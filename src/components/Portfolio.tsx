@@ -18,21 +18,27 @@ import 'pure-react-carousel/dist/react-carousel.es.css';
 import React, { useState } from 'react';
 import ReactPlayer from 'react-player/lazy';
 import { ArrowLeft, ArrowRight, InfoCircle } from 'tabler-icons-react';
+import hmcReportPage05Png from '../assets/modal/hmc-report-page-05.png';
+import hmcReportPage08Png from '../assets/modal/hmc-report-page-08.png';
+import hmcReportPage14Png from '../assets/modal/hmc-report-page-14.png';
+import hmcReportPdf from '../assets/modal/HMC_Connections_2020_2021_Annual_Report.pdf';
 import imaginableMockupPng from '../assets/modal/imaginable-mockup.png';
 import magdalenaIntroPng from '../assets/modal/magdalena-intro.png';
 import magdalenaLogosPng from '../assets/modal/magdalena-logos.png';
 import oldOneBurlingtonPng from '../assets/modal/old-one-burlington.png';
-import portraitGif from '../assets/modal/portrait.gif';
 import safetyDrivesUs2Png from '../assets/modal/safety-drives-us-2.png';
 import safetyDrivesUs3Png from '../assets/modal/safety-drives-us-3.png';
 import channelPng from '../assets/portfolio/channel.png';
 import galaxyBitesPng from '../assets/portfolio/galaxy-bites.png';
+import hmcReportMockupPng from '../assets/portfolio/hmc-report-mockup.png';
 import imaginablePng from '../assets/portfolio/imaginable.png';
+import logoAnimationPng from '../assets/portfolio/logo-animation.png';
 import magdalenaMockupsPng from '../assets/portfolio/magdalena-mockups.png';
 import oneBurlingtonPng from '../assets/portfolio/one-burlington.png';
 import portraitPng from '../assets/portfolio/portrait.png';
 import safetyDrivesUsPng from '../assets/portfolio/safety-drives-us.png';
 import spillTheBeansPng from '../assets/portfolio/spill-the-beans.png';
+import Asset from './Asset';
 import ContextCard from './ContextCard';
 import SectionTitle from './SectionTitle';
 
@@ -48,6 +54,182 @@ function DotGrouping({ count, matches }: { count: number; matches: boolean }) {
 }
 
 const placeholder = <Loader variant='bars' />; //<Skeleton radius='md' />;
+
+const type = {
+  title: '',
+  thumbnail: {
+    source: null,
+    alt: '',
+  },
+  assets: [
+    {
+      images: [
+        {
+          source: 'https://i.imgur.com/eTYQfQV.gif',
+          alt: 'Magdalena Logo Animation',
+        },
+      ],
+    },
+    {
+      images: [
+        {
+          source: magdalenaIntroPng,
+          alt: 'Magdalena Intro',
+        },
+      ],
+    },
+  ],
+  tools: ['ai', 'ae', 'id'],
+  externalLink: {
+    source: '',
+    alt: '',
+  },
+  subsize: true,
+};
+
+const logoAnimationContent = {
+  title: 'DG Logo Animation',
+  thumbnail: {
+    source: logoAnimationPng,
+    alt: 'DG Logo Animation',
+  },
+  assets: [
+    {
+      images: [
+        {
+          source: 'https://drive.google.com/uc?export=view&id=1mOvyeVH36OguE9taJZFizQ4gPT6QUK2p',
+          alt: 'DG Logo Animation',
+        },
+      ],
+    },
+  ],
+  tools: ['ai', 'ae'],
+};
+
+const hmcReportContent = {
+  title: 'HMC Annual Report',
+  thumbnail: {
+    source: hmcReportMockupPng,
+    alt: 'HMC Annual Report',
+  },
+  assets: [
+    {
+      images: [
+        {
+          source: hmcReportMockupPng,
+          alt: 'HMC Annual Report Mockup',
+        },
+      ],
+    },
+    {
+      images: [
+        {
+          source: hmcReportPage05Png,
+          alt: 'HMC Annual Report - Page 05',
+        },
+      ],
+    },
+    {
+      images: [
+        {
+          source: hmcReportPage08Png,
+          alt: 'HMC Annual Report - Page 08',
+        },
+      ],
+    },
+    {
+      images: [
+        {
+          source: hmcReportPage14Png,
+          alt: 'HMC Annual Report - Page 14',
+        },
+      ],
+    },
+  ],
+  tools: ['ps', 'ai', 'id'],
+  externalLink: {
+    source: hmcReportPdf,
+    alt: 'View Full PDF',
+  },
+};
+
+const magdalenaContent = {
+  title: 'Magdalena Logo Presentation & Animation',
+  thumbnail: {
+    source: magdalenaMockupsPng,
+    alt: 'Magdalena',
+  },
+  assets: [
+    {
+      images: [
+        {
+          source: 'https://i.imgur.com/eTYQfQV.gif',
+          alt: 'Magdalena Logo Animation',
+        },
+      ],
+    },
+    {
+      images: [
+        {
+          source: magdalenaIntroPng,
+          alt: 'Magdalena Intro',
+        },
+      ],
+    },
+    {
+      images: [
+        {
+          source: magdalenaLogosPng,
+          alt: 'Magdalena Logos',
+        },
+      ],
+    },
+    {
+      images: [
+        {
+          source: magdalenaMockupsPng,
+          alt: 'Magdalena Mockups',
+        },
+      ],
+    },
+  ],
+  tools: ['ai', 'ae', 'id'],
+  externalLink: {
+    source:
+      'https://onedrive.live.com/view.aspx?resid=D7386AEC8580F07D!2627&ithint=file%2cpptx&authkey=!AKAXu4xzFcDGgAc',
+    alt: 'View Presentation',
+  },
+  subsize: true,
+};
+
+const spillTheBeansContent = {
+  title: 'Spill The Beans App Prototype',
+  disclaimer: 'Logo not made by me',
+  thumbnail: {
+    source: spillTheBeansPng,
+    alt: 'Spill the Beans',
+  },
+  assets: [
+    {
+      images: [
+        {
+          source: spillTheBeansPng,
+          alt: 'Spill the Beans',
+        },
+      ],
+    },
+  ],
+  tools: ['xd'],
+  externalLink: {
+    source: 'https://xd.adobe.com/view/4b55e194-f7b1-4bf2-979d-1589af765b48-1e06/',
+    alt: 'View Prototype',
+  },
+};
+
+const spillTheBeansNode = <Asset {...spillTheBeansContent}></Asset>;
+const magdalenaNode = <Asset {...magdalenaContent}></Asset>;
+const logoAnimationNode = <Asset {...logoAnimationContent}></Asset>;
+const hmcReportNode = <Asset {...hmcReportContent}></Asset>;
 
 function Portfolio() {
   const matches = useMediaQuery('(min-width: 770px)');
@@ -376,93 +558,6 @@ function Portfolio() {
       </Modal>
       <Modal
         size={matches ? '70%' : '95%'}
-        opened={opened.magdalena}
-        onClose={() => setOpened({ ...opened, magdalena: false })}
-      >
-        <div style={{ paddingTop: 0, paddingBottom: 0, paddingLeft: '2vw', paddingRight: '2vw' }}>
-          <input type='hidden' data-autofocus />
-          <SectionTitle noPadding>
-            <>
-              Magdalena Logo Presentation & Animation{' '}
-              <Tooltip label='Logo not made by me' withArrow>
-                <ActionIcon size='xl' radius='xl' style={{ pointerEvents: 'none' }}>
-                  <InfoCircle />
-                </ActionIcon>
-              </Tooltip>
-            </>
-          </SectionTitle>
-          <CarouselProvider naturalSlideWidth={16} naturalSlideHeight={9} totalSlides={4} infinite>
-            <Slider>
-              <Slide index={0}>
-                <Paper shadow='sm' radius='md'>
-                  <Image
-                    src='https://i.imgur.com/eTYQfQV.gif'
-                    radius='md'
-                    alt='Magdalena Logo Animation'
-                    withPlaceholder
-                    placeholder={placeholder}
-                  />
-                </Paper>
-              </Slide>
-              <Slide index={1}>
-                <Paper shadow='sm' radius='md'>
-                  <Image
-                    src={magdalenaIntroPng}
-                    radius='md'
-                    alt='Magdalena Intro'
-                    withPlaceholder
-                    placeholder={placeholder}
-                  />
-                </Paper>
-              </Slide>
-              <Slide index={2}>
-                <Paper shadow='sm' radius='md'>
-                  <Image
-                    src={magdalenaLogosPng}
-                    radius='md'
-                    alt='Magdalena Logos'
-                    withPlaceholder
-                    placeholder={placeholder}
-                  />
-                </Paper>
-              </Slide>
-              <Slide index={3}>
-                <Paper shadow='sm' radius='md'>
-                  <Image
-                    src={magdalenaMockupsPng}
-                    radius='md'
-                    alt='Magdalena Mockups'
-                    withPlaceholder
-                    placeholder={placeholder}
-                  />
-                </Paper>
-              </Slide>
-            </Slider>
-            <Group position='apart'>
-              <ButtonBack style={{ all: 'initial' }}>
-                <ActionIcon size='xl' radius='xl'>
-                  <ArrowLeft />
-                </ActionIcon>
-              </ButtonBack>
-              <DotGrouping count={4} matches={matches} />
-              <ButtonNext style={{ all: 'initial' }}>
-                <ActionIcon size='xl' radius='xl'>
-                  <ActionIcon size='xl' radius='xl'>
-                    <ArrowRight />
-                  </ActionIcon>
-                </ActionIcon>
-              </ButtonNext>
-            </Group>
-          </CarouselProvider>
-          <ContextCard
-            programIconCodes={['ai', 'ae', 'id']}
-            buttonLink='https://onedrive.live.com/view.aspx?resid=D7386AEC8580F07D!2627&ithint=file%2cpptx&authkey=!AKAXu4xzFcDGgAc'
-            buttonText='View Presentation'
-          />
-        </div>
-      </Modal>
-      <Modal
-        size={matches ? '70%' : '95%'}
         opened={opened.channel}
         onClose={() => setOpened({ ...opened, channel: false })}
       >
@@ -485,32 +580,9 @@ function Portfolio() {
           />
         </div>
       </Modal>
-      <Modal
-        size={matches ? '70%' : '95%'}
-        opened={opened.spillTheBeans}
-        onClose={() => setOpened({ ...opened, spillTheBeans: false })}
-      >
-        <div style={{ paddingTop: 0, paddingBottom: 0, paddingLeft: '2vw', paddingRight: '2vw' }}>
-          <input type='hidden' data-autofocus />
-          <SectionTitle noPadding>Spill The Beans App Prototype</SectionTitle>
-          <Paper shadow='sm' radius='md'>
-            <Image
-              src={spillTheBeansPng}
-              radius='md'
-              alt='Spill the Beans'
-              withPlaceholder
-              placeholder={placeholder}
-            />
-          </Paper>
-          <ContextCard
-            programIconCodes={['xd']}
-            buttonLink='https://xd.adobe.com/view/4b55e194-f7b1-4bf2-979d-1589af765b48-1e06/'
-            buttonText='View Prototype'
-          />
-        </div>
-      </Modal>
       <ScrollArea style={{ height: '71vh', width: 'calc(100% + 32px)', marginLeft: '-16px' }}>
         <Group noWrap spacing='lg' pt={10}>
+          {logoAnimationNode}
           <Paper
             shadow='sm'
             radius='md'
@@ -527,7 +599,6 @@ function Portfolio() {
               placeholder={placeholder}
             />
           </Paper>
-
           <Group direction='column'>
             <Paper
               shadow='sm'
@@ -574,6 +645,7 @@ function Portfolio() {
               placeholder={placeholder}
             />
           </Paper>
+          {hmcReportNode}
           <Paper shadow='sm' radius='md' onClick={() => setOpened({ ...opened, portrait: true })}>
             <Image
               className='zoom'
@@ -587,22 +659,7 @@ function Portfolio() {
             />
           </Paper>
           <Group direction='column'>
-            <Paper
-              shadow='sm'
-              radius='md'
-              onClick={() => setOpened({ ...opened, magdalena: true })}
-            >
-              <Image
-                className='zoom'
-                src={magdalenaMockupsPng}
-                radius='md'
-                height={subHeight}
-                width={subWidth}
-                alt='Magdalena'
-                withPlaceholder
-                placeholder={placeholder}
-              />
-            </Paper>
+            {magdalenaNode}
             <Paper shadow='xl' radius='md' onClick={() => setOpened({ ...opened, channel: true })}>
               <Image
                 className='zoom'
@@ -616,22 +673,7 @@ function Portfolio() {
               />
             </Paper>
           </Group>
-          <Paper
-            shadow='sm'
-            radius='md'
-            onClick={() => setOpened({ ...opened, spillTheBeans: true })}
-          >
-            <Image
-              className='zoom'
-              src={spillTheBeansPng}
-              radius='md'
-              height='66vh'
-              width='auto'
-              alt='Spill the Beans'
-              withPlaceholder
-              placeholder={placeholder}
-            />
-          </Paper>
+          {spillTheBeansNode}
         </Group>
       </ScrollArea>
     </>
