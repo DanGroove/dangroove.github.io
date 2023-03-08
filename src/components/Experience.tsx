@@ -70,6 +70,21 @@ function Experience() {
             Sept 2021 - March 2022
           </Text>
         </Timeline.Item>
+        
+        <Timeline.Item
+          title={<Text size='xl'>Junior Graphic Designer</Text>}
+          bullet={<Palette size={12} />}
+        >
+          <Text color='dimmed' size='lg'>
+            <Text color='red' component='span' inherit>
+              Interkom
+            </Text>{' '}
+            - 4 month contract
+          </Text>
+          <Text size='sm' mt={4}>
+            Sept 2022 - Dec 2022
+          </Text>
+        </Timeline.Item>
       </Timeline>
     </Container>
   );
