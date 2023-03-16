@@ -18,7 +18,7 @@ build:
 deploy:
 	npm run deploy
 
-## Broswer commands
+## Broswer
 
 ## Opens the local project in Safari
 safari:
@@ -32,7 +32,7 @@ chrome:
 online:
 	open -a Google\ Chrome https://rendelacruz.github.io/dan/
 
-## Other commands
+## Other
 
 ## Removes the single build dependency of the app. Warning: One-way operation
 eject:
