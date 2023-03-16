@@ -15,7 +15,7 @@ import {
 import { useMediaQuery } from '@mantine/hooks';
 import { ButtonBack, ButtonNext, CarouselProvider, Dot, Slide, Slider } from 'pure-react-carousel';
 import 'pure-react-carousel/dist/react-carousel.es.css';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import ReactPlayer from 'react-player/lazy';
 import { ArrowLeft, ArrowRight, InfoCircle } from 'tabler-icons-react';
 import hmcReportPage05Png from '../assets/modal/hmc-report-page-05.png';

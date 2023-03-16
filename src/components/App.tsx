@@ -8,7 +8,7 @@ import {
   MantineProvider,
 } from '@mantine/core';
 import Cookies from 'js-cookie';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import clipSvg from '../assets/clip.svg';
 import fontNormal from '../assets/VAGRundschriftD.woff';
 import fontLight from '../assets/VAGRundschriftDLight.woff';

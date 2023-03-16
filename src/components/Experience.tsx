@@ -1,5 +1,4 @@
 import { Container, Text, Timeline } from '@mantine/core';
-import React from 'react';
 import { DeviceDesktopAnalytics, Palette, Planet, Video } from 'tabler-icons-react';
 import SectionTitle from './SectionTitle';
 
@@ -70,7 +69,7 @@ function Experience() {
             Sept 2021 - March 2022
           </Text>
         </Timeline.Item>
-        
+
         <Timeline.Item
           title={<Text size='xl'>Junior Graphic Designer</Text>}
           bullet={<Palette size={12} />}

@@ -8,7 +8,6 @@ import {
   Text,
   Tooltip,
 } from '@mantine/core';
-import React from 'react';
 import { At, BrandLinkedin, BrandYoutube, Phone } from 'tabler-icons-react';
 
 const useStyles = createStyles(theme => ({

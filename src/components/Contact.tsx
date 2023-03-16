@@ -9,7 +9,7 @@ import {
   TextInput,
   Title,
 } from '@mantine/core';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import ContactIconsList from './ContactIconList';
 import SectionTitle from './SectionTitle';
 

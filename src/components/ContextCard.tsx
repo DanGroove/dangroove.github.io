@@ -1,5 +1,4 @@
 import { Button, Container, createStyles, Group } from '@mantine/core';
-import React from 'react';
 import ProgramIcon from './ProgramIcon';
 
 const useStyles = createStyles(theme => ({

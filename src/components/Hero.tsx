@@ -8,7 +8,6 @@ import {
   ThemeIcon,
   useMantineTheme,
 } from '@mantine/core';
-import React from 'react';
 import { scrollIntoView } from 'seamless-scroll-polyfill';
 import { Check } from 'tabler-icons-react';
 import resume from '../assets/DanialEndrawes_Resume.pdf';

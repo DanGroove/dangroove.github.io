@@ -1,5 +1,4 @@
 import { createStyles, Image, Tooltip } from '@mantine/core';
-import React from 'react';
 import aeSvg from '../assets/icons/ae.svg';
 import aiSvg from '../assets/icons/ai.svg';
 import idSvg from '../assets/icons/id.svg';

@@ -12,7 +12,7 @@ import {
   useMantineTheme,
 } from '@mantine/core';
 import { useBooleanToggle } from '@mantine/hooks';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { scrollIntoView } from 'seamless-scroll-polyfill';
 import dgBlack from '../assets/dg-black.svg';
 import dgWhite from '../assets/dg-white.svg';
