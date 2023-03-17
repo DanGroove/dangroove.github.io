@@ -55,38 +55,6 @@ function DotGrouping({ count, matches }: { count: number; matches: boolean }) {
 
 const placeholder = <Loader variant='bars' />; //<Skeleton radius='md' />;
 
-const type = {
-  title: '',
-  thumbnail: {
-    source: null,
-    alt: '',
-  },
-  assets: [
-    {
-      images: [
-        {
-          source: 'https://i.imgur.com/eTYQfQV.gif',
-          alt: 'Magdalena Logo Animation',
-        },
-      ],
-    },
-    {
-      images: [
-        {
-          source: magdalenaIntroPng,
-          alt: 'Magdalena Intro',
-        },
-      ],
-    },
-  ],
-  tools: ['ai', 'ae', 'id'],
-  externalLink: {
-    source: '',
-    alt: '',
-  },
-  subsize: true,
-};
-
 const logoAnimationContent = {
   title: 'DG Logo Animation',
   thumbnail: {

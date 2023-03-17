@@ -1,13 +1,4 @@
-import {
-  ActionIcon,
-  Group,
-  Image,
-  Loader,
-  Modal,
-  Paper,
-  Tooltip,
-  useMantineTheme,
-} from '@mantine/core';
+import { ActionIcon, Group, Image, Loader, Modal, Paper, Tooltip } from '@mantine/core';
 import { useMediaQuery } from '@mantine/hooks';
 import { ButtonBack, ButtonNext, CarouselProvider, Dot, Slide, Slider } from 'pure-react-carousel';
 import 'pure-react-carousel/dist/react-carousel.es.css';
@@ -61,7 +52,6 @@ function Portfolio({
   subsize,
 }: AssetProps) {
   const matches = useMediaQuery('(min-width: 770px)');
-  const theme = useMantineTheme();
 
   const [opened, setOpened] = useState(false);
 
