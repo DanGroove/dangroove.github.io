@@ -30,7 +30,7 @@ chrome:
 
 ## Opens the project on GitHub Pages
 online:
-	open -a Google\ Chrome https://rendelacruz.github.io/dan/
+	open -a Google\ Chrome https://danialendrawes.com/
 
 ## Other
 

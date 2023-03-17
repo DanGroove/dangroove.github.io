@@ -74,7 +74,7 @@ function Portfolio({
         <Group noWrap>
           {assets[0].images.map((image, imageIndex) => {
             return (
-              <Paper shadow='sm' radius='md' key={imageIndex}>
+              <Paper shadow='sm' radius='md' key={imageIndex} style={{ margin: '0 auto' }}>
                 <Image
                   src={image.source}
                   radius='md'

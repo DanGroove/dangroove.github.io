@@ -34,6 +34,7 @@ import hmcReportMockupPng from '../assets/portfolio/hmc-report-mockup.png';
 import imaginablePng from '../assets/portfolio/imaginable.png';
 import logoAnimationPng from '../assets/portfolio/logo-animation.png';
 import magdalenaMockupsPng from '../assets/portfolio/magdalena-mockups.png';
+import newLogoPng from '../assets/portfolio/new-logo.png';
 import oneBurlingtonPng from '../assets/portfolio/one-burlington.png';
 import portraitPng from '../assets/portfolio/portrait.png';
 import safetyDrivesUsPng from '../assets/portfolio/safety-drives-us.png';
@@ -53,7 +54,28 @@ function DotGrouping({ count, matches }: { count: number; matches: boolean }) {
   return <Group spacing={matches ? 10 : 3}>{dots}</Group>;
 }
 
+const emptyAssetPadding = <div style={{ width: '10vw' }} />;
+
 const placeholder = <Loader variant='bars' />; //<Skeleton radius='md' />;
+
+const newLogoAnimationContent = {
+  title: 'New DG Logo Animation',
+  thumbnail: {
+    source: newLogoPng,
+    alt: 'New DG Logo Animation',
+  },
+  assets: [
+    {
+      images: [
+        {
+          source: 'https://drive.google.com/uc?export=view&id=1WzT97vdG7DnjCDMzwfbeSPiu7as-ufZS',
+          alt: 'New DG Logo Animation',
+        },
+      ],
+    },
+  ],
+  tools: ['ai', 'ae'],
+};
 
 const logoAnimationContent = {
   title: 'DG Logo Animation',
@@ -194,6 +216,7 @@ const spillTheBeansContent = {
   },
 };
 
+const newLogoAnimationNode = <Asset {...newLogoAnimationContent}></Asset>;
 const spillTheBeansNode = <Asset {...spillTheBeansContent}></Asset>;
 const magdalenaNode = <Asset {...magdalenaContent}></Asset>;
 const logoAnimationNode = <Asset {...logoAnimationContent}></Asset>;
@@ -550,6 +573,8 @@ function Portfolio() {
       </Modal>
       <ScrollArea style={{ height: '71vh', width: 'calc(100% + 32px)', marginLeft: '-16px' }}>
         <Group noWrap spacing='lg' pt={10}>
+          {emptyAssetPadding}
+          {newLogoAnimationNode}
           {logoAnimationNode}
           <Paper
             shadow='sm'
@@ -642,6 +667,7 @@ function Portfolio() {
             </Paper>
           </Group>
           {spillTheBeansNode}
+          {emptyAssetPadding}
         </Group>
       </ScrollArea>
     </>
