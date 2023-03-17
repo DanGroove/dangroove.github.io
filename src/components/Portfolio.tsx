@@ -16,6 +16,7 @@ import { useMediaQuery } from '@mantine/hooks';
 import { ButtonBack, ButtonNext, CarouselProvider, Dot, Slide, Slider } from 'pure-react-carousel';
 import 'pure-react-carousel/dist/react-carousel.es.css';
 import { useState } from 'react';
+import { useInView } from 'react-intersection-observer';
 import ReactPlayer from 'react-player/lazy';
 import { ArrowLeft, ArrowRight, InfoCircle } from 'tabler-icons-react';
 import hmcReportPage05Png from '../assets/modal/hmc-report-page-05.png';
@@ -216,15 +217,16 @@ const spillTheBeansContent = {
   },
 };
 
-const newLogoAnimationNode = <Asset {...newLogoAnimationContent}></Asset>;
-const spillTheBeansNode = <Asset {...spillTheBeansContent}></Asset>;
-const magdalenaNode = <Asset {...magdalenaContent}></Asset>;
-const logoAnimationNode = <Asset {...logoAnimationContent}></Asset>;
-const hmcReportNode = <Asset {...hmcReportContent}></Asset>;
-
 function Portfolio() {
   const matches = useMediaQuery('(min-width: 770px)');
   const theme = useMantineTheme();
+  const [ref, inView] = useInView({ threshold: 0.4 });
+
+  const newLogoAnimationNode = <Asset {...newLogoAnimationContent} inView={inView} order={1} />;
+  const logoAnimationNode = <Asset {...logoAnimationContent} inView={inView} order={2} />;
+  const hmcReportNode = <Asset {...hmcReportContent} inView={inView} order={6} />;
+  const magdalenaNode = <Asset {...magdalenaContent} inView={inView} order={8} />;
+  const spillTheBeansNode = <Asset {...spillTheBeansContent} inView={inView} order={9} />;
 
   const [opened, setOpened] = useState({
     oneBurlington: false,
@@ -571,7 +573,10 @@ function Portfolio() {
           />
         </div>
       </Modal>
-      <ScrollArea style={{ height: '71vh', width: 'calc(100% + 32px)', marginLeft: '-16px' }}>
+      <ScrollArea
+        ref={ref}
+        style={{ height: '71vh', width: 'calc(100% + 32px)', marginLeft: '-16px' }}
+      >
         <Group noWrap spacing='lg' pt={10}>
           {emptyAssetPadding}
           {newLogoAnimationNode}
@@ -580,6 +585,8 @@ function Portfolio() {
             shadow='sm'
             radius='md'
             onClick={() => setOpened({ ...opened, oneBurlington: true })}
+            className={inView ? 'show hidden' : 'hidden'}
+            style={{ '--order': 3 } as React.CSSProperties}
           >
             <Image
               className='zoom'
@@ -597,6 +604,8 @@ function Portfolio() {
               shadow='sm'
               radius='md'
               onClick={() => setOpened({ ...opened, galaxyBites: true })}
+              className={inView ? 'show hidden' : 'hidden'}
+              style={{ '--order': 4 } as React.CSSProperties}
             >
               <Image
                 className='zoom'
@@ -613,6 +622,8 @@ function Portfolio() {
               shadow='sm'
               radius='md'
               onClick={() => setOpened({ ...opened, safetyDrivesUs: true })}
+              className={inView ? 'show hidden' : 'hidden'}
+              style={{ '--order': 4 } as React.CSSProperties}
             >
               <Image
                 className='zoom'
@@ -626,7 +637,13 @@ function Portfolio() {
               />
             </Paper>
           </Group>
-          <Paper shadow='sm' radius='md' onClick={() => setOpened({ ...opened, imaginable: true })}>
+          <Paper
+            shadow='sm'
+            radius='md'
+            onClick={() => setOpened({ ...opened, imaginable: true })}
+            className={inView ? 'show hidden' : 'hidden'}
+            style={{ '--order': 5 } as React.CSSProperties}
+          >
             <Image
               className='zoom'
               src={imaginablePng}
@@ -639,7 +656,13 @@ function Portfolio() {
             />
           </Paper>
           {hmcReportNode}
-          <Paper shadow='sm' radius='md' onClick={() => setOpened({ ...opened, portrait: true })}>
+          <Paper
+            shadow='sm'
+            radius='md'
+            onClick={() => setOpened({ ...opened, portrait: true })}
+            className={inView ? 'show hidden' : 'hidden'}
+            style={{ '--order': 7 } as React.CSSProperties}
+          >
             <Image
               className='zoom'
               src={portraitPng}
@@ -653,7 +676,13 @@ function Portfolio() {
           </Paper>
           <Group direction='column'>
             {magdalenaNode}
-            <Paper shadow='xl' radius='md' onClick={() => setOpened({ ...opened, channel: true })}>
+            <Paper
+              shadow='xl'
+              radius='md'
+              onClick={() => setOpened({ ...opened, channel: true })}
+              className={inView ? 'show hidden' : 'hidden'}
+              style={{ '--order': 8 } as React.CSSProperties}
+            >
               <Image
                 className='zoom'
                 src={channelPng}

@@ -40,6 +40,8 @@ interface AssetProps extends Omit<React.ComponentPropsWithoutRef<'div'>, 'title'
   tools: string[];
   externalLink?: Connection;
   subsize?: boolean;
+  inView: boolean;
+  order: number;
 }
 
 function Portfolio({
@@ -50,6 +52,8 @@ function Portfolio({
   tools,
   externalLink,
   subsize,
+  inView,
+  order,
 }: AssetProps) {
   const matches = useMediaQuery('(min-width: 770px)');
 
@@ -151,7 +155,13 @@ function Portfolio({
           />
         </div>
       </Modal>
-      <Paper shadow='sm' radius='md' onClick={() => setOpened(true)}>
+      <Paper
+        shadow='sm'
+        radius='md'
+        onClick={() => setOpened(true)}
+        className={inView ? 'show hidden' : 'hidden'}
+        style={{ '--order': order } as React.CSSProperties}
+      >
         <Image
           className='zoom'
           src={thumbnail.source}
