@@ -1,5 +1,5 @@
 import { Container, Text, Timeline } from '@mantine/core';
-import { DeviceDesktopAnalytics, Palette, Planet, Video } from 'tabler-icons-react';
+import { Clover, DeviceDesktopAnalytics, FileSignal, Planet, Video } from 'tabler-icons-react';
 import SectionTitle from './SectionTitle';
 
 // const useStyles = createStyles(theme => ({}));
@@ -8,7 +8,7 @@ function Experience() {
   return (
     <Container id='experience' size={900}>
       <SectionTitle>Experience</SectionTitle>
-      <Timeline active={2} bulletSize={24} lineWidth={2}>
+      <Timeline active={5} bulletSize={24} lineWidth={2}>
         <Timeline.Item
           bullet={<Video size={12} />}
           title={<Text size='xl'>Graphic Designer / Video Editor / Web Designer</Text>}
@@ -42,7 +42,6 @@ function Experience() {
         <Timeline.Item
           title={<Text size='xl'>Graphic Designer / Video Editor / Web Designer</Text>}
           bullet={<Planet size={12} />}
-          lineVariant='dashed'
         >
           <Text color='dimmed' size='lg'>
             <Text color='red' component='span' inherit>
@@ -56,8 +55,8 @@ function Experience() {
         </Timeline.Item>
 
         <Timeline.Item
-          title={<Text size='xl'>Graphic Designer / Video Editor / Web Designer</Text>}
-          bullet={<Palette size={12} />}
+          title={<Text size='xl'>Marketing Specialist</Text>}
+          bullet={<FileSignal size={12} />}
         >
           <Text color='dimmed' size='lg'>
             <Text color='red' component='span' inherit>
@@ -72,7 +71,7 @@ function Experience() {
 
         <Timeline.Item
           title={<Text size='xl'>Junior Graphic Designer</Text>}
-          bullet={<Palette size={12} />}
+          bullet={<Clover size={12} />}
         >
           <Text color='dimmed' size='lg'>
             <Text color='red' component='span' inherit>

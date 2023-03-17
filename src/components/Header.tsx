@@ -14,8 +14,8 @@ import {
 import { useBooleanToggle } from '@mantine/hooks';
 import { useState } from 'react';
 import { scrollIntoView } from 'seamless-scroll-polyfill';
-import dgBlack from '../assets/dg-black.svg';
-import dgWhite from '../assets/dg-white.svg';
+import dgDarkMode from '../assets/dg-dark-mode.png';
+import dgLightMode from '../assets/dg-light-mode.svg';
 import SwitchToggle from './SwitchToggle';
 
 const HEADER_HEIGHT = 60;
@@ -168,7 +168,8 @@ function HeaderResponsive({ links = APP_LINKS }: HeaderResponsiveProps) {
             <Image
               height={25}
               width='auto'
-              src={theme.colorScheme === 'dark' ? dgWhite : dgBlack}
+              src={theme.colorScheme === 'dark' ? dgDarkMode : dgLightMode
+            }
               alt='DG'
             />
             <Text

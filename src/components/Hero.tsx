@@ -49,6 +49,11 @@ const useStyles = createStyles(theme => ({
     },
   },
 
+  bolder: {
+    fontWeight: 900,
+    color: theme.colorScheme === 'dark' ? theme.white : theme.black,
+  },
+
   description: {
     marginTop: theme.spacing.xl,
     fontSize: 24,
@@ -130,16 +135,16 @@ function HeroAbout() {
           className={classes.description}
         >
           <List.Item>
-            <strong>Video Editor</strong>
+            <strong className={classes.bolder}>Graphic</strong> Designer
           </List.Item>
           <List.Item>
-            <strong>Graphic Designer</strong>
+            <strong className={classes.bolder}>Video</strong> Editor
           </List.Item>
           <List.Item>
-            <strong>UX/UI Designer</strong>
+            <strong className={classes.bolder}>UX/UI</strong> Designer
           </List.Item>
           <List.Item>
-            <strong>Motion Graphics Designer</strong>
+            <strong className={classes.bolder}>Motion Graphics</strong> Designer
           </List.Item>
         </List>
 
