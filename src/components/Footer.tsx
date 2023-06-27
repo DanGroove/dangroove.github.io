@@ -91,7 +91,7 @@ function Footer() {
         </MediaQuery>
         <MediaQuery smallerThan='xs' styles={{ display: 'none' }}>
           <Text>
-            © Danial Endrawes 2022. Made by{' '}
+            © Danial Endrawes 2023. Made by{' '}
             <Anchor href='https://github.com/RenDelaCruz' target='_blank'>
               RDC
             </Anchor>
