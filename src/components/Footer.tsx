@@ -79,7 +79,7 @@ function Footer() {
 
         <MediaQuery largerThan='xs' styles={{ display: 'none' }}>
           <div style={{ textAlign: 'center' }}>
-            <Text>© Danial Endrawes 2022.</Text>
+            <Text>© Danial Endrawes 2023.</Text>
             <Text>
               Made by{' '}
               <Anchor href='https://github.com/RenDelaCruz' target='_blank'>
