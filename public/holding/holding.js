@@ -122,6 +122,8 @@
   let calm = 0;
   let unseen = 0;
   let snarl = 0;
+  let kink = 0; // steps the hung chain has stayed kinked
+  let mend = 0; // steps left of easing a kinked chain back into its hang
 
   const el = (name, attrs) => {
     const node = document.createElementNS(NS, name);
@@ -278,6 +280,21 @@
   }
 
   function step() {
+    if (mend > 0) {
+      mend -= 1;
+      let rx = ax;
+      let ry = ay;
+      for (let i = 0; i <= n; i++) {
+        if (i) {
+          rx += rest.dx[i - 1];
+          ry += rest.dy[i - 1];
+        }
+        x[i] = px[i] = x[i] + (rx - x[i]) * (mend ? 0.09 : 1);
+        y[i] = py[i] = y[i] + (ry - y[i]) * (mend ? 0.09 : 1);
+      }
+      lean = [0, 0, 0, 0];
+      return;
+    }
     const g = grav * SUB * SUB;
     // While it is carried back up, and for a moment after, the chain is held steady so it
     // settles onto its hooks instead of whipping across the page.
@@ -379,6 +396,25 @@
       }
     }
     snarl = worst > SNARL * s ? snarl + 1 : 0;
+
+    // On both hooks with no hand on it, a chain can only hang one way. If it is still
+    // kinked (links pulled apart, or bent tighter than rings allow) after a moment, it is
+    // eased back into that hang instead of staying knotted.
+    if (!grab && hookA && hookB) {
+      let bad = false;
+      for (let j = 0; j < n && !bad; j++) {
+        bad = Math.abs(Math.hypot(x[j + 1] - x[j], y[j + 1] - y[j]) - s) > 0.06 * s;
+        if (!bad && j < n - 1) bad = Math.hypot(x[j + 2] - x[j], y[j + 2] - y[j]) < 0.97 * bend;
+      }
+      kink = bad ? kink + 1 : 0;
+      if (kink > 18) {
+        kink = 0;
+        mend = 45;
+      }
+    } else {
+      kink = 0;
+    }
+
     if (snarl > 12) {
       snarl = 0;
       const side = where < grab.i ? 'a' : 'b';
@@ -456,6 +492,7 @@
 
   // Take the chain off one hook. The first to go opens the way through.
   function unhook(side) {
+    mend = 0;
     if (carry) {
       // Still on its way back up: the hand lets go, and the chain drops from a hook it is on.
       carry = null;
@@ -471,7 +508,11 @@
       kicks = null;
       svg.classList.remove('is-in');
       if (unhookBtn) unhookBtn.textContent = 'Hang it back up';
-      if (openEl) openEl.hidden = false;
+      if (openEl) {
+        window.clearTimeout(leaving);
+        openEl.classList.remove('is-leaving');
+        openEl.hidden = false;
+      }
       say('The chain is unhooked. A link to the previous site is now showing, just before this button.');
     }
     if (reduce.matches && !grab) {
@@ -484,13 +525,33 @@
   // Put the same chain back up, from wherever it ended up: an unseen hand picks up each
   // loose end in turn and sets it back on its hook, and the chain follows and settles.
   let queue = [];
+  let leaving = 0;
   function hang() {
     isOpen = false;
     letGo();
     if (unhookBtn) unhookBtn.textContent = 'Unhook the chain';
-    if (openEl) openEl.hidden = true;
+    if (openEl && !openEl.hidden) {
+      // The words step down and fade as the chain goes back up, then leave the page.
+      window.clearTimeout(leaving);
+      if (reduce.matches) openEl.hidden = true;
+      else {
+        openEl.classList.add('is-leaving');
+        leaving = window.setTimeout(() => {
+          openEl.hidden = true;
+          openEl.classList.remove('is-leaving');
+        }, 420);
+      }
+    }
     say('The chain is back up.');
+    const gone = svg.classList.contains('is-away');
     svg.classList.remove('is-away');
+    if (gone && !hookA && !hookB) {
+      const floor = window.innerHeight - stage.getBoundingClientRect().top + D;
+      for (let i = 0; i <= n; i++) {
+        x[i] = ax;
+        y[i] = Math.max(floor, ay + D) + i * s;
+      }
+    }
     if (reduce.matches) {
       hookA = hookB = true;
       running = false;
@@ -522,20 +583,24 @@
     const i = side === 'a' ? 0 : n;
     const hx = side === 'a' ? ax : bx;
     const hy = side === 'a' ? ay : by;
-    const far = Math.hypot(hx - x[i], hy - y[i]);
-    carry = {
-      side,
-      i,
-      hx,
-      hy,
-      t0: window.performance.now() + 40,
-      dur: clamp(500 + far * 0.7, 800, 1600),
-      x0: x[i],
-      y0: y[i],
-      // Brought round from below, the way you would lift a chain up to a hook.
-      cx: (x[i] + hx) / 2,
-      cy: (y[i] + hy) / 2 + D,
-    };
+    // With the other end still on its hook, the loose end is swung up around that hook
+    // with the chain kept nearly straight, so it can never fold back on itself. With
+    // nothing holding it, the end is simply lifted, and the chain hangs below the hand.
+    const holds = side === 'a' ? hookB : hookA;
+    const ox = side === 'a' ? bx : ax;
+    const oy = side === 'a' ? by : ay;
+    const t0 = window.performance.now() + 40;
+    if (holds) {
+      const a0 = Math.atan2(y[i] - oy, x[i] - ox);
+      let turn = Math.atan2(hy - oy, hx - ox) - a0;
+      while (turn > Math.PI) turn -= 2 * Math.PI;
+      while (turn < -Math.PI) turn += 2 * Math.PI;
+      const r0 = Math.min(Math.hypot(x[i] - ox, y[i] - oy), 0.98 * n * s);
+      carry = { side, i, hx, hy, t0, dur: 1500, swing: true, ox, oy, a0, turn, r0, r1: Math.hypot(hx - ox, hy - oy) };
+    } else {
+      const far = Math.hypot(hx - x[i], hy - y[i]);
+      carry = { side, i, hx, hy, t0, dur: clamp(400 + far * 0.6, 700, 1400), swing: false, x0: x[i], y0: y[i] };
+    }
     grab = { i, tx: x[i], ty: y[i], vx: 0, vy: 0, catching: 0, ghost: true };
   }
 
@@ -543,9 +608,21 @@
   function lift() {
     const t = Math.min(1, Math.max(0, (window.performance.now() - carry.t0) / carry.dur));
     const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-    const u = 1 - e;
-    grab.tx = u * u * carry.x0 + 2 * u * e * carry.cx + e * e * carry.hx;
-    grab.ty = u * u * carry.y0 + 2 * u * e * carry.cy + e * e * carry.hy;
+    if (carry.swing) {
+      // The chain stays at full stretch for most of the swing and only gives up its slack
+      // as the end reaches the hook.
+      const a = carry.a0 + carry.turn * e;
+      const rr = carry.r0 + (carry.r1 - carry.r0) * Math.pow(e, 4);
+      grab.tx = carry.ox + Math.cos(a) * rr;
+      grab.ty = carry.oy + Math.sin(a) * rr;
+    } else {
+      grab.tx = carry.x0 + (carry.hx - carry.x0) * e;
+      grab.ty = carry.y0 + (carry.hy - carry.y0) * e;
+    }
+    if (t >= 1) {
+      grab.tx = carry.hx;
+      grab.ty = carry.hy;
+    }
     const i = carry.i;
     if (t >= 1 && Math.hypot(x[i] - carry.hx, y[i] - carry.hy) < 0.5) {
       if (carry.side === 'a') {
@@ -722,6 +799,7 @@
     if (carry || e.button || !target || !target.hasAttribute || !target.hasAttribute('data-i')) return;
     const i = Number(target.getAttribute('data-i'));
     const p = local(e);
+    mend = 0;
     grab = { i, id: e.pointerId, ox: x[i] - p.x, oy: y[i] - p.y, tx: x[i], ty: y[i], px: p.x, py: p.y, vx: 0, vy: 0, time: e.timeStamp, catching: 0 };
     kicks = null;
     try {
