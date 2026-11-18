@@ -451,7 +451,9 @@
     for (let i = 0; i <= n; i++) {
       fastest = Math.max(fastest, Math.abs(x[i] - px[i]), Math.abs(y[i] - py[i]));
     }
-    calm = fastest < 0.012 && !grab && !kicks ? calm + 1 : 0;
+    // Counted in physics steps, not frames, so a fast screen does not put the chain to
+    // sleep early, and never while it is being carried, mended or is still kinked.
+    calm = fastest < 0.012 && !grab && !kicks && !carry && !mend && !kink ? calm + steps : 0;
 
     if (isOpen && !grab) {
       // Once the loose chain has swung out of sight, put it away.
@@ -464,12 +466,12 @@
         seen = x[i] > -half && x[i] < W + half && y[i] > top && y[i] < bottom;
       }
       unseen = seen ? 0 : unseen + 1;
-      if (unseen > 24 || calm > 40) {
+      if (unseen > 24 || calm > 80) {
         running = false;
         svg.classList.add('is-away');
         return;
       }
-    } else if (calm > 40) {
+    } else if (calm > 80) {
       running = false;
       return;
     }

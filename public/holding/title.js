@@ -1,7 +1,7 @@
 /*
   The headline has a red copy of itself underneath. Near the pointer, a circle around the
   cursor shows the red letters in place of the plain ones, opening as the pointer comes
-  close and closing as it leaves. A click or tap on the headline knocks the letters up in
+  close and closing as it leaves, and the letters nearest the pointer lift a little. A click or tap on the headline knocks the letters up in
   a wave from where it landed, and they drop back into place. Screen readers get the plain
   heading, and nothing moves for anyone who prefers reduced motion.
 */
@@ -17,6 +17,8 @@
   const RADIUS = 0.95; // in ems of the headline: size of the circle
   const NEAR = 1.2; // in ems: how far outside the headline the circle starts to open
   const HOP = 0.16; // in ems: how high a knocked letter jumps
+  const RISE = 0.07; // in ems: how far a letter lifts when the pointer is close
+  const FEEL = 1.3; // in ems: how far from a letter the pointer is felt
 
   // One span per letter, inside the existing word spans so the layout rules still apply.
   const plain = title.textContent.replace(/\s+/g, ' ').trim();
@@ -30,7 +32,7 @@
       el.className = 'hp-ch';
       el.textContent = ch;
       word.appendChild(el);
-      letters.push({ els: [el], cx: 0, y: 0, vy: 0, kick: 0 });
+      letters.push({ els: [el], cx: 0, cy: 0, y: 0, vy: 0, kick: 0 });
     }
   });
 
@@ -58,6 +60,7 @@
     for (const l of letters) {
       const r = l.els[0].getBoundingClientRect();
       l.cx = r.left + r.width / 2;
+      l.cy = r.top + r.height / 2 + l.y * em;
     }
   }
 
@@ -91,11 +94,15 @@
         l.vy += HOP * 26;
         l.kick = 0;
       }
-      l.vy += (-l.y * 240 - l.vy * 12) * dt;
+      // Near the pointer, a letter rests a little higher, and springs there.
+      const d = Math.hypot(mx - l.cx, (my - l.cy) * 1.4) / (FEEL * em);
+      const g = d < 1 ? 1 - d : 0;
+      const rest = RISE * g * g * (3 - 2 * g);
+      l.vy += (-(l.y - rest) * 240 - l.vy * 12) * dt;
       l.y += l.vy * dt;
       const tf = Math.abs(l.y) > 0.001 ? `translateY(${(-l.y).toFixed(3)}em)` : '';
       for (const el of l.els) el.style.transform = tf;
-      if (Math.abs(l.y) > 0.0005 || Math.abs(l.vy) > 0.005 || l.kick) busy = true;
+      if (Math.abs(l.y - rest) > 0.0005 || Math.abs(l.vy) > 0.005 || l.kick) busy = true;
     }
     if (busy) raf = window.requestAnimationFrame(frame);
     else last = 0;
