@@ -234,6 +234,46 @@ html:not(.is-classic) .cl-back {
   white-space: nowrap;
 }
 
+/* Letters of the headline, set one by one by title.js so they can hop. The headline is
+   played with, so it does not pick up a text selection on click or drag. */
+.hp-title {
+  position: relative;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.hp-title .hp-ch {
+  display: inline-block;
+}
+
+/* A red copy of the headline, shown only in a circle around the pointer. */
+.hp-title .hp-title__red {
+  position: absolute;
+  inset: 0;
+  display: block;
+  color: var(--red-ink);
+  pointer-events: none;
+  clip-path: circle(0 at 0 0);
+}
+
+/* The faint dot field behind everything (field.js). */
+.hp-field {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hp-top,
+.hp-main,
+.hp-foot {
+  position: relative;
+  z-index: 1;
+}
+
 /* The opening lines are set close so they read as one thought. */
 .hp-lede {
   max-width: 34rem;
@@ -458,6 +498,19 @@ html:not(.is-classic) .cl-back {
 
 .hp-open__go:hover svg {
   transform: translateX(0.22em);
+}
+
+/* Going back up: the words step down and fade before they leave. */
+.hp-open.is-leaving {
+  pointer-events: none;
+  animation: hp-fall 0.4s var(--ease-in, cubic-bezier(0.5, 0, 0.75, 0)) forwards;
+}
+
+@keyframes hp-fall {
+  to {
+    opacity: 0;
+    transform: translateY(0.6rem);
+  }
 }
 
 @keyframes hp-rise {
