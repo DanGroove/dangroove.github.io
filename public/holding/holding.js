@@ -72,8 +72,8 @@
   const SUB = 1 / 120; // physics step, seconds
   const ITER = 32; // constraint passes per step
   const DAMP = 0.9925; // velocity kept per step
-  const POP = 0.85; // pull or push this far past what the chain has (ring diameters) and a hook lets go
-  const GIVE = 0.28; // how far past taut the chain follows the hand, as a share of the pull
+  const POP = 1.25; // pull or push this far past what the chain has (ring diameters) and a hook lets go
+  const GIVE = 0.22; // how far past taut the chain follows the hand, as a share of the pull
   const EASY = 28; // the bend per link, in degrees, that the chain takes without complaint
   const BEND = 1.91; // closest the links either side of a link may sit, in link spacings (a bend of 34.5 degrees)
   const CATCH = 18; // physics steps the held link takes to catch up with the hand once a hook lets go
@@ -111,6 +111,9 @@
   let hookB = true;
   let isOpen = false;
   let grab = null;
+  let settle = 0; // steps left of extra calm after the chain is back on both hooks
+  const SETTLE = 150;
+  let carry = null; // hanging the chain back up: an unseen hand takes the loose end over to its hook
   let kicks = null;
   let running = false;
   let raf = 0;
@@ -177,7 +180,7 @@
     // A barrier chain's sag: deeper on a wide page, never deeper than the stage.
     const dip = clamp(0.13 * W, 0.45 * D, Math.max(0.45 * D, room - D));
     grav = 6 * D + 600;
-    popAt = Math.max(POP * D, 130);
+    popAt = Math.max(POP * D, 160);
     bend = BEND * s;
     lean = [0, 0, 0, 0];
     markPannable();
@@ -276,7 +279,9 @@
 
   function step() {
     const g = grav * SUB * SUB;
-    const keep = reduce.matches ? 0.9 : DAMP;
+    // While it is carried back up, and for a moment after, the chain is held steady so it
+    // settles onto its hooks instead of whipping across the page.
+    const keep = reduce.matches ? 0.9 : carry ? 0.972 : settle > 0 ? DAMP - ((DAMP - 0.972) * settle--) / SETTLE : DAMP;
     free[0] = hookA ? 0 : 1;
     free[n] = hookB ? 0 : 1;
     for (let i = 0; i <= n; i++) {
@@ -288,6 +293,7 @@
       x[i] += vx;
       y[i] += vy + g;
     }
+    if (carry) lift();
     if (grab) {
       // The held link goes to the hand, but never in one jump: a link has weight, and just
       // after a hook lets go it takes a moment to catch up, so the loose end swings after it
@@ -363,7 +369,7 @@
     // comes off the hook on that side.
     let worst = 0;
     let where = 0;
-    if (grab && (hookA || hookB)) {
+    if (grab && !carry && (hookA || hookB)) {
       for (let j = 0; j < n; j++) {
         const off = Math.abs(Math.hypot(x[j + 1] - x[j], y[j + 1] - y[j]) - s);
         if (off > worst) {
@@ -450,6 +456,12 @@
 
   // Take the chain off one hook. The first to go opens the way through.
   function unhook(side) {
+    if (carry) {
+      // Still on its way back up: it simply drops from the hook it is on.
+      carry = null;
+      grab = null;
+      side = 'a';
+    }
     if (side === 'a') hookA = false;
     else hookB = false;
     if (grab) grab.catching = CATCH;
@@ -480,8 +492,40 @@
     layout();
     build();
     pose();
+    if (reduce.matches) {
+      render();
+      return;
+    }
+    // Hang it back the way a person would: the chain drops from the near hook, then the
+    // loose end is lifted across the page and set on the far hook, and the chain swings
+    // into place by itself.
+    hookB = false;
+    for (let i = 0; i <= n; i++) {
+      x[i] = px[i] = ax + i * 0.02 * s;
+      y[i] = py[i] = ay + i * s * 0.999;
+    }
     render();
-    enter();
+    const now = window.performance.now();
+    carry = { t0: now + 60, x0: x[n], y0: y[n], cx: 0.5 * W, cy: by + 1.1 * D };
+    grab = { i: n, tx: x[n], ty: y[n], vx: 0, vy: 0, catching: 0, ghost: true };
+    wake();
+  }
+
+  // Where the unseen hand has the loose end, this moment, on its way to the far hook.
+  const CARRY = 1400; // ms from the chain dropping to it being back on the far hook
+  function lift() {
+    const t = Math.min(1, Math.max(0, (window.performance.now() - carry.t0) / CARRY));
+    const e = 1 - Math.pow(1 - t, 3); // quick to lift, slow to set down
+    const u = 1 - e;
+    grab.tx = u * u * carry.x0 + 2 * u * e * carry.cx + e * e * bx;
+    grab.ty = u * u * carry.y0 + 2 * u * e * carry.cy + e * e * by;
+    if (t >= 1 && Math.hypot(x[n] - bx, y[n] - by) < 0.5) {
+      carry = null;
+      grab = null;
+      hookB = true;
+      lean[2] = lean[3] = 0;
+      settle = SETTLE;
+    }
   }
 
   function enter() {
@@ -626,7 +670,7 @@
 
   svg.addEventListener('pointerdown', (e) => {
     const target = e.target;
-    if (e.button || !target || !target.hasAttribute || !target.hasAttribute('data-i')) return;
+    if (carry || e.button || !target || !target.hasAttribute || !target.hasAttribute('data-i')) return;
     const i = Number(target.getAttribute('data-i'));
     const p = local(e);
     grab = { i, id: e.pointerId, ox: x[i] - p.x, oy: y[i] - p.y, tx: x[i], ty: y[i], px: p.x, py: p.y, vx: 0, vy: 0, time: e.timeStamp, catching: 0 };
@@ -743,6 +787,7 @@
     const box = stage.getBoundingClientRect();
     if (Math.abs(box.width - W) < 1 && Math.abs(box.height - H) < 1) return;
     letGo();
+    carry = null;
     kicks = null;
     running = false;
     layout();
