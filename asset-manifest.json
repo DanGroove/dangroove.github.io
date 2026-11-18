@@ -1,7 +1,8 @@
 {
   "files": {
-    "main.css": "/static/css/main.fbe6805c.css",
-    "main.js": "/static/js/main.1ade3f22.js",
+    "main.js": "/static/js/main.9edb698e.js",
+    "static/css/563.42928735.chunk.css": "/static/css/563.42928735.chunk.css",
+    "static/js/563.caa56142.chunk.js": "/static/js/563.caa56142.chunk.js",
     "reactPlayerYouTube.js": "/static/js/reactPlayerYouTube.ab198a83.chunk.js",
     "reactPlayerSoundCloud.js": "/static/js/reactPlayerSoundCloud.d5d4297e.chunk.js",
     "reactPlayerVimeo.js": "/static/js/reactPlayerVimeo.e68f7ec5.chunk.js",
@@ -16,6 +17,7 @@
     "reactPlayerFilePlayer.js": "/static/js/reactPlayerFilePlayer.ce973b42.chunk.js",
     "reactPlayerPreview.js": "/static/js/reactPlayerPreview.671fa901.chunk.js",
     "static/js/787.0537d1f0.chunk.js": "/static/js/787.0537d1f0.chunk.js",
+    "static/js/917.c3eebda7.chunk.js": "/static/js/917.c3eebda7.chunk.js",
     "static/media/HMC_Connections_2020_2021_Annual_Report.pdf": "/static/media/HMC_Connections_2020_2021_Annual_Report.c438e498c9ae3048be27.pdf",
     "static/media/magdalena-mockups.png": "/static/media/magdalena-mockups.fbe76cf71e9244df85d4.png",
     "static/media/spill-the-beans.png": "/static/media/spill-the-beans.44bdf22c68de5674dc52.png",
@@ -42,16 +44,17 @@
     "static/media/VAGRundschriftDLight.woff": "/static/media/VAGRundschriftDLight.d1338cce148a0e8a8d81.woff",
     "static/media/dg-light-mode.svg": "/static/media/dg-light-mode.669a2802a0b7a78aee00be1678a8ae02.svg",
     "static/media/clip.svg": "/static/media/clip.307af698906a7eac109dd02ca9cd21d5.svg",
+    "index.html": "/index.html",
     "static/media/sq.svg": "/static/media/sq.7f2e7b534af566d7571427d5ff9670c6.svg",
     "static/media/xd.svg": "/static/media/xd.a9cbd42f708ed8a25d68490cd846fe85.svg",
     "static/media/ps.svg": "/static/media/ps.8d81e364833e1a1d0668d22e9f1aea31.svg",
     "static/media/ae.svg": "/static/media/ae.0b601dc288052747224747cc1e107c65.svg",
     "static/media/ai.svg": "/static/media/ai.554b57f554e9d5aacc62c1d96fd64e57.svg",
-    "index.html": "/index.html",
     "static/media/pr.svg": "/static/media/pr.4109b43db99840b96af5f9d239d4b224.svg",
     "static/media/id.svg": "/static/media/id.83a5c093435510ce5c24b80520b80ff9.svg",
-    "main.fbe6805c.css.map": "/static/css/main.fbe6805c.css.map",
-    "main.1ade3f22.js.map": "/static/js/main.1ade3f22.js.map",
+    "main.9edb698e.js.map": "/static/js/main.9edb698e.js.map",
+    "563.42928735.chunk.css.map": "/static/css/563.42928735.chunk.css.map",
+    "563.caa56142.chunk.js.map": "/static/js/563.caa56142.chunk.js.map",
     "reactPlayerYouTube.ab198a83.chunk.js.map": "/static/js/reactPlayerYouTube.ab198a83.chunk.js.map",
     "reactPlayerSoundCloud.d5d4297e.chunk.js.map": "/static/js/reactPlayerSoundCloud.d5d4297e.chunk.js.map",
     "reactPlayerVimeo.e68f7ec5.chunk.js.map": "/static/js/reactPlayerVimeo.e68f7ec5.chunk.js.map",
@@ -65,10 +68,10 @@
     "reactPlayerKaltura.e7e6c367.chunk.js.map": "/static/js/reactPlayerKaltura.e7e6c367.chunk.js.map",
     "reactPlayerFilePlayer.ce973b42.chunk.js.map": "/static/js/reactPlayerFilePlayer.ce973b42.chunk.js.map",
     "reactPlayerPreview.671fa901.chunk.js.map": "/static/js/reactPlayerPreview.671fa901.chunk.js.map",
-    "787.0537d1f0.chunk.js.map": "/static/js/787.0537d1f0.chunk.js.map"
+    "787.0537d1f0.chunk.js.map": "/static/js/787.0537d1f0.chunk.js.map",
+    "917.c3eebda7.chunk.js.map": "/static/js/917.c3eebda7.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.fbe6805c.css",
-    "static/js/main.1ade3f22.js"
+    "static/js/main.9edb698e.js"
   ]
 }
