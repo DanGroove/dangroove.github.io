@@ -234,9 +234,13 @@ html:not(.is-classic) .cl-back {
   white-space: nowrap;
 }
 
-/* Letters of the headline, set one by one by title.js so they can hop. */
+/* Letters of the headline, set one by one by title.js so they can hop. The headline is
+   played with, so it does not pick up a text selection on click or drag. */
 .hp-title {
   position: relative;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .hp-title .hp-ch {
