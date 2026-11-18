@@ -234,12 +234,23 @@ html:not(.is-classic) .cl-back {
   white-space: nowrap;
 }
 
-/* Letters of the headline, set one by one by title.js. Each keeps its full-weight width
-   so the line holds still while the letters thin and hop. */
+/* Letters of the headline, set one by one by title.js so they can hop. */
+.hp-title {
+  position: relative;
+}
+
 .hp-title .hp-ch {
   display: inline-block;
-  text-align: center;
-  will-change: transform;
+}
+
+/* A red copy of the headline, shown only in a circle around the pointer. */
+.hp-title .hp-title__red {
+  position: absolute;
+  inset: 0;
+  display: block;
+  color: var(--red-ink);
+  pointer-events: none;
+  clip-path: circle(0 at 0 0);
 }
 
 /* The faint dot field behind everything (field.js). */
