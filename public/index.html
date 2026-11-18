@@ -3,23 +3,144 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Danial Endrawes" />
+    <meta
+      name="description"
+      content="Danial Endrawes is a graphic designer, video editor, motion designer and UX/UI designer. A new portfolio is under construction, and the previous site is still open."
+    />
+
+    <link rel="canonical" href="https://danialendrawes.com/" />
 
     <!-- OpenGraph -->
     <meta property="og:title" content="Danial Endrawes">
     <meta property="og:description" content="Graphic Designer">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="DanialEndrawes.com">
-    <meta property="og:image" content="logo.png">
+    <meta property="og:url" content="https://danialendrawes.com/">
+    <meta property="og:image" content="https://danialendrawes.com/logo.png">
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="./favicon/favicon.png" />
     <link rel="icon" type="image/svg+xml" href="./favicon/favicon.svg" />
-    <meta name="theme-color" content="#FFFFFF" />
+    <meta name="theme-color" content="#E9EBED" />
     <title>Danial Endrawes</title>
+
+    <!--
+      The homepage is the "under construction" page below (styles and script in /holding).
+      The previous React site still loads at /?classic.
+    -->
+    <link rel="preload" href="%PUBLIC_URL%/holding/fonts/outfit-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="%PUBLIC_URL%/holding/holding.css" />
+    <script>
+      (function () {
+        var d = document.documentElement;
+        if (/[?&]classic(=|&|$)/.test(location.search)) {
+          d.className += ' is-classic';
+          return;
+        }
+        try {
+          var t = localStorage.getItem('dg-theme');
+          if (t === 'dark' || t === 'light') d.setAttribute('data-theme', t);
+        } catch (e) {}
+        // If the page script never arrives, show the still chain instead.
+        window.addEventListener('load', function () {
+          setTimeout(function () {
+            var stage = document.querySelector('[data-stage]');
+            if (window.__hpReady || !stage) return;
+            var still = new Image();
+            still.className = 'hp-still';
+            still.alt = '';
+            still.src = '%PUBLIC_URL%/holding/chain.svg';
+            stage.insertBefore(still, stage.firstChild);
+          }, 2500);
+        });
+      })();
+    </script>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div class="hp" id="holding">
+      <header class="hp-top">
+        <p class="hp-lockup">
+          <svg class="hp-mark" viewBox="0 0 1080 797.3" aria-hidden="true" focusable="false">
+            <path class="hp-mark__g" d="M1078.2 361.1L1068.7 361.1L967.5 361.1L947.1 361.1L931.6 361.1L780.5 361.1L780.5 503.8L911.6 503.8C871.7 591.1 783.6 651.7 681.4 651.7C541.4 651.7 427.6 537.3 428.3 397.3C428.4 375.9 431.2 355 436.3 335.2C436.7 333.8 436.6 332.5 436.2 331.2C418.1 281.3 380.7 240.7 333 218.4C329.7 216.9 325.7 218.3 324.1 221.6C297.6 274.9 282.7 335 282.7 398.6C282.7 618.9 462.7 798.2 683 797.3C902.4 796.4 1080 618.3 1080 398.6C1080 386 1079.4 373.4 1078.2 361.1Z" />
+            <path class="hp-mark__g" d="M596.1 85.3C614.4 103.7 631 123.4 645.8 144.4C647.2 146.5 649.6 147.6 652.1 147.3C661.7 146.2 671.5 145.6 681.4 145.6C771.7 145.6 851 193 895.8 264.3L1024.1 195.1C954.6 78.3 827.1 0 681.4 0C631.9 0 584.6 9 540.9 25.5C535.8 27.4 534.9 34.2 539.3 37.3C559.4 51.6 578.4 67.6 596.1 85.3Z" />
+            <path class="hp-mark__d" d="M368 712C345.6 689.7 325.9 665.3 309 639.1C307.5 636.7 304.6 635.6 301.9 636.2C284.9 639.9 267.3 641.9 249.2 641.9L184.1 641.9L184.1 155.4L247 155.4C382 155.4 493.7 265.9 492.5 401C492.3 422.2 489.3 442.9 484 462.5C483.7 463.8 483.7 465.2 484.1 466.5C505.9 529.7 557.3 579.2 621.7 598.5C624.7 599.4 627.9 598.1 629.5 595.4C662.5 537.3 681.4 470.1 681.4 398.4C681.2 177.9 500.7 0 280.2 0L0 0L0 797.3L282.7 797.3C332.1 797.3 379.5 788.3 423.2 771.8C428.2 769.9 429.1 763.1 424.7 760C404.6 745.7 385.7 729.7 368 712Z" />
+          </svg>
+          <span class="hp-name">Danial Endrawes</span>
+        </p>
+        <button class="hp-theme" type="button" data-theme-toggle aria-pressed="false" aria-label="Dark mode" title="Dark mode" hidden>
+          <svg viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+            <circle cx="9" cy="9" r="7.25" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <path d="M9 1.75a7.25 7.25 0 0 1 0 14.5z" fill="currentColor" />
+          </svg>
+        </button>
+      </header>
+
+      <main class="hp-main">
+        <div class="hp-say">
+          <h1 class="hp-title"><span>Under</span> <span>construction.</span></h1>
+          <p class="hp-lede">
+            Hey, you caught me mid-rebuild. I&rsquo;m putting the new portfolio together, link by link. <span>Until&nbsp;then, give the chain a good tug or say&nbsp;hi.</span>
+          </p>
+        </div>
+
+        <ul class="hp-links">
+          <li>
+            <a href="%PUBLIC_URL%/?classic">
+              <span class="hp-links__what">Previous site</span>
+              <span class="hp-links__where">2023 portfolio</span>
+              <svg class="is-forward" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1.5 8h12M8.75 3.25 13.5 8l-4.75 4.75" fill="none" stroke="currentColor" stroke-width="1.75" /></svg>
+            </a>
+          </li>
+          <li>
+            <a href="mailto:danialendrawes@gmail.com">
+              <span class="hp-links__what">Email</span>
+              <span class="hp-links__where">danialendrawes@gmail.com</span>
+              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3.25 12.75 12.5 3.5M5.5 3.25h7.25v7.25" fill="none" stroke="currentColor" stroke-width="1.75" /></svg>
+            </a>
+          </li>
+          <li>
+            <a href="https://www.linkedin.com/in/DanialEnd" target="_blank" rel="noopener noreferrer">
+              <span class="hp-links__what">LinkedIn<span class="hp-sr">, opens in a new tab</span></span>
+              <span class="hp-links__where">in/DanialEnd</span>
+              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3.25 12.75 12.5 3.5M5.5 3.25h7.25v7.25" fill="none" stroke="currentColor" stroke-width="1.75" /></svg>
+            </a>
+          </li>
+          <li>
+            <a href="https://www.youtube.com/c/CaptainDanGroove" target="_blank" rel="noopener noreferrer">
+              <span class="hp-links__what">YouTube<span class="hp-sr">, opens in a new tab</span></span>
+              <span class="hp-links__where">CaptainDanGroove</span>
+              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3.25 12.75 12.5 3.5M5.5 3.25h7.25v7.25" fill="none" stroke="currentColor" stroke-width="1.75" /></svg>
+            </a>
+          </li>
+        </ul>
+
+        <div class="hp-stage" data-stage>
+          <noscript><img class="hp-still" src="%PUBLIC_URL%/holding/chain.svg" alt="" /></noscript>
+          <svg class="hp-chain hp-chain--live" data-chain aria-hidden="true" focusable="false"></svg>
+          <div class="hp-open" data-open hidden>
+            <p class="hp-open__say">Go on through.</p>
+            <a class="hp-open__go" href="%PUBLIC_URL%/?classic">
+              Open the previous site
+              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1.5 8h12M8.75 3.25 13.5 8l-4.75 4.75" fill="none" stroke="currentColor" stroke-width="1.75" /></svg>
+            </a>
+          </div>
+        </div>
+      </main>
+
+      <footer class="hp-foot">
+        <p>&copy; 2026 Danial Endrawes</p>
+        <button class="hp-unhook" type="button" data-unhook hidden>Unhook the chain</button>
+        <noscript><p>The previous site needs JavaScript switched on.</p></noscript>
+      </footer>
+
+      <p class="hp-sr" role="status" data-live></p>
+    </div>
+
+    <a class="cl-back" href="%PUBLIC_URL%/">
+      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M14.5 8h-12M7.25 3.25 2.5 8l4.75 4.75" fill="none" stroke="currentColor" stroke-width="1.75" /></svg>
+      Back to the front page
+    </a>
+
     <div id="root"></div>
+    <script src="%PUBLIC_URL%/holding/holding.js" defer></script>
   </body>
 </html>

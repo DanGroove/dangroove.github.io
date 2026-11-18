@@ -1,0 +1,635 @@
+/*
+  "Under construction" page.
+
+  Everything here is scoped to the holding page (.hp) or to pages that are not
+  the previous React site, which only loads on /?classic and keeps its own styles.
+
+  Colour: Concrete, Graphite, Red, Steel, Slate. Ink-first values on dark screens.
+  Type: Outfit, self-hosted (SIL OFL 1.1, see fonts/OFL.txt).
+*/
+
+@font-face {
+  font-family: "Outfit";
+  src: url("fonts/outfit-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- Tokens ---------- */
+
+html:not(.is-classic) {
+  --bg: #e9ebed; /* Concrete */
+  --ink: #1b1e21; /* Graphite */
+  --red: #c0262e;
+  --red-ink: #c0262e; /* red when it is text */
+  --on-red: #e9ebed; /* Concrete */
+  --line: #c9ced3; /* Steel */
+  --muted: #5f666d; /* Slate */
+  --pad: clamp(1.25rem, 4.4vw, 4rem);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  color-scheme: light;
+  background: var(--bg);
+  scrollbar-color: var(--muted) var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not(.is-classic):not([data-theme="light"]) {
+    --bg: #151314; /* Ink */
+    --ink: #f7f6f3; /* Paper */
+    --red-ink: #f0484f;
+    --on-red: #f7f6f3;
+    --line: #2e2b29;
+    --muted: #a1a09e; /* Paper at 62% on Ink */
+    color-scheme: dark;
+  }
+}
+
+html:not(.is-classic)[data-theme="dark"] {
+  --bg: #151314;
+  --ink: #f7f6f3;
+  --red-ink: #f0484f;
+  --on-red: #f7f6f3;
+  --line: #2e2b29;
+  --muted: #a1a09e;
+  color-scheme: dark;
+}
+
+/* ---------- Page ---------- */
+
+html:not(.is-classic) body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Outfit", "Century Gothic", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html.is-classic .hp,
+html:not(.is-classic) #root,
+html:not(.is-classic) .cl-back {
+  display: none;
+}
+
+.hp {
+  position: relative;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow: hidden;
+  overflow: clip;
+  background: var(--bg);
+  color: var(--ink);
+  transition: background-color 0.35s ease, color 0.35s ease;
+}
+
+.hp *,
+.hp *::before,
+.hp *::after {
+  box-sizing: border-box;
+}
+
+.hp ::selection {
+  background: var(--red);
+  color: var(--on-red);
+}
+
+.hp a,
+.hp button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hp :focus-visible {
+  outline: 2px solid var(--red-ink);
+  outline-offset: 4px;
+}
+
+.hp [hidden] {
+  display: none !important;
+}
+
+.hp-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Top bar: one-line lockup ---------- */
+
+.hp-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: clamp(1rem, 3vh, 1.75rem) var(--pad) 0;
+}
+
+.hp-lockup {
+  display: flex;
+  align-items: center;
+  gap: 0.68rem;
+  margin: 0;
+}
+
+.hp-mark {
+  flex: none;
+  width: 3.4rem;
+  height: auto;
+}
+
+.hp-mark__g {
+  fill: var(--ink);
+  transition: fill 0.35s ease;
+}
+
+.hp-mark__d {
+  fill: var(--red);
+}
+
+.hp-name {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.hp-theme {
+  appearance: none;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: 0;
+  padding: 0;
+  border: 1.5px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.hp-theme svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  transition: transform 0.5s var(--ease-out);
+}
+
+.hp-theme[aria-pressed="true"] svg {
+  transform: rotate(180deg);
+}
+
+.hp-theme:hover {
+  border-color: var(--ink);
+}
+
+.hp-theme:active {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+/* ---------- Message ---------- */
+
+.hp-main {
+  --links: clamp(19rem, 26vw, 24rem);
+  --gap: clamp(2rem, 4vw, 4rem);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--links);
+  grid-template-rows: auto 1fr;
+  column-gap: var(--gap);
+  min-width: 0;
+  min-height: 0;
+  padding: clamp(1.5rem, 6vh, 4.5rem) var(--pad) 0;
+  font-size: clamp(1.0625rem, 0.96rem + 0.42vw, 1.3125rem);
+}
+
+/* The headline is sized from this column so it always sits on one line beside the links. */
+.hp-say {
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.hp-title {
+  margin: 0;
+  font-size: clamp(2.5rem, min(calc((100vw - 2 * var(--pad) - var(--gap) - var(--links)) / 8.95), 17vh), 6rem);
+  font-size: clamp(2.5rem, min(calc(100cqw / 8.95), 17vh), 6rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+  white-space: nowrap;
+}
+
+/* The opening lines are set close so they read as one thought. */
+.hp-lede {
+  max-width: 34rem;
+  margin: clamp(1rem, 3.2vh, 1.75rem) 0 0;
+  line-height: 1.25;
+  text-wrap: pretty;
+}
+
+/* Where the measure has room for it, the invitation at the end takes a line of its own,
+   a little apart from the lines above it. */
+@container (min-width: 20.5em) {
+  .hp-lede span {
+    display: block;
+    margin-top: 0.25em;
+  }
+}
+
+.hp-links {
+  align-self: start;
+  margin: 0.4em 0 0;
+  padding: 0;
+  list-style: none;
+  container-type: inline-size;
+}
+
+.hp-links li + li {
+  border-top: 1px solid var(--line);
+}
+
+.hp-links a {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 1rem;
+  padding: 0.62rem 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.hp-links li:first-child a {
+  padding-top: 0;
+}
+
+.hp-links li:last-child a {
+  padding-bottom: 0;
+}
+
+.hp-links__what {
+  font-weight: 600;
+  transition: color 0.15s ease;
+}
+
+.hp-links__where {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.9em;
+  /* Fitted to the list's width, so the longest address is never cut short. */
+  font-size: min(0.9em, calc((100cqw - 3.4em - 2rem) / 12.6));
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hp-links svg {
+  align-self: center;
+  width: 0.8em;
+  height: 0.8em;
+  transition: transform 0.3s var(--ease-out), color 0.15s ease;
+}
+
+.hp-links a:hover .hp-links__what,
+.hp-links a:hover svg {
+  color: var(--red-ink);
+}
+
+.hp-links a:hover svg {
+  transform: translate(0.14em, -0.14em);
+}
+
+.hp-links a:hover .is-forward {
+  transform: translateX(0.2em);
+}
+
+/* ---------- The chain ---------- */
+
+.hp-stage {
+  position: relative;
+  z-index: 2;
+  grid-column: 1 / -1;
+  min-height: clamp(13rem, min(30vw, 38vh), 24rem);
+  margin: clamp(0.75rem, 2.6vh, 1.75rem) calc(-1 * var(--pad)) 0;
+}
+
+.hp-chain {
+  position: absolute;
+  z-index: 1; /* in front of the message it uncovers */
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  fill: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.hp-ring.is-a {
+  stroke: var(--red);
+}
+
+.hp-ring.is-b {
+  stroke: var(--ink);
+  transition: stroke 0.35s ease;
+}
+
+/* The gap wherever one ring passes over another: the page colour, a little wider than the ring. */
+.hp-gap {
+  stroke: var(--bg);
+  transition: stroke 0.35s ease;
+}
+
+/* The still chain, for when the script cannot run. The drawing is 2.19 ring diameters
+   tall, so its height sets the links to the size the live chain gives them. */
+.hp-still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  height: min(100%, calc(clamp(120px, 14vw, 210px) * 2.19));
+  margin: auto 0;
+  object-fit: cover;
+}
+
+.hp-chain--live,
+.hp-chain--live .hp-ring {
+  touch-action: none;
+}
+
+/* Where the page itself scrolls, a swipe that starts on the chain still scrolls it. */
+.hp-chain--live.is-pannable,
+.hp-chain--live.is-pannable .hp-ring {
+  touch-action: pan-y;
+}
+
+/* Only a link that can be seen can be taken hold of: not one still waiting its turn on the
+   way in, and not the chain once it has been put away. */
+.hp-chain--live .hp-ring {
+  pointer-events: visibleStroke;
+  cursor: grab;
+}
+
+.hp-chain--live.is-held .hp-ring {
+  cursor: grabbing;
+}
+
+.hp-chain--live.is-away {
+  visibility: hidden;
+}
+
+/* The one authored moment: the chain goes up a link at a time. A link is drawn twice
+   where it passes over the next one, and that weave only holds for whole links at full
+   size and full strength. So a link is simply there when its turn comes, and the movement
+   is the weight it lands with (see the script). */
+.hp-chain--live.is-in .hp-link {
+  animation: hp-link 1ms step-end backwards;
+  animation-delay: calc(var(--i) * 52ms);
+}
+
+@keyframes hp-link {
+  from {
+    visibility: hidden;
+  }
+}
+
+/* ---------- Unhooked ---------- */
+
+.hp-open {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: clamp(1rem, 2.4vh, 1.5rem);
+  padding: 0 var(--pad);
+  animation: hp-rise 0.7s var(--ease-out) 0.28s backwards;
+}
+
+.hp-open__say {
+  margin: 0;
+  font-size: clamp(2.25rem, 5.4vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+}
+
+.hp-open__go {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 3rem;
+  padding: 0.7rem 1.3rem 0.7rem 1.5rem;
+  border-radius: 999px;
+  background: var(--red);
+  color: var(--on-red);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.hp-open__go svg {
+  width: 1em;
+  height: 1em;
+  transition: transform 0.3s var(--ease-out);
+}
+
+.hp-open__go:hover {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.hp-open__go:hover svg {
+  transform: translateX(0.22em);
+}
+
+@keyframes hp-rise {
+  from {
+    opacity: 0;
+    transform: translateY(0.9rem);
+  }
+}
+
+/* ---------- Foot ---------- */
+
+.hp-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  min-height: 2.75rem;
+  margin: 0.75rem var(--pad) clamp(1rem, 3vh, 1.5rem);
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.hp-foot p {
+  margin: 0;
+}
+
+.hp-unhook {
+  appearance: none;
+  position: relative;
+  z-index: 3;
+  min-height: 2.75rem;
+  margin: 0 0 0 auto;
+  padding: 0.5rem 1.15rem;
+  border: 1.5px solid currentColor;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.hp-unhook:hover {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.hp-unhook:active {
+  border-color: var(--red);
+  background: var(--red);
+  color: var(--on-red);
+}
+
+/* ---------- Smaller screens ---------- */
+
+@media (max-width: 56rem) {
+  .hp-main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+  }
+
+  .hp-title {
+    font-size: clamp(2.5rem, min(calc((100vw - 2 * var(--pad)) / 8.95), 17vh), 6rem);
+    font-size: clamp(2.5rem, min(calc(100cqw / 8.95), 17vh), 6rem);
+  }
+
+  .hp-links {
+    max-width: 34rem;
+    margin-top: 1.5rem;
+  }
+}
+
+@media (max-width: 40rem) {
+  .hp-title {
+    font-size: clamp(2.5rem, min(calc((100vw - 2 * var(--pad)) / 5.98), 13vh), 6rem);
+    font-size: clamp(2.5rem, min(calc(100cqw / 5.98), 13vh), 6rem);
+  }
+
+  /* Two lines on a narrow screen. */
+  .hp-title span {
+    display: block;
+  }
+
+  .hp-mark {
+    width: 3rem;
+  }
+
+  .hp-name {
+    font-size: 1.125rem;
+  }
+}
+
+/* Phones: the four links sit two by two so the chain stays on the first screen. */
+@media (max-width: 30rem) {
+  .hp-links {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1.25rem;
+    margin-top: 1.25rem;
+  }
+
+  .hp-links li + li {
+    border-top: 0;
+  }
+
+  .hp-links li:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+
+  .hp-links a,
+  .hp-links li:first-child a,
+  .hp-links li:last-child a {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    min-height: 3rem;
+    padding: 0.5rem 0;
+  }
+
+  .hp-links__where {
+    display: none;
+  }
+
+  .hp-foot {
+    font-size: 0.875rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hp,
+  .hp *,
+  .hp *::before,
+  .hp *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- On the previous site: a way back ---------- */
+
+html.is-classic .cl-back {
+  position: fixed;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 1.05rem 0.5rem 0.85rem;
+  border: 1px solid rgba(233, 235, 237, 0.2);
+  border-radius: 999px;
+  background: #1b1e21;
+  box-shadow: 0 0.6rem 1.5rem -0.6rem rgba(0, 0, 0, 0.55);
+  color: #e9ebed;
+  font: 600 0.875rem/1 "Outfit", "Century Gothic", "Segoe UI", system-ui, sans-serif;
+  text-decoration: none;
+}
+
+html.is-classic .cl-back svg {
+  width: 1em;
+  height: 1em;
+}
+
+html.is-classic .cl-back:hover {
+  background: #c0262e;
+}
+
+html.is-classic .cl-back:focus-visible {
+  outline: 2px solid #e9ebed;
+  outline-offset: 3px;
+}
