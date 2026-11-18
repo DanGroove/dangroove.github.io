@@ -457,10 +457,11 @@
   // Take the chain off one hook. The first to go opens the way through.
   function unhook(side) {
     if (carry) {
-      // Still on its way back up: it simply drops from the hook it is on.
+      // Still on its way back up: the hand lets go, and the chain drops from a hook it is on.
       carry = null;
       grab = null;
-      side = 'a';
+      queue = [];
+      side = hookA ? 'a' : 'b';
     }
     if (side === 'a') hookA = false;
     else hookB = false;
@@ -480,51 +481,99 @@
     wake();
   }
 
+  // Put the same chain back up, from wherever it ended up: an unseen hand picks up each
+  // loose end in turn and sets it back on its hook, and the chain follows and settles.
+  let queue = [];
   function hang() {
     isOpen = false;
-    hookA = hookB = true;
     letGo();
     if (unhookBtn) unhookBtn.textContent = 'Unhook the chain';
     if (openEl) openEl.hidden = true;
     say('The chain is back up.');
-    running = false;
     svg.classList.remove('is-away');
-    layout();
-    build();
-    pose();
     if (reduce.matches) {
+      hookA = hookB = true;
+      running = false;
+      pose();
       render();
       return;
     }
-    // Hang it back the way a person would: the chain drops from the near hook, then the
-    // loose end is lifted across the page and set on the far hook, and the chain swings
-    // into place by itself.
-    hookB = false;
+    // Wherever it came to rest, it starts from still.
     for (let i = 0; i <= n; i++) {
-      x[i] = px[i] = ax + i * 0.02 * s;
-      y[i] = py[i] = ay + i * s * 0.999;
+      px[i] = x[i];
+      py[i] = y[i];
     }
+    queue = [];
+    if (!hookA) queue.push('a');
+    if (!hookB) queue.push('b');
+    fetchEnd();
     render();
-    const now = window.performance.now();
-    carry = { t0: now + 60, x0: x[n], y0: y[n], cx: 0.5 * W, cy: by + 1.1 * D };
-    grab = { i: n, tx: x[n], ty: y[n], vx: 0, vy: 0, catching: 0, ghost: true };
     wake();
   }
 
-  // Where the unseen hand has the loose end, this moment, on its way to the far hook.
-  const CARRY = 1400; // ms from the chain dropping to it being back on the far hook
-  function lift() {
-    const t = Math.min(1, Math.max(0, (window.performance.now() - carry.t0) / CARRY));
-    const e = 1 - Math.pow(1 - t, 3); // quick to lift, slow to set down
-    const u = 1 - e;
-    grab.tx = u * u * carry.x0 + 2 * u * e * carry.cx + e * e * bx;
-    grab.ty = u * u * carry.y0 + 2 * u * e * carry.cy + e * e * by;
-    if (t >= 1 && Math.hypot(x[n] - bx, y[n] - by) < 0.5) {
+  function fetchEnd() {
+    const side = queue.shift();
+    if (!side) {
       carry = null;
       grab = null;
-      hookB = true;
-      lean[2] = lean[3] = 0;
       settle = SETTLE;
+      return;
+    }
+    const i = side === 'a' ? 0 : n;
+    const hx = side === 'a' ? ax : bx;
+    const hy = side === 'a' ? ay : by;
+    const far = Math.hypot(hx - x[i], hy - y[i]);
+    carry = {
+      side,
+      i,
+      hx,
+      hy,
+      t0: window.performance.now() + 40,
+      dur: clamp(500 + far * 0.7, 800, 1600),
+      x0: x[i],
+      y0: y[i],
+      // Brought round from below, the way you would lift a chain up to a hook.
+      cx: (x[i] + hx) / 2,
+      cy: (y[i] + hy) / 2 + D,
+    };
+    grab = { i, tx: x[i], ty: y[i], vx: 0, vy: 0, catching: 0, ghost: true };
+  }
+
+  // Where the unseen hand has the loose end, this moment, on its way to its hook.
+  function lift() {
+    const t = Math.min(1, Math.max(0, (window.performance.now() - carry.t0) / carry.dur));
+    const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const u = 1 - e;
+    grab.tx = u * u * carry.x0 + 2 * u * e * carry.cx + e * e * carry.hx;
+    grab.ty = u * u * carry.y0 + 2 * u * e * carry.cy + e * e * carry.hy;
+    const i = carry.i;
+    if (t >= 1 && Math.hypot(x[i] - carry.hx, y[i] - carry.hy) < 0.5) {
+      if (carry.side === 'a') {
+        hookA = true;
+        lean[0] = lean[1] = 0;
+      } else {
+        hookB = true;
+        lean[2] = lean[3] = 0;
+      }
+      fetchEnd();
+    }
+  }
+
+  // After a resize while the chain is down, it hangs from whatever still holds it.
+  function dangle() {
+    for (let i = 0; i <= n; i++) {
+      if (hookB && !hookA) {
+        x[i] = bx;
+        y[i] = by + (n - i) * s;
+      } else if (hookA && !hookB) {
+        x[i] = ax;
+        y[i] = ay + i * s;
+      } else {
+        x[i] = ax + i * s * 0.97;
+        y[i] = H + 2 * D;
+      }
+      px[i] = x[i];
+      py[i] = y[i];
     }
   }
 
@@ -795,6 +844,7 @@
     pose();
     svg.classList.remove('is-in');
     if (isOpen) {
+      dangle();
       svg.classList.add('is-away');
       return;
     }
