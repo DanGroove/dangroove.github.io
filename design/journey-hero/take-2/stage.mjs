@@ -3,6 +3,7 @@
 // This file holds every scene as a list of pieces, held still.
 import { HOME } from '../../../public/journey/hero/engine.mjs';
 import { box, cyl, turn } from './kit.mjs';
+import { CLOSE } from './art.mjs';
 
 // the screen: its left and bottom edges, its size, the z of its middle, its thickness
 export const SCREEN = { l: -2.6, b: 0.6, w: 5.6, h: 3.6, z: -1.8, t: 0.1 };
@@ -18,6 +19,9 @@ export function on(tone, l, b, w, h, { lift = 0.02, t = 0.03, art, cut, round, m
 const icon = (art, l, b, w, h, tone = 'night', lift = 0.051) => on(tone, l, b, w, h, { lift, t: 0.004, art });
 // a disc on the screen, by its middle
 const dot = (tone, cx, cy, r, { lift = 0.05, t = 0.02 } = {}) => cyl(tone, [SCREEN.l + cx * U, SCREEN.b + cy * U, ZF + (lift + t / 2) * U], 'z', r * U, t * U);
+// the outline of a selection: four thin red bars around a box on the screen
+const outline = (l, b, w, h, { line = 0.016, lift = 0.085 } = {}) => [[l, b, w, line], [l, b + h - line, w, line], [l, b, line, h], [l + w - line, b, line, h]].map(([x, y, bw, bh]) => on('red', x, y, bw, bh, { lift, t: 0.006 }));
+const handle = (x, y) => on('red', x - 0.03, y - 0.03, 0.06, 0.06, { lift: 0.09, t: 0.01, art: 'anchor' });   // one of a selection's points, by its middle
 // The point of the floor that shows at a given place in the picture (x to the right, y up, from where the world's origin shows).
 export function floorAt(x, y) {
   const { r, u } = HOME, d = r[0] * u[2] - r[2] * u[0];
@@ -31,16 +35,6 @@ function flat(tone, x, z, w, d, t, art, y = 0) {
   const at = [x + w / 2, y + t / 2, z + d];
   return turn({ ...box(tone, [at[0], at[1] + d / 2, at[2]], [w, d, t]), art }, at, [1, 0, 0], -90);
 }
-// A few leaves in a pile: the top one carries the picture and the ones under it show at the edge, which is what makes a booklet
-// read as a booklet. side: the way the pile fans, +1 to the right or -1 to the left.
-function leaves(x, z, w, d, art, { n = 3, side = 1, t = 0.022, step = 0.03 } = {}) {
-  return Array.from({ length: n }, (_, i) => {
-    const k = (n - 1 - i) * step;
-    return flat('paper', side > 0 ? x : x - k, z, w + k, d + k * 0.5, t, i === n - 1 ? art : undefined, i * t);
-  });
-}
-const shut = (x, z, w, d, cover, n = 4) => leaves(x, z, w, d, cover, { n });
-const open = (x, z, w, d, left, right, n = 3) => [...leaves(x, z, w, d, left, { n, side: -1 }), ...leaves(x + w, z, w, d, right, { n })];
 // a device lying on its back: a dark slab with rounded corners and a picture for its screen
 function device(x, z, w, d, art, { rim = 0.05, round = 0.16, t = 0.08 } = {}) {
   const at = [x + w / 2, t / 2, z + d];
@@ -48,7 +42,7 @@ function device(x, z, w, d, art, { rim = 0.05, round = 0.16, t = 0.08 } = {}) {
 }
 
 // ---- what every app shares: the screen, its bar with the app's logo and name, the Export button and the cursor
-const APPS = { ai: ['appAi', 'nameAi'], id: ['appId', 'nameId'], ps: ['appPs', 'namePs'] };
+const APPS = { ai: ['appAi', 'nameAi'], id: ['appId', 'nameId'], ps: ['appPs', 'namePs'], pr: ['appPr', 'namePr'], ae: ['appAe', 'nameAe'], fig: ['appFig', 'nameFig'] };
 function shell(app, cursorAt = [W - 0.42, H - 0.26]) {
   const P = [];
   P.push(box('dark', [SCREEN.l + SCREEN.w / 2, SCREEN.b + SCREEN.h / 2, SCREEN.z], [SCREEN.w, SCREEN.h, SCREEN.t]));
@@ -76,45 +70,42 @@ function rail(P, tools, lit) {
 const PANEL = W - 0.93;                                  // the left edge of the panel on the right
 const CANVAS = { l: 0.56, w: PANEL - 0.12 - 0.56, b: 0.1, h: TOP - 0.1 };
 
-// ---- 01 Graphic design, as three projects in three apps
-
-// Illustrator: the mark and its guide, which are one piece
-export function illustrator() {
-  const P = shell('ai');
-  rail(P, ['tArrow', 'tPen', 'tType', 'tRect', 'tCircle', 'tDrop'], 1);
-  // swatches, type and layers down the right
-  P.push(on('night', PANEL, 0.1, 0.85, TOP - 0.1));
-  ['red', 'paper', 'grey', 'ink', 'dark', 'paper'].forEach((tone, i) => P.push(on(tone, PANEL + 0.09 + (i % 3) * 0.235, TOP - 0.3 - Math.floor(i / 3) * 0.235, 0.2, 0.2, { lift: 0.05, t: 0.02 })));
-  P.push(icon('aa', PANEL + 0.09, TOP - 1.06, 0.5, 0.34));
-  [0.67, 0.5, 0.6, 0.42].forEach((w, i) => P.push(on(i === 0 ? 'grey' : 'dark', PANEL + 0.09, TOP - 1.4 - i * 0.2, w, 0.1, { lift: 0.05, t: 0.02 })));
-  // the canvas: the guide's spread, with the path of the D selected
-  const ph = 2.0, pw = ph * 352 / 496, x = CANVAS.l + (CANVAS.w - 2 * pw) / 2, y = CANVAS.b + (CANVAS.h - ph) / 2;
-  P.push(on('paper', x, y, pw, ph, { lift: 0.06, t: 0.02, art: 'guideL' }), on('paper', x + pw, y, pw, ph, { lift: 0.06, t: 0.02, art: 'guideR' }));
-  const k = 230 / 1080, at = (X, Y) => [x + (61 + X * k) / 352 * pw, y + ph - (83 + Y * k) / 496 * ph];   // a point of the mark, on the page
-  [[0, 0], [0, 797], [282, 797], [681, 398], [280, 0]].forEach(([X, Y]) => { const [ax, ay] = at(X, Y); P.push(on('red', ax - 0.035, ay - 0.035, 0.07, 0.07, { lift: 0.085, t: 0.01, art: 'anchor' })); });
-  const [hx, hy] = at(681, 398);
-  P.push(on('red', hx - 0.009, hy - 0.3, 0.018, 0.6, { lift: 0.085, t: 0.006 }), dot('red', hx, hy - 0.3, 0.035, { lift: 0.085, t: 0.012 }), dot('red', hx, hy + 0.3, 0.035, { lift: 0.085, t: 0.012 }));
-
-  designMat(P, 1);
-  return P;
-}
+// ---- 01 Graphic design, as three projects in three apps, in the order the work is made: Photoshop, Illustrator, InDesign
 
 // The mat for graphic design. Everything on it is DEEP deep, in two rows, and it is split in two zones whose edges line up in both rows.
-// It fills in the order the work is made: the guide (back right), then the photograph beside it, then the booklet (shut beside
-// the photograph, open in front of them), the phone and the tablet. upTo: how many of the three apps have exported so far.
-const DEEP = 1.3, LEAF = DEEP * 440 / 340, GUIDE = DEEP * 352 / 496;      // the booklet's page and the guide's page, each DEEP tall
-function designMat(P, upTo) {
+// It fills in the order the work is made: the photograph (back right), the map beside it, and in front of them the booklet,
+// the phone and the tablet. upTo: how many of the three apps have exported so far. at: where the booklet's pages are (see booklet).
+const DEEP = 1.3, LEAF = DEEP * 440 / 340, PHONE = 0.68, TABLET = 0.915, SIDE = PHONE + MAT.gap + TABLET;   // the booklet's page; the narrow zone and what shares it
+// The booklet's openings that the hero turns through: what shows on the left and on the right at each.
+const SPREADS = [['kOfferL', 'kOfferR'], ['kAmL', 'kAmR'], ['kGalL', 'kGalR']];
+// One booklet, lying open, whose leaves turn. x, z: its back left corner. at: the opening it shows, and how far its right leaf is on
+// the way to the next one: 0 is The Offering lying flat, 0.5 has that leaf standing on the spine, 1 is Amenities lying flat.
+function booklet(P, x, z, at) {
+  const i = Math.min(Math.floor(at), SPREADS.length - 1), deg = (at - i) * 180, [left, right] = SPREADS[i], next = SPREADS[i + 1];
+  const t = 0.03, leaf = 0.012, spine = [x + LEAF, t, 0];
+  P.push(flat('paper', x, z, LEAF, DEEP, t, left));
+  if (!deg || !next) return P.push(flat('paper', x + LEAF, z, LEAF, DEEP, t, right));
+  P.push(flat('paper', x + LEAF, z, LEAF, DEEP, t, next[1]));                                                  // what the turning leaf uncovers
+  P.push(turn(flat('paper', x + LEAF, z, LEAF, DEEP, leaf, right, t), spine, [0, 0, 1], deg));                 // the leaf's front,
+  P.push(turn(flat('paper', x, z, LEAF, DEEP, leaf, next[0], t), spine, [0, 0, 1], deg - 180));                // and its back, which is the next opening's left page
+}
+// the room the whole block takes on the floor, with a little headroom for a leaf that is turning, for the tools that crop a still to it
+export const BLOCK = { x0: MAT.x, x1: MAT.x + 2 * LEAF + MAT.gap + SIDE, z0: MAT.z, z1: MAT.z + 2 * DEEP + MAT.gap, up: 0.3 };
+// a print with a white edge. win: the part of the picture it shows.
+function print(P, x, z, w, art, win, edge = 0.06) {
+  P.push(flat('paper', x, z, w, DEEP, 0.02), { ...flat('ink', x + edge, z + edge, w - 2 * edge, DEEP - 2 * edge, 0.004, art, 0.02), window: win });
+}
+function designMat(P, upTo, at = 0.84) {
   const { x, z, gap: g } = MAT, z2 = z + DEEP + g, x2 = x + 2 * LEAF + g;
-  P.push(...open(x2, z, GUIDE, DEEP, 'guideL', 'guideR', 2));                                                // from Illustrator: the guide
+  print(P, x2, z, SIDE, 'kPhoto');                                                                             // from Photoshop: the photograph
   if (upTo < 2) return;
-  const px = x + LEAF + g, pw = LEAF - g, edge = 0.06;                                                        // from Photoshop: the photograph, as a print with a white edge
-  P.push(flat('paper', px, z, pw, DEEP, 0.02), flat('ink', px + edge, z + edge, pw - 2 * edge, DEEP - 2 * edge, 0.004, 'kPhoto', 0.02));
+  print(P, x, z, 2 * LEAF, 'kMap', [0, 0.03, 1, 0.97]);                                                        // from Illustrator: the map
   if (upTo < 3) return;
-  P.push(...shut(x, z, LEAF, DEEP, 'kCover', 6), ...open(x, z2, LEAF, DEEP, 'kOfferL', 'kOfferR', 5));        // from InDesign: the booklet, shut and open,
-  P.push(...device(x2, z2, 0.68, DEEP, 'post', { rim: 0.045 }), ...device(x2 + 0.68 + g, z2, 2 * GUIDE - 0.68 - g, DEEP, 'mail', { rim: 0.055, round: 0.1 }));   // the post on a phone, the e-blast on a tablet
+  booklet(P, x, z2, at);                                                                                       // from InDesign: the booklet (by default, as a leaf lands on Amenities),
+  P.push(...device(x2, z2, PHONE, DEEP, 'post', { rim: 0.045 }), ...device(x2 + PHONE + g, z2, TABLET, DEEP, 'mail', { rim: 0.055, round: 0.1 }));   // the post on a phone and the e-blast on a tablet
 }
 
-// Photoshop: the building's photograph, half way through its edit. It comes second, because the pieces InDesign builds all use it.
+// Photoshop comes first: the building's photograph, half way through its edit. Every later piece uses it.
 export function photoshop() {
   const P = shell('ps');
   rail(P, ['tMove', 'tMarquee', 'tBrush', 'tType', 'tRect', 'tDrop'], 2);
@@ -131,42 +122,80 @@ export function photoshop() {
     P.push(icon('eye', PANEL + 0.08, ly + 0.03, 0.14, 0.14, i === 0 ? 'dark' : 'night', i === 0 ? 0.059 : 0.051));
     P.push(on(i === 0 ? 'paper' : 'ink', PANEL + 0.27, ly, 0.28, 0.2, { lift: 0.07, t: 0.01, art }), on(i === 0 ? 'grey' : 'dark', PANEL + 0.6, ly + 0.07, 0.17, 0.05, { lift: 0.07, t: 0.008 }));
   });
-  // the canvas: the picture as it was shot on the left of the split, and graded on the right
-  const ih = 2.2, iw = ih * 396 / 360, x = CANVAS.l + (CANVAS.w - iw) / 2, y = CANVAS.b + (CANVAS.h - ih) / 2, cut = 0.42;
+  // the canvas: the picture as it was shot on the left of the split, and graded on the right. The split runs down the building's corner.
+  const ih = 2.05, iw = ih * 526 / 360, x = CANVAS.l + (CANVAS.w - iw) / 2, y = CANVAS.b + (CANVAS.h - ih) / 2, cut = 0.44;
   P.push({ ...on('ink', x, y, iw * cut, ih, { lift: 0.06, t: 0.02, art: 'kPhotoB' }), window: [0, 0, cut, 1] }, { ...on('ink', x + iw * cut, y, iw * (1 - cut), ih, { lift: 0.06, t: 0.02, art: 'kPhoto' }), window: [cut, 0, 1, 1] });
   P.push(on('paper', x + iw * cut - 0.012, y - 0.05, 0.024, ih + 0.1, { lift: 0.085, t: 0.01 }), dot('paper', x + iw * cut, y + ih / 2, 0.09, { lift: 0.085, t: 0.02 }), dot('red', x + iw * cut, y + ih / 2, 0.045, { lift: 0.105, t: 0.01 }));
+  designMat(P, 1);
+  return P;
+}
+
+// Illustrator comes second: the map of King Street on the booklet's Amenities spread, which is line work
+const FLYER = { gold: ['#9B7C29', '#86691F', '#5E4915'], lite: ['#CEAB48', '#B3933B', '#836A28'], coal: ['#282928', '#1F201F', '#161716'], black: ['#0A0F16', '#080C12', '#05080C'] };   // the flyer's colours, lit, on top and in shade
+export function illustrator() {
+  const P = shell('ai');
+  rail(P, ['tArrow', 'tPen', 'tType', 'tRect', 'tCircle', 'tDrop'], 1);
+  // down the right: swatches in the flyer's colours, type, layers
+  P.push(on('night', PANEL, 0.1, 0.85, TOP - 0.1));
+  [FLYER.gold, FLYER.lite, 'paper', FLYER.coal, FLYER.black, 'grey'].forEach((tone, i) => {
+    const pc = on(typeof tone === 'string' ? tone : 'paper', PANEL + 0.09 + (i % 3) * 0.235, TOP - 0.3 - Math.floor(i / 3) * 0.235, 0.2, 0.2, { lift: 0.05, t: 0.02 });
+    P.push(typeof tone === 'string' ? pc : { ...pc, tones: tone });
+  });
+  P.push(icon('aa', PANEL + 0.09, TOP - 1.06, 0.5, 0.34));
+  [0.67, 0.5, 0.6, 0.42].forEach((w, i) => P.push(on(i === 0 ? 'grey' : 'dark', PANEL + 0.09, TOP - 1.4 - i * 0.2, w, 0.1, { lift: 0.05, t: 0.02 })));
+  // the canvas: the whole artboard above, and under it a closer view of the part that the red frame marks
+  const [cx, cy, cw, ch] = CLOSE, pw = 3.2, k = pw / 2200, ph = 850 * k, low = pw * ch / cw, gap = 0.1;
+  const x = CANVAS.l + (CANVAS.w - pw) / 2, y2 = CANVAS.b + (CANVAS.h - ph - low - gap) / 2, y = y2 + low + gap;
+  P.push(on('ink', x, y, pw, ph, { lift: 0.06, t: 0.02, art: 'kMap' }), on('ink', x, y2, pw, low, { lift: 0.06, t: 0.02, art: 'kMapClose' }));
+  P.push(...outline(x + cx * k, y + ph - (cy + ch) * k, cw * k, ch * k));
+  // close up, the ring around the building's logo is selected: a path, with its points and two of their handles
+  const z = pw / cw, at = (X, Y) => [x + (X - cx) * z, y2 + low - (Y - cy) * z];
+  [[1309, 457], [1345, 493], [1345, 567], [1309, 603], [1273, 567], [1273, 493]].forEach(([X, Y]) => P.push(handle(...at(X, Y))));
+  [457, 603].forEach(Y => {
+    const [hx, hy] = at(1309, Y), reach = 46 * z;
+    P.push(on('red', hx - reach, hy - 0.008, reach * 2, 0.016, { lift: 0.085, t: 0.006 }), dot('red', hx - reach, hy, 0.028, { lift: 0.085, t: 0.012 }), dot('red', hx + reach, hy, 0.028, { lift: 0.085, t: 0.012 }));
+  });
   designMat(P, 2);
   return P;
 }
 
-// InDesign: the booklet, and the LinkedIn post and the e-blast that follow it
-export function indesign() {
+// InDesign comes last: the booklet, and the LinkedIn post and the e-blast that follow it
+export function indesign({ at: pages } = {}) {
   const P = shell('id');
   rail(P, ['tArrow', 'tType', 'tFrame', 'tRect', 'tLine', 'tDrop'], 0);
-  // the pages panel: the cover, three spreads, the back, with the spread on the canvas lit
+  // the pages panel: the cover, four spreads, the back, with the spread on the canvas lit
   P.push(on('night', PANEL, 0.1, 0.85, TOP - 0.1));
   const tw = 0.36, th = tw * 340 / 440, mid = PANEL + 0.425;
-  [[null, 'kCover'], ['kOfferL', 'kOfferR'], ['kMapL', 'kMapR'], ['kGalL', 'kGalR'], ['kBack', null]].forEach(([l, r], i) => {
-    const y = TOP - 0.16 - (i + 1) * th - i * 0.12;
-    if (i === 1) P.push(on('red', mid - tw - 0.03, y - 0.03, tw * 2 + 0.06, th + 0.06, { lift: 0.05, t: 0.01 }));
+  [[null, 'kCover'], ['kOfferL', 'kOfferR'], ['kLocL', 'kLocR'], ['kAmL', 'kAmR'], ['kGalL', 'kGalR'], ['kBack', null]].forEach(([l, r], i) => {
+    const y = TOP - 0.13 - (i + 1) * th - i * 0.1;
+    if (i === 3) P.push(on('red', mid - tw - 0.03, y - 0.03, tw * 2 + 0.06, th + 0.06, { lift: 0.05, t: 0.01 }));
     if (l) P.push(on('ink', mid - tw, y, tw, th, { lift: 0.065, t: 0.008, art: l }));
     if (r) P.push(on('ink', mid, y, tw, th, { lift: 0.065, t: 0.008, art: r }));
   });
-  // the canvas: a spread of the booklet above, with a picture frame selected; under it the cover, the post and the e-blast
+  // the canvas: the Amenities spread above, with the map from Illustrator placed and selected; under it the cover, the post and the e-blast
   const gap = 0.12, low = 1.0, pw = 1.6, ph = pw * 340 / 440, x = CANVAS.l + (CANVAS.w - 2 * pw) / 2, y2 = CANVAS.b + (CANVAS.h - ph - low - gap) / 2, y = y2 + low + gap;
-  P.push(on('ink', x, y, pw, ph, { lift: 0.06, t: 0.02, art: 'kOfferL' }), on('ink', x + pw, y, pw, ph, { lift: 0.06, t: 0.02, art: 'kOfferR' }));
+  P.push(on('ink', x, y, pw, ph, { lift: 0.06, t: 0.02, art: 'kAmL' }), on('ink', x + pw, y, pw, ph, { lift: 0.06, t: 0.02, art: 'kAmR' }));
   const cw = low * 440 / 340, ew = 2 * pw - cw - low - 2 * gap;                                                // the cover's width, and what is left for the e-blast
   P.push(on('ink', x, y2, cw, low, { lift: 0.06, t: 0.02, art: 'kCover' }), on('ink', x + cw + gap, y2, low, low, { lift: 0.06, t: 0.02, art: 'kPost' }));
   P.push({ ...on('ink', x + cw + low + 2 * gap, y2, ew, low, { lift: 0.06, t: 0.02, art: 'eblast' }), window: [0, 0, 1, Math.min(1, low / ew * 320 / 472)] });
-  const at = (X, Y) => [x + X / 1100 * pw, y + ph - Y / 850 * ph];                                            // a point of the left page, in hundredths of an inch
-  [[659, 204], [853, 204], [1047, 204], [659, 527], [1047, 527], [659, 850], [853, 850], [1047, 850]].forEach(([X, Y]) => { const [ax, ay] = at(X, Y); P.push(on('red', ax - 0.03, ay - 0.03, 0.06, 0.06, { lift: 0.085, t: 0.01, art: 'anchor' })); });
-  designMat(P, 3);
+  const at = (X, Y) => [x + X / 1100 * pw, y + ph - Y / 850 * ph];                                            // a point of the spread, in hundredths of an inch
+  const [fl, ft] = at(34, 84), [fr, fb] = at(2056, 826);                                                       // the map's frame, which runs across the fold
+  P.push(...outline(fl, fb, fr - fl, ft - fb, { line: 0.012 }));
+  [[fl, ft], [(fl + fr) / 2, ft], [fr, ft], [fl, (ft + fb) / 2], [fr, (ft + fb) / 2], [fl, fb], [(fl + fr) / 2, fb], [fr, fb]].forEach(([ax, ay]) => P.push(handle(ax, ay)));
+  designMat(P, 3, pages);
   return P;
 }
 
-// ---- 02 Video: the editing app has cut a video (captions, a transition, an effect) and exported it to three screens
+// ---- The screens the other crafts export to. They lie in one row, as wide as the graphic design block: a tablet on its side, then two phones.
+const ROW = 1.8, SLIM = 0.88, WIDE = 2 * LEAF + SIDE - 2 * SLIM - MAT.gap;       // the row's depth, a phone's width, the tablet's width
+function screens(P, wide, tall, third) {
+  const { x, z, gap: g } = MAT;
+  P.push(...device(x, z, WIDE, ROW, wide, { rim: 0.075, round: 0.09 }), ...device(x + WIDE + g, z, SLIM, ROW, tall, { rim: 0.055 }), ...device(x + WIDE + SLIM + 2 * g, z, SLIM, ROW, third, { rim: 0.055 }));
+}
+
+// ---- 02 Video: Premiere Pro has cut a video (captions, a transition, an effect) and exported it wide, tall and square
 export function video() {
-  const P = shell(null);
+  const P = shell('pr');
   const top = TOP, mid = 1.3;                             // the panels' top edge, and where the timeline's share of the screen begins
   // the bin: clips to cut from
   P.push(on('night', 0.08, mid, 0.86, top - mid));
@@ -203,13 +232,9 @@ export function video() {
   const head = x0 + 2.05;
   P.push(on('red', head - 0.015, 0.13, 0.03, 0.95, { lift: 0.13, t: 0.01 }), on('red', head - 0.07, 1.01, 0.14, 0.1, { lift: 0.13, t: 0.02 }));
 
-  // exported: the same edit, wide, tall on a phone, and square for a feed
-  const g = MAT.gap, d = 1.5;
-  P.push(...device(MAT.x, MAT.z, 2.56, d, 'playerWide', { rim: 0.07, round: 0.1 }));
-  P.push(...device(MAT.x + 2.56 + g, MAT.z, 0.76, d, 'reel'));
-  P.push(...device(MAT.x + 3.32 + 2 * g, MAT.z, d, d, 'sqPost', { rim: 0.07, round: 0.1 }));
+  screens(P, 'playerWide', 'reel', 'feedSq');             // exported: the same edit wide, tall as a reel, and square in a feed
   return P;
 }
 
-export const SCENES = [illustrator, photoshop, indesign, video];
+export const SCENES = [photoshop, illustrator, indesign, video];
 export const CRAFT = [0, 0, 0, 1];                      // which of the four crafts each scene belongs to

@@ -1,7 +1,7 @@
 // The second take's stills on one sheet: each scene in the hero's own layout, on a desktop and on a phone with the browser's bars showing.
 // Needs Playwright with its Chromium, like the other review tools. Nothing here is published.
 //
-//   node design/journey-hero/take-2/tools/sheet.mjs <out.png> [scenes, as in 0,1,2]     (0 Illustrator, 1 Photoshop, 2 InDesign, 3 video)
+//   node design/journey-hero/take-2/tools/sheet.mjs <out.png> [scenes, as in 0,1,2]     (0 Photoshop, 1 Illustrator, 2 InDesign, 3 video)
 //
 // The stills page is made from the built page's own markup (public/journey/index.html), so the layout and the words are the real ones.
 // It is written to design/journey-hero/.scratch/take-2/hero.html, which git ignores.
@@ -13,11 +13,13 @@ import { serve, ROOT } from '../../tools/serve.mjs';
 const require = createRequire(import.meta.url);
 const out = process.argv[2] || 'take-2-sheet.png';
 const CAPTIONS = [
-  ['01 Graphic design, in Illustrator', 'The logo and its brand guide are built as one piece. On Export the guide lands in front of the screen, lying flat'],
-  ['01 Graphic design, in Photoshop', 'A photo edit of the building: as shot on the left of the split, graded on the right. The print lands beside the guide, and the next pieces all use it'],
-  ['01 Graphic design, in InDesign', 'The 1 King Street W booklet, drawn very simply and with no agent names, plus a LinkedIn post and an e-blast that follow it. They land as a booklet (shut and open), a phone and a tablet'],
-  ['02 Video', 'The editing app with captions, a transition and effects on the timeline, exported to wide, tall and square screens'],
+  ['01 Graphic design, in Photoshop', 'First, a photo edit of the building: as shot on the left of the split, graded on the right. On Export the print lands in front of the screen, lying flat, and every later piece uses it'],
+  ['01 Graphic design, in Illustrator', 'Second, the map of King Street from the booklet\'s amenities page, simplified. The whole artboard above, and a closer view of the part in the red frame below. The map lands beside the photograph'],
+  ['01 Graphic design, in InDesign', 'Last, the 1 King Street W booklet, drawn very simply and with no agent names, plus a LinkedIn post and an e-blast that follow it. One booklet lands, lying open, and turns its own pages: here a leaf is landing on the amenities page. The post lands in a phone and the e-blast in a tablet'],
+  ['02 Video', 'The editing app with captions, a transition and an effect on the timeline, exported to three screens: wide on a tablet, tall as a reel, and square in a feed'],
 ];
+// the moments of the booklet's page turn that the sheet shows under the InDesign still (see booklet in stage.mjs), and which scene that is
+const TURNS = [0, 0.45, 1, 1.45, 1.84], BOOKLET = 2;
 
 // the built page, with its player swapped for the stills script
 export function writeStillsPage() {
@@ -38,7 +40,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url
   const { chromium } = require('playwright');
   const scenes = (process.argv[3] || '0,1,2,3').split(',').map(Number);
   const address = writeStillsPage(), { server, url } = await serve(0), browser = await chromium.launch({ args: GL });
-  const shots = { desk: [], phone: [] }, errors = [];
+  const shots = { desk: [], phone: [] }, turns = [], errors = [];
   for (const [key, width, height, scale] of [['desk', 1440, 900, 1.5], ['phone', 390, 664, 2]]) {
     const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: scale });
     page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
@@ -50,19 +52,28 @@ if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url
       await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))));
       shots[key].push((await page.screenshot()).toString('base64'));
     }
+    if (key === 'desk' && scenes.includes(BOOKLET)) for (const at of TURNS) {       // the booklet turning its pages: the flat lay only
+      await page.goto(`${url}${address}?s=${BOOKLET}&at=${at}`);
+      await page.waitForFunction(() => window.__ready, null, { timeout: 20000 });
+      await page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))));
+      const [x0, y0, x1, y1] = await page.evaluate(() => window.__need.lay), pad = 16;
+      turns.push((await page.screenshot({ clip: { x: x0 - pad, y: y0 - pad, width: x1 - x0 + 2 * pad, height: y1 - y0 + 2 * pad } })).toString('base64'));
+    }
     await page.close();
   }
   const font = fs.readFileSync(path.join(ROOT, 'public/holding/fonts/outfit-latin-wght-normal.woff2')).toString('base64');
   const img = png => `<img src="data:image/png;base64,${png}">`;
-  const row = (s, i) => `<figure><div class="pair">${img(shots.desk[i])}${img(shots.phone[i])}</div><figcaption><b>${CAPTIONS[s][0]}</b>${CAPTIONS[s][1]}</figcaption></figure>`;
+  const strip = () => `<figure><div class="strip">${turns.map(img).join('')}</div><figcaption><b>The booklet turns its pages</b>It lands open on The Offering, a leaf turns over to the amenities page, and the next one to the gallery. Five moments of that, left to right</figcaption></figure>`;
+  const row = (s, i) => `<figure><div class="pair">${img(shots.desk[i])}${img(shots.phone[i])}</div><figcaption><b>${CAPTIONS[s][0]}</b>${CAPTIONS[s][1]}</figcaption></figure>${s === BOOKLET && turns.length ? strip() : ''}`;
   const html = `<!doctype html><meta charset="utf-8"><style>
 @font-face{font-family:Outfit;src:url(data:font/woff2;base64,${font}) format("woff2");font-weight:100 900}
 body{margin:0;background:#0d0c0c;color:#B9B4AE;font-family:Outfit;padding:48px;width:2964px;box-sizing:content-box}
 h1{font-weight:800;font-size:44px;letter-spacing:-.02em;color:#F7F6F3;margin:0 0 6px}p{font-size:20px;margin:0 0 36px;max-width:1900px;line-height:1.45}
 figure{margin:0 0 56px}figure:last-child{margin:0}.pair{display:flex;gap:24px;align-items:flex-start}
-img{display:block;outline:1px solid #2E2B29}img:first-child{width:2160px}img:last-child{width:780px}
+img{display:block;outline:1px solid #2E2B29}.pair img:first-child{width:2160px}.pair img:last-child{width:780px}
+.strip{display:flex;gap:18px}.strip img{width:calc((100% - 72px) / 5)}
 figcaption{font-weight:300;font-size:17px;letter-spacing:.12em;text-transform:uppercase;margin-top:14px}figcaption b{color:#F0484F;font-weight:300;margin-right:16px}
-</style><h1>Journey hero: graphic design in three apps</h1><p>Each app is drawn simply on the same floating screen, with its own logo. The app builds a piece of real work, the cursor clicks Export, and the piece lands in front of the screen, lying flat. The flat lay fills up app by app into one tidy block. These are stills of the moment after each export. Left: a 1440 wide desktop. Right: a phone with the browser's bars showing.</p>
+</style><h1>Journey hero: the stills so far</h1><p>Each app is drawn simply on the same floating screen, with its own logo. The app builds a piece of real work, the cursor clicks Export, and the piece lands in front of the screen, lying flat. The flat lay fills up app by app into one tidy block. These are stills of the moment after each export. Left: a 1440 wide desktop. Right: a phone with the browser's bars showing.</p>
 ${scenes.map(row).join('')}`;
   const page = await browser.newPage({ viewport: { width: 3060, height: 800 } });
   await page.setContent(html); await page.evaluate(() => document.fonts.ready); await page.waitForFunction(() => [...document.images].every(i => i.complete && i.naturalWidth)); await page.waitForTimeout(300);

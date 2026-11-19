@@ -185,30 +185,60 @@ function cityMap(c, off) {
   c.restore();
 }
 
+// The map on the Amenities spread, simplified: King Street as one thick line across the fold, the streets that cross it, a square
+// for each shop or restaurant with its name set sideways, and the building's own logo in a ring. Drawn in the spread's units, 2200 x 850.
+// The flyer has about twice as many squares, and they are smaller. Their names are drawn as bars; the streets' names are spelled out.
+const STREETS = [['York Street', 338], ['Bay Street', 946], ['Yonge Street', 1380], ['Church Street', 2026]];
+const KING = { y: 426, runs: [[92, 438], [762, 1007], [1319, 1600], [1912, 2037]], names: [['King Street W', 600], ['King Street W', 1163], ['King Street E', 1760]] };
+const BADGE = [1273, 457, 72, 146];
+// each run of squares: where the first one starts, the step to the next, and how long the names are above the street and below it
+const SHOPS = [
+  [150, 55, [111, 212, 189], [102, 205, 162]],
+  [380, 72, [108, 140, 200, 126, 54, 113, 113, 153], [187, 248, 221, 171, 105, 140, 227, 282]],
+  [985, 60, [101, 151, 50, 239, 160, 74], [47, 158, 149, 230]],
+  [1420, 72, [205, 185, 95, 248, 176, 168, 177, 59], [117, 263, 187, 232, 74, 90, 225, 243]],
+];
+const NAME = 'rgba(255,255,255,0.5)';                       // a shop's name: light type, which is a soft grey from far off
+// one street that crosses King Street: a thin line, broken twice by the street's name. xAt: where the line is at a given height.
+function crossing(c, name, xAt, tilt = Math.PI / 2) {
+  c.font = `400 28px ${SANS}`; if ('letterSpacing' in c) c.letterSpacing = '0px';
+  const half = c.measureText(name).width / 2 + 14;
+  stroke(c, K.lite, 3); c.beginPath();
+  for (const [a, b] of [[98, 225 - half], [225 + half, 630 - half], [630 + half, 755]]) if (b - a > 10) { c.moveTo(xAt(a), a); c.lineTo(xAt(b), b); }
+  c.stroke();
+  for (const y of [225, 630]) { c.save(); c.translate(xAt(y), y); c.rotate(tilt); text(c, name, 0, 10, 28, { w: 400, fill: K.lite, align: 'center', track: 0, family: SANS }); c.restore(); }
+}
+function amenities(c, off = 0) {
+  c.save(); c.translate(-off, 0);
+  for (const [name, x] of STREETS) crossing(c, name, () => x);
+  crossing(c, 'University Avenue', y => 52 + (y - 98) * 99 / 654, Math.atan2(654, 99));                       // which crosses at a slant
+  stroke(c, K.gold, 20); c.lineCap = 'round'; c.beginPath(); for (const [a, b] of KING.runs) { c.moveTo(a + 10, KING.y); c.lineTo(b - 10, KING.y); } c.stroke();
+  for (const [name, x] of KING.names) text(c, name, x, KING.y + 15, 44, { w: 700, fill: K.gold, align: 'center', track: 0, family: SANS });
+  for (const [x0, step, above, below] of SHOPS) {
+    above.forEach((len, i) => { fill(c, K.white, x0 + i * step, 358, 30, 30); fill(c, NAME, x0 + i * step + 9.5, 344 - len, 11, len); });
+    below.forEach((len, i) => { fill(c, K.white, x0 + i * step, 464, 30, 30); fill(c, NAME, x0 + i * step + 9.5, 508, 11, len); });
+  }
+  const [bx, by, bw, bh] = BADGE;
+  c.fillStyle = K.coal; c.beginPath(); c.roundRect(bx, by, bw, bh, bw / 2); c.fill(); stroke(c, K.lite, 6); c.stroke();
+  c.save(); c.translate(bx + bw / 2, by + bh / 2); c.rotate(Math.PI / 2); kingLogo(c, -52, -28, 104); c.restore();
+  quad(c, K.lite, [[164, 100], [135, 121], [160, 146]]); disc(c, K.gold, 128, 150, 31); disc(c, K.lite, 128, 150, 25);      // north
+  text(c, 'N', 128, 163, 37, { w: 700, fill: K.white, align: 'center', track: 0, family: SERIF });
+  c.restore();
+}
+// the part of the map that Illustrator shows close up: its left edge, its top, its width and its height, in the spread's units
+export const CLOSE = [776, 346, 840, 276];
+
 // every picture: its size in px, and how to draw it. A picture with no background of its own is see-through there.
 export const ART = {
-  // ---- graphic design: one brand, rolled out
-  guideL: { w: 352, h: 496, draw(c, w, h) {            // the mark on its construction grid, and the three ways it is set
-    fill(c, C.paper, 0, 0, w, h); text(c, 'Logo', 30, 46, 17, { w: 600, fill: C.slate, track: 0.02 });
-    [92, 168, 244].forEach(y => fill(c, C.grey, 30, y, 292, 1.5)); [61, 176, 291].forEach(x => fill(c, C.grey, x, 66, 1.5, 204));
-    mark(c, 61, 83, 230);
-    [[C.ink, C.paper, C.red], [C.red, C.paper, C.ink], [C.grey, C.ink, C.red]].forEach(([bg, g, d], i) => { fill(c, bg, 30 + i * 101, 316, 90, 90); mark(c, 45 + i * 101, 339, 60, g, d); });
-    lines(c, C.grey, 30, 430, [292, 230], 7, 11);
-  } },
-  guideR: { w: 352, h: 496, draw(c, w, h) {            // the palette and the typeface
-    fill(c, C.paper, 0, 0, w, h);
-    text(c, 'Palette', 30, 46, 17, { w: 600, fill: C.slate, track: 0.02 });
-    [[C.ink, '151314'], [C.red, 'C0262E'], [C.grey, 'B9B4AE']].forEach(([col, name], i) => { fill(c, col, 30 + i * 101, 62, 90, 90); text(c, name, 30 + i * 101, 170, 11, { w: 500, fill: C.slate, track: 0.04 }); });
-    text(c, 'Type', 30, 226, 17, { w: 600, fill: C.slate, track: 0.02 });
-    text(c, 'Aa', 22, 366, 160); text(c, 'Outfit', 222, 300, 24, { w: 600 }); lines(c, C.grey, 222, 320, [100, 76, 100], 6, 8);
-    lines(c, C.grey, 30, 410, [292, 292, 190], 7, 11);
-  } },
   // ---- the building's photograph, before and after its edit in Photoshop, and that app's own bits
-  kPhotoB: { w: 396, h: 360, draw(c, w, h) { street(c, 0, 0, w, h, { at: 0.42, raw: true }); } },
-  kPhoto: { w: 396, h: 360, draw(c, w, h) { street(c, 0, 0, w, h, { at: 0.42 }); } },
+  kPhotoB: { w: 526, h: 360, draw(c, w, h) { street(c, 0, 0, w, h, { at: 0.44, raw: true }); } },
+  kPhoto: { w: 526, h: 360, draw(c, w, h) { street(c, 0, 0, w, h, { at: 0.44 }); } },
   eye: { w: 48, h: 48, draw(c) { c.fillStyle = C.grey; c.beginPath(); c.ellipse(24, 24, 19, 11, 0, 0, Math.PI * 2); c.fill(); disc(c, C.night, 24, 24, 6); } },
   histo: { w: 160, h: 64, draw(c, w, h) { c.fillStyle = C.grey; c.beginPath(); c.moveTo(0, h); [[0, 52], [18, 44], [34, 20], [50, 34], [70, 8], [92, 30], [112, 22], [132, 46], [160, 54]].forEach(([x, y]) => c.lineTo(x, y)); c.lineTo(w, h); c.closePath(); c.fill(); } },
-  // ---- the 1 King Street W booklet: its front cover and The Offering at full size, and three more pages small, for the pages panel
+  // ---- the map of King Street from the booklet's Amenities spread, as Illustrator's artboard: all of it, and a part of it close up
+  kMap: { w: 1100, h: 425, draw(c, w, h) { c.scale(w / 2200, h / 850); fill(c, K.coal, 0, 0, 2200, 850); amenities(c); } },
+  kMapClose: { w: 840, h: 276, draw(c, w, h) { c.scale(w / CLOSE[2], h / CLOSE[3]); c.translate(-CLOSE[0], -CLOSE[1]); fill(c, K.coal, 0, 0, 2200, 850); amenities(c); } },
+  // ---- the 1 King Street W booklet: its front cover and the three openings it turns through at full size, and two more small, for the pages panel
   kCover: { w: 440, h: 340, draw: page(c => {
     street(c, 380, 0, 720, 850, { at: 0.47 }); fadeIn(c, 380, 650, 850);
     lennard(c); kingLogo(c, 50, 482, 588, true); tab(c, 779, 670, 330, 130, 45, 'Office Space', 'For Sale');
@@ -232,8 +262,10 @@ export const ART = {
     rows.forEach((y, r) => { gIcon(c, r, 77, y); fill(c, K.white, 116, y - (r > 1 ? 15 : 5), [44, 62, 82, 78][r], 10); if (r > 1) fill(c, K.white, 116, y + 5, [0, 0, 124, 62][r], 10); });
     upTitle(c, 'The Offering'); folio(c, 1006, '2');
   }) },
-  kMapL: { w: 220, h: 170, draw: page(c => { cityMap(c, 0); folio(c, 47, '3'); }) },
-  kMapR: { w: 220, h: 170, draw: page(c => {
+  kAmL: { w: 440, h: 340, draw: page(c => { fill(c, K.coal, 0, 0, 1100, 850); amenities(c, 0); lennard(c); folio(c, 50, '5'); }) },
+  kAmR: { w: 440, h: 340, draw: page(c => { fill(c, K.coal, 0, 0, 1100, 850); amenities(c, 1100); kingLogo(c, 950, 50, 98); upTitle(c, 'Amenities'); folio(c, 1006, '6'); }) },
+  kLocL: { w: 220, h: 170, draw: page(c => { cityMap(c, 0); folio(c, 47, '3'); }) },
+  kLocR: { w: 220, h: 170, draw: page(c => {
     fill(c, K.coal, 0, 0, 1100, 850); cityMap(c, 1100); fill(c, K.gold, 253, 0, 20, 850); kingLogo(c, 950, 50, 98);
     heading(c, 'Public Transportation', 300, 183);
     [263, 380, 503].forEach((y, i) => {
@@ -243,8 +275,8 @@ export const ART = {
     heading(c, 'Direct indoor', 300, 650, 2); text(c, 'access to the PATH', 324, 700, 50, { w: 700, fill: K.white, track: 0.01, family: SERIF });
     upTitle(c, 'Location'); folio(c, 1006, '4');
   }) },
-  kGalL: { w: 220, h: 170, draw: page(c => { fill(c, K.coal, 0, 0, 1100, 850); gallery(c, 0); lennard(c); folio(c, 47, '7'); }) },
-  kGalR: { w: 220, h: 170, draw: page(c => { fill(c, K.coal, 0, 0, 1100, 850); gallery(c, 1100); upTitle(c, 'Gallery'); kingLogo(c, 950, 50, 98); folio(c, 1006, '8'); }) },
+  kGalL: { w: 440, h: 340, draw: page(c => { fill(c, K.coal, 0, 0, 1100, 850); gallery(c, 0); lennard(c); folio(c, 47, '7'); }) },
+  kGalR: { w: 440, h: 340, draw: page(c => { fill(c, K.coal, 0, 0, 1100, 850); gallery(c, 1100); upTitle(c, 'Gallery'); kingLogo(c, 950, 50, 98); folio(c, 1006, '8'); }) },
   kBack: { w: 220, h: 170, draw: page(c => {
     fill(c, K.black, 0, 0, 1100, 850); weave(c, 0, 0, 1100, 850);
     c.save(); c.beginPath(); c.moveTo(35, 0); c.lineTo(427, 0); c.lineTo(621, 850); c.lineTo(211, 850); c.closePath(); c.clip(); street(c, 0, 0, 640, 850, { at: 0.52, zoom: 0.8, drop: 0.2 }); c.restore();
@@ -304,9 +336,14 @@ export const ART = {
     disc(c, C.paper, 34, 530, 15); fill(c, C.paper, 60, 520, 96, 9); fill(c, 'rgba(247,246,243,0.6)', 60, 537, 64, 6); lines(c, 'rgba(247,246,243,0.6)', 20, 562, [210, 150], 6, 8);
     fill(c, 'rgba(247,246,243,0.4)', 20, 50, 260, 4); fill(c, C.paper, 20, 50, 150, 4); island(c, w); fill(c, C.paper, 100, 588, 100, 5);
   } },
-  sqPost: { w: 360, h: 360, draw(c, w, h) {
-    SHOTS.a(c, w, h, { k: 126, capY: 290, capPx: 34 });
-    fill(c, C.ink, 300, 20, 40, 40); playIcon(c, C.paper, 320, 40, 10); fill(c, 'rgba(247,246,243,0.45)', 0, 350, w, 10); fill(c, C.paper, 0, 350, 210, 10);
+  feedSq: { w: 300, h: 600, draw(c, w, h) {               // the square cut, in a feed on a phone
+    fill(c, '#FFFFFF', 0, 0, w, h); island(c, w);
+    const ring = c.createLinearGradient(18, 60, 54, 96); ring.addColorStop(0, '#F9A23B'); ring.addColorStop(1, '#D62D7B'); stroke(c, ring, 3.5); c.beginPath(); c.arc(36, 78, 17, 0, Math.PI * 2); c.stroke(); disc(c, C.ink, 36, 78, 12);
+    fill(c, C.ink, 64, 68, 96, 9); fill(c, C.grey, 64, 84, 62, 6); for (let i = 0; i < 3; i++) disc(c, C.slate, 262 + i * 9, 78, 2.6);
+    c.save(); c.translate(0, 112); SHOTS.a(c, 300, 300, { k: 105, capY: 242, capPx: 28 }); c.restore();
+    fill(c, C.ink, 252, 124, 34, 34); playIcon(c, C.paper, 269, 141, 8); fill(c, 'rgba(247,246,243,0.45)', 0, 404, w, 8); fill(c, C.paper, 0, 404, 175, 8);
+    heart(c, C.red, 30, 442, 11); stroke(c, C.slate, 3); c.beginPath(); c.arc(68, 441, 10, 0, Math.PI * 2); c.stroke(); playIcon(c, C.slate, 104, 441, 10);
+    lines(c, C.grey, 18, 470, [250, 170], 6, 8); fill(c, '#E4E3DF', 0, 540, w, 1.5); for (let i = 0; i < 5; i++) fill(c, i === 0 ? C.ink : C.grey, 27 + i * 56, 554, 20, 20); fill(c, C.ink, 100, 588, 100, 5);
   } },
   thumbA: { w: 96, h: 54, draw(c, w, h) { SHOTS.a(c, w, h, { cap: false }); } },
   thumbB: { w: 96, h: 54, draw(c, w, h) { SHOTS.b(c, w, h); } },
@@ -323,6 +360,16 @@ export const ART = {
   appAi: { w: 128, h: 128, draw(c, w, h) { fill(c, '#330000', 0, 0, w, h); text(c, 'Ai', 64, 88, 68, { w: 600, fill: '#FF9A00', align: 'center', track: 0 }); } },
   appId: { w: 128, h: 128, draw(c, w, h) { fill(c, '#49021F', 0, 0, w, h); text(c, 'Id', 64, 88, 68, { w: 600, fill: '#FF3366', align: 'center', track: 0 }); } },
   appPs: { w: 128, h: 128, draw(c, w, h) { fill(c, '#001E36', 0, 0, w, h); text(c, 'Ps', 64, 88, 68, { w: 600, fill: '#31A8FF', align: 'center', track: 0 }); } },
+  appPr: { w: 128, h: 128, draw(c, w, h) { fill(c, '#00005B', 0, 0, w, h); text(c, 'Pr', 64, 88, 68, { w: 600, fill: '#9999FF', align: 'center', track: 0 }); } },
+  appAe: { w: 128, h: 128, draw(c, w, h) { fill(c, '#00005B', 0, 0, w, h); text(c, 'Ae', 64, 88, 68, { w: 600, fill: '#9999FF', align: 'center', track: 0 }); } },
+  appFig: { w: 128, h: 128, draw(c, w, h) {               // Figma's mark: five shapes in two columns
+    fill(c, '#1E1E1E', 0, 0, w, h);
+    [['#F24E1E', 34, 19, [15, 0, 0, 15]], ['#FF7262', 64, 19, [0, 15, 15, 0]], ['#A259FF', 34, 49, [15, 0, 0, 15]], ['#0ACF83', 34, 79, [15, 0, 15, 15]]].forEach(([col, x, y, r]) => { c.fillStyle = col; c.beginPath(); c.roundRect(x, y, 30, 30, r); c.fill(); });
+    disc(c, '#1ABCFE', 79, 64, 15);
+  } },
+  namePr: { w: 320, h: 56, draw(c) { text(c, 'Premiere Pro', 2, 42, 40, { w: 500, fill: C.paper, track: 0 }); } },
+  nameAe: { w: 320, h: 56, draw(c) { text(c, 'After Effects', 2, 42, 40, { w: 500, fill: C.paper, track: 0 }); } },
+  nameFig: { w: 320, h: 56, draw(c) { text(c, 'Figma', 2, 42, 40, { w: 500, fill: C.paper, track: 0 }); } },
   nameAi: { w: 320, h: 56, draw(c) { text(c, 'Illustrator', 2, 42, 40, { w: 500, fill: C.paper, track: 0 }); } },
   nameId: { w: 320, h: 56, draw(c) { text(c, 'InDesign', 2, 42, 40, { w: 500, fill: C.paper, track: 0 }); } },
   namePs: { w: 320, h: 56, draw(c) { text(c, 'Photoshop', 2, 42, 40, { w: 500, fill: C.paper, track: 0 }); } },
