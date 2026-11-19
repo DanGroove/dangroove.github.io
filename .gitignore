@@ -23,3 +23,6 @@ yarn-debug.log*
 yarn-error.log*
 © 2022 GitHub, Inc.
 Terms
+
+# throwaway files from the design review tools
+/design/**/.scratch/

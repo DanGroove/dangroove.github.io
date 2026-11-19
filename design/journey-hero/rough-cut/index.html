@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Journey hero rough cut</title>
+<style>
+@font-face{font-family:Outfit;src:url(../../../public/holding/fonts/outfit-latin-wght-normal.woff2) format("woff2");font-weight:100 900;font-style:normal;font-display:block}
+:root{--ink:#151314;--paper:#F7F6F3;--red:#C0262E;--red-bright:#F0484F;--line:#2E2B29;--muted:#B9B4AE;color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--ink)}
+body{margin:0;background:var(--ink);color:var(--paper);font-family:Outfit,system-ui,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+
+/* the hero: one screen. The art is drawn on a layer that covers all of it; the stage box only says where the art is centred and how big it is. */
+.hero{--pad:64px;--stacked:0;--gl:max(var(--pad),env(safe-area-inset-left,0px));--gr:max(var(--pad),env(safe-area-inset-right,0px));position:relative;min-height:100vh;min-height:max(100svh,640px);overflow:hidden}
+.hero-art{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero-box{position:absolute;left:44%;top:88px;width:calc(56% - var(--gr));height:calc(100% - 160px);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+
+.label{font-weight:300;font-size:13px;line-height:1.2;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.hero-nav{position:absolute;left:var(--gl);right:var(--gr);top:32px;display:flex;justify-content:space-between;align-items:center}
+.hero-mark{display:block;height:44px}
+.hero-mark svg{display:block;height:100%;width:auto}
+.hero-links{display:flex;gap:36px}
+.hero-links a{position:relative;color:inherit;text-decoration:none}
+.hero-links a::after,.hero-pause::after{content:"";position:absolute;inset:-15px -8px}   /* a bigger target than the word itself */
+@media (hover:hover){.hero-links a:hover,.hero-crafts button:hover,.hero-pause:hover{color:var(--paper)}}   /* colour cuts, it does not fade */
+.hero-links a[aria-current]{color:var(--red-bright)}
+
+.hero-say{position:absolute;left:var(--gl);top:50%;transform:translateY(-46%);width:36%}
+.hero-name{margin:0;font-weight:800;font-size:clamp(56px,7.2vw,104px);line-height:.95;letter-spacing:-.02em;animation:name-in .4s cubic-bezier(.23,1,.32,1) both}
+@keyframes name-in{from{font-weight:300}to{font-weight:800}}
+.hero-lede{margin:24px 0 0;font-size:18px;line-height:1.5;max-width:25em}
+.hero-crafts{list-style:none;margin:40px 0 0;padding:0;width:min(380px,100%)}
+.hero-crafts li{border-top:1px solid var(--line)}
+.hero-crafts li:last-child{border-bottom:1px solid var(--line)}
+.hero-crafts button{appearance:none;border:0;background:none;margin:0;font:inherit;font-weight:300;letter-spacing:inherit;text-transform:inherit;color:inherit;display:flex;gap:14px;align-items:baseline;width:100%;padding:9px 0;text-align:left;cursor:pointer}
+.hero-crafts .n{width:1.6em}
+.hero-crafts button[aria-current]{color:var(--paper)}
+.hero-crafts button[aria-current] .n{color:var(--red-bright)}
+
+.hero-foot{position:absolute;left:var(--gl);right:var(--gr);bottom:28px;display:flex;justify-content:space-between;align-items:center}
+.hero-foot p{margin:0}
+.hero-pause{position:relative;appearance:none;border:0;background:none;margin:0;padding:0;font:inherit;font-weight:300;letter-spacing:inherit;text-transform:inherit;color:inherit;cursor:pointer}
+.hero :focus-visible{outline:2px solid var(--red-bright);outline-offset:2px}
+.hero.is-entering [data-foot],.hero.is-entering.nav-late [data-nav]{visibility:hidden}
+
+@media (max-width:1199px){.hero{--pad:40px}}
+@media (max-width:719px){
+  .hero{--pad:16px;--stacked:1;min-height:100vh;min-height:100svh;display:flex;flex-direction:column}
+  .hero-box{left:0;top:64px;width:100%;height:47vh;height:47svh}
+  .hero-nav{top:16px}
+  .hero-mark{height:32px}
+  .label{font-size:12px}
+  .hero-links{gap:20px}
+  .hero-say{position:relative;left:auto;top:auto;transform:none;width:auto;margin-top:calc(64px + 47vh + 8px);margin-top:calc(64px + 47svh + 8px);padding:0 var(--gr) 0 var(--gl)}
+  .hero-name{font-size:56px}
+  .hero-lede{margin-top:14px;font-size:16px}
+  .hero-crafts{margin-top:12px;width:auto;display:grid;grid-template-columns:1fr 1fr;column-gap:16px}
+  .hero-crafts li,.hero-crafts li:last-child{border:0}
+  .hero-crafts button{padding:15px 0;gap:10px}
+  .hero-foot{position:relative;left:auto;right:auto;bottom:auto;margin-top:auto;padding:12px var(--gr) 16px var(--gl)}
+}
+@media (prefers-reduced-motion:reduce){.hero-name{animation:none}.hero-pause{display:none}}
+</style>
+</head>
+<body>
+<main>
+  <section class="hero is-entering" data-hero>
+    <svg class="hero-art" data-art aria-hidden="true" focusable="false"></svg>
+    <div class="hero-box" data-stage-box aria-hidden="true"></div>
+
+    <header class="hero-nav">
+      <a class="hero-mark" data-mark href="#" aria-label="Danial Endrawes, home">
+        <svg viewBox="0 0 1080 797.3" aria-hidden="true" focusable="false"><path fill="#F7F6F3" d="M1078.2 361.1L1068.7 361.1L967.5 361.1L947.1 361.1L931.6 361.1L780.5 361.1L780.5 503.8L911.6 503.8C871.7 591.1 783.6 651.7 681.4 651.7C541.4 651.7 427.6 537.3 428.3 397.3C428.4 375.9 431.2 355 436.3 335.2C436.7 333.8 436.6 332.5 436.2 331.2C418.1 281.3 380.7 240.7 333 218.4C329.7 216.9 325.7 218.3 324.1 221.6C297.6 274.9 282.7 335 282.7 398.6C282.7 618.9 462.7 798.2 683 797.3C902.4 796.4 1080 618.3 1080 398.6C1080 386 1079.4 373.4 1078.2 361.1Z"/><path fill="#F7F6F3" d="M596.1 85.3C614.4 103.7 631 123.4 645.8 144.4C647.2 146.5 649.6 147.6 652.1 147.3C661.7 146.2 671.5 145.6 681.4 145.6C771.7 145.6 851 193 895.8 264.3L1024.1 195.1C954.6 78.3 827.1 0 681.4 0C631.9 0 584.6 9 540.9 25.5C535.8 27.4 534.9 34.2 539.3 37.3C559.4 51.6 578.4 67.6 596.1 85.3Z"/><path fill="#C0262E" d="M368 712C345.6 689.7 325.9 665.3 309 639.1C307.5 636.7 304.6 635.6 301.9 636.2C284.9 639.9 267.3 641.9 249.2 641.9L184.1 641.9L184.1 155.4L247 155.4C382 155.4 493.7 265.9 492.5 401C492.3 422.2 489.3 442.9 484 462.5C483.7 463.8 483.7 465.2 484.1 466.5C505.9 529.7 557.3 579.2 621.7 598.5C624.7 599.4 627.9 598.1 629.5 595.4C662.5 537.3 681.4 470.1 681.4 398.4C681.2 177.9 500.7 0 280.2 0L0 0L0 797.3L282.7 797.3C332.1 797.3 379.5 788.3 423.2 771.8C428.2 769.9 429.1 763.1 424.7 760C404.6 745.7 385.7 729.7 368 712Z"/></svg>
+      </a>
+      <nav class="hero-links label" data-nav aria-label="Main">
+        <a href="#" aria-current="page">Journey</a>
+        <a href="#">Contact</a>
+      </nav>
+    </header>
+
+    <div class="hero-say">
+      <h1 class="hero-name" data-name>Danial<br>Endrawes</h1>
+      <p class="hero-lede" data-lede>Hey, I&rsquo;m Danial. I make things that look good, move well and work the way they should.</p>
+      <ol class="hero-crafts label" data-crafts>
+        <li><button type="button" data-craft="0"><span class="n">01</span><span>Graphic design</span></button></li>
+        <li><button type="button" data-craft="1"><span class="n">02</span><span>Video</span></button></li>
+        <li><button type="button" data-craft="2"><span class="n">03</span><span>Motion</span></button></li>
+        <li><button type="button" data-craft="3"><span class="n">04</span><span>UX/UI</span></button></li>
+      </ol>
+    </div>
+
+    <footer class="hero-foot label" data-foot>
+      <p data-cue>Scroll for the journey</p>
+      <button class="hero-pause" type="button" data-pause>Pause</button>
+    </footer>
+  </section>
+</main>
+
+<script type="module">
+// The rough cut: the design of the journey hero, moving. It draws with SVG. The site draws the same pictures on a canvas.
+// Open it over http from the repository root (see ../README.md), not from disk: browsers do not load modules from file://.
+import { renderSVG } from './svg.mjs';
+import { makeCamera } from '../../../public/journey/hero/engine.mjs';
+import { stateAt, ENTRANCE, BEATS, ARRIVED, STILL, LABELS } from '../../../public/journey/hero/timeline.mjs';
+import { fitStage, planEntrance } from '../../../public/journey/hero/layout.mjs';
+
+// ---- the player: a clock, and one picture per frame
+const hero = document.querySelector('[data-hero]'), art = hero.querySelector('[data-art]'), box = hero.querySelector('[data-stage-box]');
+const crafts = [...hero.querySelectorAll('[data-craft]')], pauseBtn = hero.querySelector('[data-pause]');
+const still = matchMedia('(prefers-reduced-motion: reduce)');
+const LOOP0 = ENTRANCE + BEATS;                 // from here on every pass of the loop is the same
+const SCRUB = 8;                                // beats a second while jumping to a craft
+const TILT = { yaw: 6, pitch: 4, ease: 0.14 };  // how far the view follows the pointer, in degrees, and how quickly (seconds)
+
+let L = null;                                   // the layout: { vw, vh, S, cx, cy, entrance, zoom }
+let t = 0, playing = true, goal = null, last = null, shown = true, raf = 0;
+let cam = { yaw: 0, pitch: 0, toYaw: 0, toPitch: 0 }, ready = false;
+
+function measure() {
+  const h = hero.getBoundingClientRect();
+  const rel = el => { const r = el.getBoundingClientRect(); return { left: r.left - h.left, top: r.top - h.top, right: r.right - h.left, bottom: r.bottom - h.top }; };
+  const q = s => rel(hero.querySelector(s)), b = rel(box), stacked = getComputedStyle(hero).getPropertyValue('--stacked').trim() === '1';
+  const fit = fitStage({ x: b.left, y: b.top, w: b.right - b.left, h: b.bottom - b.top }, h.width, h.height);
+  const text = stacked ? [] : [q('[data-name]'), q('[data-lede]'), q('[data-crafts]')], nav = [q('[data-nav]'), q('[data-mark]')];
+  const ask = under => planEntrance({ vw: h.width, vh: h.height, ...fit, under, over: stacked ? [q('[data-name]')] : [], gapUnder: stacked ? 14 : 36, gapOver: 12, labelEnd: h.width - (stacked ? 20 : 112) });
+  let plan = ask([...nav, ...text]);
+  const late = plan.zoom < 0.7;                                   // no room to pass under the nav at a decent size: the stripes take the corner and the links cut in after them
+  if (late) plan = ask(text);
+  hero.classList.toggle('nav-late', late);
+  L = { vw: h.width, vh: h.height, ...fit, ...plan };
+  art.setAttribute('viewBox', `0 0 ${h.width} ${h.height}`);
+}
+
+function draw() {
+  const st = stateAt(t, L.entrance, L.zoom);
+  art.innerHTML = renderSVG(Object.values(st.bars), st.order, { S: L.S * st.zoom, cx: L.cx, cy: L.cy, cam: makeCamera(cam.yaw, cam.pitch), labels: LABELS });
+  hero.classList.toggle('is-entering', t < ENTRANCE + 1);        // the foot of the page, which the opening stripes cross, cuts in once they have lifted
+  crafts.forEach((b, i) => i === st.act ? b.setAttribute('aria-current', 'true') : b.removeAttribute('aria-current'));
+}
+
+function frame(now) {
+  raf = 0;
+  const dt = last === null ? 0 : Math.min(0.05, (now - last) / 1000); last = now;
+  if (goal !== null) {                                            // jumping to a craft: run the same moves, fast, the short way round
+    const step = SCRUB * dt * Math.sign(goal - t);
+    if (Math.abs(goal - t) <= Math.abs(step) || step === 0) { t = goal; goal = null; } else t += step;
+  } else if (playing) t += dt;
+  if (t >= LOOP0 + BEATS && goal === null) t -= BEATS;
+  const settle = 1 - Math.exp(-dt / TILT.ease), flat = t < ENTRANCE + 1;   // the opening is flat to the screen, so the view holds still for it
+  cam.yaw += ((flat ? 0 : cam.toYaw) - cam.yaw) * settle; cam.pitch += ((flat ? 0 : cam.toPitch) - cam.pitch) * settle;
+  draw();
+  if (shown && (playing || goal !== null || Math.abs(cam.yaw - cam.toYaw) + Math.abs(cam.pitch - cam.toPitch) > 0.01)) raf = requestAnimationFrame(frame); else last = null;
+}
+const wake = () => { if (ready && !raf && shown && !still.matches) raf = requestAnimationFrame(frame); };
+
+function jumpTo(k) {
+  if (still.matches) { t = LOOP0 + STILL[k]; draw(); return; }
+  if (t < ENTRANCE + 1) goal = ENTRANCE + ARRIVED[k];             // during the opening there is only forward
+  else {
+    while (t < LOOP0 + BEATS) t += BEATS;                         // a later pass looks the same, and leaves room to run backwards
+    const at = (t - ENTRANCE) % BEATS, ahead = (ARRIVED[k] - at + BEATS) % BEATS;
+    goal = ahead <= BEATS / 2 ? t + ahead : t - (BEATS - ahead);
+  }
+  wake();
+}
+crafts.forEach((b, i) => b.addEventListener('click', () => jumpTo(i)));
+box.addEventListener('click', () => { const st = stateAt(goal ?? t, L.entrance, L.zoom); jumpTo((st.act + 1 + 4) % 4); });
+pauseBtn.addEventListener('click', () => { playing = !playing; pauseBtn.textContent = playing ? 'Pause' : 'Play'; wake(); });   // the word says what pressing it will do
+if (matchMedia('(hover: hover) and (pointer: fine)').matches) {
+  hero.addEventListener('pointermove', e => { const r = hero.getBoundingClientRect(); cam.toYaw = TILT.yaw * ((e.clientX - r.left) / r.width * 2 - 1); cam.toPitch = -TILT.pitch * ((e.clientY - r.top) / r.height * 2 - 1); wake(); });
+  hero.addEventListener('pointerleave', () => { cam.toYaw = cam.toPitch = 0; wake(); });
+}
+hero.querySelectorAll('a[href="#"]').forEach(a => a.addEventListener('click', e => e.preventDefault()));   // the rough cut's links go nowhere
+document.addEventListener('visibilitychange', () => { shown = !document.hidden; last = null; wake(); });
+new ResizeObserver(() => { if (ready) { measure(); draw(); } }).observe(hero);
+
+// for review: ?t=12.5 holds that moment; __hero.seek(t) does the same from a script
+const held = new URLSearchParams(location.search).get('t');
+window.__hero = { seek(x) { playing = false; goal = null; t = +x; cam.yaw = cam.pitch = cam.toYaw = cam.toPitch = 0; measure(); draw(); }, layout: () => L, get t() { return t; } };
+
+await Promise.all([document.fonts.load('800 16px Outfit'), document.fonts.load('300 16px Outfit')]).catch(() => {});   // the labels are type: nothing is drawn before the face is in
+await document.fonts.ready;
+ready = true; measure();
+if (held !== null) window.__hero.seek(held);
+else if (still.matches) { t = LOOP0 + STILL[0]; draw(); }
+else wake();
+</script>
+</body>
+</html>
