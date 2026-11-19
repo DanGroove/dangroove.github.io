@@ -1,5 +1,5 @@
-// Second take, in the page: one scene, held still, in the hero's own layout (?s=0..3). For stills only: see tools/sheet.mjs.
-// ?at=1.5 sets where the booklet's pages are in the InDesign scene (see booklet in stage.mjs).
+// Second take, in the page: one scene, held still, in the hero's own layout (?s=0..4). For stills only: see tools/sheet.mjs.
+// ?at=1.5 sets where the copy of the booklet that is being read has got to, in the InDesign scene (see copy in stage.mjs).
 import { makeCamera, dot } from '/public/journey/hero/engine.mjs';
 import { createRenderer } from './sq.mjs';
 import { corners } from './kit.mjs';

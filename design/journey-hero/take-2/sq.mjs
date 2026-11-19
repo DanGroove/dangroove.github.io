@@ -4,7 +4,8 @@
 // A piece: { p: [x, y, z], q: [x, y, z, w], s: [a, b, c] half sizes, e: [up, around] roundness (0.02 sharp .. 1 round),
 //            taper: [tx, ty] how much x and y shrink toward the local +z end (1 = to a point), shear: x += shear * y, tone: 'paper',
 //            art: 'key' a picture from the atlas on its local +z face, cut: true to keep only the picture (a flat cut-out shape),
-//            window: [u0, v0, u1, v1] the part of the picture to show (default all of it) }
+//            window: [u0, v0, u1, v1] the part of the picture to show (default all of it),
+//            shade: true to dim the picture where its face turns from the light (a sheet that bends shows its bend that way) }
 
 export const TONES = {
   //        lit (faces the light)  mid (tops)   shade (away, or in shadow)
@@ -87,6 +88,7 @@ const ART_FN = `
 uniform sampler2D uAtlas;
 uniform vec4 uArt;                    // the picture's place in the atlas: x, y, w, h
 uniform float uArtMode;               // 0 none, 1 a picture on the face, 2 only the picture
+uniform float uArtShade;              // 1: the picture is also dimmed where its face turns from the light
 vec4 artAt(vec3 l, float face) {
   if (uArtMode < 0.5 || face < 0.7) return vec4(0.0);
   vec2 uv = clamp(vec2(l.x, -l.y) * 0.5 + 0.5, 0.0, 1.0);
@@ -114,8 +116,9 @@ void main() {
   float top = smoothstep(0.66 - w, 0.66 + w, d) * lit;
   vec3 col = mix(uC, mix(uB, uA, top), mid);
   // A picture keeps its own colours whichever way its face is turned (a page lying on the floor is as bright as one on the screen):
-  // only a cast shadow dims it, by as much as it dims the piece itself.
-  float k = mix(dot(uC, vec3(1.0)) / max(dot(uA, vec3(1.0)), 1e-4), 1.0, lit);
+  // only a cast shadow dims it, by as much as it dims the piece itself. A piece that asks for it is dimmed the same way where it
+  // turns from the light, with the same hard edge as the tones have.
+  float k = mix(dot(uC, vec3(1.0)) / max(dot(uA, vec3(1.0)), 1e-4), 1.0, uArtShade > 0.5 ? mid : lit);
   if (uArtMode > 1.5) col = art.rgb / art.a * k; else col = col * (1.0 - art.a) + art.rgb * k;
   o = vec4(col, 1.0);
 }`;
@@ -243,6 +246,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     const place = pc.art && places[pc.art];
     if (u.uArtMode) {
       gl.uniform1f(u.uArtMode, place ? (pc.cut ? 2 : 1) : 0);
+      if (u.uArtShade) gl.uniform1f(u.uArtShade, pc.shade ? 1 : 0);
       if (place) { const w = pc.window || [0, 0, 1, 1]; gl.uniform4f(u.uArt, place[0] + w[0] * place[2], place[1] + w[1] * place[3], (w[2] - w[0]) * place[2], (w[3] - w[1]) * place[3]); }
     }
   };

@@ -48,6 +48,31 @@ const island = (c, w) => { c.fillStyle = C.ink; c.beginPath(); c.roundRect(w / 2
 const playIcon = (c, col, x, y, r) => { c.fillStyle = col; c.beginPath(); c.moveTo(x - r * 0.7, y - r); c.lineTo(x + r, y); c.lineTo(x - r * 0.7, y + r); c.closePath(); c.fill(); };
 function heart(c, col, x, y, r) { c.fillStyle = col; c.beginPath(); c.moveTo(x, y + r); c.bezierCurveTo(x - r * 1.7, y - r * 0.1, x - r * 0.9, y - r * 1.3, x, y - r * 0.45); c.bezierCurveTo(x + r * 0.9, y - r * 1.3, x + r * 1.7, y - r * 0.1, x, y + r); c.fill(); }
 
+// ---- motion: one animation of words and shapes, the way a SaaS promo moves, in Dan's own colours. It is drawn to fill any frame,
+// so the wide, tall and square exports are the same animation laid out again. The full stop is a ball that has just flown in along
+// its path, and the rows of the list slide in one after another: the last one is still on its way.
+// o: where the words start and their size, and the list's left edge, top, width and number of rows.
+const MOVE = 2.462;                                           // how wide "move" is set in Outfit 800, in ems
+const ballAt = ({ x, y, px }) => [x + (MOVE + 0.2) * px, y + px * 0.92, px * 0.15];
+const WIDE = { x: 34, y: 116, px: 60, rows: [296, 62, 140, 3] };
+export const BALL = ballAt(WIDE);                             // where the ball is in the wide frame, and its radius, for the selection drawn around it
+function saas(c, w, h, o = WIDE) {
+  const { x, y, px, rows: [rx, ry, rw, n] } = o, [bx, by, r] = ballAt(o);
+  fill(c, C.paper, 0, 0, w, h);
+  text(c, 'Make it', x, y, px); text(c, 'move', x, y + px * 1.07, px, { fill: C.red });
+  const from = [bx + px * 0.9, y - px * 1.3], via = [bx + px * 1.0, by - px * 0.3];                             // the ball's path: a curve of dots, with a keyframe at its start
+  for (let i = 1; i < 12; i++) { const t = i / 12, u = 1 - t; disc(c, C.slate, u * u * from[0] + 2 * u * t * via[0] + t * t * bx, u * u * from[1] + 2 * u * t * via[1] + t * t * by, px * 0.028); }
+  stroke(c, C.slate, px * 0.04); c.strokeRect(from[0] - px * 0.08, from[1] - px * 0.08, px * 0.16, px * 0.16);
+  disc(c, C.red, bx, by, r);
+  const rh = rw * 0.27;
+  for (let i = 0; i < n; i++) {
+    const ox = rx + [0, 0.09, 0.24][i] * rw, oy = ry + i * rh * 1.3;
+    c.globalAlpha = i === 2 ? 0.35 : 1;
+    fill(c, C.ink, ox, oy, rw, rh); fill(c, i === 0 ? C.red : C.paper, ox + rh * 0.25, oy + rh * 0.25, rh * 0.5, rh * 0.5); fill(c, C.paper, ox + rh, oy + rh * 0.28, rw * 0.45, rh * 0.16); fill(c, C.slate, ox + rh, oy + rh * 0.58, rw * 0.3, rh * 0.13);
+    c.globalAlpha = 1;
+  }
+}
+
 // ---- Dan's 1 King Street W flyer for Lennard, drawn very simply: a 20 page landscape booklet in black, charcoal and two golds.
 // No agent's name or contact details are drawn anywhere: Dan asked for them to be left out.
 // Its faces are Georgia, Rockwell and Helvetica Neue. Gelasio and Rokkitt, open faces of the same build (./fonts), stand in for the first two.
@@ -69,20 +94,27 @@ function weave(c, x, y, w, h, col = K.weave, R = 57) {
   }
   c.stroke(); c.restore();
 }
-// a word set to a given cap height, then squeezed or stretched to a given width (so the logo keeps its shape in any serif)
-function fit(c, s, x, base, width, cap, col, weight = 700, family = SERIF) {
-  c.font = `${weight} ${cap / 0.692}px ${family}`; if ('letterSpacing' in c) c.letterSpacing = '0px';
-  const k = width / c.measureText(s).width;
-  c.save(); c.translate(x, base); c.scale(k, 1); c.fillStyle = col; c.textAlign = 'left'; c.textBaseline = 'alphabetic'; c.fillText(s, 0, 0); c.restore();
+// Dan asked for the two logos on the flyer, the firm's and the building's, to be shown as blobs: a soft, lumpy shape that says
+// "a logo goes here" without drawing anyone's mark. So neither real logo is drawn anywhere in these pictures.
+// lumps: how far each point of the shape is from its middle, going round, as shares of the box. The curve through them is smooth.
+function blob(c, col, x, y, w, h, lumps) {
+  const n = lumps.length, at = i => { const k = ((i % n) + n) % n, a = k / n * Math.PI * 2; return [x + w / 2 * (1 + Math.cos(a) * lumps[k]), y + h / 2 * (1 + Math.sin(a) * lumps[k])]; };
+  c.fillStyle = col; c.beginPath(); c.moveTo(...at(0));
+  for (let i = 0; i < n; i++) {
+    const p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
+    c.bezierCurveTo(p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6, p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6, p2[0], p2[1]);
+  }
+  c.closePath(); c.fill();
 }
-// The property's logo: a giant slab 1 behind KING, over Street W. x, y: its top left corner. w: its width; it is 0.54 w tall.
+const FIRM = [1, 1.14, 0.9, 1.1, 0.97, 1.18, 0.86, 1.05], BUILDING = [1, 1.12, 0.88, 1.16, 0.94, 1.02, 0.84, 1.2];   // each logo has its own shape
+// the firm's logo: a small blob, by its top left corner and its width
+const firmLogo = (c, col = K.lite, x = 50, y = 40, w = 138) => blob(c, col, x, y, w, w * 0.28, FIRM);
+// The building's logo: a bigger blob. x, y, w: the top left corner and the width of the room the real logo takes, which is 0.54 w tall.
+// The real one is a few letters with air between them, so a solid shape of the same weight is smaller: it starts at the same left edge.
 function kingLogo(c, x, y, w, shadow = false) {
   c.save();
-  c.fillStyle = K.gold; c.fillRect(x + 0.131 * w, y, 0.116 * w, 0.5405 * w); c.fillRect(x, y + 0.417 * w, 0.3205 * w, 0.1235 * w);     // the 1: its stem and its foot,
-  quad(c, K.gold, [[x + 0.131 * w, y], [x, y + 0.077 * w], [x, y + 0.181 * w], [x + 0.131 * w, y + 0.181 * w]]);                    // and its flag
   if (shadow) { const t = c.getTransform(), k = Math.hypot(t.a, t.b) * w; c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = 0.014 * k; c.shadowOffsetX = c.shadowOffsetY = 0.008 * k; }
-  fit(c, 'KING', x + 0.131 * w, y + 0.3166 * w, 0.869 * w, 0.22 * w, K.lite);
-  fit(c, 'Street W', x + 0.131 * w, y + 0.506 * w, 0.869 * w, 0.154 * w, K.lite, 400);
+  blob(c, K.gold, x, y + 0.08 * w, 0.7 * w, 0.38 * w, BUILDING);
   c.restore();
 }
 // the flyer's tab: a gold block with one big rounded corner, a white keyline, and two lines of words
@@ -151,7 +183,6 @@ function gallery(c, off) {
 }
 
 // what the inside pages share
-const lennard = (c, col = K.lite) => text(c, 'Lennard:', 50, 72, 32, { w: 700, fill: col, track: 0, family: SERIF });
 function folio(c, x, n) { fill(c, K.gold, x, 800, 44, 50); text(c, n, x + 22, 833, 20, { w: 800, fill: K.white, align: 'center', track: 0, family: SANS }); }
 function upTitle(c, words) { c.save(); c.translate(1052, 672); c.rotate(-Math.PI / 2); text(c, words, 0, 0, 80, { w: 700, fill: K.gold, track: 0, family: SERIF }); c.restore(); }   // a section's title, reading upward at the page's edge
 function heading(c, words, x, base, rows = 1) { fill(c, K.gold, x, base - 36, 4, 36 + (rows - 1) * 50); text(c, words, x + 24, base, 50, { w: 700, fill: K.white, track: 0.01, family: SERIF }); }
@@ -241,10 +272,10 @@ export const ART = {
   // ---- the 1 King Street W booklet: its front cover and the three openings it turns through at full size, and two more small, for the pages panel
   kCover: { w: 440, h: 340, draw: page(c => {
     street(c, 380, 0, 720, 850, { at: 0.47 }); fadeIn(c, 380, 650, 850);
-    lennard(c); kingLogo(c, 50, 482, 588, true); tab(c, 779, 670, 330, 130, 45, 'Office Space', 'For Sale');
+    firmLogo(c); kingLogo(c, 50, 482, 588, true); tab(c, 779, 670, 330, 130, 45, 'Office Space', 'For Sale');
   }) },
   kOfferL: { w: 440, h: 340, draw: page(c => {
-    fill(c, K.coal, 0, 0, 1100, 850); pins(c, 0); lennard(c);
+    fill(c, K.coal, 0, 0, 1100, 850); pins(c, 0); firmLogo(c);
     heading(c, 'Property Summary', 50, 166); text(c, 'One King West: Premier Office Destination', 50, 221, 25, { w: 700, fill: K.lite, track: 0, family: SANS });
     lines(c, K.soft, 50, 247, [560, 548, 556, 562, 550, 562, 520, 270], 7, 22); lines(c, K.soft, 50, 491, [540, 480, 556, 552, 548, 556, 530, 548, 510, 350], 7, 22);
     const frame = () => { c.beginPath(); c.roundRect(659, 204, 388, 700, [0, 172, 0, 0]); };          // the photograph's frame: one big rounded corner, running off the foot of the page
@@ -262,7 +293,7 @@ export const ART = {
     rows.forEach((y, r) => { gIcon(c, r, 77, y); fill(c, K.white, 116, y - (r > 1 ? 15 : 5), [44, 62, 82, 78][r], 10); if (r > 1) fill(c, K.white, 116, y + 5, [0, 0, 124, 62][r], 10); });
     upTitle(c, 'The Offering'); folio(c, 1006, '2');
   }) },
-  kAmL: { w: 440, h: 340, draw: page(c => { fill(c, K.coal, 0, 0, 1100, 850); amenities(c, 0); lennard(c); folio(c, 50, '5'); }) },
+  kAmL: { w: 440, h: 340, draw: page(c => { fill(c, K.coal, 0, 0, 1100, 850); amenities(c, 0); firmLogo(c); folio(c, 50, '5'); }) },
   kAmR: { w: 440, h: 340, draw: page(c => { fill(c, K.coal, 0, 0, 1100, 850); amenities(c, 1100); kingLogo(c, 950, 50, 98); upTitle(c, 'Amenities'); folio(c, 1006, '6'); }) },
   kLocL: { w: 220, h: 170, draw: page(c => { cityMap(c, 0); folio(c, 47, '3'); }) },
   kLocR: { w: 220, h: 170, draw: page(c => {
@@ -275,7 +306,7 @@ export const ART = {
     heading(c, 'Direct indoor', 300, 650, 2); text(c, 'access to the PATH', 324, 700, 50, { w: 700, fill: K.white, track: 0.01, family: SERIF });
     upTitle(c, 'Location'); folio(c, 1006, '4');
   }) },
-  kGalL: { w: 440, h: 340, draw: page(c => { fill(c, K.coal, 0, 0, 1100, 850); gallery(c, 0); lennard(c); folio(c, 47, '7'); }) },
+  kGalL: { w: 440, h: 340, draw: page(c => { fill(c, K.coal, 0, 0, 1100, 850); gallery(c, 0); firmLogo(c); folio(c, 47, '7'); }) },
   kGalR: { w: 440, h: 340, draw: page(c => { fill(c, K.coal, 0, 0, 1100, 850); gallery(c, 1100); upTitle(c, 'Gallery'); kingLogo(c, 950, 50, 98); folio(c, 1006, '8'); }) },
   kBack: { w: 220, h: 170, draw: page(c => {
     fill(c, K.black, 0, 0, 1100, 850); weave(c, 0, 0, 1100, 850);
@@ -283,30 +314,32 @@ export const ART = {
     quad(c, K.gold, [[24, 0], [35, 0], [211, 850], [200, 850]]); quad(c, K.gold, [[427, 0], [438, 0], [632, 850], [621, 850]]);
     kingLogo(c, 86, 530, 495, true);
     c.fillStyle = K.gold; c.beginPath(); c.moveTo(460, 143); c.lineTo(841, 143); c.arcTo(941, 143, 941, 243, 100); c.lineTo(941, 290); c.lineTo(493, 290); c.closePath(); c.fill();   // the panel, with the firm's name only
-    text(c, 'Lennard:', 550, 236, 56, { w: 700, fill: K.white, track: 0, family: SERIF });
+    firmLogo(c, K.white, 548, 186, 240);
     fill(c, K.soft, 780, 712, 270, 9); fill(c, K.soft, 940, 736, 110, 9); fill(c, K.lite, 955, 760, 95, 9); fill(c, 'rgba(255,255,255,0.3)', 650, 786, 400, 4); fill(c, 'rgba(255,255,255,0.3)', 670, 796, 380, 4);
   }) },
   // ---- the same listing as a LinkedIn post and as an e-blast. Dan left these to me: they follow the flyer loosely.
   kPost: { w: 400, h: 400, draw(c, w, h) {               // the post: the photograph edge to edge, the pattern as a band along the top, the logo over a dark foot
     c.scale(w / 1000, h / 1000); street(c, 0, 0, 1000, 1000, { at: 0.56, zoom: 0.9, drop: 0.14 });
-    fill(c, K.black, 0, 0, 1000, 150); weave(c, 0, 0, 1000, 150, K.weave, 44); text(c, 'Lennard:', 56, 100, 50, { w: 700, fill: K.lite, track: 0, family: SERIF });
+    fill(c, K.black, 0, 0, 1000, 150); weave(c, 0, 0, 1000, 150, K.weave, 44); firmLogo(c, K.lite, 56, 48, 214);
     const g = c.createLinearGradient(0, 500, 0, 1000); g.addColorStop(0, 'rgba(10,15,22,0)'); g.addColorStop(0.7, 'rgba(10,15,22,0.9)'); g.addColorStop(1, K.black); c.fillStyle = g; c.fillRect(0, 500, 1000, 500);
     kingLogo(c, 50, 610, 600, true); tab(c, 690, 788, 320, 146, 50, 'Office Space', 'For Sale');
   } },
-  post: { w: 300, h: 600, draw(c, w, h) {                 // that post in the LinkedIn feed, on a phone
+  post: { w: 300, h: 664, draw(c, w, h) {                 // that post in the LinkedIn feed, on a phone
     fill(c, '#FFFFFF', 0, 0, w, h); island(c, w);
     c.fillStyle = '#0A66C2'; c.beginPath(); c.roundRect(16, 50, 28, 28, 5); c.fill(); text(c, 'in', 30, 71, 19, { w: 700, fill: '#FFFFFF', align: 'center', track: 0, family: SANS });
     c.fillStyle = '#EEF0F2'; c.beginPath(); c.roundRect(56, 52, 176, 24, 12); c.fill(); disc(c, C.grey, 264, 64, 9); fill(c, '#E4E3DF', 0, 90, w, 1.5);
-    disc(c, K.black, 36, 122, 17); text(c, 'L:', 36, 128, 17, { w: 700, fill: K.lite, align: 'center', track: 0, family: SERIF });
+    disc(c, K.black, 36, 122, 17); firmLogo(c, K.lite, 24, 118.5, 24);
     fill(c, C.ink, 64, 111, 96, 9); fill(c, C.grey, 64, 127, 62, 6); for (let i = 0; i < 3; i++) disc(c, C.slate, 262 + i * 9, 120, 2.6);
     lines(c, C.grey, 18, 150, [250, 190], 6, 8);
     c.save(); c.translate(0, 184); ART.kPost.draw(c, 300, 300); c.restore();
-    [0, 1, 2, 3].forEach(i => { stroke(c, C.slate, 3); c.strokeRect(32 + i * 68, 500, 16, 14); fill(c, C.grey, 24 + i * 68, 522, 32, 5); });
-    fill(c, '#E4E3DF', 0, 540, w, 1.5); for (let i = 0; i < 5; i++) fill(c, i === 0 ? C.ink : C.grey, 27 + i * 56, 554, 20, 20); fill(c, C.ink, 100, 588, 100, 5);
+    for (let i = 0; i < 3; i++) disc(c, ['#0A66C2', C.red, '#4C9A52'][i], 24 + i * 11, 504, 7); fill(c, C.grey, 62, 501, 44, 6); fill(c, C.grey, 214, 501, 68, 6);    // who reacted, and how many comments
+    fill(c, '#E4E3DF', 18, 522, w - 36, 1.5);
+    [0, 1, 2, 3].forEach(i => { stroke(c, C.slate, 3); c.strokeRect(32 + i * 68, 540, 16, 14); fill(c, C.grey, 24 + i * 68, 562, 32, 5); });
+    fill(c, '#E4E3DF', 0, 590, w, 1.5); for (let i = 0; i < 5; i++) fill(c, i === 0 ? C.ink : C.grey, 27 + i * 56, 606, 20, 20); fill(c, C.ink, 100, 650, 100, 5);
   } },
   eblast: { w: 320, h: 472, draw(c, w, h) {              // the e-blast: the photograph in the flyer's frame with the logo across its corner, then the two units
     c.scale(w / 800, h / 1180); fill(c, K.coal, 0, 0, 800, 1180);
-    fill(c, K.black, 0, 0, 800, 120); weave(c, 0, 0, 800, 120, K.weave, 40); text(c, 'Lennard:', 44, 78, 46, { w: 700, fill: K.lite, track: 0, family: SERIF });
+    fill(c, K.black, 0, 0, 800, 120); weave(c, 0, 0, 800, 120, K.weave, 40); firmLogo(c, K.lite, 44, 34, 196);
     const frame = () => { c.beginPath(); c.roundRect(300, 168, 456, 470, [0, 170, 0, 0]); };
     c.save(); frame(); c.clip(); street(c, 300, 168, 456, 470, { at: 0.55 }); c.restore(); stroke(c, K.gold, 7); frame(); c.stroke();
     kingLogo(c, 44, 404, 430, true);
@@ -319,8 +352,8 @@ export const ART = {
     c.fillStyle = K.gold; c.beginPath(); c.roundRect(44, 1040, 262, 72, [28, 0, 0, 0]); c.fill(); text(c, 'View the flyer', 70, 1087, 30, { w: 700, fill: K.white, track: 0, family: SANS });
     fill(c, K.black, 0, 1140, 800, 40);
   } },
-  mail: { w: 320, h: 472, draw(c, w, h) {                 // the e-blast, open in a mail app on a tablet
-    fill(c, '#F3F2EE', 0, 0, w, 58); disc(c, K.black, 30, 29, 15); text(c, 'L:', 30, 34, 15, { w: 700, fill: K.lite, align: 'center', track: 0, family: SERIF });
+  mail: { w: 320, h: 516, draw(c, w, h) {                 // the e-blast, open in a mail app on a tablet
+    fill(c, '#F3F2EE', 0, 0, w, 58); disc(c, K.black, 30, 29, 15); firmLogo(c, K.lite, 19.5, 26, 21);
     fill(c, C.ink, 56, 17, 150, 9); fill(c, C.grey, 56, 34, 96, 6); for (let i = 0; i < 3; i++) disc(c, C.slate, 284 + i * 9, 29, 2.6);
     c.save(); c.translate(0, 58); ART.eblast.draw(c, 320, 472); c.restore();
   } },
@@ -356,6 +389,36 @@ export const ART = {
   tT: { w: 40, h: 40, draw(c) { fill(c, C.grey, 8, 8, 24, 6); fill(c, C.grey, 17, 8, 6, 26); } },
   tV: { w: 40, h: 40, draw(c) { stroke(c, C.grey, 5); c.strokeRect(7, 10, 26, 20); } },
   tA: { w: 40, h: 40, draw(c) { [10, 22, 14, 26, 12].forEach((v, i) => fill(c, C.grey, 6 + i * 6.4, 20 - v / 2, 3.6, v)); } },
+  // ---- motion: the animation's frame, the three screens it is exported to, and After Effects' own bits
+  compWide: { w: 480, h: 270, draw(c, w, h) { saas(c, w, h); } },
+  motWide: { w: 480, h: 270, draw(c, w, h) {               // in a player
+    saas(c, w, h, { ...WIDE, y: 104 }); playIcon(c, C.ink, 30, 245, 9); fill(c, 'rgba(21,19,20,0.25)', 54, 243, 400, 5); fill(c, C.ink, 54, 243, 250, 5); fill(c, C.ink, 300, 237, 6, 17);
+  } },
+  motTall: { w: 300, h: 600, draw(c, w, h) {               // as a story, with its call to act
+    saas(c, w, h, { x: 26, y: 236, px: 62, rows: [26, 366, 180, 3] });
+    for (let i = 0; i < 3; i++) fill(c, i === 0 ? C.ink : 'rgba(21,19,20,0.25)', 20 + i * 88, 50, 84, 4);
+    disc(c, C.ink, 34, 82, 13); fill(c, C.ink, 56, 74, 90, 8); fill(c, C.grey, 56, 88, 56, 6); island(c, w);
+    fill(c, C.red, 90, 548, 120, 30); fill(c, C.paper, 118, 560, 64, 6); fill(c, C.ink, 100, 588, 100, 5);
+  } },
+  motSq: { w: 300, h: 600, draw(c, w, h) {                 // square, as a post in a feed
+    fill(c, '#FFFFFF', 0, 0, w, h); island(c, w);
+    c.fillStyle = '#0A66C2'; c.beginPath(); c.roundRect(16, 50, 28, 28, 5); c.fill(); text(c, 'in', 30, 71, 19, { w: 700, fill: '#FFFFFF', align: 'center', track: 0, family: SANS });
+    c.fillStyle = '#EEF0F2'; c.beginPath(); c.roundRect(56, 52, 176, 24, 12); c.fill(); disc(c, C.grey, 264, 64, 9); fill(c, '#E4E3DF', 0, 90, w, 1.5);
+    disc(c, C.ink, 36, 122, 17); fill(c, C.ink, 64, 111, 96, 9); fill(c, C.grey, 64, 127, 62, 6); for (let i = 0; i < 3; i++) disc(c, C.slate, 262 + i * 9, 120, 2.6);
+    lines(c, C.grey, 18, 150, [250, 190], 6, 8);
+    c.save(); c.translate(0, 184); c.beginPath(); c.rect(0, 0, 300, 300); c.clip(); saas(c, 300, 300, { x: 20, y: 92, px: 50, rows: [146, 180, 120, 2] }); c.restore();
+    [0, 1, 2, 3].forEach(i => { stroke(c, C.slate, 3); c.strokeRect(32 + i * 68, 500, 16, 14); fill(c, C.grey, 24 + i * 68, 522, 32, 5); });
+    fill(c, '#E4E3DF', 0, 540, w, 1.5); for (let i = 0; i < 5; i++) fill(c, i === 0 ? C.ink : C.grey, 27 + i * 56, 554, 20, 20); fill(c, C.ink, 100, 588, 100, 5);
+  } },
+  graph: { w: 240, h: 200, draw(c, w, h) {                 // the ease between two keyframes: slow out of the first, slow into the second
+    for (let i = 0; i < 5; i++) { fill(c, C.dark, 0, 19 + i * 40, w, 2); fill(c, C.dark, 19 + i * 50, 0, 2, h); }
+    stroke(c, C.grey, 3); c.beginPath(); c.moveTo(24, 176); c.lineTo(128, 176); c.moveTo(216, 24); c.lineTo(112, 24); c.stroke(); disc(c, C.grey, 128, 176, 6); disc(c, C.grey, 112, 24, 6);
+    stroke(c, C.red, 6); c.beginPath(); c.moveTo(24, 176); c.bezierCurveTo(128, 176, 112, 24, 216, 24); c.stroke();
+    fill(c, C.paper, 16, 168, 16, 16); fill(c, C.paper, 208, 16, 16, 16);
+  } },
+  kf: { w: 32, h: 32, draw(c) { c.translate(16, 16); c.rotate(Math.PI / 4); fill(c, C.paper, -9, -9, 18, 18); } },         // a keyframe, and one that is selected
+  kfOn: { w: 32, h: 32, draw(c) { c.translate(16, 16); c.rotate(Math.PI / 4); fill(c, C.red, -10, -10, 20, 20); } },
+  lStar: { w: 40, h: 40, draw(c) { c.fillStyle = C.grey; c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 7 : 16; c.lineTo(20 + r * Math.cos(a), 21 + r * Math.sin(a)); } c.closePath(); c.fill(); } },   // a shape layer
   // ---- the apps' own logos, because Dan wants people to know which app this is: two letters on a dark tile, in each app's colours
   appAi: { w: 128, h: 128, draw(c, w, h) { fill(c, '#330000', 0, 0, w, h); text(c, 'Ai', 64, 88, 68, { w: 600, fill: '#FF9A00', align: 'center', track: 0 }); } },
   appId: { w: 128, h: 128, draw(c, w, h) { fill(c, '#49021F', 0, 0, w, h); text(c, 'Id', 64, 88, 68, { w: 600, fill: '#FF3366', align: 'center', track: 0 }); } },

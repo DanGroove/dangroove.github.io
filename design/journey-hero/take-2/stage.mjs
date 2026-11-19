@@ -3,7 +3,7 @@
 // This file holds every scene as a list of pieces, held still.
 import { HOME } from '../../../public/journey/hero/engine.mjs';
 import { box, cyl, turn } from './kit.mjs';
-import { CLOSE } from './art.mjs';
+import { CLOSE, BALL } from './art.mjs';
 
 // the screen: its left and bottom edges, its size, the z of its middle, its thickness
 export const SCREEN = { l: -2.6, b: 0.6, w: 5.6, h: 3.6, z: -1.8, t: 0.1 };
@@ -29,7 +29,7 @@ export function floorAt(x, y) {
 }
 
 // ---- the floor. Everything exported lies flat on it, face up, squared to the screen, in one block: the mat.
-export const MAT = { x: -3.3, z: -1.4, gap: 0.25 };      // the mat's back left corner, and the gap between two things on it
+export const MAT = { x: -3.3, z: -1.4, w: 5.5, gap: 0.25 };   // the mat's back left corner, its width, and the gap between two screens on it
 // a sheet lying on the floor. x, z: its back left corner. w: along the screen. d: toward us. t: how thick. y: what it lies on.
 function flat(tone, x, z, w, d, t, art, y = 0) {
   const at = [x + w / 2, y + t / 2, z + d];
@@ -70,42 +70,65 @@ function rail(P, tools, lit) {
 const PANEL = W - 0.93;                                  // the left edge of the panel on the right
 const CANVAS = { l: 0.56, w: PANEL - 0.12 - 0.56, b: 0.1, h: TOP - 0.1 };
 
-// ---- 01 Graphic design, as three projects in three apps, in the order the work is made: Photoshop, Illustrator, InDesign
+// ---- 01 Graphic design, as three projects in three apps, in the order the work is made: Photoshop, Illustrator, InDesign.
+// Only InDesign's export lands on the floor. The photograph and the map go on into the next app, so the floor stays empty until then.
 
-// The mat for graphic design. Everything on it is DEEP deep, in two rows, and it is split in two zones whose edges line up in both rows.
-// It fills in the order the work is made: the photograph (back right), the map beside it, and in front of them the booklet,
-// the phone and the tablet. upTo: how many of the three apps have exported so far. at: where the booklet's pages are (see booklet).
-const DEEP = 1.3, LEAF = DEEP * 440 / 340, PHONE = 0.68, TABLET = 0.915, SIDE = PHONE + MAT.gap + TABLET;   // the booklet's page; the narrow zone and what shares it
-// The booklet's openings that the hero turns through: what shows on the left and on the right at each.
-const SPREADS = [['kOfferL', 'kOfferR'], ['kAmL', 'kAmR'], ['kGalL', 'kGalR']];
-// One booklet, lying open, whose leaves turn. x, z: its back left corner. at: the opening it shows, and how far its right leaf is on
-// the way to the next one: 0 is The Offering lying flat, 0.5 has that leaf standing on the spine, 1 is Amenities lying flat.
-function booklet(P, x, z, at) {
-  const i = Math.min(Math.floor(at), SPREADS.length - 1), deg = (at - i) * 180, [left, right] = SPREADS[i], next = SPREADS[i + 1];
-  const t = 0.03, leaf = 0.012, spine = [x + LEAF, t, 0];
-  P.push(flat('paper', x, z, LEAF, DEEP, t, left));
-  if (!deg || !next) return P.push(flat('paper', x + LEAF, z, LEAF, DEEP, t, right));
-  P.push(flat('paper', x + LEAF, z, LEAF, DEEP, t, next[1]));                                                  // what the turning leaf uncovers
-  P.push(turn(flat('paper', x + LEAF, z, LEAF, DEEP, leaf, right, t), spine, [0, 0, 1], deg));                 // the leaf's front,
-  P.push(turn(flat('paper', x, z, LEAF, DEEP, leaf, next[0], t), spine, [0, 0, 1], deg - 180));                // and its back, which is the next opening's left page
+// What InDesign exports, squared up into one block that is as wide as the open booklet and sits in the middle of the mat.
+// Behind: a stack of closed copies, the post in a phone, the e-blast in a tablet. In front: the copy that is taken off the top
+// of the stack, opened and leafed through.
+const DEEP = 1.45, LEAF = DEEP * 440 / 340;              // a page of the booklet: how deep it is (toward us) and how wide
+const GUT = 0.12, PHONE = 0.7, TABLET = LEAF - PHONE - 2 * GUT;   // the gutter between two things in the block, and the two devices that share a page's width with it
+const SHEET = 0.01, COPY = 5 * SHEET, COPIES = 6;        // how thick one leaf is, and one closed copy; how many copies land
+export const BLOCK = { x0: MAT.x + MAT.w / 2 - LEAF, x1: MAT.x + MAT.w / 2 + LEAF, z0: MAT.z, z1: MAT.z + 2 * DEEP + GUT, up: 0.6 };   // the room the block takes, for the tools that crop a still to it
+
+// A closed copy: the white edges of its pages under a dark cover. x, z: its back left corner. y: what it lies on.
+function closed(P, x, z, y = 0, art = 'kCover') {
+  const skin = 0.008;
+  P.push(flat('paper', x, z, LEAF, DEEP, COPY - skin, undefined, y), flat('ink', x, z, LEAF, DEEP, skin, art, y + COPY - skin));
 }
-// the room the whole block takes on the floor, with a little headroom for a leaf that is turning, for the tools that crop a still to it
-export const BLOCK = { x0: MAT.x, x1: MAT.x + 2 * LEAF + MAT.gap + SIDE, z0: MAT.z, z1: MAT.z + 2 * DEEP + MAT.gap, up: 0.3 };
-// a print with a white edge. win: the part of the picture it shows.
-function print(P, x, z, w, art, win, edge = 0.06) {
-  P.push(flat('paper', x, z, w, DEEP, 0.02), { ...flat('ink', x + edge, z + edge, w - 2 * edge, DEEP - 2 * edge, 0.004, art, 0.02), window: win });
+// The booklet's leaves from the cover inward: what is printed on the front of each, and on its back. The copy on the mat turns
+// these three, so it opens at The Offering, then Amenities, then the gallery. LAST: the page the third one uncovers.
+const LEAVES = [['kCover', 'kOfferL'], ['kOfferR', 'kAmL'], ['kAmR', 'kGalL']], LAST = 'kGalR';
+const STRIPS = 14, clamp = (v, a, b) => Math.min(b, Math.max(a, v)), mix = (a, b, t) => a + (b - a) * t;
+// One leaf on its way over, bending the way paper does. It is a row of narrow strips, each hinged on the one before, so the leaf
+// can curl: its free edge peels up first while the rest still lies flat, it swings over the spine in a shallow arc, and it lands
+// from the spine outward, its edge coming down last. sx, y: the spine, and how high the leaf's root is. f: 0 lying on the right .. 1 on the left.
+function leaf(P, sx, z, y, f, front, back) {
+  const mid = 180 * f, lead = 34 * Math.sin(2 * Math.PI * f) + 12 * Math.sin(Math.PI * f);        // how far the free edge is ahead of the root, in degrees
+  const root = clamp(mid - lead, 0, 180), edge = clamp(mid + lead, 0, 180), w = LEAF / STRIPS, t = SHEET / 2;
+  let px = sx, py = y;
+  for (let i = 0; i < STRIPS; i++) {
+    const deg = mix(root, edge, ((i + 0.5) / STRIPS) ** 1.5), hinge = [px, py, 0], u0 = i / STRIPS, u1 = (i + 1) / STRIPS;
+    P.push({ ...turn(flat('paper', px, z, w, DEEP, t, front, py), hinge, [0, 0, 1], deg), window: [u0, 0, u1, 1], shade: true });                   // the strip's front,
+    P.push({ ...turn(flat('paper', px - w, z, w, DEEP, t, back, py), hinge, [0, 0, 1], deg - 180), window: [1 - u1, 0, 1 - u0, 1], shade: true });   // and its back
+    px += w * Math.cos(deg * Math.PI / 180); py += w * Math.sin(deg * Math.PI / 180);
+  }
 }
-function designMat(P, upTo, at = 0.84) {
-  const { x, z, gap: g } = MAT, z2 = z + DEEP + g, x2 = x + 2 * LEAF + g;
-  print(P, x2, z, SIDE, 'kPhoto');                                                                             // from Photoshop: the photograph
-  if (upTo < 2) return;
-  print(P, x, z, 2 * LEAF, 'kMap', [0, 0.03, 1, 0.97]);                                                        // from Illustrator: the map
-  if (upTo < 3) return;
-  booklet(P, x, z2, at);                                                                                       // from InDesign: the booklet (by default, as a leaf lands on Amenities),
-  P.push(...device(x2, z2, PHONE, DEEP, 'post', { rim: 0.045 }), ...device(x2 + PHONE + g, z2, TABLET, DEEP, 'mail', { rim: 0.055, round: 0.1 }));   // the post on a phone and the e-blast on a tablet
+// The copy that is taken off the top of the stack. x, z: the back left corner of the place where it lies open. from: where it
+// lay on the stack. at: -1 on the stack .. 0 set down, still shut, in the right half of its place; then one leaf turns for each 1:
+// 1 is open at The Offering, 2 at Amenities, 3 at the gallery.
+function copy(P, x, z, from, at) {
+  if (at <= 0) {                                          // on its way: up off the stack, toward us, then across (clear of the devices), and down
+    const u = clamp(at + 1, 0, 1), e = u * u * (3 - 2 * u);
+    return closed(P, mix(from[0], x + LEAF, e * e), mix(from[2], z, 1 - (1 - e) ** 2), mix(from[1], 0, e) + 0.55 * Math.sin(Math.PI * u));
+  }
+  const i = Math.min(Math.floor(at), LEAVES.length - 1), f = Math.min(at - i, 1), [front, back] = LEAVES[i];
+  const right = (4 - i) * SHEET, left = i * SHEET;        // how thick the pages are on each side of the leaf that is turning
+  P.push(flat('paper', x + LEAF, z, LEAF, DEEP, right, LEAVES[i + 1] ? LEAVES[i + 1][0] : LAST));
+  if (left) P.push(flat('paper', x, z, LEAF, DEEP, left, LEAVES[i - 1][1]));
+  if (f === 0) P.push(flat('paper', x + LEAF, z, LEAF, DEEP, SHEET, front, right));
+  else if (f === 1) P.push(flat('paper', x, z, LEAF, DEEP, SHEET, back, left));
+  else leaf(P, x + LEAF, z, mix(right, left, f) + SHEET / 2, f, front, back);
+}
+// at: where the copy that is being read has got to (see copy). By default a leaf is landing on Amenities.
+function prints(P, at = 1.82) {
+  const x = BLOCK.x0, z = BLOCK.z0, n = COPIES - 1;
+  for (let i = 0; i < n; i++) closed(P, x, z, i * COPY, i === n - 1 ? 'kCover' : undefined);                  // the stack, less the copy that was taken
+  P.push(...device(x + LEAF + GUT, z, PHONE, DEEP, 'post', { rim: 0.04 }), ...device(x + LEAF + 2 * GUT + PHONE, z, TABLET, DEEP, 'mail', { rim: 0.05, round: 0.1 }));
+  copy(P, x, z + DEEP + GUT, [x, n * COPY, z], at);
 }
 
-// Photoshop comes first: the building's photograph, half way through its edit. Every later piece uses it.
+// Photoshop comes first: the building's photograph, half way through its edit. Every later piece uses it. Nothing lands on the floor.
 export function photoshop() {
   const P = shell('ps');
   rail(P, ['tMove', 'tMarquee', 'tBrush', 'tType', 'tRect', 'tDrop'], 2);
@@ -126,11 +149,10 @@ export function photoshop() {
   const ih = 2.05, iw = ih * 526 / 360, x = CANVAS.l + (CANVAS.w - iw) / 2, y = CANVAS.b + (CANVAS.h - ih) / 2, cut = 0.44;
   P.push({ ...on('ink', x, y, iw * cut, ih, { lift: 0.06, t: 0.02, art: 'kPhotoB' }), window: [0, 0, cut, 1] }, { ...on('ink', x + iw * cut, y, iw * (1 - cut), ih, { lift: 0.06, t: 0.02, art: 'kPhoto' }), window: [cut, 0, 1, 1] });
   P.push(on('paper', x + iw * cut - 0.012, y - 0.05, 0.024, ih + 0.1, { lift: 0.085, t: 0.01 }), dot('paper', x + iw * cut, y + ih / 2, 0.09, { lift: 0.085, t: 0.02 }), dot('red', x + iw * cut, y + ih / 2, 0.045, { lift: 0.105, t: 0.01 }));
-  designMat(P, 1);
   return P;
 }
 
-// Illustrator comes second: the map of King Street on the booklet's Amenities spread, which is line work
+// Illustrator comes second: the map of King Street on the booklet's Amenities spread, which is line work. Nothing lands on the floor.
 const FLYER = { gold: ['#9B7C29', '#86691F', '#5E4915'], lite: ['#CEAB48', '#B3933B', '#836A28'], coal: ['#282928', '#1F201F', '#161716'], black: ['#0A0F16', '#080C12', '#05080C'] };   // the flyer's colours, lit, on top and in shade
 export function illustrator() {
   const P = shell('ai');
@@ -155,11 +177,11 @@ export function illustrator() {
     const [hx, hy] = at(1309, Y), reach = 46 * z;
     P.push(on('red', hx - reach, hy - 0.008, reach * 2, 0.016, { lift: 0.085, t: 0.006 }), dot('red', hx - reach, hy, 0.028, { lift: 0.085, t: 0.012 }), dot('red', hx + reach, hy, 0.028, { lift: 0.085, t: 0.012 }));
   });
-  designMat(P, 2);
   return P;
 }
 
-// InDesign comes last: the booklet, and the LinkedIn post and the e-blast that follow it
+// InDesign comes last: the booklet, and the LinkedIn post and the e-blast that follow it. Its export is what lands (see prints).
+// at: where the copy that is being read has got to.
 export function indesign({ at: pages } = {}) {
   const P = shell('id');
   rail(P, ['tArrow', 'tType', 'tFrame', 'tRect', 'tLine', 'tDrop'], 0);
@@ -182,12 +204,12 @@ export function indesign({ at: pages } = {}) {
   const [fl, ft] = at(34, 84), [fr, fb] = at(2056, 826);                                                       // the map's frame, which runs across the fold
   P.push(...outline(fl, fb, fr - fl, ft - fb, { line: 0.012 }));
   [[fl, ft], [(fl + fr) / 2, ft], [fr, ft], [fl, (ft + fb) / 2], [fr, (ft + fb) / 2], [fl, fb], [(fl + fr) / 2, fb], [fr, fb]].forEach(([ax, ay]) => P.push(handle(ax, ay)));
-  designMat(P, 3, pages);
+  prints(P, pages);
   return P;
 }
 
-// ---- The screens the other crafts export to. They lie in one row, as wide as the graphic design block: a tablet on its side, then two phones.
-const ROW = 1.8, SLIM = 0.88, WIDE = 2 * LEAF + SIDE - 2 * SLIM - MAT.gap;       // the row's depth, a phone's width, the tablet's width
+// ---- The screens the other crafts export to. They lie in one row across the mat: a tablet on its side, then two phones.
+const ROW = 1.8, SLIM = 0.955, WIDE = MAT.w - 2 * SLIM - 2 * MAT.gap;            // the row's depth, a phone's width, the tablet's width: their screens are 16:9 and 9:18
 function screens(P, wide, tall, third) {
   const { x, z, gap: g } = MAT;
   P.push(...device(x, z, WIDE, ROW, wide, { rim: 0.075, round: 0.09 }), ...device(x + WIDE + g, z, SLIM, ROW, tall, { rim: 0.055 }), ...device(x + WIDE + SLIM + 2 * g, z, SLIM, ROW, third, { rim: 0.055 }));
@@ -236,5 +258,51 @@ export function video() {
   return P;
 }
 
-export const SCENES = [photoshop, illustrator, indesign, video];
-export const CRAFT = [0, 0, 0, 1];                      // which of the four crafts each scene belongs to
+// ---- 03 Motion: After Effects has animated words and shapes, the way a SaaS promo moves, and exported it to the same three screens
+// each layer: its icon, its label's tone, how long its name is, when its bar starts and how long it is, and where its keyframes are
+const LAYERS = [
+  ['tT', 'red', 0.5, 0, 3.2, [0.1, 0.6]], ['tT', 'red', 0.36, 0.2, 3, [0.35, 0.85]], ['lStar', 'paper', 0.28, 0.6, 2.6, [0.75, 1.45]],
+  ['lStar', 'grey', 0.44, 1, 2.2, [1.2, 1.7]], ['lStar', 'grey', 0.44, 1.15, 2.05, [1.35, 1.85]], ['lStar', 'grey', 0.44, 1.3, 1.9, [1.5, 2]],
+];
+export function motion() {
+  const P = shell('ae');
+  const top = TOP, mid = 1.3;
+  // the project: the comp, and what it is made of
+  P.push(on('night', 0.08, mid, 0.86, top - mid));
+  P.push(on('paper', 0.14, top - 0.5, 0.74, 0.416, { lift: 0.05, t: 0.015, art: 'compWide' }));
+  ['red', 'grey', 'paper', 'grey'].forEach((tone, i) => {
+    const y = top - 0.68 - i * 0.14;
+    P.push(on(tone, 0.14, y, 0.08, 0.08, { lift: 0.05, t: 0.01 }), on(i === 0 ? 'grey' : 'dark', 0.28, y + 0.015, [0.5, 0.36, 0.44, 0.3][i], 0.05, { lift: 0.05, t: 0.01 }));
+  });
+  // the comp: one frame of the animation, with the ball's layer selected
+  P.push(on('night', 1.04, mid, 2.5, top - mid));
+  const fx = 1.33, fy = mid + 0.2, fw = 1.92, fh = 1.08, k = fw / 480, half = (BALL[2] + 8) * k, bx = fx + BALL[0] * k, by = fy + fh - BALL[1] * k;
+  P.push(on('paper', fx, fy, fw, fh, { lift: 0.06, t: 0.02, art: 'compWide' }));
+  P.push(...outline(bx - half, by - half, half * 2, half * 2, { line: 0.012 }));
+  for (const dx of [-1, 1]) for (const dy of [-1, 1]) P.push(on('red', bx + dx * half - 0.02, by + dy * half - 0.02, 0.04, 0.04, { lift: 0.09, t: 0.008 }));
+  P.push(icon('transport', 2.04, mid + 0.045, 0.5, 0.1));
+  // the graph: the ease between the ball's two keyframes
+  const ex = 3.64;
+  P.push(on('night', ex, mid, 1.15, top - mid));
+  P.push(icon('graph', ex + 0.1, mid + 0.3, 0.95, 0.79));
+  [0.5, 0.32].forEach((w, i) => P.push(on(i ? 'dark' : 'grey', ex + 0.1, mid + 0.17 - i * 0.09, w, 0.04, { lift: 0.05, t: 0.01 })));
+  // the timeline: a row for each layer, with its bar and its keyframes, and the playhead across them all
+  P.push(on('night', 0.08, 0.1, W - 0.16, mid - 0.2));
+  const x0 = 1.34;
+  P.push(icon('ruler', x0, 1.01, W - 0.2 - x0, 0.06));
+  LAYERS.forEach(([kind, tone, name, from, len, keys], i) => {
+    const y = 0.84 - i * 0.14, lit = i === 2;
+    if (lit) P.push(on('dark', 0.12, y - 0.02, W - 0.24, 0.13, { lift: 0.035, t: 0.006 }));
+    P.push(on(tone, 0.17, y + 0.015, 0.06, 0.06, { lift: 0.05, t: 0.01 }), icon(kind, 0.28, y - 0.015, 0.12, 0.12, lit ? 'dark' : 'night', lit ? 0.042 : 0.051), on(lit ? 'paper' : 'grey', 0.46, y + 0.025, name, 0.04, { lift: 0.05, t: 0.01 }));
+    P.push(on(lit ? 'grey' : 'dark', x0 + from, y, len, 0.09, { lift: 0.05, t: 0.012 }));
+    keys.forEach(t => P.push(icon(lit ? 'kfOn' : 'kf', x0 + t - 0.045, y, 0.09, 0.09, lit ? 'grey' : 'dark', 0.063)));
+  });
+  const head = x0 + 1.6;
+  P.push(on('red', head - 0.015, 0.13, 0.03, 0.95, { lift: 0.13, t: 0.01 }), on('red', head - 0.07, 1.01, 0.14, 0.1, { lift: 0.13, t: 0.02 }));
+
+  screens(P, 'motWide', 'motTall', 'motSq');              // exported: in a player, as a story, and square in a feed
+  return P;
+}
+
+export const SCENES = [photoshop, illustrator, indesign, video, motion];
+export const CRAFT = [0, 0, 0, 1, 2];                      // which of the four crafts each scene belongs to
