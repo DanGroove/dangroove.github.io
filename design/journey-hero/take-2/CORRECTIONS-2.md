@@ -6,7 +6,7 @@ Times are loop seconds in `341f94f`; they move as actions change. Every time bel
 
 ## A. Fixes from the critique (both critics agreed)
 
-Both critics accepted this part, with the conditions now written into A2, A5, A6 and D2 (their "Agreement" sections, 19 November, about 23:55 UTC).
+Both critics accepted this part, with the conditions now written into A2, A5, A6 and D2 (their "Agreement" sections, 19 November, about 23:50 UTC).
 
 **A1 (major; C3 is not met for the LinkedIn post). The dropped photo must not cover the post and the e-blast as they are built.** `stage.mjs` line 974 calls `dragPicture(… key + 'Photo' …, 'kPhoto')` on every frame after the drop, so a plain copy of the photo lies over the post from 27.26 s and hides the band, foot, small blob, the typed title and the drawn gold blob until the finished `kPost` cuts in at 28.46 s; on the e-blast it hides the gold photo frame until 30.68 s. Draw the dragged photo only while the drag runs: `if (!done(s, key + 'Photo', t)) dragPicture(…)`. The cover already works this way (`travel`).
 - Pass: frames every 0.05 s over 27.20 to 28.60 s and 28.95 to 30.80 s. The post's band, foot and small blob arrive with `postPhoto`; its title types visibly; its gold blob grows under the cursor; the e-blast's gold photo frame arrives with `mailPhoto`. At the end of `postButton` only the button changes; when the finished `eblast` replaces its construction nothing changes on screen. At each photo drop, the carried photo becomes the placed, frame-styled photo in one frame with no jump of more than 2 px at 1x, and no frame shows the frame empty.
