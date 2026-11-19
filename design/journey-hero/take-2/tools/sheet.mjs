@@ -16,7 +16,7 @@ import { serve, ROOT } from '../../tools/serve.mjs';
 const require = createRequire(import.meta.url);
 const out = process.argv[2] || path.join(TAKE, '.scratch', 'sheet.png');
 const CAPTIONS = [
-  ['01 Graphic design, in Photoshop', 'First, a photo edit of the building: as shot on the left of the split, graded on the right. Nothing lands on the floor when it exports. The photograph goes on into the next apps, and every later piece uses it'],
+  ['01 Graphic design, in Photoshop', 'First, a photo edit of the building: levels, a replaced sky, two healed distractions and the finished grade. Nothing lands on the floor when it exports. The photograph goes on into the next apps, and every later piece uses it'],
   ['01 Graphic design, in Illustrator', 'Second, the booklet\'s two maps, simplified. Above, King Street from the amenities page. Below, downtown from the location page, and beside it a closer view of the part in the red frame, where the subway\'s line is selected as a path. Landmarks and transit carry plain badges in place of their logos. Nothing lands on the floor here either: the maps go into the booklet'],
   ['01 Graphic design, in InDesign', 'Last, the 1 King Street W booklet, drawn very simply, with no agent names and with both logos as blobs, plus a LinkedIn post and an e-blast that follow it. This export is what lands: one stack of closed copies, the post in a phone and the e-blast in a tablet. One copy is taken off the top of the stack, opened and leafed through: here a page is landing on the location spread'],
   ['02 Video', 'The editing app with captions, a transition and an effect on the timeline, exported to three screens: wide on a tablet, tall as a reel, and square in a feed'],

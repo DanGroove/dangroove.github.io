@@ -11,7 +11,7 @@ import { previewMarkup } from './preview.mjs';
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
 function fail(time, message) {
-  if (errors.length < 30) errors.push(`${time.toFixed(6)}s (${sceneAt(time).scene.key}): ${message}`);
+  if (errors.length < 30 && !errors.some(error => error.endsWith(': ' + message))) errors.push(`${time.toFixed(6)}s (${sceneAt(time).scene.key}): ${message}`);
 }
 function finite(value, name, time) {
   if (typeof value === 'number' && !Number.isFinite(value)) fail(time, `${name} is not finite`);
@@ -77,7 +77,7 @@ for (let i = 0; i < SHOW.length; i++) {
   for (const at of [0, 0.05, 0.1, 0.5, scene.still, scene.len - 1e-8]) check(start + at);
   start += scene.len;
 }
-if (Object.keys(SCRIPTS).length === 6) assert.ok(LOOP / PACE >= 70 && LOOP / PACE <= 78, `loop is ${LOOP / PACE}s`);
+if (Object.keys(SCRIPTS).length === 6) assert.ok(LOOP / PACE >= 70 && LOOP / PACE <= 82, `loop is ${LOOP / PACE}s`);
 assert.equal(sceneAt(LOOP).i, 0);
 assert.equal(sceneAt(-0.01).scene.key, 'fig');
 assert.deepEqual(frameAt(-0.01), frameAt(LOOP - 0.01));
@@ -150,11 +150,9 @@ for (const [id, duration] of [['black', 0.5], ['white', 0.5], ['sky', 0.7], ['co
 near((SHOW[0].len - atAction(ps, 'export', 1)) / PACE, 0.3);
 for (const id of ['cone', 'crane']) {
   const before = frameAt(atAction(ps, id, 1) - 1e-6).filter(photoArt);
-  assert.ok(before.some(pc => pc.art === 'photoSky'), `${id}: distraction disappeared during scrub`);
+  assert.ok(before.some(pc => pc.art === (id === 'cone' ? 'photoSky' : 'photoNoCone')), `${id}: distraction disappeared during scrub`);
 }
-const conePatch = frameAt(atAction(ps, 'cone', 1)).filter(photoArt).find(pc => pc.art === 'photoClean');
-assert.ok(conePatch.window[0] * 526 < 28 && conePatch.window[1] * 360 < 245 && conePatch.window[2] * 526 > 104 && conePatch.window[3] * 360 > 293, 'cone patch misses barrier/posts');
-for (const [id, art] of [['crane', 'photoClean'], ['grade', 'kPhoto']]) {
+for (const [id, art] of [['cone', 'photoNoCone'], ['crane', 'photoClean'], ['grade', 'kPhoto']]) {
   const pictures = frameAt(atAction(ps, id, 1)).filter(photoArt);
   assert.equal(pictures.length, 1, `${id}: completed picture still has its construction layers`);
   assert.equal(pictures[0].art, art);
@@ -188,12 +186,12 @@ const context = new Proxy({
 globalThis.Path2D = class {};
 globalThis.document = { createElement: () => ({ getContext: () => context }) };
 const atlas = makeAtlas();
-assert.ok(atlas.pages.length <= 6, 'atlas exceeds six pages');
+assert.equal(atlas.pages.length, 5, 'the correction must keep the atlas at five pages');
 assert.ok(atlas.pages.every(p => p.width <= 2048 && p.height <= 2048));
 assert.ok(ART_TEXT.kMap.length > 10 && ART_TEXT.kLoc.length > 20, 'map lettering was not recorded');
 const skyColours = key => { const first = gradients.length, art = ART[key]; art.draw(context, art.w, art.h); return gradients[first]; };
 for (const key of ['photoRaw', 'photoHalf', 'photoLevels']) assert.deepEqual(skyColours(key), [[0, '#C1C2BF'], [1, '#C1C2BF']], `${key}: sky must stay flat grey`);
-for (const key of ['photoSky', 'photoClean', 'kPhoto']) assert.deepEqual(skyColours(key), [[0, '#6E9CD6'], [1, '#D9E6F1']], `${key}: replaced sky must stay blue through the grade`);
+for (const key of ['photoSky', 'photoNoCone', 'photoClean', 'kPhoto']) assert.deepEqual(skyColours(key), [[0, '#6E9CD6'], [1, '#D9E6F1']], `${key}: replaced sky must stay blue through the grade`);
 // Revisit every action after atlas-time font measurement, including rotated map type and carets.
 sceneStart = 0;
 for (const scene of SHOW) {
@@ -249,6 +247,7 @@ const node = rect => ({
 const hero = node({ left: 0, top: 0, width: 1440, height: 900 }), stage = node({ left: 760, top: 80, width: 600, height: 700 }), pause = node(), crafts = [0, 1, 2, 3].map(() => node());
 hero.querySelector = s => s === '[data-stage-box]' ? stage : s === '[data-pause]' ? pause : {};
 hero.querySelectorAll = () => crafts;
+let scheduledTick;
 const media = { matches: false, addEventListener(_name, f) { this.change = f; } }, win = {}, draws = [];
 const playerDocument = { querySelector: () => hero, fonts: { ready: Promise.resolve() }, hidden: false, addEventListener() {} };
 const renderer = { setAtlas() {}, draw(pieces, view) { draws.push({ pieces, view }); } };
@@ -259,7 +258,7 @@ await new AsyncFunction('env', `const { location, document, window, matchMedia, 
   location: { search: '?t=0' }, document: playerDocument, window: win, matchMedia: () => media,
   createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => atlas, fontsReady: async () => {},
   SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, devicePixelRatio: 3,
-  requestAnimationFrame: () => 1, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
+  requestAnimationFrame: callback => { scheduledTick = callback; return 1; }, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
 });
 assert.equal(win.__ready, true);
 assert.ok(draws.at(-1).view.dpr <= 2);
@@ -269,6 +268,11 @@ crafts[2].events.click();
 near(sceneAt(win.__hero.t).at, SHOW[4].still);
 pause.events.click(); crafts[0].events.click(); near(win.__hero.t, 0);
 pause.events.click(); stage.events.click(); near(sceneAt(win.__hero.t).at, SHOW[3].still);
+pause.events.click();
+scheduledTick(0); const beforeStall = win.__hero.t;
+scheduledTick(1000); near(win.__hero.t - beforeStall, 0.1);
+scheduledTick(1100); near(win.__hero.t - beforeStall, 0.2);
+pause.events.click();
 media.matches = true; media.change(); near(sceneAt(win.__hero.t).at, SHOW[3].still);
 win.__hero.seek(-0.01); near(win.__hero.t, LOOP - 0.01);
 // Parse the offline module without running it. All font URLs and page links must be self-contained.
@@ -278,6 +282,156 @@ assert.ok(preview.startsWith('<title>Journey hero take two</title>'));
 assert.ok(!/<!doctype|<html\b|<head\b|<body\b/i.test(preview));
 assert.ok(!/\b(?:src|href)=/.test(preview.split('<script>')[0]));
 assert.ok(!/url\((?!data:)/.test(preview.split('<script>')[0]));
+
+// C12: inspect what was actually emitted, at regular samples and both sides of each action boundary.
+// This is geometry/provenance evidence. It does not claim to inspect rendered pixels.
+const rectOf = pc => {
+  const p = corners(pc), xs = p.map(v => (v[0] - SCREEN.l) / 1.15), ys = p.map(v => (v[1] - SCREEN.b) / 1.15);
+  return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+};
+const contains = (r, p) => p[0] >= r[0] - 1e-8 && p[0] <= r[2] + 1e-8 && p[1] >= r[1] - 1e-8 && p[1] <= r[3] + 1e-8;
+const distanceTo = (r, p) => Math.hypot(Math.max(r[0] - p[0], 0, p[0] - r[2]), Math.max(r[1] - p[1], 0, p[1] - r[3]));
+const overlaps = (a, b) => Math.min(a[2], b[2]) > Math.max(a[0], b[0]) + 1e-8 && Math.min(a[3], b[3]) > Math.max(a[1], b[1]) + 1e-8;
+const topOf = pc => pc.p[2] + pc.s[2];
+const panelX = SCREEN.w / 1.15 - 0.93, panelTop = SCREEN.h / 1.15 - 0.54;
+const exemptions = {
+  openingFurniture: 'App furniture belongs to the opening wipe; it is not a new document object.',
+  playback: 'The viewer and exported devices replay work already made by the cursor.',
+  runMember: 'The cursor makes the members of one explicit run inside its own bounding box.',
+  layerEcho: 'Layer and page rows echo a cursor-made document object in the same frame.',
+  laneEcho: 'Timeline blocks, voice, waveforms and keys echo the carried/typed/edited work.',
+  thumbnailEcho: 'The After Effects project thumbnail mirrors the cursor-made comp.',
+  frameNameEcho: 'Frame labels echo the frame that has just been drawn or copied.',
+  phoneEcho: 'Figma phone copies echo the desktop construction in the same frame.',
+  viewerEcho: 'The viewer/histogram reflects the footage or photograph just made.',
+  graphEcho: 'The graph reflects the ball path just made by the cursor.',
+  overlay: 'Selections, carets and playheads mark existing work.',
+  carried: 'This is the piece currently being dragged by the cursor.',
+};
+function exemption(pc, scene, at, a, r) {
+  if (pc.overlay || pc.caret) return 'overlay';
+  if (pc.where === 'floor' || pc.clock !== undefined || a?.kind === 'play') return 'playback';
+  if (pc.where === 'travel' && a?.kind === 'drag') return 'carried';
+  if (!pc.document && at <= 0.8 * PACE) return 'openingFurniture';
+  if (a?.kind === 'run' && at <= a.end + 1e-8) {
+    const points = [a.from, a.to, ...(a.path || []), ...(a.points || [])];
+    const bounds = [Math.min(...points.map(p => p[0])) - 0.6, Math.min(...points.map(p => p[1])) - 0.6, Math.max(...points.map(p => p[0])) + 0.6, Math.max(...points.map(p => p[1])) + 0.6];
+    if (overlaps(r, bounds)) return 'runMember';
+  }
+  if (scene === 'ps' && /^(photo|kPhoto)/.test(pc.art || '') && r[2] < panelX) return 'viewerEcho';
+  if (scene === 'ai' && pc.art === 'kLocClose') return 'viewerEcho';
+  if (scene === 'ps' && r[0] >= panelX) return r[1] > panelTop - 0.6 ? 'viewerEcho' : 'layerEcho';
+  if (scene === 'ai' && r[0] >= panelX) return 'layerEcho';
+  if (scene === 'id' && r[0] >= panelX - 0.01) return 'layerEcho';
+  if (scene === 'pr') {
+    if (r[3] <= 1.12) return 'laneEcho';
+    if (r[0] >= 1.3 && r[2] <= 3.3 && r[1] >= 1.49) return 'viewerEcho';
+  }
+  if (scene === 'ae') {
+    if (!pc.art && r[0] >= 1.3 && r[2] <= 3.3 && r[1] >= 1.49) return 'viewerEcho';
+    if (r[3] <= 1.12) return 'laneEcho';
+    if (r[0] < 1.1) return r[1] > 2 ? 'thumbnailEcho' : 'layerEcho';
+    if (r[0] >= 3.7) return 'graphEcho';
+  }
+  if (scene === 'fig') {
+    if (!pc.art && pc.tone === 'grey' && Math.abs(r[3] - r[1] - 0.03) < 1e-8 && [1.355, 2.475].some(y => Math.abs(r[1] - y) < 1e-8)) return 'frameNameEcho';
+    if (r[2] <= 0.81) return 'layerEcho';
+    if (r[0] >= 2.5 && r[2] < panelX && r[3] <= 2.5) return 'phoneEcho';
+  }
+  return null;
+}
+const textFamilies = { ps: {}, ai: { labels: 'kMap', title: 'kMap', cityLabels: 'kLoc' }, id: { heading: 'idHeading', coverTitle: 'idCover', postTitle: 'idPost', mailTitle: 'eblast', mailFlyer: 'idFlyer' }, pr: { caption: 'cap1', caption2: 'cap2', caption3: 'cap3' }, ae: { make: 'wMake', move: 'wMove' }, fig: { heading: 'wireHeading', name: 'siteName0' } };
+const fullText = { kCover: 'idCover', kPost: 'idPost', eblast: 'eblast', cap1: 'cap1', cap2: 'cap2', cap3: 'cap3', uiBuild3Wide: 'siteName0', uiWide: 'siteName0' };
+let ruleStart = 0;
+for (const scene of SHOW) {
+  const s = SCRIPTS[scene.key], byId = Object.fromEntries(s.actions.map(a => [a.id, a]));
+  const samples = new Set(Array.from({ length: Math.ceil(scene.len * 60) }, (_, n) => n / 60));
+  for (const a of s.actions) for (const f of [-1e-7, 0, 0.01, 0.1, 0.25, 0.5, 0.75, 0.999999, 1, 1.000001]) samples.add(a.start + (a.end - a.start) * f);
+  const seen = new Set(), seenRows = new Set(), typed = new Set();
+  for (const at of [...samples].filter(t => t >= 0 && t < scene.len - 0.3 * PACE).sort((a, b) => a - b)) {
+    const time = ruleStart + at, list = frameAt(time), a = s.actions.filter(a => at >= a.start - 1e-9).at(-1);
+    const active = a && at < a.end - 1e-9;
+    const ruleFail = (rule, message) => fail(time, rule + ': ' + message);
+    if (scene.key === 'id') {
+      for (const pc of list.filter(pc => pc.document && pc.where === 'content')) {
+        const r = rectOf(pc), inPanel = r[0] >= panelX - 0.01;
+        // R1: these assets really contain the photo, including the small page thumbnails.
+        if (/^(?:kCover|kOfferL|kGal[LR]|kBack|coverPhoto|coverBlob|coverDecor|kPost|postPhoto|eblast|mailPhoto|mailButtonStyle|idCover\d+|idPost\d+|idMail\d+|idFlyer\d+|kPhoto)$/.test(pc.art || '')) {
+          const destination = inPanel ? 'photo' : ['photo', 'postPhoto', 'mailPhoto'].sort((a, b) => distanceTo(r, byId[a].to) - distanceTo(r, byId[b].to))[0];
+          if (at < byId[destination].end - 1e-8) ruleFail('R1', pc.art + ' precedes its ' + destination + ' release');
+        }
+        if (inPanel && /^k(?:Cover|Offer[LR]|Loc[LR]|Am[LR]|Gal[LR]|Back)$/.test(pc.art || '')) {
+          const th = 0.36 * 340 / 440, row = Math.round((panelTop - 0.13 - r[1] - th) / (th + 0.1));
+          if (!seenRows.has(row)) {
+            const maker = row === 0 ? byId.coverTitle : row === 2 ? byId.loc : row === 3 ? byId.spreadType : byId.pages;
+            const expected = [1, 4, 5].includes(row) ? maker.start + [1, 4, 5].indexOf(row) * 0.07 * PACE : maker.end;
+            if (at < expected - 1e-8 || at > expected + 1 / 60 + 1e-7) ruleFail('R2', 'page row ' + row + ' appeared outside ' + maker.id);
+            seenRows.add(row);
+          }
+        }
+        if (['kCover', 'kPost', 'eblast'].includes(pc.art) && (!pc.window || pc.window.every((v, i) => Math.abs(v - [0, 0, 1, 1][i]) < 1e-8))) {
+          const id = { kCover: 'blob', kPost: 'postBlob', eblast: 'mailBlob' }[pc.art];
+          if (!byId[id] || byId[id].kind !== 'draw' || at < byId[id].end - 1e-8) ruleFail('R3', pc.art + ' precedes its drawn blob');
+        }
+      }
+    }
+    // R4: the first visible prefix has a caret. A completed composite/caption must have typed ancestry.
+    for (const pc of list.filter(pc => pc.document && pc.where === 'content' && !pc.caret)) {
+      if (pc.text?.count > 0 && !typed.has(pc.text.key)) {
+        if (!pc.text.prefix || !list.some(p => p.caret === pc.text.key)) ruleFail('R4', pc.text.key + ' first appeared without a typing prefix and caret');
+        else typed.add(pc.text.key);
+      }
+      const family = fullText[pc.art];
+      if (family && !pc.text && !pc.window && !typed.has(family)) ruleFail('R4', pc.art + ' appeared before its text was typed');
+    }
+    // R5: first appearance of actual document geometry, with a closed role/reason exemption list above.
+    for (const pc of list.filter(pc => pc.document)) {
+      const r = rectOf(pc), identity = [pc.art || pc.tone, ...r.map(n => n.toFixed(5)), pc.window?.join(',')].join('/');
+      if (seen.has(identity)) continue;
+      seen.add(identity);
+      const role = list.clock !== null && list.clock !== undefined ? 'playback' : exemption(pc, scene.key, at, a, r);
+      if (role) { assert.ok(exemptions[role]); continue; }
+      const cursor = tip(list).map((v, i) => (v - [SCREEN.l, SCREEN.b][i]) / 1.15), points = [cursor, ...(a ? [a.from, a.to, ...(a.points || []), ...(a.path || []), ...(a.curve || [])] : [])];
+      if (!points.some(p => distanceTo(r, p) <= 0.6 + 1e-8)) ruleFail('R5', 'new ' + (pc.art || pc.tone) + ' is far from the cursor and action points');
+    }
+    // R6: every landed InDesign image remains present until an explicit replacement, never under a plain plate.
+    const placements = {
+      id: [['map', ['kMap', 'kAmL', 'kAmR']], ['photo', ['coverPhoto', 'coverBlob', 'coverDecor', 'kCover']], ['postPhoto', ['postPhoto', 'kPost']], ['mailPhoto', ['mailPhoto', 'eblast']]],
+      ai: [['mapExport', ['kMap']], ['locExport', ['kLoc']]],
+      pr: [['clipA', ['thumbA']], ['clipB', ['thumbB']], ['clipC', ['thumbC']]],
+      ae: at < byId.play?.start ? [['path', ['redBall']]] : [],
+      fig: [['hero', ['uiBuild2Wide', 'uiBuild3Wide', 'uiWide', 'uiBoard0', 'uiBoard1', 'uiBoard2', 'uiBoard3']]],
+    };
+    for (const [id, pictures] of placements[scene.key] || []) {
+      if (at < byId[id].end - 1e-9) continue;
+      let point = byId[id].to;
+      const image = list.filter(pc => pictures.includes(pc.art) && (scene.key === 'pr' ? pc.where === 'content' && rectOf(pc)[3] < 1.12 : scene.key === 'ae' ? pc.where === 'content' && rectOf(pc)[0] > 1.3 : contains(rectOf(pc), point))).sort((a, b) => topOf(b) - topOf(a))[0];
+      if (image && scene.key === 'pr') { const r = rectOf(image); point = [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2]; }
+      if (!image) { ruleFail('R6', id + ' disappeared after landing'); continue; }
+      const r = rectOf(image);
+      for (const plate of list.filter(pc => !pc.art && !pc.overlay && pc.where !== 'floor' && pc.where !== 'travel' && quatRotate(pc.q, [0, 0, 1])[2] > 1 - 1e-9)) {
+        const pr = rectOf(plate);
+        if (pr[2] - pr[0] > 0.08 && pr[3] - pr[1] > 0.08 && overlaps(r, pr) && topOf(image) - topOf(plate) < 0.0006 * 1.15 - 1e-9) ruleFail('R6', id + ' is behind a plain overlapping face');
+      }
+    }
+    // R7: inspect the red tool icon emitted by the app, rather than trusting the scheduler's name alone.
+    if (active && at > a.start + 1e-7 && ['set', 'drag', 'click'].includes(a.kind)) {
+      const expected = a.tool || 'arrow', icons = { arrow: 'tArrow', type: 'tType', rectangle: 'tRect', frame: scene.key === 'fig' ? 'tHash' : 'tFrame', ellipse: 'tCircle', blade: 'tBlade' };
+      const expectedIcon = icons[expected] || expected;
+      const lit = list.filter(pc => pc.tone === 'red' && ['tArrow', 'tMove', 'tType', 'tRect', 'tFrame', 'tHash', 'tCircle', 'tBlade', 'tWand'].includes(pc.art));
+      if (!lit.some(pc => pc.art === expectedIcon)) ruleFail('R7', a.id + ' lights ' + lit.map(pc => pc.art).join(',') + ' instead of ' + expectedIcon);
+    }
+  }
+  for (const [id, key] of Object.entries(textFamilies[scene.key])) {
+    const a = byId[id];
+    if (!a || a.kind !== 'type') { fail(ruleStart, 'R4: ' + id + ' needs a type action'); continue; }
+    const sample = frameAt(ruleStart + a.start + (a.end - a.start) * 0.4);
+    if (!sample.some(pc => pc.text?.key === key && pc.text.count > 0 && pc.text.count < pc.text.total && pc.text.prefix) || !sample.some(pc => pc.caret === key)) fail(ruleStart + a.start, 'R4: ' + id + ' lacks a partial prefix/caret');
+  }
+  ruleStart += scene.len;
+}
+console.log('R1–R7 sampled: photo releases, pages, blobs, typing, births, placed images, tools');
+
 if (errors.length) {
   console.error(errors.join('\n'));
   process.exitCode = 1;

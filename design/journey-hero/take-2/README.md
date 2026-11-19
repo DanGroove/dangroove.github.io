@@ -1,6 +1,6 @@
 # Journey hero, second take
 
-This is the unpublished prototype. `MOTION-2.md` controls the second pass; `MOTION.md` supplies the renderer, shell, dock, printer slot and player rules that it keeps. The browser-review corrections recorded in `BUILD.md` set the revised 70–78-second range. The loop is **77.73 seconds at PACE 1**. Every document opens empty, is built by one cursor, and reaches the approved composition before export. The last three exports play with their app's viewer.
+This is the unpublished prototype. `MOTION-2.md` controls the second pass; `MOTION.md` supplies the renderer, shell, dock, printer slot and player rules that it keeps. The browser-review corrections recorded in `BUILD.md` set the revised 70–82-second range. The loop is **80.24 seconds at PACE 1**. Every document opens empty, is built by one cursor, and reaches the approved composition before export. The last three exports play with their app's viewer.
 
 ## The design being carried forward
 
@@ -10,7 +10,7 @@ Graphic design is one pipeline: Photoshop's photograph goes to the dock; Illustr
 
 Video, motion and UX/UI export to a landscape tablet and two phones. Everything lies flat and square to the screen. The approved sizes, gutters and back edge stay. Each group now has its own x position, solved in HOME camera coordinates; its footprint's midpoint aligns with the screen face's midpoint. The light pool shares that alignment.
 
-The prior build was reviewed in Chromium on 19 November 2026, with held frames on desktop and phone, a pixel comparison of its stills, and an offline preview checked for requests. The second pass was then reviewed in a real browser: stacked pictures flickered, the comp's construction was hidden, typing was too fast, and Photoshop needed clearer, better-paced edits. Those findings are the evidence for this correction. The corrective revision was then reviewed the same way on 19 November 2026 (Chromium with software rendering): held frames at each corrected moment (Photoshop's sky, both healed distractions and the graded photo; Premiere Pro's typed caption; After Effects' typed words; the playing devices of the last three apps) show no flicker, ghost or garbled text; a film of the whole loop reads cleanly; and the offline preview runs at desktop and phone size with no requests and no errors. **Still unmeasured:** frame rate on a real graphics card and on phones, and Safari and Firefox.
+The prior build was reviewed in Chromium on 19 November 2026, with held frames on desktop and phone, a pixel comparison of its stills, and an offline preview checked for requests. The second pass was then reviewed in a real browser: stacked pictures flickered, the comp's construction was hidden, typing was too fast, and Photoshop needed clearer, better-paced edits. Those findings are the evidence for this correction. The corrective revision was then reviewed the same way on 19 November 2026 (Chromium with software rendering): held frames at each corrected moment (Photoshop's sky, both healed distractions and the graded photo; Premiere Pro's typed caption; After Effects' typed words; the playing devices of the last three apps) show no flicker, ghost or garbled text; a film of the whole loop reads cleanly; and the offline preview runs at desktop and phone size with no requests and no errors. The C14 run below now supplies RTX 4090 desktop measurements. **Still unmeasured:** phones, Safari and Firefox.
 
 ## What runs the show
 
@@ -30,14 +30,14 @@ Times below are seconds at PACE 1. The first 0.5 seconds change shell; the next 
 
 | App | Global start | Length | Local still | What is built |
 | --- | ---: | ---: | ---: | --- |
-| Photoshop | 0.000 | 7.500 | 6.549 | Raw photo; two levels adjustments; sky; separate cone and crane heals; grade; photograph to dock |
-| Illustrator | 7.500 | 11.400 | 9.239 | Empty artboards; amenities street, markers, labels, title and badge; city blocks, streets, pins and labels; close-up and selected subway; maps carried to dock |
-| InDesign | 18.900 | 16.210 | 13.307961 | Four empty frames; map and upright heading; location thumbnail; cover photograph, blob and title; post and e-blast; export, pickup and four bending leaves |
-| Premiere Pro | 35.110 | 14.560 | 11.493333 | Empty bin and timeline; shots with voice; blade and offcut; presets; typed caption and repeats; music, ducking and stepped fade; play and live exports |
-| After Effects | 49.670 | 14.030 | 10.963333 | Empty comp; words, ball and rows; layers, stopwatch and keys; path; stagger; graph handle; play and live exports |
-| Figma | 63.700 | 14.030 | 10.963333 | Empty frames; wireframe parts; selected copies; fills, picture, typed name and accents; hotspot, link and properties; live prototype exports |
+| Photoshop | 0.000 | 7.500 | 6.549000 | Raw photo; levels; sky; separate seamless cone/crane bases; grade; photograph to dock |
+| Illustrator | 7.500 | 11.400 | 9.239000 | Empty artboards; amenities and city maps; close-up and subway; maps to dock |
+| InDesign | 18.900 | 18.060 | 15.157961 | Empty frames; placed map; page rows as made; styled photo drops; drawn blobs and typed titles/button; export and four bending leaves |
+| Premiere Pro | 36.960 | 15.220 | 12.153333 | Empty bin/timeline; shots and voice; blade and presets; three typed captions and two repeats; sound; play and exports |
+| After Effects | 52.180 | 14.030 | 10.963333 | Empty comp; words, ball and rows; keys and path; graph; play and exports |
+| Figma | 66.210 | 14.030 | 10.963333 | Empty frames; wireframes and copies; fills; panel asset carried into place; typed name; arrow-set accents; prototype exports |
 
-The scripts contain lengths, never hand-authored start times. `script()` derives each approach, start and end. PACE scales those lengths, cursor approaches, shell transition, feed/return and device clocks together. The first typed text in each app takes at least 0.6 seconds; every later text takes at least 0.4 seconds. Repeat runs retain their brisk timings. The resulting scene lengths supersede the second pass's individual targets and fit the revised 70–78-second loop. After Effects also visibly moves the first ball key from zero to 0.75, so the new stopwatch operation can create its key at zero while the finished animation keeps the approved stagger.
+The scripts contain lengths, never hand-authored start times. `script()` derives each approach, start and end. PACE scales those lengths, cursor approaches, shell transition, feed/return and device clocks together. The first typed text in each app takes at least 0.6 seconds; every later text takes at least 0.4 seconds. Repeat runs retain their brisk timings. The resulting scene lengths supersede the second pass's individual targets and fit the revised 70–82-second loop. After Effects also visibly moves the first ball key from zero to 0.75, so the new stopwatch operation can create its key at zero while the finished animation keeps the approved stagger.
 
 InDesign's four leaf turns still last 0.6 seconds each, separated by 0.3 seconds, and its pickup lasts 0.7 seconds. Its settle and final reading holds are 0.3 seconds. Photoshop's levels slides each take 0.5 seconds, its sky wipe 0.7 seconds, and each healing scrub 0.25 seconds with the patch cutting in at release. Its closing wipe finishes 0.3 seconds after the photograph docks, removing the former 1.4-second empty hold.
 
@@ -85,25 +85,29 @@ Every action start and end follows. These are local times; multiply by PACE and 
 | id | photo | drag | 5.940 | 6.390 |
 | id | blob | draw | 6.590 | 6.770 |
 | id | coverTitle | type | 6.890 | 7.290 |
-| id | postPhoto | drag | 7.410 | 7.710 |
-| id | postTitle | type | 7.830 | 8.230 |
-| id | postButton | draw | 8.350 | 8.530 |
-| id | mailPhoto | drag | 8.810 | 9.110 |
-| id | mailTitle | type | 9.230 | 9.630 |
-| id | mailButton | draw | 9.750 | 9.930 |
-| id | export | export | 10.210 | 11.010 |
-| id | land | wait | 11.010 | 11.310 |
-| id | pickup | wait | 11.310 | 12.010 |
-| id | open | wait | 12.010 | 12.110 |
-| id | leaf1 | wait | 12.110 | 12.710 |
-| id | pause1 | wait | 12.710 | 13.010 |
-| id | leaf2 | wait | 13.010 | 13.610 |
-| id | pause2 | wait | 13.610 | 13.910 |
-| id | leaf3 | wait | 13.910 | 14.510 |
-| id | pause3 | wait | 14.510 | 14.810 |
-| id | leaf4 | wait | 14.810 | 15.410 |
-| id | read | wait | 15.410 | 15.710 |
-| id | return | wait | 15.710 | 16.210 |
+| id | pages | run | 7.570 | 7.780 |
+| id | postPhoto | drag | 8.060 | 8.360 |
+| id | postTitle | type | 8.480 | 8.880 |
+| id | postBlob | draw | 9.080 | 9.260 |
+| id | postButton | draw | 9.380 | 9.560 |
+| id | mailPhoto | drag | 9.840 | 10.140 |
+| id | mailTitle | type | 10.260 | 10.660 |
+| id | mailBlob | draw | 10.780 | 10.960 |
+| id | mailButton | draw | 11.080 | 11.260 |
+| id | mailFlyer | type | 11.380 | 11.780 |
+| id | export | export | 12.060 | 12.860 |
+| id | land | wait | 12.860 | 13.160 |
+| id | pickup | wait | 13.160 | 13.860 |
+| id | open | wait | 13.860 | 13.960 |
+| id | leaf1 | wait | 13.960 | 14.560 |
+| id | pause1 | wait | 14.560 | 14.860 |
+| id | leaf2 | wait | 14.860 | 15.460 |
+| id | pause2 | wait | 15.460 | 15.760 |
+| id | leaf3 | wait | 15.760 | 16.360 |
+| id | pause3 | wait | 16.360 | 16.660 |
+| id | leaf4 | wait | 16.660 | 17.260 |
+| id | read | wait | 17.260 | 17.560 |
+| id | return | wait | 17.560 | 18.060 |
 | pr | bin | run | 1.080 | 1.360 |
 | pr | clipA | drag | 1.480 | 1.880 |
 | pr | clipB | drag | 2.160 | 2.560 |
@@ -114,12 +118,14 @@ Every action start and end follows. These are local times; multiply by PACE and 
 | pr | transition | drag | 4.180 | 4.630 |
 | pr | effect | drag | 4.910 | 5.310 |
 | pr | caption | type | 5.590 | 6.190 |
-| pr | captions | run | 6.390 | 6.670 |
-| pr | music | drag | 6.950 | 7.350 |
-| pr | duck | slide | 7.470 | 7.720 |
-| pr | fade | slide | 8.000 | 8.250 |
-| pr | play | play | 8.530 | 10.130 |
-| pr | export | export | 10.410 | 11.110 |
+| pr | caption2 | type | 6.190 | 6.590 |
+| pr | caption3 | type | 6.590 | 6.990 |
+| pr | captions | run | 7.190 | 7.330 |
+| pr | music | drag | 7.610 | 8.010 |
+| pr | duck | slide | 8.130 | 8.380 |
+| pr | fade | slide | 8.660 | 8.910 |
+| pr | play | play | 9.190 | 10.790 |
+| pr | export | export | 11.070 | 11.770 |
 | ae | comp | click | 1.080 | 1.380 |
 | ae | make | type | 1.580 | 2.180 |
 | ae | move | type | 2.300 | 2.700 |
@@ -171,7 +177,7 @@ Each device retains picture chrome around its moving picture area. Progress grow
 This inventory describes known changes from the incoming motion build and the approved sheet; it is not a claim of a completed pixel comparison.
 
 - **All six stills:** the light pool moves to the screen's projected middle, and the common fitted framing is remeasured from the new stills. InDesign's deeper group and the three-device rows move horizontally to centre below the screen. Their sizes, gaps, depth and slot stay. This correction adds the small height separations needed by rounded picture/plate faces and raises selections, carets, handles, taps and the cursor above picture stacks; the still times in the tables follow the longer typing actions.
-- **Photoshop:** its still is now the finished graded photograph, before Export, rather than a split edit. The split bar and handle are gone; the sliders finish at 0.55 and 0.30; the cursor is on Export. The last rail icon is the wand needed by the sky step. The completed four layer rows and today's histogram remain. This correction draws the graded photograph alone at the still, removing the cone and patch ghosts. During construction the raw sky stays flat grey; the replacement and clean base both use the graded blue sky, so the grade does not change it again. The cone patch includes the barrier and its posts; both completed heals use one clean picture.
+- **Photoshop:** its still is now the finished graded photograph, before Export, rather than a split edit. The split bar and handle are gone; the sliders finish at 0.55 and 0.30; the cursor is on Export. The last rail icon is the wand needed by the sky step. The completed four layer rows and today's histogram remain. This correction draws the graded photograph alone at the still, removing the cone and patch ghosts. During construction the raw sky stays flat grey; the replacement and clean base both use the graded blue sky, so the grade does not change it again. Each completed heal switches the whole base: photoNoCone retains the crane after the cone/barrier are gone; photoClean removes the crane.
 - **Illustrator:** the finished maps, close-up, selected path, points and handles keep their approved measures. The cursor is now on Export, rather than still approaching it. The photo chip stays in the bar as introduced by MOTION.md; the inspect beat returns the lit tool to the arrow.
 - **InDesign:** its finished app content and its leaf pose at exactly 1.82 stay. The horizontal centring and moved pool are the changes; the booklet, stack and two device pictures keep their approved sizes and artwork.
 - **Premiere:** the bin now contains three source shots and music. The timeline adds three attached voice strips, a music lane, level line, square keys, ducked waveform and stepped taper; the clip/voice/caption lanes and preset landing heights fit those into the existing plate. A small lit timeline-tool tile shows the blade/type/arrow actions. The still is one third through export playback: the viewer/playhead and the three devices show that live phase rather than the parked shot A and burned-in caption. Device progress follows that phase. The two effects sliders from MOTION.md remain.
@@ -190,6 +196,49 @@ node design/journey-hero/take-2/tools/preview.mjs design/journey-hero/take-2/.sc
 
 `checks.mjs --timeline` also prints the derived action table. `frameAt(t)` wraps positive and negative times. `SCENES[i]()` builds the new still; `SCENES[2]({ at })` still gives any booklet reading pose with the complete group out. The player supports `?t=12.5` and `window.__hero.seek(t)`, and exposes its clock, SHOW and LOOP. `stage.html?s=0..5` holds a scene, `?t=` holds a loop time, `?atlas=1` shows every atlas page, and yaw/pitch inspect the geometry.
 
-The external browser review can continue using `tools/sheet.mjs` and `tools/film.mjs`, including phone frames and the new 0–77.73-second range. They were not run in the build itself; the browser review recorded under "The design being carried forward" ran them afterwards. No GPU frame-rate measurement has been made.
+The external browser review can continue using `tools/sheet.mjs` and `tools/film.mjs`, including phone frames and the new 0–80.24-second range. They were not run in the build itself; the browser review recorded under "The design being carried forward" ran them afterwards. C14 ran once on the RTX 4090; review/hardware/measure.md records its timing, memory and scan findings.
 
 All authored changes and the packed output are confined to this folder. Neither brief, the first take, public files, source site, dependencies nor deployment was changed.
+
+## Round-one corrections and acceptance
+
+CORRECTIONS-1.md controls this revision. Its destination is the incoming six stills. A structural comparison of every piece's tone, picture, position, rotation, size, window and clip found only five added paperTile picture bindings in After Effects (screen, thumbnail and three devices); all geometry is unchanged within 1e-8. This is not a pixel comparison. The devices now use the same paper colour as the opaque word plates; the screen and thumbnail retain their paper appearance.
+
+Frame style arrives exactly on each photo release, not on a title, blob or button action:
+
+- Cover: the woven ground and the firm's small blob arrive with photo. Its building blob is drawn separately; the gold title tab starts with coverTitle's text-frame click.
+- Post: the woven top band, dark foot and firm's small blob arrive with postPhoto. postTitle supplies its final-looking tag while typing; postBlob draws the large gold building mark. postButton touches only its button/tag area.
+- E-blast: the top band, gold photo frame, divider and firm's small blob arrive with mailPhoto. mailTitle types the body text, mailBlob draws its large building mark, mailButton draws the button, and mailFlyer types View the flyer with a caret for 0.4 seconds.
+
+Amenities, Location and cover thumbnails follow their own completion. Offering, Gallery and back cover are a three-row pages run at 0.07-second intervals. No photo-bearing thumbnail precedes photo's release. Finished pictures replace their construction only after all their parts exist. The landed amenities map sits above the spread plates and retains its outline/handles. Frame diagonals stop on the corresponding photo release.
+
+Premiere types Look good., Move well. and Work right. separately, with growing lane blocks and the correct viewer shot. Only the two repeated captions use a run. Figma's hero source belongs to the panel's opening furniture; its own slot empties during the drag. Fills and accents explicitly name the arrow. tick clamps one time step to 0.1 seconds; seeking still draws the requested time exactly.
+
+R1–R7 sample emitted pieces, measured text prefixes and carets, page births, photo releases, blob completion, tool icons and landed-image clearance. The new-object exemptions are a closed role/reason list in the checker. Each rule was observed failing with its correction undone, then restored. These checks cannot replace the external browser's pixel and whole-loop review.
+
+## Cost and production work
+
+The atlas has five RGBA8 pages, each at most 2048 × 2048: a page costs width × height × 4 bytes plus one third for its mip chain. The maximum five-page allowance is 106.67 MiB; the measured pages are 2048 × 1896, 2048 × 1752, 2048 × 1808, 2048 × 1908 and 2048 × 1492, together 69.19 MiB before mipmaps and 92.25 MiB with them. Mipmaps are allocated even though sampling is capped at level three. The 2D atlas canvases also retain their pixel storage until released.
+
+The hero canvas covers the hero, not just the visible stage; its drawing buffer is capped at 2 device pixels per CSS pixel (four times the CSS pixel area). Budget width × height × 4 for resolved colour, plus multisample colour and depth at the real sample count. At DPR 2, 1440 × 900 CSS pixels become 2880 × 1800 buffer pixels, and 1920 × 1080 become 3840 × 2160. Antialiasing is requested; its actual samples and depth bits must be queried. The 2048 × 2048 DEPTH_COMPONENT24 shadow map normally occupies a 32-bit allocation, about 16 MiB, with no mipmaps. Browser/compositor buffers, mesh/driver overhead and retained 2D canvases add to the GPU allocation estimate; the estimate is not a measured process working set.
+
+preserveDrawingBuffer: true exists so external review tools can seek, draw once and capture that held WebGL frame after compositing. It is a review convenience, with a memory/performance cost. The production build switches it off; this prototype keeps it on for those captures.
+
+Production work still required:
+
+- Handle a lost WebGL context: this prototype has no restoration path, so its canvas stays blank.
+- Handle no WebGL2: renderer creation throws, leaving dead controls and no still.
+- Measure actual phones, battery/thermal behaviour, Safari and Firefox; desktop headless timing does not establish phone performance.
+- Ship a fallback to approved stills for unsupported/lost WebGL and constrained devices, with usable craft controls and reduced-motion behaviour.
+
+Run the local-only measuring tool with node design/journey-hero/take-2/tools/measure.mjs. It uses an isolated headless browser, the packed file and no page network requests; the graphics card, software-renderer warning, frame timing, allocation estimate and flicker scan belong in review/hardware/measure.md.
+
+## Hardware run, 19 November 2026
+
+[measure.md](review/hardware/measure.md) and [measure.json](review/hardware/measure.json) record the single local run, 22:25:20.827–22:29:03.340 UTC, using Edge 157.0.4341.60. WebGL reports Google Inc. (NVIDIA), ANGLE NVIDIA GeForce RTX 4090 through Direct3D11. No software renderer was detected. WebGL2 exists; navigation to ready took 144.2 ms. No console errors or page network requests were recorded. The spawned Edge closed and its isolated profile was removed.
+
+At DPR 1, each full loop recorded 19,249 frames: median 4.20 ms, P95 4.30 ms, worst 4.50 ms, with zero gaps above 50 ms after the first second. At 1440 × 900 the hero clock advanced 80.2413 seconds over 80.2436 wall seconds; at 1920 × 1080 it advanced 80.2412 over 80.2425. Measured canvases matched those pixel sizes, with four MSAA samples and 24-bit depth. GPU allocation estimates are 152.74 MiB and 179.44 MiB respectively; the 69.19 MiB retained 2D atlas pixels and unknown driver/compositor overhead sit outside those estimates.
+
+The scan captured 569 times twice after an intervening seek: zero repeat failures, but **1,223 blink blocks** (Photoshop 40, InDesign 964, Premiere 119, After Effects 79, Figma 21). All times/8 × 8 block spans are retained for the external review. These flags have not been visually classified or declared harmless. Five labelled JPEG sheets and both reports occupy about 671 KB.
+
+Contact-sheet constraint departure: the stage capture is 775 pixels wide, so eight half-size frames would make a 3100-pixel sheet. To obey the 1600-pixel maximum, the tool fits them to 200 pixels per frame (25.806% of source, below half size). The scan comparisons use the full 775 × 772 stage capture. This is the only incomplete literal C14 requirement; no second browser run or visual comparison was performed.

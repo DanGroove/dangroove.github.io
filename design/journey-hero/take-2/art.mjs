@@ -6,7 +6,7 @@ export const C = { ink: '#151314', paper: '#F7F6F3', red: '#C0262E', grey: '#B9B
 export const TYPE_EDGES = {};
 export const TYPE_BOXES = {};
 export const ART_TEXT = {};
-let captureText = null, hideText = false, hideLogos = false, hideTabs = false;
+let captureText = null, hideText = false, hideLogos = false, hideTabs = false, hideBuilding = false;
 function recordType(c, key, words, x, px, align = 'left', baseline = px) {
   c.font = `800 ${px}px Outfit, sans-serif`; if ('letterSpacing' in c) c.letterSpacing = `${-0.02 * px}px`;
   const left = x - (align === 'center' ? c.measureText(words).width / 2 : 0);
@@ -199,7 +199,7 @@ const firmLogo = (c, col = K.lite, x = 50, y = 40, w = 138) => { if (!hideLogos)
 // The building's logo: a bigger blob. x, y, w: the top left corner and the width of the room the real logo takes, which is 0.54 w tall.
 // The real one is a few letters with air between them, so a solid shape of the same weight is smaller: it starts at the same left edge.
 function kingLogo(c, x, y, w, shadow = false) {
-  if (hideLogos) return;
+  if (hideLogos || hideBuilding) return;
   c.save();
   if (shadow) { const t = c.getTransform(), k = Math.hypot(t.a, t.b) * w; c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = 0.014 * k; c.shadowOffsetX = c.shadowOffsetY = 0.008 * k; }
   blob(c, K.gold, x, y + 0.08 * w, 0.7 * w, 0.38 * w, BUILDING);
@@ -439,10 +439,13 @@ function amenities(c, off = 0, { markers = true, labels = true, badge = true } =
 
 // every picture: its size in px, and how to draw it. A picture with no background of its own is see-through there.
 export const ART = {
-  ...Object.fromEntries([['coverPhoto', 'kCover', true], ['coverDecor', 'kCover', false], ['postPhoto', 'kPost', true], ['mailPhoto', 'eblast', true]].map(([key, source, bare]) => [key, { w: source === 'kCover' ? 440 : source === 'kPost' ? 400 : 320, h: source === 'kCover' ? 340 : source === 'kPost' ? 400 : 472, draw(c, w, h) {
-    hideText = true; hideLogos = bare; hideTabs = bare;
-    try { ART[source].draw(c, w, h); } finally { hideText = hideLogos = hideTabs = false; }
+  paperTile: { w: 8, h: 8, draw(c, w, h) { fill(c, C.paper, 0, 0, w, h); } },
+  // Frame styles retain the firm's small mark, bands, grounds, frame and divider.
+  ...Object.fromEntries([['coverPhoto', 'kCover', true, true], ['coverBlob', 'kCover', false, true], ['coverDecor', 'kCover', false, false], ['postPhoto', 'kPost', true, true], ['mailPhoto', 'eblast', true, true]].map(([key, source, noBuilding, noTab]) => [key, { w: source === 'kCover' ? 440 : source === 'kPost' ? 400 : 320, h: source === 'kCover' ? 340 : source === 'kPost' ? 400 : 472, draw(c, w, h) {
+    hideText = true; hideBuilding = noBuilding; hideTabs = noTab;
+    try { ART[source].draw(c, w, h); } finally { hideText = hideBuilding = hideTabs = false; }
   } }])),
+  mailButtonStyle: { w: 320, h: 472, draw(c, w, h) { hideText = true; try { ART.eblast.draw(c, w, h); } finally { hideText = false; } } },
   mapStreet: { w: 1100, h: 425, draw(c, w, h) { c.scale(w / 2200, h / 850); fill(c, K.coal, 0, 0, 2200, 850); hideText = true; try { amenities(c, 0, { markers: false, labels: false, badge: false }); } finally { hideText = false; } } },
   locBlocks: { w: 541, h: 340, draw(c, w, h) { c.scale(w / 1352, h / 850); hideText = true; try { cityMap(c, 0, { streets: false, pins: false }); } finally { hideText = false; } } },
   locStreets: { w: 541, h: 340, draw(c, w, h) { c.scale(w / 1352, h / 850); hideText = true; try { cityMap(c, 0, { pins: false }); } finally { hideText = false; } } },
@@ -466,6 +469,11 @@ export const ART = {
     stroke(c, '#8F7850', 7); c.beginPath(); c.moveTo(364, 20); c.lineTo(511, 69); c.stroke();
     stroke(c, '#8F7850', 2); c.beginPath(); c.moveTo(364, 20); c.lineTo(502, 42); c.lineTo(511, 69); c.moveTo(459, 53); c.lineTo(459, 92); c.stroke();
   } }])),
+  photoNoCone: { w: 526, h: 360, draw(c, w, h) {
+    street(c, 0, 0, w, h, { at: 0.44, look: { ...LOOK.raw, sky: LOOK.graded.sky } });
+    stroke(c, '#8F7850', 7); c.beginPath(); c.moveTo(364, 20); c.lineTo(511, 69); c.stroke();
+    stroke(c, '#8F7850', 2); c.beginPath(); c.moveTo(364, 20); c.lineTo(502, 42); c.lineTo(511, 69); c.moveTo(459, 53); c.lineTo(459, 92); c.stroke();
+  } },
   photoClean: { w: 526, h: 360, draw(c, w, h) { street(c, 0, 0, w, h, { at: 0.44, look: { ...LOOK.raw, sky: LOOK.graded.sky } }); } },
   brushRing: { w: 64, h: 64, draw(c) { stroke(c, C.paper, 5); c.beginPath(); c.arc(32, 32, 28, 0, Math.PI * 2); c.stroke(); } },
   tWand: { w: 64, h: 64, draw(c) { stroke(c, C.paper, 6); c.beginPath(); c.moveTo(12, 52); c.lineTo(42, 22); c.stroke(); [[40, 6], [57, 23], [25, 8]].forEach(([x, y]) => { fill(c, C.paper, x - 2, y - 5, 4, 10); fill(c, C.paper, x - 5, y - 2, 10, 4); }); } },
@@ -741,6 +749,18 @@ for (const [key, source, crop, mask, px, x, baselines, family, track, weights] o
     } };
     ART[key + n] = a;
   }
+}
+
+// The button's opaque prefixes preserve its final frame while its words are typed.
+for (let n = 0; n <= 14; n++) {
+  const a = { w: 105, h: 29, draw(c) {
+    c.save(); c.translate(-17.6, -416); hideText = true;
+    try { ART.eblast.draw(c, 320, 472); } finally { hideText = false; c.restore(); }
+    const part = 'View the flyer'.slice(0, n);
+    text(c, part, 10.4, 18.8, 12, { w: 700, fill: K.white, track: 0, family: SANS });
+    a.caret = [10.4 + c.measureText(part).width, 6.8, 12];
+  } };
+  ART['idFlyer' + n] = a;
 }
 
 // Pack rows into pages no larger than 2048 square. Places include their page number.

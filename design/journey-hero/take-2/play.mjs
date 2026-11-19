@@ -45,7 +45,7 @@ function running() { return ready && !stopped && !reduced.matches && visible && 
 function tick(now) {
   request = 0;
   if (!running()) { previous = null; return; }
-  if (previous !== null) t = wrap(t + (now - previous) / 1000);
+  if (previous !== null) t = wrap(t + Math.min(0.1, (now - previous) / 1000));
   previous = now;
   draw(); request = requestAnimationFrame(tick);
 }

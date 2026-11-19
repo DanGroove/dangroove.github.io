@@ -96,11 +96,13 @@ function shell(i, t, cursorAt, pressed) {
 }
 // the tools down the left of a design app, one of them lit
 function rail(P, tools, lit) {
+  const furniture = P.length;
   tools.forEach((art, i) => {
     const y = TOP - 0.34 - i * 0.36;
     if (i === lit) P.push(on('red', 0.11, y - 0.03, 0.3, 0.3, { lift: 0.05, t: 0.015 }));
     P.push(icon(art, 0.14, y, 0.24, 0.24, i === lit ? 'red' : 'night', i === lit ? 0.066 : 0.051));
   });
+  for (const pc of P.slice(furniture)) pc.furniture = true;
 }
 // where a design app's canvas is, between the tools and the panel on the right: its left edge, its width, its bottom, its height
 const PANEL = W - 0.93;                                  // the left edge of the panel on the right
@@ -230,10 +232,11 @@ function travel(P, key, from, to, t, a, b, endWindow = [0, 0, 1, 1]) {
   if (rim > 0) P.push({ ...on('grey', x - rim, y - rim, w + 2 * rim, h + 2 * rim, { lift: lift - 0.015, t: 0.012 }), where: 'travel' });
   P.push({ ...on('ink', ...rect, { lift, t: 0.02, art: PICTURES[key] }), window: rectMix([0, 0, 1, 1], endWindow, p), where: 'travel' });
 }
-function emptyFrame(P, [x, y, w, h], plate = true, revealed = 0) {
+function emptyFrame(P, [x, y, w, h], plate = true, revealed = 0, diagonals = true) {
   const start = P.length;
   if (plate) P.push(on('night', x, y, w, h, { lift: 0.05, t: 0.02 }));
-  P.push(...outline(x, y, w, h, { tone: 'dark', line: 0.012, lift: 0.075 }), bar([x, y], [x + w, y + h], { tone: 'dark', line: 0.01, lift: 0.075 }), bar([x, y + h], [x + w, y], { tone: 'dark', line: 0.01, lift: 0.075 }));
+  P.push(...outline(x, y, w, h, { tone: 'dark', line: 0.012, lift: 0.075 }));
+  if (diagonals) P.push(bar([x, y], [x + w, y + h], { tone: 'dark', line: 0.01, lift: 0.075 }), bar([x, y + h], [x + w, y], { tone: 'dark', line: 0.01, lift: 0.075 }));
   if (revealed > 0) for (let i = start; i < P.length; i++) P[i].clip = [1, 0, 0, -(SCREEN.l + (x + w * revealed) * U)];
 }
 function feed(P, pieces, t, a, b) {
@@ -315,7 +318,7 @@ function movie(draw, shape, p) {
 function animatedComp(draw, shape, p) {
   const o = shape === 0 || shape === 3 ? { w: 480, h: 270, x: 34, y: shape === 3 ? 116 : 104, px: 60, rows: [296, 62, 140, 3] } : shape === 1 ? { w: 300, h: 600, x: 26, y: 236, px: 62, rows: [26, 366, 180, 3] } : { w: 300, h: 600, x: 20, y: 276, px: 50, rows: [146, 364, 120, 2] };
   const { w, h, x, y, px, rows: [rx, ry, rw, n] } = o, k = px / 60, at = p * 2.4;
-  draw('paper', shape === 2 ? [0, 184 / 600, 1, 0.5] : [0, 0, 1, 1]);
+  draw('paper', shape === 2 ? [0, 184 / 600, 1, 0.5] : [0, 0, 1, 1], 'paperTile');
   const norm = r => [r[0] / w, r[1] / h, r[2] / w, r[3] / h];
   cropPicture(draw, 'paper', norm([x - 6 * k, y - 54 * k, 232 * k, 62 * k]), 'wMake', EASE.wipe(linear(at, ...LAYERS[0][5])));
   cropPicture(draw, 'paper', norm([x - 6 * k, y + px * 1.07 - 44.2 * k, 168 * k, 52 * k]), 'wMove', EASE.wipe(linear(at, ...LAYERS[1][5])));
@@ -368,6 +371,8 @@ export function script(definitions, { hold = 0, tail = 0.3 } = {}) {
     let duration = def.duration ?? (def.kind === 'type' ? Math.min(0.6, def.text.length * 0.035) : def.kind === 'run' ? Math.max(0.07, def.count * 0.07) : 0.05);
     if (def.kind === 'type') { duration = Math.max(typed ? 0.4 : 0.6, duration); typed = true; }
     const action = { ...def, from, to, previous, move: move * PACE, approach: time * PACE, start: (time + move) * PACE, end: (time + move + duration) * PACE };
+    // The measured origins are the script's text insertion points, including rotated map labels.
+    if (def.textArt) Object.defineProperty(action, 'points', { enumerable: true, get: () => (ART_TEXT[def.textArt] || []).filter(part => def.id !== 'title' || part.words.startsWith('King Street')).map(part => mapPoint(def.textRect, ...part.origin, ART[def.textArt].w, ART[def.textArt].h)) });
     time += move + duration; previous = to;
     return action;
   });
@@ -466,7 +471,9 @@ export const SCRIPTS = {
     { id: 'transition', kind: 'drag', from: centre(TRANS_FROM), to: centre(TRANS_TO), duration: 0.45 },
     { id: 'effect', kind: 'drag', from: centre(FX_FROM), to: centre(FX_TO), duration: 0.4 },
     { id: 'caption', kind: 'type', from: [VIEW[0] + 0.608, VIEW[1] + 0.28], text: 'Look good.', tool: 'type' },
-    { id: 'captions', kind: 'run', from: [1.31, 0.925], to: [3.65, 0.925], count: 4 },
+    { id: 'caption2', kind: 'type', from: [VIEW[0] + 0.608, VIEW[1] + 0.28], text: 'Move well.', duration: 0.4, tool: 'type' },
+    { id: 'caption3', kind: 'type', from: [VIEW[0] + 0.608, VIEW[1] + 0.28], text: 'Work right.', duration: 0.4, tool: 'type' },
+    { id: 'captions', kind: 'run', from: [0.44 + 2.34, 0.925], to: [0.44 + 3.21, 0.925], count: 2 },
     { id: 'music', kind: 'drag', from: centre(BINS[3]), to: [2.39, 0.245], duration: 0.4, tool: 'arrow' },
     { id: 'duck', kind: 'slide', from: [2.05, 0.31], to: [2.05, 0.245], duration: 0.25 },
     { id: 'fade', kind: 'slide', from: [4.33, 0.31], to: [4.33, 0.16], duration: 0.25 },
@@ -499,10 +506,10 @@ export const SCRIPTS = {
     { id: 'details', kind: 'run', from: topLeft(FIG.wires[0]), to: bottomRight(FIG.wires[2]), count: 9, duration: 0.21 },
     { id: 'marquee', kind: 'draw', from: topLeft(FIG.wires[0]), to: bottomRight(FIG.wires[2]), duration: 0.25, tool: 'arrow' },
     { id: 'copies', kind: 'drag', from: [(FIG.wires[0][0] + FIG.wires[2][0] + FIG.wires[2][2]) / 2, 2.01], to: [(FIG.wires[0][0] + FIG.wires[2][0] + FIG.wires[2][2]) / 2, 0.89], duration: 0.4 },
-    ...FIG.designs.map((r, i) => ({ id: 'fill' + i, kind: 'set', from: centre(r), duration: 0.05 })),
+    ...FIG.designs.map((r, i) => ({ id: 'fill' + i, kind: 'set', from: centre(r), duration: 0.05, tool: 'arrow' })),
     { id: 'hero', kind: 'drag', from: centre(HERO_SOURCE), to: centre(inRect(FIG.designs[0], HERO_REGION)), duration: 0.4 },
     { id: 'name', kind: 'type', from: topLeft(inRect(FIG.designs[0], [18 / 480, 74 / 300, 160 / 480, 38 / 300])), text: 'Danial Endrawes', duration: 0.4, tool: 'type' },
-    ...FIG.designs.map((r, i) => ({ id: 'accent' + i, kind: 'set', from: centre(r), duration: 0.05 })),
+    ...FIG.designs.map((r, i) => ({ id: 'accent' + i, kind: 'set', from: centre(r), duration: 0.05, tool: 'arrow' })),
     { id: 'hotspot', kind: 'click', from: FIG.from, tool: 'arrow' },
     { id: 'link', kind: 'drag', from: FIG.from, to: FIG.to, duration: 0.6 },
     { id: 'panel', kind: 'run', from: [PANEL + 0.2, TOP - 0.46], to: [PANEL + 0.45, 0.32], count: 5, duration: 0.2 },
@@ -517,12 +524,16 @@ export const SCRIPTS = {
     { id: 'photo', kind: 'drag', from: centre(DOCK.photo), to: centre(ID.photo), duration: 0.45 },
     { id: 'blob', kind: 'draw', from: topLeft(inRect(ID.cover, [50 / 1100, 482 / 850, 588 / 1100, 320 / 850])), to: bottomRight(inRect(ID.cover, [50 / 1100, 482 / 850, 588 / 1100, 320 / 850])), duration: 0.18, tool: 'rectangle' },
     { id: 'coverTitle', kind: 'type', from: topLeft(inRect(ID.cover, [800 / 1100, 690 / 850, 300 / 1100, 110 / 850])), text: 'Office Space For Sale', duration: 0.4, tool: 'type' },
+    { id: 'pages', kind: 'run', from: [PANEL + 0.425, TOP - 0.13 - 2 * (0.36 * 340 / 440) - 0.1], to: [PANEL + 0.425, TOP - 0.13 - 6 * (0.36 * 340 / 440) - 0.5], count: 3 },
     { id: 'postPhoto', kind: 'drag', from: centre(ID.photo), to: centre(ID.post), duration: 0.3, tool: 'arrow' },
     { id: 'postTitle', kind: 'type', from: topLeft(inRect(ID.post, [0.71, 0.81, 0.28, 0.12])), text: 'Office Space For Sale', duration: 0.4, tool: 'type' },
+    { id: 'postBlob', kind: 'draw', from: topLeft(inRect(ID.post, [0.05, 0.61, 0.60, 0.31])), to: bottomRight(inRect(ID.post, [0.05, 0.61, 0.60, 0.31])), duration: 0.18, tool: 'rectangle' },
     { id: 'postButton', kind: 'draw', from: topLeft(inRect(ID.post, [0.69, 0.788, 0.31, 0.146])), to: bottomRight(inRect(ID.post, [0.69, 0.788, 0.31, 0.146])), duration: 0.18, tool: 'rectangle' },
     { id: 'mailPhoto', kind: 'drag', from: centre(ID.photo), to: centre(ID.mailPhoto), duration: 0.3, tool: 'arrow' },
-    { id: 'mailTitle', kind: 'type', from: topLeft(inRect(ID.mail, [44 / 800, 690 / 1180, 700 / 800, 60 / 1180])), text: 'Office Space For Sale', duration: 0.4, tool: 'type' },
+    { id: 'mailTitle', kind: 'type', textArt: 'eblast', textRect: ID.mail, from: topLeft(inRect(ID.mail, [44 / 800, 690 / 1180, 700 / 800, 60 / 1180])), text: 'Office Space For Sale', duration: 0.4, tool: 'type' },
+    { id: 'mailBlob', kind: 'draw', from: topLeft(inRect(ID.mail, [44 / 800, 404 / 1180, 430 / 800, 230 / 1180])), to: bottomRight(inRect(ID.mail, [44 / 800, 404 / 1180, 430 / 800, 230 / 1180])), duration: 0.18, tool: 'rectangle' },
     { id: 'mailButton', kind: 'draw', from: topLeft(inRect(ID.mail, [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180])), to: bottomRight(inRect(ID.mail, [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180])), duration: 0.18, tool: 'rectangle' },
+    { id: 'mailFlyer', kind: 'type', from: topLeft(inRect(ID.mail, [70 / 800, 1057 / 1180, 225 / 800, 30 / 1180])), text: 'View the flyer', duration: 0.4, tool: 'type' },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.8 },
     { id: 'land', kind: 'wait', duration: 0.3 },
     { id: 'pickup', kind: 'wait', duration: 0.7 },
@@ -541,14 +552,14 @@ export const SCRIPTS = {
     ...[AI.upper, AI.lower].map((r, i) => ({ id: 'board' + i, kind: 'draw', from: topLeft(r), to: bottomRight(r), duration: 0.3, tool: 'rectangle' })),
     { id: 'street', kind: 'stroke', from: mapPoint(AI.upper, 0, 426, 2200, 850), to: mapPoint(AI.upper, 2200, 426, 2200, 850), duration: 0.5, tool: 'pen' },
     { id: 'markers', kind: 'run', from: mapPoint(AI.upper, 150, 358, 2200, 850), to: mapPoint(AI.upper, 1970, 464, 2200, 850), count: AM_MARKERS.length, duration: 0.21 },
-    { id: 'labels', kind: 'type', from: mapPoint(AI.upper, 150, 344, 2200, 850), text: 'Street and shop labels', duration: 0.6, tool: 'type' },
-    { id: 'title', kind: 'type', from: mapPoint(AI.upper, 470, 426, 2200, 850), text: 'King Street W King Street E', duration: 0.4 },
+    { id: 'labels', kind: 'type', from: mapPoint(AI.upper, 150, 344, 2200, 850), text: 'Street and shop labels', textArt: 'kMap', textRect: AI.upper, duration: 0.6, tool: 'type' },
+    { id: 'title', kind: 'type', from: mapPoint(AI.upper, 470, 426, 2200, 850), text: 'King Street W King Street E', textArt: 'kMap', textRect: AI.upper, duration: 0.4 },
     { id: 'badge', kind: 'draw', from: mapPoint(AI.upper, 1273, 457, 2200, 850), to: mapPoint(AI.upper, 1345, 603, 2200, 850), duration: 0.18, tool: 'rectangle' },
     { id: 'block', kind: 'draw', from: mapPoint(AI.lower, 660, 16, 1352, 850), to: mapPoint(AI.lower, 722, 84, 1352, 850), duration: 0.18 },
     { id: 'blocks', kind: 'run', from: mapPoint(AI.lower, 770, 16, 1352, 850), to: mapPoint(AI.lower, 680, 716, 1352, 850), count: CITY_BLOCKS.length - 1, duration: 0.14 },
     { id: 'streets', kind: 'stroke', from: mapPoint(AI.lower, 0, 368, 1352, 850), to: mapPoint(AI.lower, 1352, 368, 1352, 850), duration: 0.5, tool: 'pen' },
     { id: 'pins', kind: 'run', from: mapPoint(AI.lower, 180, 100, 1352, 850), to: mapPoint(AI.lower, 960, 640, 1352, 850), count: CITY_PINS.length, duration: 0.2 },
-    { id: 'cityLabels', kind: 'type', from: mapPoint(AI.lower, 200, 167, 1352, 850), text: 'Street and station labels', duration: 0.4, tool: 'type' },
+    { id: 'cityLabels', kind: 'type', from: mapPoint(AI.lower, 200, 167, 1352, 850), text: 'Street and station labels', textArt: 'kLoc', textRect: AI.lower, duration: 0.4, tool: 'type' },
     { id: 'marquee', kind: 'draw', from: topLeft(AI.frame), to: bottomRight(AI.frame), duration: 0.3, tool: 'arrow' },
     { id: 'close', kind: 'wait', duration: 0.5 },
     { id: 'subway', kind: 'stroke', from: AI.at(AI.segments[0][0]), to: AI.at(AI.segments.at(-1)[1]), path: [AI.segments[0][0], ...AI.segments.map(([, b]) => b)].map(AI.at), duration: 0.35, tool: 'pen' },
@@ -588,11 +599,10 @@ function editedPhoto(t) {
   });
   if (!begun(s, 'export', t)) {
     const draw = screenPainter(doc, PHOTO);
-    const base = done(s, 'grade', t) ? 'kPhoto' : done(s, 'crane', t) ? 'photoClean' : done(s, 'sky', t) ? 'photoSky' : done(s, 'white', t) ? 'photoLevels' : done(s, 'black', t) ? 'photoHalf' : 'photoRaw';
+    const base = done(s, 'grade', t) ? 'kPhoto' : done(s, 'crane', t) ? 'photoClean' : done(s, 'cone', t) ? 'photoNoCone' : done(s, 'sky', t) ? 'photoSky' : done(s, 'white', t) ? 'photoLevels' : done(s, 'black', t) ? 'photoHalf' : 'photoRaw';
     cropPicture(draw, 'ink', [0, 0, 1, 1], base, eased(s, 'open', t));
     if (begun(s, 'sky', t) && !done(s, 'sky', t)) cropPicture(draw, 'ink', [0, 0, 1, 1], 'photoSky', eased(s, 'sky', t));
-    // The first patch includes the barrier's feet. The second heal replaces the whole base.
-    if (done(s, 'cone', t) && !done(s, 'crane', t)) draw('ink', [24 / 526, 241 / 360, 84 / 526, 56 / 360], 'photoClean', [24 / 526, 241 / 360, 108 / 526, 297 / 360]);
+    // Each heal replaces the whole base on release, so no patch edge can survive.
     if (begun(s, 'grade', t)) {
       if (!done(s, 'grade', t)) draw('ink', [1 - g, 0, g, 1], 'kPhoto', [1 - g, 0, 1, 1]);
       const split = PHOTO[0] + PHOTO[2] * (1 - g), h = (PHOTO[3] + 0.1) * (1 - eased(s, 'shrink', t));
@@ -608,6 +618,7 @@ function typedPicture(P, rect, art, words, p, { tone = 'paper', colour = 'ink', 
   if (p < 0) return;
   const n = p >= 1 ? words.length : Math.floor(clamp(p, 0, 1) * words.length), size = ART[art];
   const edges = TYPE_EDGES[art] || Array.from({ length: words.length + 1 }, (_, i) => size.w * i / words.length);
+  const birth = P.length;
   const edge = clamp(edges[n] / (direction === 'up' ? size.h : size.w), 0, 1), draw = screenPainter(P, rect);
   if (p >= 1) draw(tone, [0, 0, 1, 1], art);
   else {
@@ -620,6 +631,7 @@ function typedPicture(P, rect, art, words, p, { tone = 'paper', colour = 'ink', 
     caret.tones = Array.isArray(colour) ? colour : Array(3).fill({ ink: '#151314', paper: '#F7F6F3', red: '#C0262E', grey: '#B9B4AE' }[colour]);
     caret.overlay = true; P.push(caret);
   }
+  for (const pc of P.slice(birth)) { pc.text = { key: art, words, count: n, total: words.length, prefix: p < 1 }; if (pc.overlay) pc.caret = art; }
 }
 function dragPicture(P, s, id, t, from, to, art, tone = 'ink') {
   if (!begun(s, id, t)) { P.push(on(tone, ...from, { lift: 0.07, t: 0.015, art })); return; }
@@ -671,21 +683,23 @@ function editedVideo(t) {
     }
   });
   const exported = exportPlay(s, t), playing = begun(s, 'play', t) && !done(s, 'play', t);
-  const clock = exported ?? (playing ? phase(s, 'play', t) : null), at = clock === null ? 0.9 : clock * 3.9;
+  const clock = exported ?? (playing ? phase(s, 'play', t) : null);
+  const repeated = begun(s, 'captions', t) ? Math.min(2, 1 + Math.floor(phase(s, 'captions', t) * 2)) : 0;
+  const captionIndex = begun(s, 'play', t) ? 1 : repeated ? repeated + 2 : begun(s, 'caption3', t) ? 2 : begun(s, 'caption2', t) ? 1 : 0;
+  const at = clock === null ? begun(s, 'play', t) ? 0.9 : CAPTIONS[captionIndex][0] : clock * 3.9;
   if (done(s, 'clipA', t)) {
     const draw = screenPainter(D, VIEW);
     if (clock !== null) movie(draw, 0, clock);
     else {
-      draw('ink', [0, 0, 1, 1], 'shotA');
+      draw('ink', [0, 0, 1, 1], at < 1.46 ? 'shotA' : at < 2.7 ? 'shotB' : 'shotCfx');
       if (begun(s, 'caption', t)) {
-        const captionCount = begun(s, 'captions', t) ? Math.min(4, Math.floor(phase(s, 'captions', t) * 4) + 1) : 0;
-        const cap = captionCount ? ['cap2', 'cap3', 'cap1', 'cap2'][captionCount - 1] : 'cap1';
-        typedPicture(D, [VIEW[0] + 0.608, VIEW[1] + 0.132, 0.704, 0.148], cap, cap === 'cap3' ? 'Work right.' : cap === 'cap2' ? 'Move well.' : 'Look good.', captionCount ? 1 : phase(s, 'caption', t));
+        const cap = ['cap1', 'cap2', 'cap3', 'cap1', 'cap2'][captionIndex], id = ['caption', 'caption2', 'caption3'][captionIndex];
+        typedPicture(D, [VIEW[0] + 0.608, VIEW[1] + 0.132, 0.704, 0.148], cap, cap === 'cap3' ? 'Work right.' : cap === 'cap2' ? 'Move well.' : 'Look good.', repeated || begun(s, 'play', t) ? 1 : phase(s, id, t));
       }
     }
   }
   CAPTIONS.forEach(([x, w], i) => {
-    const p = i === 0 ? phase(s, 'caption', t) : begun(s, 'captions', t) && phase(s, 'captions', t) * 4 >= i - 1 ? 1 : 0;
+    const p = i < 3 ? phase(s, ['caption', 'caption2', 'caption3'][i], t) : repeated >= i - 2 ? 1 : 0;
     if (p > 0) D.push(on(i === 2 ? 'paper' : 'grey', 0.44 + x, 0.88, w * p, 0.09, { lift: 0.05, t: 0.02 }));
   });
   if (begun(s, 'music', t)) {
@@ -794,10 +808,15 @@ function pictureRegion(P, rect, art, region, amount = 1) {
   const [u, v, w, h] = region, r = inRect(rect, [u, v, w * amount, h]);
   P.push({ ...on('paper', ...r, { lift: 0.084, t: 0.004, art }), window: [u, v, u + w * amount, v + h] });
 }
-function drawnFrame(P, r, p, tone = 'paper', diagonals = false) {
+function drawnRegion(P, rect, art, region, p) {
+  if (p <= 0) return;
+  const [u, v, w, h] = region, r = inRect(rect, [u, v, w * p, h * p]);
+  P.push({ ...on('paper', ...r, { lift: 0.09, t: 0.004, art }), window: [u, v, u + w * p, v + h * p] });
+}
+function drawnFrame(P, r, p, tone = 'paper', diagonals = false, cross = true) {
   if (p <= 0) return;
   const [x, y, w, h] = r, growing = [x, y + h * (1 - p), w * p, h * p];
-  if (diagonals) emptyFrame(P, growing);
+  if (diagonals) emptyFrame(P, growing, true, 0, cross);
   else P.push(on(tone, ...growing, { lift: 0.06, t: 0.02 }));
 }
 function editedFigma(t) {
@@ -816,10 +835,12 @@ function editedFigma(t) {
       const box = inRect(r, HERO_REGION); drawnFrame(D, box, eased(s, 'pictureBox', t), 'grey');
       if (done(s, 'pictureBox', t)) pictureRegion(D, r, wireArts[i], HERO_REGION);
       if (begun(s, 'heading', t)) {
+        const birth = D.length;
         const p = phase(s, 'heading', t), chars = Math.floor(p * 9) / 9;
         const regions = [[64 / 1440, 252 / 900, 300 / 1440, 76 / 900], [64 / 1440, 350 / 900, 420 / 1440, 76 / 900]];
         regions.forEach((region, j) => pictureRegion(D, r, wireArts[i], region, clamp(chars * 2 - j, 0, 1)));
         if (p < 1) { const j = chars < 0.5 ? 0 : 1, caret = inRect(r, regions[j]); D.push(on('grey', caret[0] + caret[2] * clamp(chars * 2 - j, 0, 1), caret[1], 0.012, caret[3], { lift: 0.095, t: 0.004, overlay: true })); }
+        for (const pc of D.slice(birth)) { pc.text = { key: 'wireHeading', count: Math.floor(p * 9), total: 9, prefix: p < 1 }; if (pc.overlay) pc.caret = 'wireHeading'; }
       }
       const p = eased(s, 'button', t), button = inRect(r, [64 / 1440, 555 / 900, 380 / 1440, 35 / 900]); drawnFrame(D, button, p, 'grey');
       if (begun(s, 'details', t)) {
@@ -859,7 +880,8 @@ function editedFigma(t) {
       else phonePrototype(draw, [0, 0, 1, 1], i === 1 ? 'uiTall' : 'uiTall2', i === 1 ? 'uiTall2' : 'uiTall', clock);
     }
   });
-  if (begun(s, 'fill0', t) && !done(s, 'hero', t)) dragPicture(D, s, 'hero', t, HERO_SOURCE, inRect(FIG.designs[0], HERO_REGION), 'heroSource');
+  if (!begun(s, 'hero', t)) P.push(on('ink', ...HERO_SOURCE, { lift: 0.07, t: 0.015, art: 'heroSource' }));
+  else if (!done(s, 'hero', t)) dragPicture(D, s, 'hero', t, HERO_SOURCE, inRect(FIG.designs[0], HERO_REGION), 'heroSource');
   if (begun(s, 'hotspot', t)) {
     D.push(...outline(...FIG.spot, { line: 0.012 }), dot('red', ...FIG.from, 0.03, { lift: 0.085, t: 0.012, overlay: true }), dot('paper', ...FIG.from, 0.012, { lift: 0.097, t: 0.006, overlay: true }));
     const end = rectMix(FIG.from, FIG.to, eased(s, 'link', t)), reach = Math.min(0.16, Math.hypot(end[0] - FIG.from[0], end[1] - FIG.from[1]) / 3), along = p => cubic(FIG.from, [FIG.from[0] + reach, FIG.from[1]], [end[0] - reach, end[1]], end, p);
@@ -879,12 +901,12 @@ function editedFigma(t) {
   const { spans, off } = playbackSpans(s); feedScreens(P, t, ['siteWide', 'siteTall', 'siteTall2'], spans, off); P.clock = clock;
   return P;
 }
-function typePatch(P, rect, key, p) {
-  const n = Math.floor(clamp(p, 0, 1) * 21), art = key + n, a = ART[art];
-  P.push(on('ink', ...rect, { lift: 0.09, t: 0.004, art }));
+function typePatch(P, rect, key, p, length = 21) {
+  const n = Math.floor(clamp(p, 0, 1) * length), art = key + n, a = ART[art];
+  P.push({ ...on('ink', ...rect, { lift: 0.09, t: 0.004, art }), text: { key, count: n, total: length, prefix: p < 1 } });
   if (p < 1) {
     const [x, y, h] = a.caret || [a.w * n / 21, 0, a.h];
-    P.push(on('paper', rect[0] + x / a.w * rect[2], rect[1] + (1 - (y + h) / a.h) * rect[3], 0.012, h / a.h * rect[3], { lift: 0.1, t: 0.004, overlay: true }));
+    P.push({ ...on('paper', rect[0] + x / a.w * rect[2], rect[1] + (1 - (y + h) / a.h) * rect[3], 0.012, h / a.h * rect[3], { lift: 0.1, t: 0.004, overlay: true }), caret: key });
   }
 }
 function readBook(s, t) {
@@ -895,10 +917,10 @@ function readBook(s, t) {
 function editedInDesign(t, { at: pages } = {}) {
   const P = [], D = [], s = SCRIPTS.id;
   actionCursor(P, s, t);
-  if (done(s, 'mailButton', t)) {
+  if (done(s, 'mailFlyer', t)) {
     // The approved finished document is also the destination of every construction region below.
     const final = approvedDocument();
-    final.forEach(pc => pc.document = true); P.push(...final);
+    final.forEach(pc => { if (!pc.furniture) pc.document = true; }); P.push(...final);
   } else {
     rail(P, ['tArrow', 'tType', 'tFrame', 'tRect', 'tLine', 'tDrop'], P.tool === 'frame' ? 2 : P.tool === 'type' ? 1 : P.tool === 'rectangle' ? 3 : 0);
     [ID.spread, ID.cover, ID.post, ID.mail].forEach((r, i) => {
@@ -906,11 +928,13 @@ function editedInDesign(t, { at: pages } = {}) {
       if (i === 0 && done(s, 'frame0', t)) {
         for (const rect of [ID.left, ID.right]) D.push({ ...on('ink', ...rect, { lift: 0.06, t: 0.02 }), tones: FLYER.coal });
         if (!done(s, 'map', t)) emptyFrame(D, ID.frame, false);
-      } else if (!done(s, ['map', 'coverTitle', 'postTitle', 'mailTitle'][i], t)) drawnFrame(D, r, eased(s, 'frame' + i, t), 'night', true);
+      } else if (!done(s, ['map', 'coverTitle', 'postTitle', 'mailTitle'][i], t)) drawnFrame(D, r, eased(s, 'frame' + i, t), 'night', true, !done(s, ['map', 'photo', 'postPhoto', 'mailPhoto'][i], t));
     });
     if (done(s, 'spreadType', t)) D.push(on('ink', ...ID.left, { lift: 0.08, t: 0.004, art: 'kAmL' }), on('ink', ...ID.right, { lift: 0.08, t: 0.004, art: 'kAmR' }));
     else if (begun(s, 'map', t)) {
-      const a = action(s, 'map'); travel(P, 'map', DOCK.map, ID.frame, t, a.start, a.end, [34 / 2200, 84 / 850, 2056 / 2200, 826 / 850]);
+      const a = action(s, 'map'), window = [34 / 2200, 84 / 850, 2056 / 2200, 826 / 850];
+      if (done(s, 'map', t)) D.push({ ...on('ink', ...ID.frame, { lift: 0.08, t: 0.004, art: 'kMap' }), window, placed: 'map' });
+      else travel(P, 'map', DOCK.map, ID.frame, t, a.start, a.end, window);
       if (begun(s, 'heading', t)) typedPicture(D, inRect(ID.right, [970 / 1100, 180 / 850, 100 / 1100, 500 / 850]), 'idHeading', 'Amenities', phase(s, 'heading', t), { colour: FLYER.gold, direction: 'up' });
       if (begun(s, 'spreadType', t)) {
         const n = Math.floor(phase(s, 'spreadType', t) * 6);
@@ -925,7 +949,8 @@ function editedInDesign(t, { at: pages } = {}) {
     }
     const tw = 0.36, th = tw * 340 / 440, mid = PANEL + 0.425;
     [[null, 'kCover'], ['kOfferL', 'kOfferR'], ['kLocL', 'kLocR'], ['kAmL', 'kAmR'], ['kGalL', 'kGalR'], ['kBack', null]].forEach(([left, right], i) => {
-      const visible = i === 0 ? done(s, 'coverTitle', t) : i === 2 ? done(s, 'loc', t) : done(s, 'spreadType', t);
+      const repeat = [1, 4, 5].indexOf(i);
+      const visible = i === 0 ? done(s, 'coverTitle', t) : i === 2 ? done(s, 'loc', t) : i === 3 ? done(s, 'spreadType', t) : begun(s, 'pages', t) && (t - action(s, 'pages').start) / PACE >= repeat * 0.07;
       if (!visible) return;
       const y = TOP - 0.13 - (i + 1) * th - i * 0.1;
       if (i === 3) D.push(on('red', mid - tw - 0.03, y - 0.03, tw * 2 + 0.06, th + 0.06, { lift: 0.05, t: 0.01 }));
@@ -937,11 +962,8 @@ function editedInDesign(t, { at: pages } = {}) {
       const a = action(s, 'photo'); travel(P, 'photo', DOCK.photo, ID.photo, t, a.start, a.end);
       if (done(s, 'photo', t)) {
         // Cropped regions keep the final photograph and woven ground at their approved measures.
-        D.push(on('ink', ...ID.cover, { lift: 0.084, t: 0.004, art: done(s, 'blob', t) ? 'coverDecor' : 'coverPhoto' }));
-        if (!done(s, 'blob', t)) {
-          const r = inRect(ID.cover, [50 / 1100, 482 / 850, 588 / 1100, 320 / 850]);
-          const p = eased(s, 'blob', t); if (p > 0) { const pc = on('paper', r[0], r[1] + r[3] * (1 - p), r[2] * p, r[3] * p, { lift: 0.09, t: 0.004 }); pc.tones = FLYER.gold; D.push(pc); }
-        }
+        D.push(on('ink', ...ID.cover, { lift: 0.084, t: 0.004, art: begun(s, 'coverTitle', t) ? 'coverDecor' : done(s, 'blob', t) ? 'coverBlob' : 'coverPhoto' }));
+        if (!done(s, 'blob', t)) drawnRegion(D, ID.cover, 'coverBlob', [50 / 1100, 482 / 850, 588 / 1100, 320 / 850], eased(s, 'blob', t));
         if (begun(s, 'coverTitle', t)) typePatch(D, inRect(ID.cover, [311.6 / 440, 268 / 340, 128.4 / 440, 52 / 340]), 'idCover', phase(s, 'coverTitle', t));
       }
     }
@@ -956,13 +978,17 @@ function editedInDesign(t, { at: pages } = {}) {
         D.push(on('ink', ...rect, { lift: 0.084, t: 0.004, art: key === 'post' ? 'postPhoto' : 'mailPhoto' }));
         if (begun(s, key + 'Title', t)) {
           if (key === 'post') typePatch(D, inRect(rect, region), patch, phase(s, key + 'Title', t));
-          else mapTyping(D, rect, art, phase(s, key + 'Title', t));
+          else mapTyping(D, rect, art, phase(s, key + 'Title', t), part => part.words !== 'View the flyer');
         }
+        const blobRegion = key === 'post' ? [0.05, 0.61, 0.60, 0.31] : [44 / 800, 404 / 1180, 430 / 800, 230 / 1180];
+        if (begun(s, key + 'Blob', t)) drawnRegion(D, rect, art, blobRegion, eased(s, key + 'Blob', t));
         if (begun(s, key + 'Button', t)) {
           const p = eased(s, key + 'Button', t), a = action(s, key + 'Button'), r = [a.from[0], a.to[1], a.to[0] - a.from[0], a.from[1] - a.to[1]];
-          if (p > 0) D.push(...outline(r[0], r[1] + r[3] * (1 - p), r[2] * p, r[3] * p, { tone: 'grey', line: 0.01 }));
+          if (key === 'mail') drawnRegion(D, rect, 'mailButtonStyle', [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180], p);
+          else if (p > 0 && p < 1) D.push(...outline(r[0], r[1] + r[3] * (1 - p), r[2] * p, r[3] * p, { tone: 'grey', line: 0.01 }));
         }
-        if (done(s, key + 'Button', t)) D.push(on('ink', ...rect, { lift: 0.095, t: 0.004, art }));
+        if (key === 'mail' && begun(s, 'mailFlyer', t)) typePatch(D, inRect(rect, [17.6 / 320, 416 / 472, 105 / 320, 29 / 472]), 'idFlyer', phase(s, 'mailFlyer', t), 14);
+        if (done(s, key + 'Blob', t) && done(s, key === 'mail' ? 'mailFlyer' : 'postButton', t)) D.push(on('ink', ...rect, { lift: 0.105, t: 0.004, art }));
       }
     }
   }
@@ -986,7 +1012,7 @@ function mapTyping(P, rect, art, p, filter = () => true) {
   let chars = Math.floor(parts.reduce((n, part) => n + part.words.length, 0) * clamp(p, 0, 1));
   for (const part of parts) {
     const count = Math.min(chars, part.words.length); chars -= count;
-    if (count <= 0) break;
+
     const [l, top, r, bottom] = part.region, u0 = clamp(l / a.w, 0, 1), v0 = clamp(top / a.h, 0, 1), u1 = clamp(r / a.w, 0, 1), v1 = clamp(bottom / a.h, 0, 1);
     if (u1 <= u0 || v1 <= v0) continue;
     const work = on('ink', ...inRect(rect, [u0, v0, u1 - u0, v1 - v0]), { lift: 0.09, t: 0.004, art }); work.window = [u0, v0, u1, v1];
@@ -996,9 +1022,11 @@ function mapTyping(P, rect, art, p, filter = () => true) {
       work.clip = [-nx, -ny, 0, nx * (SCREEN.l + edge[0] * U) + ny * (SCREEN.b + edge[1] * U)];
       const c0 = mapPoint(rect, px - part.down[0] * 0.8, py - part.down[1] * 0.8, a.w, a.h), c1 = mapPoint(rect, px + part.down[0] * 0.2, py + part.down[1] * 0.2, a.w, a.h), caret = bar(c0, c1, { tone: 'paper', line: 0.012, lift: 0.1 });
       if (/^#[\da-f]{6}$/i.test(part.colour)) caret.tones = [part.colour, part.colour, part.colour];
-      P.push(caret);
+      caret.caret = art; P.push(caret);
     }
+    work.text = { key: art, words: parts.map(part => part.words).join(' '), count: Math.floor(parts.reduce((n, part) => n + part.words.length, 0) * p), total: parts.reduce((n, part) => n + part.words.length, 0), prefix: p < 1 };
     P.push(work);
+    if (count < part.words.length) break;
   }
 }
 function editedIllustrator(t) {
@@ -1083,6 +1111,7 @@ function build(i, at, o) {
   const app = builders[i](at, o), P = shell(i, at, app.cursor || EXPORT, app.pressed);
   P.clock = app.clock;
   P.action = app.action;
+  P.tool = app.tool;
   const [a, b, c, d] = [0.5 * PACE, 0.8 * PACE, SHOW[i].len - 0.3 * PACE, SHOW[i].len], opening = at < b, closing = at >= c;
   const edge = SCREEN.l + W * U * (opening ? progress(at, a, b) : closing ? progress(at, c, d) : 1);
   for (const pc of app) {
