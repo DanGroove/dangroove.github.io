@@ -42,7 +42,7 @@ const SHOTS = {
     if (cap) caption(c, w / 2, capY, capPx);
   },
   b(c, w, h) { fill(c, C.ink, 0, 0, w, h); disc(c, C.red, w * 0.68, h * 0.42, h * 0.24); fill(c, C.slate, 0, h * 0.68, w, h * 0.32); fill(c, C.grey, 0, h * 0.68, w, h * 0.04); },     // a sun over a horizon
-  c(c, w, h) { fill(c, C.grey, 0, 0, w, h); [[0.08, 0.5, 0.2], [0.3, 0.25, 0.24], [0.58, 0.42, 0.16], [0.78, 0.6, 0.22]].forEach(([x, y, bw]) => fill(c, C.ink, w * x, h * y, w * bw, h)); disc(c, C.paper, w * 0.84, h * 0.22, h * 0.1); },   // buildings
+  c(c, w, h, ground = C.grey) { fill(c, ground, 0, 0, w, h); [[0.08, 0.5, 0.2], [0.3, 0.25, 0.24], [0.58, 0.42, 0.16], [0.78, 0.6, 0.22]].forEach(([x, y, bw]) => fill(c, C.ink, w * x, h * y, w * bw, h)); disc(c, C.paper, w * 0.84, h * 0.22, h * 0.1); },   // buildings
 };
 const island = (c, w) => { c.fillStyle = C.ink; c.beginPath(); c.roundRect(w / 2 - 44, 12, 88, 24, 12); c.fill(); };      // the pill at the top of a phone's screen
 const playIcon = (c, col, x, y, r) => { c.fillStyle = col; c.beginPath(); c.moveTo(x - r * 0.7, y - r); c.lineTo(x + r, y); c.lineTo(x - r * 0.7, y + r); c.closePath(); c.fill(); };
@@ -55,7 +55,10 @@ function heart(c, col, x, y, r) { c.fillStyle = col; c.beginPath(); c.moveTo(x, 
 const MOVE = 2.462;                                           // how wide "move" is set in Outfit 800, in ems
 const ballAt = ({ x, y, px }) => [x + (MOVE + 0.2) * px, y + px * 0.92, px * 0.15];
 const WIDE = { x: 34, y: 116, px: 60, rows: [296, 62, 140, 3] };
-export const BALL = ballAt(WIDE);                             // where the ball is in the wide frame, and its radius, for the selection drawn around it
+export const BALL = ballAt(WIDE);
+export const BALL_FROM = [BALL[0] + WIDE.px * 0.9, WIDE.y - WIDE.px * 1.3];
+export const BALL_VIA = [BALL[0] + WIDE.px, BALL[1] - WIDE.px * 0.3];
+export const ROWS = [0, 1, 2].map(i => [WIDE.rows[0] + [0, 0.09, 0.24][i] * WIDE.rows[2], WIDE.rows[1] + i * WIDE.rows[2] * 0.27 * 1.3, WIDE.rows[2], WIDE.rows[2] * 0.27]);                             // where the ball is in the wide frame, and its radius, for the selection drawn around it
 function saas(c, w, h, o = WIDE) {
   const { x, y, px, rows: [rx, ry, rw, n] } = o, [bx, by, r] = ballAt(o);
   fill(c, C.paper, 0, 0, w, h);
@@ -67,9 +70,7 @@ function saas(c, w, h, o = WIDE) {
   const rh = rw * 0.27;
   for (let i = 0; i < n; i++) {
     const ox = rx + [0, 0.09, 0.24][i] * rw, oy = ry + i * rh * 1.3;
-    c.globalAlpha = i === 2 ? 0.35 : 1;
     fill(c, C.ink, ox, oy, rw, rh); fill(c, i === 0 ? C.red : C.paper, ox + rh * 0.25, oy + rh * 0.25, rh * 0.5, rh * 0.5); fill(c, C.paper, ox + rh, oy + rh * 0.28, rw * 0.45, rh * 0.16); fill(c, C.slate, ox + rh, oy + rh * 0.58, rw * 0.3, rh * 0.13);
-    c.globalAlpha = 1;
   }
 }
 
@@ -508,7 +509,10 @@ export const ART = {
     c.save(); c.translate(0, 58); ART.eblast.draw(c, 320, 472); c.restore();
   } },
   // ---- video: one edit, on three screens
-  frameWide: { w: 480, h: 270, draw(c, w, h) { SHOTS.a(c, w, h); } },
+  shotA: { w: 480, h: 270, draw(c, w, h) { SHOTS.a(c, w, h, { cap: false }); } },
+  shotB: { w: 480, h: 270, draw(c, w, h) { SHOTS.b(c, w, h); } },
+  shotCfx: { w: 480, h: 270, draw(c, w, h) { SHOTS.c(c, w, h, C.red); } },
+  ...Object.fromEntries(['Look good.', 'Move well.', 'Work right.'].map((words, i) => ['cap' + (i + 1), { w: 352, h: 74, draw(c, w, h) { fill(c, C.paper, 0, 0, w, h); text(c, words, w / 2, 55, 54, { align: 'center' }); } }])),
   playerWide: { w: 480, h: 270, draw(c, w, h) {
     SHOTS.a(c, w, h, { capY: h * 0.76 });
     playIcon(c, C.paper, 30, 245, 9); fill(c, 'rgba(247,246,243,0.45)', 54, 243, 400, 5); fill(c, C.paper, 54, 243, 236, 5); fill(c, C.paper, 286, 237, 6, 17);
@@ -540,6 +544,11 @@ export const ART = {
   tV: { w: 40, h: 40, draw(c) { stroke(c, C.grey, 5); c.strokeRect(7, 10, 26, 20); } },
   tA: { w: 40, h: 40, draw(c) { [10, 22, 14, 26, 12].forEach((v, i) => fill(c, C.grey, 6 + i * 6.4, 20 - v / 2, 3.6, v)); } },
   // ---- motion: the animation's frame, the three screens it is exported to, and After Effects' own bits
+  wMake: { w: 232, h: 62, draw(c) { fill(c, C.paper, 0, 0, 232, 62); text(c, 'Make it', 6, 54, 60); } },
+  wMove: { w: 168, h: 52, draw(c) { fill(c, C.paper, 0, 0, 168, 52); text(c, 'move', 6, 44.2, 60, { fill: C.red }); } },
+  rowA: { w: 140, h: 38, draw(c) { c.translate(-ROWS[0][0], -ROWS[0][1]); saas(c, 480, 270); } },
+  rowB: { w: 140, h: 38, draw(c) { c.translate(-ROWS[1][0], -ROWS[1][1]); saas(c, 480, 270); } },
+  graphGrid: { w: 240, h: 200, draw(c, w, h) { for (let i = 0; i < 5; i++) { fill(c, C.dark, 0, 19 + i * 40, w, 2); fill(c, C.dark, 19 + i * 50, 0, 2, h); } } },
   compWide: { w: 480, h: 270, draw(c, w, h) { saas(c, w, h); } },
   motWide: { w: 480, h: 270, draw(c, w, h) {               // in a player
     saas(c, w, h, { ...WIDE, y: 104 }); playIcon(c, C.ink, 30, 245, 9); fill(c, 'rgba(21,19,20,0.25)', 54, 243, 400, 5); fill(c, C.ink, 54, 243, 250, 5); fill(c, C.ink, 300, 237, 6, 17);
@@ -625,30 +634,34 @@ export const ART = {
   tDrop: { w: 64, h: 64, draw(c) { stroke(c, C.paper, 8); c.beginPath(); c.moveTo(14, 50); c.lineTo(38, 26); c.stroke(); c.save(); c.translate(44, 20); c.rotate(Math.PI / 4); fill(c, C.paper, -9, -14, 18, 24); c.restore(); } },
 };
 
-// Lay every picture out in one canvas, in rows, tallest first. The canvas is `size` wide and as tall as the rows need.
-// Returns { canvas, places: { key: [x, y, w, h] as shares of the canvas } }. The page's fonts must be ready before this is called.
+// Pack rows into pages no larger than 2048 square. Places include their page number.
 export function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
-  const spots = [];
+  if (size > 2048 || size < 1 || scale <= 0 || pad < 0) throw new Error('invalid atlas measures');
+  const sheets = [[]];
   let x = pad, y = pad, row = 0;
   for (const [key, a] of Object.entries(ART).sort((p, q) => q[1].h - p[1].h)) {
     const w = Math.round(a.w * scale), h = Math.round(a.h * scale);
+    if (w + 2 * pad > size || h + 2 * pad > size) throw new Error('picture too large: ' + key);
     if (x + w + pad > size) { x = pad; y += row + pad; row = 0; }
-    spots.push([key, a, x, y, w, h]);
+    if (y + h + pad > size) { sheets.push([]); x = pad; y = pad; row = 0; }
+    sheets.at(-1).push([key, a, x, y, w, h]);
     x += w + pad; row = Math.max(row, h);
   }
-  const tall = Math.ceil((y + row + pad) / 4) * 4;
-  if (tall > 4096) throw new Error('the pictures need an atlas ' + tall + ' px tall, and 4096 is the most a phone is sure to take');
-  const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = tall;
-  const ctx = canvas.getContext('2d'), places = {};
-  for (const [key, a, px, py, w, h] of spots) {
-    ctx.save(); ctx.translate(px, py); ctx.scale(scale, scale); ctx.beginPath(); ctx.rect(0, 0, a.w, a.h); ctx.clip(); a.draw(ctx, a.w, a.h); ctx.restore();
-    places[key] = [(px + 0.5) / size, (py + 0.5) / tall, (w - 1) / size, (h - 1) / tall];
-  }
-  return { canvas, places };
+  const places = {}, pages = sheets.map((spots, page) => {
+    const tall = Math.min(size, Math.ceil(Math.max(...spots.map(p => p[3] + p[5] + pad)) / 4) * 4);
+    const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = tall;
+    const ctx = canvas.getContext('2d');
+    for (const [key, a, px, py, w, h] of spots) {
+      ctx.save(); ctx.translate(px, py); ctx.scale(scale, scale); ctx.beginPath(); ctx.rect(0, 0, a.w, a.h); ctx.clip(); a.draw(ctx, a.w, a.h); ctx.restore();
+      places[key] = [page, (px + 0.5) / size, (py + 0.5) / tall, (w - 1) / size, (h - 1) / tall];
+    }
+    return canvas;
+  });
+  return { pages, places };
 }
 // The page's own face, and the stand-ins for the flyer's faces, which live beside this file so that every page that draws the pictures gets them.
 const FACES = [['Gelasio', '400', 'gelasio-400.woff2'], ['Gelasio', '700', 'gelasio-700.woff2'], ['Rokkitt', '800', 'rokkitt-800.woff2']];
 export async function fontsReady() {
-  await Promise.all(FACES.map(([family, weight, file]) => { const f = new FontFace(family, `url(${new URL('./fonts/' + file, import.meta.url)})`, { weight }); document.fonts.add(f); return f.load(); }));
+  await Promise.all(FACES.map(([family, weight, file]) => { const f = new FontFace(family, `url(${(globalThis.__heroFonts?.[file] || new URL('./fonts/' + file, import.meta.url))})`, { weight }); document.fonts.add(f); return f.load(); }));
   await Promise.all(['800 64px Outfit', '600 32px Outfit', '500 16px Outfit', '400 16px Outfit'].map(f => document.fonts.load(f)));
 }

@@ -4,14 +4,17 @@
 //   node design/journey-hero/take-2/tools/sheet.mjs <out.png> [scenes, as in 0,1,2]     (0 Photoshop, 1 Illustrator, 2 InDesign, 3 video, 4 motion, 5 UX/UI)
 //
 // The stills page is made from the built page's own markup (public/journey/index.html), so the layout and the words are the real ones.
-// It is written to design/journey-hero/.scratch/take-2/hero.html, which git ignores.
+// Generated pages and output stay inside take-2/.scratch/.
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
+import { writeStillsPage, outputPath, TAKE } from './page.mjs';
+export { writeStillsPage } from './page.mjs';
 import { serve, ROOT } from '../../tools/serve.mjs';
 
 const require = createRequire(import.meta.url);
-const out = process.argv[2] || 'take-2-sheet.png';
+const out = process.argv[2] || path.join(TAKE, '.scratch', 'sheet.png');
 const CAPTIONS = [
   ['01 Graphic design, in Photoshop', 'First, a photo edit of the building: as shot on the left of the split, graded on the right. Nothing lands on the floor when it exports. The photograph goes on into the next apps, and every later piece uses it'],
   ['01 Graphic design, in Illustrator', 'Second, the booklet\'s two maps, simplified. Above, King Street from the amenities page. Below, downtown from the location page, and beside it a closer view of the part in the red frame, where the subway\'s line is selected as a path. Landmarks and transit carry plain badges in place of their logos. Nothing lands on the floor here either: the maps go into the booklet'],
@@ -23,22 +26,11 @@ const CAPTIONS = [
 // the moments of the booklet's story that the sheet shows under the InDesign still (see copy in stage.mjs), and which scene that is
 const TURNS = [-0.7, 0.3, 1, 1.4, 2, 2.76], BOOKLET = 2;
 
-// the built page, with its player swapped for the stills script
-export function writeStillsPage() {
-  const dir = path.join(ROOT, 'design/journey-hero/.scratch/take-2');
-  let html = fs.readFileSync(path.join(ROOT, 'public/journey/index.html'), 'utf8');
-  html = html.replace(/\s*<link rel="modulepreload"[^>]*>/g, '').replace(/<noscript>.*?<\/noscript>/s, '');
-  html = html.replace('<script type="module" src="hero/hero.mjs"></script>', '<script type="module" src="/design/journey-hero/take-2/stills.mjs"></script>');
-  html = html.replace('<meta charset="utf-8" />', '<meta charset="utf-8" />\n    <base href="/public/journey/" />');
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'hero.html'), html);
-  return '/design/journey-hero/.scratch/take-2/hero.html';
-}
-
 // headless Chromium draws WebGL in software; these switches make sure it does
 export const GL = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
 
-if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const destination = outputPath(out);
   const { chromium } = require('playwright');
   const scenes = (process.argv[3] || '0,1,2,3,4,5').split(',').map(Number);
   const address = writeStillsPage(), { server, url } = await serve(0), browser = await chromium.launch({ args: GL });
@@ -79,7 +71,7 @@ figcaption{font-weight:300;font-size:17px;letter-spacing:.12em;text-transform:up
 ${scenes.map(row).join('')}`;
   const page = await browser.newPage({ viewport: { width: 3060, height: 800 } });
   await page.setContent(html); await page.evaluate(() => document.fonts.ready); await page.waitForFunction(() => [...document.images].every(i => i.complete && i.naturalWidth)); await page.waitForTimeout(300);
-  await page.screenshot({ path: out, fullPage: true });
+  await page.screenshot({ path: destination, fullPage: true });
   if (errors.length) console.log('console:\n  ' + [...new Set(errors)].join('\n  '));
   await browser.close(); server.close();
   console.log('sheet', out);

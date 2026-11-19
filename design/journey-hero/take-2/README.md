@@ -43,9 +43,9 @@ and on a phone in two states, with a prototype link between the two. It is expor
 - `sq.mjs` the prototype renderer. WebGL2, no dependencies. Every piece is one superquadric (a box, a cylinder, a ball, or anything
   between them), with one light, a shadow map and three hard tones per material. A piece can carry a picture on its face.
 - `kit.mjs` the helpers that make pieces and move them.
-- `art.mjs` every picture (a page, a logo, an icon), drawn with the 2D canvas into one atlas.
+- `art.mjs` every picture (a page, a logo, an icon), drawn with the 2D canvas into atlas pages no larger than 2048 square.
 - `fonts/` Gelasio and Rokkitt, open faces under the SIL Open Font License, which stand in for the flyer's Georgia and Rockwell.
-- `stage.mjs` the scenes, held still: the screen, each app, and what it has exported.
+- `stage.mjs` the six scenes on one clock, and their approved still poses: the screen, each app, and what it has exported.
 - `stage.html` one scene on its own. `?s=0..5` picks it, `?yaw=-25&pitch=8` turns the view, `?atlas=1` shows the pictures.
 - `stills.mjs` and `tools/sheet.mjs` the scenes in the hero's own layout, on one sheet for comments. On the stills page `?at=` sets
   where the copy that is being read has got to: -1 is on the stack, 0 is set down and still shut, 1 is open at The Offering,
@@ -63,9 +63,95 @@ tones have, so the bend shows.
     node design/journey-hero/tools/serve.mjs
     http://localhost:4173/design/journey-hero/take-2/stage.html?s=2
 
-    node design/journey-hero/take-2/tools/sheet.mjs sheet.png 0,1,2,3,4,5
+    node design/journey-hero/take-2/tools/sheet.mjs design/journey-hero/take-2/.scratch/sheet.png 0,1,2,3,4,5
 
-## What comes next
+## The motion
 
-The motion itself: how the screen changes between apps, the Export click, the work landing, the copy leaving the stack and its
-pages turning. Then a brief for the production build.
+`MOTION.md` is the brief. The loop is 40.35 seconds. Its lengths and beats live in `stage.mjs`, with no timer inside a scene:
+`frameAt(t)` builds any moment directly, `sceneAt(t)` finds its app and local time, and `SHOW` describes the running order.
+Negative times and times past the end wrap. `SCENES[i]()` still builds that scene at its still time, and `SCENES[2]({ at })`
+still sets the booklet's reading pose with the whole block out.
+
+| App | Start | Length | What happens |
+| --- | ---: | ---: | --- |
+| Photoshop | 0 | 4.3 | The cursor pulls the grade across the photo, then exports the same picture into the dock |
+| Illustrator | 4.3 | 5.05 | It draws two maps, pulls out a close-up, selects the subway, then sends both maps to the dock |
+| InDesign | 9.35 | 9.4 | The dock's assets fill the frames; the finished work feeds out; one copy lifts off and four leaves turn |
+| Premiere Pro | 18.75 | 8 | Captions grow, two presets are dragged onto the edit, the playhead runs, and three screens feed out |
+| After Effects | 26.75 | 7.2 | The ball is selected, its ease is drawn by dragging a handle, the comp plays, then three screens feed out |
+| Figma | 33.95 | 6.4 | Designs slide from behind wireframes, a link follows the cursor, the panel fills, and three screens feed out |
+
+The screen stays. Plates keep their roles while their rectangles change, the tile turns over, and the name wipes away and on.
+Only content joins the screen's upright wipe. Docked pictures and work in flight are separate pieces. Export sinks for the click,
+then its progress divides the button's one picture into red and ink parts. The floor uses a fixed clip at the mat's back edge,
+including in the shadow pass: work feeds out of that line and returns behind it before the next app opens.
+
+Nothing gains opacity. Pose changes use the engine's wipe ease, floor arrivals its enter ease and returns its exit ease.
+Playheads run at constant speed. The booklet keeps its existing bending strips and its own pickup movement.
+The split's still time is solved for exactly 0.44 across the photo (1.685566 seconds locally); the leaf's for exactly 1.82
+(5.897961 seconds). The brief's approximate times do not replace those poses. The rows' rest positions are recovered from the approved parked
+comp at 1.6, so their specified slide preserves that still too.
+
+## The player and tools
+
+`play.mjs` fits from the same six stills as `stills.mjs`. Craft buttons cut to their first app, the stage advances to the next
+craft, and Pause stops the clock. Reduced motion shows four stills, starting with InDesign, and never starts playback.
+Hidden tabs and an off-screen hero stop drawing. Drawing uses at most two device pixels per CSS pixel.
+
+`tools/page.mjs` writes the built hero's markup twice, swapping its script for the stills or the player. It keeps the layout and
+words. Generated pages stay in this folder's `.scratch/`, and `tools/sheet.mjs` still exports `writeStillsPage()`.
+From the repository root:
+
+    node design/journey-hero/take-2/tools/page.mjs
+    node design/journey-hero/tools/serve.mjs
+
+Then open `/design/journey-hero/take-2/.scratch/play.html` or `stills.html` on that server. `?t=12.5` holds the player.
+`window.__hero.seek(t)` holds and draws another moment at once; `__hero.t`, `LOOP` and `SHOW` describe its clock.
+`stage.html?atlas=1` shows every atlas page, and `stage.html?t=12.5` holds a moment without the hero's page layout.
+
+These tools need only Node:
+
+    node design/journey-hero/take-2/tools/checks.mjs
+    node design/journey-hero/take-2/tools/preview.mjs design/journey-hero/take-2/.scratch/preview.html
+
+The preview is one offline frame: its stylesheet, all four font files, pictures and modules are inside it. It has no document
+wrapper and no addresses on the page's links. The packer wraps the named modules in dependency order, with an awaited entry;
+it does not call a bundler or fetch anything.
+
+The two browser tools must be run elsewhere, with Playwright and Chromium already available:
+
+    node design/journey-hero/take-2/tools/sheet.mjs design/journey-hero/take-2/.scratch/sheet.png 0,1,2,3,4,5
+    node design/journey-hero/take-2/tools/film.mjs design/journey-hero/take-2/.scratch/film.png 0 40.35 0.25
+    node design/journey-hero/take-2/tools/film.mjs design/journey-hero/take-2/.scratch/phone.png 9.35 18.75 0.15 --phone
+
+Film holds each time with `seek`, crops the stage with 16 pixels around it (within the viewport), and lays out eight frames to
+a row at half size. Each frame has its time and app below it. All tools reject output paths outside this prototype or onto
+`MOTION.md`. They do not publish anything.
+
+## What must survive review
+
+The approved stills and the rules above are the reference, not a new composition. Keep the screen, canvas and panel measures,
+the exported flat block, the type, colours and booklet's bending leaves. Keep both flyer logos as blobs and its names and
+contact details out. Compare the six stills with the originals at reading size, then inspect the beats and joins on both page
+sizes. New motion must preserve the same piece from its canvas through the dock or floor movement. Every app must finish
+with the cursor on Export and an empty floor before the next app opens.
+
+The renderer now clips in all three passes and chooses the lighter mesh only at roundness 0.06 or below. It reuses its colour
+lookups and draw lists and resizes the canvas only when needed. Those changes support the frame-rate target; a real browser
+still needs to measure it.
+
+## Build record
+
+The Node checker samples each scene at 60 frames a second, also checking its boundaries and still. It checks every numeric
+property, dimensions, tones, picture keys and windows, cursor count, content planes, the floor's slot and empty periods, loop
+wrapping and the still entry points. It also checks that dragged pictures follow the cursor and that the comp's rows retain
+their parked positions. The atlas layout was checked with canvas stand-ins: 94 pictures on three pages, 2048 × 1724,
+2048 × 1976 and 2048 × 476. The exported geometry at each still was also compared in memory against the original
+stage: positions, sizes and rotations match. Every module and the packed preview were syntax checked. Node-only stand-ins
+for the page and drawing APIs exercised held seeks, craft and stage clicks, pause, reduced motion, hidden and off-screen
+states, and the pixel cap; these are logic checks, not a browser render.
+
+No browser review, screenshots or frame-rate measurements were made here. The two Playwright tools were written and syntax
+checked only. The installed skills and external project notes were not read because this build was confined to the repository;
+no reviewer agents were used. The visual and performance gates remain for the browser review. Nothing here is a production
+build or a publication.
