@@ -218,6 +218,19 @@ function refresh() {
   draw();
 }
 
+function watchPixelRatio() {
+  const query = matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+  if (!query.matches) return;
+  query.addEventListener(
+    'change',
+    () => {
+      watchPixelRatio();
+      refresh();
+    },
+    { once: true }
+  );
+}
+
 function syncVisibility() {
   stop();
   wake();
@@ -298,13 +311,14 @@ if (ctx) {
     syncVisibility();
   });
   new IntersectionObserver(entries => {
-    onScreen = entries[0].isIntersecting;
+    onScreen = entries[entries.length - 1].isIntersecting;
     syncVisibility();
   }).observe(hero);
   const resize = new ResizeObserver(refresh);
   resize.observe(hero);
   resize.observe(box);
   window.addEventListener('resize', refresh);
+  watchPixelRatio();
   // Scrolling changes pointer coordinates without changing the hero's dimensions.
   window.addEventListener(
     'scroll',
