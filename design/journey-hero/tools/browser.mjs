@@ -5,7 +5,9 @@ import { createRequire } from 'node:module';
 import { serve, PAGES } from './serve.mjs';
 
 const require = createRequire(import.meta.url);
-export const SIZES = ['1440x900', '390x844', '360x640', '768x1024', '1024x768', '1920x1080', '600x960', '1280x720', '430x932', '820x1180', '2560x1440', '1366x768', '1536x864', '393x852', '412x915', '844x390'];
+export const SIZES = ['1440x900', '390x844', '360x640', '768x1024', '1024x768', '1920x1080', '600x960', '1280x720', '430x932', '820x1180', '2560x1440', '1366x768', '1536x864', '393x852', '412x915', '844x390',
+  // phones as a browser shows them: the screen less the browser's own bars, which is the room the first screen really has
+  '390x664', '393x659', '430x739', '412x775', '360x650', '375x629', '375x548'];
 
 export async function studio() {
   const { chromium } = require('playwright');

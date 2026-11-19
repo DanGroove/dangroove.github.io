@@ -34,11 +34,14 @@ into the deck. Each craft then has three seconds: graphic design until 5, video 
 `serve.mjs` and `checks.mjs` need only Node. The others drive a real browser through Playwright, which is not a dependency of this
 repository: they run where it is installed globally, as it is on the cloud review machine.
 
+The sizes they use include phones as a browser shows them (390 x 664 rather than 390 x 844): a phone's first screen is the screen
+less the browser's bars, and the hero has to fit that.
+
 | Tool | What it answers |
 | --- | --- |
 | `checks.mjs` | Do bars ever pass through each other? Does the paint order ever disagree with what is in front, or change where it shows? Does a bar ever come within 8px of the text? Run over every layout saved in `layouts.json` |
-| `measure.mjs` | Where does a page put the text and the art at sixteen screen sizes? `rough --write` saves the rough cut's answer to `layouts.json`; `built` says where the site's page differs from it |
-| `compare.mjs` | Does the built page show the same picture as the rough cut, at twenty held moments and three sizes? |
+| `measure.mjs` | Where does a page put the text and the art at each of the screen sizes listed in `browser.mjs`? `rough --write` saves the rough cut's answer to `layouts.json`; `built` says where the site's page differs from it |
+| `compare.mjs` | Does the built page show the same picture as the rough cut, at twenty held moments and four sizes? |
 | `live.mjs` | Plays a page and uses it: timing, craft buttons, pause, stage, keyboard, resize, reduced motion |
 | `shots.mjs` | Screenshots of a page at the moments you name |
 | `sheet.mjs` | The contact sheet of six moments on desktop and phone that goes out for comments |

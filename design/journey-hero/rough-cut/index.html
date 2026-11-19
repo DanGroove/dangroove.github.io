@@ -47,12 +47,12 @@ body{margin:0;background:var(--ink);color:var(--paper);font-family:Outfit,system
 @media (max-width:1199px){.hero{--pad:40px}}
 @media (max-width:719px){
   .hero{--pad:16px;--stacked:1;min-height:100vh;min-height:100svh;display:flex;flex-direction:column}
-  .hero-box{left:0;top:64px;width:100%;height:47vh;height:47svh}
+  .hero-box{position:relative;left:auto;top:auto;width:auto;height:auto;margin-top:64px;flex:1 1 0px;min-height:240px;max-height:47vh;max-height:47svh}   /* the stage gives way first, so the whole hero fits a phone with the browser's bars showing */
   .hero-nav{top:16px}
   .hero-mark{height:32px}
   .label{font-size:12px}
   .hero-links{gap:20px}
-  .hero-say{position:relative;left:auto;top:auto;transform:none;width:auto;margin-top:calc(64px + 47vh + 8px);margin-top:calc(64px + 47svh + 8px);padding:0 var(--gr) 0 var(--gl)}
+  .hero-say{position:relative;left:auto;top:auto;transform:none;width:auto;margin-top:8px;padding:0 var(--gr) 0 var(--gl)}
   .hero-name{font-size:56px}
   .hero-lede{margin-top:14px;font-size:16px}
   .hero-crafts{margin-top:12px;width:auto;display:grid;grid-template-columns:1fr 1fr;column-gap:16px}
@@ -144,7 +144,7 @@ function frame(now) {
   const dt = last === null ? 0 : Math.min(0.05, (now - last) / 1000); last = now;
   if (goal !== null) {                                            // jumping to a craft: run the same moves, fast, the short way round
     const step = SCRUB * dt * Math.sign(goal - t);
-    if (Math.abs(goal - t) <= Math.abs(step) || step === 0) { t = goal; goal = null; } else t += step;
+    if (Math.abs(goal - t) <= Math.abs(step)) { t = goal; goal = null; } else t += step;   // a jump runs even from a standstill: the first frame after a pause has no time in it, and must not land it
   } else if (playing) t += dt;
   if (t >= LOOP0 + BEATS && goal === null) t -= BEATS;
   const settle = 1 - Math.exp(-dt / TILT.ease), flat = t < ENTRANCE + 1;   // the opening is flat to the screen, so the view holds still for it

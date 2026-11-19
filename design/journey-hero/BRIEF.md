@@ -218,7 +218,7 @@ The reviewer's tools drive the page through these. They must behave exactly as i
 - These hooks in the markup, unchanged: `data-hero`, `data-art`, `data-stage-box`, `data-mark`, `data-nav`, `data-name`, `data-lede`,
   `data-crafts`, `data-craft="0"` to `"3"`, `data-foot`, `data-cue`, `data-pause`. And the classes `hero`, `is-entering`, `nav-late`.
 
-The reviewer will measure your page at sixteen screen sizes and expect the text and the art to sit where the rough cut puts them, to
+The reviewer will measure your page at some twenty screen sizes and expect the text and the art to sit where the rough cut puts them, to
 half a pixel. Then compare screenshots of the two pages at twenty held moments, and then use the page: buttons, pause, stage,
 keyboard, resize, reduced motion.
 

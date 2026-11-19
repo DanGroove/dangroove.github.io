@@ -13,7 +13,7 @@ import { studio, seek } from './browser.mjs';
 import { ROOT } from './serve.mjs';
 
 const folder = process.argv[2] || path.join(ROOT, 'design/journey-hero/.scratch/compare');
-const sizes = (process.env.SIZES || '1440x900,390x844@2,768x1024').split(',');
+const sizes = (process.env.SIZES || '1440x900,390x844@2,768x1024,390x664@2').split(',');   // the last is a phone with the browser's bars showing
 const times = (process.env.TIMES || '0.5,1.5,2.3,2.6,3.5,4.6,4.99,5.5,6,6.85,7.9,8.3,9.5,10.6,11.3,12,12.9,13.4,14.3,14.6').split(',').map(Number);
 const ALLOW = 4;                                  // solid px a pair may differ by and still pass (a faithful canvas port scores 0 everywhere)
 
