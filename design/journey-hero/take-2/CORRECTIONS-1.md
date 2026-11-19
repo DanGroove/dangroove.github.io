@@ -208,3 +208,29 @@ there: the corrections matter more than the measuring tool. Say plainly in your 
 The reviewers will look at the corrected build in a real browser: frames every 0.05 s across every window you changed, the
 stills against today's pixel for pixel, a scan of the whole loop for anything that disappears and comes back, and the
 measurement above.
+
+## Added on 19 November 2026, 5:10 PM ET: two corrections from Dan himself
+
+Dan watched the second pass while the list above was being built and sent two notes. They were built in a second run,
+straight after C1 to C14. Neither reviewer had caught them: the first because the earlier brief defined "centred" the wrong
+way, the second because nobody looked at the cursor while the pages turned.
+
+### C15. The exported work is centred under the screen in 3D space
+
+> when i said make sure it is under it, you still need to make sure that they align in 3d space. here they are way too to
+> the right. it is not centered
+
+The second pass centred each group as the camera sees it. The camera is isometric, so in the world that put the groups far to
+the right: InDesign's block was centred on x = 2.06 while the screen's middle is at x = 0.2. Every exported group (InDesign's
+block as a whole, the row of three screens in the other apps, the floor's pool of light) is now centred on the screen's own
+middle along x in world space, `SCREEN.l + SCREEN.w / 2`. Nothing moves in z. The stills change only by that shift. The check
+compares world x, not camera coordinates.
+
+### C16. The cursor clicks Export once, then rests
+
+> also why does the mouse keep clicking export when the pages flip
+
+`actionCursor` pressed the cursor for the first 0.05 s of every action, waits included. Twelve waits follow Export in InDesign
+(the landing, the pickup, each leaf, each pause, the return), so the cursor resting on Export dipped once for every page that
+turned; the same false click happened on other waits. A wait never presses the cursor: it stays where the last action left it,
+still and released, and the Export button does not react. Rule R8 in `tools/checks.mjs` holds it there.
