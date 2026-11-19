@@ -46,7 +46,7 @@ export function floorAt(x, y) {
 }
 
 // ---- the floor. Everything exported lies flat on it, face up, squared to the screen, in one block: the mat.
-export const MAT = { x: -3.3, z: -1.4, w: 5.5, gap: 0.25 };   // the mat's back left corner, its width, and the gap between two screens on it
+export const MAT = { x: SCREEN.l + (SCREEN.w - 5.5) / 2, z: -1.4, w: 5.5, gap: 0.25 };   // the mat's back left corner, its width, and the gap between two screens on it
 // a sheet lying on the floor. x, z: its back left corner. w: along the screen. d: toward us. t: how thick. y: what it lies on.
 function flat(tone, x, z, w, d, t, art, y = 0) {
   const at = [x + w / 2, y + t / 2, z + d];
@@ -117,11 +117,9 @@ const CANVAS = { l: 0.56, w: PANEL - 0.12 - 0.56, b: 0.1, h: TOP - 0.1 };
 const DEEP = 1.45, LEAF = DEEP * 440 / 340;              // a page of the booklet: how deep it is (toward us) and how wide
 const GUT = 0.12, PHONE = 0.7, TABLET = LEAF - PHONE - 2 * GUT;   // the gutter between two things in the block, and the two devices that share a page's width with it
 const SHEET = 0.01, COPY = 5 * SHEET, COPIES = 6;        // how thick one leaf is, and one closed copy (the four leaves that turn, and the rest); how many copies land
-const screenMiddle = HOME.r[0] * (SCREEN.l + SCREEN.w / 2) + HOME.r[2] * ZF;
-// Perspective makes the deeper booklet group need a different x from the device row.
-const centredX = (width, depth) => (screenMiddle - HOME.r[2] * (MAT.z + depth / 2)) / HOME.r[0] - width / 2;
-export const BLOCK = { x0: centredX(2 * LEAF, 2 * DEEP + GUT), x1: centredX(2 * LEAF, 2 * DEEP + GUT) + 2 * LEAF, z0: MAT.z, z1: MAT.z + 2 * DEEP + GUT, up: 0.6 };
-export const POOL = { x: (screenMiddle - HOME.r[2] * (MAT.z + DEEP)) / HOME.r[0], z: MAT.z + DEEP };
+const screenMiddle = SCREEN.l + SCREEN.w / 2;
+export const BLOCK = { x0: screenMiddle - LEAF, x1: screenMiddle + LEAF, z0: MAT.z, z1: MAT.z + 2 * DEEP + GUT, up: 0.6 };
+export const POOL = { x: screenMiddle, z: MAT.z + DEEP };
 
 // A closed copy: the white edges of its pages under a dark cover. x, z: its back left corner. y: what it lies on.
 function closed(P, x, z, y = 0, art = 'kCover') {
@@ -254,7 +252,7 @@ function feedScreens(P, t, art, spans, off) {
   if (t >= off[1]) return;
   const kind = art[0] === 'playerWide' ? 'video' : art[0] === 'motWide' ? 'motion' : 'ui';
   const clock = Math.max(0, (t - spans[0][1]) / PACE) % 1.6 / 1.6;
-  const x = centredX(MAT.w, ROW), widths = [WIDE, SLIM, SLIM];
+  const x = MAT.x, widths = [WIDE, SLIM, SLIM];
   let left = x;
   widths.forEach((w, i) => {
     const pieces = [], rim = i ? 0.055 : 0.075;
@@ -397,7 +395,7 @@ function actionCursor(P, s, t) {
     point = a.to;
   }
   P.cursor = point;
-  P.pressed = !!active && (['drag', 'draw', 'slide', 'stroke'].includes(active.kind) || t < active.start + 0.05 * PACE);
+  P.pressed = !!active && active.kind !== 'wait' && (['drag', 'draw', 'slide', 'stroke'].includes(active.kind) || t < active.start + 0.05 * PACE);
   P.action = active?.id;
   P.tool = tool;
 }
@@ -1111,6 +1109,7 @@ function build(i, at, o) {
   const app = builders[i](at, o), P = shell(i, at, app.cursor || EXPORT, app.pressed);
   P.clock = app.clock;
   P.action = app.action;
+  P.pressed = app.pressed;
   P.tool = app.tool;
   const [a, b, c, d] = [0.5 * PACE, 0.8 * PACE, SHOW[i].len - 0.3 * PACE, SHOW[i].len], opening = at < b, closing = at >= c;
   const edge = SCREEN.l + W * U * (opening ? progress(at, a, b) : closing ? progress(at, c, d) : 1);

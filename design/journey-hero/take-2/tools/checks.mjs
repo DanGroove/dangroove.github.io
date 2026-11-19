@@ -10,6 +10,39 @@ import { previewMarkup } from './preview.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
+const visibleBounds = [Infinity, -Infinity, Infinity, -Infinity];
+// Clip box edges too: a piece behind the printer slot is not part of the visible fit.
+function visibleCorners(pc) {
+  const points = corners(pc);
+  if (!pc.clip) return points;
+  const distances = points.map(p => dot(pc.clip, p) + pc.clip[3]);
+  const visible = points.filter((_, i) => distances[i] >= 0);
+  for (let i = 0; i < 8; i++) for (const bit of [1, 2, 4]) {
+    const j = i ^ bit;
+    if (i < j && distances[i] * distances[j] < 0) visible.push(points[i].map((v, k) => v + (points[j][k] - v) * distances[i] / (distances[i] - distances[j])));
+  }
+  return visible;
+}
+function includeFit(list) {
+  for (const pc of list) for (const p of visibleCorners(pc)) {
+    const x = dot(HOME.r, p), y = dot(HOME.u, p);
+    visibleBounds[0] = Math.min(visibleBounds[0], x); visibleBounds[1] = Math.max(visibleBounds[1], x);
+    visibleBounds[2] = Math.min(visibleBounds[2], y); visibleBounds[3] = Math.max(visibleBounds[3], y);
+  }
+}
+// R8: every wait keeps the previous action's position, released, including its rendered lift.
+function checkWait(time, list, scene, at) {
+  const wait = SCRIPTS[scene.key].actions.find(a => a.kind === 'wait' && at > a.start + 1e-8 * PACE && at < a.end - 1e-8 * PACE);
+  if (!wait) return;
+  const resting = frameAt(time - at + wait.end - 1e-7 * PACE);
+  const cursor = list.find(pc => pc.art === 'cursor'), reference = resting.find(pc => pc.art === 'cursor');
+  if (list.pressed !== false) fail(time, 'R8: ' + wait.id + ' presses during a wait');
+  const expected = [SCREEN.l + wait.previous[0] * 1.15, SCREEN.b + wait.previous[1] * 1.15];
+  if (tip(list).some((v, i) => Math.abs(v - expected[i]) > 1e-8) || cursor.p.some((v, i) => Math.abs(v - reference.p[i]) > 1e-8)) fail(time, 'R8: ' + wait.id + ' moves the resting cursor');
+  const buttons = list.filter(pc => pc.art === 'export'), restingButtons = resting.filter(pc => pc.art === 'export');
+  // An export already in progress may keep filling; a wait must never sink the button.
+  if (buttons.some(pc => Math.abs(pc.p[2] - restingButtons[0].p[2]) > 1e-8)) fail(time, 'R8: ' + wait.id + ' presses the Export button');
+}
 function fail(time, message) {
   if (errors.length < 30 && !errors.some(error => error.endsWith(': ' + message))) errors.push(`${time.toFixed(6)}s (${sceneAt(time).scene.key}): ${message}`);
 }
@@ -22,6 +55,7 @@ function finite(value, name, time) {
 function check(time) {
   const { scene, at } = sceneAt(time), list = frameAt(time);
   frames++; pieces += list.length; largest = Math.max(largest, list.length);
+  includeFit(list); checkWait(time, list, scene, at);
   if (list.filter(pc => pc.art === 'cursor').length !== 1) fail(time, 'expected exactly one cursor');
   list.forEach((pc, i) => {
     finite(pc, `piece ${i}`, time);
@@ -84,10 +118,10 @@ assert.deepEqual(frameAt(-0.01), frameAt(LOOP - 0.01));
 assert.deepEqual(frameAt(0), frameAt(LOOP));
 assert.throws(() => frameAt(NaN), TypeError);
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-8, `${a} differs from ${b}`);
-const tip = list => {
+function tip(list) {
   const pc = list.find(pc => pc.art === 'cursor');
   return [pc.p[0] - 0.46 * (0.5 - 10 / 96), pc.p[1] + 0.46 * (0.5 - 6 / 96)];
-};
+}
 // The cursor must reach every action's start before pressing, then its end before releasing.
 let sceneStart = 0;
 for (const scene of SHOW) {
@@ -165,9 +199,37 @@ for (const at of [-1, -0.7, 0, 0.3, 1, 1.4, 2, 2.76, 4]) {
   assert.ok(list.filter(pc => pc.where === 'floor').every(pc => pc.p[2] >= MAT.z));
 }
 assert.ok(SCREEN.w > 0);
-const middle = dot(HOME.r, [SCREEN.l + SCREEN.w / 2, 0, SCREEN.z + SCREEN.t / 2]);
-near(dot(HOME.r, [(BLOCK.x0 + BLOCK.x1) / 2, 0, (BLOCK.z0 + BLOCK.z1) / 2]), middle);
-near(dot(HOME.r, [POOL.x, 0, POOL.z]), middle);
+const middle = SCREEN.l + SCREEN.w / 2;
+const centred = (x, name) => assert.ok(Math.abs(x - middle) <= 0.001, name + ': footprint is not centred in world x');
+centred((BLOCK.x0 + BLOCK.x1) / 2, 'InDesign block');
+centred(MAT.x + MAT.w / 2, 'device mat');
+centred(POOL.x, 'light pool');
+for (const i of [2, 3, 4, 5]) {
+  const xs = SCENES[i]().filter(pc => pc.where === 'floor').flatMap(corners).map(p => p[0]);
+  centred((Math.min(...xs) + Math.max(...xs)) / 2, SHOW[i].key);
+}
+// Feeding and returning translate only z. Freeze the booklet pose; devices keep their own playback.
+sceneStart = 0;
+for (const scene of SHOW) {
+  if (['id', 'pr', 'ae', 'fig'].includes(scene.key)) {
+    const s = SCRIPTS[scene.key], exp = s.actions.find(a => a.id === 'export');
+    const floor = t => frameAt(sceneStart + t, { at: -1 }).filter(pc => pc.where === 'floor');
+    const landed = floor(exp.end + 0.01 * PACE);
+    const reference = scene.key === 'id' ? landed : landed.filter(pc => pc.device !== undefined && !pc.art && pc.paintLayer === undefined);
+    assert.equal(reference.length, scene.key === 'id' ? 16 : 3, scene.key + ': missing export bodies');
+    for (let n = 1; n < Math.ceil((scene.len - exp.start) * 120 / PACE); n++) {
+      const list = floor(exp.start + n * PACE / 120);
+      const bodies = scene.key === 'id' ? list : list.filter(pc => pc.device !== undefined && !pc.art && pc.paintLayer === undefined);
+      for (const pc of bodies) {
+        const match = scene.key === 'id' ? reference.find(p => p.art === pc.art && p.s.every((v, i) => Math.abs(v - pc.s[i]) < 1e-8) && Math.abs(p.p[0] - pc.p[0]) < 1e-8 && Math.abs(p.p[1] - pc.p[1]) < 1e-8) : reference.find(p => p.device === pc.device);
+        assert.ok(match, scene.key + ': export changed x/y or geometry');
+        near(pc.p[0], match.p[0]); near(pc.p[1], match.p[1]);
+        assert.deepEqual(pc.q, match.q); assert.deepEqual(pc.s, match.s);
+      }
+    }
+  }
+  sceneStart += scene.len;
+}
 // Canvas stand-ins exercise all picture functions and atlas packing, without pretending to render pixels.
 let matrix = [1, 0, 0, 1, 0, 0];
 const stack = [];
@@ -209,7 +271,7 @@ for (const scene of SHOW) {
     const bodies = [0, 1, 2].map(i => list.find(pc => pc.where === 'floor' && pc.device === i));
     assert.ok(bodies.every(Boolean), 'device row did not land');
     const footprint = bodies.flatMap(corners), xs = footprint.map(p => p[0]), zs = footprint.map(p => p[2]);
-    near(dot(HOME.r, [(Math.min(...xs) + Math.max(...xs)) / 2, 0, (Math.min(...zs) + Math.max(...zs)) / 2]), middle);
+    centred((Math.min(...xs) + Math.max(...xs)) / 2, scene.key);
     near(Math.min(...zs), MAT.z);
     assert.ok(list.some(pc => pc.where === 'content' && ['shotA', 'shotB', 'shotCfx', 'wMake', 'uiBoard0', 'uiBoard1', 'uiBoard2', 'uiBoard3'].includes(pc.art)), 'viewer is not playing with the devices');
   }
@@ -239,7 +301,7 @@ for (const scene of SHOW) for (const a of SCRIPTS[scene.key].actions) assert.ok(
 // Exercise the real player with drawing and DOM stand-ins. This is a logic check, never a browser review.
 const node = rect => ({
   events: {}, attributes: {}, textContent: '', classList: { remove() {} },
-  getBoundingClientRect: () => rect,
+  rect, getBoundingClientRect() { return this.rect; },
   addEventListener(name, f) { this.events[name] = f; },
   setAttribute(name, value) { this.attributes[name] = value; },
   removeAttribute(name) { delete this.attributes[name]; },
@@ -275,6 +337,17 @@ scheduledTick(1100); near(win.__hero.t - beforeStall, 0.2);
 pause.events.click();
 media.matches = true; media.change(); near(sceneAt(win.__hero.t).at, SHOW[3].still);
 win.__hero.seek(-0.01); near(win.__hero.t, LOOP - 0.01);
+// Dense reading poses include the leaves at their widest, between the six fitted stills.
+for (let n = -240; n <= 960; n++) includeFit(SCENES[2]({ at: n / 240 }));
+for (const [width, height, box] of [[1440, 900, { left: 633.6, top: 88, width: 742.4, height: 740 }], [390, 664, { left: 0, top: 64, width: 390, height: 240 }]]) {
+  hero.rect = { left: 0, top: 0, width, height }; stage.rect = box;
+  win.__hero.seek(0);
+  const { S, cx, cy } = draws.at(-1).view, padding = (0.25 - 0.001) * S;
+  assert.ok(cx + S * visibleBounds[0] >= box.left + padding, width + ': left fit margin');
+  assert.ok(cx + S * visibleBounds[1] <= box.left + box.width - padding, width + ': right fit margin');
+  assert.ok(cy - S * visibleBounds[3] >= box.top + padding, width + ': top fit margin');
+  assert.ok(cy - S * visibleBounds[2] <= box.top + box.height - padding, width + ': bottom fit margin');
+}
 // Parse the offline module without running it. All font URLs and page links must be self-contained.
 const preview = previewMarkup(), moduleSource = preview.match(/<script type="module">([\s\S]*)<\/script>/)[1];
 new AsyncFunction(moduleSource.replace(/import\.meta\.url/g, '"offline"'));
@@ -351,6 +424,7 @@ for (const scene of SHOW) {
   for (const at of [...samples].filter(t => t >= 0 && t < scene.len - 0.3 * PACE).sort((a, b) => a - b)) {
     const time = ruleStart + at, list = frameAt(time), a = s.actions.filter(a => at >= a.start - 1e-9).at(-1);
     const active = a && at < a.end - 1e-9;
+    checkWait(time, list, sceneAt(time).scene, sceneAt(time).at);
     const ruleFail = (rule, message) => fail(time, rule + ': ' + message);
     if (scene.key === 'id') {
       for (const pc of list.filter(pc => pc.document && pc.where === 'content')) {
@@ -430,7 +504,7 @@ for (const scene of SHOW) {
   }
   ruleStart += scene.len;
 }
-console.log('R1–R7 sampled: photo releases, pages, blobs, typing, births, placed images, tools');
+console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {
   console.error(errors.join('\n'));
