@@ -15,19 +15,19 @@ const U = 1.15, ZF = SCREEN.z + SCREEN.t / 2, W = SCREEN.w / U, H = SCREEN.h / U
 const BAR = 0.44, TOP = H - BAR - 0.1;                  // the bar along the top, and where an app's panels start under it
 
 // a flat thing on the screen, placed by its left and bottom edges. lift: its gap from the screen's face.
-export function on(tone, l, b, w, h, { lift = 0.02, t = 0.03, art, cut, round, more } = {}) {
-  return { ...box(tone, [SCREEN.l + (l + w / 2) * U, SCREEN.b + (b + h / 2) * U, ZF + (lift + t / 2) * U], [w * U, h * U, t * U], { round, more }), art, cut };
+export function on(tone, l, b, w, h, { lift = 0.02, t = 0.03, art, cut, round, more, overlay } = {}) {
+  return { ...box(tone, [SCREEN.l + (l + w / 2) * U, SCREEN.b + (b + h / 2) * U, ZF + (lift + t / 2) * U], [w * U, h * U, t * U], { round, more }), art, cut, overlay };
 }
 // a flat picture on a panel: a plate of the panel's own tone, so that only the picture shows. (A cut-out would lose thin lines when it is drawn small.)
 const icon = (art, l, b, w, h, tone = 'night', lift = 0.051) => on(tone, l, b, w, h, { lift, t: 0.004, art });
 // a disc on the screen, by its middle
-const dot = (tone, cx, cy, r, { lift = 0.05, t = 0.02 } = {}) => cyl(tone, [SCREEN.l + cx * U, SCREEN.b + cy * U, ZF + (lift + t / 2) * U], 'z', r * U, t * U);
+const dot = (tone, cx, cy, r, { lift = 0.05, t = 0.02, overlay } = {}) => ({ ...cyl(tone, [SCREEN.l + cx * U, SCREEN.b + cy * U, ZF + (lift + t / 2) * U], 'z', r * U, t * U), overlay });
 // the outline of a selection: four thin red bars around a box on the screen
-const outline = (l, b, w, h, { line = 0.016, lift = 0.085, tone = 'red' } = {}) => [[l, b, w, line], [l, b + h - line, w, line], [l, b, line, h], [l + w - line, b, line, h]].map(([x, y, bw, bh]) => on(tone, x, y, bw, bh, { lift, t: 0.006 }));
-const handle = (x, y) => on('red', x - 0.03, y - 0.03, 0.06, 0.06, { lift: 0.09, t: 0.01, art: 'anchor' });   // one of a selection's points, by its middle
+const outline = (l, b, w, h, { line = 0.016, lift = 0.085, tone = 'red' } = {}) => [[l, b, w, line], [l, b + h - line, w, line], [l, b, line, h], [l + w - line, b, line, h]].map(([x, y, bw, bh]) => on(tone, x, y, bw, bh, { lift, t: 0.006, overlay: true }));
+const handle = (x, y) => on('red', x - 0.03, y - 0.03, 0.06, 0.06, { lift: 0.09, t: 0.01, art: 'anchor', overlay: true });   // one of a selection's points, by its middle
 // a thin red bar from one point of the screen to another: a piece of a selected path, or the arm of a handle
 function bar(a, b, { line = 0.018, lift = 0.085, tone = 'red' } = {}) {
-  const pc = on(tone, a[0] - line / 2, a[1] - line / 2, Math.hypot(b[0] - a[0], b[1] - a[1]) + line, line, { lift, t: 0.006 });
+  const pc = on(tone, a[0] - line / 2, a[1] - line / 2, Math.hypot(b[0] - a[0], b[1] - a[1]) + line, line, { lift, t: 0.006, overlay: true });
   return turn(pc, [SCREEN.l + a[0] * U, SCREEN.b + a[1] * U, 0], [0, 0, 1], Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI);
 }
 // the part of the line from a to b that lies inside a box [left, top, width, height], or nothing
@@ -91,7 +91,7 @@ function shell(i, t, cursorAt, pressed) {
     if (e < 1) P.push({ ...on('ink', x + w * e, button[1], w * (1 - e), button[3], { lift, t: 0.06, art: 'export' }), window: [e, 0, 1, 1] });
   } else P.push(on('red', ...button, { lift, t: 0.06, art: 'export' }));
   const cw = 0.46, tip = [10 / 96, 6 / 96];
-  P.push({ ...box('paper', [SCREEN.l + cursorAt[0] * U + cw * (0.5 - tip[0]), SCREEN.b + cursorAt[1] * U - cw * (0.5 - tip[1]), ZF + (pressed || clicked ? 0.12 : 0.22)], [cw, cw, 0.004]), art: 'cursor', cut: true });
+  P.push({ ...box('paper', [SCREEN.l + cursorAt[0] * U + cw * (0.5 - tip[0]), SCREEN.b + cursorAt[1] * U - cw * (0.5 - tip[1]), ZF + (pressed || clicked ? 0.12 : 0.22)], [cw, cw, 0.004]), art: 'cursor', cut: true, overlay: true });
   return P;
 }
 // the tools down the left of a design app, one of them lit
@@ -268,9 +268,15 @@ function feedScreens(P, t, art, spans, off) {
 
 // A painter maps the same finished piece either onto a viewer or onto a device lying flat.
 // Cropping changes both the rectangle and its picture window; it never stretches a reveal.
+// Rounded faces need this much clearance. All painters in a frame share these two stacks.
+const LAYER_STEP = 0.0008;
+let stacks;
 function screenPainter(P, rect, faceLift = 0.08, thickness = 0.004) {
   const draw = (tone, r, art, window, lift = faceLift) => {
+    const face = stacks.screen = Math.max(lift + thickness, stacks.screen + LAYER_STEP);
+    lift = face - thickness;
     const [x, y, w, h] = rect, pc = on(tone, x + r[0] * w, y + (1 - r[1] - r[3]) * h, r[2] * w, r[3] * h, { lift, t: thickness, art });
+    pc.paintLayer = stacks.screenCount++;
     if (window) pc.window = window;
     P.push(pc); return pc;
   };
@@ -278,9 +284,10 @@ function screenPainter(P, rect, faceLift = 0.08, thickness = 0.004) {
   return draw;
 }
 function floorPainter(P, rect) {
-  let layer = 0;
   const draw = (tone, r, art, window) => {
-    const [x, z, w, d] = rect, pc = flat(tone, x + r[0] * w, z + r[1] * d, r[2] * w, r[3] * d, 0.002, art, 0.088 + layer++ * 0.00002);
+    const face = stacks.floor = Math.max(0.09, stacks.floor + LAYER_STEP);
+    const [x, z, w, d] = rect, pc = flat(tone, x + r[0] * w, z + r[1] * d, r[2] * w, r[3] * d, 0.002, art, face - 0.002);
+    pc.paintLayer = stacks.floorCount++;
     if (window) pc.window = window;
     P.push(pc); return pc;
   };
@@ -338,7 +345,7 @@ function phonePrototype(draw, rect, first, next, p) {
   cropPicture(draw, 'ink', rect, back ? first : next, EASE.wipe(linear(p, back ? 0.53 : 0.03, back ? 0.65 : 0.15)));
   if (p < 0.075 || (p >= 0.5 && p < 0.575)) {
     const [w, h] = draw.size, tw = 0.05 / w, th = 0.05 / h;
-    const tap = draw('paper', [rect[0] + rect[2] * 0.56 - tw / 2, rect[1] + rect[3] * 0.85 - th / 2, tw, th], 'tapDot'); tap.cut = true;
+    const tap = draw('paper', [rect[0] + rect[2] * 0.56 - tw / 2, rect[1] + rect[3] * 0.85 - th / 2, tw, th], 'tapDot'); tap.cut = true; tap.overlay = true;
   }
 }
 function playback(P, draw, kind, shape, p) {
@@ -353,12 +360,13 @@ function playback(P, draw, kind, shape, p) {
 
 // One scheduler owns action starts and the cursor's approach. Scene code asks for progress by name.
 export function script(definitions, { hold = 0, tail = 0.3 } = {}) {
-  let time = 0.8, previous = EXPORT;
+  let time = 0.8, previous = EXPORT, typed = false;
   const actions = definitions.map(def => {
     const from = def.from || def.to || previous, to = def.to || from;
     const distance = Math.hypot(from[0] - previous[0], from[1] - previous[1]);
     const move = distance < 1e-8 ? 0 : distance < 0.5 ? 0.12 : distance <= 1.5 ? 0.2 : 0.28;
-    const duration = def.duration ?? (def.kind === 'type' ? Math.min(0.6, def.text.length * 0.035) : def.kind === 'run' ? Math.max(0.07, def.count * 0.07) : 0.05);
+    let duration = def.duration ?? (def.kind === 'type' ? Math.min(0.6, def.text.length * 0.035) : def.kind === 'run' ? Math.max(0.07, def.count * 0.07) : 0.05);
+    if (def.kind === 'type') { duration = Math.max(typed ? 0.4 : 0.6, duration); typed = true; }
     const action = { ...def, from, to, previous, move: move * PACE, approach: time * PACE, start: (time + move) * PACE, end: (time + move + duration) * PACE };
     time += move + duration; previous = to;
     return action;
@@ -438,15 +446,15 @@ const mapPoint = (r, x, y, w, h) => [r[0] + x / w * r[2], r[1] + (1 - y / h) * r
 export const SCRIPTS = {
   ps: script([
     { id: 'open', kind: 'click', from: centre(PHOTO), duration: 0.3, tool: 'tMove' },
-    { id: 'black', kind: 'slide', from: sliderPoint(0, 0.2), to: sliderPoint(0, 0.3), duration: 0.35 },
-    { id: 'white', kind: 'slide', from: sliderPoint(1, 0.5), to: sliderPoint(1, 0.45), duration: 0.35 },
-    { id: 'sky', kind: 'click', from: photoPoint(0.6, 0.9), duration: 0.5, tool: 'tWand' },
-    { id: 'cone', kind: 'click', from: photoPoint(0.15, 0.24), tool: 'healing' },
-    { id: 'crane', kind: 'click', from: photoPoint(0.84, 0.87), tool: 'healing' },
+    { id: 'black', kind: 'slide', from: sliderPoint(0, 0.2), to: sliderPoint(0, 0.3), duration: 0.5 },
+    { id: 'white', kind: 'slide', from: sliderPoint(1, 0.5), to: sliderPoint(1, 0.45), duration: 0.5 },
+    { id: 'sky', kind: 'click', from: photoPoint(0.6, 0.9), duration: 0.7, tool: 'tWand' },
+    { id: 'cone', kind: 'stroke', from: photoPoint(0.06, 0.23), to: photoPoint(0.19, 0.23), duration: 0.25, tool: 'healing' },
+    { id: 'crane', kind: 'stroke', from: photoPoint(0.70, 0.94), to: photoPoint(0.96, 0.80), duration: 0.25, tool: 'healing' },
     { id: 'grade', kind: 'slide', from: photoPoint(1, 0.5), to: photoPoint(0, 0.5), duration: 1.1, tool: 'tBrush' },
     { id: 'shrink', kind: 'wait', duration: 0.15 },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.65 },
-  ], { hold: 1.4 }),
+  ]),
   pr: script([
     { id: 'bin', kind: 'run', from: centre(BINS[0]), to: centre(BINS[3]), count: 4 },
     { id: 'clipA', kind: 'drag', from: centre(BINS[0]), to: [0.44 + 0.65, 0.655], duration: 0.4 },
@@ -486,14 +494,14 @@ export const SCRIPTS = {
   fig: script([
     ...FIG.wires.map((r, i) => ({ id: 'frame' + i, kind: 'draw', from: topLeft(r), to: bottomRight(r), duration: 0.3, tool: 'frame' })),
     { id: 'pictureBox', kind: 'draw', from: topLeft(inRect(FIG.wires[0], HERO_REGION)), to: bottomRight(inRect(FIG.wires[0], HERO_REGION)), duration: 0.25, tool: 'rectangle' },
-    { id: 'heading', kind: 'type', from: topLeft(inRect(FIG.wires[0], [64 / 1440, 252 / 900, 420 / 1440, 174 / 900])), text: 'Portfolio', duration: 0.14, tool: 'type' },
+    { id: 'heading', kind: 'type', from: topLeft(inRect(FIG.wires[0], [64 / 1440, 252 / 900, 420 / 1440, 174 / 900])), text: 'Portfolio', duration: 0.6, tool: 'type' },
     { id: 'button', kind: 'draw', from: topLeft(inRect(FIG.wires[0], [64 / 1440, 555 / 900, 380 / 1440, 35 / 900])), to: bottomRight(inRect(FIG.wires[0], [64 / 1440, 555 / 900, 380 / 1440, 35 / 900])), duration: 0.2, tool: 'rectangle' },
     { id: 'details', kind: 'run', from: topLeft(FIG.wires[0]), to: bottomRight(FIG.wires[2]), count: 9, duration: 0.21 },
     { id: 'marquee', kind: 'draw', from: topLeft(FIG.wires[0]), to: bottomRight(FIG.wires[2]), duration: 0.25, tool: 'arrow' },
     { id: 'copies', kind: 'drag', from: [(FIG.wires[0][0] + FIG.wires[2][0] + FIG.wires[2][2]) / 2, 2.01], to: [(FIG.wires[0][0] + FIG.wires[2][0] + FIG.wires[2][2]) / 2, 0.89], duration: 0.4 },
     ...FIG.designs.map((r, i) => ({ id: 'fill' + i, kind: 'set', from: centre(r), duration: 0.05 })),
     { id: 'hero', kind: 'drag', from: centre(HERO_SOURCE), to: centre(inRect(FIG.designs[0], HERO_REGION)), duration: 0.4 },
-    { id: 'name', kind: 'type', from: topLeft(inRect(FIG.designs[0], [18 / 480, 74 / 300, 160 / 480, 38 / 300])), text: 'Danial Endrawes', duration: 0.28, tool: 'type' },
+    { id: 'name', kind: 'type', from: topLeft(inRect(FIG.designs[0], [18 / 480, 74 / 300, 160 / 480, 38 / 300])), text: 'Danial Endrawes', duration: 0.4, tool: 'type' },
     ...FIG.designs.map((r, i) => ({ id: 'accent' + i, kind: 'set', from: centre(r), duration: 0.05 })),
     { id: 'hotspot', kind: 'click', from: FIG.from, tool: 'arrow' },
     { id: 'link', kind: 'drag', from: FIG.from, to: FIG.to, duration: 0.6 },
@@ -503,17 +511,17 @@ export const SCRIPTS = {
   id: script([
     ...[ID.spread, ID.cover, ID.post, ID.mail].map((r, i) => ({ id: 'frame' + i, kind: 'draw', from: topLeft(r), to: bottomRight(r), duration: 0.3, tool: 'frame' })),
     { id: 'map', kind: 'drag', from: centre(DOCK.map), to: centre(ID.frame), duration: 0.45, tool: 'arrow' },
-    { id: 'heading', kind: 'type', from: [ID.right[0] + ID.right[2] * 1052 / 1100, ID.right[1] + ID.right[3] * (1 - 672 / 850)], text: 'Amenities', duration: 0.15, tool: 'type' },
+    { id: 'heading', kind: 'type', from: [ID.right[0] + ID.right[2] * 1052 / 1100, ID.right[1] + ID.right[3] * (1 - 672 / 850)], text: 'Amenities', duration: 0.6, tool: 'type' },
     { id: 'spreadType', kind: 'run', from: topLeft(ID.left), to: bottomRight(ID.right), count: 6, duration: 0.08 },
     { id: 'loc', kind: 'drag', from: centre(DOCK.loc), to: centre(ID.loc), duration: 0.45, tool: 'arrow' },
     { id: 'photo', kind: 'drag', from: centre(DOCK.photo), to: centre(ID.photo), duration: 0.45 },
     { id: 'blob', kind: 'draw', from: topLeft(inRect(ID.cover, [50 / 1100, 482 / 850, 588 / 1100, 320 / 850])), to: bottomRight(inRect(ID.cover, [50 / 1100, 482 / 850, 588 / 1100, 320 / 850])), duration: 0.18, tool: 'rectangle' },
-    { id: 'coverTitle', kind: 'type', from: topLeft(inRect(ID.cover, [800 / 1100, 690 / 850, 300 / 1100, 110 / 850])), text: 'Office Space For Sale', duration: 0.13, tool: 'type' },
+    { id: 'coverTitle', kind: 'type', from: topLeft(inRect(ID.cover, [800 / 1100, 690 / 850, 300 / 1100, 110 / 850])), text: 'Office Space For Sale', duration: 0.4, tool: 'type' },
     { id: 'postPhoto', kind: 'drag', from: centre(ID.photo), to: centre(ID.post), duration: 0.3, tool: 'arrow' },
-    { id: 'postTitle', kind: 'type', from: topLeft(inRect(ID.post, [0.71, 0.81, 0.28, 0.12])), text: 'Office Space For Sale', duration: 0.13, tool: 'type' },
+    { id: 'postTitle', kind: 'type', from: topLeft(inRect(ID.post, [0.71, 0.81, 0.28, 0.12])), text: 'Office Space For Sale', duration: 0.4, tool: 'type' },
     { id: 'postButton', kind: 'draw', from: topLeft(inRect(ID.post, [0.69, 0.788, 0.31, 0.146])), to: bottomRight(inRect(ID.post, [0.69, 0.788, 0.31, 0.146])), duration: 0.18, tool: 'rectangle' },
     { id: 'mailPhoto', kind: 'drag', from: centre(ID.photo), to: centre(ID.mailPhoto), duration: 0.3, tool: 'arrow' },
-    { id: 'mailTitle', kind: 'type', from: topLeft(inRect(ID.mail, [44 / 800, 690 / 1180, 700 / 800, 60 / 1180])), text: 'Office Space For Sale', duration: 0.18, tool: 'type' },
+    { id: 'mailTitle', kind: 'type', from: topLeft(inRect(ID.mail, [44 / 800, 690 / 1180, 700 / 800, 60 / 1180])), text: 'Office Space For Sale', duration: 0.4, tool: 'type' },
     { id: 'mailButton', kind: 'draw', from: topLeft(inRect(ID.mail, [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180])), to: bottomRight(inRect(ID.mail, [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180])), duration: 0.18, tool: 'rectangle' },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.8 },
     { id: 'land', kind: 'wait', duration: 0.3 },
@@ -533,14 +541,14 @@ export const SCRIPTS = {
     ...[AI.upper, AI.lower].map((r, i) => ({ id: 'board' + i, kind: 'draw', from: topLeft(r), to: bottomRight(r), duration: 0.3, tool: 'rectangle' })),
     { id: 'street', kind: 'stroke', from: mapPoint(AI.upper, 0, 426, 2200, 850), to: mapPoint(AI.upper, 2200, 426, 2200, 850), duration: 0.5, tool: 'pen' },
     { id: 'markers', kind: 'run', from: mapPoint(AI.upper, 150, 358, 2200, 850), to: mapPoint(AI.upper, 1970, 464, 2200, 850), count: AM_MARKERS.length, duration: 0.21 },
-    { id: 'labels', kind: 'type', from: mapPoint(AI.upper, 150, 344, 2200, 850), text: 'Street and shop labels', duration: 0.18, tool: 'type' },
-    { id: 'title', kind: 'type', from: mapPoint(AI.upper, 470, 426, 2200, 850), text: 'King Street W King Street E', duration: 0.14 },
+    { id: 'labels', kind: 'type', from: mapPoint(AI.upper, 150, 344, 2200, 850), text: 'Street and shop labels', duration: 0.6, tool: 'type' },
+    { id: 'title', kind: 'type', from: mapPoint(AI.upper, 470, 426, 2200, 850), text: 'King Street W King Street E', duration: 0.4 },
     { id: 'badge', kind: 'draw', from: mapPoint(AI.upper, 1273, 457, 2200, 850), to: mapPoint(AI.upper, 1345, 603, 2200, 850), duration: 0.18, tool: 'rectangle' },
     { id: 'block', kind: 'draw', from: mapPoint(AI.lower, 660, 16, 1352, 850), to: mapPoint(AI.lower, 722, 84, 1352, 850), duration: 0.18 },
     { id: 'blocks', kind: 'run', from: mapPoint(AI.lower, 770, 16, 1352, 850), to: mapPoint(AI.lower, 680, 716, 1352, 850), count: CITY_BLOCKS.length - 1, duration: 0.14 },
     { id: 'streets', kind: 'stroke', from: mapPoint(AI.lower, 0, 368, 1352, 850), to: mapPoint(AI.lower, 1352, 368, 1352, 850), duration: 0.5, tool: 'pen' },
     { id: 'pins', kind: 'run', from: mapPoint(AI.lower, 180, 100, 1352, 850), to: mapPoint(AI.lower, 960, 640, 1352, 850), count: CITY_PINS.length, duration: 0.2 },
-    { id: 'cityLabels', kind: 'type', from: mapPoint(AI.lower, 200, 167, 1352, 850), text: 'Street and station labels', duration: 0.18, tool: 'type' },
+    { id: 'cityLabels', kind: 'type', from: mapPoint(AI.lower, 200, 167, 1352, 850), text: 'Street and station labels', duration: 0.4, tool: 'type' },
     { id: 'marquee', kind: 'draw', from: topLeft(AI.frame), to: bottomRight(AI.frame), duration: 0.3, tool: 'arrow' },
     { id: 'close', kind: 'wait', duration: 0.5 },
     { id: 'subway', kind: 'stroke', from: AI.at(AI.segments[0][0]), to: AI.at(AI.segments.at(-1)[1]), path: [AI.segments[0][0], ...AI.segments.map(([, b]) => b)].map(AI.at), duration: 0.35, tool: 'pen' },
@@ -580,23 +588,23 @@ function editedPhoto(t) {
   });
   if (!begun(s, 'export', t)) {
     const draw = screenPainter(doc, PHOTO);
-    const base = done(s, 'white', t) ? 'photoLevels' : done(s, 'black', t) ? 'photoHalf' : 'photoRaw';
+    const base = done(s, 'grade', t) ? 'kPhoto' : done(s, 'crane', t) ? 'photoClean' : done(s, 'sky', t) ? 'photoSky' : done(s, 'white', t) ? 'photoLevels' : done(s, 'black', t) ? 'photoHalf' : 'photoRaw';
     cropPicture(draw, 'ink', [0, 0, 1, 1], base, eased(s, 'open', t));
-    cropPicture(draw, 'ink', [0, 0, 1, 1], 'photoSky', eased(s, 'sky', t));
-    if (begun(s, 'cone', t)) draw('ink', [0.045, 0.65, 0.17, 0.18], 'kPhotoB', [0.045, 0.65, 0.215, 0.83]);
-    if (begun(s, 'crane', t)) draw('ink', [0.68, 0.025, 0.31, 0.25], 'kPhotoB', [0.68, 0.025, 0.99, 0.275]);
+    if (begun(s, 'sky', t) && !done(s, 'sky', t)) cropPicture(draw, 'ink', [0, 0, 1, 1], 'photoSky', eased(s, 'sky', t));
+    // The first patch includes the barrier's feet. The second heal replaces the whole base.
+    if (done(s, 'cone', t) && !done(s, 'crane', t)) draw('ink', [24 / 526, 241 / 360, 84 / 526, 56 / 360], 'photoClean', [24 / 526, 241 / 360, 108 / 526, 297 / 360]);
     if (begun(s, 'grade', t)) {
-      draw('ink', [1 - g, 0, g, 1], 'kPhoto', [1 - g, 0, 1, 1]);
+      if (!done(s, 'grade', t)) draw('ink', [1 - g, 0, g, 1], 'kPhoto', [1 - g, 0, 1, 1]);
       const split = PHOTO[0] + PHOTO[2] * (1 - g), h = (PHOTO[3] + 0.1) * (1 - eased(s, 'shrink', t));
-      if (h > 0) doc.push(on('paper', split - 0.012, PHOTO[1] + PHOTO[3] / 2 - h / 2, 0.024, h, { lift: 0.085, t: 0.01 }));
-      if (!done(s, 'grade', t)) doc.push(dot('paper', split, PHOTO[1] + PHOTO[3] / 2, 0.09, { lift: 0.085 }), dot('red', split, PHOTO[1] + PHOTO[3] / 2, 0.045, { lift: 0.105, t: 0.01 }));
+      if (h > 0) doc.push(on('paper', split - 0.012, PHOTO[1] + PHOTO[3] / 2 - h / 2, 0.024, h, { lift: 0.085, t: 0.01, overlay: true }));
+      if (!done(s, 'grade', t)) doc.push(dot('paper', split, PHOTO[1] + PHOTO[3] / 2, 0.09, { lift: 0.085, overlay: true }), dot('red', split, PHOTO[1] + PHOTO[3] / 2, 0.045, { lift: 0.105, t: 0.01, overlay: true }));
     }
   } else { const a = action(s, 'export'); travel(P, 'photo', PHOTO, DOCK.photo, t, a.start, a.end); }
-  if (P.tool === 'healing') P.push({ ...on('paper', P.cursor[0] - 0.07, P.cursor[1] - 0.07, 0.14, 0.14, { lift: 0.18, t: 0.004, art: 'brushRing' }), cut: true });
+  if (P.tool === 'healing') P.push({ ...on('paper', P.cursor[0] - 0.07, P.cursor[1] - 0.07, 0.14, 0.14, { lift: 0.18, t: 0.004, art: 'brushRing', overlay: true }), cut: true });
   doc.forEach(pc => pc.document = true); P.push(...doc);
   return P;
 }
-function typedPicture(P, rect, art, words, p, { tone = 'paper', colour = 'ink', direction = 'right' } = {}) {
+function typedPicture(P, rect, art, words, p, { tone = 'paper', colour = 'ink', direction = 'right', caret: showCaret = true } = {}) {
   if (p < 0) return;
   const n = p >= 1 ? words.length : Math.floor(clamp(p, 0, 1) * words.length), size = ART[art];
   const edges = TYPE_EDGES[art] || Array.from({ length: words.length + 1 }, (_, i) => size.w * i / words.length);
@@ -604,12 +612,13 @@ function typedPicture(P, rect, art, words, p, { tone = 'paper', colour = 'ink', 
   if (p >= 1) draw(tone, [0, 0, 1, 1], art);
   else {
     cropPicture(draw, tone, [0, 0, 1, 1], art, edge, direction);
+    if (!showCaret) return;
     const [x, y, w, h] = rect;
     const bounds = TYPE_BOXES[art] || { top: 0, height: size.h };
     const caretTone = Array.isArray(colour) ? 'paper' : colour;
     const caret = direction === 'up' ? on(caretTone, x + w * 0.1, y + h * edge, w * 0.8, 0.012, { lift: 0.095, t: 0.004 }) : on(caretTone, x + w * edge, y + (1 - (bounds.top + bounds.height) / size.h) * h, 0.012, bounds.height / size.h * h, { lift: 0.095, t: 0.004 });
     caret.tones = Array.isArray(colour) ? colour : Array(3).fill({ ink: '#151314', paper: '#F7F6F3', red: '#C0262E', grey: '#B9B4AE' }[colour]);
-    P.push(caret);
+    caret.overlay = true; P.push(caret);
   }
 }
 function dragPicture(P, s, id, t, from, to, art, tone = 'ink') {
@@ -702,6 +711,22 @@ function editedVideo(t) {
   P.clock = exported;
   return P;
 }
+// Building shows the whole work at its authored positions; only Play applies animation keys.
+function constructedComp(P, rect, s, t, born, carets = true) {
+  const draw = screenPainter(P, rect), norm = ([x, y, w, h]) => [x / 480, y / 270, w / 480, h / 270];
+  if (born(0)) typedPicture(P, inRect(rect, norm([28, 62, 232, 62])), 'wMake', 'Make it', phase(s, 'make', t), { caret: carets });
+  if (born(1)) typedPicture(P, inRect(rect, norm([28, 136, 168, 52])), 'wMove', 'move', phase(s, 'move', t), { colour: 'red', caret: carets });
+  if (born(2)) {
+    const p = eased(s, 'ball', t), pos = begun(s, 'path', t) ? quadratic(BALL_FROM, BALL_VIA, BALL, eased(s, 'path', t)) : BALL_FROM, r = BALL[2];
+    draw('paper', norm([pos[0] - r, pos[1] - r, 2 * r * p, 2 * r * p]), 'redBall');
+  }
+  ROWS.forEach((r, i) => {
+    if (!born(i + 3)) return;
+    const p = i ? 1 : eased(s, 'row', t);
+    if (!i && !done(s, 'row', t)) draw('ink', norm([r[0], r[1], r[2] * p, r[3] * p]));
+    else draw('paper', norm(r), i ? 'rowB' : 'rowA');
+  });
+}
 function editedMotion(t) {
   const P = [], D = [], s = SCRIPTS.ae;
   actionCursor(P, s, t);
@@ -711,36 +736,24 @@ function editedMotion(t) {
   const born = i => i === 0 ? begun(s, 'make', t) : i === 1 ? begun(s, 'move', t) : i === 2 ? begun(s, 'ball', t) : i === 3 ? begun(s, 'row', t) : begun(s, 'copies', t) && phase(s, 'copies', t) * 2 >= i - 4;
   const selected = begun(s, 'select', t), exported = exportPlay(s, t), playing = begun(s, 'play', t) && !done(s, 'play', t), clock = exported ?? (playing ? phase(s, 'play', t) : null);
   const draw = screenPainter(D, VIEW);
-  cropPicture(draw, 'paper', [0, 0, 1, 1], undefined, eased(s, 'comp', t));
-  D.push(on('paper', 0.14, TOP - 0.5, 0.74, 0.416, { lift: 0.05, t: 0.015, art: done(s, 'keys', t) ? 'compWide' : undefined }));
+  const thumb = [0.14, TOP - 0.5, 0.74, 0.416], thumbnail = screenPainter(D, thumb, 0.05, 0.015);
+  if (clock === null) {
+    cropPicture(draw, 'paper', [0, 0, 1, 1], undefined, eased(s, 'comp', t));
+    thumbnail('paper', [0, 0, 1, 1]);
+    constructedComp(D, VIEW, s, t, born);
+    constructedComp(D, thumb, s, t, born, false);
+  } else { animatedComp(draw, 3, clock); animatedComp(thumbnail, 3, clock); }
   ['red', 'grey', 'paper', 'grey'].forEach((tone, i) => {
     if (!born(i + 2)) return;
     const y = TOP - 0.68 - i * 0.14;
     D.push(on(tone, 0.14, y, 0.08, 0.08, { lift: 0.05, t: 0.01 }), on(i ? 'dark' : 'grey', 0.28, y + 0.015, [0.5, 0.36, 0.44, 0.3][i], 0.05, { lift: 0.05, t: 0.01 }));
   });
-  if (clock !== null) animatedComp(draw, 3, clock);
-  else {
-    if (born(0)) typedPicture(D, compRect([28, 62, 232, 62]), 'wMake', 'Make it', phase(s, 'make', t));
-    if (born(1)) typedPicture(D, compRect([28, 136, 168, 52]), 'wMove', 'move', phase(s, 'move', t), { colour: 'red' });
-    if (born(2)) {
-      const p = eased(s, 'ball', t), pos = begun(s, 'path', t) ? quadratic(BALL_FROM, BALL_VIA, BALL, eased(s, 'path', t)) : BALL_FROM;
-      const [x, y] = compPoint(pos), r = BALL[2] * VIEW[2] / 480;
-      D.push(dot('red', x - r + r * p, y + r - r * p, r * p, { lift: 0.085, t: 0.006 }));
-    }
-    ROWS.forEach((r, i) => {
-      if (!born(i + 3)) return;
-      if (!i && !done(s, 'row', t)) {
-        const p = eased(s, 'row', t), [x, y, w, h] = compRect(r);
-        D.push(on('ink', x, y + h * (1 - p), w * p, h * p, { lift: 0.083, t: 0.004 }));
-      } else D.push(on('paper', ...compRect(r), { lift: 0.083, t: 0.004, art: i ? 'rowB' : 'rowA' }));
-    });
-  }
   if (selected) {
     const at = clock === null ? 1.6 : clock * 2.4, pos = clock === null ? quadratic(BALL_FROM, BALL_VIA, BALL, eased(s, 'path', t)) : quadratic(BALL_FROM, BALL_VIA, BALL, EASE.wipe(linear(at, ...LAYERS[2][5])));
     const [x, y] = compPoint(pos), half = (BALL[2] + 8) * VIEW[2] / 480;
     if (clock === null || at >= LAYERS[2][5][0]) {
       D.push(...outline(x - half, y - half, half * 2, half * 2, { line: 0.012 }));
-      for (const dx of [-1, 1]) for (const dy of [-1, 1]) D.push(on('red', x + dx * half - 0.02, y + dy * half - 0.02, 0.04, 0.04, { lift: 0.09, t: 0.008 }));
+      for (const dx of [-1, 1]) for (const dy of [-1, 1]) D.push(on('red', x + dx * half - 0.02, y + dy * half - 0.02, 0.04, 0.04, { lift: 0.09, t: 0.008, overlay: true }));
     }
     const n = begun(s, 'path', t) ? Math.floor(eased(s, 'path', t) * 12) : 0;
     for (let i = 1; i < Math.min(12, n + 1); i++) { const [px, py] = compPoint(quadratic(BALL_FROM, BALL_VIA, BALL, i / 12)), w = 60 * 0.056 * VIEW[2] / 480; D.push(on('dark', px - w / 2, py - w / 2, w, w, { lift: 0.086, t: 0.004 })); }
@@ -806,7 +819,7 @@ function editedFigma(t) {
         const p = phase(s, 'heading', t), chars = Math.floor(p * 9) / 9;
         const regions = [[64 / 1440, 252 / 900, 300 / 1440, 76 / 900], [64 / 1440, 350 / 900, 420 / 1440, 76 / 900]];
         regions.forEach((region, j) => pictureRegion(D, r, wireArts[i], region, clamp(chars * 2 - j, 0, 1)));
-        if (p < 1) { const j = chars < 0.5 ? 0 : 1, caret = inRect(r, regions[j]); D.push(on('grey', caret[0] + caret[2] * clamp(chars * 2 - j, 0, 1), caret[1], 0.012, caret[3], { lift: 0.095, t: 0.004 })); }
+        if (p < 1) { const j = chars < 0.5 ? 0 : 1, caret = inRect(r, regions[j]); D.push(on('grey', caret[0] + caret[2] * clamp(chars * 2 - j, 0, 1), caret[1], 0.012, caret[3], { lift: 0.095, t: 0.004, overlay: true })); }
       }
       const p = eased(s, 'button', t), button = inRect(r, [64 / 1440, 555 / 900, 380 / 1440, 35 / 900]); drawnFrame(D, button, p, 'grey');
       if (begun(s, 'details', t)) {
@@ -848,11 +861,11 @@ function editedFigma(t) {
   });
   if (begun(s, 'fill0', t) && !done(s, 'hero', t)) dragPicture(D, s, 'hero', t, HERO_SOURCE, inRect(FIG.designs[0], HERO_REGION), 'heroSource');
   if (begun(s, 'hotspot', t)) {
-    D.push(...outline(...FIG.spot, { line: 0.012 }), dot('red', ...FIG.from, 0.03, { lift: 0.085, t: 0.012 }), dot('paper', ...FIG.from, 0.012, { lift: 0.097, t: 0.006 }));
+    D.push(...outline(...FIG.spot, { line: 0.012 }), dot('red', ...FIG.from, 0.03, { lift: 0.085, t: 0.012, overlay: true }), dot('paper', ...FIG.from, 0.012, { lift: 0.097, t: 0.006, overlay: true }));
     const end = rectMix(FIG.from, FIG.to, eased(s, 'link', t)), reach = Math.min(0.16, Math.hypot(end[0] - FIG.from[0], end[1] - FIG.from[1]) / 3), along = p => cubic(FIG.from, [FIG.from[0] + reach, FIG.from[1]], [end[0] - reach, end[1]], end, p);
     if (begun(s, 'link', t)) for (let i = 0; i < 8; i++) D.push(bar(along(i / 8), along((i + 1) / 8)));
     if (done(s, 'link', t)) D.push(bar(FIG.to, [FIG.to[0] - 0.07, FIG.to[1] + 0.05]), bar(FIG.to, [FIG.to[0] - 0.07, FIG.to[1] - 0.05]));
-    if (clock !== null && clock % 0.5 < 0.12) D.push(dot('paper', ...along(EASE.wipe((clock % 0.5) / 0.12)), 0.025, { lift: 0.11, t: 0.006 }));
+    if (clock !== null && clock % 0.5 < 0.12) D.push(dot('paper', ...along(EASE.wipe((clock % 0.5) / 0.12)), 0.025, { lift: 0.11, t: 0.006, overlay: true }));
   }
   const count = begun(s, 'panel', t) ? Math.min(5, 1 + Math.floor(phase(s, 'panel', t) * 5)) : 0, ly = TOP - 0.9;
   if (count > 0) D.push(on('red', PANEL + 0.09, TOP - 0.54, 0.15, 0.15, { lift: 0.05, t: 0.015 }), icon('pPlay', PANEL + 0.12, TOP - 0.51, 0.09, 0.09, 'red', 0.066), on('grey', PANEL + 0.31, TOP - 0.49, 0.4, 0.045, { lift: 0.05, t: 0.01 }));
@@ -871,7 +884,7 @@ function typePatch(P, rect, key, p) {
   P.push(on('ink', ...rect, { lift: 0.09, t: 0.004, art }));
   if (p < 1) {
     const [x, y, h] = a.caret || [a.w * n / 21, 0, a.h];
-    P.push(on('paper', rect[0] + x / a.w * rect[2], rect[1] + (1 - (y + h) / a.h) * rect[3], 0.012, h / a.h * rect[3], { lift: 0.1, t: 0.004 }));
+    P.push(on('paper', rect[0] + x / a.w * rect[2], rect[1] + (1 - (y + h) / a.h) * rect[3], 0.012, h / a.h * rect[3], { lift: 0.1, t: 0.004, overlay: true }));
   }
 }
 function readBook(s, t) {
@@ -1040,7 +1053,7 @@ function editedIllustrator(t) {
     const p = eased(s, 'subway', t) * AI.segments.length;
     AI.segments.forEach(([a, b], i) => { const f = clamp(p - i, 0, 1); if (f > 0) D.push(bar(AI.at(a), AI.at(rectMix(a, b, f)))); });
     if (done(s, 'subway', t)) {
-      AI.subway.arms.slice(0, 2).forEach(([a, b]) => { const end = AI.at(b); D.push(bar(AI.at(a), end, { line: 0.012 }), dot('red', ...end, 0.026, { lift: 0.085, t: 0.012 })); });
+      AI.subway.arms.slice(0, 2).forEach(([a, b]) => { const end = AI.at(b); D.push(bar(AI.at(a), end, { line: 0.012 }), dot('red', ...end, 0.026, { lift: 0.085, t: 0.012, overlay: true })); });
       const [sx, sy, sw, sh] = SPOT;
       AI.subway.knots.filter(([X, Y]) => X > sx && X < sx + sw && Y > sy && Y < sy + sh).forEach(p => D.push(handle(...AI.at(p))));
     }
@@ -1066,6 +1079,7 @@ export function sceneAt(t) {
   for (let i = SHOW.length - 1; i >= 0; i--) if (at >= starts[i]) return { i, scene: SHOW[i], at: at - starts[i] };
 }
 function build(i, at, o) {
+  stacks = { screen: -Infinity, floor: -Infinity, screenCount: 0, floorCount: 0 };
   const app = builders[i](at, o), P = shell(i, at, app.cursor || EXPORT, app.pressed);
   P.clock = app.clock;
   P.action = app.action;
@@ -1081,7 +1095,39 @@ function build(i, at, o) {
     else pc.clip ??= leftOf(W);
     P.push(pc);
   }
+  separateFaces(P);
   return P;
+}
+// Keep legacy plates clear too. Preserve their height order and move only faces that collide.
+// Selections and cursors clear the tallest picture, even when several painters share its area.
+function separateFaces(P) {
+  for (const floor of [false, true]) {
+    const axis = floor ? 1 : 2, across = floor ? 2 : 1, step = LAYER_STEP * (floor ? 1 : U);
+    const faces = P.filter(pc => (pc.where === 'floor') === floor).flatMap(pc => {
+      const [x, y, z, w] = pc.q, normal = floor ? 2 * (y * z - w * x) : 1 - 2 * (x * x + y * y);
+      if (normal < 1 - 1e-9) return [];
+      const points = corners(pc), xs = points.map(p => p[0]), ys = points.map(p => p[across]);
+      return [{ pc, height: pc.p[axis] + pc.s[2], rect: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] }];
+    });
+    const placed = [];
+    let painted = -Infinity;
+    for (const overlay of [false, true]) {
+      const group = faces.filter(f => !!f.pc.overlay === overlay);
+      const top = Math.max(-Infinity, ...placed.filter(f => f.pc.art || f.pc.paintLayer !== undefined).map(f => f.height));
+      if (overlay) for (const f of group) f.height = Math.max(f.height, top + step + 2 * f.pc.s[2]);
+      group.sort((a, b) => a.height - b.height);
+      for (const f of group) {
+        if (!overlay && f.pc.paintLayer !== undefined) f.height = Math.max(f.height, painted + step);
+        const r = f.rect;
+        for (const before of placed) {
+          const b = before.rect;
+          if (Math.min(r[2], b[2]) - Math.max(r[0], b[0]) > 1e-9 && Math.min(r[3], b[3]) - Math.max(r[1], b[1]) > 1e-9 && f.height - before.height < step) f.height = before.height + step;
+        }
+        f.pc.p[axis] = f.height - f.pc.s[2]; placed.push(f);
+        if (!overlay && f.pc.paintLayer !== undefined) painted = f.height;
+      }
+    }
+  }
 }
 export function frameAt(t, o = {}) { const { i, at } = sceneAt(t); return build(i, at, o); }
 export const SCENES = SHOW.map((scene, i) => (o = {}) => frameAt(starts[i] + scene.still, o));

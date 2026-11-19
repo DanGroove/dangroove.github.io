@@ -458,7 +458,7 @@ export const ART = {
   ...Object.fromEntries(['Raw', 'Half', 'Levels', 'Sky'].map((step, i) => ['photo' + step, { w: 526, h: 360, draw(c, w, h) {
     const darken = (hex, amount) => '#' + hex.slice(1).match(/../g).map(v => Math.round(parseInt(v, 16) * amount).toString(16).padStart(2, '0')).join('');
     const look = Object.fromEntries(Object.entries(LOOK.raw).map(([key, value]) => [key, Array.isArray(value) ? value : darken(value, [0.8, 0.9, 1, 1][i])]));
-    look.sky = i < 3 ? ['#C1C2BF', '#C1C2BF'] : LOOK.raw.sky;
+    look.sky = i < 3 ? ['#C1C2BF', '#C1C2BF'] : LOOK.graded.sky;
     street(c, 0, 0, w, h, { at: 0.44, look });
     // Two deliberate distractions, removed by separate healing clicks.
     quad(c, '#D37632', [[68, 286], [83, 245], [98, 286]]); fill(c, '#E1D6BA', 73, 264, 20, 7); fill(c, '#494846', 62, 286, 42, 7);
@@ -466,6 +466,7 @@ export const ART = {
     stroke(c, '#8F7850', 7); c.beginPath(); c.moveTo(364, 20); c.lineTo(511, 69); c.stroke();
     stroke(c, '#8F7850', 2); c.beginPath(); c.moveTo(364, 20); c.lineTo(502, 42); c.lineTo(511, 69); c.moveTo(459, 53); c.lineTo(459, 92); c.stroke();
   } }])),
+  photoClean: { w: 526, h: 360, draw(c, w, h) { street(c, 0, 0, w, h, { at: 0.44, look: { ...LOOK.raw, sky: LOOK.graded.sky } }); } },
   brushRing: { w: 64, h: 64, draw(c) { stroke(c, C.paper, 5); c.beginPath(); c.arc(32, 32, 28, 0, Math.PI * 2); c.stroke(); } },
   tWand: { w: 64, h: 64, draw(c) { stroke(c, C.paper, 6); c.beginPath(); c.moveTo(12, 52); c.lineTo(42, 22); c.stroke(); [[40, 6], [57, 23], [25, 8]].forEach(([x, y]) => { fill(c, C.paper, x - 2, y - 5, 4, 10); fill(c, C.paper, x - 5, y - 2, 10, 4); }); } },
   tClock: { w: 40, h: 40, draw(c) { stroke(c, C.grey, 3); c.beginPath(); c.arc(20, 23, 12, 0, Math.PI * 2); c.moveTo(20, 14); c.lineTo(20, 23); c.lineTo(27, 23); c.stroke(); fill(c, C.grey, 15, 3, 10, 4); fill(c, C.grey, 18, 6, 4, 5); } },
