@@ -1,7 +1,7 @@
 // The second take's stills on one sheet: each scene in the hero's own layout, on a desktop and on a phone with the browser's bars showing.
 // Needs Playwright with its Chromium, like the other review tools. Nothing here is published.
 //
-//   node design/journey-hero/take-2/tools/sheet.mjs <out.png> [scenes, as in 0,1,2,3]
+//   node design/journey-hero/take-2/tools/sheet.mjs <out.png> [scenes, as in 0,1,2]     (0 Illustrator, 1 Photoshop, 2 InDesign, 3 video)
 //
 // The stills page is made from the built page's own markup (public/journey/index.html), so the layout and the words are the real ones.
 // It is written to design/journey-hero/.scratch/take-2/hero.html, which git ignores.
@@ -13,10 +13,10 @@ import { serve, ROOT } from '../../tools/serve.mjs';
 const require = createRequire(import.meta.url);
 const out = process.argv[2] || 'take-2-sheet.png';
 const CAPTIONS = [
-  ['01 Graphic design', 'The design app has built a brand (the mark, its guide, a four page flyer, a social post) and exported it: each piece has landed outside the screen'],
+  ['01 Graphic design, in Illustrator', 'The logo and its brand guide are built as one piece. On Export the guide lands in front of the screen, lying flat'],
+  ['01 Graphic design, in Photoshop', 'A photo edit of the building: as shot on the left of the split, graded on the right. The print lands beside the guide, and the next pieces all use it'],
+  ['01 Graphic design, in InDesign', 'The 1 King Street W booklet, drawn very simply and with no agent names, plus a LinkedIn post and an e-blast that follow it. They land as a booklet (shut and open), a phone and a tablet'],
   ['02 Video', 'The editing app with captions, a transition and effects on the timeline, exported to wide, tall and square screens'],
-  ['03 Motion', 'A text and shape animation with its keyframes and its ease curve, exported and playing outside the screen'],
-  ['04 UX/UI', 'The interface app with wireframes turning into finished screens, exported to a phone and a browser'],
 ];
 
 // the built page, with its player swapped for the stills script
@@ -62,7 +62,7 @@ h1{font-weight:800;font-size:44px;letter-spacing:-.02em;color:#F7F6F3;margin:0 0
 figure{margin:0 0 56px}figure:last-child{margin:0}.pair{display:flex;gap:24px;align-items:flex-start}
 img{display:block;outline:1px solid #2E2B29}img:first-child{width:2160px}img:last-child{width:780px}
 figcaption{font-weight:300;font-size:17px;letter-spacing:.12em;text-transform:uppercase;margin-top:14px}figcaption b{color:#F0484F;font-weight:300;margin-right:16px}
-</style><h1>Journey hero: one floating screen, four apps</h1><p>Each craft is an app on the same big screen. The app builds real work, the cursor clicks Export, and the work lands outside the screen as objects. These are stills of the moment after the export. Left: a 1440 wide desktop. Right: a phone with the browser's bars showing.</p>
+</style><h1>Journey hero: graphic design in three apps</h1><p>Each app is drawn simply on the same floating screen, with its own logo. The app builds a piece of real work, the cursor clicks Export, and the piece lands in front of the screen, lying flat. The flat lay fills up app by app into one tidy block. These are stills of the moment after each export. Left: a 1440 wide desktop. Right: a phone with the browser's bars showing.</p>
 ${scenes.map(row).join('')}`;
   const page = await browser.newPage({ viewport: { width: 3060, height: 800 } });
   await page.setContent(html); await page.evaluate(() => document.fonts.ready); await page.waitForFunction(() => [...document.images].every(i => i.complete && i.naturalWidth)); await page.waitForTimeout(300);

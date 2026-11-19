@@ -1,26 +1,50 @@
 # Journey hero, second take
 
-The first take (four bars that fold into four objects, now live in `public/journey/`) was judged "a little abstract and too simple".
-This folder is the second take, as a prototype: each craft is a detailed object you can recognise, in real 3D with light and shadow.
-Nothing here is published, and the built page does not use it yet.
+The first take (four bars that fold into four objects, now in `public/journey/`) was judged "a little abstract and too simple".
+This folder is the second take, as a prototype. Nothing here is published, and the built page does not use it yet.
+
+## The idea
+
+One big screen floats over the floor. Each craft is a real app on it, drawn simply but with its own logo, and the app builds a piece
+of Dan's real work. The cursor clicks Export, and the piece lands in front of the screen, lying flat. The flat lay fills up, app by
+app, into one tidy block.
+
+Graphic design is three apps, in the order the work is really made:
+
+1. Illustrator: the logo and its brand guide, as one piece.
+2. Photoshop: a photo edit of the building, which the later pieces all use.
+3. InDesign: the 1 King Street W booklet, and a LinkedIn post and an e-blast that follow it. They land as a booklet (shut and open),
+   a phone and a tablet.
+
+Video is in (an editing app, exported to three screens). Motion and UX/UI are still to be drawn to the same rules.
+
+## The rules Dan set
+
+- Everything exported lies flat, in a tidy block. What belongs on a phone is shown inside a phone.
+- The app is an abstract depiction, but it carries the app's own logo, so people know which app it is.
+- The flyer is his 1 King Street W booklet for Lennard, drawn very simply. It is black, charcoal and gold.
+- No agent's name or contact details appear anywhere.
+- The flyer's source files are not in this repository and must not be added to it.
 
 ## What is here
 
-- `sq.mjs` the prototype renderer. WebGL2, no dependencies. Every piece is one superquadric: a box, a cylinder, a ball, a cone or a wedge,
-  or anything between them, so one piece can change into another. One light, a shadow map, three brand tones per material.
-- `kit.mjs` the helpers that make pieces (`box`, `cyl`, `ball`, `cone`, `wedge`, `stick`) and move them (`turn`, `move`).
-- `objects.mjs` the four objects: graphic design, video, motion, UX/UI.
-- `index.html` one object on its own. `?o=0..3` picks it, `?yaw=-25&pitch=8` turns the view.
-- `stills.mjs` and `tools/sheet.mjs` the four objects in the hero's own layout, on one sheet for comments.
+- `sq.mjs` the prototype renderer. WebGL2, no dependencies. Every piece is one superquadric (a box, a cylinder, a ball, or anything
+  between them), with one light, a shadow map and three hard tones per material. A piece can carry a picture on its face.
+- `kit.mjs` the helpers that make pieces and move them.
+- `art.mjs` every picture (a page, a logo, an icon), drawn with the 2D canvas into one atlas.
+- `fonts/` Gelasio and Rokkitt, open faces under the SIL Open Font License, which stand in for the flyer's Georgia and Rockwell.
+- `stage.mjs` the scenes, held still: the screen, each app, and what it has exported.
+- `stage.html` one scene on its own. `?s=0..3` picks it, `?yaw=-25&pitch=8` turns the view, `?atlas=1` shows the pictures.
+- `stills.mjs` and `tools/sheet.mjs` the scenes in the hero's own layout, on one sheet for comments.
 
 ## Looking at it
 
     node design/journey-hero/tools/serve.mjs
-    http://localhost:4173/design/journey-hero/take-2/?o=1
+    http://localhost:4173/design/journey-hero/take-2/stage.html?s=2
 
-    node design/journey-hero/take-2/tools/sheet.mjs sheet.png
+    node design/journey-hero/take-2/tools/sheet.mjs sheet.png 0,1,2
 
 ## What comes next
 
-The loop: the pieces of one object rebuild into the next, and each object does one small thing (the clapper claps, the ball bounces,
-the cursor clicks). Then a brief for the production build.
+The motion and UX/UI apps. Then the motion itself: how the screen changes between apps, the Export click, the work landing.
+Then a brief for the production build.

@@ -3,7 +3,7 @@ import { makeCamera, dot } from '/public/journey/hero/engine.mjs';
 import { createRenderer } from './sq.mjs';
 import { corners } from './kit.mjs';
 import { makeAtlas, fontsReady } from './art.mjs';
-import { SCENES } from './stage.mjs';
+import { SCENES, CRAFT } from './stage.mjs';
 
 const q = new URLSearchParams(location.search), num = (k, d) => q.has(k) ? +q.get(k) : d;
 const hero = document.querySelector('[data-hero]'), canvas = hero.querySelector('[data-art]'), stage = hero.querySelector('[data-stage-box]');
@@ -22,7 +22,7 @@ function draw() {
   const cx = b.left - h.left + b.width / 2 - S * NEED.x, cy = b.top - h.top + b.height / 2 + S * NEED.y;
   R.draw(all[s], { W: h.width, H: h.height, dpr: devicePixelRatio, S, cx, cy, cam }, { outline: 0, floor: { radius: num('pool', 4.8) } });
   hero.classList.remove('is-entering');
-  crafts.forEach((c, i) => i === s ? c.setAttribute('aria-current', 'true') : c.removeAttribute('aria-current'));
+  crafts.forEach((c, i) => i === CRAFT[s] ? c.setAttribute('aria-current', 'true') : c.removeAttribute('aria-current'));
   window.__need = { ...NEED, S, box: [Math.round(b.width), Math.round(b.height)] };
 }
 await fontsReady();

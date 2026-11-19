@@ -18,7 +18,7 @@ const q = new URLSearchParams(location.search), num = (k, d) => q.has(k) ? +q.ge
 const canvas = document.querySelector('canvas');
 await fontsReady();
 const atlas = makeAtlas();
-if (q.has('atlas')) { canvas.replaceWith(atlas.canvas); atlas.canvas.style.cssText = 'width:100vmin;height:100vmin;background:#444'; window.__ready = true; }
+if (q.has('atlas')) { canvas.replaceWith(atlas.canvas); atlas.canvas.style.cssText = 'display:block;max-width:100vw;max-height:100vh;background:#444'; window.__ready = true; }
 else {
   const R = createRenderer(canvas); R.setAtlas(atlas);
   const draw = () => {

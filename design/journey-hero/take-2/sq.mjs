@@ -113,7 +113,9 @@ void main() {
   float mid = smoothstep(0.22 - w, 0.22 + w, d) * lit;
   float top = smoothstep(0.66 - w, 0.66 + w, d) * lit;
   vec3 col = mix(uC, mix(uB, uA, top), mid);
-  float k = dot(col, vec3(1.0)) / max(dot(uA, vec3(1.0)), 1e-4);          // how far this spot is from fully lit
+  // A picture keeps its own colours whichever way its face is turned (a page lying on the floor is as bright as one on the screen):
+  // only a cast shadow dims it, by as much as it dims the piece itself.
+  float k = mix(dot(uC, vec3(1.0)) / max(dot(uA, vec3(1.0)), 1e-4), 1.0, lit);
   if (uArtMode > 1.5) col = art.rgb / art.a * k; else col = col * (1.0 - art.a) + art.rgb * k;
   o = vec4(col, 1.0);
 }`;
