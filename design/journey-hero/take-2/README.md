@@ -151,7 +151,24 @@ stage: positions, sizes and rotations match. Every module and the packed preview
 for the page and drawing APIs exercised held seeks, craft and stage clicks, pause, reduced motion, hidden and off-screen
 states, and the pixel cap; these are logic checks, not a browser render.
 
-No browser review, screenshots or frame-rate measurements were made here. The two Playwright tools were written and syntax
-checked only. The installed skills and external project notes were not read because this build was confined to the repository;
-no reviewer agents were used. The visual and performance gates remain for the browser review. Nothing here is a production
-build or a publication.
+No browser review, screenshots or frame-rate measurements were made during the build. The two Playwright tools were written
+and syntax checked only. The installed skills and external project notes were not read because this build was confined to the
+repository; no reviewer agents were used. Nothing here is a production build or a publication.
+
+## Browser review
+
+Looked at in headless Chromium after the build, on 19 November 2026. `tools/film.mjs` and `tools/sheet.mjs` ran as written.
+Each of the six apps was read as held frames at 1440 × 900, about 130 in all, with closer frames of the split, the docking, the
+placed assets, the copy leaving the stack, three leaves part of the way over, the wipe between shots, the word reveal, the
+prototype link and each flat lay. The beats are where the brief puts them.
+
+The six stills were compared with the approved sheet pixel by pixel. They differ only where the brief says they should (the
+photo chip in Illustrator's bar, the parked playhead and the two sliders in Premiere Pro, the comp's solid third row), and in
+Illustrator's cursor, which is on its way to Export at 3.9 seconds and has not arrived.
+
+The packed preview was loaded from a file at 1440 × 900 and at 390 × 664 with its requests watched: none were made, nothing
+was reported as an error, the clock runs, and a craft button and Pause do their jobs. A frame takes 0.06 milliseconds to work
+out in Node, and the busiest one has 123 pieces.
+
+Not measured: the frame rate on a real graphics card, because headless Chromium draws in software. Safari and Firefox were
+not opened.
