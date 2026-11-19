@@ -2,7 +2,9 @@
 // lit by one light with a shadow map, shaded in three brand tones. WebGL2, no dependencies.
 //
 // A piece: { p: [x, y, z], q: [x, y, z, w], s: [a, b, c] half sizes, e: [up, around] roundness (0.02 sharp .. 1 round),
-//            taper: [tx, ty] how much x and y shrink toward the local +z end (1 = to a point), shear: x += shear * y, tone: 'paper' }
+//            taper: [tx, ty] how much x and y shrink toward the local +z end (1 = to a point), shear: x += shear * y, tone: 'paper',
+//            art: 'key' a picture from the atlas on its local +z face, cut: true to keep only the picture (a flat cut-out shape),
+//            window: [u0, v0, u1, v1] the part of the picture to show (default all of it) }
 
 export const TONES = {
   //        lit (faces the light)  mid (tops)   shade (away, or in shadow)
@@ -11,6 +13,7 @@ export const TONES = {
   ink: ['#34302E', '#292625', '#1D1B1A'],
   grey: ['#B9B4AE', '#9C9690', '#6A6460'],
   dark: ['#5A5552', '#48433F', '#322E2C'],
+  night: ['#3B3735', '#2F2C2A', '#232120'],
 };
 export const INK = '#151314';
 const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
@@ -38,6 +41,7 @@ uniform vec4 uQuat;
 uniform vec2 uExp, uTaper;
 uniform float uShear, uGrow;
 out vec3 vN, vW, vL;
+out float vFace;
 vec2 superellipse(float ang, float e) {
   float c = cos(ang), s = sin(ang), ac = abs(c), as = abs(s), m = max(ac, as), p = 2.0 / e;
   return vec2(c, s) / (m * pow(pow(ac / m, p) + pow(as / m, p), 1.0 / p));
@@ -61,6 +65,7 @@ void main() {
   p.x += uShear * p.y;
   float len = length(n);
   n = len > 1e-20 ? n / len : vec3(0.0, 0.0, 1.0);
+  vFace = n.z;
   vec3 wn = turn(uQuat, n);
   vec3 wp = uPos + turn(uQuat, p) + wn * uGrow;
   vN = wn; vW = wp; vL = unit;
@@ -78,22 +83,39 @@ float shadowAt(vec3 w, float spread) {
   return sum / 25.0;
 }`;
 
+const ART_FN = `
+uniform sampler2D uAtlas;
+uniform vec4 uArt;                    // the picture's place in the atlas: x, y, w, h
+uniform float uArtMode;               // 0 none, 1 a picture on the face, 2 only the picture
+vec4 artAt(vec3 l, float face) {
+  if (uArtMode < 0.5 || face < 0.7) return vec4(0.0);
+  vec2 uv = clamp(vec2(l.x, -l.y) * 0.5 + 0.5, 0.0, 1.0);
+  return texture(uAtlas, uArt.xy + uv * uArt.zw);
+}`;
+
 const FRAG = `#version 300 es
 precision highp float;
 precision highp sampler2DShadow;
 in vec3 vN, vW, vL;
+in float vFace;
 uniform vec3 uA, uB, uC, uLight;
 uniform float uSoft, uSpread;
 out vec4 o;
 ${SHADOW_FN}
+${ART_FN}
 void main() {
+  vec4 art = artAt(vL, vFace);
+  if (uArtMode > 1.5 && art.a < 0.5) discard;
   vec3 n = normalize(vN);
   float d = dot(n, uLight);
   float lit = shadowAt(vW + n * 0.03, uSpread);
   float w = max(fwidth(d), 0.002) + uSoft;
   float mid = smoothstep(0.22 - w, 0.22 + w, d) * lit;
   float top = smoothstep(0.66 - w, 0.66 + w, d) * lit;
-  o = vec4(mix(uC, mix(uB, uA, top), mid), 1.0);
+  vec3 col = mix(uC, mix(uB, uA, top), mid);
+  float k = dot(col, vec3(1.0)) / max(dot(uA, vec3(1.0)), 1e-4);          // how far this spot is from fully lit
+  if (uArtMode > 1.5) col = art.rgb / art.a * k; else col = col * (1.0 - art.a) + art.rgb * k;
+  o = vec4(col, 1.0);
 }`;
 
 const FRAG_FLAT = `#version 300 es
@@ -104,7 +126,10 @@ void main() { o = vec4(uA, 1.0); }`;
 
 const FRAG_NONE = `#version 300 es
 precision highp float;
-void main() {}`;
+in vec3 vL;
+in float vFace;
+${ART_FN}
+void main() { if (uArtMode > 1.5 && artAt(vL, vFace).a < 0.5) discard; }`;
 
 const VERT_FLOOR = `#version 300 es
 precision highp float;
@@ -189,14 +214,37 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   gl.drawBuffers([gl.NONE]); gl.readBuffer(gl.NONE);
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
+  // the atlas of pictures: one canvas, and where each picture sits in it
+  const atlasTex = gl.createTexture();
+  let places = {};
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+  function setAtlas(atlas) {
+    places = atlas.places;
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlas.canvas);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, 3);                // the pictures have 8px of room around them: enough for three halvings
+    const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
+    if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(4, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+  }
+
   const setPiece = (u, pc, grow) => {
     gl.uniform3fv(u.uPos, pc.p); gl.uniform4fv(u.uQuat, pc.q);
     gl.uniform3f(u.uSize, Math.max(pc.s[0], 1e-4), Math.max(pc.s[1], 1e-4), Math.max(pc.s[2], 1e-4));
     gl.uniform2f(u.uExp, Math.max(pc.e[0], 0.012), Math.max(pc.e[1], 0.012));
     gl.uniform2fv(u.uTaper, pc.taper || [0, 0]); gl.uniform1f(u.uShear, pc.shear || 0); gl.uniform1f(u.uGrow, grow);
+    const place = pc.art && places[pc.art];
+    if (u.uArtMode) {
+      gl.uniform1f(u.uArtMode, place ? (pc.cut ? 2 : 1) : 0);
+      if (place) { const w = pc.window || [0, 0, 1, 1]; gl.uniform4f(u.uArt, place[0] + w[0] * place[2], place[1] + w[1] * place[3], (w[2] - w[0]) * place[2], (w[3] - w[1]) * place[3]); }
+    }
   };
   const drawAll = (prog, pieces, grow, tone) => {
-    gl.useProgram(prog.p);
     for (const pc of pieces) {
       if (pc.hide) continue;
       setPiece(prog.u, pc, typeof grow === 'function' ? grow(pc) : grow);
@@ -233,9 +281,14 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     // 1. depth from the light
     gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFbo); gl.viewport(0, 0, shadowSize, shadowSize);
     gl.clearDepth(1); gl.clear(gl.DEPTH_BUFFER_BIT);
+    const solid = pieces.filter(pc => !pc.cut), cuts = pieces.filter(pc => pc.cut);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+    gl.useProgram(depth.p); gl.uniformMatrix4fv(depth.u.uVP, false, lvp); gl.uniform1i(depth.u.uAtlas, 1);
     gl.cullFace(gl.FRONT);
-    gl.useProgram(depth.p); gl.uniformMatrix4fv(depth.u.uVP, false, lvp);
-    drawAll(depth, pieces.filter(pc => !pc.noShadow), 0);
+    drawAll(depth, solid.filter(pc => !pc.noShadow), 0);
+    gl.disable(gl.CULL_FACE);
+    drawAll(depth, cuts.filter(pc => !pc.noShadow), 0);
+    gl.enable(gl.CULL_FACE);
 
     // 2. the picture
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, canvas.width, canvas.height);
@@ -246,16 +299,21 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     gl.cullFace(gl.BACK);
     gl.useProgram(piece.p);
     gl.uniformMatrix4fv(piece.u.uVP, false, vp); gl.uniformMatrix4fv(piece.u.uLightVP, false, lvp);
-    gl.uniform1i(piece.u.uShadow, 0); gl.uniform3fv(piece.u.uLight, L); gl.uniform1f(piece.u.uSoft, soft); gl.uniform1f(piece.u.uSpread, spread);
-    drawAll(piece, pieces, 0, (u, pc) => {
+    gl.uniform1i(piece.u.uShadow, 0); gl.uniform1i(piece.u.uAtlas, 1);
+    gl.uniform3fv(piece.u.uLight, L); gl.uniform1f(piece.u.uSoft, soft); gl.uniform1f(piece.u.uSpread, spread);
+    const tones = (u, pc) => {
       const t = pc.tones || TONES[pc.tone] || TONES.paper;
       gl.uniform3fv(u.uA, typeof t[0] === 'string' ? hex(t[0]) : t[0]); gl.uniform3fv(u.uB, typeof t[1] === 'string' ? hex(t[1]) : t[1]); gl.uniform3fv(u.uC, typeof t[2] === 'string' ? hex(t[2]) : t[2]);
-    });
+    };
+    drawAll(piece, solid, 0, tones);
+    gl.disable(gl.CULL_FACE);
+    drawAll(piece, cuts, 0, tones);
+    gl.enable(gl.CULL_FACE);
 
     if (outline > 0) {
       gl.cullFace(gl.FRONT);
       gl.useProgram(flat.p); gl.uniformMatrix4fv(flat.u.uVP, false, vp); gl.uniform3fv(flat.u.uA, hex(look.line || INK));
-      drawAll(flat, pieces.filter(pc => !pc.noLine), pc => outline * (pc.line ?? 1));
+      drawAll(flat, solid.filter(pc => !pc.noLine), pc => outline * (pc.line ?? 1));
       gl.cullFace(gl.BACK);
     }
 
@@ -270,5 +328,5 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     }
     gl.bindVertexArray(null);
   }
-  return { gl, draw };
+  return { gl, draw, setAtlas };
 }
