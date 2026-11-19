@@ -15,7 +15,7 @@ import { ROOT } from './serve.mjs';
 const folder = process.argv[2] || path.join(ROOT, 'design/journey-hero/.scratch/compare');
 const sizes = (process.env.SIZES || '1440x900,390x844@2,768x1024').split(',');
 const times = (process.env.TIMES || '0.5,1.5,2.3,2.6,3.5,4.6,4.99,5.5,6,6.85,7.9,8.3,9.5,10.6,11.3,12,12.9,13.4,14.3,14.6').split(',').map(Number);
-const ALLOW = 12;                                 // solid px a pair may differ by and still pass
+const ALLOW = 4;                                  // solid px a pair may differ by and still pass (a faithful canvas port scores 0 everywhere)
 
 // runs in a page: both screenshots in, the counts and a picture of the difference out
 async function diff({ a, b }) {

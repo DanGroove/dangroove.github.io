@@ -135,7 +135,7 @@ specification. Same steps, same order, same numbers. For each bar id in `order`:
    passes over. `INK` is also the page's background colour, so the cut must be indistinguishable from the ground.
 2. **Edge faces.** From `barFaces(bar, cam)`, the faces with `main === false`. Colour: `Math.abs(face.n[1]) > 0.7071 ? tone.up : tone.side`
    where `tone = TONES[face.color]`. Draw all faces of one colour as one path: fill it, then stroke it in the same colour with
-   `lineWidth = 0.6` and miter joins. The hairline stroke hides the seams between neighbouring faces.
+   `lineWidth = 0.6`, `lineJoin = 'miter'` and `miterLimit = 4`. The hairline stroke hides the seams between neighbouring faces.
 3. **Labelled faces.** The faces with `main === true`, colour `tone.face`, drawn the same way.
 4. **The label**, only if `dot(ez, cam.v) > 0.02` where `ez = cross(bar.ex, bar.ey)`, and only if `labels[bar.id]` exists.
    A bar can be two colours for a moment while the red wipes along it. So for each colour among the bar's labelled faces: clip to
@@ -163,7 +163,8 @@ Two things about type on a canvas:
   so give the player a way to throw them away (see the player's start-up).
 
 The picture has to match the rough cut closely enough that the two can be overlaid: same shapes to the pixel, same colours exactly,
-labels within a pixel or two.
+labels to the pixel. This section has been tried out: a renderer written from it alone matched the rough cut in all sixty of the
+reviewer's comparison pictures, with nothing between them but a pixel of edge smoothing. So follow it literally, steps in this order.
 
 ### 4. The player: `hero.mjs`
 

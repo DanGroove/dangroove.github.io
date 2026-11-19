@@ -12,7 +12,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-export const PAGES = { built: '/public/journey/', rough: '/design/journey-hero/rough-cut/' };
+// BUILT=/some/folder/ points the review tools at another copy of the built page (a path from the repository root, ending in a slash)
+export const PAGES = { built: process.env.BUILT || '/public/journey/', rough: '/design/journey-hero/rough-cut/' };
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
