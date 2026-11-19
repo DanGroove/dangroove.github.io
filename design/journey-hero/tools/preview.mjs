@@ -3,7 +3,8 @@
 //   node design/journey-hero/tools/preview.mjs <built|rough> <out.html> [--frame] [--title "Journey hero preview"]
 //
 // --frame shapes the file for a host that wraps the page in a document of its own and shows it in a frame instead of a window:
-// no doctype, html, head or body tags, the hero fills the frame it is given, and the page's own links are switched off.
+// no doctype, html, head or body tags, the hero fills the frame it is given, and the page's own links go nowhere (their addresses,
+// the contact address among them, are left out of the file).
 // Scripts are bundled with esbuild, which npx fetches on first use.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -43,6 +44,7 @@ html = html.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi, (all, attrs, code
 });
 
 if (frame) {
+  html = html.replace(/<noscript>[\s\S]*?<\/noscript>\n?/gi, '');   // scripts are on in a frame, and a rule lifted out of noscript would apply to everyone
   const styles = [...html.matchAll(/<style>[\s\S]*?<\/style>/g)].map(m => m[0]).join('\n');
   const head = html.match(/<head>([\s\S]*?)<\/head>/)[1], body = html.match(/<body[^>]*>([\s\S]*)<\/body>/)[1];
   const early = [...head.matchAll(/<script\b[^>]*>[\s\S]*?<\/script>/gi)].map(m => m[0]).join('\n');
@@ -56,8 +58,8 @@ html,body,main{height:100%}
 @media (max-width:719px){.hero{min-height:100%!important}}
 </style>
 ${early}
-${body.replace(/<style>[\s\S]*?<\/style>/g, '').trim()}
-<script>document.addEventListener('click', e => { const a = e.target.closest('a'); if (a && !/^https?:/.test(a.getAttribute('href') || '')) e.preventDefault(); });</script>
+${body.replace(/<style>[\s\S]*?<\/style>/g, '').replace(/\bhref=(["'])(?!https?:)[^"']*\1/g, 'href="#"').trim()}
+<script>document.addEventListener('click', e => { if (e.target.closest('a[href="#"]')) e.preventDefault(); });</script>
 `;
 } else if (title) html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${title}</title>`);
 

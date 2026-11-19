@@ -11,7 +11,7 @@ const [which = 'built', out = 'sheet.png', heading = 'Journey hero'] = process.a
 const MOMENTS = [[1.5, 'Opening: the four stripes'], [2.4, 'They fold down into a deck'], [4.99, '01 Graphic design: the swatch fan'], [6, '02 Video: the clapperboard'], [8.3, '03 Motion: the stack turns'], [12, '04 UX/UI: the window']];
 
 const st = await studio(), shots = {};
-for (const [key, size] of [['desk', '1440x900'], ['phone', '390x844@2']]) {
+for (const [key, size] of [['desk', '1440x900'], ['phone', '390x664@2']]) {   // the phone as a browser shows it, with its bars up
   const page = await st.open(which, size);
   shots[key] = [];
   for (const [t] of MOMENTS) { await seek(page, t); shots[key].push((await page.screenshot()).toString('base64')); }
@@ -26,7 +26,7 @@ h1{font-weight:800;font-size:44px;letter-spacing:-.02em;color:#F7F6F3;margin:0 0
 .g{display:grid;grid-template-columns:repeat(3,952px);gap:24px}.g.p{grid-template-columns:repeat(6,464px);margin-top:36px}
 figure{margin:0}img{display:block;width:100%;outline:1px solid #2E2B29}
 figcaption{font-weight:300;font-size:17px;letter-spacing:.12em;text-transform:uppercase;margin-top:10px}figcaption b{color:#F0484F;font-weight:300;margin-right:14px}
-</style><h1>${heading}</h1><p>Six moments from the loop, on a 1440 wide desktop and on a phone. Times are seconds from page load.</p>
+</style><h1>${heading}</h1><p>Six moments from the loop, on a 1440 wide desktop and on a phone with the browser's bars showing. Times are seconds from page load.</p>
 <div class="g">${MOMENTS.map(([t, c], i) => figure(shots.desk[i], t, c)).join('')}</div>
 <div class="g p">${MOMENTS.map(([t], i) => figure(shots.phone[i], t)).join('')}</div>`;
 const page = await st.browser.newPage({ viewport: { width: 3000, height: 800 } });
