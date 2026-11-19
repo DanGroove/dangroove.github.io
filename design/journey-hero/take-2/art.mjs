@@ -52,7 +52,7 @@ function heart(c, col, x, y, r) { c.fillStyle = col; c.beginPath(); c.moveTo(x, 
 // No agent's name or contact details are drawn anywhere: Dan asked for them to be left out.
 // Its faces are Georgia, Rockwell and Helvetica Neue. Gelasio and Rokkitt, open faces of the same build (./fonts), stand in for the first two.
 // A page is drawn in hundredths of an inch, 1100 x 850, and scaled to whatever size its picture has.
-const K = { black: '#030A12', weave: '#2B2C28', coal: '#262626', comb: '#4A4841', gold: '#A67A03', lite: '#D9AB2E', white: '#FFFFFF', soft: 'rgba(255,255,255,0.62)' };
+const K = { black: '#0A0F16', weave: '#30302D', coal: '#282928', comb: '#4C4B44', gold: '#9B7C29', lite: '#CEAB48', white: '#FFFFFF', soft: 'rgba(255,255,255,0.62)' };   // sampled from the flyer as Acrobat shows it
 const SERIF = 'Gelasio, Georgia, serif', SLAB = 'Rokkitt, Rockwell, serif', SANS = "'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif";
 const page = draw => (c, w, h) => { c.scale(w / 1100, h / 850); draw(c); };
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -136,7 +136,7 @@ function street(c, x, y, w, h, { at = 0.45, raw = false, zoom = 1, drop = 0 } = 
 // the covers' left side: black, with the pattern, fading into the photograph between x0 and x1
 function fadeIn(c, x0, x1, h, R = 57) {
   fill(c, K.black, 0, 0, x0 + 2, h);
-  const g = c.createLinearGradient(x0, 0, x1, 0); g.addColorStop(0, K.black); g.addColorStop(1, 'rgba(3,10,18,0)'); c.fillStyle = g; c.fillRect(x0, 0, x1 - x0, h);
+  const g = c.createLinearGradient(x0, 0, x1, 0); g.addColorStop(0, K.black); g.addColorStop(1, 'rgba(10,15,22,0)'); c.fillStyle = g; c.fillRect(x0, 0, x1 - x0, h);
   const ink = c.createLinearGradient(x0, 0, x1, 0); ink.addColorStop(0, K.weave); ink.addColorStop(0.45, 'rgba(120,120,112,0.5)'); ink.addColorStop(1, 'rgba(190,190,180,0)');
   weave(c, 0, 0, x1, h, ink, R);
 }
@@ -258,7 +258,7 @@ export const ART = {
   kPost: { w: 400, h: 400, draw(c, w, h) {               // the post: the photograph edge to edge, the pattern as a band along the top, the logo over a dark foot
     c.scale(w / 1000, h / 1000); street(c, 0, 0, 1000, 1000, { at: 0.56, zoom: 0.9, drop: 0.14 });
     fill(c, K.black, 0, 0, 1000, 150); weave(c, 0, 0, 1000, 150, K.weave, 44); text(c, 'Lennard:', 56, 100, 50, { w: 700, fill: K.lite, track: 0, family: SERIF });
-    const g = c.createLinearGradient(0, 500, 0, 1000); g.addColorStop(0, 'rgba(3,10,18,0)'); g.addColorStop(0.7, 'rgba(3,10,18,0.9)'); g.addColorStop(1, K.black); c.fillStyle = g; c.fillRect(0, 500, 1000, 500);
+    const g = c.createLinearGradient(0, 500, 0, 1000); g.addColorStop(0, 'rgba(10,15,22,0)'); g.addColorStop(0.7, 'rgba(10,15,22,0.9)'); g.addColorStop(1, K.black); c.fillStyle = g; c.fillRect(0, 500, 1000, 500);
     kingLogo(c, 50, 610, 600, true); tab(c, 690, 788, 320, 146, 50, 'Office Space', 'For Sale');
   } },
   post: { w: 300, h: 600, draw(c, w, h) {                 // that post in the LinkedIn feed, on a phone
