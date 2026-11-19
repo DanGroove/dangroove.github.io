@@ -14,13 +14,13 @@ const require = createRequire(import.meta.url);
 const out = process.argv[2] || 'take-2-sheet.png';
 const CAPTIONS = [
   ['01 Graphic design, in Photoshop', 'First, a photo edit of the building: as shot on the left of the split, graded on the right. Nothing lands on the floor when it exports. The photograph goes on into the next apps, and every later piece uses it'],
-  ['01 Graphic design, in Illustrator', 'Second, the map of King Street from the booklet\'s amenities page, simplified. The whole artboard above, and a closer view of the part in the red frame below. Nothing lands on the floor here either: the map goes into the booklet'],
-  ['01 Graphic design, in InDesign', 'Last, the 1 King Street W booklet, drawn very simply, with no agent names and with both logos as blobs, plus a LinkedIn post and an e-blast that follow it. This export is what lands: one stack of closed copies, the post in a phone and the e-blast in a tablet. One copy is taken off the top of the stack, opened and leafed through: here a page is landing on the amenities spread'],
+  ['01 Graphic design, in Illustrator', 'Second, the booklet\'s two maps, simplified. Above, King Street from the amenities page. Below, downtown from the location page, and beside it a closer view of the part in the red frame, where the subway\'s line is selected as a path. Landmarks and transit carry plain badges in place of their logos. Nothing lands on the floor here either: the maps go into the booklet'],
+  ['01 Graphic design, in InDesign', 'Last, the 1 King Street W booklet, drawn very simply, with no agent names and with both logos as blobs, plus a LinkedIn post and an e-blast that follow it. This export is what lands: one stack of closed copies, the post in a phone and the e-blast in a tablet. One copy is taken off the top of the stack, opened and leafed through: here a page is landing on the location spread'],
   ['02 Video', 'The editing app with captions, a transition and an effect on the timeline, exported to three screens: wide on a tablet, tall as a reel, and square in a feed'],
   ['03 Motion', 'A SaaS style animation of words and shapes: its layers and keyframes on the timeline, the ball selected on its path, and the ease between its keyframes in the graph. Exported to the same three screens: in a player, as a story, and square in a feed'],
 ];
 // the moments of the booklet's story that the sheet shows under the InDesign still (see copy in stage.mjs), and which scene that is
-const TURNS = [-0.7, 0.3, 1, 1.28, 1.76, 2.76], BOOKLET = 2;
+const TURNS = [-0.7, 0.3, 1, 1.4, 2, 2.76], BOOKLET = 2;
 
 // the built page, with its player swapped for the stills script
 export function writeStillsPage() {
@@ -64,7 +64,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url
   }
   const font = fs.readFileSync(path.join(ROOT, 'public/holding/fonts/outfit-latin-wght-normal.woff2')).toString('base64');
   const img = png => `<img src="data:image/png;base64,${png}">`;
-  const strip = () => `<figure><div class="strip">${turns.map(img).join('')}</div><figcaption><b>One copy is taken off the top, opened and leafed through</b>It lifts off the stack and is set down in front. Its cover opens, then two pages turn: to the amenities spread, and to the gallery. Each page bends as paper does: its edge peels up first, and it lands from the spine outward. Six moments, left to right</figcaption></figure>`;
+  const strip = () => `<figure><div class="strip">${turns.map(img).join('')}</div><figcaption><b>One copy is taken off the top, opened and leafed through</b>It lifts off the stack and is set down in front. Its cover opens at The Offering, then the pages turn: to the location spread, to amenities, and on to the gallery. Each page bends as paper does: its edge peels up first, and it lands from the spine outward. Six moments, left to right</figcaption></figure>`;
   const row = (s, i) => `<figure><div class="pair">${img(shots.desk[i])}${img(shots.phone[i])}</div><figcaption><b>${CAPTIONS[s][0]}</b>${CAPTIONS[s][1]}</figcaption></figure>${s === BOOKLET && turns.length ? strip() : ''}`;
   const html = `<!doctype html><meta charset="utf-8"><style>
 @font-face{font-family:Outfit;src:url(data:font/woff2;base64,${font}) format("woff2");font-weight:100 900}

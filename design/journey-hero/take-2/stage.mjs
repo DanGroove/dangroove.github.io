@@ -3,7 +3,7 @@
 // This file holds every scene as a list of pieces, held still.
 import { HOME } from '../../../public/journey/hero/engine.mjs';
 import { box, cyl, turn } from './kit.mjs';
-import { CLOSE, BALL } from './art.mjs';
+import { SPOT, subwayPath, BALL } from './art.mjs';
 
 // the screen: its left and bottom edges, its size, the z of its middle, its thickness
 export const SCREEN = { l: -2.6, b: 0.6, w: 5.6, h: 3.6, z: -1.8, t: 0.1 };
@@ -22,6 +22,20 @@ const dot = (tone, cx, cy, r, { lift = 0.05, t = 0.02 } = {}) => cyl(tone, [SCRE
 // the outline of a selection: four thin red bars around a box on the screen
 const outline = (l, b, w, h, { line = 0.016, lift = 0.085 } = {}) => [[l, b, w, line], [l, b + h - line, w, line], [l, b, line, h], [l + w - line, b, line, h]].map(([x, y, bw, bh]) => on('red', x, y, bw, bh, { lift, t: 0.006 }));
 const handle = (x, y) => on('red', x - 0.03, y - 0.03, 0.06, 0.06, { lift: 0.09, t: 0.01, art: 'anchor' });   // one of a selection's points, by its middle
+// a thin red bar from one point of the screen to another: a piece of a selected path, or the arm of a handle
+function bar(a, b, { line = 0.018, lift = 0.085 } = {}) {
+  const pc = on('red', a[0] - line / 2, a[1] - line / 2, Math.hypot(b[0] - a[0], b[1] - a[1]) + line, line, { lift, t: 0.006 });
+  return turn(pc, [SCREEN.l + a[0] * U, SCREEN.b + a[1] * U, 0], [0, 0, 1], Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI);
+}
+// the part of the line from a to b that lies inside a box [left, top, width, height], or nothing
+function inside(a, b, [l, t, w, h]) {
+  const d = [b[0] - a[0], b[1] - a[1]];
+  let t0 = 0, t1 = 1;
+  for (const [p, q] of [[-d[0], a[0] - l], [d[0], l + w - a[0]], [-d[1], a[1] - t], [d[1], t + h - a[1]]]) {
+    if (p === 0) { if (q < 0) return null; } else if (p < 0) t0 = Math.max(t0, q / p); else t1 = Math.min(t1, q / p);
+  }
+  return t0 < t1 ? [[a[0] + d[0] * t0, a[1] + d[1] * t0], [a[0] + d[0] * t1, a[1] + d[1] * t1]] : null;
+}
 // The point of the floor that shows at a given place in the picture (x to the right, y up, from where the world's origin shows).
 export function floorAt(x, y) {
   const { r, u } = HOME, d = r[0] * u[2] - r[2] * u[0];
@@ -71,14 +85,14 @@ const PANEL = W - 0.93;                                  // the left edge of the
 const CANVAS = { l: 0.56, w: PANEL - 0.12 - 0.56, b: 0.1, h: TOP - 0.1 };
 
 // ---- 01 Graphic design, as three projects in three apps, in the order the work is made: Photoshop, Illustrator, InDesign.
-// Only InDesign's export lands on the floor. The photograph and the map go on into the next app, so the floor stays empty until then.
+// Only InDesign's export lands on the floor. The photograph and the maps go on into the next app, so the floor stays empty until then.
 
 // What InDesign exports, squared up into one block that is as wide as the open booklet and sits in the middle of the mat.
 // Behind: a stack of closed copies, the post in a phone, the e-blast in a tablet. In front: the copy that is taken off the top
 // of the stack, opened and leafed through.
 const DEEP = 1.45, LEAF = DEEP * 440 / 340;              // a page of the booklet: how deep it is (toward us) and how wide
 const GUT = 0.12, PHONE = 0.7, TABLET = LEAF - PHONE - 2 * GUT;   // the gutter between two things in the block, and the two devices that share a page's width with it
-const SHEET = 0.01, COPY = 5 * SHEET, COPIES = 6;        // how thick one leaf is, and one closed copy; how many copies land
+const SHEET = 0.01, COPY = 5 * SHEET, COPIES = 6;        // how thick one leaf is, and one closed copy (the four leaves that turn, and the rest); how many copies land
 export const BLOCK = { x0: MAT.x + MAT.w / 2 - LEAF, x1: MAT.x + MAT.w / 2 + LEAF, z0: MAT.z, z1: MAT.z + 2 * DEEP + GUT, up: 0.6 };   // the room the block takes, for the tools that crop a still to it
 
 // A closed copy: the white edges of its pages under a dark cover. x, z: its back left corner. y: what it lies on.
@@ -87,8 +101,8 @@ function closed(P, x, z, y = 0, art = 'kCover') {
   P.push(flat('paper', x, z, LEAF, DEEP, COPY - skin, undefined, y), flat('ink', x, z, LEAF, DEEP, skin, art, y + COPY - skin));
 }
 // The booklet's leaves from the cover inward: what is printed on the front of each, and on its back. The copy on the mat turns
-// these three, so it opens at The Offering, then Amenities, then the gallery. LAST: the page the third one uncovers.
-const LEAVES = [['kCover', 'kOfferL'], ['kOfferR', 'kAmL'], ['kAmR', 'kGalL']], LAST = 'kGalR';
+// these four, so it opens at The Offering, then Location, then Amenities, then the gallery. LAST: the page the fourth one uncovers.
+const LEAVES = [['kCover', 'kOfferL'], ['kOfferR', 'kLocL'], ['kLocR', 'kAmL'], ['kAmR', 'kGalL']], LAST = 'kGalR';
 const STRIPS = 14, clamp = (v, a, b) => Math.min(b, Math.max(a, v)), mix = (a, b, t) => a + (b - a) * t;
 // One leaf on its way over, bending the way paper does. It is a row of narrow strips, each hinged on the one before, so the leaf
 // can curl: its free edge peels up first while the rest still lies flat, it swings over the spine in a shallow arc, and it lands
@@ -106,21 +120,21 @@ function leaf(P, sx, z, y, f, front, back) {
 }
 // The copy that is taken off the top of the stack. x, z: the back left corner of the place where it lies open. from: where it
 // lay on the stack. at: -1 on the stack .. 0 set down, still shut, in the right half of its place; then one leaf turns for each 1:
-// 1 is open at The Offering, 2 at Amenities, 3 at the gallery.
+// 1 is open at The Offering, 2 at Location, 3 at Amenities, 4 at the gallery.
 function copy(P, x, z, from, at) {
   if (at <= 0) {                                          // on its way: up off the stack, toward us, then across (clear of the devices), and down
     const u = clamp(at + 1, 0, 1), e = u * u * (3 - 2 * u);
     return closed(P, mix(from[0], x + LEAF, e * e), mix(from[2], z, 1 - (1 - e) ** 2), mix(from[1], 0, e) + 0.55 * Math.sin(Math.PI * u));
   }
   const i = Math.min(Math.floor(at), LEAVES.length - 1), f = Math.min(at - i, 1), [front, back] = LEAVES[i];
-  const right = (4 - i) * SHEET, left = i * SHEET;        // how thick the pages are on each side of the leaf that is turning
+  const right = (LEAVES.length - i) * SHEET, left = i * SHEET;   // how thick the pages are on each side of the leaf that is turning
   P.push(flat('paper', x + LEAF, z, LEAF, DEEP, right, LEAVES[i + 1] ? LEAVES[i + 1][0] : LAST));
   if (left) P.push(flat('paper', x, z, LEAF, DEEP, left, LEAVES[i - 1][1]));
   if (f === 0) P.push(flat('paper', x + LEAF, z, LEAF, DEEP, SHEET, front, right));
   else if (f === 1) P.push(flat('paper', x, z, LEAF, DEEP, SHEET, back, left));
   else leaf(P, x + LEAF, z, mix(right, left, f) + SHEET / 2, f, front, back);
 }
-// at: where the copy that is being read has got to (see copy). By default a leaf is landing on Amenities.
+// at: where the copy that is being read has got to (see copy). By default a leaf is landing on the Location spread.
 function prints(P, at = 1.82) {
   const x = BLOCK.x0, z = BLOCK.z0, n = COPIES - 1;
   for (let i = 0; i < n; i++) closed(P, x, z, i * COPY, i === n - 1 ? 'kCover' : undefined);                  // the stack, less the copy that was taken
@@ -152,7 +166,7 @@ export function photoshop() {
   return P;
 }
 
-// Illustrator comes second: the map of King Street on the booklet's Amenities spread, which is line work. Nothing lands on the floor.
+// Illustrator comes second: the booklet's two maps, which are line work. Nothing lands on the floor.
 const FLYER = { gold: ['#9B7C29', '#86691F', '#5E4915'], lite: ['#CEAB48', '#B3933B', '#836A28'], coal: ['#282928', '#1F201F', '#161716'], black: ['#0A0F16', '#080C12', '#05080C'] };   // the flyer's colours, lit, on top and in shade
 export function illustrator() {
   const P = shell('ai');
@@ -165,18 +179,18 @@ export function illustrator() {
   });
   P.push(icon('aa', PANEL + 0.09, TOP - 1.06, 0.5, 0.34));
   [0.67, 0.5, 0.6, 0.42].forEach((w, i) => P.push(on(i === 0 ? 'grey' : 'dark', PANEL + 0.09, TOP - 1.4 - i * 0.2, w, 0.1, { lift: 0.05, t: 0.02 })));
-  // the canvas: the whole artboard above, and under it a closer view of the part that the red frame marks
-  const [cx, cy, cw, ch] = CLOSE, pw = 3.2, k = pw / 2200, ph = 850 * k, low = pw * ch / cw, gap = 0.1;
-  const x = CANVAS.l + (CANVAS.w - pw) / 2, y2 = CANVAS.b + (CANVAS.h - ph - low - gap) / 2, y = y2 + low + gap;
-  P.push(on('ink', x, y, pw, ph, { lift: 0.06, t: 0.02, art: 'kMap' }), on('ink', x, y2, pw, low, { lift: 0.06, t: 0.02, art: 'kMapClose' }));
-  P.push(...outline(x + cx * k, y + ph - (cy + ch) * k, cw * k, ch * k));
-  // close up, the ring around the building's logo is selected: a path, with its points and two of their handles
-  const z = pw / cw, at = (X, Y) => [x + (X - cx) * z, y2 + low - (Y - cy) * z];
-  [[1309, 457], [1345, 493], [1345, 567], [1309, 603], [1273, 567], [1273, 493]].forEach(([X, Y]) => P.push(handle(...at(X, Y))));
-  [457, 603].forEach(Y => {
-    const [hx, hy] = at(1309, Y), reach = 46 * z;
-    P.push(on('red', hx - reach, hy - 0.008, reach * 2, 0.016, { lift: 0.085, t: 0.006 }), dot('red', hx - reach, hy, 0.028, { lift: 0.085, t: 0.012 }), dot('red', hx + reach, hy, 0.028, { lift: 0.085, t: 0.012 }));
-  });
+  // The canvas: two artboards. Above, King Street from the Amenities spread. Below, downtown from the Location spread, and beside it
+  // a closer view of the part that the red frame marks. The lower row is as tall as lets the map and its close-up fill the width.
+  const [sx, sy, sw, sh] = SPOT, pw = 3.2, ph = pw * 850 / 2200, gap = 0.1, low = (pw - gap) / (1352 / 850 + sw / sh), lw = low * 1352 / 850, cw = low * sw / sh;
+  const x = CANVAS.l + (CANVAS.w - pw) / 2, y2 = CANVAS.b + (CANVAS.h - ph - low - gap) / 2, y = y2 + low + gap, x2 = x + lw + gap, k = lw / 1352;
+  P.push(on('ink', x, y, pw, ph, { lift: 0.06, t: 0.02, art: 'kMap' }), on('ink', x, y2, lw, low, { lift: 0.06, t: 0.02, art: 'kLoc' }), on('ink', x2, y2, cw, low, { lift: 0.06, t: 0.02, art: 'kLocClose' }));
+  P.push(...outline(x + sx * k, y2 + low - (sy + sh) * k, sw * k, sh * k));
+  // Close up, the subway's line is selected: the path in red, and a point at each end of its two curves. The wide curve's points
+  // are the ones picked, so their two handles show.
+  const z = cw / sw, at = ([X, Y]) => [x2 + (X - sx) * z, y2 + low - (Y - sy) * z], { line, knots, arms } = subwayPath();
+  line.slice(1).forEach((b, i) => { const part = inside(line[i], b, SPOT); if (part) P.push(bar(at(part[0]), at(part[1]))); });
+  arms.slice(0, 2).forEach(([a, b]) => { const end = at(b); P.push(bar(at(a), end, { line: 0.012 }), dot('red', end[0], end[1], 0.026, { lift: 0.085, t: 0.012 })); });
+  knots.filter(([X, Y]) => X > sx && X < sx + sw && Y > sy && Y < sy + sh).forEach(p => P.push(handle(...at(p))));
   return P;
 }
 

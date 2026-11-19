@@ -11,12 +11,12 @@ of Dan's real work. The cursor clicks Export, and what is exported lands in fron
 Graphic design is three apps, in the order the work is really made:
 
 1. Photoshop: a photo edit of the building, which the later pieces all use.
-2. Illustrator: the map of King Street from the booklet's amenities page, simplified.
+2. Illustrator: the booklet's two maps, simplified: King Street from the amenities page, and downtown from the location page.
 3. InDesign: the 1 King Street W booklet, and a LinkedIn post and an e-blast that follow it.
 
 Nothing lands on the floor when Photoshop and Illustrator export: their work goes on into the next app. InDesign's export is what
 lands. Behind: one stack of closed copies of the booklet, the post in a phone, the e-blast in a tablet. In front: one copy is taken
-off the top of the stack, set down, opened, and leafed through (The Offering, Amenities, the gallery).
+off the top of the stack, set down, opened, and leafed through (The Offering, Location, Amenities, the gallery).
 
 Video (an editing app) and motion (words and shapes, the way a SaaS promo moves) are in, each exported to three screens. UX/UI is
 still to be drawn to the same rules.
@@ -30,6 +30,9 @@ still to be drawn to the same rules.
 - The booklets land as one stack of closed copies. One is taken off the top and its pages are flipped through, and one of those
   pages is the amenities page. A page must turn like real paper, which bends, and not like a stiff slab.
 - The amenities map is simplified: about half as many squares as the flyer has, and the shops' names are bars.
+- The location map is shown in Illustrator too, and the Location spread is one of the spreads the booklet is flipped through.
+  It is simplified as well: its streets, its transit lines and its landmarks are there, and each landmark and each transit
+  company is a plain badge with bars, not its logo.
 - The firm's logo and the building's logo are each drawn as a blob, not as the real logo.
 - No agent's name or contact details appear anywhere.
 - The flyer's source files are not in this repository and must not be added to it.
@@ -45,7 +48,7 @@ still to be drawn to the same rules.
 - `stage.html` one scene on its own. `?s=0..4` picks it, `?yaw=-25&pitch=8` turns the view, `?atlas=1` shows the pictures.
 - `stills.mjs` and `tools/sheet.mjs` the scenes in the hero's own layout, on one sheet for comments. On the stills page `?at=` sets
   where the copy that is being read has got to: -1 is on the stack, 0 is set down and still shut, 1 is open at The Offering,
-  2 at Amenities, 3 at the gallery, and anything between is a leaf part of the way over.
+  2 at Location, 3 at Amenities, 4 at the gallery, and anything between is a leaf part of the way over.
 
 ## How a page turns
 

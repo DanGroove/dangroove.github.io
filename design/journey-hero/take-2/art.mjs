@@ -203,17 +203,103 @@ function gIcon(c, kind, x, y) {                                // the gold icons
 // a stand-in for one gallery photograph: a room with a wall, a floor and a window's light
 const ROOMS = [['#9A6A3C', '#5F4630', '#E9D9B8'], ['#DAD3C6', '#8E8A84', '#F6F1E6'], ['#C9B58A', '#7B6A50', '#F1E3C0'], ['#B9C69A', '#7A6248', '#F3F1E4'], ['#A7AFB8', '#5F6468', '#E8EEF2'], ['#7C5433', '#4B3523', '#DFC79B'], ['#E6E0D4', '#A39A8C', '#FFFFFF'], ['#8D99A6', '#4D545B', '#DDE6EE']];
 function room(c, x, y, w, h, i) { const [wall, floor, light] = ROOMS[i % 8]; fill(c, wall, x, y, w, h); fill(c, floor, x, y + h * 0.64, w, h * 0.36); fill(c, light, x + w * 0.14, y + h * 0.14, w * 0.3, h * 0.36); fill(c, light, x + w * 0.56, y + h * 0.14, w * 0.2, h * 0.36); }
-// The Location spread's map, which runs across the fold. off: where this page starts.
-function cityMap(c, off) {
-  c.save(); c.translate(-off, 0); c.beginPath(); c.rect(0, 0, 1352, 850); c.clip();
-  fill(c, K.coal, 0, 0, 1352, 850); stroke(c, K.black, 16); c.beginPath();
-  [70, 175, 280, 367, 440, 513, 640, 740].forEach(y => { c.moveTo(0, y); c.lineTo(1352, y); }); [130, 255, 400, 545, 690, 870, 1110, 1280].forEach(x => { c.moveTo(x, 0); c.lineTo(x, 850); }); c.stroke();
-  fill(c, K.gold, 0, 173, 1352, 4); fill(c, K.gold, 0, 365, 1352, 4);                                    // Queen Street and King Street
-  stroke(c, K.gold, 4); c.beginPath(); c.moveTo(125, 0); c.lineTo(125, 800); c.lineTo(640, 820); c.lineTo(775, 783); c.lineTo(775, 540); c.stroke();
-  fill(c, '#12827C', 0, 568, 1352, 14); fill(c, '#E8862E', 0, 582, 650, 10);                              // the GO line, and the airport train under it
-  [[640, 100, 90, 40], [770, 55, 90, 40], [155, 595, 70, 40], [245, 600, 60, 66], [650, 548, 86, 62], [670, 632, 86, 30]].forEach(([mx, my, mw, mh]) => { c.fillStyle = K.gold; c.beginPath(); c.roundRect(mx, my, mw, mh, 6); c.fill(); });
-  c.fillStyle = K.black; c.beginPath(); c.roundRect(795, 498, 118, 60, 30); c.fill(); stroke(c, K.lite, 5); c.stroke(); kingLogo(c, 822, 510, 68);
+// The map on the Location spread, simplified: downtown as black streets on charcoal, with what the flyer picks out in colour. Two
+// streetcar lines and the loop to the lake are gold, the subway is a grey U with its stations, the railway is teal and orange, the
+// walkways under the towers are thin grey lines, and each landmark is a gold badge. Nobody's logo is drawn: a badge carries bars
+// where its name would be, and the building's own logo is its blob, in a ring. In the spread's units; the map ends at x = 1352.
+// A line is a list of points. A point with four numbers is a curve (its control point, then its end), and one with six is a bezier.
+const trace = (c, pts) => pts.forEach((p, i) => (i === 0 ? c.moveTo(...p) : p.length === 2 ? c.lineTo(...p) : p.length === 4 ? c.quadraticCurveTo(...p) : c.bezierCurveTo(...p)));
+function run(c, col, width, lists) { stroke(c, col, width); c.lineJoin = 'round'; c.beginPath(); lists.forEach(pts => trace(c, pts)); c.stroke(); }
+// The subway's line: down University Avenue, round under Front Street in a wide curve, and up Yonge Street after a tight one.
+export const SUBWAY = [[550, 0], [550, 176], [583, 404], [598, 506, 672, 506], [826, 506], [866, 506, 866, 466], [866, 0]];
+const CITY = {
+  expressway: [[0, 755], [550, 752], [980, 631], [1352, 631]],
+  streets: [
+    [[876, 72], [1352, 72]], [[0, 167], [1352, 167]], [[0, 216], [1120, 216], [1150, 228], [1352, 228]], [[0, 285], [1090, 285], [1120, 301], [1352, 301]],   // Shuter, Queen, Richmond, Adelaide
+    [[0, 357], [1352, 357]], [[0, 439], [1062, 439]], [[0, 533], [250, 513], [876, 513]], [[876, 498], [1170, 405], [1352, 405]],                             // King, Wellington, Front
+    [[0, 645], [140, 645, 220, 705, 325, 705], [400, 705, 400, 652, 470, 652], [627, 652]], [[770, 750], [850, 740, 860, 652, 940, 652], [1352, 652]], [[0, 815], [625, 815], [1352, 700]],   // Bremner, Lake Shore, Queens Quay
+    [[136, 0], [136, 815]], [[257, 167], [257, 513]], [[315, 0], [315, 167]], [[543, 0], [543, 176], [576, 404], [591, 513, 665, 513]], [[627, 513], [627, 815]],   // Spadina, Blue Jay Way, University, York
+    [[750, 0], [750, 575]], [[775, 580], [775, 800]], [[876, 0], [876, 790]], [[1020, 0], [1020, 448]], [[1123, 0], [1123, 600], [1135, 735]], [[1289, 0], [1289, 712]],                  // Bay, Yonge, Church, Jarvis, Sherbourne
+  ],
+  blocks: [                                                     // the towers' footprints, a shade lighter than the ground
+    [660, 16, 62, 68], [770, 0, 52, 36], [766, 104, 58, 46], [600, 232, 60, 38], [668, 232, 60, 38], [770, 236, 38, 32], [814, 236, 40, 32], [596, 300, 64, 42], [664, 300, 64, 42], [770, 300, 84, 42],
+    [606, 376, 50, 48], [662, 376, 66, 48], [770, 376, 30, 48], [806, 376, 30, 48], [640, 454, 88, 44], [770, 454, 60, 30], [366, 378, 70, 46], [370, 454, 60, 46], [436, 454, 58, 46], [570, 668, 40, 50], [640, 672, 40, 44],
+  ],
+  walks: [                                                      // the walkways that join the towers below ground
+    [[684, 139], [684, 192]], [[638, 192], [866, 192]], [[841, 95], [841, 262]], [[790, 262], [853, 262]], [[638, 192], [638, 462], [700, 462], [740, 488], [740, 506]],
+    [[536, 318], [891, 318]], [[717, 318], [717, 400]], [[600, 400], [820, 400], [820, 470]], [[397, 400], [440, 400], [440, 420], [457, 468], [457, 492], [418, 492]],
+    [[505, 556], [649, 556]], [[456, 600], [649, 600]], [[689, 664], [689, 792]], [[689, 780], [752, 772]],
+  ],
+  tracks: [[[0, 177], [1352, 177]], [[0, 368], [1352, 368]], [[126, 0], [126, 801], [625, 818], [775, 791], [767, 745], [767, 582]]],   // the streetcars: Queen Street, King Street, and Spadina Avenue's loop round to the station
+  stops: [[550, 176], [577, 366], [700, 506], [866, 366], [866, 176]],
+  stopNames: [['OSGOODE', 496, 167], ['ST ANDREW', 516, 357], ['UNION', 697, 533], ['KING', 897, 357], ['QUEEN', 905, 167]],
+  names: [                                                      // a street's name sits on the street: where its middle is, and how far it is turned
+    ['Queen Street W', 361, 167], ['Richmond Street W', 361, 216], ['Adelaide Street W', 361, 285], ['King Street W', 361, 357], ['Wellington Street W', 361, 439], ['Front Street W', 361, 514],
+    ['Shuter Street', 1010, 72], ['Queen Street E', 1010, 167], ['Richmond Street E', 1010, 216], ['Adelaide Street E', 1010, 285], ['Bremner Boulevard', 540, 652], ['Gardiner Expy', 467, 753], ['Lake Shore Boulevard E', 1012, 652],
+    ['Spadina Avenue', 136, 262, -90], ['Blue Jay Way', 257, 262, -90], ['University Avenue', 551, 248, 81.8], ['Bay Street', 750, 78, -90], ['Yonge Street', 877, 262, 90], ['York Street', 627, 720, -90],
+    ['Jarvis Street', 1123, 510, -90], ['Sherbourne Street', 1289, 510, -90], ['Front Street E', 1000, 459, -17.6], ['Queens Quay E', 990, 757, -9],
+  ],
+  badges: [[636, 101, 97, 38], [772, 48, 88, 47], [451, 394, 103, 24], [154, 596, 75, 40], [244, 603, 62, 64], [649, 550, 90, 64], [669, 631, 90, 33]],   // city hall, a mall, a concert hall, a stadium, a tower, the station, an arena
+  transit: [['#12827C', 344, 535, 82, 34], ['#12827C', 958, 535, 82, 34], ['#E8862E', 361, 592, 48, 35]],                                               // where the trains' own marks are, as plain badges
+  routes: [[64, 48, '510'], [64, 689, '510'], [572, 156, '501'], [680, 348, '504'], [768, 689, '510']],
+};
+// a landmark: a rounded block with a bar or two where its name would be
+function badge(c, col, x, y, w, h) {
+  c.fillStyle = col; c.beginPath(); c.roundRect(x, y, w, h, 7); c.fill();
+  const rows = h > 36 ? 2 : 1;
+  for (let i = 0; i < rows; i++) fill(c, K.white, x + w * (i ? 0.29 : 0.17), y + h / 2 + (i - (rows - 1) / 2) * 14 - 3.5, w * (i ? 0.42 : 0.66), 7);
+}
+// a streetcar route: a small car and the route's number
+function chip(c, x, y, n) { fill(c, K.gold, x, y, 60, 20); c.fillStyle = K.white; c.beginPath(); c.roundRect(x + 7, y + 4, 9, 12, 2.5); c.fill(); text(c, n, x + 23, y + 15.5, 15, { w: 700, fill: K.white, track: 0.08, family: SANS }); }
+function label(c, words, x, y, deg = 0, w = 700) { c.save(); c.translate(x, y); c.rotate(deg * Math.PI / 180); text(c, words, 0, 5.4, 15, { w, fill: K.white, align: 'center', track: w > 700 ? 0.05 : 0, family: SANS }); c.restore(); }
+// north: a gold disc with a pointer. x, y: its middle. r: its radius.
+function north(c, x, y, r = 31) {
+  c.save(); c.translate(x, y); c.scale(r / 31, r / 31);
+  quad(c, K.lite, [[36, -50], [7, -29], [32, -4]]); disc(c, K.gold, 0, 0, 31); disc(c, K.lite, 0, 0, 25);
+  text(c, 'N', 0, 13, 37, { w: 700, fill: K.white, align: 'center', track: 0, family: SERIF });
   c.restore();
+}
+// off: where this page starts, because the map runs across the fold.
+function cityMap(c, off = 0) {
+  c.save(); c.translate(-off, 0); c.beginPath(); c.rect(0, 0, 1352, 850); c.clip();
+  fill(c, K.coal, 0, 0, 1352, 850);
+  for (const [x, y, w, h] of CITY.blocks) fill(c, '#343533', x, y, w, h);
+  run(c, '#111C27', 24, [CITY.expressway]); run(c, K.black, 19, CITY.streets); run(c, '#8D8D8A', 3, CITY.walks);
+  fill(c, '#12827C', 0, 569, 1352, 11); fill(c, '#E8862E', 0, 580, 649, 12);                                // the railway: the commuter trains, and the airport's train as far as the station
+  run(c, K.gold, 4, CITY.tracks); run(c, '#474A56', 5, [SUBWAY]);
+  for (const [x, y] of CITY.stops) { disc(c, '#474A56', x, y, 9); disc(c, K.white, x, y, 5.5); }
+  for (const [words, x, y, deg] of CITY.names) label(c, words, x, y, deg);
+  for (const [words, x, y] of CITY.stopNames) label(c, words, x, y, 0, 800);
+  for (const b of CITY.badges) badge(c, K.gold, ...b);
+  for (const b of CITY.transit) badge(c, ...b);
+  for (const r of CITY.routes) chip(c, ...r);
+  stroke(c, K.lite, 4); c.beginPath(); c.moveTo(852, 499); c.lineTo(852, 393); c.stroke(); c.beginPath(); c.arc(852, 385, 8, 0, Math.PI * 2); c.stroke();   // the building: a ring on its corner, and a line down to its logo
+  c.fillStyle = K.coal; c.beginPath(); c.roundRect(794, 499, 117, 58, 29); c.fill(); stroke(c, K.lite, 5); c.stroke(); kingLogo(c, 823, 505, 84);
+  north(c, 217, 86, 26);
+  c.restore();
+}
+// The part of that map which Illustrator shows close up: its left edge, its top, its width and its height, in the spread's units.
+// It is framed so that no name and no badge is cut by its edge.
+export const SPOT = [448, 321, 478, 350];
+// The subway's line as points, for the selection that Illustrator draws along it: the line with each curve in `steps` straight
+// pieces, the points at the two ends of each curve, and each curve's two handles (from a point, to the handle's end).
+export function subwayPath(steps = 5) {
+  const line = [SUBWAY[0]], knots = [], arms = [];
+  for (const p of SUBWAY.slice(1)) {
+    if (p.length === 2) { line.push(p); continue; }
+    const a = line[line.length - 1], [cx, cy, bx, by] = p;
+    for (let i = 1; i <= steps; i++) { const t = i / steps, u = 1 - t; line.push([u * u * a[0] + 2 * u * t * cx + t * t * bx, u * u * a[1] + 2 * u * t * cy + t * t * by]); }
+    knots.push(a, [bx, by]); arms.push([a, [a[0] + (cx - a[0]) * 2 / 3, a[1] + (cy - a[1]) * 2 / 3]], [[bx, by], [bx + (cx - bx) * 2 / 3, by + (cy - by) * 2 / 3]]);
+  }
+  return { line, knots, arms };
+}
+// one of the round signs on the Location page: a gold vehicle, seen from the front, on a white disc with a gold rim
+function sign(c, x, y, kind) {
+  disc(c, K.white, x, y, 40); stroke(c, K.gold, 6); c.beginPath(); c.arc(x, y, 40, 0, Math.PI * 2); c.stroke();
+  c.fillStyle = K.gold; c.beginPath(); c.roundRect(x - 17, y - 23, 34, 38, kind === 2 ? 6 : 11); c.fill();
+  fill(c, K.white, x - 11, y - 16, 22, 13); disc(c, K.white, x - 9, y + 7, 3.5); disc(c, K.white, x + 9, y + 7, 3.5);       // its window and its lights
+  if (kind === 2) { fill(c, K.gold, x - 15, y + 15, 9, 7); fill(c, K.gold, x + 6, y + 15, 9, 7); }                             // a coach stands on wheels,
+  else { stroke(c, K.gold, 4); c.beginPath(); c.moveTo(x - 9, y + 15); c.lineTo(x - 15, y + 24); c.moveTo(x + 9, y + 15); c.lineTo(x + 15, y + 24); c.stroke(); }   // and a train on rails
 }
 
 // The map on the Amenities spread, simplified: King Street as one thick line across the fold, the streets that cross it, a square
@@ -252,12 +338,9 @@ function amenities(c, off = 0) {
   const [bx, by, bw, bh] = BADGE;
   c.fillStyle = K.coal; c.beginPath(); c.roundRect(bx, by, bw, bh, bw / 2); c.fill(); stroke(c, K.lite, 6); c.stroke();
   c.save(); c.translate(bx + bw / 2, by + bh / 2); c.rotate(Math.PI / 2); kingLogo(c, -52, -28, 104); c.restore();
-  quad(c, K.lite, [[164, 100], [135, 121], [160, 146]]); disc(c, K.gold, 128, 150, 31); disc(c, K.lite, 128, 150, 25);      // north
-  text(c, 'N', 128, 163, 37, { w: 700, fill: K.white, align: 'center', track: 0, family: SERIF });
+  north(c, 128, 150);
   c.restore();
 }
-// the part of the map that Illustrator shows close up: its left edge, its top, its width and its height, in the spread's units
-export const CLOSE = [776, 346, 840, 276];
 
 // every picture: its size in px, and how to draw it. A picture with no background of its own is see-through there.
 export const ART = {
@@ -266,10 +349,12 @@ export const ART = {
   kPhoto: { w: 526, h: 360, draw(c, w, h) { street(c, 0, 0, w, h, { at: 0.44 }); } },
   eye: { w: 48, h: 48, draw(c) { c.fillStyle = C.grey; c.beginPath(); c.ellipse(24, 24, 19, 11, 0, 0, Math.PI * 2); c.fill(); disc(c, C.night, 24, 24, 6); } },
   histo: { w: 160, h: 64, draw(c, w, h) { c.fillStyle = C.grey; c.beginPath(); c.moveTo(0, h); [[0, 52], [18, 44], [34, 20], [50, 34], [70, 8], [92, 30], [112, 22], [132, 46], [160, 54]].forEach(([x, y]) => c.lineTo(x, y)); c.lineTo(w, h); c.closePath(); c.fill(); } },
-  // ---- the map of King Street from the booklet's Amenities spread, as Illustrator's artboard: all of it, and a part of it close up
+  // ---- the booklet's two maps, as Illustrator's artboards: King Street from the Amenities spread, downtown from the Location spread,
+  // and a part of the second close up
   kMap: { w: 1100, h: 425, draw(c, w, h) { c.scale(w / 2200, h / 850); fill(c, K.coal, 0, 0, 2200, 850); amenities(c); } },
-  kMapClose: { w: 840, h: 276, draw(c, w, h) { c.scale(w / CLOSE[2], h / CLOSE[3]); c.translate(-CLOSE[0], -CLOSE[1]); fill(c, K.coal, 0, 0, 2200, 850); amenities(c); } },
-  // ---- the 1 King Street W booklet: its front cover and the three openings it turns through at full size, and two more small, for the pages panel
+  kLoc: { w: 541, h: 340, draw(c, w, h) { c.scale(w / 1352, h / 850); cityMap(c); } },
+  kLocClose: { w: SPOT[2], h: SPOT[3], draw(c, w, h) { c.scale(w / SPOT[2], h / SPOT[3]); c.translate(-SPOT[0], -SPOT[1]); cityMap(c); } },
+  // ---- the 1 King Street W booklet: its front cover and the four openings it turns through, and its back cover small, for the pages panel
   kCover: { w: 440, h: 340, draw: page(c => {
     street(c, 380, 0, 720, 850, { at: 0.47 }); fadeIn(c, 380, 650, 850);
     firmLogo(c); kingLogo(c, 50, 482, 588, true); tab(c, 779, 670, 330, 130, 45, 'Office Space', 'For Sale');
@@ -295,13 +380,14 @@ export const ART = {
   }) },
   kAmL: { w: 440, h: 340, draw: page(c => { fill(c, K.coal, 0, 0, 1100, 850); amenities(c, 0); firmLogo(c); folio(c, 50, '5'); }) },
   kAmR: { w: 440, h: 340, draw: page(c => { fill(c, K.coal, 0, 0, 1100, 850); amenities(c, 1100); kingLogo(c, 950, 50, 98); upTitle(c, 'Amenities'); folio(c, 1006, '6'); }) },
-  kLocL: { w: 220, h: 170, draw: page(c => { cityMap(c, 0); folio(c, 47, '3'); }) },
-  kLocR: { w: 220, h: 170, draw: page(c => {
+  kLocL: { w: 440, h: 340, draw: page(c => { cityMap(c, 0); folio(c, 50, '3'); }) },
+  kLocR: { w: 440, h: 340, draw: page(c => {
     fill(c, K.coal, 0, 0, 1100, 850); cityMap(c, 1100); fill(c, K.gold, 253, 0, 20, 850); kingLogo(c, 950, 50, 98);
     heading(c, 'Public Transportation', 300, 183);
-    [263, 380, 503].forEach((y, i) => {
-      disc(c, K.white, 363, y, 40); stroke(c, K.gold, 6); c.beginPath(); c.arc(363, y, 40, 0, Math.PI * 2); c.stroke(); c.fillStyle = K.gold; c.beginPath(); c.roundRect(347, y - 20, 32, 36, 7); c.fill();
-      fill(c, K.lite, 423, y - 24, [250, 300, 290][i], 14); fill(c, K.soft, 423, y + 4, [210, 220, 230][i], 9);
+    [[264, ['King Subway Station'], 212], [385, ['Union Station / Via Rail /', 'GO Transit / UP Express'], 222], [506, ['Toronto Coach Terminal'], 232]].forEach(([y, names, len], i) => {
+      const top = y - (names.length > 1 ? 22 : 7);            // the first line's foot: the ways to travel are spelled out, and how long each takes is a bar
+      sign(c, 364, y, i); names.forEach((name, n) => text(c, name, 424, top + n * 30, 24, { w: 700, fill: K.gold, track: 0, family: SANS }));
+      fill(c, K.soft, 424, top + names.length * 30 - 12, len, 8);
     });
     heading(c, 'Direct indoor', 300, 650, 2); text(c, 'access to the PATH', 324, 700, 50, { w: 700, fill: K.white, track: 0.01, family: SERIF });
     upTitle(c, 'Location'); folio(c, 1006, '4');
