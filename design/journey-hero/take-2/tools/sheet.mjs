@@ -1,7 +1,7 @@
 // The second take's stills on one sheet: each scene in the hero's own layout, on a desktop and on a phone with the browser's bars showing.
 // Needs Playwright with its Chromium, like the other review tools. Nothing here is published.
 //
-//   node design/journey-hero/take-2/tools/sheet.mjs <out.png> [scenes, as in 0,1,2]     (0 Photoshop, 1 Illustrator, 2 InDesign, 3 video, 4 motion)
+//   node design/journey-hero/take-2/tools/sheet.mjs <out.png> [scenes, as in 0,1,2]     (0 Photoshop, 1 Illustrator, 2 InDesign, 3 video, 4 motion, 5 UX/UI)
 //
 // The stills page is made from the built page's own markup (public/journey/index.html), so the layout and the words are the real ones.
 // It is written to design/journey-hero/.scratch/take-2/hero.html, which git ignores.
@@ -18,6 +18,7 @@ const CAPTIONS = [
   ['01 Graphic design, in InDesign', 'Last, the 1 King Street W booklet, drawn very simply, with no agent names and with both logos as blobs, plus a LinkedIn post and an e-blast that follow it. This export is what lands: one stack of closed copies, the post in a phone and the e-blast in a tablet. One copy is taken off the top of the stack, opened and leafed through: here a page is landing on the location spread'],
   ['02 Video', 'The editing app with captions, a transition and an effect on the timeline, exported to three screens: wide on a tablet, tall as a reel, and square in a feed'],
   ['03 Motion', 'A SaaS style animation of words and shapes: its layers and keyframes on the timeline, the ball selected on its path, and the ease between its keyframes in the graph. Exported to the same three screens: in a player, as a story, and square in a feed'],
+  ['04 UX/UI', 'Figma, with this page\'s own hero as the work. Wireframes above and the designs below: a desktop, and a phone in two states. A prototype link runs from the second craft in the phone\'s list to the state it leads to, and the panel on the right shows that link and its ease. Exported to the same three screens: the page in a browser on a tablet, and the phone\'s two states'],
 ];
 // the moments of the booklet's story that the sheet shows under the InDesign still (see copy in stage.mjs), and which scene that is
 const TURNS = [-0.7, 0.3, 1, 1.4, 2, 2.76], BOOKLET = 2;
@@ -39,7 +40,7 @@ export const GL = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe
 
 if (process.argv[1] && path.resolve(process.argv[1]) === new URL(import.meta.url).pathname) {
   const { chromium } = require('playwright');
-  const scenes = (process.argv[3] || '0,1,2,3,4').split(',').map(Number);
+  const scenes = (process.argv[3] || '0,1,2,3,4,5').split(',').map(Number);
   const address = writeStillsPage(), { server, url } = await serve(0), browser = await chromium.launch({ args: GL });
   const shots = { desk: [], phone: [] }, turns = [], errors = [];
   for (const [key, width, height, scale] of [['desk', 1440, 900, 1.5], ['phone', 390, 664, 2]]) {
@@ -74,7 +75,7 @@ figure{margin:0 0 56px}figure:last-child{margin:0}.pair{display:flex;gap:24px;al
 img{display:block;outline:1px solid #2E2B29}.pair img:first-child{width:2160px}.pair img:last-child{width:780px}
 .strip{display:flex;gap:18px}.strip img{width:calc((100% - ${18 * (TURNS.length - 1)}px) / ${TURNS.length})}
 figcaption{font-weight:300;font-size:17px;letter-spacing:.12em;text-transform:uppercase;margin-top:14px}figcaption b{color:#F0484F;font-weight:300;margin-right:16px}
-</style><h1>Journey hero: the stills so far</h1><p>Each app is drawn simply on the same floating screen, with its own logo. The app builds a piece of real work and the cursor clicks Export. Photoshop and Illustrator pass their work on to the next app, so the floor stays empty until InDesign exports. What is exported lies flat in front of the screen, in one tidy block. Left: a 1440 wide desktop. Right: a phone with the browser's bars showing.</p>
+</style><h1>Journey hero: stills of the four crafts</h1><p>Each app is drawn simply on the same floating screen, with its own logo. The app builds a piece of real work and the cursor clicks Export. Photoshop and Illustrator pass their work on to the next app, so the floor stays empty until InDesign exports. What is exported lies flat in front of the screen, in one tidy block. Left: a 1440 wide desktop. Right: a phone with the browser's bars showing.</p>
 ${scenes.map(row).join('')}`;
   const page = await browser.newPage({ viewport: { width: 3060, height: 800 } });
   await page.setContent(html); await page.evaluate(() => document.fonts.ready); await page.waitForFunction(() => [...document.images].every(i => i.complete && i.naturalWidth)); await page.waitForTimeout(300);

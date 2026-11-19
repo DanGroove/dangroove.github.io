@@ -18,8 +18,9 @@ Nothing lands on the floor when Photoshop and Illustrator export: their work goe
 lands. Behind: one stack of closed copies of the booklet, the post in a phone, the e-blast in a tablet. In front: one copy is taken
 off the top of the stack, set down, opened, and leafed through (The Offering, Location, Amenities, the gallery).
 
-Video (an editing app) and motion (words and shapes, the way a SaaS promo moves) are in, each exported to three screens. UX/UI is
-still to be drawn to the same rules.
+Video (an editing app) and motion (words and shapes, the way a SaaS promo moves) are each exported to three screens: a tablet on
+its side and two phones. UX/UI is Figma, and the work in it is this page's own hero: its wireframes and its designs on a desktop
+and on a phone in two states, with a prototype link between the two. It is exported to the same three screens.
 
 ## The rules Dan set
 
@@ -45,7 +46,7 @@ still to be drawn to the same rules.
 - `art.mjs` every picture (a page, a logo, an icon), drawn with the 2D canvas into one atlas.
 - `fonts/` Gelasio and Rokkitt, open faces under the SIL Open Font License, which stand in for the flyer's Georgia and Rockwell.
 - `stage.mjs` the scenes, held still: the screen, each app, and what it has exported.
-- `stage.html` one scene on its own. `?s=0..4` picks it, `?yaw=-25&pitch=8` turns the view, `?atlas=1` shows the pictures.
+- `stage.html` one scene on its own. `?s=0..5` picks it, `?yaw=-25&pitch=8` turns the view, `?atlas=1` shows the pictures.
 - `stills.mjs` and `tools/sheet.mjs` the scenes in the hero's own layout, on one sheet for comments. On the stills page `?at=` sets
   where the copy that is being read has got to: -1 is on the stack, 0 is set down and still shut, 1 is open at The Offering,
   2 at Location, 3 at Amenities, 4 at the gallery, and anything between is a leaf part of the way over.
@@ -62,9 +63,9 @@ tones have, so the bend shows.
     node design/journey-hero/tools/serve.mjs
     http://localhost:4173/design/journey-hero/take-2/stage.html?s=2
 
-    node design/journey-hero/take-2/tools/sheet.mjs sheet.png 0,1,2,3,4
+    node design/journey-hero/take-2/tools/sheet.mjs sheet.png 0,1,2,3,4,5
 
 ## What comes next
 
-The UX/UI app. Then the motion itself: how the screen changes between apps, the Export click, the work landing, the copy leaving
-the stack and its pages turning. Then a brief for the production build.
+The motion itself: how the screen changes between apps, the Export click, the work landing, the copy leaving the stack and its
+pages turning. Then a brief for the production build.

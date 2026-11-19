@@ -73,6 +73,71 @@ function saas(c, w, h, o = WIDE) {
   }
 }
 
+// ---- UX/UI: the work is this page's own hero, as its wireframe and as its finished design, on a desktop and on a phone. It is
+// drawn to fill any frame. The measures are the built page's own, at 1440 x 900 and at 390 x 664, and the frame scales them:
+// what hangs from the right edge or the foot of the real page does so here too.
+// craft: which craft is lit in the list (0 graphic design, 1 video), which also sets what the little stage shows.
+const quad = (c, col, pts) => { c.fillStyle = col; c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill(); };
+// a slanted face, by three of its corners (where it starts, the far end of its top edge, the far end of its left edge): returns a way to fill a part of it
+const face = (c, [o, a, b]) => (col, u0, v0, u1, v1) => quad(c, col, [[u0, v0], [u1, v0], [u1, v1], [u0, v1]].map(([u, v]) => [o[0] + u * (a[0] - o[0]) + v * (b[0] - o[0]), o[1] + u * (a[1] - o[1]) + v * (b[1] - o[1])]));
+function littleStage(c, craft, screen, floor) {
+  const S = face(c, screen), F = face(c, floor);
+  S(C.dark, 0, 0, 1, 1); S(C.night, 0, 0, 1, 0.13); S(craft ? '#9999FF' : '#FF3366', 0.02, 0.025, 0.08, 0.105); S(C.red, 0.8, 0.025, 0.97, 0.105);      // the screen, its bar, the app's tile and Export
+  if (craft === 0) {                                             // InDesign: the spread, three pieces under it, and what it exported
+    S(C.night, 0.02, 0.17, 0.09, 0.96); S(C.night, 0.82, 0.17, 0.98, 0.96);
+    S('#282928', 0.13, 0.2, 0.78, 0.6); S('#9B7C29', 0.17, 0.385, 0.74, 0.415); S('#6E9CD6', 0.13, 0.66, 0.36, 0.94); S('#6E9CD6', 0.39, 0.66, 0.57, 0.94); S('#282928', 0.6, 0.66, 0.78, 0.94);
+    F('#0A0F16', 0, 0, 0.5, 0.48); F('#6E9CD6', 0.2, 0.04, 0.48, 0.44); F('#FFFFFF', 0.53, 0, 0.72, 0.48); F('#282928', 0.75, 0, 1, 0.48); F('#282928', 0, 0.52, 1, 1); F('#9B7C29', 0.62, 0.52, 0.64, 1);
+  } else {                                                       // Premiere Pro: the viewer, the timeline, and the three screens
+    S(C.night, 0.02, 0.17, 0.2, 0.56); S(C.night, 0.23, 0.17, 0.72, 0.56); S(C.red, 0.3, 0.21, 0.65, 0.5); S(C.night, 0.75, 0.17, 0.98, 0.56);
+    S(C.night, 0.02, 0.62, 0.98, 0.96); S(C.grey, 0.1, 0.72, 0.36, 0.86); S(C.red, 0.36, 0.72, 0.64, 0.86); S(C.grey, 0.64, 0.72, 0.9, 0.86);
+    F(C.red, 0, 0, 0.56, 0.6); F(C.red, 0.6, 0, 0.78, 0.6); F('#FFFFFF', 0.82, 0, 1, 0.6);
+  }
+}
+function site(c, w, h, { craft = 0, wire = false } = {}) {
+  const tall = h > w, [dw, dh] = tall ? [390, 664] : [1440, 900], m = Math.min(w / dw, h / dh);
+  const X = x => x * m, R = x => w - (dw - x) * m, Y = y => y * m, B = y => h - (dh - y) * m;           // a measure from the left, from the right, from the top, from the foot
+  const ground = wire ? '#FFFFFF' : C.ink, word = wire ? C.slate : C.paper, soft = wire ? C.grey : C.slate, hot = wire ? C.slate : C.red;
+  const bar = (col, x, y, long, thick) => fill(c, col, x, y - thick * m / 2, long * m, thick * m);       // a line of words: its left end, its middle, how long and how thick
+  fill(c, ground, 0, 0, w, h);
+  const box = (x0, y0, x1, y1) => {                              // a wireframe's stand-in for a picture: a box with a cross
+    fill(c, '#ECEAE6', x0, y0, x1 - x0, y1 - y0); stroke(c, C.grey, Math.max(1, 3 * m * (tall ? 0.3 : 1))); c.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.moveTo(x1, y0); c.lineTo(x0, y1); c.stroke();
+  };
+  if (!tall) {
+    if (wire) { fill(c, C.grey, X(64), Y(31), 60 * m, 44 * m); box(R(665), Y(119), R(1343), Y(801)); }
+    else { mark(c, X(64), Y(31), 60 * m, C.paper, C.red); littleStage(c, craft, [[R(909), Y(119)], [R(1343), Y(338)], [R(909), Y(446)]], [[R(896), Y(523)], [R(1182), Y(677)], [R(665), Y(647)]]); }
+    bar(hot, R(1199), Y(53), 68, 10); bar(soft, R(1305), Y(53), 70, 10);
+    if (wire) { fill(c, word, X(64), Y(252), 300 * m, 76 * m); fill(c, word, X(64), Y(350), 420 * m, 76 * m); }
+    else { text(c, 'Danial', X(59), Y(328), 106 * m, { fill: C.paper }); text(c, 'Endrawes', X(59), Y(426), 106 * m, { fill: C.paper }); }
+    bar(soft, X(64), Y(475), 439, 12); bar(soft, X(64), Y(502), 240, 12);
+    for (let i = 0; i < 4; i++) {
+      const y = 573 + i * 34.7;
+      fill(c, wire ? '#E4E3DF' : C.line, X(64), Y(y - 17.5), 380 * m, Math.max(1, 1.4 * m));
+      bar(i === craft ? hot : soft, X(64), Y(y), 17, 10); bar(i === craft ? word : soft, X(99), Y(y), [126, 46, 60, 42][i], 10);
+    }
+    bar(soft, X(64), B(863), 199, 10); bar(soft, R(1329), B(863), 46, 10);
+  } else {
+    const drop = (h / m - dh) / 2, D = y => (y + drop) * m;      // a taller phone gives the stage more room, and it sits in the middle of that room
+    if (wire) { fill(c, C.grey, X(16), Y(16), 43 * m, 32 * m); box(X(66), D(76), X(322.5), D(334)); }
+    else { mark(c, X(16), Y(16), 43 * m, C.paper, C.red); littleStage(c, craft, [[X(159), D(76)], [X(322.5), D(161)], [X(159), D(197.5)]], [[X(153.3), D(228.7)], [X(262), D(287.1)], [X(66), D(275.7)]]); }
+    bar(hot, R(224), Y(32), 64, 8); bar(soft, R(308), Y(32), 65, 8);
+    if (wire) { fill(c, word, X(16), B(359), 170 * m, 42 * m); fill(c, word, X(16), B(410), 240 * m, 42 * m); }
+    else { text(c, 'Danial', X(13.5), B(400), 58.6 * m, { fill: C.paper }); text(c, 'Endrawes', X(13.5), B(451.5), 58.6 * m, { fill: C.paper }); }
+    bar(soft, X(16), B(486), 316, 9); bar(soft, X(16), B(510), 287, 9);
+    for (let i = 0; i < 4; i++) {
+      const x = [16, 203][i % 2], y = B([555, 598.5][i >> 1]);
+      bar(i === craft ? hot : soft, X(x), y, 14, 8); bar(i === craft ? word : soft, X(x + 29), y, [116, 43, 55, 39][i], 8);
+    }
+    bar(soft, X(16), B(641), 183, 7); bar(soft, R(331), B(641), 42, 7);
+  }
+}
+// that page in a phone's browser: the browser's bar with the address in it, the page, and a strip at the foot with the bar to swipe home
+const sitePhone = craft => ({ w: 300, h: 600, draw(c, w, h) {
+  fill(c, C.line, 0, 0, w, h); island(c, w); c.fillStyle = C.ink; c.beginPath(); c.roundRect(24, 46, w - 48, 20, 10); c.fill(); fill(c, C.slate, 96, 54, 108, 4);
+  c.save(); c.translate(0, 74); c.beginPath(); c.rect(0, 0, w, 500); c.clip(); site(c, w, 500, { craft }); c.restore();
+  fill(c, C.paper, 100, 586, 100, 5);
+} });
+
 // ---- Dan's 1 King Street W flyer for Lennard, drawn very simply: a 20 page landscape booklet in black, charcoal and two golds.
 // No agent's name or contact details are drawn anywhere: Dan asked for them to be left out.
 // Its faces are Georgia, Rockwell and Helvetica Neue. Gelasio and Rokkitt, open faces of the same build (./fonts), stand in for the first two.
@@ -81,7 +146,6 @@ const K = { black: '#0A0F16', weave: '#30302D', coal: '#282928', comb: '#4C4B44'
 const SERIF = 'Gelasio, Georgia, serif', SLAB = 'Rokkitt, Rockwell, serif', SANS = "'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif";
 const page = draw => (c, w, h) => { c.scale(w / 1100, h / 850); draw(c); };
 const lerp = (a, b, t) => a + (b - a) * t;
-function quad(c, col, pts) { c.fillStyle = col; c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill(); }
 
 // The covers' pattern: hexagons of upright lines, each with a V of slanted lines above it. R: half the height of a hexagon.
 function weave(c, x, y, w, h, col = K.weave, R = 57) {
@@ -505,6 +569,24 @@ export const ART = {
   kf: { w: 32, h: 32, draw(c) { c.translate(16, 16); c.rotate(Math.PI / 4); fill(c, C.paper, -9, -9, 18, 18); } },         // a keyframe, and one that is selected
   kfOn: { w: 32, h: 32, draw(c) { c.translate(16, 16); c.rotate(Math.PI / 4); fill(c, C.red, -10, -10, 20, 20); } },
   lStar: { w: 40, h: 40, draw(c) { c.fillStyle = C.grey; c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 7 : 16; c.lineTo(20 + r * Math.cos(a), 21 + r * Math.sin(a)); } c.closePath(); c.fill(); } },   // a shape layer
+  // ---- UX/UI: the page's hero as Figma's frames (wireframes and designs), the same page exported to three screens, and Figma's own bits
+  uiWide: { w: 480, h: 300, draw(c, w, h) { site(c, w, h); } },
+  uiTall: { w: 180, h: 390, draw(c, w, h) { site(c, w, h); } },
+  uiTall2: { w: 180, h: 390, draw(c, w, h) { site(c, w, h, { craft: 1 }); } },
+  wireWide: { w: 320, h: 200, draw(c, w, h) { site(c, w, h, { wire: true }); } },
+  wireTall: { w: 120, h: 260, draw(c, w, h) { site(c, w, h, { wire: true }); } },
+  wireTall2: { w: 120, h: 260, draw(c, w, h) { site(c, w, h, { wire: true, craft: 1 }); } },
+  siteWide: { w: 480, h: 270, draw(c, w, h) {              // in a browser, on a tablet: the window's bar, then the page
+    fill(c, C.line, 0, 0, w, 24); for (let i = 0; i < 3; i++) disc(c, C.slate, 14 + i * 12, 12, 3.4);
+    c.fillStyle = C.ink; c.beginPath(); c.roundRect(120, 5, 240, 14, 7); c.fill(); fill(c, C.slate, 136, 10.5, 110, 3);
+    c.save(); c.translate(0, 24); c.beginPath(); c.rect(0, 0, w, h - 24); c.clip(); site(c, w, h - 24); c.restore();
+  } },
+  siteTall: sitePhone(0),
+  siteTall2: sitePhone(1),
+  lFrame: { w: 40, h: 40, draw(c) { [12, 24].forEach(v => { fill(c, C.grey, v, 5, 4, 30); fill(c, C.grey, 5, v, 30, 4); }); } },                     // a frame, in the list of layers
+  pPlay: { w: 40, h: 40, draw(c) { playIcon(c, C.paper, 20, 20, 11); } },                                                                           // where a flow starts
+  tHash: { w: 64, h: 64, draw(c) { [20, 38].forEach(v => { fill(c, C.paper, v, 9, 6, 46); fill(c, C.paper, 9, v, 46, 6); }); } },                     // the frame tool
+  tChat: { w: 64, h: 64, draw(c) { c.fillStyle = C.paper; c.beginPath(); c.roundRect(11, 12, 42, 32, 9); c.fill(); c.beginPath(); c.moveTo(18, 42); c.lineTo(18, 55); c.lineTo(31, 42); c.closePath(); c.fill(); } },   // a comment
   // ---- the apps' own logos, because Dan wants people to know which app this is: two letters on a dark tile, in each app's colours
   appAi: { w: 128, h: 128, draw(c, w, h) { fill(c, '#330000', 0, 0, w, h); text(c, 'Ai', 64, 88, 68, { w: 600, fill: '#FF9A00', align: 'center', track: 0 }); } },
   appId: { w: 128, h: 128, draw(c, w, h) { fill(c, '#49021F', 0, 0, w, h); text(c, 'Id', 64, 88, 68, { w: 600, fill: '#FF3366', align: 'center', track: 0 }); } },

@@ -318,5 +318,57 @@ export function motion() {
   return P;
 }
 
-export const SCENES = [photoshop, illustrator, indesign, video, motion];
-export const CRAFT = [0, 0, 0, 1, 2];                      // which of the four crafts each scene belongs to
+// ---- 04 UX/UI: Figma, with this page's own hero in it: its wireframes above and its designs below, on a desktop and on a phone in
+// two states. A prototype link runs from the second craft in the phone's list to the state it leads to. Exported to the same screens.
+// each layer in the list: its icon, how far it is set in, and how long its name is
+const TREE = [['lFrame', 0, 0.34], ['lFrame', 0, 0.34], ['tT', 1, 0.2], ['tV', 1, 0.26], ['tV', 2, 0.18], ['tV', 2, 0.14], ['tV', 1, 0.2], ['lFrame', 0, 0.3], ['lFrame', 0, 0.36], ['lFrame', 0, 0.36]];
+export function figma() {
+  const P = shell('fig');
+  const LW = 0.72, cl = 0.08 + LW + 0.08, cr = PANEL - 0.08;     // how wide the list of layers is, and the canvas's left and right edges
+  // down the left: two pages, then the layers, with the one that carries the link lit
+  P.push(on('night', 0.08, 0.1, LW, TOP - 0.1));
+  [0.36, 0.26].forEach((w, i) => P.push(on(i ? 'dark' : 'grey', 0.17, TOP - 0.19 - i * 0.12, w, 0.05, { lift: 0.05, t: 0.01 })));
+  P.push(on('dark', 0.14, TOP - 0.4, LW - 0.12, 0.012, { lift: 0.05, t: 0.006 }));
+  TREE.forEach(([kind, set, len], i) => {
+    const y = TOP - 0.58 - i * 0.145, x = 0.16 + set * 0.1, lit = i === 5;
+    if (lit) P.push(on('dark', 0.11, y - 0.025, LW - 0.06, 0.13, { lift: 0.035, t: 0.006 }));
+    P.push(icon(kind, x, y - 0.005, 0.09, 0.09, lit ? 'dark' : 'night', lit ? 0.042 : 0.051), on(lit ? 'paper' : 'grey', x + 0.13, y + 0.02, len, 0.04, { lift: 0.05, t: 0.01 }));
+  });
+  // down the right: the Prototype tab, lit. Where the flow starts, the link itself (this layer, then the frame it goes to), and its ease.
+  P.push(on('night', PANEL, 0.1, 0.85, TOP - 0.1));
+  P.push(on('dark', PANEL + 0.09, TOP - 0.2, 0.26, 0.05, { lift: 0.05, t: 0.01 }), on('paper', PANEL + 0.43, TOP - 0.2, 0.33, 0.05, { lift: 0.05, t: 0.01 }), on('red', PANEL + 0.43, TOP - 0.265, 0.33, 0.02, { lift: 0.05, t: 0.01 }));
+  P.push(on('red', PANEL + 0.09, TOP - 0.54, 0.15, 0.15, { lift: 0.05, t: 0.015 }), icon('pPlay', PANEL + 0.12, TOP - 0.51, 0.09, 0.09, 'red', 0.066), on('grey', PANEL + 0.31, TOP - 0.49, 0.4, 0.045, { lift: 0.05, t: 0.01 }));
+  const ly = TOP - 0.9;
+  P.push(on('dark', PANEL + 0.06, ly, 0.73, 0.22, { lift: 0.04, t: 0.008 }), on('grey', PANEL + 0.11, ly + 0.09, 0.2, 0.045, { lift: 0.06, t: 0.01 }), on('paper', PANEL + 0.48, ly + 0.09, 0.26, 0.045, { lift: 0.06, t: 0.01 }));
+  P.push(bar([PANEL + 0.35, ly + 0.112], [PANEL + 0.44, ly + 0.112], { line: 0.014, lift: 0.06 }), bar([PANEL + 0.44, ly + 0.112], [PANEL + 0.405, ly + 0.147], { line: 0.014, lift: 0.06 }), bar([PANEL + 0.44, ly + 0.112], [PANEL + 0.405, ly + 0.077], { line: 0.014, lift: 0.06 }));
+  P.push(icon('graph', PANEL + 0.09, 0.56, 0.67, 0.56));
+  [0.5, 0.32].forEach((w, i) => P.push(on(i ? 'dark' : 'grey', PANEL + 0.09, 0.42 - i * 0.1, w, 0.045, { lift: 0.05, t: 0.01 })));
+  // the canvas: a desktop and two phones in each row, each frame with its name over it
+  const h = 0.86, g = 0.18, dw = h * 1.6, pw = h * 180 / 390, x = cl + (cr - cl - dw - 2 * pw - 2 * g) / 2, yUI = 0.46, yWire = yUI + h + 0.26;
+  const cols = [[x, dw], [x + dw + g, pw], [x + dw + g + pw + g, pw]];
+  [['wireWide', 'wireTall', 'wireTall2'], ['uiWide', 'uiTall', 'uiTall2']].forEach((row, r) => row.forEach((art, i) => {
+    const [fx, fw] = cols[i], fy = r ? yUI : yWire;
+    P.push(on(r ? 'ink' : 'paper', fx, fy, fw, h, { lift: 0.06, t: 0.02, art }), on('grey', fx, fy + h + 0.035, i ? 0.17 : 0.26, 0.03, { lift: 0.05, t: 0.008 }));
+  }));
+  // the link: the second craft in the first phone's list is the hot spot, and a line runs from it to the frame it leads to
+  const [p1] = cols[1], [p2] = cols[2], hy = yUI + h * 0.129, spot = [p1 + pw * 0.49, hy - 0.035, pw * 0.27, 0.07];
+  const from = [spot[0] + spot[2], hy], to = [p2, yUI + h * 0.5], reach = 0.16, STEPS = 8;
+  P.push(...outline(...spot, { line: 0.012 }), dot('red', from[0], from[1], 0.03, { lift: 0.085, t: 0.012 }), dot('paper', from[0], from[1], 0.012, { lift: 0.097, t: 0.006 }));
+  const along = t => { const u = 1 - t, a = 3 * u * u * t, b = 3 * u * t * t; return [u * u * u * from[0] + a * (from[0] + reach) + b * (to[0] - reach) + t * t * t * to[0], (u * u * u + a) * from[1] + (b + t * t * t) * to[1]]; };
+  for (let i = 0; i < STEPS; i++) P.push(bar(along(i / STEPS), along((i + 1) / STEPS)));
+  P.push(bar(to, [to[0] - 0.07, to[1] + 0.05]), bar(to, [to[0] - 0.07, to[1] - 0.05]));
+  // the tools float over the foot of the canvas
+  const tw = 1.0, tx = (cl + cr - tw) / 2;
+  P.push(on('night', tx, 0.14, tw, 0.22, { lift: 0.05, t: 0.04, more: { e: [0.1, 0.5] } }));
+  ['tArrow', 'tHash', 'tRect', 'tPen', 'tType', 'tChat'].forEach((art, i) => {
+    const ix = tx + 0.065 + i * 0.15;
+    if (i === 0) P.push(on('red', ix - 0.02, 0.165, 0.17, 0.17, { lift: 0.09, t: 0.012 }));
+    P.push(icon(art, ix, 0.185, 0.13, 0.13, i === 0 ? 'red' : 'night', i === 0 ? 0.103 : 0.091));
+  });
+
+  screens(P, 'siteWide', 'siteTall', 'siteTall2');        // exported: the page in a browser on a tablet, and the phone's two states
+  return P;
+}
+
+export const SCENES = [photoshop, illustrator, indesign, video, motion, figma];
+export const CRAFT = [0, 0, 0, 1, 2, 3];                   // which of the four crafts each scene belongs to
