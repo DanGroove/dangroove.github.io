@@ -11,7 +11,7 @@ export function outputPath(name) {
   if (!file.startsWith(TAKE + path.sep)) {
     throw new Error('output must be inside design/journey-hero/take-2/');
   }
-  if (path.relative(TAKE, file).toLowerCase() === 'motion.md') throw new Error('the motion brief is read only');
+  if (['motion.md', 'motion-2.md'].includes(path.relative(TAKE, file).toLowerCase())) throw new Error('the motion briefs are read only');
   fs.mkdirSync(path.dirname(file), { recursive: true });
   return file;
 }

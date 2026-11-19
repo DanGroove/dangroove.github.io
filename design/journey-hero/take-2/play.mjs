@@ -3,7 +3,7 @@ import { makeCamera, dot } from '../../../public/journey/hero/engine.mjs';
 import { createRenderer } from './sq.mjs';
 import { corners } from './kit.mjs';
 import { makeAtlas, fontsReady } from './art.mjs';
-import { SHOW, LOOP, SCENES, BLOCK, sceneAt, frameAt } from './stage.mjs';
+import { SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt } from './stage.mjs';
 
 const query = new URLSearchParams(location.search);
 const num = (key, fallback) => query.has(key) && Number.isFinite(+query.get(key)) ? +query.get(key) : fallback;
@@ -31,7 +31,7 @@ function draw() {
   if (!b.width || !b.height || !h.width || !h.height) return;
   const S = Math.min(b.width / need.w, b.height / need.h);
   const cx = b.left - h.left + b.width / 2 - S * need.x, cy = b.top - h.top + b.height / 2 + S * need.y;
-  renderer.draw(frameAt(t), { W: h.width, H: h.height, dpr: Math.min(2, devicePixelRatio || 1), S, cx, cy, cam }, { outline: 0, floor: { radius: num('pool', 4.8) } });
+  renderer.draw(frameAt(t), { W: h.width, H: h.height, dpr: Math.min(2, devicePixelRatio || 1), S, cx, cy, cam }, { outline: 0, floor: { ...POOL, radius: num('pool', 4.8) } });
   hero.classList.remove('is-entering');
   const { scene } = sceneAt(t);
   crafts.forEach((c, i) => i === scene.craft ? c.setAttribute('aria-current', 'true') : c.removeAttribute('aria-current'));
@@ -62,8 +62,8 @@ function seek(time) {
 window.__hero = { seek, get t() { return t; }, LOOP, SHOW };
 
 function choose(craft) {
-  const i = reduced.matches ? stills[craft] : SHOW.findIndex(s => s.craft === craft);
-  t = starts[i] + (reduced.matches ? SHOW[i].still : 0);
+  const i = reduced.matches || stopped ? stills[craft] : SHOW.findIndex(s => s.craft === craft);
+  t = starts[i] + (reduced.matches || stopped ? SHOW[i].still : 0);
   previous = null; draw();
 }
 crafts.forEach((button, i) => button.addEventListener('click', () => choose(i)));

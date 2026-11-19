@@ -2,6 +2,18 @@
 // the 2D canvas into one atlas, which the renderer then maps onto pieces. Browser only (it needs Path2D and the page's fonts).
 
 export const C = { ink: '#151314', paper: '#F7F6F3', red: '#C0262E', grey: '#B9B4AE', line: '#2E2B29', slate: '#706966', night: '#3B3735', dark: '#5A5552' };
+// Atlas creation records glyph edges with the actual loaded font. Node checks use the deterministic fallback.
+export const TYPE_EDGES = {};
+export const TYPE_BOXES = {};
+export const ART_TEXT = {};
+let captureText = null, hideText = false, hideLogos = false, hideTabs = false;
+function recordType(c, key, words, x, px, align = 'left', baseline = px) {
+  c.font = `800 ${px}px Outfit, sans-serif`; if ('letterSpacing' in c) c.letterSpacing = `${-0.02 * px}px`;
+  const left = x - (align === 'center' ? c.measureText(words).width / 2 : 0);
+  TYPE_EDGES[key] = [left, ...Array.from(words, (_, i) => left + c.measureText(words.slice(0, i + 1)).width)];
+  const m = c.measureText(words), ascent = m.actualBoundingBoxAscent ?? px * 0.8, descent = m.actualBoundingBoxDescent ?? px * 0.2;
+  TYPE_BOXES[key] = { top: baseline - ascent, height: ascent + descent };
+}
 
 // the DG mark, as it is drawn in the page header: two parts of the G, then the D. 1080 x 797.3.
 const MARK_D = [
@@ -20,7 +32,15 @@ function mark(ctx, x, y, width, g = C.ink, d = C.red) {
 function text(ctx, s, x, y, px, { w = 800, fill = C.ink, align = 'left', track = -0.02, family = 'Outfit, sans-serif' } = {}) {
   ctx.font = `${w} ${px}px ${family}`; ctx.fillStyle = fill; ctx.textAlign = align; ctx.textBaseline = 'alphabetic';
   if ('letterSpacing' in ctx) ctx.letterSpacing = `${track * px}px`;
-  ctx.fillText(s, x, y);
+  if (captureText) {
+    const t = ctx.getTransform(), base = captureText.base, m = ctx.measureText(s), width = m.width, left = align === 'center' ? x - width / 2 : x;
+    const local = (X, Y) => [(t.a * X + t.c * Y + t.e - base.e) / base.a, (t.b * X + t.d * Y + t.f - base.f) / base.d];
+    const ascent = m.actualBoundingBoxAscent ?? px, descent = m.actualBoundingBoxDescent ?? px * 0.2;
+    const points = [[left - 1, y - ascent - 1], [left + width + 1, y - ascent - 1], [left - 1, y + descent + 1], [left + width + 1, y + descent + 1]].map(([X, Y]) => local(X, Y));
+    const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
+    captureText.parts.push({ words: s, colour: fill, region: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], origin: local(left, y), axis: [t.a / base.a, t.b / base.d], down: [t.c / base.a * px, t.d / base.d * px], edges: [0, ...Array.from(s, (_, i) => ctx.measureText(s.slice(0, i + 1)).width)] });
+  }
+  if (!hideText) ctx.fillText(s, x, y);
 }
 const fill = (ctx, c, x, y, w, h) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
 const disc = (ctx, c, x, y, r) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); };
@@ -89,15 +109,15 @@ function littleStage(c, craft, screen, floor) {
     S('#282928', 0.13, 0.2, 0.78, 0.6); S('#9B7C29', 0.17, 0.385, 0.74, 0.415); S('#6E9CD6', 0.13, 0.66, 0.36, 0.94); S('#6E9CD6', 0.39, 0.66, 0.57, 0.94); S('#282928', 0.6, 0.66, 0.78, 0.94);
     F('#0A0F16', 0, 0, 0.5, 0.48); F('#6E9CD6', 0.2, 0.04, 0.48, 0.44); F('#FFFFFF', 0.53, 0, 0.72, 0.48); F('#282928', 0.75, 0, 1, 0.48); F('#282928', 0, 0.52, 1, 1); F('#9B7C29', 0.62, 0.52, 0.64, 1);
   } else {                                                       // Premiere Pro: the viewer, the timeline, and the three screens
-    S(C.night, 0.02, 0.17, 0.2, 0.56); S(C.night, 0.23, 0.17, 0.72, 0.56); S(C.red, 0.3, 0.21, 0.65, 0.5); S(C.night, 0.75, 0.17, 0.98, 0.56);
+    S(C.night, 0.02, 0.17, 0.2, 0.56); S(C.night, 0.23, 0.17, 0.72, 0.56); S([C.red, C.red, C.paper, C.grey][craft], 0.3, 0.21, 0.65, 0.5); S(C.night, 0.75, 0.17, 0.98, 0.56);
     S(C.night, 0.02, 0.62, 0.98, 0.96); S(C.grey, 0.1, 0.72, 0.36, 0.86); S(C.red, 0.36, 0.72, 0.64, 0.86); S(C.grey, 0.64, 0.72, 0.9, 0.86);
     F(C.red, 0, 0, 0.56, 0.6); F(C.red, 0.6, 0, 0.78, 0.6); F('#FFFFFF', 0.82, 0, 1, 0.6);
   }
 }
-function site(c, w, h, { craft = 0, wire = false } = {}) {
+function site(c, w, h, { craft = 0, wire = false, build = 4 } = {}) {
   const tall = h > w, [dw, dh] = tall ? [390, 664] : [1440, 900], m = Math.min(w / dw, h / dh);
   const X = x => x * m, R = x => w - (dw - x) * m, Y = y => y * m, B = y => h - (dh - y) * m;           // a measure from the left, from the right, from the top, from the foot
-  const ground = wire ? '#FFFFFF' : C.ink, word = wire ? C.slate : C.paper, soft = wire ? C.grey : C.slate, hot = wire ? C.slate : C.red;
+  const ground = wire ? '#FFFFFF' : C.ink, word = wire ? C.slate : C.paper, soft = wire ? C.grey : C.slate, hot = wire || build < 4 ? C.slate : C.red;
   const bar = (col, x, y, long, thick) => fill(c, col, x, y - thick * m / 2, long * m, thick * m);       // a line of words: its left end, its middle, how long and how thick
   fill(c, ground, 0, 0, w, h);
   const box = (x0, y0, x1, y1) => {                              // a wireframe's stand-in for a picture: a box with a cross
@@ -106,10 +126,11 @@ function site(c, w, h, { craft = 0, wire = false } = {}) {
   };
   if (!tall) {
     if (wire) { fill(c, C.grey, X(64), Y(31), 60 * m, 44 * m); box(R(665), Y(119), R(1343), Y(801)); }
-    else { mark(c, X(64), Y(31), 60 * m, C.paper, C.red); littleStage(c, craft, [[R(909), Y(119)], [R(1343), Y(338)], [R(909), Y(446)]], [[R(896), Y(523)], [R(1182), Y(677)], [R(665), Y(647)]]); }
+    else { mark(c, X(64), Y(31), 60 * m, C.paper, build < 4 ? C.slate : C.red); if (build >= 2) littleStage(c, craft, [[R(909), Y(119)], [R(1343), Y(338)], [R(909), Y(446)]], [[R(896), Y(523)], [R(1182), Y(677)], [R(665), Y(647)]]); else box(R(665), Y(119), R(1343), Y(801)); }
     bar(hot, R(1199), Y(53), 68, 10); bar(soft, R(1305), Y(53), 70, 10);
     if (wire) { fill(c, word, X(64), Y(252), 300 * m, 76 * m); fill(c, word, X(64), Y(350), 420 * m, 76 * m); }
-    else { text(c, 'Danial', X(59), Y(328), 106 * m, { fill: C.paper }); text(c, 'Endrawes', X(59), Y(426), 106 * m, { fill: C.paper }); }
+    else if (build >= 3) { text(c, 'Danial', X(59), Y(328), 106 * m, { fill: C.paper }); text(c, 'Endrawes', X(59), Y(426), 106 * m, { fill: C.paper }); }
+    else if (build < 2) { fill(c, C.grey, X(64), Y(252), 300 * m, 76 * m); fill(c, C.grey, X(64), Y(350), 420 * m, 76 * m); }
     bar(soft, X(64), Y(475), 439, 12); bar(soft, X(64), Y(502), 240, 12);
     for (let i = 0; i < 4; i++) {
       const y = 573 + i * 34.7;
@@ -120,10 +141,11 @@ function site(c, w, h, { craft = 0, wire = false } = {}) {
   } else {
     const drop = (h / m - dh) / 2, D = y => (y + drop) * m;      // a taller phone gives the stage more room, and it sits in the middle of that room
     if (wire) { fill(c, C.grey, X(16), Y(16), 43 * m, 32 * m); box(X(66), D(76), X(322.5), D(334)); }
-    else { mark(c, X(16), Y(16), 43 * m, C.paper, C.red); littleStage(c, craft, [[X(159), D(76)], [X(322.5), D(161)], [X(159), D(197.5)]], [[X(153.3), D(228.7)], [X(262), D(287.1)], [X(66), D(275.7)]]); }
+    else { mark(c, X(16), Y(16), 43 * m, C.paper, build < 4 ? C.slate : C.red); if (build >= 2) littleStage(c, craft, [[X(159), D(76)], [X(322.5), D(161)], [X(159), D(197.5)]], [[X(153.3), D(228.7)], [X(262), D(287.1)], [X(66), D(275.7)]]); else box(X(66), D(76), X(322.5), D(334)); }
     bar(hot, R(224), Y(32), 64, 8); bar(soft, R(308), Y(32), 65, 8);
     if (wire) { fill(c, word, X(16), B(359), 170 * m, 42 * m); fill(c, word, X(16), B(410), 240 * m, 42 * m); }
-    else { text(c, 'Danial', X(13.5), B(400), 58.6 * m, { fill: C.paper }); text(c, 'Endrawes', X(13.5), B(451.5), 58.6 * m, { fill: C.paper }); }
+    else if (build >= 3) { text(c, 'Danial', X(13.5), B(400), 58.6 * m, { fill: C.paper }); text(c, 'Endrawes', X(13.5), B(451.5), 58.6 * m, { fill: C.paper }); }
+    else if (build < 2) { fill(c, C.grey, X(16), B(359), 170 * m, 42 * m); fill(c, C.grey, X(16), B(410), 240 * m, 42 * m); }
     bar(soft, X(16), B(486), 316, 9); bar(soft, X(16), B(510), 287, 9);
     for (let i = 0; i < 4; i++) {
       const x = [16, 203][i % 2], y = B([555, 598.5][i >> 1]);
@@ -173,10 +195,11 @@ function blob(c, col, x, y, w, h, lumps) {
 }
 const FIRM = [1, 1.14, 0.9, 1.1, 0.97, 1.18, 0.86, 1.05], BUILDING = [1, 1.12, 0.88, 1.16, 0.94, 1.02, 0.84, 1.2];   // each logo has its own shape
 // the firm's logo: a small blob, by its top left corner and its width
-const firmLogo = (c, col = K.lite, x = 50, y = 40, w = 138) => blob(c, col, x, y, w, w * 0.28, FIRM);
+const firmLogo = (c, col = K.lite, x = 50, y = 40, w = 138) => { if (!hideLogos) blob(c, col, x, y, w, w * 0.28, FIRM); };
 // The building's logo: a bigger blob. x, y, w: the top left corner and the width of the room the real logo takes, which is 0.54 w tall.
 // The real one is a few letters with air between them, so a solid shape of the same weight is smaller: it starts at the same left edge.
 function kingLogo(c, x, y, w, shadow = false) {
+  if (hideLogos) return;
   c.save();
   if (shadow) { const t = c.getTransform(), k = Math.hypot(t.a, t.b) * w; c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = 0.014 * k; c.shadowOffsetX = c.shadowOffsetY = 0.008 * k; }
   blob(c, K.gold, x, y + 0.08 * w, 0.7 * w, 0.38 * w, BUILDING);
@@ -184,6 +207,7 @@ function kingLogo(c, x, y, w, shadow = false) {
 }
 // the flyer's tab: a gold block with one big rounded corner, a white keyline, and two lines of words
 function tab(c, x, y, w, h, r, small, big) {
+  if (hideTabs) return;
   c.fillStyle = K.gold; c.beginPath(); c.roundRect(x, y, w, h, [r, 0, 0, 0]); c.fill(); stroke(c, K.white, h * 0.024); c.stroke();
   text(c, small, x + h * 0.27, y + h * 0.44, h * 0.27, { w: 300, fill: K.white, track: 0, family: SANS }); text(c, big, x + h * 0.27, y + h * 0.8, h * 0.27, { w: 700, fill: K.white, track: 0, family: SANS });
 }
@@ -204,8 +228,8 @@ const LOOK = {
   graded: { sky: ['#6E9CD6', '#D9E6F1'], lit: '#EFE4CC', shade: '#C2B394', win: '#473D31', far: '#D9CDB5', glass: '#86A9C8', glass2: '#C6DAEA', dark: '#2B363F', dark2: '#566673', slab: '#8F8C84', road: '#47484C', kerb: '#6A6B6F', mark: '#ECECE8', car: '#F4F4F0', tram: '#C2332B', lamp: '#EDB816' },
   raw: { sky: ['#B5B9BB', '#D2D3D1'], lit: '#D1CDC2', shade: '#AFAA9F', win: '#65625C', far: '#C2BDB2', glass: '#9FA8AD', glass2: '#BDC4C7', dark: '#555A5E', dark2: '#72787B', slab: '#96948F', road: '#6F6F6E', kerb: '#838382', mark: '#C4C4C0', car: '#D6D6D2', tram: '#9A6B66', lamp: '#B49F52' },
 };
-function street(c, x, y, w, h, { at = 0.45, raw = false, zoom = 1, drop = 0 } = {}) {
-  const T = raw ? LOOK.raw : LOOK.graded;
+function street(c, x, y, w, h, { at = 0.45, raw = false, zoom = 1, drop = 0, look } = {}) {
+  const T = look || (raw ? LOOK.raw : LOOK.graded);
   c.save(); c.beginPath(); c.rect(x, y, w, h); c.clip();
   const sky = c.createLinearGradient(0, y, 0, y + h * 0.72); sky.addColorStop(0, T.sky[0]); sky.addColorStop(1, T.sky[1]); c.fillStyle = sky; c.fillRect(x, y, w, h);
   c.translate(x + w * at, y + h * drop); c.scale(h * zoom, h * zoom);      // from here 1 is the box's height, and x counts from the building's corner
@@ -325,13 +349,16 @@ function north(c, x, y, r = 31) {
   c.restore();
 }
 // off: where this page starts, because the map runs across the fold.
-function cityMap(c, off = 0) {
+function cityMap(c, off = 0, { blocks = true, streets = true, pins = true } = {}) {
   c.save(); c.translate(-off, 0); c.beginPath(); c.rect(0, 0, 1352, 850); c.clip();
   fill(c, K.coal, 0, 0, 1352, 850);
-  for (const [x, y, w, h] of CITY.blocks) fill(c, '#343533', x, y, w, h);
+  if (blocks) for (const [x, y, w, h] of CITY.blocks) fill(c, '#343533', x, y, w, h);
+  if (streets) {
   run(c, '#111C27', 24, [CITY.expressway]); run(c, K.black, 19, CITY.streets); run(c, '#8D8D8A', 3, CITY.walks);
   fill(c, '#12827C', 0, 569, 1352, 11); fill(c, '#E8862E', 0, 580, 649, 12);                                // the railway: the commuter trains, and the airport's train as far as the station
   run(c, K.gold, 4, CITY.tracks); run(c, '#474A56', 5, [SUBWAY]);
+  }
+  if (pins) {
   for (const [x, y] of CITY.stops) { disc(c, '#474A56', x, y, 9); disc(c, K.white, x, y, 5.5); }
   for (const [words, x, y, deg] of CITY.names) label(c, words, x, y, deg);
   for (const [words, x, y] of CITY.stopNames) label(c, words, x, y, 0, 800);
@@ -341,6 +368,7 @@ function cityMap(c, off = 0) {
   stroke(c, K.lite, 4); c.beginPath(); c.moveTo(852, 499); c.lineTo(852, 393); c.stroke(); c.beginPath(); c.arc(852, 385, 8, 0, Math.PI * 2); c.stroke();   // the building: a ring on its corner, and a line down to its logo
   c.fillStyle = K.coal; c.beginPath(); c.roundRect(794, 499, 117, 58, 29); c.fill(); stroke(c, K.lite, 5); c.stroke(); kingLogo(c, 823, 505, 84);
   north(c, 217, 86, 26);
+  }
   c.restore();
 }
 // The part of that map which Illustrator shows close up: its left edge, its top, its width and its height, in the spread's units.
@@ -390,25 +418,81 @@ function crossing(c, name, xAt, tilt = Math.PI / 2) {
   c.stroke();
   for (const y of [225, 630]) { c.save(); c.translate(xAt(y), y); c.rotate(tilt); text(c, name, 0, 10, 28, { w: 400, fill: K.lite, align: 'center', track: 0, family: SANS }); c.restore(); }
 }
-function amenities(c, off = 0) {
+function amenities(c, off = 0, { markers = true, labels = true, badge = true } = {}) {
   c.save(); c.translate(-off, 0);
   for (const [name, x] of STREETS) crossing(c, name, () => x);
   crossing(c, 'University Avenue', y => 52 + (y - 98) * 99 / 654, Math.atan2(654, 99));                       // which crosses at a slant
   stroke(c, K.gold, 20); c.lineCap = 'round'; c.beginPath(); for (const [a, b] of KING.runs) { c.moveTo(a + 10, KING.y); c.lineTo(b - 10, KING.y); } c.stroke();
   for (const [name, x] of KING.names) text(c, name, x, KING.y + 15, 44, { w: 700, fill: K.gold, align: 'center', track: 0, family: SANS });
   for (const [x0, step, above, below] of SHOPS) {
-    above.forEach((len, i) => { fill(c, K.white, x0 + i * step, 358, 30, 30); fill(c, NAME, x0 + i * step + 9.5, 344 - len, 11, len); });
-    below.forEach((len, i) => { fill(c, K.white, x0 + i * step, 464, 30, 30); fill(c, NAME, x0 + i * step + 9.5, 508, 11, len); });
+    above.forEach((len, i) => { if (markers) fill(c, K.white, x0 + i * step, 358, 30, 30); if (labels) fill(c, NAME, x0 + i * step + 9.5, 344 - len, 11, len); });
+    below.forEach((len, i) => { if (markers) fill(c, K.white, x0 + i * step, 464, 30, 30); if (labels) fill(c, NAME, x0 + i * step + 9.5, 508, 11, len); });
   }
+  if (badge) {
   const [bx, by, bw, bh] = BADGE;
   c.fillStyle = K.coal; c.beginPath(); c.roundRect(bx, by, bw, bh, bw / 2); c.fill(); stroke(c, K.lite, 6); c.stroke();
   c.save(); c.translate(bx + bw / 2, by + bh / 2); c.rotate(Math.PI / 2); kingLogo(c, -52, -28, 104); c.restore();
-  north(c, 128, 150);
+  }
+  if (markers) north(c, 128, 150);
   c.restore();
 }
 
 // every picture: its size in px, and how to draw it. A picture with no background of its own is see-through there.
 export const ART = {
+  ...Object.fromEntries([['coverPhoto', 'kCover', true], ['coverDecor', 'kCover', false], ['postPhoto', 'kPost', true], ['mailPhoto', 'eblast', true]].map(([key, source, bare]) => [key, { w: source === 'kCover' ? 440 : source === 'kPost' ? 400 : 320, h: source === 'kCover' ? 340 : source === 'kPost' ? 400 : 472, draw(c, w, h) {
+    hideText = true; hideLogos = bare; hideTabs = bare;
+    try { ART[source].draw(c, w, h); } finally { hideText = hideLogos = hideTabs = false; }
+  } }])),
+  mapStreet: { w: 1100, h: 425, draw(c, w, h) { c.scale(w / 2200, h / 850); fill(c, K.coal, 0, 0, 2200, 850); hideText = true; try { amenities(c, 0, { markers: false, labels: false, badge: false }); } finally { hideText = false; } } },
+  locBlocks: { w: 541, h: 340, draw(c, w, h) { c.scale(w / 1352, h / 850); hideText = true; try { cityMap(c, 0, { streets: false, pins: false }); } finally { hideText = false; } } },
+  locStreets: { w: 541, h: 340, draw(c, w, h) { c.scale(w / 1352, h / 850); hideText = true; try { cityMap(c, 0, { pins: false }); } finally { hideText = false; } } },
+  locPins: { w: 541, h: 340, draw(c, w, h) { c.scale(w / 1352, h / 850); hideText = true; try { cityMap(c); } finally { hideText = false; } } },
+  idHeading: { w: 100, h: 500, draw(c) {
+    c.font = `700 80px ${SERIF}`; if ('letterSpacing' in c) c.letterSpacing = '0px';
+    TYPE_EDGES.idHeading = [8, ...Array.from('Amenities', (_, i) => 8 + c.measureText('Amenities'.slice(0, i + 1)).width)];
+    c.translate(-970, -180); ART.kAmR.draw(c, 1100, 850);
+  } },
+  ...Object.fromEntries([1, 2, 3].flatMap(build => ['Wide', 'Tall', 'Tall2'].map((shape, i) => ['uiBuild' + build + shape, { w: i ? 180 : 480, h: i ? 390 : 300, draw(c, w, h) { site(c, w, h, { build, craft: i === 2 ? 1 : 0 }); } }]))),
+  heroSource: { w: 226, h: 228, draw(c) { c.translate(-665 / 3, -119 / 3); site(c, 480, 300); } },
+  ...Object.fromEntries(['Danial', 'Endrawes'].map((words, i) => ['siteName' + i, { w: 160, h: 38, draw(c) { fill(c, C.ink, 0, 0, 160, 38); recordType(c, 'siteName' + i, words, 59 / 3 - 18, 106 / 3); text(c, words, 59 / 3 - 18, (i ? 426 : 328) / 3 - (i ? 107 : 74), 106 / 3, { fill: C.paper }); } }])),
+  ...Object.fromEntries(['Raw', 'Half', 'Levels', 'Sky'].map((step, i) => ['photo' + step, { w: 526, h: 360, draw(c, w, h) {
+    const darken = (hex, amount) => '#' + hex.slice(1).match(/../g).map(v => Math.round(parseInt(v, 16) * amount).toString(16).padStart(2, '0')).join('');
+    const look = Object.fromEntries(Object.entries(LOOK.raw).map(([key, value]) => [key, Array.isArray(value) ? value : darken(value, [0.8, 0.9, 1, 1][i])]));
+    look.sky = i < 3 ? ['#C1C2BF', '#C1C2BF'] : LOOK.raw.sky;
+    street(c, 0, 0, w, h, { at: 0.44, look });
+    // Two deliberate distractions, removed by separate healing clicks.
+    quad(c, '#D37632', [[68, 286], [83, 245], [98, 286]]); fill(c, '#E1D6BA', 73, 264, 20, 7); fill(c, '#494846', 62, 286, 42, 7);
+    fill(c, '#A58751', 28, 260, 45, 8); fill(c, '#494846', 31, 268, 4, 23); fill(c, '#494846', 65, 268, 4, 23);
+    stroke(c, '#8F7850', 7); c.beginPath(); c.moveTo(364, 20); c.lineTo(511, 69); c.stroke();
+    stroke(c, '#8F7850', 2); c.beginPath(); c.moveTo(364, 20); c.lineTo(502, 42); c.lineTo(511, 69); c.moveTo(459, 53); c.lineTo(459, 92); c.stroke();
+  } }])),
+  brushRing: { w: 64, h: 64, draw(c) { stroke(c, C.paper, 5); c.beginPath(); c.arc(32, 32, 28, 0, Math.PI * 2); c.stroke(); } },
+  tWand: { w: 64, h: 64, draw(c) { stroke(c, C.paper, 6); c.beginPath(); c.moveTo(12, 52); c.lineTo(42, 22); c.stroke(); [[40, 6], [57, 23], [25, 8]].forEach(([x, y]) => { fill(c, C.paper, x - 2, y - 5, 4, 10); fill(c, C.paper, x - 5, y - 2, 10, 4); }); } },
+  tClock: { w: 40, h: 40, draw(c) { stroke(c, C.grey, 3); c.beginPath(); c.arc(20, 23, 12, 0, Math.PI * 2); c.moveTo(20, 14); c.lineTo(20, 23); c.lineTo(27, 23); c.stroke(); fill(c, C.grey, 15, 3, 10, 4); fill(c, C.grey, 18, 6, 4, 5); } },
+  tBlade: { w: 40, h: 40, draw(c) { quad(c, C.paper, [[7, 28], [24, 5], [35, 13], [18, 36]]); stroke(c, C.red, 2); c.beginPath(); c.moveTo(15, 25); c.lineTo(25, 12); c.stroke(); } },
+  histoDark: { w: 240, h: 100, draw(c) { for (let i = 0; i < 48; i++) { const v = 8 + 78 * Math.exp(-(((i - 10) / 8) ** 2)) * (0.6 + 0.4 * Math.abs(Math.sin(i * 1.7))); fill(c, C.grey, i * 5, 100 - v, 4, v); } } },
+  redBall: { w: 32, h: 32, draw(c) { fill(c, C.paper, 0, 0, 32, 32); disc(c, C.red, 16, 16, 16); } },
+  tapDot: { w: 32, h: 32, draw(c) { disc(c, C.paper, 16, 16, 16); } },
+  ...Object.fromEntries(['a', 'b', 'c'].flatMap((shot, i) => ['Tall', 'Sq'].map((shape, j) => [(['shotA', 'shotB', 'shotCfx'][i]) + shape, { w: 300, h: j ? 300 : 600, draw(c, w, h) { if (shot === 'a') SHOTS.a(c, w, h, { k: j ? 105 : 172, cap: false }); else if (shot === 'b') SHOTS.b(c, w, h); else SHOTS.c(c, w, h, C.red); } }]))),
+  ...Object.fromEntries([0, 1, 2, 3].map(craft => ['uiCraft' + craft, { w: 480, h: 246, draw(c, w, h) { site(c, w, h, { craft }); } }])),
+  ...Object.fromEntries([0, 1, 2, 3].map(craft => ['uiBoard' + craft, { w: 480, h: 300, draw(c, w, h) { site(c, w, h, { craft }); } }])),
+  ...Object.fromEntries([0, 1].map(craft => ['uiPhone' + craft, { w: 300, h: 500, draw(c, w, h) { site(c, w, h, { craft }); } }])),
+  // Chrome contains only the device's furniture. The moving picture is made of pieces underneath.
+  chromePlayer: { w: 480, h: 270, draw(c) { playIcon(c, C.paper, 30, 245, 9); fill(c, C.slate, 54, 243, 400, 5); } },
+  chromeReel: { w: 300, h: 600, draw(c, w) {
+    [318, 372, 426].forEach((y, i) => { if (i === 0) heart(c, C.paper, 266, y, 13); else if (i === 1) { stroke(c, C.paper, 4); c.beginPath(); c.arc(266, y, 11, 0, Math.PI * 2); c.stroke(); } else playIcon(c, C.paper, 266, y, 11); });
+    disc(c, C.paper, 34, 530, 15); fill(c, C.paper, 60, 520, 96, 9); fill(c, C.grey, 60, 537, 64, 6); lines(c, C.grey, 20, 562, [210, 150], 6, 8); fill(c, C.slate, 20, 50, 260, 4); island(c, w); fill(c, C.paper, 100, 588, 100, 5);
+  } },
+  chromeFeed: { w: 300, h: 600, draw(c, w, h) { ART.feedSq.draw(c, w, h); c.clearRect(0, 112, 300, 300); fill(c, C.ink, 252, 124, 34, 34); playIcon(c, C.paper, 269, 141, 8); fill(c, C.grey, 0, 404, 300, 8); } },
+  chromeMotion: { w: 480, h: 270, draw(c) { playIcon(c, C.ink, 30, 245, 9); fill(c, C.grey, 54, 243, 400, 5); } },
+  chromeStory: { w: 300, h: 600, draw(c, w) {
+    for (let i = 0; i < 3; i++) fill(c, C.grey, 20 + i * 88, 50, 84, 4);
+    disc(c, C.ink, 34, 82, 13); fill(c, C.ink, 56, 74, 90, 8); fill(c, C.grey, 56, 88, 56, 6); island(c, w);
+    fill(c, C.red, 90, 548, 120, 30); fill(c, C.paper, 118, 560, 64, 6); fill(c, C.ink, 100, 588, 100, 5);
+  } },
+  chromeMotionFeed: { w: 300, h: 600, draw(c, w, h) { ART.motSq.draw(c, w, h); c.clearRect(0, 184, 300, 300); } },
+  chromeBrowser: { w: 480, h: 270, draw(c, w, h) { ART.siteWide.draw(c, w, h); c.clearRect(0, 24, w, h - 24); } },
+  chromePhone: { w: 300, h: 600, draw(c, w, h) { ART.siteTall.draw(c, w, h); c.clearRect(0, 74, w, 500); } },
   // ---- the building's photograph, before and after its edit in Photoshop, and that app's own bits
   kPhotoB: { w: 526, h: 360, draw(c, w, h) { street(c, 0, 0, w, h, { at: 0.44, raw: true }); } },
   kPhoto: { w: 526, h: 360, draw(c, w, h) { street(c, 0, 0, w, h, { at: 0.44 }); } },
@@ -500,7 +584,7 @@ export const ART = {
       fill(c, K.soft, x, 978, 130, 9); fill(c, K.soft, x, 1000, 96, 9);
     });
     fill(c, K.gold, 399, 880, 3, 132);
-    c.fillStyle = K.gold; c.beginPath(); c.roundRect(44, 1040, 262, 72, [28, 0, 0, 0]); c.fill(); text(c, 'View the flyer', 70, 1087, 30, { w: 700, fill: K.white, track: 0, family: SANS });
+    if (!hideTabs) { c.fillStyle = K.gold; c.beginPath(); c.roundRect(44, 1040, 262, 72, [28, 0, 0, 0]); c.fill(); text(c, 'View the flyer', 70, 1087, 30, { w: 700, fill: K.white, track: 0, family: SANS }); }
     fill(c, K.black, 0, 1140, 800, 40);
   } },
   mail: { w: 320, h: 516, draw(c, w, h) {                 // the e-blast, open in a mail app on a tablet
@@ -512,7 +596,7 @@ export const ART = {
   shotA: { w: 480, h: 270, draw(c, w, h) { SHOTS.a(c, w, h, { cap: false }); } },
   shotB: { w: 480, h: 270, draw(c, w, h) { SHOTS.b(c, w, h); } },
   shotCfx: { w: 480, h: 270, draw(c, w, h) { SHOTS.c(c, w, h, C.red); } },
-  ...Object.fromEntries(['Look good.', 'Move well.', 'Work right.'].map((words, i) => ['cap' + (i + 1), { w: 352, h: 74, draw(c, w, h) { fill(c, C.paper, 0, 0, w, h); text(c, words, w / 2, 55, 54, { align: 'center' }); } }])),
+  ...Object.fromEntries(['Look good.', 'Move well.', 'Work right.'].map((words, i) => ['cap' + (i + 1), { w: 352, h: 74, draw(c, w, h) { fill(c, C.paper, 0, 0, w, h); recordType(c, 'cap' + (i + 1), words, w / 2, 54, 'center', 55); text(c, words, w / 2, 55, 54, { align: 'center' }); } }])),
   playerWide: { w: 480, h: 270, draw(c, w, h) {
     SHOTS.a(c, w, h, { capY: h * 0.76 });
     playIcon(c, C.paper, 30, 245, 9); fill(c, 'rgba(247,246,243,0.45)', 54, 243, 400, 5); fill(c, C.paper, 54, 243, 236, 5); fill(c, C.paper, 286, 237, 6, 17);
@@ -544,8 +628,8 @@ export const ART = {
   tV: { w: 40, h: 40, draw(c) { stroke(c, C.grey, 5); c.strokeRect(7, 10, 26, 20); } },
   tA: { w: 40, h: 40, draw(c) { [10, 22, 14, 26, 12].forEach((v, i) => fill(c, C.grey, 6 + i * 6.4, 20 - v / 2, 3.6, v)); } },
   // ---- motion: the animation's frame, the three screens it is exported to, and After Effects' own bits
-  wMake: { w: 232, h: 62, draw(c) { fill(c, C.paper, 0, 0, 232, 62); text(c, 'Make it', 6, 54, 60); } },
-  wMove: { w: 168, h: 52, draw(c) { fill(c, C.paper, 0, 0, 168, 52); text(c, 'move', 6, 44.2, 60, { fill: C.red }); } },
+  wMake: { w: 232, h: 62, draw(c) { fill(c, C.paper, 0, 0, 232, 62); recordType(c, 'wMake', 'Make it', 6, 60, 'left', 54); text(c, 'Make it', 6, 54, 60); } },
+  wMove: { w: 168, h: 52, draw(c) { fill(c, C.paper, 0, 0, 168, 52); recordType(c, 'wMove', 'move', 6, 60, 'left', 44.2); text(c, 'move', 6, 44.2, 60, { fill: C.red }); } },
   rowA: { w: 140, h: 38, draw(c) { c.translate(-ROWS[0][0], -ROWS[0][1]); saas(c, 480, 270); } },
   rowB: { w: 140, h: 38, draw(c) { c.translate(-ROWS[1][0], -ROWS[1][1]); saas(c, 480, 270); } },
   graphGrid: { w: 240, h: 200, draw(c, w, h) { for (let i = 0; i < 5; i++) { fill(c, C.dark, 0, 19 + i * 40, w, 2); fill(c, C.dark, 19 + i * 50, 0, 2, h); } } },
@@ -634,6 +718,30 @@ export const ART = {
   tDrop: { w: 64, h: 64, draw(c) { stroke(c, C.paper, 8); c.beginPath(); c.moveTo(14, 50); c.lineTo(38, 26); c.stroke(); c.save(); c.translate(44, 20); c.rotate(Math.PI / 4); fill(c, C.paper, -9, -14, 18, 24); c.restore(); } },
 };
 
+// These small patches carry real prefixes, rather than slicing through a letter while it is typed.
+// The surrounding plate is opaque, so small lettering never passes through the alpha test.
+for (const [key, source, crop, mask, px, x, baselines, family, track, weights] of [
+  ['idCover', 'kCover', [311.6, 268, 128.4, 52], [13, 10, 113, 36], 14.04, 14.04, [22.88, 41.6], SANS, 0, [300, 700]],
+  ['idPost', 'kPost', [276, 315.2, 124, 58.4], [15, 10, 108, 42], 15.768, 15.768, [25.696, 46.72], SANS, 0, [300, 700]],
+  ['idMail', 'eblast', [17.6, 268, 284.8, 28], [9, 0, 276, 28], 20, 9.6, [22.4], SERIF, 0.01, [700]],
+]) {
+  const words = key === 'idMail' ? ['Office Space For Sale'] : ['Office Space', 'For Sale'];
+  for (let n = 0; n <= 21; n++) {
+    const a = { w: Math.ceil(crop[2]), h: Math.ceil(crop[3]), draw(c) {
+      c.save(); c.translate(-crop[0], -crop[1]); ART[source].draw(c, ART[source].w, ART[source].h); c.restore();
+      fill(c, key === 'idMail' ? K.coal : K.gold, ...mask);
+      let remaining = n;
+      words.forEach((line, i) => {
+        const part = line.slice(0, Math.max(0, remaining));
+        text(c, part, x, baselines[i], px, { w: weights[i], fill: K.white, family, track });
+        if (remaining >= 0 && remaining <= line.length) a.caret = [x + c.measureText(part).width, baselines[i] - px, px];
+        remaining -= line.length + 1;
+      });
+    } };
+    ART[key + n] = a;
+  }
+}
+
 // Pack rows into pages no larger than 2048 square. Places include their page number.
 export function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
   if (size > 2048 || size < 1 || scale <= 0 || pad < 0) throw new Error('invalid atlas measures');
@@ -652,13 +760,21 @@ export function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
     const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = tall;
     const ctx = canvas.getContext('2d');
     for (const [key, a, px, py, w, h] of spots) {
-      ctx.save(); ctx.translate(px, py); ctx.scale(scale, scale); ctx.beginPath(); ctx.rect(0, 0, a.w, a.h); ctx.clip(); a.draw(ctx, a.w, a.h); ctx.restore();
+      ctx.save(); ctx.translate(px, py); ctx.scale(scale, scale); ctx.beginPath(); ctx.rect(0, 0, a.w, a.h); ctx.clip();
+      if (['kMap', 'kLoc', 'eblast'].includes(key)) captureText = { base: ctx.getTransform(), parts: [] };
+      a.draw(ctx, a.w, a.h);
+      if (captureText) { ART_TEXT[key] = captureText.parts; captureText = null; }
+      ctx.restore();
       places[key] = [page, (px + 0.5) / size, (py + 0.5) / tall, (w - 1) / size, (h - 1) / tall];
     }
     return canvas;
   });
   return { pages, places };
 }
+export const AM_MARKERS = SHOPS.flatMap(([x, step, above, below]) => [...above.map((_, i) => [x + i * step, 358, 30, 30]), ...below.map((_, i) => [x + i * step, 464, 30, 30])]);
+export const AM_LABEL_BARS = SHOPS.flatMap(([x, step, above, below]) => [...above.map((len, i) => [x + i * step + 9.5, 344 - len, 11, len]), ...below.map((len, i) => [x + i * step + 9.5, 508, 11, len])]);
+export const CITY_BLOCKS = CITY.blocks;
+export const CITY_PINS = [...CITY.badges, ...CITY.transit.map(([, ...r]) => r), ...CITY.stops.map(([x, y]) => [x - 11, y - 11, 22, 22]), ...CITY.routes.map(([x, y]) => [x, y, 60, 20]), [794, 375, 117, 182], [177, 40, 80, 80]];
 // The page's own face, and the stand-ins for the flyer's faces, which live beside this file so that every page that draws the pictures gets them.
 const FACES = [['Gelasio', '400', 'gelasio-400.woff2'], ['Gelasio', '700', 'gelasio-700.woff2'], ['Rokkitt', '800', 'rokkitt-800.woff2']];
 export async function fontsReady() {

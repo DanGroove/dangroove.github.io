@@ -12,7 +12,7 @@ import { makeCamera, dot } from '../../../public/journey/hero/engine.mjs';
 import { createRenderer } from './sq.mjs';
 import { corners } from './kit.mjs';
 import { makeAtlas, fontsReady } from './art.mjs';
-import { SCENES, frameAt } from './stage.mjs';
+import { SCENES, POOL, frameAt } from './stage.mjs';
 
 const q = new URLSearchParams(location.search), num = (k, d) => q.has(k) ? +q.get(k) : d;
 const canvas = document.querySelector('canvas');
@@ -26,7 +26,7 @@ else {
     let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
     for (const pc of pieces) for (const c of corners(pc)) { const x = dot(cam.r, c), y = dot(cam.u, c); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
     const S = num('S', Math.min(W / (x1 - x0 + 1.2), H / (y1 - y0 + 1.2)));
-    R.draw(pieces, { W, H, dpr: Math.min(2, devicePixelRatio || 1), S, cx: W / 2 - S * (x0 + x1) / 2, cy: H / 2 + S * (y0 + y1) / 2, cam }, { outline: 0, spread: num('spread', 1), floor: { on: num('floor', 1) > 0, radius: 5.2 } });
+    R.draw(pieces, { W, H, dpr: Math.min(2, devicePixelRatio || 1), S, cx: W / 2 - S * (x0 + x1) / 2, cy: H / 2 + S * (y0 + y1) / 2, cam }, { outline: 0, spread: num('spread', 1), floor: { ...POOL, on: num('floor', 1) > 0, radius: 5.2 } });
     window.__box = { w: +(x1 - x0).toFixed(2), h: +(y1 - y0).toFixed(2), S: +S.toFixed(1), pieces: pieces.length };
   };
   draw(); addEventListener('resize', draw); window.__ready = true;

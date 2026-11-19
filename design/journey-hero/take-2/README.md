@@ -1,174 +1,195 @@
 # Journey hero, second take
 
-The first take (four bars that fold into four objects, now in `public/journey/`) was judged "a little abstract and too simple".
-This folder is the second take, as a prototype. Nothing here is published, and the built page does not use it yet.
+This is the unpublished prototype. `MOTION-2.md` controls this pass; `MOTION.md` supplies the renderer, shell, dock, printer slot and player rules that it keeps. The loop is **74.71 seconds at PACE 1**. Every document opens empty, is built by one cursor, and reaches the approved composition before export. The last three exports play with their app's viewer.
 
-## The idea
+## The design being carried forward
 
-One big screen floats over the floor. Each craft is a real app on it, drawn simply but with its own logo, and the app builds a piece
-of Dan's real work. The cursor clicks Export, and what is exported lands in front of the screen, lying flat, in one tidy block.
+The approved six stills and the earlier browser review are the reference. The screen stays large and detailed enough to read as a real app. Its rails, panel hierarchy, document proportions, square corners, Outfit, ink, paper and red stay. The flyer's landscape pages keep their black, charcoal, two golds, woven grounds, asymmetric photographs and dense map structure. The firm's mark and the building's mark are blobs. No contact details or names from the source flyer are included.
 
-Graphic design is three apps, in the order the work is really made:
+Graphic design is one pipeline: Photoshop's photograph goes to the dock; Illustrator's two maps join it; InDesign places those same assets into the spread, cover, post and e-blast. Only the finished InDesign group reaches the floor. A closed stack sits behind the reading copy, alongside a phone and tablet. The reading copy still bends through fourteen strips per leaf, through The Offering, Location, Amenities and the gallery.
 
-1. Photoshop: a photo edit of the building, which the later pieces all use.
-2. Illustrator: the booklet's two maps, simplified: King Street from the amenities page, and downtown from the location page.
-3. InDesign: the 1 King Street W booklet, and a LinkedIn post and an e-blast that follow it.
+Video, motion and UX/UI export to a landscape tablet and two phones. Everything lies flat and square to the screen. The approved sizes, gutters and back edge stay. Each group now has its own x position, solved in HOME camera coordinates; its footprint's midpoint aligns with the screen face's midpoint. The light pool shares that alignment.
 
-Nothing lands on the floor when Photoshop and Illustrator export: their work goes on into the next app. InDesign's export is what
-lands. Behind: one stack of closed copies of the booklet, the post in a phone, the e-blast in a tablet. In front: one copy is taken
-off the top of the stack, set down, opened, and leafed through (The Offering, Location, Amenities, the gallery).
+The prior build was reviewed in Chromium on 19 November 2026, with held frames on desktop and phone, a pixel comparison of its stills, and an offline preview checked for requests. That record applies to the incoming build. **This pass has not been rendered or reviewed in a browser.** Its visual comparison and graphics-card frame-rate check happen elsewhere. No reviewer agents or browser tools were run here.
 
-Video (an editing app) and motion (words and shapes, the way a SaaS promo moves) are each exported to three screens: a tablet on
-its side and two phones. UX/UI is Figma, and the work in it is this page's own hero: its wireframes and its designs on a desktop
-and on a phone in two states, with a prototype link between the two. It is exported to the same three screens.
+## What runs the show
 
-## The rules Dan set
+- `stage.mjs`: PACE, the action scheduler, six scripts, shell, dock, floor and shared finished-piece players. `SHOW`, `LOOP`, `sceneAt`, `frameAt`, `SCENES`, `CRAFT`, `BLOCK`, `SCREEN`, `MAT` and `floorAt` keep their meanings. `SCRIPTS` exposes the derived action times for checks and review; `POOL` supplies the light's centre.
+- `art.mjs`: the approved pictures, staged photograph and map drawings, opaque text prefixes, measured text regions and device chrome. Fonts are measured when the atlas is made, including rotated map lettering. The atlas occupies five pages, each no larger than 2048 square.
+- `sq.mjs`: the existing WebGL2 renderer, unchanged in this pass. Its world clip plane covers colour, outline and shadow; its light mesh handles sharp pieces; its atlas supports pages.
+- `kit.mjs`: the existing piece geometry helpers, unchanged.
+- `play.mjs`, `stills.mjs`, `stage.html`: player, approved-pose entry points, and individual scene/atlas inspection. The player still fits from the six stills and caps drawing at two device pixels per CSS pixel. A paused craft choice now uses its finished still; graphic design uses InDesign. Reduced motion never starts playback. Hidden/off-screen states stop drawing.
+- `tools/checks.mjs`: Node geometry, actions, clocks, atlas, player logic and offline-module checks. Its canvas and DOM stand-ins are logic checks, not pixel renders.
+- `tools/preview.mjs`: the offline frame packer, titled **Journey hero take two**, with stylesheet, four local font files and all modules embedded. No bundler, network or installation is needed.
+- `tools/page.mjs`: writes the existing page markup with the prototype's player or still script. Its output guard protects both briefs. `tools/sheet.mjs` and `tools/film.mjs` remain the external browser review tools.
+- `BUILD.md`: this pass's decisions, acceptance criteria, stage checkpoints and limits.
 
-- Everything exported lies flat, in a tidy block. What belongs on a phone is shown inside a phone.
-- The app is an abstract depiction, but it carries the app's own logo, so people know which app it is.
-- The flyer is his 1 King Street W booklet, drawn very simply. It is black, charcoal and gold.
-- No assets appear on the floor when Photoshop and Illustrator export.
-- The booklets land as one stack of closed copies. One is taken off the top and its pages are flipped through, and one of those
-  pages is the amenities page. A page must turn like real paper, which bends, and not like a stiff slab.
-- The amenities map is simplified: about half as many squares as the flyer has, and the shops' names are bars.
-- The location map is shown in Illustrator too, and the Location spread is one of the spreads the booklet is flipped through.
-  It is simplified as well: its streets, its transit lines and its landmarks are there, and each landmark and each transit
-  company is a plain badge with bars, not its logo.
-- The firm's logo and the building's logo are each drawn as a blob, not as the real logo.
-- No agent's name or contact details appear anywhere.
-- The flyer's source files are not in this repository and must not be added to it.
+## The six scenes
 
-## What is here
+Times below are seconds at PACE 1. The first 0.5 seconds change shell; the next 0.3 wipe on the furniture. The last 0.3 wipe the content off. Every action's approach is computed from its cursor distance: 0.12, 0.20 or 0.28 seconds. All moves use the engine's wipe, enter or exit curve; playheads run at constant speed. The booklet keeps its approved pickup and bending law.
 
-- `sq.mjs` the prototype renderer. WebGL2, no dependencies. Every piece is one superquadric (a box, a cylinder, a ball, or anything
-  between them), with one light, a shadow map and three hard tones per material. A piece can carry a picture on its face.
-- `kit.mjs` the helpers that make pieces and move them.
-- `art.mjs` every picture (a page, a logo, an icon), drawn with the 2D canvas into atlas pages no larger than 2048 square.
-- `fonts/` Gelasio and Rokkitt, open faces under the SIL Open Font License, which stand in for the flyer's Georgia and Rockwell.
-- `stage.mjs` the six scenes on one clock, and their approved still poses: the screen, each app, and what it has exported.
-- `stage.html` one scene on its own. `?s=0..5` picks it, `?yaw=-25&pitch=8` turns the view, `?atlas=1` shows the pictures.
-- `stills.mjs` and `tools/sheet.mjs` the scenes in the hero's own layout, on one sheet for comments. On the stills page `?at=` sets
-  where the copy that is being read has got to: -1 is on the stack, 0 is set down and still shut, 1 is open at The Offering,
-  2 at Location, 3 at Amenities, 4 at the gallery, and anything between is a leaf part of the way over.
+| App | Global start | Length | Local still | What is built |
+| --- | ---: | ---: | ---: | --- |
+| Photoshop | 0 | 8.000 | 5.649 | Raw photo; two levels adjustments; sky; separate cone and crane heals; grade; photograph to dock |
+| Illustrator | 8.000 | 10.500 | 8.339 | Empty artboards; amenities street, markers, labels, title and badge; city blocks, streets, pins and labels; close-up and selected subway; maps carried to dock |
+| InDesign | 18.500 | 15.000 | 12.097961 | Four empty frames; map and upright heading; location thumbnail; cover photograph, blob and title; post and e-blast; export, pickup and four bending leaves |
+| Premiere Pro | 33.500 | 14.310 | 11.243333 | Empty bin and timeline; shots with voice; blade and offcut; presets; typed caption and repeats; music, ducking and stepped fade; play and live exports |
+| After Effects | 47.810 | 13.450 | 10.383333 | Empty comp; words, ball and rows; layers, stopwatch and keys; path; stagger; graph handle; play and live exports |
+| Figma | 61.260 | 13.450 | 10.383333 | Empty frames; wireframe parts; selected copies; fills, picture, typed name and accents; hotspot, link and properties; live prototype exports |
 
-## How a page turns
+The scripts contain lengths, never hand-authored start times. `script()` derives each approach, start and end. PACE scales those lengths, cursor approaches, shell transition, feed/return and device clocks together. Runs and typing in the dense Illustrator, InDesign and Figma scenes are shortened first to meet the scene targets. No construction step is dropped. After Effects also visibly moves the first ball key from zero to 0.75, so the new stopwatch operation can create its key at zero while the finished animation keeps the approved stagger.
 
-A leaf is a row of narrow strips, each hinged on the one before (`leaf` in `stage.mjs`). Its free edge runs ahead of its root on the
-way up and behind it on the way down, so the edge peels up first, the leaf swings over the spine in a shallow arc, and it lands
-from the spine outward. The renderer dims a strip's picture where the strip turns from the light, with the same hard edge the
-tones have, so the bend shows.
+InDesign's four leaf turns still last 0.6 seconds each, separated by 0.3 seconds, and its pickup lasts 0.7 seconds. Its settle and final reading holds are 0.3 seconds to fit the new construction within fifteen seconds.
 
-## Looking at it
+Every action start and end follows. These are local times; multiply by PACE and add the scene's global start. Gaps are the scheduler's cursor approaches. Wait actions cover physical work or a deliberate hold, with the cursor resting at its previous point.
 
-    node design/journey-hero/tools/serve.mjs
-    http://localhost:4173/design/journey-hero/take-2/stage.html?s=2
+| App | Action | Kind | Start | End |
+| --- | --- | --- | ---: | ---: |
+| ps | open | click | 1.080 | 1.380 |
+| ps | black | slide | 1.660 | 2.010 |
+| ps | white | slide | 2.130 | 2.480 |
+| ps | sky | click | 2.760 | 3.260 |
+| ps | cone | click | 3.540 | 3.590 |
+| ps | crane | click | 3.870 | 3.920 |
+| ps | grade | slide | 4.120 | 5.220 |
+| ps | shrink | wait | 5.220 | 5.370 |
+| ps | export | export | 5.650 | 6.300 |
+| ai | board0 | draw | 1.080 | 1.380 |
+| ai | board1 | draw | 1.660 | 1.960 |
+| ai | street | stroke | 2.240 | 2.740 |
+| ai | markers | run | 3.020 | 3.230 |
+| ai | labels | type | 3.510 | 3.690 |
+| ai | title | type | 3.810 | 3.950 |
+| ai | badge | draw | 4.150 | 4.330 |
+| ai | block | draw | 4.530 | 4.710 |
+| ai | blocks | run | 4.830 | 4.970 |
+| ai | streets | stroke | 5.170 | 5.670 |
+| ai | pins | run | 5.870 | 6.070 |
+| ai | cityLabels | type | 6.270 | 6.450 |
+| ai | marquee | draw | 6.570 | 6.870 |
+| ai | close | wait | 6.870 | 7.370 |
+| ai | subway | stroke | 7.570 | 7.920 |
+| ai | inspect | wait | 7.920 | 8.060 |
+| ai | export | export | 8.340 | 8.390 |
+| ai | closeBack | wait | 8.390 | 8.640 |
+| ai | mapExport | drag | 8.920 | 9.420 |
+| ai | locExport | drag | 9.700 | 10.200 |
+| id | frame0 | draw | 1.080 | 1.380 |
+| id | frame1 | draw | 1.660 | 1.960 |
+| id | frame2 | draw | 2.160 | 2.460 |
+| id | frame3 | draw | 2.660 | 2.960 |
+| id | map | drag | 3.240 | 3.690 |
+| id | heading | type | 3.970 | 4.120 |
+| id | spreadType | run | 4.400 | 4.480 |
+| id | loc | drag | 4.760 | 5.210 |
+| id | photo | drag | 5.490 | 5.940 |
+| id | blob | draw | 6.140 | 6.320 |
+| id | coverTitle | type | 6.440 | 6.570 |
+| id | postPhoto | drag | 6.690 | 6.990 |
+| id | postTitle | type | 7.110 | 7.240 |
+| id | postButton | draw | 7.360 | 7.540 |
+| id | mailPhoto | drag | 7.820 | 8.120 |
+| id | mailTitle | type | 8.240 | 8.420 |
+| id | mailButton | draw | 8.540 | 8.720 |
+| id | export | export | 9.000 | 9.800 |
+| id | land | wait | 9.800 | 10.100 |
+| id | pickup | wait | 10.100 | 10.800 |
+| id | open | wait | 10.800 | 10.900 |
+| id | leaf1 | wait | 10.900 | 11.500 |
+| id | pause1 | wait | 11.500 | 11.800 |
+| id | leaf2 | wait | 11.800 | 12.400 |
+| id | pause2 | wait | 12.400 | 12.700 |
+| id | leaf3 | wait | 12.700 | 13.300 |
+| id | pause3 | wait | 13.300 | 13.600 |
+| id | leaf4 | wait | 13.600 | 14.200 |
+| id | read | wait | 14.200 | 14.500 |
+| id | return | wait | 14.500 | 15.000 |
+| pr | bin | run | 1.080 | 1.360 |
+| pr | clipA | drag | 1.480 | 1.880 |
+| pr | clipB | drag | 2.160 | 2.560 |
+| pr | clipC | drag | 2.840 | 3.240 |
+| pr | cut | click | 3.440 | 3.490 |
+| pr | offcut | click | 3.610 | 3.730 |
+| pr | closeGap | wait | 3.730 | 3.980 |
+| pr | transition | drag | 4.180 | 4.630 |
+| pr | effect | drag | 4.910 | 5.310 |
+| pr | caption | type | 5.590 | 5.940 |
+| pr | captions | run | 6.140 | 6.420 |
+| pr | music | drag | 6.700 | 7.100 |
+| pr | duck | slide | 7.220 | 7.470 |
+| pr | fade | slide | 7.750 | 8.000 |
+| pr | play | play | 8.280 | 9.880 |
+| pr | export | export | 10.160 | 10.860 |
+| ae | comp | click | 1.080 | 1.380 |
+| ae | make | type | 1.580 | 1.825 |
+| ae | move | type | 1.945 | 2.120 |
+| ae | ball | draw | 2.320 | 2.570 |
+| ae | row | draw | 2.690 | 2.940 |
+| ae | copies | run | 3.140 | 3.280 |
+| ae | select | click | 3.560 | 3.610 |
+| ae | stopwatch | click | 3.730 | 3.780 |
+| ae | head | drag | 3.900 | 4.150 |
+| ae | path | drag | 4.350 | 4.700 |
+| ae | marquee | draw | 4.900 | 5.150 |
+| ae | keys | run | 5.430 | 5.780 |
+| ae | staggerBall | drag | 6.060 | 6.260 |
+| ae | graph | slide | 6.540 | 7.140 |
+| ae | play | play | 7.420 | 9.020 |
+| ae | export | export | 9.300 | 10.000 |
+| fig | frame0 | draw | 1.080 | 1.380 |
+| fig | frame1 | draw | 1.580 | 1.880 |
+| fig | frame2 | draw | 2.080 | 2.380 |
+| fig | pictureBox | draw | 2.660 | 2.910 |
+| fig | heading | type | 3.110 | 3.250 |
+| fig | button | draw | 3.370 | 3.570 |
+| fig | details | run | 3.770 | 3.980 |
+| fig | marquee | draw | 4.260 | 4.510 |
+| fig | copies | drag | 4.710 | 5.110 |
+| fig | fill0 | set | 5.310 | 5.360 |
+| fig | fill1 | set | 5.560 | 5.610 |
+| fig | fill2 | set | 5.810 | 5.860 |
+| fig | hero | drag | 6.060 | 6.460 |
+| fig | name | type | 6.660 | 6.940 |
+| fig | accent0 | set | 7.140 | 7.190 |
+| fig | accent1 | set | 7.390 | 7.440 |
+| fig | accent2 | set | 7.640 | 7.690 |
+| fig | hotspot | click | 7.890 | 7.940 |
+| fig | link | drag | 7.940 | 8.540 |
+| fig | panel | run | 8.820 | 9.020 |
+| fig | export | export | 9.300 | 10.000 |
 
-    node design/journey-hero/take-2/tools/sheet.mjs design/journey-hero/take-2/.scratch/sheet.png 0,1,2,3,4,5
+## Exports that play
 
-## The motion
+The first device lands 0.55 seconds after Export. That is the common zero for two 1.6-second plays; the row then returns over 0.4 seconds. Later devices join the same clock as they feed out. The viewer and its playhead run with them, and keep that clock during withdrawal.
 
-`MOTION.md` is the brief. The loop is 40.35 seconds. Its lengths and beats live in `stage.mjs`, with no timer inside a scene:
-`frameAt(t)` builds any moment directly, `sceneAt(t)` finds its app and local time, and `SHOW` describes the running order.
-Negative times and times past the end wrap. `SCENES[i]()` still builds that scene at its still time, and `SCENES[2]({ at })`
-still sets the booklet's reading pose with the whole block out.
+Video uses one shot/caption/wipe function for the viewer and the devices, with wide, tall and square footage drawings. Motion uses one word/ball/row function, with each device's original layout. The prototype's phones start on opposite screens: a tap, a short delay and a hard upright wipe swap them, then another tap 0.8 seconds later returns them. The desktop's four craft markers advance every 0.4 seconds and its little screen changes tone. A bead travels the app's red link on each tap.
 
-| App | Start | Length | What happens |
-| --- | ---: | ---: | --- |
-| Photoshop | 0 | 4.3 | The cursor pulls the grade across the photo, then exports the same picture into the dock |
-| Illustrator | 4.3 | 5.05 | It draws two maps, pulls out a close-up, selects the subway, then sends both maps to the dock |
-| InDesign | 9.35 | 9.4 | The dock's assets fill the frames; the finished work feeds out; one copy lifts off and four leaves turn |
-| Premiere Pro | 18.75 | 8 | Captions grow, two presets are dragged onto the edit, the playhead runs, and three screens feed out |
-| After Effects | 26.75 | 7.2 | The ball is selected, its ease is drawn by dragging a handle, the comp plays, then three screens feed out |
-| Figma | 33.95 | 6.4 | Designs slide from behind wireframes, a link follows the cursor, the panel fills, and three screens feed out |
+Each device retains picture chrome around its moving picture area. Progress grows on the existing player/story/feed rail where one existed; motion's square post and the prototype gain a thin progress line at the picture/page foot. The secondary reel bars and progress rails use opaque colours rather than newly introducing renderer blending.
 
-The screen stays. Plates keep their roles while their rectangles change, the tile turns over, and the name wipes away and on.
-Only content joins the screen's upright wipe. Docked pictures and work in flight are separate pieces. Export sinks for the click,
-then its progress divides the button's one picture into red and ink parts. The floor uses a fixed clip at the mat's back edge,
-including in the shadow pass: work feeds out of that line and returns behind it before the next app opens.
+## Still changes to compare in the browser
 
-Nothing gains opacity. Pose changes use the engine's wipe ease, floor arrivals its enter ease and returns its exit ease.
-Playheads run at constant speed. The booklet keeps its existing bending strips and its own pickup movement.
-The split's still time is solved for exactly 0.44 across the photo (1.685566 seconds locally); the leaf's for exactly 1.82
-(5.897961 seconds). The brief's approximate times do not replace those poses. The rows' rest positions are recovered from the approved parked
-comp at 1.6, so their specified slide preserves that still too.
+This inventory describes known changes from the incoming motion build and the approved sheet; it is not a claim of a completed pixel comparison.
 
-## The player and tools
+- **All six stills:** the light pool moves to the screen's projected middle, and the common fitted framing is remeasured from the new stills. InDesign's deeper group and the three-device rows move horizontally to centre below the screen. Their sizes, gaps, depth and slot stay.
+- **Photoshop:** its still is now the finished graded photograph, before Export, rather than a split edit. The split bar and handle are gone; the sliders finish at 0.55 and 0.30; the cursor is on Export. The last rail icon is the wand needed by the sky step. The completed four layer rows and today's histogram remain.
+- **Illustrator:** the finished maps, close-up, selected path, points and handles keep their approved measures. The cursor is now on Export, rather than still approaching it. The photo chip stays in the bar as introduced by MOTION.md; the inspect beat returns the lit tool to the arrow.
+- **InDesign:** its finished app content and its leaf pose at exactly 1.82 stay. The horizontal centring and moved pool are the changes; the booklet, stack and two device pictures keep their approved sizes and artwork.
+- **Premiere:** the bin now contains three source shots and music. The timeline adds three attached voice strips, a music lane, level line, square keys, ducked waveform and stepped taper; the clip/voice/caption lanes and preset landing heights fit those into the existing plate. A small lit timeline-tool tile shows the blade/type/arrow actions. The still is one third through export playback: the viewer/playhead and the three devices show that live phase rather than the parked shot A and burned-in caption. Device progress follows that phase. The two effects sliders from MOTION.md remain.
+- **After Effects:** the still is one third through playback, so its word reveal, ball/outline position, list visibility, playhead and exported pictures differ from the old parked 1.6 pose. There is now a visible stopwatch beside the ball row and a small lit tool tile. The graph grid and end keys, finished timeline keys, project list and layer measures stay. The third list row remains solid, as MOTION.md required. The ball now uses the permitted engine wipe ease; the old separate ball curve is gone. Its graph handles finish at (115.2,176) and (38.4,24), rather than (128,176) and (112,24), so the graph describes the actual engine wipe. This departure resolves MOTION-2's three-curve rule over MOTION.md's separate ball curve.
+- **Figma:** the still is one third through the first prototype play. The desktop highlights video and its little screen changes accordingly; the two phones have swapped states after the first tap, in both the app and the exported devices. The wireframes, frame measures, link, layers and filled properties keep their approved places. Progress lines now show the shared phase. A tap mark and travelling bead appear only around their tap beats, not at this still.
+- **Device pictures:** the last three apps' picture areas are live pieces instead of baked stills. Their chrome, feed/browser surroundings and original aspect-specific layout remain; live progress and solid utility-bar colours are deliberate changes. Small text is drawn on opaque plates and never uses the renderer's cut mode.
 
-`play.mjs` fits from the same six stills as `stills.mjs`. Craft buttons cut to their first app, the stage advances to the next
-craft, and Pause stops the clock. Reduced motion shows four stills, starting with InDesign, and never starts playback.
-Hidden tabs and an off-screen hero stop drawing. Drawing uses at most two device pixels per CSS pixel.
+## Checking and sharing this prototype
 
-`tools/page.mjs` writes the built hero's markup twice, swapping its script for the stills or the player. It keeps the layout and
-words. Generated pages stay in this folder's `.scratch/`, and `tools/sheet.mjs` still exports `writeStillsPage()`.
-From the repository root:
+From the repository root, the two commands used in this pass are:
 
-    node design/journey-hero/take-2/tools/page.mjs
-    node design/journey-hero/tools/serve.mjs
+```
+node design/journey-hero/take-2/tools/checks.mjs
+node design/journey-hero/take-2/tools/preview.mjs design/journey-hero/take-2/.scratch/preview.html
+```
 
-Then open `/design/journey-hero/take-2/.scratch/play.html` or `stills.html` on that server. `?t=12.5` holds the player.
-`window.__hero.seek(t)` holds and draws another moment at once; `__hero.t`, `LOOP` and `SHOW` describe its clock.
-`stage.html?atlas=1` shows every atlas page, and `stage.html?t=12.5` holds a moment without the hero's page layout.
+`checks.mjs --timeline` also prints the derived action table. `frameAt(t)` wraps positive and negative times. `SCENES[i]()` builds the new still; `SCENES[2]({ at })` still gives any booklet reading pose with the complete group out. The player supports `?t=12.5` and `window.__hero.seek(t)`, and exposes its clock, SHOW and LOOP. `stage.html?s=0..5` holds a scene, `?t=` holds a loop time, `?atlas=1` shows every atlas page, and yaw/pitch inspect the geometry.
 
-These tools need only Node:
+The external browser review can continue using `tools/sheet.mjs` and `tools/film.mjs`, including phone frames and the new 0–74.71-second range. They were not run here. The offline preview was packed and its JavaScript parsed, but no browser, screenshot, pixel comparison or GPU frame-rate measurement was attempted in this run.
 
-    node design/journey-hero/take-2/tools/checks.mjs
-    node design/journey-hero/take-2/tools/preview.mjs design/journey-hero/take-2/.scratch/preview.html
-
-The preview is one offline frame: its stylesheet, all four font files, pictures and modules are inside it. It has no document
-wrapper and no addresses on the page's links. The packer wraps the named modules in dependency order, with an awaited entry;
-it does not call a bundler or fetch anything.
-
-The two browser tools must be run elsewhere, with Playwright and Chromium already available:
-
-    node design/journey-hero/take-2/tools/sheet.mjs design/journey-hero/take-2/.scratch/sheet.png 0,1,2,3,4,5
-    node design/journey-hero/take-2/tools/film.mjs design/journey-hero/take-2/.scratch/film.png 0 40.35 0.25
-    node design/journey-hero/take-2/tools/film.mjs design/journey-hero/take-2/.scratch/phone.png 9.35 18.75 0.15 --phone
-
-Film holds each time with `seek`, crops the stage with 16 pixels around it (within the viewport), and lays out eight frames to
-a row at half size. Each frame has its time and app below it. All tools reject output paths outside this prototype or onto
-`MOTION.md`. They do not publish anything.
-
-## What must survive review
-
-The approved stills and the rules above are the reference, not a new composition. Keep the screen, canvas and panel measures,
-the exported flat block, the type, colours and booklet's bending leaves. Keep both flyer logos as blobs and its names and
-contact details out. Compare the six stills with the originals at reading size, then inspect the beats and joins on both page
-sizes. New motion must preserve the same piece from its canvas through the dock or floor movement. Every app must finish
-with the cursor on Export and an empty floor before the next app opens.
-
-The renderer now clips in all three passes and chooses the lighter mesh only at roundness 0.06 or below. It reuses its colour
-lookups and draw lists and resizes the canvas only when needed. Those changes support the frame-rate target; a real browser
-still needs to measure it.
-
-## Build record
-
-The Node checker samples each scene at 60 frames a second, also checking its boundaries and still. It checks every numeric
-property, dimensions, tones, picture keys and windows, cursor count, content planes, the floor's slot and empty periods, loop
-wrapping and the still entry points. It also checks that dragged pictures follow the cursor and that the comp's rows retain
-their parked positions. The atlas layout was checked with canvas stand-ins: 94 pictures on three pages, 2048 × 1724,
-2048 × 1976 and 2048 × 476. The exported geometry at each still was also compared in memory against the original
-stage: positions, sizes and rotations match. Every module and the packed preview were syntax checked. Node-only stand-ins
-for the page and drawing APIs exercised held seeks, craft and stage clicks, pause, reduced motion, hidden and off-screen
-states, and the pixel cap; these are logic checks, not a browser render.
-
-No browser review, screenshots or frame-rate measurements were made during the build. The two Playwright tools were written
-and syntax checked only. The installed skills and external project notes were not read because this build was confined to the
-repository; no reviewer agents were used. Nothing here is a production build or a publication.
-
-## Browser review
-
-Looked at in headless Chromium after the build, on 19 November 2026. `tools/film.mjs` and `tools/sheet.mjs` ran as written.
-Each of the six apps was read as held frames at 1440 × 900, about 130 in all, with closer frames of the split, the docking, the
-placed assets, the copy leaving the stack, three leaves part of the way over, the wipe between shots, the word reveal, the
-prototype link and each flat lay. The beats are where the brief puts them.
-
-The six stills were compared with the approved sheet pixel by pixel. They differ only where the brief says they should (the
-photo chip in Illustrator's bar, the parked playhead and the two sliders in Premiere Pro, the comp's solid third row), and in
-Illustrator's cursor, which is on its way to Export at 3.9 seconds and has not arrived.
-
-The packed preview was loaded from a file at 1440 × 900 and at 390 × 664 with its requests watched: none were made, nothing
-was reported as an error, the clock runs, and a craft button and Pause do their jobs. A frame takes 0.06 milliseconds to work
-out in Node, and the busiest one has 123 pieces.
-
-Not measured: the frame rate on a real graphics card, because headless Chromium draws in software. Safari and Firefox were
-not opened.
+All authored changes and the packed output are confined to this folder. Neither brief, the first take, public files, source site, dependencies nor deployment was changed.

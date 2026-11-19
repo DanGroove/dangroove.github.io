@@ -1,10 +1,14 @@
 // Geometry and clock checks. No browser, filesystem writes or dependencies.
 import assert from 'node:assert/strict';
-import { ART, ROWS } from '../art.mjs';
+import fs from 'node:fs';
+import { ART, ART_TEXT, ROWS, makeAtlas } from '../art.mjs';
+import { HOME, dot, makeCamera } from '../../../../public/journey/hero/engine.mjs';
+import { corners } from '../kit.mjs';
 import { TONES } from '../sq.mjs';
-import { SHOW, LOOP, SCENES, SCREEN, MAT, frameAt, sceneAt } from '../stage.mjs';
+import { SHOW, LOOP, SCENES, SCREEN, MAT, BLOCK, POOL, PACE, SCRIPTS, frameAt, sceneAt } from '../stage.mjs';
+import { previewMarkup } from './preview.mjs';
 
-let frames = 0, pieces = 0;
+let frames = 0, pieces = 0, largest = 0;
 const errors = [];
 function fail(time, message) {
   if (errors.length < 30) errors.push(`${time.toFixed(6)}s (${sceneAt(time).scene.key}): ${message}`);
@@ -17,7 +21,7 @@ function finite(value, name, time) {
 }
 function check(time) {
   const { scene, at } = sceneAt(time), list = frameAt(time);
-  frames++; pieces += list.length;
+  frames++; pieces += list.length; largest = Math.max(largest, list.length);
   if (list.filter(pc => pc.art === 'cursor').length !== 1) fail(time, 'expected exactly one cursor');
   list.forEach((pc, i) => {
     finite(pc, `piece ${i}`, time);
@@ -38,6 +42,9 @@ function check(time) {
     if (pc.where === 'floor') {
       if (scene.key === 'ps' || scene.key === 'ai' || at < 0.1) fail(time, `piece ${i}: floor must be empty`);
       if (!pc.clip || pc.clip.some((n, j) => n !== [0, 0, 1, -MAT.z][j])) fail(time, `piece ${i}: floor slot plane changed`);
+      const s = SCRIPTS[scene.key], exp = s?.actions.find(a => a.id === 'export');
+      if (exp && at < exp.start) fail(time, `piece ${i}: floor before export`);
+      if (pc.device !== undefined && list.clock !== null && list.clock !== undefined && Math.abs(pc.clock - list.clock) > 1e-8) fail(time, `piece ${i}: device and viewer clocks differ`);
     }
   });
 }
@@ -52,7 +59,7 @@ for (let i = 0; i < SHOW.length; i++) {
   for (const at of [0, 0.05, 0.1, 0.5, scene.still, scene.len - 1e-8]) check(start + at);
   start += scene.len;
 }
-assert.equal(LOOP, 40.35);
+if (Object.keys(SCRIPTS).length === 6) assert.ok(LOOP / PACE >= 68 && LOOP / PACE <= 76, `loop is ${LOOP / PACE}s`);
 assert.equal(sceneAt(LOOP).i, 0);
 assert.equal(sceneAt(-0.01).scene.key, 'fig');
 assert.deepEqual(frameAt(-0.01), frameAt(LOOP - 0.01));
@@ -63,31 +70,33 @@ const tip = list => {
   const pc = list.find(pc => pc.art === 'cursor');
   return [pc.p[0] - 0.46 * (0.5 - 10 / 96), pc.p[1] + 0.46 * (0.5 - 6 / 96)];
 };
-// A drag follows the same rectangle it moves or the same plane it reveals.
-for (let at = 1.3; at < 2.4; at += 1 / 60) {
-  const list = frameAt(at), raw = list.find(pc => pc.art === 'kPhotoB' && pc.window);
-  near(tip(list)[0], raw.p[0] + raw.s[0]);
-}
-for (const [a, b, art] of [[0.7, 1.5, 'kMap'], [1.65, 2.25, 'kLoc']]) {
-  for (let at = a + 1 / 60; at < b; at += 1 / 60) {
-    const list = frameAt(4.3 + at), map = list.find(pc => pc.art === art);
-    near(tip(list)[0], Math.min(map.clip[3], map.p[0] + map.s[0]));
+// The cursor must reach every action's start before pressing, then its end before releasing.
+let sceneStart = 0;
+for (const scene of SHOW) {
+  const s = SCRIPTS[scene.key];
+  if (s) {
+    assert.ok(frameAt(sceneStart + s.first - 1e-6).every(pc => !pc.document), `${scene.key}: document starts populated`);
+    let end = 0.8 * PACE;
+    for (const a of s.actions) {
+      near(a.approach, end); assert.ok(a.end > a.start);
+      const first = tip(frameAt(sceneStart + a.start + 1e-8));
+      near(first[0], SCREEN.l + a.from[0] * 1.15); near(first[1], SCREEN.b + a.from[1] * 1.15);
+      const last = tip(frameAt(sceneStart + a.end - 1e-8));
+      near(last[0], SCREEN.l + a.to[0] * 1.15); near(last[1], SCREEN.b + a.to[1] * 1.15);
+      end = a.end;
+    }
+    assert.ok(frameAt(sceneStart + actionStart(s, 'export') - 1e-6).every(pc => pc.where !== 'floor'), `${scene.key}: floor before export`);
   }
+  sceneStart += scene.len;
 }
-for (const [start, a, b, art] of [[9.35, 0.55, 1, 'kMap'], [18.75, 1.8, 2.35, 'trans'], [18.75, 2.8, 3.3, 'fx'], [33.95, 1, 1.4, 'uiWide']]) {
-  for (let at = a; at < b; at += 1 / 60) {
-    const list = frameAt(start + at), work = list.find(pc => pc.art === art && pc.where === 'travel');
-    assert.ok(work, `missing dragged ${art}`);
-    const [x, y] = tip(list); near(x, work.p[0]); near(y, work.p[1]);
-  }
-}
+function actionStart(s, id) { return s.actions.find(a => a.id === id).start; }
 // The new slide law must leave the approved parked list in exactly its old place.
-const rows = SCENES[4]().filter(pc => pc.art === 'rowA' || pc.art === 'rowB');
+const rows = frameAt(SHOW.slice(0, 4).reduce((n, s) => n + s.len, 0) + (SCRIPTS.ae ? actionStart(SCRIPTS.ae, 'export') - 1e-6 : 4.4)).filter(pc => pc.where === 'content' && (pc.art === 'rowA' || pc.art === 'rowB'));
 assert.equal(rows.length, 3);
 ROWS.forEach(([x, y, w, h], i) => {
   near(rows[i].p[0], SCREEN.l + (1.33 + (x + w / 2) * 1.92 / 480) * 1.15);
   near(rows[i].p[1], SCREEN.b + (1.5 + 1.08 - (y + h / 2) * 1.08 / 270) * 1.15);
-  assert.deepEqual(rows[i].window, [0, 0, 1, 1]);
+  assert.deepEqual(rows[i].window || [0, 0, 1, 1], [0, 0, 1, 1]);
 });
 // The booklet strip is a reading pose, while the rest of InDesign stays at its still time.
 for (const at of [-1, -0.7, 0, 0.3, 1, 1.4, 2, 2.76, 4]) {
@@ -96,10 +105,122 @@ for (const at of [-1, -0.7, 0, 0.3, 1, 1.4, 2, 2.76, 4]) {
   assert.ok(list.filter(pc => pc.where === 'floor').every(pc => pc.p[2] >= MAT.z));
 }
 assert.ok(SCREEN.w > 0);
+const middle = dot(HOME.r, [SCREEN.l + SCREEN.w / 2, 0, SCREEN.z + SCREEN.t / 2]);
+near(dot(HOME.r, [(BLOCK.x0 + BLOCK.x1) / 2, 0, (BLOCK.z0 + BLOCK.z1) / 2]), middle);
+near(dot(HOME.r, [POOL.x, 0, POOL.z]), middle);
+// Canvas stand-ins exercise all picture functions and atlas packing, without pretending to render pixels.
+let matrix = [1, 0, 0, 1, 0, 0];
+const stack = [];
+const context = new Proxy({
+  font: '400 10px sans-serif', letterSpacing: '0px', textAlign: 'left',
+  getTransform: () => Object.fromEntries(['a', 'b', 'c', 'd', 'e', 'f'].map((k, i) => [k, matrix[i]])),
+  save() { stack.push({ matrix: matrix.slice(), font: this.font, letterSpacing: this.letterSpacing, textAlign: this.textAlign }); },
+  restore() { const s = stack.pop(); matrix = s.matrix; this.font = s.font; this.letterSpacing = s.letterSpacing; this.textAlign = s.textAlign; },
+  translate(x, y) { matrix[4] += matrix[0] * x + matrix[2] * y; matrix[5] += matrix[1] * x + matrix[3] * y; },
+  scale(x, y) { matrix[0] *= x; matrix[1] *= x; matrix[2] *= y; matrix[3] *= y; },
+  rotate(a) { const [x, y, z, w] = matrix, c = Math.cos(a), s = Math.sin(a); matrix[0] = x * c + z * s; matrix[1] = y * c + w * s; matrix[2] = -x * s + z * c; matrix[3] = -y * s + w * c; },
+  measureText(s) { const px = +(this.font.match(/([\d.]+)px/)?.[1] || 10); return { width: s.length * px * 0.55, actualBoundingBoxAscent: px * 0.8, actualBoundingBoxDescent: px * 0.2 }; },
+  createLinearGradient: () => ({ addColorStop() {} }),
+}, { get: (o, k) => k in o ? o[k] : () => {} });
+globalThis.Path2D = class {};
+globalThis.document = { createElement: () => ({ getContext: () => context }) };
+const atlas = makeAtlas();
+assert.ok(atlas.pages.length <= 6, 'atlas exceeds six pages');
+assert.ok(atlas.pages.every(p => p.width <= 2048 && p.height <= 2048));
+assert.ok(ART_TEXT.kMap.length > 10 && ART_TEXT.kLoc.length > 20, 'map lettering was not recorded');
+// Revisit every action after atlas-time font measurement, including rotated map type and carets.
+sceneStart = 0;
+for (const scene of SHOW) {
+  const s = SCRIPTS[scene.key];
+  for (const a of s.actions) for (const f of [0, 0.25, 0.5, 0.75, 0.999999]) check(sceneStart + a.start + (a.end - a.start) * f);
+  if (['pr', 'ae', 'fig'].includes(scene.key)) {
+    const exp = s.actions.find(a => a.id === 'export'), land = exp.start + 0.55 * PACE;
+    for (const f of [0.01, 0.2, 0.333333, 0.5, 0.7, 0.99, 1.2, 1.7, 1.99]) {
+      const at = land + f * 1.6 * PACE, list = frameAt(sceneStart + at);
+      near(list.clock, f % 1);
+      assert.ok(list.some(pc => pc.device === 0));
+      for (const pc of list.filter(pc => pc.device !== undefined)) near(pc.clock, list.clock);
+    }
+    const list = frameAt(sceneStart + exp.end + 0.01 * PACE);
+    const bodies = [0, 1, 2].map(i => list.find(pc => pc.where === 'floor' && pc.device === i));
+    assert.ok(bodies.every(Boolean), 'device row did not land');
+    const footprint = bodies.flatMap(corners), xs = footprint.map(p => p[0]), zs = footprint.map(p => p[2]);
+    near(dot(HOME.r, [(Math.min(...xs) + Math.max(...xs)) / 2, 0, (Math.min(...zs) + Math.max(...zs)) / 2]), middle);
+    near(Math.min(...zs), MAT.z);
+    assert.ok(list.some(pc => pc.where === 'content' && ['shotA', 'shotB', 'shotCfx', 'wMake', 'uiBoard0', 'uiBoard1', 'uiBoard2', 'uiBoard3'].includes(pc.art)), 'viewer is not playing with the devices');
+  }
+  sceneStart += scene.len;
+}
+// Changing PACE must stretch time alone, including the shell and every exported device clock.
+const stageURL = new URL('../stage.mjs', import.meta.url);
+const stretchedSource = fs.readFileSync(stageURL, 'utf8').replace('export const PACE = 1;', 'export const PACE = 2;').replace(/from (['"])(\.{1,2}\/[^'"]+)\1/g, (_all, _quote, ref) => `from '${new URL(ref, stageURL).href}'`);
+const stretched = await import('data:text/javascript;base64,' + Buffer.from(stretchedSource).toString('base64'));
+near(stretched.LOOP, LOOP * 2);
+sceneStart = 0;
+for (let i = 0; i < SHOW.length; i++) {
+  near(stretched.SHOW[i].len, SHOW[i].len * 2);
+  for (const f of [0.134, 0.3337, 0.7169, 0.981]) {
+    const time = sceneStart + SHOW[i].len * f, normal = frameAt(time), slow = stretched.frameAt(time * 2);
+    assert.equal(normal.length, slow.length, 'PACE changed the pieces');
+    normal.forEach((pc, j) => {
+      assert.equal(pc.art, slow[j].art);
+      for (const field of ['p', 'q', 's', 'e']) pc[field].forEach((n, k) => near(n, slow[j][field][k]));
+      if (pc.clock !== undefined) near(pc.clock, slow[j].clock);
+    });
+  }
+  sceneStart += SHOW[i].len;
+}
+const readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+for (const scene of SHOW) for (const a of SCRIPTS[scene.key].actions) assert.ok(readme.includes(`| ${scene.key} | ${a.id} | ${a.kind} | ${(a.start / PACE).toFixed(3)} | ${(a.end / PACE).toFixed(3)} |`), `README action table is stale at ${scene.key}/${a.id}`);
+// Exercise the real player with drawing and DOM stand-ins. This is a logic check, never a browser review.
+const node = rect => ({
+  events: {}, attributes: {}, textContent: '', classList: { remove() {} },
+  getBoundingClientRect: () => rect,
+  addEventListener(name, f) { this.events[name] = f; },
+  setAttribute(name, value) { this.attributes[name] = value; },
+  removeAttribute(name) { delete this.attributes[name]; },
+});
+const hero = node({ left: 0, top: 0, width: 1440, height: 900 }), stage = node({ left: 760, top: 80, width: 600, height: 700 }), pause = node(), crafts = [0, 1, 2, 3].map(() => node());
+hero.querySelector = s => s === '[data-stage-box]' ? stage : s === '[data-pause]' ? pause : {};
+hero.querySelectorAll = () => crafts;
+const media = { matches: false, addEventListener(_name, f) { this.change = f; } }, win = {}, draws = [];
+const playerDocument = { querySelector: () => hero, fonts: { ready: Promise.resolve() }, hidden: false, addEventListener() {} };
+const renderer = { setAtlas() {}, draw(pieces, view) { draws.push({ pieces, view }); } };
+const observer = class { observe() {} };
+const player = fs.readFileSync(new URL('../play.mjs', import.meta.url), 'utf8').replace(/^import\s+.*?;\s*$/gm, '');
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+  location: { search: '?t=0' }, document: playerDocument, window: win, matchMedia: () => media,
+  createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => atlas, fontsReady: async () => {},
+  SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, devicePixelRatio: 3,
+  requestAnimationFrame: () => 1, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
+});
+assert.equal(win.__ready, true);
+assert.ok(draws.at(-1).view.dpr <= 2);
+crafts[0].events.click();
+near(sceneAt(win.__hero.t).at, SHOW[2].still); // A paused graphic-design choice uses the InDesign still.
+crafts[2].events.click();
+near(sceneAt(win.__hero.t).at, SHOW[4].still);
+pause.events.click(); crafts[0].events.click(); near(win.__hero.t, 0);
+pause.events.click(); stage.events.click(); near(sceneAt(win.__hero.t).at, SHOW[3].still);
+media.matches = true; media.change(); near(sceneAt(win.__hero.t).at, SHOW[3].still);
+win.__hero.seek(-0.01); near(win.__hero.t, LOOP - 0.01);
+// Parse the offline module without running it. All font URLs and page links must be self-contained.
+const preview = previewMarkup(), moduleSource = preview.match(/<script type="module">([\s\S]*)<\/script>/)[1];
+new AsyncFunction(moduleSource.replace(/import\.meta\.url/g, '"offline"'));
+assert.ok(preview.startsWith('<title>Journey hero take two</title>'));
+assert.ok(!/<!doctype|<html\b|<head\b|<body\b/i.test(preview));
+assert.ok(!/\b(?:src|href)=/.test(preview.split('<script>')[0]));
+assert.ok(!/url\((?!data:)/.test(preview.split('<script>')[0]));
 if (errors.length) {
   console.error(errors.join('\n'));
   process.exitCode = 1;
 } else {
-  console.log(`checked ${frames} frames, ${pieces} pieces`);
+  console.log(`checked ${frames} frames, ${pieces} pieces (max ${largest}); ${atlas.pages.length} atlas pages; loop ${LOOP.toFixed(3)}s`);
+  console.log(SHOW.map(s => `${s.key}: ${s.len.toFixed(3)}s`).join(', '));
   console.log('all clean');
+  if (process.argv.includes('--timeline')) {
+    console.log('| App | Action | Kind | Start | End |\n| --- | --- | --- | ---: | ---: |');
+    for (const scene of SHOW) for (const a of SCRIPTS[scene.key].actions) console.log(`| ${scene.key} | ${a.id} | ${a.kind} | ${(a.start / PACE).toFixed(3)} | ${(a.end / PACE).toFixed(3)} |`);
+  }
 }

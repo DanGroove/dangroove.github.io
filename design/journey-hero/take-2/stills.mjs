@@ -4,7 +4,7 @@ import { makeCamera, dot } from '../../../public/journey/hero/engine.mjs';
 import { createRenderer } from './sq.mjs';
 import { corners } from './kit.mjs';
 import { makeAtlas, fontsReady } from './art.mjs';
-import { SCENES, CRAFT, BLOCK } from './stage.mjs';
+import { SCENES, CRAFT, BLOCK, POOL } from './stage.mjs';
 
 const q = new URLSearchParams(location.search), num = (k, d) => q.has(k) ? +q.get(k) : d;
 const hero = document.querySelector('[data-hero]'), canvas = hero.querySelector('[data-art]'), stage = hero.querySelector('[data-stage-box]');
@@ -22,7 +22,7 @@ function draw() {
   const pieces = q.has('at') ? SCENES[s]({ at: num('at') }) : all[s];
   const S = Math.min(b.width / NEED.w, b.height / NEED.h);
   const cx = b.left - h.left + b.width / 2 - S * NEED.x, cy = b.top - h.top + b.height / 2 + S * NEED.y;
-  R.draw(pieces, { W: h.width, H: h.height, dpr: Math.min(2, devicePixelRatio || 1), S, cx, cy, cam }, { outline: 0, floor: { radius: num('pool', 4.8) } });
+  R.draw(pieces, { W: h.width, H: h.height, dpr: Math.min(2, devicePixelRatio || 1), S, cx, cy, cam }, { outline: 0, floor: { ...POOL, radius: num('pool', 4.8) } });
   hero.classList.remove('is-entering');
   crafts.forEach((c, i) => i === CRAFT[s] ? c.setAttribute('aria-current', 'true') : c.removeAttribute('aria-current'));
   // where the flat lay is in the page, so that a tool can crop a still to it
