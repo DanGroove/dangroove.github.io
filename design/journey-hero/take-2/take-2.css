@@ -1,0 +1,17 @@
+/* Take two alone owns these offsets; the borrowed first-take stylesheet stays untouched. */
+.hero-name .name-line,
+.hero-crafts .n {
+  position: relative;
+  left: var(--name-ink-shift, 0px);
+}
+.hero-name .name-line {
+  display: block;
+}
+@media (min-width: 720px) {
+  .hero {
+    --pad: clamp(40px, calc(30vw - 296px), 64px);
+  }
+  .hero-say {
+    transform: translateY(-46%) translateY(calc(-1 * var(--say-rise, 0px)));
+  }
+}

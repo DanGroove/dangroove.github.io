@@ -496,3 +496,126 @@ all clean
 ```
 
 Departures from CORRECTIONS-4: none. The small renderer shadow-position override supports the requested shadow preservation; it does not certify the rendered result. No browser command or launch, frame capture, rendered wall-shadow comparison, six-still pixel comparison, hardware run, measurement tool, installation, network, Git command, deployment, outside-repository read/write or program termination was performed. The external reviewers still own G1's frame/shadow/still gates. Protected briefs, review/hardware and .scratch/crit were not changed. Installed skills and RTK.md were outside the allowed repository and were not read.
+
+## CORRECTIONS-5
+
+Current acceptance is Dan's H1–H8, carried forward with the approved six-still structure, artwork, hierarchy, Outfit, square corners, hard wipes, centred floor groups, shared clocks and round-four drag/shadow rules. Earlier sections above are historical records; this section supersedes their current timing and laptop direction. The explicit local restrictions reserve layout, font ink, pixel, frame and independent visual critique gates for the external browser machine. They are **UNRUN**, with no visual pass claimed.
+
+### H1 — lasting spread pieces
+
+`spreadFrame` creates the two final coal-toned ink pages and the inset `ID.frame` outline/X from the first nonzero drag progress. Their x/y geometry grows proportionally about the spread's upper-left corner; normal lifts, normal thicknesses and tones retain their final values. At release the same builder stays in use. Sixty samples at 0.005 s prove every corner is inside the growing rectangle. The actual non-cursor arrays at global 20.28 s ±0.0005 are exactly identical.
+
+The final 0.000500001 s of this one draw settles to its exact endpoint. This sub-millisecond settlement is deliberate: without it, the wipe's last tiny floating-point position changes would prevent the literal equality required by H1. Action times and the cursor's route do not change. All 23 draw ends compare at ±0.0005 and ±0.005 s: other draws' emitted arrays on **each side** must match frozen round four within 1e-8. Existing construction-to-atlas substitutions (for example Illustrator's badge), echo additions and marquee removals mean those other before/after arrays are not literally identical. The oracle retains those incoming substitutions rather than misreporting them as identical pieces or claiming their rendered equivalence. A control changing another draw fails that oracle. Rendered draw-end frames remain for review.
+
+### H2 — labels and clocks
+
+InDesign's `land` is 3.0 s, up from 1.2 s; its labels remain present throughout 31.98–34.98 s and cut at pickup. PACE stays 1. The loop grows exactly 1.8 s to **83.040 s**. Every action and still shift is checked against round four; the three later apps' local playback and label clocks are unchanged. The five retained emitted stills, and Figma's screen/canvas still excluding its changed floor, compare within 1e-8 (global-clock addition introduces tiny floating-point differences). No pixel identity is claimed. The 768 × 1024 label fixture now derives its review times from Figma landing instead of stale global constants.
+
+| App | Global start | Local still | Global still |
+| --- | ---: | ---: | ---: |
+| Photoshop | 0.000000 | 6.549000 | 6.549000 |
+| Illustrator | 7.500000 | 9.239000 | 16.739000 |
+| InDesign | 18.900000 | 18.077961 | 36.977961 |
+| Premiere Pro | 39.880000 | 12.170001 | 52.050001 |
+| After Effects | 55.100000 | 10.980001 | 66.080001 |
+| Figma | 69.130000 | 11.610000 | 80.740000 |
+
+### H3 — laptop faces lower left
+
+The hinge runs in world x at the deck's low-z back edge. Local picture-right is +x, up is [0, 0.978147601, −0.207911691], and the outward normal is [0, 0.207911691, 0.978147601]: +z-facing, 12° back lean, unmirrored. Keyboard and trackpad turn with the deck. The same laptop enters along −x over 0.5 s without a clip and returns with the shared z withdrawal. The label is inset 0.08 along and 0.06 down from its actual lid-screen top-left corner. Existing label routes, fixed anchors and playback checks still run.
+
+750 computed poses at 0.005 s cover entry, landed play and return; the visible lid outline clears the canvas, Export, tablet and phone in HOME. The ordinary checks also cover screen ratios, gaps, complete footprint, moving designs and frozen withdrawal. The complete row stays centred on world x 0.200. Turning the 1.55-wide lid changes the laptop's x footprint; to retain equal 0.3 gaps and the overall row centre, tablet and phone both move right by **0.111174 world units**. Their shapes, z slots, chrome, clocks and relative spacing are unchanged. This uniform row recentering is the interpretation of “keep their places beside it”; keeping both old absolute x coordinates would break the new footprint's centre. Browser frames and page-text clearance are pending.
+
+### H4 — ink column
+
+`page-layout.mjs` wraps the two existing name lines without changing their words or weight animation. A DOM character range supplies each glyph's actual advance position, including wrapped lede lines; Canvas glyph ink metrics supply its side bearing. Both name-line left offsets use Outfit weight 800, while the lede and craft numbers use their actual styles. The name lines and numbers receive offsets to the lede's ink column. Measurements refresh on layout/font changes and while the existing name animation is active (including an animation already running when fonts finish). The 1 px pixel-ink gate at all sizes is **UNRUN**.
+
+### H5 — guarded rise
+
+At width ≥720, the whole `.hero-say` receives one extra upward translation, leaving its internal spacing intact. Rise = min(max(0, lede ink top − name ink bottom), max(0, name ink top − logo bottom − 48)). At ≤719 the rise is zero. `take-2.css` owns the offset after the borrowed stylesheet. Font/DOM computations are implemented, but no actual 1 px spacing or 48 px rendered-ink guard pass is claimed here.
+
+### H6 — equal side spaces and continuous placement
+
+The requested camera origin is `cx = (textInkRight + viewportWidth) / 2 - S * need.x`. Text ink right is the maximum glyph edge across the name, wrapped lede and craft list, not their block widths. The existing fit still solves the two label columns, content boundaries and gutters; its measurements are cached. The stage's actual click rectangle extends to include the shifted scene, while its original CSS box continues to set scale. Both player and stills use this layout. There are no per-playback-frame layout reads in player or callouts; hover reads cached hero geometry.
+
+The inherited abrupt 40→64 px gutter at 1200 would violate continuous resizing. The take-two override ramps it continuously from 1120 to 1200 (`--pad: clamp(40px, calc(30vw - 296px), 64px)`); supplied reference widths retain their original gutters. The real fit with a conservative word-width model is swept every 10 px from 720 through 2560 at heights 640, 900 and 1440: **555 samples** plus small one-sided perturbations. The maximum model centre movement per 10 px is 10.06 px. This is sampled computational continuity, not certification of font wrapping or actual DOM label constraints.
+
+Using the supplied text-ink edges as inputs, modeled left/right spaces are 131.36/131.36 px at 1280 × 800, 323.42/323.42 at 1920 × 1080 and 498.22/498.22 at 2560 × 1440. Target coverage and ≤2% scale-loss gates pass in that model. External `checkRound5Layout(page)` adds real font/DOM, target and resize checks; all ten-size label checks remain. None was executed here.
+
+### Envelope and size — before → after
+
+The six-still projected envelope, **without padding**, is unchanged:
+
+- camera-right x: −2.330956707 … 3.429467889 → −2.330956707 … 3.429467889;
+- camera-up y: −1.407385983 … 5.233459130 → −1.407385983 … 5.233459130;
+- scene width × height: **5.760424596 × 6.640845113 world projection units → the same**;
+- padded fit need: 6.260424596 × 7.140845113 → the same.
+
+The table below is a **Node model**, not measured browser pixels. It uses the retained test suite's explicit phone stage heights (240, 396, 366.6, 313.49 and 430.05 px in the listed phone order), CSS-derived desktop boxes, and conservative 0.75-em word widths. It runs both the frozen incoming label fit and current fit. Actual font/page obstacles can change the fit; external review must report actual sizes. The model shows no shrink; some phone fits gain room from the rotated laptop's new label anchor.
+
+| Viewport | S before → after | Scene px before | Scene px after | Scale change |
+| --- | ---: | ---: | ---: | ---: |
+| 390 × 664 | 33.609467 → 33.609467 | 193.60 × 223.20 | 193.60 × 223.20 | 0.00% |
+| 390 × 844 | 42.871487 → 44.300426 | 246.96 × 284.70 | 255.19 × 294.19 | 3.33% |
+| 360 × 780 | 36.896455 → 36.896455 | 212.54 × 245.02 | 212.54 × 245.02 | 0.00% |
+| 375 × 667 | 40.035446 → 40.598440 | 230.62 × 265.87 | 233.86 × 269.61 | 1.41% |
+| 412 × 915 | 47.031013 → 49.730004 | 270.92 × 312.33 | 286.47 × 330.25 | 5.74% |
+| 768 × 1024 | 62.308873 → 62.308873 | 358.93 × 413.78 | 358.93 × 413.78 | 0.00% |
+| 820 × 1180 | 66.960315 → 66.960315 | 385.72 × 444.67 | 385.72 × 444.67 | 0.00% |
+| 1024 × 768 | 85.143984 → 85.143984 | 490.47 × 565.43 | 490.47 × 565.43 | 0.00% |
+| 1440 × 900 | 103.629191 → 103.629191 | 596.95 × 688.19 | 596.95 × 688.19 | 0.00% |
+| 1920 × 1080 | 128.836291 → 128.836291 | 742.15 × 855.58 | 742.15 × 855.58 | 0.00% |
+
+### H7 — stationary floor hover
+
+`pointerFloor` inverts the current orthographic camera's right/up basis at y=0. 180 ray round trips across HOME, two changed cameras and three scales recover the source point within 1e-8. A dot's grid centre, not a fragment's distance, decides its whole red/grey state at radius 0.75; 10,404 samples test centres and nine locations within each dot. GLSL uses the same centre rule, brand red #C0262E, and the existing dot mask/pool/shadow terms. Only the tint changes: floor positions, pool and camera stay fixed. Shader-source/geometry evidence does not establish raster visibility.
+
+`floor-hover.mjs` accepts only a fine hovering mouse and rejects reduced motion/touch input. Pointer leave clears immediately in state and on the next drawing frame. Playback consumes the point on its next frame; held/paused/seeked playback coalesces moves into at most one animation-frame redraw and ignores unchanged coordinates. Node exercises coalescing, playback, held state, leave, identical moves, fine/reduced/touch gates and hidden state. Event listeners do not intercept stage, craft or Pause clicks; the existing player logic checks remain.
+
+### H8 — records, pack and limits
+
+README states current timing, new stylesheet/layout modules, floor hover, tools and review limits. `page.mjs` loads `take-2.css` after `journey.css`; `preview.mjs` inlines it in the same order. The page output guard now also protects rounds 4 and 5. The offline preview is `.scratch/preview.html`: **374,203 bytes** (366 KB as reported by the packer). Windows/source line endings can change this size. The packed module passes syntax and self-containment checks; no browser/offline-request run was made.
+
+No browser, network, installation, git command, deployment, measurement/hardware run, outside-repository read/write or program termination was performed. Public files and every protected brief/review directory were outside the writes. Installed skills and RTK.md are outside the permitted repository and were not read. Independent rendered critique, H4–H7 layout/pixel gates, H1/H3 frames, wall shadows and pixel still comparisons remain for the external machine. The small endpoint settlement, existing draw representations, uniform device-row shift and continuous gutter above are the explicit implementation qualifications; no other design departure is intended.
+
+### Negative controls
+
+All **17** controls below were observed to exit 1 at the named gate. Each exact search matched **one** site before mutation. Each file was restored byte-for-byte in `finally`. `round5-controls.mjs --audit` verifies the exact edit inventory without mutation. Exact outputs and the machine-readable inventory are in `.scratch/corrections5/controls/`. The 46 historical controls and 14 G1 controls were audited for one-site matches; their historical mutations were not rerun.
+
+In this table, strings use JSON escaping (`\n` denotes one newline).
+
+| Control | File | Exact search → replacement | Matches | Caught / gate |
+| --- | --- | --- | ---: | --- |
+| old spread drawing | `stage.mjs` | `"      if (i === 0) {\n        spreadFrame(D, t >= action(s, 'frame0').end - 0.000500001 * PACE ? 1 : eased(s, 'frame0', t), !filled);"` → `"      if (i === 0 && done(s, 'frame0', t)) {\n        for (const rect of [ID.left, ID.right]) D.push({ ...on('ink', ...rect, { lift: 0.06, t: 0.02 }), tones: FLYER.coal });\n        if (!filled) emptyFrame(D, ID.frame, false);"` | 1 | Yes; exit 1; `H1 spread: release swaps` |
+| other draw changes | `stage.mjs` | `"else P.push(on(tone, ...growing, { lift: 0.06, t: 0.02 }));"` → `"else P.push(on('red', ...growing, { lift: 0.06, t: 0.02 }));"` | 1 | Yes; exit 1; `H1 draw comparison:` |
+| spread grows outside rectangle | `stage.mjs` | `"pc.s[0] *= p; pc.s[1] *= p;"` → `"pc.s[0] *= 1; pc.s[1] *= p;"` | 1 | Yes; exit 1; `H1 spread: corner outside` |
+| short InDesign hold | `stage.mjs` | `"{ id: 'land', kind: 'wait', duration: 3.0 }"` → `"{ id: 'land', kind: 'wait', duration: 1.2 }"` | 1 | Yes; exit 1; `H2 loop` |
+| old laptop direction | `stage.mjs` | `"const lidU = [1, 0, 0], lidV = [0, Math.cos(LID_ANGLE), -Math.sin(LID_ANGLE)], lidN = [0, Math.sin(LID_ANGLE), Math.cos(LID_ANGLE)];"` → `"const lidU = [0, 0, -1], lidV = [-Math.sin(LID_ANGLE), Math.cos(LID_ANGLE), 0], lidN = [Math.cos(LID_ANGLE), Math.sin(LID_ANGLE), 0];"` | 1 | Yes; exit 1; `H3 orientation:` |
+| laptop label misses corner | `stage.mjs` | `"const local = [-face.s[0] + 0.08, face.s[1] - 0.06, face.s[2]];"` → `"const local = [0, 0, face.s[2]];"` | 1 | Yes; exit 1; `H3 laptop label top-left corner` |
+| laptop enters from wrong side | `stage.mjs` | `"const dx = -1.6 * (1 - EASE.enter(linear(t, ...spans[0])));"` → `"const dx = 1.6 * (1 - EASE.enter(linear(t, ...spans[0])));"` | 1 | Yes; exit 1; `H3 same-object x entry` |
+| wide centring undone | `view.mjs` | `"return { ...view, cx: (textRight + view.W) / 2 - view.S * need.x };"` → `"return view;"` | 1 | Yes; exit 1; `H6 equal side spaces` |
+| resize gutter jumps | `view.mjs` | `"export const sideGutter = width => Math.min(64, Math.max(40, 0.3 * width - 296));"` → `"export const sideGutter = width => Math.min(64, Math.max(40, 0.3 * width - 296)) + (width >= 1200 ? 1 : 0);"` | 1 | Yes; exit 1; `H6 discontinuity at` |
+| scene scale shrinks | `view.mjs` | `"return { ...view, cx: (textRight + view.W) / 2 - view.S * need.x };"` → `"return { ...view, S: view.S * 0.95, cx: (textRight + view.W) / 2 - view.S * need.x };"` | 1 | Yes; exit 1; `H6 scene shrank` |
+| stage target stays behind | `view.mjs` | `"return { left, width: right - left };"` → `"return { left: boxLeft, width: boxRight - boxLeft };"` | 1 | Yes; exit 1; `H6 stage target misses` |
+| floor ray shifted | `view.mjs` | `"return [(a * cam.u[2] - cam.r[2] * b) / d, 0, (cam.r[0] * b - cam.u[0] * a) / d];"` → `"return [1 + (a * cam.u[2] - cam.r[2] * b) / d, 0, (cam.r[0] * b - cam.u[0] * a) / d];"` | 1 | Yes; exit 1; `H7 current-view ray/floor point` |
+| dot decided per fragment | `view.mjs` | `"Math.hypot(centre[0] - pointer[0], centre[1] - pointer[2]) <= 0.75"` → `"Math.hypot(x - pointer[0], z - pointer[2]) <= 0.75"` | 1 | Yes; exit 1; `H7 whole dot centre/radius rule` |
+| shader decided per fragment | `sq.mjs` | `"distance(centre, uHover.xy) <= 0.75"` → `"distance(vW.xz, uHover.xy) <= 0.75"` | 1 | Yes; exit 1; `H7 shader must use centre distance` |
+| hover redraws not coalesced | `floor-hover.mjs` | `"if (!available() \|\| running() \|\| pending) return;"` → `"if (!available() \|\| running()) return;"` | 1 | Yes; exit 1; `H7 hover redraws are not coalesced` |
+| leave retains pointer | `floor-hover.mjs` | `"function clear() { if (pointer) { pointer = null; redraw(); } }"` → `"function clear() {}"` | 1 | Yes; exit 1; `H7 leave retains red dots` |
+| hover disconnected from renderer | `play.mjs` | `"pointer: hover.point(view)"` → `"pointer: null"` | 1 | Yes; exit 1; `H7 player does not bind` |
+
+### Checks output
+
+`node design/journey-hero/take-2/tools/checks.mjs` — exit 0:
+
+```text
+R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (744 samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720
+page labels 768x1024: 181 frames; S=59.601966; minimum text gap=16.000 px; routes clean
+G1 drags: 4105 samples at 0.0005 s, five drags including loc; order/one offset, projected occlusion and F1 lifetimes clean; max corner error=8.958e-14 px (S=103.629191); minimum cursor gap=0.000920; max offset=0.159436; shadow positions/uniforms unchanged; five retained emitted stills unchanged (H2 timing/H3 Figma checked separately).
+48aea47 snapshot SHA256 2df6ef35ad20837ad73d5c181cef1a404e4023545adeab99f8070c63697b195d; incoming 50b51b8 snapshot SHA256 1cb6842044168b12c4c4bf551e389b7adf31c2faf8b28f927a4282972ebb55ab. Rendered frames, shadows and pixel still identity UNRUN.
+H1–H7 computed: 23 draw ends, 60 spread samples; loop 83.040s, land 3.0s; 750 laptop poses; 555 resize samples; 180 floor rays, 10404 dot samples. Font ink, layout, pixels and frames UNRUN.
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5611 frames, 386385 pieces (max 183); 5 atlas pages; loop 83.040s
+ps: 7.500s, ai: 11.400s, id: 20.980s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+all clean
+```

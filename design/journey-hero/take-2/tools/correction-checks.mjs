@@ -188,8 +188,8 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
       contacted ||= at >= place.end - 1e-9 || own.some(pc => overlap(rect(pc), padded));
       if (!contacted && overlays.length !== 6) fail(time, 'R15: ' + id + ' frame vanished before its own contact');
       if (contacted && overlays.length) fail(time, 'R15: ' + id + ' frame survives its own contact');
-      const plateCount = i === 0 && at > draw.end + 1e-9 ? 2 : 1;
-      const validPlates = i === 0 && near(at, draw.end, 1e-9) ? [1, 2].includes(plates.length) : plates.length === plateCount;
+      const plateCount = i === 0 ? 2 : 1;
+      const validPlates = plates.length === plateCount;
       if (at < place.end - 1e-9 && !validPlates) fail(time, 'R15: ' + id + ' plate vanished before placement');
       const replacement = P.some(pc => pc.where === 'content' && !pc.echo && arts.includes(pc.art));
       if (at >= place.end - 1e-9 && !plates.length && !replacement) fail(time, 'R15: ' + id + ' plate disappeared without a same-frame replacement');

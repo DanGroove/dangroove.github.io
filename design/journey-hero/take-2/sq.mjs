@@ -161,6 +161,8 @@ precision highp float;
 precision highp sampler2DShadow;
 in vec3 vW;
 uniform vec3 uInk, uPool, uDot;
+uniform vec3 uHover;                  // floor x, floor z, enabled
+uniform vec3 uRed;
 uniform vec4 uFloor;                  // centre x, centre z, radius, dot pitch
 uniform float uSpread;
 out vec4 o;
@@ -173,7 +175,9 @@ void main() {
   vec2 g = (fract(vW.xz / uFloor.w + 0.5) - 0.5) * uFloor.w;
   float dist = length(g), aa = fwidth(dist);
   float dotv = (1.0 - smoothstep(0.03 - aa, 0.03 + aa, dist)) * pool * (0.35 + 0.65 * lit);
-  o = vec4(mix(c, uDot, dotv), 1.0);
+  vec2 centre = floor(vW.xz / uFloor.w + 0.5) * uFloor.w;
+  bool red = uHover.z > 0.5 && distance(centre, uHover.xy) <= 0.75;
+  o = vec4(mix(c, red ? uRed : uDot, dotv), 1.0);
 }`;
 
 function program(gl, vs, fs) {
@@ -365,6 +369,8 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       gl.uniformMatrix4fv(floor.u.uVP, false, vp); gl.uniformMatrix4fv(floor.u.uLightVP, false, lvp); gl.uniform1i(floor.u.uShadow, 0); gl.uniform1f(floor.u.uSpread, spread);
       gl.uniform3fv(floor.u.uInk, ink); gl.uniform3fv(floor.u.uPool, hex(f.pool || '#262323')); gl.uniform3fv(floor.u.uDot, hex(f.dot || '#4A4543'));
       gl.uniform4f(floor.u.uFloor, f.x ?? 0, f.z ?? 0, f.radius ?? 5.5, f.pitch ?? 0.5);
+      gl.uniform3fv(floor.u.uHover, f.pointer ? [f.pointer[0], f.pointer[2], 1] : [0, 0, 0]);
+      gl.uniform3fv(floor.u.uRed, hex('#C0262E'));
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       gl.enable(gl.CULL_FACE);
     }

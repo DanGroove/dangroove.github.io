@@ -1,6 +1,6 @@
 # Journey hero, second take
 
-This is the unpublished prototype. `CORRECTIONS-4.md` controls this revision; `CORRECTIONS-3.md`, `CORRECTIONS-2.md`, `CORRECTIONS-1.md`, `MOTION-2.md` and `MOTION.md` supply the retained rules. The allowed range is 70–86 seconds. Groups align on world x 0.200; waits never click. The loop is **81.240 seconds at PACE 1**. Every document opens empty and is built by one cursor. Round 4 has computed Node evidence for all five InDesign drags. The current browser checker covers ten sizes; browser frames, rendered shadows and pixel still comparisons remain for the external machine. No browser command was run for round 4. The committed hardware reports measure the incoming `48aea47` build; no hardware rerun was made for rounds 3 or 4.
+This is the unpublished prototype. `CORRECTIONS-5.md` controls this revision; rounds 1–4 and the motion briefs supply the retained rules. The allowed range is 70–86 seconds. Groups align on world x 0.200; waits never click. The loop is **83.040 seconds at PACE 1**. Every document opens empty and is built by one cursor. Round 5 adds the lasting spread draw, longer InDesign labels, lower-left-facing laptop, measured text offsets, wide-screen centring and floor hover. Node evidence and exact negative controls are in BUILD.md. Layout, font ink, pixels, frames and hardware remain unverified for this revision. No browser command was run. The committed hardware reports measure incoming `48aea47`.
 
 ## The design being carried forward
 
@@ -8,7 +8,7 @@ The approved six stills and the earlier browser review are the reference. The sc
 
 Graphic design is one pipeline: Photoshop's photograph goes to the dock; Illustrator's two maps join it; InDesign places those same assets into the spread, cover, post and e-blast. Only the finished InDesign group reaches the floor. A closed stack sits behind the reading copy, alongside a phone and tablet. The reading copy still bends through fourteen strips per leaf, through The Offering, Location, Amenities and the gallery.
 
-Video and motion retain their landscape tablet and two phones. UX/UI uses an open laptop facing world +x, a portrait tablet and one phone. Every complete footprint, including the laptop deck and lid, is centred on `SCREEN.l + SCREEN.w / 2` in world x. The light pool shares that middle. The slot remains the undrawn plane at `MAT.z`; only the laptop enters in x, whole and unclipped, from 1.6 units to its left. All returns use the shared z withdrawal.
+Video and motion retain their landscape tablet and two phones. UX/UI uses an open laptop facing world +z (lower left), a portrait tablet and one phone. Every complete footprint, including the laptop deck and lid, is centred on `SCREEN.l + SCREEN.w / 2` in world x. The light pool shares that middle. The slot remains the undrawn plane at `MAT.z`; only the laptop enters in x, whole and unclipped, from 1.6 units to its left. All returns use the shared z withdrawal.
 
 | Middle | World x |
 | --- | ---: |
@@ -31,13 +31,16 @@ The prior build was reviewed in Chromium on 19 November 2026, with held frames o
 - `tools/checks.mjs`: Node geometry, actions, clocks, atlas, player logic and offline-module checks. Every sampled frame checks at least 0.0006 height separation between overlapping screen/floor faces, shared 0.0008 painter steps and interaction marks above the pictures. Regression checks cover typing minimums, comp/thumbnail construction, heal coverage, completed photo stacks, sky colours and Photoshop timings. Its canvas and DOM stand-ins are logic checks, not pixel renders.
 - `tools/preview.mjs`: the offline frame packer, titled **Journey hero take two**, with stylesheet, four local font files and all modules embedded. No bundler, network or installation is needed.
 - `labels.mjs`: one reused SVG/text overlay, projected by the canvas camera, with measured word widths, content avoidance and deterministic hero-time rings. Both players use it.
+- `take-2.css`, `page-layout.mjs`, `view.mjs`: take-two-only text alignment, guarded upward offset and scene placement. The stylesheet loads after the borrowed `journey.css` and is inlined by the preview packer. Font ink is measured with actual glyph metrics and DOM character positions, including wrapped text. Both name lines use weight 800 for their left offset. The name animation stays. Text and word measurements are cached; playback performs no layout reads. Resize, font loading and the name's weight animation refresh the cache. The side gutter ramps continuously from 40 to 64 px between widths 1120 and 1200 to avoid the inherited breakpoint jump.
+- `floor-hover.mjs`: fine mouse hover selects whole existing floor dots by their centres within 0.75 world units of the current camera ray's floor intersection. The renderer uses brand red with the existing dot mask. Leaving clears the point; reduced motion and coarse/touch input disable it. Held playback coalesces pointer redraws to one per animation frame; playing uses its next frame. Dot positions, pool and camera do not move.
 - `tools/correction-checks.mjs`: R9–R15, full 240 Hz cursor continuity, landed-face and fixed-mark checks, 0.005 s frame/plate lifetimes, Figma geometry and canvas/toolbar/lid clearance, frozen withdrawal, photograph registration and parametric label routes.
 - `tools/controls.mjs`: reversible negative controls against the real checker, restoring source in `finally`; each exact edit must match one location; round-three evidence is in `.scratch/corrections3/controls/` and BUILD.md. The tool writes no results.json.
-- `tools/browser-check.mjs`: actual marks/fonts, gutters, outward routes, words clear of every ring/mark/line, page overlap, reduced motion and laptop entry/return at ten sizes. `checkBrowser(page)` accepts a review page; direct execution attempts only its own headless Playwright browser, closing only that browser. No browser was launched here because Playwright is unavailable in the repository.
-- `tools/drag-checks.mjs`: round-four Node sweeps every 0.0005 s over all five InDesign drags and 25.20–25.30 s. They compare stack offsets and projected corners with the saved incoming `48aea47` source, check projected box occlusion and F1's frame lifetimes, record shadow-pass position uniforms, and compare all six emitted stills with incoming `50b51b8`. These are computed checks, not rendered frames or shadows. `checks.mjs` includes them.
+- `tools/browser-check.mjs`: actual marks/fonts, gutters, outward routes, words clear of every ring/mark/line, page overlap, reduced motion and laptop entry/return at ten sizes. Its new `checkRound5Layout(page)` adds font-ink/guard/target checks, four wider reference sizes and the 555-size resize sweep. `checkBrowser(page)` accepts a review page; its CLI is for the external review machine only. These checks were not run here.
+- `tools/drag-checks.mjs`: round-four Node sweeps every 0.0005 s over all five InDesign drags and 25.20–25.30 s. They compare stack offsets and projected corners with the saved incoming `48aea47` source, check projected box occlusion and F1's frame lifetimes, record shadow-pass position uniforms, and compare the five retained emitted stills with incoming `50b51b8` (numeric tolerance 1e-8). H2 timing and H3's Figma change are checked separately. These are computed checks, not rendered frames or shadows. `checks.mjs` includes them.
+- `tools/round5-checks.mjs`, `tools/round5-controls.mjs`: H1's exact spread boundary, 0.005 s growing bounds and all 23 draw-end comparisons; H2 clocks and still poses; H3 geometry/anchor/entry; H6 centring, target, modeled sizes and continuity; H7 rays, whole-dot rule and input scheduling. The frozen round-four source/labels are in `tools/fixtures/round5-source.json`. Every deliberate fault matches one site and is restored byte-for-byte. Model size results are not browser measurements.
 - `tools/drag-controls.mjs`: fourteen reversible single-site controls for those gates, plus the changed cursor-route and legacy clearance checks; source bytes are restored in `finally`. Evidence is in `.scratch/corrections4/controls/` and BUILD.md. The frozen reference sources in `tools/fixtures/drag-sources.json` let the checks run without `.scratch` snapshots.
 - `tools/measure-phases.mjs`, `tools/phase-checks.mjs`: isolated phase orchestration and its browser-free failure-path fixture.
-- `tools/page.mjs`: writes the existing page markup with the prototype's player or still script. Its output guard protects all four briefs and the protected critique record. `tools/sheet.mjs` and `tools/film.mjs` remain the external browser review tools.
+- `tools/page.mjs`: writes the existing page markup with the prototype's player or still script and the take-two stylesheet. Its output guard protects all seven briefs and the protected review records. `tools/sheet.mjs` and `tools/film.mjs` remain the external browser review tools.
 - `BUILD.md`: this pass's decisions, acceptance criteria, stage checkpoints and limits.
 
 ## The six scenes
@@ -48,14 +51,14 @@ Times below are seconds at PACE 1. The first 0.5 seconds change shell; the next 
 | --- | ---: | ---: | ---: | --- |
 | Photoshop | 0.000 | 7.500 | 6.549000 | Raw photo; levels; sky; seamless heals; grade; photograph to dock |
 | Illustrator | 7.500 | 11.400 | 9.239000 | Empty artboards; maps, close-up and subway; maps to dock |
-| InDesign | 18.900 | 19.180 | 16.277961 | Styled photo drops, typed titles and drawn blobs; labels during the 1.2 s landing hold; four bending leaves |
-| Premiere Pro | 38.080 | 15.220 | 12.170001 | Clips, voice, captions and sound; shared playback; fully revealed export labels |
-| After Effects | 53.300 | 14.030 | 10.980001 | Words, shapes, keys and graph; shared playback; fully revealed export labels |
-| Figma | 67.330 | 13.910 | 11.610000 | Laptop/tablet/phone wireframes and designs; tap/change-state/instant interaction; scrolled Video still |
+| InDesign | 18.900 | 20.980 | 18.077961 | Styled photo drops, typed titles and drawn blobs; labels during the 3.0 s landing hold; four bending leaves |
+| Premiere Pro | 39.880 | 15.220 | 12.170001 | Clips, voice, captions and sound; shared playback; fully revealed export labels |
+| After Effects | 55.100 | 14.030 | 10.980001 | Words, shapes, keys and graph; shared playback; fully revealed export labels |
+| Figma | 69.130 | 13.910 | 11.610000 | Laptop/tablet/phone wireframes and designs; tap/change-state/instant interaction; scrolled Video still |
 
 The scripts contain lengths, never hand-authored start times. `script()` derives each approach, start and end. PACE scales those lengths, cursor approaches, shell transition, feed/return and device clocks together. The first typed text in each app takes at least 0.6 seconds; every later text takes at least 0.4 seconds. Repeat runs retain their brisk timings. The resulting scene lengths supersede the second pass's individual targets and fit the revised 70–86-second loop. After Effects also visibly moves the first ball key from zero to 0.75, so the new stopwatch operation can create its key at zero while the finished animation keeps the approved stagger.
 
-InDesign's four leaf turns still last 0.6 seconds each, separated by 0.3 seconds, and its pickup lasts 0.7 seconds. Its landing hold is 1.2 seconds; the final reading hold remains 0.3 seconds. `spreadType` runs for 0.3 seconds. Photoshop's levels slides each take 0.5 seconds, its sky wipe 0.7 seconds, and each healing scrub 0.25 seconds with the patch cutting in at release. Its closing wipe finishes 0.3 seconds after the photograph docks, removing the former 1.4-second empty hold.
+InDesign's four leaf turns still last 0.6 seconds each, separated by 0.3 seconds, and its pickup lasts 0.7 seconds. Its landing hold is 3.0 seconds; the final reading hold remains 0.3 seconds. `spreadType` runs for 0.3 seconds. Photoshop's levels slides each take 0.5 seconds, its sky wipe 0.7 seconds, and each healing scrub 0.25 seconds with the patch cutting in at release. Its closing wipe finishes 0.3 seconds after the photograph docks, removing the former 1.4-second empty hold.
 
 Every action start and end follows. These are local times; multiply by PACE and add the scene's global start. Gaps are the scheduler's cursor approaches. Wait actions cover physical work or a deliberate hold, with the cursor still and unpressed at its previous point. Export is clicked once; the cursor rests through landing, pickup, the leaf turns, reading and return. A wait never sinks the Export button; any already-running export progress continues.
 
@@ -112,18 +115,18 @@ Every action start and end follows. These are local times; multiply by PACE and 
 | id | mailButton | draw | 11.300 | 11.480 |
 | id | mailFlyer | type | 11.600 | 12.000 |
 | id | export | export | 12.280 | 13.080 |
-| id | land | wait | 13.080 | 14.280 |
-| id | pickup | wait | 14.280 | 14.980 |
-| id | open | wait | 14.980 | 15.080 |
-| id | leaf1 | wait | 15.080 | 15.680 |
-| id | pause1 | wait | 15.680 | 15.980 |
-| id | leaf2 | wait | 15.980 | 16.580 |
-| id | pause2 | wait | 16.580 | 16.880 |
-| id | leaf3 | wait | 16.880 | 17.480 |
-| id | pause3 | wait | 17.480 | 17.780 |
-| id | leaf4 | wait | 17.780 | 18.380 |
-| id | read | wait | 18.380 | 18.680 |
-| id | return | wait | 18.680 | 19.180 |
+| id | land | wait | 13.080 | 16.080 |
+| id | pickup | wait | 16.080 | 16.780 |
+| id | open | wait | 16.780 | 16.880 |
+| id | leaf1 | wait | 16.880 | 17.480 |
+| id | pause1 | wait | 17.480 | 17.780 |
+| id | leaf2 | wait | 17.780 | 18.380 |
+| id | pause2 | wait | 18.380 | 18.680 |
+| id | leaf3 | wait | 18.680 | 19.280 |
+| id | pause3 | wait | 19.280 | 19.580 |
+| id | leaf4 | wait | 19.580 | 20.180 |
+| id | read | wait | 20.180 | 20.480 |
+| id | return | wait | 20.480 | 20.980 |
 | pr | bin | run | 1.080 | 1.360 |
 | pr | clipA | drag | 1.480 | 1.880 |
 | pr | clipB | drag | 2.160 | 2.560 |
@@ -186,7 +189,7 @@ The first device lands 0.55 seconds after Export. Video and motion keep two 1.6-
 
 UX/UI remains static before the shared export clock starts at the first landing, then has one 3.0-second cycle on all three canvas designs and all three devices: tap Video (0–0.15), wipe its red selection and picture (0.15–0.30), scroll up 40% (0.40–1.00), hold and tap/lift a card at 1.25, scroll back (1.55–2.15), tap Graphic design (2.15–2.30), wipe back (2.30–2.45), then hold. During the 0.4 s withdrawal, all three devices and canvas designs hold the completed cycle; no new tap or cycle starts. The existing thin progress rail advances through the cycle. Page pictures move through cropped viewports, with no page stretching; browser/status chrome stays. The still is at 1.10 seconds, scrolled in Video before the card tap. Return begins at landing + 3.0 seconds and lasts 0.4 seconds.
 
-The laptop screen is 16:10, faces +x and leans back 12 degrees above its left-edge hinge. A simple keyboard and trackpad lie on the deck. The tablet and phone screens are 3:4 and 9:19.5. The laptop picture is widest, both gaps are 0.3 units, and the complete footprint is inside the old mat ends and depth band. Its whole device cuts in and slides 1.6 units in x over 0.5 seconds; it has no entry clip. At 390 × 664 and 390 × 844 it appears whole and fully on screen, then slides; the former off-frame-phone description is superseded. This is established by projected geometry over the phone stage-height range, not by a browser render. The tablet and phone use the original slot feed. The Figma canvas uses those same three ratios in two rows 0.86 high. Its hotspot marks Video and ends beside its own frame; the inspector states On tap / Change to Video / Instant. No extra state frame is made.
+The laptop screen is 16:10, faces +z and leans back 12 degrees above its back-edge hinge. A simple keyboard and trackpad lie on the deck. The tablet and phone screens are 3:4 and 9:19.5. The laptop picture is widest, both gaps are 0.3 units, and the complete footprint is inside the old mat ends and depth band. Its whole device cuts in and slides 1.6 units in x over 0.5 seconds; it has no entry clip. At 390 × 664 and 390 × 844 it appears whole and fully on screen, then slides; the former off-frame-phone description is superseded. This is established by projected geometry over the phone stage-height range, not by a browser render. The tablet and phone use the original slot feed. The Figma canvas uses those same three ratios in two rows 0.86 high. Its hotspot marks Video and ends beside its own frame; the inspector states On tap / Change to Video / Instant. No extra state frame is made.
 
 ## Labels on the exports
 
@@ -194,7 +197,7 @@ The laptop screen is 16:10, faces +x and leans back 12 degrees above its left-ed
 
 Marks are on the top-left, bottom-middle and top-right faces, respectively; the laptop uses the top-left of its actual lid screen. Corner insets are 0.1 units, bottom middles 0.06; the laptop uses 0.08 along and 0.06 down. Each mark is a 3 px bright-red square surrounded by six equal dashes, turning at 60 degrees per hero second and stationary under reduced motion. Radius/stroke are 8/1.25 px, or 5.5/1 px below S=70. Paper leaders start 3 px outside the ring, run diagonally at 45 degrees, bend once and end horizontally. Upper elbows are 0.45 S above the mark; lower leaders share a level 0.45 S below the lowest low mark. Left/right word columns use the group’s left edge and screen’s right edge, with 0.35 S / 0.27 S offsets and 7 px word gaps. Both columns constrain the view fit. All left labels share one end x, moved outward as necessary; horizontal runs are at least 12 px, or 8 px below S=70. Elbows stay at least 3 px outward from line starts. Words clear all rings by radius + 2 px and all marks and lines. Page content can shorten a diagonal while keeping the run outward. Device anchors use their own landed bodies or fixed lid-screen face, independent of playback layers; InDesign anchors are unchanged.
 
-Words are real uppercase Outfit 400, 11 px (9 below S=70), 1.2 line height, 0.12em spacing, without wrapping. The pointer-free, aria-hidden SVG/text overlay is above the canvas and below controls. Nothing is drawn below S=34. Nodes are reused. A mark/ring cuts in on its own landing, a line wipes for 0.25 seconds, then its words wipe for 0.15 seconds. Rows cut all labels at `off[0]`; InDesign cuts them at pickup. The InDesign reading still has none; all three later stills have complete labels. Seeks redraw immediately, including the overlay.
+Words are real uppercase Outfit 400, 11 px (9 below S=70), 1.2 line height, 0.12em spacing, without wrapping. The pointer-free, aria-hidden SVG/text overlay is above the canvas and below controls. Nothing is drawn below S=34. Nodes are reused. A mark/ring cuts in on its own landing, a line wipes for 0.25 seconds, then its words wipe for 0.15 seconds. Rows cut all labels at `off[0]`; InDesign holds its landing for 3.0 seconds (31.98–34.98 globally) and cuts labels at pickup. The InDesign reading still has none; all three later stills have complete labels. Seeks redraw immediately, including the overlay.
 
 ## Still changes to compare in the browser
 
@@ -216,11 +219,14 @@ From the repository root, the two commands used in this pass are:
 ```
 node design/journey-hero/take-2/tools/checks.mjs
 node design/journey-hero/take-2/tools/preview.mjs design/journey-hero/take-2/.scratch/preview.html
+node design/journey-hero/take-2/tools/round5-checks.mjs
+node design/journey-hero/take-2/tools/round5-controls.mjs --audit
+node design/journey-hero/take-2/tools/round5-controls.mjs
 ```
 
-`checks.mjs --timeline` also prints the derived action table. `frameAt(t)` wraps positive and negative times. `SCENES[i]()` builds the new still; `SCENES[2]({ at })` still gives any booklet reading pose with the complete group out. The player supports `?t=12.5` and `window.__hero.seek(t)`, and exposes its clock, SHOW and LOOP. `stage.html?s=0..5` holds a scene, `?t=` holds a loop time, `?atlas=1` shows every atlas page, and yaw/pitch inspect the geometry.
+`checks.mjs --timeline` also prints the derived action table. `round5-checks.mjs --only=H1` (also H2, H3, H6, H7) isolates a computed gate. `frameAt(t)` wraps positive and negative times. `SCENES[i]()` builds the new still; `SCENES[2]({ at })` still gives any booklet reading pose with the complete group out. The player supports `?t=12.5` and `window.__hero.seek(t)`, and exposes its clock, SHOW, LOOP and cached layout metrics. `window.__hero.measure()` refreshes the layout after an external tool changes a stage style directly. `stage.html?s=0..5` holds a scene, `?t=` holds a loop time, `?atlas=1` shows every atlas page, and yaw/pitch inspect the geometry.
 
-The external browser review can continue using `tools/sheet.mjs` and `tools/film.mjs`, including phone frames and the new 0–81.24-second range. They were not run in the build itself; the browser review recorded under "The design being carried forward" ran them afterwards. The retained hardware reports describe incoming `48aea47`, including both D2 runs. Round 3 was not remeasured on hardware because it changes which pieces are drawn and where labels sit, not the renderer.
+The external browser review can continue using `tools/sheet.mjs` and `tools/film.mjs`, including phone frames and the new 0–83.04-second range. They were not run in the build itself; the browser review recorded under "The design being carried forward" ran them afterwards. The retained hardware reports describe incoming `48aea47`, including both D2 runs. Round 3 was not remeasured on hardware because it changes which pieces are drawn and where labels sit, not the renderer.
 
 All authored changes and the packed output are confined to this folder. Neither brief, the first take, public files, source site, dependencies nor deployment was changed.
 
@@ -265,10 +271,10 @@ The external reviewer runs the local-only `tools/measure.mjs` with `--dpr <n>` (
 
 [DPR-2 report](review/hardware/dpr2/measure.md): 01:05:29.680–01:13:06.347 UTC, same browser/GPU, ready in 164.6 ms. Requested 1920 × 1080 at DPR 2; actual backing 3040 × 1710, ratio 1.5833. 19,487 frames, median/P95 4.20/4.30 ms, worst 8.30 ms, zero gaps over 50 ms, allocation estimate 282.64 MiB. Scan: 587 frames, zero repeat failures, 11,535 flagged blink blocks (356/7080/2090/1430/579). Both reports record zero console errors and zero network violations. Both use four MSAA samples and 24-bit depth; allocation estimates exclude driver/compositor overhead and 66.13 MiB retained 2D atlas storage.
 
-These are the committed incoming-build runs, not pending measurements and not round-three performance evidence. Their flags retain the external review’s classification. Round 3 was not remeasured on hardware: this revision changes which pieces are drawn and where labels sit, not the renderer. The protected reports and sheets are unchanged. The earlier contact-sheet scale departure remains in those reports: frames are fitted to the 1600 px sheet cap; scan comparisons keep full capture resolution.
+These are the committed incoming-build runs. Their flags retain the external review’s classification. Rounds 3–5 were not remeasured on hardware; the current floor-hover shader has no hardware performance evidence. The protected reports and sheets are unchanged. The earlier contact-sheet scale departure remains in those reports: frames are fitted to the 1600 px sheet cap; scan comparisons keep full capture resolution.
 
 ## Round-three computed checks and browser limit
 
 `tools/browser-check.mjs` checks the labels at ten sizes: 390 × 664, 390 × 844, 360 × 780, 375 × 667, 412 × 915, 768 × 1024, 820 × 1180, 1024 × 768, 1440 × 900 and 1920 × 1080. Its command needs Playwright installed in the repository; without it, it reports the sizes as UNRUN and launches nothing. Its exported `checkBrowser(page)` can be run on a page from any Playwright. The builder's machine has no Playwright, so the reviewers ran `checkBrowser` on the packed preview of `50b51b8` and `7590b44` in the cloud: it passed at all ten sizes (150 rows). The exported route assertions also run in Node against parametric layout geometry, including their negative control. BUILD.md contains exact outputs and control edits.
 
-Timing is unchanged: PACE 1, loop 81.240 seconds, original scene starts and all six still times. The first three stills retain identical emitted canvas geometry/art; rendered pixel identity remains unverified without Playwright. Numeric tests cover frame/plate continuity, drawing order, fixed marks, playback content, toolbar clearance and narrow-stage gutters. No hardware rerun or measurement entry point was invoked.
+Those round-three/four reviews used the historical 81.240-second loop. Round 5 uses 83.040 seconds, with the starts/stills in the current table above; its browser/frame review is pending. Numeric tests cover frame/plate continuity, drawing order, fixed marks, playback content, toolbar clearance and narrow-stage gutters. No hardware rerun or measurement entry point was invoked.

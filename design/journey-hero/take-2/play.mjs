@@ -5,6 +5,8 @@ import { corners } from './kit.mjs';
 import { makeAtlas, fontsReady } from './art.mjs';
 import { SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt } from './stage.mjs';
 import { createCallouts } from './labels.mjs';
+import { createPageLayout } from './page-layout.mjs';
+import { createFloorHover } from './floor-hover.mjs';
 
 const query = new URLSearchParams(location.search);
 const num = (key, fallback) => query.has(key) && Number.isFinite(+query.get(key)) ? +query.get(key) : fallback;
@@ -14,6 +16,8 @@ const crafts = [...hero.querySelectorAll('[data-craft]')], pause = hero.querySel
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const renderer = createRenderer(canvas), cam = makeCamera(num('yaw', 0), num('pitch', 0));
 const callouts = createCallouts(hero);
+const layout = createPageLayout(hero, stage, callouts);
+const fine = matchMedia('(hover: hover) and (pointer: fine)');
 const starts = SHOW.map((_, i) => SHOW.slice(0, i).reduce((sum, scene) => sum + scene.len, 0));
 const stills = [2, 3, 4, 5];
 
@@ -27,16 +31,16 @@ const need = { w: x1 - x0 + 0.5, h: y1 - y0 + 0.5, x: (x0 + x1) / 2, y: (y0 + y1
 const wrap = t => ((t % LOOP) + LOOP) % LOOP;
 let t = query.has('t') ? wrap(num('t', 0)) : reduced.matches ? starts[2] + SHOW[2].still : 0;
 let stopped = query.has('t'), visible = true, ready = false, request = 0, previous = null, lastView;
+const hover = createFloorHover(hero, fine, reduced, () => layout.metrics, running, () => ready && visible && !document.hidden, draw, requestAnimationFrame);
 
 function draw() {
-  const h = hero.getBoundingClientRect(), b = stage.getBoundingClientRect();
+  const { h, b } = layout.metrics;
   if (!b.width || !b.height || !h.width || !h.height) return;
-  const S = Math.min(b.width / need.w, b.height / need.h);
-  const cx = b.left - h.left + b.width / 2 - S * need.x, cy = b.top - h.top + b.height / 2 + S * need.y;
   const W = h.width, H = h.height, dpr = Math.min(2, devicePixelRatio || 1, Math.sqrt(5.2e6 / (W * H)));
-  const view = callouts.fit({ W, H, dpr, S, cx, cy, cam }, need, b.left - h.left), pieces = frameAt(t);
+  const view = layout.view(need, cam, dpr), pieces = frameAt(t);
+  layout.cover(view, need);
   lastView = view;
-  renderer.draw(pieces, view, { outline: 0, floor: { ...POOL, radius: num('pool', 4.8) } });
+  renderer.draw(pieces, view, { outline: 0, floor: { ...POOL, radius: num('pool', 4.8), pointer: hover.point(view) } });
   callouts.draw(calloutsAt(t), pieces, view, t, reduced.matches);
   hero.classList.remove('is-entering');
   const { scene } = sceneAt(t);
@@ -65,7 +69,7 @@ function seek(time) {
   stopped = true; t = wrap(time); schedule();
   if (ready) draw();
 }
-window.__hero = { seek, get t() { return t; }, get callouts() { return callouts.layout; }, get view() { return lastView; }, get pieces() { return frameAt(t); }, LOOP, SHOW };
+window.__hero = { seek, measure, get t() { return t; }, get callouts() { return callouts.layout; }, get view() { return lastView; }, get pieces() { return frameAt(t); }, get layout() { return layout.metrics; }, LOOP, SHOW };
 
 function choose(craft) {
   const i = reduced.matches || stopped ? stills[craft] : SHOW.findIndex(s => s.craft === craft);
@@ -79,6 +83,7 @@ pause.addEventListener('click', () => {
   stopped = !stopped; draw(); schedule();
 });
 reduced.addEventListener('change', () => {
+  hover.clear();
   if (reduced.matches) choose(sceneAt(t).scene.craft);
   draw(); schedule();
 });
@@ -87,9 +92,26 @@ new IntersectionObserver(entries => {
   visible = entries[0].isIntersecting;
   schedule();
 }, { threshold: 0 }).observe(hero);
-new ResizeObserver(() => { if (ready && visible && !document.hidden) draw(); }).observe(hero);
+function measure() { if (ready) { layout.measure(); if (visible && !document.hidden) draw(); } }
+new ResizeObserver(measure).observe(hero);
+document.fonts.addEventListener('loadingdone', measure);
+const name = hero.querySelector('[data-name]');
+name.addEventListener('animationend', measure);
+// Catch an entrance already in progress when fonts finish, as well as a fresh animationstart.
+let weighing = false;
+function watchName() {
+  if (weighing || !name.getAnimations?.().some(a => a.playState === 'running')) return;
+  weighing = true;
+  const weigh = () => {
+    measure();
+    if (name.getAnimations().some(a => a.playState === 'running')) requestAnimationFrame(weigh);
+    else weighing = false;
+  };
+  requestAnimationFrame(weigh);
+}
+name.addEventListener('animationstart', watchName);
 
 await fontsReady();
 renderer.setAtlas(makeAtlas());
 await document.fonts.ready;
-ready = true; draw(); window.__ready = true; schedule();
+ready = true; layout.measure(); draw(); window.__ready = true; schedule(); watchName();

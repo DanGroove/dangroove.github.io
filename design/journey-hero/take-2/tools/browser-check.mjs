@@ -49,6 +49,7 @@ export async function checkBrowser(page) {
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.waitForFunction(() => window.__ready);
     await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     for (const time of [...new Set(times)]) {
       const expected = calloutsAt(time);
       const result = await page.evaluate(time => {
@@ -105,10 +106,43 @@ export async function checkBrowser(page) {
     assert.deepEqual(a, b, 'reduced-motion rings turned');
     assert.ok(a.every(n => n === 0));
   }
-  await page.evaluate(() => { const box = document.querySelector('[data-stage-box]'); box.dataset.reviewStyle = box.getAttribute('style') || ''; box.style.width = '100px'; box.style.height = '100px'; __hero.seek(__hero.SHOW.slice(0, 3).reduce((n, s) => n + s.len, 0) + __hero.SHOW[3].still); });
+  await page.evaluate(() => { const box = document.querySelector('[data-stage-box]'); box.dataset.reviewStyle = box.getAttribute('style') || ''; box.style.width = '100px'; box.style.height = '100px'; __hero.measure(); __hero.seek(__hero.SHOW.slice(0, 3).reduce((n, s) => n + s.len, 0) + __hero.SHOW[3].still); });
   assert.ok(await page.evaluate(() => __need.S < 34 && __hero.callouts.length === 0 && [...document.querySelectorAll('[data-callouts] g')].every(n => getComputedStyle(n).display === 'none')), 'labels drawn below S=34');
-  await page.evaluate(() => { const box = document.querySelector('[data-stage-box]'); box.setAttribute('style', box.dataset.reviewStyle); delete box.dataset.reviewStyle; __hero.seek(__hero.t); });
+  await page.evaluate(() => { const box = document.querySelector('[data-stage-box]'); box.setAttribute('style', box.dataset.reviewStyle); delete box.dataset.reviewStyle; __hero.measure(); __hero.seek(__hero.t); });
+  await checkRound5Layout(page);
   return rows;
+}
+
+// External DOM/font checks only. Pixel-ink and frame review still belong to the reviewer.
+export async function checkRound5Layout(page) {
+  const sample = async (width, height) => {
+    await page.setViewportSize({ width, height });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    return page.evaluate(() => {
+      __hero.measure();
+      const m = __hero.layout, v = __hero.view, n = __need, h = document.querySelector('[data-hero]').getBoundingClientRect(), b = document.querySelector('[data-stage-box]').getBoundingClientRect();
+      return { ...m, h: { left: h.left, top: h.top }, stage: { left: b.left - h.left, right: b.right - h.left, top: b.top - h.top, bottom: b.bottom - h.top }, S: v.S, left: v.cx + v.S * (n.x - (n.w - 0.5) / 2), right: v.cx + v.S * (n.x + (n.w - 0.5) / 2), top: v.cy - v.S * (n.y + (n.h - 0.5) / 2), bottom: v.cy - v.S * (n.y - (n.h - 0.5) / 2) };
+    });
+  };
+  for (const [w, h] of [...BROWSER_SIZES, [1280, 800], [1366, 657], [1680, 1050], [2560, 1440]]) {
+    const r = await sample(w, h), column = r.ledeInk.left;
+    for (const ink of [...r.nameLines, ...r.numberInks]) assert.ok(Math.abs(ink.left - column) <= 1, `${w}x${h}: H4 font-ink column`);
+    const expectedRise = w < 720 ? 0 : Math.min(Math.max(0, r.gap), Math.max(0, r.baseNameTop - r.logoBottom - 48));
+    assert.ok(Math.abs(r.rise - expectedRise) <= 1, `${w}x${h}: H5 rise/guard`);
+    if (w >= 720) {
+      assert.ok(r.nameLines[0].top - r.h.top >= r.logoBottom + 48 - 1, `${w}x${h}: H5 logo guard`);
+      assert.ok(r.stage.left <= r.left && r.stage.right >= r.right && r.stage.top <= r.top && r.stage.bottom >= r.bottom, `${w}x${h}: H6 stage target`);
+      if (w >= 1280) assert.ok(Math.abs((r.left - r.textRight) - (w - r.right)) <= 8, `${w}x${h}: H6 equal side spaces`);
+    }
+  }
+  for (const h of [640, 900, 1440]) {
+    let previous;
+    for (let w = 720; w <= 2560; w += 10) {
+      const r = await sample(w, h);
+      if (previous) assert.ok(Math.abs(r.S - previous.S) < 2 && Math.abs((r.left + r.right - previous.left - previous.right) / 2) <= 14, `${w}x${h}: H6 resize step`);
+      previous = r;
+    }
+  }
 }
 
 export async function runBrowserCheck() {

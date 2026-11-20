@@ -79,6 +79,7 @@ export function previewMarkup() {
   return `<title>Journey hero take two</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>${css}</style>
+<style>${fs.readFileSync(path.join(TAKE, 'take-2.css'), 'utf8')}</style>
 <style>
 html,body,main{height:100%}
 .hero{min-height:max(100%,640px)!important}

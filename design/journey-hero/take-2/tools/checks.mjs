@@ -10,6 +10,8 @@ import { runCorrections } from './correction-checks.mjs';
 import { previewMarkup } from './preview.mjs';
 import { checkPageLabels } from './label-page-checks.mjs';
 import { checkDrags } from './drag-checks.mjs';
+import { createFloorHover } from '../floor-hover.mjs';
+import { checkRound5 } from './round5-checks.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
@@ -319,19 +321,20 @@ const node = rect => ({
   removeAttribute(name) { delete this.attributes[name]; },
 });
 const hero = node({ left: 0, top: 0, width: 1440, height: 900 }), stage = node({ left: 760, top: 80, width: 600, height: 700 }), pause = node(), crafts = [0, 1, 2, 3].map(() => node());
-hero.querySelector = s => s === '[data-stage-box]' ? stage : s === '[data-pause]' ? pause : {};
+hero.querySelector = s => s === '[data-stage-box]' ? stage : s === '[data-pause]' ? pause : node();
 hero.querySelectorAll = () => crafts;
 let scheduledTick;
 const media = { matches: false, addEventListener(_name, f) { this.change = f; } }, win = {}, draws = [];
-const playerDocument = { querySelector: () => hero, fonts: { ready: Promise.resolve() }, hidden: false, addEventListener() {} };
+const playerDocument = { querySelector: () => hero, fonts: { ready: Promise.resolve(), addEventListener() {} }, hidden: false, addEventListener() {} };
 const renderer = { setAtlas() {}, draw(pieces, view) { draws.push({ pieces, view }); } };
 const observer = class { observe() {} };
 const player = fs.readFileSync(new URL('../play.mjs', import.meta.url), 'utf8').replace(/^import\s+.*?;\s*$/gm, '');
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createFloorHover, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
   location: { search: '?t=0' }, document: playerDocument, window: win, matchMedia: () => media,
   createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => atlas, fontsReady: async () => {},
   SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts: () => ({ draw() {}, fit: view => view, layout: [] }), devicePixelRatio: 3,
+  createFloorHover: () => ({ clear() {}, point: () => null }), createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),
   requestAnimationFrame: callback => { scheduledTick = callback; return 1; }, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
 });
 assert.equal(win.__ready, true);
@@ -504,8 +507,9 @@ for (const scene of SHOW) {
   ruleStart += scene.len;
 }
 runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, MAT, SCRIPTS, PACE, UI_ROW, playbackSpans, prototypeState, tip });
-try { console.log(checkPageLabels()); } catch (error) { fail(78.24, error.message); }
+try { console.log(checkPageLabels()); } catch (error) { fail(SHOW.slice(0, 5).reduce((n, s) => n + s.len, 0) + playbackSpans(SCRIPTS.fig).land + 0.4 * PACE, error.message); }
 try { console.log(await checkDrags()); } catch (error) { fail(25.25, error.message); }
+try { const r = await checkRound5(); console.log(`H1–H7 computed: ${r.H1.draws} draw ends, ${r.H1.growingSamples} spread samples; loop ${r.H2.loop.toFixed(3)}s, land 3.0s; ${r.H3.samples} laptop poses; ${r.H6.continuitySamples} resize samples; ${r.H7.rays} floor rays, ${r.H7.wholeDotSamples} dot samples. Font ink, layout, pixels and frames UNRUN.`); } catch (error) { fail(0, error.message); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {

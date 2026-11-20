@@ -10,6 +10,7 @@ import { corners } from '../kit.mjs';
 import { createRenderer } from '../sq.mjs';
 import { SHOW, LOOP, PACE, SCRIPTS, SCENES, frameAt } from '../stage.mjs';
 import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
+import { equivalent } from '../view.mjs';
 
 const take = new URL('../', import.meta.url);
 const sources = JSON.parse(fs.readFileSync(new URL('fixtures/drag-sources.json', import.meta.url), 'utf8'));
@@ -57,8 +58,9 @@ export async function checkDrags(only = '') {
   const base = original.module;
   const enabled = rule => !only || only === rule;
   const require = (rule, ok, time, message) => { if (enabled(rule)) assert.ok(ok, `G1 ${rule}: ${time.toFixed(6)}s: ${message}`); };
-  assert.equal(PACE, incoming.module.PACE); assert.equal(LOOP, incoming.module.LOOP); assert.deepEqual(SHOW, incoming.module.SHOW); assert.deepEqual(SCRIPTS, incoming.module.SCRIPTS);
-  assert.deepEqual(SCENES.map(make => make()), incoming.module.SCENES.map(make => make()), 'G1 stills: emitted pieces differ from incoming 50b51b8');
+  assert.equal(PACE, incoming.module.PACE);
+  // H2 moves later clocks; H3 rotates only the Figma laptop and recentres its footprint.
+  for (let i = 0; i < 5; i++) equivalent(SCENES[i](), incoming.module.SCENES[i](), 'G1 retained still differs from incoming 50b51b8');
   const points = SCENES.flatMap(make => make().flatMap(corners));
   const xs = points.map(p => dot(HOME.r, p)), ys = points.map(p => dot(HOME.u, p));
   // The player's initial 1440 x 900 desktop fit. Label fitting can only reduce S.
@@ -139,6 +141,6 @@ export async function checkDrags(only = '') {
       require('shadow', positions.shadow.every((v, i) => near(v, pc.shadowP[i])) && positions.colour.every((v, i) => near(v, pc.p[i])), time, 'renderer did not retain shadow position and lifted colour position');
     }
   }
-  return `G1 drags: ${samples} samples at 0.0005 s, five drags including loc; order/one offset, projected occlusion and F1 lifetimes clean; max corner error=${maxCorner.toExponential(3)} px (S=${S.toFixed(6)}); minimum cursor gap=${minGap.toFixed(6)}; max offset=${maxOffset.toFixed(6)}; shadow positions/uniforms unchanged; six emitted stills/timing unchanged.\n48aea47 snapshot SHA256 ${original.hash}; incoming 50b51b8 snapshot SHA256 ${incoming.hash}. Rendered frames, shadows and pixel still identity UNRUN.`;
+  return `G1 drags: ${samples} samples at 0.0005 s, five drags including loc; order/one offset, projected occlusion and F1 lifetimes clean; max corner error=${maxCorner.toExponential(3)} px (S=${S.toFixed(6)}); minimum cursor gap=${minGap.toFixed(6)}; max offset=${maxOffset.toFixed(6)}; shadow positions/uniforms unchanged; five retained emitted stills unchanged (H2 timing/H3 Figma checked separately).\n48aea47 snapshot SHA256 ${original.hash}; incoming 50b51b8 snapshot SHA256 ${incoming.hash}. Rendered frames, shadows and pixel still identity UNRUN.`;
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) console.log(await checkDrags(process.argv.find(a => a.startsWith('--only='))?.slice(7)));

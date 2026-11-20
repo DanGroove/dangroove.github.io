@@ -6,12 +6,14 @@ import { corners } from './kit.mjs';
 import { makeAtlas, fontsReady } from './art.mjs';
 import { SCENES, CRAFT, BLOCK, POOL, SHOW, calloutsAt } from './stage.mjs';
 import { createCallouts } from './labels.mjs';
+import { createPageLayout } from './page-layout.mjs';
 
 const q = new URLSearchParams(location.search), num = (k, d) => q.has(k) ? +q.get(k) : d;
 const hero = document.querySelector('[data-hero]'), canvas = hero.querySelector('[data-art]'), stage = hero.querySelector('[data-stage-box]');
 const crafts = [...hero.querySelectorAll('[data-craft]')];
 const R = createRenderer(canvas), cam = makeCamera(num('yaw', 0), num('pitch', 0));
 const callouts = createCallouts(hero), reduced = matchMedia('(prefers-reduced-motion: reduce)');
+const layout = createPageLayout(hero, stage, callouts);
 
 // the room all the scenes need, measured once in the home view
 const all = SCENES.map(make => make());
@@ -20,11 +22,10 @@ for (const pieces of all) for (const pc of pieces) for (const c of corners(pc)) 
 const NEED = { w: x1 - x0 + 0.5, h: y1 - y0 + 0.5, x: (x0 + x1) / 2, y: (y0 + y1) / 2 };
 
 function draw() {
-  const h = hero.getBoundingClientRect(), b = stage.getBoundingClientRect(), s = Math.min(num('s', 0), all.length - 1);
+  const { h, b } = layout.metrics, s = Math.min(num('s', 0), all.length - 1);
   const pieces = q.has('at') ? SCENES[s]({ at: num('at') }) : all[s];
-  const S = Math.min(b.width / NEED.w, b.height / NEED.h);
-  const cx = b.left - h.left + b.width / 2 - S * NEED.x, cy = b.top - h.top + b.height / 2 + S * NEED.y;
-  const W = h.width, H = h.height, view = callouts.fit({ W, H, dpr: Math.min(2, devicePixelRatio || 1, Math.sqrt(5.2e6 / (W * H))), S, cx, cy, cam }, NEED, b.left - h.left);
+  const W = h.width, H = h.height, view = layout.view(NEED, cam, Math.min(2, devicePixelRatio || 1, Math.sqrt(5.2e6 / (W * H))));
+  layout.cover(view, NEED);
   R.draw(pieces, view, { outline: 0, floor: { ...POOL, radius: num('pool', 4.8) } });
   const time = SHOW.slice(0, s).reduce((sum, scene) => sum + scene.len, 0) + SHOW[s].still;
   callouts.draw(calloutsAt(time), pieces, view, time, reduced.matches);
@@ -38,5 +39,18 @@ function draw() {
 await fontsReady();
 R.setAtlas(makeAtlas());
 await document.fonts.ready;
-draw(); window.__ready = true;
-addEventListener('resize', draw);
+const measure = () => { layout.measure(); draw(); };
+measure(); window.__ready = true;
+addEventListener('resize', measure);
+document.fonts.addEventListener('loadingdone', measure);
+const name = hero.querySelector('[data-name]');
+name.addEventListener('animationend', measure);
+let weighing = false;
+function watchName() {
+  if (weighing || !name.getAnimations?.().some(a => a.playState === 'running')) return;
+  weighing = true;
+  const weigh = () => { measure(); if (name.getAnimations().some(a => a.playState === 'running')) requestAnimationFrame(weigh); else weighing = false; };
+  requestAnimationFrame(weigh);
+}
+name.addEventListener('animationstart', watchName);
+watchName();

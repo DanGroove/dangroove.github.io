@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { HOME, dot } from '../../../../public/journey/hero/engine.mjs';
-import { SCENES, SHOW, SCRIPTS, PACE, frameAt, calloutsAt } from '../stage.mjs';
+import { SCENES, SHOW, SCRIPTS, PACE, frameAt, calloutsAt, playbackSpans } from '../stage.mjs';
 import { corners } from '../kit.mjs';
 import { fitCalloutView, labelLayout } from '../labels.mjs';
 import { checkLabelRoutes } from './browser-check.mjs';
@@ -29,9 +29,10 @@ export function checkPageLabels() {
   const view = fitCalloutView(initial, need, 337.92, widths, obstacles);
   assert.ok(view.S >= 34 && view.S <= initial.S, 'page labels: fit must keep the labels visible');
   let samples = 0, minimumGap = Infinity;
-  const times = [...new Set([78.24, 78.34, 78.39, 78.94, ...Array.from({ length: 181 }, (_, i) => 77.84 + i / 60)])];
+  const landing = SHOW.slice(0, 5).reduce((n, s) => n + s.len, 0) + playbackSpans(SCRIPTS.fig).land;
+  const times = [...new Set([0.4, 0.5, 0.55, 1.1, ...Array.from({ length: 181 }, (_, i) => i / 60)].map(offset => landing + offset * PACE))];
   for (const time of times) {
-    const data = calloutsAt(time), anchors = calloutsAt(78.94);
+    const data = calloutsAt(time), anchors = calloutsAt(landing + 1.1 * PACE);
     const layout = labelLayout(data, frameAt(time), view, widths[view.S < 70 ? 'small' : 'large'], obstacles, false, time, anchors);
     assert.equal(layout.length, data.length, 'page labels: missing label');
     checkLabelRoutes(layout, view.S, 'page labels 768x1024/' + time.toFixed(6));

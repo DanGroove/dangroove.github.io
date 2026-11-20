@@ -142,14 +142,15 @@ export function createCallouts(hero) {
   hero.append(overlay);
   for (const n of hero.querySelectorAll('.hero-nav,.hero-say,.hero-foot')) n.style.zIndex = '3';
   let last = [];
-  let wordWidths;
+  let wordWidths, obstacles = [];
   const pageBlocks = () => {
     const h = hero.getBoundingClientRect();
     return [...hero.querySelectorAll('[data-name],[data-lede],[data-crafts],.hero-nav,[data-foot]')].map(n => n.getBoundingClientRect()).filter(r => r.width && r.height).map(r => ({ left: r.left - h.left, right: r.right - h.left, top: r.top - h.top, bottom: r.bottom - h.top }));
   };
   return {
-    fit(view, need, boxLeft) {
-      if (!wordWidths) {
+    measure() {
+      obstacles = pageBlocks();
+      {
         const word = nodes[2].word;
         word.style.display = ''; wordWidths = { small: {}, large: {} };
         let start = 0;
@@ -161,12 +162,13 @@ export function createCallouts(hero) {
           start += scene.len;
         }
       }
-      return fitCalloutView(view, need, boxLeft, wordWidths, pageBlocks());
+    },
+    fit(view, need, boxLeft) {
+      return fitCalloutView(view, need, boxLeft, wordWidths, obstacles);
     },
     draw(data, pieces, view, time, reduced) {
-      const obstacles = pageBlocks();
       const widths = {};
-      nodes.forEach((n, i) => { const c = data[i]; n.word.style.display = c ? '' : 'none'; n.word.style.fontSize = (view.S < 70 ? 9 : 11) + 'px'; if (c) { n.word.textContent = c.words; widths[c.id] = n.word.getBoundingClientRect().width; } });
+      nodes.forEach((n, i) => { const c = data[i]; n.word.style.display = c ? '' : 'none'; n.word.style.fontSize = (view.S < 70 ? 9 : 11) + 'px'; if (c) { n.word.textContent = c.words; widths[c.id] = wordWidths[view.S < 70 ? 'small' : 'large'][c.id]; } });
       let anchors = data;
       if (data.length > 0 && data.length < 3) {
         const { scene, at } = sceneAt(time), full = calloutsAt(time - at + scene.still);

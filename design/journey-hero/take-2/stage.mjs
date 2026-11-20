@@ -268,16 +268,16 @@ function feedScreens(P, t, art, spans, off) {
   takeBack(P, t, ...off);
 }
 
-// The laptop hinge runs in z. Its lid faces +x and leans twelve degrees back.
+// The laptop hinge runs in x along the back edge; its unmirrored screen faces +z.
 const LID_ANGLE = 12 * Math.PI / 180;
-const lidU = [0, 0, -1], lidV = [-Math.sin(LID_ANGLE), Math.cos(LID_ANGLE), 0], lidN = [Math.cos(LID_ANGLE), Math.sin(LID_ANGLE), 0];
+const lidU = [1, 0, 0], lidV = [0, Math.cos(LID_ANGLE), -Math.sin(LID_ANGLE)], lidN = [0, Math.sin(LID_ANGLE), Math.cos(LID_ANGLE)];
 export const UI_ROW = (() => {
   const depth = 1.65, lidW = 1.55, lidH = (lidW - 0.08) / 1.6 + 0.08, deck = 1.1, rim = 0.06, tabW = (ROW - rim * 2) * 3 / 4 + rim * 2, phoneW = (ROW - rim * 2) * 9 / 19.5 + rim * 2, gap = 0.3;
-  const lean = lidH * Math.sin(LID_ANGLE) + 0.02, width = lean + deck + tabW + phoneW + 2 * gap, left = screenMiddle - width / 2;
-  return { depth, lidW, lidH, deck, rim, tabW, phoneW, gap, left, hinge: left + lean, tablet: left + lean + deck + gap, phone: left + lean + deck + gap + tabW + gap };
+  const lean = lidH * Math.sin(LID_ANGLE) + 0.02, width = lidW + tabW + phoneW + 2 * gap, left = screenMiddle - width / 2;
+  return { depth, lidW, lidH, deck, rim, tabW, phoneW, gap, left, lean, hinge: left, tablet: left + lidW + gap, phone: left + lidW + gap + tabW + gap };
 })();
 function lidPoint(u, v, lift = 0) {
-  const g = UI_ROW, origin = [g.hinge, 0.095, MAT.z + 0.075 + g.depth];
+  const g = UI_ROW, origin = [g.hinge, 0.095, MAT.z + g.lean];
   return origin.map((n, i) => n + lidU[i] * u + lidV[i] * v + lidN[i] * lift);
 }
 function lidPainter(P) {
@@ -299,9 +299,9 @@ function feedPrototype(P, t, spans, off) {
     const pieces = [];
     if (i === 0) {
       if (t < spans[0][0]) continue;
-      pieces.push({ ...flat('ink', g.hinge, MAT.z + 0.075, g.deck, g.depth, 0.08), deviceBody: true });
-      pieces.push(flat('night', g.hinge + 0.18, MAT.z + 0.18, 0.62, 1.42, 0.008, undefined, 0.081), flat('dark', g.hinge + 0.85, MAT.z + 0.62, 0.18, 0.55, 0.008, undefined, 0.081));
-      for (let row = 0; row < 5; row++) for (let key = 0; key < 9; key++) pieces.push(flat('dark', g.hinge + 0.20 + row * 0.115, MAT.z + 0.205 + key * 0.151, 0.082, 0.115, 0.005, undefined, 0.091));
+      pieces.push({ ...flat('ink', g.hinge, MAT.z + g.lean, g.lidW, g.deck, 0.08), deviceBody: true });
+      pieces.push(flat('night', g.hinge + 0.065, MAT.z + g.lean + 0.12, 1.42, 0.62, 0.008, undefined, 0.081), flat('dark', g.hinge + 0.5, MAT.z + g.lean + 0.85, 0.55, 0.18, 0.008, undefined, 0.081));
+      for (let row = 0; row < 5; row++) for (let key = 0; key < 9; key++) pieces.push(flat('dark', g.hinge + 0.09 + key * 0.151, MAT.z + g.lean + 0.14 + row * 0.115, 0.115, 0.082, 0.005, undefined, 0.091));
       pieces.push({ ...box('ink', lidPoint(g.lidW / 2, g.lidH / 2), [g.lidW, g.lidH, 0.04]), q: quatFromBasis(lidU, lidV), lid: true });
       prototype(lidPainter(pieces), 0, t < spans[0][1] ? -1 : clock);
       const dx = -1.6 * (1 - EASE.enter(linear(t, ...spans[0])));
@@ -614,7 +614,7 @@ export const SCRIPTS = {
     { id: 'mailButton', kind: 'draw', from: topLeft(inRect(ID.mail, [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180])), to: bottomRight(inRect(ID.mail, [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180])), duration: 0.18, tool: 'rectangle' },
     { id: 'mailFlyer', kind: 'type', from: topLeft(inRect(ID.mail, [70 / 800, 1057 / 1180, 225 / 800, 30 / 1180])), text: 'View the flyer', duration: 0.4, tool: 'type' },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.8 },
-    { id: 'land', kind: 'wait', duration: 1.2 },
+    { id: 'land', kind: 'wait', duration: 3.0 },
     { id: 'pickup', kind: 'wait', duration: 0.7 },
     { id: 'open', kind: 'wait', duration: 0.1 },
     { id: 'leaf1', kind: 'wait', duration: 0.6 },
@@ -927,6 +927,19 @@ function drawnFrame(P, r, p, tone = 'paper', diagonals = false, cross = true) {
   if (diagonals) emptyFrame(P, growing, true, 0, cross);
   else P.push(on(tone, ...growing, { lift: 0.06, t: 0.02 }));
 }
+// Build the spread's lasting pieces in the drag's rectangle, rather than swapping a placeholder.
+function spreadFrame(P, p, cross) {
+  if (p <= 0) return;
+  const pieces = [];
+  for (const rect of [ID.left, ID.right]) pieces.push({ ...on('ink', ...rect, { lift: 0.06, t: 0.02 }), tones: FLYER.coal });
+  if (cross) emptyFrame(pieces, ID.frame, false);
+  const x = SCREEN.l + ID.spread[0] * U, y = SCREEN.b + (ID.spread[1] + ID.spread[3]) * U;
+  for (const pc of pieces) {
+    pc.p[0] = x + (pc.p[0] - x) * p; pc.p[1] = y + (pc.p[1] - y) * p;
+    pc.s[0] *= p; pc.s[1] *= p;
+    P.push(pc);
+  }
+}
 // Rectangles interpolate linearly in wipe progress. Solve their first intersection once in that space;
 // after contact, the styled picture owns the frame and the empty outline never returns.
 function frameContact(s, id, t, from, to, frame) {
@@ -1059,9 +1072,8 @@ function editedInDesign(t, { at: pages } = {}) {
       const frame = i ? r : ID.frame;
       const [drag, from, to] = [['map', DOCK.map, ID.frame], ['photo', DOCK.photo, ID.photo], ['postPhoto', ID.photo, ID.post], ['mailPhoto', ID.photo, ID.mailPhoto]][i];
       const filled = frameContact(s, drag, t, from, to, frame), placed = done(s, id, t), before = D.length;
-      if (i === 0 && done(s, 'frame0', t)) {
-        for (const rect of [ID.left, ID.right]) D.push({ ...on('ink', ...rect, { lift: 0.06, t: 0.02 }), tones: FLYER.coal });
-        if (!filled) emptyFrame(D, ID.frame, false);
+      if (i === 0) {
+        spreadFrame(D, t >= action(s, 'frame0').end - 0.000500001 * PACE ? 1 : eased(s, 'frame0', t), !filled);
       } else if (!placed) {
         drawnFrame(D, r, eased(s, 'frame' + i, t), 'night', true);
         if (filled) D.splice(before, D.length - before, ...D.slice(before).filter(pc => !pc.overlay));
@@ -1353,7 +1365,7 @@ export function calloutsAt(t) {
     let mark;
     if (key === 'fig' && i === 0) {
       const face = floor.find(pc => pc.lidPicture && pc.art === 'chromeLaptop');
-      // Screen-local left is the end with largest z; down is opposite lidV.
+      // Screen-local left is the low-x top corner; down is opposite lidV.
       const local = [-face.s[0] + 0.08, face.s[1] - 0.06, face.s[2]];
       mark = quatRotate(face.q, local).map((n, j) => n + face.p[j]);
     } else {
