@@ -836,7 +836,7 @@ function editedVideo(t) {
   if (begun(s, 'music', t)) {
     const echoStart = D.length;
     const p = handed(s, 'music', t), target = [0.45, 0.16, 3.88, 0.17], r = rectMix(BINS[3], target, p);
-    if (!done(s, 'music', t)) { const pc = on('dark', ...r, { lift: 0.08, t: 0.02, art: 'wave' }); pc.where = 'travel'; D.push(pc); }
+    if (!done(s, 'music', t)) { const pc = on('dark', ...r, { lift: 0.08, t: 0.02, art: 'wave' }); pc.where = 'travel'; pc.action = 'music'; D.push(pc); }
     else {
       D.push(on('dark', ...target, { lift: 0.05, t: 0.02 }));
       const duck = handed(s, 'duck', t), fade = handed(s, 'fade', t);
@@ -1321,9 +1321,51 @@ function build(i, at, o) {
   }
   // Opaque word pictures keep their approved front faces, but have no shaded side faces.
   for (const pc of P) if (pc.art === 'wMake' || pc.art === 'wMove') pc.cut = true;
-  separateFaces(P);
+  // G1 (round 8): the carried stack of the current drag (its travel pieces and the cursor) stays out of the page's own
+  // separation, so nothing it passes over moves. The stack keeps the place it had before; any tie that leaves is cleared by
+  // lifting the stack along the view, which does not move it on the page.
+  const carried = carriedStack(P);
+  if (o.withoutCarried) { for (const pc of carried) P.splice(P.indexOf(pc), 1); separateFaces(P); return P; }
+  if (carried.length) {
+    // The stack itself is placed exactly as before (with the whole page), so its own order and clearance are unchanged;
+    // everything else is placed as if the stack were not there.
+    const authored = P.map(pc => pc.p.slice());
+    separateFaces(P);
+    const placed = carried.map(pc => pc.p);
+    P.forEach((pc, k) => { pc.p = authored[k]; });
+    separateFaces(P.filter(pc => !carried.includes(pc)));
+    carried.forEach((pc, k) => { pc.p = placed[k]; });
+  } else separateFaces(P);
   if (i === 2) liftDragStack(P);
+  clearCarried(P, carried);
   return P;
+}
+// G1: with the stack out of the page's separation, a carried face may now sit level with a face it passes over. Lift the
+// whole stack along the view (no move on the page) just enough to clear every such tie; nothing else moves.
+function clearCarried(P, stack) {
+  if (!stack.length) return;
+  const step = LAYER_STEP * U, flat = pc => { const points = corners(pc); return [Math.min(...points.map(p => p[0])), Math.min(...points.map(p => p[1])), Math.max(...points.map(p => p[0])), Math.max(...points.map(p => p[1]))]; };
+  const faces = list => list.filter(pc => pc.where !== 'floor').map(pc => ({ top: pc.p[2] + pc.s[2], r: flat(pc) }));
+  const mine = faces(stack), others = faces(P.filter(pc => !stack.includes(pc)));
+  let rise = 0;
+  for (let k = 0; k < 16; k++) {
+    let need = rise;
+    for (const c of mine) for (const o of others) {
+      if (!(c.r[0] < o.r[2] - 1e-9 && c.r[2] > o.r[0] + 1e-9 && c.r[1] < o.r[3] - 1e-9 && c.r[3] > o.r[1] + 1e-9)) continue;
+      const gap = c.top + rise - o.top;
+      if (Math.abs(gap) < step) need = Math.max(need, o.top + step - c.top);
+    }
+    if (need === rise) break;
+    rise = need;
+  }
+  if (!(rise > 0)) return;
+  const offset = HOME.v.map(n => n * rise / HOME.v[2]);
+  for (const pc of stack) { pc.shadowP ??= pc.p; pc.p = pc.p.map((n, axis) => n + offset[axis]); }
+}
+export function carriedStack(P) {
+  const stack = P.action ? P.filter(pc => pc.where === 'travel' && pc.action === P.action) : [];
+  const cursor = stack.length ? P.find(pc => pc.art === 'cursor') : null;
+  return cursor ? [...stack, cursor] : stack;
 }
 // InDesign's carried faces and cursor keep their relative order. Moving toward the
 // home camera clears crossed frames without changing any projected picture corner.

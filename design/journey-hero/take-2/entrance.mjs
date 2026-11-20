@@ -11,6 +11,7 @@ export const ENTRANCE = {
   lede: { start: 0.4, end: 0.75, step: 0.06 }, // one wipe per line, left to right
   crafts: { start: 0.55, end: 0.95, step: 0.05, lines: 5 },   // four top hairlines and the last row's bottom one
   floor: [0.2, 0.9],                           // hard circle of dots and pool, centre outward
+  stars: [0.2, 0.9],                           // round 8 (B1): the star field, wholly on or off, in rings from the stage's centre
   screen: [0.5, 1.1],                          // clip plane rising from the screen's bottom edge to its top
   foot: [1.1, 1.2],                            // Scroll for the journey, Pause: cuts
 };
@@ -37,6 +38,7 @@ export function entranceAt(time, { ledeLines = 3 } = {}) {
     lede: staggerSpans(E.lede, ledeLines).map(span => wipe(time, ...span)),
     crafts: staggerSpans(E.crafts, E.crafts.lines).map(span => wipe(time, ...span)),
     floor: wipe(time, ...E.floor),
+    stars: wipe(time, ...E.stars),
     screen: wipe(time, ...E.screen),
     foot: E.foot.map(at => time >= at),
     hover: time >= E.floor[1],

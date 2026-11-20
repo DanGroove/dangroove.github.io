@@ -14,7 +14,7 @@ function once(source, search, replace, label) {
   return source.replace(search, () => replace);
 }
 
-export function handPatch(source, { k2 = true, lift = true } = {}) {
+export function handPatch(source, { k2 = true, lift = true, g1 = true } = {}) {
   let s = source;
   // The snapshot reads hand actions through `eased`; dispatching on kind is the same edit as round 7's
   // explicit `handed` readers. Travel is only ever a drag's carrier, except Photoshop's export ('photo').
@@ -42,6 +42,7 @@ export function handPatch(source, { k2 = true, lift = true } = {}) {
 `, 'lift');
   }
   if (k2) s = k2Patch(s);
+  if (g1) s = g1Patch(s);
   return s;
 }
 
@@ -100,4 +101,17 @@ export async function retimer(current) {
     return starts(current)[i] + local(old.SHOW[i].key, t - s[i]);
   };
   return { old, local, global };
+}
+
+// G1 (round 8): the carried stack leaves the page's separation. Applied to a frozen stage with the same text as stage.mjs, so
+// a comparison with it still means "nothing else moved". Snapshots without the round-4 lift are left as they are.
+import { readFileSync } from 'node:fs';
+export function g1Patch(source) {
+  const now = readFileSync(new URL('../stage.mjs', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const call = '  separateFaces(P);\n  if (i === 2) liftDragStack(P);\n  return P;\n}\n';
+  if (!source.includes(call)) return source;
+  const block = now.slice(now.indexOf('  // G1 (round 8): the carried stack'), now.indexOf('// InDesign\'s carried faces and cursor keep'));
+  let s = once(source, call, block, 'g1 build');
+  s = once(s, "const pc = on('dark', ...r, { lift: 0.08, t: 0.02, art: 'wave' }); pc.where = 'travel'; D.push(pc); }", "const pc = on('dark', ...r, { lift: 0.08, t: 0.02, art: 'wave' }); pc.where = 'travel'; pc.action = 'music'; D.push(pc); }", 'g1 music');
+  return s;
 }

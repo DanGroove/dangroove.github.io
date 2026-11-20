@@ -30,11 +30,6 @@ export function pointerFloor(x, y, { S, cx, cy, cam }) {
   return [(a * cam.u[2] - cam.r[2] * b) / d, 0, (cam.r[0] * b - cam.u[0] * a) / d];
 }
 
-export function redDot(x, z, pointer, pitch = 0.5) {
-  const centre = [Math.floor(x / pitch + 0.5) * pitch, Math.floor(z / pitch + 0.5) * pitch];
-  return !!pointer && Math.hypot(centre[0] - pointer[0], centre[1] - pointer[2]) <= 0.75;
-}
-
 export function sceneEnvelope(scenes, corners, dot, cam) {
   const points = scenes.flatMap(make => make().flatMap(corners));
   const xs = points.map(p => dot(cam.r, p)), ys = points.map(p => dot(cam.u, p));

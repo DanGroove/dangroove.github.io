@@ -30,3 +30,45 @@
     visibility: hidden;
   }
 }
+/* Round 8, N1: the name reacts as the live page's headline does (name-react.mjs). The flow text keeps the layout and is
+   what screen readers get; once live, it is painted by an overlay of the same letters at their measured pen positions,
+   with a red copy cut to a circle around the pointer. Generated content keeps the overlay out of text measurement. */
+.hero-name .name-fx {
+  position: absolute;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+  user-select: none;
+  -webkit-text-fill-color: currentcolor;
+}
+.hero-name .name-line.is-live {
+  -webkit-text-fill-color: transparent;
+}
+.hero-name .name-line.is-live .name-fx {
+  display: block;
+}
+.hero-name .name-ch {
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: pre;
+}
+.hero-name .name-ch::before {
+  content: attr(data-ch);
+}
+.hero-name .name-red {
+  position: absolute;
+  inset: 0;
+  display: block;
+  color: #f0484f;
+  -webkit-text-fill-color: #f0484f;
+  clip-path: circle(0px at 0px 0px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-name .name-line.is-live {
+    -webkit-text-fill-color: currentcolor;
+  }
+  .hero-name .name-line.is-live .name-fx {
+    display: none;
+  }
+}

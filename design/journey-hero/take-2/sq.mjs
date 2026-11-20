@@ -161,8 +161,6 @@ precision highp float;
 precision highp sampler2DShadow;
 in vec3 vW;
 uniform vec3 uInk, uPool, uDot;
-uniform vec3 uHover;                  // floor x, floor z, enabled
-uniform vec3 uRed;
 uniform vec4 uFloor;                  // centre x, centre z, radius, dot pitch
 uniform float uSpread;
 uniform float uReach;                 // the entrance's hard circle from the centre, world units (huge when off)
@@ -173,15 +171,52 @@ void main() {
   float glow = 1.0 - smoothstep(0.25, 1.0, r);
   float pool = length(vW.xz - uFloor.xy) <= uReach ? glow : 0.0;
   float lit = shadowAt(vW + vec3(0.0, 0.03, 0.0), uSpread);
-  vec3 c = mix(uInk, uPool, pool * (0.25 + 0.75 * lit));
   vec2 g = (fract(vW.xz / uFloor.w + 0.5) - 0.5) * uFloor.w;
   float dist = length(g), aa = fwidth(dist);
   vec2 centre = floor(vW.xz / uFloor.w + 0.5) * uFloor.w;
   // A dot is on or off by its grid centre alone, so the growing circle never cuts one.
   float on = distance(centre, uFloor.xy) <= uReach ? 1.0 : 0.0;
   float dotv = (1.0 - smoothstep(0.03 - aa, 0.03 + aa, dist)) * glow * on * (0.35 + 0.65 * lit);
-  bool red = uHover.z > 0.5 && distance(centre, uHover.xy) <= 0.75;
-  o = vec4(mix(c, red ? uRed : uDot, dotv), 1.0);
+  // Round 8: the colour it always had, mix(mix(ink, pool, k), dot, dotv), written premultiplied over what is behind: over ink it
+  // is unchanged, and the star field shows only where the floor adds nothing.
+  float k = pool * (0.25 + 0.75 * lit), a = 1.0 - (1.0 - k) * (1.0 - dotv);
+  o = vec4(uPool * k * (1.0 - dotv) + uDot * dotv, a);
+}`;
+
+// Round 8 (B1): the star field, one point per star in the hero's CSS px. Parallax, scroll and the entrance's rings come from
+// uniforms; aOff is the star's own offset (stirring, gathering, the blast). Colours are paper or red mixed into ink; no fades.
+const VERT_STARS = `#version 300 es
+precision highp float;
+layout(location = 0) in vec2 aHome;
+layout(location = 1) in vec3 aLook;   // depth, size (css px across), red
+layout(location = 2) in vec2 aOff;
+uniform vec2 uSize;                    // the hero, css px
+uniform float uDpr, uScroll;
+uniform vec2 uPar;                     // followed pointer fraction x 28 px
+uniform vec3 uRings;                   // centre x, y, reach (huge when off, -1 before)
+uniform vec3 uInk, uPaper, uRedInk;
+uniform vec2 uMix;
+out vec3 vCol;
+out float vR;
+void main() {
+  float d = aLook.x;
+  vec2 p = aHome + aOff - uPar * (0.12 + 0.88 * d * d) - vec2(0.0, uScroll * 0.12 * d);
+  bool on = distance(aHome, uRings.xy) <= uRings.z;
+  vR = 0.5 * aLook.y * uDpr;
+  vCol = mix(uInk, aLook.z > 0.5 ? uRedInk : uPaper, mix(uMix.x, uMix.y, d));
+  gl_PointSize = ceil(2.0 * vR) + 2.0;
+  gl_Position = on ? vec4(p.x / uSize.x * 2.0 - 1.0, 1.0 - p.y / uSize.y * 2.0, 0.0, 1.0) : vec4(2.0, 2.0, 2.0, 1.0);
+}`;
+const FRAG_STARS = `#version 300 es
+precision highp float;
+in vec3 vCol;
+in float vR;
+out vec4 o;
+void main() {
+  float dist = length(gl_PointCoord - 0.5) * (ceil(2.0 * vR) + 2.0);
+  float a = clamp(vR + 0.5 - dist, 0.0, 1.0) * min(1.0, 2.0 * vR);
+  if (a <= 0.0) discard;
+  o = vec4(vCol * a, a);
 }`;
 
 function program(gl, vs, fs) {
@@ -206,6 +241,17 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   const gl = canvas.getContext('webgl2', { antialias: true, alpha: false, preserveDrawingBuffer: true });
   if (!gl) throw new Error('no webgl2');
   const piece = program(gl, VERT, FRAG), flat = program(gl, VERT, FRAG_FLAT), depth = program(gl, VERT, FRAG_NONE), floor = program(gl, VERT_FLOOR, FRAG_FLOOR);
+  const starProgram = program(gl, VERT_STARS, FRAG_STARS);
+  // Round 8 (B1): the star field's buffers. Its look is uploaded when the field is made; offsets only when they change.
+  const starVao = gl.createVertexArray(), starLook = gl.createBuffer(), starOff = gl.createBuffer();
+  gl.bindVertexArray(starVao);
+  gl.bindBuffer(gl.ARRAY_BUFFER, starLook);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 20, 0);
+  gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 20, 8);
+  gl.bindBuffer(gl.ARRAY_BUFFER, starOff);
+  gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 0, 0);
+  gl.bindVertexArray(null);
+  let starLookVersion = -1, starOffVersion = -1, starCountNow = 0;
 
   // Rounded pieces keep the dense mesh; sharp boxes need only the face and bevel angles.
   function mesh(oct) {
@@ -347,6 +393,27 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     gl.clearColor(ink[0], ink[1], ink[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, shadowTex);
 
+    // Round 8 (B1): the star field first, behind everything; one draw call, no depth.
+    if (look.stars && look.stars.count) {
+      const st = look.stars;
+      gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.bindVertexArray(starVao); boundMesh = null;
+      if (st.attrsVersion !== starLookVersion || st.count !== starCountNow) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, starLook); gl.bufferData(gl.ARRAY_BUFFER, st.attrs, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, starOff); gl.bufferData(gl.ARRAY_BUFFER, st.offsets.byteLength, gl.DYNAMIC_DRAW);
+        starLookVersion = st.attrsVersion; starCountNow = st.count; starOffVersion = -1;
+      }
+      if (st.version !== starOffVersion) { gl.bindBuffer(gl.ARRAY_BUFFER, starOff); gl.bufferSubData(gl.ARRAY_BUFFER, 0, st.offsets); starOffVersion = st.version; }
+      gl.useProgram(starProgram.p);
+      gl.uniform2f(starProgram.u.uSize, W, H); gl.uniform1f(starProgram.u.uDpr, dpr); gl.uniform1f(starProgram.u.uScroll, st.scroll || 0);
+      gl.uniform2fv(starProgram.u.uPar, st.par || [0, 0]);
+      gl.uniform3f(starProgram.u.uRings, st.centre?.[0] ?? 0, st.centre?.[1] ?? 0, st.reveal === null || st.reveal === undefined ? 1e9 : st.reveal);
+      gl.uniform3fv(starProgram.u.uInk, ink); gl.uniform3fv(starProgram.u.uPaper, hex('#F7F6F3')); gl.uniform3fv(starProgram.u.uRedInk, hex('#F0484F'));
+      gl.uniform2f(starProgram.u.uMix, 0.12, 0.55);
+      gl.drawArrays(gl.POINTS, 0, st.count);
+      gl.bindVertexArray(null); gl.disable(gl.BLEND); gl.enable(gl.DEPTH_TEST);
+    }
+
     gl.cullFace(gl.BACK);
     gl.useProgram(piece.p);
     gl.uniformMatrix4fv(piece.u.uVP, false, vp); gl.uniformMatrix4fv(piece.u.uLightVP, false, lvp);
@@ -375,10 +442,10 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       gl.uniformMatrix4fv(floor.u.uVP, false, vp); gl.uniformMatrix4fv(floor.u.uLightVP, false, lvp); gl.uniform1i(floor.u.uShadow, 0); gl.uniform1f(floor.u.uSpread, spread);
       gl.uniform3fv(floor.u.uInk, ink); gl.uniform3fv(floor.u.uPool, hex(f.pool || '#262323')); gl.uniform3fv(floor.u.uDot, hex(f.dot || '#4A4543'));
       gl.uniform4f(floor.u.uFloor, f.x ?? 0, f.z ?? 0, f.radius ?? 5.5, f.pitch ?? 0.5);
-      gl.uniform3fv(floor.u.uHover, f.pointer ? [f.pointer[0], f.pointer[2], 1] : [0, 0, 0]);
-      gl.uniform3fv(floor.u.uRed, hex('#C0262E'));
       gl.uniform1f(floor.u.uReach, f.reveal ?? 1e6);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      gl.disable(gl.BLEND);
       gl.enable(gl.CULL_FACE);
     }
     gl.bindVertexArray(null);

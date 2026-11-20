@@ -6,8 +6,9 @@ import { makeAtlas, fontsReady } from './art.mjs';
 import { SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt } from './stage.mjs';
 import { createCallouts } from './labels.mjs';
 import { createPageLayout } from './page-layout.mjs';
-import { createFloorHover } from './floor-hover.mjs';
 import { ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView } from './entrance.mjs';
+import { createNameReact } from './name-react.mjs';
+import { createStars, starReach } from './stars.mjs';
 
 const query = new URLSearchParams(location.search);
 const num = (key, fallback) => query.has(key) && Number.isFinite(+query.get(key)) ? +query.get(key) : fallback;
@@ -18,7 +19,6 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const renderer = createRenderer(canvas), cam = makeCamera(num('yaw', 0), num('pitch', 0));
 const callouts = createCallouts(hero);
 const layout = createPageLayout(hero, stage, callouts);
-const fine = matchMedia('(hover: hover) and (pointer: fine)');
 const starts = SHOW.map((_, i) => SHOW.slice(0, i).reduce((sum, scene) => sum + scene.len, 0));
 const stills = [2, 3, 4, 5];
 
@@ -37,7 +37,11 @@ let stopped = query.has('t'), visible = true, ready = false, request = 0, previo
 let intro = null, held = false, first = false;
 const entrance = createEntranceView(hero);
 const frameNow = () => frameAt(t, first && t < 0.5 ? { first: true } : {});
-const hover = createFloorHover(hero, fine, reduced, () => layout.metrics, running, () => ready && visible && !document.hidden, draw, requestAnimationFrame);
+// Round 8: the name reacts once the entrance has ended (N1); the star field (B1, B2) is drawn first in every frame and takes
+// the pointer once the entrance's rings have reached it (0.90 s). Neither stops with Pause, and neither moves the loop.
+const nameReact = createNameReact(hero, { reduced });
+const nameOn = () => nameReact.setLive(ready && !intro && !held && !reduced.matches);
+const stars = query.get('stars') === '0' ? null : createStars(hero, { reduced, draw, running, available: () => ready && visible && !document.hidden, open: () => !intro || intro.time >= ENTRANCE.stars[1] });
 
 function draw() {
   const { h, b } = layout.metrics;
@@ -46,11 +50,12 @@ function draw() {
   const view = layout.view(need, cam, dpr), pieces = frameNow();
   layout.cover(view, need);
   lastView = view;
-  const floor = { ...POOL, radius: num('pool', 4.8), pointer: hover.point(view) }, state = intro && entranceAt(intro.time, { ledeLines: entrance.lines });
-  // The floor hover waits for the floor's wipe; the screen and its shadow share one rising clip plane.
-  if (state && !state.hover) floor.pointer = null;
+  const floor = { ...POOL, radius: num('pool', 4.8) }, state = intro && entranceAt(intro.time, { ledeLines: entrance.lines });
+  // F3 (round 8): the floor has no hover. The screen and its shadow share one rising clip plane.
   if (state) floor.reveal = floorReach(state.floor, floor.radius);
-  renderer.draw(pieces, view, { outline: 0, floor, reveal: state ? screenPlane(state.screen) : null });
+  const centre = [b.left - h.left + b.width / 2, b.top - h.top + b.height / 2];
+  const field = stars?.frame(state ? starReach(state.stars, centre, W, H) : null, centre);
+  renderer.draw(pieces, view, { outline: 0, floor, reveal: state ? screenPlane(state.screen) : null, stars: field });
   callouts.draw(calloutsAt(t), pieces, view, t, reduced.matches);
   if (state) entrance.apply(state);
   hero.classList.remove('is-entering');
@@ -60,6 +65,7 @@ function draw() {
   const at = [BLOCK.x0, BLOCK.x1].flatMap(x => [BLOCK.z0, BLOCK.z1].flatMap(z => [0, BLOCK.up].map(y => [h.left + view.cx + view.S * dot(cam.r, [x, y, z]), h.top + view.cy - view.S * dot(cam.u, [x, y, z])])));
   const lay = [Math.min(...at.map(p => p[0])), Math.min(...at.map(p => p[1])), Math.max(...at.map(p => p[0])), Math.max(...at.map(p => p[1]))].map(Math.round);
   window.__need = { ...need, S: view.S, box: [Math.round(b.width), Math.round(b.height)], lay };
+  stars?.after();
 }
 
 function running() { return ready && !stopped && !held && !reduced.matches && visible && !document.hidden; }
@@ -77,12 +83,12 @@ function tick(now) {
 }
 function startEntrance(time) {
   intro = { time };
-  entrance.clear(); entrance.measure(layout.metrics?.nameLines);
+  entrance.clear(); entrance.measure(layout.metrics?.nameLines); nameOn();
 }
 // Ends the entrance at once, everything shown; the caller then does what it was asked to.
 function endEntrance() {
   if (!intro && !held) return;
-  intro = null; held = false; entrance.clear();
+  intro = null; held = false; entrance.clear(); nameOn();
 }
 function hold(time) {
   if (time === null) { endEntrance(); if (ready) { draw(); schedule(); } return; }
@@ -104,7 +110,7 @@ function seek(time) {
   stopped = true; t = wrap(time); schedule();
   if (ready) draw();
 }
-window.__hero = { seek, measure, entrance: hold, get entering() { return intro ? intro.time : null; }, get t() { return t; }, get callouts() { return callouts.layout; }, get view() { return lastView; }, get pieces() { return frameNow(); }, get layout() { return layout.metrics; }, LOOP, SHOW };
+window.__hero = { seek, measure, entrance: hold, get entering() { return intro ? intro.time : null; }, get t() { return t; }, get callouts() { return callouts.layout; }, get view() { return lastView; }, get pieces() { return frameNow(); }, get layout() { return layout.metrics; }, get name() { return { live: nameReact.live, open: nameReact.open, lift: nameReact.letters.map(l => l.y) }; }, get stars() { return stars && { holding: stars.holding, fraction: stars.fraction, awake: stars.field?.awake ?? false, count: stars.field?.stars.length ?? 0, offsets: stars.field && Array.from(stars.field.offsets) }; }, LOOP, SHOW };
 
 function choose(craft) {
   endEntrance(); first = false;
@@ -113,14 +119,15 @@ function choose(craft) {
   previous = null; draw();
 }
 crafts.forEach((button, i) => button.addEventListener('click', () => choose(i)));
-stage.addEventListener('click', () => choose((sceneAt(t).scene.craft + 1) % 4));
+// B2: a hold on the stage gathers stars; only a short, still press is a click that changes the craft.
+stage.addEventListener('click', () => { if (stars?.swallowClick()) return; choose((sceneAt(t).scene.craft + 1) % 4); });
 pause.addEventListener('click', () => {
   if (reduced.matches) return;
   endEntrance();
   stopped = !stopped; draw(); schedule();
 });
 reduced.addEventListener('change', () => {
-  hover.clear(); endEntrance();
+  endEntrance(); nameOn();
   if (reduced.matches) choose(sceneAt(t).scene.craft);
   draw(); schedule();
 });
@@ -135,6 +142,7 @@ function measure() {
   if (intro) entrance.clear();
   layout.measure();
   if (intro) entrance.measure(layout.metrics.nameLines);
+  stars?.measure(layout.metrics.h); nameReact.measure();
   if (visible && !document.hidden) draw();
 }
 new ResizeObserver(measure).observe(hero);
@@ -158,6 +166,7 @@ name.addEventListener('animationstart', watchName);
 await fontsReady();
 renderer.setAtlas(makeAtlas());
 await document.fonts.ready;
-ready = true; layout.measure();
+ready = true; layout.measure(); stars?.measure(layout.metrics.h);
 if (!query.has('t') && !reduced.matches) { first = true; startEntrance(0); }
+nameOn(); document.fonts.ready.then(() => nameReact.measure());
 draw(); window.__ready = true; schedule(); watchName();

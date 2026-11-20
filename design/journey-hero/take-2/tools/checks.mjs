@@ -10,7 +10,6 @@ import { runCorrections } from './correction-checks.mjs';
 import { previewMarkup } from './preview.mjs';
 import { checkPageLabels } from './label-page-checks.mjs';
 import { checkDrags } from './drag-checks.mjs';
-import { createFloorHover } from '../floor-hover.mjs';
 import { checkRound5 } from './round5-checks.mjs';
 import { checkRound5Addendum } from './round5-addendum-checks.mjs';
 import { checkRound5SecondAddendum } from './round5-second-addendum-checks.mjs';
@@ -18,6 +17,7 @@ import { checkEntrance, checkEntranceControls } from './entrance-checks.mjs';
 import * as entranceModule from '../entrance.mjs';
 import { checkHand, checkHandControls, describe } from './hand-checks.mjs';
 import { retimer } from './hand-patch.mjs';
+import { checkRound8, checkRound8Controls } from './round8-checks.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
@@ -111,8 +111,10 @@ function check(time) {
     const painted = faces.filter(f => f.pc.paintLayer !== undefined && !f.pc.overlay).sort((a, b) => a.pc.paintLayer - b.pc.paintLayer);
     for (let i = 1; i < painted.length; i++) if (painted[i].height - painted[i - 1].height < 0.0008 - 1e-10) fail(time, 'painters did not share one increasing stack');
     for (const f of faces.filter(f => f.pc.overlay && !f.pc.emptyFrame)) {
-      // The original spread guides may cross a carried image; the cursor must clear it.
-      const top = Math.max(-Infinity, ...faces.filter(p => !p.pc.overlay && (p.pc.art || p.pc.paintLayer !== undefined) && !(scene.key === 'id' && f.pc.art !== 'cursor' && p.pc.shadowP)).map(p => p.height));
+      // The original spread guides may cross a carried image; the cursor must clear it. G1 (round 8): in every app, marks the
+      // carried stack passes over stay where they are, under it; only the cursor must clear the carried picture.
+      const carried = p => (scene.key === 'id' && p.pc.shadowP) || (p.pc.where === 'travel' && p.pc.action !== undefined && p.pc.action === list.action);
+      const top = Math.max(-Infinity, ...faces.filter(p => !p.pc.overlay && (p.pc.art || p.pc.paintLayer !== undefined) && !(f.pc.art !== 'cursor' && carried(p))).map(p => p.height));
       if ((f.pc.p[axis] - f.pc.s[2]) / unit < top + 0.0008 - 1e-10) fail(time, 'an interaction mark is below a picture stack');
     }
   }
@@ -338,11 +340,11 @@ const renderer = { setAtlas() {}, draw(pieces, view) { draws.push({ pieces, view
 const observer = class { observe() {} };
 const player = fs.readFileSync(new URL('../play.mjs', import.meta.url), 'utf8').replace(/^import\s+.*?;\s*$/gm, '');
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createFloorHover, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
   location: { search: '?t=0' }, document: playerDocument, window: win, matchMedia: () => media,
   createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => atlas, fontsReady: async () => {},
   SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts: () => ({ draw() {}, fit: view => view, layout: [] }), devicePixelRatio: 3,
-  createFloorHover: () => ({ clear() {}, point: () => null }), createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),
+  createNameReact: () => ({ measure() {}, setLive() {}, live: false, open: 0, letters: [] }), createStars: () => ({ measure() {}, frame: () => null, after() {}, swallowClick: () => false, field: null }), starReach: () => null, createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),
   ...entranceModule,
   requestAnimationFrame: callback => { scheduledTick = callback; return 1; }, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
 });
@@ -519,11 +521,12 @@ const timetable = await retimer({ SHOW, SCRIPTS });
 runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, MAT, SCRIPTS, PACE, UI_ROW, playbackSpans, prototypeState, tip, retime: timetable.local });
 try { console.log(checkPageLabels()); } catch (error) { fail(SHOW.slice(0, 5).reduce((n, s) => n + s.len, 0) + playbackSpans(SCRIPTS.fig).land + 0.4 * PACE, error.message); }
 try { console.log(await checkDrags()); } catch (error) { fail(timetable.global(25.25), error.message); }
-try { const r = await checkRound5(); console.log(`H1–H7 computed: ${r.H1.draws} draw ends, ${r.H1.growingSamples} spread samples; loop ${r.H2.loop.toFixed(3)}s, land 3.0s; ${r.H3.samples} laptop poses; ${r.H6.continuitySamples} resize samples; ${r.H7.rays} floor rays, ${r.H7.wholeDotSamples} dot samples. Font ink, layout, pixels and frames UNRUN.`); } catch (error) { fail(0, error.message); }
+try { const r = await checkRound5(); console.log(`H1–H7 computed: ${r.H1.draws} draw ends, ${r.H1.growingSamples} spread samples; loop ${r.H2.loop.toFixed(3)}s, land 3.0s; ${r.H3.samples} laptop poses; ${r.H6.continuitySamples} resize samples; ${r.H7.rays} floor rays; F3 no floor hover. Font ink, layout, pixels and frames UNRUN.`); } catch (error) { fail(0, error.message); }
 try { const r = await checkRound5Addendum(); console.log(`H9/H10 computed: ${r.H9.measurements} CSSOM-model measurements, ten repeats and away/back at ten sizes; ${r.H10.after.samples} Figma poses at 0.02 s; laptop/app gap ${r.H10.after.minimumGap.toFixed(6)} px, Laptop ring clearance ${r.H10.after.minimumRing.toFixed(6)} px (S=103.6); ${r.H10.preservedFrames} incoming-piece comparisons. Browser checks UNRUN.`); } catch (error) { fail(0, error.message); }
 try { console.log(await checkRound5SecondAddendum()); } catch (error) { fail(0, error.message); }
 try { console.log(await checkEntrance()); console.log('E1/E4 negative controls: ' + await checkEntranceControls()); } catch (error) { fail(0, error.message); }
 try { console.log(describe(await checkHand())); console.log('K3 negative controls: ' + await checkHandControls()); } catch (error) { fail(0, error.message); }
+try { console.log(await checkRound8()); console.log('Round 8 negative controls: ' + await checkRound8Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {

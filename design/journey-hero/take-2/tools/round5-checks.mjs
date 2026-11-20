@@ -8,11 +8,10 @@ import path from 'node:path';
 import { HOME, makeCamera, dot, quatRotate, EASE } from '../../../../public/journey/hero/engine.mjs';
 import { HAND, SHOW, LOOP, SCRIPTS, SCENES, SCREEN, MAT, PACE, UI_ROW, frameAt, calloutsAt, playbackSpans } from '../stage.mjs';
 import { corners } from '../kit.mjs';
-import { centreScene, sideGutter, stageTarget, equivalent, pointerFloor, redDot, sceneEnvelope } from '../view.mjs';
+import { centreScene, sideGutter, stageTarget, equivalent, pointerFloor, sceneEnvelope } from '../view.mjs';
 import { fitCalloutView, labelLayout } from '../labels.mjs';
 import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
 import { BROWSER_SIZES, checkLabelRoutes } from './browser-check.mjs';
-import { createFloorHover } from '../floor-hover.mjs';
 import { handPatch } from './hand-patch.mjs';
 
 const take = new URL('../', import.meta.url);
@@ -173,32 +172,15 @@ export async function checkRound5(only = '') {
       const p = [x, 0, z], view = { S, cx: 722, cy: 481, cam }, at = pointerFloor(view.cx + S * dot(cam.r, p), view.cy - S * dot(cam.u, p), view);
       at.forEach((n, i) => close(n, p[i], 'H7 current-view ray/floor point')); rays++;
     }
-    for (const pointer of [null, [0, 0, 0], [0.21, 0, -0.14], [1.4, 0, 2.3]]) for (let ix = -8; ix <= 8; ix++) for (let iz = -8; iz <= 8; iz++) {
-      const x = ix * 0.5, z = iz * 0.5, expected = !!pointer && Math.hypot(x - pointer[0], z - pointer[2]) <= 0.75;
-      for (const dx of [-0.025, 0, 0.025]) for (const dz of [-0.025, 0, 0.025]) assert.equal(redDot(x + dx, z + dz, pointer), expected, 'H7 whole dot centre/radius rule');
-      dots++;
-    }
+    // F3 (round 8): the floor reacts to nothing on hover. The red-dot hover, its uniform and its module are gone.
     const renderer = fs.readFileSync(new URL('../sq.mjs', import.meta.url), 'utf8');
-    assert.ok(renderer.includes('distance(centre, uHover.xy) <= 0.75') && renderer.includes('mix(c, red ? uRed : uDot, dotv)'), 'H7 shader must use centre distance and the existing dot mask');
-    assert.ok(renderer.includes("hex('#C0262E')"), 'H7 brand red');
-    const media = matches => ({ matches, addEventListener(_name, callback) { this.change = callback; } });
-    const fine = media(true), reduced = media(false), events = {}, queue = [];
-    let playing = false, available = true, draws = 0;
-    const view = { S: 100, cx: 400, cy: 350, cam: HOME };
-    const hover = createFloorHover({ addEventListener(name, callback) { events[name] = callback; } }, fine, reduced, () => ({ h: { left: 10, top: 20 } }), () => playing, () => available, () => draws++, callback => queue.push(callback));
-    const move = (x, y, pointerType = 'mouse') => events.pointermove({ clientX: x, clientY: y, pointerType });
-    move(410, 370); move(411, 371); move(412, 372);
-    assert.equal(queue.length, 1, 'H7 hover redraws are not coalesced'); queue.shift()(); assert.equal(draws, 1);
-    assert.ok(hover.point(view)); move(412, 372); assert.equal(queue.length, 0, 'H7 unchanged pointer schedules a redraw');
-    events.pointerleave(); assert.equal(hover.point(view), null, 'H7 leave retains red dots'); assert.equal(queue.length, 1); queue.shift()();
-    playing = true; move(410, 370); assert.equal(queue.length, 0, 'H7 playback scheduled an extra draw'); assert.ok(hover.point(view));
-    reduced.matches = true; reduced.change(); assert.equal(hover.point(view), null, 'H7 reduced motion retains red dots'); move(412, 372); assert.equal(hover.point(view), null);
-    reduced.matches = false; fine.matches = false; fine.change(); move(414, 374); assert.equal(hover.point(view), null, 'H7 coarse pointer activates dots');
-    fine.matches = true; move(414, 374, 'touch'); assert.equal(hover.point(view), null, 'H7 touch activates dots');
-    playing = false; available = false; move(415, 375); assert.equal(queue.length, 0, 'H7 hidden hero schedules a redraw');
+    const floorShader = renderer.slice(renderer.indexOf('const FRAG_FLOOR'), renderer.indexOf('const VERT_STARS'));
+    assert.ok(!/uHover|uRed\b|pointer/.test(floorShader) && floorShader.includes('o = vec4(uPool * k * (1.0 - dotv) + uDot * dotv, a);'), 'F3 floor shader still reacts to a pointer');
+    assert.ok(!/uHover|f\.pointer/.test(renderer), 'F3 renderer still passes a floor pointer');
     const player = fs.readFileSync(new URL('../play.mjs', import.meta.url), 'utf8');
-    assert.ok(player.includes('pointer: hover.point(view)'), 'H7 player does not bind floor hover to current view');
-    report.H7 = { rays, dots, wholeDotSamples: dots * 9, inputScheduling: 'coalescing, playing, held, leave, identical move, fine/reduced/touch and hidden gates', limits: 'shader source and geometry; raster visibility not rendered' };
+    assert.ok(!/floor-hover|hover\.point|floor\.pointer/.test(player) && !fs.existsSync(new URL('../floor-hover.mjs', import.meta.url)), 'F3 player still binds a floor hover');
+    assert.ok(!/redDot/.test(fs.readFileSync(new URL('../view.mjs', import.meta.url), 'utf8')), 'F3 redDot remains');
+    report.H7 = { rays, dots, F3: 'no floor hover: shader, renderer, player and helpers', limits: 'shader source and geometry; raster visibility not rendered' };
   }
   return report;
 }

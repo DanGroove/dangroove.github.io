@@ -904,3 +904,59 @@ all clean
 - Film strips at 0.02 s, before (83.04 s build) and after, for the five worst moves: `.scratch/review-out/r7/{before,after}-{fig-details,pr-bin,id-spreadType,ai-board0,ps-export}.png`.
 - Pack: `.scratch/review-out/r7-preview.html` (381 KB); no `mailto`, `href` or `http`.
 - Browser check: the repository's `checkBrowser` (which ends with `checkRound5Layout`) on the final pack at 1440 × 900, headless Chromium with SwiftShader: **PASS 160 rows**, network requests 0, page/console errors 0 (18.1 min).
+
+## CORRECTIONS-8
+
+Dan asked for the live page's headline interaction on his name, and did not like the red-dot floor hover. The brief was rewritten during the round (F1/F2, the floor variants, withdrawn: "not the floor"). `CORRECTIONS-8.md` (N1 the name, F3 a plain floor, B1 a star field, B2 hold and blast, G1 no lifting frames) controls this round; rounds 2–7 are kept. Only files in `take-2/` changed; `public/` (including `holding/title.js` and `field.js`) and `engine.mjs` are untouched. LOOP is still 91.498 s.
+
+### N1 — the name reacts (`name-react.mjs`, `take-2.css`, `play.mjs`)
+
+- Numbers are title.js's, read from its source by the check: circle 0.95 em, opening within 1.2 em of the name's box with `smoothstep` and `open += (want − open) · min(1, 9 dt)`; lift 0.07 em felt within 1.3 em (vertical distance × 1.4), spring 240 / damping 12; knock 0.16 em (`vy += 0.16 × 26`), wave 55 ms per em from where it landed. Red `#F0484F`. Mouse only for hover; a tap or click knocks.
+- **Layout kept exact.** The flow text of each `.name-line` is not split. Splitting it into spans moved glyphs (inline spans: up to 0.08 px of subpixel drift; inline-block spans, which `transform` needs: the r–a kern in "Endrawes" was lost, 3.2 px). Instead each line holds an `aria-hidden` overlay (`.name-fx`, absolute, inset 0) of one span per letter, each placed at that letter's measured pen position (`Range` rect, measured on resize, scroll and `document.fonts.ready`), with the glyph drawn by `::before { content: attr(data-ch) }`, and a red copy (`.name-red`) of the same spans cut by `clip-path: circle()`. Once live, the flow text is painted with `-webkit-text-fill-color: transparent`; it still gives the layout, the ink measurement (generated content adds no text nodes) and the one accessible name. Each line's red copy takes the same circle in its own coordinates, so the copy overlays both lines exactly at every size. Per frame only `transform` and `clip-path` are written, from title.js's own rAF loop, which sleeps when settled.
+- Live only once the entrance has ended: `nameOn()` runs at start, at `startEntrance`/`endEntrance` and on a reduced-motion change, with `ready && !intro && !held && !reduced`. A click on the name is not on the stage, so the craft does not change.
+- Evidence: the name's region at 1440 × 900 (DPR 1 and 2), 1024 × 768, 1920 × 1080 and 390 × 844 (DPR 3) is pixel-identical (0 of 77,040–547,944 pixels differ) with the overlay live and with the plain text. All 544 layout numbers (`__hero.layout` name/lede/number inks, text right, gap, rise, base name top, `--name-ink-shift` on both lines, line and name boxes, `__need`) at eight sizes (1440 × 900, 1920 × 1080, 1280 × 800, 1024 × 768, 720 × 900, 719 × 900, 390 × 844, 360 × 640) are equal to `b5cce1d` after hovering, clicking and re-measuring.
+
+### F3 — the floor goes back to plain
+
+`floor-hover.mjs`, `redDot` (view.mjs), the floor shader's `uHover`/`uRed` and the player's hover binding are gone; round 5's H7 now checks that the floor shader, renderer and player have no hover path (its ray check stays), and its control puts the red dots back into the shader. The floor's colour is unchanged: it is now written premultiplied (`rgb = pool·k·(1 − dot) + dot·dotv`, `a = 1 − (1 − k)(1 − dotv)`), which over ink is exactly `mix(mix(ink, pool, k), dot, dotv)`, so the star field shows only where the floor adds nothing.
+
+### B1 — the star field (`stars.mjs`, `sq.mjs`, `entrance.mjs`, `play.mjs`)
+
+- Drawn by the existing renderer as its first pass after the clear: one `gl.POINTS` draw, no depth, premultiplied blending; the scene and the floor draw over it; the page's text is DOM above the canvas. Pointer events are untouched (the canvas already fills the hero).
+- 1,200 stars at 1440 × 900, `round(1200 · area / (1440 · 900))`, capped at 2,000. Hashed home, depth d, mass 0.6–1.6; 0.6–2.2 px across; paper mixed into ink 12 % (far) to 55 % (near); 3 % red `#F0484F` at the same mix (3.7 % of the 1,200 by the hash). Coverage anti-aliasing only; no twinkle, no fades.
+- Parallax: target `−f · 28 px · (0.12 + 0.88 d²)`, f the pointer's offset from the hero's centre as a fraction (−0.5…0.5), back to 0 when the pointer leaves the page; one shared value follows it critically damped with τ = 0.3 s, solved exactly per frame. Scroll: a star moves up `s · 0.12 · d` more than the page. Both are uniforms.
+- Stirring: the pointer's path since the last frame pushes stars within 60 px of the segment, weight `(1 − smoothstep(0, 60, r))²`; the impulse brings the star's speed along the segment up to `0.09 · w · min(speed, 1,500 px/s) / mass` (velocity matching, so it is in proportion to speed and capped). Each star coasts: shown offset `D = S·e^(−age)`, `S += v·dt`, `v *= e^(−2.3/√m · dt)`; an impulse rebases S to D and age to 0. No spring, no overshoot; offsets held under 40 px. The offsets (2 floats a star) are uploaded with `bufferSubData` only when they changed; the field sleeps when every star is home and the parallax has settled.
+- Entrance: `ENTRANCE.stars = [0.2, 0.9]` (the floor dots' span); `starReach` grows from the stage box's centre to the farthest hero corner and a star is on only if its home is inside (`distance(aHome, uRings.xy) <= uRings.z` in the shader), so each is wholly on or off. Also under `__hero.entrance(t)`. The pointer is taken from 0.90 s.
+- Off states: reduced motion, static (no parallax of either kind, no stirring, no hold); touch, scroll parallax only; Pause stops the loop, not the field (the field asks for its own coalesced redraws while busy); without JavaScript there is no canvas drawing at all. `?stars=0` turns it off for review.
+
+### B2 — hold to gather, release to blast
+
+- A mouse or pen press in the hero, except on links, buttons (crafts, Pause) and the name, starts a hold. Capture radius `80 + 260 · min(1, held/2.5)` px; a star inside it stays captured until release.
+- Captured stars move in polar coordinates round an anchor that follows the pointer (critically damped, 1/12 s): the radius goes critically damped (1/5 s), from rest, to a hashed orbit of 6–36 px × `(1 + 0.35 log2(1 + n/24))` (n captured), so it never passes the pointer; the angle turns π/2 per second.
+- Release: each captured star gets `(300 + 1700 · min(1, held/2.5)) / mass` px/s outward from the pointer; uncaptured stars within twice the radius get half that × `(1 − r/2R)²`. All coast home as in B1; offsets are held under 45 % of the hero's width.
+- The stage: a press shorter than 0.25 s that moves less than 6 px stays a click (next craft, with the small blast it gathered); a longer or moving press is a hold, and the stage's click handler asks `stars.swallowClick()` and does not change the craft. Touch and reduced motion do nothing.
+
+### G1 — nothing lifts while a picture is carried (`stage.mjs`)
+
+- Measured on `b5cce1d` (0.01 s samples): in 117 frames, non-carried pieces moved by up to 0.0717 units because of the carried stack (InDesign map 0.0516, loc 0.0516, photo 0.0717, postPhoto 0.0717, mailPhoto 0.0714; Figma copies 0.0543). Premiere's clips were not affected.
+- `carriedStack(P)`: the current action's `travel` pieces and the cursor. In `build()`, the whole frame is separated once (old rule) only to keep the stack's own placement, then everything else is separated again from its authored heights without the stack, and the stack is put back. `liftDragStack` (InDesign) runs as before; then `clearCarried` lifts the stack along the view vector (no move on the page) just enough to clear any face it would now tie with. Premiere's music drag piece now names its action (`'music'`), like the other drags.
+- Frozen comparisons (H1/H2/H10 and round 4's, which compare with older snapshots) get the same edit in memory (`g1Patch` in `tools/hand-patch.mjs`, applied after round 7's hand patch). checks.mjs's "interaction mark below a picture stack" rule now lets non-cursor marks sit under a carried stack in every app, as it already did for InDesign.
+
+### Departures and readings
+
+- **N1 letters are an overlay, not split flow text** (above): splitting changed the name's numbers; the overlay keeps every number and pixel.
+- **Stir push strength.** The brief gives the shape, not the gain; 0.09 keeps a fast flick inside 40 px (a hard cap at 0.995 of the limit) and a slow pass visible.
+- **Hard offset limits.** The 40 px and 45 %-of-width limits are clamps on the coasting displacement (direction kept), so an extreme blast star stops at the limit before drifting home. With a 2.5 s hold some stars reach the limit (644.8 px at 1440 wide).
+- **Star count cap** of 2,000 (2560 × 1440 would be 3,413), so the state stays a few thousand numbers.
+- **Hold radius uses the simulation's time** while held (frames at most 0.05 s), and the release uses the longer of that and the wall clock.
+- **G1 visual order.** The carried picture and cursor stay in front of what they pass over. InDesign's selection guides that sat above the carried picture now sit at their own height; only where they would tie with it does the stack rise.
+
+### Evidence
+
+- `node design/journey-hero/take-2/tools/checks.mjs` ends `all clean` (6117 frames, 413714 pieces, loop 91.498 s). Round 8 lines: N1 numbers equal title.js's, off during the entrance, a held entrance and reduced motion; F3 no floor hover; B1 1200 stars at 1440 × 900, follow 0.1321 of 0.5 at 0.3 s, a sweep moved 72 stars (largest 26.66 px), masses 16.78 vs 6.53 px; B2 capture 80/132/210/340/340 px, 0.3 s hold 31 stars (119.4 px), 2.5 s hold 336 stars (644.8 px), stage presses 0.1/0 and 0.24/5 next craft, longer or moving presses hold; G1 19 drags, 794 samples, 541 with a carried stack, no non-carried piece moves.
+- Negative controls (all caught): N1 live at the first frame of the entrance; B1 parallax d instead of d²; B2 a long hold changes the craft; G1 the stack back in `separateFaces()` (id/map at 25.211 s, piece 24 moves 0.00660).
+- Layout: all 544 layout numbers at eight sizes (1440 × 900 to 360 × 640) are equal to `b5cce1d`'s after hover, click and re-measure; the name region is pixel-identical live and plain at five size/DPR pairs.
+- Films and sheets in `.scratch/review-out/r8/`: `name-hover-click-1440.png`, `name-tap-390.png`, `stars-parallax-1440.png`, `stars-slow-pass-1440.png`, `stars-fast-flick-1440.png`, `stars-hold-0.3s-1440.png`, `stars-hold-2.5s-1440.png`, `stars-entrance-0.15-0.95.png`, `g1-before-{27.83,28.68,31.05,33.03}.png`, `g1-after-{…}.png`.
+- Pack: `.scratch/review-out/r8-preview.html` (411 KB; mailto 0, href 0, http 0).
+- Stage click in the browser (1440 × 900, Chromium/SwiftShader): an instant click on the stage changes the craft (t 0 → 57.92 s with the loop held); presses that last longer than 0.25 s of page time, including a scripted "80 ms" press that SwiftShader stretched to 375 ms, are holds and leave the craft alone (as B2 asks).
+- Browser check (`tools/browser-check.mjs` `checkBrowser` on the r8 pack, headless Chromium/SwiftShader, run once): PASS at all ten sizes (390 × 664 to 1920 × 1080), 160 held-frame rows, 0 network requests, 0 page or console errors, 21.3 min.

@@ -22,11 +22,7 @@ const tests = [
   ['scene scale shrinks', 'H6', 'view.mjs', centre, 'return { ...view, S: view.S * 0.95, cx: (textRight + view.W) / 2 - view.S * need.x };', 'H6 scene shrank'],
   ['stage target stays behind', 'H6', 'view.mjs', 'return { left, width: right - left };', 'return { left: boxLeft, width: boxRight - boxLeft };', 'H6 stage target misses'],
   ['floor ray shifted', 'H7', 'view.mjs', 'return [(a * cam.u[2] - cam.r[2] * b) / d, 0, (cam.r[0] * b - cam.u[0] * a) / d];', 'return [1 + (a * cam.u[2] - cam.r[2] * b) / d, 0, (cam.r[0] * b - cam.u[0] * a) / d];', 'H7 current-view ray/floor point'],
-  ['dot decided per fragment', 'H7', 'view.mjs', 'Math.hypot(centre[0] - pointer[0], centre[1] - pointer[2]) <= 0.75', 'Math.hypot(x - pointer[0], z - pointer[2]) <= 0.75', 'H7 whole dot centre/radius rule'],
-  ['shader decided per fragment', 'H7', 'sq.mjs', 'distance(centre, uHover.xy) <= 0.75', 'distance(vW.xz, uHover.xy) <= 0.75', 'H7 shader must use centre distance'],
-  ['hover redraws not coalesced', 'H7', 'floor-hover.mjs', 'if (!available() || running() || pending) return;', 'if (!available() || running()) return;', 'H7 hover redraws are not coalesced'],
-  ['leave retains pointer', 'H7', 'floor-hover.mjs', 'function clear() { if (pointer) { pointer = null; redraw(); } }', 'function clear() {}', 'H7 leave retains red dots'],
-  ['hover disconnected from renderer', 'H7', 'play.mjs', 'pointer: hover.point(view)', 'pointer: null', 'H7 player does not bind'],
+  ['floor hover back in the shader', 'H7', 'sq.mjs', '  o = vec4(uPool * k * (1.0 - dotv) + uDot * dotv, a);', "  bool red = uHover.z > 0.5;\n  o = vec4(uPool * k * (1.0 - dotv) + (red ? uRed : uDot) * dotv, a);", 'F3 floor shader still reacts'],
 ];
 const sources = new Map(tests.map(t => [t[2], fs.readFileSync(path.join(take, t[2]))]));
 for (const [name, , file, search] of tests) assert.equal(sources.get(file).toString('utf8').replace(/\r\n/g, '\n').split(search).length - 1, 1, 'control must match exactly one place: ' + name);

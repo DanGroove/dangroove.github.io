@@ -156,12 +156,11 @@ async function runPlayer(playerSource, E) {
   const observer = class { observe() {} };
   const player = playerSource.replace(/^import\s+.*?;\s*$/gm, '');
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-  await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createFloorHover, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+  await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
     location: { search: '' }, document: { querySelector: () => hero, fonts: { ready: Promise.resolve(), addEventListener() {} }, hidden: false, addEventListener() {} }, window: win, matchMedia: () => media,
     createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => ({}), fontsReady: async () => {},
     SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts: () => ({ draw() {}, fit: v => v, layout: [] }),
-    createFloorHover: () => ({ clear() {}, point: () => [0, 0, 0] }),
-    createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect, nameLines: [] }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),
+    createNameReact: () => ({ measure() {}, setLive() {}, live: false, open: 0, letters: [] }), createStars: () => ({ measure() {}, frame: () => null, after() {}, swallowClick: () => false, field: null }), starReach: () => null, createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect, nameLines: [] }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),
     ENTRANCE: E.ENTRANCE, entranceAt: E.entranceAt, screenPlane: E.screenPlane, floorReach: E.floorReach,
     createEntranceView: () => ({ measure() {}, apply(s) { view.applied.push(s); }, clear() { view.clears++; }, lines: 3 }),
     devicePixelRatio: 1, requestAnimationFrame: f => { tick = f; return 1; }, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
@@ -181,10 +180,10 @@ async function checkPlayer(playerSource, E) {
   assert.equal(p.win.__ready, true);
   near(p.win.__hero.entering, 0, 'E1 player: entrance starts at the first frame');
   p.run(0.85); near(p.win.__hero.entering, 0.85, 'E1 player: entrance clock'); near(p.win.__hero.t, 0, 'E1 player: loop clock held before the screen ends');
-  assert.equal(p.draws.at(-1).look.floor.pointer, null, 'E1 player: floor hover before the floor wipe ends');
+  assert.equal(p.draws.at(-1).look.floor.pointer, undefined, 'F3 player: the floor has a hover point');
   assert.ok(p.draws.at(-1).look.reveal && p.draws.at(-1).look.floor.reveal > 0 && p.draws.at(-1).look.floor.reveal < 4.8, 'E1 player: renderer reveal values');
   p.run(0.35); near(p.win.__hero.t, 0.1, 'E1 player: loop clock starts at 0 when the screen wipe ends');
-  assert.ok(p.draws.at(-1).look.floor.pointer, 'E1 player: floor hover after the floor wipe');
+  assert.equal(p.draws.at(-1).look.floor.pointer, undefined, 'F3 player: the floor has a hover point');
   assert.equal(p.draws.at(-1).look.reveal, null, 'E1 player: screen clip after 1.1');
   p.run(0.2); assert.equal(p.win.__hero.entering, null, 'E1 player: entrance ends at 1.4'); near(p.win.__hero.t, 0.3, 'E1 player: loop clock at the entrance end');
   assert.ok(p.view.clears > 0 && p.draws.at(-1).look.floor.reveal === undefined, 'E1 player: entrance styles remain');
@@ -218,7 +217,7 @@ export async function checkEntrance({ entranceSource = read('entrance.mjs'), pla
   const dots = checkTimetable(E);
   const runs = await checkPlayer(playerSource, E);
   const labelSamples = await checkLabelExit(stageSource);
-  return `E4 computed: ${labelSamples} label samples at off-0.30/0.25/0.20/0.10/0.01 s in four scenes, all listed until off, none at off; LOOP and scene lengths as the pre-E4 stage under the same scheduler. E1/E2 computed: timetable of 11 parts and 5 lede line counts; screen plane at 0, 0.5, 0.8, 1.1; floor circle ${dots} dot samples; ${runs} player runs (loop clock, hover gate, craft/stage/Pause clicks, hold, reduced motion). Frames UNRUN here.`;
+  return `E4 computed: ${labelSamples} label samples at off-0.30/0.25/0.20/0.10/0.01 s in four scenes, all listed until off, none at off; LOOP and scene lengths as the pre-E4 stage under the same scheduler. E1/E2 computed: timetable of 11 parts and 5 lede line counts; screen plane at 0, 0.5, 0.8, 1.1; floor circle ${dots} dot samples; ${runs} player runs (loop clock, no floor hover, craft/stage/Pause clicks, hold, reduced motion). Frames UNRUN here.`;
 }
 
 // Each control edits one exact site in memory and must fail at its gate.
