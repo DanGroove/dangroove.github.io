@@ -26,4 +26,4 @@ Only what changed, with real frames, capped at 20 minutes: G1 and G2, F1's rules
 
 ## Agreement
 
-Both critics accepted this brief on 20 November at about 03:05 UTC (10:05 PM ET on 19 November), with conditions now written in: visual, the `loc` drag in the Node sweep and frames every 0.002 s over all five drags; integrity, the shadow test and no step at pick-up or drop under the fallback.
+Both critics accepted this brief on 20 November at about 02:58 UTC (9:58 PM ET on 19 November), with conditions now written in: visual, the `loc` drag in the Node sweep and frames every 0.002 s over all five drags; integrity, the shadow test and no step at pick-up or drop under the fallback.
