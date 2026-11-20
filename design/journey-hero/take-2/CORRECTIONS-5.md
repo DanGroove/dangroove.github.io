@@ -114,3 +114,22 @@ Facing the lower left (H3), the lid stands at the deck's back edge, and its top 
 Fix: keep a clear gap between the laptop (lid and deck) and the app screen throughout the Figma scene, as round 4 had. Move the device row forward on the floor, toward the viewer, or lower the lid, whichever keeps the row's look; the tablet and phone stay beside the laptop and nothing overlaps.
 - Pass, in Node: at every 0.02 s of the Figma scene, the laptop's projected outline and the app screen's projected outline are at least 12 px apart at 1440 x 900 (S 103.6), and the "Laptop" mark's ring does not touch the app screen.
 - Report the scene envelope and S before and after; if the envelope changes, H6 uses the new one.
+
+## Second addendum after `d7e0de5` (checked in a browser)
+
+H9 and H10 check out: ten measurements leave the stage box and S unchanged at every size, and the laptop clears the app screen with a visible gap through the Figma scene. Two more faults, the first from my own wording of H4.
+
+### H11 (major). On phones the craft numbers pile onto each other
+
+On phones the craft list is a two-column grid. H4's shift moves every number to the lede's ink column, so the second column's numbers jump left onto the first column's: at 390 x 844, "02" sits on top of "01" and "04" on top of "03", and "Video" and "UX/UI" lose their numbers. `checkRound5Layout` asserts exactly that column for every number, so it passes the fault.
+
+Fix: a number lines up with the lede only when it starts the text's left column (every number in the side-by-side layout; the first column on phones). Numbers in another column keep their own place; at most remove their own side bearing, so each number's ink starts where its column starts. Each number stays beside its own label.
+- Pass at every browser-check size: no two numbers overlap; each number is in its own button and left of its own label; first-column numbers within 1 px of the lede's ink column; second-column numbers start within 1 px of their column's left edge.
+- The browser check must assert this, with the current shift as its negative control.
+
+### H12 (minor). The scene jumps when the lede rewraps
+
+`browser-check.mjs` still fails "1000x640: H6 resize step". Measured: from 990 to 1000 px wide at 640 tall, the text's right ink edge jumps from 357 to 396 px because a word moves between the lede's lines, so the scene's centre jumps 24 px. Word wrapping is not continuous, so the scene must not follow it.
+
+Fix: take the text's right edge from things that change continuously with the width: the name's ink (its two lines never rewrap) and the lede's and craft list's boxes, the larger of them. At 1680 wide and up nothing changes (the name's ink is the widest); at 1280 x 800 the scene moves about 6 px right.
+- Pass: the resize-step check at 640, 900 and 1440 tall; the equal-spaces check, within 8 px of pixel ink, at 1280 wide and up.
