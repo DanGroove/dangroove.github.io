@@ -190,8 +190,10 @@ precision highp float;
 layout(location = 0) in vec2 aHome;
 layout(location = 1) in vec3 aLook;   // depth, size (css px across), red
 layout(location = 2) in vec2 aOff;
+layout(location = 3) in float aFlag;   // round 9 (L1): 0 behind, 1 in front, 2 in front as G (paper), 3 in front as D (red)
 uniform vec2 uSize;                    // the hero, css px
 uniform float uDpr, uScroll;
+uniform float uPass, uMarkSize;        // 0 the pass behind the scene, 1 the pass in front; a mark star's least size, css px
 uniform vec2 uPar;                     // followed pointer fraction x 28 px
 uniform vec3 uRings;                   // centre x, y, reach (huge when off, -1 before)
 uniform vec3 uInk, uPaper, uRedInk;
@@ -201,9 +203,10 @@ out float vR;
 void main() {
   float d = aLook.x;
   vec2 p = aHome + aOff - uPar * (0.12 + 0.88 * d * d) - vec2(0.0, uScroll * 0.12 * d);
-  bool on = distance(aHome, uRings.xy) <= uRings.z;
-  vR = 0.5 * aLook.y * uDpr;
-  vCol = mix(uInk, aLook.z > 0.5 ? uRedInk : uPaper, mix(uMix.x, uMix.y, d));
+  bool on = distance(aHome, uRings.xy) <= uRings.z && (aFlag > 0.5) == (uPass > 0.5);
+  // A star in the mark cuts at once to the mark's colour at full strength and at least uMarkSize across: no in-between.
+  vR = 0.5 * (aFlag > 1.5 ? max(aLook.y, uMarkSize) : aLook.y) * uDpr;
+  vCol = aFlag > 2.5 ? uRedInk : aFlag > 1.5 ? uPaper : mix(uInk, aLook.z > 0.5 ? uRedInk : uPaper, mix(uMix.x, uMix.y, d));
   gl_PointSize = ceil(2.0 * vR) + 2.0;
   gl_Position = on ? vec4(p.x / uSize.x * 2.0 - 1.0, 1.0 - p.y / uSize.y * 2.0, 0.0, 1.0) : vec4(2.0, 2.0, 2.0, 1.0);
 }`;
@@ -243,13 +246,15 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   const piece = program(gl, VERT, FRAG), flat = program(gl, VERT, FRAG_FLAT), depth = program(gl, VERT, FRAG_NONE), floor = program(gl, VERT_FLOOR, FRAG_FLOOR);
   const starProgram = program(gl, VERT_STARS, FRAG_STARS);
   // Round 8 (B1): the star field's buffers. Its look is uploaded when the field is made; offsets only when they change.
-  const starVao = gl.createVertexArray(), starLook = gl.createBuffer(), starOff = gl.createBuffer();
+  const starVao = gl.createVertexArray(), starLook = gl.createBuffer(), starOff = gl.createBuffer(), starFlag = gl.createBuffer();
   gl.bindVertexArray(starVao);
   gl.bindBuffer(gl.ARRAY_BUFFER, starLook);
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 20, 0);
   gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 20, 8);
   gl.bindBuffer(gl.ARRAY_BUFFER, starOff);
   gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 2, gl.FLOAT, false, 0, 0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, starFlag);
+  gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 0, 0);
   gl.bindVertexArray(null);
   let starLookVersion = -1, starOffVersion = -1, starCountNow = 0;
 
@@ -393,18 +398,25 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     gl.clearColor(ink[0], ink[1], ink[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, shadowTex);
 
-    // Round 8 (B1): the star field first, behind everything; one draw call, no depth.
-    if (look.stars && look.stars.count) {
+    // Round 8 (B1): the star field first, behind everything; one draw call, no depth. Round 9 (L1): captured stars are left out
+    // here and drawn by a second pass after the scene, only while any is out.
+    const starPass = pass => {
       const st = look.stars;
       gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.bindVertexArray(starVao); boundMesh = null;
       if (st.attrsVersion !== starLookVersion || st.count !== starCountNow) {
         gl.bindBuffer(gl.ARRAY_BUFFER, starLook); gl.bufferData(gl.ARRAY_BUFFER, st.attrs, gl.STATIC_DRAW);
         gl.bindBuffer(gl.ARRAY_BUFFER, starOff); gl.bufferData(gl.ARRAY_BUFFER, st.offsets.byteLength, gl.DYNAMIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, starFlag); gl.bufferData(gl.ARRAY_BUFFER, st.count * 4, gl.DYNAMIC_DRAW);
         starLookVersion = st.attrsVersion; starCountNow = st.count; starOffVersion = -1;
       }
-      if (st.version !== starOffVersion) { gl.bindBuffer(gl.ARRAY_BUFFER, starOff); gl.bufferSubData(gl.ARRAY_BUFFER, 0, st.offsets); starOffVersion = st.version; }
+      if (st.version !== starOffVersion) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, starOff); gl.bufferSubData(gl.ARRAY_BUFFER, 0, st.offsets);
+        gl.bindBuffer(gl.ARRAY_BUFFER, starFlag); if (st.flags) gl.bufferSubData(gl.ARRAY_BUFFER, 0, st.flags);
+        starOffVersion = st.version;
+      }
       gl.useProgram(starProgram.p);
+      gl.uniform1f(starProgram.u.uPass, pass); gl.uniform1f(starProgram.u.uMarkSize, st.markSize || 2);
       gl.uniform2f(starProgram.u.uSize, W, H); gl.uniform1f(starProgram.u.uDpr, dpr); gl.uniform1f(starProgram.u.uScroll, st.scroll || 0);
       gl.uniform2fv(starProgram.u.uPar, st.par || [0, 0]);
       gl.uniform3f(starProgram.u.uRings, st.centre?.[0] ?? 0, st.centre?.[1] ?? 0, st.reveal === null || st.reveal === undefined ? 1e9 : st.reveal);
@@ -412,7 +424,8 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       gl.uniform2f(starProgram.u.uMix, 0.12, 0.55);
       gl.drawArrays(gl.POINTS, 0, st.count);
       gl.bindVertexArray(null); gl.disable(gl.BLEND); gl.enable(gl.DEPTH_TEST);
-    }
+    };
+    if (look.stars && look.stars.count) starPass(0);
 
     gl.cullFace(gl.BACK);
     gl.useProgram(piece.p);
@@ -448,6 +461,8 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       gl.disable(gl.BLEND);
       gl.enable(gl.CULL_FACE);
     }
+    // Round 9 (L1): the captured stars, in front of the scene's pieces from capture until home.
+    if (look.stars && look.stars.count && look.stars.front > 0) starPass(1);
     gl.bindVertexArray(null);
   }
   return { gl, draw, setAtlas };

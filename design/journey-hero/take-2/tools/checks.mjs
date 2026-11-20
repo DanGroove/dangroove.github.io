@@ -18,6 +18,7 @@ import * as entranceModule from '../entrance.mjs';
 import { checkHand, checkHandControls, describe } from './hand-checks.mjs';
 import { retimer } from './hand-patch.mjs';
 import { checkRound8, checkRound8Controls } from './round8-checks.mjs';
+import { checkRound9, checkRound9Controls } from './round9-checks.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
@@ -527,6 +528,7 @@ try { console.log(await checkRound5SecondAddendum()); } catch (error) { fail(0, 
 try { console.log(await checkEntrance()); console.log('E1/E4 negative controls: ' + await checkEntranceControls()); } catch (error) { fail(0, error.message); }
 try { console.log(describe(await checkHand())); console.log('K3 negative controls: ' + await checkHandControls()); } catch (error) { fail(0, error.message); }
 try { console.log(await checkRound8()); console.log('Round 8 negative controls: ' + await checkRound8Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
+try { console.log(await checkRound9()); console.log('Round 9 negative controls: ' + await checkRound9Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {

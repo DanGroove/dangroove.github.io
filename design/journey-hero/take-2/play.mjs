@@ -110,7 +110,7 @@ function seek(time) {
   stopped = true; t = wrap(time); schedule();
   if (ready) draw();
 }
-window.__hero = { seek, measure, entrance: hold, get entering() { return intro ? intro.time : null; }, get t() { return t; }, get callouts() { return callouts.layout; }, get view() { return lastView; }, get pieces() { return frameNow(); }, get layout() { return layout.metrics; }, get name() { return { live: nameReact.live, open: nameReact.open, lift: nameReact.letters.map(l => l.y) }; }, get stars() { return stars && { holding: stars.holding, fraction: stars.fraction, awake: stars.field?.awake ?? false, count: stars.field?.stars.length ?? 0, offsets: stars.field && Array.from(stars.field.offsets) }; }, LOOP, SHOW };
+window.__hero = { seek, measure, entrance: hold, get entering() { return intro ? intro.time : null; }, get t() { return t; }, get callouts() { return callouts.layout; }, get view() { return lastView; }, get pieces() { return frameNow(); }, get layout() { return layout.metrics; }, get name() { return { live: nameReact.live, open: nameReact.open, lift: nameReact.letters.map(l => l.y) }; }, get stars() { return stars && { holding: stars.holding, fraction: stars.fraction, awake: stars.field?.awake ?? false, count: stars.field?.stars.length ?? 0, offsets: stars.field && Array.from(stars.field.offsets), flags: stars.field && Array.from(stars.field.flags), mark: stars.mark }; }, LOOP, SHOW };
 
 function choose(craft) {
   endEntrance(); first = false;
