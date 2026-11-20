@@ -12,6 +12,7 @@ import { checkPageLabels } from './label-page-checks.mjs';
 import { checkDrags } from './drag-checks.mjs';
 import { createFloorHover } from '../floor-hover.mjs';
 import { checkRound5 } from './round5-checks.mjs';
+import { checkRound5Addendum } from './round5-addendum-checks.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
@@ -82,7 +83,8 @@ function check(time) {
     if ('opacity' in pc || 'alpha' in pc) fail(time, `piece ${i}: transparency is not a motion tool`);
     if (pc.where === 'floor') {
       if (scene.key === 'ps' || scene.key === 'ai' || at < 0.1) fail(time, `piece ${i}: floor must be empty`);
-      if (!(scene.key === 'fig' && pc.deviceKind === 'laptop' && !pc.clip) && (!pc.clip || pc.clip.some((n, j) => n !== [0, 0, 1, -MAT.z][j]))) fail(time, `piece ${i}: floor slot plane changed`);
+      const slot = scene.key === 'fig' ? MAT.z + UI_ROW.forward : MAT.z;
+      if (!(scene.key === 'fig' && pc.deviceKind === 'laptop' && !pc.clip) && (!pc.clip || pc.clip.some((n, j) => Math.abs(n - [0, 0, 1, -slot][j]) > 1e-9))) fail(time, `piece ${i}: floor slot plane changed`);
       const s = SCRIPTS[scene.key], exp = s?.actions.find(a => a.id === 'export');
       if (exp && at < exp.start) fail(time, `piece ${i}: floor before export`);
       if (pc.device !== undefined && list.clock !== null && list.clock !== undefined && Math.abs(pc.clock - list.clock) > 1e-8) fail(time, `piece ${i}: device and viewer clocks differ`);
@@ -286,7 +288,7 @@ for (const scene of SHOW) {
     assert.ok(bodies.every(Boolean), 'device row did not land');
     const footprint = (scene.key === 'fig' ? list.filter(pc => pc.where === 'floor') : bodies).flatMap(corners), xs = footprint.map(p => p[0]), zs = footprint.map(p => p[2]);
     centred((Math.min(...xs) + Math.max(...xs)) / 2, scene.key);
-    near(Math.min(...zs), MAT.z);
+    near(Math.min(...zs), MAT.z + (scene.key === 'fig' ? UI_ROW.forward : 0));
     assert.ok(list.some(pc => pc.where === 'content' && ['shotA', 'shotB', 'shotCfx', 'wMake', 'uiPageWide0', 'uiPageWide1'].includes(pc.art)), 'viewer is not playing with the devices');
   }
   sceneStart += scene.len;
@@ -510,6 +512,7 @@ runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, MAT, SCRIPTS, PA
 try { console.log(checkPageLabels()); } catch (error) { fail(SHOW.slice(0, 5).reduce((n, s) => n + s.len, 0) + playbackSpans(SCRIPTS.fig).land + 0.4 * PACE, error.message); }
 try { console.log(await checkDrags()); } catch (error) { fail(25.25, error.message); }
 try { const r = await checkRound5(); console.log(`H1–H7 computed: ${r.H1.draws} draw ends, ${r.H1.growingSamples} spread samples; loop ${r.H2.loop.toFixed(3)}s, land 3.0s; ${r.H3.samples} laptop poses; ${r.H6.continuitySamples} resize samples; ${r.H7.rays} floor rays, ${r.H7.wholeDotSamples} dot samples. Font ink, layout, pixels and frames UNRUN.`); } catch (error) { fail(0, error.message); }
+try { const r = await checkRound5Addendum(); console.log(`H9/H10 computed: ${r.H9.measurements} CSSOM-model measurements, ten repeats and away/back at ten sizes; ${r.H10.after.samples} Figma poses at 0.02 s; laptop/app gap ${r.H10.after.minimumGap.toFixed(6)} px, Laptop ring clearance ${r.H10.after.minimumRing.toFixed(6)} px (S=103.6); ${r.H10.preservedFrames} incoming-piece comparisons. Browser checks UNRUN.`); } catch (error) { fail(0, error.message); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {

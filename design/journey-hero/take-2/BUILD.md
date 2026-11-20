@@ -499,6 +499,10 @@ Departures from CORRECTIONS-4: none. The small renderer shadow-position override
 
 ## CORRECTIONS-5
 
+### H9/H10 addendum — acceptance before editing
+
+The browser review in the addendum to CORRECTIONS-5 is the current evidence: H1, H2, H4, H5 and H7 passed externally; preserve them and the rest of round 5. H9 must measure the CSS stage rather than its expanded click target, remain stable through ten measurements and an away/back resize at all ten review sizes, and reject the old string comparison under shorter CSS serialisation. H10 must preserve the lower-left-facing laptop and row spacing while separating the complete projected laptop (lid, deck and picture layers) from the complete app-screen shell by at least 12 px at S=103.6, every 0.02 s throughout Figma; the Laptop ring's outer stroke must also clear that shell. Compare envelopes and modeled S before/after and retain the existing checks. Browser/font/pixel and resize-sweep verification stays with the external reviewer. No browser or independent rendered critique runs locally; installed skills and RTK are outside the expressly permitted repository and cannot be read in this run.
+
 Current acceptance is Dan's H1–H8, carried forward with the approved six-still structure, artwork, hierarchy, Outfit, square corners, hard wipes, centred floor groups, shared clocks and round-four drag/shadow rules. Earlier sections above are historical records; this section supersedes their current timing and laptop direction. The explicit local restrictions reserve layout, font ink, pixel, frame and independent visual critique gates for the external browser machine. They are **UNRUN**, with no visual pass claimed.
 
 ### H1 — lasting spread pieces
@@ -619,3 +623,73 @@ checked 5611 frames, 386385 pieces (max 183); 5 atlas pages; loop 83.040s
 ps: 7.500s, ai: 11.400s, id: 20.980s, pr: 15.220s, ae: 14.030s, fig: 13.910s
 all clean
 ```
+
+### H9/H10 — completed addendum to `796c0f1`
+
+The supplied browser review accepted the rest of round 5. This addendum changes only the measurement reset and the Figma floor row, with their checks and records. The earlier CORRECTIONS-5 implementation record above describes the incoming build; this addendum supersedes its H6 click-target reset, H3 depth slot, size evidence and current review status.
+
+**H9.** Before `measure()` reads any boxes, `page-layout.mjs` now removes both target-owned inline properties whenever it has applied a target. It does not compare their CSSOM strings. `cover()` still expands the click target after fitting; the next measurement always returns to the CSS sizing basis. H4/H5's ink/rise computation, H6's fit/centring, font refreshes and event behaviour stay as they were.
+
+`round5-addendum-checks.mjs` runs the actual `createPageLayout` function, including `measure()`, text traversal, `view()` and `cover()`, with deterministic glyph/DOM stand-ins and CSS-derived stage boxes. Each of the ten sizes gets ten repeated measurements and a resize away by +37/+31 px and back. Exact string storage, three-decimal serialisation and 1/64 px downward quantisation are exercised separately: **390 measurements**, with zero change in S, cx, cy or measured box on repeats/return (gate 0.01 px). This is a model of the failure mechanism, not browser certification. The external `checkRound5Layout(page)` now makes the same ten-repeat/away-back assertions on real layout metrics; its existing 555-step resize sweep is retained and **UNRUN locally**.
+
+With the exact old string comparison restored in memory, the 1/64 px model fails on the first 768 × 1024 repeat: **S 62.308873 → 67.856819**. It reproduces the brief's shorter value example, `306.388px` → `306.375px`. In the separately recorded 1/64 px model with the incoming row, the 820 × 1180 first/tenth S is **66.960315 → 121.071551**; the fixed S stays **66.960315**. Height-limited sizes can hide the bug in S, so the test checks cx, cy and the measured box as well.
+
+**H10.** `UI_ROW.forward = 0.4` translates every Figma floor piece by +z after its existing entry/withdrawal displacement. The slot plane translates by the same amount, as do the tablet/phone mark positions. The Laptop mark still comes from its emitted lid face. Moving only the row without its clipping plane would let the retreating lid approach the app again; translating both preserves its complete withdrawal while maintaining clearance. The laptop's dimensions, 12° lean, lower-left direction, keyboard, 0.3-unit gaps, world-x centre, -x entry, clocks and timings stay unchanged. Existing depth-band/slot assertions now check that same 0.4-unit translation; the older absolute depth band is deliberately superseded by H10's authorised forward move. No other departure from H9/H10 is intended.
+
+The geometry sweep covers **697 Figma times**, from global 69.130000 through 83.040000 minus 0.0000001 s, in integer 0.02 s steps plus that last instant. It has 191 visible-laptop poses and 150 Laptop-ring poses. The app outline conservatively includes the shell's thickness and all visible app furniture/art, excluding the cursor. Each laptop piece's clipped projected box outline is tested separately, including the deck, keyboard, lid and moving picture layers. Euclidean polygon distance includes containment and intersection. The ring uses the real label geometry's radius **8 px + half its 1.25 px stroke**; treating the dashed ring as a full circle is conservative.
+
+| Computed at 1440 × 900, fixed S=103.6 | Incoming | Fixed | Minimum occurs after fix |
+| --- | ---: | ---: | ---: |
+| Laptop/app outline gap | 0.000000 px | **15.730823 px** | 82.750000 s, during withdrawal |
+| Laptop ring outer-stroke clearance | −8.132410 px | **19.651534 px** | 79.650000 s |
+
+The frozen incoming sources in `tools/fixtures/round5-addendum-source.json` are SHA256-checked: stage `8bfd42a687f780f6e224f09a6a46c6fcb276b925745fc63c2ea2337ce7336cc8`, page layout `3ad80e6ae74572a36079a9a050f8b54159f3794adb4209d5d1e61175f8b6eed1`. Across 333 quarter-second loop samples, every emitted piece, including all non-floor Figma content, matches incoming within 1e-8 after applying only the authorised Figma floor/clip translation; playback/action/press/tool metadata also matches. Existing draw, drag, clock, label-route and fixed-anchor checks continue to pass. This establishes numeric preservation, not pixel identity.
+
+**Envelope and S before → after.** The actual six-still camera-space bounds stay exactly the same:
+
+- right: **−2.330956707 … 3.429467889 → the same**;
+- up: **−1.407385983 … 5.233459130 → the same**;
+- unpadded scene: **5.760424596 × 6.640845113 → the same**;
+- padded fit: **6.260424596 × 7.140845113 → the same**.
+
+The following is explicitly a **Node CSS/word model**, using the existing five phone stage heights and conservative 0.75-em word widths, without real font/page obstacles. “Incoming” is its first measurement with an unmodified CSS stage, before the growth bug accumulates; it is also the H9-only result before moving the row for H10. The frozen round-four source/label fitter supplies the comparison column. H9/H10 cause no change to those first-measure scales, and none shrink relative to modeled round four. The larger phone fits were already present in round 5; H6 does no desktop centring there. The known supplied browser round-four S values **54.7 at 768 × 1024** and **80.0 at 1024 × 768** include real obstacles and must not be replaced by this model's 62.308873 and 85.143984. Actual ten-size S, the 2% browser comparison and browser resize continuity remain external gates.
+
+| Viewport | Round-four model S | Incoming first S → fixed S |
+| --- | ---: | ---: |
+| 390 × 664 | 33.609467 | 33.609467 → 33.609467 |
+| 390 × 844 | 42.871487 | 44.300426 → 44.300426 |
+| 360 × 780 | 36.896455 | 36.896455 → 36.896455 |
+| 375 × 667 | 40.035446 | 40.598440 → 40.598440 |
+| 412 × 915 | 47.031013 | 49.730004 → 49.730004 |
+| 768 × 1024 | 62.308873 | 62.308873 → 62.308873 |
+| 820 × 1180 | 66.960315 | 66.960315 → 66.960315 |
+| 1024 × 768 | 85.143984 | 85.143984 → 85.143984 |
+| 1440 × 900 | 103.629191 | 103.629191 → 103.629191 |
+| 1920 × 1080 | 128.836291 | 128.836291 → 128.836291 |
+
+**Negative controls.** `node design/journey-hero/take-2/tools/round5-addendum-controls.mjs` observed all three exits below. Each exact edit matches **one** source location, and is applied only to an imported in-memory module; source bytes never change. `--audit` verifies the edit inventory. Restoring the single forward value also undoes its slot and mark translation, so these controls reproduce the incoming geometry rather than creating an unrelated fault.
+
+| Control / isolated gate | Exact edit | Observed result |
+| --- | --- | --- |
+| H9 / repeated measurement | `page-layout.mjs`: `for (const key of ['left', 'width']) stage.style.removeProperty(key);` → `for (const key of ['left', 'width']) if (stage.style[key] === target[key]) stage.style.removeProperty(key);` | Exit 1: `H9 repeated measurement 768x1024/call1/S: 62.30887283097424 != 67.8568192153103` |
+| H10 / outline | `stage.mjs`: `forward: 0.4` → `forward: 0` | Exit 1: `H10 projected gap: 0.000000 px at 79.150000s < 12 px` |
+| H10 / ring | `stage.mjs`: `forward: 0.4` → `forward: 0` | Exit 1: `H10 Laptop ring: -8.132410 px clearance at 79.650000s` |
+
+The incoming 17 round-five control edits were audited (all match one site), without rerunning their mutations. Full sample rows and model sizes are in `.scratch/corrections5-addendum/report.json`; exact control outputs/inventory are in `.scratch/corrections5-addendum/controls/`. The new checker and controls have documented commands in README and are included in the main checker. The offline preview was repacked to `.scratch/preview.html`: **374,525 bytes**, 366 KB from the packer (line endings can affect bytes).
+
+**Checks output.** `node design/journey-hero/take-2/tools/checks.mjs` — exit 0:
+
+```text
+R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (744 samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720
+page labels 768x1024: 181 frames; S=59.601966; minimum text gap=16.000 px; routes clean
+G1 drags: 4105 samples at 0.0005 s, five drags including loc; order/one offset, projected occlusion and F1 lifetimes clean; max corner error=8.958e-14 px (S=103.629191); minimum cursor gap=0.000920; max offset=0.159436; shadow positions/uniforms unchanged; five retained emitted stills unchanged (H2 timing/H3 Figma checked separately).
+48aea47 snapshot SHA256 2df6ef35ad20837ad73d5c181cef1a404e4023545adeab99f8070c63697b195d; incoming 50b51b8 snapshot SHA256 1cb6842044168b12c4c4bf551e389b7adf31c2faf8b28f927a4282972ebb55ab. Rendered frames, shadows and pixel still identity UNRUN.
+H1–H7 computed: 23 draw ends, 60 spread samples; loop 83.040s, land 3.0s; 750 laptop poses; 555 resize samples; 180 floor rays, 10404 dot samples. Font ink, layout, pixels and frames UNRUN.
+H9/H10 computed: 390 CSSOM-model measurements, ten repeats and away/back at ten sizes; 697 Figma poses at 0.02 s; laptop/app gap 15.730823 px, Laptop ring clearance 19.651534 px (S=103.6); 333 incoming-piece comparisons. Browser checks UNRUN.
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5611 frames, 386385 pieces (max 183); 5 atlas pages; loop 83.040s
+ps: 7.500s, ai: 11.400s, id: 20.980s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+all clean
+```
+
+Those UNRUN messages refer to this local checker; they do not undo the supplied browser acceptance of the rest of round 5. H9/H10's actual layout, font obstacles, frames, rendered side-by-side comparison and browser-check pass remain for the external machine. No local browser, network, installation, Git, deployment, `tools/measure.mjs`, hardware run, program termination, outside-repository read/write or protected-path modification occurred.

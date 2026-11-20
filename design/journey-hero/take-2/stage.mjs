@@ -274,7 +274,7 @@ const lidU = [1, 0, 0], lidV = [0, Math.cos(LID_ANGLE), -Math.sin(LID_ANGLE)], l
 export const UI_ROW = (() => {
   const depth = 1.65, lidW = 1.55, lidH = (lidW - 0.08) / 1.6 + 0.08, deck = 1.1, rim = 0.06, tabW = (ROW - rim * 2) * 3 / 4 + rim * 2, phoneW = (ROW - rim * 2) * 9 / 19.5 + rim * 2, gap = 0.3;
   const lean = lidH * Math.sin(LID_ANGLE) + 0.02, width = lidW + tabW + phoneW + 2 * gap, left = screenMiddle - width / 2;
-  return { depth, lidW, lidH, deck, rim, tabW, phoneW, gap, left, lean, hinge: left, tablet: left + lidW + gap, phone: left + lidW + gap + tabW + gap };
+  return { depth, lidW, lidH, deck, rim, tabW, phoneW, gap, left, lean, forward: 0.4, hinge: left, tablet: left + lidW + gap, phone: left + lidW + gap + tabW + gap };
 })();
 function lidPoint(u, v, lift = 0) {
   const g = UI_ROW, origin = [g.hinge, 0.095, MAT.z + g.lean];
@@ -314,7 +314,10 @@ function feedPrototype(P, t, spans, off) {
     }
     for (const pc of pieces) { pc.device = i; pc.deviceKind = ['laptop', 'tablet', 'phone'][i]; pc.clock = clock; }
   }
-  takeBack(P, t, ...off); P.clock = clock;
+  takeBack(P, t, ...off);
+  // Move the complete row and its slot together, keeping the lid clear of the app shell on return too.
+  for (const pc of P) if (pc.where === 'floor') { pc.p[2] += g.forward; if (pc.clip) pc.clip[3] -= g.forward; }
+  P.clock = clock;
 }
 
 // A painter maps the same finished piece either onto a viewer or onto a device lying flat.
@@ -1359,7 +1362,7 @@ export function calloutsAt(t) {
   if (at < Math.min(...ends) - 1e-9 || at >= off - 1e-9) return [];
   const P = frameAt(t), floor = P.filter(pc => pc.where === 'floor');
   const words = { id: ['Flyer', 'LinkedIn post', 'Email'], pr: ['YouTube', 'TikTok', 'Instagram'], ae: ['Website', 'Story', 'Feed post'], fig: ['Laptop', 'Tablet', 'Phone'] }[key];
-  const rects = key === 'id' ? [[BLOCK.x0, MAT.z, LEAF, DEEP], [BLOCK.x0 + LEAF + GUT, MAT.z, PHONE, DEEP], [BLOCK.x0 + LEAF + 2 * GUT + PHONE, MAT.z, TABLET, DEEP]] : key === 'fig' ? [null, [UI_ROW.tablet, MAT.z, UI_ROW.tabW, ROW], [UI_ROW.phone, MAT.z, UI_ROW.phoneW, ROW]] : [[MAT.x, MAT.z, WIDE, ROW], [MAT.x + WIDE + MAT.gap, MAT.z, SLIM, ROW], [MAT.x + WIDE + SLIM + 2 * MAT.gap, MAT.z, SLIM, ROW]];
+  const rects = key === 'id' ? [[BLOCK.x0, MAT.z, LEAF, DEEP], [BLOCK.x0 + LEAF + GUT, MAT.z, PHONE, DEEP], [BLOCK.x0 + LEAF + 2 * GUT + PHONE, MAT.z, TABLET, DEEP]] : key === 'fig' ? [null, [UI_ROW.tablet, MAT.z + UI_ROW.forward, UI_ROW.tabW, ROW], [UI_ROW.phone, MAT.z + UI_ROW.forward, UI_ROW.phoneW, ROW]] : [[MAT.x, MAT.z, WIDE, ROW], [MAT.x + WIDE + MAT.gap, MAT.z, SLIM, ROW], [MAT.x + WIDE + SLIM + 2 * MAT.gap, MAT.z, SLIM, ROW]];
   return words.flatMap((word, i) => {
     if (at < ends[i]) return [];
     let mark;

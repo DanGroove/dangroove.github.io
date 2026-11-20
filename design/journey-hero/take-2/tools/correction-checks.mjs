@@ -151,7 +151,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
           if (!near(lid.s[0] / lid.s[1], 1.6) || !near(widths[1] / (bodies[1].s[1] * 2 - 0.12), 3 / 4) || !near(widths[2] / (bodies[2].s[1] * 2 - 0.12), 9 / 19.5) || widths[0] <= Math.max(...widths.slice(1))) fail(time, 'Figma device geometry: wrong screen ratios or picture sizes');
           const gaps = [bodies[1].p[0] - bodies[1].s[0] - bodies[0].p[0] - bodies[0].s[0], bodies[2].p[0] - bodies[2].s[0] - bodies[1].p[0] - bodies[1].s[0]];
           const zs = floor.flatMap(corners).map(p => p[2]);
-          if (!near(gaps[0], gaps[1]) || Math.min(...zs) < MAT.z - 1e-8 || Math.max(...zs) > MAT.z + 1.8 + 1e-8 || Math.min(...xs) < MAT.x - 1e-8 || Math.max(...xs) > MAT.x + MAT.w + 1e-8) fail(time, 'Figma device geometry: unequal gaps or excessive footprint');
+          if (!near(gaps[0], gaps[1]) || Math.min(...zs) < MAT.z + UI_ROW.forward - 1e-8 || Math.max(...zs) > MAT.z + UI_ROW.forward + 1.8 + 1e-8 || Math.min(...xs) < MAT.x - 1e-8 || Math.max(...xs) > MAT.x + MAT.w + 1e-8) fail(time, 'Figma device geometry: unequal gaps or excessive footprint');
         }
         for (const lid of floor.filter(pc => pc.lid)) {
           // Clip the returning lid's box at the slot before testing its visible outline.

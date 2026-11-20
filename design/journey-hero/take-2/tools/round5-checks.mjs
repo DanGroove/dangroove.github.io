@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { HOME, makeCamera, dot, quatRotate, EASE } from '../../../../public/journey/hero/engine.mjs';
-import { SHOW, LOOP, SCRIPTS, SCENES, SCREEN, MAT, PACE, frameAt, calloutsAt, playbackSpans } from '../stage.mjs';
+import { SHOW, LOOP, SCRIPTS, SCENES, SCREEN, MAT, PACE, UI_ROW, frameAt, calloutsAt, playbackSpans } from '../stage.mjs';
 import { corners } from '../kit.mjs';
 import { centreScene, sideGutter, stageTarget, equivalent, pointerFloor, redDot, sceneEnvelope } from '../view.mjs';
 import { fitCalloutView, labelLayout } from '../labels.mjs';
@@ -103,8 +103,8 @@ export async function checkRound5(only = '') {
     const currentFloor = SCENES[5]().filter(pc => pc.where === 'floor');
     const rowShift = currentFloor.find(pc => pc.device === 1).p[0] - previousFloor.find(pc => pc.device === 1).p[0];
     for (const device of [1, 2]) {
-      const prior = previousFloor.filter(pc => pc.device === device).map(pc => ({ ...pc, p: pc.p.map((n, i) => n + (i === 0 ? rowShift : 0)) }));
-      equivalent(currentFloor.filter(pc => pc.device === device), prior, 'H3 tablet/phone changed beyond shared row recentering');
+      const prior = previousFloor.filter(pc => pc.device === device).map(pc => ({ ...pc, p: pc.p.map((n, i) => n + (i === 0 ? rowShift : i === 2 ? UI_ROW.forward : 0)), clip: pc.clip.map((n, i) => n - (i === 3 ? UI_ROW.forward : 0)) }));
+      equivalent(currentFloor.filter(pc => pc.device === device), prior, 'H3 tablet/phone changed beyond shared row recentering and H10 forward shift');
     }
     let samples = 0;
     for (const [from, to] of [timing.spans[0], [timing.spans[2][1], timing.off[0]], timing.off]) for (let at = from; at <= to; at += 0.005) {

@@ -28,7 +28,8 @@ export function createPageLayout(hero, stage, callouts) {
   }
   function measure() {
     if (target) {
-      for (const key of ['left', 'width']) if (stage.style[key] === target[key]) stage.style.removeProperty(key);
+      // CSSOM may shorten our values. Always restore the CSS sizing basis before reading it.
+      for (const key of ['left', 'width']) stage.style.removeProperty(key);
       target = null;
     }
     hero.style.setProperty('--say-rise', '0px');

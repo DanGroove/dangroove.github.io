@@ -121,9 +121,19 @@ export async function checkRound5Layout(page) {
     return page.evaluate(() => {
       __hero.measure();
       const m = __hero.layout, v = __hero.view, n = __need, h = document.querySelector('[data-hero]').getBoundingClientRect(), b = document.querySelector('[data-stage-box]').getBoundingClientRect();
-      return { ...m, h: { left: h.left, top: h.top }, stage: { left: b.left - h.left, right: b.right - h.left, top: b.top - h.top, bottom: b.bottom - h.top }, S: v.S, left: v.cx + v.S * (n.x - (n.w - 0.5) / 2), right: v.cx + v.S * (n.x + (n.w - 0.5) / 2), top: v.cy - v.S * (n.y + (n.h - 0.5) / 2), bottom: v.cy - v.S * (n.y - (n.h - 0.5) / 2) };
+      return { ...m, h: { left: h.left, top: h.top }, stage: { left: b.left - h.left, right: b.right - h.left, top: b.top - h.top, bottom: b.bottom - h.top }, measuredBox: [m.b.left, m.b.top, m.b.width, m.b.height], S: v.S, cx: v.cx, cy: v.cy, left: v.cx + v.S * (n.x - (n.w - 0.5) / 2), right: v.cx + v.S * (n.x + (n.w - 0.5) / 2), top: v.cy - v.S * (n.y + (n.h - 0.5) / 2), bottom: v.cy - v.S * (n.y - (n.h - 0.5) / 2) };
     });
   };
+  const stable = (a, b, context) => {
+    for (const key of ['S', 'cx', 'cy']) assert.ok(Math.abs(a[key] - b[key]) <= 0.01, context + ': H9 unstable ' + key);
+    for (let i = 0; i < a.measuredBox.length; i++) assert.ok(Math.abs(a.measuredBox[i] - b.measuredBox[i]) <= 0.01, context + ': H9 unstable measured box');
+  };
+  for (const [w, h] of BROWSER_SIZES) {
+    const first = await sample(w, h);
+    for (let i = 0; i < 10; i++) stable(first, await sample(w, h), `${w}x${h}/measure ${i + 1}`);
+    await sample(w + 37, h + 31);
+    stable(first, await sample(w, h), `${w}x${h}/resize away-back`);
+  }
   for (const [w, h] of [...BROWSER_SIZES, [1280, 800], [1366, 657], [1680, 1050], [2560, 1440]]) {
     const r = await sample(w, h), column = r.ledeInk.left;
     for (const ink of [...r.nameLines, ...r.numberInks]) assert.ok(Math.abs(ink.left - column) <= 1, `${w}x${h}: H4 font-ink column`);
