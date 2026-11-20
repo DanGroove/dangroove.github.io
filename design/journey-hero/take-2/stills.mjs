@@ -4,12 +4,14 @@ import { makeCamera, dot } from '../../../public/journey/hero/engine.mjs';
 import { createRenderer } from './sq.mjs';
 import { corners } from './kit.mjs';
 import { makeAtlas, fontsReady } from './art.mjs';
-import { SCENES, CRAFT, BLOCK, POOL } from './stage.mjs';
+import { SCENES, CRAFT, BLOCK, POOL, SHOW, calloutsAt } from './stage.mjs';
+import { createCallouts } from './labels.mjs';
 
 const q = new URLSearchParams(location.search), num = (k, d) => q.has(k) ? +q.get(k) : d;
 const hero = document.querySelector('[data-hero]'), canvas = hero.querySelector('[data-art]'), stage = hero.querySelector('[data-stage-box]');
 const crafts = [...hero.querySelectorAll('[data-craft]')];
 const R = createRenderer(canvas), cam = makeCamera(num('yaw', 0), num('pitch', 0));
+const callouts = createCallouts(hero), reduced = matchMedia('(prefers-reduced-motion: reduce)');
 
 // the room all the scenes need, measured once in the home view
 const all = SCENES.map(make => make());
@@ -22,13 +24,16 @@ function draw() {
   const pieces = q.has('at') ? SCENES[s]({ at: num('at') }) : all[s];
   const S = Math.min(b.width / NEED.w, b.height / NEED.h);
   const cx = b.left - h.left + b.width / 2 - S * NEED.x, cy = b.top - h.top + b.height / 2 + S * NEED.y;
-  R.draw(pieces, { W: h.width, H: h.height, dpr: Math.min(2, devicePixelRatio || 1), S, cx, cy, cam }, { outline: 0, floor: { ...POOL, radius: num('pool', 4.8) } });
+  const W = h.width, H = h.height, view = callouts.fit({ W, H, dpr: Math.min(2, devicePixelRatio || 1, Math.sqrt(5.2e6 / (W * H))), S, cx, cy, cam }, NEED, b.left - h.left);
+  R.draw(pieces, view, { outline: 0, floor: { ...POOL, radius: num('pool', 4.8) } });
+  const time = SHOW.slice(0, s).reduce((sum, scene) => sum + scene.len, 0) + SHOW[s].still;
+  callouts.draw(calloutsAt(time), pieces, view, time, reduced.matches);
   hero.classList.remove('is-entering');
   crafts.forEach((c, i) => i === CRAFT[s] ? c.setAttribute('aria-current', 'true') : c.removeAttribute('aria-current'));
   // where the flat lay is in the page, so that a tool can crop a still to it
-  const at = [BLOCK.x0, BLOCK.x1].flatMap(x => [BLOCK.z0, BLOCK.z1].flatMap(z => [0, BLOCK.up].map(y => [h.left + cx + S * dot(cam.r, [x, y, z]), h.top + cy - S * dot(cam.u, [x, y, z])])));
+  const at = [BLOCK.x0, BLOCK.x1].flatMap(x => [BLOCK.z0, BLOCK.z1].flatMap(z => [0, BLOCK.up].map(y => [h.left + view.cx + view.S * dot(cam.r, [x, y, z]), h.top + view.cy - view.S * dot(cam.u, [x, y, z])])));
   const lay = [Math.min(...at.map(p => p[0])), Math.min(...at.map(p => p[1])), Math.max(...at.map(p => p[0])), Math.max(...at.map(p => p[1]))].map(Math.round);
-  window.__need = { ...NEED, S, box: [Math.round(b.width), Math.round(b.height)], lay };
+  window.__need = { ...NEED, S: view.S, box: [Math.round(b.width), Math.round(b.height)], lay };
 }
 await fontsReady();
 R.setAtlas(makeAtlas());

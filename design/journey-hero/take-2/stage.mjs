@@ -1,7 +1,7 @@
 // Second take, reworked to Dan's brief: one big floating screen. Each craft is a real app on it (drawn simply, with its logo) that
 // builds a piece of work, and on Export the piece lands in front of the screen, lying flat in one tidy block.
 // One clock builds every piece: the persistent shell, wiped content, travelling work and the floor.
-import { HOME, EASE } from '../../../public/journey/hero/engine.mjs';
+import { HOME, EASE, quatFromBasis, quatRotate } from '../../../public/journey/hero/engine.mjs';
 import { box, cyl, turn, corners } from './kit.mjs';
 import { SPOT, subwayPath, BALL, BALL_FROM, BALL_VIA, ROWS, TYPE_EDGES, TYPE_BOXES, ART, ART_TEXT, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS } from './art.mjs';
 
@@ -173,12 +173,13 @@ const FLYER = { gold: ['#9B7C29', '#86691F', '#5E4915'], lite: ['#CEAB48', '#B39
 function approvedDocument() {
   const P = [], tw = 0.36, th = tw * 340 / 440, mid = PANEL + 0.425;
   rail(P, ['tArrow', 'tType', 'tFrame', 'tRect', 'tLine', 'tDrop'], 0);
-  P.push(on('night', PANEL, 0.1, 0.85, TOP - 0.1));
+  P.push({ ...on('night', PANEL, 0.1, 0.85, TOP - 0.1), furniture: true });
   [[null, 'kCover'], ['kOfferL', 'kOfferR'], ['kLocL', 'kLocR'], ['kAmL', 'kAmR'], ['kGalL', 'kGalR'], ['kBack', null]].forEach(([l, r], i) => {
-    const y = TOP - 0.13 - (i + 1) * th - i * 0.1;
+    const echoStart = P.length, y = TOP - 0.13 - (i + 1) * th - i * 0.1;
     if (i === 3) P.push(on('red', mid - tw - 0.03, y - 0.03, tw * 2 + 0.06, th + 0.06, { lift: 0.05, t: 0.01 }));
     if (l) P.push(on('ink', mid - tw, y, tw, th, { lift: 0.065, t: 0.008, art: l }));
     if (r) P.push(on('ink', mid, y, tw, th, { lift: 0.065, t: 0.008, art: r }));
+    tagEcho(P, ['coverTitle', 'pages', 'loc', 'spreadType', 'pages', 'pages'][i], echoStart);
   });
   P.push({ ...on('ink', ...ID.left, { lift: 0.06, t: 0.02, art: 'kAmL' }), tones: FLYER.coal }, { ...on('ink', ...ID.right, { lift: 0.06, t: 0.02, art: 'kAmR' }), tones: FLYER.coal });
   P.push(on('ink', ...ID.cover, { lift: 0.06, t: 0.02, art: 'kCover' }), on('ink', ...ID.post, { lift: 0.06, t: 0.02, art: 'kPost' }), { ...on('ink', ...ID.mail, { lift: 0.06, t: 0.02, art: 'eblast' }), window: [0, 0, 1, Math.min(1, ID.mail[3] / ID.mail[2] * 320 / 472)] });
@@ -250,13 +251,13 @@ function takeBack(P, t, a, b) {
 }
 function feedScreens(P, t, art, spans, off) {
   if (t >= off[1]) return;
-  const kind = art[0] === 'playerWide' ? 'video' : art[0] === 'motWide' ? 'motion' : 'ui';
+  const kind = art[0] === 'playerWide' ? 'video' : 'motion';
   const clock = Math.max(0, (t - spans[0][1]) / PACE) % 1.6 / 1.6;
   const x = MAT.x, widths = [WIDE, SLIM, SLIM];
   let left = x;
   widths.forEach((w, i) => {
     const pieces = [], rim = i ? 0.055 : 0.075;
-    pieces.push(device(left, MAT.z, w, ROW, undefined, { rim, round: i ? 0.16 : 0.09 })[0]);
+    pieces.push({ ...device(left, MAT.z, w, ROW, undefined, { rim, round: i ? 0.16 : 0.09 })[0], deviceBody: true });
     const draw = floorPainter(pieces, [left + rim, MAT.z + rim, w - 2 * rim, ROW - 2 * rim]);
     playback(pieces, draw, kind, i, clock);
     pieces.forEach(pc => { pc.clock = clock; pc.device = i; });
@@ -265,6 +266,53 @@ function feedScreens(P, t, art, spans, off) {
   });
   P.clock = clock;
   takeBack(P, t, ...off);
+}
+
+// The laptop hinge runs in z. Its lid faces +x and leans twelve degrees back.
+const LID_ANGLE = 12 * Math.PI / 180;
+const lidU = [0, 0, -1], lidV = [-Math.sin(LID_ANGLE), Math.cos(LID_ANGLE), 0], lidN = [Math.cos(LID_ANGLE), Math.sin(LID_ANGLE), 0];
+export const UI_ROW = (() => {
+  const depth = 1.65, lidW = 1.55, lidH = (lidW - 0.08) / 1.6 + 0.08, deck = 1.1, rim = 0.06, tabW = (ROW - rim * 2) * 3 / 4 + rim * 2, phoneW = (ROW - rim * 2) * 9 / 19.5 + rim * 2, gap = 0.3;
+  const lean = lidH * Math.sin(LID_ANGLE) + 0.02, width = lean + deck + tabW + phoneW + 2 * gap, left = screenMiddle - width / 2;
+  return { depth, lidW, lidH, deck, rim, tabW, phoneW, gap, left, hinge: left + lean, tablet: left + lean + deck + gap, phone: left + lean + deck + gap + tabW + gap };
+})();
+function lidPoint(u, v, lift = 0) {
+  const g = UI_ROW, origin = [g.hinge, 0.095, MAT.z + 0.075 + g.depth];
+  return origin.map((n, i) => n + lidU[i] * u + lidV[i] * v + lidN[i] * lift);
+}
+function lidPainter(P) {
+  let height = 0.026;
+  const g = UI_ROW, w = g.lidW - 0.08, h = g.lidH - 0.08;
+  const draw = (tone, r, art, window) => {
+    height += LAYER_STEP;
+    const pc = { ...box(tone, lidPoint(0.04 + (r[0] + r[2] / 2) * w, 0.04 + (1 - r[1] - r[3] / 2) * h, height), [r[2] * w, r[3] * h, 0.001]), q: quatFromBasis(lidU, lidV), art, window, lidPicture: true };
+    P.push(pc); return pc;
+  };
+  draw.size = [w, h]; return draw;
+}
+function feedPrototype(P, t, spans, off) {
+  if (t >= off[1]) return;
+  const g = UI_ROW, clock = Math.max(0, (t - spans[0][1]) / PACE) % 3 / 3;
+  for (let i = 0; i < 3; i++) {
+    const pieces = [];
+    if (i === 0) {
+      if (t < spans[0][0]) continue;
+      pieces.push({ ...flat('ink', g.hinge, MAT.z + 0.075, g.deck, g.depth, 0.08), deviceBody: true });
+      pieces.push(flat('night', g.hinge + 0.18, MAT.z + 0.18, 0.62, 1.42, 0.008, undefined, 0.081), flat('dark', g.hinge + 0.85, MAT.z + 0.62, 0.18, 0.55, 0.008, undefined, 0.081));
+      for (let row = 0; row < 5; row++) for (let key = 0; key < 9; key++) pieces.push(flat('dark', g.hinge + 0.20 + row * 0.115, MAT.z + 0.205 + key * 0.151, 0.082, 0.115, 0.005, undefined, 0.091));
+      pieces.push({ ...box('ink', lidPoint(g.lidW / 2, g.lidH / 2), [g.lidW, g.lidH, 0.04]), q: quatFromBasis(lidU, lidV), lid: true });
+      prototype(lidPainter(pieces), 0, t < spans[0][1] ? -1 : clock);
+      const dx = -1.6 * (1 - EASE.enter(linear(t, ...spans[0])));
+      for (const pc of pieces) { pc.p[0] += dx; pc.where = 'floor'; if (t >= off[0]) pc.clip = [0, 0, 1, -MAT.z]; P.push(pc); }
+    } else {
+      const x = i === 1 ? g.tablet : g.phone, w = i === 1 ? g.tabW : g.phoneW;
+      pieces.push({ ...device(x, MAT.z, w, ROW, undefined, { rim: g.rim, round: 0.03 })[0], deviceBody: true });
+      prototype(floorPainter(pieces, [x + g.rim, MAT.z + g.rim, w - 2 * g.rim, ROW - 2 * g.rim]), i, t < spans[0][1] ? -1 : clock);
+      feed(P, pieces, t, ...spans[i]);
+    }
+    for (const pc of pieces) { pc.device = i; pc.deviceKind = ['laptop', 'tablet', 'phone'][i]; pc.clock = clock; }
+  }
+  takeBack(P, t, ...off); P.clock = clock;
 }
 
 // A painter maps the same finished piece either onto a viewer or onto a device lying flat.
@@ -302,7 +350,17 @@ function cropPicture(draw, tone, rect, art, p, direction = 'right') {
   if (direction === 'up') draw(tone, [x, y + h * (1 - p), w, h * p], art, art ? [0, 1 - p, 1, 1] : undefined);
   else draw(tone, [x, y, w * p, h], art, art ? [0, 0, p, 1] : undefined);
 }
+function replayPainter(paint) {
+  const draw = (...args) => { const pc = paint(...args); pc.playback = true; return pc; };
+  draw.size = paint.size; return draw;
+}
+function echoPainter(paint, id) {
+  const draw = (...args) => { const pc = paint(...args); pc.echo = id; return pc; };
+  draw.size = paint.size; return draw;
+}
+function tagEcho(P, id, first) { for (const pc of P.slice(first)) pc.echo = id; }
 function movie(draw, shape, p) {
+  draw = replayPainter(draw);
   const at = p * 3.9, suffix = ['', 'Tall', 'Sq'][shape];
   const frame = shape === 2 ? [0, 112 / 600, 1, 0.5] : [0, 0, 1, 1];
   draw('ink', frame, (at < 1.46 ? 'shotA' : at < 2.7 ? 'shotB' : 'shotCfx') + suffix);
@@ -314,6 +372,7 @@ function movie(draw, shape, p) {
   }
 }
 function animatedComp(draw, shape, p) {
+  draw = replayPainter(draw);
   const o = shape === 0 || shape === 3 ? { w: 480, h: 270, x: 34, y: shape === 3 ? 116 : 104, px: 60, rows: [296, 62, 140, 3] } : shape === 1 ? { w: 300, h: 600, x: 26, y: 236, px: 62, rows: [26, 366, 180, 3] } : { w: 300, h: 600, x: 20, y: 276, px: 50, rows: [146, 364, 120, 2] };
   const { w, h, x, y, px, rows: [rx, ry, rw, n] } = o, k = px / 60, at = p * 2.4;
   draw('paper', shape === 2 ? [0, 184 / 600, 1, 0.5] : [0, 0, 1, 1], 'paperTile');
@@ -334,34 +393,53 @@ function animatedComp(draw, shape, p) {
     if (visible > 0) draw('paper', norm([l, ry + i * rw * 0.27 * 1.3, rw * visible, rw * 0.27]), i ? 'rowB' : 'rowA', [0, 0, visible, 1]);
   }
 }
-function prototype(draw, shape, p) {
-  if (shape === 0) draw('ink', [0, 24 / 270, 1, 246 / 270], 'uiCraft' + Math.min(3, Math.floor(p * 4)));
-  else {
-    phonePrototype(draw, [0, 74 / 600, 1, 500 / 600], shape === 1 ? 'uiPhone0' : 'uiPhone1', shape === 1 ? 'uiPhone1' : 'uiPhone0', p);
-  }
+// One tall page is viewed through a moving window. Intersection changes both geometry and UVs.
+export function prototypeState(p) {
+  if (p < 0) return { at: 0, scroll: 0, video: 0, lifted: false, tap: null };
+  const at = ((p * 3) % 3 + 3) % 3;
+  const scroll = at < 0.4 ? 0 : at < 1 ? 0.4 * EASE.wipe(linear(at, 0.4, 1)) : at < 1.55 ? 0.4 : at < 2.15 ? 0.4 * (1 - EASE.wipe(linear(at, 1.55, 2.15))) : 0;
+  return { at, scroll, video: at < 0.15 ? 0 : at < 0.3 ? EASE.wipe(linear(at, 0.15, 0.3)) : at < 2.3 ? 1 : at < 2.45 ? 1 - EASE.wipe(linear(at, 2.3, 2.45)) : 0, lifted: at >= 1.25 && at < 1.55, tap: at < 0.15 ? 'video' : at >= 1.25 && at < 1.4 ? 'card' : at >= 2.15 && at < 2.3 ? 'graphic' : null };
 }
-function phonePrototype(draw, rect, first, next, p) {
-  const back = p >= 0.5;
-  draw('ink', rect, back ? next : first);
-  cropPicture(draw, 'ink', rect, back ? first : next, EASE.wipe(linear(p, back ? 0.53 : 0.03, back ? 0.65 : 0.15)));
-  if (p < 0.075 || (p >= 0.5 && p < 0.575)) {
-    const [w, h] = draw.size, tw = 0.05 / w, th = 0.05 / h;
-    const tap = draw('paper', [rect[0] + rect[2] * 0.56 - tw / 2, rect[1] + rect[3] * 0.85 - th / 2, tw, th], 'tapDot'); tap.cut = true; tap.overlay = true;
+function pageWindow(draw, viewport, rect, art, uv = [0, 0, 1, 1], options = {}) {
+  const x = Math.max(rect[0], viewport[0]), y = Math.max(rect[1], viewport[1]), right = Math.min(rect[0] + rect[2], viewport[0] + viewport[2]), bottom = Math.min(rect[1] + rect[3], viewport[1] + viewport[3]);
+  if (right <= x || bottom <= y) return;
+  const window = [uv[0] + (x - rect[0]) / rect[2] * (uv[2] - uv[0]), uv[1] + (y - rect[1]) / rect[3] * (uv[3] - uv[1]), uv[0] + (right - rect[0]) / rect[2] * (uv[2] - uv[0]), uv[1] + (bottom - rect[1]) / rect[3] * (uv[3] - uv[1])];
+  return Object.assign(draw('ink', [x, y, right - x, bottom - y], art, window.map(n => clamp(n, 0, 1))), options);
+}
+function prototype(draw, shape, p, chrome = true) {
+  draw = replayPainter(draw);
+  const state = prototypeState(p), suffix = ['Wide', 'Tablet', 'Tall'][shape];
+  const viewport = chrome ? shape === 0 ? [0, 0.08, 1, 0.92] : [0, 0.055, 1, 0.91] : [0, 0, 1, 1];
+  const [x, y, w, h] = viewport, page = [x, y - state.scroll * h, w, 1.4];
+  pageWindow(draw, viewport, page, 'uiPage' + suffix + '0');
+  if (state.video > 0) {
+    const rect = [page[0], page[1], page[2] * state.video, page[3]];
+    pageWindow(draw, viewport, rect, 'uiPage' + suffix + '1', [0, 0, state.video, 1]);
   }
+  for (let i = 0; i < 3; i++) pageWindow(draw, viewport, [x + (0.045 + i * 0.31) * w, y + 1.035 - state.scroll * h - (i === 0 && state.lifted ? 0.04 : 0), 0.285 * w, 0.30], 'uiWork' + suffix + i);
+  if (state.tap) {
+    const pageW = shape ? 180 : 480, pageH = [300, 240, 390][shape], m = Math.min(pageW / 390, pageH / 664);
+    const craft = shape === 0 ? [0.16, state.tap === 'video' ? 0.675 : 0.636] : [(state.tap === 'video' ? 253.5 : 103) * m / pageW, 1 - 109 * m / pageH];
+    const point = state.tap === 'card' ? [0.18, 1.12 - state.scroll * h] : [craft[0], craft[1] - state.scroll * h];
+    const [dw, dh] = draw.size, tw = 0.05 / dw, th = 0.05 / dh;
+    pageWindow(draw, viewport, [x + point[0] * w - tw / 2, y + point[1] - th / 2, tw, th], 'tapDot', [0, 0, 1, 1], { cut: true, overlay: true });
+  }
+  if (chrome) { const pc = draw('ink', [0, 0, 1, 1], ['chromeLaptop', 'chromeTablet', 'chromeHandset'][shape]); pc.cut = true; }
+  // Keep the prototype's existing progress rail, also on the three app-canvas viewports.
+  draw('grey', [x, y + h - 0.006, w, 0.006]); draw('paper', [x, y + h - 0.006, w * Math.max(0, p), 0.006]);
 }
 function playback(P, draw, kind, shape, p) {
   if (kind === 'video') movie(draw, shape, p);
-  else if (kind === 'motion') animatedComp(draw, shape, p);
-  else prototype(draw, shape, p);
-  const chrome = { video: ['chromePlayer', 'chromeReel', 'chromeFeed'], motion: ['chromeMotion', 'chromeStory', 'chromeMotionFeed'], ui: ['chromeBrowser', 'chromePhone', 'chromePhone'] }[kind][shape];
+  else animatedComp(draw, shape, p);
+  const chrome = { video: ['chromePlayer', 'chromeReel', 'chromeFeed'], motion: ['chromeMotion', 'chromeStory', 'chromeMotionFeed'] }[kind][shape];
   const pc = draw('ink', [0, 0, 1, 1], chrome); pc.cut = true;
-  const line = kind === 'ui' ? (shape ? [0, 574 / 600, 1, 0.005] : [0, 0.99, 1, 0.008]) : !shape ? [54 / 480, 243 / 270, 400 / 480, 5 / 270] : kind === 'video' ? (shape === 1 ? [20 / 300, 50 / 600, 260 / 300, 4 / 600] : [0, 404 / 600, 1, 8 / 600]) : shape === 1 ? [20 / 300, 50 / 600, 84 / 300, 4 / 600] : [0, 484 / 600, 1, 0.006];
+  const line = !shape ? [54 / 480, 243 / 270, 400 / 480, 5 / 270] : kind === 'video' ? (shape === 1 ? [20 / 300, 50 / 600, 260 / 300, 4 / 600] : [0, 404 / 600, 1, 8 / 600]) : shape === 1 ? [20 / 300, 50 / 600, 84 / 300, 4 / 600] : [0, 484 / 600, 1, 0.006];
   draw(kind === 'motion' ? 'ink' : 'paper', [line[0], line[1], line[2] * p, line[3]]);
 }
 
 // One scheduler owns action starts and the cursor's approach. Scene code asks for progress by name.
-export function script(definitions, { hold = 0, tail = 0.3 } = {}) {
-  let time = 0.8, previous = EXPORT, typed = false;
+export function script(definitions, { hold = 0, tail = 0.3, start = EXPORT } = {}) {
+  let time = 0.8, previous = start, typed = false;
   const actions = definitions.map(def => {
     const from = def.from || def.to || previous, to = def.to || from;
     const distance = Math.hypot(from[0] - previous[0], from[1] - previous[1]);
@@ -374,7 +452,7 @@ export function script(definitions, { hold = 0, tail = 0.3 } = {}) {
     time += move + duration; previous = to;
     return action;
   });
-  return { actions, len: (time + hold + tail) * PACE, first: actions[0]?.start ?? 0.8 * PACE };
+  return { actions, start, len: (time + hold + tail) * PACE, first: actions[0]?.start ?? 0.8 * PACE };
 }
 const action = (s, id) => s.actions.find(a => a.id === id);
 const begun = (s, id, t) => t >= action(s, id).start;
@@ -382,7 +460,7 @@ const done = (s, id, t) => t >= action(s, id).end;
 const phase = (s, id, t) => linear(t, action(s, id).start, action(s, id).end);
 const eased = (s, id, t) => EASE.wipe(phase(s, id, t));
 function actionCursor(P, s, t) {
-  let point = EXPORT, active, tool;
+  let point = s.start, active, tool;
   for (const a of s.actions) {
     if (t < a.approach) break;
     if (t < a.start) { point = rectMix(a.previous, a.from, progress(t, a.approach, a.start)); break; }
@@ -419,12 +497,13 @@ const FX_FROM = [4.04, 1.37, 0.36, 0.2], FX_TO = [0.44 + 3.44, 0.55, 0.36, 0.2];
 const compPoint = ([x, y]) => [VIEW[0] + x * VIEW[2] / 480, VIEW[1] + VIEW[3] - y * VIEW[3] / 270];
 const compRect = ([x, y, w, h]) => [VIEW[0] + x * VIEW[2] / 480, VIEW[1] + VIEW[3] - (y + h) * VIEW[3] / 270, w * VIEW[2] / 480, h * VIEW[3] / 270];
 const graphPoint = ([x, y]) => [3.74 + x / 240 * 0.95, 1.6 + (1 - y / 200) * 0.79];
+function inPageSpot(x, y, w, h) { return [x + w * 0.045, y + h * (1 - 0.675 - 0.0225), w * 0.27, h * 0.045]; }
 const FIG = (() => {
-  const h = 0.86, g = 0.18, dw = h * 1.6, pw = h * 180 / 390, cl = 0.88, cr = PANEL - 0.08, x = cl + (cr - cl - dw - 2 * pw - 2 * g) / 2;
-  const cols = [[x, dw], [x + dw + g, pw], [x + dw + g + pw + g, pw]];
+  const h = 0.86, g = 0.14, dw = h * 1.6, tw = h * 3 / 4, pw = h * 9 / 19.5, cl = 0.9, cr = PANEL - 0.1, x = cl + (cr - cl - dw - tw - pw - 2 * g) / 2;
+  const cols = [[x, dw], [x + dw + g, tw], [x + dw + g + tw + g, pw]];
   const designs = cols.map(([x, w]) => [x, 0.46, w, h]), wires = cols.map(([x, w]) => [x, 1.58, w, h]);
-  const spot = [cols[1][0] + pw * 0.49, 0.46 + h * 0.129 - 0.035, pw * 0.27, 0.07];
-  return { cols, designs, wires, spot, from: [spot[0] + spot[2], spot[1] + 0.035], to: [cols[2][0], 0.46 + h / 2] };
+  const spot = inPageSpot(cols[0][0], 0.46, dw, h);
+  return { cols, designs, wires, spot, from: [spot[0] + spot[2], spot[1] + spot[3] / 2], to: [cols[0][0] + dw + 0.06, 0.46 + h * 0.325] };
 })();
 const topLeft = r => [r[0], r[1] + r[3]], bottomRight = r => [r[0] + r[2], r[1]];
 const inRect = (outer, r) => [outer[0] + r[0] * outer[2], outer[1] + (1 - r[1] - r[3]) * outer[3], r[2] * outer[2], r[3] * outer[3]];
@@ -433,7 +512,7 @@ const ID = (() => {
   const gap = 0.12, low = 1, pw = 1.6, ph = pw * 340 / 440, x = CANVAS.l + (CANVAS.w - 2 * pw) / 2, y2 = CANVAS.b + (CANVAS.h - ph - low - gap) / 2, y = y2 + low + gap;
   const cw = low * 440 / 340, ew = 2 * pw - cw - low - 2 * gap, cover = [x, y2, cw, low], post = [x + cw + gap, y2, low, low], mail = [x + cw + low + 2 * gap, y2, ew, low];
   const frame = [x + 34 / 1100 * pw, y + ph - 826 / 850 * ph, (2056 - 34) / 1100 * pw, (826 - 84) / 850 * ph];
-  const photoW = cw * (1 - 380 / 1100), photo = [x + cw * 380 / 1100, y2 + (low - photoW * 360 / 526) / 2, photoW, photoW * 360 / 526];
+  const photoW = cw * (1 - 380 / 1100), photo = [x + cw * 380 / 1100, y2, photoW, low];
   const th = 0.36 * 340 / 440, loc = [PANEL + 0.425 - 0.36, TOP - 0.13 - 3 * th - 0.2, 0.72 * 1352 / 2200, th];
   return { spread: [x, y, pw * 2, ph], left: [x, y, pw, ph], right: [x + pw, y, pw, ph], frame, cover, post, mail, mailPhoto: inRect(mail, [300 / 800, 168 / 1180, 456 / 800, 470 / 1180]), photo, loc };
 })();
@@ -512,12 +591,12 @@ export const SCRIPTS = {
     { id: 'link', kind: 'drag', from: FIG.from, to: FIG.to, duration: 0.6 },
     { id: 'panel', kind: 'run', from: [PANEL + 0.2, TOP - 0.46], to: [PANEL + 0.45, 0.32], count: 5, duration: 0.2 },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.7 },
-  ], { hold: 3.05, tail: 0.4 }),
+  ], { hold: 2.85, tail: 0.4 }),
   id: script([
     ...[ID.spread, ID.cover, ID.post, ID.mail].map((r, i) => ({ id: 'frame' + i, kind: 'draw', from: topLeft(r), to: bottomRight(r), duration: 0.3, tool: 'frame' })),
     { id: 'map', kind: 'drag', from: centre(DOCK.map), to: centre(ID.frame), duration: 0.45, tool: 'arrow' },
     { id: 'heading', kind: 'type', from: [ID.right[0] + ID.right[2] * 1052 / 1100, ID.right[1] + ID.right[3] * (1 - 672 / 850)], text: 'Amenities', duration: 0.6, tool: 'type' },
-    { id: 'spreadType', kind: 'run', from: topLeft(ID.left), to: bottomRight(ID.right), count: 6, duration: 0.08 },
+    { id: 'spreadType', kind: 'run', from: topLeft(ID.left), to: bottomRight(ID.right), count: 6, duration: 0.3 },
     { id: 'loc', kind: 'drag', from: centre(DOCK.loc), to: centre(ID.loc), duration: 0.45, tool: 'arrow' },
     { id: 'photo', kind: 'drag', from: centre(DOCK.photo), to: centre(ID.photo), duration: 0.45 },
     { id: 'blob', kind: 'draw', from: topLeft(inRect(ID.cover, [50 / 1100, 482 / 850, 588 / 1100, 320 / 850])), to: bottomRight(inRect(ID.cover, [50 / 1100, 482 / 850, 588 / 1100, 320 / 850])), duration: 0.18, tool: 'rectangle' },
@@ -533,7 +612,7 @@ export const SCRIPTS = {
     { id: 'mailButton', kind: 'draw', from: topLeft(inRect(ID.mail, [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180])), to: bottomRight(inRect(ID.mail, [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180])), duration: 0.18, tool: 'rectangle' },
     { id: 'mailFlyer', kind: 'type', from: topLeft(inRect(ID.mail, [70 / 800, 1057 / 1180, 225 / 800, 30 / 1180])), text: 'View the flyer', duration: 0.4, tool: 'type' },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.8 },
-    { id: 'land', kind: 'wait', duration: 0.3 },
+    { id: 'land', kind: 'wait', duration: 1.2 },
     { id: 'pickup', kind: 'wait', duration: 0.7 },
     { id: 'open', kind: 'wait', duration: 0.1 },
     { id: 'leaf1', kind: 'wait', duration: 0.6 },
@@ -545,7 +624,7 @@ export const SCRIPTS = {
     { id: 'leaf4', kind: 'wait', duration: 0.6 },
     { id: 'read', kind: 'wait', duration: 0.3 },
     { id: 'return', kind: 'wait', duration: 0.5 },
-  ], { tail: 0 }),
+  ], { tail: 0, start: centre(DOCK.loc) }),
   ai: script([
     ...[AI.upper, AI.lower].map((r, i) => ({ id: 'board' + i, kind: 'draw', from: topLeft(r), to: bottomRight(r), duration: 0.3, tool: 'rectangle' })),
     { id: 'street', kind: 'stroke', from: mapPoint(AI.upper, 0, 426, 2200, 850), to: mapPoint(AI.upper, 2200, 426, 2200, 850), duration: 0.5, tool: 'pen' },
@@ -595,8 +674,9 @@ function editedPhoto(t) {
     if (!i) doc.push(on('dark', PANEL + 0.05, y - 0.04, 0.75, 0.28, { lift: 0.05, t: 0.008 }));
     doc.push(icon('eye', PANEL + 0.08, y + 0.03, 0.14, 0.14, i ? 'night' : 'dark', i ? 0.051 : 0.059), on(i ? 'ink' : 'paper', PANEL + 0.27, y, 0.28, 0.2, { lift: 0.07, t: 0.01, art }), on(i ? 'dark' : 'grey', PANEL + 0.6, y + 0.07, 0.17, 0.05, { lift: 0.07, t: 0.008 }));
   });
+  for (const pc of doc) pc.echo = 'open';
   if (!begun(s, 'export', t)) {
-    const draw = screenPainter(doc, PHOTO);
+    const draw = echoPainter(screenPainter(doc, PHOTO), 'open');
     const base = done(s, 'grade', t) ? 'kPhoto' : done(s, 'crane', t) ? 'photoClean' : done(s, 'cone', t) ? 'photoNoCone' : done(s, 'sky', t) ? 'photoSky' : done(s, 'white', t) ? 'photoLevels' : done(s, 'black', t) ? 'photoHalf' : 'photoRaw';
     cropPicture(draw, 'ink', [0, 0, 1, 1], base, eased(s, 'open', t));
     if (begun(s, 'sky', t) && !done(s, 'sky', t)) cropPicture(draw, 'ink', [0, 0, 1, 1], 'photoSky', eased(s, 'sky', t));
@@ -635,16 +715,26 @@ function dragPicture(P, s, id, t, from, to, art, tone = 'ink') {
   if (!begun(s, id, t)) { P.push(on(tone, ...from, { lift: 0.07, t: 0.015, art })); return; }
   const p = eased(s, id, t), rect = rectMix(from, to, p);
   const pc = on(tone, ...rect, { lift: 0.08 + 0.08 * Math.sin(Math.PI * p), t: 0.015, art });
+  if (ART[art].photoProfile) {
+    const aspect = ART[art].w / ART[art].h, ratio = rect[2] / rect[3];
+    const w = Math.min(1, ratio / aspect), h = Math.min(1, aspect / ratio);
+    pc.window = [(1 - w) / 2, (1 - h) / 2, (1 + w) / 2, (1 + h) / 2];
+    pc.photoProfile = ART[art].photoProfile;
+    if (from === DOCK.photo && p < 1) {
+      const rim = 0.012 * (1 - p);
+      P.push({ ...on('grey', rect[0] - rim, rect[1] - rim, rect[2] + rim * 2, rect[3] + rim * 2, { lift: 0.06 + 0.08 * Math.sin(Math.PI * p), t: 0.012 }), where: 'travel', action: id });
+    }
+  }
   if (!done(s, id, t)) { pc.where = 'travel'; pc.action = id; }
   P.push(pc);
 }
-function playbackSpans(s) {
+export function playbackSpans(s) {
   const a = action(s, 'export').start, land = a + 0.55 * PACE;
-  return { spans: [[a + 0.05 * PACE, land], [a + 0.15 * PACE, a + 0.65 * PACE], [a + 0.25 * PACE, a + 0.7 * PACE]], land, off: [land + 3.2 * PACE, s.len] };
+  return { spans: [[a + 0.05 * PACE, land], [a + 0.15 * PACE, a + 0.65 * PACE], [a + 0.25 * PACE, a + 0.7 * PACE]], land, off: [land + (s === SCRIPTS.fig ? 3 : 3.2) * PACE, s.len] };
 }
 function exportPlay(s, t) {
   const { land, off } = playbackSpans(s);
-  return t >= land && t < off[1] ? ((t - land) / PACE % 1.6) / 1.6 : null;
+  return t >= land && t < off[1] ? ((t - land) / PACE % (s === SCRIPTS.fig ? 3 : 1.6)) / (s === SCRIPTS.fig ? 3 : 1.6) : null;
 }
 function editedVideo(t) {
   const P = [], D = [], s = SCRIPTS.pr;
@@ -674,10 +764,12 @@ function editedVideo(t) {
     const thumb = rectMix(BINS[i], [to[0] + 0.03, 0.54, 0.46, 0.23], p);
     const image = on('ink', ...thumb, { lift: lift + 0.035, t: 0.004, art: ['thumbA', 'thumbB', 'thumbC'][i] });
     const voice = on('dark', r[0], r[1] - 0.10, r[2], 0.075, { lift, t: 0.01, art: 'wave' });
-    [clip, image, voice].forEach(pc => { if (moving) { pc.where = 'travel'; pc.action = id; } D.push(pc); });
+    [clip, image, voice].forEach(pc => { pc.echo = id; if (moving) { pc.where = 'travel'; pc.action = id; } D.push(pc); });
     if (i === 1 && cut && !removed) {
+      const echoStart = D.length;
       D.push(on('red', 0.44 + 2.7, 0.51, 0.015, 0.29, { lift: 0.095, t: 0.008 }), on('red', 0.44 + 2.7, 0.51, 0.3, 0.29, { lift: 0.05, t: 0.03 }), on('dark', 0.44 + 2.7, 0.41, 0.3, 0.075, { lift: 0.05, t: 0.01, art: 'wave' }));
       if (begun(s, 'offcut', t)) D.push(...outline(0.44 + 2.7, 0.51, 0.3, 0.29));
+      tagEcho(D, 'cut', echoStart);
     }
   });
   const exported = exportPlay(s, t), playing = begun(s, 'play', t) && !done(s, 'play', t);
@@ -686,6 +778,7 @@ function editedVideo(t) {
   const captionIndex = begun(s, 'play', t) ? 1 : repeated ? repeated + 2 : begun(s, 'caption3', t) ? 2 : begun(s, 'caption2', t) ? 1 : 0;
   const at = clock === null ? begun(s, 'play', t) ? 0.9 : CAPTIONS[captionIndex][0] : clock * 3.9;
   if (done(s, 'clipA', t)) {
+    const echoStart = D.length;
     const draw = screenPainter(D, VIEW);
     if (clock !== null) movie(draw, 0, clock);
     else {
@@ -695,12 +788,14 @@ function editedVideo(t) {
         typedPicture(D, [VIEW[0] + 0.608, VIEW[1] + 0.132, 0.704, 0.148], cap, cap === 'cap3' ? 'Work right.' : cap === 'cap2' ? 'Move well.' : 'Look good.', repeated || begun(s, 'play', t) ? 1 : phase(s, id, t));
       }
     }
+    tagEcho(D, 'clipA', echoStart);
   }
   CAPTIONS.forEach(([x, w], i) => {
     const p = i < 3 ? phase(s, ['caption', 'caption2', 'caption3'][i], t) : repeated >= i - 2 ? 1 : 0;
-    if (p > 0) D.push(on(i === 2 ? 'paper' : 'grey', 0.44 + x, 0.88, w * p, 0.09, { lift: 0.05, t: 0.02 }));
+    if (p > 0) D.push({ ...on(i === 2 ? 'paper' : 'grey', 0.44 + x, 0.88, w * p, 0.09, { lift: 0.05, t: 0.02 }), echo: i < 3 ? ['caption', 'caption2', 'caption3'][i] : 'captions' });
   });
   if (begun(s, 'music', t)) {
+    const echoStart = D.length;
     const p = eased(s, 'music', t), target = [0.45, 0.16, 3.88, 0.17], r = rectMix(BINS[3], target, p);
     if (!done(s, 'music', t)) { const pc = on('dark', ...r, { lift: 0.08, t: 0.02, art: 'wave' }); pc.where = 'travel'; D.push(pc); }
     else {
@@ -715,8 +810,11 @@ function editedVideo(t) {
       points.slice(1).forEach((b, i) => D.push(bar(points[i], b, { tone: 'paper', line: 0.009, lift: 0.09 })));
       points.forEach(([x, y]) => D.push(on('paper', x - 0.018, y - 0.018, 0.036, 0.036, { lift: 0.095, t: 0.004 })));
     }
+    tagEcho(D, 'music', echoStart);
   }
+  const headStart = D.length;
   if (begun(s, 'clipA', t)) D.push(on('red', 0.44 + at - 0.015, 0.13, 0.03, 0.95, { lift: 0.13, t: 0.01 }), on('red', 0.44 + at - 0.07, 1.01, 0.14, 0.1, { lift: 0.13, t: 0.02 }));
+  tagEcho(D, 'clipA', headStart);
   D.forEach(pc => pc.document = true); P.push(...D);
   const { spans, off } = playbackSpans(s);
   feedScreens(P, t, ['playerWide', 'reel', 'feedSq'], spans, off);
@@ -750,15 +848,17 @@ function editedMotion(t) {
   const draw = screenPainter(D, VIEW);
   const thumb = [0.14, TOP - 0.5, 0.74, 0.416], thumbnail = screenPainter(D, thumb, 0.05, 0.015);
   if (clock === null) {
-    cropPicture(draw, 'paper', [0, 0, 1, 1], undefined, eased(s, 'comp', t));
-    thumbnail('paper', [0, 0, 1, 1]);
+    cropPicture(echoPainter(draw, 'comp'), 'paper', [0, 0, 1, 1], undefined, eased(s, 'comp', t));
+    thumbnail('paper', [0, 0, 1, 1]).echo = 'comp';
     constructedComp(D, VIEW, s, t, born);
-    constructedComp(D, thumb, s, t, born, false);
+    const echoStart = D.length;
+    constructedComp(D, thumb, s, t, born, false); tagEcho(D, 'comp', echoStart);
   } else { animatedComp(draw, 3, clock); animatedComp(thumbnail, 3, clock); }
   ['red', 'grey', 'paper', 'grey'].forEach((tone, i) => {
     if (!born(i + 2)) return;
-    const y = TOP - 0.68 - i * 0.14;
+    const echoStart = D.length, y = TOP - 0.68 - i * 0.14;
     D.push(on(tone, 0.14, y, 0.08, 0.08, { lift: 0.05, t: 0.01 }), on(i ? 'dark' : 'grey', 0.28, y + 0.015, [0.5, 0.36, 0.44, 0.3][i], 0.05, { lift: 0.05, t: 0.01 }));
+    tagEcho(D, ['ball', 'row', 'copies', 'copies'][i], echoStart);
   });
   if (selected) {
     const at = clock === null ? 1.6 : clock * 2.4, pos = clock === null ? quadratic(BALL_FROM, BALL_VIA, BALL, eased(s, 'path', t)) : quadratic(BALL_FROM, BALL_VIA, BALL, EASE.wipe(linear(at, ...LAYERS[2][5])));
@@ -775,12 +875,15 @@ function editedMotion(t) {
   // These handles describe EASE.wipe itself, so the graph and the ball's actual timing agree.
   const bend = eased(s, 'graph', t), g0 = [24, 176], g1 = [216, 24], h0 = rectMix([88, 176 - 152 / 3], [115.2, 176], bend), h1 = rectMix([152, 24 + 152 / 3], [38.4, 24], bend);
   if (done(s, 'path', t)) {
+    const echoStart = D.length;
     for (let i = 0; i < 14; i++) D.push(bar(graphPoint(cubic(g0, h0, h1, g1, i / 14)), graphPoint(cubic(g0, h0, h1, g1, (i + 1) / 14)), { line: 0.95 * 6 / 240, lift: 0.057 }));
     for (const [a, b] of [[g0, h0], [g1, h1]]) { const end = graphPoint(b); D.push(bar(graphPoint(a), end, { tone: 'grey', line: 0.95 * 3 / 240, lift: 0.058 }), dot('grey', ...end, 0.95 * 6 / 240, { lift: 0.06, t: 0.004 })); }
     for (const [x, y] of [g0, g1].map(graphPoint)) D.push(on('paper', x - 0.95 * 8 / 240, y - 0.79 * 8 / 200, 0.95 * 16 / 240, 0.79 * 16 / 200, { lift: 0.065, t: 0.004 }));
     [0.5, 0.32].forEach((w, i) => D.push(on(i ? 'dark' : 'grey', 3.74, 1.47 - i * 0.09, w, 0.04, { lift: 0.05, t: 0.01 })));
+    tagEcho(D, 'path', echoStart);
   }
   LAYERS.forEach(([kind, tone, name, from, len, keys], i) => {
+    const echoStart = D.length;
     if (!born(i)) return;
     const y = 0.84 - i * 0.14, lit = selected && i === 2;
     if (lit) D.push(on('dark', 0.12, y - 0.02, W - 0.24, 0.13, { lift: 0.035, t: 0.006 }));
@@ -792,10 +895,13 @@ function editedMotion(t) {
       const position = i === 2 && j === 0 ? key * eased(s, 'staggerBall', t) : key;
       if (visible) D.push(icon(lit ? 'kfOn' : 'kf', 1.34 + position - 0.045, y, 0.09, 0.09, lit ? 'grey' : 'dark', 0.063));
     });
+    tagEcho(D, ['make', 'move', 'ball', 'row', 'copies', 'copies'][i], echoStart);
   });
+  const laneStart = D.length;
   const head = 1.34 + (clock !== null ? clock * 2.4 : begun(s, 'play', t) ? 1.6 : 1.45 * eased(s, 'head', t));
   D.push(on('red', head - 0.015, 0.13, 0.03, 0.95, { lift: 0.13, t: 0.01 }), on('red', head - 0.07, 1.01, 0.14, 0.1, { lift: 0.13, t: 0.02 }));
   if (begun(s, 'marquee', t) && !done(s, 'marquee', t)) { const p = eased(s, 'marquee', t); D.push(...outline(1.36, 0.93 - 0.8 * p, 2.1 * p, 0.8 * p, { line: 0.012 })); }
+  tagEcho(D, 'head', laneStart);
   D.forEach(pc => pc.document = true); P.push(...D);
   const { spans, off } = playbackSpans(s); feedScreens(P, t, ['motWide', 'motTall', 'motSq'], spans, off); P.clock = exported;
   return P;
@@ -817,6 +923,22 @@ function drawnFrame(P, r, p, tone = 'paper', diagonals = false, cross = true) {
   if (diagonals) emptyFrame(P, growing, true, 0, cross);
   else P.push(on(tone, ...growing, { lift: 0.06, t: 0.02 }));
 }
+// Rectangles interpolate linearly in wipe progress. Solve their first intersection once in that space;
+// after contact, the styled picture owns the frame and the empty outline never returns.
+function frameContact(s, id, t, from, to, frame) {
+  if (!begun(s, id, t)) return false;
+  let first = 0, last = 1;
+  const pad = 0.03;
+  const bounds = r => [r[0] + r[2] - frame[0] + pad, frame[0] + frame[2] - r[0] + pad, r[1] + r[3] - frame[1] + pad, frame[1] + frame[3] - r[1] + pad];
+  const a = bounds(from), b = bounds(to);
+  for (let i = 0; i < 4; i++) {
+    const d = b[i] - a[i];
+    if (Math.abs(d) < 1e-12) { if (a[i] <= 0) return false; }
+    else if (d > 0) first = Math.max(first, -a[i] / d);
+    else last = Math.min(last, -a[i] / d);
+  }
+  return first <= last && eased(s, id, t) >= first;
+}
 function editedFigma(t) {
   const P = [], D = [], s = SCRIPTS.fig;
   actionCursor(P, s, t);
@@ -824,13 +946,13 @@ function editedFigma(t) {
   P.push(on('dark', PANEL + 0.09, TOP - 0.2, 0.26, 0.05, { lift: 0.05, t: 0.01 }), on('paper', PANEL + 0.43, TOP - 0.2, 0.33, 0.05, { lift: 0.05, t: 0.01 }), on('red', PANEL + 0.43, TOP - 0.265, 0.33, 0.02, { lift: 0.05, t: 0.01 }));
   const tw = 1, tx = TOOL_X, tools = ['tArrow', 'tHash', 'tRect', 'tPen', 'tType', 'tChat'], lit = P.tool === 'frame' ? 1 : P.tool === 'rectangle' ? 2 : P.tool === 'type' ? 4 : 0;
   tools.forEach((art, i) => { const x = tx + 0.065 + i * 0.15; if (i === lit) P.push(on('red', x - 0.02, 0.165, 0.17, 0.17, { lift: 0.09, t: 0.012 })); P.push(icon(art, x, 0.185, 0.13, 0.13, i === lit ? 'red' : 'night', i === lit ? 0.103 : 0.091)); });
-  const wireArts = ['wireWide', 'wireTall', 'wireTall2'];
+  const wireArts = ['wireWide', 'wireTablet', 'wireTall'];
   FIG.wires.forEach((r, i) => {
-    if (done(s, 'frame' + i, t)) D.push(on('grey', r[0], r[1] + r[3] + 0.035, i ? 0.17 : 0.26, 0.03, { lift: 0.05, t: 0.008 }));
-    if (done(s, 'details', t)) { D.push(on('paper', ...r, { lift: 0.06, t: 0.02, art: wireArts[i] })); return; }
+    if (done(s, 'frame' + i, t)) D.push({ ...on('grey', r[0], r[1] + r[3] + 0.015, i ? 0.17 : 0.26, 0.03, { lift: 0.05, t: 0.008 }), echo: 'frame' + i });
+    if (done(s, 'details', t)) { D.push({ ...on('paper', ...r, { lift: 0.06, t: 0.02, art: wireArts[i] }), echo: 'details' }); return; }
     drawnFrame(D, r, eased(s, 'frame' + i, t));
     if (i === 0) {
-      const box = inRect(r, HERO_REGION); drawnFrame(D, box, eased(s, 'pictureBox', t), 'grey');
+      const box = inRect(r, HERO_REGION); if (!done(s, 'pictureBox', t)) drawnFrame(D, box, eased(s, 'pictureBox', t), 'grey');
       if (done(s, 'pictureBox', t)) pictureRegion(D, r, wireArts[i], HERO_REGION);
       if (begun(s, 'heading', t)) {
         const birth = D.length;
@@ -857,16 +979,17 @@ function editedFigma(t) {
   const clock = exportPlay(s, t);
   FIG.designs.forEach((r, i) => {
     if (!begun(s, 'copies', t)) return;
-    const p = eased(s, 'copies', t), place = rectMix(FIG.wires[i], r, p), suffix = ['Wide', 'Tall', 'Tall2'][i];
+    const p = eased(s, 'copies', t), place = rectMix(FIG.wires[i], r, p), suffix = ['Wide', 'Tablet', 'Tall'][i];
     let art = wireArts[i];
     if (begun(s, 'fill' + i, t)) art = 'uiBuild1' + suffix;
     if (done(s, 'hero', t)) art = 'uiBuild2' + suffix;
     if (done(s, 'name', t)) art = 'uiBuild3' + suffix;
-    if (begun(s, 'accent' + i, t)) art = ['uiWide', 'uiTall', 'uiTall2'][i];
+    if (begun(s, 'accent' + i, t)) art = ['uiWide', 'uiTablet', 'uiTall'][i];
     const pc = on('ink', ...place, { lift: 0.06 + 0.08 * Math.sin(Math.PI * p), t: 0.02, art });
     if (!done(s, 'copies', t)) { pc.where = 'travel'; pc.action = 'copies'; }
+    pc.echo = 'copies';
     if (clock === null) D.push(pc);
-    if (done(s, 'copies', t)) D.push(on('grey', r[0], r[1] + r[3] + 0.035, i ? 0.17 : 0.26, 0.03, { lift: 0.05, t: 0.008 }));
+    if (done(s, 'copies', t)) D.push({ ...on('grey', r[0], r[1] + r[3] + 0.015, i ? 0.17 : 0.26, 0.03, { lift: 0.05, t: 0.008 }), echo: 'copies' });
     if (i === 0 && begun(s, 'name', t) && !done(s, 'name', t)) {
       const f = phase(s, 'name', t) * 14;
       typedPicture(D, inRect(r, [18 / 480, 74 / 300, 160 / 480, 38 / 300]), 'siteName0', 'Danial', clamp(f / 6, 0, 1), { tone: 'ink', colour: 'paper' });
@@ -874,10 +997,10 @@ function editedFigma(t) {
     }
     if (clock !== null) {
       const draw = screenPainter(D, r, 0.06, 0.02);
-      if (!i) draw('ink', [0, 0, 1, 1], 'uiBoard' + Math.min(3, Math.floor(clock * 4)));
-      else phonePrototype(draw, [0, 0, 1, 1], i === 1 ? 'uiTall' : 'uiTall2', i === 1 ? 'uiTall2' : 'uiTall', clock);
+      prototype(draw, i, clock, false);
     }
   });
+  for (const pc of D) if (pc.where !== 'travel') pc.canvas = true;
   if (!begun(s, 'hero', t)) P.push(on('ink', ...HERO_SOURCE, { lift: 0.07, t: 0.015, art: 'heroSource' }));
   else if (!done(s, 'hero', t)) dragPicture(D, s, 'hero', t, HERO_SOURCE, inRect(FIG.designs[0], HERO_REGION), 'heroSource');
   if (begun(s, 'hotspot', t)) {
@@ -885,18 +1008,23 @@ function editedFigma(t) {
     const end = rectMix(FIG.from, FIG.to, eased(s, 'link', t)), reach = Math.min(0.16, Math.hypot(end[0] - FIG.from[0], end[1] - FIG.from[1]) / 3), along = p => cubic(FIG.from, [FIG.from[0] + reach, FIG.from[1]], [end[0] - reach, end[1]], end, p);
     if (begun(s, 'link', t)) for (let i = 0; i < 8; i++) D.push(bar(along(i / 8), along((i + 1) / 8)));
     if (done(s, 'link', t)) D.push(bar(FIG.to, [FIG.to[0] - 0.07, FIG.to[1] + 0.05]), bar(FIG.to, [FIG.to[0] - 0.07, FIG.to[1] - 0.05]));
-    if (clock !== null && clock % 0.5 < 0.12) D.push(dot('paper', ...along(EASE.wipe((clock % 0.5) / 0.12)), 0.025, { lift: 0.11, t: 0.006, overlay: true }));
+    
   }
+  for (const pc of D) if (pc.where !== 'travel') pc.canvas = true;
+  const panelStart = D.length;
   const count = begun(s, 'panel', t) ? Math.min(5, 1 + Math.floor(phase(s, 'panel', t) * 5)) : 0, ly = TOP - 0.9;
   if (count > 0) D.push(on('red', PANEL + 0.09, TOP - 0.54, 0.15, 0.15, { lift: 0.05, t: 0.015 }), icon('pPlay', PANEL + 0.12, TOP - 0.51, 0.09, 0.09, 'red', 0.066), on('grey', PANEL + 0.31, TOP - 0.49, 0.4, 0.045, { lift: 0.05, t: 0.01 }));
   if (count > 1) { D.push(on('dark', PANEL + 0.06, ly, 0.73, 0.22, { lift: 0.04, t: 0.008 }), on('grey', PANEL + 0.11, ly + 0.09, 0.2, 0.045, { lift: 0.06, t: 0.01 }), on('paper', PANEL + 0.48, ly + 0.09, 0.26, 0.045, { lift: 0.06, t: 0.01 }), bar([PANEL + 0.35, ly + 0.112], [PANEL + 0.44, ly + 0.112], { line: 0.014, lift: 0.06 }), bar([PANEL + 0.44, ly + 0.112], [PANEL + 0.405, ly + 0.147], { line: 0.014, lift: 0.06 }), bar([PANEL + 0.44, ly + 0.112], [PANEL + 0.405, ly + 0.077], { line: 0.014, lift: 0.06 })); }
-  if (count > 2) D.push(icon('graph', PANEL + 0.09, 0.56, 0.67, 0.56));
+  if (count > 2) D.push(icon('interaction', PANEL + 0.09, 0.56, 0.67, 0.56));
   [0.5, 0.32].forEach((w, i) => { if (count > i + 3) D.push(on(i ? 'dark' : 'grey', PANEL + 0.09, 0.42 - i * 0.1, w, 0.045, { lift: 0.05, t: 0.01 })); });
+  tagEcho(D, 'panel', panelStart);
+  const treeStart = D.length;
   const layerCount = begun(s, 'details', t) ? Math.min(10, 3 + Math.floor(phase(s, 'details', t) * 7)) : FIG.wires.filter((_, i) => begun(s, 'frame' + i, t)).length;
   if (layerCount) [0.36, 0.26].forEach((w, i) => D.push(on(i ? 'dark' : 'grey', 0.17, TOP - 0.19 - i * 0.12, w, 0.05, { lift: 0.05, t: 0.01 })));
   TREE.slice(0, layerCount).forEach(([kind, set, len], i) => { const y = TOP - 0.58 - i * 0.145, x = 0.16 + set * 0.1, lit = i === 5 && begun(s, 'hotspot', t); if (lit) D.push(on('dark', 0.11, y - 0.025, 0.66, 0.13, { lift: 0.035, t: 0.006 })); D.push(icon(kind, x, y - 0.005, 0.09, 0.09, lit ? 'dark' : 'night', lit ? 0.042 : 0.051), on(lit ? 'paper' : 'grey', x + 0.13, y + 0.02, len, 0.04, { lift: 0.05, t: 0.01 })); });
+  tagEcho(D, 'details', treeStart);
   D.forEach(pc => pc.document = true); P.push(...D);
-  const { spans, off } = playbackSpans(s); feedScreens(P, t, ['siteWide', 'siteTall', 'siteTall2'], spans, off); P.clock = clock;
+  const { spans, off } = playbackSpans(s); feedPrototype(P, t, spans, off); P.clock = clock;
   return P;
 }
 function typePatch(P, rect, key, p, length = 21) {
@@ -923,10 +1051,14 @@ function editedInDesign(t, { at: pages } = {}) {
     rail(P, ['tArrow', 'tType', 'tFrame', 'tRect', 'tLine', 'tDrop'], P.tool === 'frame' ? 2 : P.tool === 'type' ? 1 : P.tool === 'rectangle' ? 3 : 0);
     [ID.spread, ID.cover, ID.post, ID.mail].forEach((r, i) => {
       if (!begun(s, 'frame' + i, t)) return;
+      const id = ['map', 'photo', 'postPhoto', 'mailPhoto'][i];
+      const frame = i ? r : ID.frame;
+      const filled = [['map', DOCK.map, ID.frame], ['photo', DOCK.photo, ID.photo], ['postPhoto', ID.photo, ID.post], ['mailPhoto', ID.photo, ID.mailPhoto]].some(([drag, from, to]) => frameContact(s, drag, t, from, to, frame)), before = D.length;
       if (i === 0 && done(s, 'frame0', t)) {
         for (const rect of [ID.left, ID.right]) D.push({ ...on('ink', ...rect, { lift: 0.06, t: 0.02 }), tones: FLYER.coal });
-        if (!done(s, 'map', t)) emptyFrame(D, ID.frame, false);
-      } else if (!done(s, ['map', 'coverTitle', 'postTitle', 'mailTitle'][i], t)) drawnFrame(D, r, eased(s, 'frame' + i, t), 'night', true, !done(s, ['map', 'photo', 'postPhoto', 'mailPhoto'][i], t));
+        if (!filled) emptyFrame(D, ID.frame, false);
+      } else if (!filled) drawnFrame(D, r, eased(s, 'frame' + i, t), 'night', true);
+      for (const pc of D.slice(before)) if (pc.overlay) pc.emptyFrame = id;
     });
     if (done(s, 'spreadType', t)) D.push(on('ink', ...ID.left, { lift: 0.08, t: 0.004, art: 'kAmL' }), on('ink', ...ID.right, { lift: 0.08, t: 0.004, art: 'kAmR' }));
     else if (begun(s, 'map', t)) {
@@ -950,14 +1082,15 @@ function editedInDesign(t, { at: pages } = {}) {
       const repeat = [1, 4, 5].indexOf(i);
       const visible = i === 0 ? done(s, 'coverTitle', t) : i === 2 ? done(s, 'loc', t) : i === 3 ? done(s, 'spreadType', t) : begun(s, 'pages', t) && (t - action(s, 'pages').start) / PACE >= repeat * 0.07;
       if (!visible) return;
-      const y = TOP - 0.13 - (i + 1) * th - i * 0.1;
+      const echoStart = D.length, y = TOP - 0.13 - (i + 1) * th - i * 0.1;
       if (i === 3) D.push(on('red', mid - tw - 0.03, y - 0.03, tw * 2 + 0.06, th + 0.06, { lift: 0.05, t: 0.01 }));
       if (left) D.push(on('ink', mid - tw, y, tw, th, { lift: 0.065, t: 0.008, art: left }));
       if (right) D.push(on('ink', mid, y, tw, th, { lift: 0.065, t: 0.008, art: right }));
+      tagEcho(D, ['coverTitle', 'pages', 'loc', 'spreadType', 'pages', 'pages'][i], echoStart);
     });
     if (begun(s, 'loc', t) && !done(s, 'loc', t)) { const a = action(s, 'loc'); travel(P, 'loc', DOCK.loc, ID.loc, t, a.start, a.end); }
     if (begun(s, 'photo', t) && !done(s, 'coverTitle', t)) {
-      const a = action(s, 'photo'); travel(P, 'photo', DOCK.photo, ID.photo, t, a.start, a.end);
+      if (!done(s, 'photo', t)) dragPicture(P, s, 'photo', t, DOCK.photo, ID.photo, 'coverImage');
       if (done(s, 'photo', t)) {
         // Cropped regions keep the final photograph and woven ground at their approved measures.
         D.push(on('ink', ...ID.cover, { lift: 0.084, t: 0.004, art: begun(s, 'coverTitle', t) ? 'coverDecor' : done(s, 'blob', t) ? 'coverBlob' : 'coverPhoto' }));
@@ -971,7 +1104,11 @@ function editedInDesign(t, { at: pages } = {}) {
       ['mail', ID.mail, 'eblast', 'idMail', [17.6 / 320, 268 / 472, 284.8 / 320, 28 / 472]],
     ]) {
       if (!begun(s, key + 'Photo', t)) continue;
-      dragPicture(D, s, key + 'Photo', t, ID.photo, key === 'mail' ? ID.mailPhoto : rect, 'kPhoto');
+      if (done(s, key + 'Blob', t) && done(s, key === 'mail' ? 'mailFlyer' : 'postButton', t)) {
+        D.push(on('ink', ...rect, { lift: 0.105, t: 0.004, art }));
+        continue;
+      }
+      if (!done(s, key + 'Photo', t)) dragPicture(D, s, key + 'Photo', t, ID.photo, key === 'mail' ? ID.mailPhoto : rect, key + 'Image');
       if (done(s, key + 'Photo', t)) {
         D.push(on('ink', ...rect, { lift: 0.084, t: 0.004, art: key === 'post' ? 'postPhoto' : 'mailPhoto' }));
         if (begun(s, key + 'Title', t)) {
@@ -986,7 +1123,6 @@ function editedInDesign(t, { at: pages } = {}) {
           else if (p > 0 && p < 1) D.push(...outline(r[0], r[1] + r[3] * (1 - p), r[2] * p, r[3] * p, { tone: 'grey', line: 0.01 }));
         }
         if (key === 'mail' && begun(s, 'mailFlyer', t)) typePatch(D, inRect(rect, [17.6 / 320, 416 / 472, 105 / 320, 29 / 472]), 'idFlyer', phase(s, 'mailFlyer', t), 14);
-        if (done(s, key + 'Blob', t) && done(s, key === 'mail' ? 'mailFlyer' : 'postButton', t)) D.push(on('ink', ...rect, { lift: 0.105, t: 0.004, art }));
       }
     }
   }
@@ -1034,7 +1170,7 @@ function editedIllustrator(t) {
   [FLYER.gold, FLYER.lite, 'paper', FLYER.coal, FLYER.black, 'grey'].forEach((tone, i) => { const pc = on(typeof tone === 'string' ? tone : 'paper', PANEL + 0.09 + i % 3 * 0.235, TOP - 0.3 - Math.floor(i / 3) * 0.235, 0.2, 0.2, { lift: 0.05, t: 0.02 }); if (typeof tone !== 'string') pc.tones = tone; P.push(pc); });
   P.push(icon('aa', PANEL + 0.09, TOP - 1.06, 0.5, 0.34));
   const layerCount = begun(s, 'board0', t) ? begun(s, 'pins', t) ? 4 : begun(s, 'block', t) ? 3 : begun(s, 'street', t) ? 2 : 1 : 0;
-  [0.67, 0.5, 0.6, 0.42].slice(0, layerCount).forEach((w, i) => D.push(on(i ? 'dark' : 'grey', PANEL + 0.09, TOP - 1.4 - i * 0.2, w, 0.1, { lift: 0.05, t: 0.02 })));
+  [0.67, 0.5, 0.6, 0.42].slice(0, layerCount).forEach((w, i) => D.push({ ...on(i ? 'dark' : 'grey', PANEL + 0.09, TOP - 1.4 - i * 0.2, w, 0.1, { lift: 0.05, t: 0.02 }), echo: ['board0', 'street', 'block', 'pins'][i] }));
   [AI.upper, AI.lower].forEach((r, i) => {
     const p = eased(s, 'board' + i, t), temp = []; drawnFrame(temp, r, p, 'ink'); temp.forEach(pc => { pc.tones = FLYER.coal; pc.p[2] -= 0.005 * U; }); D.push(...temp);
   });
@@ -1059,7 +1195,7 @@ function editedIllustrator(t) {
   else if (done(s, 'cityLabels', t)) D.push(on('ink', ...AI.lower, { lift: 0.06, t: 0.02, art: 'kLoc' }));
   else {
     if (begun(s, 'block', t)) {
-      const r = inRect(AI.lower, [660 / 1352, 16 / 850, 62 / 1352, 68 / 850]), p = eased(s, 'block', t); drawnFrame(D, r, p, 'dark');
+      const r = inRect(AI.lower, [660 / 1352, 16 / 850, 62 / 1352, 68 / 850]), p = eased(s, 'block', t); if (!done(s, 'block', t)) drawnFrame(D, r, p, 'dark');
       if (done(s, 'block', t)) mapRegion(D, AI.lower, 'locBlocks', CITY_BLOCKS[0], 1352, 850);
     }
     if (begun(s, 'blocks', t)) { const n = Math.min(CITY_BLOCKS.length - 1, 1 + Math.floor(phase(s, 'blocks', t) * (CITY_BLOCKS.length - 1))); CITY_BLOCKS.slice(1, n + 1).forEach(r => mapRegion(D, AI.lower, 'locBlocks', r, 1352, 850)); }
@@ -1073,7 +1209,7 @@ function editedIllustrator(t) {
   }
   if (begun(s, 'close', t) && !done(s, 'closeBack', t)) {
     const p = begun(s, 'closeBack', t) ? 1 - eased(s, 'closeBack', t) : eased(s, 'close', t);
-    D.push(on('ink', ...rectMix(AI.frame, AI.close, p), { lift: 0.075 + 0.08 * Math.sin(Math.PI * p), t: 0.02, art: 'kLocClose' }));
+    D.push({ ...on('ink', ...rectMix(AI.frame, AI.close, p), { lift: 0.075 + 0.08 * Math.sin(Math.PI * p), t: 0.02, art: 'kLocClose' }), echo: 'marquee' });
   }
   if (begun(s, 'subway', t) && !begun(s, 'export', t)) {
     const p = eased(s, 'subway', t) * AI.segments.length;
@@ -1091,9 +1227,9 @@ export const SHOW = [
   { key: 'ps', app: 'ps', layout: 'design', craft: 0, len: SCRIPTS.ps.len, still: action(SCRIPTS.ps, 'export').start - 0.001 * PACE },
   { key: 'ai', app: 'ai', layout: 'design', craft: 0, len: SCRIPTS.ai.len, still: action(SCRIPTS.ai, 'export').start - 0.001 * PACE },
   { key: 'id', app: 'id', layout: 'design', craft: 0, len: SCRIPTS.id.len, still: action(SCRIPTS.id, 'leaf2').start + 0.6 * PACE * inverseWipe(0.82) },
-  { key: 'pr', app: 'pr', layout: 'edit', craft: 1, len: SCRIPTS.pr.len, still: playbackSpans(SCRIPTS.pr).land + 1.6 / 3 * PACE },
-  { key: 'ae', app: 'ae', layout: 'edit', craft: 2, len: SCRIPTS.ae.len, still: playbackSpans(SCRIPTS.ae).land + 1.6 / 3 * PACE },
-  { key: 'fig', app: 'fig', layout: 'board', craft: 3, len: SCRIPTS.fig.len, still: playbackSpans(SCRIPTS.fig).land + 1.6 / 3 * PACE },
+  { key: 'pr', app: 'pr', layout: 'edit', craft: 1, len: SCRIPTS.pr.len, still: playbackSpans(SCRIPTS.pr).spans[2][1] + 0.400001 * PACE },
+  { key: 'ae', app: 'ae', layout: 'edit', craft: 2, len: SCRIPTS.ae.len, still: playbackSpans(SCRIPTS.ae).spans[2][1] + 0.400001 * PACE },
+  { key: 'fig', app: 'fig', layout: 'board', craft: 3, len: SCRIPTS.fig.len, still: playbackSpans(SCRIPTS.fig).land + 1.1 * PACE },
 ];
 export const LOOP = SHOW.reduce((sum, scene) => sum + scene.len, 0);
 const starts = SHOW.map((_, i) => SHOW.slice(0, i).reduce((sum, scene) => sum + scene.len, 0));
@@ -1123,6 +1259,8 @@ function build(i, at, o) {
     else pc.clip ??= leftOf(W);
     P.push(pc);
   }
+  // Opaque word pictures keep their approved front faces, but have no shaded side faces.
+  for (const pc of P) if (pc.art === 'wMake' || pc.art === 'wMove') pc.cut = true;
   separateFaces(P);
   return P;
 }
@@ -1160,3 +1298,36 @@ function separateFaces(P) {
 export function frameAt(t, o = {}) { const { i, at } = sceneAt(t); return build(i, at, o); }
 export const SCENES = SHOW.map((scene, i) => (o = {}) => frameAt(starts[i] + scene.still, o));
 export const CRAFT = SHOW.map(scene => scene.craft);
+
+// Anchors use the emitted top faces, including the painter's clearance. No camera lives in this data.
+export function calloutsAt(t) {
+  const { scene, at } = sceneAt(t), key = scene.key;
+  if (!['id', 'pr', 'ae', 'fig'].includes(key)) return [];
+  const s = SCRIPTS[key], timing = playbackSpans(s), exp = action(s, 'export');
+  const ends = key === 'id' ? Array(3).fill(exp.end) : timing.spans.map(span => span[1]);
+  const off = key === 'id' ? action(s, 'pickup').start : timing.off[0];
+  if (at < Math.min(...ends) - 1e-9 || at >= off - 1e-9) return [];
+  const P = frameAt(t), floor = P.filter(pc => pc.where === 'floor');
+  const words = { id: ['Flyer', 'LinkedIn post', 'Email'], pr: ['YouTube', 'TikTok', 'Instagram'], ae: ['Website', 'Story', 'Feed post'], fig: ['Laptop', 'Tablet', 'Phone'] }[key];
+  const rects = key === 'id' ? [[BLOCK.x0, MAT.z, LEAF, DEEP], [BLOCK.x0 + LEAF + GUT, MAT.z, PHONE, DEEP], [BLOCK.x0 + LEAF + 2 * GUT + PHONE, MAT.z, TABLET, DEEP]] : key === 'fig' ? [null, [UI_ROW.tablet, MAT.z, UI_ROW.tabW, ROW], [UI_ROW.phone, MAT.z, UI_ROW.phoneW, ROW]] : [[MAT.x, MAT.z, WIDE, ROW], [MAT.x + WIDE + MAT.gap, MAT.z, SLIM, ROW], [MAT.x + WIDE + SLIM + 2 * MAT.gap, MAT.z, SLIM, ROW]];
+  return words.flatMap((word, i) => {
+    if (at < ends[i]) return [];
+    let mark;
+    if (key === 'fig' && i === 0) {
+      const face = floor.find(pc => pc.lidPicture && pc.art === 'chromeLaptop');
+      // Screen-local left is the end with largest z; down is opposite lidV.
+      const local = [-face.s[0] + 0.08, face.s[1] - 0.06, face.s[2]];
+      mark = quatRotate(face.q, local).map((n, j) => n + face.p[j]);
+    } else {
+      const [x, z, w, d] = rects[i], px = i === 0 ? x + 0.1 : i === 1 ? x + w / 2 : x + w - 0.1, pz = i === 1 ? z + d - 0.06 : z + 0.1;
+      const faces = floor.filter(pc => {
+        if (quatRotate(pc.q, [0, 0, 1])[1] < 1 - 1e-8) return false;
+        const cs = corners(pc), xs = cs.map(p => p[0]), zs = cs.map(p => p[2]);
+        return px >= Math.min(...xs) - 1e-8 && px <= Math.max(...xs) + 1e-8 && pz >= Math.min(...zs) - 1e-8 && pz <= Math.max(...zs) + 1e-8;
+      });
+      mark = [px, Math.max(...faces.map(pc => pc.p[1] + pc.s[2])), pz];
+    }
+    const grow = progress(at, ends[i], ends[i] + 0.25 * PACE);
+    return [{ id: key + '-' + i, words: word, mark, side: i === 2 ? 'right' : 'left', level: i === 0 ? 'up' : 'low', grow, text: grow === 1 ? progress(at, ends[i] + 0.25 * PACE, ends[i] + 0.4 * PACE) : 0 }];
+  });
+}

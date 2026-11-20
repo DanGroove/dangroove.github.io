@@ -1,5 +1,7 @@
 # Motion second pass build record
 
+The CORRECTIONS-2 section is current. Earlier sections are historical checkpoints; their timing, projected-centring rules and prior hardware results do not describe this revision.
+
 Started 19 November 2026 at 20:02 UTC. Stop unfinished stages at about 21:02 UTC.
 
 The approved poses and the browser review in README are the visual evidence. MOTION-2 is the controlling brief. Keep the screen and panel measures, atlas artwork, square composition and bending booklet. Every new construction must end at those measures. Finished still changes must be listed in README.
@@ -78,7 +80,7 @@ Negative controls were run against the real checker, with the temporary stage ed
 
 - R1: restored the premature Offering/Gallery/back rows. Observed failure at 23.830000 s: kOfferL precedes its photo release.
 - R2: restored the same premature row rule. Observed failure at 23.830000 s: page row 1 appeared outside pages.
-- R3: removed the finished-post completion gate, letting kPost appear at title release before its blob. Observed failure at 27.780000 s: kPost precedes its drawn blob.
+- R3: the earlier recorded gate removal was redundant and did not independently prove this rule. That claim is withdrawn. CORRECTIONS-2 below supplies the observed, independent premature-composite control instead.
 - R4: restored whole second/third captions instead of prefixes. Observed failure at 43.150001 s: cap2 first appeared without a typing prefix and caret.
 - R5: restored the hero source's fill0 arrival. Observed failure at 71.980500 s: new heroSource is far from the cursor and action points.
 - R6: restored the map's landed travel piece. Observed failure at 22.590000 s: map is behind a plain overlapping face.
@@ -113,3 +115,107 @@ C16: waits are excluded from the press expression. R8 checks released state, sta
 The existing measuring tool ran once for this build, 2026-11-19T22:40:45.497Z–2026-11-19T22:44:29.375Z: Edge 157.0.4341.60, RTX 4090, WebGL2, no software renderer, ready in 152.5 ms. Both sizes recorded 19,249 frames, median/P95 4.20/4.30 ms, zero >50 ms gaps; worst 4.50/5.10 ms, allocation estimates 152.74/179.44 MiB. Console/network errors and repeat failures: zero. The 569-frame scan flagged 1,355 blink blocks for external review. Output is about 754 KB; the spawned Edge closed and its throwaway profile was removed. The existing contact-sheet scale conflict remains as documented in README. No visual approval, reviewer agents, critique loop, installs, network sources, git commands or site build; only authorized files changed.
 
 Finished 2026-11-19T22:45:56.352Z; started 2026-11-19T22:32:56.838Z; elapsed 12.99 minutes. Final checker last line: all clean. Scope/hash audit confirms only the four authorized source/record files, measurement outputs and scratch evidence changed.
+
+
+## CORRECTIONS-2
+
+Started 19 November 2026 at 23:54:49 UTC. The controlling evidence is the supplied round-two text, the approved compositions retained in the source, the prior review record and the owner’s quoted directions. The mock image files are absent; their text specification is the available reference. This run performs no browser, pixel or hardware review. The prior hardware folder is unchanged and does not certify this revision.
+
+Acceptance carried through this revision: A1–A9, the exact callout words/anchors/timing, the open laptop plus 3:4 tablet and 9:19.5 phone, one synchronized three-second prototype, actual viewport cropping, 0.1-unit canvas clearance, whole-footprint world-x centring, the laptop-only entry exception, independent measurement phases, 70–86 seconds at unchanged PACE 1, five atlas pages, the pixel ceiling, no new fading/bouncing/blur, and a packed file with no external requests/links/addresses. The source object travels through each feed, carry and return; nothing is respawned visually.
+
+Only this prototype folder was written. The four briefs and the protected critique folder were not changed. No outside-repository files or installed skill files were read; the explicit repository-only boundary prevents reopening those skills. The motion/staging principles in the existing project record were retained. The independent visual critique is left with the external reviewer, as this run explicitly forbids local browser review. No git command, install, site build/deploy, network request or desktop-app/browser control was performed. Node/PowerShell/Python were used only for scoped file work and the requested verification.
+
+### Work by item
+
+| Item | Implementation and computed evidence |
+| --- | --- |
+| A1 | Carried post/mail photos stop on release. Finished post/mail pictures replace their construction in one frame, rather than covering pieces still being emitted. Bare crop pictures share the finished artwork’s photograph profiles; their windows maintain aspect through the drag. The cover’s carried photo aperture now matches the full-height image already in the approved cover. Reference points before/after all three photo releases shift by less than 2 px at 130 px/world unit, including face lift. This is a coordinate test, not a pixel comparison. |
+| A2 | Empty outlines and diagonals stop permanently at first carried-picture contact, including the dock rim and line thickness. The overlay flag is retained. Any earlier crossing drag can fill this condition, so another frame’s line cannot cross a carried photo. Dense samples test both overlap and non-return. The map’s finished selection is retained. |
+| A3 | `script()` accepts `start`, defaulting to Export; only InDesign passes the location dock centre. `actionCursor` uses that initial point. No time was added. |
+| A4 | `spreadType` lasts 0.3 s. Its six regions still fill in order, and the Amenities row arrives on completion. R10 samples the loop and seam at 240 Hz. |
+| A5 | Both large motion-word plates use face-only `cut: true`, keeping their existing fronts and removing side faces. The two backgrounds remain opaque paper. The 2x three-pixel edge-band comparison is unrun. |
+| A6 | R5 requires explicit `echo: sourceActionId` at each echo’s emission site; all region exemptions are gone. R8 checks every press against a real 0.05 s window or a continuous pressed action, while retaining wait/Export checks. R9 records emitted face births and checks each action end and +0.1 s for later art covering its document pieces. It includes plain document pieces, excludes named echoes/playback/overlays and equivalent mappings of the same picture, and does not trust the covering face’s document flag. R10 enforces the 0.3-unit step limit at 240 Hz. R9 also exposed two redundant covered plain pieces in the map block and wireframe picture box; those stop when their picture replaces them. |
+| A7 | README now describes the actual post/mail construction and replacement, frames, clocks, labels, Figma layout, timetable and memory. The earlier redundant R3-control claim above is withdrawn; its independent replacement is below. R9/R10 and every final control are recorded here. |
+| A8 | Both players use the specified 5.2e6-pixel DPR formula. The Node player test leaves 1440×900 at 2x and detects removal of the ceiling at 1920×1080. README distinguishes nominal pixels from renderer rounding and states the allocation terms. |
+| A9 | The identifying firm comment is generic. No new firm or agent names are included in source, pictures, records or the packed file. The immutable briefs remain untouched. |
+| B | Pure `calloutsAt(t)` supplies all twelve specified labels, with actual top-face marks, source-derived corners, exact wipes and scene cutoffs. The reused SVG/text overlay has square marks, six-dash deterministic rings, one-bend 45-degree paper leaders and real uppercase Outfit. Both players share it; seeks redraw immediately. InDesign’s land wait is 1.2 s. R11–R14 test words, poses, timing and independent face anchors; the laptop anchor is checked against the lid dimensions, not the last painted progress rail. Parametric layout checks cover conservative word widths, gutters, content models and reduced motion. `tools/browser-check.mjs` supplies the required actual-browser/font/DOM checks and laptop-path review; it has not been run. |
+| C | Floor: +x-facing lid tilted 12 degrees, square deck, simple keyboard/trackpad, 16:10 screen; portrait 3:4 tablet and 9:19.5 phone. The laptop picture is widest, gaps are equal at 0.3 units, footprint is inside the old mat ends/depth, and its world-x centre is 0.200 throughout the labelled hold. Whole/unclipped laptop entry runs 1.6 units in x for 0.5 s with enter ease. Others feed in z; all return in z. Canvas: matching ratios in two 0.86-high rows, retained construction beats, Video hotspot and an On tap / Change to Video / Instant inspector, without a second state frame. All six viewports remain static before the first landing, then use the specified tap/wipe/scroll/card-lift/back sequence on one 3 s export clock; three aspect-specific work-card drawings prevent stretching. Chrome stays fixed. Still is +1.10 s; return is +3.0 s for 0.4 s. Node checks cover device geometry, count, trajectories, centre, canvas rectangles, projected lid polygons and differences at every 0.6 s pair over the cycle. |
+| D1 | Each playback, flicker scan and sheets phase has its own caught error; all are attempted after playback failures. The report stores phase errors, says playback incomplete when needed, and maps any phase failure to exit 1. `--dpr` defaults to 1 and is used by both metric overrides; real backing dimensions/ratio are reported. `--playback-limit` enables the reviewer’s forced-timeout run. Scan capture is the whole hero, including the overlay, and its script-derived windows include labels and laptop entry/return. The browser-free phase fixture uses two failing playbacks, then four synthetic scan frames and a sheets callback; it exercises the actual report formatter. Its negative control proves that an early return before scan/sheets fails. **No invocation of tools/measure.mjs occurred.** |
+
+### Deliberate changes and unrun gates
+
+- The video and motion held stills move 0.016667667 s later. The old phase was 0.533333333 s after the first landing; the last phone lands 0.15 s later and needs a fixed 0.4 s label reveal, finishing at +0.55 s. Holding at +0.550001 s satisfies the new complete-label requirement. At equal playback phase, the first five scenes’ tone/art/geometry/window/clip/shade structures match the incoming snapshot within 1e-8; word face-only cuts are the intentional flag change. This is not a rendered comparison.
+- A cropped copy is reframed as the drag starts, then keeps its destination profile through release. The cover’s carried rectangle is full height rather than the earlier short landscape rectangle. These construction-only adaptations remove the computed drop-registration mismatch while retaining the approved final cover/post/mail artwork.
+- Tall-phone framing may reduce/shift the shared view to reserve the right word column, while preserving the stills’ left fit padding. A clamped upper leader can shorten its diagonal to clear its own words. This is needed because a simple inward gutter clamp could otherwise route the horizontal line through its label. World geometry is unchanged. Actual font/DOM clearance remains an external gate.
+- The requested off-frame laptop start is **not established at every phone height**. In the explicit minimum 390×664 model with a 240 px stage, S=33.609467, the initial laptop left bound is +85.611 px and it is fully on-frame; labels are suppressed because S<34. The exact 1.6-unit path and fit were kept. Forcing an off-frame start at that fit would require a longer path or a further framing change. The real browser’s flexed stage height and off-frame presentation remain for external review; no claim is made that this descriptive target passes on the short phone.
+- Atlas packing omits five obsolete baked UX/UI device drawings, retained as code references. New scrolling pages, aspect-specific cards and photo crops remain within five pages. Revised pages are 2048×1844, 1700, 1800, 1876 and 1244 high: 66.125 MiB base and 88.166667 MiB with mipmaps. README’s conservative cap arithmetic retains the incoming 92.25 MiB atlas allowance plus 16 MiB shadow plus 36 bytes per nominal device pixel: 286.78 MiB (about 287); the actual revised atlas yields 282.69 MiB before integer-rounding overhead. This is allocation arithmetic, not resident memory.
+- Browser rendering, actual-font overlap, the 2x word-edge test, frame-by-frame pixel comparisons, GPU performance/flicker, the forced-short-playback browser run and both D2 hardware runs remain unrun here under the explicit restriction. The old contact-sheet half-size-versus-1600-pixel conflict remains: sheets fit eight frames into the cap, and now report scale relative to actual captured pixels at the requested DPR. No passing visual score is claimed.
+
+### Negative controls
+
+The real checker ran once per temporary edit, then source was restored in `finally`. All final controls below exited 1 and included the intended gate. `--control` bypasses only the README action-table consistency assertion during temporary timing edits; it does not bypass any runtime rule. The D1 control runs the Node phase fixture, not the measurement entry point. Full exact edits and output are also retained in `.scratch/corrections2/controls/results.json` and each case’s JSON. In this table `\n` denotes a real newline; replacements are literal single-site edits in the named context.
+
+| Control | File | Exact before → after | First intended failure |
+| --- | --- | --- | --- |
+| R1 premature photo row | `stage.mjs` | `if (!visible) return;\n      const echoStart` → `if (!visible && !done(s, 'spreadType', t)) return;\n      const echoStart` | `24.050000s (id): R1: kCover precedes its photo release` |
+| R2 premature page row | `stage.mjs` | `if (!visible) return;\n      const echoStart` → `if (!visible && !done(s, 'spreadType', t)) return;\n      const echoStart` | `24.050000s (id): R2: page row 0 appeared outside coverTitle` |
+| R3 independent premature composite | `stage.mjs` | `if (done(s, key + 'Blob', t) && done(s, key === 'mail' ? 'mailFlyer' : 'postButton', t)) {` → `if (done(s, key + 'Photo', t)) {` | `27.480000s (id): R3: kPost precedes its drawn blob` |
+| R4 whole captions | `stage.mjs` | `repeated \|\| begun(s, 'play', t) ? 1 : phase(s, id, t)` → `1` | `43.670000s (pr): R4: cap1 first appeared without a typing prefix and caret` |
+| R5 lane from nowhere | `stage.mjs` | `function editedVideo(t) {\n  const P = [], D = [], s = SCRIPTS.pr;` → `function editedVideo(t) {\n  const P = [], D = [], s = SCRIPTS.pr;\n  if (t >= 12.5 * PACE && t < 12.8 * PACE) P.push({ ...on('paper', 0.45, 0.20, 0.12, 0.12, { lift: 0.3 }), document: true });` | `50.580000s (pr): R5: new paper is far from the cursor and action points` |
+| R5 panel from nowhere | `stage.mjs` | `function editedInDesign(t, { at: pages } = {}) {\n  const P = [], D = [], s = SCRIPTS.id;` → `function editedInDesign(t, { at: pages } = {}) {\n  const P = [], D = [], s = SCRIPTS.id;\n  if (t >= 6.5 * PACE && t < 6.7 * PACE) P.push({ ...on('paper', PANEL + 0.64, 0.12, 0.12, 0.12, { lift: 0.3 }), document: true });` | `25.400000s (id): R5: new paper is far from the cursor and action points` |
+| R6 buried map | `stage.mjs` | `...ID.frame, { lift: 0.08, t: 0.004, art: 'kMap' }` → `...ID.frame, { lift: 0.04, t: 0.004, art: 'kMap' }` | `22.590000s (id): R6: map is behind a plain overlapping face` |
+| R7 wrong accent tool | `stage.mjs` | `id: 'accent' + i, kind: 'set', from: centre(r), duration: 0.05, tool: 'arrow'` → `id: 'accent' + i, kind: 'set', from: centre(r), duration: 0.05` | `75.050500s (fig): R7: accent0 lights tType instead of tArrow` |
+| R8 unbacked press | `stage.mjs` | `  P.action = active?.id;` → `  if (s === SCRIPTS.pr && t >= 12.5 * PACE && t < 12.8 * PACE) P.pressed = true;\n  P.action = active?.id;` | `50.580000s (pr): R8: pressed cursor has no action behind it` |
+| R9 picture over post | `stage.mjs` | `  for (const key of ['map', 'loc', 'photo']) if (!begun` → `  if (t >= action(s, 'postButton').end && t < action(s, 'postButton').end + 0.3 * PACE) D.push(on('ink', ...ID.post, { lift: 0.4, t: 0.004, art: 'kPhoto' }));\n  for (const key of ['map', 'loc', 'photo']) if (!begun` | `28.680000s (id): R9: kPhoto covers the centre of kPost made by postButton` |
+| R9 A1 undone | `stage.mjs` | `if (!done(s, key + 'Photo', t)) dragPicture(D, s, key + 'Photo'` → `dragPicture(D, s, key + 'Photo'` | `27.480000s (id): R9: postImage covers the centre of postPhoto made by postPhoto` |
+| R10 A3 undone | `stage.mjs` | `{ tail: 0, start: centre(DOCK.loc) }` → `{ tail: 0 }` | `18.904167s (id): R10: cursor step exceeds 0.3 at 1/240 s` |
+| R10 A4 undone | `stage.mjs` | `count: 6, duration: 0.3` → `count: 6, duration: 0.08` | `23.770833s (id): R10: cursor step exceeds 0.3 at 1/240 s` |
+| R11 wrong words | `stage.mjs` | `pr: ['YouTube', 'TikTok', 'Instagram']` → `pr: ['Video', 'TikTok', 'Instagram']` | `49.700000s (pr): R11: incorrect label words, side or level` |
+| R12 early label | `stage.mjs` | `timing.spans.map(span => span[1]);` → `timing.spans.map(span => span[1] - 0.2 * PACE);` | `49.505000s (pr): R12: label while its asset moves or is absent` |
+| R13 reversed growth | `stage.mjs` | `const grow = progress(at, ends[i], ends[i] + 0.25 * PACE)` → `const grow = 1 - progress(at, ends[i], ends[i] + 0.25 * PACE)` | `31.983333s (id): R13: label growth decreased` |
+| R14 wrong corner inset | `stage.mjs` | `i === 0 ? x + 0.1` → `i === 0 ? x + 0` | `31.980000s (id): R14: anchor misses its specified face/corner` |
+| Figma device count | `stage.mjs` | `pc.deviceKind = ['laptop', 'tablet', 'phone'][i]` → `pc.deviceKind = ['laptop', 'phone', 'phone'][i]` | `77.990000s (fig): Figma devices: expected laptop, tablet, phone` |
+| Figma canvas tags beside top bar | `stage.mjs` | `r[1] + r[3] + 0.015` → `r[1] + r[3] + 0.035` | `68.713333s (fig): canvas clearance: piece reaches a bar or side panel` |
+| canvas pixel ceiling | `play.mjs` | `Math.min(2, devicePixelRatio \|\| 1, Math.sqrt(5.2e6 / (W * H)))` → `Math.min(2, devicePixelRatio \|\| 1)` | `AssertionError [ERR_ASSERTION]: pixel ceiling: backing store exceeds 5.2 million pixels` |
+| frame clearance A2 undone | `stage.mjs` | `const filled = [[` → `const filled = false && [[` | `22.258333s (id): frame clearance: outline crosses a travelling picture` |
+| word side faces A5 undone | `stage.mjs` | `if (pc.art === 'wMake' \|\| pc.art === 'wMove') pc.cut = true;` → `if (pc.art === 'wMake' \|\| pc.art === 'wMove') pc.cut = false;` | `54.883333s (ae): word side faces: opaque word plate retains a visible side` |
+| Figma canvas playback frozen | `stage.mjs` | `prototype(draw, i, clock, false);` → `prototype(draw, i, 0, false);` | `77.840000s (fig): Figma motion: canvas design unchanged after 0.6 s` |
+| Figma lid clearance | `stage.mjs` | `...device(x, MAT.z, w, ROW, undefined, { rim: g.rim, round: 0.03 })[0], deviceBody: true` → `...device(x, MAT.z, w, ROW, undefined, { rim: g.rim, round: 0.03 })[0], deviceBody: true, lid: i === 1` | `77.446667s (fig): laptop clearance: lid overlaps canvas, Export or tablet` |
+| Figma world centring | `stage.mjs` | `left = screenMiddle - width / 2` → `left = screenMiddle + 0.1 - width / 2` | `AssertionError [ERR_ASSERTION]: fig: footprint is not centred in world x` |
+| Figma tablet x drift | `stage.mjs` | `feed(P, pieces, t, ...spans[i]);\n    }` → `for (const pc of pieces) pc.p[0] += 0.1 * Math.sin(Math.PI * linear(t, ...spans[i]));\n      feed(P, pieces, t, ...spans[i]);\n    }` | `AssertionError [ERR_ASSERTION]: feed path: only the laptop entry may move in x` |
+| photo registration | `stage.mjs` | `key === 'mail' ? ID.mailPhoto : rect, key + 'Image'` → `key === 'mail' ? ID.mailPhoto : rect, 'kPhoto'` | `27.480000s (id): photo registration: missing carried or styled photograph` |
+| label gutter framing | `labels.mjs` | `if (view.W >= 720) return view;` → `if (view.W >= 0) return view;` | `50.250001s (pr): label layout: horizontal leader crosses its own words` |
+| R14 laptop wrong face | `stage.mjs` | `floor.find(pc => pc.lidPicture && pc.art === 'chromeLaptop')` → `floor.filter(pc => pc.lidPicture).at(-1)` | `77.840000s (fig): R14: anchor misses its specified face/corner` |
+| Figma phone aspect | `stage.mjs` | `phoneW = (ROW - rim * 2) * 9 / 19.5 + rim * 2` → `phoneW = (ROW - rim * 2) * 9 / 18 + rim * 2` | `77.990000s (fig): Figma device geometry: wrong screen ratios or picture sizes` |
+| measurement phase failure path | `tools/measure-phases.mjs` | `  await phase('flicker scan', scan);` → `  if (report.phases.some(p => !p.complete)) return false;\n  await phase('flicker scan', scan);` | `AssertionError [ERR_ASSERTION]: measurement phases: failed playback skipped scan/sheets` |
+| Figma early tap clock | `stage.mjs` | `if (p < 0) return { at: 0, scroll: 0, video: 0, lifted: false, tap: null };` → `if (false) return { at: 0, scroll: 0, video: 0, lifted: false, tap: null };` | `77.346667s (fig): Figma clock: prototype taps before the shared export clock starts` |
+| Figma laptop playback frozen | `stage.mjs` | `prototype(lidPainter(pieces), 0, t < spans[0][1] ? -1 : clock);` → `prototype(lidPainter(pieces), 0, t < spans[0][1] ? -1 : 0);` | `77.840000s (fig): Figma motion: device picture unchanged after 0.6 s` |
+
+The first trial R3 control changed the blob action kind and hit a cursor-endpoint assertion before R3. It is not counted as R3 evidence. The final premature-composite replacement above fails R3 on its own, without a redundant gate removal. That discarded trial’s JSON is marked superseded.
+
+### Derived timetable and final evidence
+
+| Scene | Global start | Length | Local still | Global still |
+| --- | ---: | ---: | ---: | ---: |
+| ps | 0.000000 | 7.500000 | 6.549000 | 6.549000 |
+| ai | 7.500000 | 11.400000 | 9.239000 | 16.739000 |
+| id | 18.900000 | 19.180000 | 16.277961 | 35.177961 |
+| pr | 38.080000 | 15.220000 | 12.170001 | 50.250001 |
+| ae | 53.300000 | 14.030000 | 10.980001 | 64.280001 |
+| fig | 67.330000 | 13.910000 | 11.610000 | 78.940000 |
+
+Loop: **81.240 seconds**, unchanged PACE 1. InDesign’s reading still has no labels; all labels in the last three stills have grow=1 and text=1. The structural snapshot and conditional short-stage computation are in `.scratch/corrections2/structure.json`.
+
+Final positive Node output:
+
+```text
+R9–R14 sampled: occlusion, cursor continuity, labels, landed poses, wipes, anchors; Figma devices, motion and canvas/lid clearance
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5503 frames, 378883 pieces (max 183); 5 atlas pages; loop 81.240s
+ps: 7.500s, ai: 11.400s, id: 19.180s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+all clean
+```
+
+The separate phase fixture passes without a browser. The packed preview is one offline file at `.scratch/preview.html`; its module parses, local fonts/styles/modules are embedded, and the static checks find no link/resource/address-bearing attributes or network APIs. No browser claim follows from these Node checks.
+
+Completed 2026-11-20T01:00:02.016Z. All 33 final controls caught their intended gate; the final packed artifact is 358295 bytes.

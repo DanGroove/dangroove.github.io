@@ -3,7 +3,8 @@ import { makeCamera, dot } from '../../../public/journey/hero/engine.mjs';
 import { createRenderer } from './sq.mjs';
 import { corners } from './kit.mjs';
 import { makeAtlas, fontsReady } from './art.mjs';
-import { SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt } from './stage.mjs';
+import { SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt } from './stage.mjs';
+import { createCallouts } from './labels.mjs';
 
 const query = new URLSearchParams(location.search);
 const num = (key, fallback) => query.has(key) && Number.isFinite(+query.get(key)) ? +query.get(key) : fallback;
@@ -12,6 +13,7 @@ const canvas = hero.querySelector('[data-art]'), stage = hero.querySelector('[da
 const crafts = [...hero.querySelectorAll('[data-craft]')], pause = hero.querySelector('[data-pause]');
 const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 const renderer = createRenderer(canvas), cam = makeCamera(num('yaw', 0), num('pitch', 0));
+const callouts = createCallouts(hero);
 const starts = SHOW.map((_, i) => SHOW.slice(0, i).reduce((sum, scene) => sum + scene.len, 0));
 const stills = [2, 3, 4, 5];
 
@@ -24,21 +26,25 @@ for (const make of SCENES) for (const pc of make()) for (const c of corners(pc))
 const need = { w: x1 - x0 + 0.5, h: y1 - y0 + 0.5, x: (x0 + x1) / 2, y: (y0 + y1) / 2 };
 const wrap = t => ((t % LOOP) + LOOP) % LOOP;
 let t = query.has('t') ? wrap(num('t', 0)) : reduced.matches ? starts[2] + SHOW[2].still : 0;
-let stopped = query.has('t'), visible = true, ready = false, request = 0, previous = null;
+let stopped = query.has('t'), visible = true, ready = false, request = 0, previous = null, lastView;
 
 function draw() {
   const h = hero.getBoundingClientRect(), b = stage.getBoundingClientRect();
   if (!b.width || !b.height || !h.width || !h.height) return;
   const S = Math.min(b.width / need.w, b.height / need.h);
   const cx = b.left - h.left + b.width / 2 - S * need.x, cy = b.top - h.top + b.height / 2 + S * need.y;
-  renderer.draw(frameAt(t), { W: h.width, H: h.height, dpr: Math.min(2, devicePixelRatio || 1), S, cx, cy, cam }, { outline: 0, floor: { ...POOL, radius: num('pool', 4.8) } });
+  const W = h.width, H = h.height, dpr = Math.min(2, devicePixelRatio || 1, Math.sqrt(5.2e6 / (W * H)));
+  const view = callouts.fit({ W, H, dpr, S, cx, cy, cam }, need, b.left - h.left), pieces = frameAt(t);
+  lastView = view;
+  renderer.draw(pieces, view, { outline: 0, floor: { ...POOL, radius: num('pool', 4.8) } });
+  callouts.draw(calloutsAt(t), pieces, view, t, reduced.matches);
   hero.classList.remove('is-entering');
   const { scene } = sceneAt(t);
   crafts.forEach((c, i) => i === scene.craft ? c.setAttribute('aria-current', 'true') : c.removeAttribute('aria-current'));
   pause.textContent = stopped || reduced.matches ? 'Play' : 'Pause';
-  const at = [BLOCK.x0, BLOCK.x1].flatMap(x => [BLOCK.z0, BLOCK.z1].flatMap(z => [0, BLOCK.up].map(y => [h.left + cx + S * dot(cam.r, [x, y, z]), h.top + cy - S * dot(cam.u, [x, y, z])])));
+  const at = [BLOCK.x0, BLOCK.x1].flatMap(x => [BLOCK.z0, BLOCK.z1].flatMap(z => [0, BLOCK.up].map(y => [h.left + view.cx + view.S * dot(cam.r, [x, y, z]), h.top + view.cy - view.S * dot(cam.u, [x, y, z])])));
   const lay = [Math.min(...at.map(p => p[0])), Math.min(...at.map(p => p[1])), Math.max(...at.map(p => p[0])), Math.max(...at.map(p => p[1]))].map(Math.round);
-  window.__need = { ...need, S, box: [Math.round(b.width), Math.round(b.height)], lay };
+  window.__need = { ...need, S: view.S, box: [Math.round(b.width), Math.round(b.height)], lay };
 }
 
 function running() { return ready && !stopped && !reduced.matches && visible && !document.hidden; }
@@ -59,7 +65,7 @@ function seek(time) {
   stopped = true; t = wrap(time); schedule();
   if (ready) draw();
 }
-window.__hero = { seek, get t() { return t; }, LOOP, SHOW };
+window.__hero = { seek, get t() { return t; }, get callouts() { return callouts.layout; }, get view() { return lastView; }, get pieces() { return frameAt(t); }, LOOP, SHOW };
 
 function choose(craft) {
   const i = reduced.matches || stopped ? stills[craft] : SHOW.findIndex(s => s.craft === craft);

@@ -77,7 +77,7 @@ export function previewMarkup() {
   const clean = body.replace(/\s+href=(['"])[\s\S]*?\1/g, '').replace(/<style>[\s\S]*?<\/style>/g, '');
   const faces = Object.fromEntries(['gelasio-400.woff2', 'gelasio-700.woff2', 'rokkitt-800.woff2'].map(file => [file, 'data:font/woff2;base64,' + fs.readFileSync(path.join(TAKE, 'fonts', file)).toString('base64')]));
   return `<title>Journey hero take two</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>${css}</style>
 <style>
 html,body,main{height:100%}

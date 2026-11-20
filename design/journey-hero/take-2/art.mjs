@@ -135,7 +135,7 @@ function site(c, w, h, { craft = 0, wire = false, build = 4 } = {}) {
     for (let i = 0; i < 4; i++) {
       const y = 573 + i * 34.7;
       fill(c, wire ? '#E4E3DF' : C.line, X(64), Y(y - 17.5), 380 * m, Math.max(1, 1.4 * m));
-      bar(i === craft ? hot : soft, X(64), Y(y), 17, 10); bar(i === craft ? word : soft, X(99), Y(y), [126, 46, 60, 42][i], 10);
+      bar(i === craft ? hot : soft, X(64), Y(y), 17, 10); bar(i === craft ? (craft === 1 ? hot : word) : soft, X(99), Y(y), [126, 46, 60, 42][i], 10);
     }
     bar(soft, X(64), B(863), 199, 10); bar(soft, R(1329), B(863), 46, 10);
   } else {
@@ -149,7 +149,7 @@ function site(c, w, h, { craft = 0, wire = false, build = 4 } = {}) {
     bar(soft, X(16), B(486), 316, 9); bar(soft, X(16), B(510), 287, 9);
     for (let i = 0; i < 4; i++) {
       const x = [16, 203][i % 2], y = B([555, 598.5][i >> 1]);
-      bar(i === craft ? hot : soft, X(x), y, 14, 8); bar(i === craft ? word : soft, X(x + 29), y, [116, 43, 55, 39][i], 8);
+      bar(i === craft ? hot : soft, X(x), y, 14, 8); bar(i === craft ? (craft === 1 ? hot : word) : soft, X(x + 29), y, [116, 43, 55, 39][i], 8);
     }
     bar(soft, X(16), B(641), 183, 7); bar(soft, R(331), B(641), 42, 7);
   }
@@ -161,7 +161,7 @@ const sitePhone = craft => ({ w: 300, h: 600, draw(c, w, h) {
   fill(c, C.paper, 100, 586, 100, 5);
 } });
 
-// ---- Dan's 1 King Street W flyer for Lennard, drawn very simply: a 20 page landscape booklet in black, charcoal and two golds.
+// ---- the 1 King Street W flyer, drawn very simply: a 20 page landscape booklet in black, charcoal and two golds.
 // No agent's name or contact details are drawn anywhere: Dan asked for them to be left out.
 // Its faces are Georgia, Rockwell and Helvetica Neue. Gelasio and Rokkitt, open faces of the same build (./fonts), stand in for the first two.
 // A page is drawn in hundredths of an inch, 1100 x 850, and scaled to whatever size its picture has.
@@ -228,6 +228,8 @@ const LOOK = {
   graded: { sky: ['#6E9CD6', '#D9E6F1'], lit: '#EFE4CC', shade: '#C2B394', win: '#473D31', far: '#D9CDB5', glass: '#86A9C8', glass2: '#C6DAEA', dark: '#2B363F', dark2: '#566673', slab: '#8F8C84', road: '#47484C', kerb: '#6A6B6F', mark: '#ECECE8', car: '#F4F4F0', tram: '#C2332B', lamp: '#EDB816' },
   raw: { sky: ['#B5B9BB', '#D2D3D1'], lit: '#D1CDC2', shade: '#AFAA9F', win: '#65625C', far: '#C2BDB2', glass: '#9FA8AD', glass2: '#BDC4C7', dark: '#555A5E', dark2: '#72787B', slab: '#96948F', road: '#6F6F6E', kerb: '#838382', mark: '#C4C4C0', car: '#D6D6D2', tram: '#9A6B66', lamp: '#B49F52' },
 };
+// The copied photograph is reframed for its destination while carried, before the frame style lands.
+export const PHOTO_VIEWS = { cover: { at: 0.47, zoom: 1, drop: 0 }, post: { at: 0.56, zoom: 0.9, drop: 0.14 }, mail: { at: 0.55, zoom: 1, drop: 0 } };
 function street(c, x, y, w, h, { at = 0.45, raw = false, zoom = 1, drop = 0, look } = {}) {
   const T = look || (raw ? LOOK.raw : LOOK.graded);
   c.save(); c.beginPath(); c.rect(x, y, w, h); c.clip();
@@ -440,6 +442,7 @@ function amenities(c, off = 0, { markers = true, labels = true, badge = true } =
 // every picture: its size in px, and how to draw it. A picture with no background of its own is see-through there.
 export const ART = {
   paperTile: { w: 8, h: 8, draw(c, w, h) { fill(c, C.paper, 0, 0, w, h); } },
+  ...Object.fromEntries([['cover', 288, 340], ['post', 400, 400], ['mail', 228, 235]].map(([key, w, h]) => [key + 'Image', { w, h, photoProfile: key, draw(c, w, h) { street(c, 0, 0, w, h, PHOTO_VIEWS[key]); } }])),
   // Frame styles retain the firm's small mark, bands, grounds, frame and divider.
   ...Object.fromEntries([['coverPhoto', 'kCover', true, true], ['coverBlob', 'kCover', false, true], ['coverDecor', 'kCover', false, false], ['postPhoto', 'kPost', true, true], ['mailPhoto', 'eblast', true, true]].map(([key, source, noBuilding, noTab]) => [key, { w: source === 'kCover' ? 440 : source === 'kPost' ? 400 : 320, h: source === 'kCover' ? 340 : source === 'kPost' ? 400 : 472, draw(c, w, h) {
     hideText = true; hideBuilding = noBuilding; hideTabs = noTab;
@@ -455,7 +458,7 @@ export const ART = {
     TYPE_EDGES.idHeading = [8, ...Array.from('Amenities', (_, i) => 8 + c.measureText('Amenities'.slice(0, i + 1)).width)];
     c.translate(-970, -180); ART.kAmR.draw(c, 1100, 850);
   } },
-  ...Object.fromEntries([1, 2, 3].flatMap(build => ['Wide', 'Tall', 'Tall2'].map((shape, i) => ['uiBuild' + build + shape, { w: i ? 180 : 480, h: i ? 390 : 300, draw(c, w, h) { site(c, w, h, { build, craft: i === 2 ? 1 : 0 }); } }]))),
+  ...Object.fromEntries([1, 2, 3].flatMap(build => ['Wide', 'Tablet', 'Tall'].map((shape, i) => ['uiBuild' + build + shape, { w: i ? 180 : 480, h: [300, 240, 390][i], draw(c, w, h) { site(c, w, h, { build }); } }]))),
   heroSource: { w: 226, h: 228, draw(c) { c.translate(-665 / 3, -119 / 3); site(c, 480, 300); } },
   ...Object.fromEntries(['Danial', 'Endrawes'].map((words, i) => ['siteName' + i, { w: 160, h: 38, draw(c) { fill(c, C.ink, 0, 0, 160, 38); recordType(c, 'siteName' + i, words, 59 / 3 - 18, 106 / 3); text(c, words, 59 / 3 - 18, (i ? 426 : 328) / 3 - (i ? 107 : 74), 106 / 3, { fill: C.paper }); } }])),
   ...Object.fromEntries(['Raw', 'Half', 'Levels', 'Sky'].map((step, i) => ['photo' + step, { w: 526, h: 360, draw(c, w, h) {
@@ -483,9 +486,12 @@ export const ART = {
   redBall: { w: 32, h: 32, draw(c) { fill(c, C.paper, 0, 0, 32, 32); disc(c, C.red, 16, 16, 16); } },
   tapDot: { w: 32, h: 32, draw(c) { disc(c, C.paper, 16, 16, 16); } },
   ...Object.fromEntries(['a', 'b', 'c'].flatMap((shot, i) => ['Tall', 'Sq'].map((shape, j) => [(['shotA', 'shotB', 'shotCfx'][i]) + shape, { w: 300, h: j ? 300 : 600, draw(c, w, h) { if (shot === 'a') SHOTS.a(c, w, h, { k: j ? 105 : 172, cap: false }); else if (shot === 'b') SHOTS.b(c, w, h); else SHOTS.c(c, w, h, C.red); } }]))),
-  ...Object.fromEntries([0, 1, 2, 3].map(craft => ['uiCraft' + craft, { w: 480, h: 246, draw(c, w, h) { site(c, w, h, { craft }); } }])),
-  ...Object.fromEntries([0, 1, 2, 3].map(craft => ['uiBoard' + craft, { w: 480, h: 300, draw(c, w, h) { site(c, w, h, { craft }); } }])),
-  ...Object.fromEntries([0, 1].map(craft => ['uiPhone' + craft, { w: 300, h: 500, draw(c, w, h) { site(c, w, h, { craft }); } }])),
+  ...Object.fromEntries(['Wide', 'Tablet', 'Tall'].flatMap((shape, i) => [0, 1].map(craft => ['uiPage' + shape + craft, { w: i ? 180 : 480, h: [420, 336, 546][i], draw(c, w, h) { const vh = h / 1.4; site(c, w, vh, { craft }); fill(c, C.ink, 0, vh, w, h - vh); } }]))),
+  ...Object.fromEntries([['Wide', 152, 100], ['Tablet', 114, 160], ['Tall', 114, 260]].flatMap(([shape, w, h]) => [0, 1, 2].map(i => ['uiWork' + shape + i, { w, h, draw(c, w, h) { fill(c, C.line, 0, 0, w, h); if (!i) SHOTS.a(c, w, h * 0.68, { cap: false }); else if (i === 1) SHOTS.b(c, w, h * 0.68); else SHOTS.c(c, w, h * 0.68); fill(c, C.paper, w * 0.08, h * 0.79, w * 0.60, h * 0.04); fill(c, C.slate, w * 0.08, h * 0.89, w * 0.42, h * 0.03); } }]))),
+  interaction: { w: 200, h: 160, draw(c) { fill(c, C.night, 0, 0, 200, 160); ['On tap', 'Change to Video', 'Instant'].forEach((s, i) => { text(c, s, 10, 30 + i * 45, 17, { w: 400, fill: C.paper, track: 0 }); fill(c, C.line, 10, 39 + i * 45, 180, 1); }); } },
+  chromeLaptop: { w: 480, h: 300, draw(c, w) { fill(c, C.line, 0, 0, w, 24); for (let i = 0; i < 3; i++) disc(c, C.slate, 14 + i * 12, 12, 3); fill(c, C.ink, 120, 5, 240, 14); fill(c, C.slate, 136, 11, 110, 3); } },
+  chromeTablet: { w: 180, h: 240, draw(c, w, h) { fill(c, C.line, 0, 0, w, h * 0.055); fill(c, C.paper, 8, 5, 14, 2); fill(c, C.slate, w - 25, 5, 17, 2); fill(c, C.line, 0, h * 0.965, w, h * 0.035); fill(c, C.paper, w * 0.36, h * 0.98, w * 0.28, 1.5); } },
+  chromeHandset: { w: 180, h: 390, draw(c, w, h) { ART.chromeTablet.draw(c, w, h); fill(c, C.ink, w * 0.4, 3, w * 0.2, 8); } },
   // Chrome contains only the device's furniture. The moving picture is made of pieces underneath.
   chromePlayer: { w: 480, h: 270, draw(c) { playIcon(c, C.paper, 30, 245, 9); fill(c, C.slate, 54, 243, 400, 5); } },
   chromeReel: { w: 300, h: 600, draw(c, w) {
@@ -514,7 +520,7 @@ export const ART = {
   kLocClose: { w: SPOT[2], h: SPOT[3], draw(c, w, h) { c.scale(w / SPOT[2], h / SPOT[3]); c.translate(-SPOT[0], -SPOT[1]); cityMap(c); } },
   // ---- the 1 King Street W booklet: its front cover and the four openings it turns through, and its back cover small, for the pages panel
   kCover: { w: 440, h: 340, draw: page(c => {
-    street(c, 380, 0, 720, 850, { at: 0.47 }); fadeIn(c, 380, 650, 850);
+    street(c, 380, 0, 720, 850, PHOTO_VIEWS.cover); fadeIn(c, 380, 650, 850);
     firmLogo(c); kingLogo(c, 50, 482, 588, true); tab(c, 779, 670, 330, 130, 45, 'Office Space', 'For Sale');
   }) },
   kOfferL: { w: 440, h: 340, draw: page(c => {
@@ -563,7 +569,7 @@ export const ART = {
   }) },
   // ---- the same listing as a LinkedIn post and as an e-blast. Dan left these to me: they follow the flyer loosely.
   kPost: { w: 400, h: 400, draw(c, w, h) {               // the post: the photograph edge to edge, the pattern as a band along the top, the logo over a dark foot
-    c.scale(w / 1000, h / 1000); street(c, 0, 0, 1000, 1000, { at: 0.56, zoom: 0.9, drop: 0.14 });
+    c.scale(w / 1000, h / 1000); street(c, 0, 0, 1000, 1000, PHOTO_VIEWS.post);
     fill(c, K.black, 0, 0, 1000, 150); weave(c, 0, 0, 1000, 150, K.weave, 44); firmLogo(c, K.lite, 56, 48, 214);
     const g = c.createLinearGradient(0, 500, 0, 1000); g.addColorStop(0, 'rgba(10,15,22,0)'); g.addColorStop(0.7, 'rgba(10,15,22,0.9)'); g.addColorStop(1, K.black); c.fillStyle = g; c.fillRect(0, 500, 1000, 500);
     kingLogo(c, 50, 610, 600, true); tab(c, 690, 788, 320, 146, 50, 'Office Space', 'For Sale');
@@ -585,7 +591,7 @@ export const ART = {
     c.scale(w / 800, h / 1180); fill(c, K.coal, 0, 0, 800, 1180);
     fill(c, K.black, 0, 0, 800, 120); weave(c, 0, 0, 800, 120, K.weave, 40); firmLogo(c, K.lite, 44, 34, 196);
     const frame = () => { c.beginPath(); c.roundRect(300, 168, 456, 470, [0, 170, 0, 0]); };
-    c.save(); frame(); c.clip(); street(c, 300, 168, 456, 470, { at: 0.55 }); c.restore(); stroke(c, K.gold, 7); frame(); c.stroke();
+    c.save(); frame(); c.clip(); street(c, 300, 168, 456, 470, PHOTO_VIEWS.mail); c.restore(); stroke(c, K.gold, 7); frame(); c.stroke();
     kingLogo(c, 44, 404, 430, true);
     heading(c, 'Office Space For Sale', 44, 726); fill(c, K.lite, 44, 752, 330, 12); lines(c, K.soft, 44, 786, [712, 690, 520], 9, 17);
     [[150, '1201'], [520, '1502']].forEach(([x, n]) => {
@@ -674,10 +680,10 @@ export const ART = {
   // ---- UX/UI: the page's hero as Figma's frames (wireframes and designs), the same page exported to three screens, and Figma's own bits
   uiWide: { w: 480, h: 300, draw(c, w, h) { site(c, w, h); } },
   uiTall: { w: 180, h: 390, draw(c, w, h) { site(c, w, h); } },
-  uiTall2: { w: 180, h: 390, draw(c, w, h) { site(c, w, h, { craft: 1 }); } },
+  uiTablet: { w: 180, h: 240, draw(c, w, h) { site(c, w, h); } },
   wireWide: { w: 320, h: 200, draw(c, w, h) { site(c, w, h, { wire: true }); } },
   wireTall: { w: 120, h: 260, draw(c, w, h) { site(c, w, h, { wire: true }); } },
-  wireTall2: { w: 120, h: 260, draw(c, w, h) { site(c, w, h, { wire: true, craft: 1 }); } },
+  wireTablet: { w: 120, h: 160, draw(c, w, h) { site(c, w, h, { wire: true }); } },
   siteWide: { w: 480, h: 270, draw(c, w, h) {              // in a browser, on a tablet: the window's bar, then the page
     fill(c, C.line, 0, 0, w, 24); for (let i = 0; i < 3; i++) disc(c, C.slate, 14 + i * 12, 12, 3.4);
     c.fillStyle = C.ink; c.beginPath(); c.roundRect(120, 5, 240, 14, 7); c.fill(); fill(c, C.slate, 136, 10.5, 110, 3);
@@ -768,7 +774,9 @@ export function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
   if (size > 2048 || size < 1 || scale <= 0 || pad < 0) throw new Error('invalid atlas measures');
   const sheets = [[]];
   let x = pad, y = pad, row = 0;
-  for (const [key, a] of Object.entries(ART).sort((p, q) => q[1].h - p[1].h)) {
+  // Retain these old drawings as references; the new prototype never renders their baked device states.
+  const referenceOnly = new Set(['siteWide', 'siteTall', 'siteTall2', 'chromeBrowser', 'chromePhone']);
+  for (const [key, a] of Object.entries(ART).filter(([key]) => !referenceOnly.has(key)).sort((p, q) => q[1].h - p[1].h)) {
     const w = Math.round(a.w * scale), h = Math.round(a.h * scale);
     if (w + 2 * pad > size || h + 2 * pad > size) throw new Error('picture too large: ' + key);
     if (x + w + pad > size) { x = pad; y += row + pad; row = 0; }
@@ -802,3 +810,4 @@ export async function fontsReady() {
   await Promise.all(FACES.map(([family, weight, file]) => { const f = new FontFace(family, `url(${(globalThis.__heroFonts?.[file] || new URL('./fonts/' + file, import.meta.url))})`, { weight }); document.fonts.add(f); return f.load(); }));
   await Promise.all(['800 64px Outfit', '600 32px Outfit', '500 16px Outfit', '400 16px Outfit'].map(f => document.fonts.load(f)));
 }
+

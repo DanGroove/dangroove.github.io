@@ -1,27 +1,35 @@
 // Offline hardware evidence; only this process's isolated browser is controlled.
-// node tools/measure.mjs [--browser <path>] [--out <folder>] [--size 1440x900]
+// node tools/measure.mjs [--browser <path>] [--out <folder>] [--size 1440x900] [--dpr 1] [--playback-limit 360000]
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { inflateSync } from 'node:zlib';
+import { measurePhases } from './measure-phases.mjs';
 import { previewMarkup } from './preview.mjs';
 import { SHOW, SCRIPTS, LOOP, PACE } from '../stage.mjs';
 
 const TAKE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WORK = path.join(TAKE, '.scratch', 'measure');
-const options = { out: path.join(TAKE, 'review', 'hardware'), size: '1440x900' };
+const options = { out: path.join(TAKE, 'review', 'hardware'), size: '1440x900', dpr: 1, 'playback-limit': 360000 };
 for (let i = 2; i < process.argv.length; i++) {
   const key = process.argv[i];
-  if (!['--browser', '--out', '--size'].includes(key) || !process.argv[i + 1]) throw new Error('usage: measure.mjs [--browser <path>] [--out <folder>] [--size 1440x900]');
+  if (!['--browser', '--out', '--size', '--dpr', '--playback-limit'].includes(key) || !process.argv[i + 1]) throw new Error('usage: measure.mjs [--browser <path>] [--out <folder>] [--size 1440x900] [--dpr 1] [--playback-limit 360000]');
   options[key.slice(2)] = process.argv[++i];
 }
+options.dpr = Number(options.dpr); options['playback-limit'] = Number(options['playback-limit']);
+if (!(options.dpr > 0 && options.dpr <= 4) || !(options['playback-limit'] > 0 && Number.isFinite(options['playback-limit']))) throw new Error('invalid DPR or playback limit');
+const contacts = [];
 const firstSize = options.size.match(/^(\d+)x(\d+)$/)?.slice(1).map(Number);
 if (!firstSize || firstSize.some(n => n < 200 || n > 7680)) throw new Error('invalid --size');
 const out = path.resolve(options.out);
-const within = (root, file) => file === root || file.startsWith(root + path.sep);
+const within = (root, file) => {
+  if (process.platform === 'win32') { root = root.toLowerCase(); file = file.toLowerCase(); }
+  return file === root || file.startsWith(root + path.sep);
+};
 if (!within(path.join(TAKE, 'review', 'hardware'), out) && !within(path.join(TAKE, '.scratch'), out)) throw new Error('--out must remain inside review/hardware/ or .scratch/');
+if (within(path.join(TAKE, '.scratch', 'crit'), out)) throw new Error('protected review records are read only');
 await fs.mkdir(WORK, { recursive: true });
 await fs.mkdir(out, { recursive: true });
 const profile = path.join(WORK, 'profile-' + randomUUID());
@@ -36,7 +44,7 @@ const candidates = options.browser ? [path.resolve(options.browser)] : process.p
 let executable;
 for (const candidate of candidates) { try { await fs.access(candidate); executable = candidate; break; } catch {} }
 if (!executable) throw new Error('Microsoft Edge not found; on Linux supply --browser /path/to/chromium');
-const report = { started: new Date().toISOString(), browser: null, card: null, softwareRenderer: null, webgl2: false, readyMs: null, consoleErrors: [], networkViolations: [], sizes: [], windows: [], flicker: { frames: 0, repeatFailures: 0, blinkBlocks: 0, repeatDetails: [], blinkDetails: [] }, sheets: [], limitations: [
+const report = { started: new Date().toISOString(), requestedDpr: options.dpr, phases: [], playbackIncomplete: true, browser: null, card: null, softwareRenderer: null, webgl2: false, readyMs: null, consoleErrors: [], networkViolations: [], sizes: [], windows: [], flicker: { frames: 0, repeatFailures: 0, blinkBlocks: 0, repeatDetails: [], blinkDetails: [] }, sheets: [], limitations: [
   'GPU allocations are arithmetic estimates from measured texture/buffer sizes, not resident memory or process working set; driver/compositor overhead is excluded.',
   'Blink scan uses a non-overlapping 8x8 grid. Every neighbour pixel must match within 3 per RGB channel; the middle block mean absolute difference must exceed 24 in a channel.',
   'Contact frames are half size, then fitted to the 1600-pixel sheet cap when necessary. Scan comparisons retain full stage resolution.',
@@ -46,6 +54,7 @@ let child, socket, session, sequence = 0;
 const pending = new Map(), deadline = Date.now() + 25 * 60 * 1000;
 function checkDeadline() { if (Date.now() > deadline) throw new Error('25-minute measurement limit reached; partial evidence retained'); }
 function command(method, params = {}, target = session) {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return Promise.reject(new Error('No active measurement connection'));
   return new Promise((resolve, reject) => {
     const id = ++sequence, timeout = setTimeout(() => { pending.delete(id); reject(new Error(method + ' timed out')); }, method === 'Runtime.evaluate' ? 8 * 60 * 1000 : 30000);
     pending.set(id, { resolve, reject, timeout });
@@ -139,34 +148,37 @@ const infoExpression = '(' + (function () {
   const m = window.__measurement, gl = m.contexts[0];
   if (!gl) return { webgl2: false, readyMs: m.readyMs };
   const ext = gl.getExtension('WEBGL_debug_renderer_info'), c = gl.canvas, r = c.getBoundingClientRect();
-  return { webgl2: true, readyMs: m.readyMs, vendor: ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR), renderer: ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER), debugRendererInfo: !!ext, samples: gl.getParameter(gl.SAMPLES), depthBits: gl.getParameter(gl.DEPTH_BITS), stencilBits: gl.getParameter(gl.STENCIL_BITS), attributes: gl.getContextAttributes(), textures: m.textures, canvas: { width: gl.drawingBufferWidth, height: gl.drawingBufferHeight, cssWidth: r.width, cssHeight: r.height, devicePixelRatio } };
+  return { webgl2: true, readyMs: m.readyMs, vendor: ext ? gl.getParameter(ext.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR), renderer: ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER), debugRendererInfo: !!ext, samples: gl.getParameter(gl.SAMPLES), depthBits: gl.getParameter(gl.DEPTH_BITS), stencilBits: gl.getParameter(gl.STENCIL_BITS), attributes: gl.getContextAttributes(), textures: m.textures, canvas: { width: gl.drawingBufferWidth, height: gl.drawingBufferHeight, cssWidth: r.width, cssHeight: r.height, devicePixelRatio, backingRatio: gl.drawingBufferWidth / r.width } };
 }).toString() + ')()';
 async function resize(width, height) {
-  await command('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
+  await command('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: options.dpr, mobile: false });
   await evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
 }
 async function playLoop(width, height) {
   checkDeadline(); console.log('Playing one full loop at ' + width + 'x' + height);
   await resize(width, height);
-  const timing = await evaluate('(' + (function () {
+  const timing = await evaluate('(' + (function (limit) {
     return new Promise((resolve, reject) => {
       __hero.seek(0);
       const start = performance.now(), gaps = []; let previous = null, lastHero = 0, moved = 0, frames = 0, late50 = 0;
       const stop = document.querySelector('[data-pause]'); stop.click();
-      const timeout = setTimeout(() => { stop.click(); reject(new Error('Full playback loop exceeded six minutes')); }, 360000);
+      let finished = false;
+      const timeout = setTimeout(() => { finished = true; __hero.seek(__hero.t); reject(new Error('Full playback loop exceeded playback limit')); }, limit);
+      function finish() { finished = true; clearTimeout(timeout); }
       function sample(now) {
+        if (finished) return;
         frames++;
         if (previous !== null) { const gap = now - previous; gaps.push(gap); if (now - start > 1000 && gap > 50) late50++; }
         previous = now; const t = __hero.t; moved += (t - lastHero + __hero.LOOP) % __hero.LOOP; lastHero = t;
         if (moved >= __hero.LOOP - 1e-7) {
-          clearTimeout(timeout); stop.click();
+          finish(); stop.click();
           const sorted = gaps.slice().sort((a, b) => a - b), percentile = p => sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * p) - 1)];
           resolve({ frames, gaps: gaps.length, medianMs: percentile(0.5), p95Ms: percentile(0.95), worstMs: Math.max(...gaps), gapsOver50AfterFirstSecond: late50, heroSeconds: moved, wallSeconds: (now - start) / 1000, clockDriftSeconds: moved - (now - start) / 1000 });
         } else requestAnimationFrame(sample);
       }
       requestAnimationFrame(sample);
     });
-  }).toString() + ')()');
+  }).toString() + ')(' + options['playback-limit'] + ')');
   const info = await evaluate(infoExpression), result = { width, height, timing, memory: memoryAt(info) };
   report.sizes.push(result); console.log(JSON.stringify({ size: width + 'x' + height, ...timing, memoryBytes: result.memory.total }));
 }
@@ -177,19 +189,20 @@ async function capture(time, clip) {
 async function makeSheet(frames, clip, quality = 0.68) {
   return evaluate('(' + (async function (frames, clip, quality) {
     const k = Math.min(0.5, 1600 / (clip.width * 8)), w = Math.floor(clip.width * k), h = Math.floor(clip.height * k), label = 19;
+    let sourceWidth = clip.width;
     const c = document.createElement('canvas'); c.width = w * 8; c.height = Math.ceil(frames.length / 8) * (h + label);
     const ctx = c.getContext('2d'); ctx.fillStyle = '#151314'; ctx.fillRect(0, 0, c.width, c.height); ctx.font = '12px Outfit, sans-serif'; ctx.textBaseline = 'top';
     for (let i = 0; i < frames.length; i++) {
-      const f = frames[i], img = new Image(); img.src = 'data:image/png;base64,' + f.png; await img.decode();
+      const f = frames[i], img = new Image(); img.src = 'data:image/png;base64,' + f.png; await img.decode(); sourceWidth = img.width;
       const x = i % 8 * w, y = Math.floor(i / 8) * (h + label); ctx.drawImage(img, x, y, w, h); ctx.fillStyle = '#F7F6F3'; ctx.fillText(f.scene + '  ' + f.time.toFixed(3) + 's', x + 4, y + h + 3);
     }
-    return { data: c.toDataURL('image/jpeg', quality).split(',')[1], width: c.width, height: c.height, frameScale: k };
+    return { data: c.toDataURL('image/jpeg', quality).split(',')[1], width: c.width, height: c.height, frameScale: w / sourceWidth };
   }).toString() + ')(' + JSON.stringify(frames) + ',' + JSON.stringify(clip) + ',' + quality + ')');
 }
 
 async function scanWindows() {
   await resize(...firstSize);
-  const bounds = await evaluate('(() => { const r = document.querySelector("[data-stage-box]").getBoundingClientRect(); const x = Math.max(0, Math.floor(r.left - 16)), y = Math.max(0, Math.floor(r.top - 16)); return { x, y, width: Math.min(innerWidth - x, Math.ceil(r.right + 16) - x), height: Math.min(innerHeight - y, Math.ceil(r.bottom + 16) - y), scale: 1 }; })()');
+  const bounds = await evaluate('(() => { const r = document.querySelector("[data-hero]").getBoundingClientRect(); return { x: Math.max(0, Math.floor(r.left)), y: Math.max(0, Math.floor(r.top)), width: Math.min(innerWidth, Math.ceil(r.width)), height: Math.min(innerHeight, Math.ceil(r.height)), scale: 1 }; })()');
   report.flicker.clip = bounds; report.flicker.size = firstSize;
   report.flicker.repeatCriterion = 'Fail a frame when >0.001 of pixels differ in any RGB channel by >2 after seeking elsewhere and back.';
   report.flicker.blinkEncoding = 'Each [y,x,count] span names count adjacent 8x8 blocks, starting at screenshot-local (x,y), stepping x by 8. Add clip.x/clip.y for page coordinates.';
@@ -203,6 +216,7 @@ async function scanWindows() {
   for (const window of report.windows) {
     console.log('Scanning ' + window.scene + ' ' + window.from.toFixed(3) + '–' + window.to.toFixed(3));
     const n = Math.floor((window.to - window.from) / window.step + 1e-8), contact = [], rolling = [];
+    contacts.push({ window, contact, bounds });
     let repeats = 0, blinks = 0;
     for (let i = -1; i <= n + 1; i++) {
       checkDeadline(); const t = window.from + i * window.step, first = await capture(t, bounds), image = pngPixels(first);
@@ -219,11 +233,16 @@ async function scanWindows() {
       }
       if (i >= 0 && i % 50 === 0) console.log(window.scene + ': ' + i + '/' + n + ' scan frames');
     }
+    window.frames = n + 1; window.repeatFailures = repeats; window.blinkBlocks = blinks;
+    console.log(window.scene + ': ' + (n + 1) + ' frames, ' + repeats + ' repeat failures, ' + blinks + ' blink blocks');
+  }
+}
+async function writeSheets() {
+  for (const { window, contact, bounds } of contacts) {
+    if (!contact.length) continue;
     const name = window.scene + '-' + window.from.toFixed(3) + '-' + window.to.toFixed(3) + '.jpg', sheet = await makeSheet(contact, bounds);
     await fs.writeFile(path.join(out, name), Buffer.from(sheet.data, 'base64'));
     report.sheets.push({ file: name, scene: window.scene, from: window.from, to: window.to, frames: contact.length, width: sheet.width, height: sheet.height, frameScale: sheet.frameScale });
-    window.frames = n + 1; window.repeatFailures = repeats; window.blinkBlocks = blinks;
-    console.log(window.scene + ': ' + (n + 1) + ' frames, ' + repeats + ' repeat failures, ' + blinks + ' blink blocks');
   }
 }
 const mib = bytes => (bytes / 1048576).toFixed(2) + ' MiB';
@@ -232,12 +251,16 @@ function markdown() {
   let s = '# Journey hero hardware measurement\n\nGraphics card: **' + card.vendor + ' / ' + card.renderer + '**\n\nBrowser: **' + (report.browser?.product || 'unavailable') + '** (' + (report.browser?.revision || '') + ')\n\n';
   s += report.softwareRenderer ? '**SOFTWARE RENDERER: these are software-rendering results, not real-GPU performance evidence.**\n\n' : report.softwareRenderer === false ? 'Software renderer: no known software-renderer name detected.\n\n' : 'Software renderer: unknown.\n\n';
   s += 'WebGL2: ' + report.webgl2 + '. Time from navigation to __ready: ' + (report.readyMs === null ? 'unavailable' : report.readyMs.toFixed(1) + ' ms') + '.\n\nStarted ' + report.started + '; ended ' + report.ended + '. Loop ' + LOOP.toFixed(3) + ' s.\n\n';
+  s += 'Requested device scale factor: ' + report.requestedDpr + '.\n\n';
+  if (report.playbackIncomplete) s += '**playback incomplete**\n\n';
+  for (const phase of report.phases) s += '- ' + phase.name + ': ' + (phase.complete ? 'complete' : 'FAILED: ' + phase.error.replace(/\n/g, ' ')) + '\n';
+  s += '\n';
   if (report.error) s += '**Incomplete: ' + report.error + '**\n\n';
   s += '| CSS size | Frames | Median ms | P95 ms | Worst ms | Gaps >50 ms after 1 s | Hero / wall s | GPU allocation estimate |\n| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n';
   for (const size of report.sizes) { const t = size.timing; s += '| ' + size.width + ' × ' + size.height + ' | ' + t.frames + ' | ' + t.medianMs.toFixed(2) + ' | ' + t.p95Ms.toFixed(2) + ' | ' + t.worstMs.toFixed(2) + ' | ' + t.gapsOver50AfterFirstSecond + ' | ' + t.heroSeconds.toFixed(3) + ' / ' + t.wallSeconds.toFixed(3) + ' | ' + mib(size.memory.total) + ' |\n'; }
   for (const size of report.sizes) {
     const m = size.memory;
-    s += '\n## Memory at ' + size.width + ' × ' + size.height + '\n\nMeasured canvas: ' + m.canvas.width + ' × ' + m.canvas.height + ' pixels; DPR ' + m.canvas.devicePixelRatio + '. MSAA samples: ' + m.samples + '; depth ' + m.depthBits + ' bits; stencil ' + m.stencilBits + ' bits. Depth storage is estimated at ' + m.depthStorageBytesPerPixel + ' bytes per sample.\n\n';
+    s += '\n## Memory at ' + size.width + ' × ' + size.height + '\n\nMeasured canvas: ' + m.canvas.width + ' × ' + m.canvas.height + ' pixels; DPR ' + m.canvas.devicePixelRatio + '; actual backing ratio ' + m.canvas.backingRatio.toFixed(4) + '. MSAA samples: ' + m.samples + '; depth ' + m.depthBits + ' bits; stencil ' + m.stencilBits + ' bits. Depth storage is estimated at ' + m.depthStorageBytesPerPixel + ' bytes per sample.\n\n';
     for (const page of m.atlas) s += '- Atlas ' + page.page + ': ' + page.width + ' × ' + page.height + ', RGBA8 ' + mib(page.base) + ' + mipmaps ' + mib(page.mipmaps) + ' = ' + mib(page.bytes) + '.\n';
     for (const [name, bytes] of Object.entries(m.terms)) s += '- ' + name + ': ' + mib(bytes) + '.\n';
     s += '\nTotal GPU allocation estimate: **' + mib(m.total) + '**. Retained 2D atlas pixel storage adds about ' + mib(m.retainedAtlas2D) + ' outside this total. Shadow-map storage assumes 32 bits for DEPTH_COMPONENT24. This is allocation arithmetic, not measured resident memory.\n';
@@ -288,7 +311,8 @@ try {
   await command('Runtime.enable'); await command('Page.enable'); await command('Network.enable');
   await command('Network.setBlockedURLs', { urls: ['http://*', 'https://*', 'ws://*', 'wss://*', 'ftp://*'] });
   await command('Page.addScriptToEvaluateOnNewDocument', { source: instrumentation });
-  await command('Emulation.setDeviceMetricsOverride', { width: firstSize[0], height: firstSize[1], deviceScaleFactor: 1, mobile: false });
+  await command('Emulation.setDeviceMetricsOverride', { width: firstSize[0], height: firstSize[1], deviceScaleFactor: options.dpr, mobile: false });
+  await command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
   await command('Page.navigate', { url: fileURL });
   for (let n = 0; n < 300; n++) { if (await evaluate('!!window.__ready')) break; if (n === 299) throw new Error('Preview did not become ready within 30 seconds'); await pause(100); }
   const info = await evaluate(infoExpression); report.webgl2 = info.webgl2; report.readyMs = info.readyMs; report.card = { vendor: info.vendor, renderer: info.renderer, debugRendererInfo: info.debugRendererInfo };
@@ -296,10 +320,12 @@ try {
   console.log('Browser: ' + report.browser.product); console.log('Graphics: ' + info.vendor + ' / ' + info.renderer);
   console.log(report.softwareRenderer ? 'SOFTWARE RENDERER — real graphics-card performance is still unmeasured.' : 'No known software renderer detected.'); console.log('Time to ready: ' + info.readyMs.toFixed(1) + ' ms');
   if (!info.webgl2) throw new Error('No WebGL2; controls and still unavailable in this prototype');
-  await playLoop(...firstSize); await playLoop(1920, 1080); await scanWindows();
+  const sizes = [firstSize, ...((firstSize[0] === 1920 && firstSize[1] === 1080) ? [] : [[1920, 1080]])];
+  if (!await measurePhases(report, sizes, playLoop, scanWindows, writeSheets)) process.exitCode = 1;
   if (report.networkViolations.length) throw new Error('Unexpected page network request was blocked; inspect report');
 } catch (error) { report.error = error.stack || String(error); process.exitCode = 1; console.error(report.error); }
 finally {
+  if (!report.phases.length) await measurePhases(report, [firstSize], async () => { throw new Error('Playback unavailable after setup failure'); }, scanWindows, writeSheets).then(ok => { if (!ok) process.exitCode = 1; });
   if (socket?.readyState === WebSocket.OPEN) { try { await Promise.race([command('Browser.close', {}, null), pause(3000)]); } catch {} socket.close(); }
   if (child && child.exitCode === null) { await Promise.race([new Promise(resolve => child.once('exit', resolve)), pause(3000)]); if (child.exitCode === null) { report.terminationFallbackPid = child.pid; child.kill(); await Promise.race([new Promise(resolve => child.once('exit', resolve)), pause(3000)]); } }
   for (const waiter of pending.values()) clearTimeout(waiter.timeout); pending.clear();

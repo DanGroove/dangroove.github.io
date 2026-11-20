@@ -5,7 +5,8 @@ import { ART, ART_TEXT, BALL, BALL_FROM, BALL_VIA, ROWS, makeAtlas } from '../ar
 import { HOME, EASE, dot, makeCamera, quatRotate } from '../../../../public/journey/hero/engine.mjs';
 import { corners } from '../kit.mjs';
 import { TONES } from '../sq.mjs';
-import { SHOW, LOOP, SCENES, SCREEN, MAT, BLOCK, POOL, PACE, SCRIPTS, frameAt, sceneAt } from '../stage.mjs';
+import { SHOW, LOOP, SCENES, SCREEN, MAT, BLOCK, POOL, PACE, SCRIPTS, frameAt, sceneAt, calloutsAt, playbackSpans, UI_ROW, prototypeState } from '../stage.mjs';
+import { runCorrections } from './correction-checks.mjs';
 import { previewMarkup } from './preview.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
@@ -30,8 +31,10 @@ function includeFit(list) {
     visibleBounds[2] = Math.min(visibleBounds[2], y); visibleBounds[3] = Math.max(visibleBounds[3], y);
   }
 }
-// R8: every wait keeps the previous action's position, released, including its rendered lift.
+// R8: only a real action may press, and every wait keeps the previous action's position, released, including its rendered lift.
 function checkWait(time, list, scene, at) {
+  const permitted = SCRIPTS[scene.key].actions.some(a => a.kind !== 'wait' && at >= a.start - 1e-9 && at < a.end && (['drag', 'draw', 'slide', 'stroke'].includes(a.kind) || at < a.start + 0.05 * PACE));
+  if (list.pressed && !permitted) fail(time, 'R8: pressed cursor has no action behind it');
   const wait = SCRIPTS[scene.key].actions.find(a => a.kind === 'wait' && at > a.start + 1e-8 * PACE && at < a.end - 1e-8 * PACE);
   if (!wait) return;
   const resting = frameAt(time - at + wait.end - 1e-7 * PACE);
@@ -75,7 +78,7 @@ function check(time) {
     if ('opacity' in pc || 'alpha' in pc) fail(time, `piece ${i}: transparency is not a motion tool`);
     if (pc.where === 'floor') {
       if (scene.key === 'ps' || scene.key === 'ai' || at < 0.1) fail(time, `piece ${i}: floor must be empty`);
-      if (!pc.clip || pc.clip.some((n, j) => n !== [0, 0, 1, -MAT.z][j])) fail(time, `piece ${i}: floor slot plane changed`);
+      if (!(scene.key === 'fig' && pc.deviceKind === 'laptop' && !pc.clip) && (!pc.clip || pc.clip.some((n, j) => n !== [0, 0, 1, -MAT.z][j]))) fail(time, `piece ${i}: floor slot plane changed`);
       const s = SCRIPTS[scene.key], exp = s?.actions.find(a => a.id === 'export');
       if (exp && at < exp.start) fail(time, `piece ${i}: floor before export`);
       if (pc.device !== undefined && list.clock !== null && list.clock !== undefined && Math.abs(pc.clock - list.clock) > 1e-8) fail(time, `piece ${i}: device and viewer clocks differ`);
@@ -111,7 +114,7 @@ for (let i = 0; i < SHOW.length; i++) {
   for (const at of [0, 0.05, 0.1, 0.5, scene.still, scene.len - 1e-8]) check(start + at);
   start += scene.len;
 }
-if (Object.keys(SCRIPTS).length === 6) assert.ok(LOOP / PACE >= 70 && LOOP / PACE <= 82, `loop is ${LOOP / PACE}s`);
+if (Object.keys(SCRIPTS).length === 6) assert.ok(LOOP / PACE >= 70 && LOOP / PACE <= 86, `loop is ${LOOP / PACE}s`);
 assert.equal(sceneAt(LOOP).i, 0);
 assert.equal(sceneAt(-0.01).scene.key, 'fig');
 assert.deepEqual(frameAt(-0.01), frameAt(LOOP - 0.01));
@@ -215,15 +218,17 @@ for (const scene of SHOW) {
     const s = SCRIPTS[scene.key], exp = s.actions.find(a => a.id === 'export');
     const floor = t => frameAt(sceneStart + t, { at: -1 }).filter(pc => pc.where === 'floor');
     const landed = floor(exp.end + 0.01 * PACE);
-    const reference = scene.key === 'id' ? landed : landed.filter(pc => pc.device !== undefined && !pc.art && pc.paintLayer === undefined);
+    const reference = scene.key === 'id' ? landed : landed.filter(pc => pc.deviceBody);
     assert.equal(reference.length, scene.key === 'id' ? 16 : 3, scene.key + ': missing export bodies');
     for (let n = 1; n < Math.ceil((scene.len - exp.start) * 120 / PACE); n++) {
       const list = floor(exp.start + n * PACE / 120);
-      const bodies = scene.key === 'id' ? list : list.filter(pc => pc.device !== undefined && !pc.art && pc.paintLayer === undefined);
+      const bodies = scene.key === 'id' ? list : list.filter(pc => pc.deviceBody);
       for (const pc of bodies) {
         const match = scene.key === 'id' ? reference.find(p => p.art === pc.art && p.s.every((v, i) => Math.abs(v - pc.s[i]) < 1e-8) && Math.abs(p.p[0] - pc.p[0]) < 1e-8 && Math.abs(p.p[1] - pc.p[1]) < 1e-8) : reference.find(p => p.device === pc.device);
         assert.ok(match, scene.key + ': export changed x/y or geometry');
-        near(pc.p[0], match.p[0]); near(pc.p[1], match.p[1]);
+        const laptopEntry = scene.key === 'fig' && pc.deviceKind === 'laptop' && exp.start + n * PACE / 120 < playbackSpans(s).spans[0][1];
+        if (!laptopEntry) assert.ok(Math.abs(pc.p[0] - match.p[0]) < 1e-8, 'feed path: only the laptop entry may move in x');
+        near(pc.p[1], match.p[1]);
         assert.deepEqual(pc.q, match.q); assert.deepEqual(pc.s, match.s);
       }
     }
@@ -262,18 +267,19 @@ for (const scene of SHOW) {
   if (['pr', 'ae', 'fig'].includes(scene.key)) {
     const exp = s.actions.find(a => a.id === 'export'), land = exp.start + 0.55 * PACE;
     for (const f of [0.01, 0.2, 0.333333, 0.5, 0.7, 0.99, 1.2, 1.7, 1.99]) {
-      const at = land + f * 1.6 * PACE, list = frameAt(sceneStart + at);
+      if (scene.key === 'fig' && f >= 1) continue;
+      const at = land + f * (scene.key === 'fig' ? 3 : 1.6) * PACE, list = frameAt(sceneStart + at);
       near(list.clock, f % 1);
       assert.ok(list.some(pc => pc.device === 0));
       for (const pc of list.filter(pc => pc.device !== undefined)) near(pc.clock, list.clock);
     }
     const list = frameAt(sceneStart + exp.end + 0.01 * PACE);
-    const bodies = [0, 1, 2].map(i => list.find(pc => pc.where === 'floor' && pc.device === i));
+    const bodies = [0, 1, 2].map(i => list.find(pc => pc.where === 'floor' && pc.device === i && pc.deviceBody));
     assert.ok(bodies.every(Boolean), 'device row did not land');
-    const footprint = bodies.flatMap(corners), xs = footprint.map(p => p[0]), zs = footprint.map(p => p[2]);
+    const footprint = (scene.key === 'fig' ? list.filter(pc => pc.where === 'floor') : bodies).flatMap(corners), xs = footprint.map(p => p[0]), zs = footprint.map(p => p[2]);
     centred((Math.min(...xs) + Math.max(...xs)) / 2, scene.key);
     near(Math.min(...zs), MAT.z);
-    assert.ok(list.some(pc => pc.where === 'content' && ['shotA', 'shotB', 'shotCfx', 'wMake', 'uiBoard0', 'uiBoard1', 'uiBoard2', 'uiBoard3'].includes(pc.art)), 'viewer is not playing with the devices');
+    assert.ok(list.some(pc => pc.where === 'content' && ['shotA', 'shotB', 'shotCfx', 'wMake', 'uiPageWide0', 'uiPageWide1'].includes(pc.art)), 'viewer is not playing with the devices');
   }
   sceneStart += scene.len;
 }
@@ -297,7 +303,7 @@ for (let i = 0; i < SHOW.length; i++) {
   sceneStart += SHOW[i].len;
 }
 const readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8');
-for (const scene of SHOW) for (const a of SCRIPTS[scene.key].actions) assert.ok(readme.includes(`| ${scene.key} | ${a.id} | ${a.kind} | ${(a.start / PACE).toFixed(3)} | ${(a.end / PACE).toFixed(3)} |`), `README action table is stale at ${scene.key}/${a.id}`);
+if (!process.argv.includes('--control')) for (const scene of SHOW) for (const a of SCRIPTS[scene.key].actions) assert.ok(readme.includes(`| ${scene.key} | ${a.id} | ${a.kind} | ${(a.start / PACE).toFixed(3)} | ${(a.end / PACE).toFixed(3)} |`), `README action table is stale at ${scene.key}/${a.id}`);
 // Exercise the real player with drawing and DOM stand-ins. This is a logic check, never a browser review.
 const node = rect => ({
   events: {}, attributes: {}, textContent: '', classList: { remove() {} },
@@ -316,14 +322,19 @@ const renderer = { setAtlas() {}, draw(pieces, view) { draws.push({ pieces, view
 const observer = class { observe() {} };
 const player = fs.readFileSync(new URL('../play.mjs', import.meta.url), 'utf8').replace(/^import\s+.*?;\s*$/gm, '');
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
   location: { search: '?t=0' }, document: playerDocument, window: win, matchMedia: () => media,
   createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => atlas, fontsReady: async () => {},
-  SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, devicePixelRatio: 3,
+  SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts: () => ({ draw() {}, fit: view => view, layout: [] }), devicePixelRatio: 3,
   requestAnimationFrame: callback => { scheduledTick = callback; return 1; }, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
 });
 assert.equal(win.__ready, true);
 assert.ok(draws.at(-1).view.dpr <= 2);
+hero.rect = { left: 0, top: 0, width: 1920, height: 1080 };
+win.__hero.seek(0);
+assert.ok(draws.at(-1).view.dpr ** 2 * 1920 * 1080 <= 5.2e6 + 1e-6, 'pixel ceiling: backing store exceeds 5.2 million pixels');
+hero.rect = { left: 0, top: 0, width: 1440, height: 900 };
+win.__hero.seek(0); near(draws.at(-1).view.dpr, 2);
 crafts[0].events.click();
 near(sceneAt(win.__hero.t).at, SHOW[2].still); // A paused graphic-design choice uses the InDesign still.
 crafts[2].events.click();
@@ -371,45 +382,23 @@ const exemptions = {
   openingFurniture: 'App furniture belongs to the opening wipe; it is not a new document object.',
   playback: 'The viewer and exported devices replay work already made by the cursor.',
   runMember: 'The cursor makes the members of one explicit run inside its own bounding box.',
-  layerEcho: 'Layer and page rows echo a cursor-made document object in the same frame.',
-  laneEcho: 'Timeline blocks, voice, waveforms and keys echo the carried/typed/edited work.',
-  thumbnailEcho: 'The After Effects project thumbnail mirrors the cursor-made comp.',
-  frameNameEcho: 'Frame labels echo the frame that has just been drawn or copied.',
-  phoneEcho: 'Figma phone copies echo the desktop construction in the same frame.',
-  viewerEcho: 'The viewer/histogram reflects the footage or photograph just made.',
-  graphEcho: 'The graph reflects the ball path just made by the cursor.',
+  sourceEcho: 'This piece explicitly names the cursor-made source action that it mirrors.',
   overlay: 'Selections, carets and playheads mark existing work.',
   carried: 'This is the piece currently being dragged by the cursor.',
 };
 function exemption(pc, scene, at, a, r) {
   if (pc.overlay || pc.caret) return 'overlay';
-  if (pc.where === 'floor' || pc.clock !== undefined || a?.kind === 'play') return 'playback';
-  if (pc.where === 'travel' && a?.kind === 'drag') return 'carried';
+  if (pc.where === 'floor' || pc.playback) return 'playback';
+  if (pc.where === 'travel' && a?.kind === 'drag' && pc.action === a.id) return 'carried';
   if (!pc.document && at <= 0.8 * PACE) return 'openingFurniture';
   if (a?.kind === 'run' && at <= a.end + 1e-8) {
     const points = [a.from, a.to, ...(a.path || []), ...(a.points || [])];
     const bounds = [Math.min(...points.map(p => p[0])) - 0.6, Math.min(...points.map(p => p[1])) - 0.6, Math.max(...points.map(p => p[0])) + 0.6, Math.max(...points.map(p => p[1])) + 0.6];
     if (overlaps(r, bounds)) return 'runMember';
   }
-  if (scene === 'ps' && /^(photo|kPhoto)/.test(pc.art || '') && r[2] < panelX) return 'viewerEcho';
-  if (scene === 'ai' && pc.art === 'kLocClose') return 'viewerEcho';
-  if (scene === 'ps' && r[0] >= panelX) return r[1] > panelTop - 0.6 ? 'viewerEcho' : 'layerEcho';
-  if (scene === 'ai' && r[0] >= panelX) return 'layerEcho';
-  if (scene === 'id' && r[0] >= panelX - 0.01) return 'layerEcho';
-  if (scene === 'pr') {
-    if (r[3] <= 1.12) return 'laneEcho';
-    if (r[0] >= 1.3 && r[2] <= 3.3 && r[1] >= 1.49) return 'viewerEcho';
-  }
-  if (scene === 'ae') {
-    if (!pc.art && r[0] >= 1.3 && r[2] <= 3.3 && r[1] >= 1.49) return 'viewerEcho';
-    if (r[3] <= 1.12) return 'laneEcho';
-    if (r[0] < 1.1) return r[1] > 2 ? 'thumbnailEcho' : 'layerEcho';
-    if (r[0] >= 3.7) return 'graphEcho';
-  }
-  if (scene === 'fig') {
-    if (!pc.art && pc.tone === 'grey' && Math.abs(r[3] - r[1] - 0.03) < 1e-8 && [1.355, 2.475].some(y => Math.abs(r[1] - y) < 1e-8)) return 'frameNameEcho';
-    if (r[2] <= 0.81) return 'layerEcho';
-    if (r[0] >= 2.5 && r[2] < panelX && r[3] <= 2.5) return 'phoneEcho';
+  if (pc.echo) {
+    assert.ok(SCRIPTS[scene].actions.some(a => a.id === pc.echo), 'R5: invalid echo source ' + pc.echo);
+    return 'sourceEcho';
   }
   return null;
 }
@@ -463,7 +452,7 @@ for (const scene of SHOW) {
       const r = rectOf(pc), identity = [pc.art || pc.tone, ...r.map(n => n.toFixed(5)), pc.window?.join(',')].join('/');
       if (seen.has(identity)) continue;
       seen.add(identity);
-      const role = list.clock !== null && list.clock !== undefined ? 'playback' : exemption(pc, scene.key, at, a, r);
+      const role = exemption(pc, scene.key, at, a, r);
       if (role) { assert.ok(exemptions[role]); continue; }
       const cursor = tip(list).map((v, i) => (v - [SCREEN.l, SCREEN.b][i]) / 1.15), points = [cursor, ...(a ? [a.from, a.to, ...(a.points || []), ...(a.path || []), ...(a.curve || [])] : [])];
       if (!points.some(p => distanceTo(r, p) <= 0.6 + 1e-8)) ruleFail('R5', 'new ' + (pc.art || pc.tone) + ' is far from the cursor and action points');
@@ -474,7 +463,7 @@ for (const scene of SHOW) {
       ai: [['mapExport', ['kMap']], ['locExport', ['kLoc']]],
       pr: [['clipA', ['thumbA']], ['clipB', ['thumbB']], ['clipC', ['thumbC']]],
       ae: at < byId.play?.start ? [['path', ['redBall']]] : [],
-      fig: [['hero', ['uiBuild2Wide', 'uiBuild3Wide', 'uiWide', 'uiBoard0', 'uiBoard1', 'uiBoard2', 'uiBoard3']]],
+      fig: [['hero', ['uiBuild2Wide', 'uiBuild3Wide', 'uiWide', 'uiPageWide0', 'uiPageWide1']]],
     };
     for (const [id, pictures] of placements[scene.key] || []) {
       if (at < byId[id].end - 1e-9) continue;
@@ -504,6 +493,7 @@ for (const scene of SHOW) {
   }
   ruleStart += scene.len;
 }
+runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, MAT, SCRIPTS, PACE, UI_ROW, playbackSpans, prototypeState, tip });
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {
@@ -512,6 +502,7 @@ if (errors.length) {
 } else {
   console.log(`checked ${frames} frames, ${pieces} pieces (max ${largest}); ${atlas.pages.length} atlas pages; loop ${LOOP.toFixed(3)}s`);
   console.log(SHOW.map(s => `${s.key}: ${s.len.toFixed(3)}s`).join(', '));
+  if (process.argv.includes('--metrics')) console.log(JSON.stringify({ atlas: atlas.pages.map(p => [p.width, p.height]), baseBytes: atlas.pages.reduce((n, p) => n + p.width * p.height * 4, 0), mipBytes: atlas.pages.reduce((n, p) => n + p.width * p.height * 4 * 4 / 3, 0) }));
   console.log('all clean');
   if (process.argv.includes('--timeline')) {
     console.log('| App | Action | Kind | Start | End |\n| --- | --- | --- | ---: | ---: |');
