@@ -315,7 +315,7 @@ Post-frame geometry sampled every 0.02 s at both requested windows; CSV retained
 
 Phone bounds are CSS-pixel projections over the stated stage-height and text-width models. The whole device is present at its cut, fully on screen, and slides to its slot. These models do not replace actual browser/font/page checks. The two desktop models give a shared left column and exactly 12 px for the LAPTOP horizontal run; the approved mock’s rendered agreement remains unverified. The shared two-column fit may shift/scale phone canvas framing as F2 requires; the first-three-still identity result concerns emitted pieces, not changed camera pixels.
 
-The packed preview is `.scratch/preview.html`: **361,587 bytes** (353.112 KiB). It remains one offline file with embedded fonts, styles and modules. Node parse/self-containment checks pass; a supplemental literal scan found no web addresses or network APIs. No actual browser request observation is claimed.
+The round-three `e8cced5` preview was `.scratch/preview.html`: **361,587 bytes** (353.112 KiB). This is historical; the final CORRECTIONS-4 size is below. It remains one offline file with embedded fonts, styles and modules. Node parse/self-containment checks pass; a supplemental literal scan found no web addresses or network APIs. No actual browser request observation is claimed.
 
 `node design/journey-hero/take-2/tools/checks.mjs --metrics` — exit 0
 
@@ -400,3 +400,99 @@ all clean
 ```
 
 Departures: none beyond the requested label layout, its checks and this record. PACE, loop length, scene starts, still times, artwork and motion source are unchanged. No browser command, browser launch, hardware measurement, installation, network or git command was run for this addendum. The ten-size browser run and rendered comparison remain for the external machine; the computed Node result does not certify those gates. Installed skill files and RTK.md are outside the permitted repository, so they were not read; the existing research and review record were carried forward.
+
+## CORRECTIONS-4
+
+Acceptance carried forward before the edit: G1 and G2; retain F1's paired contacts, gap-free plates and whole crossed frames; carry the backing, image and cursor with one offset; preserve the incoming 48aea47 projected image corners within 0.1 px; allow only the cursor and original spread guides above the stack; retain PACE, the 81.240 s loop, scene starts, action times and six still times. The approved artwork, hierarchy and motion laws remain the reference. Frame, wall-shadow and pixel-still acceptance belongs to the external browser review.
+
+### G1 - one stack, along the viewing direction
+
+`stage.mjs` now identifies the active carried faces by their action. After the existing separation pass, `liftDragStack` computes one clearance offset for the whole active stack, including its cursor. It considers projected overlap with the other pieces and clears their full depth. The offset follows `HOME.v`, the approved home camera's viewing direction; its dot products with the camera's right and up vectors are zero. **The viewing-direction lift is used; the constant-lift fallback is not used.** The per-face world-z lift and its separate follow-up mark lift are removed. Other apps do not receive this drawing-order lift.
+
+The lift can move a shadow caster even while preserving its projected picture. Each stack member therefore retains its pre-lift `shadowP`. One position override in `sq.mjs` uses that position only for the light's depth pass; the colour pass uses the lifted position. The computed sweep finds the caster positions identical to the incoming 48aea47 positions, and a Node WebGL-call recorder exercises the real renderer's shadow/colour uniform selection. This is position and call evidence, not a rendered shadow pass.
+
+`tools/drag-checks.mjs` is included in `checks.mjs`. It runs every 0.0005 s over map, loc, photo, postPhoto and mailPhoto, includes exact-boundary neighbours and the explicit 25.20-25.30 s fine window, and produces 4,105 active samples. It checks cursor/image/backing order and a common offset against the reference, every projected image-box corner at the 1440 x 900 initial desktop fit (S = 103.629191; label fitting can only reduce that scale), and both the image and backing footprints. For intersecting visible projected convex boxes, a conservative whole-box depth bound proves that no other piece can be in front; only matching original spread guides and the cursor are exempt. This is stronger than testing whether world-x/y rectangles overlap.
+
+F1's fine samples and the retained 0.005 s 19.9-30.8 s sweep use the original unlifted routes to determine own-picture contact. They check all six frame lines, their sizes/rotations/positions, visibility and clipping, and each plate through placement and its same-frame replacement. The legacy clearance checks now use projected polygons. The scheduler's cursor check removes the depth-only lift through its authored shadow position; the generic interaction check permits original spread guides under a carried image while still requiring the cursor above it.
+
+The reference sources are frozen, compressed source text in `tools/fixtures/drag-sources.json`, rather than a dependency on ignored `.scratch` files. They were copied from the existing round-three incoming-source record (`.scratch/corrections3/before/stage.mjs`, identified there as 48aea47) and the untouched source at the start of this round (incoming 50b51b8). Their SHA256 values are pinned in the checker and printed below; the modules are reconstructed only in memory with repository-local imports. No Git command was used to retrieve them. All six emitted stills, SHOW, SCRIPTS, PACE and LOOP compare exactly with the frozen incoming source. No pixel identity is claimed.
+
+### G2 - current records and pack
+
+README now identifies CORRECTIONS-4, states **ten** browser sizes, and describes the computed G1 gates and their external visual limits. The old 361,587-byte e8cced5 figure above is explicitly historical. The final `tools/preview.mjs` run reports:
+
+```text
+design/journey-hero/take-2/.scratch/preview.html (356 KB)
+```
+
+Final file size: **364,070 bytes** (355.537 KiB). A pack made on Windows can differ by source line endings. The preview remains one self-contained offline file; the checker parses and validates its packed module.
+
+### Negative controls
+
+All **14 final controls** exited 1 at their intended gate. Every edit matches exactly one place, counted before mutation; each source file is restored byte-for-byte in `finally`. `node design/journey-hero/take-2/tools/drag-controls.mjs --audit` prints `G1 controls: all 14 exact edits match one place`. The existing `controls.mjs --audit` also passes all 46 historical edits; those historical mutations were not rerun. Full final control outputs are retained in `.scratch/corrections4/controls/*.txt`; no results.json was written.
+
+The two old-lift controls replace the single new call with the **exact incoming round-three block**, including its mark lift. They independently fail order and corners: the latter detects a 2.392692 px step. Other controls cover omitted cursor motion, other geometry above the stack, crossed-frame lines, a hidden or prematurely removed post frame, premature plate loss, same-frame replacement, the shadow position and renderer override, the scheduler's coordinate transform, and the legacy projected-clearance/interaction checks.
+
+In the exact edits below, inline strings use JSON escaping (`\n` denotes a newline); the two long symbols expand to the literal blocks below. `OLD_PER_FACE` ends with one newline. An empty string deletes the search text.
+
+| Control | File | Exact search -> replacement | Matches | Caught / intended failure |
+| --- | --- | --- | ---: | --- |
+| authored cursor route transform removed | `tools/checks.mjs` | `"const p = pc.shadowP \|\| pc.p; // The drag's depth-only lift leaves its authored route intact."` -> `"const p = pc.p;"` | 1 | Yes, exit 1 - 0.5959749999999979 differs from 0.5009749999999995 |
+| crossed post frame disappears | `stage.mjs` | `"const filled = frameContact(s, drag, t, from, to, frame), placed = done(s, id, t), before = D.length;"` -> `UNPAIRED_POST_CONTACT` | 1 | Yes, exit 1 - G1 frames: 25.229000s: postPhoto crossed frame not whole through own contact |
+| crossed post frame hidden | `stage.mjs` | `"  if (i === 2) liftDragStack(P);\n"` -> `"  if (i === 2) liftDragStack(P);\n  for (const pc of P) if (pc.emptyFrame === 'postPhoto') pc.hide = true;\n"` | 1 | Yes, exit 1 - G1 frames: 21.365000s: postPhoto crossed frame was altered |
+| cursor beneath carried image | `stage.mjs` | `"  if (i === 2) liftDragStack(P);\n"` -> `"  if (i === 2) liftDragStack(P);\n  if (i === 2 && P.action === 'photo') P.find(pc => pc.art === 'cursor').p[2] -= 0.1;\n"` | 1 | Yes, exit 1 - 25.066667s (id): an interaction mark is below a picture stack |
+| cursor omitted from shared lift | `stage.mjs` | `"for (const pc of [...stack, cursor]) {"` -> `"for (const pc of stack) {"` | 1 | Yes, exit 1 - G1 order: 22.140000s: expected cursor above image above backing |
+| lift undone permits frame lines | `stage.mjs` | `"  if (i === 2) liftDragStack(P);\n"` -> `""` | 1 | Yes, exit 1 - G1 frames: 25.227500s: empty-frame line above carried image |
+| lift undone permits occlusion | `stage.mjs` | `"  if (i === 2) liftDragStack(P);\n"` -> `""` | 1 | Yes, exit 1 - G1 clearance: 22.188500s: grey drawn above carried image |
+| old per-face lift breaks order | `stage.mjs` | `"  if (i === 2) liftDragStack(P);\n"` -> `OLD_PER_FACE` | 1 | Yes, exit 1 - G1 order: 25.227000s: expected cursor above image above backing |
+| old per-face lift moves corners | `stage.mjs` | `"  if (i === 2) liftDragStack(P);\n"` -> `OLD_PER_FACE` | 1 | Yes, exit 1 - G1 corners: 25.227000s: corner moved 2.392692 px from 48aea47 |
+| plate removed before placement | `stage.mjs` | `"placed = done(s, id, t), before = D.length;"` -> `"placed = filled, before = D.length;"` | 1 | Yes, exit 1 - G1 frames: 25.225500s: photo plate vanished before placement |
+| R15 projected clearance lift undone | `stage.mjs` | `"  if (i === 2) liftDragStack(P);\n"` -> `""` | 1 | Yes, exit 1 - 25.233333s (id): frame clearance: outline crosses a travelling picture |
+| renderer shadow override removed | `sq.mjs` | `"      if (prog === depth && pc.shadowP) gl.uniform3fv(prog.u.uPos, pc.shadowP);\n"` -> `""` | 1 | Yes, exit 1 - G1 shadow: 22.144000s: renderer did not retain shadow position and lifted colour position |
+| shadow caster follows colour lift | `stage.mjs` | `"pc.shadowP = pc.p;"` -> `"pc.shadowP = pc.p.map((n, axis) => n + offset[axis]);"` | 1 | Yes, exit 1 - G1 shadow: 22.140000s: shadow caster differs from 48aea47 |
+| valid placement exception removed | `tools/drag-checks.mjs` | `"plates.length \|\| P.some(pc => pc.where === 'content' && !pc.echo && replacements[id].includes(pc.art))"` -> `"plates.length"` | 1 | Yes, exit 1 - G1 frames: 25.510000s: photo placement left bare wall |
+
+`OLD_PER_FACE`:
+
+```js
+  // Only InDesign carries photographs over other empty frames. Keep those frames whole below it.
+  if (i === 2) for (const pc of P.filter(pc => pc.where === 'travel')) {
+    const points = corners(pc), bounds = axis => [Math.min(...points.map(p => p[axis])), Math.max(...points.map(p => p[axis]))];
+    const [left, right] = bounds(0), [bottom, top] = bounds(1);
+    for (const line of P.filter(q => q.emptyFrame)) {
+      const cs = corners(line);
+      if (left < Math.max(...cs.map(p => p[0])) && right > Math.min(...cs.map(p => p[0])) && bottom < Math.max(...cs.map(p => p[1])) && top > Math.min(...cs.map(p => p[1]))) pc.p[2] = Math.max(pc.p[2], line.p[2] + line.s[2] + LAYER_STEP * U + pc.s[2]);
+    }
+  }
+  if (i === 2) {
+    const top = Math.max(...P.filter(pc => pc.where !== 'floor' && (pc.art || pc.paintLayer !== undefined) && !pc.overlay).map(pc => pc.p[2] + pc.s[2]));
+    const marks = P.filter(pc => pc.where !== 'floor' && pc.overlay && !pc.emptyFrame), bottom = Math.min(...marks.map(pc => pc.p[2] - pc.s[2]));
+    const rise = Math.max(0, top + LAYER_STEP * U - bottom);
+    for (const pc of marks) pc.p[2] += rise;
+  }
+```
+
+`UNPAIRED_POST_CONTACT` (one line):
+
+```js
+const filled = i === 2 && t >= 6.329 * PACE ? [['map', DOCK.map, ID.frame], ['photo', DOCK.photo, ID.photo], ['postPhoto', ID.photo, ID.post], ['mailPhoto', ID.photo, ID.mailPhoto]].some(([drag, from, to]) => frameContact(s, drag, t, from, to, frame)) : frameContact(s, drag, t, from, to, frame), placed = done(s, id, t), before = D.length;
+```
+
+An exploratory control that removed an authored-contact coordinate transform did not fail at the existing 0.005 s samples; it was not counted. That unnecessary checker edit was reverted. The new dense lifetime oracle instead uses independently reconstructed original routes. The final 14-control table above contains only observed failures at the intended gates.
+
+### Final checks and limits
+
+`node design/journey-hero/take-2/tools/checks.mjs` - exit 0:
+
+```text
+R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (636 samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720
+page labels 768x1024: 182 frames; S=54.612696; minimum text gap=16.000 px; routes clean
+G1 drags: 4105 samples at 0.0005 s, five drags including loc; order/one offset, projected occlusion and F1 lifetimes clean; max corner error=8.958e-14 px (S=103.629191); minimum cursor gap=0.000920; max offset=0.159436; shadow positions/uniforms unchanged; six emitted stills/timing unchanged.
+48aea47 snapshot SHA256 2df6ef35ad20837ad73d5c181cef1a404e4023545adeab99f8070c63697b195d; incoming 50b51b8 snapshot SHA256 1cb6842044168b12c4c4bf551e389b7adf31c2faf8b28f927a4282972ebb55ab. Rendered frames, shadows and pixel still identity UNRUN.
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5503 frames, 379765 pieces (max 183); 5 atlas pages; loop 81.240s
+ps: 7.500s, ai: 11.400s, id: 19.180s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+all clean
+```
+
+Departures from CORRECTIONS-4: none. The small renderer shadow-position override supports the requested shadow preservation; it does not certify the rendered result. No browser command or launch, frame capture, rendered wall-shadow comparison, six-still pixel comparison, hardware run, measurement tool, installation, network, Git command, deployment, outside-repository read/write or program termination was performed. The external reviewers still own G1's frame/shadow/still gates. Protected briefs, review/hardware and .scratch/crit were not changed. Installed skills and RTK.md were outside the allowed repository and were not read.

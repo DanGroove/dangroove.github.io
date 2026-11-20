@@ -9,6 +9,7 @@ import { SHOW, LOOP, SCENES, SCREEN, MAT, BLOCK, POOL, PACE, SCRIPTS, frameAt, s
 import { runCorrections } from './correction-checks.mjs';
 import { previewMarkup } from './preview.mjs';
 import { checkPageLabels } from './label-page-checks.mjs';
+import { checkDrags } from './drag-checks.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
@@ -100,8 +101,11 @@ function check(time) {
     }
     const painted = faces.filter(f => f.pc.paintLayer !== undefined && !f.pc.overlay).sort((a, b) => a.pc.paintLayer - b.pc.paintLayer);
     for (let i = 1; i < painted.length; i++) if (painted[i].height - painted[i - 1].height < 0.0008 - 1e-10) fail(time, 'painters did not share one increasing stack');
-    const top = Math.max(-Infinity, ...faces.filter(f => !f.pc.overlay && (f.pc.art || f.pc.paintLayer !== undefined)).map(f => f.height));
-    for (const f of faces.filter(f => f.pc.overlay && !f.pc.emptyFrame)) if ((f.pc.p[axis] - f.pc.s[2]) / unit < top + 0.0008 - 1e-10) fail(time, 'an interaction mark is below a picture stack');
+    for (const f of faces.filter(f => f.pc.overlay && !f.pc.emptyFrame)) {
+      // The original spread guides may cross a carried image; the cursor must clear it.
+      const top = Math.max(-Infinity, ...faces.filter(p => !p.pc.overlay && (p.pc.art || p.pc.paintLayer !== undefined) && !(scene.key === 'id' && f.pc.art !== 'cursor' && p.pc.shadowP)).map(p => p.height));
+      if ((f.pc.p[axis] - f.pc.s[2]) / unit < top + 0.0008 - 1e-10) fail(time, 'an interaction mark is below a picture stack');
+    }
   }
 }
 
@@ -124,7 +128,8 @@ assert.throws(() => frameAt(NaN), TypeError);
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-8, `${a} differs from ${b}`);
 function tip(list) {
   const pc = list.find(pc => pc.art === 'cursor');
-  return [pc.p[0] - 0.46 * (0.5 - 10 / 96), pc.p[1] + 0.46 * (0.5 - 6 / 96)];
+  const p = pc.shadowP || pc.p; // The drag's depth-only lift leaves its authored route intact.
+  return [p[0] - 0.46 * (0.5 - 10 / 96), p[1] + 0.46 * (0.5 - 6 / 96)];
 }
 // The cursor must reach every action's start before pressing, then its end before releasing.
 let sceneStart = 0;
@@ -500,6 +505,7 @@ for (const scene of SHOW) {
 }
 runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, MAT, SCRIPTS, PACE, UI_ROW, playbackSpans, prototypeState, tip });
 try { console.log(checkPageLabels()); } catch (error) { fail(78.24, error.message); }
+try { console.log(await checkDrags()); } catch (error) { fail(25.25, error.message); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {

@@ -7,6 +7,7 @@
 //            window: [u0, v0, u1, v1] the part of the picture to show (default all of it),
 //            clip: [a, b, c, d] keeps world points where ax + by + cz + d >= 0 in every pass,
 //            shade: true to dim the picture where its face turns from the light (a sheet that bends shows its bend that way) }
+// shadowP optionally keeps a depth-only colour lift's shadow caster at its authored position.
 
 export const TONES = {
   //        lit (faces the light)  mid (tops)   shade (away, or in shadow)
@@ -284,6 +285,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       const mesh = Math.max(pc.e[0], pc.e[1]) > 0.06 ? roundMesh : sharpMesh;
       if (mesh !== boundMesh) { gl.bindVertexArray(mesh.vao); boundMesh = mesh; }
       setPiece(prog.u, pc, typeof grow === 'function' ? grow(pc) : grow);
+      if (prog === depth && pc.shadowP) gl.uniform3fv(prog.u.uPos, pc.shadowP);
       if (tone) tone(prog.u, pc);
       gl.drawElements(gl.TRIANGLES, boundMesh.count, gl.UNSIGNED_SHORT, 0);
     }

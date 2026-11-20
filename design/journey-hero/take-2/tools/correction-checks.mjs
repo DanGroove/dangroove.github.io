@@ -129,7 +129,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
       if (expected[scene.key] && at >= Math.max(...ends) + 0.4 * PACE && at < off && labels.length !== 3) fail(time, 'R11: expected three labels');
       if (isId) for (const id of ['map', 'photo', 'postPhoto', 'mailPhoto']) {
         const overlays = P.filter(pc => pc.emptyFrame === id), moving = P.filter(pc => pc.where === 'travel');
-        if (overlays.some(pc => moving.some(q => overlap(rect(pc), rect(q)) && pc.p[2] + pc.s[2] >= q.p[2] - q.s[2] - 1e-8))) fail(time, 'frame clearance: outline crosses a travelling picture');
+        if (overlays.some(pc => moving.some(q => polygonsOverlap(visibleProjection(pc), visibleProjection(q)) && pc.p[2] + pc.s[2] >= q.p[2] - q.s[2] - 1e-8))) fail(time, 'frame clearance: outline crosses a travelling picture');
         if (at > byId['frame' + ['map', 'photo', 'postPhoto', 'mailPhoto'].indexOf(id)].end && !overlays.length) vanishedFrames.add(id);
         if (vanishedFrames.has(id) && overlays.length) fail(time, 'frame clearance: empty outline returned');
       }
@@ -193,7 +193,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
       if (at < place.end - 1e-9 && !validPlates) fail(time, 'R15: ' + id + ' plate vanished before placement');
       const replacement = P.some(pc => pc.where === 'content' && !pc.echo && arts.includes(pc.art));
       if (at >= place.end - 1e-9 && !plates.length && !replacement) fail(time, 'R15: ' + id + ' plate disappeared without a same-frame replacement');
-      for (const line of P.filter(pc => pc.emptyFrame)) for (const moving of P.filter(pc => pc.where === 'travel')) if (overlap(rect(line), rect(moving)) && line.p[2] + line.s[2] >= moving.p[2] - moving.s[2] - 1e-8) fail(time, 'frame clearance: overlay above travelling InDesign picture');
+      for (const line of P.filter(pc => pc.emptyFrame)) for (const moving of P.filter(pc => pc.where === 'travel')) if (polygonsOverlap(visibleProjection(line), visibleProjection(moving)) && line.p[2] + line.s[2] >= moving.p[2] - moving.s[2] - 1e-8) fail(time, 'frame clearance: overlay above travelling InDesign picture');
     }
   }
   let fixedSamples = 0, windowStart = 0;

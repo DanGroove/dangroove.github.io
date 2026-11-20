@@ -1,7 +1,7 @@
 // Second take, reworked to Dan's brief: one big floating screen. Each craft is a real app on it (drawn simply, with its logo) that
 // builds a piece of work, and on Export the piece lands in front of the screen, lying flat in one tidy block.
 // One clock builds every piece: the persistent shell, wiped content, travelling work and the floor.
-import { HOME, EASE, quatFromBasis, quatRotate } from '../../../public/journey/hero/engine.mjs';
+import { HOME, EASE, dot as dot3, quatFromBasis, quatRotate } from '../../../public/journey/hero/engine.mjs';
 import { box, cyl, turn, corners } from './kit.mjs';
 import { SPOT, subwayPath, BALL, BALL_FROM, BALL_VIA, ROWS, TYPE_EDGES, TYPE_BOXES, ART, ART_TEXT, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS } from './art.mjs';
 
@@ -228,8 +228,8 @@ function travel(P, key, from, to, t, a, b, endWindow = [0, 0, 1, 1]) {
   const p = progress(t, a, b), rect = rectMix(from, to, p), dockStart = from === DOCK[key], lift = (dockStart ? mix(0.055, 0.06, p) : mix(0.06, 0.055, p)) + 0.08 * Math.sin(Math.PI * p), [x, y, w, h] = rect;
   // The picture is the same piece throughout. The dock's rim folds down as it leaves, or grows as it lands.
   const rim = 0.012 * (dockStart ? 1 - p : p);
-  if (rim > 0) P.push({ ...on('grey', x - rim, y - rim, w + 2 * rim, h + 2 * rim, { lift: lift - 0.015, t: 0.012 }), where: 'travel' });
-  P.push({ ...on('ink', ...rect, { lift, t: 0.02, art: PICTURES[key] }), window: rectMix([0, 0, 1, 1], endWindow, p), where: 'travel' });
+  if (rim > 0) P.push({ ...on('grey', x - rim, y - rim, w + 2 * rim, h + 2 * rim, { lift: lift - 0.015, t: 0.012 }), where: 'travel', action: key });
+  P.push({ ...on('ink', ...rect, { lift, t: 0.02, art: PICTURES[key] }), window: rectMix([0, 0, 1, 1], endWindow, p), where: 'travel', action: key });
 }
 function emptyFrame(P, [x, y, w, h], plate = true, revealed = 0, diagonals = true) {
   const start = P.length;
@@ -1273,22 +1273,34 @@ function build(i, at, o) {
   // Opaque word pictures keep their approved front faces, but have no shaded side faces.
   for (const pc of P) if (pc.art === 'wMake' || pc.art === 'wMove') pc.cut = true;
   separateFaces(P);
-  // Only InDesign carries photographs over other empty frames. Keep those frames whole below it.
-  if (i === 2) for (const pc of P.filter(pc => pc.where === 'travel')) {
-    const points = corners(pc), bounds = axis => [Math.min(...points.map(p => p[axis])), Math.max(...points.map(p => p[axis]))];
-    const [left, right] = bounds(0), [bottom, top] = bounds(1);
-    for (const line of P.filter(q => q.emptyFrame)) {
-      const cs = corners(line);
-      if (left < Math.max(...cs.map(p => p[0])) && right > Math.min(...cs.map(p => p[0])) && bottom < Math.max(...cs.map(p => p[1])) && top > Math.min(...cs.map(p => p[1]))) pc.p[2] = Math.max(pc.p[2], line.p[2] + line.s[2] + LAYER_STEP * U + pc.s[2]);
-    }
-  }
-  if (i === 2) {
-    const top = Math.max(...P.filter(pc => pc.where !== 'floor' && (pc.art || pc.paintLayer !== undefined) && !pc.overlay).map(pc => pc.p[2] + pc.s[2]));
-    const marks = P.filter(pc => pc.where !== 'floor' && pc.overlay && !pc.emptyFrame), bottom = Math.min(...marks.map(pc => pc.p[2] - pc.s[2]));
-    const rise = Math.max(0, top + LAYER_STEP * U - bottom);
-    for (const pc of marks) pc.p[2] += rise;
-  }
+  if (i === 2) liftDragStack(P);
   return P;
+}
+// InDesign's carried faces and cursor keep their relative order. Moving toward the
+// home camera clears crossed frames without changing any projected picture corner.
+function liftDragStack(P) {
+  if (!['map', 'loc', 'photo', 'postPhoto', 'mailPhoto'].includes(P.action)) return;
+  const stack = P.filter(pc => pc.where === 'travel' && pc.action === P.action);
+  if (!stack.length) return;
+  const bounds = pc => {
+    const points = corners(pc).map(p => [dot3(HOME.r, p), dot3(HOME.u, p)]);
+    return [Math.min(...points.map(p => p[0])), Math.min(...points.map(p => p[1])), Math.max(...points.map(p => p[0])), Math.max(...points.map(p => p[1]))];
+  };
+  const rects = stack.map(bounds), cursor = P.find(pc => pc.art === 'cursor');
+  const bottom = Math.min(...stack.map(pc => pc.p[2] - pc.s[2]));
+  let rise = 0;
+  for (const pc of P) {
+    // The spread's selection guides may stay above the picture, as in the original.
+    if (stack.includes(pc) || pc === cursor || (pc.overlay && !pc.emptyFrame)) continue;
+    const b = bounds(pc);
+    if (rects.some(r => r[0] < b[2] && r[2] > b[0] && r[1] < b[3] && r[3] > b[1])) rise = Math.max(rise, pc.p[2] + pc.s[2] + LAYER_STEP * U - bottom);
+  }
+  const offset = HOME.v.map(n => n * rise / HOME.v[2]);
+  for (const pc of [...stack, cursor]) {
+    // Keep the authored shadow caster where it was; the lift only resolves colour depth.
+    pc.shadowP = pc.p;
+    pc.p = pc.p.map((n, axis) => n + offset[axis]);
+  }
 }
 // Keep legacy plates clear too. Preserve their height order and move only faces that collide.
 // Selections and cursors clear the tallest picture, even when several painters share its area.
