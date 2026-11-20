@@ -5,7 +5,7 @@ import { ART, ART_TEXT, BALL, BALL_FROM, BALL_VIA, ROWS, makeAtlas } from '../ar
 import { HOME, EASE, dot, makeCamera, quatRotate } from '../../../../public/journey/hero/engine.mjs';
 import { corners } from '../kit.mjs';
 import { TONES } from '../sq.mjs';
-import { SHOW, LOOP, SCENES, SCREEN, MAT, BLOCK, POOL, PACE, SCRIPTS, frameAt, sceneAt, calloutsAt, playbackSpans, UI_ROW, prototypeState } from '../stage.mjs';
+import { HAND, SHOW, LOOP, SCENES, SCREEN, MAT, BLOCK, POOL, PACE, SCRIPTS, frameAt, sceneAt, calloutsAt, playbackSpans, UI_ROW, prototypeState } from '../stage.mjs';
 import { runCorrections } from './correction-checks.mjs';
 import { previewMarkup } from './preview.mjs';
 import { checkPageLabels } from './label-page-checks.mjs';
@@ -16,6 +16,8 @@ import { checkRound5Addendum } from './round5-addendum-checks.mjs';
 import { checkRound5SecondAddendum } from './round5-second-addendum-checks.mjs';
 import { checkEntrance, checkEntranceControls } from './entrance-checks.mjs';
 import * as entranceModule from '../entrance.mjs';
+import { checkHand, checkHandControls, describe } from './hand-checks.mjs';
+import { retimer } from './hand-patch.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
@@ -126,7 +128,8 @@ for (let i = 0; i < SHOW.length; i++) {
   for (const at of [0, 0.05, 0.1, 0.5, scene.still, scene.len - 1e-8]) check(start + at);
   start += scene.len;
 }
-if (Object.keys(SCRIPTS).length === 6) assert.ok(LOOP / PACE >= 70 && LOOP / PACE <= 86, `loop is ${LOOP / PACE}s`);
+// CORRECTIONS-7 K2 lengthens the loop (about 90.8 s expected, 91.5 s with K3's speed floor); the round-2 ceiling of 86 s is raised to 92.
+if (Object.keys(SCRIPTS).length === 6) assert.ok(LOOP / PACE >= 70 && LOOP / PACE <= 92, `loop is ${LOOP / PACE}s`);
 assert.equal(sceneAt(LOOP).i, 0);
 assert.equal(sceneAt(-0.01).scene.key, 'fig');
 assert.deepEqual(frameAt(-0.01), frameAt(LOOP - 0.01));
@@ -182,7 +185,7 @@ for (const [id, art] of [['make', 'wMake'], ['move', 'wMove']]) {
     else assert.ok(pc.window[2] > 0 && pc.window[2] < 1, `${id}: typing prefix missing`);
   }
 }
-const halfway = EASE.wipe(0.5);
+const halfway = HAND(0.5); // the ball follows the hand's drag (CORRECTIONS-7 K1)
 for (const [id, f, pos] of [['ball', 1, BALL_FROM], ['path', 0.5, BALL_FROM.map((v, i) => (1 - halfway) ** 2 * v + 2 * (1 - halfway) * halfway * BALL_VIA[i] + halfway ** 2 * BALL[i])], ['path', 1, BALL]]) {
   const balls = frameAt(aeStart + atAction(ae, id, f) + (f === 1 ? 1e-7 : 0)).filter(pc => pc.art === 'redBall');
   assert.equal(balls.length, 2, `${id}: ball missing from comp or thumbnail`);
@@ -446,7 +449,7 @@ for (const scene of SHOW) {
           const th = 0.36 * 340 / 440, row = Math.round((panelTop - 0.13 - r[1] - th) / (th + 0.1));
           if (!seenRows.has(row)) {
             const maker = row === 0 ? byId.coverTitle : row === 2 ? byId.loc : row === 3 ? byId.spreadType : byId.pages;
-            const expected = [1, 4, 5].includes(row) ? maker.start + [1, 4, 5].indexOf(row) * 0.07 * PACE : maker.end;
+            const expected = [1, 4, 5].includes(row) ? maker.start + [1, 4, 5].indexOf(row) * (maker.end - maker.start) / maker.count : maker.end;   // a third of the run each (CORRECTIONS-7 K2)
             if (at < expected - 1e-8 || at > expected + 1 / 60 + 1e-7) ruleFail('R2', 'page row ' + row + ' appeared outside ' + maker.id);
             seenRows.add(row);
           }
@@ -485,7 +488,7 @@ for (const scene of SHOW) {
       fig: [['hero', ['uiBuild2Wide', 'uiBuild3Wide', 'uiWide', 'uiPageWide0', 'uiPageWide1']]],
     };
     for (const [id, pictures] of placements[scene.key] || []) {
-      if (at < byId[id].end - 1e-9) continue;
+      if (at < byId[id].end + 1e-9) continue;   // the release instant itself can read as still dragging after global-to-local rounding
       let point = byId[id].to;
       const image = list.filter(pc => pictures.includes(pc.art) && (scene.key === 'pr' ? pc.where === 'content' && rectOf(pc)[3] < 1.12 : scene.key === 'ae' ? pc.where === 'content' && rectOf(pc)[0] > 1.3 : contains(rectOf(pc), point))).sort((a, b) => topOf(b) - topOf(a))[0];
       if (image && scene.key === 'pr') { const r = rectOf(image); point = [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2]; }
@@ -512,13 +515,15 @@ for (const scene of SHOW) {
   }
   ruleStart += scene.len;
 }
-runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, MAT, SCRIPTS, PACE, UI_ROW, playbackSpans, prototypeState, tip });
+const timetable = await retimer({ SHOW, SCRIPTS });
+runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, MAT, SCRIPTS, PACE, UI_ROW, playbackSpans, prototypeState, tip, retime: timetable.local });
 try { console.log(checkPageLabels()); } catch (error) { fail(SHOW.slice(0, 5).reduce((n, s) => n + s.len, 0) + playbackSpans(SCRIPTS.fig).land + 0.4 * PACE, error.message); }
-try { console.log(await checkDrags()); } catch (error) { fail(25.25, error.message); }
+try { console.log(await checkDrags()); } catch (error) { fail(timetable.global(25.25), error.message); }
 try { const r = await checkRound5(); console.log(`H1–H7 computed: ${r.H1.draws} draw ends, ${r.H1.growingSamples} spread samples; loop ${r.H2.loop.toFixed(3)}s, land 3.0s; ${r.H3.samples} laptop poses; ${r.H6.continuitySamples} resize samples; ${r.H7.rays} floor rays, ${r.H7.wholeDotSamples} dot samples. Font ink, layout, pixels and frames UNRUN.`); } catch (error) { fail(0, error.message); }
 try { const r = await checkRound5Addendum(); console.log(`H9/H10 computed: ${r.H9.measurements} CSSOM-model measurements, ten repeats and away/back at ten sizes; ${r.H10.after.samples} Figma poses at 0.02 s; laptop/app gap ${r.H10.after.minimumGap.toFixed(6)} px, Laptop ring clearance ${r.H10.after.minimumRing.toFixed(6)} px (S=103.6); ${r.H10.preservedFrames} incoming-piece comparisons. Browser checks UNRUN.`); } catch (error) { fail(0, error.message); }
 try { console.log(await checkRound5SecondAddendum()); } catch (error) { fail(0, error.message); }
 try { console.log(await checkEntrance()); console.log('E1/E4 negative controls: ' + await checkEntranceControls()); } catch (error) { fail(0, error.message); }
+try { console.log(describe(await checkHand())); console.log('K3 negative controls: ' + await checkHandControls()); } catch (error) { fail(0, error.message); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {

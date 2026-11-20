@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const take = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const call = "      if (i === 0) {\n        spreadFrame(D, t >= action(s, 'frame0').end - 0.000500001 * PACE ? 1 : eased(s, 'frame0', t), !filled);";
+const call = "      if (i === 0) {\n        spreadFrame(D, t >= action(s, 'frame0').end - 0.000500001 * PACE ? 1 : handed(s, 'frame0', t), !filled);";
 const old = "      if (i === 0 && done(s, 'frame0', t)) {\n        for (const rect of [ID.left, ID.right]) D.push({ ...on('ink', ...rect, { lift: 0.06, t: 0.02 }), tones: FLYER.coal });\n        if (!filled) emptyFrame(D, ID.frame, false);";
 const centre = 'return { ...view, cx: (textRight + view.W) / 2 - view.S * need.x };';
 const tests = [

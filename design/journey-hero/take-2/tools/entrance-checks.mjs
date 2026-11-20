@@ -7,6 +7,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { makeCamera, dot } from '../../../../public/journey/hero/engine.mjs';
 import { corners } from '../kit.mjs';
+import { inflateRawSync } from 'node:zlib';
+import { handPatch } from './hand-patch.mjs';
 import { SHOW, LOOP, SCENES, BLOCK, POOL, SCREEN, sceneAt, frameAt, calloutsAt } from '../stage.mjs';
 
 const TAKE = new URL('../', import.meta.url);
@@ -31,11 +33,18 @@ async function loadStage(source) {
   const fixed = source.replace(/from (['"])(\.{1,2}\/[^'"]+)\1/g, (_all, _quote, ref) => `from '${new URL(ref, url).href}'`);
   return import('data:text/javascript;base64,' + Buffer.from(fixed).toString('base64'));
 }
+async function preExit() {
+  const record = JSON.parse(read('tools/fixtures/round5-addendum-source.json')).sources['stage.mjs'];
+  return loadStage(handPatch(inflateRawSync(Buffer.from(record.deflateBase64, 'base64')).toString('utf8')));
+}
 export async function checkLabelExit(stageSource = read('stage.mjs')) {
   const S = await loadStage(stageSource), { EASE } = await import('../../../../public/journey/hero/engine.mjs');
   const { SHOW: show, LOOP: loop, SCRIPTS, PACE, playbackSpans, calloutsAt: labelsAt } = S;
-  close(loop, 83.04, 'E4 labels: LOOP moved', 1e-9);
-  const lens = { ps: 7.5, ai: 11.4, id: 20.98, pr: 15.22, ae: 14.03, fig: 13.91 };
+  // CORRECTIONS-7: derived, not typed. The pre-E4 stage (round-5 incoming, frozen) scheduled with round 7's hand
+  // gives the loop and the lengths the exit must leave alone (83.04 s and 7.5/11.4/20.98/15.22/14.03/13.91 before round 7).
+  const before = await preExit();
+  close(loop, before.LOOP, 'E4 labels: LOOP moved', 1e-9);
+  const lens = Object.fromEntries(before.SHOW.map(scene => [scene.key, scene.len]));
   let start = 0, samples = 0;
   for (const scene of show) {
     close(scene.len, lens[scene.key], `E4 labels: ${scene.key} length moved`, 1e-9);
@@ -209,7 +218,7 @@ export async function checkEntrance({ entranceSource = read('entrance.mjs'), pla
   const dots = checkTimetable(E);
   const runs = await checkPlayer(playerSource, E);
   const labelSamples = await checkLabelExit(stageSource);
-  return `E4 computed: ${labelSamples} label samples at off-0.30/0.25/0.20/0.10/0.01 s in four scenes, all listed until off, none at off; LOOP 83.04 and scene lengths unchanged. E1/E2 computed: timetable of 11 parts and 5 lede line counts; screen plane at 0, 0.5, 0.8, 1.1; floor circle ${dots} dot samples; ${runs} player runs (loop clock, hover gate, craft/stage/Pause clicks, hold, reduced motion). Frames UNRUN here.`;
+  return `E4 computed: ${labelSamples} label samples at off-0.30/0.25/0.20/0.10/0.01 s in four scenes, all listed until off, none at off; LOOP and scene lengths as the pre-E4 stage under the same scheduler. E1/E2 computed: timetable of 11 parts and 5 lede line counts; screen plane at 0, 0.5, 0.8, 1.1; floor circle ${dots} dot samples; ${runs} player runs (loop clock, hover gate, craft/stage/Pause clicks, hold, reduced motion). Frames UNRUN here.`;
 }
 
 // Each control edits one exact site in memory and must fail at its gate.

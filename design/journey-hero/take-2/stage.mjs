@@ -205,6 +205,11 @@ const TREE = [['lFrame', 0, 0.34], ['lFrame', 0, 0.34], ['tT', 1, 0.2], ['tV', 1
 // ---- The clock and the shared choreography. All times are local to the current scene.
 const linear = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
 const progress = (t, a, b) => EASE.wipe(linear(t, a, b));
+// CORRECTIONS-7 K1: the hand's one easing. Minimum jerk: no overshoot, top speed 1.875 times its average
+// (EASE.wipe's is 3.8). It moves the cursor and everything the cursor carries; nothing else uses it.
+// Clamped only against rounding: the polynomial reaches 1 + 2e-15 just before x = 1.
+export const HAND = x => Math.min(1, Math.max(0, x * x * x * (10 + x * (6 * x - 15))));
+export const HAND_KINDS = ['drag', 'draw', 'slide', 'stroke', 'run'];
 const held = (t, a, b) => t >= a && t < b;
 const rectMix = (a, b, p) => a.map((v, i) => mix(v, b[i], p));
 const centre = r => [r[0] + r[2] / 2, r[1] + r[3] / 2];
@@ -226,8 +231,8 @@ function chip(P, key) {
   const [x, y, w, h] = DOCK[key];
   P.push({ ...on('grey', x - 0.012, y - 0.012, w + 0.024, h + 0.024, { lift: 0.04, t: 0.012 }), where: 'travel' }, { ...on('ink', x, y, w, h, { lift: 0.055, t: 0.02, art: PICTURES[key] }), where: 'travel' });
 }
-function travel(P, key, from, to, t, a, b, endWindow = [0, 0, 1, 1]) {
-  const p = progress(t, a, b), rect = rectMix(from, to, p), dockStart = from === DOCK[key], lift = (dockStart ? mix(0.055, 0.06, p) : mix(0.06, 0.055, p)) + 0.08 * Math.sin(Math.PI * p), [x, y, w, h] = rect;
+function travel(P, key, from, to, t, a, b, endWindow = [0, 0, 1, 1], curve = EASE.wipe) {
+  const p = curve(linear(t, a, b)), rect = rectMix(from, to, p), dockStart = from === DOCK[key], lift = (dockStart ? mix(0.055, 0.06, p) : mix(0.06, 0.055, p)) + 0.08 * Math.sin(Math.PI * p), [x, y, w, h] = rect;
   // The picture is the same piece throughout. The dock's rim folds down as it leaves, or grows as it lands.
   const rim = 0.012 * (dockStart ? 1 - p : p);
   if (rim > 0) P.push({ ...on('grey', x - rim, y - rim, w + 2 * rim, h + 2 * rim, { lift: lift - 0.015, t: 0.012 }), where: 'travel', action: key });
@@ -450,9 +455,12 @@ export function script(definitions, { hold = 0, tail = 0.3, start = EXPORT } = {
   const actions = definitions.map(def => {
     const from = def.from || def.to || previous, to = def.to || from;
     const distance = Math.hypot(from[0] - previous[0], from[1] - previous[1]);
-    const move = distance < 1e-8 ? 0 : distance < 0.5 ? 0.12 : distance <= 1.5 ? 0.2 : 0.28;
+    // CORRECTIONS-7 K2: longer moves take longer. An approach of distance d takes min(0.5, 0.18 + 0.07 d);
+    // a hand action of path length d takes at least 0.12 + 0.08 d (its path's segments, or from to to).
+    const move = distance < 1e-8 ? 0 : Math.max(Math.min(0.5, 0.18 + 0.07 * distance), handTime({ from: previous, to: from }));
     let duration = def.duration ?? (def.kind === 'type' ? Math.min(0.6, def.text.length * 0.035) : def.kind === 'run' ? Math.max(0.07, def.count * 0.07) : 0.05);
     if (def.kind === 'type') { duration = Math.max(typed ? 0.4 : 0.6, duration); typed = true; }
+    if (HAND_KINDS.includes(def.kind)) duration = Math.max(duration, 0.12 + 0.08 * pathLength(def.path || [from, to]), handTime({ ...def, from, to }));
     const action = { ...def, from, to, previous, move: move * PACE, approach: time * PACE, start: (time + move) * PACE, end: (time + move + duration) * PACE };
     // The measured origins are the script's text insertion points, including rotated map labels.
     if (def.textArt) Object.defineProperty(action, 'points', { enumerable: true, get: () => (ART_TEXT[def.textArt] || []).filter(part => def.id !== 'title' || part.words.startsWith('King Street')).map(part => mapPoint(def.textRect, ...part.origin, ART[def.textArt].w, ART[def.textArt].h)) });
@@ -461,20 +469,43 @@ export function script(definitions, { hold = 0, tail = 0.3, start = EXPORT } = {
   });
   return { actions, start, len: (time + hold + tail) * PACE, first: actions[0]?.start ?? 0.8 * PACE };
 }
+// CORRECTIONS-7: a path is walked by its length, so the hand's speed does not jump from segment to segment.
+// Returns the segment and the fraction of it reached at fraction p of the whole length.
+function alongPath(points, p) {
+  const lengths = points.slice(1).map((b, i) => Math.hypot(b[0] - points[i][0], b[1] - points[i][1])), total = lengths.reduce((n, d) => n + d, 0);
+  let left = p * total;
+  for (let i = 0; i < lengths.length; i++) { if (left <= lengths[i] || i === lengths.length - 1) return [i, lengths[i] ? clamp(left / lengths[i], 0, 1) : 1]; left -= lengths[i]; }
+}
+// K2's floor from K3's limit: the distance rule assumed about 86 px per unit, but HOME draws a diagonal
+// down-right move at up to 119 px per unit. So a move also takes at least the time that keeps its projected
+// peak speed, along its own route at HAND, under HAND_PAGE.limit at the 1440 x 900 fit (S 103.6).
+export const HAND_PAGE = { S: 103.6, limit: 1500 };
+function handTime(route) {
+  const page = ([x, y]) => [0, 1].map(k => HAND_PAGE.S * U * dot3([HOME.r, HOME.u][k], [x, y, 0])), n = 1000;
+  let peak = 0, last = page(actionPoint(route, 0));
+  for (let i = 1; i <= n; i++) { const p = page(actionPoint(route, HAND(i / n))); peak = Math.max(peak, Math.hypot(p[0] - last[0], p[1] - last[1]) * n); last = p; }
+  // A straight route's exact peak is 1.875 times its length; the sampled one is never above it.
+  if (!route.curve && !route.path) { const [a, b] = [page(route.from), page(route.to)]; peak = 1.875 * Math.hypot(b[0] - a[0], b[1] - a[1]); }
+  return peak / HAND_PAGE.limit;
+}
+function pathLength(points) { let d = 0; for (let i = 1; i < points.length; i++) d += Math.hypot(points[i][0] - points[i - 1][0], points[i][1] - points[i - 1][1]); return d; }
 const action = (s, id) => s.actions.find(a => a.id === id);
 const begun = (s, id, t) => t >= action(s, id).start;
 const done = (s, id, t) => t >= action(s, id).end;
 const phase = (s, id, t) => linear(t, action(s, id).start, action(s, id).end);
-const eased = (s, id, t) => EASE.wipe(phase(s, id, t));
+// Everything that is not the hand keeps the brand's wipe; a hand action read through it is a mistake.
+const eased = (s, id, t) => { const a = action(s, id); if (HAND_KINDS.includes(a.kind)) throw new Error(`${id} is a hand action: read it with handed()`); return EASE.wipe(linear(t, a.start, a.end)); };
+// The cursor's point and every piece it moves read this, so they stay together.
+const handed = (s, id, t) => { const a = action(s, id); if (!HAND_KINDS.includes(a.kind)) throw new Error(`${id} is not a hand action`); return HAND(linear(t, a.start, a.end)); };
 function actionCursor(P, s, t) {
   let point = s.start, active, tool;
   for (const a of s.actions) {
     if (t < a.approach) break;
-    if (t < a.start) { point = rectMix(a.previous, a.from, progress(t, a.approach, a.start)); break; }
+    if (t < a.start) { point = rectMix(a.previous, a.from, HAND(linear(t, a.approach, a.start))); break; }
     if (a.tool) tool = a.tool;
     if (t < a.end) {
       active = a;
-      point = ['drag', 'draw', 'slide', 'stroke', 'run'].includes(a.kind) ? actionPoint(a, EASE.wipe(phase(s, a.id, t))) : a.from;
+      point = HAND_KINDS.includes(a.kind) ? actionPoint(a, handed(s, a.id, t)) : a.from;
       break;
     }
     point = a.to;
@@ -486,7 +517,7 @@ function actionCursor(P, s, t) {
 }
 function actionPoint(a, p) {
   if (a.curve) return quadratic(...a.curve, p);
-  if (a.path) { const f = p * (a.path.length - 1), i = Math.min(a.path.length - 2, Math.floor(f)); return rectMix(a.path[i], a.path[i + 1], f - i); }
+  if (a.path) { const [i, f] = alongPath(a.path, p); return rectMix(a.path[i], a.path[i + 1], f); }
   return rectMix(a.from, a.to, p);
 }
 function inverseWipe(p) {
@@ -664,8 +695,8 @@ function editedPhoto(t) {
   const current = s.actions.filter(a => t >= a.start).at(-1), tool = current?.tool || 'tBrush';
   rail(P, ['tMove', 'tMarquee', 'tBrush', 'tType', 'tRect', 'tWand'], tool === 'tMove' ? 0 : tool === 'tWand' ? 5 : 2);
   // The empty panel retains its sliders; histogram and layers belong to the document.
-  const g = eased(s, 'grade', t);
-  const levels = [mix(0.2, 0.3, eased(s, 'black', t)), mix(0.5, 0.45, eased(s, 'white', t))];
+  const g = handed(s, 'grade', t);
+  const levels = [mix(0.2, 0.3, handed(s, 'black', t)), mix(0.5, 0.45, handed(s, 'white', t))];
   const values = [mix(levels[0], 0.55, g), mix(levels[1], 0.3, g)];
   values.forEach((v, i) => {
     const [hx, y] = sliderPoint(i, v);
@@ -720,7 +751,7 @@ function typedPicture(P, rect, art, words, p, { tone = 'paper', colour = 'ink', 
 }
 function dragPicture(P, s, id, t, from, to, art, tone = 'ink') {
   if (!begun(s, id, t)) { P.push(on(tone, ...from, { lift: 0.07, t: 0.015, art })); return; }
-  const p = eased(s, id, t), rect = rectMix(from, to, p);
+  const p = handed(s, id, t), rect = rectMix(from, to, p);
   const pc = on(tone, ...rect, { lift: 0.08 + 0.08 * Math.sin(Math.PI * p), t: 0.015, art });
   if (ART[art].photoProfile) {
     const aspect = ART[art].w / ART[art].h, ratio = rect[2] / rect[3];
@@ -754,7 +785,7 @@ function editedVideo(t) {
   if (begun(s, 'bin', t)) { P.push(on('red', 0.15, 1.025, 0.18, 0.18, { lift: 0.05, t: 0.012 }), icon(P.tool === 'blade' ? 'tBlade' : P.tool === 'type' ? 'tType' : 'tArrow', 0.17, 1.045, 0.14, 0.14, 'red', 0.065)); }
   [['tT', 0.84], ['tV', 0.54], ['tA', 0.30], ['tA', 0.13]].forEach(([art, y]) => P.push(icon(art, 0.16, y, 0.2, 0.16)));
   // Neutral wheels and empty lanes are furniture; footage, captions and sound are document pieces.
-  const grade = eased(s, 'effect', t);
+  const grade = handed(s, 'effect', t);
   for (let i = 0; i < 3; i++) P.push(dot('dark', 3.86 + i * 0.355, TOP - 0.3, 0.15), dot(i === 1 ? 'red' : 'paper', 3.86 + i * 0.355 + [0.05, -0.04, 0.02][i] * grade, TOP - 0.3 + [0.03, 0.05, -0.06][i] * grade, 0.035, { lift: 0.08, t: 0.01 }));
   [mix(0.5, 0.62, grade), mix(0.5, 0.3, grade)].forEach((v, i) => {
     const y = TOP - 0.66 - i * 0.2;
@@ -765,7 +796,7 @@ function editedVideo(t) {
   const gap = 0.3 * (1 - eased(s, 'closeGap', t));
   ['clipA', 'clipB', 'clipC'].forEach((id, i) => {
     if (!begun(s, id, t)) return;
-    const p = eased(s, id, t), cut = begun(s, 'cut', t), removed = done(s, 'offcut', t);
+    const p = handed(s, id, t), cut = begun(s, 'cut', t), removed = done(s, 'offcut', t);
     const length = [1.3, cut ? 1.4 : 1.7, 1.2][i], start = [0, 1.3, 2.7 + gap][i];
     const to = [0.45 + start, 0.51, length - 0.02, 0.29], r = rectMix(BINS[i], to, p), moving = !done(s, id, t);
     const lift = 0.05 + 0.08 * Math.sin(Math.PI * p), clip = on(i === 1 ? 'red' : 'grey', ...r, { lift, t: 0.03 });
@@ -804,11 +835,11 @@ function editedVideo(t) {
   });
   if (begun(s, 'music', t)) {
     const echoStart = D.length;
-    const p = eased(s, 'music', t), target = [0.45, 0.16, 3.88, 0.17], r = rectMix(BINS[3], target, p);
+    const p = handed(s, 'music', t), target = [0.45, 0.16, 3.88, 0.17], r = rectMix(BINS[3], target, p);
     if (!done(s, 'music', t)) { const pc = on('dark', ...r, { lift: 0.08, t: 0.02, art: 'wave' }); pc.where = 'travel'; D.push(pc); }
     else {
       D.push(on('dark', ...target, { lift: 0.05, t: 0.02 }));
-      const duck = eased(s, 'duck', t), fade = eased(s, 'fade', t);
+      const duck = handed(s, 'duck', t), fade = handed(s, 'fade', t);
       const level = u => (1 - 0.5 * duck * (u > 0.08 && u < 0.87 ? 1 : 0)) * (u > 0.8 ? 1 - fade * Math.floor((u - 0.8) * 25) / 5 : 1);
       for (let i = 0; i < 64; i++) {
         const u = i / 64, h = (0.025 + Math.abs(Math.sin(i * 1.7) * Math.sin(i * 0.4)) * 0.11) * Math.max(0, level(u));
@@ -835,12 +866,12 @@ function constructedComp(P, rect, s, t, born, carets = true) {
   if (born(0)) typedPicture(P, inRect(rect, norm([28, 62, 232, 62])), 'wMake', 'Make it', phase(s, 'make', t), { caret: carets });
   if (born(1)) typedPicture(P, inRect(rect, norm([28, 136, 168, 52])), 'wMove', 'move', phase(s, 'move', t), { colour: 'red', caret: carets });
   if (born(2)) {
-    const p = eased(s, 'ball', t), pos = begun(s, 'path', t) ? quadratic(BALL_FROM, BALL_VIA, BALL, eased(s, 'path', t)) : BALL_FROM, r = BALL[2];
+    const p = handed(s, 'ball', t), pos = begun(s, 'path', t) ? quadratic(BALL_FROM, BALL_VIA, BALL, handed(s, 'path', t)) : BALL_FROM, r = BALL[2];
     draw('paper', norm([pos[0] - r, pos[1] - r, 2 * r * p, 2 * r * p]), 'redBall');
   }
   ROWS.forEach((r, i) => {
     if (!born(i + 3)) return;
-    const p = i ? 1 : eased(s, 'row', t);
+    const p = i ? 1 : handed(s, 'row', t);
     if (!i && !done(s, 'row', t)) draw('ink', norm([r[0], r[1], r[2] * p, r[3] * p]));
     else draw('paper', norm(r), i ? 'rowB' : 'rowA');
   });
@@ -869,19 +900,19 @@ function editedMotion(t) {
     tagEcho(D, ['ball', 'row', 'copies', 'copies'][i], echoStart);
   });
   if (selected) {
-    const at = clock === null ? 1.6 : clock * 2.4, pos = clock === null ? quadratic(BALL_FROM, BALL_VIA, BALL, eased(s, 'path', t)) : quadratic(BALL_FROM, BALL_VIA, BALL, EASE.wipe(linear(at, ...LAYERS[2][5])));
+    const at = clock === null ? 1.6 : clock * 2.4, pos = clock === null ? quadratic(BALL_FROM, BALL_VIA, BALL, handed(s, 'path', t)) : quadratic(BALL_FROM, BALL_VIA, BALL, EASE.wipe(linear(at, ...LAYERS[2][5])));
     const [x, y] = compPoint(pos), half = (BALL[2] + 8) * VIEW[2] / 480;
     if (clock === null || at >= LAYERS[2][5][0]) {
       D.push(...outline(x - half, y - half, half * 2, half * 2, { line: 0.012 }));
       for (const dx of [-1, 1]) for (const dy of [-1, 1]) D.push(on('red', x + dx * half - 0.02, y + dy * half - 0.02, 0.04, 0.04, { lift: 0.09, t: 0.008, overlay: true }));
     }
-    const n = begun(s, 'path', t) ? Math.floor(eased(s, 'path', t) * 12) : 0;
+    const n = begun(s, 'path', t) ? Math.floor(handed(s, 'path', t) * 12) : 0;
     for (let i = 1; i < Math.min(12, n + 1); i++) { const [px, py] = compPoint(quadratic(BALL_FROM, BALL_VIA, BALL, i / 12)), w = 60 * 0.056 * VIEW[2] / 480; D.push(on('dark', px - w / 2, py - w / 2, w, w, { lift: 0.086, t: 0.004 })); }
     const [sx, sy] = compPoint(BALL_FROM), w = 60 * 0.16 * VIEW[2] / 480;
     if (begun(s, 'stopwatch', t)) D.push(...outline(sx - w / 2, sy - w / 2, w, w, { tone: 'dark', line: 60 * 0.04 * VIEW[2] / 480 }));
   }
   // These handles describe EASE.wipe itself, so the graph and the ball's actual timing agree.
-  const bend = eased(s, 'graph', t), g0 = [24, 176], g1 = [216, 24], h0 = rectMix([88, 176 - 152 / 3], [115.2, 176], bend), h1 = rectMix([152, 24 + 152 / 3], [38.4, 24], bend);
+  const bend = handed(s, 'graph', t), g0 = [24, 176], g1 = [216, 24], h0 = rectMix([88, 176 - 152 / 3], [115.2, 176], bend), h1 = rectMix([152, 24 + 152 / 3], [38.4, 24], bend);
   if (done(s, 'path', t)) {
     const echoStart = D.length;
     for (let i = 0; i < 14; i++) D.push(bar(graphPoint(cubic(g0, h0, h1, g1, i / 14)), graphPoint(cubic(g0, h0, h1, g1, (i + 1) / 14)), { line: 0.95 * 6 / 240, lift: 0.057 }));
@@ -900,15 +931,15 @@ function editedMotion(t) {
     if (i === 2) D.push(icon('tClock', 1.08, y, 0.1, 0.09));
     keys.forEach((key, j) => {
       const visible = i === 2 ? j === 0 ? begun(s, 'stopwatch', t) : done(s, 'path', t) : begun(s, 'keys', t) && phase(s, 'keys', t) * 5 >= (i < 2 ? i : i - 1);
-      const position = i === 2 && j === 0 ? key * eased(s, 'staggerBall', t) : key;
+      const position = i === 2 && j === 0 ? key * handed(s, 'staggerBall', t) : key;
       if (visible) D.push(icon(lit ? 'kfOn' : 'kf', 1.34 + position - 0.045, y, 0.09, 0.09, lit ? 'grey' : 'dark', 0.063));
     });
     tagEcho(D, ['make', 'move', 'ball', 'row', 'copies', 'copies'][i], echoStart);
   });
   const laneStart = D.length;
-  const head = 1.34 + (clock !== null ? clock * 2.4 : begun(s, 'play', t) ? 1.6 : 1.45 * eased(s, 'head', t));
+  const head = 1.34 + (clock !== null ? clock * 2.4 : begun(s, 'play', t) ? 1.6 : 1.45 * handed(s, 'head', t));
   D.push(on('red', head - 0.015, 0.13, 0.03, 0.95, { lift: 0.13, t: 0.01 }), on('red', head - 0.07, 1.01, 0.14, 0.1, { lift: 0.13, t: 0.02 }));
-  if (begun(s, 'marquee', t) && !done(s, 'marquee', t)) { const p = eased(s, 'marquee', t); D.push(...outline(1.36, 0.93 - 0.8 * p, 2.1 * p, 0.8 * p, { line: 0.012 })); }
+  if (begun(s, 'marquee', t) && !done(s, 'marquee', t)) { const p = handed(s, 'marquee', t); D.push(...outline(1.36, 0.93 - 0.8 * p, 2.1 * p, 0.8 * p, { line: 0.012 })); }
   if (begun(s, 'head', t)) tagEcho(D, 'head', laneStart);
   for (const pc of D.slice(laneStart)) pc.overlay = true;
   D.forEach(pc => pc.document = true); P.push(...D);
@@ -945,7 +976,7 @@ function spreadFrame(P, p, cross) {
     P.push(pc);
   }
 }
-// Rectangles interpolate linearly in wipe progress. Solve their first intersection once in that space;
+// Rectangles interpolate linearly in hand progress (HAND). Solve their first intersection once in that space;
 // after contact, the styled picture owns the frame and the empty outline never returns.
 function frameContact(s, id, t, from, to, frame) {
   if (!begun(s, id, t)) return false;
@@ -959,7 +990,7 @@ function frameContact(s, id, t, from, to, frame) {
     else if (d > 0) first = Math.max(first, -a[i] / d);
     else last = Math.min(last, -a[i] / d);
   }
-  return first <= last && eased(s, id, t) >= first;
+  return first <= last && handed(s, id, t) >= first;
 }
 function editedFigma(t) {
   const P = [], D = [], s = SCRIPTS.fig;
@@ -972,9 +1003,9 @@ function editedFigma(t) {
   FIG.wires.forEach((r, i) => {
     if (done(s, 'frame' + i, t)) D.push({ ...on('grey', r[0], r[1] + r[3] + 0.015, i ? 0.17 : 0.26, 0.03, { lift: 0.05, t: 0.008 }), echo: 'frame' + i });
     if (done(s, 'details', t)) { D.push({ ...on('paper', ...r, { lift: 0.06, t: 0.02, art: wireArts[i] }), echo: 'details' }); return; }
-    drawnFrame(D, r, eased(s, 'frame' + i, t));
+    drawnFrame(D, r, handed(s, 'frame' + i, t));
     if (i === 0) {
-      const box = inRect(r, HERO_REGION); if (!done(s, 'pictureBox', t)) drawnFrame(D, box, eased(s, 'pictureBox', t), 'grey');
+      const box = inRect(r, HERO_REGION); if (!done(s, 'pictureBox', t)) drawnFrame(D, box, handed(s, 'pictureBox', t), 'grey');
       if (done(s, 'pictureBox', t)) pictureRegion(D, r, wireArts[i], HERO_REGION);
       if (begun(s, 'heading', t)) {
         const birth = D.length;
@@ -984,7 +1015,7 @@ function editedFigma(t) {
         if (p < 1) { const j = chars < 0.5 ? 0 : 1, caret = inRect(r, regions[j]); D.push(on('grey', caret[0] + caret[2] * clamp(chars * 2 - j, 0, 1), caret[1], 0.012, caret[3], { lift: 0.095, t: 0.004, overlay: true })); }
         for (const pc of D.slice(birth)) { pc.text = { key: 'wireHeading', count: Math.floor(p * 9), total: 9, prefix: p < 1 }; if (pc.overlay) pc.caret = 'wireHeading'; }
       }
-      const p = eased(s, 'button', t), button = inRect(r, [64 / 1440, 555 / 900, 380 / 1440, 35 / 900]); drawnFrame(D, button, p, 'grey');
+      const p = handed(s, 'button', t), button = inRect(r, [64 / 1440, 555 / 900, 380 / 1440, 35 / 900]); drawnFrame(D, button, p, 'grey');
       if (begun(s, 'details', t)) {
         const n = Math.floor(phase(s, 'details', t) * 9);
         [[0, 0, 1, 0.13], [0, 0.49, 0.46, 0.13], [0, 0.61, 0.46, 0.39]].forEach((region, j) => { if (n >= j) pictureRegion(D, r, wireArts[i], region); });
@@ -995,13 +1026,13 @@ function editedFigma(t) {
     }
   });
   if (begun(s, 'marquee', t) && !done(s, 'copies', t)) {
-    const a = topLeft(FIG.wires[0]), b = bottomRight(FIG.wires[2]), p = eased(s, 'marquee', t);
+    const a = topLeft(FIG.wires[0]), b = bottomRight(FIG.wires[2]), p = handed(s, 'marquee', t);
     D.push(...outline(a[0], a[1] + (b[1] - a[1]) * p, (b[0] - a[0]) * p, (a[1] - b[1]) * p, { line: 0.012 }));
   }
   const clock = exportPlay(s, t);
   FIG.designs.forEach((r, i) => {
     if (!begun(s, 'copies', t)) return;
-    const p = eased(s, 'copies', t), place = rectMix(FIG.wires[i], r, p), suffix = ['Wide', 'Tablet', 'Tall'][i];
+    const p = handed(s, 'copies', t), place = rectMix(FIG.wires[i], r, p), suffix = ['Wide', 'Tablet', 'Tall'][i];
     let art = wireArts[i];
     if (begun(s, 'fill' + i, t)) art = 'uiBuild1' + suffix;
     if (done(s, 'hero', t)) art = 'uiBuild2' + suffix;
@@ -1027,7 +1058,7 @@ function editedFigma(t) {
   else if (!done(s, 'hero', t)) dragPicture(D, s, 'hero', t, HERO_SOURCE, inRect(FIG.designs[0], HERO_REGION), 'heroSource');
   if (begun(s, 'hotspot', t)) {
     D.push(...outline(...FIG.spot, { line: 0.012 }), dot('red', ...FIG.from, 0.03, { lift: 0.085, t: 0.012, overlay: true }), dot('paper', ...FIG.from, 0.012, { lift: 0.097, t: 0.006, overlay: true }));
-    const end = rectMix(FIG.from, FIG.to, eased(s, 'link', t)), reach = Math.min(0.16, Math.hypot(end[0] - FIG.from[0], end[1] - FIG.from[1]) / 3), along = p => cubic(FIG.from, [FIG.from[0] + reach, FIG.from[1]], [end[0] - reach, end[1]], end, p);
+    const end = rectMix(FIG.from, FIG.to, handed(s, 'link', t)), reach = Math.min(0.16, Math.hypot(end[0] - FIG.from[0], end[1] - FIG.from[1]) / 3), along = p => cubic(FIG.from, [FIG.from[0] + reach, FIG.from[1]], [end[0] - reach, end[1]], end, p);
     if (begun(s, 'link', t)) for (let i = 0; i < 8; i++) D.push(bar(along(i / 8), along((i + 1) / 8)));
     if (done(s, 'link', t)) D.push(bar(FIG.to, [FIG.to[0] - 0.07, FIG.to[1] + 0.05]), bar(FIG.to, [FIG.to[0] - 0.07, FIG.to[1] - 0.05]));
     
@@ -1078,9 +1109,9 @@ function editedInDesign(t, { at: pages } = {}) {
       const [drag, from, to] = [['map', DOCK.map, ID.frame], ['photo', DOCK.photo, ID.photo], ['postPhoto', ID.photo, ID.post], ['mailPhoto', ID.photo, ID.mailPhoto]][i];
       const filled = frameContact(s, drag, t, from, to, frame), placed = done(s, id, t), before = D.length;
       if (i === 0) {
-        spreadFrame(D, t >= action(s, 'frame0').end - 0.000500001 * PACE ? 1 : eased(s, 'frame0', t), !filled);
+        spreadFrame(D, t >= action(s, 'frame0').end - 0.000500001 * PACE ? 1 : handed(s, 'frame0', t), !filled);
       } else if (!placed) {
-        drawnFrame(D, r, eased(s, 'frame' + i, t), 'night', true);
+        drawnFrame(D, r, handed(s, 'frame' + i, t), 'night', true);
         if (filled) D.splice(before, D.length - before, ...D.slice(before).filter(pc => !pc.overlay));
       }
       for (const pc of D.slice(before)) {
@@ -1092,7 +1123,7 @@ function editedInDesign(t, { at: pages } = {}) {
     else if (begun(s, 'map', t)) {
       const a = action(s, 'map'), window = [34 / 2200, 84 / 850, 2056 / 2200, 826 / 850];
       if (done(s, 'map', t)) D.push({ ...on('ink', ...ID.frame, { lift: 0.08, t: 0.004, art: 'kMap' }), window, placed: 'map' });
-      else travel(P, 'map', DOCK.map, ID.frame, t, a.start, a.end, window);
+      else travel(P, 'map', DOCK.map, ID.frame, t, a.start, a.end, window, HAND);
       if (begun(s, 'heading', t)) typedPicture(D, inRect(ID.right, [970 / 1100, 180 / 850, 100 / 1100, 500 / 850]), 'idHeading', 'Amenities', phase(s, 'heading', t), { colour: FLYER.gold, direction: 'up' });
       if (begun(s, 'spreadType', t)) {
         const n = Math.floor(phase(s, 'spreadType', t) * 6);
@@ -1108,7 +1139,7 @@ function editedInDesign(t, { at: pages } = {}) {
     const tw = 0.36, th = tw * 340 / 440, mid = PANEL + 0.425;
     [[null, 'kCover'], ['kOfferL', 'kOfferR'], ['kLocL', 'kLocR'], ['kAmL', 'kAmR'], ['kGalL', 'kGalR'], ['kBack', null]].forEach(([left, right], i) => {
       const repeat = [1, 4, 5].indexOf(i);
-      const visible = i === 0 ? done(s, 'coverTitle', t) : i === 2 ? done(s, 'loc', t) : i === 3 ? done(s, 'spreadType', t) : begun(s, 'pages', t) && (t - action(s, 'pages').start) / PACE >= repeat * 0.07;
+      const visible = i === 0 ? done(s, 'coverTitle', t) : i === 2 ? done(s, 'loc', t) : i === 3 ? done(s, 'spreadType', t) : begun(s, 'pages', t) && phase(s, 'pages', t) * action(s, 'pages').count >= repeat;   // K2: one page per third of the run, however long it takes
       if (!visible) return;
       const echoStart = D.length, y = TOP - 0.13 - (i + 1) * th - i * 0.1;
       if (i === 3) D.push(on('red', mid - tw - 0.03, y - 0.03, tw * 2 + 0.06, th + 0.06, { lift: 0.05, t: 0.01 }));
@@ -1116,13 +1147,13 @@ function editedInDesign(t, { at: pages } = {}) {
       if (right) D.push(on('ink', mid, y, tw, th, { lift: 0.065, t: 0.008, art: right }));
       tagEcho(D, ['coverTitle', 'pages', 'loc', 'spreadType', 'pages', 'pages'][i], echoStart);
     });
-    if (begun(s, 'loc', t) && !done(s, 'loc', t)) { const a = action(s, 'loc'); travel(P, 'loc', DOCK.loc, ID.loc, t, a.start, a.end); }
+    if (begun(s, 'loc', t) && !done(s, 'loc', t)) { const a = action(s, 'loc'); travel(P, 'loc', DOCK.loc, ID.loc, t, a.start, a.end, undefined, HAND); }
     if (begun(s, 'photo', t) && !done(s, 'coverTitle', t)) {
       if (!done(s, 'photo', t)) dragPicture(P, s, 'photo', t, DOCK.photo, ID.photo, 'coverImage');
       if (done(s, 'photo', t)) {
         // Cropped regions keep the final photograph and woven ground at their approved measures.
         D.push(on('ink', ...ID.cover, { lift: 0.084, t: 0.004, art: begun(s, 'coverTitle', t) ? 'coverDecor' : done(s, 'blob', t) ? 'coverBlob' : 'coverPhoto' }));
-        if (!done(s, 'blob', t)) drawnRegion(D, ID.cover, 'coverBlob', [50 / 1100, 482 / 850, 588 / 1100, 320 / 850], eased(s, 'blob', t));
+        if (!done(s, 'blob', t)) drawnRegion(D, ID.cover, 'coverBlob', [50 / 1100, 482 / 850, 588 / 1100, 320 / 850], handed(s, 'blob', t));
         if (begun(s, 'coverTitle', t)) typePatch(D, inRect(ID.cover, [311.6 / 440, 268 / 340, 128.4 / 440, 52 / 340]), 'idCover', phase(s, 'coverTitle', t));
       }
     }
@@ -1144,9 +1175,9 @@ function editedInDesign(t, { at: pages } = {}) {
           else mapTyping(D, rect, art, phase(s, key + 'Title', t), part => part.words !== 'View the flyer');
         }
         const blobRegion = key === 'post' ? [0.05, 0.61, 0.60, 0.31] : [44 / 800, 404 / 1180, 430 / 800, 230 / 1180];
-        if (begun(s, key + 'Blob', t)) drawnRegion(D, rect, art, blobRegion, eased(s, key + 'Blob', t));
+        if (begun(s, key + 'Blob', t)) drawnRegion(D, rect, art, blobRegion, handed(s, key + 'Blob', t));
         if (begun(s, key + 'Button', t)) {
-          const p = eased(s, key + 'Button', t), a = action(s, key + 'Button'), r = [a.from[0], a.to[1], a.to[0] - a.from[0], a.from[1] - a.to[1]];
+          const p = handed(s, key + 'Button', t), a = action(s, key + 'Button'), r = [a.from[0], a.to[1], a.to[0] - a.from[0], a.from[1] - a.to[1]];
           if (key === 'mail') drawnRegion(D, rect, 'mailButtonStyle', [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180], p);
           else if (p > 0 && p < 1) D.push(...outline(r[0], r[1] + r[3] * (1 - p), r[2] * p, r[3] * p, { tone: 'grey', line: 0.01 }));
         }
@@ -1200,12 +1231,12 @@ function editedIllustrator(t) {
   const layerCount = begun(s, 'board0', t) ? begun(s, 'pins', t) ? 4 : begun(s, 'block', t) ? 3 : begun(s, 'street', t) ? 2 : 1 : 0;
   [0.67, 0.5, 0.6, 0.42].slice(0, layerCount).forEach((w, i) => D.push({ ...on(i ? 'dark' : 'grey', PANEL + 0.09, TOP - 1.4 - i * 0.2, w, 0.1, { lift: 0.05, t: 0.02 }), echo: ['board0', 'street', 'block', 'pins'][i] }));
   [AI.upper, AI.lower].forEach((r, i) => {
-    const p = eased(s, 'board' + i, t), temp = []; drawnFrame(temp, r, p, 'ink'); temp.forEach(pc => { pc.tones = FLYER.coal; pc.p[2] -= 0.005 * U; }); D.push(...temp);
+    const p = handed(s, 'board' + i, t), temp = []; drawnFrame(temp, r, p, 'ink'); temp.forEach(pc => { pc.tones = FLYER.coal; pc.p[2] -= 0.005 * U; }); D.push(...temp);
   });
-  if (begun(s, 'mapExport', t)) { const a = action(s, 'mapExport'); travel(P, 'map', AI.upper, DOCK.map, t, a.start, a.end); }
+  if (begun(s, 'mapExport', t)) { const a = action(s, 'mapExport'); travel(P, 'map', AI.upper, DOCK.map, t, a.start, a.end, undefined, HAND); }
   else if (done(s, 'badge', t)) D.push(on('ink', ...AI.upper, { lift: 0.06, t: 0.02, art: 'kMap' }));
   else {
-    const draw = screenPainter(D, AI.upper); cropPicture(draw, 'ink', [0, 0, 1, 1], 'mapStreet', eased(s, 'street', t));
+    const draw = screenPainter(D, AI.upper); cropPicture(draw, 'ink', [0, 0, 1, 1], 'mapStreet', handed(s, 'street', t));
     if (begun(s, 'markers', t)) {
       const n = Math.min(AM_MARKERS.length, 1 + Math.floor(phase(s, 'markers', t) * AM_MARKERS.length));
       AM_MARKERS.slice(0, n).forEach(r => mapRegion(D, AI.upper, 'kMap', r, 2200, 850));
@@ -1217,22 +1248,22 @@ function editedIllustrator(t) {
       mapTyping(D, AI.upper, 'kMap', phase(s, 'labels', t), p => !p.words.startsWith('King Street') && p.words !== 'N');
     }
     if (begun(s, 'title', t)) mapTyping(D, AI.upper, 'kMap', phase(s, 'title', t), p => p.words.startsWith('King Street'));
-    if (begun(s, 'badge', t)) { const p = eased(s, 'badge', t), r = inRect(AI.upper, [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850]); drawnFrame(D, r, p, 'grey'); }
+    if (begun(s, 'badge', t)) { const p = handed(s, 'badge', t), r = inRect(AI.upper, [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850]); drawnFrame(D, r, p, 'grey'); }
   }
-  if (begun(s, 'locExport', t)) { const a = action(s, 'locExport'); travel(P, 'loc', AI.lower, DOCK.loc, t, a.start, a.end); }
+  if (begun(s, 'locExport', t)) { const a = action(s, 'locExport'); travel(P, 'loc', AI.lower, DOCK.loc, t, a.start, a.end, undefined, HAND); }
   else if (done(s, 'cityLabels', t)) D.push(on('ink', ...AI.lower, { lift: 0.06, t: 0.02, art: 'kLoc' }));
   else {
     if (begun(s, 'block', t)) {
-      const r = inRect(AI.lower, [660 / 1352, 16 / 850, 62 / 1352, 68 / 850]), p = eased(s, 'block', t); if (!done(s, 'block', t)) drawnFrame(D, r, p, 'dark');
+      const r = inRect(AI.lower, [660 / 1352, 16 / 850, 62 / 1352, 68 / 850]), p = handed(s, 'block', t); if (!done(s, 'block', t)) drawnFrame(D, r, p, 'dark');
       if (done(s, 'block', t)) mapRegion(D, AI.lower, 'locBlocks', CITY_BLOCKS[0], 1352, 850);
     }
     if (begun(s, 'blocks', t)) { const n = Math.min(CITY_BLOCKS.length - 1, 1 + Math.floor(phase(s, 'blocks', t) * (CITY_BLOCKS.length - 1))); CITY_BLOCKS.slice(1, n + 1).forEach(r => mapRegion(D, AI.lower, 'locBlocks', r, 1352, 850)); }
-    if (begun(s, 'streets', t)) cropPicture(screenPainter(D, AI.lower), 'ink', [0, 0, 1, 1], 'locStreets', eased(s, 'streets', t));
+    if (begun(s, 'streets', t)) cropPicture(screenPainter(D, AI.lower), 'ink', [0, 0, 1, 1], 'locStreets', handed(s, 'streets', t));
     if (begun(s, 'pins', t)) { const n = Math.min(CITY_PINS.length, 1 + Math.floor(phase(s, 'pins', t) * CITY_PINS.length)); CITY_PINS.slice(0, n).forEach(r => mapRegion(D, AI.lower, 'locPins', r, 1352, 850)); }
     if (begun(s, 'cityLabels', t)) mapTyping(D, AI.lower, 'kLoc', phase(s, 'cityLabels', t));
   }
   if (begun(s, 'marquee', t) && !begun(s, 'export', t)) {
-    const p = eased(s, 'marquee', t), [x, y, w, h] = AI.frame;
+    const p = handed(s, 'marquee', t), [x, y, w, h] = AI.frame;
     if (p > 0) D.push(...outline(x, y + h * (1 - p), w * p, h * p));
   }
   if (begun(s, 'close', t) && !done(s, 'closeBack', t)) {
@@ -1240,8 +1271,9 @@ function editedIllustrator(t) {
     D.push({ ...on('ink', ...rectMix(AI.frame, AI.close, p), { lift: 0.075 + 0.08 * Math.sin(Math.PI * p), t: 0.02, art: 'kLocClose' }), echo: 'marquee' });
   }
   if (begun(s, 'subway', t) && !begun(s, 'export', t)) {
-    const p = eased(s, 'subway', t) * AI.segments.length;
-    AI.segments.forEach(([a, b], i) => { const f = clamp(p - i, 0, 1); if (f > 0) D.push(bar(AI.at(a), AI.at(rectMix(a, b, f)))); });
+    // The line is drawn to the cursor: the same fraction of the path's length.
+    const [reached, part] = alongPath(action(s, 'subway').path, handed(s, 'subway', t));
+    AI.segments.forEach(([a, b], i) => { const f = i < reached ? 1 : i === reached ? part : 0; if (f > 0) D.push(bar(AI.at(a), AI.at(rectMix(a, b, f)))); });
     if (done(s, 'subway', t)) {
       AI.subway.arms.slice(0, 2).forEach(([a, b]) => { const end = AI.at(b); D.push(bar(AI.at(a), end, { line: 0.012 }), dot('red', ...end, 0.026, { lift: 0.085, t: 0.012, overlay: true })); });
       const [sx, sy, sw, sh] = SPOT;
@@ -1311,6 +1343,18 @@ function liftDragStack(P) {
     if (stack.includes(pc) || pc === cursor || (pc.overlay && !pc.emptyFrame)) continue;
     const b = bounds(pc);
     if (rects.some(r => r[0] < b[2] && r[2] > b[0] && r[1] < b[3] && r[3] > b[1])) rise = Math.max(rise, pc.p[2] + pc.s[2] + LAYER_STEP * U - bottom);
+  }
+  // CORRECTIONS-7: the lifted cursor must not come to rest level with a guide it covers (a depth tie).
+  // Raise the one shared offset until it clears them; the stack only rises further from what it covers.
+  const flat = pc => { const points = corners(pc); return [Math.min(...points.map(p => p[0])), Math.min(...points.map(p => p[1])), Math.max(...points.map(p => p[0])), Math.max(...points.map(p => p[1]))]; };
+  if (cursor) {
+    const c = flat(cursor), top = cursor.p[2] + cursor.s[2];
+    const covered = P.filter(pc => !stack.includes(pc) && pc !== cursor && pc.where !== 'floor').filter(pc => { const b = flat(pc); return c[0] < b[2] - 1e-9 && c[2] > b[0] + 1e-9 && c[1] < b[3] - 1e-9 && c[3] > b[1] + 1e-9; }).map(pc => pc.p[2] + pc.s[2]);
+    for (let k = 0; k < covered.length; k++) {
+      const tie = covered.filter(h => Math.abs(top + rise - h) < LAYER_STEP * U);
+      if (!tie.length) break;
+      rise = Math.max(...tie) + LAYER_STEP * U - top;
+    }
   }
   const offset = HOME.v.map(n => n * rise / HOME.v[2]);
   for (const pc of [...stack, cursor]) {

@@ -11,6 +11,7 @@ import { createRenderer } from '../sq.mjs';
 import { SHOW, LOOP, PACE, SCRIPTS, SCENES, frameAt } from '../stage.mjs';
 import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
 import { equivalent } from '../view.mjs';
+import { handPatch, retimer } from './hand-patch.mjs';
 
 const take = new URL('../', import.meta.url);
 const sources = JSON.parse(fs.readFileSync(new URL('fixtures/drag-sources.json', import.meta.url), 'utf8'));
@@ -22,7 +23,8 @@ const near = (a, b) => Math.abs(a - b) < 1e-8;
 async function snapshot(name) {
   const raw = inflateRawSync(Buffer.from(sources[name].deflateBase64, 'base64')).toString('utf8');
   // The saved source used paths relative to take-2. Resolve imports there, in memory.
-  const source = raw.replace(/from (['"])([^'"]+)\1/g, (_, q, ref) => 'from ' + q + new URL(ref, take).href + q);
+  // CORRECTIONS-7: round 7's hand edit is applied in memory; the hash below is still of the frozen bytes.
+  const source = handPatch(raw).replace(/from (['"])([^'"]+)\1/g, (_, q, ref) => 'from ' + q + new URL(ref, take).href + q);
   return { module: await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64')), hash: createHash('sha256').update(raw).digest('hex') };
 }
 function stack(P, id) {
@@ -71,7 +73,9 @@ export async function checkDrags(only = '') {
     for (let n = 0; n <= Math.ceil((a.end - a.start) / (0.0005 * PACE)); n++) times.add(start + Math.min(a.end, a.start + n * 0.0005 * PACE));
     for (const at of [a.start, a.end]) for (const d of [-1e-8, 1e-8]) times.add(start + at + d * PACE);
   }
-  for (let n = 0; n <= 200; n++) times.add(25.20 + n * 0.0005 * PACE);
+  // Instants named from the 83.04 s timetable are mapped to now through the actions around them (CORRECTIONS-7 K2).
+  const { global: retime, local: retimeLocal } = await retimer({ SHOW, SCRIPTS });
+  for (let n = 0; n <= 200; n++) times.add(retime(25.20 + n * 0.0005 * PACE));
   for (const time of [...times].sort((a, b) => a - b)) {
     const at = time - start, a = drags.find(a => at >= a.start && at < a.end);
     if (!a) continue;
@@ -121,10 +125,10 @@ export async function checkDrags(only = '') {
     // The first four bars are the frame rectangle. Diagonal caps extend beyond it.
     const bounds = made.slice(0, 4).map(rect), target = [Math.min(...bounds.map(r => r[0])), Math.min(...bounds.map(r => r[1])), Math.max(...bounds.map(r => r[2])), Math.max(...bounds.map(r => r[3]))].map((n, k) => n + (k < 2 ? -1 : 1) * 0.03 * 1.15);
     const samples = new Set(times);
-    for (let n = 0; n <= 2180; n++) samples.add(19.9 + n * 0.005 * PACE);
+    for (let n = 0; n <= 2180; n++) samples.add(retime(19.9 + n * 0.005 * PACE));
     let contacted = false;
     for (const time of [...samples].sort((a, b) => a - b)) {
-      const at = time - start; if (at <= draw.end + 1e-9 || at > 11.9 * PACE) continue;
+      const at = time - start; if (at <= draw.end + 1e-9 || at > retimeLocal('id', 11.9 * PACE)) continue;
       const P = frameAt(time), own = stack(base.frameAt(time), id).image;
       contacted ||= at >= place.end - 1e-9 || (own && overlap(rect(own), target));
       const lines = P.filter(pc => pc.emptyFrame === id), plates = P.filter(pc => pc.framePlate === id);
@@ -135,7 +139,7 @@ export async function checkDrags(only = '') {
       require('frames', at < place.end - 1e-9 || plates.length || P.some(pc => pc.where === 'content' && !pc.echo && replacements[id].includes(pc.art)), time, `${id} placement left bare wall`);
     }
   }
-  if (enabled('shadow')) for (const time of [22.144, 25.227, 25.25, 25.251, 27.2, 29.1]) {
+  if (enabled('shadow')) for (const time of [22.144, 25.227, 25.25, 25.251, 27.2, 29.1].map(retime)) {
     for (const pc of frameAt(time).filter(pc => pc.shadowP)) {
       const positions = rendererPositions(pc);
       require('shadow', positions.shadow.every((v, i) => near(v, pc.shadowP[i])) && positions.colour.every((v, i) => near(v, pc.p[i])), time, 'renderer did not retain shadow position and lifted colour position');

@@ -40,7 +40,9 @@ export function polygonsOverlap(a, b) {
   return true;
 }
 
-export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, MAT, SCRIPTS, PACE, UI_ROW, playbackSpans, prototypeState, tip }) {
+const gutterEntry = { over: 0 };
+// retime(key, t) maps a scene-local instant named from the 83.04 s timetable to now (CORRECTIONS-7 K2).
+export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, MAT, SCRIPTS, PACE, UI_ROW, playbackSpans, prototypeState, tip, retime = (_key, t) => t }) {
   let previous = tip(frameAt(LOOP - PACE / 240));
   for (let n = 0; n <= Math.ceil(LOOP * 240 / PACE); n++) {
     const time = Math.min(LOOP, n * PACE / 240), p = tip(frameAt(time));
@@ -179,12 +181,12 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
     const draw = idScript.actions.find(a => a.id === 'frame' + i), place = idScript.actions.find(a => a.id === id);
     const made = frameAt(idStart + draw.end + 1e-7 * PACE).filter(pc => pc.emptyFrame === id).map(rect);
     const target = [Math.min(...made.map(r => r[0])), Math.min(...made.map(r => r[1])), Math.max(...made.map(r => r[2])), Math.max(...made.map(r => r[3]))].map((n, k) => n + (k < 2 ? 1 : -1) * 0.005 * 1.15);
-    const samples = new Set(Array.from({ length: 2181 }, (_, n) => (1 + n * 0.005) * PACE));
-    samples.add(6.329 * PACE); // The incoming post-frame fault at global 25.229 s.
+    const samples = new Set(Array.from({ length: 2181 }, (_, n) => retime('id', (1 + n * 0.005) * PACE)));
+    samples.add(retime('id', 6.329 * PACE)); // The incoming post-frame fault at global 25.229 s (83.04 s timetable).
     for (const t of [draw.start, draw.end, place.start, place.end]) for (const d of [-1e-7, 0, 1e-7]) samples.add(t + d * PACE);
     let contacted = false;
     for (const at of [...samples].sort((a, b) => a - b)) {
-      if (at <= draw.start + 1e-9 || at > 11.9 * PACE) continue;
+      if (at <= draw.start + 1e-9 || at > retime('id', 11.9 * PACE)) continue;
       const time = idStart + at, P = frameAt(time), overlays = P.filter(pc => pc.emptyFrame === id), plates = P.filter(pc => pc.framePlate === id);
       const own = P.filter(pc => pc.where === 'travel' && (profile ? pc.photoProfile === profile : pc.art === 'kMap'));
       const padded = target.map((n, k) => n + (k < 2 ? -1 : 1) * 0.03 * 1.15);
@@ -266,15 +268,25 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
       start += scene.len;
     }
   }
-  const allPoints = [];
-  for (let at = 0; at < LOOP; at += PACE / 30) for (const pc of frameAt(at)) for (const p of corners(pc)) if (!pc.clip || p.reduce((sum, n, i) => sum + n * pc.clip[i], pc.clip[3]) >= 0) allPoints.push(dot(HOME.r, p));
+  const allPoints = [], entryPoints = [];
+  // CORRECTIONS-7: the Figma laptop's H3 slide-in starts 1.6 units left with no entry clip. Its first 0.03 s
+  // reaches past the fitted envelope; at 83.04 s the 1/30 s grid happened to land 0.027 s into the slide and missed
+  // it, at 91.5 s it lands 0.002 s in. Those instants are bounded separately below (and the start itself is sampled).
+  const entry = figStart + timing.spans[0][0], inEntry = at => at >= entry - 1e-9 && at < entry + 0.03 * PACE;
+  const sampleAt = [...Array.from({ length: Math.ceil(LOOP * 30 / PACE) }, (_, n) => n * PACE / 30).filter(at => at < LOOP), entry];
+  for (const at of sampleAt) for (const pc of frameAt(at)) for (const p of corners(pc)) if (!pc.clip || p.reduce((sum, n, i) => sum + n * pc.clip[i], pc.clip[3]) >= 0) (inEntry(at) && pc.deviceKind === 'laptop' ? entryPoints : allPoints).push(dot(HOME.r, p));
   const leftmost = allPoints.reduce((n, v) => Math.min(n, v), Infinity), rightmost = allPoints.reduce((n, v) => Math.max(n, v), -Infinity);
+  const entryLeft = entryPoints.reduce((n, v) => Math.min(n, v), Infinity);
+  let entryOver = 0;
   for (let W = 280; W <= 720; W++) {
     const S = Math.min(W / need.w, 396 / need.h);
     const view = fitCalloutView({ W, H: 844, S, cx: W / 2 - S * need.x, cy: 262 + S * need.y, cam: HOME }, need, 0, 65);
     if (view.cx + view.S * leftmost < 16 - 1e-7 || view.cx + view.S * rightmost > W - 16 + 1e-7) fail(0, 'stage gutters: stage crossed a 16 px side gutter at width ' + W);
+    entryOver = Math.max(entryOver, 16 - (view.cx + view.S * Math.min(leftmost, entryLeft)));
   }
-  console.log('R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (' + fixedSamples + ' samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720');
+  if (!(entryPoints.length && entryOver <= 5)) fail(0, `stage gutters: the Figma laptop's first 0.03 s enters the 16 px gutter by ${entryOver.toFixed(2)} px (allowed 5)`);
+  gutterEntry.over = entryOver;
+  console.log('R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (' + fixedSamples + ' samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720 (Figma laptop entry, first 0.03 s: ' + gutterEntry.over.toFixed(2) + ' px into the gutter, bounded at 5)');
 }
 // Direct use initializes the same atlas/player fixtures in a child to avoid an ESM entry-point cycle.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

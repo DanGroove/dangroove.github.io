@@ -15,6 +15,7 @@ import { BROWSER_SIZES } from './browser-check.mjs';
 import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
 
 const take = new URL('../', import.meta.url);
+import { handPatch } from './hand-patch.mjs';
 const fixture = JSON.parse(fs.readFileSync(new URL('fixtures/round5-addendum-source.json', import.meta.url)));
 const sha = source => createHash('sha256').update(source).digest('hex');
 const close = (a, b, message, epsilon = 0.01) => assert.ok(Math.abs(a - b) <= epsilon, `${message}: ${a} != ${b}`);
@@ -147,7 +148,8 @@ export function laptopClearance(module) {
 export async function checkRound5Addendum({ only = '', control = '' } = {}) {
   assert.equal(fixture.sources['stage.mjs'].sha256, '8bfd42a687f780f6e224f09a6a46c6fcb276b925745fc63c2ea2337ce7336cc8');
   assert.equal(fixture.sources['page-layout.mjs'].sha256, '3ad80e6ae74572a36079a9a050f8b54159f3794adb4209d5d1e61175f8b6eed1');
-  const oldStageURL = moduleURL(decode(fixture.sources['stage.mjs']), 'stage.mjs');
+  // CORRECTIONS-7: the frozen incoming stage gets round 7's hand edit in memory, so H10 still proves nothing else moved.
+  const oldStageURL = moduleURL(handPatch(decode(fixture.sources['stage.mjs'])), 'stage.mjs');
   const incoming = await import(oldStageURL), incomingLabels = await import(moduleURL(source('labels.mjs'), 'labels.mjs', { './stage.mjs': oldStageURL }));
   const need = sceneEnvelope(current.SCENES, corners, dot, HOME), beforeNeed = sceneEnvelope(incoming.SCENES, corners, dot, HOME);
   const report = { computedOnly: true, beforeEnvelope: beforeNeed, afterEnvelope: need };

@@ -839,3 +839,68 @@ all clean
 - A real first load (no hold) at both sizes: no page or console errors; once the entrance has ended and 2 s more have passed, no entering part is clipped, hidden or weighted inline, the name is 800, `is-entering` is gone, Pause reads "Pause" and the loop clock advances.
 - The E4 exit was filmed separately (see E4 above). The entrance sheets were re-filmed from the final pack, which includes E4.
 - Browser check: `bcheck3.mjs` (the repository's `checkBrowser`, which ends with `checkRound5Layout`) on the final pack at 1440 × 900: **PASS 150 rows**, no page or console errors. It includes E3's 16 px allowance below 1440 wide.
+
+## CORRECTIONS-7
+
+Dan asked: "Do you think the mouse moves too fast at times?" `CORRECTIONS-7.md` (K1 one hand easing, K2 longer moves take longer, K3 checks) controls this round; everything from rounds 2–6 is kept. Only files in `take-2/` changed; `engine.mjs` is untouched.
+
+### K1 — one hand easing
+
+`stage.mjs` exports `HAND`, the minimum-jerk curve `x³(10 + x(6x − 15))` (top speed 1.875 × average, no overshoot), clamped to 0–1 only against rounding (the polynomial gives 1 + 2e-15 just before x = 1, which made a picture window negative). `HAND_KINDS` is drag, draw, slide, stroke, run.
+
+- Readers are explicit. `handed(s, id, t)` is `HAND(phase)` and throws for a non-hand action; `eased(s, id, t)` stays `EASE.wipe(phase)` and now throws for a hand action, so a hand action can no longer be read through the wipe by name.
+- Moved to `HAND`: the cursor's approach (`HAND(linear(t, approach, start))`) and its point during every hand action; `dragPicture` (Premiere transition/effect, Figma hero, InDesign photo/postPhoto/mailPhoto); `frameContact` (InDesign's four photo/map drags); `travel()` gained a curve argument, `HAND` for InDesign map/loc and Illustrator mapExport/locExport (Photoshop's export travel keeps the wipe); Photoshop grade (split line, dot, picture window, both slider knobs), black, white; Premiere clipA/B/C, effect (and its colour grade), music, duck, fade; After Effects ball, path (comp ball, thumbnail ball, motion-path dots), row, graph handles, staggerBall, head, marquee; Figma frame0–2, pictureBox, button, marquee, copies, link; InDesign frame0 (spread), frame1–3, blob, postBlob/mailBlob, postButton/mailButton; Illustrator board0/1, street, badge, block, streets, marquee, subway. Run counters keep reading linear phase (they count members, they carry nothing).
+- Still on `EASE.wipe`: shell changes, wipes, page flips, Photoshop open/sky/shrink, Premiere closeGap, After Effects comp, Illustrator close/closeBack, InDesign leaves, exports, playback, labels, entrance.
+- K1 alone: LOOP 83.040 unchanged; **peak cursor speed 3,073.1 px/s** (Illustrator subway stroke, whose path was walked one segment per equal share of time); `checks.mjs` all clean (saved state and log in the build's scratch).
+
+### K2 — longer moves take longer
+
+`script()`: an approach of distance d takes `min(0.5, 0.18 + 0.07 d)`; a hand action of path length d (its `path` segments, else from–to) takes at least `0.12 + 0.08 d`. With exactly that, the loop is 90.881 s (approaches +6.900, durations +0.941, as the brief expected) but the peak was still 3,073 px/s, then 1,895 px/s once the subway was fixed (below), with 14 moves over 1,500.
+
+**New LOOP 91.498 s** (91.49807…). Scenes: Photoshop 8.046, Illustrator 13.148, InDesign 23.091, Premiere 16.681, After Effects 15.082, Figma 15.449 (starts 0, 8.046, 21.194, 44.285, 60.967, 76.049). Stills (local): 7.095311, 10.835164, 20.189380, 13.631291, 12.032090, 13.149236. Peak cursor speed **1,499.7 px/s** (InDesign frame0 draw).
+
+Everything timed from actions followed (labels, exports, InDesign pickup/leaves/still, Figma taps, morphs, playback spans). One run was timed in absolute seconds: InDesign's page thumbnails appeared every 0.07 s of `pages`; they now appear each third of the run (identical at 0.21 s).
+
+### Departures and why
+
+- **Speed floor added to K2.** The brief's rule assumes about 86 px per unit; HOME draws a diagonal down-right move at up to 119 px per unit, so the rule alone left 14 moves at 1,530–1,895 px/s and K3 could not pass. Each approach and hand action also takes at least the time that keeps its projected peak (along its own route, at HAND) under 1,500 px/s at S 103.6 (`HAND_PAGE`, `handTime()`). This adds 0.617 s over the brief's 90.881 s.
+- **Paths walked by length.** `actionPoint` walked a `path` one segment per equal share of the phase, so the subway's cursor sped up on long segments (3,073 px/s). It now walks by length (`alongPath`), and the subway line is drawn to the same point, so the pen stays on the line.
+- **Loop range.** `checks.mjs` allowed 70–86 s (round 2); raised to 92 for K2's expected ~90.8 s. Dan's choice of 83.04 (K1 only) is still open.
+- **Lifted cursor tie.** With the new timing a sampled frame caught the lifted drag cursor level (within 0.0006) with a selection guide it covered (InDesign loc/photo drags). This existed before at unsampled instants (13 ties at 0.0005 s on the 83.04 s build). `liftDragStack` raises the one shared offset until the cursor clears any guide it covers; the stack only rises further from what it covers.
+- **Figma laptop entry and the phone gutters.** The H3 slide-in starts 1.6 units left with no entry clip; its first ~0.03 s passes the 16 px side gutter by up to 4.4 px at 441–454 px wide. The 83.04 s build had the same frames; the 1/30 s sample grid landed 0.027 s into the slide and missed them. The gutter check now samples the entry instant itself and bounds those first 0.03 s at 5 px instead of hiding them. Not fixed: changing H3 is outside this brief. Worth Dan's eye.
+- **Frozen snapshots.** Checks that compare with 48aea47, 50b51b8, round 4 and the round-5 incoming stage now apply round 7's edit to the frozen source in memory (`tools/hand-patch.mjs`, each edit must match exactly once; hashes are still of the frozen bytes), so they still prove nothing else moved. Instants named from the 83.04 s timetable (G1's 25.20–25.30 s window and shadow times, F1/R15 windows 1.0–11.9 s local, the 25.229 s fault) are mapped to now through the actions around them (`retimer`).
+- **R6 boundary.** A placed-image check sampled the exact release instant, which global-to-local rounding can read as still dragging; it now starts 1e-9 s after release.
+
+### K3 — checks
+
+`tools/hand-checks.mjs` (run by `checks.mjs`):
+- Speed: the cursor tip projected with HOME at S 103.6 every 1/120 s over the loop (10,979 samples), on the screen face (the press's depth step is a cut, the drag lift moves along the view); limit 1,500 px/s.
+- Together: for each of the 53 drags, draws, slides and strokes, some feature (corner, edge middle, centre) of a piece moved by the action keeps its grab offset to the cursor, or the cursor's progress along its own route, within 0.002 units at 19 phases (paths are judged segment by segment). The heals' carried piece is the brush ring. In all 1,458 approach and hand-action samples the cursor is exactly on its route at HAND.
+- Updated, derived rather than retyped: `round5-checks.mjs` H2 (loop = round-4 scripts under the same scheduler + 1.8 s, starts likewise; H1 spread growth reads HAND), `entrance-checks.mjs` E4 (loop and lengths from the pre-E4 stage under the same scheduler), `checks.mjs` R2 page rows (thirds of the run), ball halfway (HAND), README table check, loop range, drag/correction windows via `retimer`.
+
+Negative controls (in memory, one exact site each), all caught:
+- `EASE.wipe` back on the approach → `K3 speed: cursor peaks at 3025.0 px/s at 47.2750 s (pr/clipC approach) > 1500`.
+- `dragPicture` left on `EASE.wipe(phase)` → `K3 together: id/photo (drag) has no piece within 0.002 of the cursor: closest 0.46605`.
+- Photoshop grade left on `EASE.wipe(phase)` → `K3 together: ps/grade (slide) … closest 0.01817`.
+- Round 4–5 control suites rerun: round5 17/17, drag 14/14, addendum 3/3, second addendum 2/2 caught; `controls.mjs` audit: all 46 edits match one place (the full 46-run suite was not rerun).
+
+**Checks output.** `node design/journey-hero/take-2/tools/checks.mjs` — exit 0, tail:
+
+```text
+R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (744 samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720 (Figma laptop entry, first 0.03 s: 4.42 px into the gutter, bounded at 5)
+H11/H12 computed: 48 four-craft layout samples; 555 resize samples; 990/1000 centre step 6.800 px, maximum step 8.300 px. DOM/glyph model only; browser/pixel checks UNRUN.
+E4 computed: 60 label samples at off-0.30/0.25/0.20/0.10/0.01 s in four scenes, all listed until off, none at off; LOOP and scene lengths as the pre-E4 stage under the same scheduler. E1/E2 computed: timetable of 11 parts and 5 lede line counts; screen plane at 0, 0.5, 0.8, 1.1; floor circle 18125 dot samples; 6 player runs (loop clock, hover gate, craft/stage/Pause clicks, hold, reduced motion). Frames UNRUN here.
+E1/E4 negative controls: timetable caught: E1 timetable: Endrawes before 0.16; labels-cut caught: E4 labels: id Flyer text at off-0.25: 1 != 0.8236004772467269; click caught: E1 click: craft click leaves the entrance running
+K3 computed: cursor peak 1499.7 px/s at 22.6083 s (id/frame0 draw), 10979 samples at 1/120 s, S=103.6, limit 1500; 53 drags/draws/slides/strokes carry a piece within 0.002 (worst 9.93e-16, ae/path); cursor on HAND in 1458 approach/action samples.
+K3 negative controls: approach caught: K3 speed: cursor peaks at 3025.0 px/s at 47.2750 s (pr/clipC approach) > 1500; reader caught: K3 together: id/photo (drag) has no piece within 0.002 of the cursor: closest 0.46605; grade caught: K3 together: ps/grade (slide) has no piece within 0.002 of the cursor: closest 0.01817
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 6117 frames, 413714 pieces (max 183); 5 atlas pages; loop 91.498s
+ps: 8.046s, ai: 13.148s, id: 23.091s, pr: 16.681s, ae: 15.082s, fig: 15.449s
+all clean
+```
+
+### Browser evidence
+
+- Film strips at 0.02 s, before (83.04 s build) and after, for the five worst moves: `.scratch/review-out/r7/{before,after}-{fig-details,pr-bin,id-spreadType,ai-board0,ps-export}.png`.
+- Pack: `.scratch/review-out/r7-preview.html` (381 KB); no `mailto`, `href` or `http`.
+- Browser check: the repository's `checkBrowser` (which ends with `checkRound5Layout`) on the final pack at 1440 × 900, headless Chromium with SwiftShader: **PASS 160 rows**, network requests 0, page/console errors 0 (18.1 min).

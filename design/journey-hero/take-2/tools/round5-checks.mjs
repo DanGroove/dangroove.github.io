@@ -6,13 +6,14 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { HOME, makeCamera, dot, quatRotate, EASE } from '../../../../public/journey/hero/engine.mjs';
-import { SHOW, LOOP, SCRIPTS, SCENES, SCREEN, MAT, PACE, UI_ROW, frameAt, calloutsAt, playbackSpans } from '../stage.mjs';
+import { HAND, SHOW, LOOP, SCRIPTS, SCENES, SCREEN, MAT, PACE, UI_ROW, frameAt, calloutsAt, playbackSpans } from '../stage.mjs';
 import { corners } from '../kit.mjs';
 import { centreScene, sideGutter, stageTarget, equivalent, pointerFloor, redDot, sceneEnvelope } from '../view.mjs';
 import { fitCalloutView, labelLayout } from '../labels.mjs';
 import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
 import { BROWSER_SIZES, checkLabelRoutes } from './browser-check.mjs';
 import { createFloorHover } from '../floor-hover.mjs';
+import { handPatch } from './hand-patch.mjs';
 
 const take = new URL('../', import.meta.url);
 const fixture = JSON.parse(fs.readFileSync(new URL('fixtures/round5-source.json', import.meta.url)));
@@ -28,7 +29,8 @@ async function reference() {
   assert.equal(fixture.sha256, 'fc33a53c13659008a0d3c3b6a86ff4091c26e985e79402561cf3261b94815ec6');
   assert.equal(createHash('sha256').update(raw).digest('hex'), fixture.sha256, 'round 4 fixture hash');
   const resolve = source => source.replace(/from (['"])([^'"]+)\1/g, (_, q, ref) => 'from ' + q + new URL(ref, take).href + q);
-  const stageURL = 'data:text/javascript;base64,' + Buffer.from(resolve(raw)).toString('base64');
+  // CORRECTIONS-7: round 7's hand edit is applied in memory; the hash above is still of the frozen bytes.
+  const stageURL = 'data:text/javascript;base64,' + Buffer.from(resolve(handPatch(raw))).toString('base64');
   const module = await import(stageURL);
   const labels = inflateRawSync(Buffer.from(fixture.labels.deflateBase64, 'base64')).toString('utf8');
   assert.equal(fixture.labels.sha256, 'f3b14cc19650b455e9a33bc8cf012b384aae2bd38c13b3c5d840567c582596a3');
@@ -50,7 +52,7 @@ export async function checkRound5(only = '') {
     const left = Math.min(...points.map(p => p[0])), right = Math.max(...points.map(p => p[0])), top = Math.max(...points.map(p => p[1])), bottom = Math.min(...points.map(p => p[1]));
     let samples = 0;
     for (let t = a.start + 0.005; t < a.end + 0.000001; t += 0.005) {
-      const p = EASE.wipe((Math.min(t, a.end) - a.start) / (a.end - a.start));
+      const p = HAND((Math.min(t, a.end) - a.start) / (a.end - a.start)); // frame0 is drawn by the hand (CORRECTIONS-7 K1)
       const pieces = frameAt(start + t).filter(pc => pc.framePlate === 'map' || pc.emptyFrame === 'map');
       assert.equal(pieces.length, 8, 'H1 spread: missing lasting page/frame pieces');
       for (const pc of pieces) for (const c of corners(pc)) assert.ok(c[0] >= left - 1e-8 && c[0] <= left + (right - left) * p + 1e-8 && c[1] <= top + 1e-8 && c[1] >= top - (top - bottom) * p - 1e-8, 'H1 spread: corner outside growing rectangle');
@@ -70,8 +72,11 @@ export async function checkRound5(only = '') {
     report.H1 = { draws, growingSamples: samples, spreadBoundary: 'exact non-cursor identity', otherDraws: 'both sides unchanged from round 4, numeric tolerance 1e-8' };
   }
   if (enabled('H2')) {
-    close(LOOP, 83.04, 'H2 loop'); assert.equal(PACE, 1, 'H2 pace');
-    assert.deepEqual(round(times), [0, 7.5, 18.9, 39.88, 55.1, 69.13], 'H2 starts');
+    // CORRECTIONS-7: derived, not typed. The round-4 scripts (scheduled with round 7's hand, in memory) plus
+    // round 5's 1.8 s longer InDesign landing hold give the loop and the scene starts (83.04 s before round 7).
+    close(LOOP, old.LOOP + 1.8 * PACE, 'H2 loop'); assert.equal(PACE, 1, 'H2 pace');
+    close(LOOP, SHOW.reduce((n, s) => n + s.len, 0), 'H2 loop is the scenes');
+    assert.deepEqual(round(times), round(oldStarts.map((t, i) => t + (i > 2 ? 1.8 * PACE : 0))), 'H2 starts');
     const land = SCRIPTS.id.actions.find(a => a.id === 'land');
     close(land.end - land.start, 3, 'H2 InDesign landing hold');
     for (let i = 0; i < SHOW.length; i++) {
