@@ -102,7 +102,10 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
         const body = isId ? floor.filter(pc => pc.art === 'kCover' || pc.art === 'post' || pc.art === 'mail') : floor.filter(pc => pc.deviceBody || pc.lid);
         for (const pc of body) if (!landed.some(q => q.art === pc.art && q.s.every((v, j) => near(v, pc.s[j])) && q.p.every((v, j) => near(v, pc.p[j])))) fail(time, 'R12: labelled asset is not in its landed pose');
         const before = seenLabels.get(c.id);
-        if (before && c.grow < before.grow - 1e-8) fail(time, 'R13: label growth decreased');
+        // E4: the line may only retract during its exit, the last 0.20 s before off; it never grows back there.
+        const leaving = at >= off - 0.2 * PACE - 1e-9;
+        if (before && !leaving && c.grow < before.grow - 1e-8) fail(time, 'R13: label growth decreased');
+        if (before && leaving && c.grow > before.grow + 1e-8) fail(time, 'R13: label grows during its exit');
         if (c.text > 0 && !near(c.grow, 1)) fail(time, 'R13: words precede the completed line');
         if (!(c.grow >= 0 && c.grow <= 1 && c.text >= 0 && c.text <= 1)) fail(time, 'R13: invalid wipe');
         seenLabels.set(c.id, c);

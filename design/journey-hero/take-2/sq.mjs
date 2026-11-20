@@ -97,10 +97,10 @@ vec4 artAt(vec3 l, float face) {
   return texture(uAtlas, uArt.xy + uv * uArt.zw);
 }`;
 
-// The same world plane cuts the picture, its silhouette and its cast shadow.
+// The same world plane cuts the picture, its silhouette and its cast shadow. uReveal is the entrance's one plane for the whole draw.
 const CLIP_FN = `
-uniform vec4 uClip;
-void clipAt(vec3 w) { if (dot(uClip, vec4(w, 1.0)) < 0.0) discard; }
+uniform vec4 uClip, uReveal;
+void clipAt(vec3 w) { if (dot(uClip, vec4(w, 1.0)) < 0.0 || dot(uReveal, vec4(w, 1.0)) < 0.0) discard; }
 `;
 
 const FRAG = `#version 300 es
@@ -165,17 +165,21 @@ uniform vec3 uHover;                  // floor x, floor z, enabled
 uniform vec3 uRed;
 uniform vec4 uFloor;                  // centre x, centre z, radius, dot pitch
 uniform float uSpread;
+uniform float uReach;                 // the entrance's hard circle from the centre, world units (huge when off)
 out vec4 o;
 ${SHADOW_FN}
 void main() {
   float r = length(vW.xz - uFloor.xy) / uFloor.z;
-  float pool = 1.0 - smoothstep(0.25, 1.0, r);
+  float glow = 1.0 - smoothstep(0.25, 1.0, r);
+  float pool = length(vW.xz - uFloor.xy) <= uReach ? glow : 0.0;
   float lit = shadowAt(vW + vec3(0.0, 0.03, 0.0), uSpread);
   vec3 c = mix(uInk, uPool, pool * (0.25 + 0.75 * lit));
   vec2 g = (fract(vW.xz / uFloor.w + 0.5) - 0.5) * uFloor.w;
   float dist = length(g), aa = fwidth(dist);
-  float dotv = (1.0 - smoothstep(0.03 - aa, 0.03 + aa, dist)) * pool * (0.35 + 0.65 * lit);
   vec2 centre = floor(vW.xz / uFloor.w + 0.5) * uFloor.w;
+  // A dot is on or off by its grid centre alone, so the growing circle never cuts one.
+  float on = distance(centre, uFloor.xy) <= uReach ? 1.0 : 0.0;
+  float dotv = (1.0 - smoothstep(0.03 - aa, 0.03 + aa, dist)) * glow * on * (0.35 + 0.65 * lit);
   bool red = uHover.z > 0.5 && distance(centre, uHover.xy) <= 0.75;
   o = vec4(mix(c, red ? uRed : uDot, dotv), 1.0);
 }`;
@@ -298,11 +302,12 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   const solid = [], cuts = [];
 
   // view: { W, H (css px), dpr, S (px per unit), cx, cy (px), cam: { r, u, v } }
-  // look: { light: [x, y, z], outline (units), soft, spread, floor: { on, x, z, radius, pitch }, centre: [x, y, z] of the lit volume, reach }
+  // look: { light: [x, y, z], outline (units), soft, spread, floor: { on, x, z, radius, pitch, reveal }, centre: [x, y, z] of the lit volume, reach,
+  //         reveal: [a, b, c, d] one more clip plane for every piece (the entrance) }
   function draw(pieces, view, look = {}) {
     const { W, H, dpr = 1, S, cx, cy, cam } = view;
     const L = norm(look.light || [-0.3, 0.55, 0.78]), outline = look.outline ?? 0.035, soft = look.soft ?? 0, spread = look.spread ?? 1;
-    const C = look.centre || [0, 2.2, 0], reach = look.reach || 7;
+    const C = look.centre || [0, 2.2, 0], reach = look.reach || 7, reveal = look.reveal || noClip;
     const width = Math.round(W * dpr), height = Math.round(H * dpr);
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== height) canvas.height = height;
@@ -329,7 +334,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     gl.clearDepth(1); gl.clear(gl.DEPTH_BUFFER_BIT);
     solid.length = cuts.length = 0;
     for (const pc of pieces) (pc.cut ? cuts : solid).push(pc);
-    gl.useProgram(depth.p); gl.uniformMatrix4fv(depth.u.uVP, false, lvp); gl.uniform1i(depth.u.uAtlas, 1);
+    gl.useProgram(depth.p); gl.uniformMatrix4fv(depth.u.uVP, false, lvp); gl.uniform1i(depth.u.uAtlas, 1); gl.uniform4fv(depth.u.uReveal, reveal);
     gl.cullFace(gl.FRONT);
     drawAll(depth, solid, 0, null, 'noShadow');
     gl.disable(gl.CULL_FACE);
@@ -346,6 +351,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     gl.useProgram(piece.p);
     gl.uniformMatrix4fv(piece.u.uVP, false, vp); gl.uniformMatrix4fv(piece.u.uLightVP, false, lvp);
     gl.uniform1i(piece.u.uShadow, 0); gl.uniform1i(piece.u.uAtlas, 1);
+    gl.uniform4fv(piece.u.uReveal, reveal);
     gl.uniform3fv(piece.u.uLight, L); gl.uniform1f(piece.u.uSoft, soft); gl.uniform1f(piece.u.uSpread, spread);
     const tones = (u, pc) => {
       const t = pc.tones || TONES[pc.tone] || TONES.paper;
@@ -358,7 +364,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
 
     if (outline > 0) {
       gl.cullFace(gl.FRONT);
-      gl.useProgram(flat.p); gl.uniformMatrix4fv(flat.u.uVP, false, vp); gl.uniform3fv(flat.u.uA, hex(look.line || INK));
+      gl.useProgram(flat.p); gl.uniformMatrix4fv(flat.u.uVP, false, vp); gl.uniform4fv(flat.u.uReveal, reveal); gl.uniform3fv(flat.u.uA, hex(look.line || INK));
       drawAll(flat, solid, pc => outline * (pc.line ?? 1), null, 'noLine');
       gl.cullFace(gl.BACK);
     }
@@ -371,6 +377,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       gl.uniform4f(floor.u.uFloor, f.x ?? 0, f.z ?? 0, f.radius ?? 5.5, f.pitch ?? 0.5);
       gl.uniform3fv(floor.u.uHover, f.pointer ? [f.pointer[0], f.pointer[2], 1] : [0, 0, 0]);
       gl.uniform3fv(floor.u.uRed, hex('#C0262E'));
+      gl.uniform1f(floor.u.uReach, f.reveal ?? 1e6);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       gl.enable(gl.CULL_FACE);
     }

@@ -24,7 +24,7 @@ change('R10 A3 undone', 'R10:', 'stage.mjs', "{ tail: 0, start: centre(DOCK.loc)
 change('R10 A4 undone', 'R10:', 'stage.mjs', "count: 6, duration: 0.3", 'count: 6, duration: 0.08');
 change('R11 wrong words', 'R11:', 'stage.mjs', "pr: ['YouTube', 'TikTok', 'Instagram']", "pr: ['Video', 'TikTok', 'Instagram']");
 change('R12 early label', 'R12:', 'stage.mjs', 'timing.spans.map(span => span[1]);', 'timing.spans.map(span => span[1] - 0.2 * PACE);');
-change('R13 reversed growth', 'R13:', 'stage.mjs', 'const grow = progress(at, ends[i], ends[i] + 0.25 * PACE)', 'const grow = 1 - progress(at, ends[i], ends[i] + 0.25 * PACE)');
+change('R13 reversed growth', 'R13:', 'stage.mjs', 'const growIn = progress(at, ends[i], ends[i] + 0.25 * PACE)', 'const growIn = 1 - progress(at, ends[i], ends[i] + 0.25 * PACE)');
 change('R14 wrong corner inset', 'R14:', 'stage.mjs', 'i === 0 ? x + 0.1', 'i === 0 ? x + 0');
 change('Figma device count', 'Figma devices:', 'stage.mjs', "pc.deviceKind = ['laptop', 'tablet', 'phone'][i]", "pc.deviceKind = ['laptop', 'phone', 'phone'][i]");
 change('Figma canvas tags beside top bar', 'canvas clearance:', 'stage.mjs', "if (done(s, 'frame' + i, t)) D.push({ ...on('grey', r[0], r[1] + r[3] + 0.015", "if (done(s, 'frame' + i, t)) D.push({ ...on('grey', r[0], r[1] + r[3] + 0.035");

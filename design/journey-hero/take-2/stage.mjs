@@ -60,12 +60,13 @@ function device(x, z, w, d, art, { rim = 0.05, round = 0.16, t = 0.08 } = {}) {
 
 // ---- what every app shares: the screen, its bar with the app's logo and name, the Export button and the cursor
 const APPS = { ai: ['appAi', 'nameAi'], id: ['appId', 'nameId'], ps: ['appPs', 'namePs'], pr: ['appPr', 'namePr'], ae: ['appAe', 'nameAe'], fig: ['appFig', 'nameFig'] };
-function shell(i, t, cursorAt, pressed) {
-  const P = [], scene = SHOW[i], old = SHOW[(i + SHOW.length - 1) % SHOW.length];
+// first: the page's first pass, where nothing came before Photoshop, so its shell starts as itself (round 6 entrance).
+function shell(i, t, cursorAt, pressed, first = false) {
+  const P = [], scene = SHOW[i], old = first ? scene : SHOW[(i + SHOW.length - 1) % SHOW.length];
   const change = t / PACE;
   P.push(box('dark', [SCREEN.l + SCREEN.w / 2, SCREEN.b + SCREEN.h / 2, SCREEN.z], [SCREEN.w, SCREEN.h, SCREEN.t]));
   P.push(on('night', 0, H - BAR, W, BAR, { lift: 0, t: 0.03 }));
-  const p = progress(change, 0.05, 0.5), angle = p * 180;
+  const p = first ? 0 : progress(change, 0.05, 0.5), angle = p * 180;
   const tile = on('ink', 0.07, H - BAR + 0.03, 0.38, 0.38, { lift: 0.04 + 0.2 * Math.sin(Math.PI * p), t: 0.07, art: APPS[old.app][0], more: { e: [0.1, 0.22] } });
   const back = { ...tile, p: tile.p.slice(), q: tile.q, art: APPS[scene.app][0], s: tile.s.slice() };
   back.s[2] = 0.002; back.p[2] = tile.p[2] - tile.s[2] - 0.001;
@@ -76,7 +77,8 @@ function shell(i, t, cursorAt, pressed) {
   const firstName = change < 0.275, nameProgress = firstName ? progress(change, 0.05, 0.275) : progress(change, 0.275, 0.5);
   const name = firstName ? icon(APPS[old.app][1], 0.56, H - BAR + 0.12, 1.14, 0.2, 'night', 0.031) : icon(APPS[scene.app][1], 0.56, H - BAR + 0.12, 1.14, 0.2, 'night', 0.031);
   const edge = SCREEN.l + (0.56 + 1.14 * nameProgress) * U;
-  name.clip = firstName ? [1, 0, 0, -edge] : [-1, 0, 0, edge]; P.push(name);
+  if (!first) name.clip = firstName ? [1, 0, 0, -edge] : [-1, 0, 0, edge];
+  P.push(name);
   const before = PLATES[old.layout], after = PLATES[scene.layout], f = progress(change, 0, 0.5);
   for (const role of Object.keys(after)) {
     const rect = rectMix(before[role], after[role], f);
@@ -1268,7 +1270,7 @@ export function sceneAt(t) {
 }
 function build(i, at, o) {
   stacks = { screen: -Infinity, floor: -Infinity, screenCount: 0, floorCount: 0 };
-  const app = builders[i](at, o), P = shell(i, at, app.cursor || EXPORT, app.pressed);
+  const app = builders[i](at, o), P = shell(i, at, app.cursor || EXPORT, app.pressed, !!o.first && i === 0);
   P.clock = app.clock;
   P.action = app.action;
   P.pressed = app.pressed;
@@ -1381,7 +1383,10 @@ export function calloutsAt(t) {
       });
       mark = [px, Math.max(...faces.map(pc => pc.p[1] + pc.s[2])), pz];
     }
-    const grow = progress(at, ends[i], ends[i] + 0.25 * PACE);
-    return [{ id: key + '-' + i, words: word, mark, side: i === 2 ? 'right' : 'left', level: i === 0 ? 'up' : 'low', grow, text: grow === 1 ? progress(at, ends[i] + 0.25 * PACE, ends[i] + 0.4 * PACE) : 0 }];
+    const growIn = progress(at, ends[i], ends[i] + 0.25 * PACE), textIn = growIn === 1 ? progress(at, ends[i] + 0.25 * PACE, ends[i] + 0.4 * PACE) : 0;
+    // E4 (round 6): every label of the scene leaves together, as its entrance played backwards, ending at the old cut (off):
+    // the word wipes back toward the line's end over off-0.30..off-0.20, then the line retracts into the mark until off.
+    const growOut = progress(off - at, 0, 0.2 * PACE), textOut = progress(off - at, 0.2 * PACE, 0.3 * PACE);
+    return [{ id: key + '-' + i, words: word, mark, side: i === 2 ? 'right' : 'left', level: i === 0 ? 'up' : 'low', grow: Math.min(growIn, growOut), text: Math.min(textIn, textOut) }];
   });
 }

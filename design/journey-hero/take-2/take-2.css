@@ -15,3 +15,18 @@
     transform: translateY(-46%) translateY(calc(-1 * var(--say-rise, 0px)));
   }
 }
+/* Round 6 entrance. The player animates the name's weight itself, from the entrance's own clock. Until the first frame can
+   draw, the parts that enter stay hidden, so nothing shows before its turn. Without scripts, or with reduced motion, nothing
+   is held back. */
+.hero-name {
+  animation: none;
+}
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .hero.is-entering .hero-mark,
+  .hero.is-entering .hero-links a,
+  .hero.is-entering .hero-name,
+  .hero.is-entering .hero-lede,
+  .hero.is-entering .hero-crafts li {
+    visibility: hidden;
+  }
+}

@@ -183,7 +183,8 @@ export async function checkRound5Layout(page) {
     if (w >= 720) {
       assert.ok(r.nameLines[0].top - r.h.top >= r.logoBottom + 48 - 1, `${w}x${h}: H5 logo guard`);
       assert.ok(r.stage.left <= r.left && r.stage.right >= r.right && r.stage.top <= r.top && r.stage.bottom >= r.bottom, `${w}x${h}: H6 stage target`);
-      if (w >= 1280) assert.ok(Math.abs((r.left - r.textInkRight) - (w - r.right)) <= 8, `${w}x${h}: H6 equal side spaces (H12 actual ink)`);
+      // E3 (round 6): H12 takes the text's edge from the lede's box, which leaves up to 13 px below 1440 wide.
+      if (w >= 1280) assert.ok(Math.abs((r.left - r.textInkRight) - (w - r.right)) <= (w < 1440 ? 16 : 8), `${w}x${h}: H6 equal side spaces (H12 actual ink)`);
     }
   }
   for (const h of [640, 900, 1440]) {

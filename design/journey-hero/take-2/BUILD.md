@@ -762,3 +762,80 @@ all clean
 ```
 
 The preview was repacked to `.scratch/preview.html`: **375,006 bytes**, 367 KB from the packer. Its module syntax and self-contained resources are checked by the full Node checker. The supplied acceptance of the other round-five work stands; no local browser, network, installation, Git command, deployment, `tools/measure.mjs`, program termination, outside-repository read/write or protected-path modification occurred. Installed skills and RTK remain outside the permitted read scope. Rendered side-by-side comparison and actual browser H11/H12 gates are reserved for the external reviewer.
+
+## CORRECTIONS-6
+
+Dan asked for "a nice in animation on everything when the page first loads". `CORRECTIONS-6.md` (E1 entrance, E2 review hold, E3 one browser-check tolerance) controls this round; everything from rounds 2–5 is kept.
+
+### E1 — the entrance
+
+`entrance.mjs` holds the timetable (`ENTRANCE`), the pure state at any time (`entranceAt`), the renderer values (`screenPlane`, `floorReach`, with JS mirrors `revealDot`/`revealPool` of the shader rule) and the page view (`createEntranceView`). Times run from the first frame that can draw (fonts and atlas ready). Wipes use `EASE.wipe`, the weight uses `EASE.enter` (the curve `name-in` used); `engine.mjs` is unchanged.
+
+| Time (s) | Part | How it is done |
+|---|---|---|
+| 0.00–0.30 | DG mark | `clip-path: inset(0 x% 0 0)` shrinking right edge. |
+| 0.24, 0.30 | Journey, Contact | Cut: clipped shut (`inset(0 100% 0 0)`) until their time, then no clip. |
+| 0.08–0.40, 0.16–0.48 | Danial, Endrawes | Each `.name-line` gets a polygon clip whose top edge rises from 3 px under its measured ink bottom (the baseline) to above its ink top; inline `font-weight` 300→800 over the same span. |
+| 0.40–0.75 | Lede | One `clip-path: path()` rectangle per rendered line (lines measured once from the lede's range rects), each wiping left to right; starts 0.06 s apart and the last ends at 0.75 whatever the line count. |
+| 0.55–0.95 | Craft list | Five hairlines (four row tops and the last row's bottom), starts 0.05 s apart, each 0.20 s. Each `li` gets a `path()` clip: the hairline strip up to the wipe's tip, plus the number's and the word's regions once the tip passes their right edges. Phones (no hairlines) use the same timing, so the numbers and words cut in at the same moments. |
+| 0.20–0.90 | Floor | New `uReach` uniform in `FRAG_FLOOR`: the pool is cut by a hard circle from `POOL`'s centre (`length(vW.xz - uFloor.xy) <= uReach`); a dot is on only if its grid centre is inside (`distance(centre, uFloor.xy) <= uReach`), so each dot is wholly on or off. Radius grows 0→4.8 (the pool's edge). |
+| 0.50–1.10 | App screen | New `uReveal` uniform in the shared `CLIP_FN`: one world plane `[0, -1, 0, y]` for the whole draw, keeping y ≤ edge, rising from 0.02 below the screen's bottom to 0.02 above its top. Colour, outline and the light's depth pass all clip with it, so the screen's shadow is revealed with it. Photoshop's empty shell and the cursor are on it. |
+| 1.10, 1.20 | Scroll for the journey, Pause | Cuts, as for the nav. |
+
+Player (`play.mjs`): the entrance starts at ready unless reduced motion or `?t=`. Its clock advances with the same 0.1 s-capped frame step as the loop, and the loop time is `max(0, entrance − 1.10)`, so the loop starts at 0 when the screen's wipe ends. At 1.4 the entrance clears its inline styles and the loop continues from 0.30. It is never restarted: resize only re-measures (inline styles off, measure, styles back on from fresh geometry), and tab return or scrolling back just resumes or continues the normal loop. Craft, stage and Pause clicks, `seek`, a reduced-motion change and `__hero.entrance(null)` call `endEntrance()` first and then act. The floor hover's point is passed as null until 0.90. No layout is read per frame: geometry is read once at start and on resize.
+
+`take-2.css`: `name-in` is switched off (the player owns the weight now). Until the first frame, the mark, nav links, name, lede and craft rows are `visibility: hidden` under `.hero.is-entering`, only inside `@media (scripting: enabled) and (prefers-reduced-motion: no-preference)`. The existing `is-entering` rule still hides the foot. Without scripts nothing is held back; with reduced motion the page shows as before.
+
+### E2 — `__hero.entrance(time)`
+
+`__hero.entrance(t)` clamps `t` to 0–1.4, stops ticking, shows the entrance at `t` (loop time `max(0, t − 1.10)`) and draws it. `__hero.entrance(null)` ends it and plays on. `__hero.entering` gives the entrance clock or null. `__hero.pieces` uses the same first-pass frame as the drawing.
+
+### E3 — browser check tolerance
+
+`checkRound5Layout` now allows 16 px for "H6 equal side spaces (H12 actual ink)" below 1440 wide and keeps 8 px at 1440 and up.
+
+### E4 — the labels leave the way they came in
+
+Added to the brief during this round. In `calloutsAt` (`stage.mjs`) each label keeps its entrance values (`growIn`, `textIn`, unchanged) and gains exit values that are the entrance played backwards, ending at the old cut `off`: `textOut = progress(off − at, 0.20, 0.30)` (the word wipes back toward the line's end over off−0.30 … off−0.20, same clip) and `growOut = progress(off − at, 0, 0.20)` (the line retracts into the mark over the last 0.20 s, same dash offset), all times × `PACE`. `grow` and `text` are the smaller of the two, so a label still coming in can never jump. All of a scene's labels share `off`, so they leave together. Each label stays listed until `off`, so the anchors and routes in `labels.mjs` do not change; the ring keeps turning and the mark stays until the cut at `off`, as before. No scene start, no length and not the loop (83.040 s) moves; `labels.mjs` is unchanged. A craft click still cuts the labels at once (it moves the clock), and stills, reduced motion and fitting (which use the stills) are unchanged — the InDesign still is after `off`, the others well before off−0.30.
+
+Existing checks updated for it: R13 in `correction-checks.mjs` now allows the line to shrink only inside the last 0.20 s before `off` (and fails if it grows there); the R13 control in `controls.mjs` follows the renamed `growIn` and is still caught.
+
+Filmed at 1440 × 900 (held with `seek`, every 0.05 s from off−0.35 to off+0.05, Premiere Pro and Figma): words wipe out toward their line's end, then the lines retract into their marks, then rings and marks cut out at `off`; values at off−0.25/−0.15/−0.10/−0.05 were 0.82/1, 0/0.97, 0/0.82, 0/0.21 (text/grow) for every label.
+
+### Departures and readings
+
+- **Name line spans.** The table's row is 0.08–0.48 with Endrawes 0.08 s later; each line therefore runs 0.32 s (Danial 0.08–0.40, Endrawes 0.16–0.48) rather than `name-in`'s 0.4 s, so the row ends at 0.48 as written.
+- **First pass of the shell.** At loop time 0 the shell is mid-change from Figma to Photoshop (Figma's tile and name, board layout). The brief says Photoshop's empty document is already on the screen and that no part of the loop is skipped, so `frameAt(t, { first: true })` (used only before the loop first wraps, and only below 0.5 s, after which the shell is identical) starts the Photoshop shell as itself: no tile flip, no name wipe, design layout. Content then wipes in at 0.5–0.8 as in every loop. Without this the filmed entrance showed the Figma tile flipping at 1.25–1.4 s.
+- **Cuts are clips.** "Cut in" is done with a fully-shut clip-path switched off, not `visibility`, so every page part animates by clip alone.
+- **Lede with many lines.** If a layout wraps the lede into more than four lines, the 0.06 s step shrinks to `0.35 / (lines + 1)` so the last line still ends at 0.75.
+- **Hidden tab mid-entrance.** The entrance clock pauses with the loop and resumes; it does not jump or replay.
+
+### Checks and negative controls
+
+`tools/entrance-checks.mjs` (run by `checks.mjs`):
+- Timetable: each part's start and end (nothing just before its start, something just after, incomplete just before its end, complete at it), weights 300/800, lede at 2, 3, 4, 5 and 7 lines, the five craft lines, cuts at 0.24/0.30/1.10/1.20, hover at 0.90, end at 1.4; the loop clock (0 until 1.10, 0.30 at 1.4); the screen plane below every piece of the first frame at 0 and 0.5, partway at 0.8, gone at 1.1, never falling; no Figma art on the first pass; the floor circle 0 until 0.2, growing below 4.8, gone from 0.9; 18,125 dot samples where five points inside each dot agree with its centre, and on-dots lie inside the pool circle; the shader source uses those two rules.
+- Player, with DOM/GL stand-ins and no `?t`: entrance clock, loop held then starting at 0 at 1.10, hover null before 0.90, reveal values passed and cleared, end at 1.4; craft click (chooses Motion and ends the entrance), stage click, Pause click (ends and pauses); E2 hold, hold after 1.1, release; reduced motion ends it.
+- E4: in each of the four labelled scenes, `text` and `grow` at off−0.30, 0.25, 0.20, 0.10 and 0.01 s (× `PACE`) against the exact `EASE.wipe` values (60 label samples); all three labels listed just before `off` and none at `off`; `LOOP` 83.04 and every scene's length unchanged; no still falls inside an exit.
+- Negative controls (in memory, one exact site each, all must fail at their gate): E4 exit removed, so labels cut as before (`grow: growIn, text: textIn`) → `E4 labels: id Flyer text at off-0.25: 1 != 0.8236…`; Endrawes moved to Danial's span in `entrance.mjs` → `E1 timetable: Endrawes before 0.16`; `endEntrance()` removed from `choose` in `play.mjs` → `E1 click: craft click leaves the entrance running`. All three caught.
+
+The player stand-in in `checks.mjs` gains the entrance exports. Control audits for rounds 4–5 still match one site each.
+
+**Checks output.** `node design/journey-hero/take-2/tools/checks.mjs` — exit 0, tail:
+
+```text
+H11/H12 computed: 48 four-craft layout samples; 555 resize samples; 990/1000 centre step 6.800 px, maximum step 8.300 px. DOM/glyph model only; browser/pixel checks UNRUN.
+E4 computed: 60 label samples at off-0.30/0.25/0.20/0.10/0.01 s in four scenes, all listed until off, none at off; LOOP 83.04 and scene lengths unchanged. E1/E2 computed: timetable of 11 parts and 5 lede line counts; screen plane at 0, 0.5, 0.8, 1.1; floor circle 18125 dot samples; 6 player runs (loop clock, hover gate, craft/stage/Pause clicks, hold, reduced motion). Frames UNRUN here.
+E1/E4 negative controls: timetable caught: E1 timetable: Endrawes before 0.16; labels-cut caught: E4 labels: id Flyer text at off-0.25: 1 != 0.8236004772467269; click caught: E1 click: craft click leaves the entrance running
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5611 frames, 386385 pieces (max 183); 5 atlas pages; loop 83.040s
+ps: 7.500s, ai: 11.400s, id: 20.980s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+all clean
+```
+
+### Browser evidence (this container, headless Chromium with SwiftShader)
+
+- Pack: `.scratch/review-out/r6-preview.html` (377 KB); no `mailto`, `href=` or `http`.
+- Filmed with `__hero.entrance(t)` every 0.05 s from 0 to 1.4 at 1440 × 900 and 390 × 844. The frame at 0 is plain ink (maximum red 21 at both sizes). A first film showed the Figma tile flipping at 1.25–1.4 s and a few pixels of round letter overshoot under the name at 0 on the phone; both were fixed (first pass shell; clip starts 3 px under the ink bottom). After the fixes nothing flashes, fades or pops early, and everything is shown by 1.4 s.
+- A real first load (no hold) at both sizes: no page or console errors; once the entrance has ended and 2 s more have passed, no entering part is clipped, hidden or weighted inline, the name is 800, `is-entering` is gone, Pause reads "Pause" and the loop clock advances.
+- The E4 exit was filmed separately (see E4 above). The entrance sheets were re-filmed from the final pack, which includes E4.
+- Browser check: `bcheck3.mjs` (the repository's `checkBrowser`, which ends with `checkRound5Layout`) on the final pack at 1440 × 900: **PASS 150 rows**, no page or console errors. It includes E3's 16 px allowance below 1440 wide.

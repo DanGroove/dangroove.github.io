@@ -14,6 +14,8 @@ import { createFloorHover } from '../floor-hover.mjs';
 import { checkRound5 } from './round5-checks.mjs';
 import { checkRound5Addendum } from './round5-addendum-checks.mjs';
 import { checkRound5SecondAddendum } from './round5-second-addendum-checks.mjs';
+import { checkEntrance, checkEntranceControls } from './entrance-checks.mjs';
+import * as entranceModule from '../entrance.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
@@ -333,11 +335,12 @@ const renderer = { setAtlas() {}, draw(pieces, view) { draws.push({ pieces, view
 const observer = class { observe() {} };
 const player = fs.readFileSync(new URL('../play.mjs', import.meta.url), 'utf8').replace(/^import\s+.*?;\s*$/gm, '');
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createFloorHover, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createFloorHover, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
   location: { search: '?t=0' }, document: playerDocument, window: win, matchMedia: () => media,
   createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => atlas, fontsReady: async () => {},
   SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts: () => ({ draw() {}, fit: view => view, layout: [] }), devicePixelRatio: 3,
   createFloorHover: () => ({ clear() {}, point: () => null }), createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),
+  ...entranceModule,
   requestAnimationFrame: callback => { scheduledTick = callback; return 1; }, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
 });
 assert.equal(win.__ready, true);
@@ -515,6 +518,7 @@ try { console.log(await checkDrags()); } catch (error) { fail(25.25, error.messa
 try { const r = await checkRound5(); console.log(`H1–H7 computed: ${r.H1.draws} draw ends, ${r.H1.growingSamples} spread samples; loop ${r.H2.loop.toFixed(3)}s, land 3.0s; ${r.H3.samples} laptop poses; ${r.H6.continuitySamples} resize samples; ${r.H7.rays} floor rays, ${r.H7.wholeDotSamples} dot samples. Font ink, layout, pixels and frames UNRUN.`); } catch (error) { fail(0, error.message); }
 try { const r = await checkRound5Addendum(); console.log(`H9/H10 computed: ${r.H9.measurements} CSSOM-model measurements, ten repeats and away/back at ten sizes; ${r.H10.after.samples} Figma poses at 0.02 s; laptop/app gap ${r.H10.after.minimumGap.toFixed(6)} px, Laptop ring clearance ${r.H10.after.minimumRing.toFixed(6)} px (S=103.6); ${r.H10.preservedFrames} incoming-piece comparisons. Browser checks UNRUN.`); } catch (error) { fail(0, error.message); }
 try { console.log(await checkRound5SecondAddendum()); } catch (error) { fail(0, error.message); }
+try { console.log(await checkEntrance()); console.log('E1/E4 negative controls: ' + await checkEntranceControls()); } catch (error) { fail(0, error.message); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {
