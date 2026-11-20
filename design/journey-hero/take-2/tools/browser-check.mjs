@@ -10,6 +10,37 @@ import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
 import { previewMarkup } from './preview.mjs';
 
 export const BROWSER_SIZES = [[390, 664], [390, 844], [360, 780], [375, 667], [412, 915], [768, 1024], [820, 1180], [1024, 768], [1440, 900], [1920, 1080]];
+export const ROUND5_LAYOUT_SIZES = [...BROWSER_SIZES, [1280, 800], [1366, 657], [1680, 1050], [2560, 1440]];
+
+// Shared with the Node layout model so controls exercise these exact browser assertions.
+export function checkCraftColumns(r, width, context) {
+  assert.equal(r.crafts.length, 4, `${context}: H11 four numbered crafts`);
+  const inside = (a, b) => a.left >= b.left - 1 && a.right <= b.right + 1 && a.top >= b.top - 1 && a.bottom <= b.bottom + 1;
+  const overlaps = (a, b) => Math.min(a.right, b.right) > Math.max(a.left, b.left) + 0.01 && Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top) + 0.01;
+  for (const [i, c] of r.crafts.entries()) {
+    const second = width < 720 && i % 2 === 1;
+    const edge = second ? c.button.left : r.ledeInk.left;
+    assert.ok(Math.abs(c.ink.left - edge) <= 1, `${context}: H11 craft ${i + 1} column`);
+    assert.ok(inside(c.ink, c.button), `${context}: H11 craft ${i + 1} number outside own button`);
+    assert.ok(c.ink.right <= c.label.left && Math.min(c.ink.bottom, c.label.bottom) > Math.max(c.ink.top, c.label.top), `${context}: H11 craft ${i + 1} number beside own label`);
+    if (second) {
+      const first = r.crafts[i - 1].button;
+      assert.ok(c.button.left > first.right && Math.abs(c.button.top - first.top) <= 1, `${context}: H11 phone grid columns`);
+    } else assert.ok(Math.abs(c.button.left - r.craftBox.left) <= 1, `${context}: H11 first column starts at list edge`);
+    for (const d of r.crafts.slice(i + 1)) assert.ok(!overlaps(c.ink, d.ink), `${context}: H11 overlapping numbers`);
+  }
+}
+
+export function checkSceneTextEdge(r, context) {
+  assert.ok(Math.abs(r.textRight - r.textEdgeRight) <= 0.01, `${context}: H12 text right must use name ink and lede/craft boxes`);
+}
+
+export function checkResizeStep(previous, r, context) {
+  const scaleStep = Math.abs(r.S - previous.S);
+  const centreStep = Math.abs((r.left + r.right - previous.left - previous.right) / 2);
+  assert.ok(scaleStep < 2 && centreStep <= 14, `${context}: H6 resize step (H12 wrapping continuity); S step ${scaleStep.toFixed(3)}, centre step ${centreStep.toFixed(3)} px`);
+}
+
 export function checkLabelRoutes(labels, scale, context) {
   const crosses = (a, b, r, pad = 0.5) => {
     let lo = 0, hi = 1;
@@ -121,7 +152,15 @@ export async function checkRound5Layout(page) {
     return page.evaluate(() => {
       __hero.measure();
       const m = __hero.layout, v = __hero.view, n = __need, h = document.querySelector('[data-hero]').getBoundingClientRect(), b = document.querySelector('[data-stage-box]').getBoundingClientRect();
-      return { ...m, h: { left: h.left, top: h.top }, stage: { left: b.left - h.left, right: b.right - h.left, top: b.top - h.top, bottom: b.bottom - h.top }, measuredBox: [m.b.left, m.b.top, m.b.width, m.b.height], S: v.S, cx: v.cx, cy: v.cy, left: v.cx + v.S * (n.x - (n.w - 0.5) / 2), right: v.cx + v.S * (n.x + (n.w - 0.5) / 2), top: v.cy - v.S * (n.y + (n.h - 0.5) / 2), bottom: v.cy - v.S * (n.y - (n.h - 0.5) / 2) };
+      const box = r => ({ left: r.left, right: r.right, top: r.top, bottom: r.bottom });
+      const craftBox = box(document.querySelector('[data-crafts]').getBoundingClientRect());
+      const crafts = [...document.querySelectorAll('[data-crafts] button')].map((button, i) => {
+        const range = document.createRange(); range.selectNodeContents(button.querySelector('.n').nextElementSibling);
+        return { ink: m.numberInks[i], button: box(button.getBoundingClientRect()), label: box(range.getBoundingClientRect()) };
+      });
+      const textEdgeRight = Math.max(m.text[0].right, document.querySelector('[data-lede]').getBoundingClientRect().right, craftBox.right) - h.left;
+      const textInkRight = Math.max(...m.text.map(r => r.right)) - h.left;
+      return { ...m, crafts, craftBox, textEdgeRight, textInkRight, h: { left: h.left, top: h.top }, stage: { left: b.left - h.left, right: b.right - h.left, top: b.top - h.top, bottom: b.bottom - h.top }, measuredBox: [m.b.left, m.b.top, m.b.width, m.b.height], S: v.S, cx: v.cx, cy: v.cy, left: v.cx + v.S * (n.x - (n.w - 0.5) / 2), right: v.cx + v.S * (n.x + (n.w - 0.5) / 2), top: v.cy - v.S * (n.y + (n.h - 0.5) / 2), bottom: v.cy - v.S * (n.y - (n.h - 0.5) / 2) };
     });
   };
   const stable = (a, b, context) => {
@@ -134,22 +173,25 @@ export async function checkRound5Layout(page) {
     await sample(w + 37, h + 31);
     stable(first, await sample(w, h), `${w}x${h}/resize away-back`);
   }
-  for (const [w, h] of [...BROWSER_SIZES, [1280, 800], [1366, 657], [1680, 1050], [2560, 1440]]) {
+  for (const [w, h] of ROUND5_LAYOUT_SIZES) {
     const r = await sample(w, h), column = r.ledeInk.left;
-    for (const ink of [...r.nameLines, ...r.numberInks]) assert.ok(Math.abs(ink.left - column) <= 1, `${w}x${h}: H4 font-ink column`);
+    for (const ink of r.nameLines) assert.ok(Math.abs(ink.left - column) <= 1, `${w}x${h}: H4 font-ink column`);
+    checkCraftColumns(r, w, `${w}x${h}`);
+    checkSceneTextEdge(r, `${w}x${h}`);
     const expectedRise = w < 720 ? 0 : Math.min(Math.max(0, r.gap), Math.max(0, r.baseNameTop - r.logoBottom - 48));
     assert.ok(Math.abs(r.rise - expectedRise) <= 1, `${w}x${h}: H5 rise/guard`);
     if (w >= 720) {
       assert.ok(r.nameLines[0].top - r.h.top >= r.logoBottom + 48 - 1, `${w}x${h}: H5 logo guard`);
       assert.ok(r.stage.left <= r.left && r.stage.right >= r.right && r.stage.top <= r.top && r.stage.bottom >= r.bottom, `${w}x${h}: H6 stage target`);
-      if (w >= 1280) assert.ok(Math.abs((r.left - r.textRight) - (w - r.right)) <= 8, `${w}x${h}: H6 equal side spaces`);
+      if (w >= 1280) assert.ok(Math.abs((r.left - r.textInkRight) - (w - r.right)) <= 8, `${w}x${h}: H6 equal side spaces (H12 actual ink)`);
     }
   }
   for (const h of [640, 900, 1440]) {
     let previous;
     for (let w = 720; w <= 2560; w += 10) {
       const r = await sample(w, h);
-      if (previous) assert.ok(Math.abs(r.S - previous.S) < 2 && Math.abs((r.left + r.right - previous.left - previous.right) / 2) <= 14, `${w}x${h}: H6 resize step`);
+      checkSceneTextEdge(r, `${w}x${h}`);
+      if (previous) checkResizeStep(previous, r, `${w}x${h}`);
       previous = r;
     }
   }

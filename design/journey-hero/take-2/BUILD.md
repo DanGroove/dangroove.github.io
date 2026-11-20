@@ -499,6 +499,10 @@ Departures from CORRECTIONS-4: none. The small renderer shadow-position override
 
 ## CORRECTIONS-5
 
+### H11/H12 second addendum — acceptance before editing
+
+The second addendum after `d7e0de5` is the current browser evidence. H9/H10 and the rest of round 5 are accepted; retain them. H11 changes only craft-number offsets: every desktop number and the first phone column align to the lede's ink within 1 px; the second phone column starts at its own column edge within 1 px. All four numbers must remain inside their own buttons, beside their own labels, with no pair overlapping. H12 centres from the maximum of the name's ink right and the lede/craft-list box rights, so wrapping cannot change that input. Retain the 555-size resize sweep at heights 640/900/1440 and compare equal side spaces against actual text ink (8 px tolerance) at widths 1280 and up, independently of the new centring input. Add exact one-site negative controls for both incoming faults. Node can exercise the actual layout function with deterministic DOM/glyph stand-ins and the same assertions; real font/layout/pixel and rendered comparison gates remain external. No external skill/RTK reads, browser or independent rendered critique are permitted in this run.
+
 ### H9/H10 addendum — acceptance before editing
 
 The browser review in the addendum to CORRECTIONS-5 is the current evidence: H1, H2, H4, H5 and H7 passed externally; preserve them and the rest of round 5. H9 must measure the CSS stage rather than its expanded click target, remain stable through ten measurements and an away/back resize at all ten review sizes, and reject the old string comparison under shorter CSS serialisation. H10 must preserve the lower-left-facing laptop and row spacing while separating the complete projected laptop (lid, deck and picture layers) from the complete app-screen shell by at least 12 px at S=103.6, every 0.02 s throughout Figma; the Laptop ring's outer stroke must also clear that shell. Compare envelopes and modeled S before/after and retain the existing checks. Browser/font/pixel and resize-sweep verification stays with the external reviewer. No browser or independent rendered critique runs locally; installed skills and RTK are outside the expressly permitted repository and cannot be read in this run.
@@ -693,3 +697,68 @@ all clean
 ```
 
 Those UNRUN messages refer to this local checker; they do not undo the supplied browser acceptance of the rest of round 5. H9/H10's actual layout, font obstacles, frames, rendered side-by-side comparison and browser-check pass remain for the external machine. No local browser, network, installation, Git, deployment, `tools/measure.mjs`, hardware run, program termination, outside-repository read/write or protected-path modification occurred.
+
+### H11/H12 — completed second addendum after `d7e0de5`
+
+The supplied second browser addendum accepts H9/H10 and the rest of round 5. This revision changes only the two text measurements in `page-layout.mjs`, their regression tools, this record, README and the generated preview. No motion, geometry, art, timing, stylesheet, label-fitting or input code changes. No intended design departure.
+
+**H11.** Reset the existing number offsets before reading their unshifted boxes. A number whose box starts at the craft list's left edge aligns its ink to the lede; every other number removes only its own side bearing. This uses the actual column position rather than hard-coded item indices in production. The first phone column and all desktop numbers retain H4's alignment. The second phone column remains beside its own labels. Name alignment, the weight animation, H5 rise and measurement scheduling stay as before.
+
+`checkRound5Layout` now checks the name separately from the numbers. `checkCraftColumns` asserts all four number/label pairs, first-column alignment to the lede, second-column alignment to its button/column edge, the two-column phone arrangement, every number's containment in its own button, horizontal order and vertical overlap with its own label, and no pairwise number-ink overlaps. These run at the ten browser sizes and four wider references. The Node model calls the actual `createPageLayout` and these same browser assertions at those fourteen sizes plus 719/720 px, three measurements per size: **48 four-craft samples**, or **192 number placements**. Glyph bearings, label boxes and grid positions are deterministic stand-ins; no actual Outfit/pixel pass is claimed locally.
+
+**H12.** The centring input is now `max(name ink right, lede box right, craft-list box right) − hero left`. The cached `text` metrics remain glyph ink, so the external equal-spaces assertion can still compare against text ink independently of the centring input. The browser checker independently reads both boxes, asserts the mixed ink/box input, retains the existing 555-size resize sweep at 640/900/1440 tall and its scale/centre tolerances, and retains the 8 px equal-spaces gate at widths 1280 and up using glyph ink. Real raster comparison and these actual layout gates are **UNRUN here**; the Node result does not certify them.
+
+The new Node model passes all **555 resize samples** through the actual layout function and the shared browser assertions. It isolates centring from label fitting, whose existing real-fitter sweeps remain in the full checker. The model deliberately reproduces the supplied lede ink edges **357 → 396 px** between 990 and 1000 wide at 640 tall, while the boxes vary continuously. The fixed centre moves **6.800 px**; restoring only the old text-right expression moves it **24.500 px** and fails the existing 14 px resize gate. Maximum fixed centre step over the new model sweep is **8.300 px**. These are modeled values, not new browser measurements. The six-still scene envelope, device-row geometry, loop length and all retained geometry/action checks are unchanged.
+
+**Exact negative controls.** `node design/journey-hero/take-2/tools/round5-second-addendum-controls.mjs` observed both faults exiting 1 at the shared browser assertions below. Each exact search matches **one** source location (line endings normalised for the search). The replacement is imported only as an in-memory module; the runner verifies the source bytes are unchanged. `--audit` confirms both one-site matches. Exact searches, replacements and process output are also saved in `.scratch/corrections5-second-addendum/controls/controls.json`.
+
+H11 replaces this one loop in `page-layout.mjs`:
+
+```js
+    for (const number of numbers) {
+      const column = number.getBoundingClientRect().left;
+      // Only the text's first column shares the lede's ink edge; other columns keep their own start.
+      const left = Math.abs(column - craftLeft) <= 1 ? lede.left : column;
+      number.style.setProperty('--name-ink-shift', `${left - ink(number).left}px`);
+    }
+```
+
+with the incoming shift:
+
+```js
+    for (const number of numbers) number.style.setProperty('--name-ink-shift', `${lede.left - ink(number).left}px`);
+```
+
+Observed exit 1: `390x664/measure 1: H11 overlapping numbers`.
+
+H12 replaces this one line in `page-layout.mjs`:
+
+```js
+    const textRight = Math.max(text[0].right, ledeNode.getBoundingClientRect().right, crafts.getBoundingClientRect().right) - h.left;
+```
+
+with:
+
+```js
+    const textRight = Math.max(...text.map(r => r.right)) - h.left;
+```
+
+Observed exit 1: `1000x640: H6 resize step (H12 wrapping continuity); S step 0.000, centre step 24.500 px`.
+
+**Checks output.** `node design/journey-hero/take-2/tools/checks.mjs` — exit 0:
+
+```text
+R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (744 samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720
+page labels 768x1024: 181 frames; S=59.601966; minimum text gap=16.000 px; routes clean
+G1 drags: 4105 samples at 0.0005 s, five drags including loc; order/one offset, projected occlusion and F1 lifetimes clean; max corner error=8.958e-14 px (S=103.629191); minimum cursor gap=0.000920; max offset=0.159436; shadow positions/uniforms unchanged; five retained emitted stills unchanged (H2 timing/H3 Figma checked separately).
+48aea47 snapshot SHA256 2df6ef35ad20837ad73d5c181cef1a404e4023545adeab99f8070c63697b195d; incoming 50b51b8 snapshot SHA256 1cb6842044168b12c4c4bf551e389b7adf31c2faf8b28f927a4282972ebb55ab. Rendered frames, shadows and pixel still identity UNRUN.
+H1–H7 computed: 23 draw ends, 60 spread samples; loop 83.040s, land 3.0s; 750 laptop poses; 555 resize samples; 180 floor rays, 10404 dot samples. Font ink, layout, pixels and frames UNRUN.
+H9/H10 computed: 390 CSSOM-model measurements, ten repeats and away/back at ten sizes; 697 Figma poses at 0.02 s; laptop/app gap 15.730823 px, Laptop ring clearance 19.651534 px (S=103.6); 333 incoming-piece comparisons. Browser checks UNRUN.
+H11/H12 computed: 48 four-craft layout samples; 555 resize samples; 990/1000 centre step 6.800 px, maximum step 8.300 px. DOM/glyph model only; browser/pixel checks UNRUN.
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5611 frames, 386385 pieces (max 183); 5 atlas pages; loop 83.040s
+ps: 7.500s, ai: 11.400s, id: 20.980s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+all clean
+```
+
+The preview was repacked to `.scratch/preview.html`: **375,006 bytes**, 367 KB from the packer. Its module syntax and self-contained resources are checked by the full Node checker. The supplied acceptance of the other round-five work stands; no local browser, network, installation, Git command, deployment, `tools/measure.mjs`, program termination, outside-repository read/write or protected-path modification occurred. Installed skills and RTK remain outside the permitted read scope. Rendered side-by-side comparison and actual browser H11/H12 gates are reserved for the external reviewer.

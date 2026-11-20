@@ -35,15 +35,22 @@ export function createPageLayout(hero, stage, callouts) {
     hero.style.setProperty('--say-rise', '0px');
     for (const line of [...lines, ...numbers]) line.style.setProperty('--name-ink-shift', '0px');
     const h = hero.getBoundingClientRect(), b = stage.getBoundingClientRect();
-    const lede = ink(hero.querySelector('[data-lede]'));
+    const ledeNode = hero.querySelector('[data-lede]'), crafts = hero.querySelector('[data-crafts]');
+    const lede = ink(ledeNode), craftLeft = crafts.getBoundingClientRect().left;
     for (const line of lines) line.style.setProperty('--name-ink-shift', `${lede.left - ink(line, '800').left}px`);
-    for (const number of numbers) number.style.setProperty('--name-ink-shift', `${lede.left - ink(number).left}px`);
+    for (const number of numbers) {
+      const column = number.getBoundingClientRect().left;
+      // Only the text's first column shares the lede's ink edge; other columns keep their own start.
+      const left = Math.abs(column - craftLeft) <= 1 ? lede.left : column;
+      number.style.setProperty('--name-ink-shift', `${left - ink(number).left}px`);
+    }
     const nameInk = ink(name), gap = lede.top - nameInk.bottom;
     const logo = hero.querySelector('[data-mark]').getBoundingClientRect();
     const rise = h.width < 720 ? 0 : Math.min(Math.max(0, gap), Math.max(0, nameInk.top - logo.bottom - 48));
     hero.style.setProperty('--say-rise', rise + 'px');
-    const text = [name, hero.querySelector('[data-lede]'), hero.querySelector('[data-crafts]')].map(n => ink(n));
-    const textRight = Math.max(...text.map(r => r.right)) - h.left;
+    const text = [name, ledeNode, crafts].map(n => ink(n));
+    // The name never rewraps. Box edges keep the other text's line breaks out of scene placement.
+    const textRight = Math.max(text[0].right, ledeNode.getBoundingClientRect().right, crafts.getBoundingClientRect().right) - h.left;
     callouts.measure();
     cached = { h, b, textRight, gap, rise, text, baseNameTop: nameInk.top - h.top, logoBottom: logo.bottom - h.top, nameLines: lines.map(n => ink(n, '800')), ledeInk: ink(hero.querySelector('[data-lede]')), numberInks: numbers.map(n => ink(n)) };
     return cached;
