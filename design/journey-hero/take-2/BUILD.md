@@ -1,6 +1,6 @@
 # Motion second pass build record
 
-The CORRECTIONS-3 section is current. Earlier sections are historical checkpoints; their timing, projected-centring rules and prior hardware results do not describe this revision.
+The CORRECTIONS-3 section and its addendum are current. Earlier sections are historical checkpoints; their timing, projected-centring rules and prior hardware results do not describe this revision.
 
 Started 19 November 2026 at 20:02 UTC. Stop unfinished stages at about 21:02 UTC.
 
@@ -361,3 +361,42 @@ browser-check UNAVAILABLE: Playwright is not installed in the repository; no bro
 ```
 
 The direct correction-checks entry initializes the same atlas/player fixtures through checks.mjs, then executes the correction gates; it is not a browser test. Final numeric status: all clean. Browser visual acceptance is incomplete for the availability reason above; no hardware rerun was attempted.
+
+## CORRECTIONS-3, addendum
+
+Acceptance follows F2's addendum and the retained label specification: left words at least 16 px right of page blocks sharing their rows, aligned left-column ends, outward 45-degree leaders, rising up labels, 8/12 px horizontal runs, clear rings/words and existing gutters. The supplied 768 × 1024 rectangles and 9 px Figma word widths are the measured reference; other word widths in the Node fixture are explicitly conservative models.
+
+`labels.mjs` now feeds the actual page blocks into `fitCalloutView` in both players. The fit solves their left-column boundary together with both route columns and stage gutters. It splits the scale range where a word row enters or leaves a page block, then takes the largest feasible scale while preserving the vertical centre. `labelLayout` uses the same 16 px boundary. Browser route checks now assert vertical direction and the 45-degree/horizontal shape as well as F2's existing rules, and check the 16 px page-text gap. `browser-check.mjs` includes 820 × 1180 and 1024 × 768: ten sizes total.
+
+The new `tools/label-page-checks.mjs` runs the real fit/layout with the addendum's five page blocks and LAPTOP/TABLET/PHONE widths 40.4/38.6/36.0 px. It checks the four reported times and the Figma label window at 60 Hz, including partial label groups, route geometry, gutters, alignment and page-text clearance; `checks.mjs` includes it. Before changing `labels.mjs`, this test exited **1** on the incoming e8cced5 behaviour:
+
+```text
+AssertionError [ERR_ASSERTION]: page labels 768x1024/78.240000: label route: leader turns inward or has a short horizontal run
+```
+
+After the fix, `node design/journey-hero/take-2/tools/label-page-checks.mjs` exits **0**:
+
+```text
+page labels 768x1024: 182 frames; S=54.612696; minimum text gap=16.000 px; routes clean
+```
+
+The three new reversible controls below were run separately and caught (each test exited 1); source was restored in `finally`. `controls.mjs --audit` exits 0: all **46** edits match exactly one place. The existing stage-gutter control was also rerun and caught. The other historical controls were not rerun. In the exact edits below, `\n` denotes one newline.
+
+| Control in `labels.mjs` | Exact search → replacement | Matches | Caught |
+| --- | --- | ---: | --- |
+| Page boundary omitted from fit | `export function fitCalloutView(view, need, boxLeft, widths, obstacles = []) {` → `export function fitCalloutView(view, need, boxLeft, widths, ignoredObstacles = []) {\n  const obstacles = [];` | 1 | Yes; the same 78.240000 route failure quoted above. This removes page boundaries from the fit while retaining them in layout. |
+| Up leader starts downward | `const delta = Math.abs(elbowX - mx), signY = c.level === 'up' ? -1 : 1;` → `const delta = Math.abs(elbowX - mx), signY = 1;` | 1 | Yes; `label route: leader goes in the wrong vertical direction` |
+| Diagonal/horizontal shape broken | `const points = [start, [elbowX, endY], [endX, endY]];` → `const points = [start, [elbowX, endY + 1], [endX, endY]];` | 1 | Yes; `label route: expected a 45-degree diagonal then a horizontal run` |
+
+`node design/journey-hero/take-2/tools/checks.mjs` — exit 0:
+
+```text
+R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (636 samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720
+page labels 768x1024: 182 frames; S=54.612696; minimum text gap=16.000 px; routes clean
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5503 frames, 379765 pieces (max 183); 5 atlas pages; loop 81.240s
+ps: 7.500s, ai: 11.400s, id: 19.180s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+all clean
+```
+
+Departures: none beyond the requested label layout, its checks and this record. PACE, loop length, scene starts, still times, artwork and motion source are unchanged. No browser command, browser launch, hardware measurement, installation, network or git command was run for this addendum. The ten-size browser run and rendered comparison remain for the external machine; the computed Node result does not certify those gates. Installed skill files and RTK.md are outside the permitted repository, so they were not read; the existing research and review record were carried forward.

@@ -8,6 +8,7 @@ import { TONES } from '../sq.mjs';
 import { SHOW, LOOP, SCENES, SCREEN, MAT, BLOCK, POOL, PACE, SCRIPTS, frameAt, sceneAt, calloutsAt, playbackSpans, UI_ROW, prototypeState } from '../stage.mjs';
 import { runCorrections } from './correction-checks.mjs';
 import { previewMarkup } from './preview.mjs';
+import { checkPageLabels } from './label-page-checks.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
@@ -498,6 +499,7 @@ for (const scene of SHOW) {
   ruleStart += scene.len;
 }
 runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, MAT, SCRIPTS, PACE, UI_ROW, playbackSpans, prototypeState, tip });
+try { console.log(checkPageLabels()); } catch (error) { fail(78.24, error.message); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {

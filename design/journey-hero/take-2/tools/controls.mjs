@@ -38,6 +38,12 @@ change('Figma world centring', 'fig: footprint is not centred in world x', 'stag
 change('Figma tablet x drift', 'feed path:', 'stage.mjs', 'feed(P, pieces, t, ...spans[i]);\n    }', 'for (const pc of pieces) pc.p[0] += 0.1 * Math.sin(Math.PI * linear(t, ...spans[i]));\n      feed(P, pieces, t, ...spans[i]);\n    }');
 change('photo registration', 'photo registration:', 'stage.mjs', "key === 'mail' ? ID.mailPhoto : rect, key + 'Image'", "key === 'mail' ? ID.mailPhoto : rect, 'kPhoto'");
 change('label route fit undone', 'label route:', 'labels.mjs', 'const { S, cx } = fit;', 'const S = view.S, cx = view.cx;');
+change('page text boundary fit undone', 'page labels 768x1024/78.240000: label route:', 'labels.mjs', 'export function fitCalloutView(view, need, boxLeft, widths, obstacles = []) {', 'export function fitCalloutView(view, need, boxLeft, widths, ignoredObstacles = []) {\n  const obstacles = [];');
+tests.at(-1).checker = 'label-page-checks.mjs';
+change('up label direction undone', 'label route: leader goes in the wrong vertical direction', 'labels.mjs', "const delta = Math.abs(elbowX - mx), signY = c.level === 'up' ? -1 : 1;", 'const delta = Math.abs(elbowX - mx), signY = 1;');
+tests.at(-1).checker = 'label-page-checks.mjs';
+change('label diagonal undone', 'label route: expected a 45-degree diagonal then a horizontal run', 'labels.mjs', 'const points = [start, [elbowX, endY], [endX, endY]];', 'const points = [start, [elbowX, endY + 1], [endX, endY]];');
+tests.at(-1).checker = 'label-page-checks.mjs';
 change('stage gutter fit undone', 'stage gutters:', 'labels.mjs', 'const { S, cx } = fit;', 'const S = view.S, cx = view.cx;');
 change('R14 laptop wrong face', 'R14:', 'stage.mjs', "floor.find(pc => pc.lidPicture && pc.art === 'chromeLaptop')", "floor.filter(pc => pc.lidPicture).at(-1)");
 change('Figma phone aspect', 'Figma device geometry:', 'stage.mjs', 'phoneW = (ROW - rim * 2) * 9 / 19.5 + rim * 2', 'phoneW = (ROW - rim * 2) * 9 / 18 + rim * 2');

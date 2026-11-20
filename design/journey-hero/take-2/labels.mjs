@@ -10,8 +10,8 @@ const padded = (r, n) => ({ left: r.left - n, top: r.top - n, right: r.right + n
 export const projectMark = (p, { S, cx, cy, cam }) => [cx + S * dot(cam.r, p), cy - S * dot(cam.u, p)];
 const fitting = new WeakMap();
 
-// Solve both word columns and the stage gutters together. The feasible interval is linear in S.
-export function fitCalloutView(view, need, boxLeft, widths) {
+// Solve both columns, page-text boundaries and gutters together, at the largest feasible scale.
+export function fitCalloutView(view, need, boxLeft, widths, obstacles = []) {
   let scenes = fitting.get(view.cam);
   if (!scenes) {
     let start = 0; scenes = [];
@@ -23,24 +23,50 @@ export function fitCalloutView(view, need, boxLeft, widths) {
     fitting.set(view.cam, scenes);
   }
   const solve = small => {
-    const run = small ? 8 : 12, lower = [[16, -(need.x - need.w / 2 + 0.249)]], upper = [[view.W - 16, -(need.x + need.w / 2 - 0.249)]];
+    const run = small ? 8 : 12, halfHeight = (small ? 9 : 11) * 0.6;
+    const centreY = view.cy - view.S * need.y, rows = [];
     for (const labels of scenes) {
       const lowest = Math.min(...labels.filter(c => c.level === 'low').map(c => dot(view.cam.u, c.mark)));
       const word = c => typeof widths === 'number' ? widths : widths[small ? 'small' : 'large'][c.id];
-      const leftWidth = Math.max(...labels.filter(c => c.side === 'left').map(word));
-      for (const c of labels) {
-        const x = dot(view.cam.r, c.mark), diagonal = c.level === 'up' ? 0.45 : 0.45 + dot(view.cam.u, c.mark) - lowest;
-        if (c.side === 'left') lower.push([16 + leftWidth + 7 + run, diagonal - x]);
-        else upper.push([view.W - 16 - word(c) - 7 - run, -diagonal - x]);
+      rows.push(labels.map(c => ({ side: c.side, width: word(c), x: dot(view.cam.r, c.mark), diagonal: c.level === 'up' ? 0.45 : 0.45 + dot(view.cam.u, c.mark) - lowest, y: need.y - (c.level === 'up' ? dot(view.cam.u, c.mark) + 0.45 : lowest - 0.45) })));
+    }
+    // A row's page boundary changes only when its word box crosses a block's top or bottom.
+    // Split there so each interval remains a linear fit; a newly entered row cannot be missed.
+    const ceiling = Math.min(view.S, small ? 70 - 1e-8 : Infinity), floor = small ? 0 : 70;
+    if (ceiling < floor) return null;
+    const cuts = [floor, ceiling];
+    for (const labels of rows) for (const c of labels.filter(c => c.side === 'left')) for (const r of obstacles) {
+      for (const edge of [r.top - halfHeight, r.bottom + halfHeight]) {
+        const S = (edge - centreY) / c.y;
+        if (S > floor && S < ceiling) cuts.push(S);
       }
     }
-    let S = Math.min(view.S, small ? 70 - 1e-8 : Infinity);
-    for (const [a, b] of lower) for (const [c, d] of upper) if (b > d) S = Math.min(S, (c - a) / (b - d));
-    const lo = Math.max(...lower.map(([a, b]) => a + b * S)), hi = Math.min(...upper.map(([a, b]) => a + b * S));
-    return { S, cx: clamp(view.cx + (view.S - S) * need.x, lo, hi) };
+    cuts.sort((a, b) => a - b);
+    for (let i = cuts.length - 1; i > 0; i--) {
+      const sample = (cuts[i] + cuts[i - 1]) / 2;
+      const lower = [[16, -(need.x - need.w / 2 + 0.249)]], upper = [[view.W - 16, -(need.x + need.w / 2 - 0.249)]];
+      for (const labels of rows) {
+        const left = labels.filter(c => c.side === 'left');
+        let leftEnd = 16 + Math.max(...left.map(c => c.width)) + 7;
+        for (const c of left) for (const r of obstacles) if (centreY + sample * c.y + halfHeight > r.top && centreY + sample * c.y - halfHeight < r.bottom) leftEnd = Math.max(leftEnd, r.right + 16 + c.width + 7);
+        for (const c of labels) {
+          if (c.side === 'left') lower.push([leftEnd + run, c.diagonal - c.x]);
+          else upper.push([view.W - 16 - c.width - 7 - run, -c.diagonal - c.x]);
+        }
+      }
+      let S = cuts[i], minimum = cuts[i - 1];
+      for (const [a, b] of lower) for (const [c, d] of upper) {
+        if (b > d) S = Math.min(S, (c - a) / (b - d));
+        else if (b < d) minimum = Math.max(minimum, (c - a) / (b - d));
+        else if (a > c) S = -1;
+      }
+      if (S < minimum) continue;
+      const lo = Math.max(...lower.map(([a, b]) => a + b * S)), hi = Math.min(...upper.map(([a, b]) => a + b * S));
+      return { S, cx: clamp(view.cx + (view.S - S) * need.x, lo, hi) };
+    }
+    return null;
   };
-  let fit = solve(false);
-  if (fit.S < 70) fit = solve(true);
+  const fit = solve(false) || solve(true);
   const { S, cx } = fit;
   // Preserve the original vertical fit's centre when reducing the scale.
   return { ...view, S, cx, cy: view.cy + (S - view.S) * need.y };
@@ -58,7 +84,12 @@ export function labelLayout(data, pieces, view, widths, obstacles = [], reduced 
   const run = small ? 8 : 12;
   const leftLimit = Math.min(...anchors.filter(c => c.side === 'left').map(c => { const [x, y] = projectMark(c.mark, view); return x - (c.level === 'up' ? 0.45 * S : low - y) - run; }));
   const rightLimit = Math.max(...anchors.filter(c => c.side === 'right').map(c => { const [x, y] = projectMark(c.mark, view); return x + (c.level === 'up' ? 0.45 * S : low - y) + run; }));
-  let leftEnd = clamp(Math.min(Math.min(...floor.map(p => p[0])) - 0.35 * S, leftLimit), 16 + leftWidth + 7, W - 16);
+  let leftMinimum = 16 + leftWidth + 7;
+  for (let i = 0; i < data.length; i++) if (data[i].side === 'left') {
+    const y = data[i].level === 'low' ? low : marks[i][1] - 0.45 * S;
+    for (const r of obstacles) if (y + height / 2 > r.top && y - height / 2 < r.bottom) leftMinimum = Math.max(leftMinimum, r.right + 16 + widths[data[i].id] + 7);
+  }
+  let leftEnd = clamp(Math.min(Math.min(...floor.map(p => p[0])) - 0.35 * S, leftLimit), leftMinimum, W - 16);
   let rightEnd = clamp(Math.max(Math.max(...screen.map(p => p[0])) + 0.27 * S, rightLimit), 16, W - 16 - Math.max(0, ...data.filter(c => c.side === 'right').map(c => widths[c.id])) - 7);
   const occupied = obstacles.map(r => padded(r, 2));
   const result = [];
@@ -112,6 +143,10 @@ export function createCallouts(hero) {
   for (const n of hero.querySelectorAll('.hero-nav,.hero-say,.hero-foot')) n.style.zIndex = '3';
   let last = [];
   let wordWidths;
+  const pageBlocks = () => {
+    const h = hero.getBoundingClientRect();
+    return [...hero.querySelectorAll('[data-name],[data-lede],[data-crafts],.hero-nav,[data-foot]')].map(n => n.getBoundingClientRect()).filter(r => r.width && r.height).map(r => ({ left: r.left - h.left, right: r.right - h.left, top: r.top - h.top, bottom: r.bottom - h.top }));
+  };
   return {
     fit(view, need, boxLeft) {
       if (!wordWidths) {
@@ -126,10 +161,10 @@ export function createCallouts(hero) {
           start += scene.len;
         }
       }
-      return fitCalloutView(view, need, boxLeft, wordWidths);
+      return fitCalloutView(view, need, boxLeft, wordWidths, pageBlocks());
     },
     draw(data, pieces, view, time, reduced) {
-      const h = hero.getBoundingClientRect(), obstacles = [...hero.querySelectorAll('[data-name],[data-lede],[data-crafts],.hero-nav,[data-foot]')].map(n => n.getBoundingClientRect()).filter(r => r.width && r.height).map(r => ({ left: r.left - h.left, right: r.right - h.left, top: r.top - h.top, bottom: r.bottom - h.top }));
+      const obstacles = pageBlocks();
       const widths = {};
       nodes.forEach((n, i) => { const c = data[i]; n.word.style.display = c ? '' : 'none'; n.word.style.fontSize = (view.S < 70 ? 9 : 11) + 'px'; if (c) { n.word.textContent = c.words; widths[c.id] = n.word.getBoundingClientRect().width; } });
       let anchors = data;

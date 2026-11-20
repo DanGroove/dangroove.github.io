@@ -9,7 +9,7 @@ import { SHOW, SCRIPTS, PACE, calloutsAt, playbackSpans } from '../stage.mjs';
 import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
 import { previewMarkup } from './preview.mjs';
 
-export const BROWSER_SIZES = [[390, 664], [390, 844], [360, 780], [375, 667], [412, 915], [768, 1024], [1440, 900], [1920, 1080]];
+export const BROWSER_SIZES = [[390, 664], [390, 844], [360, 780], [375, 667], [412, 915], [768, 1024], [820, 1180], [1024, 768], [1440, 900], [1920, 1080]];
 export function checkLabelRoutes(labels, scale, context) {
   const crosses = (a, b, r, pad = 0.5) => {
     let lo = 0, hi = 1;
@@ -21,6 +21,9 @@ export function checkLabelRoutes(labels, scale, context) {
   for (const c of labels) {
     const dir = c.side === 'left' ? -1 : 1, [start, elbow, end] = c.points, run = scale < 70 ? 8 : 12;
     assert.ok(dir * (elbow[0] - start[0]) >= 3 - 1e-7 && dir * (end[0] - elbow[0]) >= run - 1e-7, `${context}: label route: leader turns inward or has a short horizontal run`);
+    const vertical = c.level === 'up' ? -1 : 1;
+    assert.ok(vertical * (start[1] - c.mark2[1]) > 0 && vertical * (elbow[1] - start[1]) >= 3 - 1e-7, `${context}: label route: leader goes in the wrong vertical direction`);
+    assert.ok(Math.abs(Math.abs(elbow[0] - start[0]) - Math.abs(elbow[1] - start[1])) < 1e-7 && Math.abs(end[1] - elbow[1]) < 1e-7, `${context}: label route: expected a 45-degree diagonal then a horizontal run`);
     const words = c.box || c.label;
     for (const d of labels) {
       const mark = d.mark2, dx = Math.max(words.left - mark[0], 0, mark[0] - words.right), dy = Math.max(words.top - mark[1], 0, mark[1] - words.bottom);
@@ -74,6 +77,7 @@ export async function checkBrowser(page) {
         const ring = { left: c.mark[0] - c.radius - c.stroke / 2, right: c.mark[0] + c.radius + c.stroke / 2, top: c.mark[1] - c.radius - c.stroke / 2, bottom: c.mark[1] + c.radius + c.stroke / 2 };
         for (const r of result.obstacles) {
           assert.ok(!overlaps(c.box, r) && !overlaps(ring, r), `${width}/${time}: words/ring on page content`);
+          if (c.side === 'left' && c.box.top < r.bottom && c.box.bottom > r.top) assert.ok(c.box.left >= r.right + 16 - 0.01, `${width}/${time}: left words less than 16 px from page text`);
           for (let k = 1; k < c.points.length; k++) assert.ok(!crosses(c.points[k - 1], c.points[k], r), `${width}/${time}: line on page content`);
         }
         for (const d of result.labels.slice(i + 1)) assert.ok(!overlaps(c.box, d.box), `${width}/${time}: labels overlap`);
@@ -146,7 +150,7 @@ export async function runBrowserCheck() {
     for (const [w, h] of BROWSER_SIZES) console.log(`${w}x${h}: PASS (${rows.filter(r => r.width === w && r.height === h).length} held frames; laptop entry/return; reduced motion)`);
     assert.deepEqual(requests, [], 'packed preview attempted network requests');
     assert.deepEqual(errors, [], 'packed preview page errors');
-    console.log('browser-check all eight sizes clean; network requests 0; page errors 0');
+    console.log(`browser-check all ${BROWSER_SIZES.length} sizes clean; network requests 0; page errors 0`);
   } finally { await browser.close(); }
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await runBrowserCheck();
