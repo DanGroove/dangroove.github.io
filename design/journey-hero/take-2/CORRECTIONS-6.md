@@ -37,7 +37,30 @@ Add `__hero.entrance(time)`: it shows the entrance held at `time` seconds (0 to 
 
 `browser-check.mjs` asserts "H6 equal side spaces (H12 actual ink)" within 8 px at 1280 wide and up. H12 takes the text's edge from the lede's box, which leaves 13 px at 1280 x 800 (lede box right 514, its ink 501), so the assertion contradicts the brief. Allow 16 px below 1440 wide and keep 8 px at 1440 and up. With that change the check passed all 150 rows on `984c8b1` here.
 
+## E4 (major). The labels leave the way they came in
+
+Dan, 3:11 AM ET: "The leading lines and their text need an out animation as well."
+
+Today each label comes in like this (`calloutsAt` in `stage.mjs`, drawn by `labels.mjs`): the ring and the red mark cut in when the asset lands, the line draws out from the mark over 0.25 s (`grow`, by dash offset), then the word wipes in from the line's end over 0.15 s (`text`, by clip). It leaves by a cut at `off` (InDesign: the start of `pickup`; the others: `timing.off[0]`).
+
+Make it leave as its entrance played backwards, ending exactly at today's cut, so no scene start, no other timing and not the loop (83.04 s) moves:
+
+| Time before `off` (x `PACE`) | What | How |
+|---|---|---|
+| 0.30 to 0.20 s | The word | Wipes out toward its line's end: the same clip as its entrance, running back (`text` 1 to 0). |
+| 0.20 to 0.00 s | The line | Retracts from the word's end back into the mark: the same dash offset, running back (`grow` 1 to 0). |
+| At `off` | The ring and the mark | Cut out, as now. |
+
+- All of a scene's labels leave together. Use `progress` (that is, `EASE.wipe`) as the entrance does, running back.
+- Write each value as the smaller of its entrance value and its exit value, so a label that is still coming in can never jump.
+- The ring keeps turning and the mark stays on its asset's corner through the exit.
+- Keep each label in `calloutsAt`'s list until `off`, so the layout anchors in `labels.mjs` do not change during the exit (no other label's route jumps).
+- A click that jumps to another craft still cuts the labels at once, as now. Reduced motion and the stills are unchanged.
+- Hard-edged only, as above: no fade on the word, the line or the ring.
+
 ## Checks
+
+- For E4 in Node, in each of the four scenes: `text` and `grow` at `off` minus 0.30, 0.25, 0.20, 0.10 and 0.01 s (x `PACE`); every label still listed just before `off` and none at `off`; `LOOP` still 83.04 and every scene's start unchanged. With a negative control (an exit that cuts must fail).
 
 - In Node: the timetable above (each part's start and end, the screen's clip plane at 0, 0.5, 0.8 and 1.1 s, the floor circle's radius over time, each dot wholly on or off), the loop clock starting at 0 when the screen's wipe ends, and that a click during the entrance ends it. Each with a negative control.
 - Keep `node design/journey-hero/take-2/tools/checks.mjs` printing all clean.
