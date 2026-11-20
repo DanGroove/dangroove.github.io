@@ -92,3 +92,25 @@ While a mouse pointer is over the hero, the floor's dots inside a circle of radi
 Add a "CORRECTIONS-5" section to BUILD.md: what was done for H1 to H7, any departure and its reason, the negative controls (each control's edit matching exactly one place), the scene envelope and scene size before and after, and the `checks.mjs` output. Update README for the loop length, the new stylesheet, the floor hover, and the tools' commands if they changed.
 
 No hardware run. The browser checks cannot run on the builder's machine; they are run elsewhere, with frames at each note.
+
+## Addendum after the build `796c0f1` (checked in a browser)
+
+H1, H2, H4, H5 and H7 check out in frames and pixels: the spread now grows as its pages and nothing changes at 20.28 s but the cursor; name, lede and numbers share one ink column at every size; the block rises by the gap (41 at 1920 x 1080, 10 at 1366 x 657 under the guard); the side spaces match within 2 px from 1280 to 2560 wide; the red dots work, hard-edged, and clear on leaving. Two faults remain, and `browser-check.mjs` fails ("1000x640: H6 resize step").
+
+### H9 (major). Each measurement grows the stage box, so the scene creeps larger
+
+`page-layout.mjs` `measure()` removes the stage box's inline `left` and `width` only when `stage.style[key] === target[key]`. Chromium serialises the values it was given with fewer digits (set `306.388…px`, read back `306.375px`), so the test fails, the enlarged box from `cover()` stays, and the next measurement reads it as the stage. Measured in Chromium at 768 x 1024: on load S is 62.0 (round 4: 54.7, box 390); three calls of `__hero.measure()` give box widths 422, 453, 489 and S 62.0, 62.0, 67.9. At 1024 x 768 the box reads 578 (round 4: 533) and S is 85.1 (round 4: 80.0), so the scene comes within 20 px of the text (round 4: 49). At 1920 x 1080 the box reads 1045 (1011); S is height-limited there, so it hides.
+
+Fix: never measure a box that was changed for the click target. Leave the stage box's own geometry alone and cover the shifted scene some other way (a separate target, or a hit test on the hero), or clear the inline values unconditionally before measuring.
+- Pass: ten calls of `__hero.measure()`, and resizing away and back, leave S, cx, cy and the measured box unchanged to 0.01 px at every browser-check size.
+- S at each of the ten sizes is within 2% of round 4's (`7590b44`) or larger only where H6's centring needs no extra room; report the table.
+- `browser-check.mjs` passes, including the resize steps.
+- Add a negative control: the current string comparison must fail the repeated-measure check.
+
+### H10 (major). The laptop's lid now runs into the app screen
+
+Facing the lower left (H3), the lid stands at the deck's back edge, and its top edge now meets the bottom edge of the big app screen: at 1440 x 900, from about 79.4 s to the end of the Figma scene, the lid's top right overlaps the screen's lower left, and the "Laptop" mark sits on the screen's corner. In round 4 there was a clear gap.
+
+Fix: keep a clear gap between the laptop (lid and deck) and the app screen throughout the Figma scene, as round 4 had. Move the device row forward on the floor, toward the viewer, or lower the lid, whichever keeps the row's look; the tablet and phone stay beside the laptop and nothing overlaps.
+- Pass, in Node: at every 0.02 s of the Figma scene, the laptop's projected outline and the app screen's projected outline are at least 12 px apart at 1440 x 900 (S 103.6), and the "Laptop" mark's ring does not touch the app screen.
+- Report the scene envelope and S before and after; if the envelope changes, H6 uses the new one.
