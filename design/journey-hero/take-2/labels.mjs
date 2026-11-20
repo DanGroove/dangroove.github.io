@@ -10,25 +10,40 @@ const padded = (r, n) => ({ left: r.left - n, top: r.top - n, right: r.right + n
 export const projectMark = (p, { S, cx, cy, cam }) => [cx + S * dot(cam.r, p), cy - S * dot(cam.u, p)];
 const fitting = new WeakMap();
 
-// At tall phone sizes the right word column can otherwise lie underneath its own returning line.
-// Keep the stills' left padding while solving the largest scale that leaves that column clear.
-export function fitCalloutView(view, need, boxLeft, wordWidth) {
-  if (view.W >= 720) return view;
-  let right = fitting.get(view.cam);
-  if (right === undefined) {
-    let start = 0; right = -Infinity;
+// Solve both word columns and the stage gutters together. The feasible interval is linear in S.
+export function fitCalloutView(view, need, boxLeft, widths) {
+  let scenes = fitting.get(view.cam);
+  if (!scenes) {
+    let start = 0; scenes = [];
     for (const scene of SHOW) {
       const time = start + (scene.key === 'id' ? SCRIPTS.id.actions.find(a => a.id === 'export').end + 0.41 * PACE : scene.still), labels = calloutsAt(time);
-      const low = labels.filter(c => c.level === 'low'), lowest = Math.min(...low.map(c => dot(view.cam.u, c.mark)));
-      for (const c of low.filter(c => c.side === 'right')) right = Math.max(right, dot(view.cam.r, c.mark) + 0.45 + dot(view.cam.u, c.mark) - lowest);
+      if (labels.length) scenes.push(labels);
       start += scene.len;
     }
-    fitting.set(view.cam, right);
+    fitting.set(view.cam, scenes);
   }
-  const limit = view.W - 16 - wordWidth - 2, left = need.x - need.w / 2 + 0.25;
-  const S = Math.min(view.S, (limit - boxLeft) / (right - left + 0.25));
+  const solve = small => {
+    const run = small ? 8 : 12, lower = [[16, -(need.x - need.w / 2 + 0.249)]], upper = [[view.W - 16, -(need.x + need.w / 2 - 0.249)]];
+    for (const labels of scenes) {
+      const lowest = Math.min(...labels.filter(c => c.level === 'low').map(c => dot(view.cam.u, c.mark)));
+      const word = c => typeof widths === 'number' ? widths : widths[small ? 'small' : 'large'][c.id];
+      const leftWidth = Math.max(...labels.filter(c => c.side === 'left').map(word));
+      for (const c of labels) {
+        const x = dot(view.cam.r, c.mark), diagonal = c.level === 'up' ? 0.45 : 0.45 + dot(view.cam.u, c.mark) - lowest;
+        if (c.side === 'left') lower.push([16 + leftWidth + 7 + run, diagonal - x]);
+        else upper.push([view.W - 16 - word(c) - 7 - run, -diagonal - x]);
+      }
+    }
+    let S = Math.min(view.S, small ? 70 - 1e-8 : Infinity);
+    for (const [a, b] of lower) for (const [c, d] of upper) if (b > d) S = Math.min(S, (c - a) / (b - d));
+    const lo = Math.max(...lower.map(([a, b]) => a + b * S)), hi = Math.min(...upper.map(([a, b]) => a + b * S));
+    return { S, cx: clamp(view.cx + (view.S - S) * need.x, lo, hi) };
+  };
+  let fit = solve(false);
+  if (fit.S < 70) fit = solve(true);
+  const { S, cx } = fit;
   // Preserve the original vertical fit's centre when reducing the scale.
-  return { ...view, S, cx: Math.min(view.cx + (view.S - S) * need.x, limit - S * right), cy: view.cy + (S - view.S) * need.y };
+  return { ...view, S, cx, cy: view.cy + (S - view.S) * need.y };
 }
 
 export function labelLayout(data, pieces, view, widths, obstacles = [], reduced = false, time = 0, anchors = data) {
@@ -40,8 +55,11 @@ export function labelLayout(data, pieces, view, widths, obstacles = [], reduced 
   const screen = [[SCREEN.l, SCREEN.b, SCREEN.z], [SCREEN.l + SCREEN.w, SCREEN.b + SCREEN.h, SCREEN.z]].map(p => projectMark(p, view));
   const low = Math.max(...anchors.filter(c => c.level === 'low').map(c => projectMark(c.mark, view)[1])) + 0.45 * S;
   const leftWidth = Math.max(0, ...data.filter(c => c.side === 'left').map(c => widths[c.id]));
-  let leftEnd = clamp(Math.min(...floor.map(p => p[0])) - 0.35 * S, 16 + leftWidth + 7, W - 16);
-  let rightEnd = clamp(Math.max(...screen.map(p => p[0])) + 0.27 * S, 16, W - 16 - Math.max(0, ...data.filter(c => c.side === 'right').map(c => widths[c.id])) - 7);
+  const run = small ? 8 : 12;
+  const leftLimit = Math.min(...anchors.filter(c => c.side === 'left').map(c => { const [x, y] = projectMark(c.mark, view); return x - (c.level === 'up' ? 0.45 * S : low - y) - run; }));
+  const rightLimit = Math.max(...anchors.filter(c => c.side === 'right').map(c => { const [x, y] = projectMark(c.mark, view); return x + (c.level === 'up' ? 0.45 * S : low - y) + run; }));
+  let leftEnd = clamp(Math.min(Math.min(...floor.map(p => p[0])) - 0.35 * S, leftLimit), 16 + leftWidth + 7, W - 16);
+  let rightEnd = clamp(Math.max(Math.max(...screen.map(p => p[0])) + 0.27 * S, rightLimit), 16, W - 16 - Math.max(0, ...data.filter(c => c.side === 'right').map(c => widths[c.id])) - 7);
   const occupied = obstacles.map(r => padded(r, 2));
   const result = [];
   // Clamp the common low level before solving the horizontal ends. The marks stay attached to their assets.
@@ -66,8 +84,8 @@ export function labelLayout(data, pieces, view, widths, obstacles = [], reduced 
       endY = c.level === 'up' ? Math.min(endY, hit.top - height / 2 - 1) : Math.max(my + radius + 4, Math.min(endY, hit.top - height / 2 - 1));
       elbowX = mx + dir * Math.abs(endY - my);
     }
-    elbowX = clamp(elbowX, 16, W - 16);
-    if (c.level === 'up' && c.side === 'left') elbowX = Math.max(elbowX, endX - 6);
+    // Content can shorten the diagonal, but never reverse the outward horizontal run.
+    elbowX = c.side === 'left' ? Math.max(elbowX, endX + run) : Math.min(elbowX, endX - run);
     const delta = Math.abs(elbowX - mx), signY = c.level === 'up' ? -1 : 1;
     if (Math.abs(endY - my) > delta) endY = my + signY * delta;
     const start = [mx + dir * (radius + 3) / Math.SQRT2, my + signY * (radius + 3) / Math.SQRT2];
@@ -93,16 +111,22 @@ export function createCallouts(hero) {
   hero.append(overlay);
   for (const n of hero.querySelectorAll('.hero-nav,.hero-say,.hero-foot')) n.style.zIndex = '3';
   let last = [];
-  let rightWordWidth;
+  let wordWidths;
   return {
     fit(view, need, boxLeft) {
-      if (view.W >= 720) return view;
-      if (rightWordWidth === undefined) {
+      if (!wordWidths) {
         const word = nodes[2].word;
-        word.style.display = ''; word.style.fontSize = '9px';
-        rightWordWidth = Math.max(...['Instagram', 'Feed post', 'Email', 'Phone'].map(words => { word.textContent = words; return word.getBoundingClientRect().width; }));
+        word.style.display = ''; wordWidths = { small: {}, large: {} };
+        let start = 0;
+        for (const scene of SHOW) {
+          const time = start + (scene.key === 'id' ? SCRIPTS.id.actions.find(a => a.id === 'export').end + 0.41 * PACE : scene.still);
+          for (const c of calloutsAt(time)) for (const [key, size] of [['small', 9], ['large', 11]]) {
+            word.style.fontSize = size + 'px'; word.textContent = c.words; wordWidths[key][c.id] = word.getBoundingClientRect().width;
+          }
+          start += scene.len;
+        }
       }
-      return fitCalloutView(view, need, boxLeft, rightWordWidth);
+      return fitCalloutView(view, need, boxLeft, wordWidths);
     },
     draw(data, pieces, view, time, reduced) {
       const h = hero.getBoundingClientRect(), obstacles = [...hero.querySelectorAll('[data-name],[data-lede],[data-crafts],.hero-nav,[data-foot]')].map(n => n.getBoundingClientRect()).filter(r => r.width && r.height).map(r => ({ left: r.left - h.left, right: r.right - h.left, top: r.top - h.top, bottom: r.bottom - h.top }));

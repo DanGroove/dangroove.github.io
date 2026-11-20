@@ -285,6 +285,8 @@ function lidPainter(P) {
   const g = UI_ROW, w = g.lidW - 0.08, h = g.lidH - 0.08;
   const draw = (tone, r, art, window) => {
     height += LAYER_STEP;
+    // The screen's own face is fixed; page layers below it may change their count.
+    if (art === 'chromeLaptop') height = 0.04;
     const pc = { ...box(tone, lidPoint(0.04 + (r[0] + r[2] / 2) * w, 0.04 + (1 - r[1] - r[3] / 2) * h, height), [r[2] * w, r[3] * h, 0.001]), q: quatFromBasis(lidU, lidV), art, window, lidPicture: true };
     P.push(pc); return pc;
   };
@@ -292,7 +294,7 @@ function lidPainter(P) {
 }
 function feedPrototype(P, t, spans, off) {
   if (t >= off[1]) return;
-  const g = UI_ROW, clock = Math.max(0, (t - spans[0][1]) / PACE) % 3 / 3;
+  const g = UI_ROW, clock = Math.max(0, (Math.min(t, off[0]) - spans[0][1]) / PACE) / 3;
   for (let i = 0; i < 3; i++) {
     const pieces = [];
     if (i === 0) {
@@ -396,7 +398,7 @@ function animatedComp(draw, shape, p) {
 // One tall page is viewed through a moving window. Intersection changes both geometry and UVs.
 export function prototypeState(p) {
   if (p < 0) return { at: 0, scroll: 0, video: 0, lifted: false, tap: null };
-  const at = ((p * 3) % 3 + 3) % 3;
+  const at = p >= 1 ? 3 : ((p * 3) % 3 + 3) % 3;
   const scroll = at < 0.4 ? 0 : at < 1 ? 0.4 * EASE.wipe(linear(at, 0.4, 1)) : at < 1.55 ? 0.4 : at < 2.15 ? 0.4 * (1 - EASE.wipe(linear(at, 1.55, 2.15))) : 0;
   return { at, scroll, video: at < 0.15 ? 0 : at < 0.3 ? EASE.wipe(linear(at, 0.15, 0.3)) : at < 2.3 ? 1 : at < 2.45 ? 1 - EASE.wipe(linear(at, 2.3, 2.45)) : 0, lifted: at >= 1.25 && at < 1.55, tap: at < 0.15 ? 'video' : at >= 1.25 && at < 1.4 ? 'card' : at >= 2.15 && at < 2.3 ? 'graphic' : null };
 }
@@ -426,7 +428,7 @@ function prototype(draw, shape, p, chrome = true) {
   }
   if (chrome) { const pc = draw('ink', [0, 0, 1, 1], ['chromeLaptop', 'chromeTablet', 'chromeHandset'][shape]); pc.cut = true; }
   // Keep the prototype's existing progress rail, also on the three app-canvas viewports.
-  draw('grey', [x, y + h - 0.006, w, 0.006]); draw('paper', [x, y + h - 0.006, w * Math.max(0, p), 0.006]);
+  draw('grey', [x, y + h - 0.006, w, 0.006]).progressRail = true; draw('paper', [x, y + h - 0.006, w * Math.max(0, p), 0.006]).progressRail = true;
 }
 function playback(P, draw, kind, shape, p) {
   if (kind === 'video') movie(draw, shape, p);
@@ -734,6 +736,7 @@ export function playbackSpans(s) {
 }
 function exportPlay(s, t) {
   const { land, off } = playbackSpans(s);
+  if (s === SCRIPTS.fig) return t >= land && t < off[1] ? (Math.min(t, off[0]) - land) / (3 * PACE) : null;
   return t >= land && t < off[1] ? ((t - land) / PACE % (s === SCRIPTS.fig ? 3 : 1.6)) / (s === SCRIPTS.fig ? 3 : 1.6) : null;
 }
 function editedVideo(t) {
@@ -901,7 +904,8 @@ function editedMotion(t) {
   const head = 1.34 + (clock !== null ? clock * 2.4 : begun(s, 'play', t) ? 1.6 : 1.45 * eased(s, 'head', t));
   D.push(on('red', head - 0.015, 0.13, 0.03, 0.95, { lift: 0.13, t: 0.01 }), on('red', head - 0.07, 1.01, 0.14, 0.1, { lift: 0.13, t: 0.02 }));
   if (begun(s, 'marquee', t) && !done(s, 'marquee', t)) { const p = eased(s, 'marquee', t); D.push(...outline(1.36, 0.93 - 0.8 * p, 2.1 * p, 0.8 * p, { line: 0.012 })); }
-  tagEcho(D, 'head', laneStart);
+  if (begun(s, 'head', t)) tagEcho(D, 'head', laneStart);
+  for (const pc of D.slice(laneStart)) pc.overlay = true;
   D.forEach(pc => pc.document = true); P.push(...D);
   const { spans, off } = playbackSpans(s); feedScreens(P, t, ['motWide', 'motTall', 'motSq'], spans, off); P.clock = exported;
   return P;
@@ -1022,7 +1026,7 @@ function editedFigma(t) {
   const layerCount = begun(s, 'details', t) ? Math.min(10, 3 + Math.floor(phase(s, 'details', t) * 7)) : FIG.wires.filter((_, i) => begun(s, 'frame' + i, t)).length;
   if (layerCount) [0.36, 0.26].forEach((w, i) => D.push(on(i ? 'dark' : 'grey', 0.17, TOP - 0.19 - i * 0.12, w, 0.05, { lift: 0.05, t: 0.01 })));
   TREE.slice(0, layerCount).forEach(([kind, set, len], i) => { const y = TOP - 0.58 - i * 0.145, x = 0.16 + set * 0.1, lit = i === 5 && begun(s, 'hotspot', t); if (lit) D.push(on('dark', 0.11, y - 0.025, 0.66, 0.13, { lift: 0.035, t: 0.006 })); D.push(icon(kind, x, y - 0.005, 0.09, 0.09, lit ? 'dark' : 'night', lit ? 0.042 : 0.051), on(lit ? 'paper' : 'grey', x + 0.13, y + 0.02, len, 0.04, { lift: 0.05, t: 0.01 })); });
-  tagEcho(D, 'details', treeStart);
+  tagEcho(D, begun(s, 'details', t) ? 'details' : 'frame0', treeStart);
   D.forEach(pc => pc.document = true); P.push(...D);
   const { spans, off } = playbackSpans(s); feedPrototype(P, t, spans, off); P.clock = clock;
   return P;
@@ -1053,12 +1057,19 @@ function editedInDesign(t, { at: pages } = {}) {
       if (!begun(s, 'frame' + i, t)) return;
       const id = ['map', 'photo', 'postPhoto', 'mailPhoto'][i];
       const frame = i ? r : ID.frame;
-      const filled = [['map', DOCK.map, ID.frame], ['photo', DOCK.photo, ID.photo], ['postPhoto', ID.photo, ID.post], ['mailPhoto', ID.photo, ID.mailPhoto]].some(([drag, from, to]) => frameContact(s, drag, t, from, to, frame)), before = D.length;
+      const [drag, from, to] = [['map', DOCK.map, ID.frame], ['photo', DOCK.photo, ID.photo], ['postPhoto', ID.photo, ID.post], ['mailPhoto', ID.photo, ID.mailPhoto]][i];
+      const filled = frameContact(s, drag, t, from, to, frame), placed = done(s, id, t), before = D.length;
       if (i === 0 && done(s, 'frame0', t)) {
         for (const rect of [ID.left, ID.right]) D.push({ ...on('ink', ...rect, { lift: 0.06, t: 0.02 }), tones: FLYER.coal });
         if (!filled) emptyFrame(D, ID.frame, false);
-      } else if (!filled) drawnFrame(D, r, eased(s, 'frame' + i, t), 'night', true);
-      for (const pc of D.slice(before)) if (pc.overlay) pc.emptyFrame = id;
+      } else if (!placed) {
+        drawnFrame(D, r, eased(s, 'frame' + i, t), 'night', true);
+        if (filled) D.splice(before, D.length - before, ...D.slice(before).filter(pc => !pc.overlay));
+      }
+      for (const pc of D.slice(before)) {
+        if (pc.overlay) pc.emptyFrame = id;
+        else pc.framePlate = id;
+      }
     });
     if (done(s, 'spreadType', t)) D.push(on('ink', ...ID.left, { lift: 0.08, t: 0.004, art: 'kAmL' }), on('ink', ...ID.right, { lift: 0.08, t: 0.004, art: 'kAmR' }));
     else if (begun(s, 'map', t)) {
@@ -1262,6 +1273,21 @@ function build(i, at, o) {
   // Opaque word pictures keep their approved front faces, but have no shaded side faces.
   for (const pc of P) if (pc.art === 'wMake' || pc.art === 'wMove') pc.cut = true;
   separateFaces(P);
+  // Only InDesign carries photographs over other empty frames. Keep those frames whole below it.
+  if (i === 2) for (const pc of P.filter(pc => pc.where === 'travel')) {
+    const points = corners(pc), bounds = axis => [Math.min(...points.map(p => p[axis])), Math.max(...points.map(p => p[axis]))];
+    const [left, right] = bounds(0), [bottom, top] = bounds(1);
+    for (const line of P.filter(q => q.emptyFrame)) {
+      const cs = corners(line);
+      if (left < Math.max(...cs.map(p => p[0])) && right > Math.min(...cs.map(p => p[0])) && bottom < Math.max(...cs.map(p => p[1])) && top > Math.min(...cs.map(p => p[1]))) pc.p[2] = Math.max(pc.p[2], line.p[2] + line.s[2] + LAYER_STEP * U + pc.s[2]);
+    }
+  }
+  if (i === 2) {
+    const top = Math.max(...P.filter(pc => pc.where !== 'floor' && (pc.art || pc.paintLayer !== undefined) && !pc.overlay).map(pc => pc.p[2] + pc.s[2]));
+    const marks = P.filter(pc => pc.where !== 'floor' && pc.overlay && !pc.emptyFrame), bottom = Math.min(...marks.map(pc => pc.p[2] - pc.s[2]));
+    const rise = Math.max(0, top + LAYER_STEP * U - bottom);
+    for (const pc of marks) pc.p[2] += rise;
+  }
   return P;
 }
 // Keep legacy plates clear too. Preserve their height order and move only faces that collide.
@@ -1321,6 +1347,7 @@ export function calloutsAt(t) {
     } else {
       const [x, z, w, d] = rects[i], px = i === 0 ? x + 0.1 : i === 1 ? x + w / 2 : x + w - 0.1, pz = i === 1 ? z + d - 0.06 : z + 0.1;
       const faces = floor.filter(pc => {
+        if (key !== 'id' && (!pc.deviceBody || pc.device !== i)) return false;
         if (quatRotate(pc.q, [0, 0, 1])[1] < 1 - 1e-8) return false;
         const cs = corners(pc), xs = cs.map(p => p[0]), zs = cs.map(p => p[2]);
         return px >= Math.min(...xs) - 1e-8 && px <= Math.max(...xs) + 1e-8 && pz >= Math.min(...zs) - 1e-8 && pz <= Math.max(...zs) + 1e-8;

@@ -1,8 +1,34 @@
-// External review only. Supply an already-open Playwright page displaying the packed file.
-// This module neither launches nor closes a browser, serves a page, nor installs anything.
+// Accept an existing page, or run locally with a repository-installed Playwright.
+// The CLI opens only its own headless browser and blocks every non-file/data request.
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { createRequire } from 'node:module';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { SHOW, SCRIPTS, PACE, calloutsAt, playbackSpans } from '../stage.mjs';
 import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
+import { previewMarkup } from './preview.mjs';
+
+export const BROWSER_SIZES = [[390, 664], [390, 844], [360, 780], [375, 667], [412, 915], [768, 1024], [1440, 900], [1920, 1080]];
+export function checkLabelRoutes(labels, scale, context) {
+  const crosses = (a, b, r, pad = 0.5) => {
+    let lo = 0, hi = 1;
+    for (const [p, q] of [[a[0] - b[0], a[0] - r.left + pad], [b[0] - a[0], r.right + pad - a[0]], [a[1] - b[1], a[1] - r.top + pad], [b[1] - a[1], r.bottom + pad - a[1]]]) {
+      if (!p) { if (q < 0) return false; } else if (p < 0) lo = Math.max(lo, q / p); else hi = Math.min(hi, q / p);
+    }
+    return lo <= hi;
+  };
+  for (const c of labels) {
+    const dir = c.side === 'left' ? -1 : 1, [start, elbow, end] = c.points, run = scale < 70 ? 8 : 12;
+    assert.ok(dir * (elbow[0] - start[0]) >= 3 - 1e-7 && dir * (end[0] - elbow[0]) >= run - 1e-7, `${context}: label route: leader turns inward or has a short horizontal run`);
+    const words = c.box || c.label;
+    for (const d of labels) {
+      const mark = d.mark2, dx = Math.max(words.left - mark[0], 0, mark[0] - words.right), dy = Math.max(words.top - mark[1], 0, mark[1] - words.bottom);
+      assert.ok(Math.hypot(dx, dy) >= d.radius + 2 - 1e-7, `${context}: label route: words touch a ring or mark`);
+      for (let k = 1; k < d.points.length; k++) assert.ok(!crosses(d.points[k - 1], d.points[k], words), `${context}: label route: line on label words`);
+    }
+  }
+}
 
 export async function checkBrowser(page) {
   const times = [], rows = [];
@@ -15,7 +41,7 @@ export async function checkBrowser(page) {
     }
     start += scene.len;
   }
-  for (const [width, height] of [[390, 664], [390, 844], [1440, 900], [1920, 1080]]) {
+  for (const [width, height] of BROWSER_SIZES) {
     await page.setViewportSize({ width, height });
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.waitForFunction(() => window.__ready);
@@ -39,6 +65,7 @@ export async function checkBrowser(page) {
         return lo <= hi;
       };
       assert.equal(result.labels.length, result.S < 34 ? 0 : expected.length, `${width}/${time}: label count`);
+      checkLabelRoutes(result.labels, result.S, `${width}x${height}/${time}`);
       for (const [i, c] of result.labels.entries()) {
         assert.ok(Math.hypot(...c.mark.map((v, j) => v - c.projected[j])) <= 1, `${width}/${time}: projected mark`);
         assert.ok(c.box.left >= 16 - 0.01 && c.box.right <= result.W - 16 + 0.01, `${width}/${time}: word gutter`);
@@ -79,3 +106,47 @@ export async function checkBrowser(page) {
   await page.evaluate(() => { const box = document.querySelector('[data-stage-box]'); box.setAttribute('style', box.dataset.reviewStyle); delete box.dataset.reviewStyle; __hero.seek(__hero.t); });
   return rows;
 }
+
+export async function runBrowserCheck() {
+  const take = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), root = path.resolve(take, '../../..');
+  const require = createRequire(path.join(root, 'package.json'));
+  let playwright;
+  for (const name of ['playwright', '@playwright/test', 'playwright-core']) {
+    try {
+      const resolved = require.resolve(name);
+      if (resolved.startsWith(root + path.sep)) { playwright = require(resolved); break; }
+    } catch (error) { if (error.code !== 'MODULE_NOT_FOUND') throw error; }
+  }
+  if (!playwright) {
+    console.log('browser-check UNAVAILABLE: Playwright is not installed in the repository; no browser launched.');
+    for (const [w, h] of BROWSER_SIZES) console.log(`${w}x${h}: UNRUN (Playwright unavailable)`);
+    process.exitCode = 2; return;
+  }
+  let browser;
+  try {
+    browser = await playwright.chromium.launch({ headless: true });
+  } catch (error) {
+    console.log('browser-check UNAVAILABLE: Playwright could not launch its headless Chromium browser.');
+    console.log(String(error.message).split('\n')[0]);
+    for (const [w, h] of BROWSER_SIZES) console.log(`${w}x${h}: UNRUN (browser unavailable)`);
+    process.exitCode = 2; return;
+  }
+  try {
+    const context = await browser.newContext({ serviceWorkers: 'block' }), requests = [], errors = [];
+    await context.route('**/*', route => {
+      if (/^(?:file|data|blob):/.test(route.request().url())) return route.continue();
+      requests.push(route.request().url()); return route.abort();
+    });
+    const page = await context.newPage();
+    page.on('pageerror', error => errors.push(error.message));
+    const packed = path.join(take, '.scratch/corrections3/browser-preview.html');
+    fs.mkdirSync(path.dirname(packed), { recursive: true }); fs.writeFileSync(packed, previewMarkup());
+    await page.goto(pathToFileURL(packed).href + '?t=0');
+    const rows = await checkBrowser(page);
+    for (const [w, h] of BROWSER_SIZES) console.log(`${w}x${h}: PASS (${rows.filter(r => r.width === w && r.height === h).length} held frames; laptop entry/return; reduced motion)`);
+    assert.deepEqual(requests, [], 'packed preview attempted network requests');
+    assert.deepEqual(errors, [], 'packed preview page errors');
+    console.log('browser-check all eight sizes clean; network requests 0; page errors 0');
+  } finally { await browser.close(); }
+}
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await runBrowserCheck();

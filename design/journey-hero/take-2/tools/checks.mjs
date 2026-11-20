@@ -100,7 +100,7 @@ function check(time) {
     const painted = faces.filter(f => f.pc.paintLayer !== undefined && !f.pc.overlay).sort((a, b) => a.pc.paintLayer - b.pc.paintLayer);
     for (let i = 1; i < painted.length; i++) if (painted[i].height - painted[i - 1].height < 0.0008 - 1e-10) fail(time, 'painters did not share one increasing stack');
     const top = Math.max(-Infinity, ...faces.filter(f => !f.pc.overlay && (f.pc.art || f.pc.paintLayer !== undefined)).map(f => f.height));
-    for (const f of faces.filter(f => f.pc.overlay)) if ((f.pc.p[axis] - f.pc.s[2]) / unit < top + 0.0008 - 1e-10) fail(time, 'an interaction mark is below a picture stack');
+    for (const f of faces.filter(f => f.pc.overlay && !f.pc.emptyFrame)) if ((f.pc.p[axis] - f.pc.s[2]) / unit < top + 0.0008 - 1e-10) fail(time, 'an interaction mark is below a picture stack');
   }
 }
 
@@ -387,6 +387,11 @@ const exemptions = {
   carried: 'This is the piece currently being dragged by the cursor.',
 };
 function exemption(pc, scene, at, a, r) {
+  if (pc.echo) {
+    const source = SCRIPTS[scene].actions.find(a => a.id === pc.echo);
+    assert.ok(source, 'R5: invalid echo source ' + pc.echo);
+    assert.ok(at >= source.start - 1e-8, 'R5: echo precedes source action ' + pc.echo);
+  }
   if (pc.overlay || pc.caret) return 'overlay';
   if (pc.where === 'floor' || pc.playback) return 'playback';
   if (pc.where === 'travel' && a?.kind === 'drag' && pc.action === a.id) return 'carried';
@@ -397,7 +402,6 @@ function exemption(pc, scene, at, a, r) {
     if (overlaps(r, bounds)) return 'runMember';
   }
   if (pc.echo) {
-    assert.ok(SCRIPTS[scene].actions.some(a => a.id === pc.echo), 'R5: invalid echo source ' + pc.echo);
     return 'sourceEcho';
   }
   return null;

@@ -1,7 +1,15 @@
 // Node-only failure-path fixture. It does not import or execute the measurement entry point.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
-import { measurePhases } from './measure-phases.mjs';
+import { measurePhases, reportError } from './measure-phases.mjs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const fixturePath = fileURLToPath(new URL('../stage.mjs', import.meta.url));
+const failure = new Error('cannot open ' + fixturePath);
+failure.stack = 'SECRET STACK ' + fixturePath;
+const cleanError = reportError(failure);
+assert.equal(cleanError, 'cannot open design/journey-hero/take-2/stage.mjs', 'report paths: message must be repository-relative');
+assert.ok(!cleanError.includes('SECRET STACK'), 'report paths: stack leaked');
 
 const report = { phases: [], sizes: [], sheets: [], flicker: { frames: 0, repeatFailures: 0, blinkBlocks: 0, repeatDetails: [], blinkDetails: [] }, windows: [], limitations: [], consoleErrors: [], networkViolations: [], requestedDpr: 2, readyMs: null };
 const attempted = [];
@@ -21,3 +29,4 @@ assert.equal(await measurePhases(success, [[390, 664]], async () => {}, async ()
 assert.equal(success.playbackIncomplete, false);
 console.log('phase fixture: both failed playbacks recorded; scan 4 frames; sheets attempted; report says playback incomplete; failed result maps to exit 1');
 console.log('phase checks clean (no browser or hardware measurement run)');
+console.log('report paths: message only; repository-relative path; stack omitted');

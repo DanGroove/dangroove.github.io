@@ -1,8 +1,12 @@
 // Round-two numeric gates. These inspect emitted geometry, never rendered pixels.
 import assert from 'node:assert/strict';
-import { HOME, dot, quatRotate } from '../../../../public/journey/hero/engine.mjs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawnSync } from 'node:child_process';
+import { HOME, EASE, dot, quatRotate } from '../../../../public/journey/hero/engine.mjs';
 import { corners } from '../kit.mjs';
 import { labelLayout, fitCalloutView } from '../labels.mjs';
+import { checkLabelRoutes } from './browser-check.mjs';
 
 const rect = pc => { const p = corners(pc); return [Math.min(...p.map(p => p[0])), Math.min(...p.map(p => p[1])), Math.max(...p.map(p => p[0])), Math.max(...p.map(p => p[1]))]; };
 const overlap = (a, b) => Math.min(a[2], b[2]) > Math.max(a[0], b[0]) + 1e-8 && Math.min(a[3], b[3]) > Math.max(a[1], b[1]) + 1e-8;
@@ -117,7 +121,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
           const left = Math.min(...xs), right = Math.max(...xs), back = Math.min(...zs), front = Math.max(...zs);
           const inset = isId && i > 0 ? (i === 1 ? 0.04 : 0.05) : 0;
           const x = i === 0 ? left + 0.1 : i === 1 ? (left + right) / 2 : right + inset - 0.1, z = i === 1 ? front + inset - 0.06 : back - inset + 0.1;
-          const faces = floor.filter(pc => quatRotate(pc.q, [0, 0, 1])[1] > 1 - 1e-8 && corners(pc).some(p => near(p[0], x, pc.s[0] * 2 + 1e-7))).filter(pc => { const cs = corners(pc); return x >= Math.min(...cs.map(p => p[0])) - 1e-8 && x <= Math.max(...cs.map(p => p[0])) + 1e-8 && z >= Math.min(...cs.map(p => p[2])) - 1e-8 && z <= Math.max(...cs.map(p => p[2])) + 1e-8; });
+          const faces = floor.filter(pc => (isId || pc.deviceBody) && quatRotate(pc.q, [0, 0, 1])[1] > 1 - 1e-8 && corners(pc).some(p => near(p[0], x, pc.s[0] * 2 + 1e-7))).filter(pc => { const cs = corners(pc); return x >= Math.min(...cs.map(p => p[0])) - 1e-8 && x <= Math.max(...cs.map(p => p[0])) + 1e-8 && z >= Math.min(...cs.map(p => p[2])) - 1e-8 && z <= Math.max(...cs.map(p => p[2])) + 1e-8; });
           mark = [x, Math.max(...faces.map(pc => pc.p[1] + pc.s[2])), z];
         }
         if (c.mark.some((n, j) => !near(n, mark[j]))) fail(time, 'R14: anchor misses its specified face/corner');
@@ -125,7 +129,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
       if (expected[scene.key] && at >= Math.max(...ends) + 0.4 * PACE && at < off && labels.length !== 3) fail(time, 'R11: expected three labels');
       if (isId) for (const id of ['map', 'photo', 'postPhoto', 'mailPhoto']) {
         const overlays = P.filter(pc => pc.emptyFrame === id), moving = P.filter(pc => pc.where === 'travel');
-        if (overlays.some(pc => moving.some(q => overlap(rect(pc), rect(q))))) fail(time, 'frame clearance: outline crosses a travelling picture');
+        if (overlays.some(pc => moving.some(q => overlap(rect(pc), rect(q)) && pc.p[2] + pc.s[2] >= q.p[2] - q.s[2] - 1e-8))) fail(time, 'frame clearance: outline crosses a travelling picture');
         if (at > byId['frame' + ['map', 'photo', 'postPhoto', 'mailPhoto'].indexOf(id)].end && !overlays.length) vanishedFrames.add(id);
         if (vanishedFrames.has(id) && overlays.length) fail(time, 'frame clearance: empty outline returned');
       }
@@ -134,7 +138,8 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
         const U = 1.15, panel = SCREEN.w / U - 0.93, top = SCREEN.h / U - 0.54;
         for (const pc of P.filter(pc => pc.canvas)) {
           const r = rect(pc).map((v, i) => (v - (i % 2 ? SCREEN.b : SCREEN.l)) / U);
-          if (r[0] < 0.9 - 1e-8 || r[2] > panel - 0.1 + 1e-8 || r[3] > top - 0.1 + 1e-8) fail(time, 'canvas clearance: piece reaches a bar or side panel');
+          if (r[1] < 0.36 + 0.1 - 1e-8) fail(time, 'toolbar clearance: canvas is less than 0.1 above bottom toolbar');
+          if (r[0] < 0.9 - 1e-8 || r[2] > panel - 0.1 + 1e-8 || r[3] > top - 0.1 + 1e-8 || r[1] < 0.36 + 0.1 - 1e-8) fail(time, 'canvas clearance: piece reaches a bar or side panel or bottom toolbar');
         }
         const floor = P.filter(pc => pc.where === 'floor'), kinds = new Set(floor.map(pc => pc.deviceKind));
         if (at >= Math.max(...ends) && at < off && (floor.filter(pc => pc.deviceBody).length !== 3 || [...kinds].sort().join(',') !== 'laptop,phone,tablet')) fail(time, 'Figma devices: expected laptop, tablet, phone');
@@ -165,7 +170,63 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
     start += scene.len;
   }
   const figStart = SHOW.slice(0, 5).reduce((sum, s) => sum + s.len, 0), timing = playbackSpans(SCRIPTS.fig);
-  const picture = pieces => JSON.stringify(pieces.filter(pc => pc.playback).map(pc => [pc.art, pc.tone, pc.window, pc.p, pc.s]));
+  // R15 follows each cursor-made frame through its own contact and same-frame placement.
+  const idStart = SHOW.slice(0, 2).reduce((sum, s) => sum + s.len, 0), idScript = SCRIPTS.id;
+  for (const [i, id, profile, arts] of [[0, 'map', null, ['kMap']], [1, 'photo', 'cover', ['coverPhoto', 'coverBlob', 'coverDecor', 'kCover']], [2, 'postPhoto', 'post', ['postPhoto', 'kPost']], [3, 'mailPhoto', 'mail', ['mailPhoto', 'eblast']]]) {
+    const draw = idScript.actions.find(a => a.id === 'frame' + i), place = idScript.actions.find(a => a.id === id);
+    const made = frameAt(idStart + draw.end + 1e-7 * PACE).filter(pc => pc.emptyFrame === id).map(rect);
+    const target = [Math.min(...made.map(r => r[0])), Math.min(...made.map(r => r[1])), Math.max(...made.map(r => r[2])), Math.max(...made.map(r => r[3]))].map((n, k) => n + (k < 2 ? 1 : -1) * 0.005 * 1.15);
+    const samples = new Set(Array.from({ length: 2181 }, (_, n) => (1 + n * 0.005) * PACE));
+    samples.add(6.329 * PACE); // The incoming post-frame fault at global 25.229 s.
+    for (const t of [draw.start, draw.end, place.start, place.end]) for (const d of [-1e-7, 0, 1e-7]) samples.add(t + d * PACE);
+    let contacted = false;
+    for (const at of [...samples].sort((a, b) => a - b)) {
+      if (at <= draw.start + 1e-9 || at > 11.9 * PACE) continue;
+      const time = idStart + at, P = frameAt(time), overlays = P.filter(pc => pc.emptyFrame === id), plates = P.filter(pc => pc.framePlate === id);
+      const own = P.filter(pc => pc.where === 'travel' && (profile ? pc.photoProfile === profile : pc.art === 'kMap'));
+      const padded = target.map((n, k) => n + (k < 2 ? -1 : 1) * 0.03 * 1.15);
+      contacted ||= at >= place.end - 1e-9 || own.some(pc => overlap(rect(pc), padded));
+      if (!contacted && overlays.length !== 6) fail(time, 'R15: ' + id + ' frame vanished before its own contact');
+      if (contacted && overlays.length) fail(time, 'R15: ' + id + ' frame survives its own contact');
+      const plateCount = i === 0 && at > draw.end + 1e-9 ? 2 : 1;
+      const validPlates = i === 0 && near(at, draw.end, 1e-9) ? [1, 2].includes(plates.length) : plates.length === plateCount;
+      if (at < place.end - 1e-9 && !validPlates) fail(time, 'R15: ' + id + ' plate vanished before placement');
+      const replacement = P.some(pc => pc.where === 'content' && !pc.echo && arts.includes(pc.art));
+      if (at >= place.end - 1e-9 && !plates.length && !replacement) fail(time, 'R15: ' + id + ' plate disappeared without a same-frame replacement');
+      for (const line of P.filter(pc => pc.emptyFrame)) for (const moving of P.filter(pc => pc.where === 'travel')) if (overlap(rect(line), rect(moving)) && line.p[2] + line.s[2] >= moving.p[2] - moving.s[2] - 1e-8) fail(time, 'frame clearance: overlay above travelling InDesign picture');
+    }
+  }
+  let fixedSamples = 0, windowStart = 0;
+  for (const scene of SHOW) {
+    if (['id', 'pr', 'ae', 'fig'].includes(scene.key)) {
+      const s = SCRIPTS[scene.key], spans = playbackSpans(s), end = scene.key === 'id' ? s.actions.find(a => a.id === 'pickup').start : spans.off[0];
+      const begin = scene.key === 'id' ? s.actions.find(a => a.id === 'export').end : spans.land;
+      const reference = new Map(); let low;
+      for (let at = begin; at < end - 1e-9; at += PACE / 60) {
+        const labels = calloutsAt(windowStart + at); fixedSamples++;
+        for (const c of labels) {
+          const prior = reference.get(c.id);
+          if (prior && c.mark.some((n, j) => !near(n, prior[j], 1e-9))) fail(windowStart + at, 'fixed marks: playback moved an asset anchor');
+          reference.set(c.id, c.mark);
+        }
+        if (labels.length === 3) {
+          const level = Math.min(...labels.filter(c => c.level === 'low').map(c => dot(HOME.u, c.mark)));
+          if (low !== undefined && !near(low, level, 1e-9)) fail(windowStart + at, 'fixed marks: common low level moved');
+          low = level;
+        }
+      }
+    }
+    windowStart += scene.len;
+  }
+  const held = frameAt(figStart + timing.off[0]);
+  const pose = (P, offset) => P.filter(pc => pc.device !== undefined).map(pc => ({ art: pc.art, window: pc.window, s: pc.s, p: pc.p.map((n, i) => i === 2 ? n - offset : n) }));
+  for (let at = timing.off[0]; at < timing.off[1] - 1e-8; at += PACE / 60) {
+    const P = frameAt(figStart + at), base = held.find(pc => pc.deviceBody), body = P.find(pc => pc.deviceBody);
+    const a = pose(held, 0), b = pose(P, body.p[2] - base.p[2]);
+    if (P.some(pc => pc.device !== undefined && pc.art === 'tapDot')) fail(figStart + at, 'Figma return: a new prototype tap started during withdrawal');
+    if (a.length !== b.length || a.some((pc, i) => pc.art !== b[i].art || JSON.stringify(pc.window) !== JSON.stringify(b[i].window) || pc.s.some((n, j) => !near(n, b[i].s[j])) || pc.p.some((n, j) => !near(n, b[i].p[j])))) fail(figStart + at, 'Figma return: a new prototype frame started during withdrawal');
+  }
+  const picture = pieces => JSON.stringify(pieces.filter(pc => pc.playback && !pc.progressRail).map(pc => [pc.art, pc.tone, pc.window, pc.p, pc.s]));
   for (let n = 0; n < 300; n++) {
     const at = n / 100, first = frameAt(figStart + timing.land + at * PACE), second = frameAt(figStart + timing.land + ((at + 0.6) % 3) * PACE);
     for (let i = 0; i < 3; i++) {
@@ -180,7 +241,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
   const points = SHOW.flatMap((scene, i) => frameAt(SHOW.slice(0, i).reduce((n, s) => n + s.len, 0) + scene.still).flatMap(corners)).map(p => [dot(HOME.r, p), dot(HOME.u, p)]);
   const xs = points.map(p => p[0]), ys = points.map(p => p[1]), need = { w: Math.max(...xs) - Math.min(...xs) + 0.5, h: Math.max(...ys) - Math.min(...ys) + 0.5, x: (Math.max(...xs) + Math.min(...xs)) / 2, y: (Math.max(...ys) + Math.min(...ys)) / 2 };
   // These are parametric layout checks, including conservative word widths. Actual DOM/font boxes belong to browser-check.
-  for (const [W, H, b] of [[390, 664, [0, 64, 390, 240]], [390, 664, [0, 64, 390, 280]], [390, 844, [0, 64, 390, 396]], [1440, 900, [633.6, 88, 742.4, 740]], [1920, 1080, [844.8, 88, 1011.2, 920]]]) for (const widthFactor of [0.55, 0.65, 0.75]) {
+  for (const [W, H, b] of [[390, 664, [0, 64, 390, 240]], [390, 664, [0, 64, 390, 280]], [390, 844, [0, 64, 390, 396]], [360, 780, [0, 64, 360, 366.6]], [375, 667, [0, 64, 375, 313.49]], [412, 915, [0, 64, 412, 430.05]], [768, 1024, [337.92, 88, 390.08, 864]], [1440, 900, [633.6, 88, 742.4, 740]], [1920, 1080, [844.8, 88, 1011.2, 920]]]) for (const widthFactor of [0.55, 0.65, 0.75]) {
     const S = Math.min(b[2] / need.w, b[3] / need.h), size = S < 70 ? 9 : 11;
     const initial = { W, H, S, cx: b[0] + b[2] / 2 - S * need.x, cy: b[1] + b[3] / 2 + S * need.y, cam: HOME };
     const view = fitCalloutView(initial, need, b[0], 9 * size * widthFactor);
@@ -190,6 +251,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
       const widths = Object.fromEntries(data.map(c => [c.id, c.words.length * size * widthFactor]));
       const obstacles = W < 720 ? [{ left: 16, right: W - 16, top: b[1] + b[3] + 8, bottom: H - 35 }] : [];
       const layout = labelLayout(data, pieces, view, widths, obstacles, false, time);
+      try { checkLabelRoutes(layout, view.S, 'parametric ' + W + '/' + time); } catch (error) { fail(time, error.message); }
       for (const c of layout) {
         if (c.label.left < 16 - 1e-7 || c.label.right > W - 16 + 1e-7 || c.points.some(p => p[0] < 16 - 1e-7 || p[0] > W - 16 + 1e-7)) fail(time, 'label layout: word or line crosses a side gutter');
         const elbow = c.points[1], end = c.points[2];
@@ -201,5 +263,18 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
       start += scene.len;
     }
   }
-  console.log('R9–R14 sampled: occlusion, cursor continuity, labels, landed poses, wipes, anchors; Figma devices, motion and canvas/lid clearance');
+  const allPoints = [];
+  for (let at = 0; at < LOOP; at += PACE / 30) for (const pc of frameAt(at)) for (const p of corners(pc)) if (!pc.clip || p.reduce((sum, n, i) => sum + n * pc.clip[i], pc.clip[3]) >= 0) allPoints.push(dot(HOME.r, p));
+  const leftmost = allPoints.reduce((n, v) => Math.min(n, v), Infinity), rightmost = allPoints.reduce((n, v) => Math.max(n, v), -Infinity);
+  for (let W = 280; W <= 720; W++) {
+    const S = Math.min(W / need.w, 396 / need.h);
+    const view = fitCalloutView({ W, H: 844, S, cx: W / 2 - S * need.x, cy: 262 + S * need.y, cam: HOME }, need, 0, 65);
+    if (view.cx + view.S * leftmost < 16 - 1e-7 || view.cx + view.S * rightmost > W - 16 + 1e-7) fail(0, 'stage gutters: stage crossed a 16 px side gutter at width ' + W);
+  }
+  console.log('R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (' + fixedSamples + ' samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720');
+}
+// Direct use initializes the same atlas/player fixtures in a child to avoid an ESM entry-point cycle.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const run = spawnSync(process.execPath, [fileURLToPath(new URL('./checks.mjs', import.meta.url)), ...process.argv.slice(2)], { stdio: 'inherit', windowsHide: true });
+  process.exitCode = run.status ?? 1;
 }

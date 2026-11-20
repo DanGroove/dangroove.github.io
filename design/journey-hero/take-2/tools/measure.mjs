@@ -6,7 +6,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { inflateSync } from 'node:zlib';
-import { measurePhases } from './measure-phases.mjs';
+import { measurePhases, reportError } from './measure-phases.mjs';
 import { previewMarkup } from './preview.mjs';
 import { SHOW, SCRIPTS, LOOP, PACE } from '../stage.mjs';
 
@@ -323,7 +323,7 @@ try {
   const sizes = [firstSize, ...((firstSize[0] === 1920 && firstSize[1] === 1080) ? [] : [[1920, 1080]])];
   if (!await measurePhases(report, sizes, playLoop, scanWindows, writeSheets)) process.exitCode = 1;
   if (report.networkViolations.length) throw new Error('Unexpected page network request was blocked; inspect report');
-} catch (error) { report.error = error.stack || String(error); process.exitCode = 1; console.error(report.error); }
+} catch (error) { report.error = reportError(error); process.exitCode = 1; console.error(report.error); }
 finally {
   if (!report.phases.length) await measurePhases(report, [firstSize], async () => { throw new Error('Playback unavailable after setup failure'); }, scanWindows, writeSheets).then(ok => { if (!ok) process.exitCode = 1; });
   if (socket?.readyState === WebSocket.OPEN) { try { await Promise.race([command('Browser.close', {}, null), pause(3000)]); } catch {} socket.close(); }

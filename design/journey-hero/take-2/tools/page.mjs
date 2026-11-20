@@ -12,7 +12,7 @@ export function outputPath(name) {
     throw new Error('output must be inside design/journey-hero/take-2/');
   }
   const relative = path.relative(TAKE, file).toLowerCase().split(path.sep).join('/');
-  if (['motion.md', 'motion-2.md', 'corrections-1.md', 'corrections-2.md'].includes(relative) || relative === '.scratch/crit' || relative.startsWith('.scratch/crit/')) throw new Error('the briefs and protected review records are read only');
+  if (['motion.md', 'motion-2.md', 'corrections-1.md', 'corrections-2.md', 'corrections-3.md'].includes(relative) || ['.scratch/crit', 'review/hardware'].some(p => relative === p || relative.startsWith(p + '/'))) throw new Error('the briefs and protected review records are read only');
   fs.mkdirSync(path.dirname(file), { recursive: true });
   return file;
 }
