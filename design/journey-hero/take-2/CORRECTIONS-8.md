@@ -31,6 +31,31 @@ Replace today's red-dot hover with three variants that Dan can switch between in
 - Do all of this in the floor shader and its uniforms: no per-dot JavaScript, and no layout reads per frame. A click ring is a uniform (start time and centre); at most two rings at once.
 - Remove the old red-circle hover (`redDot` and its uniform use), or keep it only as an internal helper if a check needs it.
 
+## F2 (major). A fourth floor, `stir`, the new default
+
+Dan, 7:19 AM ET, with a link to a page whose star field reacts to the mouse: "I like the background on this page and how it reacts to my mouse, can we do something similar?" The reference was read in a browser and its shader read in its source. How it works:
+
+- The moving pointer pushes the stars it sweeps through, along the line of its own motion. The push comes from the pointer's path segment since the last frame, not from where the pointer sits, so a still pointer pushes nothing.
+- Each star has its own mass and coasts: its velocity decays (a drag of about 2.3 divided by the square root of its mass), and it drifts back home on an exponential (about e to the minus its age). The source says so itself: individual momentum, with no spring pulling toward the cursor. Nothing overshoots or bounces.
+
+Do the same with the floor's dots, as variant `stir`, and make it the default instead of `swell`:
+
+- **The push.** Each frame, take the pointer's path segment on the floor plane (`pointerFloor` at the last and current positions). Dots within about 0.6 floor units of that segment get an impulse along it. Use `(1 - smoothstep(0, r, distance))²` weighting, in proportion to the pointer's speed, with the impulse capped so a fast flick cannot fling a dot far.
+- **Each dot's mass** comes from a fixed hash of its grid cell, between about 0.6 and 1.6, so neighbours move differently.
+- **The coast.** Each dot coasts and returns home as above. The largest offset stays under 0.35 units (the pitch is 0.5), and dots never swap places.
+- **What does not move.** The floor plane, the pool of light and every unstirred dot stay put, so nothing moves unless the pointer moves through it. That keeps to Dan's rule that the floor itself does not move.
+- **Colour and size.** Dots keep their colour and size.
+- **Clicks.** A click on the floor still goes to the next craft; no ring.
+- **How to build it.** There are only a few hundred dots (pool radius 4.8, pitch 0.5), so a JavaScript simulation of their offsets is fine. Upload the offsets to a small texture each frame, only while any dot is away from home, and let the floor shader draw each dot at home plus offset. Check the neighbouring cells so a moved dot is never clipped by its own cell. Sleep when everything has settled.
+- **When it is off.** It starts only after the entrance's floor wipe. It is off with reduced motion and without a mouse. The other variants keep their behaviour.
+- **Checks.** In Node:
+  - a still pointer moves nothing;
+  - a sweep moves only dots near its path, and along it;
+  - every dot returns home monotonically with no overshoot, within 0.35 units;
+  - two dots of different mass in the same sweep end up different.
+
+  Add a negative control. In the browser, film a slow sweep and a fast flick across the floor at 1440 x 900.
+
 ## Checks
 
 - In Node:
