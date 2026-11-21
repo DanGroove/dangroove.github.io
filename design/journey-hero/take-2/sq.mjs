@@ -90,13 +90,16 @@ float shadowAt(vec3 w, float spread) {
 
 const ART_FN = `
 uniform sampler2D uAtlas;
+uniform sampler2D uAtlasB;
 uniform vec4 uArt;                    // the picture's place in the atlas: x, y, w, h
+uniform vec4 uArtB;
+uniform float uArtMix;
 uniform float uArtMode;               // 0 none, 1 a picture on the face, 2 only the picture
 uniform float uArtShade;              // 1: the picture is also dimmed where its face turns from the light
 vec4 artAt(vec3 l, float face) {
   if (uArtMode < 0.5 || face < 0.7) return vec4(0.0);
   vec2 uv = clamp(vec2(l.x, -l.y) * 0.5 + 0.5, 0.0, 1.0);
-  return texture(uAtlas, uArt.xy + uv * uArt.zw);
+  return mix(texture(uAtlas, uArt.xy + uv * uArt.zw), texture(uAtlasB, uArtB.xy + uv * uArtB.zw), uArtMix);
 }`;
 
 // The same world plane cuts the picture, its silhouette and its cast shadow. uReveal is the entrance's one plane for the whole draw.
@@ -314,7 +317,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
   // One texture per atlas page. A draw binds only when its picture changes page.
-  let atlasTextures = [], places = {}, boundPage = -1;
+  let atlasTextures = [], places = {}, boundPage = -1, boundMixPage = -1;
   function setAtlas(atlas) {
     atlasTextures.forEach(tex => gl.deleteTexture(tex));
     places = atlas.places;
@@ -332,7 +335,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(4, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
       return tex;
     });
-    boundPage = -1;
+    boundPage = boundMixPage = -1;
   }
   const whole = [0, 0, 1, 1], noClip = [0, 0, 0, 1], noTaper = [0, 0];
   const colourCache = new Map();
@@ -352,6 +355,11 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       gl.uniform1f(u.uArtMode, place ? (pc.cut ? 2 : 1) : 0);
       if (u.uArtShade) gl.uniform1f(u.uArtShade, pc.shade ? 1 : 0);
       if (place) { const w = pc.window || whole; gl.uniform4f(u.uArt, place[1] + w[0] * place[3], place[2] + w[1] * place[4], (w[2] - w[0]) * place[3], (w[3] - w[1]) * place[4]); }
+      const second = places[pc.artB] || place;
+      if (second && second[0] !== boundMixPage) { boundMixPage = second[0]; gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, atlasTextures[boundMixPage]); }
+      if (u.uArtMix) gl.uniform1f(u.uArtMix, pc.artB ? pc.artMix : 0);
+      if (u.uArtB && second) { const w = pc.window || whole; gl.uniform4f(u.uArtB, second[1] + w[0] * second[3], second[2] + w[1] * second[4], (w[2] - w[0]) * second[3], (w[3] - w[1]) * second[4]); }
+      if (u.uAtlasB) gl.uniform1i(u.uAtlasB, 2);
     }
   };
   const drawAll = (prog, pieces, grow, tone, skip) => {

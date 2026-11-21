@@ -8,6 +8,7 @@ import { inflateRawSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { HOME, dot } from '../../../../public/journey/hero/engine.mjs';
 import { corners } from '../kit.mjs';
+import { checkRound17Exports, checkRound17RetainedControls } from './round17-checks.mjs';
 
 const stageURL = new URL('../stage.mjs', import.meta.url);
 const moduleOf = code => import('data:text/javascript;base64,' + Buffer.from(code.replace(/from (['"])(\.{1,2}\/[^'"]+)\1/g, (_all, _q, ref) => `from '${new URL(ref, stageURL).href}'`)).toString('base64'));
@@ -268,6 +269,7 @@ export async function checkRound15Controls() {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  if (!process.argv.includes('--controls')) console.log(await checkAll());
-  console.log('Round 15 negative controls: ' + await checkRound15Controls());
+  // Register round 17's replacements for the changed pop, rest, sink and laptop dimensions, keeping N1/N2 and clip checks.
+  if (!process.argv.includes('--controls')) console.log(await checkRound17Exports());
+  console.log('Round 15 retained negative controls: ' + await checkRound17RetainedControls());
 }

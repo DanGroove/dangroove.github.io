@@ -8,11 +8,13 @@ import { corners } from '../kit.mjs';
 import { labelLayout, fitCalloutView } from '../labels.mjs';
 import { checkLabelRoutes } from './browser-check.mjs';
 import { BLOCK_ROW, EXPORT_SHIFT, FIG } from '../stage.mjs';
+import { sameRegisteredPicture } from './round17-checks.mjs';
 
 const rect = pc => { const p = corners(pc); return [Math.min(...p.map(p => p[0])), Math.min(...p.map(p => p[1])), Math.max(...p.map(p => p[0])), Math.max(...p.map(p => p[1]))]; };
 const overlap = (a, b) => Math.min(a[2], b[2]) > Math.max(a[0], b[0]) + 1e-8 && Math.min(a[3], b[3]) > Math.max(a[1], b[1]) + 1e-8;
 const contains = (a, p) => p[0] > a[0] + 1e-8 && p[0] < a[2] - 1e-8 && p[1] > a[1] + 1e-8 && p[1] < a[3] - 1e-8;
 function samePicture(a, b) {
+  if (sameRegisteredPicture(a, b)) return true;
   if (a.art !== b.art) return false;
   const mapping = pc => { const r = rect(pc), [u, v, right, bottom] = pc.window || [0, 0, 1, 1], w = (r[2] - r[0]) / (right - u), h = (r[3] - r[1]) / (bottom - v); return [w, h, r[0] - u * w, r[3] + v * h]; };
   const x = mapping(a), y = mapping(b); return x.every((n, i) => Math.abs(n - y[i]) < 1e-7);
@@ -55,7 +57,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
   for (const scene of SHOW) {
     const s = SCRIPTS[scene.key], byId = Object.fromEntries(s.actions.map(a => [a.id, a])), spans = playbackSpans(s), isId = scene.key === 'id';
     const ends = spans.spans.map(() => spans.land), off =   // CORRECTIONS-15: every label from the last piece's become end (land)
-      isId ? byId.pickup.start : spans.off[0];
+      isId ? byId.pickup.start : spans.off[0] - (scene.key === 'fig' ? 0.4 * PACE : 0);
     const seenLabels = new Map(), vanishedFrames = new Set();
     if (isId) for (const [id, profile, style, crop] of [['photo', 'cover', 'coverPhoto', [380 / 1100, 0, 720 / 1100, 1]], ['postPhoto', 'post', 'postPhoto', [0, 0, 1, 1]], ['mailPhoto', 'mail', 'mailPhoto', [300 / 800, 168 / 1180, 456 / 800, 470 / 1180]]]) {
       const a = byId[id], before = frameAt(start + a.end - 1e-7 * PACE).find(pc => pc.photoProfile === profile), after = frameAt(start + a.end + 1e-7 * PACE).find(pc => pc.art === style && !pc.echo);
@@ -117,7 +119,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
         let mark;
         if (scene.key === 'fig' && i === 0) {
           const lid = floor.find(pc => pc.lid), face = floor.find(pc => pc.art === 'chromeLaptop');
-          const p = quatRotate(lid.q, [-lid.s[0] + 0.04 + 0.08, lid.s[1] - 0.04 - 0.06, face.s[2]]); mark = p.map((v, j) => v + face.p[j]);
+          const p = quatRotate(lid.q, [-lid.s[0] + 0.04 + 0.08, lid.s[1] - 0.090625 - 0.06, face.s[2]]); mark = p.map((v, j) => v + face.p[j]);
         } else {
           let asset;
           if (isId) asset = floor.filter(pc => pc.art === ['kCover', 'post', 'mail'][i]).sort((a, b) => b.p[1] - a.p[1])[0];
@@ -157,7 +159,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
           if (!near(lid.s[0] / lid.s[1], 1.6) || !near(widths[1] / (bodies[1].s[1] * 2 - 0.12), 3 / 4) || !near(widths[2] / (bodies[2].s[1] * 2 - rims[2]), 9 / 19.5) || widths[0] <= Math.max(...widths.slice(1))) fail(time, 'Figma device geometry: wrong screen ratios or picture sizes');
           const gaps = [bodies[1].p[0] - bodies[1].s[0] - bodies[0].p[0] - bodies[0].s[0], bodies[2].p[0] - bodies[2].s[0] - bodies[1].p[0] - bodies[1].s[0]];
           const zs = floor.flatMap(corners).map(p => p[2]);
-          if (!near(gaps[0], gaps[1]) || Math.min(...zs) < MAT.z + UI_ROW.forward - 1e-8 || Math.max(...zs) > MAT.z + UI_ROW.forward + 1.8 + 1e-8 || Math.min(...xs) < MAT.x - 1e-8 || Math.max(...xs) > MAT.x + MAT.w + 1e-8) fail(time, 'Figma device geometry: unequal gaps or excessive footprint');
+          if (!near(gaps[0], gaps[1]) || Math.min(...zs) < MAT.z + UI_ROW.forward - 0.02 - 1e-8 || Math.max(...zs) > MAT.z + UI_ROW.forward + 1.8 + 1e-8 || Math.min(...xs) < MAT.x - 1e-8 || Math.max(...xs) > MAT.x + MAT.w + 1e-8) fail(time, 'Figma device geometry: unequal gaps or excessive footprint');
         }
         for (const lid of floor.filter(pc => pc.lid)) {
           // Clip the returning lid's box at the slot before testing its visible outline.

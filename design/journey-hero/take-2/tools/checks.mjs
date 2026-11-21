@@ -25,7 +25,7 @@ import { checkRound12StarsList, checkRound12Controls } from './round12-stars-lis
 import { checkRound14, checkRound14Controls } from './round14-checks.mjs';
 import { checkRound12 as checkRound12Scene, checkRound12Controls as checkRound12SceneControls } from './round12-checks.mjs';
 import { checkRows as checkRound13Rows, checkRowsControls as checkRound13RowsControls } from './round13-checks.mjs';
-import { checkAll as checkRound15, checkRound15Controls } from './round15-checks.mjs';
+import { checkRound17, checkRound17Controls, checkRound17Exports as checkRound15, checkRound17RetainedControls as checkRound15Controls, withSourceLines } from './round17-checks.mjs';
 import * as stageModule from '../stage.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
@@ -99,7 +99,7 @@ function check(time) {
       if (scene.key === 'ps' || scene.key === 'ai' || at < 0.1) fail(time, `piece ${i}: floor must be empty`);
       // CORRECTIONS-13 E2: the slot at the mat's back edge is gone. CORRECTIONS-15: the only clips on the floor are the ball's at the
       // button's face while it pops, a format's or block's become wipe (one plane in x) and the sink's plane at y = 0.
-      if (pc.clip && !(pc.morph === 'ball' && pc.clip[2] === 1 && !pc.clip[0] && !pc.clip[1]) && !(pc.edge !== undefined && Math.abs(pc.clip[0]) === 1 && !pc.clip[1] && !pc.clip[2]) && !(pc.sink && pc.clip.join() === '0,1,0,0')) fail(time, `piece ${i}: a floor piece is clipped outside the ball's pop, its wipes and the sink`);
+      if (pc.clip && !(pc.morph === 'ball' && pc.clip[1] === 1 && !pc.clip[0] && !pc.clip[2]) && !(pc.edge !== undefined && Math.abs(pc.clip[0]) === 1 && !pc.clip[1] && !pc.clip[2]) && !(pc.sink && pc.clip.join() === '0,1,0,0')) fail(time, `piece ${i}: a floor piece is clipped outside the ball's pop, its wipes and the sink`);
       const s = SCRIPTS[scene.key], exp = s?.actions.find(a => a.id === 'export');
       if (exp && at < exp.start) fail(time, `piece ${i}: floor before export`);
       if (pc.device !== undefined && list.clock !== null && list.clock !== undefined && Math.abs(pc.clock - list.clock) > 1e-8) fail(time, `piece ${i}: device and viewer clocks differ`);
@@ -252,7 +252,7 @@ for (const i of [2, 3, 4, 5]) {
 sceneStart = 0;
 for (const scene of SHOW) {
   if (['id', 'pr', 'ae', 'fig'].includes(scene.key)) {
-    const s = SCRIPTS[scene.key], { land, off } = playbackSpans(s), end = scene.key === 'id' ? s.actions.find(a => a.id === 'pickup').start : off[0];
+    const s = SCRIPTS[scene.key], { land, off } = playbackSpans(s), end = scene.key === 'id' ? s.actions.find(a => a.id === 'pickup').start : scene.key === 'fig' ? land + 3 * PACE : off[0];
     const floor = t => frameAt(sceneStart + t, { at: -1 }).filter(pc => pc.where === 'floor');
     const landed = floor(land + 1e-6 * PACE);
     const reference = scene.key === 'id' ? landed : landed.filter(pc => pc.deviceBody || pc.lid);
@@ -301,7 +301,7 @@ for (const scene of SHOW) {
   if (['pr', 'ae', 'fig'].includes(scene.key)) {
     const exp = s.actions.find(a => a.id === 'export'), land = playbackSpans(s).land;   // CORRECTIONS-13: plays start once every body is built
     for (const f of [0.01, 0.2, 0.333333, 0.5, 0.7, 0.99, 1.2, 1.7, 1.99]) {
-      if (scene.key === 'fig' && f >= 1) continue;
+      if (['fig', 'ae'].includes(scene.key) && f >= 1) continue;
       const at = land + f * (scene.key === 'fig' ? 3 : 1.6) * PACE, list = frameAt(sceneStart + at);
       near(list.clock, f % 1);
       assert.ok(list.some(pc => pc.device === 0));
@@ -315,7 +315,7 @@ for (const scene of SHOW) {
     if (scene.key !== 'fig') near(Math.min(...zs), MAT.z);
     else {   // CORRECTIONS-13 U1: the tablet's back edge now sits on the deck's (tabZ behind the row line), not on the mat's back edge.
       near(Math.min(...corners(bodies[1]).map(p => p[2])), MAT.z + UI_ROW.forward + UI_ROW.tabZ);
-      assert.ok(Math.min(...zs) >= MAT.z + UI_ROW.forward - 1e-6, 'fig row reaches behind its row line');
+      assert.ok(Math.min(...zs) >= MAT.z + UI_ROW.forward - 0.02 - 1e-6, 'fig row reaches behind its row line');
     }
     assert.ok(list.some(pc => pc.where === 'content' && ['shotA', 'shotB', 'shotCfx', 'wMake', 'uiPageWide0', 'uiPageWide1'].includes(pc.art)), 'viewer is not playing with the devices');
   }
@@ -549,10 +549,10 @@ try { console.log(await checkDrags()); } catch (error) { fail(timetable.global(2
 try { const r = await checkRound5(); console.log(`H1–H7 computed: ${r.H1.draws} draw ends, ${r.H1.growingSamples} spread samples; loop ${r.H2.loop.toFixed(3)}s, land 3.0s; ${r.H3.samples} laptop poses; ${r.H6.continuitySamples} resize samples; ${r.H7.rays} floor rays; F3 no floor hover. Font ink, layout, pixels and frames UNRUN.`); } catch (error) { fail(0, error.message); }
 try { const r = await checkRound5Addendum(); console.log(`H9/H10 computed: ${r.H9.measurements} CSSOM-model measurements, ten repeats and away/back at ten sizes; X1 envelope scale against round 4 ${r.H9.envelopeScale.map(n => n.toFixed(4)).join("–")}; ${r.H10.after.samples} Figma poses at 0.02 s; laptop/app gap ${r.H10.after.minimumGap.toFixed(6)} px, Laptop ring clearance ${r.H10.after.minimumRing.toFixed(6)} px (S=103.6); ${r.H10.preservedFrames} incoming-piece comparisons. Browser checks UNRUN.`); } catch (error) { fail(0, error.message); }
 try { console.log(await checkRound5SecondAddendum()); } catch (error) { fail(0, error.message); }
-try { console.log(await checkEntrance()); console.log('E1/E4 negative controls: ' + await checkEntranceControls()); } catch (error) { fail(0, error.message); }
+try { console.log(await checkEntrance()); console.log('E1/E4 negative controls: ' + await withSourceLines(checkEntranceControls)); } catch (error) { fail(0, error.message); }
 try { console.log(describe(await checkHand())); console.log('K3 negative controls: ' + await checkHandControls()); } catch (error) { fail(0, error.message); }
-try { console.log(await checkRound8()); console.log('Round 8 negative controls: ' + await checkRound8Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
-try { console.log(await checkRound9()); console.log('Round 9 negative controls: ' + await checkRound9Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
+try { console.log(await checkRound8()); console.log('Round 8 negative controls: ' + await withSourceLines(checkRound8Controls)); } catch (error) { fail(0, error.message.split('\n')[0]); }
+try { console.log(await checkRound9()); console.log('Round 9 negative controls: ' + await withSourceLines(checkRound9Controls)); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound10()); console.log('Round 10 negative controls: ' + await checkRound10Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 // Round 12 (S1): its L2 checks (the selection box) are gone with the box; round 14's letter roll (K1) carries round 11's
 // and round 12's kept rules for the craft list.
@@ -564,6 +564,7 @@ try { console.log(await checkRound12Scene()); console.log('Round 12 (D1, I1, X1)
 try { console.log(await checkRound13Rows(stageModule)); console.log('Round 13 (U1, I2) negative controls: ' + await checkRound13RowsControls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 // CORRECTIONS-15: the ball and the sink (S1, S2), the map without its selection box (N1) and flat drags (N2); round 13's E1/E2 are retired.
 try { console.log(await checkRound15(stageModule)); console.log('Round 15 (S1, S2, N1, N2) negative controls: ' + await checkRound15Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
+try { console.log(await checkRound17(stageModule)); console.log('Round 17 negative controls:\n' + await checkRound17Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {
