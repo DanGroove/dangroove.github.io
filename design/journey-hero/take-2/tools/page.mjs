@@ -23,6 +23,8 @@ export function pageMarkup(kind = 'play') {
   html = html.replace('<link rel="stylesheet" href="journey.css" />', '<link rel="stylesheet" href="journey.css" />\n    <link rel="stylesheet" href="/design/journey-hero/take-2/take-2.css" />');
   html = html.replace(/\s*<link rel="modulepreload"[^>]*>/g, '').replace(/<noscript>[\s\S]*?<\/noscript>/g, '');
   html = html.replace('<script type="module" src="hero/hero.mjs"></script>', `<script type="module" src="/design/journey-hero/take-2/${kind}.mjs"></script>`);
+  // Dan, 21 November: his welcome under the name, the greeting on its own line. The first take in public/ keeps its own line.
+  html = html.replace(/(<p class="hero-lede" data-lede>)[\s\S]*?(<\/p>)/, '$1\n            Hey, I&rsquo;m Dan! <span class="hero-lede-more">Welcome to my portfolio, where I show how I go from first sketch to final cut, and everything in between.</span>\n          $2');
   return html.replace('<meta charset="utf-8" />', '<meta charset="utf-8" />\n    <base href="/public/journey/" />');
 }
 

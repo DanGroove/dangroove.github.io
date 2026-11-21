@@ -76,6 +76,20 @@
     display: none;
   }
 }
+/* Dan, 21 November: the greeting on its own line, a little space, then the rest, balanced so no word sits alone. */
+.hero-lede-more {
+  display: block;
+  margin-top: 0.5em;
+  text-wrap: balance;
+}
+
+/* The two-part welcome is a line longer on phones, so the stage gives up 16 px to keep everything on the first screen (390 x 664). */
+@media (max-width: 719px) {
+  .hero-box {
+    min-height: 224px;
+  }
+}
+
 /* Round 14, K1 (replaces round 12's selection box, which replaced round 11's red rule): the current craft's letters roll up
    into place. craft-wipe.mjs adds .is-rolling to the list once its overlay is measured (never with reduced motion, never
    without scripts). Then each button carries an aria-hidden overlay of glyph masks at the flow letters' measured pen
