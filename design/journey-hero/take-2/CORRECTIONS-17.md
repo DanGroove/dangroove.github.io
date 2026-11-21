@@ -81,7 +81,7 @@ The cause: `travel()` tags its pieces `action: key`, the picture's key (`map`, `
 
 At `mailFlyer`'s end (32.350 s) the build is replaced by `approvedDocument()`, which places every page at lift 0.06, thickness 0.02 (face 0.080). The build had the post at face 0.109 (since `postButton` ended) and the cover and spread at 0.084, so all of them move back in one frame.
 
-Dan: "the backwards position on these is the correct one, not what they were before". So:
+Dan: "the backwards position on these is the correct one, not what they were before", then, with a screenshot of the finished document just after the move (arrow tool, cursor on Export): "this is how it should look". So:
 - Every page and panel sits where `approvedDocument()` puts it (face 0.080) from the moment it is placed, all through the build. That covers the spread's pages, the cover, the post, the e-blast and the pages panel's thumbnails.
 - What is drawn onto a page while it is built (typed words, drawn shapes, a dropped photo) sits on that page, at most a few layer steps above it, and never lifts the page itself.
 - At 32.350 s nothing moves (rule G).
