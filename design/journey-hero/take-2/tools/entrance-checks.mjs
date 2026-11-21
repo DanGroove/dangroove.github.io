@@ -10,6 +10,7 @@ import { corners } from '../kit.mjs';
 import { inflateRawSync } from 'node:zlib';
 import { handPatch } from './hand-patch.mjs';
 import { SHOW, LOOP, SCENES, BLOCK, POOL, SCREEN, sceneAt, frameAt, calloutsAt } from '../stage.mjs';
+import { createCraftModel, followCraft } from '../craft-wipe.mjs';
 
 const TAKE = new URL('../', import.meta.url);
 const read = name => fs.readFileSync(new URL(name, TAKE), 'utf8');
@@ -151,13 +152,15 @@ async function runPlayer(playerSource, E) {
   hero.querySelector = s => s === '[data-stage-box]' ? stage : s === '[data-pause]' ? pause : node();
   hero.querySelectorAll = () => crafts;
   const media = { matches: false, addEventListener(_name, f) { this.change = f; } }, win = {}, draws = [], view = { applied: [], clears: 0 };
-  let tick = null;
+  const wipe = { model: createCraftModel(), follows: [] };
+  let tick = null, now = 0;
   const renderer = { setAtlas() {}, draw(pieces, v, look) { draws.push({ look }); } };
   const observer = class { observe() {} };
   const player = playerSource.replace(/^import\s+.*?;\s*$/gm, '');
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-  await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+  await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
     location: { search: '' }, document: { querySelector: () => hero, fonts: { ready: Promise.resolve(), addEventListener() {} }, hidden: false, addEventListener() {} }, window: win, matchMedia: () => media,
+    createCraftWipe: () => ({ measure() {}, hold: () => null, follow(craft, o) { wipe.follows.push(!!o?.cut); followCraft(wipe.model, craft, now / 1000, { ...o, reduced: media.matches }); }, state: null }),
     createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => ({}), fontsReady: async () => {},
     SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts: () => ({ draw() {}, fit: v => v, layout: [] }),
     createNameReact: () => ({ measure() {}, setLive() {}, live: false, open: 0, letters: [] }), createStars: () => ({ measure() {}, frame: () => null, after() {}, swallowClick: () => false, field: null }), starReach: () => null, createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect, nameLines: [] }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),
@@ -165,10 +168,9 @@ async function runPlayer(playerSource, E) {
     createEntranceView: () => ({ measure() {}, apply(s) { view.applied.push(s); }, clear() { view.clears++; }, lines: 3 }),
     devicePixelRatio: 1, requestAnimationFrame: f => { tick = f; return 1; }, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
   });
-  let now = 0;
   const run = seconds => { for (let n = 0; n < Math.round(seconds / 0.05); n++) { now += 50; tick(now); } };
   tick(now);
-  return { win, draws, view, crafts, pause, stage, media, run };
+  return { win, draws, view, crafts, pause, stage, media, run, wipe };
 }
 
 function near(a, b, message) { close(a, b, message, 1e-6); }
@@ -188,6 +190,9 @@ async function checkPlayer(playerSource, E) {
   p.run(0.2); assert.equal(p.win.__hero.entering, null, 'E1 player: entrance ends at 1.4'); near(p.win.__hero.t, 0.3, 'E1 player: loop clock at the entrance end');
   assert.ok(p.view.clears > 0 && p.draws.at(-1).look.floor.reveal === undefined, 'E1 player: entrance styles remain');
   p.run(1); near(p.win.__hero.t, 1.3, 'E1 player: loop keeps playing');
+  // Round 11 (C1): the entrance sets the craft list (its rule draws with the hairline); the loop's start is no change.
+  assert.ok(p.wipe.follows.length > 20 && p.wipe.follows.some(cut => cut) && p.wipe.follows.some(cut => !cut), 'C1 player: the craft list is not followed through and after the entrance');
+  assert.ok(p.wipe.model.current === 0 && p.wipe.model.changes === 0, `C1 player: the entrance or the loop's start made a craft change (${p.wipe.model.changes})`);
   // A click during the entrance ends it at once and then does what the click does.
   p = await runPlayer(playerSource, E); p.run(0.5);
   p.crafts[2].events.click();

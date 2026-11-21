@@ -9,6 +9,7 @@ import { createPageLayout } from './page-layout.mjs';
 import { ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView } from './entrance.mjs';
 import { createNameReact } from './name-react.mjs';
 import { createStars, starReach } from './stars.mjs';
+import { createCraftWipe } from './craft-wipe.mjs';
 
 const query = new URLSearchParams(location.search);
 const num = (key, fallback) => query.has(key) && Number.isFinite(+query.get(key)) ? +query.get(key) : fallback;
@@ -40,6 +41,8 @@ const frameNow = () => frameAt(t, first && t < 0.5 ? { first: true } : {});
 // Round 8: the name reacts once the entrance has ended (N1); the star field (B1, B2) is drawn first in every frame and takes
 // the pointer once the entrance's rings have reached it (0.90 s). Neither stops with Pause, and neither moves the loop.
 const nameReact = createNameReact(hero, { reduced });
+// Round 11 (C1): the craft list's red rule wipes from the old row to the new on its own clock; the entrance sets it.
+const craftWipe = createCraftWipe(hero, { reduced });
 const nameOn = () => nameReact.setLive(ready && !intro && !held && !reduced.matches);
 const stars = query.get('stars') === '0' ? null : createStars(hero, { reduced, draw, running, available: () => ready && visible && !document.hidden, open: () => !intro || intro.time >= ENTRANCE.stars[1] });
 
@@ -61,6 +64,7 @@ function draw() {
   hero.classList.remove('is-entering');
   const { scene } = sceneAt(t);
   crafts.forEach((c, i) => i === scene.craft ? c.setAttribute('aria-current', 'true') : c.removeAttribute('aria-current'));
+  craftWipe.follow(scene.craft, { cut: !!intro });
   pause.textContent = stopped || reduced.matches ? 'Play' : 'Pause';
   const at = [BLOCK.x0, BLOCK.x1].flatMap(x => [BLOCK.z0, BLOCK.z1].flatMap(z => [0, BLOCK.up].map(y => [h.left + view.cx + view.S * dot(cam.r, [x, y, z]), h.top + view.cy - view.S * dot(cam.u, [x, y, z])])));
   const lay = [Math.min(...at.map(p => p[0])), Math.min(...at.map(p => p[1])), Math.max(...at.map(p => p[0])), Math.max(...at.map(p => p[1]))].map(Math.round);
@@ -110,7 +114,7 @@ function seek(time) {
   stopped = true; t = wrap(time); schedule();
   if (ready) draw();
 }
-window.__hero = { seek, measure, entrance: hold, get entering() { return intro ? intro.time : null; }, get t() { return t; }, get callouts() { return callouts.layout; }, get view() { return lastView; }, get pieces() { return frameNow(); }, get layout() { return layout.metrics; }, get name() { return { live: nameReact.live, open: nameReact.open, lift: nameReact.letters.map(l => l.y) }; }, get stars() { return stars && { holding: stars.holding, fraction: stars.fraction, awake: stars.field?.awake ?? false, count: stars.field?.stars.length ?? 0, offsets: stars.field && Array.from(stars.field.offsets), flags: stars.field && Array.from(stars.field.flags), weights: stars.field && Array.from(stars.field.weights), alpha: stars.field && Array.from(stars.field.alpha), mixes: stars.field && Array.from(stars.field.mixes), mark: stars.mark }; }, LOOP, SHOW };
+window.__hero = { seek, measure, entrance: hold, get entering() { return intro ? intro.time : null; }, get t() { return t; }, get callouts() { return callouts.layout; }, get view() { return lastView; }, get pieces() { return frameNow(); }, get layout() { return layout.metrics; }, crafts: p => craftWipe.hold(p), get craftWipe() { return craftWipe.state; }, get name() { return { live: nameReact.live, open: nameReact.open, lift: nameReact.letters.map(l => l.y) }; }, get stars() { return stars && { holding: stars.holding, fraction: stars.fraction, awake: stars.field?.awake ?? false, count: stars.field?.stars.length ?? 0, offsets: stars.field && Array.from(stars.field.offsets), flags: stars.field && Array.from(stars.field.flags), weights: stars.field && Array.from(stars.field.weights), alpha: stars.field && Array.from(stars.field.alpha), mixes: stars.field && Array.from(stars.field.mixes), mark: stars.mark }; }, LOOP, SHOW };
 
 function choose(craft) {
   endEntrance(); first = false;
@@ -142,7 +146,7 @@ function measure() {
   if (intro) entrance.clear();
   layout.measure();
   if (intro) entrance.measure(layout.metrics.nameLines);
-  stars?.measure(layout.metrics.h); nameReact.measure();
+  stars?.measure(layout.metrics.h); nameReact.measure(); craftWipe.measure();
   if (visible && !document.hidden) draw();
 }
 new ResizeObserver(measure).observe(hero);
@@ -166,7 +170,7 @@ name.addEventListener('animationstart', watchName);
 await fontsReady();
 renderer.setAtlas(makeAtlas());
 await document.fonts.ready;
-ready = true; layout.measure(); stars?.measure(layout.metrics.h);
+ready = true; layout.measure(); stars?.measure(layout.metrics.h); craftWipe.measure();
 if (!query.has('t') && !reduced.matches) { first = true; startEntrance(0); }
 nameOn(); document.fonts.ready.then(() => nameReact.measure());
 draw(); window.__ready = true; schedule(); watchName();

@@ -20,6 +20,7 @@ import { retimer } from './hand-patch.mjs';
 import { checkRound8, checkRound8Controls } from './round8-checks.mjs';
 import { checkRound9, checkRound9Controls } from './round9-checks.mjs';
 import { checkRound10, checkRound10Controls } from './round10-checks.mjs';
+import { checkRound11, checkRound11Controls } from './round11-checks.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
@@ -336,17 +337,18 @@ const hero = node({ left: 0, top: 0, width: 1440, height: 900 }), stage = node({
 hero.querySelector = s => s === '[data-stage-box]' ? stage : s === '[data-pause]' ? pause : node();
 hero.querySelectorAll = () => crafts;
 let scheduledTick;
+const craftFollows = [];
 const media = { matches: false, addEventListener(_name, f) { this.change = f; } }, win = {}, draws = [];
 const playerDocument = { querySelector: () => hero, fonts: { ready: Promise.resolve(), addEventListener() {} }, hidden: false, addEventListener() {} };
 const renderer = { setAtlas() {}, draw(pieces, view) { draws.push({ pieces, view }); } };
 const observer = class { observe() {} };
 const player = fs.readFileSync(new URL('../play.mjs', import.meta.url), 'utf8').replace(/^import\s+.*?;\s*$/gm, '');
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
   location: { search: '?t=0' }, document: playerDocument, window: win, matchMedia: () => media,
   createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => atlas, fontsReady: async () => {},
   SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts: () => ({ draw() {}, fit: view => view, layout: [] }), devicePixelRatio: 3,
-  createNameReact: () => ({ measure() {}, setLive() {}, live: false, open: 0, letters: [] }), createStars: () => ({ measure() {}, frame: () => null, after() {}, swallowClick: () => false, field: null }), starReach: () => null, createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),
+  createNameReact: () => ({ measure() {}, setLive() {}, live: false, open: 0, letters: [] }), createCraftWipe: () => ({ measure() {}, follow(craft, options) { craftFollows.push([craft, !!options?.cut]); }, hold: () => null, state: null }), createStars: () => ({ measure() {}, frame: () => null, after() {}, swallowClick: () => false, field: null }), starReach: () => null, createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),
   ...entranceModule,
   requestAnimationFrame: callback => { scheduledTick = callback; return 1; }, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
 });
@@ -369,6 +371,8 @@ scheduledTick(1000); near(win.__hero.t - beforeStall, 0.1);
 scheduledTick(1100); near(win.__hero.t - beforeStall, 0.2);
 pause.events.click();
 media.matches = true; media.change(); near(sceneAt(win.__hero.t).at, SHOW[3].still);
+// Round 11: every draw hands the craft list the scene's own craft; the stand-in page has no entrance (?t=0), so no cut.
+assert.ok(craftFollows.length >= draws.length && craftFollows.at(-1)[0] === sceneAt(win.__hero.t).scene.craft && craftFollows.every(([, cut]) => !cut), 'C1: the player does not hand the craft list its craft on each draw');
 win.__hero.seek(-0.01); near(win.__hero.t, LOOP - 0.01);
 // Dense reading poses include the leaves at their widest, between the six fitted stills.
 for (let n = -240; n <= 960; n++) includeFit(SCENES[2]({ at: n / 240 }));
@@ -531,6 +535,7 @@ try { console.log(describe(await checkHand())); console.log('K3 negative control
 try { console.log(await checkRound8()); console.log('Round 8 negative controls: ' + await checkRound8Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound9()); console.log('Round 9 negative controls: ' + await checkRound9Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound10()); console.log('Round 10 negative controls: ' + await checkRound10Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
+try { console.log(await checkRound11()); console.log('Round 11 negative controls: ' + await checkRound11Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {
