@@ -56,6 +56,11 @@ export async function checkHand(source = read('stage.mjs'), { only = '' } = {}) 
   if (!only || only === 'together') {
     const key = pc => (pc.art || '') + '|' + pc.tone + '|' + (pc.overlay ? 1 : 0) + '|' + (pc.where || '');
     const features = pc => {
+      if (pc.building) {
+        const plan=pc.building.plan, clips=[plan.base,...Object.values(plan.marks)].flatMap(rule=>rule?.clips||[]);
+        const plain={...pc,building:undefined};
+        return [...features(plain),...clips.flatMap(artReveal=>features({...plain,artReveal,labelRegion:[0,0,1,1]}))];
+      }
       // C3's margin quad is stationary; its original paint clip is the feature carried by the hand.
       const reveal = pc.artReveal, full = pc.labelRegion;
       const points = reveal && full ? [[reveal[0],reveal[1]],[reveal[2],reveal[1]],[reveal[0],reveal[3]],[reveal[2],reveal[3]]].map(([u,v]) => {
@@ -99,7 +104,7 @@ export async function checkHand(source = read('stage.mjs'), { only = '' } = {}) 
           const L = frameAt(X(n / 20)), c = local(world(L)), q = ((c[0] - c0[0]) * dc[0] + (c[1] - c0[1]) * dc[1]) / length;
           for (const [id, f] of pieces(L)) {
             const f0 = m0.get(id), f1 = m1.get(id); if (!f0 || !f1) continue;
-            for (let k = 0; k < 9; k++) {
+            for (let k = 0; k < Math.min(f0.length,f1.length,f.length); k++) {
               const [A, B, F] = [f0[k], f1[k], f[k]];
               if (Math.hypot(B[0] - A[0], B[1] - A[1]) < 1e-3) continue;   // not moved by this action
               const grab = Math.hypot(F[0] - c[0] - (A[0] - c0[0]), F[1] - c[1] - (A[1] - c0[1]));

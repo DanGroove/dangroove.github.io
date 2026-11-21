@@ -1,4 +1,4 @@
-import { ART, CUTOUTS } from './art.mjs';
+import { ART, buildingSize, paintBuilding, buildingChanges } from './art.mjs';
 // Second take, prototype renderer: every piece is one superquadric (a box, a cylinder, a ball, a cone, a wedge, or anything between),
 // lit by one light with a shadow map, shaded in three brand tones. WebGL2, no dependencies.
 //
@@ -92,6 +92,9 @@ float shadowAt(vec3 w, float spread) {
 const ART_FN = `
 uniform sampler2D uAtlas;
 uniform sampler2D uAtlasB;
+uniform float uBuilding;
+uniform float uSpineAttribution;
+uniform float uBuildingFaceOnly;
 uniform vec4 uArt;                    // the picture's place in the atlas: x, y, w, h
 uniform vec4 uArtB;
 uniform float uArtMix;
@@ -123,6 +126,9 @@ ${CLIP_FN}
 void main() {
   clipAt(vW);
   vec4 art = artAt(vL, vFace);
+  if (uBuildingFaceOnly > 0.5 && vFace < 0.7) discard;
+  if (uSpineAttribution > 0.5) { o = vFace > 0.7 ? vec4(1,0,0,1) : vec4(0,1,0,1); return; }
+  if (uBuilding > 0.5 && vFace > 0.7 && art.a == 0.0) discard;
   if (uArtMode > 2.5) { if (vFace < 0.999) discard; }
   else if (uArtMode > 1.5 && art.a < 0.5) discard;
   vec3 n = normalize(vN);
@@ -321,11 +327,13 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
 
   // One texture per atlas page. A draw binds only when its picture changes page.
   let atlasTextures = [], places = {}, atlasPages = [], boundPage = -1, boundMixPage = -1;
-  const revealTextures = new Map();
+  const buildingTextures = new Map(), buildingReferences = new Map(), buildingTimes = [];
+  let atlasScale = 1;
   function setAtlas(atlas) {
     atlasTextures.forEach(tex => gl.deleteTexture(tex));
-    places = atlas.places; atlasPages = atlas.pages;
-    for (const entry of revealTextures.values()) gl.deleteTexture(entry.texture); revealTextures.clear();
+    places = atlas.places; atlasPages = atlas.pages; atlasScale = atlas.scale || 1;
+    for (const entry of buildingTextures.values()) gl.deleteTexture(entry.texture); buildingTextures.clear();
+    for (const entry of buildingReferences.values()) gl.deleteTexture(entry.texture); buildingReferences.clear();
     const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
     atlasTextures = atlas.pages.map(canvas => {
       const tex = gl.createTexture();
@@ -342,35 +350,67 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     });
     boundPage = boundMixPage = -1;
   }
-  function revealedPicture(pc) {
-    const part = CUTOUTS[pc.art], a = ART[pc.art], source = ART[part.source], original = places[part.source];
-    let entry = revealTextures.get(pc.art);
-    if (!entry) {
-      const sourcePage = atlasPages[original[0]], phase = n => ((n % 8) + 8) % 8;
-      const x = 24 + phase(Math.round(original[1]*sourcePage.width-.5)+part.crop[0]-24);
-      const y = 24 + phase(Math.round(original[2]*sourcePage.height-.5)+part.crop[1]-24);
-      const image = document.createElement('canvas');
-      image.width = Math.ceil((x+a.w+24)/8)*8; image.height = Math.ceil((y+a.h+24)/8)*8;
-      entry = { image, x, y, texture: gl.createTexture(), signature: null }; revealTextures.set(pc.art, entry);
+  function uploadBuilding(entry) {
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,entry.texture);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,entry.image);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false); gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAX_LEVEL,3);
+    const aniso=gl.getExtension('EXT_texture_filter_anisotropic');
+    if(aniso)gl.texParameterf(gl.TEXTURE_2D,aniso.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(4,gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+    boundPage=boundMixPage=-1;
+  }
+  function buildingPicture(building, fresh = false) {
+    const start=performance.now();
+    const {id,source,plan}=building;
+    let entry=(fresh?buildingReferences:buildingTextures).get(id);
+    if(!entry) {
+      const size=buildingSize(source,atlasScale), image=document.createElement('canvas');
+      image.width=size.width;image.height=size.height;
+      entry={...size,image,source,texture:gl.createTexture(),signature:null};
+      (fresh?buildingReferences:buildingTextures).set(id,entry);
     }
-    const signature = pc.artReveal.join(',');
-    if (entry.signature !== signature) {
-      const c = entry.image.getContext('2d'), [u,v,r,b] = pc.artReveal;
-      c.clearRect(0,0,entry.image.width,entry.image.height); c.save(); c.translate(entry.x,entry.y);
-      c.beginPath(); c.rect(u*source.w-part.crop[0],v*source.h-part.crop[1],(r-u)*source.w,(b-v)*source.h); c.clip();
-      a.draw(c,a.w,a.h); c.restore();
-      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,entry.texture);
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);
-      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,entry.image);
-      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false); gl.generateMipmap(gl.TEXTURE_2D);
-      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAX_LEVEL,3);
-      const aniso=gl.getExtension('EXT_texture_filter_anisotropic');
-      if(aniso)gl.texParameterf(gl.TEXTURE_2D,aniso.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(4,gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+    const signature=fresh?'finished':JSON.stringify(plan);
+    if(entry.signature!==signature) {
+      const c=entry.image.getContext('2d');
+      c.clearRect(0,0,entry.width,entry.height);c.save();c.translate(entry.x,entry.y);c.scale(entry.scale,entry.scale);
+      if(fresh) {c.beginPath();c.rect(0,0,ART[source].w,ART[source].h);c.clip();ART[source].draw(c,ART[source].w,ART[source].h);}
+      else paintBuilding(c,source,plan);
+      c.restore();const painted=performance.now();uploadBuilding(entry);
+      if(!fresh)buildingTimes.push({id,signature,paint:painted-start,uploadMipmaps:performance.now()-painted,total:performance.now()-start});
       entry.signature=signature;
     }
     return entry;
   }
+  function readBuildingLevels(entry) {
+    const read=gl.getParameter(gl.READ_FRAMEBUFFER_BINDING),draw=gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING),fbo=gl.createFramebuffer(),levels=[];
+    try {
+      gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);
+      for(let level=0;level<=3;level++) {
+        const width=entry.width>>level,height=entry.height>>level,pixels=new Uint8Array(width*height*4);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,entry.texture,level);
+        if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)throw new Error('building readback framebuffer '+level);
+        gl.readPixels(0,0,width,height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
+        levels.push({level,width,height,pixels:Array.from(pixels)});
+      }
+    } finally {gl.bindFramebuffer(gl.READ_FRAMEBUFFER,read);gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER,draw);gl.deleteFramebuffer(fbo);}
+    return levels;
+  }
+  const buildings = {
+    changedRegions: buildingChanges,
+    async atlasHashes() {return Promise.all(atlasPages.slice(0,5).map(async page=>({width:page.width,height:page.height,sha256:Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',page.getContext('2d').getImageData(0,0,page.width,page.height).data))).map(n=>n.toString(16).padStart(2,'0')).join('')})));},
+    get times() {return buildingTimes.slice();},
+    resetTimes() {buildingTimes.length=0;},
+    inspect(id) {const e=buildingTextures.get(id);return e&&{source:e.source,width:e.width,height:e.height,x:e.x,y:e.y,w:e.w,h:e.h,signature:e.signature};},
+    readback(id) {const entry=buildingTextures.get(id);if(!entry)throw new Error('building not painted '+id);return readBuildingLevels(entry);},
+    reference(id) {const entry=buildingTextures.get(id);if(!entry)throw new Error('building not painted '+id);return readBuildingLevels(buildingPicture({id,source:entry.source,plan:{}},true));},
+    referenceOnly: false,
+    spineAttribution: false,
+  };
   const whole = [0, 0, 1, 1], noClip = [0, 0, 0, 1], noTaper = [0, 0];
   const colourCache = new Map();
   const colour = value => { if (!colourCache.has(value)) colourCache.set(value, hex(value)); return colourCache.get(value); };
@@ -396,13 +436,16 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       if (u.uArtB && second) { const w = pc.window || whole; gl.uniform4f(u.uArtB, second[1] + w[0] * second[3], second[2] + w[1] * second[4], (w[2] - w[0]) * second[3], (w[3] - w[1]) * second[4]); }
       if (u.uAtlasB) gl.uniform1i(u.uAtlasB, 2);
     }
-    if (pc.artReveal && pc.blend && u.uArtMode) {
-      const entry = revealedPicture(pc), a = ART[pc.art], w = pc.window || whole;
-      const x=(entry.x+.5+w[0]*(a.w-1))/entry.image.width, y=(entry.y+.5+w[1]*(a.h-1))/entry.image.height;
-      const width=(w[2]-w[0])*(a.w-1)/entry.image.width, height=(w[3]-w[1])*(a.h-1)/entry.image.height;
-      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,entry.texture);
-      gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D,entry.texture);
-      gl.uniform4f(u.uArt,x,y,width,height); gl.uniform4f(u.uArtB,x,y,width,height);
+    if (u.uBuilding) gl.uniform1f(u.uBuilding,pc.building?1:0);
+    if (u.uSpineAttribution) gl.uniform1f(u.uSpineAttribution,buildings.spineAttribution?1:0);
+    if (u.uBuildingFaceOnly) gl.uniform1f(u.uBuildingFaceOnly,pc.buildingFaceOnly?1:0);
+    if (pc.building && u.uArtMode) {
+      const entry=buildingPicture(pc.building,buildings.referenceOnly), w=pc.window||whole;
+      gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,entry.texture);
+      gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,entry.texture);
+      const x=(entry.x+.5+w[0]*(entry.w-1))/entry.width,y=(entry.y+.5+w[1]*(entry.h-1))/entry.height;
+      const width=(w[2]-w[0])*(entry.w-1)/entry.width,height=(w[3]-w[1])*(entry.h-1)/entry.height;
+      gl.uniform1f(u.uArtMode,1);gl.uniform4f(u.uArt,x,y,width,height);gl.uniform4f(u.uArtB,x,y,width,height);
       boundPage=boundMixPage=-1;
     }
 
@@ -428,6 +471,10 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   // look: { light: [x, y, z], outline (units), soft, spread, floor: { on, x, z, radius, pitch, reveal }, centre: [x, y, z] of the lit volume, reach,
   //         reveal: [a, b, c, d] one more clip plane for every piece (the entrance) }
   function draw(pieces, view, look = {}) {
+    if(buildings.spineAttribution) {
+      pieces=pieces.filter(pc=>pc.where==='floor'&&pc.sink&&pc.device===undefined&&pc.p[2]>buildings.spineAttribution.z);
+      look={...look,bg:'#000000',line:'#0000ff',floor:{...look.floor,pool:'#000000',dot:'#000000'}};
+    }
     const { W, H, dpr = 1, S, cx, cy, cam } = view;
     const L = norm(look.light || [-0.3, 0.55, 0.78]), outline = look.outline ?? 0.035, soft = look.soft ?? 0, spread = look.spread ?? 1;
     const C = look.centre || [0, 2.2, 0], reach = look.reach || 7, reveal = look.reveal || noClip;
@@ -554,5 +601,5 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     if (look.stars && look.stars.count && look.stars.front > 0) starPass(1);
     gl.bindVertexArray(null);
   }
-  return { gl, draw, setAtlas };
+  return { gl, draw, setAtlas, buildings };
 }

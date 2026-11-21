@@ -283,7 +283,7 @@ const context = new Proxy({
 globalThis.Path2D = class {};
 globalThis.document = { createElement: () => ({ getContext: () => context }) };
 const atlas = makeAtlas();
-assert.equal(atlas.pages.length, 7, 'C3 isolated artwork uses seven atlas pages');
+assert.equal(atlas.pages.length, 5, 'C3 building textures retain five atlas pages');
 assert.ok(atlas.pages.every(p => p.width <= 2048 && p.height <= 2048));
 assert.ok(ART_TEXT.kMap.length > 10 && ART_TEXT.kLoc.length > 20, 'map lettering was not recorded');
 const skyColours = key => { const first = gradients.length, art = ART[key]; art.draw(context, art.w, art.h); return gradients[first]; };
@@ -477,7 +477,7 @@ for (const scene of SHOW) {
             seenRows.add(row);
           }
         }
-        if (['kCover', 'kPost', 'eblast'].includes(pc.art) && (!pc.window || pc.window.every((v, i) => Math.abs(v - [0, 0, 1, 1][i]) < 1e-8))) {
+        if (!pc.building && ['kCover', 'kPost', 'eblast'].includes(pc.art) && (!pc.window || pc.window.every((v, i) => Math.abs(v - [0, 0, 1, 1][i]) < 1e-8))) {
           const id = { kCover: 'blob', kPost: 'postBlob', eblast: 'mailBlob' }[pc.art];
           if (!byId[id] || byId[id].kind !== 'draw' || at < byId[id].end - 1e-8) ruleFail('R3', pc.art + ' precedes its drawn blob');
         }
@@ -490,7 +490,7 @@ for (const scene of SHOW) {
         else typed.add(pc.text.key);
       }
       const family = fullText[pc.art];
-      if (family && !pc.text && !pc.window && !typed.has(family)) ruleFail('R4', pc.art + ' appeared before its text was typed');
+      if (family && !pc.building && !pc.text && !pc.window && !typed.has(family)) ruleFail('R4', pc.art + ' appeared before its text was typed');
     }
     // R5: first appearance of actual document geometry, with a closed role/reason exemption list above.
     for (const pc of list.filter(pc => pc.document)) {
@@ -534,7 +534,7 @@ for (const scene of SHOW) {
     const a = byId[id];
     if (!a || a.kind !== 'type') { fail(ruleStart, 'R4: ' + id + ' needs a type action'); continue; }
     const sample = frameAt(ruleStart + a.start + (a.end - a.start) * 0.4);
-    if (!sample.some(pc => pc.text?.key === key && pc.text.count > 0 && pc.text.count < pc.text.total && pc.text.prefix) || !sample.some(pc => pc.caret === key)) fail(ruleStart + a.start, 'R4: ' + id + ' lacks a partial prefix/caret');
+    if (!sample.some(pc => [pc.text,...(pc.buildingTexts||[])].some(text=>text?.key===key&&text.count>0&&text.count<text.total&&text.prefix)) || !sample.some(pc => pc.caret === key)) fail(ruleStart + a.start, 'R4: ' + id + ' lacks a partial prefix/caret');
   }
   ruleStart += scene.len;
 }

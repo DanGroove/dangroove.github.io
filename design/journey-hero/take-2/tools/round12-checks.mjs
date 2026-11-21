@@ -103,7 +103,7 @@ export function checkPages(M) {
     }
   }
   // Each picture lands on its own page: what is placed lies within that page.
-  const placed = { map: 'kMap', photo: 'coverPhoto', postPhoto: 'postPhoto', mailPhoto: 'mailPhoto' };
+  const placed = { map: 'kMap', photo: 'kCover', postPhoto: 'kPost', mailPhoto: 'eblast' };
   for (const [id, art] of Object.entries(placed)) {
     const a = s.actions.find(a => a.id === id), P = M.frameAt(start + a.end + 1e-6), pc = P.find(pc => pc.art === art && pc.where === 'content' && !pc.echo);
     assert.ok(pc, `I1 placing: ${id} left no ${art}`);

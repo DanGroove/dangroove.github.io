@@ -3,7 +3,7 @@
 // One clock builds every piece: the persistent shell, wiped content, travelling work and the floor.
 import { HOME, EASE, dot as dot3, quatFromBasis, quatRotate } from '../../../public/journey/hero/engine.mjs';
 import { box, cyl, turn, corners, qAxis, qMul } from './kit.mjs';
-import { SPOT, subwayPath, BALL as COMP_BALL, BALL_FROM, BALL_VIA, ROWS, TYPE_EDGES, TYPE_BOXES, ART, ART_TEXT, HISTOGRAM, CUTOUTS, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS } from './art.mjs';
+import { SPOT, subwayPath, BALL as COMP_BALL, BALL_FROM, BALL_VIA, ROWS, TYPE_EDGES, TYPE_BOXES, ART, ART_TEXT, HISTOGRAM, CUTOUTS, BUILDING_PICTURES, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS } from './art.mjs';
 
 // All authored durations, including the cursor's journeys, share this one control.
 export const PACE = 1;
@@ -1495,7 +1495,7 @@ function mapTyping(P, rect, art, p, filter = () => true) {
     // where they do in the full map, including the half-texel inset. Using l/size here would shift a far-edge label by a pixel.
     const [l, top, r, bottom] = part.crop, u0 = l / (a.w - 1), v0 = top / (a.h - 1), u1 = (r - 1) / (a.w - 1), v1 = (bottom - 1) / (a.h - 1);
     if (u1 <= u0 || v1 <= v0) continue;
-    const work = on('ink', ...inRect(rect, [u0, v0, u1 - u0, v1 - v0]), { lift: 0.084, t: 0.004, art: part.picture, cut: true });
+    const work = on('ink', ...inRect(rect, [u0, v0, u1 - u0, v1 - v0]), { lift: 0.084, t: 0.004, art: part.picture });
     work.labelRegion = [u0, v0, u1, v1];
     work.labelSource = art;
     if (count < part.words.length) {
@@ -1616,7 +1616,7 @@ function build(i, at, o) {
   // separation, so nothing it passes over moves. The stack keeps the place it had before; any tie that leaves is cleared by
   // lifting the stack along the view, which does not move it on the page.
   const carried = carriedStack(P);
-  if (o.withoutCarried) { for (const pc of carried) P.splice(P.indexOf(pc), 1); separateFaces(P); return P; }
+  if (o.withoutCarried) { for (const pc of carried) P.splice(P.indexOf(pc), 1); separateFaces(P); buildingFaces(P, SHOW[i].key, at); return P; }
   if (carried.length) {
     // The stack itself is placed exactly as before (with the whole page), so its own order and clearance are unchanged;
     // everything else is placed as if the stack were not there.
@@ -1637,7 +1637,95 @@ function build(i, at, o) {
     const near = Math.max(...solids.map(pc => dot3(HOME.v, pc.p) + Math.hypot(...pc.s))) - (dot3(HOME.v, cursor.p) - cursor.s[2]) + 0.05;
     if (near > 0) cursor.near = near;
   }
+  buildingFaces(P, SHOW[i].key, at);
   return P;
+}
+
+export const BUILDING_USES = [
+  ['ai','kMap','badge','street'], ['ai','kLoc','cityLabels','block'],
+  ['id','kCover','coverTitle','photo'], ['id','kPost','postButton','postPhoto'], ['id','eblast','mailFlyer','mailPhoto'],
+  ['fig','wireWide','details','frame0'], ['fig','wireTablet','details','frame1'], ['fig','wireTall','details','frame2'],
+].map(([scene,source,last,first]) => ({id: scene + ':' + source, scene, source, last, first}));
+
+function typedCounts(source, filter, p, target) {
+  const parts = (ART_TEXT[source] || []).map((part,i) => ({...part,i})).filter(filter)
+    .sort((a,b) => a.region[1]-b.region[1] || a.region[0]-b.region[0]);
+  let remaining = Math.floor(parts.reduce((n,p) => n+p.words.length,0)*clamp(p,0,1));
+  for (const part of parts) { target[part.i] = Math.min(remaining,part.words.length); remaining -= target[part.i]; }
+}
+// Construction helpers above also carry the old page/hand geometry. They now describe paint ownership only: after depth
+// separation we consume them here, preserving all unrelated geometry and the cursor, and emit ONE ordinary picture face.
+function buildingFaces(P, scene, t) {
+  const s = SCRIPTS[scene];
+  for (const use of BUILDING_USES.filter(u => u.scene === scene)) {
+    const {source} = use, finished = released(s,use.last,t), marks = {}, text = {}, plan = {base:true,marks,text,tab:true};
+    const parts = Object.values(CUTOUTS).filter(p => p.source === source);
+    const recipes = P.filter(pc => pc.cutoutSource === source);
+    for (const pc of recipes) {
+      const old = marks[pc.cutoutId];
+      if (!pc.artReveal) marks[pc.cutoutId] = true;
+      else if (old !== true) marks[pc.cutoutId] = {clips:[...(old?.clips || []),pc.artReveal]};
+    }
+    const full = () => { for (const part of parts) marks[part.id] = true; };
+    let rect, bases, active;
+    if (scene === 'ai') {
+      rect = source === 'kMap' ? AI.upper : AI.lower;
+      bases = source === 'kMap' ? ['mapStreet','kMap'] : ['locGround','kLoc'];
+      active = begun(s,use.first,t);
+      const p = handed(s,source === 'kMap' ? 'street' : 'streets',t);
+      plan.base = p >= 1 ? true : p > 0 ? {clips:[[0,0,p,1]]} : false;
+      if (source === 'kMap') {
+        typedCounts(source,p=>!p.words.startsWith('King Street')&&p.words!=='N',phase(s,'labels',t),text);
+        typedCounts(source,p=>p.words.startsWith('King Street'),phase(s,'title',t),text);
+      } else typedCounts(source,()=>true,phase(s,'cityLabels',t),text);
+    } else if (scene === 'id') {
+      rect = source === 'kCover' ? ID.cover : source === 'kPost' ? ID.post : ID.mail;
+      bases = source === 'kCover' ? ['coverPhoto','coverBlob','coverDecor','kCover'] : source === 'kPost' ? ['postPhoto','kPost'] : ['mailPhoto','eblast'];
+      active = done(s,use.first,t);
+      if (source === 'eblast') {
+        typedCounts(source,p=>p.words!=='View the flyer',phase(s,'mailTitle',t),text);
+        typedCounts(source,p=>p.words==='View the flyer',phase(s,'mailFlyer',t),text);
+      } else {
+        const key = source === 'kCover' ? 'coverTitle' : 'postTitle', n = Math.floor(clamp(phase(s,key,t),0,1)*21);
+        text[0] = Math.min(n,12); text[1] = Math.max(0,n-13); plan.tab = begun(s,key,t);
+        if (source === 'kCover' && released(s,'blob',t)) marks.blob = true;
+      }
+    } else {
+      const i = ['wireWide','wireTablet','wireTall'].indexOf(source), p = handed(s,'frame'+i,t);
+      rect = FIG.wires[i]; bases = [source+'Base',source]; active = p > 0;
+      plan.base = p >= 1 ? true : {clips:[[0,1-p,p,1]]};
+    }
+    if (finished) {full();plan.base=true;plan.tab=true;(ART_TEXT[source]||[]).forEach((p,i)=>{text[i]=p.words.length;});if(source==='kCover'||source==='kPost'){text[0]=12;text[1]=8;}}
+    const owned = pc => pc.cutoutSource===source || pc.labelSource===source ||
+      scene==='id' && new RegExp('^id'+(source==='kCover'?'Cover':source==='kPost'?'Post':'(?:Mail|Flyer)')+'\\d+$').test(pc.art||'');
+    const primary = P.filter(pc => bases.includes(pc.art) && pc.where!=='travel' &&
+      (pc.art!==source || Math.abs(pc.p[0]-(SCREEN.l+(rect[0]+rect[2]/2)*U))<.02) && Math.abs(pc.p[1]-(SCREEN.b+(rect[1]+rect[3]/2)*U))<rect[3]*U)
+      .sort((a,b)=>b.s[0]*b.s[1]-a.s[0]*a.s[1])[0];
+    const replace = new Set(P.filter(owned)), texts = [...replace].filter(pc=>pc.text).map(pc=>pc.text);
+    if (primary) replace.add(primary);
+    for (let i=P.length-1;i>=0;i--) if(replace.has(P[i])) P.splice(i,1);
+    if (active && t>.5*PACE && t<s.len && !(scene==='ai'&&begun(s,source==='kMap'?'mapExport':'locExport',t))) {
+      const face = scene==='ai' ? .084 : .080;
+      const pc = on(scene==='fig'?'paper':'ink',...rect,{lift:scene==='ai'?.08:.06,t:scene==='ai'?.004:.02,art:source});
+      registerPicture(pc,face); pc.where='content';pc.document=true;
+      // Full picture geometry has the registered page's constant plane; the old partial quad's window never defines it.
+      if(plan.base!==true) {pc.noLine=true;pc.noShadow=true;}
+      if(scene==='fig') pc.canvas=true;
+      pc.clip = primary?.clip || leftOf(W);
+      pc.building = {id:use.id,source,plan};
+      pc.buildingTexts = texts;
+      pc.buildingFaceOnly = plan.base!==true;
+      P.push(pc);
+    }
+    // Copies, thumbnails, floor pieces and travelling maps remain on the same use until they leave this scene.
+    for (const pc of P) if(pc.art===source && !pc.building) pc.building={id:use.id,source,plan};
+  }
+  // The dock stays visible across the AI→ID app change. Those original maps keep their completed building textures
+  // until their ID placements consume them; device pictures and the assembled spread still use their original atlas art.
+  if(scene==='id')for(const source of ['kMap','kLoc']) {
+    const plan={base:true,marks:Object.fromEntries(Object.values(CUTOUTS).filter(p=>p.source===source).map(p=>[p.id,true])),text:Object.fromEntries((ART_TEXT[source]||[]).map((p,i)=>[i,p.words.length])),tab:true};
+    for(const pc of P)if(pc.art===source)pc.building={id:'ai:'+source,source,plan};
+  }
 }
 // G1: with the stack out of the page's separation, a carried face may now sit level with a face it passes over. Lift the
 // whole stack along the view (no move on the page) just enough to clear every such tie; nothing else moves.

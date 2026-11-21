@@ -552,7 +552,7 @@ export const ART = {
   // ---- the 1 King Street W booklet: its front cover and the four openings it turns through, and its back cover small, for the pages panel
   kCover: { w: 440, h: 340, draw: page(c => {
     street(c, 380, 0, 720, 850, PHOTO_VIEWS.cover); fadeIn(c, 380, 650, 850);
-    firmLogo(c); paintGroup('blob', () => kingLogo(c, 50, 482, 588, true)); tab(c, 779, 670, 330, 130, 45, 'Office Space', 'For Sale');
+    firmLogo(c); paintGroup('blob', () => kingLogo(c, 50, 482, 588, true)); paintGroup('tab', () => tab(c, 779, 670, 330, 130, 45, 'Office Space', 'For Sale'));
   }) },
   kOfferL: { w: 440, h: 340, draw: page(c => {
     fill(c, K.coal, 0, 0, 1100, 850); pins(c, 0); firmLogo(c);
@@ -603,7 +603,7 @@ export const ART = {
     c.scale(w / 1000, h / 1000); street(c, 0, 0, 1000, 1000, PHOTO_VIEWS.post);
     fill(c, K.black, 0, 0, 1000, 150); weave(c, 0, 0, 1000, 150, K.weave, 44); firmLogo(c, K.lite, 56, 48, 214);
     const g = c.createLinearGradient(0, 500, 0, 1000); g.addColorStop(0, 'rgba(10,15,22,0)'); g.addColorStop(0.7, 'rgba(10,15,22,0.9)'); g.addColorStop(1, K.black); c.fillStyle = g; c.fillRect(0, 500, 1000, 500);
-    paintGroup('blob', () => kingLogo(c, 50, 610, 600, true)); tab(c, 690, 788, 320, 146, 50, 'Office Space', 'For Sale');
+    paintGroup('blob', () => kingLogo(c, 50, 610, 600, true)); paintGroup('tab', () => tab(c, 690, 788, 320, 146, 50, 'Office Space', 'For Sale'));
   } },
   post: { w: 300, h: 650, draw(c, w, h) {                 // that post in the LinkedIn feed, on a phone
     fill(c, '#FFFFFF', 0, 0, w, h);
@@ -886,20 +886,8 @@ export function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
     sheets.at(-1).push([key,a,x,y,w,h,pad]);positions.set(key,[x,y]);
     x+=w+pad;row=Math.max(row,h);
   }
-  sheets.push([]);x=0;y=0;row=0;
-  for(const [key,a] of drawings.filter(([,a]) => extra(a)).sort((p,q) => q[1].h-p[1].h)) {
-    const w=Math.round(a.w*scale),h=Math.round(a.h*scale),gap=a.cutout?Math.max(pad,CUTOUT_GUTTER):pad,reserve=a.cutout?7:0;
-    if(w+2*gap+reserve>size||h+2*gap+reserve>size)throw new Error('picture too large: '+key);
-    if(x+w+2*gap+reserve>size){x=0;y+=row;row=0;}
-    if(y+h+2*gap+reserve>size){sheets.push([]);x=0;y=0;row=0;}
-    const source=positions.get(a.source),crop=CUTOUTS[key]?.crop;
-    // Match the full picture's 8-texel grid so levels 0..3 filter the same original texels.
-    const phase=(n)=>((n%8)+8)%8;
-    const dx=a.cutout&&source?phase(source[0]+Math.round(crop[0]*scale)-x-gap):0;
-    const dy=a.cutout&&source?phase(source[1]+Math.round(crop[1]*scale)-y-gap):0;
-    sheets.at(-1).push([key,a,x+gap+dx,y+gap+dy,w,h,gap]);
-    x+=w+2*gap+reserve;row=Math.max(row,h+2*gap+reserve);
-  }
+  // Building uses have independent textures. Keep the original packing, including its old prefix/letter slots,
+  // byte-for-byte; the added cutout/base pages have no rendered uses any more.
   const places = {}, pages = sheets.map((spots, page) => {
     const tall = Math.min(size, Math.ceil(Math.max(...spots.map(p => p[3] + p[5] + p[6])) / 4) * 4);
     const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = tall;
@@ -913,7 +901,7 @@ export function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
     return canvas;
   });
   maskLetterPictures(pages, sheets.flatMap((spots, page) => spots.map(spot => [...spot.slice(0, 6), page])));
-  return { pages, places };
+  return { pages, places, scale };
 }
 export const AM_MARKERS = SHOPS.flatMap(([x, step, above, below]) => [...above.map((_, i) => [x + i * step, 358, 30, 30]), ...below.map((_, i) => [x + i * step, 464, 30, 30])]);
 export const AM_LABEL_BARS = SHOPS.flatMap(([x, step, above, below]) => [...above.map((len, i) => [x + i * step + 9.5, 344 - len, 11, len]), ...below.map((len, i) => [x + i * step + 9.5, 508, 11, len])]);
@@ -929,10 +917,7 @@ function addCutout(source, id, rect, order, accept = group => group === id) {
   const r = Math.min(a.w, Math.ceil(x + w + CUTOUT_MARGIN)), b = Math.min(a.h, Math.ceil(y + h + CUTOUT_MARGIN));
   const key = source + 'Part' + id;
   CUTOUTS[key] = { source, id, rect, crop: [l, t, r, b], order, margin: CUTOUT_MARGIN, gutter: CUTOUT_GUTTER, accept };
-  ART[key] = { w: r - l, h: b - t, cutout: true, source, draw(c) {
-    c.save(); c.translate(-l, -t);
-    try { drawPictureParts(c, source, accept); } finally { c.restore(); }
-  } };
+  // Ownership only: the building painter replays these commands in their full picture's order.
 }
 const unitsRect = (r, sx, sy = sx) => r.map((n, i) => n * (i % 2 ? sy : sx));
 AM_MARKERS.forEach((r, i) => addCutout('kMap', 'marker' + i, unitsRect(r, 0.5), 20 + 2 * i));
@@ -983,6 +968,71 @@ export function prepareWireCutouts(ctx = null) {
   }
 }
 prepareWireCutouts();
+
+export const BUILDING_PICTURES = ['kMap', 'kLoc', 'kCover', 'kPost', 'eblast', 'wireWide', 'wireTablet', 'wireTall'];
+export function buildingSize(source, scale = 1) {
+  const a = ART[source], w = Math.round(a.w * scale), h = Math.round(a.h * scale);
+  return { w, h, x: 24, y: 24, width: Math.ceil((w + 48) / 8) * 8, height: Math.ceil((h + 48) / 8) * 8, scale };
+}
+export function buildingChanges(source, before, after) {
+  const a=ART[source], regions=[], add=([x,y,w,h])=>regions.push([(x-24)/a.w,(y-24)/a.h,(x+w+24)/a.w,(y+h+24)/a.h]);
+  if(JSON.stringify(before?.base)!==JSON.stringify(after.base))add([0,0,a.w,a.h]);
+  for(const part of Object.values(CUTOUTS).filter(p=>p.source===source))if(JSON.stringify(before?.marks?.[part.id])!==JSON.stringify(after.marks[part.id]))add(part.rect);
+  if(before?.tab!==after.tab)add(source==='kCover'?[311.6,268,128.4,52]:[276,315.2,124,58.4]);
+  for(const [i,count] of Object.entries(after.text))if(count!==before?.text?.[i]) {
+    const part=ART_TEXT[source]?.[i];
+    if(part){const [l,t,r,b]=part.region;add([l,t,r-l,b-t]);}
+    else add(source==='kCover'?[311.6,268,128.4,52]:[276,315.2,124,58.4]);
+  }
+  return regions;
+}
+// Null means the original, unclipped command; false means it has not been placed yet.
+// The CUTOUTS inventory is retained as paint ownership, never as atlas art or rendered pieces.
+export function buildingCommand(source, plan, group, method, index, textIndex) {
+  const own = Object.values(CUTOUTS).find(p => p.source === source && p.accept(group, method, index));
+  if (method.endsWith('Text')) {
+    if (own && source === 'kMap' && group === 'north') return plan.marks.north === true ? null : plan.marks.north || false;
+    const count = plan.text[textIndex] ?? 0;
+    return count ? { count } : false;
+  }
+  if (own) return plan.marks[own.id] === true ? null : plan.marks[own.id] || false;
+  if (group === 'tab') return plan.tab ? null : false;
+  return plan.base === true ? null : plan.base || false;
+}
+// Replaying the finished draw preserves paths, gradients, transforms and source order. Canvas clips use Path2D so they
+// cannot destroy the current source path. Text inherits the finished font/spacing/alignment, with its full line's origin.
+export function paintBuilding(c, source, plan, observe = null) {
+  const a = ART[source], base = c.getTransform(); let index = 0, textIndex = 0;
+  const selected = new Proxy(c, {
+    get(target, key) {
+      const value = target[key];
+      if (!PAINT_CALLS.has(key)) return typeof value === 'function' ? value.bind(target) : value;
+      return (...args) => {
+        const n = index++, ti = key.endsWith('Text') ? textIndex++ : -1;
+        const rule = buildingCommand(source, plan, currentPaintGroup, key, n, ti);
+        if (rule === false) return;
+        const original = args.slice(), partialText = key.endsWith('Text') && rule?.count < args[0].length;
+        observe?.({ n, group: currentPaintGroup, method: key, original, args: args.slice(), rule,
+          font: target.font, align: target.textAlign, spacing: target.letterSpacing, matrix: target.getTransform() });
+        if (partialText) {
+          const full=args[0], shift=target.textAlign==='center'?.5:['right','end'].includes(target.textAlign)?1:0;
+          const edge=args[1]-shift*target.measureText(full).width+target.measureText(full.slice(0,rule.count)).width;
+          const path=new Path2D();path.rect(-1e6,-1e6,1e6+edge,2e6);
+          // Keep the entire finished command (including shaping/kerning). Only its original typing half-plane changes.
+          target.save();target.clip(path);value.apply(target,args);target.restore();
+        } else if (rule?.clips) {
+          const matrix = target.getTransform(), path = new Path2D();
+          for (const [l,t,r,b] of rule.clips) path.rect(l*a.w,t*a.h,(r-l)*a.w,(b-t)*a.h);
+          target.save(); target.setTransform(base); target.clip(path); target.setTransform(matrix);
+          value.apply(target, args); target.restore();
+        } else value.apply(target, args);
+      };
+    },
+    set(target,key,value) { target[key] = value; return true; },
+  });
+  c.save(); c.beginPath(); c.rect(0,0,a.w,a.h); c.clip();
+  try { ART[source].draw(selected,a.w,a.h); } finally { c.restore(); }
+}
 // The page's own face, and the stand-ins for the flyer's faces, which live beside this file so that every page that draws the pictures gets them.
 const FACES = [['Gelasio', '400', 'gelasio-400.woff2'], ['Gelasio', '700', 'gelasio-700.woff2'], ['Rokkitt', '800', 'rokkitt-800.woff2']];
 export async function fontsReady() {

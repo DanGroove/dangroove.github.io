@@ -6,12 +6,13 @@ import { createPageLayout } from '../page-layout.mjs';
 import { BROWSER_SIZES } from './browser-check.mjs';
 // CORRECTIONS-17. Geometry and source checks only: no browser, rasterisation, file mutation or dependencies.
 import assert from 'node:assert/strict';
+import { inflateRawSync } from 'node:zlib';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { HOME, dot, quatRotate, EASE, makeCamera } from '../../../../public/journey/hero/engine.mjs';
 import { corners } from '../kit.mjs';
 import { createRenderer } from '../sq.mjs';
-import { ART, ART_TEXT, HISTOGRAM, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS, makeAtlas, letterMask, maskLetterPictures, CUTOUTS, CUTOUT_MARGIN, CUTOUT_GUTTER, drawPictureParts, paintGroupName } from '../art.mjs';
+import { ART, ART_TEXT, HISTOGRAM, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS, makeAtlas, letterMask, maskLetterPictures, CUTOUTS, CUTOUT_MARGIN, CUTOUT_GUTTER, drawPictureParts, paintGroupName, BUILDING_PICTURES, buildingSize, buildingCommand, paintBuilding, buildingChanges } from '../art.mjs';
 import { checkMapFrame, checkDragsFlat, checkRendererClips, onMapFrame } from './round15-checks.mjs';
 
 const url = new URL('../stage.mjs', import.meta.url);
@@ -76,7 +77,7 @@ export function prepareRound17Art() {
   }, { get: (o, k) => k in o ? o[k] : () => {} });
   const doc = globalThis.document, path = globalThis.Path2D;
   globalThis.Path2D = class {}; globalThis.document = { createElement: () => ({ getContext: () => ctx }) };
-  try { const atlas = preparedAtlas = makeAtlas(); assert.equal(atlas.pages.length, 7, 'C3 atlas: seven pages with isolated marks'); return atlas; }
+  try { const atlas = preparedAtlas = makeAtlas(); assert.equal(atlas.pages.length, 5, 'C3 atlas: original five pages'); return atlas; }
   finally { if (doc === undefined) delete globalThis.document; else globalThis.document = doc; if (path === undefined) delete globalThis.Path2D; else globalThis.Path2D = path; }
 }
 
@@ -126,50 +127,24 @@ export async function checkLevels(M) {
 }
 
 export async function checkDrawsAndLetters(M) {
-  M ??= await load();
-  prepareRound17Art(); const S = scale(M); let samples = 0;
-  for (const [id, source, mark, nominal] of [
-    ['badge','kMap','badge',[1273/2200,457/850,72/2200,146/850]],
-    ['block','kLoc','block0',[660/1352,16/850,62/1352,68/850]],
-  ]) {
-    const a = action(M, 'ai', id), part = CUTOUTS[source+'Part'+mark], size=ART[source];
-    const isDraw = pc => pc.cutoutSource === source && pc.cutoutId === mark;
-    const final = at(M,'ai',a.end-1e-7).find(isDraw);
-    assert.ok(final, `R2 draw: missing ${id}'s isolated region`);
-    for (const t of grid(a.start + 0.01, a.end)) {
-      const P=at(M,'ai',t), pc=P.find(isDraw), p=M.HAND((t-a.start)/(a.end-a.start));
-      assert.ok(pc && pc.blend && !pc.cut, `R2 draw: ${id} is an untextured box`);
-      const opaque=P.filter(q=>q.document&&!q.art&&!q.overlay&&q.s[0]>0.002&&q.s[1]>0.002&&top(q)>top(pc)-0.001);
-      assert.ok(!opaque.some(q=>distance(front(q),front(pc),S)<10),'R2 draw: untextured opaque piece over map');
-      assert.ok(distance(fullCorners(pc),fullCorners(final),S)<=0.1,`R2 draw: ${id} not registered`);
-      const [u,v,w,h]=nominal,[l,y,r,b]=part.crop;
-      const expected=[l/(size.w-1),y/(size.h-1),(r-1)/(size.w-1),(b-1)/(size.h-1)];
-      pc.labelRegion.forEach((n,i)=>near(n,expected[i],'R2 isolated margin quad'));
-      assert.ok(pc.artReveal,'R2 growing paint clip');
-      [u,v,u+w*p,v+h*p].forEach((n,i)=>near(pc.artReveal[i],n,'R2 growing paint clip')); samples++;
+  M ??= await load(); prepareRound17Art(); let samples=0;
+  for(const [id,source,mark,nominal] of [['badge','kMap','badge',[1273/2200,457/850,72/2200,146/850]],['block','kLoc','block0',[660/1352,16/850,62/1352,68/850]]]) {
+    const a=action(M,'ai',id),ref=at(M,'ai',a.end+.001).find(pc=>pc.building?.source===source);
+    for(const t of grid(a.start+.01,a.end)) {
+      const P=at(M,'ai',t),pc=P.find(pc=>pc.building?.source===source),p=M.HAND((t-a.start)/(a.end-a.start));
+      assert.ok(pc&&!pc.cut&&!pc.blend,'R2 draw: missing ordinary building face');
+      assert.ok(distance(fullCorners(pc),fullCorners(ref),scale(M))<=.1,'R2 draw: unregistered face');
+      const [u,v,w,h]=nominal,clip=pc.building.plan.marks[mark]?.clips?.[0];
+      assert.ok(clip,'R2 draw: missing canvas reveal');[u,v,u+w*p,v+h*p].forEach((n,i)=>near(clip[i],n,'R2 growing paint clip'));samples++;
     }
   }
-  for (const [key, ids] of [['ai', ['labels', 'title', 'cityLabels']], ['id', ['mailTitle']]]) for (const id of ids) {
-    const a = action(M, key, id), art = a.textArt, final = at(M, key, a.end + 0.001);
-    for (const t of grid(a.start + 0.01, a.end)) {
-      const P = at(M, key, t), labels = P.filter(pc => pc.labelSource === art);
-      assert.ok(labels.length, `R3 letters: ${key}/${id} missing letters`);
-      const rect = a.textRect, ref = M.on('ink', ...rect, { lift: key === 'ai' ? 0.08 : 0.076, t: 0.004 });
-      for (const pc of labels) {
-        assert.ok(pc.cut && ART[pc.art]?.lettersOnly, 'R3 letters: label shows ground');
-        const crop = ART[pc.art].sourceRect, size = ART[art], uv = [crop[0] / (size.w - 1), crop[1] / (size.h - 1), (crop[2] - 1) / (size.w - 1), (crop[3] - 1) / (size.h - 1)];
-        uv.forEach((v, i) => near(pc.labelRegion[i], v, 'R3 texel-centre registration'));
-        assert.ok(distance(fullCorners(pc), fullCorners(ref), S) <= 0.1, `R3 registration: ${id} at lift ${top(pc)}`);
-      }
-      assert.ok(P.some(pc => pc.caret === art), 'R3 letters: missing caret'); samples++;
+  for(const [key,ids] of [['ai',['labels','title','cityLabels']],['id',['mailTitle']]])for(const id of ids) {
+    const a=action(M,key,id),source=a.textArt;
+    for(const t of grid(a.start+.01,a.end)) {
+      const P=at(M,key,t),pc=P.find(pc=>pc.building?.source===source&&pc.where==='content');
+      assert.ok(pc&&!pc.cut&&!pc.blend,'R3 letters: missing ordinary building');
+      assert.ok(P.some(pc=>pc.caret===source),'R3 letters: missing caret');samples++;
     }
-  }
-  // Execute the companion drawings with a paint recorder: only fillText may reach the underlying context.
-  for (const [key, picture] of Object.entries(ART).filter(([, a]) => a.lettersOnly)) {
-    const log = [], ctx = new Proxy({ getTransform: () => ({a: 1, b: 0, c: 0, d: 1, e: 0, f: 0}), measureText: s => ({ width: s.length * 10 }), createLinearGradient: () => ({ addColorStop() {} }) }, { get: (o, k) => k in o ? o[k] : (...args) => { if (['fill', 'stroke', 'fillRect', 'strokeRect', 'drawImage', 'fillText'].includes(k)) log.push([k, ...args]); }, set: (o, k, v) => (o[k] = v, true) });
-    picture.draw(ctx, picture.w, picture.h);
-    assert.ok(log.length === 1 && log[0][0] === 'fillText', `R3 letters: ${key} paints ground or a neighbouring label`);
-    assert.equal(log[0][1], ART_TEXT[picture.source][picture.labelIndex].words, 'R3 letters: wrong individual label');
   }
   return samples;
 }
@@ -324,7 +299,7 @@ export async function checkSwaps(M) {
     boundaries++;
   }
   // Known build-to-finished page swaps: compare full page anchors even where the source texture changes.
-  for (const [id, arts] of [['coverTitle', ['coverDecor', 'kCover']], ['postButton', ['postPhoto', 'kPost']], ['mailFlyer', ['kPost', 'kPost']], ['mailFlyer', ['kCover', 'kCover']], ['mailFlyer', ['kAmL', 'kAmL']], ['mailFlyer', ['kAmR', 'kAmR']]]) {
+  for (const [id, arts] of [['coverTitle', ['kCover', 'kCover']], ['postButton', ['kPost', 'kPost']], ['mailFlyer', ['kPost', 'kPost']], ['mailFlyer', ['kCover', 'kCover']], ['mailFlyer', ['kAmL', 'kAmL']], ['mailFlyer', ['kAmR', 'kAmR']]]) {
     const a = action(M, 'id', id), pick = (t, art) => at(M, 'id', t).filter(pc => pc.art === art && !pc.window && pc.where === 'content').sort((p, q) => q.s[0] - p.s[0])[0];
     const p = pick(a.end - 0.001, arts[0]), q = pick(a.end + 0.001, arts[1]);
     assert.ok(p && q, `G page: ${id}/${arts} missing page`);
@@ -613,7 +588,7 @@ export async function checkDeviceGlass(M, clearanceOnly = false) {
 }
 
 // A command recorder, not a rasterizer. It preserves path/state/transform/clip identities and paint order.
-export function recordPicture(source, accept = null, offset = [0,0]) {
+export function recordPicture(source, accept = null, offset = [0,0], plan = undefined) {
   const paints=[], saved=[]; let matrix=[1,0,0,1,...offset], path=[], clips=[];
   const defaults={fillStyle:'#000000',strokeStyle:'#000000',lineWidth:1,font:'10px sans-serif',letterSpacing:'0px',textAlign:'left',textBaseline:'alphabetic',globalAlpha:1,globalCompositeOperation:'source-over',lineCap:'butt',lineJoin:'miter',shadowBlur:0,shadowOffsetX:0,shadowOffsetY:0,shadowColor:'rgba(0,0,0,0)'};
   const point=(x,y)=>[matrix[0]*x+matrix[2]*y+matrix[4],matrix[1]*x+matrix[3]*y+matrix[5]];
@@ -625,9 +600,10 @@ export function recordPicture(source, accept = null, offset = [0,0]) {
     scale(x,y){matrix[0]*=x;matrix[1]*=x;matrix[2]*=y;matrix[3]*=y;},
     rotate(a){const [x,y,z,w]=matrix,c=Math.cos(a),s=Math.sin(a);matrix[0]=x*c+z*s;matrix[1]=y*c+w*s;matrix[2]=-x*s+z*c;matrix[3]=-y*s+w*c;},
     measureText(s){const px=+(this.font.match(/([\d.]+)px/)?.[1]||10);return {width:s.length*px*0.55,actualBoundingBoxAscent:px*0.8,actualBoundingBoxDescent:px*0.2};},
+    setTransform(m){matrix=Array.isArray(m)?m.slice():['a','b','c','d','e','f'].map(k=>m[k]);},
     setLineDash(){},
     createLinearGradient(...args){return {args,stops:[],addColorStop(...stop){this.stops.push(stop);}};},
-    beginPath(){path=[];},closePath(){path.push(['close']);},clip(){clips.push([...path]);},
+    beginPath(){path=[];},closePath(){path.push(['close']);},clip(p){clips.push(p?.rects||[...path]);},
   };
   for(const method of ['moveTo','lineTo','rect','roundRect','bezierCurveTo','quadraticCurveTo','arc','arcTo','ellipse']) ctx[method]=(...args)=>path.push([method,...args]);
   let ordinal=0;
@@ -640,107 +616,74 @@ export function recordPicture(source, accept = null, offset = [0,0]) {
     const semantic=Object.fromEntries(relevant.map(k=>[k,state[k]]));
     paints.push({group,n,mode:ctx.globalCompositeOperation,clips:[...clips],key:JSON.stringify([method,args,method==='fill'||method==='stroke'?path:null,matrix,semantic,clips]),method,args,state,path:[...path],matrix:[...matrix]});
   };
-  const previous=globalThis.Path2D;globalThis.Path2D=class {constructor(d){this.path=d;}};
-  try {if(accept)drawPictureParts(ctx,source,accept);else ART[source].draw(ctx,ART[source].w,ART[source].h);}
+  const previous=globalThis.Path2D;globalThis.Path2D=class {constructor(d){this.path=d;this.rects=[];}rect(...r){this.rects.push(['rect',...r]);}};
+  try {if(plan!==undefined)paintBuilding(ctx,source,plan);else if(accept)drawPictureParts(ctx,source,accept);else ART[source].draw(ctx,ART[source].w,ART[source].h);}
   finally {if(previous===undefined)delete globalThis.Path2D;else globalThis.Path2D=previous;}
   return paints;
 }
 
-export async function checkCutouts(M) {
-  M ??= await load();prepareRound17Art();
-  const inventory={kMap:98,kLoc:44,kCover:1,kPost:1,eblast:2,wireWide:24,wireTablet:20,wireTall:20}, rows=[];
-  for(const [source,count] of Object.entries(inventory)) {
-    const full=recordPicture(source), parts=Object.entries(CUTOUTS).filter(([,p])=>p.source===source);
-    assert.equal(parts.length,count,'C3 exactness: cutout inventory '+source);
-    const assigned=new Map();let commands=0;
-    assert.ok(full.every(p=>p.mode==='source-over'),'C3 exactness: source composite mode');
-    for(const [key,part] of parts) {
-      assert.ok(part.margin>=24&&part.gutter>=24,'C3 atlas: margin/gutter');
-      const own=full.filter(p=>part.accept(p.group,p.method,p.n));
-      assert.ok(own.length,'C3 exactness: empty mark '+key);
-      const replay=recordPicture(key,null,[part.crop[0],part.crop[1]]);
-      assert.deepEqual(replay.map(p=>p.key),own.map(p=>p.key),'C3 exactness: replay differs '+key);
-      for(const p of own) {assert.ok(!assigned.has(p.n),'C3 exactness: repeated command '+source+'/'+p.n);assigned.set(p.n,key);assert.equal(p.mode,'source-over','C3 exactness: composite mode');commands++;}
-      assert.ok(!own.some(p=>p.clips.length>1),'C3 exactness: shared internal clip');
-      const [x,y,w,h]=part.rect,[l,t,r,b]=part.crop,a=ART[source];
-      assert.ok((l===0||x-l>=24-1e-9)&&(t===0||y-t>=24-1e-9)&&(r===a.w||r-x-w>=24-1e-9)&&(b===a.h||b-y-h>=24-1e-9),'C3 atlas: transparent margin '+key);
-    }
-    const ordered=parts.slice().sort((a,b)=>a[1].order-b[1].order).flatMap(([,part])=>full.filter(p=>part.accept(p.group,p.method,p.n)).map(p=>p.n));
-    assert.deepEqual(ordered,full.filter(p=>assigned.has(p.n)).map(p=>p.n),'C3 exactness: finished paint order '+source);
-    const base=recordPicture(source,(g,k,n)=>!assigned.has(n));
-    const sameCommands=(a,b,gate)=>assert.deepEqual(a.map(p=>p.key),b.map(p=>p.key),gate);
-    if(['kMap','kLoc','wireWide','wireTablet','wireTall','eblast'].includes(source)) {
-      const name={kMap:'mapStreet',kLoc:'locGround',eblast:'mailPhoto'}[source]||source+'Base';
-      sameCommands(recordPicture(name),full.filter(p=>!assigned.has(p.n)&&!p.method.endsWith('Text')),'C3 exactness: actual base '+source);
-    }
-    if(source==='kCover')sameCommands(recordPicture('coverBlob'),[...recordPicture('coverPhoto'),...recordPicture('kCoverPartblob',null,CUTOUTS.kCoverPartblob.crop.slice(0,2))],'C3 exactness: actual cover base/blob');
-    if(source==='kPost') {
-      const actual=recordPicture('postPhoto'),remaining=new Map();for(const p of base)remaining.set(p.key,(remaining.get(p.key)||0)+1);
-      for(const p of actual){const n=remaining.get(p.key)||0;assert.ok(n,'C3 exactness: actual post base');remaining.set(p.key,n-1);}
-      const prefix=recordPicture('idPost21',null,[276,315.2]);
-      for(const p of base.filter(p=>!p.method.endsWith('Text')))assert.ok(actual.some(q=>q.key===p.key)||prefix.some(q=>q.key===p.key),'C3 exactness: post tab prefix');
-    }
-    const composed=[...base,...parts.flatMap(([key])=>recordPicture(key,null,CUTOUTS[key].crop.slice(0,2)))];
-    const multiset=xs=>xs.map(p=>p.key).sort();
-    assert.deepEqual(multiset(composed),multiset(full),'C3 exactness: missing/repeated source paint '+source);
-    const paintBounds=p=>{
-      const pts=[],rect=(x,y,w,h)=>pts.push([x,y],[x+w,y],[x,y+h],[x+w,y+h]);
-      if(p.method==='fillRect'||p.method==='strokeRect')rect(...p.args);
-      else if(p.method.endsWith('Text')) {const px=+(p.state.font.match(/([\d.]+)px/)?.[1]||10),[words,x,y]=p.args,w=words.length*px*.55;rect(x-(p.state.textAlign==='center'?w/2:p.state.textAlign==='right'?w:0),y-px*.8,w,px);}
-      else for(const [kind,...args] of p.path) {if(kind==='rect'||kind==='roundRect')rect(...args);else if(kind==='arc')rect(args[0]-args[2],args[1]-args[2],2*args[2],2*args[2]);else for(let i=0;i+1<args.length;i+=2)if(typeof args[i]==='number'&&typeof args[i+1]==='number')pts.push([args[i],args[i+1]]);}
-      assert.ok(pts.length,'C3 exactness: unmeasured base command '+source+'/'+p.n);
-      const m=p.matrix,world=pts.map(([x,y])=>[m[0]*x+m[2]*y+m[4],m[1]*x+m[3]*y+m[5]]),radius=p.method.startsWith('stroke')?p.state.lineWidth*Math.max(Math.hypot(m[0],m[1]),Math.hypot(m[2],m[3]))/2:0;
-      return [Math.min(...world.map(p=>p[0]))-radius,Math.min(...world.map(p=>p[1]))-radius,Math.max(...world.map(p=>p[0]))+radius,Math.max(...world.map(p=>p[1]))+radius];
-    };
-    let letterCommands=0;
-    if(ART_TEXT[source])for(const p of full.filter(p=>!assigned.has(p.n)&&p.method==='fillText')) {
-      const matches=ART_TEXT[source].filter(part=>part.words===p.args[0]).map(part=>recordPicture(part.picture,null,part.crop.slice(0,2))).flat();
-      assert.ok(matches.some(q=>q.key===p.key),'C3 exactness: missing original typed command '+source+'/'+p.n);letterCommands++;
-    }
-    let lateBaseCommands=0;
-    for(const p of full.filter(p=>!assigned.has(p.n)&&!(ART_TEXT[source]&&p.method.endsWith('Text')))) for(const [key,part] of parts) {
-      if(!full.some(q=>assigned.get(q.n)===key&&q.n<p.n))continue;
-      lateBaseCommands++;const r=paintBounds(p),[x,y,w,h]=part.rect;
-      assert.ok(!(Math.min(r[2],x+w)>Math.max(r[0],x)+1e-9&&Math.min(r[3],y+h)>Math.max(r[1],y)+1e-9),'C3 exactness: overlapping late base paint '+source+'/'+p.n+'/'+key);
-    }
-    rows.push({source,cutouts:count,commands,baseCommands:base.length-letterCommands,letterCommands,lateBaseComparisons:lateBaseCommands});
-  }
-  const probe=M.round17RevealProbe?M:await load();
-  for(const [i,[x,y,w,h]] of AM_LABEL_BARS.entries())for(const amount of [.125,.5,.875,1]) {
-    const pc=probe.round17RevealProbe('kMap','bar'+i,[x/2200,y/850,w/2200,h/850],amount,true)[0];
-    assert.ok(pc.blend&&!pc.cut,'C3 bar blended reveal');
-    if(amount===1)assert.equal(pc.artReveal,undefined,'C3 full bar uses isolated static picture');
-    else [x/2200,(y+h*(1-amount))/850,(x+w)/2200,(y+h)/850].forEach((n,j)=>near(pc.artReveal[j],n,'C3 eight-step upward paint clip'));
-  }
-  const atlas=prepareRound17Art(), pixelRect=key=>{const [page,u,v,w,h]=atlas.places[key],canvas=atlas.pages[page];return [page,Math.round(u*canvas.width-.5),Math.round(v*canvas.height-.5),Math.round(w*canvas.width+1),Math.round(h*canvas.height+1)];};
-  for(const [key,p] of Object.entries(CUTOUTS)) {
-    const [page,x,y,w,h]=pixelRect(key),canvas=atlas.pages[page];
-    assert.ok(x>=24&&y>=24&&canvas.width-x-w>=24&&canvas.height-y-h>=24,'C3 atlas: page gutter '+key);
-    for(const other of Object.keys(atlas.places))if(other!==key) {const [q,l,t,r,b]=pixelRect(other);if(q!==page)continue;assert.ok(Math.max(l-x-w,x-l-r,t-y-h,y-t-b)>=24,'C3 atlas: neighbour gutter '+key+'/'+other);}
-    const [,sx,sy]=pixelRect(p.source);near(((x-p.crop[0]-sx)%8+8)%8,0,'C3 atlas: mip x phase');near(((y-p.crop[1]-sy)%8+8)%8,0,'C3 atlas: mip y phase');
-  }
-  const releases=[['ai','badge','kMap'],['ai','cityLabels','kLoc'],['id','blob','kCover','coverBlob'],['id','postButton','kPost'],['id','mailFlyer','eblast'],...['wireWide','wireTablet','wireTall'].map(a=>['fig','details',a])];
-  for(const [scene,id,source,finished=source] of releases) {
-    const end=action(M,scene,id).end;
-    const before=at(M,scene,end-1e-7),after=at(M,scene,end+1e-9);
-    const emitted=new Set(before.filter(pc=>pc.cutoutSource===source).map(pc=>pc.art));
-    const baseKeys={kMap:['mapStreet'],kLoc:['locGround'],kCover:['coverPhoto'],kPost:['postPhoto'],eblast:['mailPhoto'],wireWide:['wireWideBase'],wireTablet:['wireTabletBase'],wireTall:['wireTallBase']}[source];
-    const base=before.find(pc=>baseKeys.includes(pc.art));assert.ok(base,'C3 depth: missing base '+source);
-    for(const pc of before.filter(pc=>pc.cutoutSource===source)) {
-      near(top(pc)-top(base),.0004*1.15,'C3 depth: blend must be above emitted base',1e-9);
-      assert.ok(pc.blend&&!pc.cut&&pc.noShadow&&pc.noLine,'C3 depth: blended face contract');
-    }
-    for(const pc of before.filter(pc=>pc.labelSource===source))near(top(pc)-top(base),.0008*1.15,'C3 depth: letter must be above blend',1e-9);
-    for(const [key,p] of Object.entries(CUTOUTS).filter(([,p])=>p.source===source)) assert.ok(emitted.has(key),'C3 exactness: missing emitted mark '+key);
-    for(const dt of [0,1e-9,0.001,0.02]) assert.ok(!at(M,scene,end+dt).some(pc=>pc.cutoutSource===source),'C3 release: cutout after release '+source);
-    assert.ok(after.some(pc=>pc.art===finished&&(!pc.window||pc.window.every((n,i)=>n===[0,0,1,1][i]))&&!pc.labelSource),'C3 release: finished picture missing '+source);
-    assert.ok(!after.some(pc=>pc.labelSource===source),'C3 release: retained typed companion '+source);
-  }
-  return {pictures:rows,atlas:atlas.pages.map(p=>[p.width,p.height]),exceptions:{missing:0,repeated:0,compositeModes:0,sharedInternalClips:0}};
+export function checkAtlasPacking(atlas=prepareRound17Art()) {
+  const before=JSON.parse(inflateRawSync(Buffer.from('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','base64')));
+  assert.deepEqual(atlas.pages.map(p=>[p.width,p.height]),before.pages,'C3 atlas packing: page heights');
+  assert.deepEqual(atlas.places,before.places,'C3 atlas packing: places/sizes/phases');
+  return {pages:before.pages,places:Object.keys(before.places).length};
 }
-export const checkCropFringes = checkCutouts;
+export async function checkCutouts(M) {
+  M ??= await load();prepareRound17Art();const rows=[];
+  const unchanged={base:true,marks:{marker0:true},text:{},tab:true};
+  assert.deepEqual(buildingChanges('kMap',unchanged,unchanged),[],'C3 identical plan has no dirty region');
+  const dirty=buildingChanges('kMap',{...unchanged,marks:{}},unchanged),r=CUTOUTS.kMapPartmarker0.rect;
+  assert.deepEqual(dirty,[[(r[0]-24)/1100,(r[1]-24)/425,(r[0]+r[2]+24)/1100,(r[1]+r[3]+24)/425]],'C3 changed mark region plus 24 texels');
+  const normalized=p=>{const key=JSON.parse(p.key);key.at(-1).shift();return JSON.stringify(key);};
+  for(const use of M.BUILDING_USES) {
+    const end=action(M,use.scene,use.last).end,pc=at(M,use.scene,end+.002).find(p=>p.building?.id===use.id);
+    assert.ok(pc,'C3 release exactness: missing building '+use.id);
+    const full=recordPicture(use.source),built=recordPicture(use.source,null,[0,0],pc.building.plan);
+    assert.equal(built.length,full.length,'C3 release exactness: command count '+use.id);
+    assert.deepEqual(built.map(normalized),full.map(p=>p.key),'C3 release exactness: ordered unclipped source commands '+use.id);
+    const size=buildingSize(use.source);
+    assert.ok(size.x>=24&&size.y>=24&&size.width-size.x-size.w>=24&&size.height-size.y-size.h>=24,'C3 building margin');
+    assert.ok([size.x,size.y,size.width,size.height].every(n=>n%8===0),'C3 building grid');
+    const first=action(M,use.scene,use.first).start;
+    for(let t=first;t<=end+.002;t+=1/60) {
+      const P=at(M,use.scene,t),groups=new Map();
+      for(const q of P.filter(p=>p.building)) {
+        const uses=groups.get(q.building.id)||new Set();uses.add(q.building.source);groups.set(q.building.id,uses);
+        assert.ok(!q.cut&&!q.blend,'C3 alpha-tested building: '+q.building.id);
+      }
+      assert.ok(!P.some(p=>p.labelSource===use.source||p.cutoutSource===use.source),'C3 retained construction piece');
+      assert.ok([...groups.values()].every(g=>g.size===1),'C3 shared building texture');
+      const q=P.find(p=>p.building?.source===use.source);if(!q)continue;
+      // The scheduler's ownership boundaries are independent of the paint list's final-state equality.
+      const markAction=id=>use.scene==='ai'?(use.source==='kMap'?(id.startsWith('marker')||id==='north'?'markers':id.startsWith('bar')?'labels':'badge'):id==='block0'?'block':id.startsWith('block')?'blocks':id==='roads'?'streets':'pins'):use.scene==='id'?(id==='button'?'mailButton':use.source==='kCover'?'blob':use.source==='kPost'?'postBlob':'mailBlob'):null;
+      for(const [id,value] of Object.entries(q.building.plan.marks))if(value){const owner=markAction(id);if(owner)assert.ok(t>=action(M,use.scene,owner).start-1e-9,'C3 early mark: '+use.id+'/'+id);}
+      const original=recordPicture(use.source).filter(p=>p.method.endsWith('Text'));
+      const actual=recordPicture(use.source,null,[0,0],q.building.plan).filter(p=>p.method.endsWith('Text'));
+      for(const p of actual){assert.ok(original.some(ref=>JSON.stringify(p.args)===JSON.stringify(ref.args)&&p.state.font===ref.state.font&&p.state.textAlign===ref.state.textAlign&&p.state.letterSpacing===ref.state.letterSpacing&&JSON.stringify(p.matrix)===JSON.stringify(ref.matrix)),'C3 typed command: font/position/alignment/spacing');}
+    }
+    rows.push({...use,...size,commands:full.length,release:end+starts(M)[M.SHOW.findIndex(s=>s.key===use.scene)]});
+  }
+  const atlas=checkAtlasPacking();return {pictures:rows,atlas};
+}
+export const checkCropFringes=checkCutouts;
+export function checkBuildingMode(code=fs.readFileSync(new URL('../sq.mjs',import.meta.url),'utf8')) {
+  const start=code.indexOf('if (pc.building && u.uArtMode)'),end=code.indexOf('\n\n  };',start),body=code.slice(start,end);
+  assert.match(body,/gl\.uniform1f\(u\.uArtMode,1\)/,'C3 alpha-tested building: ordinary mode 1 required');
+  assert.ok(!/gl\.uniform1f\(u\.uArtMode,[23]\)/.test(body),'C3 alpha-tested building: cut/blend mode');
+}
+export async function checkSpine(M) {
+  M ??=await load();const [start,end]=M.playbackSpans(M.SCRIPTS.id).off;let samples=0,worst=0,pieces=0;
+  for(let n=0;n<=Math.ceil((end-start)*1000);n++) {
+    const P=at(M,'id',Math.min(end-1e-9,start+n/1000)).filter(p=>p.sink&&p.device===undefined&&p.p[2]>M.BLOCK_ROW.stack[1]+M.BLOCK_ROW.stack[3]);
+    const edges=P.map(pc=>{const xs=corners(pc).map(p=>p[0]);return {pc,l:Math.min(...xs),r:Math.max(...xs)};});
+    const left=edges.filter(e=>e.pc.p[0]<-.1),right=edges.filter(e=>e.pc.p[0]>=-.1);
+    assert.ok(left.length&&right.length,'C7 spine: missing half');
+    for(const e of [...left,...right]) {const x=e.pc.p[0]<-.1?e.r:e.l;worst=Math.max(worst,Math.abs(x+.1));near(x,-.1,'C7 spine gap',1e-12);pieces++;}
+    samples++;
+  }
+  return {samples,pieces,worst,spine:-.1};
+}
 
-// Execute the renderer in a recording WebGL2 context; state, order and lifetime are observable without a GPU.
 function rendererTrace(code = null) {
   let next=0,program,depthWrite=true,depthTest=false,blend=false,offset=false,factor=0,units=0;const calls=[],uniforms=new Map();
   const names=['uArtMode','uClip','uCarryClip','uPos'];
@@ -759,7 +702,7 @@ function rendererTrace(code = null) {
     if(key==='drawElements'||key==='drawArrays')return ()=>calls.push({program,depthWrite,depthTest,blend,offset,factor,units,mode:uniforms.get('uArtMode'),position:uniforms.get('uPos')});
     return ()=>({});
   }});
-  const make=code ? new Function('ART','CUTOUTS',code.replace(/^import .*;$/gm,'').replaceAll('export ','')+'; return createRenderer;')(ART,CUTOUTS) : createRenderer;
+  const make=code ? new Function('ART','buildingSize','paintBuilding','buildingChanges',code.replace(/^import .*;$/gm,'').replaceAll('export ','')+'; return createRenderer;')(ART,buildingSize,paintBuilding,buildingChanges) : createRenderer;
   const renderer=make({getContext:()=>gl});renderer.setAtlas({pages:[{}],places:{probe:[0,0,0,1,1]}});
   return {renderer,calls,state:()=>({depthWrite,blend,offset,factor,units})};
 }
@@ -773,19 +716,6 @@ export function checkFloorOffset(code) {
   assert.ok(calls.filter(c=>c.program!==4).every(c=>!c.offset),'C5 floor offset: leaked into pieces');
   assert.deepEqual(state(),{depthWrite:true,blend:false,offset:false,factor:0,units:0},'C5 floor offset: state not restored');
 }
-export function checkBlendedPass() {
-  const shader=fs.readFileSync(new URL('../sq.mjs',import.meta.url),'utf8');
-  assert.match(shader,/uArtMode > 2.5.*vFace < 0.999/,'C3 blended pass: only picture face');
-  assert.match(shader,/o = vec4\(art.rgb \* k, art.a\)/,'C3 blended pass: premultiplied lit colour');
-  const {renderer,calls}=rendererTrace(),pc={tone:'paper',p:[0,0,0],q:[0,0,0,1],s:[.1,.1,.001],e:[.02,.02],art:'probe'};
-  renderer.draw([pc,{...pc,blend:true,paintOrder:2,p:[2,0,0]},{...pc,blend:true,paintOrder:1,p:[1,0,0]}],{W:100,H:100,S:10,cx:50,cy:50,cam:HOME},{floor:{}});
-  const blended=calls.filter(c=>c.mode===3&&c.program===1);
-  assert.deepEqual(blended.map(c=>c.position[0]),[1,2],'C3 blended pass: paint order');
-  assert.ok(blended.every(c=>c.blend&&c.depthTest&&!c.depthWrite),'C3 blended pass: blend/depth state');
-  assert.ok(calls.filter(c=>c.program===2||c.program===3).every(c=>c.position[0]===0),'C3 blended pass: shadow/outline');
-  assert.ok(calls.indexOf(blended[0])>calls.findLastIndex(c=>c.program===2)&&calls.indexOf(blended.at(-1))<calls.findIndex(c=>c.program===4),'C3 blended pass: pass order');
-}
-
 function checkCarryClipRenderer() {
   const sq=fs.readFileSync(new URL('../sq.mjs',import.meta.url),'utf8');
   assert.match(sq,/dot\(uCarryClip, vec4\(w, 1.0\)\) < 0.0/,'C2 renderer: carried clip missing');
@@ -813,24 +743,6 @@ function checkCarryClipRenderer() {
   calls.length=0;renderer.draw([{...pc,sinkTop:-0.001}],view);
   assert.equal(calls.length,0,'C2 renderer: drawn after body under floor');
 }
-export function checkRevealPass() {
-  const key='kMapPartbar0',part=CUTOUTS[key],events=[],doc=globalThis.document,previousPath=globalThis.Path2D;
-  const context=new Proxy({getTransform:()=>({a:1,b:0,c:0,d:1,e:0,f:0}),measureText:s=>({width:s.length*10})},{get:(o,k)=>k in o?o[k]:(...args)=>{if(['rect','clip','fill','fillRect','stroke','fillText'].includes(k))events.push([k,...args]);},set:(o,k,v)=>(o[k]=v,true)});
-  const images=[];
-  globalThis.document={createElement:()=>{const c={width:0,height:0,getContext:()=>context};images.push(c);return c;}};globalThis.Path2D=class {};
-  try {
-    const {renderer}=rendererTrace();renderer.setAtlas({pages:[{width:2048,height:2048}],places:{kMap:[0,8.5/2048,8.5/2048,1099/2048,424/2048],[key]:[0,.5/2048,.5/2048,(ART[key].w-1)/2048,(ART[key].h-1)/2048]}});
-    const [x,y,w,h]=AM_LABEL_BARS[0],pc={tone:'paper',p:[0,0,0],q:[0,0,0,1],s:[.1,.1,.001],e:[.02,.02],art:key,blend:true,artReveal:[x/2200,(y+h/2)/850,(x+w)/2200,(y+h)/850]};
-    const view={W:100,H:100,S:10,cx:50,cy:50,cam:HOME};renderer.draw([pc],view);
-    const clip=events.findIndex(e=>e[0]==='clip'),paint=events.findIndex(e=>e[0]==='fillRect');
-    assert.ok(clip>=0&&paint>clip,'C3 reveal: paint must follow the reveal clip');
-    assert.equal(events[clip-1][0],'rect','C3 reveal: nominal clip');[x/2-part.crop[0],(y+h/2)/2-part.crop[1],w/2,h/4].forEach((n,i)=>near(events[clip-1][i+1],n,'C3 reveal: nominal clip, no expanded paint'));
-    assert.equal(events.filter(e=>['fill','stroke','fillText','fillRect'].includes(e[0])).length,1,'C3 reveal: another mark leaked');
-    const count=events.length;renderer.draw([pc],view);assert.equal(events.length,count,'C3 reveal: identical step repainted');
-    assert.ok(images[0].width>=ART[key].w+48&&images[0].height>=ART[key].h+48,'C3 reveal: transparent texture gutter');
-  } finally {if(doc===undefined)delete globalThis.document;else globalThis.document=doc;if(previousPath===undefined)delete globalThis.Path2D;else globalThis.Path2D=previousPath;}
-}
-
 export async function checkPinnedCamera(M, envelope=sceneEnvelope) {
   M ??= await load();
   assert.deepEqual(envelope(M.SCENES,corners,dot,HOME),DEFAULT_FIT,'R12 pinned fit: computed instead');
@@ -859,7 +771,7 @@ export async function checkRound17(M) {
   const levels = await checkLevels(M), letters = await checkDrawsAndLetters(M), swaps = await checkSwaps(M), carries = await checkCarries(M), flight = await checkFlight(M), sinks = await checkLidAndSinks(M);
   const devices = await checkDeviceModels(M), camera = await checkPinnedCamera(M);
   const heights = await checkDocumentHeights(M), stable = await checkPlaybackStability(M), masks = checkLetterMasks();
-  const contact = await checkDeviceGlass(M), clearance = await checkDeviceGlass(M,true), fringes = await checkCutouts(M);checkCarryClipRenderer();checkFloorOffset();checkBlendedPass();checkRevealPass();console.log('Pixel helper synthetic tests: '+JSON.stringify(checkPixelHelpers()));
+  const contact = await checkDeviceGlass(M), clearance = await checkDeviceGlass(M,true), fringes = await checkCutouts(M);checkBuildingMode();checkCarryClipRenderer();checkFloorOffset();console.log('C7 spine: '+JSON.stringify(await checkSpine(M)));console.log('Pixel helper synthetic tests: '+JSON.stringify(checkPixelHelpers()));
   console.log(`Critique round 2: retained C1 ${JSON.stringify({contact,clearance})}; C2 own-body depths, carry clips and renderer cull; C3 ${JSON.stringify(fringes)} exact paint partition; C4 five InDesign objects; C5 floor offset 1/2.`);
   return `R12: ${JSON.stringify({devices,camera})}\nRound 17: G ${swaps.boundaries} action ends / ${swaps.comparisons} registrations, worst ${swaps.worst.toFixed(5)} px; R1 ${levels} levels samples; R2/R3 ${letters} draw/type samples; R4 ${carries.carries} carries / ${carries.samples} samples, flat worst ${carries.flat.worst.toFixed(5)} px; R6/R7 ${flight} flight samples; R8-R11 ${sinks.samples} sink samples (${JSON.stringify(sinks.endTimes)}).\nFollow-up: F1 ${heights.samples} height samples / ${heights.pages} pages / ${heights.layers} layers; F2 ${stable.samples} playback samples / ${stable.faces} fixed faces, worst ${stable.worst.toFixed(5)} px; F3 ${masks.pictures} masks / ${masks.texels} fixture texels / ${masks.covered} covered, exact finished RGB.`;
 }
@@ -867,7 +779,7 @@ export async function checkRound17(M) {
 // Register round 17's changed surfaces with the earlier frozen-picture comparisons. These surfaces now have the explicit
 // G/R1-R4 gates above; unchanged app furniture, footage, comp construction and clocks still compare with the frozen evidence.
 export const round17Changed = M => pc => {
-  if (pc.blend || ART[pc.art]?.cutout || /^(locGround|wire(?:Wide|Tablet|Tall)Base)$/.test(pc.art || '')) return true;
+  if (pc.building || pc.blend || ART[pc.art]?.cutout || /^(locGround|wire(?:Wide|Tablet|Tall)Base)$/.test(pc.art || '')) return true;
   if (onMapFrame(M)(pc)) return true;
   if (pc.overlay || pc.caret || pc.histogram !== undefined || pc.where === 'travel') return true;
   if (/^(histo(?:Dark)?|photoRaw|photoHalf|photoLevels|mapStreet|locBlocks|locStreets|locPins|kMap(?:Letters\d+)?|kLoc(?:Letters\d+|Close)?|kAm[LR]|kCover|kPost|eblast(?:Letters\d+)?|cover(?:Photo|Blob|Decor)|postPhoto|mailPhoto|mailButtonStyle|id(?:Cover|Post|Mail|Flyer)\d+)$/.test(pc.art || '')) return true;
@@ -885,6 +797,12 @@ export function round17ScreenReference(frozen) {
   for (const name of ['screenPainter', 'separateFaces']) {
     const body = code => { const a = code.indexOf('function ' + name + '('), b = code.indexOf('\n}', a) + 2; assert.ok(a >= 0 && b > a, 'F2 reference: missing ' + name); return code.slice(a, b); };
     frozen = frozen.replace(body(frozen), body(live));
+  }
+  // r15Patch copies the live build tail. Historical fixtures have none of the new building scheduler's helpers.
+  if (!frozen.includes('function released(')) {
+    frozen=frozen.replaceAll('buildingFaces(P, SHOW[i].key, at);','');
+    const a=frozen.indexOf('export const BUILDING_USES'),b=frozen.indexOf('// G1: with the stack out',a);
+    if(a>=0&&b>a)frozen=frozen.slice(0,a)+frozen.slice(b);
   }
   return frozen;
 }
@@ -930,8 +848,6 @@ export async function checkRound17Controls() {
     assert.ok(caught, `${name}: MISSED`); out.push(`${name}: failed at ${gate}`);
   };
   await control('done() photo choice', s => s.replace("pc.artMix = handed(s, white ? 'white' : 'black', t);", "pc.artMix = done(s, white ? 'white' : 'black', t) ? 1 : 0;"), 'R1 photo mix', checkLevels);
-  await control('badge drawnFrame', s => s.replace("isolatedDraw(D, AI.upper, 'kMap', 'badge', [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850], handed(s, 'badge', t))", "drawnFrame(D, inRect(AI.upper, [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850]), handed(s, 'badge', t), 'grey')"), 'R2 draw:', checkDrawsAndLetters);
-  await control('label lift 0.09', s => s.replace("{ lift: 0.084, t: 0.004, art: part.picture, cut: true }", "{ lift: 0.09, t: 0.004, art: part.picture, cut: true }").replace('work.labelSource = art;', 'work.labelSource = art; work.unregistered = true;').replace("if (pc.art && !pc.overlay && pc.art !== 'kLocClose') registerPicture", "if (pc.art && !pc.overlay && pc.art !== 'kLocClose' && !pc.unregistered) registerPicture"), 'R3 registration:', checkDrawsAndLetters);
   await control('travel action:key', s => {
     const a = s.indexOf('function travel('), b = s.indexOf('\n}', a) + 2, body = s.slice(a, b);
     assert.equal(body.split("where: 'travel', action: id").length - 1, 2, 'travel control: both travelling pieces');
@@ -981,12 +897,21 @@ export async function checkRound17Controls() {
   await control('C6 carried layers without cull or clip',s=>s.replace('pc.carryClip = [0, 1, 0, -Math.max(0, top(pc) - heights[j])]', 'pc.carryClip = undefined').replace('pc.sinkTop = heights[j] - depth * g;', 'pc.sinkTop = Infinity;'),'C2 carried lifetime: drawn after body',M=>checkLidAndSinks(M,true));
   await control('C2 reading copy grouped with stack',s=>s.replace('formats[0].objects = [floor.slice(0, 10), reading.filter(pc => pc.p[0] < spine), reading.filter(pc => pc.p[0] >= spine)];','formats[0].objects = [formats[0].pieces];'),'C2 body cull top',checkLidAndSinks);
   await control('C2 heights from tallest piece',s=>s.replace('(bodies[j].length ? bodies[j] : pieces).filter', 'pieces.filter'),'C2 body cull top',checkLidAndSinks);
-  await control('C3 missing marker cutout',s=>s.replace('AM_MARKERS.slice(0, n).forEach', 'AM_MARKERS.slice(1, n).forEach'),'C3 exactness: missing emitted mark',checkCutouts);
   await control('C4 reading halves grouped',s=>s.replace('formats[0].objects = [floor.slice(0, 10), reading.filter(pc => pc.p[0] < spine), reading.filter(pc => pc.p[0] >= spine)];','formats[0].objects = [floor.slice(0, 10), reading];'),'R11 sink finish:',M=>checkLidAndSinks(M,true));
   let offsetFailed=false;
   try {checkFloorOffset(fs.readFileSync(new URL('../sq.mjs',import.meta.url),'utf8').replace('gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 2);',''));}
   catch(error) {assert.ok(error.message.includes('C5 floor offset:'),error.message);offsetFailed=true;}
   assert.ok(offsetFailed,'C5 no floor offset: MISSED');out.push('C5 no floor offset: failed at C5 floor offset:');
+  await control('C3 one command short',s=>s.replace('if (finished) {full();','if (finished) {full(); delete marks.marker0;'),'C3 release exactness:',checkCutouts);
+  await control('C3 one action early',s=>s.replace('const full = () =>', "if(source==='kMap')marks.badge=true; const full = () =>"),'C3 early mark:',checkCutouts);
+  let alphaFailed=false;try {checkBuildingMode(fs.readFileSync(new URL('../sq.mjs',import.meta.url),'utf8').replace('gl.uniform1f(u.uArtMode,1);gl.uniform4f','gl.uniform1f(u.uArtMode,2);gl.uniform4f'));}catch(e){assert.ok(e.message.includes('C3 alpha-tested building:'),e.message);alphaFailed=true;}assert.ok(alphaFailed,'C3 alpha-tested type MISSED');out.push('C3 alpha-tested typed letters: failed at C3 alpha-tested building:');
+  await control('C3 shared texture',s=>s.replace("id:use.id,source,plan", "id:'shared',source,plan"),'C3 shared building texture',async M=>{
+    const P=at(M,'ai',action(M,'ai','cityLabels').end+.002),groups=new Map();
+    for(const pc of P.filter(p=>p.building)){const g=groups.get(pc.building.id)||new Set();g.add(pc.building.source);groups.set(pc.building.id,g);}
+    assert.ok([...groups.values()].every(g=>g.size===1),'C3 shared building texture');
+  });
+  let packingFailed=false;try {const atlas=prepareRound17Art();checkAtlasPacking({...atlas,pages:atlas.pages.map((p,i)=>i===1?{...p,height:1704}:p)});}catch(e){assert.ok(e.message.includes('C3 atlas packing:'),e.message);packingFailed=true;}assert.ok(packingFailed,'C3 repadded page MISSED');out.push('C3 page 1 1704: failed at C3 atlas packing:');
+  await control('C7 0.0001 gap',s=>s.replace('const reading = floor.slice(18), spine = -0.1;', 'const reading = floor.slice(18), spine = -0.1; for(const pc of reading)if(pc.p[0]>=spine)pc.p[0]+=.0001;'),'C7 spine gap',checkSpine);
   return out.join('\n');
 }
 

@@ -61,7 +61,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
       isId ? byId.pickup.start : spans.off[0] - (scene.key === 'fig' ? 0.4 * PACE : 0);
     const seenLabels = new Map(), vanishedFrames = new Set();
     if (isId) for (const [id, profile, style, crop] of [['photo', 'cover', 'coverPhoto', [380 / 1100, 0, 720 / 1100, 1]], ['postPhoto', 'post', 'postPhoto', [0, 0, 1, 1]], ['mailPhoto', 'mail', 'mailPhoto', [300 / 800, 168 / 1180, 456 / 800, 470 / 1180]]]) {
-      const a = byId[id], before = frameAt(start + a.end - 1e-7 * PACE).find(pc => pc.photoProfile === profile), after = frameAt(start + a.end + 1e-7 * PACE).find(pc => pc.art === style && !pc.echo);
+      const a = byId[id], before = frameAt(start + a.end - 1e-7 * PACE).find(pc => pc.photoProfile === profile), after = frameAt(start + a.end + 1e-7 * PACE).find(pc => (pc.art === style || pc.building?.source === {coverPhoto:'kCover',postPhoto:'kPost',mailPhoto:'eblast'}[style]) && !pc.echo);
       if (!before || !after) { fail(start + a.end, 'photo registration: missing carried or styled photograph'); continue; }
       const point = (pc, u, v) => { const r = rect(pc), window = pc.window || [0, 0, 1, 1]; return [r[0] + (u - window[0]) / (window[2] - window[0]) * (r[2] - r[0]), r[3] - (v - window[1]) / (window[3] - window[1]) * (r[3] - r[1]), pc.p[2] + pc.s[2]]; };
       for (const [u, v] of [[0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7]]) {
