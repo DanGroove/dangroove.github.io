@@ -12,9 +12,11 @@ This brief is for the builder. Dan, 21 November, 9:33 to 9:42 AM ET, left eleven
 | R6 | 32.94 s (InDesign +11.75) | 82 % across, 34 % down | "The ball should come out of the top of the export button and have momentum up then down" |
 | R7 | 33.93 s (InDesign +12.74) | 46 % across, 70 % down | "There is too big of a pause between the ball landing and then morphing" |
 | R8 | 43.00 s (InDesign +21.81) | 38 % across, 76 % down | "sinking into the floor is too fast" |
-| R9 | 77.72 s (After Effects +15.26) | 49 % across, 74 % down | "The screens sink after the first loop" |
+| R9 | 77.72 s (After Effects +15.26) | 49 % across, 74 % down | "The screens sink after the first loop", then, in the thread: "That's not what I was saying about after effects", "They sink like a pixel or two" |
 | R10 | 93.82 s (Figma +13.92) | 30 % across, 70 % down | "Please make the top of the laptop flush with the bottom half" |
 | R11 | 97.34 s (Figma +17.44) | 36 % across, 70 % down | "Close the laptop before making it sink, make sure the sink is still on time with the others. the laptop shouldnt be closing while the others already sank" |
+
+**Changed at 10:16 AM ET, after the first build was sent:** R9 was misread. Dan: "That's not what I was saying about after effects", then "They sink like a pixel or two". Revert the first build's R9 (After Effects sinking after one play); the R9 below replaces it.
 
 Everything in `CORRECTIONS-2.md` to `CORRECTIONS-16.md` still holds unless it is changed here. The motion stays hard-edged: no fades and no blur. Nothing here touches anything outside `design/journey-hero/take-2/`.
 
@@ -105,12 +107,19 @@ This applies to all four scenes that export to the floor.
 
 `sink` goes from 0.5 s to 1.0 s, with the same curve, in all four scenes, InDesign's `return` included.
 
-## R9. After Effects' screens sink after one play
+## R9. The exported screens never move while they play
 
-Today After Effects' three screens play its motion twice (two 1.6 s cycles from `land`), then sink. At the wrap (77.80 s) the motion restarts from its empty first frame, so for a moment the screens go blank.
+Measured on version 27 at 1474 x 996:
+- After Effects' two phones rise 1 px while the motion builds (76.6 to 77.0 s), then drop 1 px when it restarts at 77.796 s.
+- Premiere Pro's phones rise 2 px and drop at its restart, 60.363 s.
+- The tablet does not move.
 
-- In After Effects only, the sink starts when the first cycle ends (`land + 1.6`). The screens hold that cycle's last frame through the sink, as all plays do now. The scene gets 1.6 s shorter.
-- Premiere Pro keeps its two plays: its video restarts with a cut, which reads as a video looping.
+The cause: `floorPainter()` (line 459) puts every layer at `stacks.floor + LAYER_STEP`, and `stacks` (line 446) is shared by every painter in the frame. The phones are painted after the tablet, so their faces start above however many layers the tablet has drawn. They move whenever that count changes.
+
+- Each device's layers start from that device's own base height. A layer's height depends only on its own device and its place in that device's stack, never on what another device shows.
+- Through every play and every restart (Premiere Pro, After Effects, Figma), each device's body and the faces of its screen keep their projected corners within 0.1 px. Only the content meant to move moves.
+- After Effects keeps its two plays, with the sink at `land + 3.2` as before. Revert the first build's R9.
+- `screenPainter()` shares `stacks.screen` the same way, which may be one cause of rule G's 1 px map shifts. Fix it there too, keeping pictures that overlap on the screen in their drawing order.
 
 ## R10. The laptop's lid sits flush on its deck
 
@@ -137,9 +146,9 @@ Today the sink moves every piece down by one depth: the tallest top (the open li
 BALL = { pop: 0.3, arc: 0.8, rest: 0, split: 0.6, hold: 0.15, become: 0.6, stagger: 0.1, lid: 0.4, sink: 1.0 }
 ```
 
-- After Effects' sink starts at `land + 1.6`. Premiere Pro's stays at `land + 3.2`.
+- Premiere Pro's and After Effects' sinks start at `land + 3.2`, as before (R9's first reading is reverted).
 - Figma: `land + 3.0`, then the lid closes over `lid`, then the sink.
-- Report the new loop length and every scene's start. Expect about 97.9 s. The checks' ceiling stays 100 s.
+- Report the new loop length and every scene's start. Expect about 99.5 s. The checks' ceiling stays 100 s.
 
 ## Checks
 
@@ -158,11 +167,12 @@ BALL = { pop: 0.3, arc: 0.8, rest: 0, split: 0.6, hold: 0.15, become: 0.6, stagg
   - while emerging, nothing of the ball shows below the plane of the button's top side or behind the screen's face;
   - it rests on the floor (1e-6) at the footprint's centre.
 - **R7:** the split starts on the touchdown frame, and the pieces' footprint moves on its first 0.01 s step.
-- **R8, R9, R11:**
-  - every sink lasts 1.0 s, and After Effects' sink starts at `land + 1.6`;
+- **R8, R11:**
+  - every sink lasts 1.0 s, and Premiere Pro's and After Effects' sinks start at `land + 3.2`;
   - every export's pieces are all above the floor at the sink's start and all below it at its end;
   - no export piece of a scene is gone more than 0.01 s before the others;
   - Figma's lid is shut (within 1e-6) before its sink starts.
+- **R9:** at 0.01 s steps through every play on the floor, and 0.001 s either side of every restart, each device's body and the faces of its screen keep their projected corners within 0.1 px, and each face's height depends only on its own device's stack.
 - **R10:** when shut, the lid's footprint equals the deck's within 0.001, with no gap between them, and no key or trackpad face above the deck's top. The laptop's red block equals the shut laptop.
 
 **Negative controls**, each of which must make its check fail:
@@ -174,7 +184,8 @@ BALL = { pop: 0.3, arc: 0.8, rest: 0, split: 0.6, hold: 0.15, become: 0.6, stagg
 - put an ease between the pop and the arc;
 - set `rest` back to 0.15;
 - give the lid its 0.03 lift back;
-- sink every piece by one depth again.
+- sink every piece by one depth again;
+- share one floor stack across the devices again.
 
 Keep every other check clean; update earlier checks only where a number changed here, and say which. `node design/journey-hero/take-2/tools/checks.mjs` must print all clean.
 
