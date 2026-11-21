@@ -213,7 +213,7 @@ Checks, at 0.01 s steps in all four sinks:
 
 Negative controls, each of which must fail: the carried layers without their clip; the reading copy grouped with the stack again; heights from the tallest piece instead of the body's top.
 
-How it will be judged: browser frames at every 1/60 s over the last 0.4 s of each sink, at 1474 x 996, dpr 1 and dpr 2. After the frame in which an object's body is last drawn, no pixel in that object's footprint differs from the empty floor by more than 8 levels (the cursor, the big app screen above and the labels excluded).
+How it will be judged: browser frames at every 1/60 s over each whole sink (corrected in critique round 2: the window first written here, the last 0.4 s, began after the thin devices' crossings), at 1474 x 996, dpr 1 and dpr 2. After the frame in which an object's body is last drawn, no pixel in that object's footprint differs from the empty floor by more than 8 levels (the cursor, the big app screen above and the labels excluded).
 
 ### C3. Illustrator's badge release changes nothing but the cursor and the rail
 
@@ -235,6 +235,86 @@ These were found and will be put to Dan separately. Do not change them: the brow
 ### Records for C1 to C3
 
 BUILD.md: add a "Round 17, critique round 1" part: each correction with its numbers, the checks and controls added, and every earlier check changed with its old and new number.
+
+## Critique round 2: C3 again, C4 to C6
+
+Build these on top of `dcb8094` and keep everything else, C1 and C2 included. Both critics re-reviewed `dcb8094` in a real browser. C1 passes: no star, no step at the rims, the island and the tablet camera right, R9's faces still. C2 passes as judged: every object of a scene is last drawn in the same frame (InDesign 43.415, Premiere Pro 62.581, After Effects 80.363, Figma 99.024). C3 does not hold, and the re-review found two smaller defects in the sinks. Change nothing else: no time, size, place, picture or colour that these corrections do not name.
+
+### C3 again. Cut-outs instead of padded crops, so a release changes nothing
+
+What shows: at the badge's release (14.080 against 14.084 s), outside the cursor and the rail, about 1,737 to 2,208 pixels still change by more than 8 levels at 1474 x 996, dpr 1 (up to 80 levels), and about 880 to 1,001 at dpr 2 (up to 49). The markers' and bars' soft edges still appear in one frame. And the stills after a release are not the finished picture, because the crops are still drawn over it: at 18.881 s the upper map differs from a plain render of `kMap` by 2,527 pixels over 8 levels.
+
+Cause: the atlas is sampled with mipmaps (`LINEAR_MIPMAP_LINEAR`, levels 0 to 3, 4x anisotropy; `sq.mjs` lines 328 to 335). So a shape's soft edge on screen spreads over about 1.5 x 2^L atlas texels, L being the mip level the picture is drawn at: about 6 texels at 1474 x 996 dpr 1, about 3 at dpr 2, and 12 or more at 390 x 664. C3's pads are 1 to 2.5 texels. Neighbouring marks are about 7 texels apart, so no pad is wide enough at every size without showing a neighbour's edge before that neighbour is placed. A hard mask has the same limit.
+
+Correction:
+- Replace every crop that C3 padded (BUILD.md's inventory, 157 regions: on the upper map the 48 markers, 48 bars, the north sign and the badge; on the lower map the 21 blocks and the 22 pins, the building among them; in InDesign the cover, post and mail blobs and the mail button; in Figma the hero box, the two headings and the nine detail regions) by a cut-out: a picture of that one mark alone on a transparent ground.
+- Paint each cut-out with the finished picture's own drawing code: the paint commands that the finished picture adds to its base (C3's Node proof already records them), replayed in their original order on a transparent canvas. No new artwork, no redrawn shape.
+- Each mark that is placed on its own has its own cut-out picture. Each cut-out picture keeps a transparent margin of at least 24 atlas texels around its mark, and its drawn quad covers that margin (clipped to the base picture's outer edges), so the mark's whole filtered edge is drawn at every size. In the atlas, keep a transparent gutter of at least 24 texels around every cut-out picture, so that no texel of another picture reaches its samples at mip level 3 (the coarsest level the atlas samples, `TEXTURE_MAX_LEVEL` 3), with the bilinear neighbour and the anisotropic spread.
+- Blend the cut-outs, never alpha-test them: premultiplied colour, blended `ONE, ONE_MINUS_SRC_ALPHA` over what is drawn beneath, lit as today's crops are. Never `cut: true`: that would bring back the hard edges F3 removed. This needs a blended pass in `sq.mjs`: pieces marked for it are drawn after the solid, cut and outline passes and before the floor, in the finished picture's paint order, with depth testing on and depth writes off. Only their picture face is drawn; they cast no shadow and get no outline, as today's crops.
+- Reveals do not change: each mark appears at its own time and place, the bars rise in their eight steps, the badge and the block grow from the drag's corner, and the typing and the wipes are as today. Only what is drawn changes, not when or where.
+- In the release frame itself, the finished picture alone replaces the base and all its cut-outs: Illustrator's upper map at 14.082 and lower map at 16.806, and InDesign's and Figma's pictures at their own releases (list them in BUILD.md). From then on no cut-out of that picture is drawn.
+- F3's typed letters stay as they are, unless the pixel gate below shows them changing at a release. Then list where, and give them the same treatment.
+- If `sq.mjs` cannot be given a blended pass, stop and report. Do not fall back to wider padding.
+
+Checks:
+- Node, an exactness proof on the recorded paint commands, in place of C3's coverage proof. For every picture: the finished picture's commands are its base's commands plus every cut-out's commands, each in its original order; each cut-out holds only its own mark's commands, and none is missing or repeated; every one of them paints source-over, so the composite equals the finished picture up to rounding. List any exception (a base command painted after a mark that it overlaps, a composite mode other than source-over, a clip shared by two marks) with its count; there should be none. Also: every cut-out's margin and atlas gutter are at least 24 texels; no cut-out of a picture is drawn at or after its release; the release frame draws the finished picture alone.
+- Browser, in the new pixel gate (below): at every rule G release (Photoshop 2.296 and 2.991; Illustrator 14.082, 14.528 and 16.806; InDesign 22.667, 25.233, 27.066, 29.779 and 32.350; and each picture release that C3 found in Figma), compare the frame 0.002 s before the release with the frame 0.002 s after it, with the cursor's projected box grown by 4 px, the caret and the tool rail masked. Sizes: 1474 x 996 at dpr 1 and dpr 2, and 390 x 844 at dpr 2. No pixel may differ by more than 8 levels; at 390 x 844 only, at most 0.5 % of the changed picture's pixels may, each one counted and recorded.
+
+Negative controls: the Node proof fails with one marker's cut-out removed. C3's control "old tight regions" goes: it tested only the coverage proof, which passed a release that changes on screen. The coordinator runs the pixel gate on `dcb8094`'s packed preview, where it must fail at 14.082.
+
+How it will be judged: frames at every release above; in Illustrator's marker, label, title and badge builds (11.728 to 14.082 s, every 1/60 s), no mark shows before it is placed, and each placement changes pixels only around its own mark, apart from the cursor and the caret; the stills with a finished picture (18.881 among them) match a plain render of the finished picture within 8 levels.
+
+### C4. The reading copy's two halves sink by their own heights
+
+What shows: in InDesign's sink (42.782 to 43.782 s), the open reading copy's right half (the "Main Lobby" page) is under the floor at 43.037 s, +0.255 s, while its left half, the stack, the phone and the tablet stay until 43.420 s, +0.638 s.
+
+Cause: C2 sinks the reading copy as one object by its own top, which is the top of its taller left half (0.040). The right half is 0.010 tall, so it crosses once the copy has sunk 0.010.
+
+Correction:
+- In the sink, the reading copy is two objects, its left half and its right half, split at the spine (about x = -0.1). Every piece of the copy belongs to one half; report any piece that spans both.
+- Each half sinks by its own top with InDesign's shared factor: the left half 0.040 x 1.08 = 0.0432, the right half 0.010 x 1.08 = 0.0108. Both cross the floor with the others at +0.638 s. InDesign then has five objects.
+- Nothing else about the copy changes: x and z stay fixed, the floor clip stays, and the halves do not part (the step at the spine just shrinks with their heights).
+
+Checks: C2's checks with five InDesign objects, every one last drawn within 0.01 s of the others. Negative control: the two halves grouped as one object again must fail.
+
+How it will be judged: every 1/60 s frame of the whole InDesign sink at 1474 x 996, dpr 1 and dpr 2: the right half is still drawn at 43.400 s and last drawn in the same frame as the rest, and no floor shows between the halves at the spine before then.
+
+### C5. Nothing breaks up in the frame before it goes under
+
+What shows: in the frame just before a crossing, dark patches on the objects' tops: an X across Figma's shut lid at 99.025 s, dark wedges on InDesign's pages at 43.410 and 43.415 s. It is older than round 17, but C2 puts every object's crossing in the same frame, and after C4 the 0.010 right half would stay in the band where it happens for about 54 ms, three frames, on every loop.
+
+Cause: depth precision. `sq.mjs` tests depth with `LEQUAL` (line 408) and draws the floor after the pieces (lines 486 to 495). When a top face is within about 0.0002 world of y = 0, the floor wins in patches that follow the face's mesh lines: the lid is clean at 99.024 s with its top 0.00024 above the floor, and broken at 99.025 s.
+
+Correction:
+- Draw the floor with a depth offset away from the viewer: `POLYGON_OFFSET_FILL` with a factor of at least 1 and at least 2 units, on for the floor's draw only and off again after it. Nothing that lies on or above the floor then loses to it.
+- Every sinking piece is already clipped at y >= 0 and culled once its body's top is under the floor, so every crossing stays as it is (+0.638, +0.419, +0.419, +0.535 s) and C2's numbers do not change. If anything passes through the floor without the floor's clip, give it the clip, so the offset cannot show what lies just under the floor.
+- Do not hide objects early by a distance from the floor. Each top falls as H x (1 - k g), so thin objects reach any fixed distance sooner: a 0.002 margin would hide the right half about 0.2 s before the stack, and break "together".
+- Everything that lies on the floor on purpose (the shadows, the light pool, the mat, the floor dots, the red blocks, the landed ball) must look as it does now.
+
+Checks: Node, through C2's WebGL recorder: the floor's draw call is made with the polygon offset on and positive, and the state is restored after it. Browser, in the pixel gate: in each sink, sampled every 1 ms from 0.1 s before the scene's crossing to 0.02 s after it, at 1474 x 996, dpr 1 and dpr 2: within the sinking objects' projected footprint, the count of pixels that differ from the empty floor (the frame at the sink's end) by more than 8 levels never falls by more than 5 % from one sample to the next before the crossing, and is 0 after it. Negative control: the Node gate fails without the offset. The coordinator runs the pixel gate on `dcb8094`, which must fail it.
+
+How it will be judged: the same 1 ms frames; and nothing else changes: the six stills, one rest frame in each floor scene (after its landings, before its sink) and one frame in each sink's first 0.3 s match `dcb8094` within 8 levels, apart from the pictures C3 changes, which match a plain render of their finished pictures.
+
+### C6. The sink's control tests behaviour
+
+C2's control "carried layers without their clip" now fails only at a structural assertion, because the whole-object cull already ends the carried layers. Replace it with a control that removes both the cull and the clip. It must fail at the behaviour gate "C2 carried lifetime: drawn after body".
+
+### The pixel gate
+
+Put C3's and C5's browser gates in a new file, `tools/round17-pixel-checks.mjs`. Playwright is not installed on the PC, so it cannot run there; the coordinator runs it in the cloud. Write it so that it runs there without changes:
+- Export `checkRound17Pixels(chromium, previewPath)`: it runs every gate on the packed preview at `previewPath` with the given Playwright browser type, and returns its rows and its failures. Add a command line, `node design/journey-hero/take-2/tools/round17-pixel-checks.mjs [packed preview]`: it finds Playwright the way `runBrowserCheck()` does (prints UNAVAILABLE and exits 2 when it is missing), packs this build's preview with `previewMarkup()` when no path is given, prints one line per gate with its numbers, and exits 1 on any failure.
+- Launch Chromium with `GL` from `tools/sheet.mjs`, as `film.mjs` does. Use one context per size and dpr (`viewport` and `deviceScaleFactor`), with service workers blocked and every request other than file, data and blob aborted, as `runBrowserCheck()` does. Wait for `window.__ready` and `document.fonts.ready` before the first frame.
+- Seek with `window.__hero.seek(t)`, take `page.screenshot` clipped to what the gate compares (as `film.mjs` does), and decode the PNG with Node's zlib as `tools/measure.mjs` does. No new dependencies.
+- Find the cursor's, the caret's and the tool rail's boxes and the sinking objects' footprints from `__hero.pieces` and `__hero.view` with `visibleProjection`, as `checkBrowser()` projects the laptop, and convert them to the screenshot's device pixels.
+- Test its decoding, masking and counting in Node on small synthetic images, since it cannot be run on the PC.
+
+### Not in this run, still
+
+Unchanged from round 1's list: the browser check's H6 and H5 (failing since `d251dce`), how long the sink stays in view, the STORY ring over the story's call to act, the ball over the Export button's red end as it pops, and the laptop lid's pictures on its flat glass.
+
+### Records for C3 to C6
+
+BUILD.md: add a "Round 17, critique round 2" part: C3's cut-outs (how many for each picture, their atlas pages and gutters, the blended pass, the release frames), C4's halves (their pieces, heights, depths and crossings), C5's offset, the checks and controls added or changed, every earlier check changed with its old and new number, and how to run the pixel gate.
 
 ## G. The swap rule (R2, R3, R5 and their kin)
 
