@@ -1335,3 +1335,57 @@ Dan, 21 November, 6:31–6:44 AM ET, four comments on the preview at 1474 x 996:
 - **InDesign's waits** keep their ids `drop` and `return`; they now hold the ball and the sink.
 - **N2's flattening** also covers Photoshop's and Illustrator's dock travels, which go through `travel()`.
 - **Known standalone misses** in `tools/controls.mjs` are the ones round 12 recorded (D1/I1/X1 above): R1 premature photo row and R2 premature page row (exit 1, stopped first by R5's `echo precedes source action`; re-run on a `git archive` copy of `6874791` here, they miss the same way), R10 A4 undone (exit 0: the distance rule lengthens `spreadType` to 0.476 s whatever its authored length) and page text boundary fit undone (exit 0). Not changed by this round.
+
+## CORRECTIONS-16
+
+Dan, 21 November, 7:42–8:06 AM ET: the extra stars after the logo should make "a spinning ring that is consistent around it", "visually centered, not just mathematically", keeping "the randomnness of it before" and going all the way round, thicker ("maybe just needs more stars?"); and "the stars vibrate a bit when held for a certain amount". `CORRECTIONS-16.md` (R1–R5, as amended at 8:00 and 8:06) controls this round; rounds 2–15 are kept except where it changes them. Files changed: `stars.mjs`, the new `tools/round16-checks.mjs`, `tools/checks.mjs` (runs it), `tools/round9-checks.mjs` and `tools/round12-stars-list-checks.mjs` (see below), this file and README. `public/` and everything outside the star field are untouched.
+
+### R1: the ring is centred on the mark's weight (`stars.mjs`)
+
+- `placeMark` also returns `weight` (the mean of the placed points, px from the box centre) and `ring: { centre: weight, radius, band }`: `radius`, the band's inner edge, is the farthest point from the weight plus `STARS.mark.ringGap` (0.095) × the mark's height; `band` is `STARS.mark.ringBand` (0.10) × the height, outward. `ringRadius(i, mark) = radius + hash(i, 6) × band` (today's hash channel). `STARS.mark.ring: [8, 22]` is gone.
+- At 1474 × 996: the mark is 199.2 px tall; the weight is (−16.50, +1.09) px from the box centre; the smallest circle round the outline is centred at (−18.4, 0.0), 2.18 px away (the brief says "within 2 px"; its own figures give 2.1 px). The band runs 153.5 + 18.9 = 172.5 to 192.4 px. Clearance from the band to the D's top and bottom corners is 17.0–36.9 and 18.4–38.3 px, to the G's right edge 21.0–41.0 px.
+
+### R2: scattered, all the way round, turning as one
+
+- **The turning frame.** Each hold has a ring `{ order, phase }`; the phase advances by `STARS.hold.turn × dt` every frame of the hold (today's quarter turn a second, clockwise on screen). A ring star keeps ψ (its angle round the ring centre less the phase), its velocity, its own radius and its own `jitter = 0.7 × (hash(i, 7) − 0.5)`.
+- **A join** (`join()`, called from `assign`'s rest): each joiner starts from rest in the turning frame at the angle and distance it was captured at; joiners go into the members' cyclic order by ψ (the members' own order is never re-sorted); star k's target is δ + (k + 0.5 + jitter_k) × 2π/N with δ the circular mean of ψ_k − (k + 0.5 + jitter_k) × 2π/N.
+- **Following.** `turnRing()`: each ring star's radius and ψ follow their targets with `follow` (τ 0.2 s); the star is placed at the ring centre (the mark's centre plus the weight) + ρ (cos(ψ + phase), sin(ψ + phase)).
+- **No passing.** Two things the brief's words alone did not guarantee:
+  - *Unwrapping.* Unwrapping each target separately to the nearest equivalent of its own ψ sent neighbours the opposite ways round when the young ring was bunched on one side (a sweep captures from its leading edge), so one star then passed all the others. Instead each ψ is first rewritten by whole turns (which moves nothing) as one rising run round the order, and all targets are unwrapped together by one whole number of turns, the one nearest the stars' ψ. Since the run of ψ and the run of slots both rise, every star moves part way from one ordered run to the other.
+  - *Carried velocity.* A join retargets members that are still moving; their carried velocities could still close a pair of neighbours past each other while the ring spreads. A guard after each follow: if a pair would close to under half of the smaller of its gap and a tenth of a slot in one frame, both are set to that gap and share their mean speed. Settled neighbours are at least 0.3 slots apart, so it never acts on a settled ring.
+- **State.** `markState().ring` is now `{ centre, radius, phase, count }` (it was the ring's count) and `markState().charge` the tremble's amplitude; `__hero.stars.mark` carries both.
+
+### R3: the ring stays on the screen
+
+- `markCentre` clamps the mark's centre so the mark and the whole band (its circle out to `radius + band`, where the farthest ring stars sit) stay 16 px inside the hero; on an axis where that band cannot fit, the old mark-only clamp; where the mark cannot fit, the middle. It applies from the press, so a still hold's centre never moves.
+- **Reading.** The brief says "the whole ring circle"; with the band it is read as the outer edge, so no ring star leaves the screen. Near an edge the mark now forms further in than the brief's "about 45 px": at 1474 × 996 by 41 (right), 74 (left), 92–94 (top, bottom) and up to 120 px (corners), because the band reaches 192 px from a centre 16.5 px left of the box centre and the vertical clamp used only the mark's 99.6 px half-height before.
+
+### R4: the held stars tremble
+
+- `STARS.charge = { start: 1.5, ramp: 2, amp: 1.5, hz: [10, 16] }`. The amplitude `chargeAmp(held, formedAt + start) = amp × smooth((held − t0) / ramp)` (0 before; without a mark t0 = `hold.full + start`). Each star's offset is `a × [sin(2π f_x t + φ_x), sin(2π f_y t + φ_y)]`, t the time held, f from `hash(i, 9|10)` in 10–16 Hz, φ from `hash(i, 11|12)` (`trembleHz`, `tremblePhase`, `tremble`).
+- It rides on top: every captured star's offset is computed as before into `base` (a Float64Array, exported for the checks) and the tremble is added only to what is shown; nothing reads it back. The blast rebases from the shown offset, so the release starts where the star is drawn; after it, `charge` is 0.
+
+### R5: the hold keeps gathering
+
+- `hold.extra = max(0, held − 2.5) × 104` for the whole hold (round 12 froze it at the formation), so the radius is `min(diagonal, captureRadius(held) + extra)` throughout. New captures take free points first, then the ring. The blast still uses `captureRadius` (2.5 s cap).
+
+### Checks and evidence
+
+- `tools/round16-checks.mjs` (run by `checks.mjs`; `--controls` alone):
+  - R1 at 1474 × 996, 1440 × 900, 1280 × 800, 1024 × 640 and 390 × 844: the weight, the inner edge and the depth (1e-9), the ring's centre in the hold (1e-9); at 1474 × 996 the weight's x in −18…−15, the three clearances within 5 px of each other (17.0, 18.4, 21.0), the smallest outline circle 2.18 px from the weight (held to 2.5 px, see R1).
+  - R2, 1440 × 900, every frame: the phase exactly `turn × dt`; the order by ψ (forward gaps round the order sum to one turn) and the members' cyclic order; on each join every member's target move; settled stars' spin within 1 % (12,903 star-frames, worst 0.07 %). A full mark held at [700, 450] to 2.6 s, then swept at 150 px/s to 350 and on to 1100: 600 ring stars, the last join at 7.2 s; round 9's 40-point mark held still: 1,160 ring stars. 2.0 s after the last join every star is within 0.32 px of its own radius, radii in the band spanning 99.7 %, within 8e-5 rad of its target, neighbours' gaps equal one slot plus their jitters (3e-5 rad), gaps 0.31–1.66 slots.
+  - R3: still holds at the four edges and four corners of 1474 × 996, 1280 × 800 and 1024 × 640 until the ring has stars (R5 fills it): every mark point and the band's outer circle 16 px inside in every frame, the centre unchanged in every frame; the two fallbacks on a made-up mark.
+  - R4 at 1474 × 996, a hold at (820, 470) against the same hold with `amp: 0`: the amplitude on the ramp (1e-9), never over 1.5, 1.5 from +3.5 s; `base` identical every frame, offsets identical before +1.5 s, arrival, mark weights and ring identical; every captured star shown at base + its own tremble (4e-5 px, float32); 100 stars' frequencies in 10–16 Hz, x ≠ y, no two the same; the blast starts at the shown offset (0 px) and nothing trembles after.
+  - R5 at 1474 × 996, a still hold at [700, 450]: the radius formula in all 480 frames (138 before the formation at 2.317 s, 342 after); the mark completes (600 of 600 arrived by 5 s); ring 116, 370, 566 and 759 stars at 4, 5, 6 and 8 s (of 1,359).
+  - Ten negative controls, each one exact site in memory, each caught at its gate: growth frozen at the formation (R5 radius), a tremble from the press and a tremble past amp (R4 amplitude), the box centre for the ring (R1 centre), one radius for every ring star (R2 band), a 14 px band (R1 band), no jitter (R2 jitter), ring stars kept at their capture angles (R2 gaps), a join ordered by star index (R2 order), the old mark-only clamp (R3 inside).
+- **Departures from the brief's checks**, each forced by the brief's own mechanism:
+  - *Settling at 2.0 s, not 1.5 s.* A critically damped follow with τ 0.2 s leaves (1 + 7.5) e^−7.5 = 0.47 % of the distance at 1.5 s, and with R5 the last joiners are caught at the edge of a radius of 600–900 px, 400–700 px off the band: they are still 2.9–3.0 px off their radius at 1.5 s (0.31–0.32 px at 2.0 s). Angles and gaps already pass at 1.5 s (reported). τ was not changed.
+  - *Target moves on a join.* When m stars join in the same frame on one side of the ring, even spacing forces members to shift by about m/2 slots whatever δ is. The check allows 1.5 × max(1, m/2) slots; a lone joiner moved a member at most 0.60 slots (0.51 in the 40-point run), a batch at most 1.12 × m/2.
+- **Existing checks changed.**
+  - `round9-checks.mjs`, formation: the expected centre uses R3's clamp (mark and band). Overflow: measured from the ring centre against the farthest point from it (the brief's change); with R5 the hold now runs to 1.5 s after the last capture (about 7 s, as round 9's 4 s was 1.5 s after 2.5 s), and `markState().ring.count` replaces the old count.
+  - `round12-stars-list-checks.mjs`, S1 radius: after the formation the radius goes on at 104 px/s to the diagonal (R5) instead of staying still, and the middle's radius is round 8's curve plus 104 px/s past 2.5 s.
+  - Rounds 8 and 10 and every other check pass unchanged (the tremble starts after their holds end).
+
+### The merge
+
+Round 16 was built on `8a35171` in a separate copy while round 15 was building in this tree, then merged after round 15 and Dan's welcome (`d251dce`): the code applied cleanly, and README and this file were joined by hand (round 15's section first). In the merged tree `node design/journey-hero/take-2/tools/checks.mjs` prints `all clean` (`.scratch/r16/checks-merged.txt`, 2 min 46 s): 6474 frames, 445690 pieces (max 183), loop **97.691 s**, every round 15 and round 16 line and negative control as above. The builder's browser film ran on the copy (`.scratch/review-out/r16/` there): the circle fitted to the 759 ring stars of the settled still is 0.35 px from the weight centre and 16.9 px from the box centre. A before and after of one gesture (press right of the stage's middle, a 200 px circle for 6 s from the formation, then 4 s still) on today's star code and on this round's is `.scratch/r16/ring-{before,after}.png`.

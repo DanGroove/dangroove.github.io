@@ -57,13 +57,14 @@ export async function checkThreshold(source = read('stars.mjs')) {
   return out;
 }
 
-// ---- the radius: 80 to 340 px over 2.5 s as before; then, short of 300, on at 104 px a second until 300 are caught; then
-// still. At the middle the formation starts before 2.5 s and the radius keeps round 8's curve.
+// ---- the radius: 80 to 340 px over 2.5 s as before; then, short of 300, on at 104 px a second until 300 are caught; round
+// 16 (R5): and on at that rate past the formation, up to the diagonal (round 12 held it still from the formation). At the
+// middle the formation starts before 2.5 s and the radius keeps round 8's curve to 2.5 s.
 export async function checkRadius(source = read('stars.mjs')) {
   const M = await load('stars.mjs', source), out = {};
   assert.ok(Math.abs(M.growthRate() - 104) < 1e-9, 'S1 radius: the growth rate is not 104 px a second');
   for (const [name, P] of [['top left', [3, 3]], ['top right', [W - 3, 3]], ['bottom left', [3, H - 3]], ['bottom right', [W - 3, H - 3]]]) {
-    const F = await fieldFor(M), { hold, frames } = run(F, P, 8);
+    const F = await fieldFor(M), { hold, frames } = run(F, P, 8), diagonal = Math.hypot(W, H);
     const start = hold.formedAt;
     assert.ok(start !== null && start > 2.5, `S1 radius: the corner hold formed at ${start} s (${name})`);
     let still = null;
@@ -73,17 +74,19 @@ export async function checkRadius(source = read('stars.mjs')) {
         assert.ok(Math.abs(f.radius - (340 + 104 * (f.held - 2.5))) < 1e-6, `S1 radius: ${f.radius.toFixed(2)} px at ${f.held.toFixed(3)} s is not 340 + 104 px/s (${name})`);
         if (f.held < start - 1e-9) assert.ok(f.captured < 300, `S1 radius: 300 caught before the formation (${name})`);
       } else {
+        // Round 16 (R5): the growth no longer stops at the formation; it goes on at 104 px a second up to the diagonal.
         still ??= frames.find(g => Math.abs(g.held - start) < 1e-9).radius;
-        assert.equal(f.radius, still, `S1 radius: the radius moved after the formation started, at ${f.held.toFixed(3)} s (${name})`);
+        assert.ok(Math.abs(f.radius - Math.min(diagonal, 340 + 104 * (f.held - 2.5))) < 1e-6, `S1 radius: ${f.radius.toFixed(2)} px at ${f.held.toFixed(3)} s after the formation is not 340 + 104 px/s (${name})`);
       }
     }
     assert.ok(still > 340, `S1 radius: the corner radius did not grow past 340 px (${name})`);
     out[name] = { start: +start.toFixed(3), radius: +still.toFixed(1) };
   }
-  // The middle: the formation starts before 2.5 s; the radius goes on to 340 px at 2.5 s on round 8's curve and stays.
+  // The middle: the formation starts before 2.5 s; the radius goes on to 340 px at 2.5 s on round 8's curve, and (round 16,
+  // R5) then on at 104 px a second.
   const F = await fieldFor(M), { hold, frames } = run(F, [720, 450], 4);
   assert.ok(hold.formedAt < 2.5, 'S1 radius: the middle hold did not form before 2.5 s');
-  for (const f of frames) assert.ok(Math.abs(f.radius - M.captureRadius(f.held)) < 1e-9, `S1 radius: the middle radius left round 8's curve at ${f.held.toFixed(3)} s`);
+  for (const f of frames) assert.ok(Math.abs(f.radius - M.captureRadius(f.held) - 104 * Math.max(0, f.held - 2.5)) < 1e-9, `S1 radius: the middle radius left round 8's curve (plus 104 px/s past 2.5 s) at ${f.held.toFixed(3)} s`);
   // A hero too small to hold 300 stars (600 x 400 has 222): the radius reaches the diagonal and the logo forms with what it has.
   const small = await fieldFor(M, 600, 400), s = run(small, [300, 200], 10), diag = Math.hypot(600, 400);
   assert.ok(small.stars.length < 300 && s.hold.formedAt !== null && Math.abs(s.firstPoint.radius - diag) < 1e-9, 'S1 radius: a hero short of 300 stars does not form at its diagonal');
@@ -121,7 +124,7 @@ export async function checkRound12StarsList() {
   const s = await checkS1();
   const corners = Object.entries(s.radius).filter(([k]) => k !== 'small');
   return `S1 threshold: no star given a point before 300 are captured; formation starts with the 300th capture: ${s.threshold.map(t => `${t.name} ${t.at} s (${t.captured} caught, radius ${t.radius} px)`).join(', ')}.
-S1 radius: round 8's 80-340 px over 2.5 s, then 340 + 104 px/s until 300 are caught, then still: ${corners.map(([k, v]) => `${k} forms at ${v.start} s, radius ${v.radius} px`).join('; ')}; the middle keeps round 8's curve; a ${s.radius.small.stars}-star hero (600 x 400) forms at its ${s.radius.small.diagonal} px diagonal at ${s.radius.small.start} s with ${s.radius.small.captured}; the blast stays 2000/mass at the 2.5 s cap.`;
+S1 radius: round 8's 80-340 px over 2.5 s, then 340 + 104 px/s until 300 are caught and on past the formation (round 16, R5): ${corners.map(([k, v]) => `${k} forms at ${v.start} s, radius ${v.radius} px`).join('; ')}; the middle keeps round 8's curve to 2.5 s; a ${s.radius.small.stars}-star hero (600 x 400) forms at its ${s.radius.small.diagonal} px diagonal at ${s.radius.small.start} s with ${s.radius.small.captured}; the blast stays 2000/mass at the 2.5 s cap.`;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

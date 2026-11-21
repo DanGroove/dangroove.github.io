@@ -154,8 +154,11 @@ export async function checkFormation(source = read('stars.mjs')) {
         assert.equal(late.length, 0, `L1 formation: ${late.length} of ${first.size} stars assigned at the start are not within 1 px ${settle} s later (${name})`);
         at24 = { assigned: first.size, arrived: state.arrived, captured: F.cluster.size, start: +hold.formedAt.toFixed(3), settle };
       }
-      // The mark's centre is the anchor, clamped so every point stays 16 px inside the hero.
-      const C = state.centre, lo = [16 + mark.half[0], 16 + mark.half[1]], want = [0, 1].map(j => Math.min([W, H][j] - lo[j], Math.max(lo[j], hold.anchor[j])));
+      // The mark's centre is the anchor, clamped so every point stays 16 px inside the hero. Round 16 (R3): and the whole ring
+      // round the weight centre too, out to its band's outer edge (it fits on both axes at 1440 x 900; round16-checks.mjs
+      // checks the fallbacks).
+      const C = state.centre, r = mark.ring.radius + mark.ring.band, w = mark.weight, lo = [0, 1].map(j => Math.max(16 + mark.half[j], 16 + r - w[j])), hi = [0, 1].map(j => Math.min([W, H][j] - 16 - mark.half[j], [W, H][j] - 16 - r - w[j]));
+      const want = [0, 1].map(j => Math.min(hi[j], Math.max(lo[j], hold.anchor[j])));
       assert.ok(Math.hypot(C[0] - want[0], C[1] - want[1]) < 1e-9, `L1 formation: the mark is not centred on the (clamped) anchor (${name})`);
       for (const p of mark.points) assert.ok(C[0] + p.x >= 16 - 1e-9 && C[0] + p.x <= W - 16 + 1e-9 && C[1] + p.y >= 16 - 1e-9 && C[1] + p.y <= H - 16 + 1e-9, `L1 formation: the mark leaves the hero (${name})`);
     }
@@ -210,27 +213,32 @@ export async function checkColour(source = read('stars.mjs'), rendererSource = r
   return { cuts, backs: backs[0], formed: { assigned: formed.assigned, arrived: formed.arrived } };
 }
 
-// ---- overflow: once every point is taken, further stars keep turning as a ring outside the mark.
+// ---- overflow: once every point is taken, further stars keep turning as a ring outside the mark. Round 16: measured from the
+// ring's centre (the mark's weight centre), against the farthest point from it; the ring's count is markState().ring.count.
 export async function checkOverflow(source = read('stars.mjs')) {
   const { F, mark } = await fieldWith(source, { points: 40 }), P = [700, 450], hold = F.press(...P);
-  let last = new Map();
-  while (hold.held < 4.0 - 1e-9) {
+  // Round 16 (R5): the hold keeps gathering past the formation, so the last capture comes when the radius has reached every
+  // star (about 7 s held here, not at 2.5 s); the hold runs to 1.5 s after it, as round 9's 4 s was 1.5 s after 2.5 s.
+  let last = new Map(), lastCapture = 0, size = 0;
+  while (hold.held < lastCapture + 1.5 - 1e-9 || size < F.stars.length) {
     F.gather(hold, P, DT); F.step(DT);
+    if (F.cluster.size !== size) { size = F.cluster.size; lastCapture = hold.held; }
+    assert.ok(hold.held < 20, 'L1 overflow: the hold never captured every star');
     const now = new Map();
     for (const [i, c] of F.cluster) if (c.ring) now.set(i, c.theta);
-    if (hold.held > 3.8) for (const [i, th] of now) if (last.has(i)) assert.ok(th - last.get(i) > 0.9 * Math.PI / 2 * DT, `L1 overflow: ring star ${i} does not turn`);
+    if (hold.held > lastCapture + 1.3) for (const [i, th] of now) if (last.has(i)) assert.ok(th - last.get(i) > 0.9 * Math.PI / 2 * DT, `L1 overflow: ring star ${i} does not turn`);
     last = now;
   }
-  const s = F.markState(), C = s.centre;
-  assert.ok(s.assigned === 40 && s.ring > 0 && s.ring === F.cluster.size - 40, `L1 overflow: ${s.assigned} in the mark, ${s.ring} in the ring of ${F.cluster.size}`);
-  // At 4 s held (1.5 s after the last capture) every ring star turns outside the mark's farthest point.
+  const s = F.markState(), C = s.ring.centre, far = Math.max(...mark.points.map(p => Math.hypot(p.x - mark.weight[0], p.y - mark.weight[1])));
+  assert.ok(s.assigned === 40 && s.ring.count > 0 && s.ring.count === F.cluster.size - 40, `L1 overflow: ${s.assigned} in the mark, ${s.ring.count} in the ring of ${F.cluster.size}`);
+  // 1.5 s after the last capture every ring star turns outside the mark's farthest point (from the ring centre, round 16).
   let settled = 0;
   for (const [i, c] of F.cluster) if (c.ring) {
     const [x, y] = F.position(i);
-    assert.ok(Math.hypot(x - C[0], y - C[1]) > mark.reach, `L1 overflow: ring star ${i} is inside the mark`);
+    assert.ok(Math.hypot(x - C[0], y - C[1]) > far, `L1 overflow: ring star ${i} is inside the mark`);
     settled++;
   }
-  return { captured: F.cluster.size, ring: s.ring, settled, reach: +mark.reach.toFixed(1) };
+  return { captured: F.cluster.size, ring: s.ring.count, settled, reach: +far.toFixed(1) };
 }
 
 // ---- release: a formed mark blasts with B2's impulses; every star goes home monotonically, no overshoot.

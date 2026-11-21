@@ -22,13 +22,21 @@ export const STARS = {
   // Round 9 (L1): the captured stars form the DG mark, read from the page's own SVG. height: of the hero's height; tau: the
   // formation's time constant (see BUILD.md, CORRECTIONS-9); arrive: px; size: px across once arrived.
   // Round 12 (S1): the formation starts once the hold has captured `threshold` stars (round 9 started it at 1.4 s held).
-  mark: { threshold: 300, height: 0.2, margin: 16, count: 600, tau: 0.12, arrive: 1, size: 2.6, ring: [8, 22], cells: 24000, edge: 2 },
+  // Round 16 (R1): the extra stars make a band round the mark's weight centre: its inner edge ringGap of the mark's height
+  // outside the farthest point, ringBand of the mark's height deep, outward.
+  mark: { threshold: 300, height: 0.2, margin: 16, count: 600, tau: 0.12, arrive: 1, size: 2.6, ringGap: 0.095, ringBand: 0.1, cells: 24000, edge: 2 },
+  // Round 16 (R4): every captured star trembles from start s after the formation starts (after hold.full without a mark), its
+  // amplitude rising to amp px over ramp s (smooth), at its own hashed frequencies in hz (x and y) and phases.
+  charge: { start: 1.5, ramp: 2, amp: 1.5, hz: [10, 16] },
 };
 
 // R2: the fade-in's step, landing on exactly 1 (sums of dt / 0.4 in float32 can stop just short of it).
 const fadeUp = (a, dt) => { const v = a + dt / STARS.fadeIn; return v >= 1 - 1e-5 ? 1 : v; };
 const clamp01 = x => Math.min(1, Math.max(0, x));
 const smooth = x => { x = clamp01(x); return x * x * (3 - 2 * x); };
+// Round 16 (R2): an angle brought into -pi to pi.
+const TURN = 2 * Math.PI;
+const wrapAngle = a => a - TURN * Math.round(a / TURN);
 // A fixed hash of a star's index and a channel, 0 to 1.
 export function hash(i, k = 0) {
   let h = Math.imul((i | 0) + 0x9e3779b9, 0x85ebca6b) ^ Math.imul((k | 0) + 0x7f4a7c15, 0xc2b2ae35);
@@ -62,8 +70,8 @@ export const starReach = (p, centre, W, H) => p >= 1 ? null : p <= 0 ? -1 : p * 
 // B2: the capture radius after `held` seconds, and the blast's impulse for a star of mass m.
 export const captureRadius = held => STARS.hold.base + STARS.hold.grow * Math.min(1, Math.max(0, held) / STARS.hold.full);
 // Round 12 (S1): with a mark, a hold whose radius has reached its full 2.5 s size with fewer than the threshold captured
-// keeps growing it at the same rate (104 px a second), up to the hero's diagonal; once the formation starts the extra growth
-// stops. extra is the hold's extra radius so far; it is frozen once formed. The blast still uses captureRadius (2.5 s cap).
+// keeps growing it at the same rate (104 px a second), up to the hero's diagonal; extra is the hold's extra radius so far.
+// Round 16 (R5): it no longer stops once the formation starts. The blast still uses captureRadius (2.5 s cap).
 export const growthRate = () => STARS.hold.grow / STARS.hold.full;
 export const holdRadius = (held, extra, diagonal) => Math.min(diagonal, captureRadius(held) + extra);
 export const blastImpulse = (held, m) => (STARS.hold.blast[0] + STARS.hold.blast[1] * Math.min(1, Math.max(0, held) / STARS.hold.full)) / m;
@@ -95,6 +103,10 @@ export function createField(W, H, mark = null) {
   // the front pass draws the star at.
   const fade = new Float32Array(n), mixes = new Float32Array(n), alpha = new Float32Array(n);
   let awake = false, version = 0, par = [0, 0], cluster = null, front = 0, centre = null, formed = false;
+  // Round 16 (R2): the ring of the hold: its members in cyclic order and its phase (radians turned since the press).
+  let ring = null, charge = 0;
+  // Round 16 (R4): each captured star's offset without the tremble, in float64.
+  const base = new Float64Array(n * 2);
   const diagonal = Math.hypot(W, H);
   // The largest offsets: under 40 px for stirring, under 45 % of the hero's width after a blast (a hard limit, kept just inside).
   const cap = i => (big[i] ? STARS.hold.max * W : STARS.push.max) * 0.995;
@@ -126,9 +138,9 @@ export function createField(W, H, mark = null) {
   }
 
   // B2: a hold. Stars inside the growing radius are captured and pulled into a slowly turning cluster round the pointer.
-  function press(x, y) { cluster = new Map(); formed = false; centre = null; return { anchor: [x, y], anchorV: [0, 0], held: 0, next: 0, extra: 0, radius: STARS.hold.base, formedAt: null }; }
+  function press(x, y) { cluster = new Map(); formed = false; centre = null; ring = { order: [], phase: 0 }; charge = 0; return { anchor: [x, y], anchorV: [0, 0], held: 0, next: 0, extra: 0, radius: STARS.hold.base, formedAt: null, charge: 0 }; }
   // L1: give stars the next free points of the order, matched by angle round the mark's centre (stars nearest the centre first
-  // when points run out); the rest turn as a ring just outside the mark. Each starts from rest, offset e from its point.
+  // when points run out); the rest join the ring (round 16, R2). Each starts from rest, offset e from its point.
   function assign(hold, ids, C) {
     const at = ids.map(i => { const [x, y] = position(i); return { i, x, y, a: Math.atan2(y - C[1], x - C[0]) }; });
     const k = Math.min(at.length, mark.points.length - hold.next);
@@ -144,15 +156,77 @@ export function createField(W, H, mark = null) {
       c.e0 = Math.hypot(c.e[0], c.e[1]); c.given = true; flags[t.i] = markFlag(c.kind); mixes[t.i] = 0;
     });
     hold.next += k;
-    for (const t of rest) { const c = cluster.get(t.i); c.ring = true; c.rho = Math.max(1e-6, Math.hypot(t.x - C[0], t.y - C[1])); c.rv = 0; c.theta = Math.atan2(t.y - C[1], t.x - C[0]); }
+    if (rest.length) join(rest.map(t => t.i), C);
+  }
+  // Round 16 (R2): stars join the ring. Each starts at the angle it was captured at, as its ring angle psi (its angle round
+  // the ring centre less the phase), from rest in the turning frame. It goes into the cyclic order by psi among the members,
+  // whose own order never changes; star k's target is delta + (k + 0.5 + jitter_k) 2 pi / N, delta the circular mean of
+  // (psi_k - (k + 0.5 + jitter_k) 2 pi / N), so the members already there move as little as possible.
+  function join(ids, C) {
+    const R = [C[0] + mark.ring.centre[0], C[1] + mark.ring.centre[1]], key = a => ((a % TURN) + TURN) % TURN;
+    const fresh = ids.map(i => {
+      const [x, y] = position(i), c = cluster.get(i);
+      c.ring = true; c.rho = Math.max(1e-6, Math.hypot(x - R[0], y - R[1])); c.rv = 0; c.psi = Math.atan2(y - R[1], x - R[0]) - ring.phase; c.pv = 0;
+      // R1: its own radius in the band; R2: its own offset from the middle of its slot, under half a slot either way.
+      c.radius = ringRadius(i, mark); c.jitter = ringJitter(i);
+      return { i, a: key(c.psi) };
+    }).sort((a, b) => a.a - b.a);
+    // The members, from the one with the smallest angle on; each joiner goes in before the first member past its angle.
+    const old = ring.order.map(i => ({ i, a: key(cluster.get(i).psi) }));
+    let start = 0;
+    old.forEach((m, k) => { if (m.a < old[start].a) start = k; });
+    const merged = old.slice(start).concat(old.slice(0, start));
+    let at = 0;
+    for (const f of fresh) { while (at < merged.length && merged[at].a <= f.a) at++; merged.splice(at, 0, f); at++; }
+    ring.order = merged.map(m => m.i);
+    const N = ring.order.length;
+    let sx = 0, sy = 0;
+    const slot = (k, c) => TURN * (k + 0.5 + c.jitter) / N;
+    ring.order.forEach((i, k) => { const c = cluster.get(i), r = c.psi - slot(k, c); sx += Math.cos(r); sy += Math.sin(r); });
+    const delta = Math.atan2(sy, sx);
+    // The targets are unwrapped together, by one whole number of turns, to the nearest equivalent of the stars' own psi (the
+    // circular mean already puts each star's target within about half a turn of it). First each psi is written, by whole
+    // turns (which moves nothing), as one rising run round the order; slots and psi then rise together, so every star moves
+    // part way from one ordered run to another and no star is sent the other way round past its neighbours.
+    const cs = ring.order.map(i => cluster.get(i));
+    cs.forEach((c, k) => {
+      if (!k) return;
+      const up = Math.floor((c.psi - cs[k - 1].psi) / TURN);
+      if (up) { c.psi -= TURN * up; if (c.target !== undefined) c.target -= TURN * up; }
+    });
+    let lift = 0;
+    cs.forEach((c, k) => { lift += c.psi - delta - slot(k, c); });
+    const base = delta + TURN * Math.round(lift / N / TURN);
+    cs.forEach((c, k) => { c.target = base + slot(k, c); });
+  }
+  // Round 16 (R2): each ring star's radius and ring angle follow its own radius and its place in its slot (critically damped,
+  // in the turning frame). No passing: should a pair of neighbours close to under half of the smaller of their gap and a
+  // tenth of a slot in one frame (velocities carried over from earlier targets can do that while the ring spreads), both
+  // move apart to that gap and share their mean speed. Settled neighbours are 0.3 slots apart or more, so it never acts then.
+  function turnRing(dt) {
+    const cs = ring.order.map(i => cluster.get(i)), N = cs.length, was = cs.map(c => c.psi), tau = 1 / STARS.hold.pull;
+    for (const c of cs) { [c.rho, c.rv] = follow(c.rho, c.rv, c.radius, dt, tau); [c.psi, c.pv] = follow(c.psi, c.pv, c.target, dt, tau); }
+    for (let pass = 0, again = N > 1; again && pass < N; pass++) {
+      again = false;
+      for (let k = 0; k < N; k++) {
+        const j = (k + 1) % N, a = cs[k], b = cs[j], g0 = ((was[j] - was[k]) % TURN + TURN) % TURN;
+        const g1 = g0 + (b.psi - was[j]) - (a.psi - was[k]), floor = 0.5 * Math.min(g0, 0.1 * TURN / N);
+        if (g1 >= floor) continue;
+        const half = (floor - g1) / 2, v = (a.pv + b.pv) / 2;
+        a.psi -= half; b.psi += half; a.pv = b.pv = v; again = true;
+      }
+    }
   }
   function gather(hold, pointer, dt) {
     hold.held += dt;
     [hold.anchor[0], hold.anchorV[0]] = follow(hold.anchor[0], hold.anchorV[0], pointer[0], dt, 1 / STARS.hold.follow);
     [hold.anchor[1], hold.anchorV[1]] = follow(hold.anchor[1], hold.anchorV[1], pointer[1], dt, 1 / STARS.hold.follow);
-    // S1: past the full 2.5 s size and not yet formed, the radius goes on growing (only with a mark to form).
-    if (mark && !formed) hold.extra = Math.max(0, hold.held - STARS.hold.full) * growthRate();
+    // S1: past the full 2.5 s size, the radius goes on growing (only with a mark to form). Round 16 (R5): for the whole hold,
+    // not only until the formation, so a still hold completes the mark and then fills the ring.
+    if (mark) hold.extra = Math.max(0, hold.held - STARS.hold.full) * growthRate();
     const R = hold.radius = holdRadius(hold.held, hold.extra, diagonal);
+    // Round 16 (R2): the ring's phase advances at today's turn, STARS.hold.turn, every frame of the hold.
+    ring.phase += STARS.hold.turn * dt;
     for (let i = 0; i < n; i++) {
       if (cluster.has(i)) continue;
       const [px, py] = position(i);
@@ -168,12 +242,18 @@ export function createField(W, H, mark = null) {
     // once the threshold is captured (or, short of it, once the radius has reached the hero's diagonal).
     centre = mark ? markCentre(hold.anchor, mark, W, H) : null;
     if (mark && !formed && (cluster.size >= STARS.mark.threshold || R >= diagonal)) hold.formedAt = hold.held;
+    // Round 16 (R4): the charge's tremble rides on each captured star's offset (base keeps it without the tremble, for the
+    // checks); it feeds back into nothing (targets, arrival, mark weight, ring), and its amplitude is the same for every star.
+    const t0 = mark ? (hold.formedAt === null ? null : hold.formedAt + STARS.charge.start) : STARS.hold.full + STARS.charge.start;
+    const a = charge = hold.charge = chargeAmp(hold.held, t0);
+    const place = (i, x, y) => { const [tx, ty] = tremble(i, hold.held, a); base[2 * i] = x; base[2 * i + 1] = y; S[2 * i] = x + tx; S[2 * i + 1] = y + ty; };
     if (mark && hold.formedAt !== null) {
       const fresh = [];
       for (const [i, c] of cluster) if (c.point === undefined && !c.ring) fresh.push(i);
       formed = true;
       if (fresh.length) assign(hold, fresh, centre);
     }
+    if (mark) turnRing(dt);
     for (const [i, c] of cluster) {
       // R2: the fade-in, 0 in the frame of the capture, then up by dt / 0.4 s.
       if (c.fresh) c.fresh = false; else fade[i] = fadeUp(fade[i], dt);
@@ -187,16 +267,15 @@ export function createField(W, H, mark = null) {
         // In the frame it is given its point, m stays 0.
         if (c.given) c.given = false; else mixes[i] = Math.max(mixes[i], Math.min(want, mixes[i] + STARS.fade * dt));
         if (!c.arrived && d <= STARS.mark.arrive) c.arrived = true;
-        S[2 * i] = centre[0] + p.x + c.e[0] - s.x - q[0]; S[2 * i + 1] = centre[1] + p.y + c.e[1] - s.y - q[1];
+        place(i, centre[0] + p.x + c.e[0] - s.x - q[0], centre[1] + p.y + c.e[1] - s.y - q[1]);
         V[2 * i] = V[2 * i + 1] = 0; age[i] = 0; big[i] = 1; moving[i] = 1;
         continue;
       }
       if (c.ring) {
-        // Overflow: every point is taken, so this star keeps turning as a ring just outside the mark.
-        [c.rho, c.rv] = follow(c.rho, c.rv, ringRadius(i, mark), dt, 1 / STARS.hold.pull);
-        c.theta += STARS.hold.turn * dt;
-        const s = stars[i], q = parallaxOffset(par, s.d);
-        S[2 * i] = centre[0] + c.rho * Math.cos(c.theta) - s.x - q[0]; S[2 * i + 1] = centre[1] + c.rho * Math.sin(c.theta) - s.y - q[1];
+        // Round 16 (R2): every point is taken, so this star is in the ring (moved by turnRing), turning as one by its phase.
+        c.theta = c.psi + ring.phase;
+        const s = stars[i], q = parallaxOffset(par, s.d), rx = centre[0] + mark.ring.centre[0], ry = centre[1] + mark.ring.centre[1];
+        place(i, rx + c.rho * Math.cos(c.theta) - s.x - q[0], ry + c.rho * Math.sin(c.theta) - s.y - q[1]);
         V[2 * i] = V[2 * i + 1] = 0; age[i] = 0; big[i] = 1; moving[i] = 1;
         continue;
       }
@@ -205,7 +284,7 @@ export function createField(W, H, mark = null) {
       c.theta += STARS.hold.turn * dt;
       const s = stars[i], p = parallaxOffset(par, s.d);
       const tx = hold.anchor[0] + c.rho * Math.cos(c.theta) - s.x - p[0], ty = hold.anchor[1] + c.rho * Math.sin(c.theta) - s.y - p[1];
-      S[2 * i] = tx; S[2 * i + 1] = ty; V[2 * i] = V[2 * i + 1] = 0; age[i] = 0; big[i] = 1; moving[i] = 1;
+      place(i, tx, ty); V[2 * i] = V[2 * i + 1] = 0; age[i] = 0; big[i] = 1; moving[i] = 1;
     }
     awake = true;
     return R;
@@ -222,7 +301,7 @@ export function createField(W, H, mark = null) {
     const captured = cluster.size;
     // R1: every star in front starts (or, if still out from an earlier release, keeps) its return weight.
     for (let i = 0; i < n; i++) if (flags[i] && far[i] < 0) { weights[i] = 1; far[i] = Math.hypot(offsets[2 * i], offsets[2 * i + 1]); }
-    cluster = null; formed = false;
+    cluster = null; formed = false; ring = null; charge = 0;
     return captured;
   }
 
@@ -274,19 +353,22 @@ export function createField(W, H, mark = null) {
     awake = any;
     return awake;
   }
-  function reset() { weights.fill(0); fade.fill(0); mixes.fill(0); alpha.fill(0); far.fill(-1); S.fill(0); V.fill(0); age.fill(0); offsets.fill(0); big.fill(0); moving.fill(0); flags.fill(0); last.fill(-1); falling.fill(0); front = 0; cluster = null; formed = false; awake = false; version++; }
+  function reset() { weights.fill(0); fade.fill(0); mixes.fill(0); alpha.fill(0); far.fill(-1); S.fill(0); V.fill(0); age.fill(0); offsets.fill(0); big.fill(0); moving.fill(0); flags.fill(0); last.fill(-1); falling.fill(0); front = 0; cluster = null; formed = false; ring = null; charge = 0; awake = false; version++; }
   // What the checks and __hero.stars read about the mark.
   function markState() {
-    let assigned = 0, arrived = 0, ring = 0;
-    if (cluster) for (const c of cluster.values()) { if (c.point !== undefined) { assigned++; if (c.arrived) arrived++; } else if (c.ring) ring++; }
-    return { points: mark ? mark.points.length : 0, height: mark ? mark.height : 0, formed, assigned, arrived, ring, front, centre: centre && centre.slice(), captured: cluster ? cluster.size : 0 };
+    let assigned = 0, arrived = 0;
+    if (cluster) for (const c of cluster.values()) if (c.point !== undefined) { assigned++; if (c.arrived) arrived++; }
+    // Round 16 (R2): the ring, its centre in the hero's px (null before the hold has a mark centre), radius, phase and count;
+    // R4: charge, the tremble's amplitude now.
+    const circle = mark ? { centre: centre && [centre[0] + mark.ring.centre[0], centre[1] + mark.ring.centre[1]], radius: mark.ring.radius, phase: ring ? ring.phase : 0, count: ring ? ring.order.length : 0 } : null;
+    return { points: mark ? mark.points.length : 0, height: mark ? mark.height : 0, formed, assigned, arrived, ring: circle, charge, front, centre: centre && centre.slice(), captured: cluster ? cluster.size : 0 };
   }
   return {
-    stars, offsets, flags, weights, fade, mixes, alpha, mark, W, H, push, press, gather, blast, step, reset, position, shown, markState,
+    stars, offsets, flags, weights, fade, mixes, alpha, mark, W, H, base, push, press, gather, blast, step, reset, position, shown, markState,
     velocity: i => [V[2 * i] * Math.exp(-age[i]), V[2 * i + 1] * Math.exp(-age[i])],
     get front() { return front; },
     setParallax(f) { par = f; },
-    get awake() { return awake; }, get version() { return version; }, get cluster() { return cluster; },
+    get awake() { return awake; }, get version() { return version; }, get cluster() { return cluster; }, get ring() { return ring; },
   };
 }
 
@@ -382,19 +464,35 @@ export function sampleMark(paths, count = STARS.mark.count) {
 }
 // The mark for a hero of W x H: about 20 % of its height, the mark's own proportions, never wider than the hero allows.
 // Points are px from the mark's centre (y down, upright, not mirrored); half is its half size; reach its farthest point.
+// Round 16 (R1): weight is the mean of the points (the fill's centroid, the points being even over it), in px from the box
+// centre; the ring's band is centred on it: its inner edge (radius) ringGap of the mark's height outside the farthest point
+// from it, its depth (band) ringBand of the mark's height.
 export function placeMark(sample, W, H, height = STARS.mark.height) {
   const [x0, y0, x1, y1] = sample.box, bw = x1 - x0, bh = y1 - y0, m = STARS.mark.margin;
   if (!sample.points.length || !(bw > 0) || !(bh > 0)) return null;
   const h = Math.max(1, Math.min(height * H, (W - 2 * m) * bh / bw, H - 2 * m)), s = h / bh, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
   const points = sample.points.map(p => ({ x: (p.x - cx) * s, y: (p.y - cy) * s, kind: p.kind }));
-  return { points, half: [bw * s / 2, bh * s / 2], height: h, scale: s, reach: Math.max(...points.map(p => Math.hypot(p.x, p.y))) };
+  const weight = [0, 1].map(k => points.reduce((sum, p) => sum + (k ? p.y : p.x), 0) / points.length);
+  const radius = Math.max(...points.map(p => Math.hypot(p.x - weight[0], p.y - weight[1]))) + STARS.mark.ringGap * h;
+  return { points, half: [bw * s / 2, bh * s / 2], height: h, scale: s, reach: Math.max(...points.map(p => Math.hypot(p.x, p.y))), weight, ring: { centre: weight, radius, band: STARS.mark.ringBand * h } };
 }
-// The mark's centre: the hold's anchor, clamped so the whole mark stays inside the hero with a 16 px margin.
+// The mark's centre: the hold's anchor, clamped so the whole mark stays inside the hero with a 16 px margin. Round 16 (R3):
+// and so the whole ring does too (its circle out to the band's outer edge, where the farthest ring stars sit); on an axis
+// where the ring cannot fit, the mark-only clamp; where even the mark cannot fit, the middle.
 export const markCentre = (anchor, mark, W, H) => [W, H].map((L, k) => {
-  const lo = STARS.mark.margin + mark.half[k], hi = L - lo;
-  return lo > hi ? L / 2 : Math.min(hi, Math.max(lo, anchor[k]));
+  const m = STARS.mark.margin, lo = m + mark.half[k], hi = L - lo;
+  if (lo > hi) return L / 2;
+  const r = mark.ring.radius + mark.ring.band, w = mark.ring.centre[k], a = Math.max(lo, m + r - w), b = Math.min(hi, L - m - r - w);
+  return a > b ? Math.min(hi, Math.max(lo, anchor[k])) : Math.min(b, Math.max(a, anchor[k]));
 });
-export const ringRadius = (i, mark) => mark.reach + STARS.mark.ring[0] + (STARS.mark.ring[1] - STARS.mark.ring[0]) * hash(i, 6);
+// Round 16 (R1): a ring star's own radius in the band (today's hash channel); R2: its own offset in its slot, in slots.
+export const ringRadius = (i, mark) => mark.ring.radius + hash(i, 6) * mark.ring.band;
+export const ringJitter = i => 0.7 * (hash(i, 7) - 0.5);
+// Round 16 (R4): the tremble's amplitude t s held for a charge that starts at t0 (formedAt + start), and a star's offset.
+export const chargeAmp = (t, t0) => t0 === null || t < t0 ? 0 : STARS.charge.amp * smooth((t - t0) / STARS.charge.ramp);
+export const trembleHz = (i, k) => STARS.charge.hz[0] + (STARS.charge.hz[1] - STARS.charge.hz[0]) * hash(i, 9 + k);
+export const tremblePhase = (i, k) => 2 * Math.PI * hash(i, 11 + k);
+export const tremble = (i, t, a) => a ? [0, 1].map(k => a * Math.sin(2 * Math.PI * trembleHz(i, k) * t + tremblePhase(i, k))) : [0, 0];
 // The page's own mark, read from the DOM: the [data-mark] link's paths, their d and fill.
 export function readMark(root) {
   const link = root?.querySelector?.('[data-mark]') || root?.ownerDocument?.querySelector?.('[data-mark]');

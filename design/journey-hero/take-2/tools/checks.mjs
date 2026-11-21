@@ -20,6 +20,7 @@ import { retimer } from './hand-patch.mjs';
 import { checkRound8, checkRound8Controls } from './round8-checks.mjs';
 import { checkRound9, checkRound9Controls } from './round9-checks.mjs';
 import { checkRound10, checkRound10Controls } from './round10-checks.mjs';
+import { checkRound16, checkRound16Controls } from './round16-checks.mjs';
 import { checkRound12StarsList, checkRound12Controls } from './round12-stars-list-checks.mjs';
 import { checkRound14, checkRound14Controls } from './round14-checks.mjs';
 import { checkRound12 as checkRound12Scene, checkRound12Controls as checkRound12SceneControls } from './round12-checks.mjs';
@@ -557,6 +558,8 @@ try { console.log(await checkRound10()); console.log('Round 10 negative controls
 // and round 12's kept rules for the craft list.
 try { console.log(await checkRound12StarsList()); console.log('Round 12 (S1) negative controls: ' + await checkRound12Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound14()); console.log('Round 14 (K1) negative controls: ' + await checkRound14Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
+// Round 16 (R1-R5): the ring round the mark, the tremble, the hold that keeps gathering.
+try { console.log(await checkRound16()); console.log('Round 16 (R1-R5) negative controls: ' + await checkRound16Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound12Scene()); console.log('Round 12 (D1, I1, X1) negative controls: ' + await checkRound12SceneControls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound13Rows(stageModule)); console.log('Round 13 (U1, I2) negative controls: ' + await checkRound13RowsControls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 // CORRECTIONS-15: the ball and the sink (S1, S2), the map without its selection box (N1) and flat drags (N2); round 13's E1/E2 are retired.
