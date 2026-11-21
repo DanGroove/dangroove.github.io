@@ -310,3 +310,25 @@ These are the committed incoming-build runs. Their flags retain the external rev
 `tools/browser-check.mjs` checks the labels at ten sizes: 390 × 664, 390 × 844, 360 × 780, 375 × 667, 412 × 915, 768 × 1024, 820 × 1180, 1024 × 768, 1440 × 900 and 1920 × 1080. Its command needs Playwright installed in the repository; without it, it reports the sizes as UNRUN and launches nothing. Its exported `checkBrowser(page)` can be run on a page from any Playwright. The builder's machine has no Playwright, so the reviewers ran `checkBrowser` on the packed preview of `50b51b8` and `7590b44` in the cloud: it passed at all ten sizes (150 rows). The exported route assertions also run in Node against parametric layout geometry, including their negative control. BUILD.md contains exact outputs and control edits.
 
 Those round-three/four reviews used the historical 81.240-second loop. Round 5 used 83.040 seconds; round 7 used 91.498 seconds, round 12 88.500, round 13 91.591 and rounds 15-16 used 97.691; the round 17 follow-up uses 99.490895, with starts/stills in the current table above. The supplied review accepted the rest of round 5; the H9/H10 fixes await external browser/frame review. Numeric tests cover frame/plate continuity, drawing order, fixed marks, playback content, toolbar clearance, narrow-stage gutters, measurement stability and the full laptop/app gap. No hardware rerun or measurement entry point was invoked.
+
+
+## Round 17, critique round 2
+
+The construction pictures now use **210 transparent source-paint cutouts**, with **24-texel margins and gutters**, a separate premultiplied blended-face pass, and original paint clipped before mip filtering during partial reveals. The first five atlas pages and their 303 old placements stay fixed; two added pages are 2048 x 1984 and 2048 x 412 in the Node model. F3 letter masks and font drawing remain in use; completed pictures retire their construction companions at release.
+
+InDesign's reading copy sinks as separate **0.040/0.010** halves, depths **0.0432/0.0108**, crossing with its other three objects at **+0.637731481 s**. The floor alone has polygon offset **1/2**; carried clips and whole-object culling remain. The combined missing-clip/cull control fails the carried-lifetime gate.
+
+Run the Node suite and its 30 in-memory negative controls:
+
+```
+node design/journey-hero/take-2/tools/checks.mjs
+node design/journey-hero/take-2/tools/round17-checks.mjs --controls
+```
+
+The browser pixel gate is **external review only**. On the machine with Playwright/Chromium:
+
+```
+node design/journey-hero/take-2/tools/round17-pixel-checks.mjs [packed-preview.html]
+```
+
+No argument packs this build. The export `checkRound17Pixels(chromium, previewPath)` returns its rows and failures. It tests desktop dpr 1/2 and phone dpr 2 releases, and desktop sinks at 1 ms. Missing Playwright prints UNAVAILABLE and exits 2; failures exit 1. Full measurements, original/new check numbers, cutout pages, release times, choices and local-verification limits are in BUILD.md's **Round 17, critique round 2** and `.scratch/review-out/r17/critique2-audit.json`. The pixel gate has syntax and synthetic PNG/mask/count coverage locally; it has not been run in a browser here.

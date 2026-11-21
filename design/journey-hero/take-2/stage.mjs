@@ -3,7 +3,7 @@
 // One clock builds every piece: the persistent shell, wiped content, travelling work and the floor.
 import { HOME, EASE, dot as dot3, quatFromBasis, quatRotate } from '../../../public/journey/hero/engine.mjs';
 import { box, cyl, turn, corners, qAxis, qMul } from './kit.mjs';
-import { SPOT, subwayPath, BALL as COMP_BALL, BALL_FROM, BALL_VIA, ROWS, TYPE_EDGES, TYPE_BOXES, ART, ART_TEXT, HISTOGRAM, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS } from './art.mjs';
+import { SPOT, subwayPath, BALL as COMP_BALL, BALL_FROM, BALL_VIA, ROWS, TYPE_EDGES, TYPE_BOXES, ART, ART_TEXT, HISTOGRAM, CUTOUTS, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS } from './art.mjs';
 
 // All authored durations, including the cursor's journeys, share this one control.
 export const PACE = 1;
@@ -233,8 +233,7 @@ function approvedDocument() {
   P.push({ ...on('ink', ...ID.left, { lift: 0.06, t: 0.02, art: 'kAmL' }), tones: FLYER.coal, page: 'map' }, { ...on('ink', ...ID.right, { lift: 0.06, t: 0.02, art: 'kAmR' }), tones: FLYER.coal, page: 'map' });
   finishedSpreadLayers(P);
   P.push(on('ink', ...ID.cover, { lift: 0.06, t: 0.02, art: 'kCover' }), on('ink', ...ID.post, { lift: 0.06, t: 0.02, art: 'kPost' }), on('ink', ...ID.mail, { lift: 0.06, t: 0.02, art: 'eblast' }));
-  // Keep the typed cut-outs in their own slots; a finished page must not collapse overlapping lines of type backward.
-  mapTyping(P, ID.mail, 'eblast', 1, part => part.words !== 'View the flyer');
+  // C3: the released page is its finished picture alone.
   // CORRECTIONS-15 N1: the placed amenities map has no selection outline or handles.
   return P;
 }
@@ -1168,6 +1167,32 @@ function pictureRegion(P, rect, art, region, amount = 1) {
   const [u, v, w, h] = region, r = inRect(rect, [u, v, w * amount, h]);
   P.push({ ...on('paper', ...r, { lift: 0.084, t: 0.004, art }), window: [u, v, u + w * amount, v + h] });
 }
+// Global-to-local subtraction can miss an authored end by a few ulps. C3's replacement belongs to that end frame.
+function released(s, id, t) { return t >= action(s, id).end - 1e-9; }
+function cutoutRegion(P, rect, source, id, reveal = null) {
+  const key = source + 'Part' + id, part = CUTOUTS[key];
+  if (!part) throw new Error('missing isolated picture ' + key);
+  const a = ART[source], [l, t, r, b] = part.crop;
+  let u0 = l / (a.w - 1), v0 = t / (a.h - 1), u1 = (r - 1) / (a.w - 1), v1 = (b - 1) / (a.h - 1);
+  const full = [u0, v0, u1, v1];
+  if (reveal) {
+    u0 = Math.max(u0, reveal[0]); v0 = Math.max(v0, reveal[1]);
+    u1 = Math.min(u1, reveal[2]); v1 = Math.min(v1, reveal[3]);
+  }
+  if (u1 <= u0 || v1 <= v0) return;
+  P.push({ ...on('paper', ...inRect(rect, [u0, v0, u1-u0, v1-v0]), { lift: 0.084, t: 0.004, art: key }),
+    blend: true, noShadow: true, noLine: true, cutoutSource: source, cutoutId: id, paintOrder: part.order,
+    labelRegion: [u0, v0, u1, v1], window: [(u0-full[0])/(full[2]-full[0]), (v0-full[1])/(full[3]-full[1]), (u1-full[0])/(full[2]-full[0]), (v1-full[1])/(full[3]-full[1])] });
+}
+function isolatedDraw(P, rect, source, id, region, p, upward = false) {
+  if (p <= 0) return;
+  cutoutRegion(P, rect, source, id);
+  if (p < 1) {
+    const [u,v,w,h] = region;
+    // Clip the original paint BEFORE mip filtering. The quad still includes its whole transparent margin.
+    P.at(-1).artReveal = upward ? [u,v+h*(1-p),u+w,v+h] : [u,v,u+w*p,v+h*p];
+  }
+}
 function drawnRegion(P, rect, art, region, p, stroke = 0) {
   if (p <= 0) return;
   const [u, v, w, h] = region, padded = cropFringe(art, [u, v, w * p, h * p], stroke), r = inRect(rect, padded);
@@ -1226,6 +1251,30 @@ function pageContact(s, id, t, from, to, page) {
   }
   return first <= last && handed(s, id, t) >= first;
 }
+function wireRegion(P, rect, source, [u,v,w,h], amount = 1) {
+  if (amount <= 0) return;
+  const a = ART[source], reveal = [u,v,u+w*amount,v+h];
+  for (const part of Object.values(CUTOUTS).filter(part => part.source === source)) {
+    const [x,y,rw,rh] = part.rect;
+    if (x+rw < u*a.w || x > (u+w)*a.w || y+rh < v*a.h || y > (v+h)*a.h) continue;
+    cutoutRegion(P, rect, source, part.id); P.at(-1).artReveal = reveal;
+  }
+}
+function mergeWireParts(D, rect, source) {
+  const parts = D.filter(pc => pc.cutoutSource === source), groups = new Map();
+  for (const pc of parts) { const list = groups.get(pc.cutoutId) || []; list.push(pc.artReveal || pc.labelRegion); groups.set(pc.cutoutId, list); }
+  const subtract = (a,b) => { const l=Math.max(a[0],b[0]),t=Math.max(a[1],b[1]),r=Math.min(a[2],b[2]),d=Math.min(a[3],b[3]); if(r<=l||d<=t)return [a]; return [[a[0],a[1],a[2],t],[a[0],d,a[2],a[3]],[a[0],t,l,d],[r,t,a[2],d]].filter(r=>r[2]>r[0]&&r[3]>r[1]); };
+  for (let i=D.length-1;i>=0;i--) if(D[i].cutoutSource===source) D.splice(i,1);
+  const a=ART[source];
+  for(const [id, regions] of groups) {
+    const part=CUTOUTS[source+'Part'+id], [x,y,w,h]=part.rect;
+    let missing=[[x/(a.w-1),y/(a.h-1),(x+w)/(a.w-1),(y+h)/(a.h-1)]];
+    for(const r of regions) missing=missing.flatMap(q=>subtract(q,r));
+    if(!missing.length) {cutoutRegion(D,rect,source,id);continue;}
+    const drawn=[];
+    for(const r of regions) {let next=[r];for(const q of drawn)next=next.flatMap(v=>subtract(v,q));for(const q of next){cutoutRegion(D,rect,source,id);D.at(-1).artReveal=q;drawn.push(q);}}
+  }
+}
 function editedFigma(t) {
   const P = [], D = [], s = SCRIPTS.fig;
   actionCursor(P, s, t);
@@ -1236,28 +1285,29 @@ function editedFigma(t) {
   const wireArts = ['wireWide', 'wireTablet', 'wireTall'];
   FIG.wires.forEach((r, i) => {
     if (done(s, 'frame' + i, t)) D.push({ ...on('grey', r[0], r[1] + r[3] + 0.015, i ? 0.17 : 0.26, 0.03, { lift: 0.05, t: 0.008 }), echo: 'frame' + i });
-    if (done(s, 'details', t)) D.push({ ...on('paper', ...r, { lift: 0.06, t: 0.02, art: wireArts[i] }), echo: 'details' });
-    else drawnFrame(D, r, handed(s, 'frame' + i, t));
-    if (i === 0) {
-      const box = inRect(r, HERO_REGION); if (!done(s, 'pictureBox', t)) drawnFrame(D, box, handed(s, 'pictureBox', t), 'grey');
-      if (done(s, 'pictureBox', t)) paddedPictureRegion(D, r, wireArts[i], HERO_REGION, 1, 0.5);
+    if (released(s, 'details', t)) D.push({ ...on('paper', ...r, { lift: 0.06, t: 0.02, art: wireArts[i] }), echo: 'details' });
+    else { const before = D.length; drawnFrame(D, r, handed(s, 'frame' + i, t)); for (const pc of D.slice(before)) pc.art = wireArts[i] + 'Base'; }
+    if (!released(s, 'details', t) && i === 0) {
+      const box = inRect(r, HERO_REGION);
+      wireRegion(D, r, wireArts[i], HERO_REGION, handed(s, 'pictureBox', t), 0.5);
       if (begun(s, 'heading', t)) {
         const birth = D.length;
         const p = phase(s, 'heading', t), chars = Math.floor(p * 9) / 9;
         const regions = [[64 / 1440, 252 / 900, 300 / 1440, 76 / 900], [64 / 1440, 350 / 900, 420 / 1440, 76 / 900]];
-        regions.forEach((region, j) => paddedPictureRegion(D, r, wireArts[i], region, clamp(chars * 2 - j, 0, 1)));
+        regions.forEach((region, j) => wireRegion(D, r, wireArts[i], region, clamp(chars * 2 - j, 0, 1)));
         if (p < 1) { const j = chars < 0.5 ? 0 : 1, caret = inRect(r, regions[j]); D.push(on('grey', caret[0] + caret[2] * clamp(chars * 2 - j, 0, 1), caret[1], 0.012, caret[3], { lift: 0.095, t: 0.004, overlay: true })); }
         for (const pc of D.slice(birth)) { pc.text = { key: 'wireHeading', count: Math.floor(p * 9), total: 9, prefix: p < 1 }; if (pc.overlay) pc.caret = 'wireHeading'; }
       }
-      const p = handed(s, 'button', t), button = inRect(r, [64 / 1440, 555 / 900, 380 / 1440, 35 / 900]); drawnFrame(D, button, p, 'grey');
+      const p = handed(s, 'button', t); wireRegion(D, r, wireArts[i], [64 / 1440, 555 / 900, 380 / 1440, 35 / 900], p);
       if (begun(s, 'details', t)) {
         const n = Math.floor(phase(s, 'details', t) * 9);
-        [[0, 0, 1, 0.13], [0, 0.49, 0.46, 0.13], [0, 0.61, 0.46, 0.39]].forEach((region, j) => { if (n >= j) paddedPictureRegion(D, r, wireArts[i], region); });
+        [[0, 0, 1, 0.13], [0, 0.49, 0.46, 0.13], [0, 0.61, 1, 0.39]].forEach((region, j) => { if (n >= j) wireRegion(D, r, wireArts[i], region); });
       }
-    } else if (begun(s, 'details', t)) {
+    } else if (!released(s, 'details', t) && begun(s, 'details', t)) {
       const n = Math.floor(phase(s, 'details', t) * 9) - 3 - (i - 1) * 3;
-      [[0, 0, 1, 0.18], [0, 0.18, 1, 0.40], [0, 0.58, 1, 0.42]].forEach((region, j) => { if (n >= j) paddedPictureRegion(D, r, wireArts[i], region); });
+      [[0, 0, 1, 0.18], [0, 0.18, 1, 0.40], [0, 0.58, 1, 0.42]].forEach((region, j) => { if (n >= j) wireRegion(D, r, wireArts[i], region); });
     }
+    mergeWireParts(D, r, wireArts[i]);
   });
   if (begun(s, 'marquee', t) && !done(s, 'copies', t)) {
     const a = topLeft(FIG.wires[0]), b = action(s, 'marquee').to, p = handed(s, 'marquee', t);
@@ -1331,7 +1381,7 @@ function readBook(s, t) {
 function editedInDesign(t, { at: pages } = {}) {
   const P = [], D = [], s = SCRIPTS.id;
   actionCursor(P, s, t);
-  if (done(s, 'mailFlyer', t)) {
+  if (released(s, 'mailFlyer', t)) {
     // The approved finished document is also the destination of every construction region below.
     const final = approvedDocument();
     final.forEach(pc => { if (!pc.furniture) pc.document = true; if (pc.labelSource) registerPicture(pc, 0.080); else if (pc.art && !pc.furniture) Object.defineProperty(pc, 'registered', { value: true }); }); P.push(...final);
@@ -1356,7 +1406,7 @@ function editedInDesign(t, { at: pages } = {}) {
     const tw = 0.36, th = tw * 340 / 440, mid = PANEL + 0.425;
     [[null, 'kCover'], ['kOfferL', 'kOfferR'], ['kLocL', 'kLocR'], ['kAmL', 'kAmR'], ['kGalL', 'kGalR'], ['kBack', null]].forEach(([left, right], i) => {
       const repeat = [1, 4, 5].indexOf(i);
-      const visible = i === 0 ? done(s, 'coverTitle', t) : i === 2 ? done(s, 'loc', t) : i === 3 ? done(s, 'spreadType', t) : begun(s, 'pages', t) && phase(s, 'pages', t) * action(s, 'pages').count >= repeat;   // K2: one page per third of the run, however long it takes
+      const visible = i === 0 ? released(s, 'coverTitle', t) : i === 2 ? done(s, 'loc', t) : i === 3 ? done(s, 'spreadType', t) : begun(s, 'pages', t) && phase(s, 'pages', t) * action(s, 'pages').count >= repeat;   // K2: one page per third of the run, however long it takes
       if (!visible) return;
       const echoStart = D.length, y = TOP - 0.13 - (i + 1) * th - i * 0.1;
       if (i === 3) D.push(on('red', mid - tw - 0.03, y - 0.03, tw * 2 + 0.06, th + 0.06, { lift: 0.05, t: 0.01 }));
@@ -1365,22 +1415,22 @@ function editedInDesign(t, { at: pages } = {}) {
       tagEcho(D, ['coverTitle', 'pages', 'loc', 'spreadType', 'pages', 'pages'][i], echoStart);
     });
     if (begun(s, 'loc', t) && !done(s, 'loc', t)) { const a = action(s, 'loc'); travel(P, 'loc', DOCK.loc, ID.loc, t, a.start, a.end, undefined, HAND); }
-    if (begun(s, 'photo', t) && !done(s, 'coverTitle', t)) {
+    if (begun(s, 'photo', t) && !released(s, 'coverTitle', t)) {
       if (!done(s, 'photo', t)) dragPicture(P, s, 'photo', t, DOCK.photo, ID.photo, 'coverImage');
       if (done(s, 'photo', t)) {
         // Cropped regions keep the final photograph and woven ground at their approved measures.
-        D.push(on('ink', ...ID.cover, { lift: 0.06, t: 0.02, art: begun(s, 'coverTitle', t) ? 'coverDecor' : done(s, 'blob', t) ? 'coverBlob' : 'coverPhoto' }));
-        if (!done(s, 'blob', t)) drawnRegion(D, ID.cover, 'coverBlob', [50 / 1100, 482 / 850, 588 / 1100, 320 / 850], handed(s, 'blob', t));
+        D.push(on('ink', ...ID.cover, { lift: 0.06, t: 0.02, art: begun(s, 'coverTitle', t) ? 'coverDecor' : released(s, 'blob', t) ? 'coverBlob' : 'coverPhoto' }));
+        if (!released(s, 'blob', t)) isolatedDraw(D, ID.cover, 'kCover', 'blob', [50 / 1100, 482 / 850, 588 / 1100, 320 / 850], handed(s, 'blob', t));
         if (begun(s, 'coverTitle', t)) typePatch(D, inRect(ID.cover, [311.6 / 440, 268 / 340, 128.4 / 440, 52 / 340]), 'idCover', phase(s, 'coverTitle', t));
       }
     }
-    if (done(s, 'coverTitle', t)) D.push(on('ink', ...ID.cover, { lift: 0.06, t: 0.02, art: 'kCover' }));
+    if (released(s, 'coverTitle', t)) D.push(on('ink', ...ID.cover, { lift: 0.06, t: 0.02, art: 'kCover' }));
     for (const [key, rect, art, patch, region] of [
       ['post', ID.post, 'kPost', 'idPost', [276 / 400, 315.2 / 400, 124 / 400, 58.4 / 400]],
       ['mail', ID.mail, 'eblast', 'idMail', [17.6 / 320, 268 / 472, 284.8 / 320, 28 / 472]],
     ]) {
       if (!begun(s, key + 'Photo', t)) continue;
-      if (done(s, key + 'Blob', t) && done(s, key === 'mail' ? 'mailFlyer' : 'postButton', t)) {
+      if (done(s, key + 'Blob', t) && released(s, key === 'mail' ? 'mailFlyer' : 'postButton', t)) {
         D.push(on('ink', ...rect, { lift: 0.06, t: 0.02, art }));
         continue;
       }
@@ -1392,10 +1442,10 @@ function editedInDesign(t, { at: pages } = {}) {
           else mapTyping(D, rect, art, phase(s, key + 'Title', t), part => part.words !== 'View the flyer');
         }
         const blobRegion = key === 'post' ? [0.05, 0.61, 0.60, 0.31] : [44 / 800, 404 / 1180, 430 / 800, 230 / 1180];
-        if (begun(s, key + 'Blob', t)) drawnRegion(D, rect, art, blobRegion, handed(s, key + 'Blob', t));
+        if (begun(s, key + 'Blob', t)) isolatedDraw(D, rect, art, 'blob', blobRegion, handed(s, key + 'Blob', t));
         if (begun(s, key + 'Button', t)) {
           const p = handed(s, key + 'Button', t), a = action(s, key + 'Button'), r = [a.from[0], a.to[1], a.to[0] - a.from[0], a.from[1] - a.to[1]];
-          if (key === 'mail') drawnRegion(D, rect, 'mailButtonStyle', [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180], p);
+          if (key === 'mail') isolatedDraw(D, rect, 'eblast', 'button', [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180], p);
           else if (p > 0 && p < 1) D.push(...outline(r[0], r[1] + r[3] * (1 - p), r[2] * p, r[3] * p, { tone: 'grey', line: 0.01 }));
         }
         if (key === 'mail' && begun(s, 'mailFlyer', t)) typePatch(D, inRect(rect, [17.6 / 320, 416 / 472, 105 / 320, 29 / 472]), 'idFlyer', phase(s, 'mailFlyer', t), 14);
@@ -1419,7 +1469,8 @@ function editedInDesign(t, { at: pages } = {}) {
 // (body, picture, camera); then the reading copy from 18 onward (two closed pieces, or pages and the turning leaf).
 function bookletOut(P, s, t, floor) {
   const formats = [[...floor.slice(0, 10), ...floor.slice(18)], floor.slice(10, 15), floor.slice(15, 18)].map(pieces => ({ pieces }));
-  formats[0].objects = [floor.slice(0, 10), floor.slice(18)];
+  const reading = floor.slice(18), spine = -0.1;
+  formats[0].objects = [floor.slice(0, 10), reading.filter(pc => pc.p[0] < spine), reading.filter(pc => pc.p[0] >= spine)];
   formats[0].shape = [...BLOCK_ROW.stack, COPIES * COPY, floor[0].e.slice()];
   formats[1].shape = lyingShape(floor[10]); formats[2].shape = lyingShape(floor[15]);
   exportOut(P, s, t, 'id', formats);
@@ -1428,7 +1479,11 @@ function mapRegion(P, rect, art, r, w, h, amount = 1, upward = false) {
   if (amount <= 0) return;
   const [x, y, rw, rh] = r;
   const region = upward ? [x / w, (y + rh * (1 - amount)) / h, rw / w, rh * amount / h] : [x / w, y / h, rw * amount / w, rh / h];
-  pictureRegion(P, rect, art, cropFringe(art, region));
+  const source = art === 'kMap' ? 'kMap' : 'kLoc';
+  const inventory = art === 'kMap' ? AM_MARKERS : art === 'locBlocks' ? CITY_BLOCKS : CITY_PINS;
+  const index = inventory.findIndex(q => q.every((n, i) => Math.abs(n - r[i]) < 1e-9));
+  const id = art === 'kMap' ? index >= 0 ? 'marker' + index : 'north' : art === 'locBlocks' ? 'block' + index : Object.values(CUTOUTS).filter(p => p.source === 'kLoc' && !p.id.startsWith('block') && p.id !== 'roads')[index].id;
+  isolatedDraw(P, rect, source, id, [x/w,y/h,rw/w,rh/h], amount, upward);
 }
 function mapTyping(P, rect, art, p, filter = () => true) {
   const a = ART[art], parts = (ART_TEXT[art] || []).filter(filter).sort((a, b) => a.region[1] - b.region[1] || a.region[0] - b.region[0]);
@@ -1469,29 +1524,32 @@ function editedIllustrator(t) {
   });
   if (begun(s, 'mapExport', t)) { const a = action(s, 'mapExport'); travel(P, 'map', AI.upper, DOCK.map, t, a.start, a.end, undefined, HAND); }
   else {
-    const draw = screenPainter(D, AI.upper); cropPicture(draw, 'ink', [0, 0, 1, 1], done(s, 'badge', t) ? 'kMap' : 'mapStreet', handed(s, 'street', t));
-    if (begun(s, 'markers', t)) {
+    const draw = screenPainter(D, AI.upper); cropPicture(draw, 'ink', [0, 0, 1, 1], released(s, 'badge', t) ? 'kMap' : 'mapStreet', handed(s, 'street', t));
+    if (!released(s, 'badge', t) && begun(s, 'markers', t)) {
       const n = Math.min(AM_MARKERS.length, 1 + Math.floor(phase(s, 'markers', t) * AM_MARKERS.length));
       AM_MARKERS.slice(0, n).forEach(r => mapRegion(D, AI.upper, 'kMap', r, 2200, 850));
       mapRegion(D, AI.upper, 'kMap', [88, 90, 82, 96], 2200, 850);
     }
-    if (begun(s, 'labels', t)) {
+    if (!released(s, 'badge', t) && begun(s, 'labels', t)) {
       const f = phase(s, 'labels', t) * AM_LABEL_BARS.length;
-      AM_LABEL_BARS.forEach((r, i) => mapRegion(D, AI.upper, 'kMap', r, 2200, 850, Math.floor(clamp(f - i, 0, 1) * 8) / 8, true));
+      AM_LABEL_BARS.forEach(([x,y,w,h], i) => isolatedDraw(D, AI.upper, 'kMap', 'bar' + i, [x/2200,y/850,w/2200,h/850], Math.floor(clamp(f - i, 0, 1) * 8) / 8, true));
       mapTyping(D, AI.upper, 'kMap', phase(s, 'labels', t), p => !p.words.startsWith('King Street') && p.words !== 'N');
     }
-    if (begun(s, 'title', t)) mapTyping(D, AI.upper, 'kMap', phase(s, 'title', t), p => p.words.startsWith('King Street'));
-    if (begun(s, 'badge', t)) drawnRegion(D, AI.upper, 'kMap', [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850], handed(s, 'badge', t), 1.5);
+    if (!released(s, 'badge', t) && begun(s, 'title', t)) mapTyping(D, AI.upper, 'kMap', phase(s, 'title', t), p => p.words.startsWith('King Street'));
+    if (!released(s, 'badge', t) && begun(s, 'badge', t)) isolatedDraw(D, AI.upper, 'kMap', 'badge', [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850], handed(s, 'badge', t));
   }
   if (begun(s, 'locExport', t)) { const a = action(s, 'locExport'); travel(P, 'loc', AI.lower, DOCK.loc, t, a.start, a.end, undefined, HAND); }
   else {
-    if (begun(s, 'block', t)) {
-      drawnRegion(D, AI.lower, 'locBlocks', [660 / 1352, 16 / 850, 62 / 1352, 68 / 850], handed(s, 'block', t));
+    if (!released(s, 'cityLabels', t) && begun(s, 'block', t)) {
+      isolatedDraw(D, AI.lower, 'kLoc', 'block0', [660 / 1352, 16 / 850, 62 / 1352, 68 / 850], handed(s, 'block', t));
     }
-    if (begun(s, 'blocks', t)) { const n = Math.min(CITY_BLOCKS.length - 1, 1 + Math.floor(phase(s, 'blocks', t) * (CITY_BLOCKS.length - 1))); CITY_BLOCKS.slice(1, n + 1).forEach(r => mapRegion(D, AI.lower, 'locBlocks', r, 1352, 850)); }
-    if (begun(s, 'streets', t)) cropPicture(screenPainter(D, AI.lower), 'ink', [0, 0, 1, 1], done(s, 'cityLabels', t) ? 'kLoc' : 'locStreets', handed(s, 'streets', t));
-    if (begun(s, 'pins', t)) { const n = Math.min(CITY_PINS.length, 1 + Math.floor(phase(s, 'pins', t) * CITY_PINS.length)); CITY_PINS.slice(0, n).forEach(r => mapRegion(D, AI.lower, 'locPins', r, 1352, 850)); }
-    if (begun(s, 'cityLabels', t)) mapTyping(D, AI.lower, 'kLoc', phase(s, 'cityLabels', t));
+    if (!released(s, 'cityLabels', t) && begun(s, 'blocks', t)) { const n = Math.min(CITY_BLOCKS.length - 1, 1 + Math.floor(phase(s, 'blocks', t) * (CITY_BLOCKS.length - 1))); CITY_BLOCKS.slice(1, n + 1).forEach(r => mapRegion(D, AI.lower, 'locBlocks', r, 1352, 850)); }
+    if (begun(s, 'streets', t)) {
+      cropPicture(screenPainter(D, AI.lower), 'ink', [0, 0, 1, 1], released(s, 'cityLabels', t) ? 'kLoc' : 'locGround', handed(s, 'streets', t));
+      if (!released(s, 'cityLabels', t)) isolatedDraw(D, AI.lower, 'kLoc', 'roads', [0,0,1,1], handed(s, 'streets', t));
+    }
+    if (!released(s, 'cityLabels', t) && begun(s, 'pins', t)) { const n = Math.min(CITY_PINS.length, 1 + Math.floor(phase(s, 'pins', t) * CITY_PINS.length)); CITY_PINS.slice(0, n).forEach(r => mapRegion(D, AI.lower, 'locPins', r, 1352, 850)); }
+    if (!released(s, 'cityLabels', t) && begun(s, 'cityLabels', t)) mapTyping(D, AI.lower, 'kLoc', phase(s, 'cityLabels', t));
   }
   if (begun(s, 'marquee', t) && !begun(s, 'export', t)) {
     const p = handed(s, 'marquee', t), [x, y, w, h] = AI.frame;
@@ -1650,7 +1708,7 @@ function liftDragStack(P) {
 function separateFaces(P) {
   for (const floor of [false, true]) {
     const axis = floor ? 1 : 2, across = floor ? 2 : 1, step = LAYER_STEP * (floor ? 1 : U);
-    const faces = P.filter(pc => (pc.where === 'floor') === floor && !pc.solid && !pc.sink).flatMap(pc => {   // Sinks were separated before their independent translations.
+    const faces = P.filter(pc => (pc.where === 'floor') === floor && !pc.solid && !pc.sink && !pc.blend && !pc.labelSource).flatMap(pc => {   // Sinks were separated before their independent translations.
       const [x, y, z, w] = pc.q, normal = floor ? 2 * (y * z - w * x) : 1 - 2 * (x * x + y * y);
       if (normal < 1 - 1e-9) return [];
       const points = corners(pc), xs = points.map(p => p[0]), ys = points.map(p => p[across]);
@@ -1680,6 +1738,15 @@ function separateFaces(P) {
         if (!overlay && f.pc.paintLayer !== undefined) painted.set(f.pc.paintStack, f.height);
       }
     }
+  }
+  const baseArts = {kMap:['mapStreet'],kLoc:['locGround'],kCover:['coverPhoto','coverBlob','coverDecor'],kPost:['postPhoto'],eblast:['mailPhoto'],wireWide:['wireWideBase'],wireTablet:['wireTabletBase'],wireTall:['wireTallBase']};
+  for (const pc of P.filter(pc => (pc.blend || pc.labelSource) && pc.registered && !pc.sink)) {
+    const source = pc.cutoutSource || pc.labelSource, eligible = baseArts[source] || [];
+    const bases = P.filter(q => eligible.includes(q.art) && q.p[0]-q.s[0] < pc.p[0]+pc.s[0] && q.p[0]+q.s[0] > pc.p[0]-pc.s[0] && q.p[1]-q.s[1] < pc.p[1]+pc.s[1] && q.p[1]+q.s[1] > pc.p[1]-pc.s[1]);
+    // Use the emitted base's separated face, not its authored plane: an artboard can already have lifted that base one step.
+    const base = Math.max(pc.p[2]+pc.s[2], ...bases.map(q => q.p[2]+q.s[2]));
+    const face = base + (pc.labelSource ? 1 : 0.5) * LAYER_STEP * U, rise = face-pc.s[2]-pc.p[2];
+    pc.p[0] += HOME.v[0]*rise/HOME.v[2]; pc.p[1] += HOME.v[1]*rise/HOME.v[2]; pc.p[2] += rise;
   }
 }
 export function frameAt(t, o = {}) { const { i, at } = sceneAt(t); return build(i, at, o); }

@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { HOME, dot } from '../../../../public/journey/hero/engine.mjs';
+import { HOME, dot, quatRotate } from '../../../../public/journey/hero/engine.mjs';
 import { corners } from '../kit.mjs';
 
 const TAKE = new URL('../', import.meta.url);
@@ -56,7 +56,12 @@ export async function checkHand(source = read('stage.mjs'), { only = '' } = {}) 
   if (!only || only === 'together') {
     const key = pc => (pc.art || '') + '|' + pc.tone + '|' + (pc.overlay ? 1 : 0) + '|' + (pc.where || '');
     const features = pc => {
-      const points = corners(pc.shadowP ? { ...pc, p: pc.shadowP } : pc), xs = points.map(p => p[0]), ys = points.map(p => p[1]);
+      // C3's margin quad is stationary; its original paint clip is the feature carried by the hand.
+      const reveal = pc.artReveal, full = pc.labelRegion;
+      const points = reveal && full ? [[reveal[0],reveal[1]],[reveal[2],reveal[1]],[reveal[0],reveal[3]],[reveal[2],reveal[3]]].map(([u,v]) => {
+        const local=[(2*(u-full[0])/(full[2]-full[0])-1)*pc.s[0],(1-2*(v-full[1])/(full[3]-full[1]))*pc.s[1],pc.s[2]];
+        return quatRotate(pc.q,local).map((n,i)=>n+pc.p[i]);
+      }) : corners(pc.shadowP ? { ...pc, p: pc.shadowP } : pc), xs = points.map(p => p[0]), ys = points.map(p => p[1]);
       const l = Math.min(...xs), r = Math.max(...xs), b = Math.min(...ys), t = Math.max(...ys), out = [];
       for (const x of [l, (l + r) / 2, r]) for (const y of [b, (b + t) / 2, t]) out.push(local([x, y]));
       return out;

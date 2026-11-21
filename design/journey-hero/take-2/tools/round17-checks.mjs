@@ -1,3 +1,4 @@
+import { checkPixelHelpers } from './round17-pixel-checks.mjs';
 import { laptopClearance, layoutModel, widthsFor } from './round5-addendum-checks.mjs';
 import { DEFAULT_FIT, sceneEnvelope } from '../view.mjs';
 import { fitCalloutView } from '../labels.mjs';
@@ -10,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { HOME, dot, quatRotate, EASE, makeCamera } from '../../../../public/journey/hero/engine.mjs';
 import { corners } from '../kit.mjs';
 import { createRenderer } from '../sq.mjs';
-import { ART, ART_TEXT, HISTOGRAM, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS, makeAtlas, letterMask, maskLetterPictures } from '../art.mjs';
+import { ART, ART_TEXT, HISTOGRAM, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS, makeAtlas, letterMask, maskLetterPictures, CUTOUTS, CUTOUT_MARGIN, CUTOUT_GUTTER, drawPictureParts, paintGroupName } from '../art.mjs';
 import { checkMapFrame, checkDragsFlat, checkRendererClips, onMapFrame } from './round15-checks.mjs';
 
 const url = new URL('../stage.mjs', import.meta.url);
@@ -27,9 +28,8 @@ export function round17PainterProbe(count, overlap, floor) {
   if (floor) for (const pc of P) pc.where = 'floor';
   separateFaces(P); return P;
 }
-export function round17CropProbe(art, region, amount, upward) {
-  const P = [], size = art === 'kMap' ? [2200, 850] : [1352, 850];
-  mapRegion(P, [0, 0, 1, 1], art, region, ...size, amount, upward); return P;
+export function round17RevealProbe(source, id, region, amount, upward) {
+  const P=[]; isolatedDraw(P,[0,0,1,1],source,id,region,amount,upward); return P;
 }
 `;
 const load = async edit => {
@@ -59,8 +59,9 @@ function fullCorners(pc) {
 }
 
 // Canvas logic stand-in: transforms and text metrics only. It executes all atlas drawing paths, never renders a pixel.
+let preparedAtlas;
 export function prepareRound17Art() {
-  if (ART_TEXT.kMap?.length) return;
+  if (preparedAtlas) return preparedAtlas;
   let matrix = [1, 0, 0, 1, 0, 0]; const stack = [];
   const ctx = new Proxy({
     font: '400 10px sans-serif', letterSpacing: '0px', textAlign: 'left',
@@ -75,7 +76,7 @@ export function prepareRound17Art() {
   }, { get: (o, k) => k in o ? o[k] : () => {} });
   const doc = globalThis.document, path = globalThis.Path2D;
   globalThis.Path2D = class {}; globalThis.document = { createElement: () => ({ getContext: () => ctx }) };
-  try { const atlas = makeAtlas(); assert.equal(atlas.pages.length, 5, 'R3 atlas: retain five pages'); }
+  try { const atlas = preparedAtlas = makeAtlas(); assert.equal(atlas.pages.length, 7, 'C3 atlas: seven pages with isolated marks'); return atlas; }
   finally { if (doc === undefined) delete globalThis.document; else globalThis.document = doc; if (path === undefined) delete globalThis.Path2D; else globalThis.Path2D = path; }
 }
 
@@ -127,18 +128,25 @@ export async function checkLevels(M) {
 export async function checkDrawsAndLetters(M) {
   M ??= await load();
   prepareRound17Art(); const S = scale(M); let samples = 0;
-  for (const [id, art] of [['badge', 'kMap'], ['block', 'locBlocks']]) {
-    const origin = id === 'badge' ? [1268 / 2200, 452 / 850] : [(660 - 1352 / 541) / 1352, 13.5 / 850], isDraw = pc => pc.art === art && pc.window && origin.every((v, i) => Math.abs(v - pc.window[i]) < 1e-9);
-    const a = action(M, 'ai', id), final = at(M, 'ai', a.end + 0.001).find(isDraw);
-    assert.ok(final, `R2 draw: missing ${id}'s finished region`);
+  for (const [id, source, mark, nominal] of [
+    ['badge','kMap','badge',[1273/2200,457/850,72/2200,146/850]],
+    ['block','kLoc','block0',[660/1352,16/850,62/1352,68/850]],
+  ]) {
+    const a = action(M, 'ai', id), part = CUTOUTS[source+'Part'+mark], size=ART[source];
+    const isDraw = pc => pc.cutoutSource === source && pc.cutoutId === mark;
+    const final = at(M,'ai',a.end-1e-7).find(isDraw);
+    assert.ok(final, `R2 draw: missing ${id}'s isolated region`);
     for (const t of grid(a.start + 0.01, a.end)) {
-      const P = at(M, 'ai', t), pc = P.find(isDraw), p = M.HAND((t - a.start) / (a.end - a.start));
-      assert.ok(pc, `R2 draw: ${id} is an untextured box`);
-      const opaque = P.filter(q => q.document && !q.art && !q.overlay && q.s[0] > 0.002 && q.s[1] > 0.002 && top(q) > top(pc) - 0.001);
-      assert.ok(!opaque.some(q => distance(front(q), front(pc), S) < 10), 'R2 draw: untextured opaque piece over map');
-      assert.ok(distance(fullCorners(pc), fullCorners(final), S) <= 0.1, `R2 draw: ${id} not registered`);
-      const [w, h, px, py] = id === 'badge' ? [72, 146, 5, 5] : [62, 68, 1352 / 541, 2.5];
-      near(pc.s[0] / final.s[0], (w * p + 2 * px) / (w + 2 * px), 'R2 growing width'); near(pc.s[1] / final.s[1], (h * p + 2 * py) / (h + 2 * py), 'R2 growing height'); samples++;
+      const P=at(M,'ai',t), pc=P.find(isDraw), p=M.HAND((t-a.start)/(a.end-a.start));
+      assert.ok(pc && pc.blend && !pc.cut, `R2 draw: ${id} is an untextured box`);
+      const opaque=P.filter(q=>q.document&&!q.art&&!q.overlay&&q.s[0]>0.002&&q.s[1]>0.002&&top(q)>top(pc)-0.001);
+      assert.ok(!opaque.some(q=>distance(front(q),front(pc),S)<10),'R2 draw: untextured opaque piece over map');
+      assert.ok(distance(fullCorners(pc),fullCorners(final),S)<=0.1,`R2 draw: ${id} not registered`);
+      const [u,v,w,h]=nominal,[l,y,r,b]=part.crop;
+      const expected=[l/(size.w-1),y/(size.h-1),(r-1)/(size.w-1),(b-1)/(size.h-1)];
+      pc.labelRegion.forEach((n,i)=>near(n,expected[i],'R2 isolated margin quad'));
+      assert.ok(pc.artReveal,'R2 growing paint clip');
+      [u,v,u+w*p,v+h*p].forEach((n,i)=>near(pc.artReveal[i],n,'R2 growing paint clip')); samples++;
     }
   }
   for (const [key, ids] of [['ai', ['labels', 'title', 'cityLabels']], ['id', ['mailTitle']]]) for (const id of ids) {
@@ -243,7 +251,7 @@ export async function checkPlaybackStability(M) {
   return { samples, faces, worst };
 }
 
-export function checkLetterMasks(A = { letterMask, maskLetterPictures }) {
+export function checkLetterMasks(A = { letterMask, maskLetterPictures, CUTOUTS, CUTOUT_MARGIN, CUTOUT_GUTTER, drawPictureParts, paintGroupName }) {
   prepareRound17Art();
   const all = Object.entries(ART).filter(([, a]) => a.lettersOnly), sources = new Map();
   let texels = 0, covered = 0;
@@ -288,7 +296,7 @@ export function checkLetterMasks(A = { letterMask, maskLetterPictures }) {
 
 const family = key => {
   const art = ART[key]?.source || key;
-  return /^(mapStreet|kMap)$/.test(art) ? 'map' : /^(locStreets|kLoc)$/.test(art) ? 'loc' : /^(coverPhoto|coverBlob|coverDecor|kCover)$/.test(art) ? 'cover' : /^(postPhoto|kPost)$/.test(art) ? 'post' : /^(mailPhoto|eblast)$/.test(art) ? 'mail' : art;
+  return /^(mapStreet|kMap)$/.test(art) ? 'map' : /^(locGround|locStreets|kLoc)$/.test(art) ? 'loc' : /^(coverPhoto|coverBlob|coverDecor|kCover)$/.test(art) ? 'cover' : /^(postPhoto|kPost)$/.test(art) ? 'post' : /^(mailPhoto|eblast)$/.test(art) ? 'mail' : art;
 };
 export async function checkSwaps(M) {
   M ??= await load();
@@ -406,7 +414,7 @@ export async function checkFlight(M) {
   return samples;
 }
 
-export async function checkLidAndSinks(M) {
+export async function checkLidAndSinks(M, behaviourOnly = false) {
   M ??= await load();
   let samples = 0; const endTimes = {};
   for (const key of ['id', 'pr', 'ae', 'fig']) {
@@ -437,14 +445,20 @@ export async function checkLidAndSinks(M) {
         assert.ok(P.filter(pc => pc.device > 0).every(pc => Math.abs(pc.clock - 1) < 1e-9), 'R11 other devices hold final frame');
       }
     }
-    const first = floor(off[0]), group = pc => key !== 'id' ? pc.device : pc.device !== undefined ? pc.device + 1 : pc.p[2] > M.BLOCK_ROW.stack[1] + M.BLOCK_ROW.stack[3] ? 0 : 1;
-    const count = key === 'id' ? 4 : 3, groups = Array.from({length: count}, (_, j) => first.filter(pc => group(pc) === j));
+    const first = floor(off[0]), group = pc => key !== 'id' ? pc.device : pc.device !== undefined ? pc.device + 2 : pc.p[2] > M.BLOCK_ROW.stack[1] + M.BLOCK_ROW.stack[3] ? pc.p[0] < -0.1 ? 1 : 2 : 0;
+    const count = key === 'id' ? 5 : 3, groups = Array.from({length: count}, (_, j) => first.filter(pc => group(pc) === j));
     const bodies = groups.map(pieces => { const own = pieces.filter(pc => pc.deviceBody || pc.lid); return own.length ? own : pieces; });
+    if(key==='id') {
+      const left=bounds(groups[1]),right=bounds(groups[2]);
+      near(left[4],.04,'C4 left height');near(right[4],.01,'C4 right height');
+      near(left[2],-.1,'C4 left spine');near(right[0],-.1,'C4 right spine');
+      assert.ok(groups[1].every(p=>bounds([p])[2]<=-.1+1e-9)&&groups[2].every(p=>bounds([p])[0]>=-.1-1e-9),'C4 piece spans both halves');
+    }
     const heights = bodies.map(pieces => bounds(pieces)[4]), gone = Array(count).fill(null), last = Array(count).fill(null);
     for (const t of [...grid(off[0], off[1]), off[1] - 1e-8]) {
       const P = floor(t), progress = EASE.wipe((t - off[0]) / (off[1] - off[0]));
       assert.equal(P.length, first.length, 'R11 sink: piece list changes');
-      for (let i = 0; i < P.length; i++) {
+      if (!behaviourOnly) for (let i = 0; i < P.length; i++) {
         const pc = P[i], j = group(first[i]); near(pc.p[0], first[i].p[0], 'R11 sink x'); near(pc.p[2], first[i].p[2], 'R11 sink z');
         near(pc.p[1], first[i].p[1] - heights[j] * (1 + 0.02 / Math.max(...heights)) * progress, 'R11 own height sink ' + key + '/' + j + '/' + i + ' at ' + (t-off[0]), 1e-6);
         assert.deepEqual(pc.clip, [0, 1, 0, 0], 'R11 sink floor clip');
@@ -598,73 +612,178 @@ export async function checkDeviceGlass(M, clearanceOnly = false) {
   return {samples,highestPhoneLayer};
 }
 
-// Conservative paint-support proof, not a font rasteriser. Removing common paint commands leaves a superset of all changed
-// texels: every raster cell intersecting rectangle/path control hulls or centred strokes. Glyphs use F3's recorded crops.
-function mapPaintSupport(art) {
-  let matrix = [1,0,0,1,0,0], points = [], textIndex = 0; const saved = [], paints = [];
-  const point = (x,y) => [matrix[0]*x+matrix[2]*y+matrix[4],matrix[1]*x+matrix[3]*y+matrix[5]];
-  const rect = (x,y,w,h) => [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].map(p => point(...p));
-  const emit = (kind, pts, extra = '') => {
-    const radius = kind === 'stroke' ? ctx.lineWidth * Math.max(Math.hypot(matrix[0],matrix[1]),Math.hypot(matrix[2],matrix[3])) / 2 : 0;
-    const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
-    const r=kind==='text' ? ART_TEXT[art][textIndex++].crop : [Math.min(...xs)-radius,Math.min(...ys)-radius,Math.max(...xs)+radius,Math.max(...ys)+radius];
-    paints.push({key:JSON.stringify([kind,pts,kind==='stroke'?ctx.strokeStyle:ctx.fillStyle,radius,extra]),r});
+// A command recorder, not a rasterizer. It preserves path/state/transform/clip identities and paint order.
+export function recordPicture(source, accept = null, offset = [0,0]) {
+  const paints=[], saved=[]; let matrix=[1,0,0,1,...offset], path=[], clips=[];
+  const defaults={fillStyle:'#000000',strokeStyle:'#000000',lineWidth:1,font:'10px sans-serif',letterSpacing:'0px',textAlign:'left',textBaseline:'alphabetic',globalAlpha:1,globalCompositeOperation:'source-over',lineCap:'butt',lineJoin:'miter',shadowBlur:0,shadowOffsetX:0,shadowOffsetY:0,shadowColor:'rgba(0,0,0,0)'};
+  const point=(x,y)=>[matrix[0]*x+matrix[2]*y+matrix[4],matrix[1]*x+matrix[3]*y+matrix[5]];
+  const ctx={...defaults,
+    getTransform:()=>Object.fromEntries(['a','b','c','d','e','f'].map((k,i)=>[k,matrix[i]])),
+    save(){saved.push({matrix:[...matrix],clips:[...clips],state:Object.fromEntries(Object.keys(defaults).map(k=>[k,this[k]]))});},
+    restore(){const s=saved.pop();matrix=s.matrix;clips=s.clips;Object.assign(this,s.state);},
+    translate(x,y){matrix[4]+=matrix[0]*x+matrix[2]*y;matrix[5]+=matrix[1]*x+matrix[3]*y;},
+    scale(x,y){matrix[0]*=x;matrix[1]*=x;matrix[2]*=y;matrix[3]*=y;},
+    rotate(a){const [x,y,z,w]=matrix,c=Math.cos(a),s=Math.sin(a);matrix[0]=x*c+z*s;matrix[1]=y*c+w*s;matrix[2]=-x*s+z*c;matrix[3]=-y*s+w*c;},
+    measureText(s){const px=+(this.font.match(/([\d.]+)px/)?.[1]||10);return {width:s.length*px*0.55,actualBoundingBoxAscent:px*0.8,actualBoundingBoxDescent:px*0.2};},
+    setLineDash(){},
+    createLinearGradient(...args){return {args,stops:[],addColorStop(...stop){this.stops.push(stop);}};},
+    beginPath(){path=[];},closePath(){path.push(['close']);},clip(){clips.push([...path]);},
   };
-  const ctx = {
-    font:'400 10px sans-serif',letterSpacing:'0px',textAlign:'left',lineWidth:1,
-    save() {saved.push({matrix:matrix.slice(),font:this.font,letterSpacing:this.letterSpacing,textAlign:this.textAlign,fillStyle:this.fillStyle,strokeStyle:this.strokeStyle,lineWidth:this.lineWidth});},
-    restore() {const state=saved.pop();matrix=state.matrix;Object.assign(this,state);},
-    translate(x,y) {matrix[4]+=matrix[0]*x+matrix[2]*y;matrix[5]+=matrix[1]*x+matrix[3]*y;},
-    scale(x,y) {matrix[0]*=x;matrix[1]*=x;matrix[2]*=y;matrix[3]*=y;},
-    rotate(a) {const [x,y,z,w]=matrix,c=Math.cos(a),s=Math.sin(a);matrix[0]=x*c+z*s;matrix[1]=y*c+w*s;matrix[2]=-x*s+z*c;matrix[3]=-y*s+w*c;},
-    getTransform() {return Object.fromEntries(['a','b','c','d','e','f'].map((k,i)=>[k,matrix[i]]));},
-    measureText(s) {const px=+(this.font.match(/([\d.]+)px/)?.[1]||10);return {width:s.length*px*0.55,actualBoundingBoxAscent:px*0.8,actualBoundingBoxDescent:px*0.2};},
-    beginPath() {points=[];},moveTo(x,y) {points.push(point(x,y));},lineTo(x,y) {points.push(point(x,y));},
-    bezierCurveTo(...p) {for(let i=0;i<p.length;i+=2)points.push(point(p[i],p[i+1]));},
-    quadraticCurveTo(...p) {this.bezierCurveTo(...p);},
-    rect(x,y,w,h) {points.push(...rect(x,y,w,h));},roundRect(x,y,w,h) {this.rect(x,y,w,h);},
-    arc(x,y,r) {points.push(...rect(x-r,y-r,2*r,2*r));},closePath() {},clip() {},
-    fill() {emit('fill',points);},stroke() {emit('stroke',points);},
-    fillRect(x,y,w,h) {emit('fill',rect(x,y,w,h));},
-    fillText(s,x,y) {const m=this.measureText(s),l=this.textAlign==='center'?x-m.width/2:x;emit('text',rect(l,y-m.actualBoundingBoxAscent,m.width,m.actualBoundingBoxAscent+m.actualBoundingBoxDescent),[s,this.font]);},
+  for(const method of ['moveTo','lineTo','rect','roundRect','bezierCurveTo','quadraticCurveTo','arc','arcTo','ellipse']) ctx[method]=(...args)=>path.push([method,...args]);
+  let ordinal=0;
+  for(const method of ['fill','stroke','fillRect','strokeRect','fillText','strokeText','drawImage','clearRect','putImageData']) ctx[method]=(...args)=>{
+    const group=paintGroupName(), n=ordinal++;
+    const state=Object.fromEntries(Object.keys(defaults).map(k=>[k,ctx[k]]));
+    const relevant=['globalAlpha','globalCompositeOperation','shadowBlur','shadowOffsetX','shadowOffsetY','shadowColor',method.startsWith('stroke')?'strokeStyle':'fillStyle'];
+    if(method.startsWith('stroke'))relevant.push('lineWidth','lineCap','lineJoin');
+    if(method.endsWith('Text'))relevant.push('font','letterSpacing','textAlign','textBaseline');
+    const semantic=Object.fromEntries(relevant.map(k=>[k,state[k]]));
+    paints.push({group,n,mode:ctx.globalCompositeOperation,clips:[...clips],key:JSON.stringify([method,args,method==='fill'||method==='stroke'?path:null,matrix,semantic,clips]),method,args,state,path:[...path],matrix:[...matrix]});
   };
-  ART[art].draw(ctx,ART[art].w,ART[art].h);return paints;
+  const previous=globalThis.Path2D;globalThis.Path2D=class {constructor(d){this.path=d;}};
+  try {if(accept)drawPictureParts(ctx,source,accept);else ART[source].draw(ctx,ART[source].w,ART[source].h);}
+  finally {if(previous===undefined)delete globalThis.Path2D;else globalThis.Path2D=previous;}
+  return paints;
 }
 
-export async function checkCropFringes(M) {
+export async function checkCutouts(M) {
   M ??= await load();prepareRound17Art();
-  const base = new Map();for(const p of mapPaintSupport('mapStreet'))base.set(p.key,(base.get(p.key)||0)+1);
-  const changes = mapPaintSupport('kMap').filter(p=>{const n=base.get(p.key)||0;if(n){base.set(p.key,n-1);return false;}return true;});
-  const a=ART.kMap, end=action(M,'ai','badge').end, P=at(M,'ai',end-1e-9);
-  const crops=P.filter(pc=>pc.art==='kMap'&&pc.window||pc.labelSource==='kMap').map(pc=>pc.labelRegion||pc.window);
-  let texels=0; const seen=new Set();
-  for(const {r} of changes) for(let y=Math.max(0,Math.floor(r[1]));y<Math.min(a.h,Math.ceil(r[3]));y++) for(let x=Math.max(0,Math.floor(r[0]));x<Math.min(a.w,Math.ceil(r[2]));x++) {
-    const i=y*a.w+x;if(seen.has(i))continue;seen.add(i);
-    const u=x/(a.w-1),v=y/(a.h-1);
-    assert.ok(crops.some(([l,t,r,b])=>u>=l-1e-9&&u<=r+1e-9&&v>=t-1e-9&&v<=b+1e-9),`C3 changed texel coverage: missing ${x},${y}`);texels++;
-  }
-  assert.ok(changes.length>100&&texels>10000,'C3 changed texel coverage: empty proof');
-  const probe = M.round17CropProbe ? M : await load();
-  // Independently pin the one-texel halo, including its upward reveal; no expanded constant can validate itself.
-  for (const [art, regions, w, h] of [['kMap',[...AM_MARKERS,...AM_LABEL_BARS,[88,90,82,96]],2200,850],['locBlocks',CITY_BLOCKS,1352,850],['locPins',CITY_PINS,1352,850]]) {
-    for (const [x,y,rw,rh] of regions) for (const amount of [0.125,0.5,1]) {
-      const pc=probe.round17CropProbe(art,[x,y,rw,rh],amount,true)[0], px=1/ART[art].w,py=1/ART[art].h;
-      const expected=[Math.max(0,x/w-px),Math.max(0,(y+rh*(1-amount))/h-py),Math.min(1,(x+rw)/w+px),Math.min(1,(y+rh)/h+py)];
-      pc.window.forEach((v,i)=>near(v,expected[i],'C3 crop halo and upward reveal',1e-9));
+  const inventory={kMap:98,kLoc:44,kCover:1,kPost:1,eblast:2,wireWide:24,wireTablet:20,wireTall:20}, rows=[];
+  for(const [source,count] of Object.entries(inventory)) {
+    const full=recordPicture(source), parts=Object.entries(CUTOUTS).filter(([,p])=>p.source===source);
+    assert.equal(parts.length,count,'C3 exactness: cutout inventory '+source);
+    const assigned=new Map();let commands=0;
+    assert.ok(full.every(p=>p.mode==='source-over'),'C3 exactness: source composite mode');
+    for(const [key,part] of parts) {
+      assert.ok(part.margin>=24&&part.gutter>=24,'C3 atlas: margin/gutter');
+      const own=full.filter(p=>part.accept(p.group,p.method,p.n));
+      assert.ok(own.length,'C3 exactness: empty mark '+key);
+      const replay=recordPicture(key,null,[part.crop[0],part.crop[1]]);
+      assert.deepEqual(replay.map(p=>p.key),own.map(p=>p.key),'C3 exactness: replay differs '+key);
+      for(const p of own) {assert.ok(!assigned.has(p.n),'C3 exactness: repeated command '+source+'/'+p.n);assigned.set(p.n,key);assert.equal(p.mode,'source-over','C3 exactness: composite mode');commands++;}
+      assert.ok(!own.some(p=>p.clips.length>1),'C3 exactness: shared internal clip');
+      const [x,y,w,h]=part.rect,[l,t,r,b]=part.crop,a=ART[source];
+      assert.ok((l===0||x-l>=24-1e-9)&&(t===0||y-t>=24-1e-9)&&(r===a.w||r-x-w>=24-1e-9)&&(b===a.h||b-y-h>=24-1e-9),'C3 atlas: transparent margin '+key);
     }
+    const ordered=parts.slice().sort((a,b)=>a[1].order-b[1].order).flatMap(([,part])=>full.filter(p=>part.accept(p.group,p.method,p.n)).map(p=>p.n));
+    assert.deepEqual(ordered,full.filter(p=>assigned.has(p.n)).map(p=>p.n),'C3 exactness: finished paint order '+source);
+    const base=recordPicture(source,(g,k,n)=>!assigned.has(n));
+    const sameCommands=(a,b,gate)=>assert.deepEqual(a.map(p=>p.key),b.map(p=>p.key),gate);
+    if(['kMap','kLoc','wireWide','wireTablet','wireTall','eblast'].includes(source)) {
+      const name={kMap:'mapStreet',kLoc:'locGround',eblast:'mailPhoto'}[source]||source+'Base';
+      sameCommands(recordPicture(name),full.filter(p=>!assigned.has(p.n)&&!p.method.endsWith('Text')),'C3 exactness: actual base '+source);
+    }
+    if(source==='kCover')sameCommands(recordPicture('coverBlob'),[...recordPicture('coverPhoto'),...recordPicture('kCoverPartblob',null,CUTOUTS.kCoverPartblob.crop.slice(0,2))],'C3 exactness: actual cover base/blob');
+    if(source==='kPost') {
+      const actual=recordPicture('postPhoto'),remaining=new Map();for(const p of base)remaining.set(p.key,(remaining.get(p.key)||0)+1);
+      for(const p of actual){const n=remaining.get(p.key)||0;assert.ok(n,'C3 exactness: actual post base');remaining.set(p.key,n-1);}
+      const prefix=recordPicture('idPost21',null,[276,315.2]);
+      for(const p of base.filter(p=>!p.method.endsWith('Text')))assert.ok(actual.some(q=>q.key===p.key)||prefix.some(q=>q.key===p.key),'C3 exactness: post tab prefix');
+    }
+    const composed=[...base,...parts.flatMap(([key])=>recordPicture(key,null,CUTOUTS[key].crop.slice(0,2)))];
+    const multiset=xs=>xs.map(p=>p.key).sort();
+    assert.deepEqual(multiset(composed),multiset(full),'C3 exactness: missing/repeated source paint '+source);
+    const paintBounds=p=>{
+      const pts=[],rect=(x,y,w,h)=>pts.push([x,y],[x+w,y],[x,y+h],[x+w,y+h]);
+      if(p.method==='fillRect'||p.method==='strokeRect')rect(...p.args);
+      else if(p.method.endsWith('Text')) {const px=+(p.state.font.match(/([\d.]+)px/)?.[1]||10),[words,x,y]=p.args,w=words.length*px*.55;rect(x-(p.state.textAlign==='center'?w/2:p.state.textAlign==='right'?w:0),y-px*.8,w,px);}
+      else for(const [kind,...args] of p.path) {if(kind==='rect'||kind==='roundRect')rect(...args);else if(kind==='arc')rect(args[0]-args[2],args[1]-args[2],2*args[2],2*args[2]);else for(let i=0;i+1<args.length;i+=2)if(typeof args[i]==='number'&&typeof args[i+1]==='number')pts.push([args[i],args[i+1]]);}
+      assert.ok(pts.length,'C3 exactness: unmeasured base command '+source+'/'+p.n);
+      const m=p.matrix,world=pts.map(([x,y])=>[m[0]*x+m[2]*y+m[4],m[1]*x+m[3]*y+m[5]]),radius=p.method.startsWith('stroke')?p.state.lineWidth*Math.max(Math.hypot(m[0],m[1]),Math.hypot(m[2],m[3]))/2:0;
+      return [Math.min(...world.map(p=>p[0]))-radius,Math.min(...world.map(p=>p[1]))-radius,Math.max(...world.map(p=>p[0]))+radius,Math.max(...world.map(p=>p[1]))+radius];
+    };
+    let letterCommands=0;
+    if(ART_TEXT[source])for(const p of full.filter(p=>!assigned.has(p.n)&&p.method==='fillText')) {
+      const matches=ART_TEXT[source].filter(part=>part.words===p.args[0]).map(part=>recordPicture(part.picture,null,part.crop.slice(0,2))).flat();
+      assert.ok(matches.some(q=>q.key===p.key),'C3 exactness: missing original typed command '+source+'/'+p.n);letterCommands++;
+    }
+    let lateBaseCommands=0;
+    for(const p of full.filter(p=>!assigned.has(p.n)&&!(ART_TEXT[source]&&p.method.endsWith('Text')))) for(const [key,part] of parts) {
+      if(!full.some(q=>assigned.get(q.n)===key&&q.n<p.n))continue;
+      lateBaseCommands++;const r=paintBounds(p),[x,y,w,h]=part.rect;
+      assert.ok(!(Math.min(r[2],x+w)>Math.max(r[0],x)+1e-9&&Math.min(r[3],y+h)>Math.max(r[1],y)+1e-9),'C3 exactness: overlapping late base paint '+source+'/'+p.n+'/'+key);
+    }
+    rows.push({source,cutouts:count,commands,baseCommands:base.length-letterCommands,letterCommands,lateBaseComparisons:lateBaseCommands});
   }
-  // Figma's wireframe fragments also sit over a base later filled by their complete picture.
-  const wire = at(M,'fig',action(M,'fig','details').end-0.001);
-  const wireRegions = [
-    ['wireWide',[665/1440,119/900,678/1440,682/900],1.5],
-    ...[[64/1440,252/900,300/1440,76/900],[64/1440,350/900,420/1440,76/900],[0,0,1,0.13],[0,0.49,0.46,0.13],[0,0.61,0.46,0.39]].map(r=>['wireWide',r,1]),
-    ...['wireTablet','wireTall'].flatMap(art=>[[0,0,1,0.18],[0,0.18,1,0.40],[0,0.58,1,0.42]].map(r=>[art,r,1])),
-  ];
-  for (const [art,[u,v,w,h],pad] of wireRegions) {
-    const a=ART[art],r=[Math.max(0,u-pad/a.w),Math.max(0,v-pad/a.h),Math.min(1,u+w+pad/a.w),Math.min(1,v+h+pad/a.h)];
-    assert.ok(wire.some(pc=>pc.art===art&&pc.window&&pc.window.every((n,i)=>Math.abs(n-r[i])<1e-9)),'C3 wire crop halo: '+art);
+  const probe=M.round17RevealProbe?M:await load();
+  for(const [i,[x,y,w,h]] of AM_LABEL_BARS.entries())for(const amount of [.125,.5,.875,1]) {
+    const pc=probe.round17RevealProbe('kMap','bar'+i,[x/2200,y/850,w/2200,h/850],amount,true)[0];
+    assert.ok(pc.blend&&!pc.cut,'C3 bar blended reveal');
+    if(amount===1)assert.equal(pc.artReveal,undefined,'C3 full bar uses isolated static picture');
+    else [x/2200,(y+h*(1-amount))/850,(x+w)/2200,(y+h)/850].forEach((n,j)=>near(pc.artReveal[j],n,'C3 eight-step upward paint clip'));
   }
-  return {changedPaints:changes.length,texels,crops:crops.length,wireCrops:wireRegions.length};
+  const atlas=prepareRound17Art(), pixelRect=key=>{const [page,u,v,w,h]=atlas.places[key],canvas=atlas.pages[page];return [page,Math.round(u*canvas.width-.5),Math.round(v*canvas.height-.5),Math.round(w*canvas.width+1),Math.round(h*canvas.height+1)];};
+  for(const [key,p] of Object.entries(CUTOUTS)) {
+    const [page,x,y,w,h]=pixelRect(key),canvas=atlas.pages[page];
+    assert.ok(x>=24&&y>=24&&canvas.width-x-w>=24&&canvas.height-y-h>=24,'C3 atlas: page gutter '+key);
+    for(const other of Object.keys(atlas.places))if(other!==key) {const [q,l,t,r,b]=pixelRect(other);if(q!==page)continue;assert.ok(Math.max(l-x-w,x-l-r,t-y-h,y-t-b)>=24,'C3 atlas: neighbour gutter '+key+'/'+other);}
+    const [,sx,sy]=pixelRect(p.source);near(((x-p.crop[0]-sx)%8+8)%8,0,'C3 atlas: mip x phase');near(((y-p.crop[1]-sy)%8+8)%8,0,'C3 atlas: mip y phase');
+  }
+  const releases=[['ai','badge','kMap'],['ai','cityLabels','kLoc'],['id','blob','kCover','coverBlob'],['id','postButton','kPost'],['id','mailFlyer','eblast'],...['wireWide','wireTablet','wireTall'].map(a=>['fig','details',a])];
+  for(const [scene,id,source,finished=source] of releases) {
+    const end=action(M,scene,id).end;
+    const before=at(M,scene,end-1e-7),after=at(M,scene,end+1e-9);
+    const emitted=new Set(before.filter(pc=>pc.cutoutSource===source).map(pc=>pc.art));
+    const baseKeys={kMap:['mapStreet'],kLoc:['locGround'],kCover:['coverPhoto'],kPost:['postPhoto'],eblast:['mailPhoto'],wireWide:['wireWideBase'],wireTablet:['wireTabletBase'],wireTall:['wireTallBase']}[source];
+    const base=before.find(pc=>baseKeys.includes(pc.art));assert.ok(base,'C3 depth: missing base '+source);
+    for(const pc of before.filter(pc=>pc.cutoutSource===source)) {
+      near(top(pc)-top(base),.0004*1.15,'C3 depth: blend must be above emitted base',1e-9);
+      assert.ok(pc.blend&&!pc.cut&&pc.noShadow&&pc.noLine,'C3 depth: blended face contract');
+    }
+    for(const pc of before.filter(pc=>pc.labelSource===source))near(top(pc)-top(base),.0008*1.15,'C3 depth: letter must be above blend',1e-9);
+    for(const [key,p] of Object.entries(CUTOUTS).filter(([,p])=>p.source===source)) assert.ok(emitted.has(key),'C3 exactness: missing emitted mark '+key);
+    for(const dt of [0,1e-9,0.001,0.02]) assert.ok(!at(M,scene,end+dt).some(pc=>pc.cutoutSource===source),'C3 release: cutout after release '+source);
+    assert.ok(after.some(pc=>pc.art===finished&&(!pc.window||pc.window.every((n,i)=>n===[0,0,1,1][i]))&&!pc.labelSource),'C3 release: finished picture missing '+source);
+    assert.ok(!after.some(pc=>pc.labelSource===source),'C3 release: retained typed companion '+source);
+  }
+  return {pictures:rows,atlas:atlas.pages.map(p=>[p.width,p.height]),exceptions:{missing:0,repeated:0,compositeModes:0,sharedInternalClips:0}};
+}
+export const checkCropFringes = checkCutouts;
+
+// Execute the renderer in a recording WebGL2 context; state, order and lifetime are observable without a GPU.
+function rendererTrace(code = null) {
+  let next=0,program,depthWrite=true,depthTest=false,blend=false,offset=false,factor=0,units=0;const calls=[],uniforms=new Map();
+  const names=['uArtMode','uClip','uCarryClip','uPos'];
+  const gl=new Proxy({}, {get:(_,key)=>{
+    if(/^[A-Z_0-9]+$/.test(key))return key;
+    if(key==='createProgram')return ()=>++next;
+    if(key==='getProgramParameter')return (_,p)=>p==='ACTIVE_UNIFORMS'?names.length:true;
+    if(key==='getShaderParameter')return ()=>true;
+    if(key==='getActiveUniform')return (_,i)=>({name:names[i]});
+    if(key==='getUniformLocation')return (_,name)=>({name});
+    if(key==='useProgram')return p=>{program=p;};
+    if(key==='uniform1f'||key==='uniform3fv'||key==='uniform4fv')return (u,p)=>{if(u)uniforms.set(u.name,Array.isArray(p)?[...p]:p);};
+    if(key==='enable'||key==='disable')return state=>{if(state==='DEPTH_TEST')depthTest=key==='enable';if(state==='BLEND')blend=key==='enable';if(state==='POLYGON_OFFSET_FILL')offset=key==='enable';};
+    if(key==='depthMask')return value=>{depthWrite=value;};
+    if(key==='polygonOffset')return (f,u)=>{factor=f;units=u;};
+    if(key==='drawElements'||key==='drawArrays')return ()=>calls.push({program,depthWrite,depthTest,blend,offset,factor,units,mode:uniforms.get('uArtMode'),position:uniforms.get('uPos')});
+    return ()=>({});
+  }});
+  const make=code ? new Function('ART','CUTOUTS',code.replace(/^import .*;$/gm,'').replaceAll('export ','')+'; return createRenderer;')(ART,CUTOUTS) : createRenderer;
+  const renderer=make({getContext:()=>gl});renderer.setAtlas({pages:[{}],places:{probe:[0,0,0,1,1]}});
+  return {renderer,calls,state:()=>({depthWrite,blend,offset,factor,units})};
+}
+export function checkFloorOffset(code) {
+  const {renderer,calls,state}=rendererTrace(code);
+  const pc={tone:'paper',p:[0,0,0],q:[0,0,0,1],s:[.1,.1,.001],e:[.02,.02],art:'probe'};
+  renderer.draw([pc,{...pc,cut:true},{...pc,blend:true}],{W:100,H:100,S:10,cx:50,cy:50,cam:HOME},{floor:{}});
+  const floor=calls.filter(c=>c.program===4);
+  assert.equal(floor.length,1,'C5 floor offset: floor draw missing');
+  assert.ok(floor[0].offset&&floor[0].factor>=1&&floor[0].units>=2,'C5 floor offset: missing positive offset');
+  assert.ok(calls.filter(c=>c.program!==4).every(c=>!c.offset),'C5 floor offset: leaked into pieces');
+  assert.deepEqual(state(),{depthWrite:true,blend:false,offset:false,factor:0,units:0},'C5 floor offset: state not restored');
+}
+export function checkBlendedPass() {
+  const shader=fs.readFileSync(new URL('../sq.mjs',import.meta.url),'utf8');
+  assert.match(shader,/uArtMode > 2.5.*vFace < 0.999/,'C3 blended pass: only picture face');
+  assert.match(shader,/o = vec4\(art.rgb \* k, art.a\)/,'C3 blended pass: premultiplied lit colour');
+  const {renderer,calls}=rendererTrace(),pc={tone:'paper',p:[0,0,0],q:[0,0,0,1],s:[.1,.1,.001],e:[.02,.02],art:'probe'};
+  renderer.draw([pc,{...pc,blend:true,paintOrder:2,p:[2,0,0]},{...pc,blend:true,paintOrder:1,p:[1,0,0]}],{W:100,H:100,S:10,cx:50,cy:50,cam:HOME},{floor:{}});
+  const blended=calls.filter(c=>c.mode===3&&c.program===1);
+  assert.deepEqual(blended.map(c=>c.position[0]),[1,2],'C3 blended pass: paint order');
+  assert.ok(blended.every(c=>c.blend&&c.depthTest&&!c.depthWrite),'C3 blended pass: blend/depth state');
+  assert.ok(calls.filter(c=>c.program===2||c.program===3).every(c=>c.position[0]===0),'C3 blended pass: shadow/outline');
+  assert.ok(calls.indexOf(blended[0])>calls.findLastIndex(c=>c.program===2)&&calls.indexOf(blended.at(-1))<calls.findIndex(c=>c.program===4),'C3 blended pass: pass order');
 }
 
 function checkCarryClipRenderer() {
@@ -694,6 +813,24 @@ function checkCarryClipRenderer() {
   calls.length=0;renderer.draw([{...pc,sinkTop:-0.001}],view);
   assert.equal(calls.length,0,'C2 renderer: drawn after body under floor');
 }
+export function checkRevealPass() {
+  const key='kMapPartbar0',part=CUTOUTS[key],events=[],doc=globalThis.document,previousPath=globalThis.Path2D;
+  const context=new Proxy({getTransform:()=>({a:1,b:0,c:0,d:1,e:0,f:0}),measureText:s=>({width:s.length*10})},{get:(o,k)=>k in o?o[k]:(...args)=>{if(['rect','clip','fill','fillRect','stroke','fillText'].includes(k))events.push([k,...args]);},set:(o,k,v)=>(o[k]=v,true)});
+  const images=[];
+  globalThis.document={createElement:()=>{const c={width:0,height:0,getContext:()=>context};images.push(c);return c;}};globalThis.Path2D=class {};
+  try {
+    const {renderer}=rendererTrace();renderer.setAtlas({pages:[{width:2048,height:2048}],places:{kMap:[0,8.5/2048,8.5/2048,1099/2048,424/2048],[key]:[0,.5/2048,.5/2048,(ART[key].w-1)/2048,(ART[key].h-1)/2048]}});
+    const [x,y,w,h]=AM_LABEL_BARS[0],pc={tone:'paper',p:[0,0,0],q:[0,0,0,1],s:[.1,.1,.001],e:[.02,.02],art:key,blend:true,artReveal:[x/2200,(y+h/2)/850,(x+w)/2200,(y+h)/850]};
+    const view={W:100,H:100,S:10,cx:50,cy:50,cam:HOME};renderer.draw([pc],view);
+    const clip=events.findIndex(e=>e[0]==='clip'),paint=events.findIndex(e=>e[0]==='fillRect');
+    assert.ok(clip>=0&&paint>clip,'C3 reveal: paint must follow the reveal clip');
+    assert.equal(events[clip-1][0],'rect','C3 reveal: nominal clip');[x/2-part.crop[0],(y+h/2)/2-part.crop[1],w/2,h/4].forEach((n,i)=>near(events[clip-1][i+1],n,'C3 reveal: nominal clip, no expanded paint'));
+    assert.equal(events.filter(e=>['fill','stroke','fillText','fillRect'].includes(e[0])).length,1,'C3 reveal: another mark leaked');
+    const count=events.length;renderer.draw([pc],view);assert.equal(events.length,count,'C3 reveal: identical step repainted');
+    assert.ok(images[0].width>=ART[key].w+48&&images[0].height>=ART[key].h+48,'C3 reveal: transparent texture gutter');
+  } finally {if(doc===undefined)delete globalThis.document;else globalThis.document=doc;if(previousPath===undefined)delete globalThis.Path2D;else globalThis.Path2D=previousPath;}
+}
+
 export async function checkPinnedCamera(M, envelope=sceneEnvelope) {
   M ??= await load();
   assert.deepEqual(envelope(M.SCENES,corners,dot,HOME),DEFAULT_FIT,'R12 pinned fit: computed instead');
@@ -722,14 +859,15 @@ export async function checkRound17(M) {
   const levels = await checkLevels(M), letters = await checkDrawsAndLetters(M), swaps = await checkSwaps(M), carries = await checkCarries(M), flight = await checkFlight(M), sinks = await checkLidAndSinks(M);
   const devices = await checkDeviceModels(M), camera = await checkPinnedCamera(M);
   const heights = await checkDocumentHeights(M), stable = await checkPlaybackStability(M), masks = checkLetterMasks();
-  const contact = await checkDeviceGlass(M), clearance = await checkDeviceGlass(M,true), fringes = await checkCropFringes(M);checkCarryClipRenderer();
-  console.log(`Critique round 1: C1 ${JSON.stringify({contact,clearance})}; C2 own-body depths, carry clips and renderer cull; C3 ${JSON.stringify(fringes)} conservative changed-texel support.`);
+  const contact = await checkDeviceGlass(M), clearance = await checkDeviceGlass(M,true), fringes = await checkCutouts(M);checkCarryClipRenderer();checkFloorOffset();checkBlendedPass();checkRevealPass();console.log('Pixel helper synthetic tests: '+JSON.stringify(checkPixelHelpers()));
+  console.log(`Critique round 2: retained C1 ${JSON.stringify({contact,clearance})}; C2 own-body depths, carry clips and renderer cull; C3 ${JSON.stringify(fringes)} exact paint partition; C4 five InDesign objects; C5 floor offset 1/2.`);
   return `R12: ${JSON.stringify({devices,camera})}\nRound 17: G ${swaps.boundaries} action ends / ${swaps.comparisons} registrations, worst ${swaps.worst.toFixed(5)} px; R1 ${levels} levels samples; R2/R3 ${letters} draw/type samples; R4 ${carries.carries} carries / ${carries.samples} samples, flat worst ${carries.flat.worst.toFixed(5)} px; R6/R7 ${flight} flight samples; R8-R11 ${sinks.samples} sink samples (${JSON.stringify(sinks.endTimes)}).\nFollow-up: F1 ${heights.samples} height samples / ${heights.pages} pages / ${heights.layers} layers; F2 ${stable.samples} playback samples / ${stable.faces} fixed faces, worst ${stable.worst.toFixed(5)} px; F3 ${masks.pictures} masks / ${masks.texels} fixture texels / ${masks.covered} covered, exact finished RGB.`;
 }
 
 // Register round 17's changed surfaces with the earlier frozen-picture comparisons. These surfaces now have the explicit
 // G/R1-R4 gates above; unchanged app furniture, footage, comp construction and clocks still compare with the frozen evidence.
 export const round17Changed = M => pc => {
+  if (pc.blend || ART[pc.art]?.cutout || /^(locGround|wire(?:Wide|Tablet|Tall)Base)$/.test(pc.art || '')) return true;
   if (onMapFrame(M)(pc)) return true;
   if (pc.overlay || pc.caret || pc.histogram !== undefined || pc.where === 'travel') return true;
   if (/^(histo(?:Dark)?|photoRaw|photoHalf|photoLevels|mapStreet|locBlocks|locStreets|locPins|kMap(?:Letters\d+)?|kLoc(?:Letters\d+|Close)?|kAm[LR]|kCover|kPost|eblast(?:Letters\d+)?|cover(?:Photo|Blob|Decor)|postPhoto|mailPhoto|mailButtonStyle|id(?:Cover|Post|Mail|Flyer)\d+)$/.test(pc.art || '')) return true;
@@ -792,7 +930,7 @@ export async function checkRound17Controls() {
     assert.ok(caught, `${name}: MISSED`); out.push(`${name}: failed at ${gate}`);
   };
   await control('done() photo choice', s => s.replace("pc.artMix = handed(s, white ? 'white' : 'black', t);", "pc.artMix = done(s, white ? 'white' : 'black', t) ? 1 : 0;"), 'R1 photo mix', checkLevels);
-  await control('badge drawnFrame', s => s.replace("drawnRegion(D, AI.upper, 'kMap', [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850], handed(s, 'badge', t), 1.5)", "drawnFrame(D, inRect(AI.upper, [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850]), handed(s, 'badge', t), 'grey')"), 'R2 draw:', checkDrawsAndLetters);
+  await control('badge drawnFrame', s => s.replace("isolatedDraw(D, AI.upper, 'kMap', 'badge', [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850], handed(s, 'badge', t))", "drawnFrame(D, inRect(AI.upper, [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850]), handed(s, 'badge', t), 'grey')"), 'R2 draw:', checkDrawsAndLetters);
   await control('label lift 0.09', s => s.replace("{ lift: 0.084, t: 0.004, art: part.picture, cut: true }", "{ lift: 0.09, t: 0.004, art: part.picture, cut: true }").replace('work.labelSource = art;', 'work.labelSource = art; work.unregistered = true;').replace("if (pc.art && !pc.overlay && pc.art !== 'kLocClose') registerPicture", "if (pc.art && !pc.overlay && pc.art !== 'kLocClose' && !pc.unregistered) registerPicture"), 'R3 registration:', checkDrawsAndLetters);
   await control('travel action:key', s => {
     const a = s.indexOf('function travel('), b = s.indexOf('\n}', a) + 2, body = s.slice(a, b);
@@ -840,10 +978,15 @@ export async function checkRound17Controls() {
   await control('C1 old placement, underside',coplanar,'C1 glass underside:',checkDeviceGlass);
   await control('C1 old placement, top',coplanar,'C1 glass clearance:',M=>checkDeviceGlass(M,true));
   await control('C1 old island height',s=>s.replace('face: 0.052 + 16 * 0.0008','face: 0.05 + 16 * 0.0008'),'R12 one island: fixed height',checkDeviceModels);
-  await control('C2 carried layers without clip',s=>s.replace('pc.carryClip = [0, 1, 0, -Math.max(0, top(pc) - heights[j])]', 'pc.carryClip = undefined'),'C2 carried clip:',checkLidAndSinks);
-  await control('C2 reading copy grouped with stack',s=>s.replace('formats[0].objects = [floor.slice(0, 10), floor.slice(18)];','formats[0].objects = [formats[0].pieces];'),'C2 body cull top',checkLidAndSinks);
+  await control('C6 carried layers without cull or clip',s=>s.replace('pc.carryClip = [0, 1, 0, -Math.max(0, top(pc) - heights[j])]', 'pc.carryClip = undefined').replace('pc.sinkTop = heights[j] - depth * g;', 'pc.sinkTop = Infinity;'),'C2 carried lifetime: drawn after body',M=>checkLidAndSinks(M,true));
+  await control('C2 reading copy grouped with stack',s=>s.replace('formats[0].objects = [floor.slice(0, 10), reading.filter(pc => pc.p[0] < spine), reading.filter(pc => pc.p[0] >= spine)];','formats[0].objects = [formats[0].pieces];'),'C2 body cull top',checkLidAndSinks);
   await control('C2 heights from tallest piece',s=>s.replace('(bodies[j].length ? bodies[j] : pieces).filter', 'pieces.filter'),'C2 body cull top',checkLidAndSinks);
-  await control('C3 old tight regions',s=>s.replace('const a = ART[art], x = (1 + stroke) / a.w, y = (1 + stroke) / a.h;', 'const a = ART[art], x = 0, y = 0;'),'C3 changed texel coverage:',checkCropFringes);
+  await control('C3 missing marker cutout',s=>s.replace('AM_MARKERS.slice(0, n).forEach', 'AM_MARKERS.slice(1, n).forEach'),'C3 exactness: missing emitted mark',checkCutouts);
+  await control('C4 reading halves grouped',s=>s.replace('formats[0].objects = [floor.slice(0, 10), reading.filter(pc => pc.p[0] < spine), reading.filter(pc => pc.p[0] >= spine)];','formats[0].objects = [floor.slice(0, 10), reading];'),'R11 sink finish:',M=>checkLidAndSinks(M,true));
+  let offsetFailed=false;
+  try {checkFloorOffset(fs.readFileSync(new URL('../sq.mjs',import.meta.url),'utf8').replace('gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 2);',''));}
+  catch(error) {assert.ok(error.message.includes('C5 floor offset:'),error.message);offsetFailed=true;}
+  assert.ok(offsetFailed,'C5 no floor offset: MISSED');out.push('C5 no floor offset: failed at C5 floor offset:');
   return out.join('\n');
 }
 

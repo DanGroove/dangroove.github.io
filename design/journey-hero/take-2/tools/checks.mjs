@@ -117,7 +117,7 @@ function check(time) {
     for (let i = 0; i < faces.length; i++) for (let j = 0; j < i; j++) {
       const a = faces[i], b = faces[j];
       const overlap = Math.min(a.rect[2], b.rect[2]) - Math.max(a.rect[0], b.rect[0]) > 1e-9 && Math.min(a.rect[3], b.rect[3]) - Math.max(a.rect[1], b.rect[1]) > 1e-9;
-      if (overlap && Math.abs(a.height - b.height) < 0.0006 - 1e-10) fail(time, `${floor ? 'floor' : 'screen'} faces ${a.i}/${b.i} overlap with less than 0.0006 clearance`);
+      if (overlap && !a.pc.blend && !b.pc.blend && !(a.pc.labelSource && a.pc.labelSource === b.pc.labelSource) && Math.abs(a.height - b.height) < 0.0006 - 1e-10) fail(time, `${floor ? 'floor' : 'screen'} faces ${a.i}/${b.i} overlap with less than 0.0006 clearance`);
     }
     // F2 replaces the frame-global stack with independent painter bases and retained order wherever painters overlap.
     try { checkPainterStacks(list, floor); } catch (error) { fail(time, error.message); }
@@ -283,7 +283,7 @@ const context = new Proxy({
 globalThis.Path2D = class {};
 globalThis.document = { createElement: () => ({ getContext: () => context }) };
 const atlas = makeAtlas();
-assert.equal(atlas.pages.length, 5, 'the correction must keep the atlas at five pages');
+assert.equal(atlas.pages.length, 7, 'C3 isolated artwork uses seven atlas pages');
 assert.ok(atlas.pages.every(p => p.width <= 2048 && p.height <= 2048));
 assert.ok(ART_TEXT.kMap.length > 10 && ART_TEXT.kLoc.length > 20, 'map lettering was not recorded');
 const skyColours = key => { const first = gradients.length, art = ART[key]; art.draw(context, art.w, art.h); return gradients[first]; };

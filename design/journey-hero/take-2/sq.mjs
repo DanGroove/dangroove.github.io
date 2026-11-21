@@ -1,3 +1,4 @@
+import { ART, CUTOUTS } from './art.mjs';
 // Second take, prototype renderer: every piece is one superquadric (a box, a cylinder, a ball, a cone, a wedge, or anything between),
 // lit by one light with a shadow map, shaded in three brand tones. WebGL2, no dependencies.
 //
@@ -122,7 +123,8 @@ ${CLIP_FN}
 void main() {
   clipAt(vW);
   vec4 art = artAt(vL, vFace);
-  if (uArtMode > 1.5 && art.a < 0.5) discard;
+  if (uArtMode > 2.5) { if (vFace < 0.999) discard; }
+  else if (uArtMode > 1.5 && art.a < 0.5) discard;
   vec3 n = normalize(vN);
   float d = dot(n, uLight);
   float lit = shadowAt(vW + n * 0.03, uSpread);
@@ -134,6 +136,7 @@ void main() {
   // only a cast shadow dims it, by as much as it dims the piece itself. A piece that asks for it is dimmed the same way where it
   // turns from the light, with the same hard edge as the tones have.
   float k = mix(dot(uC, vec3(1.0)) / max(dot(uA, vec3(1.0)), 1e-4), 1.0, uArtShade > 0.5 ? mid : lit);
+  if (uArtMode > 2.5) { o = vec4(art.rgb * k, art.a); return; }
   if (uArtMode > 1.5) col = art.rgb / art.a * k; else col = col * (1.0 - art.a) + art.rgb * k;
   o = vec4(col, 1.0);
 }`;
@@ -317,10 +320,12 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
   // One texture per atlas page. A draw binds only when its picture changes page.
-  let atlasTextures = [], places = {}, boundPage = -1, boundMixPage = -1;
+  let atlasTextures = [], places = {}, atlasPages = [], boundPage = -1, boundMixPage = -1;
+  const revealTextures = new Map();
   function setAtlas(atlas) {
     atlasTextures.forEach(tex => gl.deleteTexture(tex));
-    places = atlas.places;
+    places = atlas.places; atlasPages = atlas.pages;
+    for (const entry of revealTextures.values()) gl.deleteTexture(entry.texture); revealTextures.clear();
     const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
     atlasTextures = atlas.pages.map(canvas => {
       const tex = gl.createTexture();
@@ -336,6 +341,35 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       return tex;
     });
     boundPage = boundMixPage = -1;
+  }
+  function revealedPicture(pc) {
+    const part = CUTOUTS[pc.art], a = ART[pc.art], source = ART[part.source], original = places[part.source];
+    let entry = revealTextures.get(pc.art);
+    if (!entry) {
+      const sourcePage = atlasPages[original[0]], phase = n => ((n % 8) + 8) % 8;
+      const x = 24 + phase(Math.round(original[1]*sourcePage.width-.5)+part.crop[0]-24);
+      const y = 24 + phase(Math.round(original[2]*sourcePage.height-.5)+part.crop[1]-24);
+      const image = document.createElement('canvas');
+      image.width = Math.ceil((x+a.w+24)/8)*8; image.height = Math.ceil((y+a.h+24)/8)*8;
+      entry = { image, x, y, texture: gl.createTexture(), signature: null }; revealTextures.set(pc.art, entry);
+    }
+    const signature = pc.artReveal.join(',');
+    if (entry.signature !== signature) {
+      const c = entry.image.getContext('2d'), [u,v,r,b] = pc.artReveal;
+      c.clearRect(0,0,entry.image.width,entry.image.height); c.save(); c.translate(entry.x,entry.y);
+      c.beginPath(); c.rect(u*source.w-part.crop[0],v*source.h-part.crop[1],(r-u)*source.w,(b-v)*source.h); c.clip();
+      a.draw(c,a.w,a.h); c.restore();
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,entry.texture);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,entry.image);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false); gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAX_LEVEL,3);
+      const aniso=gl.getExtension('EXT_texture_filter_anisotropic');
+      if(aniso)gl.texParameterf(gl.TEXTURE_2D,aniso.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(4,gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+      entry.signature=signature;
+    }
+    return entry;
   }
   const whole = [0, 0, 1, 1], noClip = [0, 0, 0, 1], noTaper = [0, 0];
   const colourCache = new Map();
@@ -353,7 +387,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       boundPage = place[0]; gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, atlasTextures[boundPage]);
     }
     if (u.uArtMode) {
-      gl.uniform1f(u.uArtMode, place ? (pc.cut ? 2 : 1) : 0);
+      gl.uniform1f(u.uArtMode, place ? (pc.blend ? 3 : pc.cut ? 2 : 1) : 0);
       if (u.uArtShade) gl.uniform1f(u.uArtShade, pc.shade ? 1 : 0);
       if (place) { const w = pc.window || whole; gl.uniform4f(u.uArt, place[1] + w[0] * place[3], place[2] + w[1] * place[4], (w[2] - w[0]) * place[3], (w[3] - w[1]) * place[4]); }
       const second = places[pc.artB] || place;
@@ -362,6 +396,16 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       if (u.uArtB && second) { const w = pc.window || whole; gl.uniform4f(u.uArtB, second[1] + w[0] * second[3], second[2] + w[1] * second[4], (w[2] - w[0]) * second[3], (w[3] - w[1]) * second[4]); }
       if (u.uAtlasB) gl.uniform1i(u.uAtlasB, 2);
     }
+    if (pc.artReveal && pc.blend && u.uArtMode) {
+      const entry = revealedPicture(pc), a = ART[pc.art], w = pc.window || whole;
+      const x=(entry.x+.5+w[0]*(a.w-1))/entry.image.width, y=(entry.y+.5+w[1]*(a.h-1))/entry.image.height;
+      const width=(w[2]-w[0])*(a.w-1)/entry.image.width, height=(w[3]-w[1])*(a.h-1)/entry.image.height;
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,entry.texture);
+      gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D,entry.texture);
+      gl.uniform4f(u.uArt,x,y,width,height); gl.uniform4f(u.uArtB,x,y,width,height);
+      boundPage=boundMixPage=-1;
+    }
+
   };
   const drawAll = (prog, pieces, grow, tone, skip) => {
     for (const pc of pieces) {
@@ -378,7 +422,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     }
   };
 
-  const solid = [], cuts = [];
+  const solid = [], cuts = [], blended = [];
 
   // view: { W, H (css px), dpr, S (px per unit), cx, cy (px), cam: { r, u, v } }
   // look: { light: [x, y, z], outline (units), soft, spread, floor: { on, x, z, radius, pitch, reveal }, centre: [x, y, z] of the lit volume, reach,
@@ -411,8 +455,9 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     // 1. depth from the light
     gl.bindFramebuffer(gl.FRAMEBUFFER, shadowFbo); gl.viewport(0, 0, shadowSize, shadowSize);
     gl.clearDepth(1); gl.clear(gl.DEPTH_BUFFER_BIT);
-    solid.length = cuts.length = 0;
-    for (const pc of pieces) (pc.cut ? cuts : solid).push(pc);
+    solid.length = cuts.length = blended.length = 0;
+    for (const pc of pieces) (pc.blend ? blended : pc.cut ? cuts : solid).push(pc);
+    blended.sort((a, b) => (a.paintOrder || 0) - (b.paintOrder || 0));
     gl.useProgram(depth.p); gl.uniformMatrix4fv(depth.u.uVP, false, lvp); gl.uniform1i(depth.u.uAtlas, 1); gl.uniform4fv(depth.u.uReveal, reveal);
     gl.cullFace(gl.FRONT);
     drawAll(depth, solid, 0, null, 'noShadow');
@@ -483,6 +528,14 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       gl.cullFace(gl.BACK);
     }
 
+    // C3: isolated premultiplied picture faces, in authored paint order. They neither write depth nor cast a shadow/outline.
+    if (blended.length) {
+      gl.useProgram(piece.p); gl.disable(gl.CULL_FACE);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+      drawAll(piece, blended, 0, tones);
+      gl.depthMask(true); gl.disable(gl.BLEND); gl.enable(gl.CULL_FACE);
+    }
+
     if (look.floor && look.floor.on !== false) {
       const f = look.floor;
       gl.bindVertexArray(fvao); gl.useProgram(floor.p); gl.disable(gl.CULL_FACE);
@@ -491,7 +544,9 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       gl.uniform4f(floor.u.uFloor, f.x ?? 0, f.z ?? 0, f.radius ?? 5.5, f.pitch ?? 0.5);
       gl.uniform1f(floor.u.uReach, f.reveal ?? 1e6);
       gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 2);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      gl.disable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(0, 0);
       gl.disable(gl.BLEND);
       gl.enable(gl.CULL_FACE);
     }
