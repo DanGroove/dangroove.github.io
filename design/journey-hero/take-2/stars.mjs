@@ -27,7 +27,9 @@ export const STARS = {
   mark: { threshold: 300, height: 0.2, margin: 16, count: 600, tau: 0.12, arrive: 1, size: 2.6, ringGap: 0.095, ringBand: 0.1, cells: 24000, edge: 2 },
   // Round 16 (R4): every captured star trembles from start s after the formation starts (after hold.full without a mark), its
   // amplitude rising to amp px over ramp s (smooth), at its own hashed frequencies in hz (x and y) and phases.
-  charge: { start: 1.5, ramp: 2, amp: 1.5, hz: [10, 16] },
+  // Dan, 21 November, 9:31 AM, on version 26: 1.5 s started "too quickly", before the logo's last stars had landed. He chose
+  // "about 8 s into the hold": a long calm logo first (about 8 s held at 1474 x 996, where it forms at 2.4 s; full at about 10 s).
+  charge: { start: 5.6, ramp: 2, amp: 1.5, hz: [10, 16] },
 };
 
 // R2: the fade-in's step, landing on exactly 1 (sums of dt / 0.4 in float32 can stop just short of it).

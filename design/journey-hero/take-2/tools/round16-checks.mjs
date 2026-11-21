@@ -216,16 +216,17 @@ export async function checkClamp(source = read('stars.mjs')) {
 
 // ================================================================ R4: the tremble
 export async function checkCharge(source = read('stars.mjs')) {
-  const site = 'charge: { start: 1.5, ramp: 2, amp: 1.5, hz: [10, 16] },';
-  assert.equal(source.split(site).length - 1, 1, 'R4 charge: STARS.charge is not { start: 1.5, ramp: 2, amp: 1.5, hz: [10, 16] }');
-  const M = await load('stars.mjs', source), Q = await load('stars.mjs', source.replace(site, 'charge: { start: 1.5, ramp: 2, amp: 0, hz: [10, 16] },'));
+  // Dan, 9:32 AM on version 26: the start is 5.6 s after the formation, about 8 s held (round 16 built it at 1.5 s).
+  const START = 5.6, site = `charge: { start: ${START}, ramp: 2, amp: 1.5, hz: [10, 16] },`;
+  assert.equal(source.split(site).length - 1, 1, `R4 charge: STARS.charge is not { start: ${START}, ramp: 2, amp: 1.5, hz: [10, 16] }`);
+  const M = await load('stars.mjs', source), Q = await load('stars.mjs', source.replace(site, `charge: { start: ${START}, ramp: 2, amp: 0, hz: [10, 16] },`));
   const W = 1474, H = 996, P = [820, 470], n = M.makeStars(W, H).length;
   const A = fieldFor(M, W, H), B = fieldFor(Q, W, H), ha = A.F.press(...P), hb = B.F.press(...P);
   let worstShown = 0, trembling = 0, t0 = null, frames = 0;
-  while (ha.formedAt === null || ha.held < ha.formedAt + 1.5 + 2 + 1) {
+  while (ha.formedAt === null || ha.held < ha.formedAt + START + 2 + 1) {
     A.F.gather(ha, P, DT); A.F.step(DT); B.F.gather(hb, P, DT); B.F.step(DT); frames++;
     const t = ha.held;
-    if (ha.formedAt !== null) t0 = ha.formedAt + 1.5;
+    if (ha.formedAt !== null) t0 = ha.formedAt + START;
     const want = t0 === null || t < t0 ? 0 : 1.5 * (x => x * x * (3 - 2 * x))(Math.min(1, (t - t0) / 2));
     assert.ok(Math.abs(ha.charge - want) < 1e-9 && A.F.markState().charge === ha.charge, `R4 amplitude: ${ha.charge} px at ${t.toFixed(3)} s, not the ramp's ${want}`);
     assert.ok(ha.charge <= 1.5, `R4 amplitude: ${ha.charge} px is past amp at ${t.toFixed(3)} s`);
@@ -263,7 +264,7 @@ export async function checkCharge(source = read('stars.mjs')) {
     A.F.step(DT);
     for (const i of ids.slice(0, 200)) { const sh = A.F.shown(i); assert.ok(Math.abs(sh[0] - A.F.offsets[2 * i]) < 1e-3 && Math.abs(sh[1] - A.F.offsets[2 * i + 1]) < 1e-3, `R4 release: star ${i} trembles after the release`); }
   }
-  return { formedAt: +ha.formedAt.toFixed(3), start: +(ha.formedAt + 1.5).toFixed(3), full: +(ha.formedAt + 3.5).toFixed(3), frames, trembling, worstShown, worstRelease, captured: ids.length };
+  return { formedAt: +ha.formedAt.toFixed(3), start: +(ha.formedAt + START).toFixed(3), full: +(ha.formedAt + START + 2).toFixed(3), frames, trembling, worstShown, worstRelease, captured: ids.length };
 }
 
 // ================================================================ R5: the hold keeps gathering
