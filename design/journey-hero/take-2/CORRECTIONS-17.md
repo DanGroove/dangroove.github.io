@@ -171,6 +171,71 @@ Earlier checks that pin a device's old size, rim, placement or picture shape (fo
 - BUILD.md: add a "Round 17, R12" part. It covers the two models, every picture redrawn and its new size, the placements, the pinned fit, the ten sizes' `S` before and after, and the checks changed.
 - README: the devices, and the screens the exports play on.
 
+## Critique round 1: three corrections (C1 to C3)
+
+Build these on top of R12 (`6e790cf`) and keep everything else. Two independent critics reviewed `6e790cf` in a real browser and agreed these defects, their causes and how each will be judged. Change nothing else: no time, size, place, picture or colour that these corrections do not name.
+
+### C1. No dark star on any device screen
+
+What shows: on every phone and tablet screen, in every scene, a black star of spikes at the middle of the screen (Premiere Pro's still at 59.514 s, After Effects' at 77.296 s, and the others).
+
+Cause: each device's lowest picture layer has its top face exactly at the body's top (0.05 phone, 0.04 tablet). The body is a superellipsoid whose top is slightly domed (`e` up 0.35), so the two surfaces fight for depth around the pole. The check "R12 no gap" asserts that coplanar state, so it passes on the starred build.
+
+- Every picture layer on a device lies on the glass: its underside on the body's top face, its top 0.002 above it. `device()` places its own screen picture from `m.t`, not `m.t - 0.002`. The device painters (`floorPainter` for the playback and the prototype) start their first layer's underside at the device's face: pass that base explicitly from the device, with no test on its value.
+- The phone's island rises by the same 0.002: `face` 0.052 + 16 x 0.0008 = 0.0648 (underside 0.0646). It must stay above every layer that phone ever has; today Figma's tap dot reaches 0.0628 once the layers rise. Same size, place and tone as now.
+- The tablet's camera stays where it is (it lies in the bezel, under no picture).
+- The laptop's lid pictures are not part of this correction.
+
+Checks: "R12 no gap" compares each device's lowest layer's **underside** with the glass top (within 1e-9). Add: each device's lowest layer's **top** is at least one `LAYER_STEP` above the glass, for every phone and tablet in every frame before its sink. "R12 one island: fixed height" expects 0.002 + 16 x 0.0008. Negative control: the old placement (`m.t - 0.002` and the painter starting at the face) must fail both no-gap assertions. Update BUILD.md's island numbers (0.0648, 0.0646, highest layer 0.0628).
+
+How it will be judged: dpr 2 frames of each device at the four floor stills (40.380, 59.514, 77.296, 96.191) show no star and no step between a picture and its glass at the rim, and R9's still faces stay still through the restarts.
+
+### C2. Every object goes under the floor whole, and all of them together
+
+What shows, in every floor sink:
+- InDesign (`return`, 42.782 to 43.782): the open reading copy is gone at +0.13 to +0.22 s while the stack, phone and tablet last to about +0.635 s. The phone's body is gone at +0.43 s, but its island stays alone on the floor until +0.635 s, about 12 frames.
+- Premiere Pro (62.164 to 63.164) and After Effects (79.946 to 80.946): the bodies are gone at +0.365 s; their pictures stay to +0.41 s and the chrome and islands to +0.445 s (the tablet's play icon and scrub bar, the phones' header cards and account lines, "move" and the list rows float alone).
+- Figma (98.491 to 99.491): the tablet's and phone's bodies are gone at +0.40 s; their lines float beside the shut lid until +0.535 s.
+
+This breaks R11: "all three start together and are gone together", and "every piece starts and finishes together".
+
+Cause: `exportOut()` moves each format rigidly by one depth taken from its tallest piece. The reading copy shares format 0's depth with the 0.3 tall stack, so it goes far sooner. Within a device, the tallest piece is a layer on the glass (the island at 16 layer steps, or a picture), so the body's top, which is lower, crosses the floor first and everything stacked on it is left on show.
+
+- The objects are: in InDesign, the reading copy (both halves together), the stack, the phone and the tablet; in Premiere Pro and After Effects, the tablet and each phone; in Figma, the laptop (deck and shut lid), the tablet and the phone.
+- Each object sinks by its own height, taken from its body's top (a device's top face, the stack's top, the reading copy's own top, the shut lid's top), with the shared proportional clearance the build uses now (`depth = H x (1 + 0.02 / max H)` within each scene), so all of a scene's objects cross the floor together.
+- Everything a device carries (its screen pictures, chrome, overlays and tap dots, island and camera) sinks with it and is not drawn once its body's top is under the floor: clip each such layer at its own rest height above the glass, so it goes under on the same frame as its body. Nothing may show as a sliver after its body.
+- Keep the 1.0 s span, the curve, x and z fixed, the floor's clip, and the lid shut before Figma's sink starts.
+
+Checks, at 0.01 s steps in all four sinks:
+- every object's last drawn sample is within 0.01 s of the others in its scene;
+- no carried piece is drawn after its body's last drawn sample;
+- every piece is under the floor by the end of the span.
+
+Negative controls, each of which must fail: the carried layers without their clip; the reading copy grouped with the stack again; heights from the tallest piece instead of the body's top.
+
+How it will be judged: browser frames at every 1/60 s over the last 0.4 s of each sink, at 1474 x 996, dpr 1 and dpr 2. After the frame in which an object's body is last drawn, no pixel in that object's footprint differs from the empty floor by more than 8 levels (the cursor, the big app screen above and the labels excluded).
+
+### C3. Illustrator's badge release changes nothing but the cursor and the rail
+
+What shows: at the badge's release (Illustrator, 14.082 s), every white marker square and grey street bar on the upper map gains its soft edge in one frame. Nothing moves, but about 2,479 pixels brighten by up to 105 levels at dpr 1. This is rule G's table entry for the badge and R2: "At release, only the cursor and the rail change."
+
+Cause: until the badge ends, the upper map's base is `mapStreet` (the map without markers, labels and badge), and the markers and bars are crops of `kMap` (`AM_MARKERS`, 30 x 30; `AM_LABEL_BARS`, 11 wide, `art.mjs` about lines 877 and 878, drawn by `mapRegion()`). Each crop ends exactly at its shape's edge, so `kMap`'s anti-aliased fringe just outside it is missing. When `kMap` replaces the build, every fringe appears at once.
+
+- Every crop of `kMap` laid on `mapStreet` covers every pixel of `kMap` that differs from `mapStreet` around its shape: for example, pad each `AM_MARKERS` and `AM_LABEL_BARS` region by at least 2 px of the 2200 x 850 map (one texel) on every side. The padding shows `kMap`'s own pixels, which match `mapStreet` outside the shapes. Keep the bars' upward reveal as it is.
+- Look for any other place where crops of a finished picture sit on a base that the finished picture later replaces, and treat it the same way; list what you found in BUILD.md.
+
+Check: at the badge's release, every texel where `kMap` differs from `mapStreet` lies inside the crops drawn in the frame before. Negative control: today's tight regions must fail.
+
+How it will be judged: browser frames at 14.080 and 14.084 (dpr 1) and 14.081 and 14.083 (dpr 2). Outside the cursor and the tool rail, no pixel differs by more than 8 levels.
+
+### Not in this run
+
+These were found and will be put to Dan separately. Do not change them: the browser check's H6 at 1280 x 800 and H5 "logo guard" at 1366 x 657 (both fail since `d251dce`, before round 17); how long the sink stays in view; the STORY ring over the story's call to act; the ball over the Export button's red end as it pops; the laptop lid's pictures on its flat glass.
+
+### Records for C1 to C3
+
+BUILD.md: add a "Round 17, critique round 1" part: each correction with its numbers, the checks and controls added, and every earlier check changed with its old and new number.
+
 ## G. The swap rule (R2, R3, R5 and their kin)
 
 Several notes are one fault. A scene builds something out of parts on the screen, then replaces the parts with the finished picture in one frame, and the finished picture does not sit where the parts were. So something jumps, or something the parts hid comes back.
