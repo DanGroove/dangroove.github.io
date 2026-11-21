@@ -16,7 +16,7 @@ import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
 
 const take = new URL('../', import.meta.url);
 import { handPatch, r12Patch, r15Patch } from './hand-patch.mjs';
-import { round15Changed } from './round15-checks.mjs';
+import { round17Changed as round15Changed } from './round17-checks.mjs';
 const fixture = JSON.parse(fs.readFileSync(new URL('fixtures/round5-addendum-source.json', import.meta.url)));
 const sha = source => createHash('sha256').update(source).digest('hex');
 const close = (a, b, message, epsilon = 0.01) => assert.ok(Math.abs(a - b) <= epsilon, `${message}: ${a} != ${b}`);
@@ -205,7 +205,7 @@ export async function checkRound5Addendum({ only = '', control = '' } = {}) {
   if (!only || only.startsWith('H10')) {
     let module = current;
     if (control === 'H10') {
-      const search = 'forward: 0.4', code = source('stage.mjs');
+      const search = 'forward: 0.46', code = source('stage.mjs');
       assert.equal(code.split(search).length - 1, 1, 'H10 control one-site match');
       module = await import(moduleURL(code.replace(search, 'forward: 0'), 'stage.mjs'));
     }

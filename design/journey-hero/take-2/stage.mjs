@@ -3,7 +3,7 @@
 // One clock builds every piece: the persistent shell, wiped content, travelling work and the floor.
 import { HOME, EASE, dot as dot3, quatFromBasis, quatRotate } from '../../../public/journey/hero/engine.mjs';
 import { box, cyl, turn, corners, qAxis, qMul } from './kit.mjs';
-import { SPOT, subwayPath, BALL as COMP_BALL, BALL_FROM, BALL_VIA, ROWS, TYPE_EDGES, TYPE_BOXES, ART, ART_TEXT, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS } from './art.mjs';
+import { SPOT, subwayPath, BALL as COMP_BALL, BALL_FROM, BALL_VIA, ROWS, TYPE_EDGES, TYPE_BOXES, ART, ART_TEXT, HISTOGRAM, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS } from './art.mjs';
 
 // All authored durations, including the cursor's journeys, share this one control.
 export const PACE = 1;
@@ -50,14 +50,13 @@ export function floorAt(x, y) {
 export const EXPORT_SHIFT = -0.3;
 const screenMiddle = SCREEN.l + SCREEN.w / 2, exportMiddle = screenMiddle + EXPORT_SHIFT;
 // CORRECTIONS-15 S1, S2 (they replace round 13's drop and its backwards return): Export pops a red ball out of the button. It arcs
-// to the floor, rests, splits into one red block per format (each the exact footprint and thickness of its format), holds, and a
+// to the floor, splits immediately into one red block per format (each the exact footprint and thickness of its format), holds, and a
 // hard wipe turns each block into its format; when the scene's exports leave, they sink straight down through the floor. Each
 // beat's length in seconds at PACE 1, as one table to tune: the pop, the arc, the rest, the split, the hold, each piece's wipe
 // (become), the wipes' stagger left to right, Figma's laptop lid opening after its wipe, and the sink.
-export const BALL = { pop: 0.3, arc: 0.8, rest: 0.15, split: 0.6, hold: 0.15, become: 0.6, stagger: 0.1, lid: 0.4, sink: 0.5 };
-// The ball's own measures, world units: its diameter at full size (about the phone it helps make), its radius as it starts inside
-// the button, how far it comes out along the screen's normal and how far up while it pops, and how high its arc rises above that.
-export const BALL_PATH = { size: 0.6, start: 0.1, out: 0.45, up: 0.15, rise: 0.6 };
+export const BALL = { pop: 0.3, arc: 0.8, rest: 0, split: 0.6, hold: 0.15, become: 0.6, stagger: 0.1, lid: 0.4, sink: 1.0 };
+// World units: full diameter, starting radius, and the peak's height above the Export button's top side.
+export const BALL_PATH = { size: 0.6, start: 0.1, rise: 0.6 };
 // CORRECTIONS-12 D1: phones in true proportion to the tablets beside them. The reference bodies, in mm: a phone 71.6 x 147.6
 // and a tablet 179.5 x 248.6. A phone is 147.6 / 248.6 of an upright tablet's height, 147.6 / 179.5 of one on its side.
 export const BODY = { phone: [71.6, 147.6], tablet: [179.5, 248.6] };
@@ -216,8 +215,10 @@ function approvedDocument() {
     if (r) P.push(on('ink', mid, y, tw, th, { lift: 0.065, t: 0.008, art: r }));
     tagEcho(P, ['coverTitle', 'pages', 'loc', 'spreadType', 'pages', 'pages'][i], echoStart);
   });
-  P.push({ ...on('ink', ...ID.left, { lift: 0.06, t: 0.02, art: 'kAmL' }), tones: FLYER.coal }, { ...on('ink', ...ID.right, { lift: 0.06, t: 0.02, art: 'kAmR' }), tones: FLYER.coal });
-  P.push(on('ink', ...ID.cover, { lift: 0.06, t: 0.02, art: 'kCover' }), on('ink', ...ID.post, { lift: 0.06, t: 0.02, art: 'kPost' }), { ...on('ink', ...ID.mail, { lift: 0.06, t: 0.02, art: 'eblast' }), window: [0, 0, 1, Math.min(1, ID.mail[3] / ID.mail[2] * 320 / 472)] });
+  P.push({ ...on('ink', ...ID.left, { lift: 0.08, t: 0.004, art: 'kAmL' }), tones: FLYER.coal }, { ...on('ink', ...ID.right, { lift: 0.08, t: 0.004, art: 'kAmR' }), tones: FLYER.coal });
+  P.push(on('ink', ...ID.cover, { lift: 0.084, t: 0.004, art: 'kCover' }), on('ink', ...ID.post, { lift: 0.084, t: 0.004, art: 'kPost' }), on('ink', ...ID.mail, { lift: 0.084, t: 0.004, art: 'eblast' }));
+  // Keep the typed cut-outs in their own slots; a finished page must not collapse overlapping lines of type backward.
+  mapTyping(P, ID.mail, 'eblast', 1, part => part.words !== 'View the flyer');
   // CORRECTIONS-15 N1: the placed amenities map has no selection outline or handles.
   return P;
 }
@@ -266,12 +267,12 @@ function chip(P, key) {
 }
 // CORRECTIONS-15 N2: a carried picture keeps one height above the screen's face from pickup to drop, its placed height, and moves
 // on a straight line; where it passes over taller content it is raised only along the view (clearCarried).
-function travel(P, key, from, to, t, a, b, endWindow = [0, 0, 1, 1], curve = EASE.wipe) {
-  const p = curve(linear(t, a, b)), rect = rectMix(from, to, p), dockStart = from === DOCK[key], lift = dockStart ? 0.06 : 0.055, [x, y, w, h] = rect;
+function travel(P, key, from, to, t, a, b, endWindow = [0, 0, 1, 1], curve = EASE.wipe, id = from === DOCK[key] ? key : key === 'photo' ? 'export' : key + 'Export') {
+  const p = curve(linear(t, a, b)), rect = rectMix(from, to, p), dockStart = from === DOCK[key], lift = dockStart ? (key === 'loc' ? 0.053 : 0.064) : 0.055, [x, y, w, h] = rect;
   // The picture is the same piece throughout. The dock's rim folds down as it leaves, or grows as it lands.
   const rim = 0.012 * (dockStart ? 1 - p : p);
-  if (rim > 0) P.push({ ...on('grey', x - rim, y - rim, w + 2 * rim, h + 2 * rim, { lift: lift - 0.015, t: 0.012 }), where: 'travel', action: key });
-  P.push({ ...on('ink', ...rect, { lift, t: 0.02, art: PICTURES[key] }), window: rectMix([0, 0, 1, 1], endWindow, p), where: 'travel', action: key });
+  if (rim > 0) P.push({ ...on('grey', x - rim, y - rim, w + 2 * rim, h + 2 * rim, { lift: lift - 0.015, t: 0.012 }), where: 'travel', action: id });
+  P.push({ ...on('ink', ...rect, { lift, t: 0.02, art: PICTURES[key] }), window: rectMix([0, 0, 1, 1], endWindow, p), where: 'travel', action: id });
 }
 // ---- CORRECTIONS-15 S1, S2: the ball. Times are local to the scene; beats are seconds after Export, at PACE 1. Every scene that
 // exports to the floor has three pieces, numbered left to right in world x (j); piece j's wipe starts BALL.stagger after piece
@@ -282,22 +283,20 @@ export function ballBeats(key, j) {
   return { start: 0, pop, arc, rest, split, hold, wipe, wiped, become: key === 'fig' && j === 0 ? wiped + BALL.lid : wiped };
 }
 export const ballLength = key => Math.max(...[0, 1, 2].map(j => ballBeats(key, j).become));
-// The Export button (screen units), the world plane of its face (unpressed), and where the ball starts: the face's middle.
+// The Export button and the launch centre: just inside its top side, already clear of its face.
 const BUTTON = [W - 0.98, H - BAR + 0.08, 0.86, 0.28], BUTTON_FACE = ZF + (0.05 + 0.06) * U;
 export const EXPORT_BUTTON = { rect: [SCREEN.l + BUTTON[0] * U, SCREEN.b + BUTTON[1] * U, SCREEN.l + (BUTTON[0] + BUTTON[2]) * U, SCREEN.b + (BUTTON[1] + BUTTON[3]) * U], face: BUTTON_FACE };
-export const BALL_START = [SCREEN.l + (BUTTON[0] + BUTTON[2] / 2) * U, SCREEN.b + (BUTTON[1] + BUTTON[3] / 2) * U, BUTTON_FACE];
-// The ball u seconds (at PACE 1) after Export, coming to rest at `to` ([x, z]): its centre, its radius and, while it pops, the
-// clip at the button's face plane. Pop: from inside the button it grows to full size as it comes out along the screen's normal
-// and up (EASE.wipe). Arc: one ballistic flight; x and z are linear in time and y is a true parabola (constant downward
-// acceleration) that rises BALL_PATH.rise above where it left the pop and ends with the ball sitting on the floor. Then it rests.
+export const BALL_START = [SCREEN.l + (BUTTON[0] + BUTTON[2] / 2) * U, EXPORT_BUTTON.rect[3] - BALL_PATH.start, BUTTON_FACE + BALL_PATH.start + 0.001];
+// The ball u seconds after Export: one ballistic centre path throughout pop + arc, linear x/z, constant gravity. Only its
+// radius grows during pop. Until its bottom clears the button's top side, that horizontal plane clips its colour and shadow.
 export function ballAt(u, to) {
-  const R = BALL_PATH.size / 2, c0 = BALL_START, c1 = [c0[0], c0[1] + BALL_PATH.up, c0[2] + BALL_PATH.out];
-  if (u < BALL.pop) { const e = EASE.wipe(clamp(u / BALL.pop, 0, 1)); return { c: c0.map((v, i) => mix(v, c1[i], e)), r: mix(BALL_PATH.start, R, e), clip: [0, 0, 1, -BUTTON_FACE] }; }
-  const end = [to[0], R, to[1]], T = BALL.arc, s = u - BALL.pop;
-  if (s >= T) return { c: end, r: R };
-  // y(s) = y1 + vy s - g s^2 / 2 with its peak (vy^2 / 2g) at `rise` above y1 and y(T) on the floor: solve for a = sqrt(g).
-  const h = BALL_PATH.rise, fall = c1[1] - end[1], a = (Math.sqrt(2 * h) * T + Math.sqrt(2 * h * T * T + 2 * fall * T * T)) / (T * T), g = a * a, vy = a * Math.sqrt(2 * h);
-  return { c: [mix(c1[0], end[0], s / T), c1[1] + vy * s - g * s * s / 2, mix(c1[2], end[2], s / T)], r: R };
+  const R = BALL_PATH.size / 2, c0 = BALL_START, end = [to[0], R, to[1]], T = BALL.pop + BALL.arc, s = clamp(u, 0, T);
+  // One launch, including emergence: solve gravity from the peak and touchdown. Nothing restarts at pop's end.
+  const h = EXPORT_BUTTON.rect[3] + BALL_PATH.rise - c0[1], fall = c0[1] - R;
+  const root = (Math.sqrt(2 * h) + Math.sqrt(2 * (h + fall))) / T, gravity = root * root, vy = root * Math.sqrt(2 * h);
+  const c = [mix(c0[0], end[0], s / T), c0[1] + vy * s - gravity * s * s / 2, mix(c0[2], end[2], s / T)];
+  const r = mix(BALL_PATH.start, R, clamp(s / BALL.pop, 0, 1));
+  return { c: s === T ? end : c, r, ...(s < BALL.pop && c[1] - r < EXPORT_BUTTON.rect[3] ? { clip: [0, 1, 0, -EXPORT_BUTTON.rect[3]] } : {}) };
 }
 // A red piece lying on the floor the way every export lies (local x along world x, local y toward the back, local z up), so the
 // ball has its shapes' rotation from the start and nothing has to turn later. solid: a volume, kept out of the faces' separation.
@@ -306,12 +305,13 @@ const redPiece = (c, s, e, morph, part) => ({ tone: 'red', p: c, q: LYING.slice(
 // A lying piece's block: [x, z, w, d, top, e].
 const lyingShape = pc => [pc.p[0] - pc.s[0], pc.p[2] - pc.s[1], 2 * pc.s[0], 2 * pc.s[1], pc.p[1] + pc.s[2], pc.e.slice()];
 // Figma's laptop lid at lean theta (degrees: -90 shut on the deck, 12 open): its box and its screen's pictures turn together about
-// the hinge, lifted clear of the keys while it is forward of upright. A picture is left out while its face is turned away from the
+// the hinge. Keys and trackpad are left out while it is forward of upright. A picture is left out while its face is turned away from the
 // view: the lid's own box is in front of it then.
-function poseLid({ pieces, pivot }, theta) {
-  const by = 12 - theta, lift = 0.03 * Math.max(0, -Math.sin(theta * Math.PI / 180));
+function poseLid({ pieces, pivot, details = [] }, theta) {
+  const by = 12 - theta, lift = 0;
   if (by) turn(pieces, pivot, [1, 0, 0], by);
   for (const pc of pieces) { pc.p[1] += lift; if (pc.lidPicture) pc.hide = dot3(quatRotate(pc.q, [0, 0, 1]), HOME.v) <= 0; }
+  for (const pc of details) pc.hide = theta < 0;
 }
 // The export of one scene. formats: its three pieces left to right, each { pieces: built in their final landed pose (as round 13
 // left them), shape: their block [x, z, w, d, thickness, e], lid?: Figma's laptop lid, posed shut until its wipe has ended }.
@@ -321,12 +321,21 @@ function exportOut(P, s, t, key, formats) {
   const u = (t - a) / PACE, all = formats.flatMap(f => f.pieces);
   for (const pc of all) pc.where = 'floor';
   if (u >= ballLength(key)) {
+    // Close fully before sinking. The other two devices keep the cycle's last frame.
+    for (const f of formats) if (f.lid) poseLid(f.lid, mix(12, -90, EASE.wipe(linear(t, off[0] - BALL.lid * PACE, off[0]))));
     if (t >= off[0]) {
+      separateFaces(all.filter(pc => !pc.hide));
       // S2: everything sinks together, straight down (x and z fixed), cut by the floor's plane in every pass, until nothing is left.
-      const depth = Math.max(...all.flatMap(corners).map(c => c[1])) + 0.02, g = EASE.wipe(linear(t, off[0], off[1]));
-      for (const pc of all) { pc.p[1] -= depth * g; pc.clip = [0, 1, 0, 0]; pc.sink = true; }
+      const g = EASE.wipe(linear(t, off[0], off[1]));
+      const heights = formats.map(f => Math.max(...f.pieces.filter(pc => !pc.hide).flatMap(corners).map(c => c[1])));
+      // A fixed 0.02 on unequal heights hides the thin devices earlier. Scale the clearance too, so all tops cross y=0 together.
+      const clearance = 1 + 0.02 / Math.max(...heights);
+      for (const [j, f] of formats.entries()) {
+        const depth = heights[j] * clearance;
+        for (const pc of f.pieces) { pc.p[1] -= depth * g; pc.clip = [0, 1, 0, 0]; pc.sink = true; }
+      }
     }
-    P.push(...all); return;
+    P.push(...all.filter(pc => !pc.hide)); return;
   }
   // The ball comes to rest at the middle of the three blocks' combined footprint.
   const blocks = formats.map(f => f.shape), to = [(Math.min(...blocks.map(r => r[0])) + Math.max(...blocks.map(r => r[0] + r[2]))) / 2, (Math.min(...blocks.map(r => r[1])) + Math.max(...blocks.map(r => r[1] + r[3]))) / 2];
@@ -340,7 +349,7 @@ function exportOut(P, s, t, key, formats) {
     const b = ballBeats(key, j), [x, z, w, d, h, e] = f.shape;
     if (u < b.split) {
       // Split: from three exact copies of the resting ball, each moves along the floor to its place while it becomes its block.
-      const k = EASE.wipe(linear(u, b.rest, b.split)), size = [mix(R, w / 2, k), mix(R, d / 2, k), mix(R, h / 2, k)];
+      const k = EASE.enter(linear(u, b.rest, b.split)), size = [mix(R, w / 2, k), mix(R, d / 2, k), mix(R, h / 2, k)];
       P.push(redPiece([mix(to[0], x + w / 2, k), size[2], mix(to[1], z + d / 2, k)], size, [mix(1, e[0], k), mix(1, e[1], k)], 'split', j));
       return;
     }
@@ -363,7 +372,7 @@ function screensOut(P, t, s, art) {
   const key = s === SCRIPTS.pr ? 'pr' : 'ae', a = action(s, 'export').start, { land, off } = playbackSpans(s);
   if (t < a || t >= off[1]) return;
   const kind = art[0] === 'playerWide' ? 'video' : 'motion';
-  const clock = Math.max(0, (Math.min(t, off[0]) - land) / PACE) % 1.6 / 1.6, widths = [WIDE, SLIM, SLIM];   // held through the sink
+  const clock = playClock(t, land, off[0], key), widths = [WIDE, SLIM, SLIM];
   let left = MAT.x;
   const formats = widths.map((w, i) => {
     const face = [], rim = i ? SLIM_RIM : 0.075, d = i ? SLIM_D : ROW, z = MAT.z + ROW - d;
@@ -386,24 +395,25 @@ export const UI_ROW = (() => {
   // 9 : 19.5 screen the prototype's phone pictures are drawn for.
   // CORRECTIONS-13 U1: the tablet is as deep as the laptop's deck, its back and front edges on the deck's, its 3 : 4 screen and rim
   // kept; the phone (D1's rule against this tablet) shares that front edge. tabZ, phoneZ: their back edges from MAT.z.
-  const depth = 1.65, lidW = 1.55, lidH = (lidW - 0.08) / 1.6 + 0.08, deck = 1.1, rim = 0.06, tabD = deck, tabW = (tabD - rim * 2) * 3 / 4 + rim * 2, gap = 0.3;
+  const depth = 1.65, lidW = 1.55, lidH = 1.1, deck = 1.1, rim = 0.06, tabD = deck, tabW = (tabD - rim * 2) * 3 / 4 + rim * 2, gap = 0.3;
   const lean = lidH * Math.sin(LID_ANGLE) + 0.02, tabZ = lean;
   const phoneD = tabD * PHONE_BESIDE.upright, phoneW = phoneD * PHONE_SHAPE, phoneRim = rimFor(phoneW, phoneD, 9, 19.5), phoneZ = tabZ + tabD - phoneD;
   const width = lidW + tabW + phoneW + 2 * gap, left = exportMiddle - width / 2;
-  return { depth, lidW, lidH, deck, rim, tabD, tabZ, tabW, phoneW, phoneD, phoneRim, phoneZ, gap, left, lean, forward: 0.4, hinge: left, tablet: left + lidW + gap, phone: left + lidW + gap + tabW + gap };
+  return { depth, lidW, lidH, screenH: (lidW - 0.08) / 1.6, deck, rim, tabD, tabZ, tabW, phoneW, phoneD, phoneRim, phoneZ, gap, left, lean, forward: 0.46, hinge: left, tablet: left + lidW + gap, phone: left + lidW + gap + tabW + gap };
 })();
+const lidHinge = () => [UI_ROW.hinge, 0.08, MAT.z + UI_ROW.lean];
 function lidPoint(u, v, lift = 0) {
-  const g = UI_ROW, origin = [g.hinge, 0.095, MAT.z + g.lean];
-  return origin.map((n, i) => n + lidU[i] * u + lidV[i] * v + lidN[i] * lift);
+  // The lower edge of the lid's front surface meets the deck's back top edge. Its centre plane is half a lid behind it.
+  return lidHinge().map((n, i) => n + lidU[i] * u + lidV[i] * v + lidN[i] * (lift - 0.02));
 }
 function lidPainter(P) {
   let height = 0.026;
-  const g = UI_ROW, w = g.lidW - 0.08, h = g.lidH - 0.08;
+  const g = UI_ROW, w = g.lidW - 0.08, h = g.screenH, chin = g.lidH - h - 0.04;
   const draw = (tone, r, art, window) => {
     height += LAYER_STEP;
     // The screen's own face is fixed; page layers below it may change their count.
     if (art === 'chromeLaptop') height = 0.04;
-    const pc = { ...box(tone, lidPoint(0.04 + (r[0] + r[2] / 2) * w, 0.04 + (1 - r[1] - r[3] / 2) * h, height), [r[2] * w, r[3] * h, 0.001]), q: quatFromBasis(lidU, lidV), art, window, lidPicture: true };
+    const pc = { ...box(tone, lidPoint(0.04 + (r[0] + r[2] / 2) * w, chin + (1 - r[1] - r[3] / 2) * h, height), [r[2] * w, r[3] * h, 0.001]), q: quatFromBasis(lidU, lidV), art, window, lidPicture: true };
     P.push(pc); return pc;
   };
   draw.size = [w, h]; return draw;
@@ -414,7 +424,7 @@ function lidPainter(P) {
 function prototypeOut(P, t, s) {
   const a = action(s, 'export').start, g = UI_ROW, { land, off } = playbackSpans(s);
   if (t < a || t >= off[1]) return;
-  const clock = Math.max(0, (Math.min(t, off[0]) - land) / PACE) / 3, shown = t < land ? -1 : clock;
+  const clock = Math.max(0, (Math.min(t, land + 3 * PACE) - land) / PACE) / 3, shown = t < land ? -1 : clock;
   const formats = [0, 1, 2].map(i => {
     const kind = ['laptop', 'tablet', 'phone'][i], body = [], face = [];
     if (i === 0) {
@@ -428,12 +438,12 @@ function prototypeOut(P, t, s) {
       body.push({ ...device(x, z, w, d, undefined, { rim, round: 0.03 })[0], deviceBody: true });
       prototype(floorPainter(face, [x + rim, z + rim, w - 2 * rim, d - 2 * rim]), i, shown);
     }
-    // The whole row sits 0.4 forward of the mat (round 5, H10).
+    // R17: the taller lid needs 0.06 beyond H10's 0.4 shift to keep the approved 12 px app clearance.
     for (const pc of [...body, ...face]) { pc.p[2] += g.forward; pc.device = i; pc.deviceKind = kind; pc.clock = clock; }
     if (i) return { pieces: [...body, ...face], shape: lyingShape(body[0]) };
     // The closed laptop's block: the deck's footprint, up to the top of the lid lying shut on it (see poseLid), sharp like the deck.
-    const pivot = lidPoint(0, 0).map((n, k) => n + (k === 2 ? g.forward : 0));
-    return { pieces: [...body, ...face], shape: [g.hinge, MAT.z + g.lean + g.forward, g.lidW, g.deck, pivot[1] + 0.03 + 0.02, body[0].e.slice()], lid: { pieces: [body.at(-1), ...face], pivot } };
+    const pivot = lidHinge().map((n, k) => n + (k === 2 ? g.forward : 0));
+    return { pieces: [...body, ...face], shape: [g.hinge, MAT.z + g.lean + g.forward, g.lidW, g.deck, pivot[1] + 0.04, body[0].e.slice()], lid: { pieces: [body.at(-1), ...face], details: body.slice(1, -1), pivot } };
   });
   exportOut(P, s, t, 'fig', formats);
   P.clock = clock;
@@ -471,8 +481,8 @@ function cropPicture(draw, tone, rect, art, p, direction = 'right') {
   p = clamp(p, 0, 1);
   if (p <= 0) return;
   const [x, y, w, h] = rect;
-  if (direction === 'up') draw(tone, [x, y + h * (1 - p), w, h * p], art, art ? [0, 1 - p, 1, 1] : undefined);
-  else draw(tone, [x, y, w * p, h], art, art ? [0, 0, p, 1] : undefined);
+  if (direction === 'up') return draw(tone, [x, y + h * (1 - p), w, h * p], art, art ? [0, 1 - p, 1, 1] : undefined);
+  return draw(tone, [x, y, w * p, h], art, art ? [0, 0, p, 1] : undefined);
 }
 function replayPainter(paint) {
   const draw = (...args) => { const pc = paint(...args); pc.playback = true; return pc; };
@@ -653,7 +663,7 @@ function inPageSpot(x, y, w, h) { return [x + w * 0.045, y + h * (1 - 0.675 - 0.
 export const FIG_PHONE = (UI_ROW.phoneD - 2 * UI_ROW.phoneRim) / (UI_ROW.tabD - 2 * UI_ROW.rim);
 // CORRECTIONS-13 U1: all three frames mirror their screens' heights (the laptop's lid screen, the tablet's and the phone's), the
 // tallest 0.86 high as before.
-export const FIG_SCREENS = [UI_ROW.lidH - 0.08, UI_ROW.tabD - 2 * UI_ROW.rim, UI_ROW.phoneD - 2 * UI_ROW.phoneRim];
+export const FIG_SCREENS = [UI_ROW.screenH, UI_ROW.tabD - 2 * UI_ROW.rim, UI_ROW.phoneD - 2 * UI_ROW.phoneRim];
 export const FIG = (() => {
   const h = 0.86, k = h / Math.max(...FIG_SCREENS), tall = FIG_SCREENS.map(n => n * k), g = 0.14, dw = tall[0] * 1.6, tw = tall[1] * 3 / 4, pw = tall[2] * 9 / 19.5, cl = 0.9, cr = PANEL - 0.1, x = cl + (cr - cl - dw - tw - pw - 2 * g) / 2;
   const cols = [[x, dw], [x + dw + g, tw], [x + dw + g + tw + g, pw]];
@@ -681,8 +691,8 @@ const AI = (() => {
   return { upper: [x, y, pw, ph], lower: [x, y2, lw, low], close, frame, at, segments, subway };
 })();
 const mapPoint = (r, x, y, w, h) => [r[0] + x / w * r[2], r[1] + (1 - y / h) * r[3]];
-// CORRECTIONS-15: after Export's 0.7 s, each row scene holds through its ball and its plays (two of 1.6 s, or Figma's 3.0 s cycle).
-const EXPORT_HOLD = { pr: ballLength('pr') + 3.2 - 0.7, ae: ballLength('ae') + 3.2 - 0.7, fig: ballLength('fig') + 3 - 0.7 };
+// After Export's 0.7 s: the ball, two video plays / one motion play / Figma's cycle and lid closing.
+const EXPORT_HOLD = { pr: ballLength('pr') + 3.2 - 0.7, ae: ballLength('ae') + 1.6 - 0.7, fig: ballLength('fig') + 3 + BALL.lid - 0.7 };
 export const SCRIPTS = {
   ps: script([
     { id: 'open', kind: 'click', from: centre(PHOTO), duration: 0.3, tool: 'tMove' },
@@ -825,7 +835,11 @@ function editedPhoto(t) {
   });
   if (!begun(s, 'open', t)) return P;
   const doc = [];
-  doc.push(icon(done(s, 'white', t) ? 'histo' : 'histoDark', PANEL + 0.09, TOP - 0.42, 0.67, 0.28));
+  const histogramMix = (handed(s, 'black', t) + handed(s, 'white', t)) / 2;
+  HISTOGRAM.forEach(([dark, graded], i) => {
+    const h = mix(dark, graded, histogramMix) * 0.28;
+    doc.push({ ...on('grey', PANEL + 0.09 + i * 0.67 / 48, TOP - 0.42, 0.67 / 48 * 0.8, h, { lift: 0.051, t: 0.004 }), histogram: i, histogramMix });
+  });
   const rows = [begun(s, 'open', t), done(s, 'black', t), begun(s, 'sky', t), begun(s, 'cone', t)];
   rows.forEach((visible, i) => {
     if (!visible) return;
@@ -836,8 +850,12 @@ function editedPhoto(t) {
   for (const pc of doc) pc.echo = 'open';
   if (!begun(s, 'export', t)) {
     const draw = echoPainter(screenPainter(doc, PHOTO), 'open');
-    const base = done(s, 'grade', t) ? 'kPhoto' : done(s, 'crane', t) ? 'photoClean' : done(s, 'cone', t) ? 'photoNoCone' : done(s, 'sky', t) ? 'photoSky' : done(s, 'white', t) ? 'photoLevels' : done(s, 'black', t) ? 'photoHalf' : 'photoRaw';
-    cropPicture(draw, 'ink', [0, 0, 1, 1], base, eased(s, 'open', t));
+    const white = begun(s, 'white', t), base = done(s, 'grade', t) ? 'kPhoto' : done(s, 'crane', t) ? 'photoClean' : done(s, 'cone', t) ? 'photoNoCone' : done(s, 'sky', t) ? 'photoSky' : begun(s, 'sky', t) ? 'photoLevels' : white ? 'photoHalf' : 'photoRaw';
+    const pc = cropPicture(draw, 'ink', [0, 0, 1, 1], base, eased(s, 'open', t));
+    if (pc && !begun(s, 'sky', t)) {
+      pc.artB = white ? 'photoLevels' : 'photoHalf';
+      pc.artMix = handed(s, white ? 'white' : 'black', t);
+    }
     if (begun(s, 'sky', t) && !done(s, 'sky', t)) cropPicture(draw, 'ink', [0, 0, 1, 1], 'photoSky', eased(s, 'sky', t));
     // Each heal replaces the whole base on release, so no patch edge can survive.
     if (begun(s, 'grade', t)) {
@@ -894,13 +912,17 @@ export function playbackSpans(s) {
   const key = Object.keys(SCRIPTS).find(k => SCRIPTS[k] === s), a = action(s, 'export').start;
   const spans = [0, 1, 2].map(j => { const b = ballBeats(key, j); return [a + b.start * PACE, a + b.become * PACE]; }), land = a + ballLength(key) * PACE;
   if (key === 'id') { const back = action(s, 'return'); return { spans, land, off: [back.start, back.end] }; }
-  return { spans, land, off: [land + (key === 'fig' ? 3 : 3.2) * PACE, s.len] };
+  return { spans, land, off: [land + (key === 'fig' ? 3 + BALL.lid : key === 'ae' ? 1.6 : 3.2) * PACE, s.len] };
+}
+function playClock(t, land, stop, key) {
+  const elapsed = Math.max(0, (Math.min(t, stop) - land) / PACE), cycles = key === 'ae' ? 1 : 2;
+  return elapsed >= cycles * 1.6 - 1e-9 ? 1 : elapsed % 1.6 / 1.6;
 }
 function exportPlay(s, t) {
   const { land, off } = playbackSpans(s);
-  if (s === SCRIPTS.fig) return t >= land && t < off[1] ? (Math.min(t, off[0]) - land) / (3 * PACE) : null;
+  if (s === SCRIPTS.fig) return t >= land && t < off[1] ? Math.min(1, (t - land) / (3 * PACE)) : null;
   // CORRECTIONS-15 S2: the plays hold their frame while the exports sink (as Figma's cycle always has), so nothing moves but down.
-  return t >= land && t < off[1] ? ((Math.min(t, off[0]) - land) / PACE % 1.6) / 1.6 : null;
+  return t >= land && t < off[1] ? playClock(t, land, off[0], s === SCRIPTS.ae ? 'ae' : 'pr') : null;
 }
 function editedVideo(t) {
   const P = [], D = [], s = SCRIPTS.pr;
@@ -1083,6 +1105,12 @@ function drawnRegion(P, rect, art, region, p) {
   const [u, v, w, h] = region, r = inRect(rect, [u, v, w * p, h * p]);
   P.push({ ...on('paper', ...r, { lift: 0.09, t: 0.004, art }), window: [u, v, u + w * p, v + h * p] });
 }
+// A region's face may need its own depth slot, but its ink belongs to its page's plane. Moving along the view keeps the
+// projected corners registered when separation raises that slot. The reference is the page's persistent face, not its layer count.
+function registerPicture(pc, face) {
+  pc.p[2] = ZF + face * U - pc.s[2];
+  Object.defineProperty(pc, 'registered', { value: true, writable: true });
+}
 function drawnFrame(P, r, p, tone = 'paper') {
   if (p <= 0) return;
   const [x, y, w, h] = r, growing = [x, y + h * (1 - p), w * p, h * p];
@@ -1129,8 +1157,8 @@ function editedFigma(t) {
   const wireArts = ['wireWide', 'wireTablet', 'wireTall'];
   FIG.wires.forEach((r, i) => {
     if (done(s, 'frame' + i, t)) D.push({ ...on('grey', r[0], r[1] + r[3] + 0.015, i ? 0.17 : 0.26, 0.03, { lift: 0.05, t: 0.008 }), echo: 'frame' + i });
-    if (done(s, 'details', t)) { D.push({ ...on('paper', ...r, { lift: 0.06, t: 0.02, art: wireArts[i] }), echo: 'details' }); return; }
-    drawnFrame(D, r, handed(s, 'frame' + i, t));
+    if (done(s, 'details', t)) D.push({ ...on('paper', ...r, { lift: 0.06, t: 0.02, art: wireArts[i] }), echo: 'details' });
+    else drawnFrame(D, r, handed(s, 'frame' + i, t));
     if (i === 0) {
       const box = inRect(r, HERO_REGION); if (!done(s, 'pictureBox', t)) drawnFrame(D, box, handed(s, 'pictureBox', t), 'grey');
       if (done(s, 'pictureBox', t)) pictureRegion(D, r, wireArts[i], HERO_REGION);
@@ -1203,6 +1231,7 @@ function editedFigma(t) {
   if (layerCount) [0.36, 0.26].forEach((w, i) => D.push(on(i ? 'dark' : 'grey', 0.17, TOP - 0.19 - i * 0.12, w, 0.05, { lift: 0.05, t: 0.01 })));
   TREE.slice(0, layerCount).forEach(([kind, set, len], i) => { const y = TOP - 0.58 - i * 0.145, x = 0.16 + set * 0.1, lit = i === 5 && begun(s, 'hotspot', t); if (lit) D.push(on('dark', 0.11, y - 0.025, 0.66, 0.13, { lift: 0.035, t: 0.006 })); D.push(icon(kind, x, y - 0.005, 0.09, 0.09, lit ? 'dark' : 'night', lit ? 0.042 : 0.051), on(lit ? 'paper' : 'grey', x + 0.13, y + 0.02, len, 0.04, { lift: 0.05, t: 0.01 })); });
   tagEcho(D, begun(s, 'details', t) ? 'details' : 'frame0', treeStart);
+  for (const pc of D) if (pc.canvas && (pc.art || pc.paintLayer !== undefined) && !pc.overlay) registerPicture(pc, 0.08);
   D.forEach(pc => pc.document = true); P.push(...D);
   prototypeOut(P, t, s); P.clock = clock;
   return P;
@@ -1226,7 +1255,7 @@ function editedInDesign(t, { at: pages } = {}) {
   if (done(s, 'mailFlyer', t)) {
     // The approved finished document is also the destination of every construction region below.
     const final = approvedDocument();
-    final.forEach(pc => { if (!pc.furniture) pc.document = true; }); P.push(...final);
+    final.forEach(pc => { if (!pc.furniture) pc.document = true; if (pc.labelSource) registerPicture(pc, 0.088); else if (pc.art && !pc.furniture) Object.defineProperty(pc, 'registered', { value: true }); }); P.push(...final);
   } else {
     rail(P, ['tArrow', 'tType', 'tFrame', 'tRect', 'tLine', 'tDrop'], P.tool === 'frame' ? 2 : P.tool === 'type' ? 1 : P.tool === 'rectangle' ? 3 : 0);
     blankPages(D, s, t);
@@ -1264,14 +1293,14 @@ function editedInDesign(t, { at: pages } = {}) {
         if (begun(s, 'coverTitle', t)) typePatch(D, inRect(ID.cover, [311.6 / 440, 268 / 340, 128.4 / 440, 52 / 340]), 'idCover', phase(s, 'coverTitle', t));
       }
     }
-    if (done(s, 'coverTitle', t)) D.push(on('ink', ...ID.cover, { lift: 0.08, t: 0.004, art: 'kCover' }));
+    if (done(s, 'coverTitle', t)) D.push(on('ink', ...ID.cover, { lift: 0.084, t: 0.004, art: 'kCover' }));
     for (const [key, rect, art, patch, region] of [
       ['post', ID.post, 'kPost', 'idPost', [276 / 400, 315.2 / 400, 124 / 400, 58.4 / 400]],
       ['mail', ID.mail, 'eblast', 'idMail', [17.6 / 320, 268 / 472, 284.8 / 320, 28 / 472]],
     ]) {
       if (!begun(s, key + 'Photo', t)) continue;
       if (done(s, key + 'Blob', t) && done(s, key === 'mail' ? 'mailFlyer' : 'postButton', t)) {
-        D.push(on('ink', ...rect, { lift: 0.105, t: 0.004, art }));
+        D.push(on('ink', ...rect, { lift: 0.084, t: 0.004, art }));
         continue;
       }
       if (!done(s, key + 'Photo', t)) dragPicture(D, s, key + 'Photo', t, ID.photo, key === 'mail' ? ID.mailPhoto : rect, key + 'Image');
@@ -1291,6 +1320,10 @@ function editedInDesign(t, { at: pages } = {}) {
         if (key === 'mail' && begun(s, 'mailFlyer', t)) typePatch(D, inRect(rect, [17.6 / 320, 416 / 472, 105 / 320, 29 / 472]), 'idFlyer', phase(s, 'mailFlyer', t), 14);
       }
     }
+  }
+  for (const pc of D) if (pc.art && pc.where !== 'travel') {
+    const face = pc.p[0] > SCREEN.l + PANEL * U ? 0.073 : pc.p[1] > SCREEN.b + ID.spread[1] * U ? 0.084 : 0.088;
+    registerPicture(pc, face);
   }
   for (const key of ['map', 'loc', 'photo']) if (!begun(s, key, t)) chip(P, key);
   D.forEach(pc => pc.document = true); P.push(...D);
@@ -1320,9 +1353,13 @@ function mapTyping(P, rect, art, p, filter = () => true) {
   for (const part of parts) {
     const count = Math.min(chars, part.words.length); chars -= count;
 
-    const [l, top, r, bottom] = part.region, u0 = clamp(l / a.w, 0, 1), v0 = clamp(top / a.h, 0, 1), u1 = clamp(r / a.w, 0, 1), v1 = clamp(bottom / a.h, 0, 1);
+    // Atlas places span texel centres (0..size-1). Invert that same mapping for a cropped label, so its pixels sample exactly
+    // where they do in the full map, including the half-texel inset. Using l/size here would shift a far-edge label by a pixel.
+    const [l, top, r, bottom] = part.crop, u0 = l / (a.w - 1), v0 = top / (a.h - 1), u1 = (r - 1) / (a.w - 1), v1 = (bottom - 1) / (a.h - 1);
     if (u1 <= u0 || v1 <= v0) continue;
-    const work = on('ink', ...inRect(rect, [u0, v0, u1 - u0, v1 - v0]), { lift: 0.09, t: 0.004, art }); work.window = [u0, v0, u1, v1];
+    const work = on('ink', ...inRect(rect, [u0, v0, u1 - u0, v1 - v0]), { lift: 0.084, t: 0.004, art: part.picture, cut: true });
+    work.labelRegion = [u0, v0, u1, v1];
+    work.labelSource = art;
     if (count < part.words.length) {
       const px = part.origin[0] + part.axis[0] * part.edges[count], py = part.origin[1] + part.axis[1] * part.edges[count], edge = mapPoint(rect, px, py, a.w, a.h);
       const normal = [part.axis[0] / a.w * rect[2], -part.axis[1] / a.h * rect[3]], len = Math.hypot(...normal), nx = normal[0] / len, ny = normal[1] / len;
@@ -1348,9 +1385,8 @@ function editedIllustrator(t) {
     const p = handed(s, 'board' + i, t), temp = []; drawnFrame(temp, r, p, 'ink'); temp.forEach(pc => { pc.tones = FLYER.coal; pc.p[2] -= 0.005 * U; }); D.push(...temp);
   });
   if (begun(s, 'mapExport', t)) { const a = action(s, 'mapExport'); travel(P, 'map', AI.upper, DOCK.map, t, a.start, a.end, undefined, HAND); }
-  else if (done(s, 'badge', t)) D.push(on('ink', ...AI.upper, { lift: 0.06, t: 0.02, art: 'kMap' }));
   else {
-    const draw = screenPainter(D, AI.upper); cropPicture(draw, 'ink', [0, 0, 1, 1], 'mapStreet', handed(s, 'street', t));
+    const draw = screenPainter(D, AI.upper); cropPicture(draw, 'ink', [0, 0, 1, 1], done(s, 'badge', t) ? 'kMap' : 'mapStreet', handed(s, 'street', t));
     if (begun(s, 'markers', t)) {
       const n = Math.min(AM_MARKERS.length, 1 + Math.floor(phase(s, 'markers', t) * AM_MARKERS.length));
       AM_MARKERS.slice(0, n).forEach(r => mapRegion(D, AI.upper, 'kMap', r, 2200, 850));
@@ -1362,17 +1398,15 @@ function editedIllustrator(t) {
       mapTyping(D, AI.upper, 'kMap', phase(s, 'labels', t), p => !p.words.startsWith('King Street') && p.words !== 'N');
     }
     if (begun(s, 'title', t)) mapTyping(D, AI.upper, 'kMap', phase(s, 'title', t), p => p.words.startsWith('King Street'));
-    if (begun(s, 'badge', t)) { const p = handed(s, 'badge', t), r = inRect(AI.upper, [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850]); drawnFrame(D, r, p, 'grey'); }
+    if (begun(s, 'badge', t)) drawnRegion(D, AI.upper, 'kMap', [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850], handed(s, 'badge', t));
   }
   if (begun(s, 'locExport', t)) { const a = action(s, 'locExport'); travel(P, 'loc', AI.lower, DOCK.loc, t, a.start, a.end, undefined, HAND); }
-  else if (done(s, 'cityLabels', t)) D.push(on('ink', ...AI.lower, { lift: 0.06, t: 0.02, art: 'kLoc' }));
   else {
     if (begun(s, 'block', t)) {
-      const r = inRect(AI.lower, [660 / 1352, 16 / 850, 62 / 1352, 68 / 850]), p = handed(s, 'block', t); if (!done(s, 'block', t)) drawnFrame(D, r, p, 'dark');
-      if (done(s, 'block', t)) mapRegion(D, AI.lower, 'locBlocks', CITY_BLOCKS[0], 1352, 850);
+      drawnRegion(D, AI.lower, 'locBlocks', [660 / 1352, 16 / 850, 62 / 1352, 68 / 850], handed(s, 'block', t));
     }
     if (begun(s, 'blocks', t)) { const n = Math.min(CITY_BLOCKS.length - 1, 1 + Math.floor(phase(s, 'blocks', t) * (CITY_BLOCKS.length - 1))); CITY_BLOCKS.slice(1, n + 1).forEach(r => mapRegion(D, AI.lower, 'locBlocks', r, 1352, 850)); }
-    if (begun(s, 'streets', t)) cropPicture(screenPainter(D, AI.lower), 'ink', [0, 0, 1, 1], 'locStreets', handed(s, 'streets', t));
+    if (begun(s, 'streets', t)) cropPicture(screenPainter(D, AI.lower), 'ink', [0, 0, 1, 1], done(s, 'cityLabels', t) ? 'kLoc' : 'locStreets', handed(s, 'streets', t));
     if (begun(s, 'pins', t)) { const n = Math.min(CITY_PINS.length, 1 + Math.floor(phase(s, 'pins', t) * CITY_PINS.length)); CITY_PINS.slice(0, n).forEach(r => mapRegion(D, AI.lower, 'locPins', r, 1352, 850)); }
     if (begun(s, 'cityLabels', t)) mapTyping(D, AI.lower, 'kLoc', phase(s, 'cityLabels', t));
   }
@@ -1394,6 +1428,7 @@ function editedIllustrator(t) {
       AI.subway.knots.filter(([X, Y]) => X > sx && X < sx + sw && Y > sy && Y < sy + sh).forEach(p => D.push(handle(...AI.at(p))));
     }
   }
+  for (const pc of D) if (pc.art && !pc.overlay && pc.art !== 'kLocClose') registerPicture(pc, 0.084);
   D.forEach(pc => pc.document = true); P.push(...D); chip(P, 'photo');
   return P;
 }
@@ -1469,16 +1504,19 @@ function build(i, at, o) {
 // each carried face ends at least one layer step above every face it passes over (the cursor goes up with them).
 function clearCarried(P, stack) {
   if (!stack.length) return;
-  const step = LAYER_STEP * U, flat = pc => { const points = corners(pc); return [Math.min(...points.map(p => p[0])), Math.min(...points.map(p => p[1])), Math.max(...points.map(p => p[0])), Math.max(...points.map(p => p[1]))]; };
-  const faces = list => list.filter(pc => pc.where !== 'floor').map(pc => ({ top: pc.p[2] + pc.s[2], r: flat(pc) }));
+  const step = LAYER_STEP * U;
+  const faces = list => list.filter(pc => pc.where !== 'floor').map(pc => {
+    const points = corners(pc).filter((_, i) => i % 2 === 1), x = points.map(p => dot3(HOME.r, p)), y = points.map(p => dot3(HOME.u, p)), depth = points.map(p => dot3(HOME.v, p));
+    return { top: Math.max(...depth), bottom: Math.min(...depth), r: [Math.min(...x), Math.min(...y), Math.max(...x), Math.max(...y)] };
+  });
   const mine = faces(stack.filter(pc => pc.art !== 'cursor')), others = faces(P.filter(pc => !stack.includes(pc)));
   let rise = 0;
   for (const c of mine) for (const o of others) {
     if (!(c.r[0] < o.r[2] - 1e-9 && c.r[2] > o.r[0] + 1e-9 && c.r[1] < o.r[3] - 1e-9 && c.r[3] > o.r[1] + 1e-9)) continue;
-    rise = Math.max(rise, o.top + step - c.top);
+    rise = Math.max(rise, o.top + step - c.bottom);
   }
   if (!(rise > 0)) return;
-  const offset = HOME.v.map(n => n * rise / HOME.v[2]);
+  const offset = HOME.v.map(n => n * rise);
   for (const pc of stack) { pc.shadowP ??= pc.p; pc.p = pc.p.map((n, axis) => n + offset[axis]); }
 }
 export function carriedStack(P) {
@@ -1529,7 +1567,7 @@ function liftDragStack(P) {
 function separateFaces(P) {
   for (const floor of [false, true]) {
     const axis = floor ? 1 : 2, across = floor ? 2 : 1, step = LAYER_STEP * (floor ? 1 : U);
-    const faces = P.filter(pc => (pc.where === 'floor') === floor && !pc.solid).flatMap(pc => {   // CORRECTIONS-15: the ball's red volumes are not faces
+    const faces = P.filter(pc => (pc.where === 'floor') === floor && !pc.solid && !pc.sink).flatMap(pc => {   // Sinks were separated before their independent translations.
       const [x, y, z, w] = pc.q, normal = floor ? 2 * (y * z - w * x) : 1 - 2 * (x * x + y * y);
       if (normal < 1 - 1e-9) return [];
       const points = corners(pc), xs = points.map(p => p[0]), ys = points.map(p => p[across]);
@@ -1549,7 +1587,9 @@ function separateFaces(P) {
           const b = before.rect;
           if (Math.min(r[2], b[2]) - Math.max(r[0], b[0]) > 1e-9 && Math.min(r[3], b[3]) - Math.max(r[1], b[1]) > 1e-9 && f.height - before.height < step) f.height = before.height + step;
         }
-        f.pc.p[axis] = f.height - f.pc.s[2]; placed.push(f);
+        const rise = f.height - f.pc.s[2] - f.pc.p[axis];
+        if (!floor && f.pc.registered) { f.pc.p[0] += HOME.v[0] * rise / HOME.v[2]; f.pc.p[1] += HOME.v[1] * rise / HOME.v[2]; }
+        f.pc.p[axis] += rise; placed.push(f);
         if (!overlay && f.pc.paintLayer !== undefined) painted = f.height;
       }
     }
@@ -1565,7 +1605,7 @@ export function calloutsAt(t) {
   if (!['id', 'pr', 'ae', 'fig'].includes(key)) return [];
   const s = SCRIPTS[key], timing = playbackSpans(s), exp = action(s, 'export');
   const ends = timing.spans.map(() => timing.land);   // CORRECTIONS-15: all from the last piece's "become" end (Figma's lid open)
-  const off = key === 'id' ? action(s, 'pickup').start : timing.off[0];
+  const off = key === 'id' ? action(s, 'pickup').start : timing.off[0] - (key === 'fig' ? BALL.lid * PACE : 0);
   if (at < Math.min(...ends) - 1e-9 || at >= off - 1e-9) return [];
   const P = frameAt(t), floor = P.filter(pc => pc.where === 'floor');
   const words = { id: ['Flyer', 'LinkedIn post', 'Email'], pr: ['YouTube', 'TikTok', 'Instagram'], ae: ['Website', 'Story', 'Feed post'], fig: ['Laptop', 'Tablet', 'Phone'] }[key];

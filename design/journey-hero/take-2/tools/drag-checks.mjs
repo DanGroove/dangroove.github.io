@@ -13,7 +13,7 @@ import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
 import { equivalent } from '../view.mjs';
 import { handPatch, retimer, r12Patch, r15Patch } from './hand-patch.mjs';   // r15Patch: CORRECTIONS-15 N2's flat drags
 import * as stageModule from '../stage.mjs';
-import { round15Changed } from './round15-checks.mjs';
+import { round17Changed as round15Changed, round17CarryReference } from './round17-checks.mjs';
 
 const take = new URL('../', import.meta.url);
 const sources = JSON.parse(fs.readFileSync(new URL('fixtures/drag-sources.json', import.meta.url), 'utf8'));
@@ -27,7 +27,7 @@ async function snapshot(name) {
   // The saved source used paths relative to take-2. Resolve imports there, in memory.
   // CORRECTIONS-7: round 7's hand edit is applied in memory; the hash below is still of the frozen bytes.
   // CORRECTIONS-12 I1: and without InDesign's frame steps, so its drags fall at today's instants.
-  const source = r15Patch(r12Patch(handPatch(raw))).replace(/from (['"])([^'"]+)\1/g, (_, q, ref) => 'from ' + q + new URL(ref, take).href + q);
+  const source = round17CarryReference(r15Patch(r12Patch(handPatch(raw)))).replace(/from (['"])([^'"]+)\1/g, (_, q, ref) => 'from ' + q + new URL(ref, take).href + q);
   return { module: await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64')), hash: createHash('sha256').update(raw).digest('hex') };
 }
 function stack(P, id) {

@@ -6,6 +6,12 @@ export const C = { ink: '#151314', paper: '#F7F6F3', red: '#C0262E', grey: '#B9B
 export const TYPE_EDGES = {};
 export const TYPE_BOXES = {};
 export const ART_TEXT = {};
+// The graded bars sample the old histogram's outline at the same 48 bin centres as the dark bars.
+const HISTO_OUTLINE = [[0, 52], [18, 44], [34, 20], [50, 34], [70, 8], [92, 30], [112, 22], [132, 46], [160, 54]];
+export const HISTOGRAM = Array.from({ length: 48 }, (_, i) => {
+  const x = (i + 0.5) * 160 / 48, j = HISTO_OUTLINE.findIndex(p => p[0] >= x), a = HISTO_OUTLINE[j - 1], b = HISTO_OUTLINE[j];
+  return [(8 + 78 * Math.exp(-(((i - 10) / 8) ** 2)) * (0.6 + 0.4 * Math.abs(Math.sin(i * 1.7)))) / 100, 1 - (a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0])) / 64];
+});
 let captureText = null, hideText = false, hideLogos = false, hideTabs = false, hideBuilding = false;
 function recordType(c, key, words, x, px, align = 'left', baseline = px) {
   c.font = `800 ${px}px Outfit, sans-serif`; if ('letterSpacing' in c) c.letterSpacing = `${-0.02 * px}px`;
@@ -36,7 +42,8 @@ function text(ctx, s, x, y, px, { w = 800, fill = C.ink, align = 'left', track =
     const t = ctx.getTransform(), base = captureText.base, m = ctx.measureText(s), width = m.width, left = align === 'center' ? x - width / 2 : x;
     const local = (X, Y) => [(t.a * X + t.c * Y + t.e - base.e) / base.a, (t.b * X + t.d * Y + t.f - base.f) / base.d];
     const ascent = m.actualBoundingBoxAscent ?? px, descent = m.actualBoundingBoxDescent ?? px * 0.2;
-    const points = [[left - 1, y - ascent - 1], [left + width + 1, y - ascent - 1], [left - 1, y + descent + 1], [left + width + 1, y + descent + 1]].map(([X, Y]) => local(X, Y));
+    const inkLeft = Math.min(left, x - (m.actualBoundingBoxLeft ?? x - left)) - 1, inkRight = Math.max(left + width, x + (m.actualBoundingBoxRight ?? left + width - x)) + 1;
+    const points = [[inkLeft, y - ascent - 1], [inkRight, y - ascent - 1], [inkLeft, y + descent + 1], [inkRight, y + descent + 1]].map(([X, Y]) => local(X, Y));
     const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
     captureText.parts.push({ words: s, colour: fill, region: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)], origin: local(left, y), axis: [t.a / base.a, t.b / base.d], down: [t.c / base.a * px, t.d / base.d * px], edges: [0, ...Array.from(s, (_, i) => ctx.measureText(s.slice(0, i + 1)).width)] });
   }
@@ -771,9 +778,35 @@ for (let n = 0; n <= 14; n++) {
   ART['idFlyer' + n] = a;
 }
 
+// Each label has its own transparent crop. A crop from a shared letters texture could expose a neighbour whose ink overlaps
+// its rectangle (the e-blast's Unit/number pairs do). Replay the source's transforms, allowing only this one text call to paint.
+function letterPictures(ctx, source) {
+  ctx.save(); captureText = { base: ctx.getTransform(), parts: [] };
+  try { ART[source].draw(ctx, ART[source].w, ART[source].h); ART_TEXT[source] = captureText.parts; }
+  finally { captureText = null; ctx.restore(); }
+  for (const key of Object.keys(ART)) if (key.startsWith(source + 'Letters')) delete ART[key];
+  ART_TEXT[source].forEach((part, index) => {
+    const [l, t, r, b] = part.region, crop = [Math.max(0, Math.floor(l)), Math.max(0, Math.floor(t)), Math.min(ART[source].w, Math.ceil(r)), Math.min(ART[source].h, Math.ceil(b))], picture = source + 'Letters' + index;
+    part.crop = crop; part.picture = picture;
+    if (crop[2] <= crop[0] || crop[3] <= crop[1]) return;
+    ART[picture] = { w: crop[2] - crop[0], h: crop[3] - crop[1], lettersOnly: true, source, sourceRect: crop, labelIndex: index, draw(c) {
+      const paint = new Set(['fill', 'stroke', 'fillRect', 'strokeRect', 'clearRect', 'drawImage', 'putImageData']); let call = 0;
+      const letters = new Proxy(c, { get(target, key) {
+        if (key === 'fillText') return (...args) => { if (call++ === index) target.fillText(...args); };
+        const value = target[key]; return paint.has(key) ? () => {} : typeof value === 'function' ? value.bind(target) : value;
+      }, set(target, key, value) { target[key] = value; return true; } });
+      c.save(); c.translate(-crop[0], -crop[1]);
+      try { ART[source].draw(letters, ART[source].w, ART[source].h); } finally { c.restore(); }
+    } };
+  });
+}
+
 // Pack rows into pages no larger than 2048 square. Places include their page number.
 export function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
   if (size > 2048 || size < 1 || scale <= 0 || pad < 0) throw new Error('invalid atlas measures');
+  const measure = document.createElement('canvas'); measure.width = 1100; measure.height = 472;
+  const context = measure.getContext('2d');
+  for (const source of ['kMap', 'kLoc', 'eblast']) letterPictures(context, source);
   const sheets = [[]];
   let x = pad, y = pad, row = 0;
   // Retain these old drawings as references; the new prototype never renders their baked device states.
@@ -792,9 +825,7 @@ export function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
     const ctx = canvas.getContext('2d');
     for (const [key, a, px, py, w, h] of spots) {
       ctx.save(); ctx.translate(px, py); ctx.scale(scale, scale); ctx.beginPath(); ctx.rect(0, 0, a.w, a.h); ctx.clip();
-      if (['kMap', 'kLoc', 'eblast'].includes(key)) captureText = { base: ctx.getTransform(), parts: [] };
       a.draw(ctx, a.w, a.h);
-      if (captureText) { ART_TEXT[key] = captureText.parts; captureText = null; }
       ctx.restore();
       places[key] = [page, (px + 0.5) / size, (py + 0.5) / tall, (w - 1) / size, (h - 1) / tall];
     }

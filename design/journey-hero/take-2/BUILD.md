@@ -1,6 +1,6 @@
 # Motion second pass build record
 
-The CORRECTIONS-3 section and its addendum are current. Earlier sections are historical checkpoints; their timing, projected-centring rules and prior hardware results do not describe this revision.
+The CORRECTIONS-17 section is current. Earlier sections are historical checkpoints; their superseded timing and hardware results do not describe this revision.
 
 Started 19 November 2026 at 20:02 UTC. Stop unfinished stages at about 21:02 UTC.
 
@@ -1393,3 +1393,76 @@ Round 16 was built on `8a35171` in a separate copy while round 15 was building i
 ### Dan's note on version 26: the tremble starts later
 
 Dan, 21 November, 9:31 AM ET: "they start jittering too quickly". The tremble started 1.5 s after the formation, about 3.9 s into a hold in the middle at 1474 x 996 and full at 5.9 s, while the logo's last stars were still landing (about 5 s). Of three options he chose "about 8 s into the hold": `STARS.charge.start` is now 5.6, so the tremble starts about 8.0 s held (the logo forms at about 2.4 s there) and is full at about 10.0 s; near an edge, where the logo forms later, it starts 5.6 s after that. Only the number and R4's check (its `START`) change; every other R4 rule and negative control is as before.
+
+## CORRECTIONS-17
+
+Dan's eleven notes on versions 26/27 and rule G, 21 November 2026. The supplied brief, approved artwork and retained research/review record are the evidence. The working acceptance record is `.scratch/review-out/r17/PLAN.md`. This run used Node geometry, source and renderer-call checks only: no browser, screenshots, visual judgement, reviewer agents, network, installation, site build, deployment or git mutation. Installed skill files and RTK were not reopened because this run prohibits every outside-repository read; the motion/staging principles already recorded here were carried forward. Only the authorised sources, check registrations/numbers, records and r17 notes were written.
+
+### Each note and its cause
+
+| Note | Cause and change |
+| --- | --- |
+| R1 | `done()` selected raw/half/levels images and swapped the histogram on release. During black, one photo piece now mixes `photoRaw` → `photoHalf` by `handed(black)`; during white, `photoHalf` → `photoLevels` by `handed(white)`. `sq.mjs` samples both atlas pages independently and mixes their premultiplied pixels on that one piece. Endpoints are exact; sky, heals and grade retain their actions. One persistent set of 48 geometry bars interpolates the original dark bars to samples of the old graded histogram outline by `(handed(black) + handed(white))/2`. No piece opacity or histogram crossfade. |
+| R2 | The badge/block used opaque temporary boxes. They now use `drawnRegion` with the finished `kMap` / `locBlocks` crops, growing from the drag corner with the hand. Artboards retain `drawnFrame`. Completed maps fill underneath their persistent region layers, so release does not discard their positions or expose an old box. |
+| R3 | `mapTyping` exposed finished-picture rectangles, including ground, at a separate height. `art.mjs` now measures and builds 54 individual `kMapLettersN`, `kLocLettersN` and `eblastLettersN` crops with the finished drawing's own text calls and transforms, allowing exactly one label to paint in each. This also prevents a neighbouring label from leaking into an overlapping rectangle. Crops include measured ink overhang, preserve the source's canvas bounds, and invert the atlas's texel-centre mapping to sample at precisely the full picture's pixel positions. Their cut-outs reveal at the measured typing edge; the existing caret remains. This covers labels, title, cityLabels and mailTitle. |
+| R4 | `travel` named the asset instead of its action. It now names `export`, `mapExport`, `locExport`, or the InDesign action. `clearCarried` uses projected face overlap and view depth; it clears the whole moving stack only along HOME.v. Cursor ordering, authored shadow positions and one flat carry plane remain. Idle dock pictures are not mistaken for a new carry. |
+| R5 | Finished-document heights differed from the build. Spread faces remain 0.084, cover/post/mail faces 0.088 and panel thumbnails 0.073 in screen units. `approvedDocument` keeps those heights, and retains the mail's overlapping typed cut-outs in their slots. The carried map ends at face 0.084 and location map at 0.073. |
+| R6 | An eased pop stopped in front of the button and restarted as a separate flight. One 1.1 s ballistic centre path now covers pop and arc: linear x/z, constant downward acceleration, initially rising, peak one diameter above the button top. The radius grows linearly from 0.1 to 0.3 during pop. It starts just below the top side, with its back already 0.001 in front of the face, and clips at the top-side plane until clear. It lands at the combined footprint centre, sitting on y=0, with no bounce. The old unused pop `up/out` distances were removed. |
+| R7 | A 0.15 s rest and slow-start wipe delayed the split. Rest is zero and split uses `EASE.enter`, beginning with the exact touchdown ball and visibly moving at the first 0.01 s sample. Hold and wipes are unchanged. Applies to all four exports. |
+| R8 | Every sink, including InDesign's return, is now 1.0 s with the existing wipe curve. |
+| R9 | AE's second cycle restarted empty. Its sink now starts at land+1.6, holding clock=1 through the sink. Premiere retains two cycles and holds its second last frame. AE is 1.6 s shorter relative to the otherwise revised timing. |
+| R10 | Lid depth and its 0.03 shut lift exposed the deck. The lid now has the deck's 1.55 × 1.1 footprint and rests on its 0.08 top, with top 0.12. The physical hinge is exactly on the back top edge; the lid's centre plane is half a thickness behind that hinge surface. Extra depth 0.10125 goes into the chin (0.14125), keeping the picture 1.47 × 0.91875, 16:10 and 0.04 from the top. Keys/trackpad are omitted while the lid faces away. The red block is the exact shut laptop. `lean` grows 0.227651559 → 0.248702860 (+0.021051301 in z). H10 clearance requires another +0.06 forward (see below). |
+| R11 | The open lid previously sank while the thin devices vanished. After the 3 s Figma cycle it closes over 0.4 s with reversed wipe, with the other devices frozen. Only after it is shut do all three sink. Each format uses its own measured top, after face separation; subsequent separation cannot undo its sink. x/z and floor clipping are retained. The explicit clearance conflict is resolved below. |
+
+### G: registration and the additional audit
+
+Construction regions now use their page's fixed reference plane. When face separation gives overlapping regions their depth slots, it moves a registered region along the view, preserving its projected corners. Layers that persist keep their slots; a finished full map does not collapse the construction's layers. The registration flag is internal/non-enumerable so it does not change frozen-picture comparisons by itself. Travel pieces stay outside this registration pass.
+
+Beyond G's supplied table, the audit found:
+
+- **InDesign spreadType:** `pictureRegion` construction faces dropped from 0.088 to the finished spread's 0.084. Regions now register to 0.084 from creation, with at most the necessary single-layer clearance at replacement.
+- **Figma wireframe details:** several region/heading pictures collapsed to a single lower `wireWide` picture at details completion. The completed wireframe now fills below the retained regions; all wire/design construction pictures and their progress rails share the frame's registered plane. This also corrects the wire pictureBox/heading/details and typed-name registration. The original board rectangles and picture sizes remain.
+- **Overlapping e-blast text:** some line rectangles need two depth slots; retaining those cut-outs in the approved document prevents their collapse at mailFlyer completion.
+- **Old picture-equivalence test:** it compared unprojected x/y mappings and treated view-cleared cut-out letters as new opaque cover pictures. The registered-picture equivalence now compares the same source's projected UV mapping, so unrelated pictures still fail R9. R3 separately proves that a letters-only companion executes only text paint.
+
+The G gate samples all 115 action ends at ±0.001 s, including every location in the brief's table. It compares full-picture UV anchors, persistent regions and page face heights, with a dedicated carried-location-map → two-thumbnail reconstruction. It records 3,785 comparisons, worst **0.08692 px**, under 0.1 at the conservative 1474 × 996 fit; the player's label fitting can only reduce that scale. Intended new frame fills, clip placement and rail changes remain additions. No pixel-equivalence or browser visual pass is claimed.
+
+### Timing
+
+`BALL = { pop: 0.3, arc: 0.8, rest: 0, split: 0.6, hold: 0.15, become: 0.6, stagger: 0.1, lid: 0.4, sink: 1.0 }`, PACE 1. Loop **97.890894748 s** (97.890895 rounded; below the unchanged 100 s ceiling).
+
+| Scene | Global start | Length | Local still |
+| --- | ---: | ---: | ---: |
+| Photoshop | 0.000000000 | 8.046310592 | 7.095310592 |
+| Illustrator | 8.046310592 | 13.147725757 | 10.835164154 |
+| InDesign | 21.194036350 | 22.588316352 | 19.186277008 |
+| Premiere Pro | 43.782352702 | 19.381290439 | 15.731291439 |
+| After Effects | 63.163643141 | 16.182089022 | 14.132090022 |
+| Figma | 79.345732163 | 18.545162584 | 15.245162584 |
+
+Export / land / sink, globally: InDesign **32.732353 / 35.382353 / 42.782353–43.782353**; Premiere **56.313643 / 58.963643 / 62.163643–63.163643**; AE **74.095732 / 76.745732 / 78.345732–79.345732**; Figma **90.640895 / 93.490895 / 96.890895–97.890895**. Figma closes at **96.490895–96.890895**, before the sink. Its labels retain the 3 s cycle window and complete their existing reverse exit at the start of closing, avoiding an anchor on a turned-away lid.
+
+### Deliberate departures and remaining gates
+
+1. **R11's two numerical requirements conflict.** Translating each unequal height H by exactly `(H + 0.02) × wipe(t)` makes its last visible top cross the floor at `wipe(t) = H / (H + 0.02)`. In this scene the booklet and devices disappear **0.14 s apart**, exceeding the requested 0.01 s. To preserve the same 1 s curve and simultaneous disappearance, clearance is proportional too: `depth_j = H_j × (1 + 0.02 / max(H))`. The tallest still gets +0.02; smaller exports get proportionally less. All three formats' tops cross in the same 0.01 s sample: id +0.64, pr +0.51, ae +0.53, fig +0.54 s from sink start; all are strictly below by the end. The gate explicitly checks this chosen formula and synchrony; it does **not** claim literal +0.02 on every format.
+2. **R10 needs another 0.06 forward for retained H10.** At the deeper lid's required hinge and lean, the previous `forward: 0.4` leaves **8.671399 px** between laptop and app (required 12). `forward: 0.46` gives **12.838991 px**, with ring clearance **16.320339 px**. The new lean contributes +0.021051301; total row shift is **+0.081051301 z**, front edges **0.408702860**. No x shift, device resizing or screen-picture resizing. Hinge seating and the exact closed footprint are independently checked.
+3. **Browser gates remain external**, as requested. Text companions execute the same drawing/font code, but Node does not rasterize fonts, compile WebGL shaders or certify pixels, appearance or performance. This build emits more retained construction pieces; five atlas pages remain. No visual score is assigned.
+
+### Earlier checks registered or updated
+
+- `checks.mjs`: registers round 17 and its nine controls; registers replacement R6–R11 export gates and the five retained round-15 controls; changes the ball's permitted clip normal from z to y; AE clock samples stop after one cycle; Figma's stationary-body interval ends at the 3 s cycle, before closing. R10's exact surface hinge puts the lid's rear thickness up to 0.02 behind the moved row line, so the rear-envelope number includes that thickness. It still stays 0.04 in front of the original row line after the added forward clearance.
+- `round15-checks.mjs`: its CLI registers the replacement export gates, retaining independent map-outline, flat-drag and renderer-clip tests. Its old two-part pop/rest/shared-depth-sink/exact-old-laptop assertions are superseded, not represented as current passing gates. The retained controls still catch a map outline, drag arc, early play, missing sink clip and landing bounce.
+- `round5-checks.mjs`: AE growth/play duration decreases by 1.6; registers round 17's changed surfaces with the frozen comparisons. Unchanged furniture, comp construction and footage remain compared to the original evidence.
+- `round5-addendum-checks.mjs`: registers the same changed surfaces; H10's forward-control number is 0.46. Its **12 px** clearance threshold is unchanged.
+- `drag-checks.mjs`: registers the changed surfaces and the new map/location carry face numbers in its frozen reference (0.084 / 0.073); that reference preserves the picture/rim's authored flat plane under N2 rather than letting its legacy separator move it. The dense five-drag offset, corner, occlusion and shadow checks still run.
+- `entrance-checks.mjs`: AE's timing delta is −1.6; Figma's label cutoff is before its added 0.4 close. `round8-checks.mjs`: expected loop 97.89089.
+- `correction-checks.mjs`: registers exact projected equivalence for registered regions and letter-only source companions; Figma label cutoff subtracts the added 0.4; the lid-to-picture top-bezel number is 0.090625 instead of 0.04 because the chin absorbs 0.10125 while the picture height stays fixed; its rear-envelope number includes the same 0.02 hinge thickness as the main checker.
+- Some untouched source files use CRLF but the older E1/G1/L1 exact-site controls contain LF strings. `withSourceLines` normalizes only their in-memory `.mjs` reads; it does not edit those files or skip the controls. Their intended negative gates now execute. The round-8/round-9 checker files were not changed for this platform issue.
+
+### How this was checked
+
+- `node design/journey-hero/take-2/tools/checks.mjs`: **all clean**, 6,486 frames / 524,786 pieces / max 247. Includes the 60 Hz loop/action boundaries, PACE-2 equivalence, atlas and player stand-ins, offline-module parsing, earlier retained gates and their controls. Exact final-command output is `.scratch/review-out/r17/checks-final-verified.txt`; the individual-crop `--metrics` run is `checks-label-crops.txt`.
+- `node design/journey-hero/take-2/tools/round17-checks.mjs --controls`: all **nine** requested edits fail at their intended R1/R2/R3/R4/G/R6/R7/R10/R11 gate (`.scratch/review-out/r17/controls-final.txt`); edits are imported from memory, never written into the prototype.
+- Round 17: 105 levels samples, 210 draw/type samples, 16 carries / 701 samples at 0.01 s, 440 emitted flight samples, 404 sink samples; G's 3,785 registrations above. Constant acceleration/linear x/z are checked through the pop boundary to 1e-6; the lid's hinge, screen size/top bezel, flush shut pose and red block are checked independently. N2's flat paths have worst 0.00000 px deviation.
+- Retained dense drag check: **4,083 samples**, worst corner error **1.569e-13 px**, cursor gap at least **0.021170**, authored shadow positions retained. H1–H7, H9/H10, U1/I2 and all other retained checks pass. Source/geometry comparisons are evidence of registration, not a substitute for the external browser review.
+- Atlas in the Node font-metric model: five pages, 2048 × 1844 / 1700 / 1800 / 1876 / 1284; 69,664,768 base bytes (66.44 MiB), 92,886,357 bytes including the conservative mip estimate (88.58 MiB). Browser fonts determine the crops' final measured sizes; no browser packing/rasterisation measurement is claimed. README's current allocation arithmetic is updated; its historical hardware measurements remain historical.
