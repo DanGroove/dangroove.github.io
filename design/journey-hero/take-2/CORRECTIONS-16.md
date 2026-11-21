@@ -1,4 +1,4 @@
-# Round 16: journey hero, second take: the star ring goes all the way round, centred by eye, and held stars tremble
+# Round 16: journey hero, second take: the star ring fills as you hold, goes all the way round and is centred by eye; held stars tremble
 
 This brief is for the builder. Dan, 21 November, in the thread:
 
@@ -8,7 +8,9 @@ This brief is for the builder. Dan, 21 November, in the thread:
 
 - 8:02 AM ET: "lets also have the stars vibrate a bit when held for a certain amount to show that a build up of energy is happening before they explode"
 
-So the ring keeps today's scattered band and today's spin. Only two things change: it is centred by eye (R1), and it goes all the way round (R2). R4 adds the tremble before the blast.
+- 8:06 AM ET, on the diagram of a scattered band 14 px deep: "the ring still is too thin compared to the old one but that could just be visual, maybe just needs more stars?" I showed him 350 stars at 14 and 20 px deep, recommended 20 px and a hold that keeps gathering stars (R5), and said I'm building that.
+
+So the ring keeps today's scattered band and today's spin. Only two things change: it is centred by eye (R1), and it goes all the way round (R2). R4 adds the tremble before the blast. R5 gives the ring more stars.
 
 Everything in `CORRECTIONS-8.md` to `CORRECTIONS-15.md` still holds unless it is changed here. This round touches only the star field (`stars.mjs`) and its checks. Nothing here touches anything outside `design/journey-hero/take-2/`, and `public/` stays untouched.
 
@@ -29,16 +31,16 @@ Everything in `CORRECTIONS-8.md` to `CORRECTIONS-15.md` still holds unless it is
 - `ring`: `{ centre: weight, radius, band }`.
 
 The ring is a band, as today, but measured from the weight centre:
-- Its middle (`radius`) is the farthest placed point from the weight centre, plus `STARS.mark.ringGap` times the mark's height. This is the spacing Dan approved.
-- Its depth (`band`) is `STARS.mark.ringBand` times the mark's height, centred on the middle.
-- Each ring star keeps its own radius in the band, from the same hash as today: `radius + (hash(i, 6) - 0.5) * band`.
-- Set `ringGap: 0.13` and `ringBand: 0.07` in `STARS.mark`, so Dan can tune them. They replace `STARS.mark.ring: [8, 22]`; today's band is also 14 px deep at this size.
+- Its inner edge (`radius`) is the farthest placed point from the weight centre, plus `STARS.mark.ringGap` times the mark's height. This keeps the gap Dan approved.
+- Its depth (`band`) is `STARS.mark.ringBand` times the mark's height, outward from the inner edge.
+- Each ring star keeps its own radius in the band, from the same hash as today: `radius + hash(i, 6) * band`.
+- Set `ringGap: 0.095` and `ringBand: 0.10` in `STARS.mark`, so Dan can tune them. They replace `STARS.mark.ring: [8, 22]`. Today's band is 14 px deep at this size; Dan found a 14 px band all the way round too thin, so it is 20 px.
 
 The numbers at 1474 x 996:
 - The mark is 199.2 px tall. Its weight centre is (-16.5, +1.1) px from the box centre, toward the D.
 - That lies within 2 px of the centre of the smallest circle round the mark's outline (-18.3, 0). That is why it reads as centred: the D's corners and the G's outer edge end up about equally far from the ring.
-- The band's middle is 153.5 + 25.9 = 179.4 px, and it runs 7 px either side (172.4 to 186.4).
-- Clearance from the band to the D's top and bottom corners is 17 to 31 and 18 to 32 px. To the G's right edge it is 21 to 35 px. Today those are about 7 to 21 and 40 to 54.
+- The band runs from 153.5 + 18.9 = 172.5 px to 192.4 px from the weight centre.
+- Clearance from the band to the D's top and bottom corners is 17 to 37 and 18 to 38 px. To the G's right edge it is 21 to 41 px. Today those are about 7 to 21 and 40 to 54.
 
 ## R2. The scattered ring goes all the way round
 
@@ -80,6 +82,13 @@ Dan wants the captured stars to "vibrate a bit" once a hold has gone on a while,
 - **Release.** The blast starts from where the star is shown, tremble included, so nothing jumps. After the release there is no tremble. The blast itself is unchanged.
 - Name `STARS.charge = { start: 1.5, ramp: 2, amp: 1.5, hz: [10, 16] }` so Dan can tune it.
 
+## R5. The hold keeps gathering, so the ring fills as you hold
+
+- **Today (round 12, S1).** Past 2.5 s, a hold that has not formed the mark keeps growing its capture radius at 104 px a second, but the extra growth stops once the formation starts. So a still hold captures about 336 stars at Dan's view. That is not enough to fill the mark's 600 points, and the ring only gets stars if the pointer sweeps around.
+- **Change.** The extra growth no longer stops at the formation. The capture radius keeps growing at the same rate, up to the hero's diagonal, for as long as the hold lasts.
+- New captures take the mark's free points first, then join the ring. So a still hold completes the logo and then thickens the ring. The longer the hold, the more of the sky it gathers, while the tremble (R4) builds.
+- The blast is unchanged. Its reach still uses `captureRadius` (capped at 2.5 s).
+
 ## Checks
 
 **In Node.** Put the new checks in `tools/round16-checks.mjs` and call it from `tools/checks.mjs`.
@@ -87,7 +96,7 @@ Dan wants the captured stars to "vibrate a bit" once a hold has gone on a while,
 R1:
 - The weight is the mean of the points (1e-9).
 - The ring centre is the mark's centre plus the weight (1e-9).
-- The band's middle is the farthest point plus 0.13 h, and its depth is 0.07 h (1e-9).
+- The band's inner edge is the farthest point plus 0.095 h, and its depth is 0.10 h (1e-9).
 - At 1474 x 996:
   - the weight's x is between -18 and -15 px;
   - the clearances to the D's two square corners and to the G's rightmost point (measured on the outline, `flattenPath`) differ by at most 5 px.
@@ -115,11 +124,17 @@ R4:
 - With the tremble taken out, every star's path equals the path without R4 (1e-9). So arrival, the mark weight, the ring and the R2 checks are untouched.
 - At the release frame, every star's shown position equals the blast's start (1e-6 px).
 
+R5:
+- At every frame of a hold, before and after the formation, the radius is `min(diagonal, captureRadius(held) + max(0, held - 2.5) * 104)`.
+- A still hold at [700, 450] at 1474 x 996 completes the mark. Report how many stars are in the ring at 4, 5, 6 and 8 s held.
+- Update round 12's S1 check that expects the growth to stop at the formation, and say so.
+
 **Negative controls.** Each must make its check fail:
+- the growth frozen at the formation (today's rule);
 - a tremble that starts at the press;
 - a tremble that grows past `amp`;
 - the box centre for the ring;
-- one radius for every ring star (no band);
+- one radius for every ring star (no band), and a 14 px band;
 - no jitter (a plain dotted ring);
 - ring stars kept at their capture angles;
 - a join that orders by star index;
