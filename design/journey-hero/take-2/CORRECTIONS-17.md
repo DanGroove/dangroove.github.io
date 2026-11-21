@@ -20,6 +20,29 @@ This brief is for the builder. Dan, 21 November, 9:33 to 9:42 AM ET, left eleven
 
 **Changed at 10:52 AM ET:** on R5, with a screenshot of the panels just after they move back, Dan: "the backwards position on these is the correct one, not what they were before". So the finished pictures' places are the reference: under rule G the build moves to where the finished picture sits, never the other way. R5 below says it for InDesign.
 
+## Follow-up after the first build (`db65772`), 11:20 AM ET
+
+The first build is reviewed: R1, R4, R6, R7, R8, R10 and R11 look right in a browser, and the checks print `all clean`. Build the three items below on top of it, and keep everything else it did.
+
+**F1. R5 went the wrong way.** The first build raised `approvedDocument()` to the build's heights (spread pages at face 0.084; cover, post and e-blast at 0.088). Dan wants the opposite ("the backwards position on these is the correct one"), so the finished document's version 27 heights are the reference:
+- Restore `approvedDocument()`'s pages to version 27's (`12ea0de`, line 208): the spread's two pages, the cover, the post and the e-blast at lift 0.06, thickness 0.02 (face 0.080). The pages panel's thumbnails stay as they are.
+- Then lower the build to those heights. From the moment each is placed, the spread's pages, the cover, the post and the e-blast sit at face 0.080. What is drawn onto them sits at most a few `LAYER_STEP`s above that, and never lifts a page. A carried picture lands at the height of the page it lands on.
+- At 32.350 s nothing moves (rule G). Keep the first build's fix that stops the e-blast's overlapping lines collapsing backward, at the new height.
+
+**F2. R9 was built from my first, wrong reading.** The first build makes After Effects play once (sink at `land + 1.6`). Revert that: After Effects plays twice and sinks at `land + 3.2`, as in version 27. Then build R9 as written below: each device's layers start from that device's own base, no device body or screen face moves through any play or restart, and `stacks.screen` gets the same fix. Expect the loop to grow by about 1.6 s, to about 99.5 s; the ceiling stays 100 s.
+
+**F3. Typed letters now break up into dots (a regression from R3).** Measured in Chromium at 1474 x 996, dpr 1:
+- From the start of `labels` (12.43 s) until `badge` ends (14.082 s), the upper map's cross-street names and "King Street W" show as broken dots and fragments, not letters.
+- At 14.09 s, when `kMap` replaces them, they turn into whole letters in one frame. Version 27 shows whole letters in all of those frames.
+- My reading of the cause: the letters-only crops are drawn with `cut: true`, which is alpha-tested at 0.5. Small anti-aliased type has few texels above 0.5, so most of each stroke is cut away.
+- `cityLabels` and the e-blast's `mailTitle` use the same mechanism, so they need the same fix. So does any other piece this round made `cut: true` from anti-aliased art: list them in BUILD.md.
+
+What is required: once a letter is revealed, it looks exactly like the same letter in the finished picture, with the same weight and colour and no gaps, and the swap to the finished picture changes nothing on screen. One way to do it is to give each letters-only crop a mask that is opaque wherever the finished letter has any coverage (alpha above 0, grown by one texel), coloured with the finished picture's own pixels. Then, wherever the mask shows, the pixels are exactly the finished picture's. Blending these pieces by alpha instead of testing it would also work.
+
+You cannot render on the PC, so I will check the result in a browser. Add a Node check that at least proves each mask covers every texel where its finished letters have coverage. Its negative control is a 0.5 threshold, which must fail.
+
+**Not in this run:** Dan also asked (10:55 to 11:14 AM) for one tablet and one phone model in every scene, bigger, and "high end". That comes as R12 in a separate brief once he has approved a mock. Do not change any device's size, shape or look in this run.
+
 Everything in `CORRECTIONS-2.md` to `CORRECTIONS-16.md` still holds unless it is changed here. The motion stays hard-edged: no fades and no blur. Nothing here touches anything outside `design/journey-hero/take-2/`.
 
 ## G. The swap rule (R2, R3, R5 and their kin)
