@@ -1581,7 +1581,7 @@ export function calloutsAt(t) {
     } else {
       const [x, z, w, d] = rects[i], px = i === 0 ? x + 0.1 : i === 1 ? x + w / 2 : x + w - 0.1, pz = i === 1 ? z + d - 0.06 : z + 0.1;
       const faces = floor.filter(pc => {
-        if (false) return false;
+        if (key !== 'id' && (!pc.deviceBody || pc.device !== i)) return false;
         if (quatRotate(pc.q, [0, 0, 1])[1] < 1 - 1e-8) return false;
         const cs = corners(pc), xs = cs.map(p => p[0]), zs = cs.map(p => p[2]);
         return px >= Math.min(...xs) - 1e-8 && px <= Math.max(...xs) + 1e-8 && pz >= Math.min(...zs) - 1e-8 && pz <= Math.max(...zs) + 1e-8;

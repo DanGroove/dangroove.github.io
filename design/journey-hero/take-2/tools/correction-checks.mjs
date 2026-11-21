@@ -190,7 +190,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
       if (at < place.end - 1e-9 && plateCount !== (i === 0 ? 2 : 1)) fail(time, 'R15: ' + id + ' page missing before placement');
       if (i && at < place.start - 1e-9 && edges !== 4) fail(time, 'R15: ' + id + ' page edges missing before its drag');
       const replacement = P.some(pc => pc.where === 'content' && !pc.echo && arts.includes(pc.art));
-      if (at >= place.end - 1e-9 && !plates.length && !replacement) fail(time, 'R15: ' + id + ' page disappeared without a same-frame replacement');
+      if (at >= place.end - 1e-9 && !plates.length && true) fail(time, 'R15: ' + id + ' page disappeared without a same-frame replacement');
     }
   }
   let fixedSamples = 0, windowStart = 0;
