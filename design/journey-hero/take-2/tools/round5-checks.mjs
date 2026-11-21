@@ -173,7 +173,7 @@ export async function checkRound5(only = '') {
     });
     const sideSpaces = [];
     for (const [W, H, edge] of [[1280, 800, 501], [1920, 1080, 531], [2560, 1440, 531]]) {
-      const c = model(W, H, need, fitCalloutView, true, edge), left = c.cx + c.S * need.bounds[0], right = c.cx + c.S * need.bounds[1];
+      const c = model(W, H, need, fitCalloutView, true, edge), left = c.cx + c.S * (need.x - need.w / 2 + 0.25), right = c.cx + c.S * (need.x + need.w / 2 - 0.25);
       close(left - edge, W - right, 'H6 equal side spaces');
       const target = stageTarget(c, need, W * 0.44, W - sideGutter(W));
       assert.ok(target.left <= left && target.left + target.width >= right, 'H6 stage target misses the scene');

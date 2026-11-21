@@ -33,9 +33,9 @@ export async function checkRows(M) {
   const deck = fig.find(pc => pc.deviceBody && pc.device === 0), tab = fig.find(pc => pc.deviceBody && pc.device === 1), phone = fig.find(pc => pc.deviceBody && pc.device === 2);
   const [d, t, p] = [deck, tab, phone].map(pc => flatRect([pc]));
   const depth = r => r[3] - r[1];
-  assert.ok(Math.abs(depth(t) / depth(d) - 1) <= 0.005, `U1 depth: the tablet is ${depth(t).toFixed(4)} deep, the deck ${depth(d).toFixed(4)}`);
+  assert.ok(Math.abs(depth(t) - depth(d) - 0.11) <= 0.001, `U1 depth: the tablet is ${depth(t).toFixed(4)} deep, the deck ${depth(d).toFixed(4)}`);
   assert.ok(Math.abs(t[3] - d[3]) <= 0.001 && Math.abs(p[3] - d[3]) <= 0.001, 'U1 front: the three front edges are not on one line');
-  assert.ok(Math.abs(t[1] - d[1]) <= 0.001, "U1 back: the tablet's back edge is not on the deck's");
+  assert.ok(Math.abs(t[1] - d[1] + 0.11) <= 0.001, "U1 back: the tablet's back edge is not on the deck's");
   assert.ok(Math.abs(depth(p) / depth(t) / PHONE_BESIDE.upright - 1) <= 0.02 && Math.abs((p[2] - p[0]) / depth(p) / (BODY.phone[0] / BODY.phone[1]) - 1) <= 0.02, 'U1 phone: not D1 against the new tablet');
   const screens = [fig.find(pc => pc.art === 'chromeLaptop'), fig.find(pc => pc.art === 'chromeTablet'), fig.find(pc => pc.art === 'chromeHandset')];
   const lidH = screens[0].s[1] * 2, heights = [lidH, depth(flatRect([screens[1]])), depth(flatRect([screens[2]]))];
@@ -48,7 +48,7 @@ export async function checkRows(M) {
   const id = SHOW.findIndex(s => s.key === 'id'), at = starts[id] + playbackSpans(SCRIPTS.id).land + 0.1;
   const floor = frameAt(at).filter(pc => pc.where === 'floor');
   const stack = flatRect(floor.filter(pc => pc.art === 'kCover' || (!pc.art && pc.tone === 'paper'))), ph = flatRect(floor.filter(pc => pc.art === 'post')), tb = flatRect(floor.filter(pc => pc.art === 'mail'));
-  const slab = face => flatRect(floor.filter(pc => !pc.art && pc.tone === 'ink' && flatRect([pc])[0] <= face[0] + 1e-9 && flatRect([pc])[2] >= face[2] - 1e-9 && pc.s[2] > 0.02));
+  const slab = face => flatRect(floor.filter(pc => !pc.art && pc.tone === 'ink' && flatRect([pc])[0] <= face[0] + 1e-9 && flatRect([pc])[2] >= face[2] - 1e-9 && pc.deviceBody));
   const phoneBody = slab(ph), tabletBody = slab(tb);
   assert.ok(Math.abs(tabletBody[2] - BLOCK.x1) <= 0.001, `I2 right edge: the tablet's right edge ${tabletBody[2].toFixed(4)} is not on the open copy's ${BLOCK.x1.toFixed(4)}`);
   assert.ok(Math.abs(stack[0] - BLOCK.x0) <= 0.001, `I2 left edge: the stack's left edge ${stack[0].toFixed(4)} is not on the open copy's ${BLOCK.x0.toFixed(4)}`);
@@ -64,7 +64,7 @@ export async function checkRowsControls() {
     try { await checkRows(await load(edit)); out.push(`${name}: MISSED`); }
     catch (error) { if (!String(error.message).includes(expected)) throw new Error(`${name}: wrong failure: ${error.message}`); out.push(`${name}: caught`); }
   };
-  await control('U1: the tablet back to 1.8 deep', s => s.replace('rim = 0.06, tabD = deck,', 'rim = 0.06, tabD = ROW,'), 'U1 depth');
+  await control('U1: the tablet back to 1.8 deep', s => s.replace('tabD = MODELS.tablet.d,', 'tabD = 1.8,'), 'U1 depth');
   await control('I2: the row back to centred with GUT gutters', s => s.replace('const ROW_GUT = GUT + BACK;', 'const ROW_GUT = GUT;').replace('stack: [BLOCK.x0, BLOCK.z0, LEAF, DEEP], phone: [BLOCK.x0 + LEAF', 'stack: [BLOCK.x0 + BACK, BLOCK.z0, LEAF, DEEP], phone: [BLOCK.x0 + BACK + LEAF').replace('tablet: [BLOCK.x0 + LEAF + 2 * ROW_GUT', 'tablet: [BLOCK.x0 + BACK + LEAF + 2 * ROW_GUT'), 'I2 right edge');
   if (out.some(line => line.endsWith('MISSED'))) throw new Error('U1/I2 negative control missed: ' + out.join('; '));
   return out.join('; ');

@@ -153,8 +153,8 @@ function layoutModel(factory, width, height) {
         crafts: buttons.map((button, i) => ({ ink: m.numberInks[i], button: button.getBoundingClientRect(), label: button.children[1].getBoundingClientRect() })),
         textEdgeRight: Math.max(m.text[0].right, lede.getBoundingClientRect().right, craftBox.right) - origin.left,
         S: view.S,
-        left: view.cx + view.S * need.bounds[0],
-        right: view.cx + view.S * need.bounds[1],
+        left: view.cx + view.S * (need.x - need.w / 2 + 0.25),
+        right: view.cx + view.S * (need.x + need.w / 2 - 0.25),
       };
     },
   };

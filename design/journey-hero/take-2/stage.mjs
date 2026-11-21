@@ -57,16 +57,19 @@ const screenMiddle = SCREEN.l + SCREEN.w / 2, exportMiddle = screenMiddle + EXPO
 export const BALL = { pop: 0.3, arc: 0.8, rest: 0, split: 0.6, hold: 0.15, become: 0.6, stagger: 0.1, lid: 0.4, sink: 1.0 };
 // World units: full diameter, starting radius, and the peak's height above the Export button's top side.
 export const BALL_PATH = { size: 0.6, start: 0.1, rise: 0.6 };
-// CORRECTIONS-12 D1: phones in true proportion to the tablets beside them. The reference bodies, in mm: a phone 71.6 x 147.6
-// and a tablet 179.5 x 248.6. A phone is 147.6 / 248.6 of an upright tablet's height, 147.6 / 179.5 of one on its side.
-export const BODY = { phone: [71.6, 147.6], tablet: [179.5, 248.6] };
+// R12: one physical model in every scene; landscape turns the tablet, never resizes it.
+export const BODY = { phone: [77.6, 163.0], tablet: [179.5, 248.6] };
 const PHONE_SHAPE = BODY.phone[0] / BODY.phone[1];
 export const PHONE_BESIDE = { upright: BODY.phone[1] / BODY.tablet[1], side: BODY.phone[1] / BODY.tablet[0] };
-// a phone's rim that keeps its screen's picture at w : h inside a body of width bw and depth bd
 const rimFor = (bw, bd, w, h) => (bw - bd * w / h) / (2 * (1 - w / h));
-// ---- the floor. Everything exported lies flat on it, face up, squared to the screen, in one block: the mat.
-// The mat's back left corner, its width (the row of screens across it, D1) and the gap between two screens on it.
-const ROW = 1.8, SLIM_D = ROW * PHONE_BESIDE.side, SLIM = SLIM_D * PHONE_SHAPE, WIDE = 3.09;   // the row's depth, a phone's depth and width, the tablet's width
+const tabletD = 1.65, tabletW = tabletD * BODY.tablet[0] / BODY.tablet[1];
+const phoneD = tabletD * PHONE_BESIDE.upright, phoneW = phoneD * PHONE_SHAPE;
+const metalGlass = ['#ABA59E', '#121111', '#4A4541'];
+export const MODELS = {
+  tablet: { w: tabletW, d: tabletD, t: 0.04, rim: rimFor(tabletW, tabletD, 1640, 2360), e: [0.35, 0.1], tones: metalGlass, camera: { diameter: 0.018, tones: ['#3C4A56', '#26313A', '#141A20'] } },
+  phone: { w: phoneW, d: phoneD, t: 0.05, rim: rimFor(phoneW, phoneD, 9, 19.5), e: [0.35, 0.16], tones: metalGlass, island: { w: (phoneW - 2 * rimFor(phoneW, phoneD, 9, 19.5)) * 88 / 300, d: (phoneD - 2 * rimFor(phoneW, phoneD, 9, 19.5)) * 24 / 650, top: (phoneD - 2 * rimFor(phoneW, phoneD, 9, 19.5)) * 12 / 650, face: 0.05 + 16 * 0.0008 } },
+};
+const ROW = MODELS.tablet.w, SLIM_D = MODELS.phone.d, SLIM = MODELS.phone.w, WIDE = MODELS.tablet.d;
 const MAT_W = WIDE + 2 * SLIM + 2 * 0.25;
 export const MAT = { x: exportMiddle - MAT_W / 2, z: -1.4, w: MAT_W, gap: 0.25 };
 // a sheet lying on the floor. x, z: its back left corner. w: along the screen. d: toward us. t: how thick. y: what it lies on.
@@ -74,10 +77,24 @@ function flat(tone, x, z, w, d, t, art, y = 0) {
   const at = [x + w / 2, y + t / 2, z + d];
   return turn({ ...box(tone, [at[0], at[1] + d / 2, at[2]], [w, d, t]), art }, at, [1, 0, 0], -90);
 }
-// a device lying on its back: a dark slab with rounded corners and a picture for its screen
-function device(x, z, w, d, art, { rim = 0.05, round = 0.16, t = 0.08 } = {}) {
-  const at = [x + w / 2, t / 2, z + d];
-  return [turn(box('ink', [at[0], at[1] + d / 2, at[2]], [w, d, t], { more: { e: [0.1, round] } }), at, [1, 0, 0], -90), flat('ink', x + rim, z + rim, w - rim * 2, d - rim * 2, 0.01, art, t)];
+// A device's body, screen rectangle and hardware details all come from the same model.
+function device(x, z, w, d, art, { model = 'phone', landscape = false, rim = MODELS[model].rim } = {}) {
+  const m = MODELS[model], at = [x + w / 2, m.t / 2, z + d];
+  const body = turn(box('ink', [at[0], at[1] + d / 2, at[2]], [w, d, m.t], { more: { e: m.e.slice(), tones: m.tones } }), at, [1, 0, 0], -90);
+  Object.assign(body, { deviceBody: true, solid: true, model, landscape, screenRect: [x + rim, z + rim, w - 2 * rim, d - 2 * rim], face: m.t });
+  return [body, ...(art ? [flat('ink', ...body.screenRect, 0.002, art, m.t - 0.002)] : []), ...deviceDetails(body)];
+}
+function deviceDetails(body) {
+  const { model, landscape, face, screenRect: [x, z, w, d] } = body, m = MODELS[model];
+  if (model === 'tablet') {
+    const cx = landscape ? x + w / 2 : x + w + m.rim / 2, cz = landscape ? z - m.rim / 2 : z + d / 2;
+    return [{ ...cyl('ink', [cx, face + 0.0002, cz], 'y', m.camera.diameter / 2, 0.0004), tones: m.camera.tones, camera: true, solid: true, model }];
+  }
+  const i = m.island, r = i.d / 2, cx = x + w / 2, cz = z + i.top + r, tones = ['#121111', '#121111', '#121111'];
+  // Three coplanar solids make one exact flat capsule: straight middle and semicircular ends.
+  return [flat('ink', cx - i.w / 2 + r, cz - r, i.w - 2 * r, i.d, 0.0002, undefined, i.face - 0.0002),
+    cyl('ink', [cx - i.w / 2 + r, i.face - 0.0001, cz], 'y', r, 0.0002), cyl('ink', [cx + i.w / 2 - r, i.face - 0.0001, cz], 'y', r, 0.0002)]
+    .map((pc, part) => ({ ...pc, tones, island: part, solid: true, model }));
 }
 
 // ---- what every app shares: the screen, its bar with the app's logo and name, the Export button and the cursor
@@ -139,11 +156,9 @@ const CANVAS = { l: 0.56, w: PANEL - 0.12 - 0.56, b: 0.1, h: TOP - 0.1 };
 // Behind: a stack of closed copies, the post in a phone, the e-blast in a tablet. In front: the copy that is taken off the top
 // of the stack, opened and leafed through.
 const DEEP = 1.45, LEAF = DEEP * 440 / 340;              // a page of the booklet: how deep it is (toward us) and how wide
-// The gutter between two things in the block, and the two devices that share a page's width with it. D1: the phone is in true
-// proportion to the upright tablet beside it, and the tablet widens to a real tablet's shape (179.5 : 248.6) within the width the
-// phone frees. The gutters stay; the row behind (stack, phone, tablet) is centred in the block, so the block keeps its middle
-// whether the copy lies on the stack or open in front. The phone's front edge lines up with the tablet's.
-const GUT = 0.12, PHONE_D = DEEP * PHONE_BESIDE.upright, PHONE = PHONE_D * PHONE_SHAPE, TABLET = DEEP * BODY.tablet[0] / BODY.tablet[1];
+// R12: the shared models use the space beside a page. I2 divides the remaining width into two equal gutters.
+// The row's front edges align with the stack; the tablet reaches 0.2 further back.
+const GUT = 0.12, PHONE_D = MODELS.phone.d, PHONE = MODELS.phone.w, TABLET = MODELS.tablet.w;
 const BACK = (2 * LEAF - (LEAF + PHONE + TABLET + 2 * GUT)) / 2;   // the width D1's smaller phone freed on each side of the row
 // CORRECTIONS-13 I2: the row behind spans exactly the open copy's width, its outer edges on BLOCK.x0 and BLOCK.x1; the freed width
 // goes equally into its two gutters (this supersedes D1's "keep the gaps" for this row only).
@@ -151,7 +166,7 @@ const ROW_GUT = GUT + BACK;
 const SHEET = 0.01, COPY = 5 * SHEET, COPIES = 6;        // how thick one leaf is, and one closed copy (the four leaves that turn, and the rest); how many copies land
 export const BLOCK = { x0: exportMiddle - LEAF, x1: exportMiddle + LEAF, z0: MAT.z, z1: MAT.z + 2 * DEEP + GUT, up: 0.6 };
 // where the three things in the row behind lie: [x, z, w, d]
-export const BLOCK_ROW = { stack: [BLOCK.x0, BLOCK.z0, LEAF, DEEP], phone: [BLOCK.x0 + LEAF + ROW_GUT, BLOCK.z0 + DEEP - PHONE_D, PHONE, PHONE_D], tablet: [BLOCK.x0 + LEAF + 2 * ROW_GUT + PHONE, BLOCK.z0, TABLET, DEEP], gutter: ROW_GUT, phoneRim: rimFor(PHONE, PHONE_D, 300, 664) };
+export const BLOCK_ROW = { stack: [BLOCK.x0, BLOCK.z0, LEAF, DEEP], phone: [BLOCK.x0 + LEAF + ROW_GUT, BLOCK.z0 + DEEP - PHONE_D, PHONE, PHONE_D], tablet: [BLOCK.x0 + LEAF + 2 * ROW_GUT + PHONE, BLOCK.z0 + DEEP - MODELS.tablet.d, TABLET, MODELS.tablet.d], gutter: ROW_GUT, phoneRim: MODELS.phone.rim };
 export const POOL = { x: exportMiddle, z: MAT.z + DEEP };
 
 // A closed copy: the white edges of its pages under a dark cover. x, z: its back left corner. y: what it lies on.
@@ -197,8 +212,8 @@ function copy(P, x, z, from, at) {
 function prints(P, at = 1.82) {
   const [sx, z] = BLOCK_ROW.stack, n = COPIES - 1, phone = BLOCK_ROW.phone, tablet = BLOCK_ROW.tablet;
   for (let i = 0; i < n; i++) closed(P, sx, z, i * COPY, i === n - 1 ? 'kCover' : undefined);                  // the stack, less the copy that was taken
-  // D1: the phone's rim keeps the post's 300 x 664 screen; the tablet's screen is the mail art's own shape (see art.mjs).
-  P.push(...device(...phone, 'post', { rim: BLOCK_ROW.phoneRim }), ...device(...tablet, 'mail', { rim: 0.05, round: 0.1 }));
+  // R12: shared hardware, and redrawn screen art at each model's exact aspect.
+  P.push(...device(...phone, 'post', { rim: BLOCK_ROW.phoneRim }).map(pc => ({ ...pc, device: 1 })), ...device(...tablet, 'mail', { model: 'tablet' }).map(pc => ({ ...pc, device: 2 })));
   copy(P, BLOCK.x0, z + DEEP + GUT, [sx, n * COPY, z], at);
 }
 
@@ -237,9 +252,8 @@ function finishedSpreadLayers(P) {
   for (const pc of P.slice(first)) registerPicture(pc, 0.080);
 }
 // ---- The screens the other crafts export to. They lie in one row across the mat: a tablet on its side, then two phones.
-// (ROW, SLIM, SLIM_D and WIDE are set with the mat above. D1: the tablet keeps its 3.09 x 1.8; each phone is in true proportion to
-// it, its front edge on the tablet's. A phone's 300 x 600 picture keeps its shape, centred along the phone's taller screen.)
-const SLIM_RIM = 0.04, SLIM_SCREEN = (() => { const w = SLIM - 2 * SLIM_RIM, d = w * 600 / 300; return [SLIM_RIM, (SLIM_D - d) / 2, w, d]; })();
+// R12: each phone fills its 9:19.5 screen, with the same even rim in all scenes.
+const SLIM_RIM = MODELS.phone.rim, SLIM_SCREEN = [SLIM_RIM, SLIM_RIM, SLIM - 2 * SLIM_RIM, SLIM_D - 2 * SLIM_RIM];
 // ---- 03 Motion: After Effects has animated words and shapes, the way a SaaS promo moves, and exported it to the same three screens
 // each layer: its icon, its label's tone, how long its name is, when its bar starts and how long it is, and where its keyframes are
 export const LAYERS = [
@@ -300,7 +314,7 @@ export const ballLength = key => Math.max(...[0, 1, 2].map(j => ballBeats(key, j
 // The Export button and the launch centre: just inside its top side, already clear of its face.
 const BUTTON = [W - 0.98, H - BAR + 0.08, 0.86, 0.28], BUTTON_FACE = ZF + (0.05 + 0.06) * U;
 export const EXPORT_BUTTON = { rect: [SCREEN.l + BUTTON[0] * U, SCREEN.b + BUTTON[1] * U, SCREEN.l + (BUTTON[0] + BUTTON[2]) * U, SCREEN.b + (BUTTON[1] + BUTTON[3]) * U], face: BUTTON_FACE };
-export const BALL_START = [SCREEN.l + (BUTTON[0] + BUTTON[2] / 2) * U, EXPORT_BUTTON.rect[3] - BALL_PATH.start, BUTTON_FACE + BALL_PATH.start + 0.001];
+export const BALL_START = [SCREEN.l + (BUTTON[0] + BUTTON[2] / 2) * U, EXPORT_BUTTON.rect[3] - BALL_PATH.start, BUTTON_FACE + BALL_PATH.start + 0.01]; // R12's shorter video footprint needs 0.009 more emergence clearance.
 // The ball u seconds after Export: one ballistic centre path throughout pop + arc, linear x/z, constant gravity. Only its
 // radius grows during pop. Until its bottom clears the button's top side, that horizontal plane clips its colour and shadow.
 export function ballAt(u, to) {
@@ -389,10 +403,11 @@ function screensOut(P, t, s, art) {
   const clock = playClock(t, land, off[0], key), widths = [WIDE, SLIM, SLIM];
   let left = MAT.x;
   const formats = widths.map((w, i) => {
-    const face = [], rim = i ? SLIM_RIM : 0.075, d = i ? SLIM_D : ROW, z = MAT.z + ROW - d;
-    const slab = { ...device(left, z, w, d, undefined, { rim, round: i ? 0.16 : 0.09 })[0], deviceBody: true };
+    const face = [], rim = i ? SLIM_RIM : MODELS.tablet.rim, d = i ? SLIM_D : ROW, z = MAT.z + ROW - d;
+    const slab = { ...device(left, z, w, d, undefined, { rim, model: i ? 'phone' : 'tablet', landscape: !i })[0], deviceBody: true };
     const F = i ? [left + SLIM_SCREEN[0], z + SLIM_SCREEN[1], SLIM_SCREEN[2], SLIM_SCREEN[3]] : [left + rim, z + rim, w - 2 * rim, d - 2 * rim];
-    playback(face, floorPainter(face, F), kind, i, clock);
+    playback(face, floorPainter(face, F, slab.face), kind, i, clock);
+    face.push(...deviceDetails(slab));
     for (const pc of [slab, ...face]) { pc.clock = clock; pc.device = i; }
     left += w + MAT.gap;
     return { pieces: [slab, ...face], shape: lyingShape(slab) };
@@ -405,15 +420,11 @@ function screensOut(P, t, s, art) {
 const LID_ANGLE = 12 * Math.PI / 180;
 const lidU = [1, 0, 0], lidV = [0, Math.cos(LID_ANGLE), -Math.sin(LID_ANGLE)], lidN = [0, Math.sin(LID_ANGLE), Math.cos(LID_ANGLE)];
 export const UI_ROW = (() => {
-  // D1: the phone is in true proportion to the upright tablet (1.8 deep), its front edge on the tablet's, and its rim keeps the
-  // 9 : 19.5 screen the prototype's phone pictures are drawn for.
-  // CORRECTIONS-13 U1: the tablet is as deep as the laptop's deck, its back and front edges on the deck's, its 3 : 4 screen and rim
-  // kept; the phone (D1's rule against this tablet) shares that front edge. tabZ, phoneZ: their back edges from MAT.z.
-  const depth = 1.65, lidW = 1.55, lidH = 1.1, deck = 1.1, rim = 0.06, tabD = deck, tabW = (tabD - rim * 2) * 3 / 4 + rim * 2, gap = 0.3;
-  const lean = lidH * Math.sin(LID_ANGLE) + 0.02, tabZ = lean;
-  const phoneD = tabD * PHONE_BESIDE.upright, phoneW = phoneD * PHONE_SHAPE, phoneRim = rimFor(phoneW, phoneD, 9, 19.5), phoneZ = tabZ + tabD - phoneD;
+  const depth = 1.65, scale = 1.4, bezel = 0.04 * scale, lidW = 2.17, lidH = 1.54, deck = 1.54, rim = MODELS.tablet.rim, tabD = MODELS.tablet.d, tabW = MODELS.tablet.w, gap = 0.3;
+  const lean = lidH * Math.sin(LID_ANGLE) + 0.02, tabZ = lean + deck - tabD;
+  const phoneD = MODELS.phone.d, phoneW = MODELS.phone.w, phoneRim = MODELS.phone.rim, phoneZ = tabZ + tabD - phoneD;
   const width = lidW + tabW + phoneW + 2 * gap, left = exportMiddle - width / 2;
-  return { depth, lidW, lidH, screenH: (lidW - 0.08) / 1.6, deck, rim, tabD, tabZ, tabW, phoneW, phoneD, phoneRim, phoneZ, gap, left, lean, forward: 0.46, hinge: left, tablet: left + lidW + gap, phone: left + lidW + gap + tabW + gap };
+  return { depth, scale, bezel, lidW, lidH, screenH: (lidW - 2 * bezel) / 1.6, deck, rim, tabD, tabZ, tabW, phoneW, phoneD, phoneRim, phoneZ, gap, left, lean, forward: 0.93, hinge: left, tablet: left + lidW + gap, phone: left + lidW + gap + tabW + gap };
 })();
 const lidHinge = () => [UI_ROW.hinge, 0.08, MAT.z + UI_ROW.lean];
 function lidPoint(u, v, lift = 0) {
@@ -421,13 +432,13 @@ function lidPoint(u, v, lift = 0) {
   return lidHinge().map((n, i) => n + lidU[i] * u + lidV[i] * v + lidN[i] * (lift - 0.02));
 }
 function lidPainter(P) {
-  let height = 0.026;
-  const g = UI_ROW, w = g.lidW - 0.08, h = g.screenH, chin = g.lidH - h - 0.04;
+  let height = 0.0195 - 0.0008;
+  const g = UI_ROW, w = g.lidW - 2 * g.bezel, h = g.screenH, chin = g.lidH - h - g.bezel;
   const draw = (tone, r, art, window) => {
     height += LAYER_STEP;
     // The screen's own face is fixed; page layers below it may change their count.
-    if (art === 'chromeLaptop') height = 0.04;
-    const pc = { ...box(tone, lidPoint(0.04 + (r[0] + r[2] / 2) * w, chin + (1 - r[1] - r[3] / 2) * h, height), [r[2] * w, r[3] * h, 0.001]), q: quatFromBasis(lidU, lidV), art, window, lidPicture: true };
+    if (art === 'chromeLaptop') height = 0.0195 + 8 * LAYER_STEP;
+    const pc = { ...box(tone, lidPoint(g.bezel + (r[0] + r[2] / 2) * w, chin + (1 - r[1] - r[3] / 2) * h, height), [r[2] * w, r[3] * h, 0.001]), q: quatFromBasis(lidU, lidV), art, window, lidPicture: true };
     P.push(pc); return pc;
   };
   draw.size = [w, h]; return draw;
@@ -442,18 +453,20 @@ function prototypeOut(P, t, s) {
   const formats = [0, 1, 2].map(i => {
     const kind = ['laptop', 'tablet', 'phone'][i], body = [], face = [];
     if (i === 0) {
-      body.push({ ...flat('ink', g.hinge, MAT.z + g.lean, g.lidW, g.deck, 0.08), deviceBody: true });
-      body.push(flat('night', g.hinge + 0.065, MAT.z + g.lean + 0.12, 1.42, 0.62, 0.008, undefined, 0.081), flat('dark', g.hinge + 0.5, MAT.z + g.lean + 0.85, 0.55, 0.18, 0.008, undefined, 0.081));
-      for (let row = 0; row < 5; row++) for (let key = 0; key < 9; key++) body.push(flat('dark', g.hinge + 0.09 + key * 0.151, MAT.z + g.lean + 0.14 + row * 0.115, 0.115, 0.082, 0.005, undefined, 0.091));
-      body.push({ ...box('ink', lidPoint(g.lidW / 2, g.lidH / 2), [g.lidW, g.lidH, 0.04]), q: quatFromBasis(lidU, lidV), lid: true });
+      body.push({ ...flat('ink', g.hinge, MAT.z + g.lean, g.lidW, g.deck, 0.08), tones: ['#86807A', '#3E3A37', '#252220'], deviceBody: true });
+      const detail = (tones, x, z, w, d, t, y) => ({ ...flat('ink', g.hinge + x * g.scale, MAT.z + g.lean + z * g.scale, w * g.scale, d * g.scale, t, undefined, y), tones });
+      body.push(detail(['#121111', '#121111', '#121111'], 0.065, 0.12, 1.42, 0.62, 0.008, 0.081), detail(['#86807A', '#4A4643', '#252220'], 0.5, 0.85, 0.55, 0.18, 0.008, 0.081));
+      for (let row = 0; row < 5; row++) for (let key = 0; key < 9; key++) body.push(detail(['#2C2928', '#1B1918', '#111010'], 0.09 + key * 0.151, 0.14 + row * 0.115, 0.115, 0.082, 0.005, 0.091));
+      body.push({ ...box('ink', lidPoint(g.lidW / 2, g.lidH / 2), [g.lidW, g.lidH, 0.04]), tones: ['#86807A', '#3E3A37', '#252220'], q: quatFromBasis(lidU, lidV), lid: true });
       prototype(lidPainter(face), 0, shown);
     } else {
       const x = i === 1 ? g.tablet : g.phone, w = i === 1 ? g.tabW : g.phoneW, d = i === 1 ? g.tabD : g.phoneD, z = MAT.z + (i === 1 ? g.tabZ : g.phoneZ), rim = i === 1 ? g.rim : g.phoneRim;
-      body.push({ ...device(x, z, w, d, undefined, { rim, round: 0.03 })[0], deviceBody: true });
-      prototype(floorPainter(face, [x + rim, z + rim, w - 2 * rim, d - 2 * rim]), i, shown);
+      body.push({ ...device(x, z, w, d, undefined, { rim, model: i === 1 ? 'tablet' : 'phone' })[0], deviceBody: true });
+      prototype(floorPainter(face, [x + rim, z + rim, w - 2 * rim, d - 2 * rim], body[0].face), i, shown);
+      face.push(...deviceDetails(body[0]));
     }
-    // R17: the taller lid needs 0.06 beyond H10's 0.4 shift to keep the approved 12 px app clearance.
-    for (const pc of [...body, ...face]) { pc.p[2] += g.forward; pc.device = i; pc.deviceKind = kind; pc.clock = clock; }
+    // R12: preserve the row's centre; the enlarged lid clears the app at forward 0.93.
+    for (const pc of [...body, ...face]) { pc.p[2] += g.forward; if (pc.screenRect) pc.screenRect = pc.screenRect.map((n, k) => n + (k === 1 ? g.forward : 0)); pc.device = i; pc.deviceKind = kind; pc.clock = clock; }
     if (i) return { pieces: [...body, ...face], shape: lyingShape(body[0]) };
     // The closed laptop's block: the deck's footprint, up to the top of the lid lying shut on it (see poseLid), sharp like the deck.
     const pivot = lidHinge().map((n, k) => n + (k === 2 ? g.forward : 0));
@@ -482,11 +495,11 @@ function screenPainter(P, rect, faceLift = 0.08, thickness = 0.004) {
   draw.size = [rect[2] * U, rect[3] * U];
   return draw;
 }
-function floorPainter(P, rect) {
-  let height = 0.09 - LAYER_STEP;
+function floorPainter(P, rect, base = 0.09) {
+  let height = base - LAYER_STEP;
   const draw = (tone, r, art, window) => {
     // Reserve the face above this device's maximum six content layers. Chrome cannot ride the changing content count.
-    const face = height = art?.startsWith('chrome') ? 0.09 + 8 * LAYER_STEP : height + LAYER_STEP;
+    const face = height = art?.startsWith('chrome') ? base + 8 * LAYER_STEP : height + LAYER_STEP;
     const [x, z, w, d] = rect, pc = flat(tone, x + r[0] * w, z + r[1] * d, r[2] * w, r[3] * d, 0.002, art, face - 0.002);
     pc.paintLayer = stacks.floorCount++;
     Object.defineProperty(pc, 'paintStack', { value: draw });
@@ -514,21 +527,22 @@ function echoPainter(paint, id) {
 function tagEcho(P, id, first) { for (const pc of P.slice(first)) pc.echo = id; }
 function movie(draw, shape, p) {
   draw = replayPainter(draw);
-  const at = p * 3.9, suffix = ['', 'Tall', 'Sq'][shape];
-  const frame = shape === 2 ? [0, 112 / 600, 1, 0.5] : [0, 0, 1, 1];
+  const at = p * 3.9, suffix = ['', 'Tall', 'Sq', '', 'Tablet'][shape];
+  const frame = shape === 2 ? [0, 112 / 650, 1, 300 / 650] : [0, 0, 1, 1];
   draw('ink', frame, (at < 1.46 ? 'shotA' : at < 2.7 ? 'shotB' : 'shotCfx') + suffix);
   if (at >= 1.14 && at < 1.46) cropPicture(draw, 'ink', frame, 'shotB' + suffix, EASE.wipe((at - 1.14) / 0.32));
   const cap = CAPTIONS.findIndex(([x, w]) => at >= x && at < x + w);
   if (cap >= 0) {
-    const rect = shape === 0 ? [0.3167, 0.715, 0.3666, 0.137] : shape === 1 ? [0.12, 0.70, 0.76, 0.09] : [0.17, 0.54, 0.66, 0.064];
+    const width = shape === 1 ? 228 : shape === 2 ? 198 : 176, size = shape === 4 ? [472, 328] : shape === 0 ? [480, 270] : [300, 650];
+    const rect = shape === 0 ? [0.3167, 0.715, 0.3666, 0.137] : [(shape === 1 ? 36 : shape === 2 ? 51 : (size[0] - width) / 2) / size[0], (shape === 1 ? 420 : shape === 2 ? 324 : size[1] - 77) / size[1], width / size[0], width * 74 / 352 / size[1]];
     draw('paper', rect, ['cap1', 'cap2', 'cap3', 'cap1', 'cap2'][cap]);
   }
 }
 function animatedComp(draw, shape, p) {
   draw = replayPainter(draw);
-  const o = shape === 0 || shape === 3 ? { w: 480, h: 270, x: 34, y: shape === 3 ? 116 : 104, px: 60, rows: [296, 62, 140, 3] } : shape === 1 ? { w: 300, h: 600, x: 26, y: 236, px: 62, rows: [26, 366, 180, 3] } : { w: 300, h: 600, x: 20, y: 276, px: 50, rows: [146, 364, 120, 2] };
+  const o = shape === 4 ? { w: 472, h: 328, x: 34, y: 133, px: 60, rows: [288, 91, 140, 3] } : shape === 0 || shape === 3 ? { w: 480, h: 270, x: 34, y: shape === 3 ? 116 : 104, px: 60, rows: [296, 62, 140, 3] } : shape === 1 ? { w: 300, h: 650, x: 26, y: 236, px: 62, rows: [26, 366, 180, 3] } : { w: 300, h: 650, x: 20, y: 276, px: 50, rows: [146, 364, 120, 2] };
   const { w, h, x, y, px, rows: [rx, ry, rw, n] } = o, k = px / 60, at = p * 2.4;
-  draw('paper', shape === 2 ? [0, 184 / 600, 1, 0.5] : [0, 0, 1, 1], 'paperTile');
+  draw('paper', shape === 2 ? [0, 184 / 650, 1, 300 / 650] : [0, 0, 1, 1], shape === 4 ? 'paperTablet' : shape === 1 ? 'paperPhone' : shape === 2 ? 'paperSq' : 'paperTile');
   const norm = r => [r[0] / w, r[1] / h, r[2] / w, r[3] / h];
   cropPicture(draw, 'paper', norm([x - 6 * k, y - 54 * k, 232 * k, 62 * k]), 'wMake', EASE.wipe(linear(at, ...LAYERS[0][5])));
   cropPicture(draw, 'paper', norm([x - 6 * k, y + px * 1.07 - 44.2 * k, 168 * k, 52 * k]), 'wMove', EASE.wipe(linear(at, ...LAYERS[1][5])));
@@ -543,7 +557,8 @@ function animatedComp(draw, shape, p) {
     const parked = 1 - EASE.enter(linear(1.6, ...LAYERS[i + 3][5]));
     const l = rx + [0, 0.09, 0.24][i] * rw - parked * 0.75 * rw + (1 - f) * 0.75 * rw;
     const visible = clamp((w - l) / rw, 0, 1);
-    if (visible > 0) draw('paper', norm([l, ry + i * rw * 0.27 * 1.3, rw * visible, rw * 0.27]), i ? 'rowB' : 'rowA', [0, 0, visible, 1]);
+    // Device rows keep their 37.8px height; crop only the 0.2px blank foot of the 38px tile.
+    if (visible > 0) draw('paper', norm([l, ry + i * rw * 0.27 * 1.3, rw * visible, rw * 0.27]), i ? 'rowB' : 'rowA', [0, 0, visible, shape === 0 || shape === 3 ? 1 : 37.8 / 38]);
   }
 }
 // One tall page is viewed through a moving window. Intersection changes both geometry and UVs.
@@ -571,7 +586,7 @@ function prototype(draw, shape, p, chrome = true) {
   }
   for (let i = 0; i < 3; i++) pageWindow(draw, viewport, [x + (0.045 + i * 0.31) * w, y + 1.035 - state.scroll * h - (i === 0 && state.lifted ? 0.04 : 0), 0.285 * w, 0.30], 'uiWork' + suffix + i);
   if (state.tap) {
-    const pageW = shape ? 180 : 480, pageH = [300, 240, 390][shape], m = Math.min(pageW / 390, pageH / 664);
+    const pageW = shape === 1 ? 164 : shape ? 180 : 480, pageH = [300, 236, 390][shape], m = Math.min(pageW / 390, pageH / 664);
     const craft = shape === 0 ? [0.16, state.tap === 'video' ? 0.675 : 0.636] : [(state.tap === 'video' ? 253.5 : 103) * m / pageW, 1 - 109 * m / pageH];
     const point = state.tap === 'card' ? [0.18, 1.12 - state.scroll * h] : [craft[0], craft[1] - state.scroll * h];
     const [dw, dh] = draw.size, tw = 0.05 / dw, th = 0.05 / dh;
@@ -582,33 +597,33 @@ function prototype(draw, shape, p, chrome = true) {
   draw('grey', [x, y + h - 0.006, w, 0.006]).progressRail = true; draw('paper', [x, y + h - 0.006, w * Math.max(0, p), 0.006]).progressRail = true;
 }
 function playback(P, draw, kind, shape, p) {
-  if (kind === 'video') movie(draw, shape, p);
-  else animatedComp(draw, shape, p);
+  if (kind === 'video') movie(draw, shape === 0 ? 4 : shape, p);
+  else animatedComp(draw, shape === 0 ? 4 : shape, p);
   const chrome = { video: ['chromePlayer', 'chromeReel', 'chromeFeed'], motion: ['chromeMotion', 'chromeStory', 'chromeMotionFeed'] }[kind][shape];
   const pc = draw('ink', [0, 0, 1, 1], chrome); pc.cut = true;
-  const line = !shape ? [54 / 480, 243 / 270, 400 / 480, 5 / 270] : kind === 'video' ? (shape === 1 ? [20 / 300, 50 / 600, 260 / 300, 4 / 600] : [0, 404 / 600, 1, 8 / 600]) : shape === 1 ? [20 / 300, 50 / 600, 84 / 300, 4 / 600] : [0, 484 / 600, 1, 0.006];
+  const line = !shape ? [54 / 472, 301 / 328, 392 / 472, 5 / 328] : kind === 'video' ? (shape === 1 ? [20 / 300, 50 / 650, 260 / 300, 4 / 650] : [0, 404 / 650, 1, 8 / 650]) : shape === 1 ? [20 / 300, 50 / 650, 84 / 300, 4 / 650] : [0, 484 / 650, 1, 3.6 / 650];
   draw(kind === 'motion' ? 'ink' : 'paper', [line[0], line[1], line[2] * p, line[3]]);
 }
 
 // One scheduler owns action starts and the cursor's approach. Scene code asks for progress by name.
-export function script(definitions, { hold = 0, tail = 0.3, start = EXPORT } = {}) {
+export function script(definitions, { hold = 0, tail = 0.3, start = EXPORT, beats, clockLength } = {}) {
   let time = 0.8, previous = start, typed = false;
-  const actions = definitions.map(def => {
+  const actions = definitions.map((def, index) => {
     const from = def.from || def.to || previous, to = def.to || from;
     const distance = Math.hypot(from[0] - previous[0], from[1] - previous[1]);
     // CORRECTIONS-7 K2: longer moves take longer. An approach of distance d takes min(0.5, 0.18 + 0.07 d);
     // a hand action of path length d takes at least 0.12 + 0.08 d (its path's segments, or from to to).
-    const move = distance < 1e-8 ? 0 : Math.max(Math.min(0.5, 0.18 + 0.07 * distance), handTime({ from: previous, to: from }));
+    let move = distance < 1e-8 ? 0 : Math.max(Math.min(0.5, 0.18 + 0.07 * distance), handTime({ from: previous, to: from }));
     let duration = def.duration ?? (def.kind === 'type' ? Math.min(0.6, def.text.length * 0.035) : def.kind === 'run' ? Math.max(0.07, def.count * 0.07) : 0.05);
     if (def.kind === 'type') { duration = Math.max(typed ? 0.4 : 0.6, duration); typed = true; }
     if (HAND_KINDS.includes(def.kind)) duration = Math.max(duration, 0.12 + 0.08 * pathLength(def.path || [from, to]), handTime({ ...def, from, to }));
-    const action = { ...def, from, to, previous, move: move * PACE, approach: time * PACE, start: (time + move) * PACE, end: (time + move + duration) * PACE };
+    const action = { ...def, from, to, previous, move: move * PACE, approach: time * PACE, start: (time + move) * PACE, end: (time + move + duration) * PACE, ...(beats ? Object.fromEntries(Object.entries(beats[index]).map(([key, value]) => [key, value * PACE])) : {}) };
     // The measured origins are the script's text insertion points, including rotated map labels.
     if (def.textArt) Object.defineProperty(action, 'points', { enumerable: true, get: () => (ART_TEXT[def.textArt] || []).filter(part => def.id !== 'title' || part.words.startsWith('King Street')).map(part => mapPoint(def.textRect, ...part.origin, ART[def.textArt].w, ART[def.textArt].h)) });
     time += move + duration; previous = to;
     return action;
   });
-  return { actions, start, len: (time + hold + tail) * PACE, first: actions[0]?.start ?? 0.8 * PACE };
+  return { actions, start, len: (clockLength ?? time + hold + tail) * PACE, first: actions[0]?.start ?? 0.8 * PACE };
 }
 // CORRECTIONS-7: a path is walked by its length, so the hand's speed does not jump from segment to segment.
 // Returns the segment and the fraction of it reached at fraction p of the whole length.
@@ -678,13 +693,13 @@ const compRect = ([x, y, w, h]) => [VIEW[0] + x * VIEW[2] / 480, VIEW[1] + VIEW[
 const graphPoint = ([x, y]) => [3.74 + x / 240 * 0.95, 1.6 + (1 - y / 200) * 0.79];
 function inPageSpot(x, y, w, h) { return [x + w * 0.045, y + h * (1 - 0.675 - 0.0225), w * 0.27, h * 0.045]; }
 // D1: the canvas mirrors the devices. The phone's frame is to the tablet's frame as the phone's screen is to the tablet's on the
-// floor (both 9 : 19.5 and 3 : 4 as before), top-aligned in its row as Figma lines frames up.
+// floor (9 : 19.5 and 1640 : 2360), top-aligned in its row as Figma lines frames up.
 export const FIG_PHONE = (UI_ROW.phoneD - 2 * UI_ROW.phoneRim) / (UI_ROW.tabD - 2 * UI_ROW.rim);
 // CORRECTIONS-13 U1: all three frames mirror their screens' heights (the laptop's lid screen, the tablet's and the phone's), the
 // tallest 0.86 high as before.
 export const FIG_SCREENS = [UI_ROW.screenH, UI_ROW.tabD - 2 * UI_ROW.rim, UI_ROW.phoneD - 2 * UI_ROW.phoneRim];
 export const FIG = (() => {
-  const h = 0.86, k = h / Math.max(...FIG_SCREENS), tall = FIG_SCREENS.map(n => n * k), g = 0.14, dw = tall[0] * 1.6, tw = tall[1] * 3 / 4, pw = tall[2] * 9 / 19.5, cl = 0.9, cr = PANEL - 0.1, x = cl + (cr - cl - dw - tw - pw - 2 * g) / 2;
+  const h = 0.86, k = h / Math.max(...FIG_SCREENS), tall = FIG_SCREENS.map(n => n * k), g = 0.14, dw = tall[0] * 1.6, tw = tall[1] * 1640 / 2360, pw = tall[2] * 9 / 19.5, cl = 0.9, cr = PANEL - 0.1, x = cl + (cr - cl - dw - tw - pw - 2 * g) / 2;
   const cols = [[x, dw], [x + dw + g, tw], [x + dw + g + tw + g, pw]];
   const designs = cols.map(([x, w], i) => [x, 0.46 + h - tall[i], w, tall[i]]), wires = cols.map(([x, w], i) => [x, 1.58 + h - tall[i], w, tall[i]]);
   const [lx, ly, , lh] = designs[0], spot = inPageSpot(lx, ly, dw, lh);
@@ -712,6 +727,30 @@ const AI = (() => {
 const mapPoint = (r, x, y, w, h) => [r[0] + x / w * r[2], r[1] + (1 - y / h) * r[3]];
 // After Export's 0.7 s: the ball, two video plays / one motion play / Figma's cycle and lid closing.
 const EXPORT_HOLD = { pr: ballLength('pr') + 3.2 - 0.7, ae: ballLength('ae') + 3.2 - 0.7, fig: ballLength('fig') + 3 + BALL.lid - 0.7 };
+// R12 changes frame geometry, not choreography: retain every Figma approach and action span from F1-F3.
+const FIG_BEATS = [
+  {"move": 0.41391163778500195, "start": 1.213911637785002, "end": 1.5139116377850022, "approach": 0.8}, // frame0
+  {"move": 0.2372820338871622, "start": 1.751193671672164, "end": 2.051193671672164, "approach": 1.513911637785002}, // frame1
+  {"move": 0.2409924585502175, "start": 2.292186130222382, "end": 2.5921861302223816, "approach": 2.051193671672164}, // frame2
+  {"move": 0.3146491373784349, "start": 2.9068352676008167, "end": 3.1568352676008167, "approach": 2.5921861302223816}, // pictureBox
+  {"move": 0.26728049412440724, "start": 3.424115761725224, "end": 4.0241157617252235, "approach": 3.1568352676008167}, // heading
+  {"move": 0.199000625, "start": 4.2231163867252235, "end": 4.423116386725224, "approach": 4.0241157617252235}, // button
+  {"move": 0.22630389447901342, "start": 4.649420281204237, "end": 4.982742395131682, "approach": 4.423116386725224}, // details
+  {"move": 0.3569647673349694, "start": 5.3397071624666514, "end": 5.694219410958081, "approach": 4.982742395131682}, // marquee
+  {"move": 0.2703042196541784, "start": 5.96452363061226, "end": 6.36452363061226, "approach": 5.694219410958081}, // copies
+  {"move": 0.22127106818352288, "start": 6.585794698795782, "end": 6.635794698795782, "approach": 6.3645236306122595}, // fill0
+  {"move": 0.2575478221909713, "start": 6.893342520986754, "end": 6.943342520986754, "approach": 6.635794698795783}, // fill1
+  {"move": 0.2226493562214541, "start": 7.165991877208207, "end": 7.215991877208207, "approach": 6.943342520986754}, // fill2
+  {"move": 0.26221175521859263, "start": 7.4782036324268, "end": 7.878203632426801, "approach": 7.215991877208208}, // hero
+  {"move": 0.2414139689960454, "start": 8.119617601422846, "end": 8.519617601422846, "approach": 7.878203632426801}, // name
+  {"move": 0.22414328171208503, "start": 8.74376088313493, "end": 8.793760883134931, "approach": 8.519617601422846}, // accent0
+  {"move": 0.2575478221909713, "start": 9.051308705325903, "end": 9.101308705325904, "approach": 8.793760883134931}, // accent1
+  {"move": 0.2226493562214541, "start": 9.323958061547357, "end": 9.373958061547357, "approach": 9.101308705325902}, // accent2
+  {"move": 0.3167726930723548, "start": 9.690730754619711, "end": 9.740730754619712, "approach": 9.373958061547356}, // hotspot
+  {"move": 0, "start": 9.74073075461971, "end": 10.34073075461971, "approach": 9.74073075461971}, // link
+  {"move": 0.3296428529821371, "start": 10.670373607601846, "end": 10.93658275318894, "approach": 10.34073075461971}, // panel
+  {"move": 0.3585798312902868, "start": 11.295162584479227, "end": 11.995162584479226, "approach": 10.93658275318894}, // export
+];
 export const SCRIPTS = {
   ps: script([
     { id: 'open', kind: 'click', from: centre(PHOTO), duration: 0.3, tool: 'tMove' },
@@ -778,7 +817,7 @@ export const SCRIPTS = {
     { id: 'link', kind: 'drag', from: FIG.from, to: FIG.to, duration: 0.6 },
     { id: 'panel', kind: 'run', from: [PANEL + 0.2, TOP - 0.46], to: [PANEL + 0.45, 0.32], count: 5, duration: 0.2 },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.7 },
-  ], { hold: EXPORT_HOLD.fig, tail: BALL.sink }),
+  ], { hold: EXPORT_HOLD.fig, tail: BALL.sink, beats: FIG_BEATS, clockLength: 18.545162584479227 }),
   id: script([
     // CORRECTIONS-12 I1: no frames are drawn. The document opens with its blank pages already there (see blankPages).
     { id: 'map', kind: 'drag', from: centre(DOCK.map), to: centre(ID.frame), duration: 0.45, tool: 'arrow' },
@@ -1237,7 +1276,7 @@ function editedFigma(t) {
     const end = rectMix(FIG.from, FIG.to, handed(s, 'link', t)), reach = Math.min(0.16, Math.hypot(end[0] - FIG.from[0], end[1] - FIG.from[1]) / 3), along = p => cubic(FIG.from, [FIG.from[0] + reach, FIG.from[1]], [end[0] - reach, end[1]], end, p);
     if (begun(s, 'link', t)) for (let i = 0; i < 8; i++) D.push(bar(along(i / 8), along((i + 1) / 8)));
     if (done(s, 'link', t)) D.push(bar(FIG.to, [FIG.to[0] - 0.07, FIG.to[1] + 0.05]), bar(FIG.to, [FIG.to[0] - 0.07, FIG.to[1] - 0.05]));
-    
+
   }
   for (const pc of D) if (pc.where !== 'travel') pc.canvas = true;
   const panelStart = D.length;
@@ -1357,12 +1396,12 @@ function editedInDesign(t, { at: pages } = {}) {
 }
 // InDesign: the ball becomes the booklet stack (with the copy that is read lying on top), the LinkedIn post's phone and the
 // e-blast's tablet. The land, pickup, opening and leaf turns follow as before; on the sink the copy lying open goes down with them.
-// floor: as prints() builds it: the stack's five copies (0-9), the phone (10, 11), the tablet (12, 13), then the copy that is
-// read: on the stack (14, 15), or open (14 its right pages, 15 its left pages, 16 the leaf that landed on them).
+// floor: as prints() builds it: stack's five copies 0-9; phone 10-14 (body, picture, three island solids); tablet 15-17
+// (body, picture, camera); then the reading copy from 18 onward (two closed pieces, or pages and the turning leaf).
 function bookletOut(P, s, t, floor) {
-  const formats = [[...floor.slice(0, 10), ...floor.slice(14)], floor.slice(10, 12), floor.slice(12, 14)].map(pieces => ({ pieces }));
+  const formats = [[...floor.slice(0, 10), ...floor.slice(18)], floor.slice(10, 15), floor.slice(15, 18)].map(pieces => ({ pieces }));
   formats[0].shape = [...BLOCK_ROW.stack, COPIES * COPY, floor[0].e.slice()];
-  formats[1].shape = lyingShape(floor[10]); formats[2].shape = lyingShape(floor[12]);
+  formats[1].shape = lyingShape(floor[10]); formats[2].shape = lyingShape(floor[15]);
   exportOut(P, s, t, 'id', formats);
 }
 function mapRegion(P, rect, art, r, w, h, amount = 1, upward = false) {

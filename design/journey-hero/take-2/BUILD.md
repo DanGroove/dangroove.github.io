@@ -1518,3 +1518,132 @@ AE lands at **76.745732**, plays twice and sinks **79.945732–80.945732**. Figm
 **Limits and deliberate decisions.** No departure from F1–F3. The fixed spread-patch and chrome slots are the implementation of those rules. The first build's documented proportional sink clearance and additional 0.06 Figma forward clearance remain untouched. No browser or independent visual verdict is claimed; no reviewer was started. Installed skill files and RTK remain unread because the user prohibits outside-repository reads.
 
 **Final verification:** `node design/journey-hero/take-2/tools/checks.mjs` exits 0 and prints **all clean**: **6,582 frames / 542,264 pieces / max 247**, five atlas pages, loop 99.491 s. It includes the new gates and all retained checks/controls, PACE-2 equivalence, renderer-call/clip evidence, atlas and player stand-ins, and offline-module parsing. The dense drag gate passes **4,083 samples**, worst **1.569e-13 px**, cursor gap at least **0.038420**; H10 retains **12.838991 px** app clearance and **16.320339 px** ring clearance. `node design/journey-hero/take-2/tools/round17-checks.mjs --controls` exits 0: **all 14 controls fail at their intended gates**, including every required follow-up fault. Logs are `.scratch/review-out/r17/follow-up-checks.txt` and `follow-up-controls.txt`. Read-only git diff checks confirm only the authorised tracked files changed; scratch records stay under r17. Browser/font/pixel acceptance remains unrun locally.
+
+### Round 17, R12
+
+Built **"One phone and one tablet everywhere: bigger, and high end"** after F1-F3, preserving every earlier round-17 change except where R12 supersedes it. Read AGENTS, R12, F1-F3, G, R9-R11, README and the round-17 build/review record before editing. Acceptance criteria and numerical evidence: `.scratch/review-out/r17/R12.md`, `r12-before.json`, `r12-clocks.json`, `r12-after.json`. No screenshots, browser, reviewers, network, installation, site build or git mutation. External skills/RTK remain unread under the repository-only read boundary.
+
+**Models as built, in world units.** Dimensions derive from the supplied millimetres, keeping their precision rather than rounding to the brief's four-decimal display.
+
+| | Tablet | Phone |
+| --- | --- | --- |
+| Body, portrait | 1.191371681416 × 1.65 | 0.515044247788 × 1.081858407080 |
+| Screen | 1.044653392330 × 1.503281710914 | 0.485840707965 × 1.052654867257 |
+| Even rim | 0.073359144543 | 0.014601769912 |
+| Thickness | 0.04 | 0.05 |
+| e: up / around | 0.35 / 0.1 | 0.35 / 0.16 |
+| Screen aspect | 1640:2360 (turned for landscape) | 9:19.5 |
+
+Both use metal/glass tones `['#ABA59E', '#121111', '#4A4541']`. Tablet camera: diameter **0.018**, tones `#3C4A56 / #26313A / #141A20`, centred in its top bezel in landscape/right bezel in portrait. Phone island: **0.142513274336 × 0.038867256637**, top **0.019433628319** inside the screen, centred across it. Three coplanar solids form one flat capsule (straight middle and circular ends), all `#121111`. Its fixed top is **0.0628**, underside **0.0626**, above the highest phone picture/tap at **0.0608**. No phone picture draws a pill/notch. Body/detail volumes bypass legacy picture separation, letting each first picture sit exactly on its glass; independent per-device picture stacks and overlapping painter ordering remain.
+
+Laptop: specified space-grey deck/lid `#86807A / #3E3A37 / #252220`, well top `#121111`, keys `#2C2928 / #1B1918 / #111010`, trackpad `#86807A / #4A4643 / #252220`. Scale **1.4** about the hinge's left end: width **2.17**, lid height/deck depth **1.54**, screen **2.058 x 1.28625** (16:10), bezel **0.056**, chin **0.19775**. Keyboard/trackpad scale with it. Deck thickness **0.08**, lid **0.04**, first screen layer on the lid glass. R10's flush closed lid, 0.12-high red block and hidden closed keys, and R11's close-before-sink remain.
+
+**Every new/redrawn picture and its size.** This table covers every new art key or changed raster dimension. `chromeHandset` additionally changes at its existing **180 × 390**, removing its separate notch. Captions' art stays **352 × 74**, now preserved on every screen.
+
+| Picture | Before | R12 |
+| --- | --- | --- |
+| `paperTablet` | new | 59 × 41 |
+| `paperPhone` | new | 18 × 39 |
+| `paperSq` | new | 8 × 8 |
+| `uiBuild1Tablet` | 180 × 240 | 164 × 236 |
+| `uiBuild2Tablet` | 180 × 240 | 164 × 236 |
+| `uiBuild3Tablet` | 180 × 240 | 164 × 236 |
+| `shotATall` | 300 × 600 | 300 × 650 |
+| `shotATablet` | new | 472 × 328 |
+| `shotBTall` | 300 × 600 | 300 × 650 |
+| `shotBTablet` | new | 472 × 328 |
+| `shotCfxTall` | 300 × 600 | 300 × 650 |
+| `shotCfxTablet` | new | 472 × 328 |
+| `uiPageTablet0` | 180 × 336 | 164 × 330 |
+| `uiPageTablet1` | 180 × 336 | 164 × 330 |
+| `uiWorkTablet0` | 114 × 160 | 156 × 236 |
+| `uiWorkTablet1` | 114 × 160 | 156 × 236 |
+| `uiWorkTablet2` | 114 × 160 | 156 × 236 |
+| `chromeTablet` | 180 × 240 | 164 × 236 |
+| `chromePlayer` | 480 × 270 | 472 × 328 |
+| `chromeReel` | 300 × 600 | 300 × 650 |
+| `chromeFeed` | 300 × 600 | 300 × 650 |
+| `chromeMotion` | 480 × 270 | 472 × 328 |
+| `chromeStory` | 300 × 600 | 300 × 650 |
+| `chromeMotionFeed` | 300 × 600 | 300 × 650 |
+| `chromePhone` | 300 × 600 | 300 × 650 |
+| `post` | 300 × 664 | 300 × 650 |
+| `mail` | 362 × 516 | 328 × 472 |
+| `playerWide` | 480 × 270 | 472 × 328 |
+| `reel` | 300 × 600 | 300 × 650 |
+| `feedSq` | 300 × 600 | 300 × 650 |
+| `motWide` | 480 × 270 | 472 × 328 |
+| `motTall` | 300 × 600 | 300 × 650 |
+| `motSq` | 300 × 600 | 300 × 650 |
+| `uiTablet` | 180 × 240 | 164 × 236 |
+| `wireTablet` | 120 × 160 | 164 × 236 |
+| `siteTall` | 300 × 600 | 300 × 650 |
+| `siteTall2` | 300 × 600 | 300 × 650 |
+
+Tablet shots redraw through `SHOTS`; no stretching of the app's 16:9 monitor. The tall person fits inside the frame horizontally; suns/lights use the shorter dimension to avoid clipping. Tablet motion retains 60 px words/ball and 140 px rows: words move down **29 px**, rows left **8 px**/down **29 px**, preserving the old **10.4 px** right margin. Player icon stays x **30**, **25 px** from the bottom; scrub bar x **54**, **27 px** from the bottom, **26 px** from the right (width **392**). Phone top progress/header/status stays fixed; foot/nav/home/account/side buttons/CTA move down **50 px**. Feeds retain their square at y **112** or **184** and show another post's avatar/name in the extra space. Row tiles crop only the **0.2 px blank foot** of their 140 × 38 raster, retaining the original **37.8 px row height** without stretching. Mail fits the complete e-blast, **280.678 × 414**, below its **58 px** header, instead of clipping its former bottom 14 px. Figma's page/work rasters follow the viewport's 1.4-page and 0.285 × 0.30-card geometry; integer rounding causes at most **0.128205%** aspect error, below 0.5%. Laptop and phone art keep 16:10 and 9:19.5; the app monitor/comp remain 16:9.
+
+**Placements: x / back z / width / depth.** Every row's centre remains **x -0.1**, with no sideways move of its centre.
+
+| Piece | x | z | w | d |
+| --- | ---: | ---: | ---: | ---: |
+| InDesign stack | -1.976470588 | -1.400000000 | 1.876470588 | 1.450000000 |
+| InDesign phone | -0.014972670 | -1.031858407 | 0.515044248 | 1.081858407 |
+| InDesign tablet | 0.585098907 | -1.600000000 | 1.191371681 | 1.650000000 |
+| Premiere / AE tablet | -1.690044248 | -1.400000000 | 1.650000000 | 1.191371681 |
+| Premiere / AE phone 1 | 0.209955752 | -1.290486726 | 0.515044248 | 1.081858407 |
+| Premiere / AE phone 2 | 0.975000000 | -1.290486726 | 0.515044248 | 1.081858407 |
+| Figma laptop deck | -2.338207965 | -0.129815996 | 2.170000000 | 1.540000000 |
+| Figma tablet | 0.131792035 | -0.239815996 | 1.191371681 | 1.650000000 |
+| Figma phone | 1.623163717 | 0.328325597 | 0.515044248 | 1.081858407 |
+
+InDesign gutters **0.085027329516**, row width **3.752941176471** (the open copy's exact width), fronts **z 0.05**. Tablet extends **0.2** behind the stack. Booklet size/reading path stay. Export grouping now matches `prints()`: stack **0-9**, phone **10-14** (body, picture, three capsule solids), tablet **15-17** (body, picture, camera), reading copy **18 onward**. Premiere/AE mat **3.180088495575** wide, gaps **0.25**, common front **z -0.208628318584**.
+
+Figma gaps **0.3**, `forward` **0.93**, `lean` **0.340184003859** (old 0.248702859900, +0.091481143960); front **z 1.410184003859**. Tablet back is **0.11** behind the deck. The existing label solver moves Laptop/Tablet's left column outward for their new anchors; Phone keeps the right column. Page-text/gutter/route checks remain.
+
+**Camera pin and containment.** One frozen `DEFAULT_FIT`: `{ w: 6.472556630033903, h: 7.02662378036781, x: 0.4431895737378033, y: 1.9701472394822923 }`. `play.mjs`, `stills.mjs` and `sceneEnvelope()` use it at the default basis; yaw/pitch still compute. A fit computed from the new stills would be **w 6.579981268199 / h 7.084465988475 / x 0.389477254655 / y 1.941226135429**; its negative control fails.
+
+All six stills fit. Left/bottom margins: Photoshop and Illustrator **2.157400 / 1.572839**, InDesign **0.25 / 0.25**, Premiere and AE **1.745569 / 1.055281**, Figma **0.142575 / 0.192158**; all have **0.25** at top/right. Every Figma pose sampled at **0.01 s**, including ball/split/wipe/open/play/close/sink, remains inside: minimum **left 0.142575, bottom 0.130419, right/top 0.25**. The 0.130419 is the phone's already floor-clipped sink corner; the still's devices retain the expected 0.19 below. Dense booklet poses also remain inside. The pin deliberately consumes part of the former 0.25 margin.
+
+**Ten browser sizes, S from the layout model.** Same actual `createPageLayout` / `fitCalloutView` and modelled CSSOM/glyph boxes before/after; these are not browser measurements.
+
+| Browser | Before S | After S | Change |
+| --- | ---: | ---: | ---: |
+| 390 × 664 | 34.155806188 | 34.155806188 | 0.000% |
+| 390 × 844 | 48.887996143 | 56.357080211 | 15.278% |
+| 360 × 780 | 40.717300409 | 47.727939190 | 17.218% |
+| 375 × 667 | 44.614598675 | 44.614598675 | 0.000% |
+| 412 × 915 | 54.879839682 | 61.202935214 | 11.522% |
+| 768 × 1024 | 60.266757372 | 60.266757372 | 0.000% |
+| 820 × 1180 | 64.765752385 | 64.765752385 | 0.000% |
+| 1024 × 768 | 82.415655898 | 82.415655898 | 0.000% |
+| 1440 × 900 | 105.313735747 | 105.313735747 | 0.000% |
+| 1920 × 1080 | 130.930590388 | 130.930590388 | 0.000% |
+
+Seven are unchanged; three taller phone sizes grow more than the brief's mock estimate. These are the model's results; no device was shrunk to force the estimate. H10's unchanged **12 px** threshold measures **12.403419841 px** app clearance and **59.576000959 px** Laptop ring clearance at **S 103.6**, through **929 poses**, with **247** laptop / **150** ring samples.
+
+**Earlier checks changed, old -> new.** No fixtures edited, unrelated checks removed or comparison tolerances relaxed.
+
+| File / check | Old -> R12 |
+| --- | --- |
+| `round12-checks.mjs`: reference phone, ID tablet, post | 71.6:147.6 -> 77.6:163.0; tablet depth 1.45 -> 1.65; 300:664 -> 300:650 |
+| Same: video tablet d/w, ID width budget | 1.8 / 3.09 -> 1.191371681416 / 1.65; 0.12 gutters -> I2's actual 0.085027329516 |
+| Same: old-phone control site | `DEEP * PHONE_BESIDE` -> `MODELS.phone`; same D1 failure |
+| `round13-checks.mjs`: U1 depth/back | tablet = deck depth/back -> depth deck + 0.11, back deck - 0.11; aligned fronts retained |
+| Same: tablet body discovery / control site | half-thickness > 0.02 -> explicit body marker (new half-thickness exactly 0.02); old rim/tabD site -> shared tabD site, still mutates depth to 1.8 |
+| `correction-checks.mjs`: laptop mark | side bezel 0.04 -> 0.056; half-height offset 0.090625 -> 0.126875 |
+| Same: tablet rim/shape | ID 0.05 / Figma 0.06 (sum 0.12) -> 0.073359144543 (sum 0.146718289086); 3:4 -> 1640:2360 |
+| Same: Figma envelope | old mat x [-2.612994429, 2.412994429] -> own row [-2.338207965, 2.138207965]; z-span ceiling 1.8 -> lean + deck = 1.880184003859 |
+| `round17-checks.mjs`: R10 screen/bezel | 1.47 x 0.91875 / 0.04 -> 2.058 x 1.28625 / 0.056 |
+| Same: sink/F2 surfaces | ID hardware assigned to its own export; fixed `paperTile` inventory now includes proportioned tablet/phone/square grounds; shared-floor control matches own-base expression in place of literal 0.09 |
+| `checks.mjs`: ID landing count / fit margin | 16 -> 20 (four hardware pieces); 0.249 S -> 0.129 S, below the pinned transient clearance 0.130419; inside-box checks remain |
+| `round5-addendum-checks.mjs`: H10 control | forward 0.46 -> 0.93, same 12 px threshold; exports existing layout model/width helper for R12 |
+| `round5-checks.mjs`, `round5-second-addendum-checks.mjs`: bounds | measured `bounds` -> pin x +/- (w - 0.5)/2; same 0.25 definition/equality tolerance |
+| `round17-checks.mjs`, `drag-checks.mjs`, `label-page-checks.mjs`, `correction-checks.mjs`: fit | recomputed envelope -> pre-R12 pin; drag S stays 105.313735747 rather than falling to 104.453886; 768-page base S stays 60.266757372 |
+| `checks.mjs`, `entrance-checks.mjs`, `round8-checks.mjs`: player stand-ins | supply new `sceneEnvelope` import, unchanged assertions/clocks |
+| `controls.mjs`: Figma lid control hook | old `round: 0.03` call -> shared tablet/phone model call; same injected fault and gate |
+
+**Decisions and limits.** The new shorter video footprint brings the ballistic touchdown centre nearer the screen. Keeping the former **0.001** launch clearance causes about **0.0031** screen/button penetration at pop's end. Clearance is now **0.01** (+0.009 world z at launch), retaining ball sizes/timing, one constant-gravity y path, linear x/z and landing at the new footprint's centre. Prototype page/card raster rounding stays below 0.13% as recorded above. These are the explicit implementation accommodations; no other R12 departure.
+
+`FIG_BEATS` retains every pre-R12 approach/start/end/move: the new frame geometry would otherwise shorten its automatic timetable about 0.1 s. Loop **99.490894747815 s**; starts unchanged at **0 / 8.046310592 / 21.194036350 / 43.782352702 / 63.163643141 / 80.945732163**. Real-browser font/shader/pixel and visual-quality acceptance remains external; no local visual verdict is claimed.
+
+**Verification.** Required commands: `node design/journey-hero/take-2/tools/checks.mjs` -> **all clean**; `node design/journey-hero/take-2/tools/round17-checks.mjs --controls` -> all **21 faults fail at their intended gates** (14 earlier, seven R12: old phone, tablet bars, phone bars, stretched art, baked island, old forward, computed fit). Mutants only run in memory. R12 covers **4,817 device samples / 14,821 picture layers**, conservative opaque-rectangle coverage within 0.001, UV-relative aspect worst **0.128205%**, own-glass contact, hardware identity/details, laptop scale/contact, pin containment and ten S comparisons. Full suite: **6,582 frames / 550,080 pieces / max 247**, PACE-2 equivalence, all **115 action ends / 3,893 registrations**, G worst **0.08692 px**, F2 **947 samples / 7,921 stationary faces** (zero movement), F3 **54 masks**, all retained geometry/renderer/atlas/player/offline gates. Five atlas pages: **2048 x 1880 / 1700 / 1800 / 1992 / 1492**, **72,613,888 base bytes** (69.25 MiB), **96,818,517 mip-estimate bytes** (92.33 MiB). Final logs: `r12-checks-final.txt`, `r12-controls-final.txt`; allocation run: `r12-metrics.txt`. A separate comparison of all 460 approach/start/end/move fields reports zero change (`r12-audit.json`). Read-only status/diff and UTF-8 checks verify the allowed-file boundary. No publication.

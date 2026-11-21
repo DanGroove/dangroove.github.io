@@ -1,3 +1,4 @@
+import { DEFAULT_FIT } from '../view.mjs';
 // CORRECTIONS-4: geometry and renderer-call evidence, never a pixel/shadow render.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -69,10 +70,8 @@ export async function checkDrags(only = '') {
   // CORRECTIONS-15 N1 removes the map's selection marks and N2 flattens carried pictures on purpose (round15-checks.mjs holds both).
   const changed = round15Changed(stageModule), screen = list => list.filter(pc => pc.where !== 'floor' && !changed(pc));
   for (let i = 0; i < 5; i++) equivalent(screen(SCENES[i]()), screen(incoming.module.SCENES[i]()), 'G1 retained still differs from incoming 50b51b8');
-  const points = SCENES.flatMap(make => make().flatMap(corners));
-  const xs = points.map(p => dot(HOME.r, p)), ys = points.map(p => dot(HOME.u, p));
   // The player's initial 1440 x 900 desktop fit. Label fitting can only reduce S.
-  const S = Math.min(742.4 / (Math.max(...xs) - Math.min(...xs) + 0.5), 740 / (Math.max(...ys) - Math.min(...ys) + 0.5));
+  const S = Math.min(742.4 / DEFAULT_FIT.w, 740 / DEFAULT_FIT.h);
   let samples = 0, maxCorner = 0, maxOffset = 0, minGap = Infinity;
   const times = new Set(), drags = SCRIPTS.id.actions.filter(a => arts[a.id]);
   for (const a of drags) {

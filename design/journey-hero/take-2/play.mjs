@@ -1,3 +1,4 @@
+import { sceneEnvelope } from './view.mjs';
 // The second take in the built hero's layout. One clock also supports held review frames.
 import { makeCamera, dot } from '../../../public/journey/hero/engine.mjs';
 import { createRenderer } from './sq.mjs';
@@ -23,13 +24,7 @@ const layout = createPageLayout(hero, stage, callouts);
 const starts = SHOW.map((_, i) => SHOW.slice(0, i).reduce((sum, scene) => sum + scene.len, 0));
 const stills = [2, 3, 4, 5];
 
-// Fit from exactly the same six stills and padding as stills.mjs, once per camera.
-let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-for (const make of SCENES) for (const pc of make()) for (const c of corners(pc)) {
-  const x = dot(cam.r, c), y = dot(cam.u, c);
-  x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
-}
-const need = { w: x1 - x0 + 0.5, h: y1 - y0 + 0.5, x: (x0 + x1) / 2, y: (y0 + y1) / 2 };
+const need = sceneEnvelope(SCENES, corners, dot, cam);
 const wrap = t => ((t % LOOP) + LOOP) % LOOP;
 let t = query.has('t') ? wrap(num('t', 0)) : reduced.matches ? starts[2] + SHOW[2].still : 0;
 let stopped = query.has('t'), visible = true, ready = false, request = 0, previous = null, lastView;

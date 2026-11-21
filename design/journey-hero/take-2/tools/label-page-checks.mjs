@@ -1,3 +1,4 @@
+import { sceneEnvelope } from '../view.mjs';
 // Browser-free regression for CORRECTIONS-3's measured 768 x 1024 page.
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -9,9 +10,7 @@ import { fitCalloutView, labelLayout } from '../labels.mjs';
 import { checkLabelRoutes } from './browser-check.mjs';
 
 export function checkPageLabels() {
-  const points = SCENES.flatMap(make => make().flatMap(corners));
-  const xs = points.map(p => dot(HOME.r, p)), ys = points.map(p => dot(HOME.u, p));
-  const need = { w: Math.max(...xs) - Math.min(...xs) + 0.5, h: Math.max(...ys) - Math.min(...ys) + 0.5, x: (Math.max(...xs) + Math.min(...xs)) / 2, y: (Math.max(...ys) + Math.min(...ys)) / 2 };
+  const need = sceneEnvelope(SCENES, corners, dot, HOME);
   const obstacles = [[40, 32, 728, 76], [40, 332, 316, 439], [40, 463, 316, 544], [40, 584, 316, 723], [40, 980, 728, 996]].map(([left, top, right, bottom]) => ({ left, top, right, bottom }));
   const widths = { small: {}, large: {} };
   let start = 0;

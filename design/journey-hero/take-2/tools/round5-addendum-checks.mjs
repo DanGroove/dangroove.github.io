@@ -27,7 +27,7 @@ const decode = record => {
   return bytes.toString('utf8');
 };
 const moduleURL = (code, file, replacements = {}) => 'data:text/javascript;base64,' + Buffer.from(code.replace(/from (['"])([^'"]+)\1/g, (_, q, ref) => 'from ' + q + (replacements[ref] || new URL(ref, new URL(file, take)).href) + q)).toString('base64');
-const widthsFor = module => {
+export const widthsFor = module => {
   const widths = { small: {}, large: {} };
   let start = 0;
   for (const scene of module.SHOW) {
@@ -41,7 +41,7 @@ const widthsFor = module => {
 
 // Exercise createPageLayout itself, including ink traversal and cover(), while modeling CSS
 // boxes and glyph metrics. This deliberately does not claim real font/DOM measurements.
-function layoutModel(factory, need, fit, widths, W, H, serialise = value => Math.floor(parseFloat(value) * 64) / 64 + 'px') {
+export function layoutModel(factory, need, fit, widths, W, H, serialise = value => Math.floor(parseFloat(value) * 64) / 64 + 'px') {
   let width = W, height = H;
   const style = (shorten = false) => {
     const values = {};
@@ -205,7 +205,7 @@ export async function checkRound5Addendum({ only = '', control = '' } = {}) {
   if (!only || only.startsWith('H10')) {
     let module = current;
     if (control === 'H10') {
-      const search = 'forward: 0.46', code = source('stage.mjs');
+      const search = 'forward: 0.93', code = source('stage.mjs');
       assert.equal(code.split(search).length - 1, 1, 'H10 control one-site match');
       module = await import(moduleURL(code.replace(search, 'forward: 0'), 'stage.mjs'));
     }

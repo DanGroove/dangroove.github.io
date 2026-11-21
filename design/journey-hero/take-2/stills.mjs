@@ -1,3 +1,4 @@
+import { sceneEnvelope } from './view.mjs';
 // Second take, in the page: one scene, held still, in the hero's own layout (?s=0..5). For stills only: see tools/sheet.mjs.
 // ?at=1.5 sets where the copy of the booklet that is being read has got to, in the InDesign scene (see copy in stage.mjs).
 import { makeCamera, dot } from '../../../public/journey/hero/engine.mjs';
@@ -17,9 +18,7 @@ const layout = createPageLayout(hero, stage, callouts);
 
 // the room all the scenes need, measured once in the home view
 const all = SCENES.map(make => make());
-let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
-for (const pieces of all) for (const pc of pieces) for (const c of corners(pc)) { const x = dot(cam.r, c), y = dot(cam.u, c); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
-const NEED = { w: x1 - x0 + 0.5, h: y1 - y0 + 0.5, x: (x0 + x1) / 2, y: (y0 + y1) / 2 };
+const NEED = sceneEnvelope(SCENES, corners, dot, cam);
 
 function draw() {
   const { h, b } = layout.metrics, s = Math.min(num('s', 0), all.length - 1);

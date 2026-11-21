@@ -1,3 +1,4 @@
+import { sceneEnvelope } from '../view.mjs';
 // Round 8 (CORRECTIONS-8): N1 the name, F3 the plain floor, B1/B2 the star field, G1 the carried stack. Node only.
 //   node design/journey-hero/take-2/tools/round8-checks.mjs [--controls]
 // Each part reads the real modules; the negative controls edit one exact site in memory and must fail at their gate.
@@ -114,8 +115,8 @@ async function runPlayer(playerSource) {
   const player = playerSource.replace(/^import\s+.*?;\s*$/gm, '');
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
   const out = { win, live, media, stage, swallow: false };
-  await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
-    location: { search: '' }, document: { querySelector: () => hero, fonts: { ready: Promise.resolve(), addEventListener() {} }, hidden: false, addEventListener() {} }, window: win, matchMedia: () => media,
+  await new AsyncFunction('env', `const { sceneEnvelope, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+    sceneEnvelope, location: { search: '' }, document: { querySelector: () => hero, fonts: { ready: Promise.resolve(), addEventListener() {} }, hidden: false, addEventListener() {} }, window: win, matchMedia: () => media,
     createRenderer: () => ({ setAtlas() {}, draw() {} }), makeCamera: engine.makeCamera, dot: engine.dot, corners: kit.corners, makeAtlas: () => ({}), fontsReady: async () => {},
     SHOW: M.SHOW, LOOP: M.LOOP, SCENES: M.SCENES, BLOCK: M.BLOCK, POOL: M.POOL, sceneAt: M.sceneAt, frameAt: M.frameAt, calloutsAt: M.calloutsAt, createCallouts: () => ({ draw() {}, fit: v => v, layout: [] }),
     createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect, nameLines: [] }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),

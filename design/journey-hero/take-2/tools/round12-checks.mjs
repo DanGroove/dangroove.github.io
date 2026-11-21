@@ -23,7 +23,7 @@ const foot = pc => { const c = corners(pc); return [Math.min(...c.map(p => p[0])
 const size = (pc, floor) => { const f = floor ? foot(pc) : (() => { const c = corners(pc); return [Math.min(...c.map(p => p[0])), Math.min(...c.map(p => p[1])), Math.max(...c.map(p => p[0])), Math.max(...c.map(p => p[1]))]; })(); return [f[2] - f[0], f[3] - f[1]]; };
 const inside = (a, b, e = 1e-9) => a[0] >= b[0] - e && a[1] >= b[1] - e && a[2] <= b[2] + e && a[3] <= b[3] + e;
 // The reference bodies Dan's brief gives, in mm.
-const PHONE = [71.6, 147.6], TABLET = [179.5, 248.6];
+const PHONE = [77.6, 163.0], TABLET = [179.5, 248.6];
 
 // ---- D1: each phone's size against the rule, each front edge on its tablet's, each screen's picture in its own shape.
 export function checkPhones(M) {
@@ -37,14 +37,14 @@ export function checkPhones(M) {
   const phone = body('post'), tablet = body('mail');
   assert.ok(phone.body && tablet.body, 'D1 InDesign: no phone or tablet body under the post or the e-blast');
   const [pw, pd] = size(phone.body, true), [tw, td] = size(tablet.body, true);
-  near(td, 1.45, 'D1 InDesign tablet: its depth changed', 1e-9);
+  near(td, 1.65, 'D1 InDesign tablet: its depth changed', 1e-9);
   within(pd / td, upright, 'D1 InDesign phone: depth against the upright tablet');
   within(pw / pd, shape, 'D1 InDesign phone: its own shape');
   within(tw / td, TABLET[0] / TABLET[1], 'D1 InDesign tablet: a real tablet\'s shape');
-  assert.ok(tw <= 1.45 * 440 / 340 - pw - 2 * 0.12 + 1e-9, 'D1 InDesign tablet: wider than the width the smaller phone frees');
+  assert.ok(tw <= 1.45 * 440 / 340 - pw - 2 * M.BLOCK_ROW.gutter + 1e-9, 'D1 InDesign tablet: wider than the width the smaller phone frees');
   near(foot(phone.body)[3], foot(tablet.body)[3], 'D1 InDesign: the phone\'s front edge is not on the tablet\'s');
   // the pictures keep their own shapes on the new screens
-  within(size(phone.face, true)[0] / size(phone.face, true)[1], 300 / 664, 'D1 InDesign phone: the post does not fit its screen', 0.005);
+  within(size(phone.face, true)[0] / size(phone.face, true)[1], 300 / 650, 'D1 InDesign phone: the post does not fit its screen', 0.005);
   within(size(tablet.face, true)[0] / size(tablet.face, true)[1], M.ART_SIZES.mail[0] / M.ART_SIZES.mail[1], 'D1 InDesign tablet: the e-blast does not fit its screen', 0.005);
   out.push(`InDesign phone ${pw.toFixed(4)} x ${pd.toFixed(4)} (${(pd / td).toFixed(4)} of the tablet), tablet ${tw.toFixed(4)} x ${td.toFixed(4)}`);
   // Video, motion and UX/UI: device bodies at each still.
@@ -54,8 +54,8 @@ export function checkPhones(M) {
     const tab = bodyOf(key === 'fig' ? 1 : 0), phones = key === 'fig' ? [bodyOf(2)] : [bodyOf(1), bodyOf(2)];
     const [tW, tD] = size(tab, true);
     // CORRECTIONS-13 U1 makes Figma's tablet as deep as the laptop's deck (1.1, 0.855 wide) on purpose; round13-checks checks it.
-    near(tD, key === 'fig' ? M.UI_ROW.tabD : 1.8, `D1 ${key} tablet: its depth changed`);
-    near(tW, key === 'fig' ? M.UI_ROW.tabW : 3.09, `D1 ${key} tablet: its width changed`, 1e-6);
+    near(tD, key === 'fig' ? M.UI_ROW.tabD : M.MODELS.tablet.w, `D1 ${key} tablet: its depth changed`);
+    near(tW, key === 'fig' ? M.UI_ROW.tabW : M.MODELS.tablet.d, `D1 ${key} tablet: its width changed`, 1e-6);
     for (const p of phones) {
       const [w, d] = size(p, true);
       within(d / tD, kind === 'side' ? side : upright, `D1 ${key} phone: depth against the tablet ${kind === 'side' ? 'on its side' : 'upright'}`);
@@ -151,7 +151,7 @@ export async function checkRound12(source = read('stage.mjs')) {
 }
 
 const ROUND12_CONTROLS = [
-  { id: 'old InDesign phone', search: 'PHONE_D = DEEP * PHONE_BESIDE.upright, PHONE = PHONE_D * PHONE_SHAPE,', replacement: 'PHONE_D = DEEP, PHONE = 0.7,', gate: 'D1 InDesign phone' },
+  { id: 'old InDesign phone', search: 'PHONE_D = MODELS.phone.d, PHONE = MODELS.phone.w,', replacement: 'PHONE_D = DEEP, PHONE = 0.7,', gate: 'D1 InDesign phone' },
   // CORRECTIONS-13 U1: phoneZ is now measured from the tablet's back edge (tabZ), not MAT.z.
   { id: 'phone set back', search: 'phoneZ = tabZ + tabD - phoneD;', replacement: 'phoneZ = tabZ;', gate: 'D1 fig: a phone\'s front edge' },
   { id: 'one frame step back', search: "    // CORRECTIONS-12 I1: no frames are drawn.", replacement: "    { id: 'frame1', kind: 'draw', from: topLeft(ID.cover), to: bottomRight(ID.cover), duration: 0.3, tool: 'frame' },\n    // CORRECTIONS-12 I1: no frames are drawn.", gate: 'I1 steps' },

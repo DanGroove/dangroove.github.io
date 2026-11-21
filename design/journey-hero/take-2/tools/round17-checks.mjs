@@ -1,8 +1,13 @@
+import { laptopClearance, layoutModel, widthsFor } from './round5-addendum-checks.mjs';
+import { DEFAULT_FIT, sceneEnvelope } from '../view.mjs';
+import { fitCalloutView } from '../labels.mjs';
+import { createPageLayout } from '../page-layout.mjs';
+import { BROWSER_SIZES } from './browser-check.mjs';
 // CORRECTIONS-17. Geometry and source checks only: no browser, rasterisation, file mutation or dependencies.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { HOME, dot, quatRotate, EASE } from '../../../../public/journey/hero/engine.mjs';
+import { HOME, dot, quatRotate, EASE, makeCamera } from '../../../../public/journey/hero/engine.mjs';
 import { corners } from '../kit.mjs';
 import { ART, ART_TEXT, HISTOGRAM, makeAtlas, letterMask, maskLetterPictures } from '../art.mjs';
 import { checkMapFrame, checkDragsFlat, checkRendererClips, onMapFrame } from './round15-checks.mjs';
@@ -36,8 +41,7 @@ const front = pc => corners(pc).filter((_, i) => i % 2 === 1);
 const project = p => [dot(HOME.r, p), dot(HOME.u, p)];
 // Conservative 1474 x 996 still-envelope fit and existing padding; the player's label fitting can only reduce this scale.
 function scale(M) {
-  const points = M.SCENES.flatMap(f => f().flatMap(corners)).map(project), xs = points.map(p => p[0]), ys = points.map(p => p[1]);
-  return Math.min((1474 * 0.56 - 64) / (Math.max(...xs) - Math.min(...xs) + 0.5), (996 - 160) / (Math.max(...ys) - Math.min(...ys) + 0.5));
+  return Math.min((1474 * 0.56 - 64) / DEFAULT_FIT.w, (996 - 160) / DEFAULT_FIT.h);
 }
 const top = pc => (pc.shadowP || pc.p)[2] + pc.s[2];
 const distance = (a, b, S) => Math.max(...a.map((p, i) => Math.hypot(...project(p).map((v, k) => v - project(b[i])[k])) * S));
@@ -201,7 +205,7 @@ export async function checkPlaybackStability(M) {
   for (const key of ['pr', 'ae', 'fig']) {
     const { land, off } = M.playbackSpans(M.SCRIPTS[key]), stop = key === 'fig' ? land + 3 * M.PACE : off[0];
     if (key !== 'fig') near((off[0] - land) / M.PACE, 3.2, 'F2 two plays: ' + key);
-    const fixed = P => P.filter(pc => pc.where === 'floor' && (pc.deviceBody || pc.lid || pc.art?.startsWith('chrome') || !pc.lidPicture && (pc.art === 'paperTile' || !pc.window && /^shot[A-C]/.test(pc.art || ''))));
+    const fixed = P => P.filter(pc => pc.where === 'floor' && (pc.deviceBody || pc.lid || pc.art?.startsWith('chrome') || !pc.lidPicture && (/^paper(?:Tile|Tablet|Phone|Sq)$/.test(pc.art || '') || !pc.window && /^shot[A-C]/.test(pc.art || ''))));
     const baseline = fixed(at(M, key, land + 1e-7));
     const times = [...grid(land + 1e-7, stop), stop - 1e-7];
     if (key !== 'fig') times.push(land + (1.6 - 0.001) * M.PACE, land + (1.6 + 0.001) * M.PACE);
@@ -409,9 +413,9 @@ export async function checkLidAndSinks(M) {
       const open = floor(land + 0.1), opened = open.find(pc => pc.lid), screen = open.find(pc => pc.art === 'chromeLaptop'), deckOpen = open.find(pc => pc.deviceBody && pc.device === 0);
       const hinge = quatRotate(opened.q, [-opened.s[0], -opened.s[1], opened.s[2]]).map((n, i) => n + opened.p[i]), db = bounds([deckOpen]);
       [db[0], db[4], db[1]].forEach((v, i) => near(hinge[i], v, 'R10 hinge on back top edge', 1e-6));
-      near(screen.s[0] * 2, 1.47, 'R10 retained screen width'); near(screen.s[1] * 2, 0.91875, 'R10 retained screen height');
+      near(screen.s[0] * 2, 2.058, 'R10 retained screen width'); near(screen.s[1] * 2, 1.28625, 'R10 retained screen height');
       const v = quatRotate(opened.q, [0, 1, 0]), offset = screen.p.map((n, i) => n - opened.p[i]);
-      near(opened.s[1] - dot(v, offset) - screen.s[1], 0.04, 'R10 retained top bezel');
+      near(opened.s[1] - dot(v, offset) - screen.s[1], 0.056, 'R10 retained top bezel');
       for (const t of [off[0], action(M, key, 'export').start + M.ballBeats(key, 0).wiped - 1e-7]) {
         const P = floor(t), lid = P.find(pc => pc.lid), deck = P.find(pc => pc.deviceBody && pc.device === 0);
         const l = bounds([lid]), d = bounds([deck]);
@@ -428,7 +432,7 @@ export async function checkLidAndSinks(M) {
       }
     }
     const first = floor(off[0]), group = pc => {
-      if (key !== 'id') return pc.device;
+      if (key !== 'id' || pc.device !== undefined) return pc.device;
       if (pc.art === 'post') return 1; if (pc.art === 'mail') return 2;
       if (pc.art || pc.tone === 'paper') return 0;
       return Math.abs(pc.p[0] - M.BLOCK_ROW.phone[0] - M.BLOCK_ROW.phone[2] / 2) < 1e-6 ? 1 : 2;
@@ -452,12 +456,137 @@ export async function checkLidAndSinks(M) {
   return { samples, endTimes };
 }
 
+// R12 uses the actual picture windows, conservative opaque canvas rectangles and emitted model geometry.
+// Every art (including the correctly proportioned ground tiles, cropped chrome and captions) is measured.
+const subtract = (a, b) => {
+  const x = Math.max(a[0], b[0]), y = Math.max(a[1], b[1]), r = Math.min(a[2], b[2]), d = Math.min(a[3], b[3]);
+  if (r <= x || d <= y) return [a];
+  return [[a[0],a[1],a[2],y],[a[0],d,a[2],a[3]],[a[0],y,x,d],[r,y,a[2],d]].filter(q => q[2] > q[0] && q[3] > q[1]);
+};
+const artOpaque = new Map();
+function opaqueRects(key) {
+  if (artOpaque.has(key)) return artOpaque.get(key);
+  const a = ART[key]; let rectangles = [], matrix = [1,1,0,0]; const stack = [];
+  const ctx = new Proxy({
+    getTransform() { return {a:matrix[0],b:0,c:0,d:matrix[1],e:matrix[2],f:matrix[3]}; },
+    save() { stack.push(matrix.slice()); }, restore() { matrix = stack.pop(); },
+    translate(x,y) { matrix[2] += x * matrix[0]; matrix[3] += y * matrix[1]; }, scale(x,y) { matrix[0] *= x; matrix[1] *= y; },
+    fillRect(x,y,w,h) { if (String(this.fillStyle).startsWith('rgba')) return; rectangles.push([x*matrix[0]+matrix[2],y*matrix[1]+matrix[3],(x+w)*matrix[0]+matrix[2],(y+h)*matrix[1]+matrix[3]]); },
+    clearRect(x,y,w,h) { const cut = [x,y,x+w,y+h]; rectangles = rectangles.flatMap(r => subtract(r,cut)); },
+    measureText: s => ({width:s.length*10}), createLinearGradient: () => ({addColorStop(){}}),
+  }, {get:(o,k)=>k in o ? o[k] : ()=>{}});
+  a.draw(ctx,a.w,a.h);
+  const result = rectangles.map(r => r.map((n,i)=>n/(i%2?a.h:a.w)));
+  artOpaque.set(key,result); return result;
+}
+export function checkPhoneArt(code = fs.readFileSync(new URL('../art.mjs',import.meta.url),'utf8')) {
+  assert.ok(!/\bisland\s*\(/.test(code), 'R12 one island: baked phone pill');
+  const handset = code.slice(code.indexOf('  chromeHandset:'), code.indexOf('\n',code.indexOf('  chromeHandset:')));
+  assert.ok(!/fill\(c, C\.ink/.test(handset), 'R12 one island: handset notch');
+}
+export async function checkDeviceModels(M) {
+  M ??= await load(); prepareRound17Art(); checkPhoneArt();
+  let samples=0, pictures=0, worstAspect=0;
+  const expected = {tablet:{w:1.65*179.5/248.6,d:1.65,t:0.04,e:[0.35,0.1]},phone:{w:1.65*77.6/248.6,d:1.65*163/248.6,t:0.05,e:[0.35,0.16]}};
+  for (const key of ['id','pr','ae','fig']) {
+    const {land,off}=M.playbackSpans(M.SCRIPTS[key]);
+    // Include wipe poses, all plays/restarts, close and sink. Coverage is checked before the floor starts clipping.
+    for (const t of [...grid(action(M,key,'export').start,off[1]), land+1.599,land+1.601].filter(t=>t<off[1])) {
+      const P=at(M,key,t), bodies=P.filter(pc=>pc.where==='floor'&&pc.model&&pc.deviceBody);
+      const slabs=P.filter(pc=>pc.where==='floor'&&pc.deviceBody&&!(key==='fig'&&pc.device===0));
+      assert.equal(bodies.length,slabs.length,'R12 identical models: unmodelled device');
+      if(t>=land) assert.equal(bodies.length,key==='pr'||key==='ae'?3:2,'R12 identical models: missing device');
+      for (const body of bodies) {
+        const m=expected[body.model], b=bounds([body]), landscape=body.model==='tablet'&&['pr','ae'].includes(key), w=landscape?m.d:m.w,d=landscape?m.w:m.d;
+        near(2*body.s[0],w,'R12 identical models: width'); near(2*body.s[1],d,'R12 identical models: depth'); near(2*body.s[2],m.t,'R12 identical models: thickness');
+        assert.deepEqual(body.e,m.e,'R12 identical models: corners'); assert.deepEqual(body.tones,['#ABA59E','#121111','#4A4541'],'R12 identical models: tones');
+        const rim=(m.w-m.d*(body.model==='phone'?9/19.5:1640/2360))/(2*(1-(body.model==='phone'?9/19.5:1640/2360)));
+        const own=P.filter(pc=>pc.where==='floor'&&pc.device===body.device), arts=own.filter(pc=>pc.art);
+        const screen=[b[0]+rim,b[1]+rim,b[2]-rim,b[3]-rim];
+        [screen[0],screen[1],w-2*rim,d-2*rim].forEach((v,i)=>near(body.screenRect[i],v,'R12 identical models: rim'));
+        if (body.model==='phone') {
+          const island=own.filter(pc=>pc.island!==undefined), ib=bounds(island), iw=(m.w-2*rim)*88/300, id=(m.d-2*rim)*24/650;
+          assert.equal(island.length,3,'R12 one island: capsule parts');
+          near(ib[2]-ib[0],iw,'R12 one island: width'); near(ib[3]-ib[1],id,'R12 one island: depth'); near((ib[0]+ib[2])/2,(b[0]+b[2])/2,'R12 one island: centre');
+          near(ib[1]-screen[1],(m.d-2*rim)*12/650,'R12 one island: top inset'); near(ib[4]-b[4],16*0.0008,'R12 one island: fixed height',1e-8);
+          assert.ok(island.every(pc=>pc.tones.every(t=>t==='#121111')),'R12 one island: glass tone');
+          assert.ok(arts.every(pc=>bounds([pc])[4]<ib[5]),`R12 one island: below picture layer ${key}/${t} ${JSON.stringify(arts.map(pc=>[pc.art,bounds([pc])[4]]))} island ${ib[5]}`);
+        } else {
+          const camera=own.filter(pc=>pc.camera); assert.equal(camera.length,1,'R12 identical models: one camera'); const c=camera[0];
+          near(c.p[1]-b[4],0.0002,'R12 identical models: camera face'); near(2*c.s[0],0.018,'R12 identical models: camera size'); assert.deepEqual(c.tones,['#3C4A56','#26313A','#141A20'],'R12 identical models: lens');
+          near(c.p[0],landscape?(b[0]+b[2])/2:b[2]-rim/2,'R12 identical models: camera x'); near(c.p[2],landscape?b[1]+rim/2:(b[1]+b[3])/2,'R12 identical models: camera z');
+        }
+        if (t>=off[0]) continue;
+        const first=Math.min(...arts.filter(pc=>!pc.cut).map(pc=>bounds([pc])[4]));
+        near(first,b[4],'R12 no gap: first picture on own glass',1e-9);
+        let uncovered=[screen], aspectErrors=[];
+        for (const pc of arts) {
+          const a=ART[pc.art], uv=pc.window||[0,0,1,1], r=bounds([pc]);
+          {
+            const ratio=pc.s[0]/pc.s[1]/((a.w*(uv[2]-uv[0]))/(a.h*(uv[3]-uv[1]))), error=Math.abs(ratio-1);
+            worstAspect=Math.max(worstAspect,error); if(error>0.005) aspectErrors.push(`R12 picture aspect: ${key}/${pc.art} ${(error*100).toFixed(4)}%`);
+          }
+          for (const op of opaqueRects(pc.art)) {
+            const clip=[Math.max(op[0],uv[0]),Math.max(op[1],uv[1]),Math.min(op[2],uv[2]),Math.min(op[3],uv[3])];
+            if (clip[2]<=clip[0]||clip[3]<=clip[1]) continue;
+            const filled=clip.map((n,i)=>r[i%2]+(n-uv[i%2])/(uv[i%2+2]-uv[i%2])*(r[i%2+2]-r[i%2]));
+            uncovered=uncovered.flatMap(q=>subtract(q,filled));
+          }
+          pictures++;
+        }
+        assert.ok(uncovered.every(r=>r[2]-r[0]<=0.001||r[3]-r[1]<=0.001),`R12 screen filled: ${key}/${body.device} gaps ${JSON.stringify(uncovered)}`);
+        assert.equal(aspectErrors.length,0,aspectErrors.join('; '));
+        samples++;
+      }
+    }
+  }
+  // Laptop pictures use a tilted local basis; UV-relative aspect is independent of its pose.
+  const {land,off}=M.playbackSpans(M.SCRIPTS.fig);
+  for(const t of grid(land,off[0])) for(const pc of at(M,'fig',t).filter(pc=>pc.lidPicture&&pc.art)) {
+    const a=ART[pc.art],uv=pc.window||[0,0,1,1],error=Math.abs(pc.s[0]/pc.s[1]/(a.w/a.h*(uv[2]-uv[0])/(uv[3]-uv[1]))-1);
+    assert.ok(error<=0.005,`R12 picture aspect: laptop/${pc.art}`);worstAspect=Math.max(worstAspect,error);pictures++;
+  }
+  const open=at(M,'fig',land+0.1), lid=open.find(pc=>pc.lid), deck=open.find(pc=>pc.device===0&&pc.deviceBody);
+  const laptopTones=['#86807A','#3E3A37','#252220'];
+  assert.deepEqual(lid.tones,laptopTones,'R12 laptop scale: lid metal'); assert.deepEqual(deck.tones,laptopTones,'R12 laptop scale: deck metal');
+  const first=open.find(pc=>pc.lidPicture), normal=quatRotate(lid.q,[0,0,1]);
+  near(dot(normal,first.p.map((n,i)=>n-lid.p[i]))+first.s[2],lid.s[2],'R12 no gap: laptop glass',1e-9);
+  const well=open.find(pc=>pc.device===0&&pc.tones?.[1]==='#121111'), track=open.find(pc=>pc.device===0&&pc.tones?.[1]==='#4A4643'), keys=open.filter(pc=>pc.device===0&&pc.tones?.[1]==='#1B1918');
+  near(2*well.s[0],1.42*1.4,'R12 laptop scale: keyboard well');near(2*track.s[0],0.55*1.4,'R12 laptop scale: trackpad');assert.equal(keys.length,45,'R12 laptop scale: keys');near(2*keys[0].s[0],0.115*1.4,'R12 laptop scale: key width');near(2*deck.s[2],0.08,'R12 laptop scale: deck thickness');
+  near(M.UI_ROW.lidW,2.17,'R12 laptop scale: width'); near(M.UI_ROW.lidH,1.54,'R12 laptop scale: lid'); near(M.UI_ROW.deck,1.54,'R12 laptop scale: deck'); near(M.UI_ROW.bezel,0.056,'R12 laptop scale: bezel');
+  near(M.FIG.designs[1][2]/M.FIG.designs[1][3],1640/2360,'R12 tablet canvas aspect');
+  near(M.LOOP,99.49089474781469,'R12 unchanged loop');
+  return {samples,pictures,worstAspect};
+}
+export async function checkPinnedCamera(M, envelope=sceneEnvelope) {
+  M ??= await load();
+  assert.deepEqual(envelope(M.SCENES,corners,dot,HOME),DEFAULT_FIT,'R12 pinned fit: computed instead');
+  assert.notDeepEqual(envelope(M.SCENES,corners,dot,makeCamera(10,4)),DEFAULT_FIT,'R12 turned camera computes');
+  for(const name of ['play.mjs','stills.mjs']) assert.match(fs.readFileSync(new URL('../'+name,import.meta.url),'utf8'),/sceneEnvelope\(SCENES, corners, dot, cam\)/,'R12 pinned fit: player wiring');
+  const points=M.SCENES.flatMap(make=>make().flatMap(corners));
+  for(const t of grid(0,M.SHOW[5].len)) points.push(...at(M,'fig',t).flatMap(corners));
+  const edges=[DEFAULT_FIT.x-DEFAULT_FIT.w/2,DEFAULT_FIT.y-DEFAULT_FIT.h/2,DEFAULT_FIT.x+DEFAULT_FIT.w/2,DEFAULT_FIT.y+DEFAULT_FIT.h/2];
+  let left=Infinity,right=Infinity,bottom=Infinity,top=Infinity;
+  for(const p of points) { const [x,y]=project(p);left=Math.min(left,x-edges[0]);right=Math.min(right,edges[2]-x);bottom=Math.min(bottom,y-edges[1]);top=Math.min(top,edges[3]-y); }
+  assert.ok(Math.min(left,right,bottom,top)>=-1e-9,'R12 pinned fit: piece outside box');
+  const h10=laptopClearance(M);
+  assert.ok(h10.minimumGap>=12,'R12 H10 clearance: '+h10.minimumGap); assert.ok(h10.minimumRing>0,'R12 Laptop ring: '+h10.minimumRing);
+  const before=[34.15580618825121,48.88799614326756,40.717300409016715,44.61459867481197,54.87983968171818,60.266757372187996,64.76575238520613,82.41565589781574,105.31373574710791,130.93059038829634];
+  const previous=globalThis.getComputedStyle;globalThis.getComputedStyle=()=>({fontWeight:'800',fontSize:'20px',fontFamily:'Outfit'});
+  let scales;
+  try { scales=BROWSER_SIZES.map(([W,H],i)=>{const S=layoutModel(createPageLayout,DEFAULT_FIT,fitCalloutView,widthsFor(M),W,H).sample().S; assert.ok(S>=before[i]-1e-8,'R12 scale shrank: '+W+'x'+H);return {W,H,before:before[i],after:S};}); }
+  finally { if(previous===undefined)delete globalThis.getComputedStyle;else globalThis.getComputedStyle=previous; }
+  const {rows,...clearance}=h10;
+  return {left,right,bottom,top,scales,clearance};
+}
+
 export async function checkRound17(M) {
   M ??= await load();
   prepareRound17Art();
   const levels = await checkLevels(M), letters = await checkDrawsAndLetters(M), swaps = await checkSwaps(M), carries = await checkCarries(M), flight = await checkFlight(M), sinks = await checkLidAndSinks(M);
+  const devices = await checkDeviceModels(M), camera = await checkPinnedCamera(M);
   const heights = await checkDocumentHeights(M), stable = await checkPlaybackStability(M), masks = checkLetterMasks();
-  return `Round 17: G ${swaps.boundaries} action ends / ${swaps.comparisons} registrations, worst ${swaps.worst.toFixed(5)} px; R1 ${levels} levels samples; R2/R3 ${letters} draw/type samples; R4 ${carries.carries} carries / ${carries.samples} samples, flat worst ${carries.flat.worst.toFixed(5)} px; R6/R7 ${flight} flight samples; R8-R11 ${sinks.samples} sink samples (${JSON.stringify(sinks.endTimes)}).\nFollow-up: F1 ${heights.samples} height samples / ${heights.pages} pages / ${heights.layers} layers; F2 ${stable.samples} playback samples / ${stable.faces} fixed faces, worst ${stable.worst.toFixed(5)} px; F3 ${masks.pictures} masks / ${masks.texels} fixture texels / ${masks.covered} covered, exact finished RGB.`;
+  return `R12: ${JSON.stringify({devices,camera})}\nRound 17: G ${swaps.boundaries} action ends / ${swaps.comparisons} registrations, worst ${swaps.worst.toFixed(5)} px; R1 ${levels} levels samples; R2/R3 ${letters} draw/type samples; R4 ${carries.carries} carries / ${carries.samples} samples, flat worst ${carries.flat.worst.toFixed(5)} px; R6/R7 ${flight} flight samples; R8-R11 ${sinks.samples} sink samples (${JSON.stringify(sinks.endTimes)}).\nFollow-up: F1 ${heights.samples} height samples / ${heights.pages} pages / ${heights.layers} layers; F2 ${stable.samples} playback samples / ${stable.faces} fixed faces, worst ${stable.worst.toFixed(5)} px; F3 ${masks.pictures} masks / ${masks.texels} fixture texels / ${masks.covered} covered, exact finished RGB.`;
 }
 
 // Register round 17's changed surfaces with the earlier frozen-picture comparisons. These surfaces now have the explicit
@@ -541,7 +670,7 @@ export async function checkRound17Controls() {
     const body = s.slice(a, b).replaceAll("lift: 0.06, t: 0.02, art: 'kAm", "lift: 0.08, t: 0.004, art: 'kAm").replaceAll('lift: 0.06, t: 0.02', 'lift: 0.084, t: 0.004');
     return s.slice(0, a) + body + s.slice(b);
   }, 'F1 page face', checkDocumentHeights);
-  await control('F2 shared floor stack', s => s.replace("const face = height = art?.startsWith('chrome') ? 0.09 + 8 * LAYER_STEP : height + LAYER_STEP;", 'const face = height = stacks.floor = Math.max(0.09, (stacks.floor ?? -Infinity) + LAYER_STEP);'), 'F2 stationary faces:', checkPlaybackStability);
+  await control('F2 shared floor stack', s => s.replace("const face = height = art?.startsWith('chrome') ? base + 8 * LAYER_STEP : height + LAYER_STEP;", 'const face = height = stacks.floor = Math.max(0.09, (stacks.floor ?? -Infinity) + LAYER_STEP);'), 'F2 stationary faces:', checkPlaybackStability);
   await control('F2 shared screen stack', s => s.replace('const face = height = Math.max(lift + thickness, height + LAYER_STEP);', 'const face = height = stacks.screen = Math.max(lift + thickness, (stacks.screen ?? -Infinity) + LAYER_STEP);'), 'F2 independent painter bases', checkPlaybackStability);
   await control('F2 one After Effects play', s => s.replace("ae: ballLength('ae') + 3.2 - 0.7", "ae: ballLength('ae') + 1.6 - 0.7").replace("key === 'fig' ? 3 + BALL.lid : 3.2", "key === 'fig' ? 3 + BALL.lid : key === 'ae' ? 1.6 : 3.2").replace('cycles = 2;', "cycles = key === 'ae' ? 1 : 2;"), 'F2 two plays:', checkPlaybackStability);
   const artURL = new URL('../art.mjs', import.meta.url), oldArt = fs.readFileSync(artURL, 'utf8');
@@ -555,6 +684,20 @@ export async function checkRound17Controls() {
   await control('rest 0.15', s => s.replace('rest: 0, split:', 'rest: 0.15, split:'), 'R7 immediate split', checkFlight);
   await control('lid lift 0.03', s => s.replace('const by = 12 - theta, lift = 0;', 'const by = 12 - theta, lift = 0.03 * Math.max(0, -Math.sin(theta * Math.PI / 180));'), 'R10 lid gap', checkLidAndSinks);
   await control('one shared sink depth', s => s.replace('const depth = heights[j] * clearance;', 'const depth = Math.max(...heights) * clearance;'), 'R11 own height sink', checkLidAndSinks);
+  await control('R12 one old phone', s=>s.replace('PHONE_D = MODELS.phone.d, PHONE = MODELS.phone.w,','PHONE_D = 0.861, PHONE = 0.418,'), 'R12 identical models:', checkDeviceModels);
+  await control('R12 letterboxed tablet',s=>s.replace("const frame = shape === 2 ?", "const frame = shape === 4 ? [0, (1 - 472 / (16 / 9) / 328) / 2, 1, 472 / (16 / 9) / 328] : shape === 2 ?"),'R12 screen filled:',checkDeviceModels);
+  await control('R12 300x600 phone with bars',s=>s.replace("const frame = shape === 2 ?", "const frame = shape === 1 ? [0, 25 / 650, 1, 600 / 650] : shape === 2 ?"),'R12 screen filled:',checkDeviceModels);
+  await control('R12 stretched picture',s=>s.replace("width * 74 / 352 / size[1]", "width * 74 / 352 / size[1] * 1.13"),'R12 picture aspect:',checkDeviceModels);
+  let islandFailed=false;
+  try { checkPhoneArt(oldArt.replace('ART.chromeTablet.draw(c, w, h); } },','ART.chromeTablet.draw(c, w, h); island(c, w); } },')); }
+  catch(error) { assert.ok(error.message.includes('R12 one island:'),error.message);islandFailed=true; }
+  assert.ok(islandFailed,'R12 art island: MISSED');out.push('R12 baked island: failed at R12 one island:');
+  await control('R12 old row forward',s=>s.replace('forward: 0.93','forward: 0.46'),'R12 H10 clearance:',checkPinnedCamera);
+  let pinFailed=false;
+  try { await checkPinnedCamera(await load(), (scenes,corners,dot,cam)=>{
+    const points=scenes.flatMap(f=>f().flatMap(corners)),xs=points.map(p=>dot(cam.r,p)),ys=points.map(p=>dot(cam.u,p));return {w:Math.max(...xs)-Math.min(...xs)+0.5,h:Math.max(...ys)-Math.min(...ys)+0.5,x:(Math.max(...xs)+Math.min(...xs))/2,y:(Math.max(...ys)+Math.min(...ys))/2};
+  }); } catch(error) {assert.ok(error.message.includes('R12 pinned fit:'),error.message);pinFailed=true;}
+  assert.ok(pinFailed,'R12 computed fit: MISSED');out.push('R12 computed fit: failed at R12 pinned fit:');
   return out.join('\n');
 }
 

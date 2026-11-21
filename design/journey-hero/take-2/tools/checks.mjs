@@ -1,3 +1,4 @@
+import { sceneEnvelope } from '../view.mjs';
 // Geometry and clock checks. No browser, filesystem writes or dependencies.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -251,7 +252,7 @@ for (const scene of SHOW) {
     const floor = t => frameAt(sceneStart + t, { at: -1 }).filter(pc => pc.where === 'floor');
     const landed = floor(land + 1e-6 * PACE);
     const reference = scene.key === 'id' ? landed : landed.filter(pc => pc.deviceBody || pc.lid);
-    assert.equal(reference.length, scene.key === 'id' ? 16 : scene.key === 'fig' ? 4 : 3, scene.key + ': missing export bodies');
+    assert.equal(reference.length, scene.key === 'id' ? 20 : scene.key === 'fig' ? 4 : 3, scene.key + ': missing export bodies');
     for (let n = 1; land + n * PACE / 120 < end; n++) {
       const list = floor(land + n * PACE / 120), bodies = scene.key === 'id' ? list : list.filter(pc => pc.deviceBody || pc.lid);
       assert.equal(bodies.length, reference.length, scene.key + ': export bodies changed');
@@ -356,8 +357,8 @@ const renderer = { setAtlas() {}, draw(pieces, view) { draws.push({ pieces, view
 const observer = class { observe() {} };
 const player = fs.readFileSync(new URL('../play.mjs', import.meta.url), 'utf8').replace(/^import\s+.*?;\s*$/gm, '');
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-await new AsyncFunction('env', `const { location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
-  location: { search: '?t=0' }, document: playerDocument, window: win, matchMedia: () => media,
+await new AsyncFunction('env', `const { sceneEnvelope, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+  sceneEnvelope, location: { search: '?t=0' }, document: playerDocument, window: win, matchMedia: () => media,
   createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => atlas, fontsReady: async () => {},
   SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts: () => ({ draw() {}, fit: view => view, layout: [] }), devicePixelRatio: 3,
   createNameReact: () => ({ measure() {}, setLive() {}, live: false, open: 0, letters: [] }), createCraftWipe: () => ({ measure() {}, follow(craft, options) { craftFollows.push([craft, !!options?.cut]); }, hold: () => null, state: null }), createStars: () => ({ measure() {}, frame: () => null, after() {}, swallowClick: () => false, field: null }), starReach: () => null, createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),
@@ -391,7 +392,7 @@ for (let n = -240; n <= 960; n++) includeFit(SCENES[2]({ at: n / 240 }));
 for (const [width, height, box] of [[1440, 900, { left: 633.6, top: 88, width: 742.4, height: 740 }], [390, 664, { left: 0, top: 64, width: 390, height: 240 }]]) {
   hero.rect = { left: 0, top: 0, width, height }; stage.rect = box;
   win.__hero.seek(0);
-  const { S, cx, cy } = draws.at(-1).view, padding = (0.25 - 0.001) * S;
+  const { S, cx, cy } = draws.at(-1).view, padding = (0.13 - 0.001) * S;
   assert.ok(cx + S * visibleBounds[0] >= box.left + padding, width + ': left fit margin');
   assert.ok(cx + S * visibleBounds[1] <= box.left + box.width - padding, width + ': right fit margin');
   assert.ok(cy - S * visibleBounds[3] >= box.top + padding, width + ': top fit margin');

@@ -33,7 +33,7 @@ change('page contact undone', 'page edges still drawn under its carried picture'
 change('word side faces A5 undone', 'word side faces:', 'stage.mjs', "if (pc.art === 'wMake' || pc.art === 'wMove') pc.cut = true;", "if (pc.art === 'wMake' || pc.art === 'wMove') pc.cut = false;");
 change('Figma canvas playback frozen', 'Figma motion:', 'stage.mjs', 'prototype(draw, i, clock, false);', 'prototype(draw, i, 0, false);');
 change('Figma laptop playback frozen', 'Figma motion:', 'stage.mjs', 'prototype(lidPainter(face), 0, shown);', 'prototype(lidPainter(face), 0, t < land ? -1 : 0);');   // CORRECTIONS-13: prototypeOut
-change('Figma lid clearance', 'laptop clearance:', 'stage.mjs', "...device(x, z, w, d, undefined, { rim, round: 0.03 })[0], deviceBody: true", "...device(x, z, w, d, undefined, { rim, round: 0.03 })[0], deviceBody: true, lid: i === 1");
+change('Figma lid clearance', 'laptop clearance:', 'stage.mjs', "...device(x, z, w, d, undefined, { rim, model: i === 1 ? 'tablet' : 'phone' })[0], deviceBody: true", "...device(x, z, w, d, undefined, { rim, model: i === 1 ? 'tablet' : 'phone' })[0], deviceBody: true, lid: i === 1");
 change('Figma world centring', 'fig: footprint is not centred in world x', 'stage.mjs', 'left = exportMiddle - width / 2', 'left = exportMiddle + 0.1 - width / 2');
 // CORRECTIONS-13: feed() is gone; the tablet now drifts in x after it is built, against checks.mjs's built-export rule.
 change('Figma tablet x drift', 'fig: export moved after it was built', 'stage.mjs', 'for (const pc of [...body, ...face]) { pc.p[2] += g.forward;', 'for (const pc of [...body, ...face]) { if (i === 1) pc.p[0] += 0.1 * Math.sin(Math.PI * linear(t, land, off[0])); pc.p[2] += g.forward;');

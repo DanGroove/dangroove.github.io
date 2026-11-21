@@ -68,10 +68,9 @@ const SHOTS = {
     fill(c, C.red, 0, 0, w, h); fill(c, '#A31D25', w * 0.62, 0, w * 0.38, h); person(c, cx, h, k);
     if (cap) caption(c, w / 2, capY, capPx);
   },
-  b(c, w, h) { fill(c, C.ink, 0, 0, w, h); disc(c, C.red, w * 0.68, h * 0.42, h * 0.24); fill(c, C.slate, 0, h * 0.68, w, h * 0.32); fill(c, C.grey, 0, h * 0.68, w, h * 0.04); },     // a sun over a horizon
-  c(c, w, h, ground = C.grey) { fill(c, ground, 0, 0, w, h); [[0.08, 0.5, 0.2], [0.3, 0.25, 0.24], [0.58, 0.42, 0.16], [0.78, 0.6, 0.22]].forEach(([x, y, bw]) => fill(c, C.ink, w * x, h * y, w * bw, h)); disc(c, C.paper, w * 0.84, h * 0.22, h * 0.1); },   // buildings
+  b(c, w, h) { fill(c, C.ink, 0, 0, w, h); disc(c, C.red, w * 0.68, h * 0.42, Math.min(h, w) * 0.24); fill(c, C.slate, 0, h * 0.68, w, h * 0.32); fill(c, C.grey, 0, h * 0.68, w, h * 0.04); },     // a sun over a horizon
+  c(c, w, h, ground = C.grey) { fill(c, ground, 0, 0, w, h); [[0.08, 0.5, 0.2], [0.3, 0.25, 0.24], [0.58, 0.42, 0.16], [0.78, 0.6, 0.22]].forEach(([x, y, bw]) => fill(c, C.ink, w * x, h * y, w * bw, h)); disc(c, C.paper, w * 0.84, h * 0.22, Math.min(h, w) * 0.1); },   // buildings
 };
-const island = (c, w) => { c.fillStyle = C.ink; c.beginPath(); c.roundRect(w / 2 - 44, 12, 88, 24, 12); c.fill(); };      // the pill at the top of a phone's screen
 const playIcon = (c, col, x, y, r) => { c.fillStyle = col; c.beginPath(); c.moveTo(x - r * 0.7, y - r); c.lineTo(x + r, y); c.lineTo(x - r * 0.7, y + r); c.closePath(); c.fill(); };
 function heart(c, col, x, y, r) { c.fillStyle = col; c.beginPath(); c.moveTo(x, y + r); c.bezierCurveTo(x - r * 1.7, y - r * 0.1, x - r * 0.9, y - r * 1.3, x, y - r * 0.45); c.bezierCurveTo(x + r * 0.9, y - r * 1.3, x + r * 1.7, y - r * 0.1, x, y + r); c.fill(); }
 
@@ -162,10 +161,10 @@ function site(c, w, h, { craft = 0, wire = false, build = 4 } = {}) {
   }
 }
 // that page in a phone's browser: the browser's bar with the address in it, the page, and a strip at the foot with the bar to swipe home
-const sitePhone = craft => ({ w: 300, h: 600, draw(c, w, h) {
-  fill(c, C.line, 0, 0, w, h); island(c, w); c.fillStyle = C.ink; c.beginPath(); c.roundRect(24, 46, w - 48, 20, 10); c.fill(); fill(c, C.slate, 96, 54, 108, 4);
-  c.save(); c.translate(0, 74); c.beginPath(); c.rect(0, 0, w, 500); c.clip(); site(c, w, 500, { craft }); c.restore();
-  fill(c, C.paper, 100, 586, 100, 5);
+const sitePhone = craft => ({ w: 300, h: 650, draw(c, w, h) {
+  fill(c, C.line, 0, 0, w, h); c.fillStyle = C.ink; c.beginPath(); c.roundRect(24, 46, w - 48, 20, 10); c.fill(); fill(c, C.slate, 96, 54, 108, 4);
+  c.save(); c.translate(0, 74); c.beginPath(); c.rect(0, 0, w, 550); c.clip(); site(c, w, 550, { craft }); c.restore();
+  fill(c, C.paper, 100, 636, 100, 5);
 } });
 
 // ---- the 1 King Street W flyer, drawn very simply: a 20 page landscape booklet in black, charcoal and two golds.
@@ -448,6 +447,7 @@ function amenities(c, off = 0, { markers = true, labels = true, badge = true } =
 
 // every picture: its size in px, and how to draw it. A picture with no background of its own is see-through there.
 export const ART = {
+  ...Object.fromEntries([['Tablet', 59, 41], ['Phone', 18, 39], ['Sq', 8, 8]].map(([shape, w, h]) => ['paper' + shape, { w, h, draw(c, w, h) { fill(c, C.paper, 0, 0, w, h); } }])),
   paperTile: { w: 8, h: 8, draw(c, w, h) { fill(c, C.paper, 0, 0, w, h); } },
   ...Object.fromEntries([['cover', 288, 340], ['post', 400, 400], ['mail', 228, 235]].map(([key, w, h]) => [key + 'Image', { w, h, photoProfile: key, draw(c, w, h) { street(c, 0, 0, w, h, PHOTO_VIEWS[key]); } }])),
   // Frame styles retain the firm's small mark, bands, grounds, frame and divider.
@@ -465,7 +465,7 @@ export const ART = {
     TYPE_EDGES.idHeading = [8, ...Array.from('Amenities', (_, i) => 8 + c.measureText('Amenities'.slice(0, i + 1)).width)];
     c.translate(-970, -180); ART.kAmR.draw(c, 1100, 850);
   } },
-  ...Object.fromEntries([1, 2, 3].flatMap(build => ['Wide', 'Tablet', 'Tall'].map((shape, i) => ['uiBuild' + build + shape, { w: i ? 180 : 480, h: [300, 240, 390][i], draw(c, w, h) { site(c, w, h, { build }); } }]))),
+  ...Object.fromEntries([1, 2, 3].flatMap(build => ['Wide', 'Tablet', 'Tall'].map((shape, i) => ['uiBuild' + build + shape, { w: i === 1 ? 164 : i ? 180 : 480, h: [300, 236, 390][i], draw(c, w, h) { site(c, w, h, { build }); } }]))),
   heroSource: { w: 226, h: 228, draw(c) { c.translate(-665 / 3, -119 / 3); site(c, 480, 300); } },
   ...Object.fromEntries(['Danial', 'Endrawes'].map((words, i) => ['siteName' + i, { w: 160, h: 38, draw(c) { fill(c, C.ink, 0, 0, 160, 38); recordType(c, 'siteName' + i, words, 59 / 3 - 18, 106 / 3); text(c, words, 59 / 3 - 18, (i ? 426 : 328) / 3 - (i ? 107 : 74), 106 / 3, { fill: C.paper }); } }])),
   ...Object.fromEntries(['Raw', 'Half', 'Levels', 'Sky'].map((step, i) => ['photo' + step, { w: 526, h: 360, draw(c, w, h) {
@@ -492,29 +492,29 @@ export const ART = {
   histoDark: { w: 240, h: 100, draw(c) { for (let i = 0; i < 48; i++) { const v = 8 + 78 * Math.exp(-(((i - 10) / 8) ** 2)) * (0.6 + 0.4 * Math.abs(Math.sin(i * 1.7))); fill(c, C.grey, i * 5, 100 - v, 4, v); } } },
   redBall: { w: 32, h: 32, draw(c) { fill(c, C.paper, 0, 0, 32, 32); disc(c, C.red, 16, 16, 16); } },
   tapDot: { w: 32, h: 32, draw(c) { disc(c, C.paper, 16, 16, 16); } },
-  ...Object.fromEntries(['a', 'b', 'c'].flatMap((shot, i) => ['Tall', 'Sq'].map((shape, j) => [(['shotA', 'shotB', 'shotCfx'][i]) + shape, { w: 300, h: j ? 300 : 600, draw(c, w, h) { if (shot === 'a') SHOTS.a(c, w, h, { k: j ? 105 : 172, cap: false }); else if (shot === 'b') SHOTS.b(c, w, h); else SHOTS.c(c, w, h, C.red); } }]))),
-  ...Object.fromEntries(['Wide', 'Tablet', 'Tall'].flatMap((shape, i) => [0, 1].map(craft => ['uiPage' + shape + craft, { w: i ? 180 : 480, h: [420, 336, 546][i], draw(c, w, h) { const vh = h / 1.4; site(c, w, vh, { craft }); fill(c, C.ink, 0, vh, w, h - vh); } }]))),
-  ...Object.fromEntries([['Wide', 152, 100], ['Tablet', 114, 160], ['Tall', 114, 260]].flatMap(([shape, w, h]) => [0, 1, 2].map(i => ['uiWork' + shape + i, { w, h, draw(c, w, h) { fill(c, C.line, 0, 0, w, h); if (!i) SHOTS.a(c, w, h * 0.68, { cap: false }); else if (i === 1) SHOTS.b(c, w, h * 0.68); else SHOTS.c(c, w, h * 0.68); fill(c, C.paper, w * 0.08, h * 0.79, w * 0.60, h * 0.04); fill(c, C.slate, w * 0.08, h * 0.89, w * 0.42, h * 0.03); } }]))),
+  ...Object.fromEntries(['a', 'b', 'c'].flatMap((shot, i) => ['Tall', 'Sq', 'Tablet'].map((shape, j) => [(['shotA', 'shotB', 'shotCfx'][i]) + shape, { w: j === 2 ? 472 : 300, h: j === 2 ? 328 : j ? 300 : 650, draw(c, w, h) { if (shot === 'a') SHOTS.a(c, w, h, { k: j === 2 ? h * 0.36 : j ? 105 : 138, cap: false }); else if (shot === 'b') SHOTS.b(c, w, h); else SHOTS.c(c, w, h, C.red); } }]))),
+  ...Object.fromEntries(['Wide', 'Tablet', 'Tall'].flatMap((shape, i) => [0, 1].map(craft => ['uiPage' + shape + craft, { w: i === 1 ? 164 : i ? 180 : 480, h: [420, 330, 546][i], draw(c, w, h) { const vh = h / 1.4; site(c, w, vh, { craft }); fill(c, C.ink, 0, vh, w, h - vh); } }]))),
+  ...Object.fromEntries([['Wide', 152, 100], ['Tablet', 156, 236], ['Tall', 114, 260]].flatMap(([shape, w, h]) => [0, 1, 2].map(i => ['uiWork' + shape + i, { w, h, draw(c, w, h) { fill(c, C.line, 0, 0, w, h); if (!i) SHOTS.a(c, w, h * 0.68, { cap: false }); else if (i === 1) SHOTS.b(c, w, h * 0.68); else SHOTS.c(c, w, h * 0.68); fill(c, C.paper, w * 0.08, h * 0.79, w * 0.60, h * 0.04); fill(c, C.slate, w * 0.08, h * 0.89, w * 0.42, h * 0.03); } }]))),
   interaction: { w: 200, h: 160, draw(c) { fill(c, C.night, 0, 0, 200, 160); ['On tap', 'Change to Video', 'Instant'].forEach((s, i) => { text(c, s, 10, 30 + i * 45, 17, { w: 400, fill: C.paper, track: 0 }); fill(c, C.line, 10, 39 + i * 45, 180, 1); }); } },
   chromeLaptop: { w: 480, h: 300, draw(c, w) { fill(c, C.line, 0, 0, w, 24); for (let i = 0; i < 3; i++) disc(c, C.slate, 14 + i * 12, 12, 3); fill(c, C.ink, 120, 5, 240, 14); fill(c, C.slate, 136, 11, 110, 3); } },
-  chromeTablet: { w: 180, h: 240, draw(c, w, h) { fill(c, C.line, 0, 0, w, h * 0.055); fill(c, C.paper, 8, 5, 14, 2); fill(c, C.slate, w - 25, 5, 17, 2); fill(c, C.line, 0, h * 0.965, w, h * 0.035); fill(c, C.paper, w * 0.36, h * 0.98, w * 0.28, 1.5); } },
-  chromeHandset: { w: 180, h: 390, draw(c, w, h) { ART.chromeTablet.draw(c, w, h); fill(c, C.ink, w * 0.4, 3, w * 0.2, 8); } },
+  chromeTablet: { w: 164, h: 236, draw(c, w, h) { fill(c, C.line, 0, 0, w, h * 0.055); fill(c, C.paper, 8, 5, 14, 2); fill(c, C.slate, w - 25, 5, 17, 2); fill(c, C.line, 0, h * 0.965, w, h * 0.035); fill(c, C.paper, w * 0.36, h * 0.98, w * 0.28, 1.5); } },
+  chromeHandset: { w: 180, h: 390, draw(c, w, h) { ART.chromeTablet.draw(c, w, h); } },
   // Chrome contains only the device's furniture. The moving picture is made of pieces underneath.
-  chromePlayer: { w: 480, h: 270, draw(c) { playIcon(c, C.paper, 30, 245, 9); fill(c, C.slate, 54, 243, 400, 5); } },
-  chromeReel: { w: 300, h: 600, draw(c, w) {
-    [318, 372, 426].forEach((y, i) => { if (i === 0) heart(c, C.paper, 266, y, 13); else if (i === 1) { stroke(c, C.paper, 4); c.beginPath(); c.arc(266, y, 11, 0, Math.PI * 2); c.stroke(); } else playIcon(c, C.paper, 266, y, 11); });
-    disc(c, C.paper, 34, 530, 15); fill(c, C.paper, 60, 520, 96, 9); fill(c, C.grey, 60, 537, 64, 6); lines(c, C.grey, 20, 562, [210, 150], 6, 8); fill(c, C.slate, 20, 50, 260, 4); island(c, w); fill(c, C.paper, 100, 588, 100, 5);
+  chromePlayer: { w: 472, h: 328, draw(c) { playIcon(c, C.paper, 30, 303, 9); fill(c, C.slate, 54, 301, 392, 5); } },
+  chromeReel: { w: 300, h: 650, draw(c, w) {
+    [368, 422, 476].forEach((y, i) => { if (i === 0) heart(c, C.paper, 266, y, 13); else if (i === 1) { stroke(c, C.paper, 4); c.beginPath(); c.arc(266, y, 11, 0, Math.PI * 2); c.stroke(); } else playIcon(c, C.paper, 266, y, 11); });
+    disc(c, C.paper, 34, 580, 15); fill(c, C.paper, 60, 570, 96, 9); fill(c, C.grey, 60, 587, 64, 6); lines(c, C.grey, 20, 612, [210, 150], 6, 8); fill(c, C.slate, 20, 50, 260, 4); fill(c, C.paper, 100, 638, 100, 5);
   } },
-  chromeFeed: { w: 300, h: 600, draw(c, w, h) { ART.feedSq.draw(c, w, h); c.clearRect(0, 112, 300, 300); fill(c, C.ink, 252, 124, 34, 34); playIcon(c, C.paper, 269, 141, 8); fill(c, C.grey, 0, 404, 300, 8); } },
-  chromeMotion: { w: 480, h: 270, draw(c) { playIcon(c, C.ink, 30, 245, 9); fill(c, C.grey, 54, 243, 400, 5); } },
-  chromeStory: { w: 300, h: 600, draw(c, w) {
+  chromeFeed: { w: 300, h: 650, draw(c, w, h) { ART.feedSq.draw(c, w, h); c.clearRect(0, 112, 300, 300); fill(c, C.ink, 252, 124, 34, 34); playIcon(c, C.paper, 269, 141, 8); fill(c, C.grey, 0, 404, 300, 8); } },
+  chromeMotion: { w: 472, h: 328, draw(c) { playIcon(c, C.ink, 30, 303, 9); fill(c, C.grey, 54, 301, 392, 5); } },
+  chromeStory: { w: 300, h: 650, draw(c, w) {
     for (let i = 0; i < 3; i++) fill(c, C.grey, 20 + i * 88, 50, 84, 4);
-    disc(c, C.ink, 34, 82, 13); fill(c, C.ink, 56, 74, 90, 8); fill(c, C.grey, 56, 88, 56, 6); island(c, w);
-    fill(c, C.red, 90, 548, 120, 30); fill(c, C.paper, 118, 560, 64, 6); fill(c, C.ink, 100, 588, 100, 5);
+    disc(c, C.ink, 34, 82, 13); fill(c, C.ink, 56, 74, 90, 8); fill(c, C.grey, 56, 88, 56, 6);
+    fill(c, C.red, 90, 598, 120, 30); fill(c, C.paper, 118, 610, 64, 6); fill(c, C.ink, 100, 638, 100, 5);
   } },
-  chromeMotionFeed: { w: 300, h: 600, draw(c, w, h) { ART.motSq.draw(c, w, h); c.clearRect(0, 184, 300, 300); } },
+  chromeMotionFeed: { w: 300, h: 650, draw(c, w, h) { ART.motSq.draw(c, w, h); c.clearRect(0, 184, 300, 300); } },
   chromeBrowser: { w: 480, h: 270, draw(c, w, h) { ART.siteWide.draw(c, w, h); c.clearRect(0, 24, w, h - 24); } },
-  chromePhone: { w: 300, h: 600, draw(c, w, h) { ART.siteTall.draw(c, w, h); c.clearRect(0, 74, w, 500); } },
+  chromePhone: { w: 300, h: 650, draw(c, w, h) { ART.siteTall.draw(c, w, h); c.clearRect(0, 74, w, 550); } },
   // ---- the building's photograph, before and after its edit in Photoshop, and that app's own bits
   kPhotoB: { w: 526, h: 360, draw(c, w, h) { street(c, 0, 0, w, h, { at: 0.44, raw: true }); } },
   kPhoto: { w: 526, h: 360, draw(c, w, h) { street(c, 0, 0, w, h, { at: 0.44 }); } },
@@ -581,8 +581,8 @@ export const ART = {
     const g = c.createLinearGradient(0, 500, 0, 1000); g.addColorStop(0, 'rgba(10,15,22,0)'); g.addColorStop(0.7, 'rgba(10,15,22,0.9)'); g.addColorStop(1, K.black); c.fillStyle = g; c.fillRect(0, 500, 1000, 500);
     kingLogo(c, 50, 610, 600, true); tab(c, 690, 788, 320, 146, 50, 'Office Space', 'For Sale');
   } },
-  post: { w: 300, h: 664, draw(c, w, h) {                 // that post in the LinkedIn feed, on a phone
-    fill(c, '#FFFFFF', 0, 0, w, h); island(c, w);
+  post: { w: 300, h: 650, draw(c, w, h) {                 // that post in the LinkedIn feed, on a phone
+    fill(c, '#FFFFFF', 0, 0, w, h);
     c.fillStyle = '#0A66C2'; c.beginPath(); c.roundRect(16, 50, 28, 28, 5); c.fill(); text(c, 'in', 30, 71, 19, { w: 700, fill: '#FFFFFF', align: 'center', track: 0, family: SANS });
     c.fillStyle = '#EEF0F2'; c.beginPath(); c.roundRect(56, 52, 176, 24, 12); c.fill(); disc(c, C.grey, 264, 64, 9); fill(c, '#E4E3DF', 0, 90, w, 1.5);
     disc(c, K.black, 36, 122, 17); firmLogo(c, K.lite, 24, 118.5, 24);
@@ -592,7 +592,7 @@ export const ART = {
     for (let i = 0; i < 3; i++) disc(c, ['#0A66C2', C.red, '#4C9A52'][i], 24 + i * 11, 504, 7); fill(c, C.grey, 62, 501, 44, 6); fill(c, C.grey, 214, 501, 68, 6);    // who reacted, and how many comments
     fill(c, '#E4E3DF', 18, 522, w - 36, 1.5);
     [0, 1, 2, 3].forEach(i => { stroke(c, C.slate, 3); c.strokeRect(32 + i * 68, 540, 16, 14); fill(c, C.grey, 24 + i * 68, 562, 32, 5); });
-    fill(c, '#E4E3DF', 0, 590, w, 1.5); for (let i = 0; i < 5; i++) fill(c, i === 0 ? C.ink : C.grey, 27 + i * 56, 606, 20, 20); fill(c, C.ink, 100, 650, 100, 5);
+    fill(c, '#E4E3DF', 0, 576, w, 1.5); for (let i = 0; i < 5; i++) fill(c, i === 0 ? C.ink : C.grey, 27 + i * 56, 592, 20, 20); fill(c, C.ink, 100, 636, 100, 5);
   } },
   eblast: { w: 320, h: 472, draw(c, w, h) {              // the e-blast: the photograph in the flyer's frame with the logo across its corner, then the two units
     c.scale(w / 800, h / 1180); fill(c, K.coal, 0, 0, 800, 1180);
@@ -609,36 +609,35 @@ export const ART = {
     if (!hideTabs) { c.fillStyle = K.gold; c.beginPath(); c.roundRect(44, 1040, 262, 72, [28, 0, 0, 0]); c.fill(); text(c, 'View the flyer', 70, 1087, 30, { w: 700, fill: K.white, track: 0, family: SANS }); }
     fill(c, K.black, 0, 1140, 800, 40);
   } },
-  // CORRECTIONS-12 D1: the tablet is a real tablet's shape now (179.5 : 248.6), so its screen is wider: the mail app's bar runs
-  // across it and the 320 wide e-blast sits in the middle of the message, on the app's own ground, as a mail app shows it.
-  mail: { w: 362, h: 516, draw(c, w, h) {                 // the e-blast, open in a mail app on a tablet
+  // R12: a 1640:2360 mail viewport. The complete e-blast fits below its header, on the app's own ground.
+  mail: { w: 328, h: 472, draw(c, w, h) {                 // the e-blast, open in a mail app on a tablet
     fill(c, '#F3F2EE', 0, 0, w, h); disc(c, K.black, 30, 29, 15); firmLogo(c, K.lite, 19.5, 26, 21);
     fill(c, C.ink, 56, 17, 150, 9); fill(c, C.grey, 56, 34, 96, 6); for (let i = 0; i < 3; i++) disc(c, C.slate, w - 36 + i * 9, 29, 2.6);
-    c.save(); c.translate((w - 320) / 2, 58); ART.eblast.draw(c, 320, 472); c.restore();
+    c.save(); const eh = h - 58, ew = eh * 800 / 1180; c.translate((w - ew) / 2, 58); ART.eblast.draw(c, ew, eh); c.restore();
   } },
   // ---- video: one edit, on three screens
   shotA: { w: 480, h: 270, draw(c, w, h) { SHOTS.a(c, w, h, { cap: false }); } },
   shotB: { w: 480, h: 270, draw(c, w, h) { SHOTS.b(c, w, h); } },
   shotCfx: { w: 480, h: 270, draw(c, w, h) { SHOTS.c(c, w, h, C.red); } },
   ...Object.fromEntries(['Look good.', 'Move well.', 'Work right.'].map((words, i) => ['cap' + (i + 1), { w: 352, h: 74, draw(c, w, h) { fill(c, C.paper, 0, 0, w, h); recordType(c, 'cap' + (i + 1), words, w / 2, 54, 'center', 55); text(c, words, w / 2, 55, 54, { align: 'center' }); } }])),
-  playerWide: { w: 480, h: 270, draw(c, w, h) {
+  playerWide: { w: 472, h: 328, draw(c, w, h) {
     SHOTS.a(c, w, h, { capY: h * 0.76 });
-    playIcon(c, C.paper, 30, 245, 9); fill(c, 'rgba(247,246,243,0.45)', 54, 243, 400, 5); fill(c, C.paper, 54, 243, 236, 5); fill(c, C.paper, 286, 237, 6, 17);
+    playIcon(c, C.paper, 30, 303, 9); fill(c, 'rgba(247,246,243,0.45)', 54, 301, 392, 5); fill(c, C.paper, 54, 301, 236, 5); fill(c, C.paper, 286, 295, 6, 17);
   } },
-  reel: { w: 300, h: 600, draw(c, w, h) {
-    SHOTS.a(c, w, h, { k: 172, capY: 462, capPx: 40 });
-    [318, 372, 426].forEach((y, i) => { if (i === 0) heart(c, C.paper, 266, y, 13); else if (i === 1) { stroke(c, C.paper, 4); c.beginPath(); c.arc(266, y, 11, 0, Math.PI * 2); c.stroke(); } else playIcon(c, C.paper, 266, y, 11); });
-    disc(c, C.paper, 34, 530, 15); fill(c, C.paper, 60, 520, 96, 9); fill(c, 'rgba(247,246,243,0.6)', 60, 537, 64, 6); lines(c, 'rgba(247,246,243,0.6)', 20, 562, [210, 150], 6, 8);
-    fill(c, 'rgba(247,246,243,0.4)', 20, 50, 260, 4); fill(c, C.paper, 20, 50, 150, 4); island(c, w); fill(c, C.paper, 100, 588, 100, 5);
+  reel: { w: 300, h: 650, draw(c, w, h) {
+    SHOTS.a(c, w, h, { k: 138, capY: 462, capPx: 40 });
+    [368, 422, 476].forEach((y, i) => { if (i === 0) heart(c, C.paper, 266, y, 13); else if (i === 1) { stroke(c, C.paper, 4); c.beginPath(); c.arc(266, y, 11, 0, Math.PI * 2); c.stroke(); } else playIcon(c, C.paper, 266, y, 11); });
+    disc(c, C.paper, 34, 580, 15); fill(c, C.paper, 60, 570, 96, 9); fill(c, 'rgba(247,246,243,0.6)', 60, 587, 64, 6); lines(c, 'rgba(247,246,243,0.6)', 20, 612, [210, 150], 6, 8);
+    fill(c, 'rgba(247,246,243,0.4)', 20, 50, 260, 4); fill(c, C.paper, 20, 50, 150, 4); fill(c, C.paper, 100, 638, 100, 5);
   } },
-  feedSq: { w: 300, h: 600, draw(c, w, h) {               // the square cut, in a feed on a phone
-    fill(c, '#FFFFFF', 0, 0, w, h); island(c, w);
+  feedSq: { w: 300, h: 650, draw(c, w, h) {               // the square cut, in a feed on a phone
+    fill(c, '#FFFFFF', 0, 0, w, h);
     const ring = c.createLinearGradient(18, 60, 54, 96); ring.addColorStop(0, '#F9A23B'); ring.addColorStop(1, '#D62D7B'); stroke(c, ring, 3.5); c.beginPath(); c.arc(36, 78, 17, 0, Math.PI * 2); c.stroke(); disc(c, C.ink, 36, 78, 12);
     fill(c, C.ink, 64, 68, 96, 9); fill(c, C.grey, 64, 84, 62, 6); for (let i = 0; i < 3; i++) disc(c, C.slate, 262 + i * 9, 78, 2.6);
     c.save(); c.translate(0, 112); SHOTS.a(c, 300, 300, { k: 105, capY: 242, capPx: 28 }); c.restore();
     fill(c, C.ink, 252, 124, 34, 34); playIcon(c, C.paper, 269, 141, 8); fill(c, 'rgba(247,246,243,0.45)', 0, 404, w, 8); fill(c, C.paper, 0, 404, 175, 8);
     heart(c, C.red, 30, 442, 11); stroke(c, C.slate, 3); c.beginPath(); c.arc(68, 441, 10, 0, Math.PI * 2); c.stroke(); playIcon(c, C.slate, 104, 441, 10);
-    lines(c, C.grey, 18, 470, [250, 170], 6, 8); fill(c, '#E4E3DF', 0, 540, w, 1.5); for (let i = 0; i < 5; i++) fill(c, i === 0 ? C.ink : C.grey, 27 + i * 56, 554, 20, 20); fill(c, C.ink, 100, 588, 100, 5);
+    lines(c, C.grey, 18, 470, [250, 170], 6, 8); disc(c, C.ink, 36, 564, 13); fill(c, C.ink, 64, 554, 96, 9); fill(c, C.grey, 64, 570, 62, 6); fill(c, '#E4E3DF', 0, 590, w, 1.5); for (let i = 0; i < 5; i++) fill(c, i === 0 ? C.ink : C.grey, 27 + i * 56, 604, 20, 20); fill(c, C.ink, 100, 638, 100, 5);
   } },
   thumbA: { w: 96, h: 54, draw(c, w, h) { SHOTS.a(c, w, h, { cap: false }); } },
   thumbB: { w: 96, h: 54, draw(c, w, h) { SHOTS.b(c, w, h); } },
@@ -658,24 +657,24 @@ export const ART = {
   rowB: { w: 140, h: 38, draw(c) { c.translate(-ROWS[1][0], -ROWS[1][1]); saas(c, 480, 270); } },
   graphGrid: { w: 240, h: 200, draw(c, w, h) { for (let i = 0; i < 5; i++) { fill(c, C.dark, 0, 19 + i * 40, w, 2); fill(c, C.dark, 19 + i * 50, 0, 2, h); } } },
   compWide: { w: 480, h: 270, draw(c, w, h) { saas(c, w, h); } },
-  motWide: { w: 480, h: 270, draw(c, w, h) {               // in a player
-    saas(c, w, h, { ...WIDE, y: 104 }); playIcon(c, C.ink, 30, 245, 9); fill(c, 'rgba(21,19,20,0.25)', 54, 243, 400, 5); fill(c, C.ink, 54, 243, 250, 5); fill(c, C.ink, 300, 237, 6, 17);
+  motWide: { w: 472, h: 328, draw(c, w, h) {               // in a player
+    saas(c, w, h, { x: 34, y: 133, px: 60, rows: [288, 91, 140, 3] }); playIcon(c, C.ink, 30, 303, 9); fill(c, 'rgba(21,19,20,0.25)', 54, 301, 392, 5); fill(c, C.ink, 54, 301, 250, 5); fill(c, C.ink, 300, 295, 6, 17);
   } },
-  motTall: { w: 300, h: 600, draw(c, w, h) {               // as a story, with its call to act
+  motTall: { w: 300, h: 650, draw(c, w, h) {               // as a story, with its call to act
     saas(c, w, h, { x: 26, y: 236, px: 62, rows: [26, 366, 180, 3] });
     for (let i = 0; i < 3; i++) fill(c, i === 0 ? C.ink : 'rgba(21,19,20,0.25)', 20 + i * 88, 50, 84, 4);
-    disc(c, C.ink, 34, 82, 13); fill(c, C.ink, 56, 74, 90, 8); fill(c, C.grey, 56, 88, 56, 6); island(c, w);
-    fill(c, C.red, 90, 548, 120, 30); fill(c, C.paper, 118, 560, 64, 6); fill(c, C.ink, 100, 588, 100, 5);
+    disc(c, C.ink, 34, 82, 13); fill(c, C.ink, 56, 74, 90, 8); fill(c, C.grey, 56, 88, 56, 6);
+    fill(c, C.red, 90, 598, 120, 30); fill(c, C.paper, 118, 610, 64, 6); fill(c, C.ink, 100, 638, 100, 5);
   } },
-  motSq: { w: 300, h: 600, draw(c, w, h) {                 // square, as a post in a feed
-    fill(c, '#FFFFFF', 0, 0, w, h); island(c, w);
+  motSq: { w: 300, h: 650, draw(c, w, h) {                 // square, as a post in a feed
+    fill(c, '#FFFFFF', 0, 0, w, h);
     c.fillStyle = '#0A66C2'; c.beginPath(); c.roundRect(16, 50, 28, 28, 5); c.fill(); text(c, 'in', 30, 71, 19, { w: 700, fill: '#FFFFFF', align: 'center', track: 0, family: SANS });
     c.fillStyle = '#EEF0F2'; c.beginPath(); c.roundRect(56, 52, 176, 24, 12); c.fill(); disc(c, C.grey, 264, 64, 9); fill(c, '#E4E3DF', 0, 90, w, 1.5);
     disc(c, C.ink, 36, 122, 17); fill(c, C.ink, 64, 111, 96, 9); fill(c, C.grey, 64, 127, 62, 6); for (let i = 0; i < 3; i++) disc(c, C.slate, 262 + i * 9, 120, 2.6);
     lines(c, C.grey, 18, 150, [250, 190], 6, 8);
     c.save(); c.translate(0, 184); c.beginPath(); c.rect(0, 0, 300, 300); c.clip(); saas(c, 300, 300, { x: 20, y: 92, px: 50, rows: [146, 180, 120, 2] }); c.restore();
     [0, 1, 2, 3].forEach(i => { stroke(c, C.slate, 3); c.strokeRect(32 + i * 68, 500, 16, 14); fill(c, C.grey, 24 + i * 68, 522, 32, 5); });
-    fill(c, '#E4E3DF', 0, 540, w, 1.5); for (let i = 0; i < 5; i++) fill(c, i === 0 ? C.ink : C.grey, 27 + i * 56, 554, 20, 20); fill(c, C.ink, 100, 588, 100, 5);
+    disc(c, C.ink, 36, 564, 13); fill(c, C.ink, 64, 554, 96, 9); fill(c, C.grey, 64, 570, 62, 6); fill(c, '#E4E3DF', 0, 590, w, 1.5); for (let i = 0; i < 5; i++) fill(c, i === 0 ? C.ink : C.grey, 27 + i * 56, 604, 20, 20); fill(c, C.ink, 100, 638, 100, 5);
   } },
   graph: { w: 240, h: 200, draw(c, w, h) {                 // the ease between two keyframes: slow out of the first, slow into the second
     for (let i = 0; i < 5; i++) { fill(c, C.dark, 0, 19 + i * 40, w, 2); fill(c, C.dark, 19 + i * 50, 0, 2, h); }
@@ -689,10 +688,10 @@ export const ART = {
   // ---- UX/UI: the page's hero as Figma's frames (wireframes and designs), the same page exported to three screens, and Figma's own bits
   uiWide: { w: 480, h: 300, draw(c, w, h) { site(c, w, h); } },
   uiTall: { w: 180, h: 390, draw(c, w, h) { site(c, w, h); } },
-  uiTablet: { w: 180, h: 240, draw(c, w, h) { site(c, w, h); } },
+  uiTablet: { w: 164, h: 236, draw(c, w, h) { site(c, w, h); } },
   wireWide: { w: 320, h: 200, draw(c, w, h) { site(c, w, h, { wire: true }); } },
   wireTall: { w: 120, h: 260, draw(c, w, h) { site(c, w, h, { wire: true }); } },
-  wireTablet: { w: 120, h: 160, draw(c, w, h) { site(c, w, h, { wire: true }); } },
+  wireTablet: { w: 164, h: 236, draw(c, w, h) { site(c, w, h, { wire: true }); } },
   siteWide: { w: 480, h: 270, draw(c, w, h) {              // in a browser, on a tablet: the window's bar, then the page
     fill(c, C.line, 0, 0, w, 24); for (let i = 0; i < 3; i++) disc(c, C.slate, 14 + i * 12, 12, 3.4);
     c.fillStyle = C.ink; c.beginPath(); c.roundRect(120, 5, 240, 14, 7); c.fill(); fill(c, C.slate, 136, 10.5, 110, 3);

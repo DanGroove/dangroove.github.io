@@ -1,3 +1,4 @@
+import { DEFAULT_FIT } from '../view.mjs';
 // Round-two numeric gates. These inspect emitted geometry, never rendered pixels.
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -119,7 +120,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
         let mark;
         if (scene.key === 'fig' && i === 0) {
           const lid = floor.find(pc => pc.lid), face = floor.find(pc => pc.art === 'chromeLaptop');
-          const p = quatRotate(lid.q, [-lid.s[0] + 0.04 + 0.08, lid.s[1] - 0.090625 - 0.06, face.s[2]]); mark = p.map((v, j) => v + face.p[j]);
+          const p = quatRotate(lid.q, [-lid.s[0] + 0.056 + 0.08, lid.s[1] - 0.126875 - 0.06, face.s[2]]); mark = p.map((v, j) => v + face.p[j]);
         } else {
           let asset;
           if (isId) asset = floor.filter(pc => pc.art === ['kCover', 'post', 'mail'][i]).sort((a, b) => b.p[1] - a.p[1])[0];
@@ -128,7 +129,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
           const points = corners(asset), xs = points.map(p => p[0]), zs = points.map(p => p[2]);
           // Closed copies use their full cover; device chrome sits inside the slab rim.
           const left = Math.min(...xs), right = Math.max(...xs), back = Math.min(...zs), front = Math.max(...zs);
-          const inset = isId && i > 0 ? (i === 1 ? BLOCK_ROW.phoneRim : 0.05) : 0;   // CORRECTIONS-12 D1: the phone's rim keeps its post's screen
+          const inset = isId && i > 0 ? (i === 1 ? BLOCK_ROW.phoneRim : UI_ROW.rim) : 0;   // CORRECTIONS-12 D1: the phone's rim keeps its post's screen
           const x = i === 0 ? left + 0.1 : i === 1 ? (left + right) / 2 : right + inset - 0.1, z = i === 1 ? front + inset - 0.06 : back - inset + 0.1;
           const faces = floor.filter(pc => (isId || pc.deviceBody) && quatRotate(pc.q, [0, 0, 1])[1] > 1 - 1e-8 && corners(pc).some(p => near(p[0], x, pc.s[0] * 2 + 1e-7))).filter(pc => { const cs = corners(pc); return x >= Math.min(...cs.map(p => p[0])) - 1e-8 && x <= Math.max(...cs.map(p => p[0])) + 1e-8 && z >= Math.min(...cs.map(p => p[2])) - 1e-8 && z <= Math.max(...cs.map(p => p[2])) + 1e-8; });
           mark = [x, Math.max(...faces.map(pc => pc.p[1] + pc.s[2])), z];
@@ -155,11 +156,11 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
           const xs = floor.flatMap(corners).map(p => p[0]);
           if (Math.abs((Math.min(...xs) + Math.max(...xs)) / 2 - (SCREEN.l + SCREEN.w / 2 + EXPORT_SHIFT)) > 0.001) fail(time, 'Figma centring: complete footprint left the screen middle');   // plus X1's shift
           const bodies = [0, 1, 2].map(i => floor.find(pc => pc.device === i && pc.deviceBody)), lid = floor.find(pc => pc.art === 'chromeLaptop');
-          const rims = [0, 0.12, 2 * UI_ROW.phoneRim], widths = [lid.s[0] * 2, ...bodies.slice(1).map((pc, k) => pc.s[0] * 2 - rims[k + 1])];   // D1: the smaller phone's own rim
-          if (!near(lid.s[0] / lid.s[1], 1.6) || !near(widths[1] / (bodies[1].s[1] * 2 - 0.12), 3 / 4) || !near(widths[2] / (bodies[2].s[1] * 2 - rims[2]), 9 / 19.5) || widths[0] <= Math.max(...widths.slice(1))) fail(time, 'Figma device geometry: wrong screen ratios or picture sizes');
+          const rims = [0, 2 * UI_ROW.rim, 2 * UI_ROW.phoneRim], widths = [lid.s[0] * 2, ...bodies.slice(1).map((pc, k) => pc.s[0] * 2 - rims[k + 1])];   // D1: the smaller phone's own rim
+          if (!near(lid.s[0] / lid.s[1], 1.6) || !near(widths[1] / (bodies[1].s[1] * 2 - 2 * UI_ROW.rim), 1640 / 2360) || !near(widths[2] / (bodies[2].s[1] * 2 - rims[2]), 9 / 19.5) || widths[0] <= Math.max(...widths.slice(1))) fail(time, 'Figma device geometry: wrong screen ratios or picture sizes');
           const gaps = [bodies[1].p[0] - bodies[1].s[0] - bodies[0].p[0] - bodies[0].s[0], bodies[2].p[0] - bodies[2].s[0] - bodies[1].p[0] - bodies[1].s[0]];
           const zs = floor.flatMap(corners).map(p => p[2]);
-          if (!near(gaps[0], gaps[1]) || Math.min(...zs) < MAT.z + UI_ROW.forward - 0.02 - 1e-8 || Math.max(...zs) > MAT.z + UI_ROW.forward + 1.8 + 1e-8 || Math.min(...xs) < MAT.x - 1e-8 || Math.max(...xs) > MAT.x + MAT.w + 1e-8) fail(time, 'Figma device geometry: unequal gaps or excessive footprint');
+          if (!near(gaps[0], gaps[1]) || Math.min(...zs) < MAT.z + UI_ROW.forward - 0.02 - 1e-8 || Math.max(...zs) > MAT.z + UI_ROW.forward + UI_ROW.lean + UI_ROW.deck + 1e-8 || Math.min(...xs) < UI_ROW.left - 1e-8 || Math.max(...xs) > UI_ROW.phone + UI_ROW.phoneW + 1e-8) fail(time, 'Figma device geometry: unequal gaps or excessive footprint');
         }
         for (const lid of floor.filter(pc => pc.lid)) {
           // Clip the returning lid's box at the slot before testing its visible outline.
@@ -246,8 +247,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
       if (picture(first.filter(inDesign)) === picture(second.filter(inDesign))) fail(figStart + timing.land + at, 'Figma motion: canvas design unchanged after 0.6 s');
     }
   }
-  const points = SHOW.flatMap((scene, i) => frameAt(SHOW.slice(0, i).reduce((n, s) => n + s.len, 0) + scene.still).flatMap(corners)).map(p => [dot(HOME.r, p), dot(HOME.u, p)]);
-  const xs = points.map(p => p[0]), ys = points.map(p => p[1]), need = { w: Math.max(...xs) - Math.min(...xs) + 0.5, h: Math.max(...ys) - Math.min(...ys) + 0.5, x: (Math.max(...xs) + Math.min(...xs)) / 2, y: (Math.max(...ys) + Math.min(...ys)) / 2 };
+  const need = DEFAULT_FIT;
   // These are parametric layout checks, including conservative word widths. Actual DOM/font boxes belong to browser-check.
   for (const [W, H, b] of [[390, 664, [0, 64, 390, 240]], [390, 664, [0, 64, 390, 280]], [390, 844, [0, 64, 390, 396]], [360, 780, [0, 64, 360, 366.6]], [375, 667, [0, 64, 375, 313.49]], [412, 915, [0, 64, 412, 430.05]], [768, 1024, [337.92, 88, 390.08, 864]], [1440, 900, [633.6, 88, 742.4, 740]], [1920, 1080, [844.8, 88, 1011.2, 920]]]) for (const widthFactor of [0.55, 0.65, 0.75]) {
     const S = Math.min(b[2] / need.w, b[3] / need.h), size = S < 70 ? 9 : 11;
