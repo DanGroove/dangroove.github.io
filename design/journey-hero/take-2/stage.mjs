@@ -67,7 +67,7 @@ const phoneD = tabletD * PHONE_BESIDE.upright, phoneW = phoneD * PHONE_SHAPE;
 const metalGlass = ['#ABA59E', '#121111', '#4A4541'];
 export const MODELS = {
   tablet: { w: tabletW, d: tabletD, t: 0.04, rim: rimFor(tabletW, tabletD, 1640, 2360), e: [0.35, 0.1], tones: metalGlass, camera: { diameter: 0.018, tones: ['#3C4A56', '#26313A', '#141A20'] } },
-  phone: { w: phoneW, d: phoneD, t: 0.05, rim: rimFor(phoneW, phoneD, 9, 19.5), e: [0.35, 0.16], tones: metalGlass, island: { w: (phoneW - 2 * rimFor(phoneW, phoneD, 9, 19.5)) * 88 / 300, d: (phoneD - 2 * rimFor(phoneW, phoneD, 9, 19.5)) * 24 / 650, top: (phoneD - 2 * rimFor(phoneW, phoneD, 9, 19.5)) * 12 / 650, face: 0.05 + 16 * 0.0008 } },
+  phone: { w: phoneW, d: phoneD, t: 0.05, rim: rimFor(phoneW, phoneD, 9, 19.5), e: [0.35, 0.16], tones: metalGlass, island: { w: (phoneW - 2 * rimFor(phoneW, phoneD, 9, 19.5)) * 88 / 300, d: (phoneD - 2 * rimFor(phoneW, phoneD, 9, 19.5)) * 24 / 650, top: (phoneD - 2 * rimFor(phoneW, phoneD, 9, 19.5)) * 12 / 650, face: 0.052 + 16 * 0.0008 } },
 };
 const ROW = MODELS.tablet.w, SLIM_D = MODELS.phone.d, SLIM = MODELS.phone.w, WIDE = MODELS.tablet.d;
 const MAT_W = WIDE + 2 * SLIM + 2 * 0.25;
@@ -82,7 +82,7 @@ function device(x, z, w, d, art, { model = 'phone', landscape = false, rim = MOD
   const m = MODELS[model], at = [x + w / 2, m.t / 2, z + d];
   const body = turn(box('ink', [at[0], at[1] + d / 2, at[2]], [w, d, m.t], { more: { e: m.e.slice(), tones: m.tones } }), at, [1, 0, 0], -90);
   Object.assign(body, { deviceBody: true, solid: true, model, landscape, screenRect: [x + rim, z + rim, w - 2 * rim, d - 2 * rim], face: m.t });
-  return [body, ...(art ? [flat('ink', ...body.screenRect, 0.002, art, m.t - 0.002)] : []), ...deviceDetails(body)];
+  return [body, ...(art ? [flat('ink', ...body.screenRect, 0.002, art, m.t)] : []), ...deviceDetails(body)];
 }
 function deviceDetails(body) {
   const { model, landscape, face, screenRect: [x, z, w, d] } = body, m = MODELS[model];
@@ -355,12 +355,22 @@ function exportOut(P, s, t, key, formats) {
       separateFaces(all.filter(pc => !pc.hide));
       // S2: everything sinks together, straight down (x and z fixed), cut by the floor's plane in every pass, until nothing is left.
       const g = EASE.wipe(linear(t, off[0], off[1]));
-      const heights = formats.map(f => Math.max(...f.pieces.filter(pc => !pc.hide).flatMap(corners).map(c => c[1])));
+      // A format can contain separate objects: the reading copy must not inherit the closed stack's depth.
+      const objects = formats.flatMap(f => f.objects || [f.pieces]);
+      const top = pc => Math.max(...corners(pc).map(c => c[1]));
+      const bodies = objects.map(pieces => pieces.filter(pc => pc.deviceBody || pc.lid));
+      const heights = objects.map((pieces, j) => Math.max(...(bodies[j].length ? bodies[j] : pieces).filter(pc => !pc.hide).map(top)));
       // A fixed 0.02 on unequal heights hides the thin devices earlier. Scale the clearance too, so all tops cross y=0 together.
       const clearance = 1 + 0.02 / Math.max(...heights);
-      for (const [j, f] of formats.entries()) {
+      for (const [j, pieces] of objects.entries()) {
         const depth = heights[j] * clearance;
-        for (const pc of f.pieces) { pc.p[1] -= depth * g; pc.clip = [0, 1, 0, 0]; pc.sink = true; }
+        for (const pc of pieces) {
+          // Keep the floor clip, and clip carried glass layers at their own rest top above the body.
+          // Their last fragment then crosses with the body, rather than leaving chrome or an island behind.
+          if (bodies[j].length && !bodies[j].includes(pc)) pc.carryClip = [0, 1, 0, -Math.max(0, top(pc) - heights[j])];
+          pc.sinkTop = heights[j] - depth * g;
+          pc.p[1] -= depth * g; pc.clip = [0, 1, 0, 0]; pc.sink = true;
+        }
       }
     }
     P.push(...all.filter(pc => !pc.hide)); return;
@@ -495,11 +505,11 @@ function screenPainter(P, rect, faceLift = 0.08, thickness = 0.004) {
   draw.size = [rect[2] * U, rect[3] * U];
   return draw;
 }
-function floorPainter(P, rect, base = 0.09) {
-  let height = base - LAYER_STEP;
+function floorPainter(P, rect, base) {
+  let height = base + 0.002 - LAYER_STEP;
   const draw = (tone, r, art, window) => {
     // Reserve the face above this device's maximum six content layers. Chrome cannot ride the changing content count.
-    const face = height = art?.startsWith('chrome') ? base + 8 * LAYER_STEP : height + LAYER_STEP;
+    const face = height = art?.startsWith('chrome') ? base + 0.002 + 8 * LAYER_STEP : height + LAYER_STEP;
     const [x, z, w, d] = rect, pc = flat(tone, x + r[0] * w, z + r[1] * d, r[2] * w, r[3] * d, 0.002, art, face - 0.002);
     pc.paintLayer = stacks.floorCount++;
     Object.defineProperty(pc, 'paintStack', { value: draw });
@@ -1158,10 +1168,19 @@ function pictureRegion(P, rect, art, region, amount = 1) {
   const [u, v, w, h] = region, r = inRect(rect, [u, v, w * amount, h]);
   P.push({ ...on('paper', ...r, { lift: 0.084, t: 0.004, art }), window: [u, v, u + w * amount, v + h] });
 }
-function drawnRegion(P, rect, art, region, p) {
+function drawnRegion(P, rect, art, region, p, stroke = 0) {
   if (p <= 0) return;
-  const [u, v, w, h] = region, r = inRect(rect, [u, v, w * p, h * p]);
-  P.push({ ...on('paper', ...r, { lift: 0.09, t: 0.004, art }), window: [u, v, u + w * p, v + h * p] });
+  const [u, v, w, h] = region, padded = cropFringe(art, [u, v, w * p, h * p], stroke), r = inRect(rect, padded);
+  P.push({ ...on('paper', ...r, { lift: 0.09, t: 0.004, art }), window: [padded[0], padded[1], padded[0] + padded[2], padded[1] + padded[3]] });
+}
+// A crop includes one raster texel beyond its shape (and any centred stroke). The extra pixels are the finished picture's own.
+function cropFringe(art, [u, v, w, h], stroke = 0) {
+  const a = ART[art], x = (1 + stroke) / a.w, y = (1 + stroke) / a.h;
+  const l = Math.max(0, u - x), t = Math.max(0, v - y), r = Math.min(1, u + w + x), b = Math.min(1, v + h + y);
+  return [l, t, r - l, b - t];
+}
+function paddedPictureRegion(P, rect, art, [u, v, w, h], amount = 1, stroke = 0) {
+  if (amount > 0) pictureRegion(P, rect, art, cropFringe(art, [u, v, w * amount, h], stroke));
 }
 // A region's face may need its own depth slot, but its ink belongs to its page's plane. Moving along the view keeps the
 // projected corners registered when separation raises that slot. The reference is the page's persistent face, not its layer count.
@@ -1221,23 +1240,23 @@ function editedFigma(t) {
     else drawnFrame(D, r, handed(s, 'frame' + i, t));
     if (i === 0) {
       const box = inRect(r, HERO_REGION); if (!done(s, 'pictureBox', t)) drawnFrame(D, box, handed(s, 'pictureBox', t), 'grey');
-      if (done(s, 'pictureBox', t)) pictureRegion(D, r, wireArts[i], HERO_REGION);
+      if (done(s, 'pictureBox', t)) paddedPictureRegion(D, r, wireArts[i], HERO_REGION, 1, 0.5);
       if (begun(s, 'heading', t)) {
         const birth = D.length;
         const p = phase(s, 'heading', t), chars = Math.floor(p * 9) / 9;
         const regions = [[64 / 1440, 252 / 900, 300 / 1440, 76 / 900], [64 / 1440, 350 / 900, 420 / 1440, 76 / 900]];
-        regions.forEach((region, j) => pictureRegion(D, r, wireArts[i], region, clamp(chars * 2 - j, 0, 1)));
+        regions.forEach((region, j) => paddedPictureRegion(D, r, wireArts[i], region, clamp(chars * 2 - j, 0, 1)));
         if (p < 1) { const j = chars < 0.5 ? 0 : 1, caret = inRect(r, regions[j]); D.push(on('grey', caret[0] + caret[2] * clamp(chars * 2 - j, 0, 1), caret[1], 0.012, caret[3], { lift: 0.095, t: 0.004, overlay: true })); }
         for (const pc of D.slice(birth)) { pc.text = { key: 'wireHeading', count: Math.floor(p * 9), total: 9, prefix: p < 1 }; if (pc.overlay) pc.caret = 'wireHeading'; }
       }
       const p = handed(s, 'button', t), button = inRect(r, [64 / 1440, 555 / 900, 380 / 1440, 35 / 900]); drawnFrame(D, button, p, 'grey');
       if (begun(s, 'details', t)) {
         const n = Math.floor(phase(s, 'details', t) * 9);
-        [[0, 0, 1, 0.13], [0, 0.49, 0.46, 0.13], [0, 0.61, 0.46, 0.39]].forEach((region, j) => { if (n >= j) pictureRegion(D, r, wireArts[i], region); });
+        [[0, 0, 1, 0.13], [0, 0.49, 0.46, 0.13], [0, 0.61, 0.46, 0.39]].forEach((region, j) => { if (n >= j) paddedPictureRegion(D, r, wireArts[i], region); });
       }
     } else if (begun(s, 'details', t)) {
       const n = Math.floor(phase(s, 'details', t) * 9) - 3 - (i - 1) * 3;
-      [[0, 0, 1, 0.18], [0, 0.18, 1, 0.40], [0, 0.58, 1, 0.42]].forEach((region, j) => { if (n >= j) pictureRegion(D, r, wireArts[i], region); });
+      [[0, 0, 1, 0.18], [0, 0.18, 1, 0.40], [0, 0.58, 1, 0.42]].forEach((region, j) => { if (n >= j) paddedPictureRegion(D, r, wireArts[i], region); });
     }
   });
   if (begun(s, 'marquee', t) && !done(s, 'copies', t)) {
@@ -1400,14 +1419,16 @@ function editedInDesign(t, { at: pages } = {}) {
 // (body, picture, camera); then the reading copy from 18 onward (two closed pieces, or pages and the turning leaf).
 function bookletOut(P, s, t, floor) {
   const formats = [[...floor.slice(0, 10), ...floor.slice(18)], floor.slice(10, 15), floor.slice(15, 18)].map(pieces => ({ pieces }));
+  formats[0].objects = [floor.slice(0, 10), floor.slice(18)];
   formats[0].shape = [...BLOCK_ROW.stack, COPIES * COPY, floor[0].e.slice()];
   formats[1].shape = lyingShape(floor[10]); formats[2].shape = lyingShape(floor[15]);
   exportOut(P, s, t, 'id', formats);
 }
 function mapRegion(P, rect, art, r, w, h, amount = 1, upward = false) {
+  if (amount <= 0) return;
   const [x, y, rw, rh] = r;
-  if (upward) pictureRegion(P, rect, art, [x / w, (y + rh * (1 - amount)) / h, rw / w, rh * amount / h]);
-  else pictureRegion(P, rect, art, [x / w, y / h, rw / w, rh / h], amount);
+  const region = upward ? [x / w, (y + rh * (1 - amount)) / h, rw / w, rh * amount / h] : [x / w, y / h, rw * amount / w, rh / h];
+  pictureRegion(P, rect, art, cropFringe(art, region));
 }
 function mapTyping(P, rect, art, p, filter = () => true) {
   const a = ART[art], parts = (ART_TEXT[art] || []).filter(filter).sort((a, b) => a.region[1] - b.region[1] || a.region[0] - b.region[0]);
@@ -1460,7 +1481,7 @@ function editedIllustrator(t) {
       mapTyping(D, AI.upper, 'kMap', phase(s, 'labels', t), p => !p.words.startsWith('King Street') && p.words !== 'N');
     }
     if (begun(s, 'title', t)) mapTyping(D, AI.upper, 'kMap', phase(s, 'title', t), p => p.words.startsWith('King Street'));
-    if (begun(s, 'badge', t)) drawnRegion(D, AI.upper, 'kMap', [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850], handed(s, 'badge', t));
+    if (begun(s, 'badge', t)) drawnRegion(D, AI.upper, 'kMap', [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850], handed(s, 'badge', t), 1.5);
   }
   if (begun(s, 'locExport', t)) { const a = action(s, 'locExport'); travel(P, 'loc', AI.lower, DOCK.loc, t, a.start, a.end, undefined, HAND); }
   else {

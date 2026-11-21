@@ -877,7 +877,8 @@ export function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
 export const AM_MARKERS = SHOPS.flatMap(([x, step, above, below]) => [...above.map((_, i) => [x + i * step, 358, 30, 30]), ...below.map((_, i) => [x + i * step, 464, 30, 30])]);
 export const AM_LABEL_BARS = SHOPS.flatMap(([x, step, above, below]) => [...above.map((len, i) => [x + i * step + 9.5, 344 - len, 11, len]), ...below.map((len, i) => [x + i * step + 9.5, 508, 11, len])]);
 export const CITY_BLOCKS = CITY.blocks;
-export const CITY_PINS = [...CITY.badges, ...CITY.transit.map(([, ...r]) => r), ...CITY.stops.map(([x, y]) => [x - 11, y - 11, 22, 22]), ...CITY.routes.map(([x, y]) => [x, y, 60, 20]), [794, 375, 117, 182], [177, 40, 80, 80]];
+// The building's ring has a centred 5-unit stroke; include its outer half before adding the crop's raster fringe.
+export const CITY_PINS = [...CITY.badges, ...CITY.transit.map(([, ...r]) => r), ...CITY.stops.map(([x, y]) => [x - 11, y - 11, 22, 22]), ...CITY.routes.map(([x, y]) => [x, y, 60, 20]), [791.5, 372.5, 122, 187], [177, 40, 80, 80]];
 // The page's own face, and the stand-ins for the flyer's faces, which live beside this file so that every page that draws the pictures gets them.
 const FACES = [['Gelasio', '400', 'gelasio-400.woff2'], ['Gelasio', '700', 'gelasio-700.woff2'], ['Rokkitt', '800', 'rokkitt-800.woff2']];
 export async function fontsReady() {

@@ -104,8 +104,8 @@ vec4 artAt(vec3 l, float face) {
 
 // The same world plane cuts the picture, its silhouette and its cast shadow. uReveal is the entrance's one plane for the whole draw.
 const CLIP_FN = `
-uniform vec4 uClip, uReveal;
-void clipAt(vec3 w) { if (dot(uClip, vec4(w, 1.0)) < 0.0 || dot(uReveal, vec4(w, 1.0)) < 0.0) discard; }
+uniform vec4 uClip, uCarryClip, uReveal;
+void clipAt(vec3 w) { if (dot(uClip, vec4(w, 1.0)) < 0.0 || dot(uCarryClip, vec4(w, 1.0)) < 0.0 || dot(uReveal, vec4(w, 1.0)) < 0.0) discard; }
 `;
 
 const FRAG = `#version 300 es
@@ -347,6 +347,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     gl.uniform2f(u.uExp, Math.max(pc.e[0], 0.012), Math.max(pc.e[1], 0.012));
     gl.uniform2fv(u.uTaper, pc.taper || noTaper); gl.uniform1f(u.uShear, pc.shear || 0); gl.uniform1f(u.uGrow, grow);
     gl.uniform4fv(u.uClip, pc.clip || noClip);
+    gl.uniform4fv(u.uCarryClip, pc.carryClip || noClip);
     const place = pc.art && places[pc.art];
     if (place && boundPage !== place[0]) {
       boundPage = place[0]; gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, atlasTextures[boundPage]);
@@ -364,7 +365,8 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   };
   const drawAll = (prog, pieces, grow, tone, skip) => {
     for (const pc of pieces) {
-      if (pc.hide || (skip && pc[skip])) continue;
+      // Once the body's top is under the floor, omit its whole object in every pass, including expanded outlines.
+      if (pc.hide || pc.sinkTop < 0 || (skip && pc[skip])) continue;
       const mesh = Math.max(pc.e[0], pc.e[1]) > 0.06 ? roundMesh : sharpMesh;
       if (mesh !== boundMesh) { gl.bindVertexArray(mesh.vao); boundMesh = mesh; }
       setPiece(prog.u, pc, typeof grow === 'function' ? grow(pc) : grow);

@@ -1534,7 +1534,7 @@ Built **"One phone and one tablet everywhere: bigger, and high end"** after F1-F
 | e: up / around | 0.35 / 0.1 | 0.35 / 0.16 |
 | Screen aspect | 1640:2360 (turned for landscape) | 9:19.5 |
 
-Both use metal/glass tones `['#ABA59E', '#121111', '#4A4541']`. Tablet camera: diameter **0.018**, tones `#3C4A56 / #26313A / #141A20`, centred in its top bezel in landscape/right bezel in portrait. Phone island: **0.142513274336 × 0.038867256637**, top **0.019433628319** inside the screen, centred across it. Three coplanar solids form one flat capsule (straight middle and circular ends), all `#121111`. Its fixed top is **0.0628**, underside **0.0626**, above the highest phone picture/tap at **0.0608**. No phone picture draws a pill/notch. Body/detail volumes bypass legacy picture separation, letting each first picture sit exactly on its glass; independent per-device picture stacks and overlapping painter ordering remain.
+Both use metal/glass tones `['#ABA59E', '#121111', '#4A4541']`. Tablet camera: diameter **0.018**, tones `#3C4A56 / #26313A / #141A20`, centred in its top bezel in landscape/right bezel in portrait. Phone island: **0.142513274336 × 0.038867256637**, top **0.019433628319** inside the screen, centred across it. Three coplanar solids form one flat capsule (straight middle and circular ends), all `#121111`. After critique C1, its fixed top is **0.0648**, underside **0.0646**, above the highest phone picture/tap at **0.0628**. No phone picture draws a pill/notch. Body/detail volumes bypass legacy picture separation, letting each first picture sit exactly on its glass; independent per-device picture stacks and overlapping painter ordering remain.
 
 Laptop: specified space-grey deck/lid `#86807A / #3E3A37 / #252220`, well top `#121111`, keys `#2C2928 / #1B1918 / #111010`, trackpad `#86807A / #4A4643 / #252220`. Scale **1.4** about the hinge's left end: width **2.17**, lid height/deck depth **1.54**, screen **2.058 x 1.28625** (16:10), bezel **0.056**, chin **0.19775**. Keyboard/trackpad scale with it. Deck thickness **0.08**, lid **0.04**, first screen layer on the lid glass. R10's flush closed lid, 0.12-high red block and hidden closed keys, and R11's close-before-sink remain.
 
@@ -1647,3 +1647,83 @@ Seven are unchanged; three taller phone sizes grow more than the brief's mock es
 `FIG_BEATS` retains every pre-R12 approach/start/end/move: the new frame geometry would otherwise shorten its automatic timetable about 0.1 s. Loop **99.490894747815 s**; starts unchanged at **0 / 8.046310592 / 21.194036350 / 43.782352702 / 63.163643141 / 80.945732163**. Real-browser font/shader/pixel and visual-quality acceptance remains external; no local visual verdict is claimed.
 
 **Verification.** Required commands: `node design/journey-hero/take-2/tools/checks.mjs` -> **all clean**; `node design/journey-hero/take-2/tools/round17-checks.mjs --controls` -> all **21 faults fail at their intended gates** (14 earlier, seven R12: old phone, tablet bars, phone bars, stretched art, baked island, old forward, computed fit). Mutants only run in memory. R12 covers **4,817 device samples / 14,821 picture layers**, conservative opaque-rectangle coverage within 0.001, UV-relative aspect worst **0.128205%**, own-glass contact, hardware identity/details, laptop scale/contact, pin containment and ten S comparisons. Full suite: **6,582 frames / 550,080 pieces / max 247**, PACE-2 equivalence, all **115 action ends / 3,893 registrations**, G worst **0.08692 px**, F2 **947 samples / 7,921 stationary faces** (zero movement), F3 **54 masks**, all retained geometry/renderer/atlas/player/offline gates. Five atlas pages: **2048 x 1880 / 1700 / 1800 / 1992 / 1492**, **72,613,888 base bytes** (69.25 MiB), **96,818,517 mip-estimate bytes** (92.33 MiB). Final logs: `r12-checks-final.txt`, `r12-controls-final.txt`; allocation run: `r12-metrics.txt`. A separate comparison of all 460 approach/start/end/move fields reports zero change (`r12-audit.json`). Read-only status/diff and UTF-8 checks verify the allowed-file boundary. No publication.
+
+
+### Round 17, critique round 1
+
+Built only **C1-C3**, on the existing R12 build. Read AGENTS.md, the critique section, R11, R12, G and R2 before writing, then the take-two README, round-17 BUILD and R12 research/review record. Acceptance/evidence lives in `.scratch/review-out/r17/critique1.md`; measured before/after data is in `critique1-before.json` and `critique1-after.json`. The before module comes from read-only `git show HEAD:.../stage.mjs`, imported in memory. No reference or fixture was changed.
+
+**C1: glass contact without coplanar tops.** `device()` starts its picture at `m.t`, and every floor painter receives its body's explicit face, without a default or a value-dependent special case. The first picture's underside/top changes from **0.048/0.050 -> 0.050/0.052** on phones and **0.038/0.040 -> 0.040/0.042** on tablets. Every later picture/chrome/overlay slot rises by the same **0.002**. Chrome's fixed top is now phone **0.0584**, tablet **0.0484**; the highest phone picture/tap is **0.0628**. The island's top/underside is **0.0648/0.0646** (formerly **0.0628/0.0626**), retaining its size, x/z and glass tone. Tablet camera top/underside stays **0.0404/0.0400**. Laptop lid pictures are untouched.
+
+**C2: bodies set each object's sink, and carry clips end with the body.** The three wipe formats stay the same. Only during the sink, InDesign's first format divides into the closed stack and the open reading copy, both halves together. A device uses its body top; the laptop uses deck plus shut lid; the stack and reading copy use their own page tops. Each object's depth is **H * (1 + 0.02 / max H)**. The common multipliers are **1.08** InDesign, **1.4** Premiere/After Effects and **7/6** Figma.
+
+The existing floor plane remains `[0,1,0,0]`. Each carried layer also gets `[0,1,0,-max(0, layerRestTop - bodyRestTop)]`; colour, expanded outline and shadow all receive it. Once the body's translated top is below zero, all three renderer passes omit the whole object, so expanded outlines cannot leave a sliver. The raw island geometry can still have positive world y after its body crosses; its carried clip and whole-object cull leave no drawable portion. "Under the floor" checks therefore use the actual clipping/culling semantics, rather than requiring hidden geometry to translate farther than the specified body-based depth.
+
+All heights below are world units. Crossings are seconds **after that scene's sink starts**; "last" is the last drawable carried piece after clipping, or the object's own last surface for the books/laptop. Before values include the incoming C1 placement; after values include C1 and C2. Heights H are unchanged.
+
+| Scene / object | Body H | Depth before -> after | Body crossing before -> after | Last crossing before -> after |
+| --- | ---: | ---: | ---: | ---: |
+| InDesign reading copy | 0.040000 | 0.270000 -> 0.043200 | 0.222692 -> 0.637731 | 0.222692 -> 0.637731 |
+| InDesign stack | 0.250000 | 0.270000 -> 0.270000 | 0.637731 -> 0.637731 | 0.637731 -> 0.637731 |
+| InDesign phone | 0.050000 | 0.067824 -> 0.054000 | 0.432924 -> 0.637731 | 0.637731 -> 0.637731 |
+| InDesign tablet | 0.040000 | 0.043632 -> 0.043200 | 0.620537 -> 0.637731 | 0.637731 -> 0.637731 |
+| Premiere tablet | 0.040000 | 0.062231847 -> 0.056000 | 0.382851 -> 0.419055 | 0.447032 -> 0.419055 |
+| Premiere phone 1 | 0.050000 | 0.082800 -> 0.070000 | 0.366636 -> 0.419055 | 0.447032 -> 0.419055 |
+| Premiere phone 2 | 0.050000 | 0.082800 -> 0.070000 | 0.366636 -> 0.419055 | 0.447032 -> 0.419055 |
+| After Effects tablet | 0.040000 | 0.062231847 -> 0.056000 | 0.382851 -> 0.419055 | 0.447032 -> 0.419055 |
+| After Effects phone 1 | 0.050000 | 0.082800 -> 0.070000 | 0.366636 -> 0.419055 | 0.447032 -> 0.419055 |
+| After Effects phone 2 | 0.050000 | 0.082800 -> 0.070000 | 0.366636 -> 0.419055 | 0.447032 -> 0.419055 |
+| Figma laptop, shut | 0.120000 | 0.140000 -> 0.140000 | 0.535181 -> 0.535181 | 0.535181 -> 0.535181 |
+| Figma tablet | 0.040000 | 0.056000 -> 0.046666667 | 0.419055 -> 0.535181 | 0.535181 -> 0.535181 |
+| Figma phone | 0.050000 | 0.073266667 -> 0.058333333 | 0.401752 -> 0.535181 | 0.535181 -> 0.535181 |
+
+The closed stack is **0.25** at this instant: the sixth copy has already been taken off for reading (the initial red format remains **0.30**). No book thickness changed. Sink spans remain InDesign **42.782352702-43.782352702**, Premiere **62.163643141-63.163643141**, After Effects **79.945732163-80.945732163**, Figma **98.490894748-99.490894748**. Actual global last crossings are respectively **43.420084183**, **62.582697692**, **80.364786714**, **99.026075611**. At the required 0.01 s sample grid, all object last-drawn samples are **+0.63 / +0.41 / +0.41 / +0.53 s**, and the first wholly absent samples are **+0.64 / +0.42 / +0.42 / +0.54 s**. Within each scene the spread is zero samples. Figma still closes completely before its sink; both video/motion plays, 1.0 s spans, curve and x/z are unchanged.
+
+**C3: finished-picture crop inventory.** Padding samples the existing finished picture, preserving its original UV registration; it introduces no new artwork. Padding is applied after computing the revealed rectangle, so the bars retain their original upward, eight-step reveal and all draws retain their action times. All padding clips to the picture's outer edges.
+
+| Every crop padded | Count | Added padding on each side |
+| --- | ---: | --- |
+| Upper map `AM_MARKERS` | 48 | **1 atlas texel = 2 x 2** units of the 2200 x 850 source |
+| Upper map `AM_LABEL_BARS` | 48 | **1 texel = 2 x 2** source units, after the upward reveal |
+| Upper map north sign, nominal [88,90,82,96] | 1 | **1 texel = 2 x 2** source units |
+| Upper map drawn badge, nominal [1273,457,72,146] | 1 | **2.5 texels = 5 x 5** source units: 3-unit outer half-stroke plus 2-unit raster fringe |
+| Lower map `CITY_BLOCKS`, first drawn block included | 21 | **1 texel = 2.499075786 x 2.5** units of the 1352 x 850 source |
+| Lower map `CITY_PINS`: 7 landmark badges, 3 transit badges, 5 stops, 5 route chips, building, north | 22 | Same **1 texel**; building additionally includes its centred stroke as below |
+| InDesign drawn cover blob | 1 | **1 texel = 2.5 x 2.5** units of its 1100 x 850 source |
+| InDesign drawn post blob | 1 | **1 texel = 2.5 x 2.5** units of its 1000 x 1000 source |
+| InDesign drawn mail blob and mail button | 2 | **1 texel = 2.5 x 2.5** units of their 800 x 1180 source |
+| Figma wide wireframe hero box | 1 | **1.5 texels = 6.75 x 6.75** units of the 1440 x 900 source, including the 0.5-texel outer half-stroke |
+| Figma wide wireframe's two heading regions and three detail regions | 5 | **1 texel = 4.5 x 4.5** source units |
+| Figma tablet wireframe's three detail regions | 3 | **1 texel = 1/164 horizontally and 1/236 vertically** in normalized picture coordinates |
+| Figma phone wireframe's three detail regions | 3 | **1 texel = 1/120 horizontally and 1/260 vertically** in normalized picture coordinates |
+
+The lower map's building-ring crop changes **[794,375,117,182] -> [791.5,372.5,122,187]** before the raster halo, explicitly including the 5-unit stroke's outer half. Its effective bounds are **x 789.000924214-915.999075786, y 370-562**. These are crop bounds only; no map geometry moves. Total: **157 padded regions**.
+
+Other analogous paths inspected: typed `kMap`/`kLoc`/`eblast` letter crops already use F3's grown alpha-support masks and finished pixels; those remain unchanged. InDesign's four spread-corner patches remain present, in the same fixed depth slots, on both sides of the finished-page swap and already enclose their logos/folios; no tight shape edge needed extra padding. Its opaque title/button prefixes already replay the finished background throughout typing; they are retained. Full-frame street/shot/prototype wipes are intentional content reveals, not a crop-to-finished replacement. The additional Figma wireframe crops above were found in this audit and padded under C3.
+
+**Checks and negative controls.** All additions live in `tools/round17-checks.mjs`, already invoked by `tools/checks.mjs`.
+
+- C1 independently checks lowest-layer underside contact at **1e-9** and top clearance of at least **0.0008**, through **4,795 phone/tablet samples** per gate before sinking. The existing fixed-island check takes **0.002 + 16 * 0.0008**. Controls restore the old placement and fail each contact/clearance gate separately; another restores the old island height and fails its fixed-height gate.
+- C2 extends the existing **404 sink samples** (0.01 s plus end samples) to four/three/three/three physical objects, checks unchanged x/z, own-body depths, 1 s spans, floor and carried planes, no carried lifetime beyond the body, all pieces clipped/cullable at the end, and last-drawn spread at most **0.01 s**. A WebGL call recorder executes the real renderer: carry planes reach colour/outline/shadow, and all three stop drawing once the body is below zero. Controls omit carried clips, regroup the reading copy with the stack and choose tallest-piece heights; all fail.
+- C3 records the actual Canvas paint commands in `kMap` and `mapStreet`, removes identical commands, and conservatively enumerates every raster cell intersecting the remaining rectangle/path control hulls and centred strokes. Typed lettering uses F3's recorded crop bounds. **116 changed paint operations / 73,377 potentially changed texels** are covered by the **111 emitted crops** immediately before badge release, including letters. It additionally pins halo size and upward reveal at **1/8, 1/2 and full**, across upper/lower-map crop inventories, and the **12 actual Figma wireframe fragments**. Restoring tight crops fails `C3 changed texel coverage`.
+- All **21 earlier controls** remain; the **7 added controls** make **28**. Each mutant is in memory and must fail at its named gate. No fixture edits or threshold relaxation.
+
+**Every earlier check changed, old -> new.** Only `round17-checks.mjs` needed changes; all other prior check files remain byte-for-byte unchanged.
+
+| Earlier check / hook | Old -> new C1-C3 number or expectation |
+| --- | --- |
+| R12 no-gap | Lowest picture **top = body top** -> lowest picture **underside = body top**, same **1e-9** tolerance; first tops **0.05/0.04 -> 0.052/0.042** |
+| R12 fixed island | Offset **16 * 0.0008 = 0.0128 -> 0.002 + 16 * 0.0008 = 0.0148**; top **0.0628 -> 0.0648** |
+| R2 badge draw origin/full extent | **[1273,457,72,146] -> [1268,452,82,156]** in 2200 x 850 source units; ratio **p -> (72p+10)/82**, **p -> (146p+10)/156** |
+| R2 lower first block origin/full extent | **[660,16,62,68] -> [657.500924214,13.5,66.998151571,73]** in 1352 x 850 units; ratios **p -> (62p+4.998151571)/66.998151571**, **p -> (68p+5)/73** |
+| R8/R11 sink grouping | **3/3/3/3 formats -> 4/3/3/3 objects**; height from tallest piece -> body's top; depths/crossings are all listed in C2's table above |
+| R8/R11 disappearance samples | InDesign **[0.64,0.64,0.64] -> [0.64,0.64,0.64,0.64]**; Premiere and AE **[0.45,0.45,0.45] -> [0.42,0.42,0.42]**; Figma **[0.54,0.54,0.54] -> same**, now applied to body and carried visibility |
+| F2 floor-painter probe | Default base **0.09 -> explicit 0.09**, because C1 removes the production default; screen probe retains its original **0.08** default |
+| Retained badge/shared-floor controls | Badge hook adds the **1.5-texel** half-stroke argument; chrome source hook **base + 8 steps -> base + 0.002 + 8 steps**; injected faults and failure gates unchanged |
+
+**Preservation and limits.** No departure from C1-C3's requested timing, grouping, depth or crop rules. Whole-object culling supplements the required carry clip to cover expanded outlines in every renderer pass. Actual `SCRIPTS` and `SHOW` deep-compare equal to the incoming module; loop remains **99.490894747815 s**, with scene starts **0 / 8.046310592 / 21.194036350 / 43.782352702 / 63.163643141 / 80.945732163**. All body sizes, footprints, model tones, art drawings and camera fit remain unchanged. Crops sample those same art drawings. H10 remains **12.403419841 px**; playback faces retain zero motion across restarts.
+
+No screenshots, browser rendering, visual verdict or reviewer agents. The C3 support proof is conservative Node geometry plus recorded text metrics, not browser-font rasterisation or a claim that the external pixel threshold passed. The specified dpr 1/2 star/rim/release/sink comparisons remain for external review. H5/H6 and every other "Not in this run" item remain untouched. External skills and RTK were not read because this run prohibits outside-repository reads.
+
+
+**Final verification.** `node design/journey-hero/take-2/tools/checks.mjs` exited 0 and printed **all clean**: **6,582 frames / 550,080 pieces / max 247**, five atlas pages, loop **99.491 s**. It includes C1-C3 and all retained gates: G **115 boundaries / 3,893 registrations**, worst **0.08692 px**; F2 **947 samples / 7,921 stationary faces**, zero movement; F3 **54 masks**, unchanged. `node design/journey-hero/take-2/tools/round17-checks.mjs --controls` exited 0 with **all 28 controls failing at their intended gates**. Final logs: `.scratch/review-out/r17/critique1-checks-final.txt` and `critique1-controls-final.txt`. The read-only clock/model audit and corrected physical-object measurements are reproducible with `critique1-measure.mjs`; its output is `critique1-metrics.txt`. Read-only git status/diff checks show only the six authorized tracked files changed; all own notes remain inside r17. No source change followed the final successful suite.

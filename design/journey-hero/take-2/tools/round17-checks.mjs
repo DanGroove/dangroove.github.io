@@ -9,7 +9,8 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { HOME, dot, quatRotate, EASE, makeCamera } from '../../../../public/journey/hero/engine.mjs';
 import { corners } from '../kit.mjs';
-import { ART, ART_TEXT, HISTOGRAM, makeAtlas, letterMask, maskLetterPictures } from '../art.mjs';
+import { createRenderer } from '../sq.mjs';
+import { ART, ART_TEXT, HISTOGRAM, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS, makeAtlas, letterMask, maskLetterPictures } from '../art.mjs';
 import { checkMapFrame, checkDragsFlat, checkRendererClips, onMapFrame } from './round15-checks.mjs';
 
 const url = new URL('../stage.mjs', import.meta.url);
@@ -19,12 +20,16 @@ const painterProbe = `
 export function round17PainterProbe(count, overlap, floor) {
   stacks = { screenCount: 0, floorCount: 0 };
   const P = [], painter = floor ? floorPainter : screenPainter;
-  const first = painter(P, [0, 0, 1, 1]);
+  const first = floor ? painter(P, [0, 0, 1, 1], 0.09) : painter(P, [0, 0, 1, 1]);
   for (let i = 0; i < count; i++) first('paper', [0, 0, 1, 1]);
-  const second = painter(P, [overlap ? 0 : 2, 0, 1, 1]);
+  const second = floor ? painter(P, [overlap ? 0 : 2, 0, 1, 1], 0.09) : painter(P, [overlap ? 0 : 2, 0, 1, 1]);
   second('paper', [0, 0, 1, 1]);
   if (floor) for (const pc of P) pc.where = 'floor';
   separateFaces(P); return P;
+}
+export function round17CropProbe(art, region, amount, upward) {
+  const P = [], size = art === 'kMap' ? [2200, 850] : [1352, 850];
+  mapRegion(P, [0, 0, 1, 1], art, region, ...size, amount, upward); return P;
 }
 `;
 const load = async edit => {
@@ -123,7 +128,7 @@ export async function checkDrawsAndLetters(M) {
   M ??= await load();
   prepareRound17Art(); const S = scale(M); let samples = 0;
   for (const [id, art] of [['badge', 'kMap'], ['block', 'locBlocks']]) {
-    const origin = id === 'badge' ? [1273 / 2200, 457 / 850] : [660 / 1352, 16 / 850], isDraw = pc => pc.art === art && pc.window && origin.every((v, i) => Math.abs(v - pc.window[i]) < 1e-9);
+    const origin = id === 'badge' ? [1268 / 2200, 452 / 850] : [(660 - 1352 / 541) / 1352, 13.5 / 850], isDraw = pc => pc.art === art && pc.window && origin.every((v, i) => Math.abs(v - pc.window[i]) < 1e-9);
     const a = action(M, 'ai', id), final = at(M, 'ai', a.end + 0.001).find(isDraw);
     assert.ok(final, `R2 draw: missing ${id}'s finished region`);
     for (const t of grid(a.start + 0.01, a.end)) {
@@ -132,7 +137,8 @@ export async function checkDrawsAndLetters(M) {
       const opaque = P.filter(q => q.document && !q.art && !q.overlay && q.s[0] > 0.002 && q.s[1] > 0.002 && top(q) > top(pc) - 0.001);
       assert.ok(!opaque.some(q => distance(front(q), front(pc), S) < 10), 'R2 draw: untextured opaque piece over map');
       assert.ok(distance(fullCorners(pc), fullCorners(final), S) <= 0.1, `R2 draw: ${id} not registered`);
-      near(pc.s[0] / final.s[0], p, 'R2 growing width'); near(pc.s[1] / final.s[1], p, 'R2 growing height'); samples++;
+      const [w, h, px, py] = id === 'badge' ? [72, 146, 5, 5] : [62, 68, 1352 / 541, 2.5];
+      near(pc.s[0] / final.s[0], (w * p + 2 * px) / (w + 2 * px), 'R2 growing width'); near(pc.s[1] / final.s[1], (h * p + 2 * py) / (h + 2 * py), 'R2 growing height'); samples++;
     }
   }
   for (const [key, ids] of [['ai', ['labels', 'title', 'cityLabels']], ['id', ['mailTitle']]]) for (const id of ids) {
@@ -431,13 +437,10 @@ export async function checkLidAndSinks(M) {
         assert.ok(P.filter(pc => pc.device > 0).every(pc => Math.abs(pc.clock - 1) < 1e-9), 'R11 other devices hold final frame');
       }
     }
-    const first = floor(off[0]), group = pc => {
-      if (key !== 'id' || pc.device !== undefined) return pc.device;
-      if (pc.art === 'post') return 1; if (pc.art === 'mail') return 2;
-      if (pc.art || pc.tone === 'paper') return 0;
-      return Math.abs(pc.p[0] - M.BLOCK_ROW.phone[0] - M.BLOCK_ROW.phone[2] / 2) < 1e-6 ? 1 : 2;
-    };
-    const heights = [0, 1, 2].map(j => bounds(first.filter(pc => group(pc) === j))[4]), gone = [null, null, null];
+    const first = floor(off[0]), group = pc => key !== 'id' ? pc.device : pc.device !== undefined ? pc.device + 1 : pc.p[2] > M.BLOCK_ROW.stack[1] + M.BLOCK_ROW.stack[3] ? 0 : 1;
+    const count = key === 'id' ? 4 : 3, groups = Array.from({length: count}, (_, j) => first.filter(pc => group(pc) === j));
+    const bodies = groups.map(pieces => { const own = pieces.filter(pc => pc.deviceBody || pc.lid); return own.length ? own : pieces; });
+    const heights = bodies.map(pieces => bounds(pieces)[4]), gone = Array(count).fill(null), last = Array(count).fill(null);
     for (const t of [...grid(off[0], off[1]), off[1] - 1e-8]) {
       const P = floor(t), progress = EASE.wipe((t - off[0]) / (off[1] - off[0]));
       assert.equal(P.length, first.length, 'R11 sink: piece list changes');
@@ -445,13 +448,28 @@ export async function checkLidAndSinks(M) {
         const pc = P[i], j = group(first[i]); near(pc.p[0], first[i].p[0], 'R11 sink x'); near(pc.p[2], first[i].p[2], 'R11 sink z');
         near(pc.p[1], first[i].p[1] - heights[j] * (1 + 0.02 / Math.max(...heights)) * progress, 'R11 own height sink ' + key + '/' + j + '/' + i + ' at ' + (t-off[0]), 1e-6);
         assert.deepEqual(pc.clip, [0, 1, 0, 0], 'R11 sink floor clip');
+        const bodyTop = bounds(P.filter(q => group(q) === j && bodies[j].some(b => first.indexOf(b) === P.indexOf(q))))[4];
+        near(pc.sinkTop, bodyTop, 'C2 body cull top', 1e-9);
+        if (!bodies[j].includes(first[i])) {
+          const offset = Math.max(0, bounds([first[i]])[4] - heights[j]);
+          assert.deepEqual(pc.carryClip?.slice(0,3), [0,1,0], 'C2 carried clip: missing plane');
+          near(pc.carryClip[3], -offset, 'C2 carried clip: rest height', 1e-9);
+          assert.ok(bounds([pc])[4] + pc.carryClip[3] <= bodyTop + 1e-9, 'C2 carried clip: sliver after body');
+        }
       }
-      for (let j = 0; j < 3; j++) if (bounds(P.filter(pc => group(pc) === j))[4] <= 0 && gone[j] === null) gone[j] = t;
+      for (let j = 0; j < count; j++) {
+        const visible = P.filter(pc => group(pc) === j && bounds([pc])[4] + (pc.carryClip?.[3] || 0) >= -1e-12 && pc.sinkTop >= -1e-12);
+        const bodyVisible = bodies[j].some(pc => bounds([P[first.indexOf(pc)]])[4] >= -1e-12);
+        assert.ok(bodyVisible || !visible.length, 'C2 carried lifetime: drawn after body');
+        if (visible.length) last[j] = t; else if (gone[j] === null) gone[j] = t;
+        if (t >= off[1] - 1e-7) assert.ok(P.filter(pc => group(pc) === j).every(pc => bounds([pc])[4] + (pc.carryClip?.[3] || 0) <= 0), 'C2 end: piece above its floor clip');
+      }
       if (key === 'ae') assert.ok(P.every(pc => Math.abs(pc.clock - 1) < 1e-9), 'R9 AE final frame held through sink'); samples++;
     }
     assert.ok(gone.every(t => t !== null), 'R11 sink: something remains above floor');
     endTimes[key] = gone.map(t => +(t - off[0]).toFixed(3));
     assert.ok(Math.max(...gone) - Math.min(...gone) <= 0.01 + 1e-8, `R11 sink finish: exports gone at ${endTimes[key]}`);
+    assert.ok(last.every(t => t !== null) && Math.max(...last) - Math.min(...last) <= 0.01 + 1e-8, 'C2 last drawn samples: objects disagree');
   }
   return { samples, endTimes };
 }
@@ -508,7 +526,7 @@ export async function checkDeviceModels(M) {
           const island=own.filter(pc=>pc.island!==undefined), ib=bounds(island), iw=(m.w-2*rim)*88/300, id=(m.d-2*rim)*24/650;
           assert.equal(island.length,3,'R12 one island: capsule parts');
           near(ib[2]-ib[0],iw,'R12 one island: width'); near(ib[3]-ib[1],id,'R12 one island: depth'); near((ib[0]+ib[2])/2,(b[0]+b[2])/2,'R12 one island: centre');
-          near(ib[1]-screen[1],(m.d-2*rim)*12/650,'R12 one island: top inset'); near(ib[4]-b[4],16*0.0008,'R12 one island: fixed height',1e-8);
+          near(ib[1]-screen[1],(m.d-2*rim)*12/650,'R12 one island: top inset'); near(ib[4]-b[4],0.002+16*0.0008,'R12 one island: fixed height',1e-8);
           assert.ok(island.every(pc=>pc.tones.every(t=>t==='#121111')),'R12 one island: glass tone');
           assert.ok(arts.every(pc=>bounds([pc])[4]<ib[5]),`R12 one island: below picture layer ${key}/${t} ${JSON.stringify(arts.map(pc=>[pc.art,bounds([pc])[4]]))} island ${ib[5]}`);
         } else {
@@ -517,8 +535,8 @@ export async function checkDeviceModels(M) {
           near(c.p[0],landscape?(b[0]+b[2])/2:b[2]-rim/2,'R12 identical models: camera x'); near(c.p[2],landscape?b[1]+rim/2:(b[1]+b[3])/2,'R12 identical models: camera z');
         }
         if (t>=off[0]) continue;
-        const first=Math.min(...arts.filter(pc=>!pc.cut).map(pc=>bounds([pc])[4]));
-        near(first,b[4],'R12 no gap: first picture on own glass',1e-9);
+        const first=Math.min(...arts.filter(pc=>!pc.cut).map(pc=>bounds([pc])[5]));
+        near(first,b[4],'R12 no gap: first picture underside on own glass',1e-9);
         let uncovered=[screen], aspectErrors=[];
         for (const pc of arts) {
           const a=ART[pc.art], uv=pc.window||[0,0,1,1], r=bounds([pc]);
@@ -558,6 +576,124 @@ export async function checkDeviceModels(M) {
   near(M.LOOP,99.49089474781469,'R12 unchanged loop');
   return {samples,pictures,worstAspect};
 }
+
+// Independent contact and clearance gates: the old coplanar top must fail both, not merely an island assertion.
+export async function checkDeviceGlass(M, clearanceOnly = false) {
+  M ??= await load(); let samples = 0, highestPhoneLayer = 0;
+  for (const key of ['id','pr','ae','fig']) {
+    const {off} = M.playbackSpans(M.SCRIPTS[key]);
+    for (const t of grid(action(M,key,'export').start,off[0])) {
+      const P = at(M,key,t).filter(pc => pc.where === 'floor');
+      for (const body of P.filter(pc => pc.deviceBody && pc.model)) {
+        const arts = P.filter(pc => pc.device === body.device && pc.art), glass = bounds([body])[4];
+        const lowest = arts.filter(pc => !pc.cut).sort((a,b) => bounds([a])[4] - bounds([b])[4])[0];
+        assert.ok(lowest,'C1 glass: missing first layer');
+        if (clearanceOnly) assert.ok(bounds([lowest])[4] >= glass + 0.0008 - 1e-9, 'C1 glass clearance: coplanar picture top');
+        else near(bounds([lowest])[5], glass, 'C1 glass underside: gap or penetration', 1e-9);
+        if (body.model === 'phone') for (const pc of arts) highestPhoneLayer = Math.max(highestPhoneLayer,bounds([pc])[4]);
+        samples++;
+      }
+    }
+  }
+  return {samples,highestPhoneLayer};
+}
+
+// Conservative paint-support proof, not a font rasteriser. Removing common paint commands leaves a superset of all changed
+// texels: every raster cell intersecting rectangle/path control hulls or centred strokes. Glyphs use F3's recorded crops.
+function mapPaintSupport(art) {
+  let matrix = [1,0,0,1,0,0], points = [], textIndex = 0; const saved = [], paints = [];
+  const point = (x,y) => [matrix[0]*x+matrix[2]*y+matrix[4],matrix[1]*x+matrix[3]*y+matrix[5]];
+  const rect = (x,y,w,h) => [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].map(p => point(...p));
+  const emit = (kind, pts, extra = '') => {
+    const radius = kind === 'stroke' ? ctx.lineWidth * Math.max(Math.hypot(matrix[0],matrix[1]),Math.hypot(matrix[2],matrix[3])) / 2 : 0;
+    const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+    const r=kind==='text' ? ART_TEXT[art][textIndex++].crop : [Math.min(...xs)-radius,Math.min(...ys)-radius,Math.max(...xs)+radius,Math.max(...ys)+radius];
+    paints.push({key:JSON.stringify([kind,pts,kind==='stroke'?ctx.strokeStyle:ctx.fillStyle,radius,extra]),r});
+  };
+  const ctx = {
+    font:'400 10px sans-serif',letterSpacing:'0px',textAlign:'left',lineWidth:1,
+    save() {saved.push({matrix:matrix.slice(),font:this.font,letterSpacing:this.letterSpacing,textAlign:this.textAlign,fillStyle:this.fillStyle,strokeStyle:this.strokeStyle,lineWidth:this.lineWidth});},
+    restore() {const state=saved.pop();matrix=state.matrix;Object.assign(this,state);},
+    translate(x,y) {matrix[4]+=matrix[0]*x+matrix[2]*y;matrix[5]+=matrix[1]*x+matrix[3]*y;},
+    scale(x,y) {matrix[0]*=x;matrix[1]*=x;matrix[2]*=y;matrix[3]*=y;},
+    rotate(a) {const [x,y,z,w]=matrix,c=Math.cos(a),s=Math.sin(a);matrix[0]=x*c+z*s;matrix[1]=y*c+w*s;matrix[2]=-x*s+z*c;matrix[3]=-y*s+w*c;},
+    getTransform() {return Object.fromEntries(['a','b','c','d','e','f'].map((k,i)=>[k,matrix[i]]));},
+    measureText(s) {const px=+(this.font.match(/([\d.]+)px/)?.[1]||10);return {width:s.length*px*0.55,actualBoundingBoxAscent:px*0.8,actualBoundingBoxDescent:px*0.2};},
+    beginPath() {points=[];},moveTo(x,y) {points.push(point(x,y));},lineTo(x,y) {points.push(point(x,y));},
+    bezierCurveTo(...p) {for(let i=0;i<p.length;i+=2)points.push(point(p[i],p[i+1]));},
+    quadraticCurveTo(...p) {this.bezierCurveTo(...p);},
+    rect(x,y,w,h) {points.push(...rect(x,y,w,h));},roundRect(x,y,w,h) {this.rect(x,y,w,h);},
+    arc(x,y,r) {points.push(...rect(x-r,y-r,2*r,2*r));},closePath() {},clip() {},
+    fill() {emit('fill',points);},stroke() {emit('stroke',points);},
+    fillRect(x,y,w,h) {emit('fill',rect(x,y,w,h));},
+    fillText(s,x,y) {const m=this.measureText(s),l=this.textAlign==='center'?x-m.width/2:x;emit('text',rect(l,y-m.actualBoundingBoxAscent,m.width,m.actualBoundingBoxAscent+m.actualBoundingBoxDescent),[s,this.font]);},
+  };
+  ART[art].draw(ctx,ART[art].w,ART[art].h);return paints;
+}
+
+export async function checkCropFringes(M) {
+  M ??= await load();prepareRound17Art();
+  const base = new Map();for(const p of mapPaintSupport('mapStreet'))base.set(p.key,(base.get(p.key)||0)+1);
+  const changes = mapPaintSupport('kMap').filter(p=>{const n=base.get(p.key)||0;if(n){base.set(p.key,n-1);return false;}return true;});
+  const a=ART.kMap, end=action(M,'ai','badge').end, P=at(M,'ai',end-1e-9);
+  const crops=P.filter(pc=>pc.art==='kMap'&&pc.window||pc.labelSource==='kMap').map(pc=>pc.labelRegion||pc.window);
+  let texels=0; const seen=new Set();
+  for(const {r} of changes) for(let y=Math.max(0,Math.floor(r[1]));y<Math.min(a.h,Math.ceil(r[3]));y++) for(let x=Math.max(0,Math.floor(r[0]));x<Math.min(a.w,Math.ceil(r[2]));x++) {
+    const i=y*a.w+x;if(seen.has(i))continue;seen.add(i);
+    const u=x/(a.w-1),v=y/(a.h-1);
+    assert.ok(crops.some(([l,t,r,b])=>u>=l-1e-9&&u<=r+1e-9&&v>=t-1e-9&&v<=b+1e-9),`C3 changed texel coverage: missing ${x},${y}`);texels++;
+  }
+  assert.ok(changes.length>100&&texels>10000,'C3 changed texel coverage: empty proof');
+  const probe = M.round17CropProbe ? M : await load();
+  // Independently pin the one-texel halo, including its upward reveal; no expanded constant can validate itself.
+  for (const [art, regions, w, h] of [['kMap',[...AM_MARKERS,...AM_LABEL_BARS,[88,90,82,96]],2200,850],['locBlocks',CITY_BLOCKS,1352,850],['locPins',CITY_PINS,1352,850]]) {
+    for (const [x,y,rw,rh] of regions) for (const amount of [0.125,0.5,1]) {
+      const pc=probe.round17CropProbe(art,[x,y,rw,rh],amount,true)[0], px=1/ART[art].w,py=1/ART[art].h;
+      const expected=[Math.max(0,x/w-px),Math.max(0,(y+rh*(1-amount))/h-py),Math.min(1,(x+rw)/w+px),Math.min(1,(y+rh)/h+py)];
+      pc.window.forEach((v,i)=>near(v,expected[i],'C3 crop halo and upward reveal',1e-9));
+    }
+  }
+  // Figma's wireframe fragments also sit over a base later filled by their complete picture.
+  const wire = at(M,'fig',action(M,'fig','details').end-0.001);
+  const wireRegions = [
+    ['wireWide',[665/1440,119/900,678/1440,682/900],1.5],
+    ...[[64/1440,252/900,300/1440,76/900],[64/1440,350/900,420/1440,76/900],[0,0,1,0.13],[0,0.49,0.46,0.13],[0,0.61,0.46,0.39]].map(r=>['wireWide',r,1]),
+    ...['wireTablet','wireTall'].flatMap(art=>[[0,0,1,0.18],[0,0.18,1,0.40],[0,0.58,1,0.42]].map(r=>[art,r,1])),
+  ];
+  for (const [art,[u,v,w,h],pad] of wireRegions) {
+    const a=ART[art],r=[Math.max(0,u-pad/a.w),Math.max(0,v-pad/a.h),Math.min(1,u+w+pad/a.w),Math.min(1,v+h+pad/a.h)];
+    assert.ok(wire.some(pc=>pc.art===art&&pc.window&&pc.window.every((n,i)=>Math.abs(n-r[i])<1e-9)),'C3 wire crop halo: '+art);
+  }
+  return {changedPaints:changes.length,texels,crops:crops.length,wireCrops:wireRegions.length};
+}
+
+function checkCarryClipRenderer() {
+  const sq=fs.readFileSync(new URL('../sq.mjs',import.meta.url),'utf8');
+  assert.match(sq,/dot\(uCarryClip, vec4\(w, 1.0\)\) < 0.0/,'C2 renderer: carried clip missing');
+  assert.match(sq,/gl\.uniform4fv\(u\.uCarryClip, pc\.carryClip \|\| noClip\)/,'C2 renderer: carried plane not uploaded');
+  assert.match(sq,/pc\.hide \|\| pc\.sinkTop < 0 \|\|/,'C2 renderer: sunk body outline not culled');
+  checkRendererClips();
+  let next=0,program,plane;const calls=[],names=['uClip','uCarryClip'];
+  const gl=new Proxy({}, {get:(_,key)=>{
+    if(/^[A-Z_0-9]+$/.test(key))return key;
+    if(key==='createProgram')return ()=>++next;
+    if(key==='getProgramParameter')return (_,p)=>p==='ACTIVE_UNIFORMS'?names.length:true;
+    if(key==='getShaderParameter')return ()=>true;
+    if(key==='getActiveUniform')return (_,i)=>({name:names[i]});
+    if(key==='getUniformLocation')return (_,name)=>({name});
+    if(key==='useProgram')return p=>{program=p;};
+    if(key==='uniform4fv')return (u,p)=>{if(u?.name==='uCarryClip')plane=[...p];};
+    if(key==='drawElements')return ()=>calls.push({program,plane});
+    return ()=>({});
+  }});
+  const renderer=createRenderer({getContext:()=>gl}),pc={tone:'ink',p:[0,0.01,0],q:[0,0,0,1],s:[0.1,0.1,0.001],e:[0.03,0.03],sink:true,sinkTop:0.001,clip:[0,1,0,0],carryClip:[0,1,0,-0.0148]};
+  const view={W:1474,H:996,S:100,cx:737,cy:498,cam:HOME};
+  renderer.draw([pc],view);
+  assert.ok([1,2,3].every(p=>calls.some(c=>c.program===p)),'C2 renderer: colour/outline/shadow not exercised');
+  assert.ok(calls.every(c=>c.plane?.join()===pc.carryClip.join()),'C2 renderer: wrong carried plane in a pass');
+  calls.length=0;renderer.draw([{...pc,sinkTop:-0.001}],view);
+  assert.equal(calls.length,0,'C2 renderer: drawn after body under floor');
+}
 export async function checkPinnedCamera(M, envelope=sceneEnvelope) {
   M ??= await load();
   assert.deepEqual(envelope(M.SCENES,corners,dot,HOME),DEFAULT_FIT,'R12 pinned fit: computed instead');
@@ -586,6 +722,8 @@ export async function checkRound17(M) {
   const levels = await checkLevels(M), letters = await checkDrawsAndLetters(M), swaps = await checkSwaps(M), carries = await checkCarries(M), flight = await checkFlight(M), sinks = await checkLidAndSinks(M);
   const devices = await checkDeviceModels(M), camera = await checkPinnedCamera(M);
   const heights = await checkDocumentHeights(M), stable = await checkPlaybackStability(M), masks = checkLetterMasks();
+  const contact = await checkDeviceGlass(M), clearance = await checkDeviceGlass(M,true), fringes = await checkCropFringes(M);checkCarryClipRenderer();
+  console.log(`Critique round 1: C1 ${JSON.stringify({contact,clearance})}; C2 own-body depths, carry clips and renderer cull; C3 ${JSON.stringify(fringes)} conservative changed-texel support.`);
   return `R12: ${JSON.stringify({devices,camera})}\nRound 17: G ${swaps.boundaries} action ends / ${swaps.comparisons} registrations, worst ${swaps.worst.toFixed(5)} px; R1 ${levels} levels samples; R2/R3 ${letters} draw/type samples; R4 ${carries.carries} carries / ${carries.samples} samples, flat worst ${carries.flat.worst.toFixed(5)} px; R6/R7 ${flight} flight samples; R8-R11 ${sinks.samples} sink samples (${JSON.stringify(sinks.endTimes)}).\nFollow-up: F1 ${heights.samples} height samples / ${heights.pages} pages / ${heights.layers} layers; F2 ${stable.samples} playback samples / ${stable.faces} fixed faces, worst ${stable.worst.toFixed(5)} px; F3 ${masks.pictures} masks / ${masks.texels} fixture texels / ${masks.covered} covered, exact finished RGB.`;
 }
 
@@ -654,7 +792,7 @@ export async function checkRound17Controls() {
     assert.ok(caught, `${name}: MISSED`); out.push(`${name}: failed at ${gate}`);
   };
   await control('done() photo choice', s => s.replace("pc.artMix = handed(s, white ? 'white' : 'black', t);", "pc.artMix = done(s, white ? 'white' : 'black', t) ? 1 : 0;"), 'R1 photo mix', checkLevels);
-  await control('badge drawnFrame', s => s.replace("drawnRegion(D, AI.upper, 'kMap', [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850], handed(s, 'badge', t))", "drawnFrame(D, inRect(AI.upper, [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850]), handed(s, 'badge', t), 'grey')"), 'R2 draw:', checkDrawsAndLetters);
+  await control('badge drawnFrame', s => s.replace("drawnRegion(D, AI.upper, 'kMap', [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850], handed(s, 'badge', t), 1.5)", "drawnFrame(D, inRect(AI.upper, [1273 / 2200, 457 / 850, 72 / 2200, 146 / 850]), handed(s, 'badge', t), 'grey')"), 'R2 draw:', checkDrawsAndLetters);
   await control('label lift 0.09', s => s.replace("{ lift: 0.084, t: 0.004, art: part.picture, cut: true }", "{ lift: 0.09, t: 0.004, art: part.picture, cut: true }").replace('work.labelSource = art;', 'work.labelSource = art; work.unregistered = true;').replace("if (pc.art && !pc.overlay && pc.art !== 'kLocClose') registerPicture", "if (pc.art && !pc.overlay && pc.art !== 'kLocClose' && !pc.unregistered) registerPicture"), 'R3 registration:', checkDrawsAndLetters);
   await control('travel action:key', s => {
     const a = s.indexOf('function travel('), b = s.indexOf('\n}', a) + 2, body = s.slice(a, b);
@@ -670,7 +808,7 @@ export async function checkRound17Controls() {
     const body = s.slice(a, b).replaceAll("lift: 0.06, t: 0.02, art: 'kAm", "lift: 0.08, t: 0.004, art: 'kAm").replaceAll('lift: 0.06, t: 0.02', 'lift: 0.084, t: 0.004');
     return s.slice(0, a) + body + s.slice(b);
   }, 'F1 page face', checkDocumentHeights);
-  await control('F2 shared floor stack', s => s.replace("const face = height = art?.startsWith('chrome') ? base + 8 * LAYER_STEP : height + LAYER_STEP;", 'const face = height = stacks.floor = Math.max(0.09, (stacks.floor ?? -Infinity) + LAYER_STEP);'), 'F2 stationary faces:', checkPlaybackStability);
+  await control('F2 shared floor stack', s => s.replace("const face = height = art?.startsWith('chrome') ? base + 0.002 + 8 * LAYER_STEP : height + LAYER_STEP;", 'const face = height = stacks.floor = Math.max(0.09, (stacks.floor ?? -Infinity) + LAYER_STEP);'), 'F2 stationary faces:', checkPlaybackStability);
   await control('F2 shared screen stack', s => s.replace('const face = height = Math.max(lift + thickness, height + LAYER_STEP);', 'const face = height = stacks.screen = Math.max(lift + thickness, (stacks.screen ?? -Infinity) + LAYER_STEP);'), 'F2 independent painter bases', checkPlaybackStability);
   await control('F2 one After Effects play', s => s.replace("ae: ballLength('ae') + 3.2 - 0.7", "ae: ballLength('ae') + 1.6 - 0.7").replace("key === 'fig' ? 3 + BALL.lid : 3.2", "key === 'fig' ? 3 + BALL.lid : key === 'ae' ? 1.6 : 3.2").replace('cycles = 2;', "cycles = key === 'ae' ? 1 : 2;"), 'F2 two plays:', checkPlaybackStability);
   const artURL = new URL('../art.mjs', import.meta.url), oldArt = fs.readFileSync(artURL, 'utf8');
@@ -698,6 +836,14 @@ export async function checkRound17Controls() {
     const points=scenes.flatMap(f=>f().flatMap(corners)),xs=points.map(p=>dot(cam.r,p)),ys=points.map(p=>dot(cam.u,p));return {w:Math.max(...xs)-Math.min(...xs)+0.5,h:Math.max(...ys)-Math.min(...ys)+0.5,x:(Math.max(...xs)+Math.min(...xs))/2,y:(Math.max(...ys)+Math.min(...ys))/2};
   }); } catch(error) {assert.ok(error.message.includes('R12 pinned fit:'),error.message);pinFailed=true;}
   assert.ok(pinFailed,'R12 computed fit: MISSED');out.push('R12 computed fit: failed at R12 pinned fit:');
+  const coplanar = s => s.replace("0.002, art, m.t)]", "0.002, art, m.t - 0.002)]").replace('let height = base + 0.002 - LAYER_STEP;', 'let height = base - LAYER_STEP;').replace('base + 0.002 + 8 * LAYER_STEP', 'base + 8 * LAYER_STEP');
+  await control('C1 old placement, underside',coplanar,'C1 glass underside:',checkDeviceGlass);
+  await control('C1 old placement, top',coplanar,'C1 glass clearance:',M=>checkDeviceGlass(M,true));
+  await control('C1 old island height',s=>s.replace('face: 0.052 + 16 * 0.0008','face: 0.05 + 16 * 0.0008'),'R12 one island: fixed height',checkDeviceModels);
+  await control('C2 carried layers without clip',s=>s.replace('pc.carryClip = [0, 1, 0, -Math.max(0, top(pc) - heights[j])]', 'pc.carryClip = undefined'),'C2 carried clip:',checkLidAndSinks);
+  await control('C2 reading copy grouped with stack',s=>s.replace('formats[0].objects = [floor.slice(0, 10), floor.slice(18)];','formats[0].objects = [formats[0].pieces];'),'C2 body cull top',checkLidAndSinks);
+  await control('C2 heights from tallest piece',s=>s.replace('(bodies[j].length ? bodies[j] : pieces).filter', 'pieces.filter'),'C2 body cull top',checkLidAndSinks);
+  await control('C3 old tight regions',s=>s.replace('const a = ART[art], x = (1 + stroke) / a.w, y = (1 + stroke) / a.h;', 'const a = ART[art], x = 0, y = 0;'),'C3 changed texel coverage:',checkCropFringes);
   return out.join('\n');
 }
 
