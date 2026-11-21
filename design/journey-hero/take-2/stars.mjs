@@ -16,11 +16,16 @@ export const STARS = {
   hold: { base: 80, grow: 260, full: 2.5, orbit: [6, 36], turn: Math.PI / 2, pull: 5, follow: 12, blast: [300, 1700], reach: 2, weak: 0.5, max: 0.45 },
   click: { time: 0.25, move: 6 },
   rest: { offset: 0.05, speed: 0.5 },
+  // Round 10: the return weight (R1) and the mark weight (R2) change at most this much per second (0.09 a frame at 60); a
+  // captured star's front copy fades in over fadeIn seconds (R2).
+  fade: 5.4, fadeIn: 0.4,
   // Round 9 (L1): from 1.4 s held the captured stars form the DG mark, read from the page's own SVG. height: of the hero's
   // height; tau: the formation's time constant (see BUILD.md, CORRECTIONS-9); arrive: px; size: px across once arrived.
   mark: { at: 1.4, height: 0.2, margin: 16, count: 600, tau: 0.12, arrive: 1, size: 2.6, ring: [8, 22], cells: 24000, edge: 2 },
 };
 
+// R2: the fade-in's step, landing on exactly 1 (sums of dt / 0.4 in float32 can stop just short of it).
+const fadeUp = (a, dt) => { const v = a + dt / STARS.fadeIn; return v >= 1 - 1e-5 ? 1 : v; };
 const clamp01 = x => Math.min(1, Math.max(0, x));
 const smooth = x => { x = clamp01(x); return x * x * (3 - 2 * x); };
 // A fixed hash of a star's index and a channel, 0 to 1.
@@ -75,6 +80,14 @@ export function createField(W, H, mark = null) {
   // Round 9: once a star's offset starts to shrink after a kick, it may never grow again nor swing past the side of home it
   // fell from (an impulse with a part toward home could otherwise carry it past home and out again: an overshoot).
   const last = new Float32Array(n).fill(-1), peak = new Float32Array(n * 2), falling = new Uint8Array(n);
+  // Round 10 (R1): each star drawn in front has a return weight, the front copy's opacity: 1 while captured and from the
+  // release until its offset starts to shrink, then its offset over its largest offset since the release; it never grows.
+  // far holds that largest offset (-1 while not returning).
+  const weights = new Float32Array(n), far = new Float32Array(n).fill(-1);
+  // R2: fade is the front copy's fade-in since its capture (0 to 1 over 0.4 s, never falling); mixes is the mark weight m, how
+  // far its front look has gone from its own toward the mark's (0 when given a point, 1 on arrival). alpha = fade x w is what
+  // the front pass draws the star at.
+  const fade = new Float32Array(n), mixes = new Float32Array(n), alpha = new Float32Array(n);
   let awake = false, version = 0, par = [0, 0], cluster = null, front = 0, centre = null, formed = false;
   // The largest offsets: under 40 px for stirring, under 45 % of the hero's width after a blast (a hard limit, kept just inside).
   const cap = i => (big[i] ? STARS.hold.max * W : STARS.push.max) * 0.995;
@@ -120,6 +133,8 @@ export function createField(W, H, mark = null) {
     take.forEach((t, q) => {
       const c = cluster.get(t.i), p = mark.points[pts[q].j];
       c.point = pts[q].j; c.kind = p.kind; c.e = [t.x - C[0] - p.x, t.y - C[1] - p.y]; c.ev = [0, 0]; c.arrived = false;
+      // R2: from here the front look eases from the star's own toward this point's (its colour code says which mark colour).
+      c.e0 = Math.hypot(c.e[0], c.e[1]); c.given = true; flags[t.i] = markFlag(c.kind); mixes[t.i] = 0;
     });
     hold.next += k;
     for (const t of rest) { const c = cluster.get(t.i); c.ring = true; c.rho = Math.max(1e-6, Math.hypot(t.x - C[0], t.y - C[1])); c.rv = 0; c.theta = Math.atan2(t.y - C[1], t.x - C[0]); }
@@ -134,8 +149,10 @@ export function createField(W, H, mark = null) {
       const [px, py] = position(i);
       if (Math.hypot(px - pointer[0], py - pointer[1]) > R) continue;
       const rho = Math.max(1e-6, Math.hypot(px - hold.anchor[0], py - hold.anchor[1]));
-      cluster.set(i, { rho, rv: 0, theta: Math.atan2(py - hold.anchor[1], px - hold.anchor[0]) });
-      flags[i] = 1;
+      cluster.set(i, { rho, rv: 0, theta: Math.atan2(py - hold.anchor[1], px - hold.anchor[0]), fresh: true });
+      // R2: the front copy fades in from 0 (a star still out from an earlier release goes on from the opacity it had).
+      fade[i] = flags[i] ? fade[i] * weights[i] : 0;
+      flags[i] = 1; weights[i] = 1; far[i] = -1; mixes[i] = 0;
     }
     const scale = cluster.size;
     // L1: from 1.4 s held, the cluster stops turning and forms the mark; later captures take the next free points.
@@ -147,11 +164,18 @@ export function createField(W, H, mark = null) {
       if (fresh.length) assign(hold, fresh, centre);
     }
     for (const [i, c] of cluster) {
+      // R2: the fade-in, 0 in the frame of the capture, then up by dt / 0.4 s.
+      if (c.fresh) c.fresh = false; else fade[i] = fadeUp(fade[i], dt);
       if (c.point !== undefined) {
         // Critically damped from rest toward the point, relative to the (clamped) anchor: e only shrinks along its own line.
         const p = mark.points[c.point], s = stars[i], q = parallaxOffset(par, s.d);
         for (const k of [0, 1]) [c.e[k], c.ev[k]] = follow(c.e[k], c.ev[k], 0, dt, STARS.mark.tau);
-        if (!c.arrived && Math.hypot(c.e[0], c.e[1]) <= STARS.mark.arrive) { c.arrived = true; flags[i] = markFlag(c.kind); }
+        // R2: m = 1 - (distance past the 1 px of arrival) / (that distance when given the point), so it is exactly 1 on
+        // arrival; it never falls, and rises at most STARS.fade a second (only a star given a point within about 2 px of it).
+        const d = Math.hypot(c.e[0], c.e[1]), want = c.e0 > STARS.mark.arrive ? 1 - Math.max(0, d - STARS.mark.arrive) / (c.e0 - STARS.mark.arrive) : 1;
+        // In the frame it is given its point, m stays 0.
+        if (c.given) c.given = false; else mixes[i] = Math.max(mixes[i], Math.min(want, mixes[i] + STARS.fade * dt));
+        if (!c.arrived && d <= STARS.mark.arrive) c.arrived = true;
         S[2 * i] = centre[0] + p.x + c.e[0] - s.x - q[0]; S[2 * i + 1] = centre[1] + p.y + c.e[1] - s.y - q[1];
         V[2 * i] = V[2 * i + 1] = 0; age[i] = 0; big[i] = 1; moving[i] = 1;
         continue;
@@ -185,6 +209,8 @@ export function createField(W, H, mark = null) {
       else if (r < STARS.hold.reach * R) { const k = STARS.hold.weak * (1 - r / (STARS.hold.reach * R)) ** 2; kick(i, dir[0] * k * blastImpulse(hold.held, stars[i].m), dir[1] * k * blastImpulse(hold.held, stars[i].m), true); }
     }
     const captured = cluster.size;
+    // R1: every star in front starts (or, if still out from an earlier release, keeps) its return weight.
+    for (let i = 0; i < n; i++) if (flags[i] && far[i] < 0) { weights[i] = 1; far[i] = Math.hypot(offsets[2 * i], offsets[2 * i + 1]); }
     cluster = null; formed = false;
     return captured;
   }
@@ -215,18 +241,29 @@ export function createField(W, H, mark = null) {
         }
       }
       last[i] = Math.hypot(x, y);
+      if (flags[i]) fade[i] = fadeUp(fade[i], dt);
+      if (flags[i] && far[i] >= 0) {
+        // R1: the return weight: 1 until the guard sees the offset fall (a dip in the kick's first frame, before the guard
+        // runs, does not count), then offset over its largest since the release, never growing.
+        const now = last[i];
+        if (now > far[i]) far[i] = now;
+        if (falling[i]) weights[i] = Math.min(weights[i], Math.max(far[i] > 0 ? now / far[i] : 0, weights[i] - STARS.fade * dt));
+      }
       if (Math.hypot(x, y) < STARS.rest.offset && Math.hypot(V[2 * i] * e, V[2 * i + 1] * e) < STARS.rest.speed) {
-        // Home: the star cuts back to its own colour and size, behind the scene.
+        // Home: the front copy, faded to its weight (near 0 by now, and kept in weights for the checks), leaves the front pass;
+        // the copy behind is the star's own look, as it was all the way home.
         S[2 * i] = S[2 * i + 1] = V[2 * i] = V[2 * i + 1] = age[i] = 0; x = y = 0; moving[i] = 0; big[i] = 0; last[i] = -1; falling[i] = 0;
-        if (flags[i]) { flags[i] = 0; front--; }
+        if (flags[i]) { flags[i] = 0; front--; far[i] = -1; }
       } else any = true;
       offsets[2 * i] = x; offsets[2 * i + 1] = y;
     }
+    // R2: the opacity each front copy is drawn at.
+    for (let i = 0; i < n; i++) alpha[i] = flags[i] ? fade[i] * weights[i] : 0;
     version++;
     awake = any;
     return awake;
   }
-  function reset() { S.fill(0); V.fill(0); age.fill(0); offsets.fill(0); big.fill(0); moving.fill(0); flags.fill(0); last.fill(-1); falling.fill(0); front = 0; cluster = null; formed = false; awake = false; version++; }
+  function reset() { weights.fill(0); fade.fill(0); mixes.fill(0); alpha.fill(0); far.fill(-1); S.fill(0); V.fill(0); age.fill(0); offsets.fill(0); big.fill(0); moving.fill(0); flags.fill(0); last.fill(-1); falling.fill(0); front = 0; cluster = null; formed = false; awake = false; version++; }
   // What the checks and __hero.stars read about the mark.
   function markState() {
     let assigned = 0, arrived = 0, ring = 0;
@@ -234,7 +271,7 @@ export function createField(W, H, mark = null) {
     return { points: mark ? mark.points.length : 0, height: mark ? mark.height : 0, formed, assigned, arrived, ring, front, centre: centre && centre.slice() };
   }
   return {
-    stars, offsets, flags, mark, W, H, push, press, gather, blast, step, reset, position, shown, markState,
+    stars, offsets, flags, weights, fade, mixes, alpha, mark, W, H, push, press, gather, blast, step, reset, position, shown, markState,
     velocity: i => [V[2 * i] * Math.exp(-age[i]), V[2 * i + 1] * Math.exp(-age[i])],
     get front() { return front; },
     setParallax(f) { par = f; },
@@ -246,6 +283,7 @@ export function createField(W, H, mark = null) {
 // its placement for a hero size. Points from paper paths are G points; points from any other fill (the red path) are D points.
 export const markKind = fill => String(fill || '').trim().toUpperCase() === STARS.paper ? 'G' : 'D';
 // A star's colour code for the renderer: 0 behind (own colour), 1 in front (own colour), 2 in front as G, 3 in front as D.
+// Round 10 (R2): 2 and 3 are set when the star is given a point; its front look goes toward that colour by its mark weight.
 export const markFlag = kind => kind === 'D' ? 3 : 2;
 export const FLAG_INK = [null, null, STARS.paper, STARS.redInk];
 // Flattens an SVG path (M, L, C, Z, absolute or relative) into closed rings of [x, y].
@@ -426,7 +464,7 @@ export function createStars(hero, { reduced, win = hero.ownerDocument.defaultVie
     if (live && hold) field.gather(hold, pointer || hold.anchor, dt);
     field.step(dt);
     return {
-      count: field.stars.length, attrs, attrsVersion, offsets: field.offsets, flags: field.flags, front: field.front, markSize: STARS.mark.size, version: field.version,
+      count: field.stars.length, attrs, attrsVersion, offsets: field.offsets, flags: field.flags, weights: field.weights, alpha: field.alpha, mixes: field.mixes, front: field.front, markSize: STARS.mark.size, version: field.version,
       par: [f[0] * STARS.parallax, f[1] * STARS.parallax], scroll: still ? 0 : Math.max(0, scrollY - top), reveal, centre,
     };
   }

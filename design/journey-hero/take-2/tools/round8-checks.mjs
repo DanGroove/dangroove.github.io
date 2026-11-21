@@ -211,7 +211,8 @@ export async function checkStars(source = read('stars.mjs'), entranceSource = re
   assert.equal(shown, F.stars.length, 'B1 entrance: not every star on by 0.90');
   assert.equal(F.stars.filter(s => starOn(s.x, s.y, centre, starReach(0, centre, 1440, 900))).length, 0, 'B1 entrance: stars before the rings');
   // Round 9 (L1) adds the pass in front for captured stars: one POINTS draw, called once behind and once more only while a star is out.
-  assert.ok(rendererSource.includes('bool on = distance(aHome, uRings.xy) <= uRings.z && (aFlag > 0.5) == (uPass > 0.5);') && rendererSource.split('gl.drawArrays(gl.POINTS, 0, st.count);').length === 2
+  // Round 10 (R1): the pass behind draws every star; the pass in front only stars that are out, at their weights.
+  assert.ok(rendererSource.includes('bool on = distance(aHome, uRings.xy) <= uRings.z && (!front || (aFlag > 0.5 && aWeight > 0.0));') && rendererSource.split('gl.drawArrays(gl.POINTS, 0, st.count);').length === 2
     && rendererSource.includes('if (look.stars && look.stars.count) starPass(0);') && rendererSource.includes('if (look.stars && look.stars.count && look.stars.front > 0) starPass(1);'), 'B1 entrance: shader rule or one draw call missing');
   // The controller: reduced motion is static (no parallax, no stir, no hold); touch does not stir.
   for (const reducedMotion of [true, false]) {

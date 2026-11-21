@@ -166,27 +166,32 @@ export async function checkFormation(source = read('stars.mjs')) {
   return out;
 }
 
-// ---- colour: only its own colour or its mark colour; cut on arriving within 1 px, back only at home.
+// ---- colour: its own colour or its own mark colour; full mark colour only on arriving within 1 px. Round 10 rewrites this rule:
+// R2 eases the front look toward the mark colour by the mark weight m (round 9 cut it on arrival), and R1 fades the front copy
+// out on the way home instead of cutting it back at home (both checked in round10-checks.mjs). Here: the colour code names the
+// point's own colour from when it is given a point, m is 1 only once arrived within 1 px, and the front copy leaves only at home.
 export async function checkColour(source = read('stars.mjs'), rendererSource = read('sq.mjs')) {
   const { M, F } = await fieldWith(source), P = [700, 450], hold = F.press(...P), n = F.stars.length;
   assert.ok(M.STARS.mark.size >= 2 && M.STARS.mark.size <= 3, 'L1 colour: a mark star is not 2 to 3 px across');
   // The renderer: flag 2 is paper and flag 3 red, both at full strength, at least the mark size; the uniforms are the brand's.
-  assert.ok(rendererSource.includes('vCol = aFlag > 2.5 ? uRedInk : aFlag > 1.5 ? uPaper : mix(uInk,') && rendererSource.includes('max(aLook.y, uMarkSize)')
+  // Round 10: the flag's look is the front copy's (the copy behind is always the star's own look), mixed from its own by m.
+  assert.ok(rendererSource.includes('float flag = front ? aFlag : 0.0;') && rendererSource.includes('vCol = mix(own, flag > 2.5 ? uRedInk : uPaper, m);') && rendererSource.includes('mix(aLook.y, max(aLook.y, uMarkSize), m)')
     && rendererSource.includes("uPaper, hex('#F7F6F3')") && rendererSource.includes("uRedInk, hex('#F0484F')"), 'L1 colour: the shader does not cut flags 2 and 3 to paper and red');
   const ink = (i, flag) => flag >= 2 ? M.FLAG_INK[flag] : 'own';
-  const kind = new Map(), prev = new Float32Array(n), cuts = { G: 0, D: 0 }, backs = [0];
+  const kind = new Map(), prev = new Float32Array(n), cuts = { G: 0, D: 0 }, backs = [0], full = new Set();
   const look = released => {
     for (let i = 0; i < n; i++) {
       const f = F.flags[i], p = prev[i], c = F.cluster?.get(i);
       if (c?.kind) kind.set(i, c.kind);
       const k = kind.get(i);
       if (f >= 2) assert.equal(ink(i, f), k === 'D' ? RED : PAPER, `L1 colour: a ${k} star shows ${ink(i, f)}`);
-      if (f >= 2 && p < 2) {
-        assert.ok(c && c.arrived && Math.hypot(c.e[0], c.e[1]) <= 1, `L1 colour: star ${i} cut to the mark colour before arriving`);
-        cuts[k]++;
+      if (f >= 2 && p < 2) assert.ok(c && c.point !== undefined, `L1 colour: star ${i} has a mark colour code but no point`);
+      if (!released && f >= 2 && F.mixes[i] === 1 && !full.has(i)) {
+        assert.ok(c && c.arrived && Math.hypot(c.e[0], c.e[1]) <= 1, `L1 colour: star ${i} reached the full mark colour before arriving`);
+        full.add(i); cuts[k]++;
       }
       if (p >= 2) assert.ok(f === p || f === 0, `L1 colour: star ${i} changed from ${p} to ${f}`);
-      if (p >= 2 && f === 0) { assert.ok(released && F.offsets[2 * i] === 0 && F.offsets[2 * i + 1] === 0, `L1 colour: star ${i} cut back before home`); backs[0]++; }
+      if (p >= 2 && f === 0) { assert.ok(released && F.offsets[2 * i] === 0 && F.offsets[2 * i + 1] === 0, `L1 colour: star ${i}'s front copy left before home`); backs[0]++; }
       if (p === 1 && f === 0) assert.ok(released && F.offsets[2 * i] === 0 && F.offsets[2 * i + 1] === 0, `L1 colour: star ${i} went behind before home`);
       prev[i] = f;
     }
@@ -195,7 +200,7 @@ export async function checkColour(source = read('stars.mjs'), rendererSource = r
   const formed = F.markState();
   F.blast(hold, P);
   for (let k = 0; k < 60 * 25; k++) { F.step(DT); look(true); }
-  assert.ok(cuts.G > 0 && cuts.D > 0, 'L1 colour: no G or no D star cut to the mark colour');
+  assert.ok(cuts.G > 0 && cuts.D > 0, 'L1 colour: no G or no D star reached the mark colour');
   assert.ok(F.flags.every(f => f === 0) && F.front === 0, 'L1 colour: a star is still in the mark colour at home');
   return { cuts, backs: backs[0], formed: { assigned: formed.assigned, arrived: formed.arrived } };
 }
@@ -297,7 +302,7 @@ export async function checkRound9() {
   return `L1 sampler: 600 points in ${s.ms} ms, each inside its own path; areas G ${s.area.G}, D ${s.area.D} (D ${s.area.dShare} %); largest gap / sqrt(area/N) ${s.gaps.map(g => `N ${g.N} ${g.ratio}`).join(', ')} (limit 2.2); D share ${s.gaps.map(g => g.share + ' %').join('/')}; 180 px tall at 1440 x 900, upright.
 L1 timing: ${t.frames} frames before 1.4 s identical to round 8's turning cluster; first points at ${t.firstAt} s held.
 L1 formation: ${Object.entries(f).map(([k, v]) => `${k} ${v.assigned} assigned at 1.4 s, all within 1 px by 2.4 s, centre ${v.centre.join(',')}`).join('; ')}; distances never grow; upright; inside the hero at every corner.
-L1 colour: cuts G ${c.cuts.G}, D ${c.cuts.D} on arriving within 1 px; ${c.backs} back at home only; only own or mark colour.
+L1 colour: full mark colour G ${c.cuts.G}, D ${c.cuts.D}, each only once arrived within 1 px (eased in on the way, round 10); ${c.backs} front copies leave only at home (faded on the way, round 10); each code its own point's colour.
 L1 overflow: 40 points, ${o.captured} captured, ${o.ring} turning in the ring (${o.settled} settled outside ${o.reach} px).
 L1 release at 2.5 s: ${r.blasted} blasted (${r.inMark} given points, ${r.arrived} arrived) at ${r.impulse}/mass px/s, largest ${r.largest} px, all home monotonically.
 L1 clicks: ${k.join('; ')}.`;
