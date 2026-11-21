@@ -105,7 +105,7 @@ Add one named constant, `EXPORT_SHIFT` in world units. Apply it to the world x o
 - the UX/UI row, including the laptop's slide-in path;
 - the light pool on the floor (`POOL`).
 
-Set it to -0.6 for now (the comparison sheet suggests 0.6 reads as centred). Dan may choose another value from a comparison sheet, so it must be a one-number change.
+Set it to -0.3 (Dan chose it from a comparison sheet at 2:42 AM ET). Keep it a one-number change.
 
 **Checks:**
 - every group's world centre is the screen's middle plus `EXPORT_SHIFT`;
