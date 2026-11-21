@@ -105,7 +105,8 @@ async function fieldWith(source, { points } = {}) {
 }
 const pointOf = (F, i) => { const c = F.cluster.get(i), C = F.markState().centre, p = F.mark.points[c.point]; return [C[0] + p.x, C[1] + p.y]; };
 
-// ---- timing: no point before 1.4 s held; until then the cluster turns exactly as round 8's.
+// ---- timing: no point before the formation starts; until then the cluster turns exactly as round 8's. Round 12 (S1): the
+// formation starts once STARS.mark.threshold (300) stars are captured, not at 1.4 s held (round12-checks.mjs checks the rule).
 export async function checkTiming(source = read('stars.mjs')) {
   const { M, F } = await fieldWith(source), plain = M.createField(W, H), P = [700, 450];
   const a = F.press(...P), b = plain.press(...P);
@@ -113,24 +114,28 @@ export async function checkTiming(source = read('stars.mjs')) {
   for (let k = 0; k < 200; k++) {
     F.gather(a, P, DT); F.step(DT); plain.gather(b, P, DT); plain.step(DT);
     const any = [...F.cluster.values()].some(c => c.point !== undefined || c.ring);
-    if (a.held < 1.4 - 1e-9) {
+    if (a.formedAt === null) {
       assert.ok(!any, `L1 timing: a star has a point at ${a.held.toFixed(3)} s held`);
       assert.ok(F.offsets.every((v, i) => v === plain.offsets[i]), `L1 timing: the cluster differs from round 8's at ${a.held.toFixed(3)} s`);
       frames++;
     } else if (firstAt === null && any) firstAt = a.held;
   }
-  assert.ok(firstAt !== null && firstAt < 1.4 + DT, `L1 formation: no star given a point at 1.4 s (first at ${firstAt})`);
+  assert.ok(firstAt !== null && firstAt === a.formedAt, `L1 formation: no star given a point when the formation starts (first at ${firstAt}, start ${a.formedAt})`);
   return { frames, firstAt: +firstAt.toFixed(4) };
 }
 
-// ---- formation: distances never grow; formed by 2.4 s; upright, centred on the anchor, inside the hero at the corners.
+// ---- formation: distances never grow; formed 1 s after it starts (round 9: 1.4 to 2.4 s; round 12: from the threshold);
+// upright, centred on the anchor, inside the hero at the corners (where, since round 12, the radius grows on to catch 300).
 export async function checkFormation(source = read('stars.mjs')) {
   const out = {};
   for (const [name, start, moveTo] of [['centre', [700, 450]], ['moving', [600, 400], [820, 520]], ['top left', [3, 3]], ['top right', [W - 3, 3]], ['bottom left', [3, H - 3]], ['bottom right', [W - 3, H - 3]]]) {
     const { F, mark } = await fieldWith(source), P = start.slice(), hold = F.press(...P);
     const dist = new Map();
     let first = null, at24 = null;
-    for (let k = 0; hold.held < 3.0 - 1e-9; k++) {
+    // Round 12: a corner hold catches its 300 with a radius near 640 px, so its stars start up to twice as far from their
+    // points as round 9's (at 340 px) and the same formation (tau 0.12 s) takes 1.25 s to bring every one within 1 px.
+    const settle = /(top|bottom) (left|right)/.test(name) ? 1.25 : 1.0;
+    for (let k = 0; hold.formedAt === null ? hold.held < 12 : hold.held < hold.formedAt + settle + 3 * DT; k++) {
       if (moveTo && hold.held >= 1.6 && hold.held < 2.0) for (const j of [0, 1]) P[j] += (moveTo[j] - start[j]) * DT / 0.4;
       F.gather(hold, P, DT); F.step(DT);
       const state = F.markState();
@@ -143,18 +148,18 @@ export async function checkFormation(source = read('stars.mjs')) {
         assert.ok(!dist.has(i) || d <= dist.get(i) + 1e-6, `L1 formation: star ${i}'s distance to its point grew from ${dist.get(i)} to ${d} (${name})`);
         dist.set(i, d);
       }
-      if (at24 === null && hold.held >= 2.4 - 1e-9) {
-        assert.ok(first && first.size > 0, `L1 formation: no star given a point at 1.4 s (${name})`);
+      if (at24 === null && hold.formedAt !== null && hold.held >= hold.formedAt + settle - 1e-9) {
+        assert.ok(first && first.size > 0, `L1 formation: no star given a point when the formation starts (${name})`);
         const late = [...first].filter(i => !(dist.get(i) <= 1));
-        assert.equal(late.length, 0, `L1 formation: ${late.length} of ${first.size} stars assigned at 1.4 s are not within 1 px at 2.4 s (${name})`);
-        at24 = { assigned: first.size, arrived: state.arrived, captured: F.cluster.size };
+        assert.equal(late.length, 0, `L1 formation: ${late.length} of ${first.size} stars assigned at the start are not within 1 px ${settle} s later (${name})`);
+        at24 = { assigned: first.size, arrived: state.arrived, captured: F.cluster.size, start: +hold.formedAt.toFixed(3), settle };
       }
       // The mark's centre is the anchor, clamped so every point stays 16 px inside the hero.
       const C = state.centre, lo = [16 + mark.half[0], 16 + mark.half[1]], want = [0, 1].map(j => Math.min([W, H][j] - lo[j], Math.max(lo[j], hold.anchor[j])));
       assert.ok(Math.hypot(C[0] - want[0], C[1] - want[1]) < 1e-9, `L1 formation: the mark is not centred on the (clamped) anchor (${name})`);
       for (const p of mark.points) assert.ok(C[0] + p.x >= 16 - 1e-9 && C[0] + p.x <= W - 16 + 1e-9 && C[1] + p.y >= 16 - 1e-9 && C[1] + p.y <= H - 16 + 1e-9, `L1 formation: the mark leaves the hero (${name})`);
     }
-    assert.ok(at24, `L1 formation: the hold never reached 2.4 s (${name})`);
+    assert.ok(at24, `L1 formation: the hold never formed, or never reached 1 s after (${name})`);
     // Upright and not mirrored: an arrived star sits at its SVG point, scaled about the mark's box centre, y down.
     const s = mark.scale, C = F.markState().centre, raw = (await load('stars.mjs', source)).sampleMark(markPaths(), 600).points;
     for (const [i, c] of F.cluster) if (c.arrived) {
@@ -196,7 +201,7 @@ export async function checkColour(source = read('stars.mjs'), rendererSource = r
       prev[i] = f;
     }
   };
-  while (hold.held < 2.5 - 1e-9) { F.gather(hold, P, DT); F.step(DT); look(false); }
+  while (hold.held < 3.5 - 1e-9) { F.gather(hold, P, DT); F.step(DT); look(false); }
   const formed = F.markState();
   F.blast(hold, P);
   for (let k = 0; k < 60 * 25; k++) { F.step(DT); look(true); }
@@ -232,9 +237,10 @@ export async function checkOverflow(source = read('stars.mjs')) {
 export async function checkRelease(source = read('stars.mjs')) {
   const { M, F } = await fieldWith(source), P = [700, 450], hold = F.press(...P);
   let first = 0;
-  while (hold.held < 2.5 - 1e-9) { F.gather(hold, P, DT); F.step(DT); if (!first) first = F.markState().assigned; }
+  while (hold.held < 3.5 - 1e-9) { F.gather(hold, P, DT); F.step(DT); if (!first) first = F.markState().assigned; }
   const ids = [...F.cluster.keys()], before = F.markState();
-  // Formed: every star given a point at 1.4 s is on it (later captures may still be on their way).
+  // Formed: every star given a point when the formation started is on it (later captures may still be on their way). Round
+  // 12: released at 3.5 s held (round 9 released at 2.5 s, 1.1 s after its 1.4 s start); the impulse is capped at 2.5 s.
   assert.ok(first > 0 && before.arrived >= first, `L1 release: the mark is not formed at 2.5 s (${before.arrived} of ${first})`);
   F.blast(hold, P);
   for (const i of ids) {
@@ -256,7 +262,7 @@ export async function checkRelease(source = read('stars.mjs')) {
 // ---- clicks: a short stage click changes the craft and forms no mark; a hold changes no craft and forms the mark.
 export async function checkClicks(source = read('stars.mjs')) {
   const M = await load('stars.mjs', source), paths = markPaths(), outcomes = [];
-  for (const [held, click] of [[0.1, true], [0.24, true], [0.3, false], [1.3, false], [2.5, false]]) {
+  for (const [held, click] of [[0.1, true], [0.24, true], [0.3, false], [1.3, false], [2.0, false], [3.0, false]]) {
     const handlers = {}, add = target => (name, f) => { (handlers[target + name] ||= []).push(f); };
     const win = { scrollY: 0, addEventListener: add('win:'), performance: { now: () => 0 } };
     const link = { querySelectorAll: () => paths.map(p => ({ getAttribute: k => p[k] })) };
@@ -272,15 +278,17 @@ export async function checkClicks(source = read('stars.mjs')) {
     fire('win:pointerup', { pointerType: 'mouse', clientX: 900, clientY: 400 });
     const swallowed = c.swallowClick();
     assert.equal(swallowed, !click, `L1 clicks: a ${held} s press ${click ? 'did not change the craft' : 'changed the craft'}`);
-    assert.equal(state.formed, held >= 1.4, `L1 clicks: a ${held} s press ${held >= 1.4 ? 'formed no mark' : 'formed a mark'}`);
-    if (held < 1.4) assert.equal(state.assigned, 0, `L1 clicks: a ${held} s press gave stars points`);
+    // Round 12: formed exactly when the press has captured the threshold (by 3.0 s near the middle, not by 2.0 s).
+    assert.equal(state.formed, state.captured >= M.STARS.mark.threshold, `L1 clicks: a ${held} s press with ${state.captured} captured ${state.formed ? 'formed a mark' : 'formed no mark'}`);
+    assert.equal(state.formed, held >= 3.0, `L1 clicks: a ${held} s press ${held >= 3.0 ? 'formed no mark' : 'formed a mark'}`);
+    if (!state.formed) assert.equal(state.assigned, 0, `L1 clicks: a ${held} s press gave stars points`);
     outcomes.push(`${held} s ${click ? 'next craft' : 'no craft change'}, ${state.formed ? `mark ${state.assigned} stars` : 'no mark'}`);
   }
   return outcomes;
 }
 
 export const ROUND9_CONTROLS = [
-  { id: 'formation off', file: 'stars.mjs', search: 'if (mark && hold.held >= STARS.mark.at) {', replacement: 'if (false) {', gate: 'L1 formation:', run: s => checkTiming(s).then(() => checkFormation(s)) },
+  { id: 'formation off', file: 'stars.mjs', search: 'if (mark && hold.formedAt !== null) {', replacement: 'if (false) {', gate: 'L1 formation:', run: s => checkTiming(s).then(() => checkFormation(s)) },
   { id: 'D and G colours swapped', file: 'stars.mjs', search: "export const markFlag = kind => kind === 'D' ? 3 : 2;", replacement: "export const markFlag = kind => kind === 'D' ? 2 : 3;", gate: 'L1 colour:', run: s => checkColour(s) },
   { id: 'a point outside the mark', file: 'stars.mjs', search: '  return { points, box, area };\n}\n// The mark for a hero', replacement: '  points[7] = { ...points[7], x: box[0] - 40 };\n  return { points, box, area };\n}\n// The mark for a hero', gate: 'L1 sampler:', run: s => checkSampler(s) },
 ];
@@ -300,11 +308,11 @@ export async function checkRound9Controls() {
 export async function checkRound9() {
   const s = await checkSampler(), t = await checkTiming(), f = await checkFormation(), c = await checkColour(), o = await checkOverflow(), r = await checkRelease(), k = await checkClicks();
   return `L1 sampler: 600 points in ${s.ms} ms, each inside its own path; areas G ${s.area.G}, D ${s.area.D} (D ${s.area.dShare} %); largest gap / sqrt(area/N) ${s.gaps.map(g => `N ${g.N} ${g.ratio}`).join(', ')} (limit 2.2); D share ${s.gaps.map(g => g.share + ' %').join('/')}; 180 px tall at 1440 x 900, upright.
-L1 timing: ${t.frames} frames before 1.4 s identical to round 8's turning cluster; first points at ${t.firstAt} s held.
-L1 formation: ${Object.entries(f).map(([k, v]) => `${k} ${v.assigned} assigned at 1.4 s, all within 1 px by 2.4 s, centre ${v.centre.join(',')}`).join('; ')}; distances never grow; upright; inside the hero at every corner.
+L1 timing: ${t.frames} frames before the formation starts identical to round 8's turning cluster; first points at ${t.firstAt} s held (the 300th capture, round 12).
+L1 formation: ${Object.entries(f).map(([k, v]) => `${k} ${v.assigned} assigned at ${v.start} s, all within 1 px ${v.settle} s later, centre ${v.centre.join(',')}`).join('; ')}; distances never grow; upright; inside the hero at every corner.
 L1 colour: full mark colour G ${c.cuts.G}, D ${c.cuts.D}, each only once arrived within 1 px (eased in on the way, round 10); ${c.backs} front copies leave only at home (faded on the way, round 10); each code its own point's colour.
 L1 overflow: 40 points, ${o.captured} captured, ${o.ring} turning in the ring (${o.settled} settled outside ${o.reach} px).
-L1 release at 2.5 s: ${r.blasted} blasted (${r.inMark} given points, ${r.arrived} arrived) at ${r.impulse}/mass px/s, largest ${r.largest} px, all home monotonically.
+L1 release at 3.5 s: ${r.blasted} blasted (${r.inMark} given points, ${r.arrived} arrived) at ${r.impulse}/mass px/s, largest ${r.largest} px, all home monotonically.
 L1 clicks: ${k.join('; ')}.`;
 }
 

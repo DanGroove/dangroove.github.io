@@ -19,9 +19,10 @@ export const STARS = {
   // Round 10: the return weight (R1) and the mark weight (R2) change at most this much per second (0.09 a frame at 60); a
   // captured star's front copy fades in over fadeIn seconds (R2).
   fade: 5.4, fadeIn: 0.4,
-  // Round 9 (L1): from 1.4 s held the captured stars form the DG mark, read from the page's own SVG. height: of the hero's
-  // height; tau: the formation's time constant (see BUILD.md, CORRECTIONS-9); arrive: px; size: px across once arrived.
-  mark: { at: 1.4, height: 0.2, margin: 16, count: 600, tau: 0.12, arrive: 1, size: 2.6, ring: [8, 22], cells: 24000, edge: 2 },
+  // Round 9 (L1): the captured stars form the DG mark, read from the page's own SVG. height: of the hero's height; tau: the
+  // formation's time constant (see BUILD.md, CORRECTIONS-9); arrive: px; size: px across once arrived.
+  // Round 12 (S1): the formation starts once the hold has captured `threshold` stars (round 9 started it at 1.4 s held).
+  mark: { threshold: 300, height: 0.2, margin: 16, count: 600, tau: 0.12, arrive: 1, size: 2.6, ring: [8, 22], cells: 24000, edge: 2 },
 };
 
 // R2: the fade-in's step, landing on exactly 1 (sums of dt / 0.4 in float32 can stop just short of it).
@@ -60,6 +61,11 @@ export const starOn = (x, y, centre, reach) => reach === null || Math.hypot(x - 
 export const starReach = (p, centre, W, H) => p >= 1 ? null : p <= 0 ? -1 : p * Math.max(...[[0, 0], [W, 0], [0, H], [W, H]].map(([x, y]) => Math.hypot(x - centre[0], y - centre[1])));
 // B2: the capture radius after `held` seconds, and the blast's impulse for a star of mass m.
 export const captureRadius = held => STARS.hold.base + STARS.hold.grow * Math.min(1, Math.max(0, held) / STARS.hold.full);
+// Round 12 (S1): with a mark, a hold whose radius has reached its full 2.5 s size with fewer than the threshold captured
+// keeps growing it at the same rate (104 px a second), up to the hero's diagonal; once the formation starts the extra growth
+// stops. extra is the hold's extra radius so far; it is frozen once formed. The blast still uses captureRadius (2.5 s cap).
+export const growthRate = () => STARS.hold.grow / STARS.hold.full;
+export const holdRadius = (held, extra, diagonal) => Math.min(diagonal, captureRadius(held) + extra);
 export const blastImpulse = (held, m) => (STARS.hold.blast[0] + STARS.hold.blast[1] * Math.min(1, Math.max(0, held) / STARS.hold.full)) / m;
 export const orbitRadius = (i, captured) => (STARS.hold.orbit[0] + (STARS.hold.orbit[1] - STARS.hold.orbit[0]) * hash(i, 5)) * (1 + 0.35 * Math.log2(1 + captured / 24));
 // The push weight at distance r from the pointer's path.
@@ -72,7 +78,7 @@ function segmentDistance(px, py, a, b) {
 
 // The simulation. Each star: S (coasting displacement), v (velocity), age; shown offset D = S * exp(-age). An impulse rebases
 // S to D and age to 0; then S moves with v, v decays by drag / sqrt(m), and D goes home on exp(-age). No spring, no overshoot.
-// Round 9: mark (from placeMark) makes a hold of 1.4 s or more form the DG mark; flags holds each star's colour code (markFlag).
+// Round 9: mark (from placeMark) makes a hold that has captured STARS.mark.threshold stars form the DG mark (round 12, S1); flags holds each star's colour code (markFlag).
 export function createField(W, H, mark = null) {
   const stars = makeStars(W, H), n = stars.length;
   const offsets = new Float32Array(n * 2), S = new Float32Array(n * 2), V = new Float32Array(n * 2), age = new Float32Array(n);
@@ -89,6 +95,7 @@ export function createField(W, H, mark = null) {
   // the front pass draws the star at.
   const fade = new Float32Array(n), mixes = new Float32Array(n), alpha = new Float32Array(n);
   let awake = false, version = 0, par = [0, 0], cluster = null, front = 0, centre = null, formed = false;
+  const diagonal = Math.hypot(W, H);
   // The largest offsets: under 40 px for stirring, under 45 % of the hero's width after a blast (a hard limit, kept just inside).
   const cap = i => (big[i] ? STARS.hold.max * W : STARS.push.max) * 0.995;
   const shown = i => { const e = Math.exp(-age[i]); return [S[2 * i] * e, S[2 * i + 1] * e]; };
@@ -119,7 +126,7 @@ export function createField(W, H, mark = null) {
   }
 
   // B2: a hold. Stars inside the growing radius are captured and pulled into a slowly turning cluster round the pointer.
-  function press(x, y) { cluster = new Map(); formed = false; centre = null; return { anchor: [x, y], anchorV: [0, 0], held: 0, next: 0 }; }
+  function press(x, y) { cluster = new Map(); formed = false; centre = null; return { anchor: [x, y], anchorV: [0, 0], held: 0, next: 0, extra: 0, radius: STARS.hold.base, formedAt: null }; }
   // L1: give stars the next free points of the order, matched by angle round the mark's centre (stars nearest the centre first
   // when points run out); the rest turn as a ring just outside the mark. Each starts from rest, offset e from its point.
   function assign(hold, ids, C) {
@@ -143,7 +150,9 @@ export function createField(W, H, mark = null) {
     hold.held += dt;
     [hold.anchor[0], hold.anchorV[0]] = follow(hold.anchor[0], hold.anchorV[0], pointer[0], dt, 1 / STARS.hold.follow);
     [hold.anchor[1], hold.anchorV[1]] = follow(hold.anchor[1], hold.anchorV[1], pointer[1], dt, 1 / STARS.hold.follow);
-    const R = captureRadius(hold.held);
+    // S1: past the full 2.5 s size and not yet formed, the radius goes on growing (only with a mark to form).
+    if (mark && !formed) hold.extra = Math.max(0, hold.held - STARS.hold.full) * growthRate();
+    const R = hold.radius = holdRadius(hold.held, hold.extra, diagonal);
     for (let i = 0; i < n; i++) {
       if (cluster.has(i)) continue;
       const [px, py] = position(i);
@@ -155,9 +164,11 @@ export function createField(W, H, mark = null) {
       flags[i] = 1; weights[i] = 1; far[i] = -1; mixes[i] = 0;
     }
     const scale = cluster.size;
-    // L1: from 1.4 s held, the cluster stops turning and forms the mark; later captures take the next free points.
+    // L1: once formed, the cluster stops turning and forms the mark; later captures take the next free points. S1: it forms
+    // once the threshold is captured (or, short of it, once the radius has reached the hero's diagonal).
     centre = mark ? markCentre(hold.anchor, mark, W, H) : null;
-    if (mark && hold.held >= STARS.mark.at) {
+    if (mark && !formed && (cluster.size >= STARS.mark.threshold || R >= diagonal)) hold.formedAt = hold.held;
+    if (mark && hold.formedAt !== null) {
       const fresh = [];
       for (const [i, c] of cluster) if (c.point === undefined && !c.ring) fresh.push(i);
       formed = true;
@@ -268,7 +279,7 @@ export function createField(W, H, mark = null) {
   function markState() {
     let assigned = 0, arrived = 0, ring = 0;
     if (cluster) for (const c of cluster.values()) { if (c.point !== undefined) { assigned++; if (c.arrived) arrived++; } else if (c.ring) ring++; }
-    return { points: mark ? mark.points.length : 0, height: mark ? mark.height : 0, formed, assigned, arrived, ring, front, centre: centre && centre.slice() };
+    return { points: mark ? mark.points.length : 0, height: mark ? mark.height : 0, formed, assigned, arrived, ring, front, centre: centre && centre.slice(), captured: cluster ? cluster.size : 0 };
   }
   return {
     stars, offsets, flags, weights, fade, mixes, alpha, mark, W, H, push, press, gather, blast, step, reset, position, shown, markState,
@@ -474,7 +485,7 @@ export function createStars(hero, { reduced, win = hero.ownerDocument.defaultVie
     measure, frame, after() { if (busy()) redraw(); }, busy,
     // The stage's click handler asks once: was that a hold (no craft change)?
     swallowClick() { const s = swallow; swallow = false; return s; },
-    get field() { return field; }, get holding() { return hold ? hold.held : null; }, get fraction() { return f.slice(); },
+    get field() { return field; }, get holding() { return hold ? hold.held : null; }, get radius() { return hold ? hold.radius : null; }, get fraction() { return f.slice(); },
     get mark() { return field ? field.markState() : null; },
   };
 }

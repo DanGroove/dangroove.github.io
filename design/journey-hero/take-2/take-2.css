@@ -76,47 +76,57 @@
     display: none;
   }
 }
-/* Round 11, C1: the current craft is a red rule over its row's top hairline (the top edge of its cell on phones), and its
-   colours sit behind the same hard-edged front. craft-wipe.mjs writes only --wa/--wb (the span, fractions of the row),
-   --xa/--xb (the same span in the word's own px) and .is-lit (the number). No padding, border or font changes. */
-.hero-crafts.is-wiped li {
+/* Round 12, L2 (replaces round 11's red rule): the current craft is selected like a layer in a design app. A 1 px red
+   rectangle runs round its row (top and bottom on the row's own hairlines, sides at its edges; round the current cell of the
+   phone grid), drawn by the list's ::before; ::after is the top left handle, 5 px square, centred on its corner, and its
+   three shadows are the other three. craft-wipe.mjs writes only custom properties on the list (--sl/--sr/--st/--sb, each
+   line's position in px; --sel-show; --sel-clip and --h0 to --h3 during the entrance) and .is-lit on a row (text paper,
+   number red: hard cuts). Both are absolute, so no layout number changes; the list's position: relative moves nothing. */
+.hero-crafts.is-selected {
   position: relative;
-  --rule-top: -1px;
 }
-.hero-crafts.is-wiped li::before {
+.hero-crafts.is-selected::before,
+.hero-crafts.is-selected::after {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
-  top: var(--rule-top);
-  height: 1px;
-  background: var(--red-bright);
+  display: var(--sel-show, none);
+  box-sizing: border-box;
   pointer-events: none;
-  clip-path: inset(0 calc(100% - var(--wb, 0) * 100%) 0 calc(var(--wa, 0) * 100%));
 }
-.hero-crafts.is-wiped button {
-  --off: var(--muted);
+.hero-crafts.is-selected::before {
+  left: var(--sl, 0px);
+  top: var(--st, 0px);
+  width: calc(var(--sr, 0px) - var(--sl, 0px) + 1px);
+  height: calc(var(--sb, 0px) - var(--st, 0px) + 1px);
+  border: 1px solid var(--red-bright);
+  clip-path: var(--sel-clip, none);
+}
+.hero-crafts.is-selected::after {
+  left: calc(var(--sl, 0px) - 2px);
+  top: calc(var(--st, 0px) - 2px);
+  width: 5px;
+  height: 5px;
+  background: var(--h0, var(--red-bright));
+  box-shadow:
+    calc(var(--sr, 0px) - var(--sl, 0px)) 0 0 0 var(--h1, var(--red-bright)),
+    0 calc(var(--sb, 0px) - var(--st, 0px)) 0 0 var(--h2, var(--red-bright)),
+    calc(var(--sr, 0px) - var(--sl, 0px)) calc(var(--sb, 0px) - var(--st, 0px)) 0 0 var(--h3, var(--red-bright));
+}
+/* Above journey.css's aria-current colours (0,2,1 and 0,3,1): the colours follow the selection's cuts, not aria-current. */
+.hero-crafts.is-selected li button {
+  color: inherit;
 }
 @media (hover: hover) {
-  .hero-crafts.is-wiped button:hover {
-    --off: var(--paper);
+  .hero-crafts.is-selected li button:hover {
+    color: var(--paper);
   }
 }
-/* Above journey.css's .hero-crafts button[aria-current] .n (0,3,1): the number follows the wipe, not aria-current. */
-.hero-crafts.is-wiped li button .n {
-  color: var(--off);
+.hero-crafts.is-selected li.is-lit button {
+  color: var(--paper);
 }
-.hero-crafts.is-wiped li.is-lit button .n {
+.hero-crafts.is-selected li button .n {
+  color: inherit;
+}
+.hero-crafts.is-selected li.is-lit button .n {
   color: var(--red-bright);
-}
-.hero-crafts.is-wiped .n + span {
-  -webkit-text-fill-color: transparent;
-  background-image: linear-gradient(90deg, var(--off) var(--xa, 0px), var(--paper) var(--xa, 0px), var(--paper) var(--xb, 0px), var(--off) var(--xb, 0px));
-  -webkit-background-clip: text;
-  background-clip: text;
-}
-@media (max-width: 719px) {
-  .hero-crafts.is-wiped li {
-    --rule-top: 0px;
-  }
 }

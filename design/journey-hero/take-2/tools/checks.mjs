@@ -20,7 +20,7 @@ import { retimer } from './hand-patch.mjs';
 import { checkRound8, checkRound8Controls } from './round8-checks.mjs';
 import { checkRound9, checkRound9Controls } from './round9-checks.mjs';
 import { checkRound10, checkRound10Controls } from './round10-checks.mjs';
-import { checkRound11, checkRound11Controls } from './round11-checks.mjs';
+import { checkRound12StarsList, checkRound12Controls } from './round12-stars-list-checks.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
@@ -535,7 +535,8 @@ try { console.log(describe(await checkHand())); console.log('K3 negative control
 try { console.log(await checkRound8()); console.log('Round 8 negative controls: ' + await checkRound8Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound9()); console.log('Round 9 negative controls: ' + await checkRound9Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound10()); console.log('Round 10 negative controls: ' + await checkRound10Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
-try { console.log(await checkRound11()); console.log('Round 11 negative controls: ' + await checkRound11Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
+// Round 12 (S1, L2): round 11's wipe checks are replaced by L2's, which carry round 11's kept rules.
+try { console.log(await checkRound12StarsList()); console.log('Round 12 (S1, L2) negative controls: ' + await checkRound12Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {
