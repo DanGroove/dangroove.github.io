@@ -20,15 +20,15 @@ const tests = [
   { name: 'lift undone permits occlusion', rule: 'clearance', file: 'stage.mjs', before: call, after: '' },
   { name: 'lift undone permits frame lines', rule: 'frames', file: 'stage.mjs', before: call, after: '' },
   { name: 'cursor omitted from shared lift', rule: 'order', file: 'stage.mjs', before: 'for (const pc of [...stack, cursor]) {', after: 'for (const pc of stack) {' },
-  { name: 'crossed post frame hidden', rule: 'frames', file: 'stage.mjs', before: call, after: call + "  for (const pc of P) if (pc.emptyFrame === 'postPhoto') pc.hide = true;\n" },
-  { name: 'crossed post frame disappears', rule: 'frames', file: 'stage.mjs', before: 'const filled = frameContact(s, drag, t, from, to, frame), placed = done(s, id, t), before = D.length;', after: "const filled = i === 2 && t >= 6.329 * PACE ? [['map', DOCK.map, ID.frame], ['photo', DOCK.photo, ID.photo], ['postPhoto', ID.photo, ID.post], ['mailPhoto', ID.photo, ID.mailPhoto]].some(([drag, from, to]) => frameContact(s, drag, t, from, to, frame)) : frameContact(s, drag, t, from, to, frame), placed = done(s, id, t), before = D.length;" },
-  { name: 'plate removed before placement', rule: 'frames', file: 'stage.mjs', before: 'placed = done(s, id, t), before = D.length;', after: 'placed = filled, before = D.length;' },
+  { name: 'post page hidden', rule: 'frames', file: 'stage.mjs', before: call, after: call + "  for (const pc of P) if (pc.page === 'postPhoto' && !pc.pageEdge) pc.hide = true;\n" },   // CORRECTIONS-12 I1: pages, not crossed frames
+  { name: 'post page leaves at its drag', rule: 'frames', file: 'stage.mjs', before: 'else if (!done(s, id, t)) {', after: 'else if (!done(s, id, t) && !(i === 2 && begun(s, id, t))) {' },
+  { name: 'plate removed at contact', rule: 'frames', file: 'stage.mjs', before: "      D.push(on('night', x, y, w, h, { lift: 0.05, t: 0.02 }));", after: "      if (!pageContact(s, id, t, from, to, r)) D.push(on('night', x, y, w, h, { lift: 0.05, t: 0.02 }));" },
   { name: 'valid placement exception removed', rule: 'frames', file: 'tools/drag-checks.mjs', before: "plates.length || P.some(pc => pc.where === 'content' && !pc.echo && replacements[id].includes(pc.art))", after: 'plates.length' },
   { name: 'shadow caster follows colour lift', rule: 'shadow', file: 'stage.mjs', before: 'pc.shadowP = pc.p;', after: 'pc.shadowP = pc.p.map((n, axis) => n + offset[axis]);' },
   { name: 'renderer shadow override removed', rule: 'shadow', file: 'sq.mjs', before: '      if (prog === depth && pc.shadowP) gl.uniform3fv(prog.u.uPos, pc.shadowP);\n', after: '' },
   { name: 'authored cursor route transform removed', checker: 'checks.mjs', rule: 'differs from', file: 'tools/checks.mjs', before: 'const p = pc.shadowP || pc.p; // The drag\'s depth-only lift leaves its authored route intact.', after: 'const p = pc.p;' },
   { name: 'cursor beneath carried image', checker: 'checks.mjs', rule: 'an interaction mark is below a picture stack', file: 'stage.mjs', before: call, after: call + "  if (i === 2 && P.action === 'photo') P.find(pc => pc.art === 'cursor').p[2] -= 0.1;\n" },
-  { name: 'R15 projected clearance lift undone', checker: 'checks.mjs', rule: 'frame clearance:', file: 'stage.mjs', before: call, after: '' },
+  { name: 'R15 projected clearance lift undone', checker: 'checks.mjs', rule: 'page clearance:', file: 'stage.mjs', before: call, after: '' },
 ];
 for (const test of tests) {
   const text = files[test.file].toString('utf8').replace(/\r\n/g, '\n');

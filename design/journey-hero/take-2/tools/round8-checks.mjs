@@ -45,8 +45,8 @@ export async function checkCarried(source = read('stage.mjs')) {
       }
     }
   }
-  assert.ok(Math.abs(LOOP - 91.49807) < 1e-4, 'G1: LOOP moved ' + LOOP);
-  return { drags, samples, carriedFrames, per };
+  assert.ok(Math.abs(LOOP - 88.50030) < 1e-4, 'G1: LOOP moved ' + LOOP);   // 91.49807 until CORRECTIONS-12 (I1 shortens InDesign, D1 Figma)
+  return { drags, samples, carriedFrames, per, loop: LOOP };
 }
 
 // ---- N1: the name, as a pure model, against title.js's own numbers; and the player's gate.
@@ -330,7 +330,7 @@ export async function checkRound8() {
 F3 computed: no floor hover (round5 H7).
 B1 computed: ${b1.count} stars at 1440 x 900 (${b1.red} % red); parallax at 12 pointer/depth samples; follow 0.3 s critically damped (${b1.follow.at03} of 0.5 at 0.3 s, no overshoot); a still pointer moves nothing; a sweep moved ${b1.stir.moved} stars along it, largest ${b1.stir.largest} px, all home monotonically; two masses ${b1.stir.masses.join(' vs ')} px; reduced motion static, touch scroll-only; entrance rings 0.20-0.90 s.
 B2 computed: capture 80/132/210/340/340 px at 0/0.5/1.25/2.5/4 s; 0.3 s hold ${b2.runs[0.3].captured} stars, blast largest ${b2.runs[0.3].largest} px; 2.5 s hold ${b2.runs[2.5].captured} stars, largest ${b2.runs[2.5].largest} px; none crosses the pointer, settled on orbit, all home monotonically; stage presses ${b2.clicks.map(c => c.join('/')).join(', ')}.
-G1 computed: ${g1.drags} drags/carries every 0.01 s, ${g1.samples} samples, ${g1.carriedFrames} with a carried stack (${Object.keys(g1.per).length} actions); no non-carried piece moves; cursor in front of its carried picture; LOOP 91.498 s.`;
+G1 computed: ${g1.drags} drags/carries every 0.01 s, ${g1.samples} samples, ${g1.carriedFrames} with a carried stack (${Object.keys(g1.per).length} actions); no non-carried piece moves; cursor in front of its carried picture; LOOP ${g1.loop.toFixed(3)} s.`;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

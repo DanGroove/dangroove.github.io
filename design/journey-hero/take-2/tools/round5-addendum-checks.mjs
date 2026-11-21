@@ -15,7 +15,7 @@ import { BROWSER_SIZES } from './browser-check.mjs';
 import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
 
 const take = new URL('../', import.meta.url);
-import { handPatch } from './hand-patch.mjs';
+import { handPatch, r12Patch } from './hand-patch.mjs';
 const fixture = JSON.parse(fs.readFileSync(new URL('fixtures/round5-addendum-source.json', import.meta.url)));
 const sha = source => createHash('sha256').update(source).digest('hex');
 const close = (a, b, message, epsilon = 0.01) => assert.ok(Math.abs(a - b) <= epsilon, `${message}: ${a} != ${b}`);
@@ -149,7 +149,7 @@ export async function checkRound5Addendum({ only = '', control = '' } = {}) {
   assert.equal(fixture.sources['stage.mjs'].sha256, '8bfd42a687f780f6e224f09a6a46c6fcb276b925745fc63c2ea2337ce7336cc8');
   assert.equal(fixture.sources['page-layout.mjs'].sha256, '3ad80e6ae74572a36079a9a050f8b54159f3794adb4209d5d1e61175f8b6eed1');
   // CORRECTIONS-7: the frozen incoming stage gets round 7's hand edit in memory, so H10 still proves nothing else moved.
-  const oldStageURL = moduleURL(handPatch(decode(fixture.sources['stage.mjs'])), 'stage.mjs');
+  const oldStageURL = moduleURL(r12Patch(handPatch(decode(fixture.sources['stage.mjs']))), 'stage.mjs');
   const incoming = await import(oldStageURL), incomingLabels = await import(moduleURL(source('labels.mjs'), 'labels.mjs', { './stage.mjs': oldStageURL }));
   const need = sceneEnvelope(current.SCENES, corners, dot, HOME), beforeNeed = sceneEnvelope(incoming.SCENES, corners, dot, HOME);
   const report = { computedOnly: true, beforeEnvelope: beforeNeed, afterEnvelope: need };
@@ -164,7 +164,7 @@ export async function checkRound5Addendum({ only = '', control = '' } = {}) {
     const previousStyle = Object.getOwnPropertyDescriptor(globalThis, 'getComputedStyle');
     globalThis.getComputedStyle = () => ({ fontWeight: '800', fontSize: '20px', fontFamily: 'Outfit' });
     try {
-      const widths = widthsFor(current), sizes = [];
+      const widths = widthsFor(current), sizes = [], h9Envelope = [];
       let measurements = 0;
       const stable = (a, b, context) => { for (const key of ['S', 'cx', 'cy']) close(a[key], b[key], 'H9 repeated measurement ' + context + '/' + key); a.box.forEach((n, i) => close(n, b.box[i], 'H9 repeated measurement ' + context + '/box' + i)); };
       const oldFactory = (await import(moduleURL(decode(fixture.sources['page-layout.mjs']), 'page-layout.mjs'))).createPageLayout;
@@ -188,11 +188,14 @@ export async function checkRound5Addendum({ only = '', control = '' } = {}) {
         const before = layoutModel(createPageLayout, beforeNeed, incomingLabels.fitCalloutView, widthsFor(incoming), W, H).sample();
         // Round four used the CSS box's centre, without H6's text-ink centring.
         const legacyFit = (view, envelope, left, words) => priorLabels.fitCalloutView({ ...view, cx: W < 720 ? view.cx : W * 0.44 + (W * 0.56 - sideGutter(W)) / 2 - view.S * envelope.x }, envelope, left, words);
-        const round4View = layoutModel(createPageLayout, priorNeed, legacyFit, widthsFor(prior), W, H).sample();
+        // CORRECTIONS-12 X1 widens the scene's own envelope on purpose (the exports sit further left), which shrinks every fit.
+        // H9 is about the layout's own loss, so round 4's fit is given today's envelope; the envelope's share is reported apart.
+        const round4View = layoutModel(createPageLayout, need, legacyFit, widthsFor(prior), W, H).sample();
         assert.ok(final.S >= round4View.S * 0.98, 'H9 scale loss exceeds 2% in CSS/word model');
+        h9Envelope.push(round4View.S / layoutModel(createPageLayout, priorNeed, legacyFit, widthsFor(prior), W, H).sample().S);
         sizes.push({ W, H, round4S: round4View.S, incomingFirstS: incomingFirst.S, incomingTenthS: incomingTenth.S, beforeH10S: before.S, afterS: final.S, box: final.box });
       }
-      report.H9 = { measurements, sizes, limits: 'CSS stage/word model only; actual font obstacles and browser sizes remain external' };
+      report.H9 = { measurements, sizes, envelopeScale: [Math.min(...h9Envelope), Math.max(...h9Envelope)], limits: 'CSS stage/word model only; actual font obstacles and browser sizes remain external' };
     } finally {
       if (previousStyle) Object.defineProperty(globalThis, 'getComputedStyle', previousStyle); else delete globalThis.getComputedStyle;
     }
@@ -210,10 +213,14 @@ export async function checkRound5Addendum({ only = '', control = '' } = {}) {
     assert.ok(after.laptopSamples > 100 && after.ringSamples > 100, 'H10 sweep missed visible devices/labels');
     // Every emitted piece except the authorised Figma floor translation remains as incoming.
     let preservedFrames = 0;
+    // CORRECTIONS-12: the frozen stage runs without InDesign's frame steps (r12Patch), so the timetables agree up to Figma. D1
+    // and X1 move the floor and I1 replaces InDesign's frames with pages, on purpose; so InDesign and Figma (whose canvas and
+    // timing D1 changes) are left to their own checks, and elsewhere the screen is compared, not the floor.
     for (let t = 0; t < current.LOOP; t += 0.25) {
-      const P = current.frameAt(t), old = incoming.frameAt(t);
+      if (['id', 'fig'].includes(current.sceneAt(t).scene.key)) continue;
+      const P = current.frameAt(t), old = incoming.frameAt(t), screen = list => list.filter(pc => pc.where !== 'floor');
       const expected = old.map(pc => pc.where === 'floor' && incoming.sceneAt(t).scene.key === 'fig' ? { ...pc, p: pc.p.map((n, i) => n + (i === 2 ? current.UI_ROW.forward : 0)), ...(pc.clip ? { clip: pc.clip.map((n, i) => n - (i === 3 ? current.UI_ROW.forward : 0)) } : {}) } : pc);
-      equivalent([...P], expected, 'H10 retained round-5 pieces');
+      equivalent(screen(P), screen(expected), 'H10 retained round-5 pieces');
       for (const key of ['clock', 'action', 'pressed', 'tool']) equivalent(P[key], old[key], 'H10 retained round-5 ' + key);
       preservedFrames++;
     }

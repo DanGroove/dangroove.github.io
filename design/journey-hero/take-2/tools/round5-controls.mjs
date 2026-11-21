@@ -6,13 +6,13 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const take = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const call = "      if (i === 0) {\n        spreadFrame(D, t >= action(s, 'frame0').end - 0.000500001 * PACE ? 1 : handed(s, 'frame0', t), !filled);";
-const old = "      if (i === 0 && done(s, 'frame0', t)) {\n        for (const rect of [ID.left, ID.right]) D.push({ ...on('ink', ...rect, { lift: 0.06, t: 0.02 }), tones: FLYER.coal });\n        if (!filled) emptyFrame(D, ID.frame, false);";
+// CORRECTIONS-12 I1: the spread is no longer drawn; its pages must be there, whole and still, until the map lands.
+const spread = "if (i === 0) for (const rect of [ID.left, ID.right]) D.push({ ...on('ink', ...rect, { lift: 0.06, t: 0.02 }), tones: FLYER.coal });";
 const centre = 'return { ...view, cx: (textRight + view.W) / 2 - view.S * need.x };';
 const tests = [
-  ['old spread drawing', 'H1', 'stage.mjs', call, old, 'H1 spread: release swaps'],
-  ['other draw changes', 'H1', 'stage.mjs', "else P.push(on(tone, ...growing, { lift: 0.06, t: 0.02 }));", "else P.push(on('red', ...growing, { lift: 0.06, t: 0.02 }));", 'H1 draw comparison:'],
-  ['spread grows outside rectangle', 'H1', 'stage.mjs', 'pc.s[0] *= p; pc.s[1] *= p;', 'pc.s[0] *= 1; pc.s[1] *= p;', 'H1 spread: corner outside'],
+  ['spread pages arrive late', 'H1', 'stage.mjs', spread, spread.replace('[ID.left, ID.right])', '[ID.left, ID.right].filter(() => t >= 1.2 * PACE))'), 'H1 spread: missing lasting page pieces'],
+  ['other draw changes', 'H1', 'stage.mjs', "  P.push(on(tone, ...growing, { lift: 0.06, t: 0.02 }));", "  P.push(on('red', ...growing, { lift: 0.06, t: 0.02 }));", 'H1 draw comparison:'],
+  ['spread page grows', 'H1', 'stage.mjs', spread, spread.replace("on('ink', ...rect,", "on('ink', rect[0], rect[1], rect[2] * Math.min(1, t / (2 * PACE)), rect[3],"), 'H1 spread: a page changed size'],
   ['short InDesign hold', 'H2', 'stage.mjs', "{ id: 'land', kind: 'wait', duration: 3.0 }", "{ id: 'land', kind: 'wait', duration: 1.2 }", 'H2 loop'],
   ['old laptop direction', 'H3', 'stage.mjs', 'const lidU = [1, 0, 0], lidV = [0, Math.cos(LID_ANGLE), -Math.sin(LID_ANGLE)], lidN = [0, Math.sin(LID_ANGLE), Math.cos(LID_ANGLE)];', 'const lidU = [0, 0, -1], lidV = [-Math.sin(LID_ANGLE), Math.cos(LID_ANGLE), 0], lidN = [Math.cos(LID_ANGLE), Math.sin(LID_ANGLE), 0];', 'H3 orientation:'],
   ['laptop label misses corner', 'H3', 'stage.mjs', 'const local = [-face.s[0] + 0.08, face.s[1] - 0.06, face.s[2]];', 'const local = [0, 0, face.s[2]];', 'H3 laptop label top-left corner'],

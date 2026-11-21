@@ -1,6 +1,6 @@
 # Journey hero, second take
 
-This is the unpublished prototype. `CORRECTIONS-14.md` (the craft list changes with a letter roll, replacing round 12's selection box and round 11's red hairline wipe) controls this revision, on top of `CORRECTIONS-10.md` (gathered stars ease into the mark's look and blasted stars ease back to their own), `CORRECTIONS-9.md` (a long hold draws the DG mark in stars), `CORRECTIONS-8.md` (the name reacts as the live page's headline does, a star field behind the hero with hold-and-blast, no floor hover, and no frames lifting while a picture is carried), `CORRECTIONS-7.md` (one hand easing for the cursor, longer moves taking longer), `CORRECTIONS-6.md` (the one-time entrance and the labels' exit), `CORRECTIONS-5.md` and its second addendum after `d7e0de5`; rounds 1–4 and the motion briefs supply the retained rules. The allowed range is 70–92 seconds (raised from 86 for round 7's K2). Groups align on world x 0.200; waits never click. The loop is **91.498 seconds at PACE 1** (83.040 before round 7; scenes 8.046, 13.148, 23.091, 16.681, 15.082 and 15.449 s). Every document opens empty and is built by one cursor. Round 5 adds the lasting spread draw, longer InDesign labels, lower-left-facing laptop, measured text offsets, wide-screen centring and floor hover. The supplied browser review accepts H9/H10 and the rest of round 5. H11 keeps phone craft numbers in their own columns; H12 centres from the name's ink and lede/craft-list boxes, independently of word wrapping. Those two fixes have Node evidence and exact negative controls in BUILD.md; their browser checks remain external. No browser command was run locally. The committed hardware reports measure incoming `48aea47`.
+This is the unpublished prototype. `CORRECTIONS-14.md` (the craft list changes with a letter roll, replacing round 12's selection box and round 11's red hairline wipe) and `CORRECTIONS-12.md` (300 stars before the logo; phones in true proportion to their tablets, InDesign without frame drawing, and one export shift) control this revision, on top of `CORRECTIONS-10.md` (gathered stars ease into the mark's look and blasted stars ease back to their own), `CORRECTIONS-9.md` (a long hold draws the DG mark in stars), `CORRECTIONS-8.md` (the name reacts as the live page's headline does, a star field behind the hero with hold-and-blast, no floor hover, and no frames lifting while a picture is carried), `CORRECTIONS-7.md` (one hand easing for the cursor, longer moves taking longer), `CORRECTIONS-6.md` (the one-time entrance and the labels' exit), `CORRECTIONS-5.md` and its second addendum after `d7e0de5`; rounds 1–4 and the motion briefs supply the retained rules. The allowed range is 70–92 seconds (raised from 86 for round 7's K2). The screen's middle is world x 0.200; every export group and the light pool sit `EXPORT_SHIFT` (-0.3) to its left, at -0.100 (round 12, X1). Waits never click. The loop is **88.500 seconds at PACE 1** (91.498 in rounds 7-11, 83.040 before round 7; scenes 8.046, 13.148, 20.238, 16.681, 15.082 and 15.305 s). Every document opens empty and is built by one cursor, except InDesign's, which opens with its blank pages already there (round 12, I1). Round 5 adds the lasting spread draw, longer InDesign labels, lower-left-facing laptop, measured text offsets, wide-screen centring and floor hover. The supplied browser review accepts H9/H10 and the rest of round 5. H11 keeps phone craft numbers in their own columns; H12 centres from the name's ink and lede/craft-list boxes, independently of word wrapping. Those two fixes have Node evidence and exact negative controls in BUILD.md; their browser checks remain external. The committed hardware reports measure incoming `48aea47`.
 
 ## The design being carried forward
 
@@ -8,16 +8,16 @@ The approved six stills and the earlier browser review are the reference. The sc
 
 Graphic design is one pipeline: Photoshop's photograph goes to the dock; Illustrator's two maps join it; InDesign places those same assets into the spread, cover, post and e-blast. Only the finished InDesign group reaches the floor. A closed stack sits behind the reading copy, alongside a phone and tablet. The reading copy still bends through fourteen strips per leaf, through The Offering, Location, Amenities and the gallery.
 
-Video and motion retain their landscape tablet and two phones. UX/UI uses an open laptop facing world +z (lower left), a portrait tablet and one phone. Every complete footprint, including the laptop deck and lid, is centred on `SCREEN.l + SCREEN.w / 2` in world x. The light pool shares that middle. The slot remains the undrawn plane at `MAT.z`, shifted with the Figma row to `MAT.z + UI_ROW.forward` for H10; only the laptop enters in x, whole and unclipped, from 1.6 units to its left. All returns use the shared z withdrawal.
+Video and motion retain their landscape tablet and two phones. UX/UI uses an open laptop facing world +z (lower left), a portrait tablet and one phone. Every complete footprint, including the laptop deck and lid, is centred on `SCREEN.l + SCREEN.w / 2 + EXPORT_SHIFT` in world x (`EXPORT_SHIFT` = -0.3 in `stage.mjs`, round 12 X1: one number moves the InDesign block and its booklet's reading place, both device mats, the UX/UI row with the laptop's slide-in path, and the light pool). The light pool shares that middle. Every phone is sized in true proportion to the tablet beside it (round 12, D1): 0.594 of an upright tablet's height, 0.822 of a tablet on its side, in a 71.6:147.6 body; front edges stay aligned and groups stay centred. The slot remains the undrawn plane at `MAT.z`, shifted with the Figma row to `MAT.z + UI_ROW.forward` for H10; only the laptop enters in x, whole and unclipped, from 1.6 units to its left. All returns use the shared z withdrawal.
 
 | Middle | World x |
 | --- | ---: |
 | Screen | 0.200 |
-| InDesign block | 0.200 |
-| Premiere Pro row | 0.200 |
-| After Effects row | 0.200 |
-| Figma row | 0.200 |
-| Light pool | 0.200 |
+| InDesign block | -0.100 |
+| Premiere Pro row | -0.100 |
+| After Effects row | -0.100 |
+| Figma row | -0.100 |
+| Light pool | -0.100 |
 
 The prior build was reviewed in Chromium on 19 November 2026, with held frames on desktop and phone, a pixel comparison of its stills, and an offline preview checked for requests. The second pass was then reviewed in a real browser: stacked pictures flickered, the comp's construction was hidden, typing was too fast, and Photoshop needed clearer, better-paced edits. Those findings are the evidence for this correction. The corrective revision was then reviewed the same way on 19 November 2026 (Chromium with software rendering): held frames at each corrected moment (Photoshop's sky, both healed distractions and the graded photo; Premiere Pro's typed caption; After Effects' typed words; the playing devices of the last three apps) show no flicker, ghost or garbled text; a film of the whole loop reads cleanly; and the offline preview runs at desktop and phone size with no requests and no errors. The committed hardware runs below measure incoming `48aea47`; they do not measure round 3. **Still unmeasured:** phones, Safari and Firefox.
 
@@ -44,6 +44,8 @@ The prior build was reviewed in Chromium on 19 November 2026, with held frames o
 - `craft-wipe.mjs` (round 14, K1; replaces round 12's selection box and round 11's red rule, keeping the file name and its seams): the craft list changes with a letter roll. At rest the current row's number is red `#F0484F` and its text paper, the others muted, the hairlines bare. Every glyph of a row (two digits, then the label's letters, spaces included) has an out copy (the button's own colour: muted, or paper under hover) and an in copy (paper; red for the digits) stacked in a hard mask the height of the line box with 0.2 em of slack either side. A glyph's roll moves the out copy up by 110 % and brings the in copy up from 110 % to 0, 0.38 s with `EASE.wipe`, glyph i starting i × 0.018 s after the change ("Graphic design", 16 glyphs, ends at 0.65 s); the old row rolls back down at once on the same timetable. A change during a change sends each glyph of a row whose target changed on from where it is. The glyphs are an `aria-hidden` overlay at pen positions measured from the flow text (as `name-react.mjs` does), so kerning and tracking are kept; the flow text keeps the layout and is what screen readers read, painted transparent only while the overlay is live. Per frame only the copies' `transform` is written; geometry on measure. Own clock; runs from the craft actually current; the entrance sets it (the current row appears lit as its row cuts in); reduced motion cuts (overlay off, journey.css's `aria-current` colours). `__hero.crafts(p)` holds the latest change at p (0–1 over its whole length), `null` lets it run; `__hero.craftWipe` reads `{ current, changes, held, busy, length, live, rolls, lit, touched, shown }`.
 - `tools/round12-stars-list-checks.mjs` (run by `checks.mjs`; `--controls` alone; replaces `round11-checks.mjs`): S1 (no point before 300 captured, the middle's start, the corner radius growing on at 104 px/s and stopping, a hero short of 300 forming at its diagonal, the blast unchanged), with its negative control. Its L2 checks went with the selection box in round 14.
 - `tools/round14-checks.mjs` (run by `checks.mjs`; `--controls` alone): K1 on the pure model (one change against the timetable and exactly at rest, the glyph order, a change 0.2 s into a change with no copy moving more per 60 fps frame than `EASE.wipe` allows, 01 to 03 touching only its two rows, reduced motion, the entrance and the loop's first start, the loop's changes, the sources), with two negative controls (every glyph together; a restart from rest).
+- `tools/round12-checks.mjs` (run by `checks.mjs`; `--controls` alone): D1's phone and tablet sizes in all four apps against `PHONE_BESIDE` (within 2 %), front edges, art aspect and the Figma canvas phone frame; I1's InDesign without frame steps or empty/crossed frames, its pages whole from the open and each picture on its own page; X1's centres on `SCREEN.l + SCREEN.w / 2 + EXPORT_SHIFT` and a one-number move that moves only floor pieces (the laptop's slide-in included). Four negative controls: the old InDesign phone, a phone set back, one frame step put back, and the pool left behind.
+- `tools/hand-patch.mjs` `r12Patch` (round 12): removes InDesign's frame steps from the frozen earlier sources in memory, so the older snapshot checks compare like with like; the retimer matches actions by id.
 - `tools/correction-checks.mjs`: R9–R15, full 240 Hz cursor continuity, landed-face and fixed-mark checks, 0.005 s frame/plate lifetimes, Figma geometry and canvas/toolbar/lid clearance, frozen withdrawal, photograph registration and parametric label routes.
 - `tools/controls.mjs`: reversible negative controls against the real checker, restoring source in `finally`; each exact edit must match one location; round-three evidence is in `.scratch/corrections3/controls/` and BUILD.md. The tool writes no results.json.
 - `tools/browser-check.mjs`: actual marks/fonts, gutters, outward routes, words clear of every ring/mark/line, page overlap, reduced motion and laptop entry/return at ten sizes. Its new `checkRound5Layout(page)` adds font-ink/guard/target checks, four wider reference sizes and the 555-size resize sweep. `checkBrowser(page)` accepts a review page; its CLI is for the external review machine only. These checks were not run here.
@@ -65,10 +67,10 @@ Times below are seconds at PACE 1. The first 0.5 seconds change shell; the next 
 | --- | ---: | ---: | ---: | --- |
 | Photoshop | 0.000 | 8.046 | 7.095311 | Raw photo; levels; sky; seamless heals; grade; photograph to dock |
 | Illustrator | 8.046 | 13.148 | 10.835164 | Empty artboards; maps, close-up and subway; maps to dock |
-| InDesign | 21.194 | 23.091 | 20.189380 | Styled photo drops, typed titles and drawn blobs; labels during the 3.0 s landing hold; four bending leaves |
-| Premiere Pro | 44.285 | 16.681 | 13.631291 | Clips, voice, captions and sound; shared playback; fully revealed export labels |
-| After Effects | 60.967 | 15.082 | 12.032090 | Words, shapes, keys and graph; shared playback; fully revealed export labels |
-| Figma | 76.049 | 15.449 | 13.149236 | Laptop/tablet/phone wireframes and designs; tap/change-state/instant interaction; scrolled Video still |
+| InDesign | 21.194 | 20.238 | 17.336277 | Blank pages from the open; styled photo drops onto them, typed titles and drawn blobs; labels during the 3.0 s landing hold; four bending leaves |
+| Premiere Pro | 41.432 | 16.681 | 13.631291 | Clips, voice, captions and sound; shared playback; fully revealed export labels |
+| After Effects | 58.114 | 15.082 | 12.032090 | Words, shapes, keys and graph; shared playback; fully revealed export labels |
+| Figma | 73.196 | 15.305 | 13.004570 | Laptop/tablet/phone wireframes and designs; tap/change-state/instant interaction; scrolled Video still |
 
 The scripts contain lengths, never hand-authored start times. `script()` derives each approach, start and end. PACE scales those lengths, cursor approaches, shell transition, feed/return and device clocks together. The first typed text in each app takes at least 0.6 seconds; every later text takes at least 0.4 seconds. Repeat runs retain their brisk timings. The resulting scene lengths supersede the second pass's individual targets and fit the revised loop (70–92 seconds since round 7). After Effects also visibly moves the first ball key from zero to 0.75, so the new stopwatch operation can create its key at zero while the finished animation keeps the approved stagger.
 
@@ -107,40 +109,36 @@ Every action start and end follows. These are local times; multiply by PACE and 
 | ai | closeBack | wait | 10.886 | 11.136 |
 | ai | mapExport | drag | 11.488 | 11.988 |
 | ai | locExport | drag | 12.348 | 12.848 |
-| id | frame0 | draw | 1.173 | 1.649 |
-| id | frame1 | draw | 2.053 | 2.353 |
-| id | frame2 | draw | 2.604 | 2.904 |
-| id | frame3 | draw | 3.154 | 3.454 |
-| id | map | drag | 3.877 | 4.327 |
-| id | heading | type | 4.621 | 5.221 |
-| id | spreadType | run | 5.667 | 6.143 |
-| id | loc | drag | 6.442 | 6.892 |
-| id | photo | drag | 7.259 | 7.709 |
-| id | blob | draw | 7.946 | 8.129 |
-| id | coverTitle | type | 8.325 | 8.725 |
-| id | pages | run | 9.128 | 9.369 |
-| id | postPhoto | drag | 9.754 | 10.054 |
-| id | postTitle | type | 10.260 | 10.660 |
-| id | postBlob | draw | 10.888 | 11.068 |
-| id | postButton | draw | 11.258 | 11.438 |
-| id | mailPhoto | drag | 11.730 | 12.030 |
-| id | mailTitle | type | 12.243 | 12.643 |
-| id | mailBlob | draw | 12.840 | 13.020 |
-| id | mailButton | draw | 13.235 | 13.415 |
-| id | mailFlyer | type | 13.609 | 14.009 |
-| id | export | export | 14.391 | 15.191 |
-| id | land | wait | 15.191 | 18.191 |
-| id | pickup | wait | 18.191 | 18.891 |
-| id | open | wait | 18.891 | 18.991 |
-| id | leaf1 | wait | 18.991 | 19.591 |
-| id | pause1 | wait | 19.591 | 19.891 |
-| id | leaf2 | wait | 19.891 | 20.491 |
-| id | pause2 | wait | 20.491 | 20.791 |
-| id | leaf3 | wait | 20.791 | 21.391 |
-| id | pause3 | wait | 21.391 | 21.691 |
-| id | leaf4 | wait | 21.691 | 22.291 |
-| id | read | wait | 22.291 | 22.591 |
-| id | return | wait | 22.591 | 23.091 |
+| id | map | drag | 1.023 | 1.473 |
+| id | heading | type | 1.768 | 2.368 |
+| id | spreadType | run | 2.814 | 3.290 |
+| id | loc | drag | 3.589 | 4.039 |
+| id | photo | drag | 4.406 | 4.856 |
+| id | blob | draw | 5.093 | 5.276 |
+| id | coverTitle | type | 5.472 | 5.872 |
+| id | pages | run | 6.275 | 6.516 |
+| id | postPhoto | drag | 6.901 | 7.201 |
+| id | postTitle | type | 7.407 | 7.807 |
+| id | postBlob | draw | 8.035 | 8.215 |
+| id | postButton | draw | 8.405 | 8.585 |
+| id | mailPhoto | drag | 8.877 | 9.177 |
+| id | mailTitle | type | 9.390 | 9.790 |
+| id | mailBlob | draw | 9.987 | 10.167 |
+| id | mailButton | draw | 10.382 | 10.562 |
+| id | mailFlyer | type | 10.756 | 11.156 |
+| id | export | export | 11.538 | 12.338 |
+| id | land | wait | 12.338 | 15.338 |
+| id | pickup | wait | 15.338 | 16.038 |
+| id | open | wait | 16.038 | 16.138 |
+| id | leaf1 | wait | 16.138 | 16.738 |
+| id | pause1 | wait | 16.738 | 17.038 |
+| id | leaf2 | wait | 17.038 | 17.638 |
+| id | pause2 | wait | 17.638 | 17.938 |
+| id | leaf3 | wait | 17.938 | 18.538 |
+| id | pause3 | wait | 18.538 | 18.838 |
+| id | leaf4 | wait | 18.838 | 19.438 |
+| id | read | wait | 19.438 | 19.738 |
+| id | return | wait | 19.738 | 20.238 |
 | pr | bin | run | 1.271 | 1.551 |
 | pr | clipA | drag | 1.765 | 2.165 |
 | pr | clipB | drag | 2.469 | 2.869 |
@@ -175,27 +173,27 @@ Every action start and end follows. These are local times; multiply by PACE and 
 | ae | graph | slide | 8.054 | 8.654 |
 | ae | play | play | 8.969 | 10.569 |
 | ae | export | export | 10.932 | 11.632 |
-| fig | frame0 | draw | 1.222 | 1.522 |
-| fig | frame1 | draw | 1.763 | 2.063 |
-| fig | frame2 | draw | 2.304 | 2.604 |
-| fig | pictureBox | draw | 2.937 | 3.187 |
-| fig | heading | type | 3.461 | 4.061 |
-| fig | button | draw | 4.261 | 4.461 |
-| fig | details | run | 4.690 | 5.076 |
-| fig | marquee | draw | 5.462 | 5.847 |
-| fig | copies | drag | 6.126 | 6.526 |
-| fig | fill0 | set | 6.753 | 6.803 |
-| fig | fill1 | set | 7.063 | 7.113 |
-| fig | fill2 | set | 7.340 | 7.390 |
-| fig | hero | drag | 7.657 | 8.057 |
-| fig | name | type | 8.303 | 8.703 |
-| fig | accent0 | set | 8.930 | 8.980 |
-| fig | accent1 | set | 9.240 | 9.290 |
-| fig | accent2 | set | 9.517 | 9.567 |
-| fig | hotspot | click | 9.892 | 9.942 |
-| fig | link | drag | 9.942 | 10.542 |
-| fig | panel | run | 10.874 | 11.141 |
-| fig | export | export | 11.499 | 12.199 |
+| fig | frame0 | draw | 1.216 | 1.516 |
+| fig | frame1 | draw | 1.757 | 2.057 |
+| fig | frame2 | draw | 2.298 | 2.598 |
+| fig | pictureBox | draw | 2.915 | 3.165 |
+| fig | heading | type | 3.438 | 4.038 |
+| fig | button | draw | 4.238 | 4.438 |
+| fig | details | run | 4.668 | 5.008 |
+| fig | marquee | draw | 5.370 | 5.737 |
+| fig | copies | drag | 6.011 | 6.411 |
+| fig | fill0 | set | 6.632 | 6.682 |
+| fig | fill1 | set | 6.943 | 6.993 |
+| fig | fill2 | set | 7.215 | 7.265 |
+| fig | hero | drag | 7.525 | 7.925 |
+| fig | name | type | 8.170 | 8.570 |
+| fig | accent0 | set | 8.797 | 8.847 |
+| fig | accent1 | set | 9.108 | 9.158 |
+| fig | accent2 | set | 9.380 | 9.430 |
+| fig | hotspot | click | 9.751 | 9.801 |
+| fig | link | drag | 9.801 | 10.401 |
+| fig | panel | run | 10.730 | 10.996 |
+| fig | export | export | 11.355 | 12.055 |
 
 ## Exports that play
 
@@ -220,7 +218,7 @@ This inventory describes known changes from the incoming motion build and the ap
 - **All six stills:** C15 permits only the floor groups and light pool to move in world x, to the screen's own middle at 0.200. Relative to the incoming build, InDesign's complete block moves left by 1.860 units and each three-device row by 1.250. That statement describes the incoming C15 change. This round adds labels and the three Figma device layouts; its small-screen framing may also shift/reduce the common view to clear the label column. The common framing is recalculated from these stills with the existing fit formula and padding. This correction adds the small height separations needed by rounded picture/plate faces and raises selections, carets, handles, taps and the cursor above picture stacks; the still times in the tables follow the longer typing actions.
 - **Photoshop:** its still is now the finished graded photograph, before Export, rather than a split edit. The split bar and handle are gone; the sliders finish at 0.55 and 0.30; the cursor is on Export. The last rail icon is the wand needed by the sky step. The completed four layer rows and today's histogram remain. This correction draws the graded photograph alone at the still, removing the cone and patch ghosts. During construction the raw sky stays flat grey; the replacement and clean base both use the graded blue sky, so the grade does not change it again. Each completed heal switches the whole base: photoNoCone retains the crane after the cone/barrier are gone; photoClean removes the crane.
 - **Illustrator:** the finished maps, close-up, selected path, points and handles keep their approved measures. The cursor is now on Export, rather than still approaching it. The photo chip stays in the bar as introduced by MOTION.md; the inspect beat returns the lit tool to the arrow.
-- **InDesign:** its finished app content and its leaf pose at exactly 1.82 stay. The horizontal centring and moved pool are the changes; the booklet, stack and two device pictures keep their approved sizes and artwork.
+- **InDesign:** its finished app content and its leaf pose at exactly 1.82 stay. The horizontal centring and moved pool are the changes; the booklet and stack keep their approved sizes. Round 12 (D1) makes the phone 0.594 of the tablet's height and widens the tablet toward a real tablet's shape within the freed width; the e-blast picture is redrawn wider (362 x 516) to fill it, its content centred. Round 12 (X1) moves the whole block and reading place by `EXPORT_SHIFT`.
 - **Premiere:** the bin now contains three source shots and music. The timeline adds three attached voice strips, a music lane, level line, square keys, ducked waveform and stepped taper; the clip/voice/caption lanes and preset landing heights fit those into the existing plate. A small lit timeline-tool tile shows the blade/type/arrow actions. The still is 0.550001 seconds into export playback: the viewer/playhead and the three devices show that live phase rather than the parked shot A and burned-in caption. Device progress follows that phase. The two effects sliders from MOTION.md remain.
 - **After Effects:** the still is one third through playback, so its word reveal, ball/outline position, list visibility, playhead and exported pictures differ from the old parked 1.6 pose. This correction makes the project thumbnail show that same live phase instead of its former baked picture. While building, both comp and thumbnail show typed words, the growing and dragged ball, and whole rows at their authored positions; the keyed reveal applies only during playback. There is now a visible stopwatch beside the ball row and a small lit tool tile. The graph grid and end keys, finished timeline keys, project list and layer measures stay. The third list row remains solid, as MOTION.md required. The ball now uses the permitted engine wipe ease; the old separate ball curve is gone. Its graph handles finish at (115.2,176) and (38.4,24), rather than (128,176) and (112,24), so the graph describes the actual engine wipe. This departure resolves MOTION-2's three-curve rule over MOTION.md's separate ball curve.
 - **Figma:** the 1.10-second scrolled Video phase replaces the former parked desktop/two-phone arrangement. Both canvas rows are laptop/tablet/phone layouts; the floor is an open laptop, portrait tablet and phone. Each plays the same sequence with its own viewport and fixed chrome. All three labels are complete. The card tap has not happened at this still.
@@ -245,7 +243,7 @@ node design/journey-hero/take-2/tools/round5-second-addendum-controls.mjs --audi
 
 `checks.mjs --timeline` also prints the derived action table. `round5-checks.mjs --only=H1` (also H2, H3, H6, H7) isolates a computed gate. The addendum checker accepts `--only=H9`, `H10`, `H10-gap` or `H10-ring`; its optional report includes every Figma sample. `frameAt(t)` wraps positive and negative times. `SCENES[i]()` builds the new still; `SCENES[2]({ at })` still gives any booklet reading pose with the complete group out. The player supports `?t=12.5` and `window.__hero.seek(t)`, and exposes its clock, SHOW, LOOP and cached layout metrics. `window.__hero.measure()` clears the expanded target's inline left/width before reading the CSS stage; it then refreshes the view and target. `stage.html?s=0..5` holds a scene, `?t=` holds a loop time, `?atlas=1` shows every atlas page, and yaw/pitch inspect the geometry.
 
-The external browser review can continue using `tools/sheet.mjs` and `tools/film.mjs`, including phone frames and the 0–91.498-second range. They were not run in the build itself; the browser review recorded under "The design being carried forward" ran them afterwards. The retained hardware reports describe incoming `48aea47`, including both D2 runs. Round 3 was not remeasured on hardware because it changes which pieces are drawn and where labels sit, not the renderer.
+The external browser review can continue using `tools/sheet.mjs` and `tools/film.mjs`, including phone frames and the 0–88.500-second range. They were not run in the build itself; the browser review recorded under "The design being carried forward" ran them afterwards. The retained hardware reports describe incoming `48aea47`, including both D2 runs. Round 3 was not remeasured on hardware because it changes which pieces are drawn and where labels sit, not the renderer.
 
 All authored changes and the packed output are confined to this folder. Neither brief, the first take, public files, source site, dependencies nor deployment was changed.
 
@@ -259,7 +257,7 @@ Frame style arrives exactly on each photo release, not on a title, blob or butto
 - Post: the woven top band, dark foot and firm's small blob arrive with postPhoto. postTitle supplies its final-looking tag while typing; postBlob draws the large gold building mark. postButton touches only its button/tag area.
 - E-blast: the top band, gold photo frame, divider and firm's small blob arrive with mailPhoto. mailTitle types the body text, mailBlob draws its large building mark, mailButton draws the button, and mailFlyer types View the flyer with a caret for 0.4 seconds.
 
-Amenities, Location and cover thumbnails follow their own completion. Offering, Gallery and back cover are a three-row pages run at 0.07-second intervals. No photo-bearing thumbnail precedes photo's release. Finished pictures replace their construction only after all their parts exist. The landed amenities map sits above the spread plates and retains its selection/handles. Each empty frame’s outline and cross stop only at its own picture’s first contact and never return. Its plate remains until placement; that frame contains the styled replacement immediately. InDesign travelling pictures draw above other frames’ intact outlines and crosses. Each carried photograph is cropped to its destination’s framing before release; the cover’s photo aperture now matches the full-height photo already printed in the approved cover. Finished post and e-blast pictures replace their construction pieces, which stop in that same frame.
+Amenities, Location and cover thumbnails follow their own completion. Offering, Gallery and back cover are a three-row pages run at 0.07-second intervals. No photo-bearing thumbnail precedes photo's release. Finished pictures replace their construction only after all their parts exist. The landed amenities map sits above the spread plates and retains its selection/handles. Round 12 (I1): no frames are drawn. The spread's two pages and the cover, post and e-blast pages are there from the open; each blank page's thin edge stops only at its own picture's first contact and never returns. Its plate remains until placement; that page contains the styled replacement immediately. InDesign travelling pictures draw above other pages' intact edges. Each carried photograph is cropped to its destination’s framing before release; the cover’s photo aperture now matches the full-height photo already printed in the approved cover. Finished post and e-blast pictures replace their construction pieces, which stop in that same frame.
 
 Premiere types Look good., Move well. and Work right. separately, with growing lane blocks and the correct viewer shot. Only the two repeated captions use a run. Figma's hero source belongs to the panel's opening furniture; its own slot empties during the drag. Fills and accents explicitly name the arrow. tick clamps one time step to 0.1 seconds; seeking still draws the requested time exactly.
 
@@ -296,4 +294,4 @@ These are the committed incoming-build runs. Their flags retain the external rev
 
 `tools/browser-check.mjs` checks the labels at ten sizes: 390 × 664, 390 × 844, 360 × 780, 375 × 667, 412 × 915, 768 × 1024, 820 × 1180, 1024 × 768, 1440 × 900 and 1920 × 1080. Its command needs Playwright installed in the repository; without it, it reports the sizes as UNRUN and launches nothing. Its exported `checkBrowser(page)` can be run on a page from any Playwright. The builder's machine has no Playwright, so the reviewers ran `checkBrowser` on the packed preview of `50b51b8` and `7590b44` in the cloud: it passed at all ten sizes (150 rows). The exported route assertions also run in Node against parametric layout geometry, including their negative control. BUILD.md contains exact outputs and control edits.
 
-Those round-three/four reviews used the historical 81.240-second loop. Round 5 used 83.040 seconds; round 7 uses 91.498 seconds, with the starts/stills in the current table above. The supplied review accepted the rest of round 5; the H9/H10 fixes await external browser/frame review. Numeric tests cover frame/plate continuity, drawing order, fixed marks, playback content, toolbar clearance, narrow-stage gutters, measurement stability and the full laptop/app gap. No hardware rerun or measurement entry point was invoked.
+Those round-three/four reviews used the historical 81.240-second loop. Round 5 used 83.040 seconds; round 7 used 91.498 seconds and round 12 uses 88.500, with the starts/stills in the current table above. The supplied review accepted the rest of round 5; the H9/H10 fixes await external browser/frame review. Numeric tests cover frame/plate continuity, drawing order, fixed marks, playback content, toolbar clearance, narrow-stage gutters, measurement stability and the full laptop/app gap. No hardware rerun or measurement entry point was invoked.

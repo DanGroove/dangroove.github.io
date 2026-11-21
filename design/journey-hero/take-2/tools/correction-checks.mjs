@@ -7,6 +7,7 @@ import { HOME, EASE, dot, quatRotate } from '../../../../public/journey/hero/eng
 import { corners } from '../kit.mjs';
 import { labelLayout, fitCalloutView } from '../labels.mjs';
 import { checkLabelRoutes } from './browser-check.mjs';
+import { BLOCK_ROW, EXPORT_SHIFT } from '../stage.mjs';
 
 const rect = pc => { const p = corners(pc); return [Math.min(...p.map(p => p[0])), Math.min(...p.map(p => p[1])), Math.max(...p.map(p => p[0])), Math.max(...p.map(p => p[1]))]; };
 const overlap = (a, b) => Math.min(a[2], b[2]) > Math.max(a[0], b[0]) + 1e-8 && Math.min(a[3], b[3]) > Math.max(a[1], b[1]) + 1e-8;
@@ -17,6 +18,7 @@ function samePicture(a, b) {
   const x = mapping(a), y = mapping(b); return x.every((n, i) => Math.abs(n - y[i]) < 1e-7);
 }
 const near = (a, b, eps = 1e-7) => Math.abs(a - b) <= eps;
+const LAPTOP_ENTRY_ALLOWANCE = 8;   // px; 5 until round 11 (see CORRECTIONS-12 X1 below)
 const projection = pc => { const p = corners(pc).map(p => [dot(HOME.r, p), dot(HOME.u, p)]); return [Math.min(...p.map(p => p[0])), Math.min(...p.map(p => p[1])), Math.max(...p.map(p => p[0])), Math.max(...p.map(p => p[1]))]; };
 function hull(points) {
   const p = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]), cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
@@ -124,7 +126,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
           const points = corners(asset), xs = points.map(p => p[0]), zs = points.map(p => p[2]);
           // Closed copies use their full cover; device chrome sits inside the slab rim.
           const left = Math.min(...xs), right = Math.max(...xs), back = Math.min(...zs), front = Math.max(...zs);
-          const inset = isId && i > 0 ? (i === 1 ? 0.04 : 0.05) : 0;
+          const inset = isId && i > 0 ? (i === 1 ? BLOCK_ROW.phoneRim : 0.05) : 0;   // CORRECTIONS-12 D1: the phone's rim keeps its post's screen
           const x = i === 0 ? left + 0.1 : i === 1 ? (left + right) / 2 : right + inset - 0.1, z = i === 1 ? front + inset - 0.06 : back - inset + 0.1;
           const faces = floor.filter(pc => (isId || pc.deviceBody) && quatRotate(pc.q, [0, 0, 1])[1] > 1 - 1e-8 && corners(pc).some(p => near(p[0], x, pc.s[0] * 2 + 1e-7))).filter(pc => { const cs = corners(pc); return x >= Math.min(...cs.map(p => p[0])) - 1e-8 && x <= Math.max(...cs.map(p => p[0])) + 1e-8 && z >= Math.min(...cs.map(p => p[2])) - 1e-8 && z <= Math.max(...cs.map(p => p[2])) + 1e-8; });
           mark = [x, Math.max(...faces.map(pc => pc.p[1] + pc.s[2])), z];
@@ -132,11 +134,10 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
         if (c.mark.some((n, j) => !near(n, mark[j]))) fail(time, 'R14: anchor misses its specified face/corner');
       }
       if (expected[scene.key] && at >= Math.max(...ends) + 0.4 * PACE && at < off && labels.length !== 3) fail(time, 'R11: expected three labels');
-      if (isId) for (const id of ['map', 'photo', 'postPhoto', 'mailPhoto']) {
-        const overlays = P.filter(pc => pc.emptyFrame === id), moving = P.filter(pc => pc.where === 'travel');
-        if (overlays.some(pc => moving.some(q => polygonsOverlap(visibleProjection(pc), visibleProjection(q)) && pc.p[2] + pc.s[2] >= q.p[2] - q.s[2] - 1e-8))) fail(time, 'frame clearance: outline crosses a travelling picture');
-        if (at > byId['frame' + ['map', 'photo', 'postPhoto', 'mailPhoto'].indexOf(id)].end && !overlays.length) vanishedFrames.add(id);
-        if (vanishedFrames.has(id) && overlays.length) fail(time, 'frame clearance: empty outline returned');
+      // CORRECTIONS-12 I1: no empty frames; a blank page's edges stay under every travelling picture.
+      if (isId) {
+        const pages = P.filter(pc => pc.page && pc.where === 'content'), moving = P.filter(pc => pc.where === 'travel');
+        if (pages.some(pc => moving.some(q => polygonsOverlap(visibleProjection(pc), visibleProjection(q)) && pc.p[2] + pc.s[2] >= q.p[2] - q.s[2] - 1e-8))) fail(time, 'page clearance: a blank page crosses a travelling picture');
       }
       if (scene.key === 'fig') {
         if (at < spans.land && P.some(pc => pc.art === 'tapDot')) fail(time, 'Figma clock: prototype taps before the shared export clock starts');
@@ -150,10 +151,10 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
         if (at >= Math.max(...ends) && at < off && (floor.filter(pc => pc.deviceBody).length !== 3 || [...kinds].sort().join(',') !== 'laptop,phone,tablet')) fail(time, 'Figma devices: expected laptop, tablet, phone');
         if (at >= Math.max(...ends) && at < off) {
           const xs = floor.flatMap(corners).map(p => p[0]);
-          if (Math.abs((Math.min(...xs) + Math.max(...xs)) / 2 - (SCREEN.l + SCREEN.w / 2)) > 0.001) fail(time, 'Figma centring: complete footprint left the screen middle');
+          if (Math.abs((Math.min(...xs) + Math.max(...xs)) / 2 - (SCREEN.l + SCREEN.w / 2 + EXPORT_SHIFT)) > 0.001) fail(time, 'Figma centring: complete footprint left the screen middle');   // plus X1's shift
           const bodies = [0, 1, 2].map(i => floor.find(pc => pc.device === i && pc.deviceBody)), lid = floor.find(pc => pc.art === 'chromeLaptop');
-          const widths = [lid.s[0] * 2, ...bodies.slice(1).map(pc => pc.s[0] * 2 - 0.12)];
-          if (!near(lid.s[0] / lid.s[1], 1.6) || !near(widths[1] / (bodies[1].s[1] * 2 - 0.12), 3 / 4) || !near(widths[2] / (bodies[2].s[1] * 2 - 0.12), 9 / 19.5) || widths[0] <= Math.max(...widths.slice(1))) fail(time, 'Figma device geometry: wrong screen ratios or picture sizes');
+          const rims = [0, 0.12, 2 * UI_ROW.phoneRim], widths = [lid.s[0] * 2, ...bodies.slice(1).map((pc, k) => pc.s[0] * 2 - rims[k + 1])];   // D1: the smaller phone's own rim
+          if (!near(lid.s[0] / lid.s[1], 1.6) || !near(widths[1] / (bodies[1].s[1] * 2 - 0.12), 3 / 4) || !near(widths[2] / (bodies[2].s[1] * 2 - rims[2]), 9 / 19.5) || widths[0] <= Math.max(...widths.slice(1))) fail(time, 'Figma device geometry: wrong screen ratios or picture sizes');
           const gaps = [bodies[1].p[0] - bodies[1].s[0] - bodies[0].p[0] - bodies[0].s[0], bodies[2].p[0] - bodies[2].s[0] - bodies[1].p[0] - bodies[1].s[0]];
           const zs = floor.flatMap(corners).map(p => p[2]);
           if (!near(gaps[0], gaps[1]) || Math.min(...zs) < MAT.z + UI_ROW.forward - 1e-8 || Math.max(...zs) > MAT.z + UI_ROW.forward + 1.8 + 1e-8 || Math.min(...xs) < MAT.x - 1e-8 || Math.max(...xs) > MAT.x + MAT.w + 1e-8) fail(time, 'Figma device geometry: unequal gaps or excessive footprint');
@@ -175,30 +176,21 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
     start += scene.len;
   }
   const figStart = SHOW.slice(0, 5).reduce((sum, s) => sum + s.len, 0), timing = playbackSpans(SCRIPTS.fig);
-  // R15 follows each cursor-made frame through its own contact and same-frame placement.
+  // R15, as CORRECTIONS-12 I1 leaves it: each blank page is there from the document's first frame until its own picture is
+  // placed on it, and the placed picture replaces it in that same frame. (No frame is drawn, so none is contacted.)
   const idStart = SHOW.slice(0, 2).reduce((sum, s) => sum + s.len, 0), idScript = SCRIPTS.id;
-  for (const [i, id, profile, arts] of [[0, 'map', null, ['kMap']], [1, 'photo', 'cover', ['coverPhoto', 'coverBlob', 'coverDecor', 'kCover']], [2, 'postPhoto', 'post', ['postPhoto', 'kPost']], [3, 'mailPhoto', 'mail', ['mailPhoto', 'eblast']]]) {
-    const draw = idScript.actions.find(a => a.id === 'frame' + i), place = idScript.actions.find(a => a.id === id);
-    const made = frameAt(idStart + draw.end + 1e-7 * PACE).filter(pc => pc.emptyFrame === id).map(rect);
-    const target = [Math.min(...made.map(r => r[0])), Math.min(...made.map(r => r[1])), Math.max(...made.map(r => r[2])), Math.max(...made.map(r => r[3]))].map((n, k) => n + (k < 2 ? 1 : -1) * 0.005 * 1.15);
+  for (const [i, id, arts] of [[0, 'map', ['kMap']], [1, 'photo', ['coverPhoto', 'coverBlob', 'coverDecor', 'kCover']], [2, 'postPhoto', ['postPhoto', 'kPost']], [3, 'mailPhoto', ['mailPhoto', 'eblast']]]) {
+    const place = idScript.actions.find(a => a.id === id);
     const samples = new Set(Array.from({ length: 2181 }, (_, n) => retime('id', (1 + n * 0.005) * PACE)));
-    samples.add(retime('id', 6.329 * PACE)); // The incoming post-frame fault at global 25.229 s (83.04 s timetable).
-    for (const t of [draw.start, draw.end, place.start, place.end]) for (const d of [-1e-7, 0, 1e-7]) samples.add(t + d * PACE);
-    let contacted = false;
+    for (const t of [0.8 * PACE, place.start, place.end]) for (const d of [-1e-7, 0, 1e-7]) samples.add(t + d * PACE);
     for (const at of [...samples].sort((a, b) => a - b)) {
-      if (at <= draw.start + 1e-9 || at > retime('id', 11.9 * PACE)) continue;
-      const time = idStart + at, P = frameAt(time), overlays = P.filter(pc => pc.emptyFrame === id), plates = P.filter(pc => pc.framePlate === id);
-      const own = P.filter(pc => pc.where === 'travel' && (profile ? pc.photoProfile === profile : pc.art === 'kMap'));
-      const padded = target.map((n, k) => n + (k < 2 ? -1 : 1) * 0.03 * 1.15);
-      contacted ||= at >= place.end - 1e-9 || own.some(pc => overlap(rect(pc), padded));
-      if (!contacted && overlays.length !== 6) fail(time, 'R15: ' + id + ' frame vanished before its own contact');
-      if (contacted && overlays.length) fail(time, 'R15: ' + id + ' frame survives its own contact');
-      const plateCount = i === 0 ? 2 : 1;
-      const validPlates = plates.length === plateCount;
-      if (at < place.end - 1e-9 && !validPlates) fail(time, 'R15: ' + id + ' plate vanished before placement');
+      if (at <= 0.8 * PACE || at > retime('id', 11.9 * PACE)) continue;
+      const time = idStart + at, P = frameAt(time), plates = P.filter(pc => pc.page === id);
+      const plateCount = plates.filter(pc => !pc.pageEdge).length, edges = plates.filter(pc => pc.pageEdge).length;
+      if (at < place.end - 1e-9 && plateCount !== (i === 0 ? 2 : 1)) fail(time, 'R15: ' + id + ' page missing before placement');
+      if (i && at < place.start - 1e-9 && edges !== 4) fail(time, 'R15: ' + id + ' page edges missing before its drag');
       const replacement = P.some(pc => pc.where === 'content' && !pc.echo && arts.includes(pc.art));
-      if (at >= place.end - 1e-9 && !plates.length && !replacement) fail(time, 'R15: ' + id + ' plate disappeared without a same-frame replacement');
-      for (const line of P.filter(pc => pc.emptyFrame)) for (const moving of P.filter(pc => pc.where === 'travel')) if (polygonsOverlap(visibleProjection(line), visibleProjection(moving)) && line.p[2] + line.s[2] >= moving.p[2] - moving.s[2] - 1e-8) fail(time, 'frame clearance: overlay above travelling InDesign picture');
+      if (at >= place.end - 1e-9 && !plates.length && !replacement) fail(time, 'R15: ' + id + ' page disappeared without a same-frame replacement');
     }
   }
   let fixedSamples = 0, windowStart = 0;
@@ -273,7 +265,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
   // reaches past the fitted envelope; at 83.04 s the 1/30 s grid happened to land 0.027 s into the slide and missed
   // it, at 91.5 s it lands 0.002 s in. Those instants are bounded separately below (and the start itself is sampled).
   const entry = figStart + timing.spans[0][0], inEntry = at => at >= entry - 1e-9 && at < entry + 0.03 * PACE;
-  const sampleAt = [...Array.from({ length: Math.ceil(LOOP * 30 / PACE) }, (_, n) => n * PACE / 30).filter(at => at < LOOP), entry];
+  const sampleAt = [...Array.from({ length: Math.ceil(LOOP * 30 / PACE) }, (_, n) => n * PACE / 30).filter(at => at < LOOP), entry, entry + 1e-7 * PACE];   // CORRECTIONS-12: the entry itself can round to just before the slide; a hair after is inside it
   for (const at of sampleAt) for (const pc of frameAt(at)) for (const p of corners(pc)) if (!pc.clip || p.reduce((sum, n, i) => sum + n * pc.clip[i], pc.clip[3]) >= 0) (inEntry(at) && pc.deviceKind === 'laptop' ? entryPoints : allPoints).push(dot(HOME.r, p));
   const leftmost = allPoints.reduce((n, v) => Math.min(n, v), Infinity), rightmost = allPoints.reduce((n, v) => Math.max(n, v), -Infinity);
   const entryLeft = entryPoints.reduce((n, v) => Math.min(n, v), Infinity);
@@ -284,9 +276,11 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
     if (view.cx + view.S * leftmost < 16 - 1e-7 || view.cx + view.S * rightmost > W - 16 + 1e-7) fail(0, 'stage gutters: stage crossed a 16 px side gutter at width ' + W);
     entryOver = Math.max(entryOver, 16 - (view.cx + view.S * Math.min(leftmost, entryLeft)));
   }
-  if (!(entryPoints.length && entryOver <= 5)) fail(0, `stage gutters: the Figma laptop's first 0.03 s enters the 16 px gutter by ${entryOver.toFixed(2)} px (allowed 5)`);
+  // CORRECTIONS-12 X1 moves the laptop's slide-in path left with its row. Sampled at the entry itself (it used to round to just
+  // before it), the first 0.03 s reached 4.42 px into the gutter at round 11 and 7.66 px with EXPORT_SHIFT -0.3, at 424 px wide.
+  if (!(entryPoints.length && entryOver <= LAPTOP_ENTRY_ALLOWANCE)) fail(0, `stage gutters: the Figma laptop's first 0.03 s enters the 16 px gutter by ${entryOver.toFixed(2)} px (allowed ${LAPTOP_ENTRY_ALLOWANCE})`);
   gutterEntry.over = entryOver;
-  console.log('R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (' + fixedSamples + ' samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720 (Figma laptop entry, first 0.03 s: ' + gutterEntry.over.toFixed(2) + ' px into the gutter, bounded at 5)');
+  console.log('R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (' + fixedSamples + ' samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720 (Figma laptop entry, first 0.03 s: ' + gutterEntry.over.toFixed(2) + ' px into the gutter, bounded at ' + LAPTOP_ENTRY_ALLOWANCE + ')');
 }
 // Direct use initializes the same atlas/player fixtures in a child to avoid an ESM entry-point cycle.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

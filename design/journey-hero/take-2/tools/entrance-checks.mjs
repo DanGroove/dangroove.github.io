@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { makeCamera, dot } from '../../../../public/journey/hero/engine.mjs';
 import { corners } from '../kit.mjs';
 import { inflateRawSync } from 'node:zlib';
-import { handPatch } from './hand-patch.mjs';
+import { handPatch, r12Patch } from './hand-patch.mjs';
 import { SHOW, LOOP, SCENES, BLOCK, POOL, SCREEN, sceneAt, frameAt, calloutsAt } from '../stage.mjs';
 import { createCraftModel, followCraft } from '../craft-wipe.mjs';
 
@@ -36,7 +36,8 @@ async function loadStage(source) {
 }
 async function preExit() {
   const record = JSON.parse(read('tools/fixtures/round5-addendum-source.json')).sources['stage.mjs'];
-  return loadStage(handPatch(inflateRawSync(Buffer.from(record.deflateBase64, 'base64')).toString('utf8')));
+  // CORRECTIONS-12 I1: without InDesign's frame steps, as today.
+  return loadStage(r12Patch(handPatch(inflateRawSync(Buffer.from(record.deflateBase64, 'base64')).toString('utf8'))));
 }
 export async function checkLabelExit(stageSource = read('stage.mjs')) {
   const S = await loadStage(stageSource), { EASE } = await import('../../../../public/journey/hero/engine.mjs');
@@ -44,11 +45,13 @@ export async function checkLabelExit(stageSource = read('stage.mjs')) {
   // CORRECTIONS-7: derived, not typed. The pre-E4 stage (round-5 incoming, frozen) scheduled with round 7's hand
   // gives the loop and the lengths the exit must leave alone (83.04 s and 7.5/11.4/20.98/15.22/14.03/13.91 before round 7).
   const before = await preExit();
-  close(loop, before.LOOP, 'E4 labels: LOOP moved', 1e-9);
+  // CORRECTIONS-12 D1 redraws Figma's canvas, which changes its own length; every other length is the frozen stage's.
+  const figLen = scene => scene.SHOW.find(s => s.key === 'fig').len;
+  close(loop - figLen(S), before.LOOP - figLen(before), 'E4 labels: LOOP moved', 1e-9);
   const lens = Object.fromEntries(before.SHOW.map(scene => [scene.key, scene.len]));
   let start = 0, samples = 0;
   for (const scene of show) {
-    close(scene.len, lens[scene.key], `E4 labels: ${scene.key} length moved`, 1e-9);
+    if (scene.key !== 'fig') close(scene.len, lens[scene.key], `E4 labels: ${scene.key} length moved`, 1e-9);
     if (['id', 'pr', 'ae', 'fig'].includes(scene.key)) {
       const s = SCRIPTS[scene.key], off = start + (scene.key === 'id' ? s.actions.find(a => a.id === 'pickup').start : playbackSpans(s).off[0]);
       const expect = { 0.3: [1, 1], 0.25: [EASE.wipe(0.5), 1], 0.2: [0, 1], 0.1: [0, EASE.wipe(0.5)], 0.01: [0, EASE.wipe(0.05)] };

@@ -89,7 +89,10 @@ export async function retimer(current) {
   const code = raw.replace(/from (['"])([^'"]+)\1/g, (_, q, ref) => 'from ' + q + new URL(ref, new URL('stage.mjs', take)).href + q);
   const old = await import('data:text/javascript;base64,' + Buffer.from(code).toString('base64'));
   if (Math.abs(old.LOOP - 83.04) > 1e-9) throw new Error('retimer: the 83.04 s timetable is ' + old.LOOP);
-  const events = (M, key) => [0, ...M.SCRIPTS[key].actions.flatMap(a => [a.approach, a.start, a.end]), M.SHOW.find(s => s.key === key).len];
+  // CORRECTIONS-12 I1: actions are matched by id, so a step removed since (InDesign's frame0 to frame3) folds into the span
+  // before the next action both timetables share.
+  const shared = key => new Set(current.SCRIPTS[key].actions.map(a => a.id).filter(id => old.SCRIPTS[key].actions.some(a => a.id === id)));
+  const events = (M, key) => { const ids = shared(key); return [0, ...M.SCRIPTS[key].actions.filter(a => ids.has(a.id)).flatMap(a => [a.approach, a.start, a.end]), M.SHOW.find(s => s.key === key).len]; };
   const starts = M => M.SHOW.map((_, i) => M.SHOW.slice(0, i).reduce((n, s) => n + s.len, 0));
   const local = (key, t) => {
     const a = events(old, key), b = events(current, key);
@@ -114,4 +117,23 @@ export function g1Patch(source) {
   let s = once(source, call, block, 'g1 build');
   s = once(s, "const pc = on('dark', ...r, { lift: 0.08, t: 0.02, art: 'wave' }); pc.where = 'travel'; D.push(pc); }", "const pc = on('dark', ...r, { lift: 0.08, t: 0.02, art: 'wave' }); pc.where = 'travel'; pc.action = 'music'; D.push(pc); }", 'g1 music');
   return s;
+}
+
+// CORRECTIONS-12 I1: InDesign no longer draws its four frames. A check that compares today's InDesign with a frozen stage at the
+// same instant applies this to the frozen source in memory: the frame-draw steps leave its script (so its timetable is today's),
+// and its pages count as drawn from the start. Its pictures, drags and cursor are otherwise its own. Floor geometry (D1, X1) is
+// not patched; those checks compare the screen only.
+export function r12Patch(source) {
+  const line = /\n\s*\.\.\.\[ID\.spread, ID\.cover, ID\.post, ID\.mail\]\.map\(\(r, i\) => \(\{ id: 'frame' \+ i, kind: 'draw'[^\n]*/;
+  if (!line.test(source)) throw new Error('r12Patch: InDesign frame steps not found');
+  let s = source.replace(line, '');
+  const from = s.indexOf('function editedInDesign('), to = s.indexOf('\nfunction ', from + 1);
+  if (from < 0 || to < 0) throw new Error('r12Patch: editedInDesign not found');
+  const body = s.slice(from, to)
+    .replace(/begun\(s, 'frame' \+ i, t\)/g, 'true')
+    .replace(/done\(s, 'frame0', t\)/g, 'true')
+    .replace(/(?:eased|handed)\(s, 'frame(?:' \+ i|0'), t\)/g, '1')
+    .replace(/action\(s, 'frame0'\)\.end/g, '0');
+  if (/s, 'frame/.test(body)) throw new Error('r12Patch: a frame step is still read');
+  return s.slice(0, from) + body + s.slice(to);
 }

@@ -5,7 +5,7 @@ import { ART, ART_TEXT, BALL, BALL_FROM, BALL_VIA, ROWS, makeAtlas } from '../ar
 import { HOME, EASE, dot, makeCamera, quatRotate } from '../../../../public/journey/hero/engine.mjs';
 import { corners } from '../kit.mjs';
 import { TONES } from '../sq.mjs';
-import { HAND, SHOW, LOOP, SCENES, SCREEN, MAT, BLOCK, POOL, PACE, SCRIPTS, frameAt, sceneAt, calloutsAt, playbackSpans, UI_ROW, prototypeState } from '../stage.mjs';
+import { HAND, SHOW, LOOP, SCENES, SCREEN, MAT, BLOCK, POOL, PACE, SCRIPTS, frameAt, sceneAt, calloutsAt, playbackSpans, UI_ROW, prototypeState, EXPORT_SHIFT } from '../stage.mjs';
 import { runCorrections } from './correction-checks.mjs';
 import { previewMarkup } from './preview.mjs';
 import { checkPageLabels } from './label-page-checks.mjs';
@@ -22,6 +22,7 @@ import { checkRound9, checkRound9Controls } from './round9-checks.mjs';
 import { checkRound10, checkRound10Controls } from './round10-checks.mjs';
 import { checkRound12StarsList, checkRound12Controls } from './round12-stars-list-checks.mjs';
 import { checkRound14, checkRound14Controls } from './round14-checks.mjs';
+import { checkRound12 as checkRound12Scene, checkRound12Controls as checkRound12SceneControls } from './round12-checks.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
@@ -152,7 +153,8 @@ let sceneStart = 0;
 for (const scene of SHOW) {
   const s = SCRIPTS[scene.key];
   if (s) {
-    assert.ok(frameAt(sceneStart + s.first - 1e-6).every(pc => !pc.document), `${scene.key}: document starts populated`);
+    // CORRECTIONS-12 I1: InDesign's document opens with its blank pages already there, and nothing else on them.
+    assert.ok(frameAt(sceneStart + s.first - 1e-6).every(pc => !pc.document || (scene.key === 'id' && pc.page)), `${scene.key}: document starts populated`);
     let end = 0.8 * PACE;
     let typed = false;
     for (const a of s.actions) {
@@ -224,7 +226,8 @@ for (const at of [-1, -0.7, 0, 0.3, 1, 1.4, 2, 2.76, 4]) {
   assert.ok(list.filter(pc => pc.where === 'floor').every(pc => pc.p[2] >= MAT.z));
 }
 assert.ok(SCREEN.w > 0);
-const middle = SCREEN.l + SCREEN.w / 2;
+// Dan's centring rule (round 2), then CORRECTIONS-12 X1's one shift: every group's middle is the screen's middle plus EXPORT_SHIFT.
+const middle = SCREEN.l + SCREEN.w / 2 + EXPORT_SHIFT;
 const centred = (x, name) => assert.ok(Math.abs(x - middle) <= 0.001, name + ': footprint is not centred in world x');
 centred((BLOCK.x0 + BLOCK.x1) / 2, 'InDesign block');
 centred(MAT.x + MAT.w / 2, 'device mat');
@@ -412,6 +415,7 @@ const exemptions = {
   sourceEcho: 'This piece explicitly names the cursor-made source action that it mirrors.',
   overlay: 'Selections, carets and playheads mark existing work.',
   carried: 'This is the piece currently being dragged by the cursor.',
+  blankPage: "CORRECTIONS-12 I1: InDesign's document opens with its blank pages already there, as a new document does.",
 };
 function exemption(pc, scene, at, a, r) {
   if (pc.echo) {
@@ -423,6 +427,7 @@ function exemption(pc, scene, at, a, r) {
   if (pc.where === 'floor' || pc.playback) return 'playback';
   if (pc.where === 'travel' && a?.kind === 'drag' && pc.action === a.id) return 'carried';
   if (!pc.document && at <= 0.8 * PACE) return 'openingFurniture';
+  if (scene === 'id' && pc.page && at <= 0.8 * PACE) return 'blankPage';
   if (a?.kind === 'run' && at <= a.end + 1e-8) {
     const points = [a.from, a.to, ...(a.path || []), ...(a.points || [])];
     const bounds = [Math.min(...points.map(p => p[0])) - 0.6, Math.min(...points.map(p => p[1])) - 0.6, Math.max(...points.map(p => p[0])) + 0.6, Math.max(...points.map(p => p[1])) + 0.6];
@@ -529,7 +534,7 @@ runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, MAT, SCRIPTS, PA
 try { console.log(checkPageLabels()); } catch (error) { fail(SHOW.slice(0, 5).reduce((n, s) => n + s.len, 0) + playbackSpans(SCRIPTS.fig).land + 0.4 * PACE, error.message); }
 try { console.log(await checkDrags()); } catch (error) { fail(timetable.global(25.25), error.message); }
 try { const r = await checkRound5(); console.log(`H1–H7 computed: ${r.H1.draws} draw ends, ${r.H1.growingSamples} spread samples; loop ${r.H2.loop.toFixed(3)}s, land 3.0s; ${r.H3.samples} laptop poses; ${r.H6.continuitySamples} resize samples; ${r.H7.rays} floor rays; F3 no floor hover. Font ink, layout, pixels and frames UNRUN.`); } catch (error) { fail(0, error.message); }
-try { const r = await checkRound5Addendum(); console.log(`H9/H10 computed: ${r.H9.measurements} CSSOM-model measurements, ten repeats and away/back at ten sizes; ${r.H10.after.samples} Figma poses at 0.02 s; laptop/app gap ${r.H10.after.minimumGap.toFixed(6)} px, Laptop ring clearance ${r.H10.after.minimumRing.toFixed(6)} px (S=103.6); ${r.H10.preservedFrames} incoming-piece comparisons. Browser checks UNRUN.`); } catch (error) { fail(0, error.message); }
+try { const r = await checkRound5Addendum(); console.log(`H9/H10 computed: ${r.H9.measurements} CSSOM-model measurements, ten repeats and away/back at ten sizes; X1 envelope scale against round 4 ${r.H9.envelopeScale.map(n => n.toFixed(4)).join("–")}; ${r.H10.after.samples} Figma poses at 0.02 s; laptop/app gap ${r.H10.after.minimumGap.toFixed(6)} px, Laptop ring clearance ${r.H10.after.minimumRing.toFixed(6)} px (S=103.6); ${r.H10.preservedFrames} incoming-piece comparisons. Browser checks UNRUN.`); } catch (error) { fail(0, error.message); }
 try { console.log(await checkRound5SecondAddendum()); } catch (error) { fail(0, error.message); }
 try { console.log(await checkEntrance()); console.log('E1/E4 negative controls: ' + await checkEntranceControls()); } catch (error) { fail(0, error.message); }
 try { console.log(describe(await checkHand())); console.log('K3 negative controls: ' + await checkHandControls()); } catch (error) { fail(0, error.message); }
@@ -540,6 +545,7 @@ try { console.log(await checkRound10()); console.log('Round 10 negative controls
 // and round 12's kept rules for the craft list.
 try { console.log(await checkRound12StarsList()); console.log('Round 12 (S1) negative controls: ' + await checkRound12Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound14()); console.log('Round 14 (K1) negative controls: ' + await checkRound14Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
+try { console.log(await checkRound12Scene()); console.log('Round 12 (D1, I1, X1) negative controls: ' + await checkRound12SceneControls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {

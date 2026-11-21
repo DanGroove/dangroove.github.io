@@ -602,10 +602,12 @@ export const ART = {
     if (!hideTabs) { c.fillStyle = K.gold; c.beginPath(); c.roundRect(44, 1040, 262, 72, [28, 0, 0, 0]); c.fill(); text(c, 'View the flyer', 70, 1087, 30, { w: 700, fill: K.white, track: 0, family: SANS }); }
     fill(c, K.black, 0, 1140, 800, 40);
   } },
-  mail: { w: 320, h: 516, draw(c, w, h) {                 // the e-blast, open in a mail app on a tablet
-    fill(c, '#F3F2EE', 0, 0, w, 58); disc(c, K.black, 30, 29, 15); firmLogo(c, K.lite, 19.5, 26, 21);
-    fill(c, C.ink, 56, 17, 150, 9); fill(c, C.grey, 56, 34, 96, 6); for (let i = 0; i < 3; i++) disc(c, C.slate, 284 + i * 9, 29, 2.6);
-    c.save(); c.translate(0, 58); ART.eblast.draw(c, 320, 472); c.restore();
+  // CORRECTIONS-12 D1: the tablet is a real tablet's shape now (179.5 : 248.6), so its screen is wider: the mail app's bar runs
+  // across it and the 320 wide e-blast sits in the middle of the message, on the app's own ground, as a mail app shows it.
+  mail: { w: 362, h: 516, draw(c, w, h) {                 // the e-blast, open in a mail app on a tablet
+    fill(c, '#F3F2EE', 0, 0, w, h); disc(c, K.black, 30, 29, 15); firmLogo(c, K.lite, 19.5, 26, 21);
+    fill(c, C.ink, 56, 17, 150, 9); fill(c, C.grey, 56, 34, 96, 6); for (let i = 0; i < 3; i++) disc(c, C.slate, w - 36 + i * 9, 29, 2.6);
+    c.save(); c.translate((w - 320) / 2, 58); ART.eblast.draw(c, 320, 472); c.restore();
   } },
   // ---- video: one edit, on three screens
   shotA: { w: 480, h: 270, draw(c, w, h) { SHOTS.a(c, w, h, { cap: false }); } },

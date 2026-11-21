@@ -45,8 +45,22 @@ export function floorAt(x, y) {
   return [(x * u[2] - r[2] * y) / d, 0, (r[0] * y - u[0] * x) / d];
 }
 
+// CORRECTIONS-12 X1: every export group, and the light pool under it, sits this far along world x from the screen's middle
+// (Dan's centring rule of round 2, then this one shift). One number: Dan may pick another from a comparison sheet.
+export const EXPORT_SHIFT = -0.3;
+const screenMiddle = SCREEN.l + SCREEN.w / 2, exportMiddle = screenMiddle + EXPORT_SHIFT;
+// CORRECTIONS-12 D1: phones in true proportion to the tablets beside them. The reference bodies, in mm: a phone 71.6 x 147.6
+// and a tablet 179.5 x 248.6. A phone is 147.6 / 248.6 of an upright tablet's height, 147.6 / 179.5 of one on its side.
+export const BODY = { phone: [71.6, 147.6], tablet: [179.5, 248.6] };
+const PHONE_SHAPE = BODY.phone[0] / BODY.phone[1];
+export const PHONE_BESIDE = { upright: BODY.phone[1] / BODY.tablet[1], side: BODY.phone[1] / BODY.tablet[0] };
+// a phone's rim that keeps its screen's picture at w : h inside a body of width bw and depth bd
+const rimFor = (bw, bd, w, h) => (bw - bd * w / h) / (2 * (1 - w / h));
 // ---- the floor. Everything exported lies flat on it, face up, squared to the screen, in one block: the mat.
-export const MAT = { x: SCREEN.l + (SCREEN.w - 5.5) / 2, z: -1.4, w: 5.5, gap: 0.25 };   // the mat's back left corner, its width, and the gap between two screens on it
+// The mat's back left corner, its width (the row of screens across it, D1) and the gap between two screens on it.
+const ROW = 1.8, SLIM_D = ROW * PHONE_BESIDE.side, SLIM = SLIM_D * PHONE_SHAPE, WIDE = 3.09;   // the row's depth, a phone's depth and width, the tablet's width
+const MAT_W = WIDE + 2 * SLIM + 2 * 0.25;
+export const MAT = { x: exportMiddle - MAT_W / 2, z: -1.4, w: MAT_W, gap: 0.25 };
 // a sheet lying on the floor. x, z: its back left corner. w: along the screen. d: toward us. t: how thick. y: what it lies on.
 function flat(tone, x, z, w, d, t, art, y = 0) {
   const at = [x + w / 2, y + t / 2, z + d];
@@ -117,11 +131,17 @@ const CANVAS = { l: 0.56, w: PANEL - 0.12 - 0.56, b: 0.1, h: TOP - 0.1 };
 // Behind: a stack of closed copies, the post in a phone, the e-blast in a tablet. In front: the copy that is taken off the top
 // of the stack, opened and leafed through.
 const DEEP = 1.45, LEAF = DEEP * 440 / 340;              // a page of the booklet: how deep it is (toward us) and how wide
-const GUT = 0.12, PHONE = 0.7, TABLET = LEAF - PHONE - 2 * GUT;   // the gutter between two things in the block, and the two devices that share a page's width with it
+// The gutter between two things in the block, and the two devices that share a page's width with it. D1: the phone is in true
+// proportion to the upright tablet beside it, and the tablet widens to a real tablet's shape (179.5 : 248.6) within the width the
+// phone frees. The gutters stay; the row behind (stack, phone, tablet) is centred in the block, so the block keeps its middle
+// whether the copy lies on the stack or open in front. The phone's front edge lines up with the tablet's.
+const GUT = 0.12, PHONE_D = DEEP * PHONE_BESIDE.upright, PHONE = PHONE_D * PHONE_SHAPE, TABLET = DEEP * BODY.tablet[0] / BODY.tablet[1];
+const BACK = (2 * LEAF - (LEAF + PHONE + TABLET + 2 * GUT)) / 2;   // how far the row behind is set in from the block's left edge
 const SHEET = 0.01, COPY = 5 * SHEET, COPIES = 6;        // how thick one leaf is, and one closed copy (the four leaves that turn, and the rest); how many copies land
-const screenMiddle = SCREEN.l + SCREEN.w / 2;
-export const BLOCK = { x0: screenMiddle - LEAF, x1: screenMiddle + LEAF, z0: MAT.z, z1: MAT.z + 2 * DEEP + GUT, up: 0.6 };
-export const POOL = { x: screenMiddle, z: MAT.z + DEEP };
+export const BLOCK = { x0: exportMiddle - LEAF, x1: exportMiddle + LEAF, z0: MAT.z, z1: MAT.z + 2 * DEEP + GUT, up: 0.6 };
+// where the three things in the row behind lie: [x, z, w, d]
+export const BLOCK_ROW = { stack: [BLOCK.x0 + BACK, BLOCK.z0, LEAF, DEEP], phone: [BLOCK.x0 + BACK + LEAF + GUT, BLOCK.z0 + DEEP - PHONE_D, PHONE, PHONE_D], tablet: [BLOCK.x0 + BACK + LEAF + 2 * GUT + PHONE, BLOCK.z0, TABLET, DEEP], phoneRim: rimFor(PHONE, PHONE_D, 300, 664) };
+export const POOL = { x: exportMiddle, z: MAT.z + DEEP };
 
 // A closed copy: the white edges of its pages under a dark cover. x, z: its back left corner. y: what it lies on.
 function closed(P, x, z, y = 0, art = 'kCover') {
@@ -164,10 +184,11 @@ function copy(P, x, z, from, at) {
 }
 // at: where the copy that is being read has got to (see copy). By default a leaf is landing on the Location spread.
 function prints(P, at = 1.82) {
-  const x = BLOCK.x0, z = BLOCK.z0, n = COPIES - 1;
-  for (let i = 0; i < n; i++) closed(P, x, z, i * COPY, i === n - 1 ? 'kCover' : undefined);                  // the stack, less the copy that was taken
-  P.push(...device(x + LEAF + GUT, z, PHONE, DEEP, 'post', { rim: 0.04 }), ...device(x + LEAF + 2 * GUT + PHONE, z, TABLET, DEEP, 'mail', { rim: 0.05, round: 0.1 }));
-  copy(P, x, z + DEEP + GUT, [x, n * COPY, z], at);
+  const [sx, z] = BLOCK_ROW.stack, n = COPIES - 1, phone = BLOCK_ROW.phone, tablet = BLOCK_ROW.tablet;
+  for (let i = 0; i < n; i++) closed(P, sx, z, i * COPY, i === n - 1 ? 'kCover' : undefined);                  // the stack, less the copy that was taken
+  // D1: the phone's rim keeps the post's 300 x 664 screen; the tablet's screen is the mail art's own shape (see art.mjs).
+  P.push(...device(...phone, 'post', { rim: BLOCK_ROW.phoneRim }), ...device(...tablet, 'mail', { rim: 0.05, round: 0.1 }));
+  copy(P, BLOCK.x0, z + DEEP + GUT, [sx, n * COPY, z], at);
 }
 
 const FLYER = { gold: ['#9B7C29', '#86691F', '#5E4915'], lite: ['#CEAB48', '#B3933B', '#836A28'], coal: ['#282928', '#1F201F', '#161716'], black: ['#0A0F16', '#080C12', '#05080C'] };   // the flyer's colours, lit, on top and in shade
@@ -191,7 +212,9 @@ function approvedDocument() {
   return P;
 }
 // ---- The screens the other crafts export to. They lie in one row across the mat: a tablet on its side, then two phones.
-const ROW = 1.8, SLIM = 0.955, WIDE = MAT.w - 2 * SLIM - 2 * MAT.gap;            // the row's depth, a phone's width, the tablet's width: their screens are 16:9 and 9:18
+// (ROW, SLIM, SLIM_D and WIDE are set with the mat above. D1: the tablet keeps its 3.09 x 1.8; each phone is in true proportion to
+// it, its front edge on the tablet's. A phone's 300 x 600 picture keeps its shape, centred along the phone's taller screen.)
+const SLIM_RIM = 0.04, SLIM_SCREEN = (() => { const w = SLIM - 2 * SLIM_RIM, d = w * 600 / 300; return [SLIM_RIM, (SLIM_D - d) / 2, w, d]; })();
 // ---- 03 Motion: After Effects has animated words and shapes, the way a SaaS promo moves, and exported it to the same three screens
 // each layer: its icon, its label's tone, how long its name is, when its bar starts and how long it is, and where its keyframes are
 export const LAYERS = [
@@ -238,13 +261,6 @@ function travel(P, key, from, to, t, a, b, endWindow = [0, 0, 1, 1], curve = EAS
   if (rim > 0) P.push({ ...on('grey', x - rim, y - rim, w + 2 * rim, h + 2 * rim, { lift: lift - 0.015, t: 0.012 }), where: 'travel', action: key });
   P.push({ ...on('ink', ...rect, { lift, t: 0.02, art: PICTURES[key] }), window: rectMix([0, 0, 1, 1], endWindow, p), where: 'travel', action: key });
 }
-function emptyFrame(P, [x, y, w, h], plate = true, revealed = 0, diagonals = true) {
-  const start = P.length;
-  if (plate) P.push(on('night', x, y, w, h, { lift: 0.05, t: 0.02 }));
-  P.push(...outline(x, y, w, h, { tone: 'dark', line: 0.012, lift: 0.075 }));
-  if (diagonals) P.push(bar([x, y], [x + w, y + h], { tone: 'dark', line: 0.01, lift: 0.075 }), bar([x, y + h], [x + w, y], { tone: 'dark', line: 0.01, lift: 0.075 }));
-  if (revealed > 0) for (let i = start; i < P.length; i++) P[i].clip = [1, 0, 0, -(SCREEN.l + (x + w * revealed) * U)];
-}
 function feed(P, pieces, t, a, b) {
   if (t <= a) return;
   const back = t < b ? Math.max(...pieces.flatMap(pc => corners(pc).map(p => p[2]))) - MAT.z + 0.05 : 0, dz = -back * (1 - EASE.enter(linear(t, a, b)));
@@ -263,9 +279,9 @@ function feedScreens(P, t, art, spans, off) {
   const x = MAT.x, widths = [WIDE, SLIM, SLIM];
   let left = x;
   widths.forEach((w, i) => {
-    const pieces = [], rim = i ? 0.055 : 0.075;
-    pieces.push({ ...device(left, MAT.z, w, ROW, undefined, { rim, round: i ? 0.16 : 0.09 })[0], deviceBody: true });
-    const draw = floorPainter(pieces, [left + rim, MAT.z + rim, w - 2 * rim, ROW - 2 * rim]);
+    const pieces = [], rim = i ? SLIM_RIM : 0.075, d = i ? SLIM_D : ROW, z = MAT.z + ROW - d;
+    pieces.push({ ...device(left, z, w, d, undefined, { rim, round: i ? 0.16 : 0.09 })[0], deviceBody: true });
+    const draw = floorPainter(pieces, i ? [left + SLIM_SCREEN[0], z + SLIM_SCREEN[1], SLIM_SCREEN[2], SLIM_SCREEN[3]] : [left + rim, z + rim, w - 2 * rim, d - 2 * rim]);
     playback(pieces, draw, kind, i, clock);
     pieces.forEach(pc => { pc.clock = clock; pc.device = i; });
     feed(P, pieces, t, ...spans[i]);
@@ -279,9 +295,12 @@ function feedScreens(P, t, art, spans, off) {
 const LID_ANGLE = 12 * Math.PI / 180;
 const lidU = [1, 0, 0], lidV = [0, Math.cos(LID_ANGLE), -Math.sin(LID_ANGLE)], lidN = [0, Math.sin(LID_ANGLE), Math.cos(LID_ANGLE)];
 export const UI_ROW = (() => {
-  const depth = 1.65, lidW = 1.55, lidH = (lidW - 0.08) / 1.6 + 0.08, deck = 1.1, rim = 0.06, tabW = (ROW - rim * 2) * 3 / 4 + rim * 2, phoneW = (ROW - rim * 2) * 9 / 19.5 + rim * 2, gap = 0.3;
-  const lean = lidH * Math.sin(LID_ANGLE) + 0.02, width = lidW + tabW + phoneW + 2 * gap, left = screenMiddle - width / 2;
-  return { depth, lidW, lidH, deck, rim, tabW, phoneW, gap, left, lean, forward: 0.4, hinge: left, tablet: left + lidW + gap, phone: left + lidW + gap + tabW + gap };
+  // D1: the phone is in true proportion to the upright tablet (1.8 deep), its front edge on the tablet's, and its rim keeps the
+  // 9 : 19.5 screen the prototype's phone pictures are drawn for.
+  const depth = 1.65, lidW = 1.55, lidH = (lidW - 0.08) / 1.6 + 0.08, deck = 1.1, rim = 0.06, tabW = (ROW - rim * 2) * 3 / 4 + rim * 2, gap = 0.3;
+  const phoneD = ROW * PHONE_BESIDE.upright, phoneW = phoneD * PHONE_SHAPE, phoneRim = rimFor(phoneW, phoneD, 9, 19.5), phoneZ = ROW - phoneD;
+  const lean = lidH * Math.sin(LID_ANGLE) + 0.02, width = lidW + tabW + phoneW + 2 * gap, left = exportMiddle - width / 2;
+  return { depth, lidW, lidH, deck, rim, tabW, phoneW, phoneD, phoneRim, phoneZ, gap, left, lean, forward: 0.4, hinge: left, tablet: left + lidW + gap, phone: left + lidW + gap + tabW + gap };
 })();
 function lidPoint(u, v, lift = 0) {
   const g = UI_ROW, origin = [g.hinge, 0.095, MAT.z + g.lean];
@@ -314,9 +333,9 @@ function feedPrototype(P, t, spans, off) {
       const dx = -1.6 * (1 - EASE.enter(linear(t, ...spans[0])));
       for (const pc of pieces) { pc.p[0] += dx; pc.where = 'floor'; if (t >= off[0]) pc.clip = [0, 0, 1, -MAT.z]; P.push(pc); }
     } else {
-      const x = i === 1 ? g.tablet : g.phone, w = i === 1 ? g.tabW : g.phoneW;
-      pieces.push({ ...device(x, MAT.z, w, ROW, undefined, { rim: g.rim, round: 0.03 })[0], deviceBody: true });
-      prototype(floorPainter(pieces, [x + g.rim, MAT.z + g.rim, w - 2 * g.rim, ROW - 2 * g.rim]), i, t < spans[0][1] ? -1 : clock);
+      const x = i === 1 ? g.tablet : g.phone, w = i === 1 ? g.tabW : g.phoneW, d = i === 1 ? ROW : g.phoneD, z = MAT.z + (i === 1 ? 0 : g.phoneZ), rim = i === 1 ? g.rim : g.phoneRim;
+      pieces.push({ ...device(x, z, w, d, undefined, { rim, round: 0.03 })[0], deviceBody: true });
+      prototype(floorPainter(pieces, [x + rim, z + rim, w - 2 * rim, d - 2 * rim]), i, t < spans[0][1] ? -1 : clock);
       feed(P, pieces, t, ...spans[i]);
     }
     for (const pc of pieces) { pc.device = i; pc.deviceKind = ['laptop', 'tablet', 'phone'][i]; pc.clock = clock; }
@@ -536,10 +555,13 @@ const compPoint = ([x, y]) => [VIEW[0] + x * VIEW[2] / 480, VIEW[1] + VIEW[3] - 
 const compRect = ([x, y, w, h]) => [VIEW[0] + x * VIEW[2] / 480, VIEW[1] + VIEW[3] - (y + h) * VIEW[3] / 270, w * VIEW[2] / 480, h * VIEW[3] / 270];
 const graphPoint = ([x, y]) => [3.74 + x / 240 * 0.95, 1.6 + (1 - y / 200) * 0.79];
 function inPageSpot(x, y, w, h) { return [x + w * 0.045, y + h * (1 - 0.675 - 0.0225), w * 0.27, h * 0.045]; }
+// D1: the canvas mirrors the devices. The phone's frame is to the tablet's frame as the phone's screen is to the tablet's on the
+// floor (both 9 : 19.5 and 3 : 4 as before), top-aligned in its row as Figma lines frames up.
+export const FIG_PHONE = (UI_ROW.phoneD - 2 * UI_ROW.phoneRim) / (ROW - 2 * UI_ROW.rim);
 const FIG = (() => {
-  const h = 0.86, g = 0.14, dw = h * 1.6, tw = h * 3 / 4, pw = h * 9 / 19.5, cl = 0.9, cr = PANEL - 0.1, x = cl + (cr - cl - dw - tw - pw - 2 * g) / 2;
-  const cols = [[x, dw], [x + dw + g, tw], [x + dw + g + tw + g, pw]];
-  const designs = cols.map(([x, w]) => [x, 0.46, w, h]), wires = cols.map(([x, w]) => [x, 1.58, w, h]);
+  const h = 0.86, g = 0.14, dw = h * 1.6, tw = h * 3 / 4, ph = h * FIG_PHONE, pw = ph * 9 / 19.5, cl = 0.9, cr = PANEL - 0.1, x = cl + (cr - cl - dw - tw - pw - 2 * g) / 2;
+  const cols = [[x, dw], [x + dw + g, tw], [x + dw + g + tw + g, pw]], tall = [h, h, ph];
+  const designs = cols.map(([x, w], i) => [x, 0.46 + h - tall[i], w, tall[i]]), wires = cols.map(([x, w], i) => [x, 1.58 + h - tall[i], w, tall[i]]);
   const spot = inPageSpot(cols[0][0], 0.46, dw, h);
   return { cols, designs, wires, spot, from: [spot[0] + spot[2], spot[1] + spot[3] / 2], to: [cols[0][0] + dw + 0.06, 0.46 + h * 0.325] };
 })();
@@ -619,7 +641,7 @@ export const SCRIPTS = {
     { id: 'heading', kind: 'type', from: topLeft(inRect(FIG.wires[0], [64 / 1440, 252 / 900, 420 / 1440, 174 / 900])), text: 'Portfolio', duration: 0.6, tool: 'type' },
     { id: 'button', kind: 'draw', from: topLeft(inRect(FIG.wires[0], [64 / 1440, 555 / 900, 380 / 1440, 35 / 900])), to: bottomRight(inRect(FIG.wires[0], [64 / 1440, 555 / 900, 380 / 1440, 35 / 900])), duration: 0.2, tool: 'rectangle' },
     { id: 'details', kind: 'run', from: topLeft(FIG.wires[0]), to: bottomRight(FIG.wires[2]), count: 9, duration: 0.21 },
-    { id: 'marquee', kind: 'draw', from: topLeft(FIG.wires[0]), to: bottomRight(FIG.wires[2]), duration: 0.25, tool: 'arrow' },
+    { id: 'marquee', kind: 'draw', from: topLeft(FIG.wires[0]), to: [FIG.wires[2][0] + FIG.wires[2][2], FIG.wires[0][1]], duration: 0.25, tool: 'arrow' },   // D1: round the whole row, down to its tallest frame's foot
     { id: 'copies', kind: 'drag', from: [(FIG.wires[0][0] + FIG.wires[2][0] + FIG.wires[2][2]) / 2, 2.01], to: [(FIG.wires[0][0] + FIG.wires[2][0] + FIG.wires[2][2]) / 2, 0.89], duration: 0.4 },
     ...FIG.designs.map((r, i) => ({ id: 'fill' + i, kind: 'set', from: centre(r), duration: 0.05, tool: 'arrow' })),
     { id: 'hero', kind: 'drag', from: centre(HERO_SOURCE), to: centre(inRect(FIG.designs[0], HERO_REGION)), duration: 0.4 },
@@ -631,7 +653,7 @@ export const SCRIPTS = {
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.7 },
   ], { hold: 2.85, tail: 0.4 }),
   id: script([
-    ...[ID.spread, ID.cover, ID.post, ID.mail].map((r, i) => ({ id: 'frame' + i, kind: 'draw', from: topLeft(r), to: bottomRight(r), duration: 0.3, tool: 'frame' })),
+    // CORRECTIONS-12 I1: no frames are drawn. The document opens with its blank pages already there (see blankPages).
     { id: 'map', kind: 'drag', from: centre(DOCK.map), to: centre(ID.frame), duration: 0.45, tool: 'arrow' },
     { id: 'heading', kind: 'type', from: [ID.right[0] + ID.right[2] * 1052 / 1100, ID.right[1] + ID.right[3] * (1 - 672 / 850)], text: 'Amenities', duration: 0.6, tool: 'type' },
     { id: 'spreadType', kind: 'run', from: topLeft(ID.left), to: bottomRight(ID.right), count: 6, duration: 0.3 },
@@ -957,32 +979,33 @@ function drawnRegion(P, rect, art, region, p) {
   const [u, v, w, h] = region, r = inRect(rect, [u, v, w * p, h * p]);
   P.push({ ...on('paper', ...r, { lift: 0.09, t: 0.004, art }), window: [u, v, u + w * p, v + h * p] });
 }
-function drawnFrame(P, r, p, tone = 'paper', diagonals = false, cross = true) {
+function drawnFrame(P, r, p, tone = 'paper') {
   if (p <= 0) return;
   const [x, y, w, h] = r, growing = [x, y + h * (1 - p), w * p, h * p];
-  if (diagonals) emptyFrame(P, growing, true, 0, cross);
-  else P.push(on(tone, ...growing, { lift: 0.06, t: 0.02 }));
+  P.push(on(tone, ...growing, { lift: 0.06, t: 0.02 }));
 }
-// Build the spread's lasting pieces in the drag's rectangle, rather than swapping a placeholder.
-function spreadFrame(P, p, cross) {
-  if (p <= 0) return;
-  const pieces = [];
-  for (const rect of [ID.left, ID.right]) pieces.push({ ...on('ink', ...rect, { lift: 0.06, t: 0.02 }), tones: FLYER.coal });
-  if (cross) emptyFrame(pieces, ID.frame, false);
-  const x = SCREEN.l + ID.spread[0] * U, y = SCREEN.b + (ID.spread[1] + ID.spread[3]) * U;
-  for (const pc of pieces) {
-    pc.p[0] = x + (pc.p[0] - x) * p; pc.p[1] = y + (pc.p[1] - y) * p;
-    pc.s[0] *= p; pc.s[1] *= p;
-    P.push(pc);
-  }
+// CORRECTIONS-12 I1: the document opens as a new InDesign document does, with its pages already there and nothing on them: the
+// spread's two pages, then the cover, the post and the e-blast as plain pages with their edges. No empty frames, no crossed lines.
+// Each picture is dragged straight onto its page. The spread's pages stay under what is placed on them. A single page's edges
+// stop at its own picture's first contact (as the frames' outlines did) and its plate stays until the picture is placed on it.
+function blankPages(D, s, t) {
+  [ID.spread, ID.cover, ID.post, ID.mail].forEach((r, i) => {
+    const id = ['map', 'photo', 'postPhoto', 'mailPhoto'][i], before = D.length;
+    if (i === 0) for (const rect of [ID.left, ID.right]) D.push({ ...on('ink', ...rect, { lift: 0.06, t: 0.02 }), tones: FLYER.coal });
+    else if (!done(s, id, t)) {
+      const [x, y, w, h] = r, line = 0.012, [from, to] = [[DOCK.photo, ID.photo], [ID.photo, ID.post], [ID.photo, ID.mailPhoto]][i - 1];
+      D.push(on('night', x, y, w, h, { lift: 0.05, t: 0.02 }));
+      if (!pageContact(s, id, t, from, to, r)) for (const edge of [[x, y, w, line], [x, y + h - line, w, line], [x, y, line, h], [x + w - line, y, line, h]]) D.push({ ...on('dark', ...edge, { lift: 0.075, t: 0.006 }), pageEdge: true });
+    }
+    for (const pc of D.slice(before)) pc.page = id;
+  });
 }
-// Rectangles interpolate linearly in hand progress (HAND). Solve their first intersection once in that space;
-// after contact, the styled picture owns the frame and the empty outline never returns.
-function frameContact(s, id, t, from, to, frame) {
+// Rectangles interpolate linearly in hand progress (HAND). Solve their first intersection with the page once in that space.
+function pageContact(s, id, t, from, to, page) {
   if (!begun(s, id, t)) return false;
   let first = 0, last = 1;
   const pad = 0.03;
-  const bounds = r => [r[0] + r[2] - frame[0] + pad, frame[0] + frame[2] - r[0] + pad, r[1] + r[3] - frame[1] + pad, frame[1] + frame[3] - r[1] + pad];
+  const bounds = r => [r[0] + r[2] - page[0] + pad, page[0] + page[2] - r[0] + pad, r[1] + r[3] - page[1] + pad, page[1] + page[3] - r[1] + pad];
   const a = bounds(from), b = bounds(to);
   for (let i = 0; i < 4; i++) {
     const d = b[i] - a[i];
@@ -1026,7 +1049,7 @@ function editedFigma(t) {
     }
   });
   if (begun(s, 'marquee', t) && !done(s, 'copies', t)) {
-    const a = topLeft(FIG.wires[0]), b = bottomRight(FIG.wires[2]), p = handed(s, 'marquee', t);
+    const a = topLeft(FIG.wires[0]), b = action(s, 'marquee').to, p = handed(s, 'marquee', t);
     D.push(...outline(a[0], a[1] + (b[1] - a[1]) * p, (b[0] - a[0]) * p, (a[1] - b[1]) * p, { line: 0.012 }));
   }
   const clock = exportPlay(s, t);
@@ -1102,23 +1125,7 @@ function editedInDesign(t, { at: pages } = {}) {
     final.forEach(pc => { if (!pc.furniture) pc.document = true; }); P.push(...final);
   } else {
     rail(P, ['tArrow', 'tType', 'tFrame', 'tRect', 'tLine', 'tDrop'], P.tool === 'frame' ? 2 : P.tool === 'type' ? 1 : P.tool === 'rectangle' ? 3 : 0);
-    [ID.spread, ID.cover, ID.post, ID.mail].forEach((r, i) => {
-      if (!begun(s, 'frame' + i, t)) return;
-      const id = ['map', 'photo', 'postPhoto', 'mailPhoto'][i];
-      const frame = i ? r : ID.frame;
-      const [drag, from, to] = [['map', DOCK.map, ID.frame], ['photo', DOCK.photo, ID.photo], ['postPhoto', ID.photo, ID.post], ['mailPhoto', ID.photo, ID.mailPhoto]][i];
-      const filled = frameContact(s, drag, t, from, to, frame), placed = done(s, id, t), before = D.length;
-      if (i === 0) {
-        spreadFrame(D, t >= action(s, 'frame0').end - 0.000500001 * PACE ? 1 : handed(s, 'frame0', t), !filled);
-      } else if (!placed) {
-        drawnFrame(D, r, handed(s, 'frame' + i, t), 'night', true);
-        if (filled) D.splice(before, D.length - before, ...D.slice(before).filter(pc => !pc.overlay));
-      }
-      for (const pc of D.slice(before)) {
-        if (pc.overlay) pc.emptyFrame = id;
-        else pc.framePlate = id;
-      }
-    });
+    blankPages(D, s, t);
     if (done(s, 'spreadType', t)) D.push(on('ink', ...ID.left, { lift: 0.08, t: 0.004, art: 'kAmL' }), on('ink', ...ID.right, { lift: 0.08, t: 0.004, art: 'kAmR' }));
     else if (begun(s, 'map', t)) {
       const a = action(s, 'map'), window = [34 / 2200, 84 / 850, 2056 / 2200, 826 / 850];
@@ -1382,7 +1389,7 @@ function liftDragStack(P) {
   let rise = 0;
   for (const pc of P) {
     // The spread's selection guides may stay above the picture, as in the original.
-    if (stack.includes(pc) || pc === cursor || (pc.overlay && !pc.emptyFrame)) continue;
+    if (stack.includes(pc) || pc === cursor || pc.overlay) continue;
     const b = bounds(pc);
     if (rects.some(r => r[0] < b[2] && r[2] > b[0] && r[1] < b[3] && r[3] > b[1])) rise = Math.max(rise, pc.p[2] + pc.s[2] + LAYER_STEP * U - bottom);
   }
@@ -1450,7 +1457,7 @@ export function calloutsAt(t) {
   if (at < Math.min(...ends) - 1e-9 || at >= off - 1e-9) return [];
   const P = frameAt(t), floor = P.filter(pc => pc.where === 'floor');
   const words = { id: ['Flyer', 'LinkedIn post', 'Email'], pr: ['YouTube', 'TikTok', 'Instagram'], ae: ['Website', 'Story', 'Feed post'], fig: ['Laptop', 'Tablet', 'Phone'] }[key];
-  const rects = key === 'id' ? [[BLOCK.x0, MAT.z, LEAF, DEEP], [BLOCK.x0 + LEAF + GUT, MAT.z, PHONE, DEEP], [BLOCK.x0 + LEAF + 2 * GUT + PHONE, MAT.z, TABLET, DEEP]] : key === 'fig' ? [null, [UI_ROW.tablet, MAT.z + UI_ROW.forward, UI_ROW.tabW, ROW], [UI_ROW.phone, MAT.z + UI_ROW.forward, UI_ROW.phoneW, ROW]] : [[MAT.x, MAT.z, WIDE, ROW], [MAT.x + WIDE + MAT.gap, MAT.z, SLIM, ROW], [MAT.x + WIDE + SLIM + 2 * MAT.gap, MAT.z, SLIM, ROW]];
+  const rects = key === 'id' ? [BLOCK_ROW.stack, BLOCK_ROW.phone, BLOCK_ROW.tablet] : key === 'fig' ? [null, [UI_ROW.tablet, MAT.z + UI_ROW.forward, UI_ROW.tabW, ROW], [UI_ROW.phone, MAT.z + UI_ROW.forward + UI_ROW.phoneZ, UI_ROW.phoneW, UI_ROW.phoneD]] : [[MAT.x, MAT.z, WIDE, ROW], [MAT.x + WIDE + MAT.gap, MAT.z + ROW - SLIM_D, SLIM, SLIM_D], [MAT.x + WIDE + SLIM + 2 * MAT.gap, MAT.z + ROW - SLIM_D, SLIM, SLIM_D]];
   return words.flatMap((word, i) => {
     if (at < ends[i]) return [];
     let mark;

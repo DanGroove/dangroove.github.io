@@ -11,7 +11,7 @@ import { createRenderer } from '../sq.mjs';
 import { SHOW, LOOP, PACE, SCRIPTS, SCENES, frameAt } from '../stage.mjs';
 import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
 import { equivalent } from '../view.mjs';
-import { handPatch, retimer } from './hand-patch.mjs';
+import { handPatch, retimer, r12Patch } from './hand-patch.mjs';
 
 const take = new URL('../', import.meta.url);
 const sources = JSON.parse(fs.readFileSync(new URL('fixtures/drag-sources.json', import.meta.url), 'utf8'));
@@ -24,7 +24,8 @@ async function snapshot(name) {
   const raw = inflateRawSync(Buffer.from(sources[name].deflateBase64, 'base64')).toString('utf8');
   // The saved source used paths relative to take-2. Resolve imports there, in memory.
   // CORRECTIONS-7: round 7's hand edit is applied in memory; the hash below is still of the frozen bytes.
-  const source = handPatch(raw).replace(/from (['"])([^'"]+)\1/g, (_, q, ref) => 'from ' + q + new URL(ref, take).href + q);
+  // CORRECTIONS-12 I1: and without InDesign's frame steps, so its drags fall at today's instants.
+  const source = r12Patch(handPatch(raw)).replace(/from (['"])([^'"]+)\1/g, (_, q, ref) => 'from ' + q + new URL(ref, take).href + q);
   return { module: await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64')), hash: createHash('sha256').update(raw).digest('hex') };
 }
 function stack(P, id) {
@@ -62,7 +63,9 @@ export async function checkDrags(only = '') {
   const require = (rule, ok, time, message) => { if (enabled(rule)) assert.ok(ok, `G1 ${rule}: ${time.toFixed(6)}s: ${message}`); };
   assert.equal(PACE, incoming.module.PACE);
   // H2 moves later clocks; H3 rotates only the Figma laptop and recentres its footprint.
-  for (let i = 0; i < 5; i++) equivalent(SCENES[i](), incoming.module.SCENES[i](), 'G1 retained still differs from incoming 50b51b8');
+  // CORRECTIONS-12 D1/X1 move the floor on purpose; the screen at each still is compared as before.
+  const screen = list => list.filter(pc => pc.where !== 'floor');
+  for (let i = 0; i < 5; i++) equivalent(screen(SCENES[i]()), screen(incoming.module.SCENES[i]()), 'G1 retained still differs from incoming 50b51b8');
   const points = SCENES.flatMap(make => make().flatMap(corners));
   const xs = points.map(p => dot(HOME.r, p)), ys = points.map(p => dot(HOME.u, p));
   // The player's initial 1440 x 900 desktop fit. Label fitting can only reduce S.
@@ -112,29 +115,23 @@ export async function checkDrags(only = '') {
           // box in z, every shared viewing ray meets the carried face first.
           // Visible convex hulls (including clips) supply the overlap test.
           const above = Math.max(...corners(pc).map(p => p[2])) >= Math.min(...corners(face).map(p => p[2])) - 1e-8;
-          require('clearance', !above, time, `${pc.art || pc.emptyFrame || pc.tone} drawn above carried image`);
-          if (pc.emptyFrame) require('frames', !above, time, 'empty-frame line above carried image');
+          require('clearance', !above, time, `${pc.art || pc.page || pc.tone} drawn above carried image`);
+          if (pc.page) require('frames', !above, time, 'blank page above carried image');   // CORRECTIONS-12 I1: pages, not frames
         }
       }
     }
   }
-  // F1's lifetimes use unlifted 48aea47 routes; the other frames must remain whole.
+  // CORRECTIONS-12 I1: no crossed frames. Each blank page is whole (not hidden, never moved) from the document's opening until
+  // its own picture is placed, and the placement leaves no bare wall.
   if (enabled('frames')) for (const [i, id] of ['map', 'photo', 'postPhoto', 'mailPhoto'].entries()) {
-    const draw = SCRIPTS.id.actions.find(a => a.id === 'frame' + i), place = drags.find(a => a.id === id);
-    const made = frameAt(start + draw.end + 1e-7).filter(pc => pc.emptyFrame === id);
-    // The first four bars are the frame rectangle. Diagonal caps extend beyond it.
-    const bounds = made.slice(0, 4).map(rect), target = [Math.min(...bounds.map(r => r[0])), Math.min(...bounds.map(r => r[1])), Math.max(...bounds.map(r => r[2])), Math.max(...bounds.map(r => r[3]))].map((n, k) => n + (k < 2 ? -1 : 1) * 0.03 * 1.15);
+    const place = drags.find(a => a.id === id), opened = frameAt(start + 0.8 * PACE + 1e-7).filter(pc => pc.page === id);
     const samples = new Set(times);
     for (let n = 0; n <= 2180; n++) samples.add(retime(19.9 + n * 0.005 * PACE));
-    let contacted = false;
     for (const time of [...samples].sort((a, b) => a - b)) {
-      const at = time - start; if (at <= draw.end + 1e-9 || at > retimeLocal('id', 11.9 * PACE)) continue;
-      const P = frameAt(time), own = stack(base.frameAt(time), id).image;
-      contacted ||= at >= place.end - 1e-9 || (own && overlap(rect(own), target));
-      const lines = P.filter(pc => pc.emptyFrame === id), plates = P.filter(pc => pc.framePlate === id);
-      require('frames', lines.length === (contacted ? 0 : 6), time, `${id} crossed frame not whole through own contact`);
-      if (!contacted) require('frames', lines.every((pc, j) => !pc.hide && JSON.stringify(pc.clip) === JSON.stringify(made[j].clip) && pc.s.every((v, k) => near(v, made[j].s[k])) && pc.q.every((v, k) => near(v, made[j].q[k])) && pc.p.slice(0, 2).every((v, k) => near(v, made[j].p[k]))), time, `${id} crossed frame was altered`);
-      require('frames', at >= place.end - 1e-9 || (plates.length === (i ? 1 : 2) && plates.every(pc => !pc.hide)), time, `${id} plate vanished before placement`);
+      const at = time - start; if (at <= 0.8 * PACE + 1e-9 || at > retimeLocal('id', 11.9 * PACE)) continue;
+      const P = frameAt(time), plates = P.filter(pc => pc.page === id);
+      require('frames', !P.some(pc => pc.emptyFrame), time, 'an empty frame is drawn');
+      require('frames', at >= place.end - 1e-9 || (plates.filter(pc => !pc.pageEdge).length === (i ? 1 : 2) && plates.filter(pc => !pc.pageEdge).every((pc, j) => !pc.hide && pc.s.every((v, k) => near(v, opened[j].s[k])) && pc.p.slice(0, 2).every((v, k) => near(v, opened[j].p[k])))), time, `${id} page vanished or moved before placement`);
       const replacements = { map: ['kMap', 'kAmL'], photo: ['coverPhoto', 'coverBlob', 'coverDecor', 'kCover'], postPhoto: ['postPhoto', 'kPost'], mailPhoto: ['mailPhoto', 'eblast'] };
       require('frames', at < place.end - 1e-9 || plates.length || P.some(pc => pc.where === 'content' && !pc.echo && replacements[id].includes(pc.art)), time, `${id} placement left bare wall`);
     }
