@@ -41,9 +41,135 @@ What is required: once a letter is revealed, it looks exactly like the same lett
 
 You cannot render on the PC, so I will check the result in a browser. Add a Node check that at least proves each mask covers every texel where its finished letters have coverage. Its negative control is a 0.5 threshold, which must fail.
 
-**Not in this run:** Dan also asked (10:55 to 11:14 AM) for one tablet and one phone model in every scene, bigger, and "high end". That comes as R12 in a separate brief once he has approved a mock. Do not change any device's size, shape or look in this run.
+**Not in this run:** Dan also asked (10:55 to 11:14 AM) for one tablet and one phone model in every scene, bigger, and "high end". That is R12, below, built in the run after F1 to F3. Do not change any device's size, shape or look in the F1 to F3 run.
 
 Everything in `CORRECTIONS-2.md` to `CORRECTIONS-16.md` still holds unless it is changed here. The motion stays hard-edged: no fades and no blur. Nothing here touches anything outside `design/journey-hero/take-2/`.
+
+## R12. One phone and one tablet everywhere: bigger, and high end
+
+Build this after F1 to F3, on top of them, and keep everything they did.
+
+Dan, 21 November, 10:55 to 11:28 AM ET:
+- "make sure all phones and tablets are the same size throughout? the UXUI versions are dfferent for some reason"
+- "just use the same model for all please"
+- "make sure the tablet size works for all orientations that it will be in, right now the last one is too small looking and the other one is too wide/tall", then "Portrait/landscape I meant"
+- On a decision card about the first mock, he picked "Laptop grows with it".
+- "I Think the laptop and phone on all need to be bigger", then "These devices need to look high end please"
+- On the mock of what follows (11:28 AM): "Make sure the video/motion fills the screens properly. Otherwise go for it"
+
+Today there are three phones and three tablets:
+- InDesign: a phone 0.418 x 0.861 and an upright tablet 1.047 x 1.45.
+- Premiere Pro and After Effects: phones 0.718 x 1.480 and a 3.09 x 1.8 "tablet" in landscape, which is 16 : 9 rather than a tablet's shape.
+- Figma: a phone 0.317 x 0.653 and a tablet 0.855 x 1.1.
+
+Each scene also has its own rims, corners and screen shapes. After R12 there is one phone and one tablet. They differ only in where they lie, which way they face and what they show.
+
+### The two models (world units)
+
+| | Tablet | Phone |
+|---|---|---|
+| Body shape | 179.5 x 248.6 mm (a real tablet) | 77.6 x 163.0 mm (a large phone) |
+| Body, portrait (w x d) | 1.1914 x 1.65 | 0.5150 x 1.0819 (true proportion to the tablet: 163.0 / 248.6 of its long side) |
+| Screen | 1640 : 2360, an even rim of 0.0734 (`rimFor`), so the screen is 1.0447 x 1.5033 | 9 : 19.5, an even rim of 0.0146, so the screen is 0.4858 x 1.0527 |
+| Thickness | 0.04 | 0.05 |
+| Corner roundness (`e` around) | 0.1 | 0.16 |
+| Top edge (`e` up) | 0.35: a rounded edge that catches the light | 0.35 |
+| Detail | a front camera: a dot 0.018 across, centred in the bezel of one long side (the top bezel in landscape, the right bezel in portrait), lens tones `#3C4A56 / #26313A / #141A20` | an island: a flat pill in the glass tone (`#121111`), centred across the screen, 0.1425 x 0.0389 (88 x 24 px of the phone's 300 x 650 picture), its top 0.0194 (12 px) inside the screen's top edge, which is where the pictures draw their islands today. It lies just above the highest picture layer that phone ever has, at the same height in every frame. |
+
+**Tones.** The body is metal on its sides and black glass on top. As `tones` (lit side, top, shaded side): `['#ABA59E', '#121111', '#4A4541']`. The screen's pictures start on the glass with no gap. Each device's layers start from its own face (R9).
+
+**The tablet's orientation.** The tablet is portrait in InDesign and Figma, and landscape in Premiere Pro and After Effects (the same body, turned 90°). The phones are portrait everywhere.
+
+### Pictures fill their screens
+
+Dan's condition: the video and motion fill the screens properly. So every picture fills its whole screen, out to the rim: no black bars, no glass showing, and nothing stretched. A picture whose art has another shape is drawn again at its screen's shape: 2360 : 1640 on the landscape tablet, 1640 : 2360 on the upright one, 9 : 19.5 on the phone. It is never stretched, and never zoomed so far that its furniture or its subject is cut off.
+
+- **The landscape tablet (Premiere Pro and After Effects).**
+  - The video and the motion are drawn at 2360 : 1640 (for example 472 x 328) and fill the screen.
+  - The shots (`SHOTS`) and the motion (`saas`) are drawn to fill any frame. So lay them out again for this frame, the way the tall and square exports already are. The person, the sun and the skyline fill the frame. "Make it move", the ball's path and the list rows keep their size, with margins at least as wide as today's.
+  - The player's furniture (the play icon and the scrub bar) keeps its size and its distance from the bottom and left edges. The bar ends at the same distance from the right edge.
+  - This replaces `playerWide`, `chromePlayer`, `motWide`, `chromeMotion`, and the shots and layout that `movie()` and `animatedComp()` use for the tablet. Premiere Pro's own program monitor and After Effects' comp stay 16 : 9.
+- **The phones (Premiere Pro and After Effects).** Each phone picture is drawn at 9 : 19.5 (300 x 650) and fills the screen.
+  - What hangs from the top stays where it is: the progress bars, the header and the status area.
+  - What hangs from the foot moves down the extra 50 px: the nav bar, the home bar, the reel's account lines and side buttons, and the story's call to act.
+  - The picture between them grows. The tall video and the story fill the full height. The feeds keep their square picture under the header, and show the top of the next post in the extra space (its avatar and name lines, drawn like the first post's), not an empty band.
+  - This covers `reel`, `feedSq`, `motTall`, `motSq`, their chrome arts and the tall shots. It also covers `movie()`'s and `animatedComp()`'s layouts for the phones and `playback()`'s progress lines.
+- **The captions.** Today the reel's caption is drawn 13 % taller than its art and the feed's 8 % flatter. Each keeps its art's shape (352 : 74) on every screen.
+- **InDesign.** Its phone shows the LinkedIn post redrawn at 300 x 650 (today 300 x 664). Its tablet shows the e-blast in the mail app, redrawn at 1640 : 2360 (today 362 x 516, 1 % off).
+- **Figma.** Its tablet pictures are redrawn at 1640 : 2360, as a website fills its screen: `wireTablet`, `uiTablet`, `chromeTablet`, and the work pictures and prototype states drawn for the tablet. Figma's canvas frame for the tablet takes that shape too (`FIG`'s `tw`). Its phone pictures are 9 : 19.5 already.
+- **One island.** No picture draws an island or a notch of its own: remove `island()` from the arts and the bar at the top of `chromeHandset`. Each phone's own island (in the table) is then the only one, the same on every phone.
+
+### The laptop
+
+Space grey aluminium:
+- the deck and lid: `['#86807A', '#3E3A37', '#252220']`;
+- the keyboard well's top: `#121111`;
+- the keys: `['#2C2928', '#1B1918', '#111010']`;
+- the trackpad: `['#86807A', '#4A4643', '#252220']`.
+
+It scales by 1.4 about its hinge's left end. `lidW` becomes 2.17, and `lidH` and `deck` become 1.54. The keyboard, the trackpad, the bezels and the chin scale with it. The deck's thickness stays 0.08, and R10's flush lid holds at the new size. The laptop's own screen pictures keep their shape (16 : 10).
+
+Dan's round 13 rule (U1) made the tablet exactly as deep as the deck. At this size, a deck as deep as the tablet (1.65) runs off the stage's left edge, or puts the lid over Figma's canvas. So:
+- the deck is 1.54;
+- the tablet's and the phone's front edges stay on the deck's front edge;
+- the tablet reaches 0.11 further back.
+
+### Where they lie
+
+**InDesign.** The booklet keeps its size. The row behind still spans exactly the open copy's width, with two equal gutters (I2): stack, phone, tablet. That makes each gutter 0.085. All three front edges are on the stack's front edge, and the tablet, being taller than a page, reaches 0.2 further back. The export's piece grouping (the indices in the comment at "floor: as prints() builds it") must follow the new pieces.
+
+**Premiere Pro and After Effects.** Left to right: the landscape tablet, then the two phones. The phones' front edges are on the tablet's, with 0.25 gaps, centred on the mat as now. The mat is 3.18 wide.
+
+**Figma.** The row (laptop, tablet, phone, with 0.3 gaps) stays centred where it is now and moves 0.47 further forward (`forward` 0.93), with no sideways move. On my mock that is the least forward shift that gives H10's 12 px: `laptopClearance()` measures 12.4 px. In every frame:
+- the open lid clears the canvas frames, the toolbar and the bar by at least 12 px (H10), and the Laptop ring stays clear;
+- every device lies inside the pinned fit (below);
+- the labels keep clear of the page's text, the craft list and the page's edges at every size, as `fitCalloutView()` solves now. The Laptop and Tablet labels sit further left than today, as the Phone label already sits beyond the stage box on the right.
+
+If any of these cannot hold, tell me the numbers rather than shrinking anything.
+
+### The camera stays where it is
+
+Pin the camera's fit for the default camera to today's numbers: `{ w: 6.472556630033903, h: 7.02662378036781, x: 0.4431895737378033, y: 1.9701472394822923 }`. `play.mjs`, `stills.mjs` and `sceneEnvelope()` (view.mjs) all compute it from the six stills today. Make them read this one constant for the default camera, so that nothing on the page moves or scales because of R12. A camera turned by `yaw` or `pitch` still computes its own fit.
+
+Why: measured on my mock, the bigger Figma laptop widens the stills' envelope. At the placement above it would grow to w 6.580 and h 7.084, and the whole scene would shrink by 1 to 2 % at every larger size. Pinned, Figma's devices still lie inside the fit: their leftmost point is 0.14 and their lowest point 0.19 inside the box's edges, out of the 0.25 margin.
+
+With the pin, the scene's scale `S` stays the same or grows at each of the ten browser sizes. On my mock it is unchanged at seven of the ten sizes. It grows 7 to 11 % at 390 x 844, 360 x 780 and 412 x 915, probably because the video row's labels bound it there today and the new row is narrower. Report all ten before and after.
+
+### What stays
+
+- The timing: R12 changes no time, and the loop stays as F2 left it.
+- The ball, which still splits into the red blocks of the new bodies' footprints.
+- The wipes, the sinks (each by its own height, R11) and the labels. Each label anchors to its device's new corner.
+
+### Checks for R12
+
+Add these to `tools/round17-checks.mjs`, with negative controls under `--controls`:
+- **The models are identical.** Every phone in every scene has the same body size, thickness, rim, tones, roundness and island. Every tablet has the same size, rim, tones, roundness and camera, landscape being the same body turned 90°.
+- **Every screen is filled.** In every frame where a device shows pictures, its picture layers cover its whole screen out to the rim (within 0.001), with no bars and no glass showing.
+- **Every picture keeps its shape.** Every picture layer on a device keeps its art's aspect within 0.5 %, the captions and chrome included.
+- **No gap** between a screen's pictures and its glass: each device's first layer sits on its own face.
+- **One island.** No phone art draws an island or a notch. Each phone's island has the same size, place and height in every frame.
+- **The laptop and the camera.**
+  - The laptop's scale.
+  - H10's 12 px clearance (`laptopClearance()`) and the Laptop ring in every Figma frame.
+  - The pinned fit, with every piece of the six stills and of every Figma frame inside it.
+  - `S` at the ten browser sizes the same as today or larger.
+
+Earlier checks that pin a device's old size, rim, placement or picture shape (for example in `round12-checks.mjs`, `round13-checks.mjs`, `correction-checks.mjs` and `controls.mjs`) take R12's numbers. List each in BUILD.md with its old and new number, and change nothing else about them.
+
+**Negative controls**, each of which must make its check fail:
+- one old phone size in one scene;
+- the 16 : 9 picture letterboxed on the landscape tablet;
+- a phone's 300 x 600 picture centred on its 9 : 19.5 screen, with bars at both ends;
+- a stretched picture;
+- a phone art that draws its own island again;
+- Figma's row at its old `forward` (0.46), with the lid over the canvas;
+- the fit computed from the stills instead of pinned.
+
+### Records for R12
+
+- BUILD.md: add a "Round 17, R12" part. It covers the two models, every picture redrawn and its new size, the placements, the pinned fit, the ten sizes' `S` before and after, and the checks changed.
+- README: the devices, and the screens the exports play on.
 
 ## G. The swap rule (R2, R3, R5 and their kin)
 
