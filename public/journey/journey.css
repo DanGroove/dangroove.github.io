@@ -1,0 +1,341 @@
+@font-face {
+  font-family: Outfit;
+  src: url(../holding/fonts/outfit-latin-wght-normal.woff2) format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+
+:root {
+  --ink: #151314;
+  --paper: #F7F6F3;
+  --red: #C0262E;
+  --red-bright: #F0484F;
+  --line: #2E2B29;
+  --muted: #B9B4AE;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--ink);
+}
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: Outfit, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* The canvas covers the hero; the stage box sets the art's centre and size. */
+.hero {
+  --pad: 64px;
+  --stacked: 0;
+  --gl: max(var(--pad), env(safe-area-inset-left, 0px));
+  --gr: max(var(--pad), env(safe-area-inset-right, 0px));
+  position: relative;
+  min-height: 100vh;
+  min-height: max(100svh, 640px);
+  overflow: hidden;
+}
+
+.hero-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hero-box {
+  position: absolute;
+  left: 44%;
+  top: 88px;
+  width: calc(56% - var(--gr));
+  height: calc(100% - 160px);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Navigation and small labels. */
+.label {
+  font-weight: 300;
+  font-size: 13px;
+  line-height: 1.2;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hero-nav {
+  position: absolute;
+  left: var(--gl);
+  right: var(--gr);
+  top: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hero-mark {
+  display: block;
+  height: 44px;
+}
+
+.hero-mark svg {
+  display: block;
+  height: 100%;
+  width: auto;
+}
+
+.hero-links {
+  display: flex;
+  gap: 36px;
+}
+
+.hero-links a {
+  position: relative;
+  color: inherit;
+  text-decoration: none;
+}
+
+.hero-links a::after,
+.hero-pause::after {
+  content: "";
+  position: absolute;
+  inset: -15px -8px;
+}
+
+/* A bigger target than the word itself; hover colours cut without a transition. */
+@media (hover: hover) {
+  .hero-links a:hover,
+  .hero-crafts button:hover,
+  .hero-pause:hover {
+    color: var(--paper);
+  }
+}
+
+.hero-links a[aria-current] {
+  color: var(--red-bright);
+}
+
+/* Introduction and craft controls. */
+.hero-say {
+  position: absolute;
+  left: var(--gl);
+  top: 50%;
+  transform: translateY(-46%);
+  width: 36%;
+}
+
+.hero-name {
+  margin: 0;
+  font-weight: 800;
+  font-size: clamp(56px, 7.2vw, 104px);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  animation: name-in 0.4s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes name-in {
+  from {
+    font-weight: 300;
+  }
+  to {
+    font-weight: 800;
+  }
+}
+
+.hero-lede {
+  margin: 24px 0 0;
+  font-size: 18px;
+  line-height: 1.5;
+  max-width: 25em;
+}
+
+.hero-crafts {
+  list-style: none;
+  margin: 40px 0 0;
+  padding: 0;
+  width: min(380px, 100%);
+}
+
+.hero-crafts li {
+  border-top: 1px solid var(--line);
+}
+
+.hero-crafts li:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.hero-crafts button {
+  appearance: none;
+  border: 0;
+  background: none;
+  margin: 0;
+  font: inherit;
+  font-weight: 300;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  width: 100%;
+  padding: 9px 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hero-crafts .n {
+  width: 1.6em;
+}
+
+.hero-crafts button[aria-current] {
+  color: var(--paper);
+}
+
+.hero-crafts button[aria-current] .n {
+  color: var(--red-bright);
+}
+
+/* Footer and keyboard focus. */
+.hero-foot {
+  position: absolute;
+  left: var(--gl);
+  right: var(--gr);
+  bottom: 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hero-foot p {
+  margin: 0;
+}
+
+.hero-pause {
+  position: relative;
+  appearance: none;
+  border: 0;
+  background: none;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 300;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.hero :focus-visible {
+  outline: 2px solid var(--red-bright);
+  outline-offset: 2px;
+}
+
+.hero.is-entering [data-foot],
+.hero.is-entering.nav-late [data-nav] {
+  visibility: hidden;
+}
+
+/* Smaller screens retain the original gutters and stacked layout. */
+@media (max-width: 1199px) {
+  .hero {
+    --pad: 40px;
+  }
+}
+
+@media (max-width: 719px) {
+  .hero {
+    --pad: 16px;
+    --stacked: 1;
+    min-height: 100vh;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+  }
+  /* The stage flexes so the whole hero fits while the phone's browser bars show. */
+  .hero-box {
+    position: relative;
+    left: auto;
+    top: auto;
+    width: auto;
+    height: auto;
+    margin-top: 64px;
+    flex: 1 1 0px;
+    min-height: 240px;
+    max-height: 47vh;
+    max-height: 47svh;
+  }
+  .hero-nav {
+    top: 16px;
+  }
+  .hero-mark {
+    height: 32px;
+  }
+  .label {
+    font-size: 12px;
+  }
+  .hero-links {
+    gap: 20px;
+  }
+  .hero-say {
+    position: relative;
+    left: auto;
+    top: auto;
+    transform: none;
+    width: auto;
+    margin-top: 8px;
+    padding: 0 var(--gr) 0 var(--gl);
+  }
+  .hero-name {
+    font-size: 56px;
+  }
+  .hero-lede {
+    margin-top: 14px;
+    font-size: 16px;
+  }
+  .hero-crafts {
+    margin-top: 12px;
+    width: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 16px;
+  }
+  .hero-crafts li,
+  .hero-crafts li:last-child {
+    border: 0;
+  }
+  .hero-crafts button {
+    padding: 15px 0;
+    gap: 10px;
+  }
+  .hero-foot {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    margin-top: auto;
+    padding: 12px var(--gr) 16px var(--gl);
+  }
+}
+
+/* Reduced motion keeps the still layout and removes playback controls. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-name {
+    animation: none;
+  }
+  .hero-pause {
+    display: none;
+  }
+}

@@ -1,0 +1,1330 @@
+# Motion second pass build record
+
+The CORRECTIONS-3 section and its addendum are current. Earlier sections are historical checkpoints; their timing, projected-centring rules and prior hardware results do not describe this revision.
+
+Started 19 November 2026 at 20:02 UTC. Stop unfinished stages at about 21:02 UTC.
+
+The approved poses and the browser review in README are the visual evidence. MOTION-2 is the controlling brief. Keep the screen and panel measures, atlas artwork, square composition and bending booklet. Every new construction must end at those measures. Finished still changes must be listed in README.
+
+Acceptance: one cursor; no new opacity, bounce or blur; only the three engine eases; one scheduler derives action times and approaches from lengths; empty documents before the first action; no small text through alpha cut; no more than six atlas pages; each floor footprint and the light pool centred in HOME camera coordinates; floor absent outside export; one playback clock on viewer and three devices; loop 68–76 seconds at PACE 1. Node checks and offline packing pass after each stage. Browser appearance and frame rate are reviewed elsewhere, without local screenshots or reviewer agents.
+
+Order: shared actions, centring and playback; Photoshop; Premiere; After Effects; Figma; InDesign; Illustrator.
+
+The installed motion-playbook was read. Its spatial consistency and staging apply; the brief's hard edges and engine curves override generic motion defaults. RTK was requested by the local instructions but is unavailable on PATH; shell reads use PowerShell directly. All writes stay here.
+
+## Stage checkpoints
+
+1. Shared scheduler, camera centring, device picture/chrome separation and playback, paused craft selection: checked and packed at about 20:06 UTC.
+2. Photoshop: raw/half-levelled/levelled/sky pictures, two independent heals, grade and dock travel; checked and packed by 20:09.
+3. Premiere: bin population, carried clips/voice, blade/offcut/gap close, preset drags, caption prefixes, music, ducking, stepped taper, preview and live exports; checked and packed by 20:12.
+4. After Effects: empty comp, typed words, shapes and layer creation, keys and path, graph, preview and live exports; checked and packed by 20:15.
+5. Figma: drawn frames, wireframe construction, selected copies, fills, asset drag, name, accents, prototype and live exports; checked and packed by 20:19.
+6. InDesign: drawn frames, carried dock assets and copied photographs, upright title and letter prefixes, completed page layouts, fed group, pickup and four bending leaves; checked by 20:25.
+7. Illustrator: staged street geometry, individual markers/blocks/pins, measured rotated lettering and growing label bars, close-up, stroked selection and cursor-carried dock exports; checked and packed by 20:30.
+
+All seven stages were implemented inside 28 minutes. Remaining work after that point refined their correctness and recorded the review handoff. The final scene lengths are 8, 10.5, 15, 14.31, 13.45 and 13.45 seconds, totalling 74.71. Typing and repeat runs were accelerated before trimming physical read holds to meet the targets.
+
+## Decisions and departures
+
+- Finished art and original geometry remain the destination. Illustrator's final maps return to the original lift and thickness, Figma's finished frames retain theirs, and InDesign uses a static approved-document builder rather than retaining the previous absolute-time scene.
+- Each floor group solves its own x position from its depth and HOME.r. The pool follows the same projected middle; MAT.z remains the slot.
+- Device chrome is kept as a picture with the picture area cut away. Moving footage, comp parts and prototype screens are drawn beneath it. Existing progress-rail places are reused; missing prototype/motion-post rails are added at the page/picture foot. Muted utility bars are solid colours.
+- After Effects creates the first ball key at zero, then visibly drags it to 0.75 to recover the approved stagger. Its ball uses EASE.wipe, and the graph's final handles now represent that engine curve. This follows MOTION-2's three-curve rule over MOTION.md's separate ball curve; README lists the still change. The approved booklet pickup and bending law remain intact.
+- Dense small labels use repeat runs, as the action vocabulary allows. Actual text uses opaque patches or measured glyph-region reveals; the upright InDesign heading types upward. Font measurements are made during atlas creation, not every frame.
+- No installed critique agents or browser workflow was started: the run's explicit instruction reserves visual review for elsewhere. The old README's browser-review outcome is identified as evidence for the incoming build, not claimed for this revision.
+
+## Verification and remaining gate
+
+Every stage reached passing Node checks before moving on. The final checker samples the loop at 60 Hz, action interiors after atlas/font measurement, scene boundaries, still entry points and reading poses. It checks numeric geometry, tones, atlas windows/keys, one cursor, empty initial documents, approaches and action endpoints, no pre-export floor, slot planes, projected footprint/pool centring and device/viewer clocks. It also checks a PACE-2 copy entirely in memory, the README action table, actual player logic with DOM/draw stand-ins, and syntax/self-containment of the packed offline module.
+
+No browser, screenshot, pixel comparison or graphics-card frame-rate measurement was performed. Those are the remaining visual/performance gates. The known still changes and the exact derived action table are in README. The briefs, public/source folders, original review tools and everything outside this folder remain outside the writes for this run.
+
+Final verification: `all clean`, 5,083 sampled frames, 340,120 checked pieces, at most 147 pieces in a frame, five atlas pages. The offline preview packs to 319 KB at `.scratch/preview.html`. All six scene lengths meet their target ranges. The in-memory PACE-2 comparison, player stand-ins and packed-module parse pass. Work finished at approximately 20:52 UTC, about 50 minutes after the start; all stages were already implemented before the sixty-minute stopping rule could apply.
+
+## Browser-review corrections, 19 November 2026
+
+Started at 21:01 UTC. The supplied real-browser review is the reference for this bounded revision: fix overlapping faces, visible comp construction, typing readability and Photoshop's edit beats; preserve the existing compositions and motion curves. The revised acceptance range is 70–82 seconds at PACE 1. No browser tools or reviewer agents are permitted in this run.
+
+- A: one screen counter and one floor/device counter reset for each frame. Painter faces advance by at least 0.0008 in their own plane's units. A final height pass separates overlapping legacy plates too, preserves painter order and lifts interaction marks above the finished picture stacks. Completed Photoshop heals use one clean picture; the completed grade uses one graded picture.
+- B: comp construction and its thumbnail share the typed words, drawn/dragged ball and whole rows. Keyed reveals and row offsets apply during playback, including the thumbnail and exported devices.
+- C: the scheduler enforces 0.6 seconds for each app's first typed text and 0.4 seconds for later texts. Explicit typing lengths and the README's derived tables agree.
+- D: levels slides last 0.5 seconds each, the sky wipe 0.7, and healing scrubs 0.25 with the heal cutting in on release. The cone patch covers the barrier and posts. The raw sky stays flat pale grey; the replacement and clean base use the graded blue sky. The former 1.4-second empty hold is removed: the closing wipe finishes 0.3 seconds after docking.
+- E: the loop is 77.73 seconds; scene lengths are 7.50, 11.40, 16.21, 14.56, 14.03 and 14.03. README records revised action/still times and the thumbnail, photo and depth-clearance changes.
+
+Verification: `all clean`, 5,262 sampled frames, 355,137 pieces, at most 152 in a frame, five atlas pages. Every sampled frame checks overlapping picture/plate faces in the screen and floor planes for at least 0.0006 height separation, shared 0.0008 painter steps and clear interaction marks. Focused checks cover construction visibility and positions, typing minimums, heal coverage, single-picture completed states, sky colours and edit timings; existing PACE-2, clocks, player and offline-module checks pass. `.scratch/preview.html` packs to 322 KB. No local browser render or GPU measurement was performed; visual confirmation of the supplied flicker fix remains with the external browser review. All writes stay in this folder; both motion briefs are untouched. Completed at about 21:13 UTC, approximately 12 minutes.
+
+## CORRECTIONS-1, 19 November 2026
+
+Started 22:02:30 UTC (17:02:30 EST). Stop unfinished work at about 23:02:30 UTC. Only the listed correction files and scratch/hardware outputs may be written. No network, installs, site builds, git mutations, reviewer agents or local visual review. The motion-playbook's spatial consistency applies under the supplied brief. The independent browser critique is the evidence; the six incoming stills remain the destination.
+
+Acceptance: C1–C14 in the prescribed order; map stays above the spread; page rows follow their making actions; photo frame style lands with each photo; separate cursor-drawn building blobs; every new caption/button text types; frame Xs stop on landing; whole clean heal bases; persistent Figma panel asset and explicit arrow tools; 0.1-second clock ceiling; sampled R1–R7 with genuine negative-control failures; 70–82 seconds; no geometry/art change at the stills except C4 paper bindings; hardware evidence from one isolated Edge run.
+
+Corrections completed before measurement:
+
+- C1: the landed map uses a thin document picture at lift 0.08 with the travel's final crop. The drag and selection marks remain.
+- C2: Amenities/Location/cover rows appear at spreadType/loc/coverTitle completion. The three remaining rows use the new pages run, 0.07 seconds apart in page order.
+- C3: postBlob and mailBlob are explicit corner draws; mailFlyer types View the flyer for 0.4 seconds. Cover tab starts on coverTitle. README names every frame-style part and its own photo release. Full pictures wait for their made parts.
+- C6 (done here in the required InDesign group): photo releases remove only frame diagonals; the outline persists through construction.
+- C4: animatedComp uses the 8 × 8 all-paper tile on screen, thumbnail and exported devices. Opaque word plates remain. Structural still comparison finds only these five art bindings, with no geometry differences above 1e-8; a rendered pixel comparison is reserved for external review.
+- C5: caption2 and caption3 type for 0.4 seconds, with prefixes/carets, growing blocks and the corresponding viewer shot. Two repeats remain a run.
+- C7: photoNoCone is a full base with the crane retained; photoClean replaces it on crane release. No healed patch remains and the atlas stays at five pages.
+- C8: the hero source is panel furniture from the opening wipe, then the same carried piece; the slot is empty afterwards.
+- C9: fill* and accent* explicitly name arrow.
+- C10: the sheet caption now describes the finished graded photo and its editing process.
+- C11: tick clamps each elapsed step to 0.1 seconds, with seek unchanged.
+- C12: the checker samples R1–R7 through the loop and around action boundaries, with a closed list of role/reason exemptions. It also requires exactly five atlas pages. The revised loop is 80.240 seconds; scene lengths are 7.500, 11.400, 18.060, 15.220, 14.030 and 14.030. The seam and PACE scaling still pass.
+- C13: README's scene/action tables, frame styles, allocation terms, preserveDrawingBuffer reason and production failure/fallback list are updated. This section is the correction record.
+- C14: the dependency-free Node/WebSocket tool was implemented and run exactly once, with the contact-sheet scale departure described below. All requested measurements and output files were produced.
+
+Negative controls were run against the real checker, with the temporary stage edit restored in finally after each run:
+
+- R1: restored the premature Offering/Gallery/back rows. Observed failure at 23.830000 s: kOfferL precedes its photo release.
+- R2: restored the same premature row rule. Observed failure at 23.830000 s: page row 1 appeared outside pages.
+- R3: the earlier recorded gate removal was redundant and did not independently prove this rule. That claim is withdrawn. CORRECTIONS-2 below supplies the observed, independent premature-composite control instead.
+- R4: restored whole second/third captions instead of prefixes. Observed failure at 43.150001 s: cap2 first appeared without a typing prefix and caret.
+- R5: restored the hero source's fill0 arrival. Observed failure at 71.980500 s: new heroSource is far from the cursor and action points.
+- R6: restored the map's landed travel piece. Observed failure at 22.590000 s: map is behind a plain overlapping face.
+- R7: removed accent*'s arrow. Observed failure at 73.930500 s: accent0 lights tType instead of tArrow.
+
+Every listed correction checkpoint was followed by passing Node checks. All seven negative controls exited 1 and printed their intended rule; the restored build prints all clean. Scratch contains original allowed files, the structural still comparison and the negative-control evidence. No browser visual approval is claimed.
+
+### C14 measurement outcome
+
+The tool packs the preview under .scratch/measure/, starts headless-new Edge with a unique profile there, speaks CDP through its own loopback WebSocket, navigates only that file and blocks page network URLs. It measures real texture/buffer allocations, two complete unseeked playback loops, and script-derived scan windows; decodes page PNGs with Node zlib; reports repeated-frame differences and every flagged 8 × 8 block as lossless coordinate spans; and writes five labelled JPEG sheets plus readable/JSON reports. Node-only positive and negative controls checked PNG decoding, repeat differences and blink blocks before the one browser run. No dependency, network source, install or site build was used.
+
+Run: 22:25:20.827–22:29:03.340 UTC, Edge 157.0.4341.60; WebGL2, Google Inc. (NVIDIA), ANGLE NVIDIA GeForce RTX 4090 through D3D11. Software renderer: false. Ready: 144.2 ms. Console errors: zero. Unexpected/blocked page network requests: zero. The started browser closed successfully and its temporary profile was removed; no other Edge process was targeted.
+
+Both sizes recorded 19,249 frames, median 4.20 ms, P95 4.30 ms, worst 4.50 ms, and zero >50 ms gaps after the first second. At 1440 × 900, clock/wall seconds were 80.2413/80.2436; at 1920 × 1080, 80.2412/80.2425. Measured canvases use DPR 1, 4 MSAA samples and 24-bit depth. Allocation estimates total 160,164,352 bytes (152.74 MiB) and 188,157,952 bytes (179.44 MiB). Atlas plus mipmaps: 92.25 MiB; retained 2D atlas pixels: 69.19 MiB outside the GPU estimate. These are allocation estimates, not measured resident memory.
+
+The five windows contain 569 duplicate-tested frames and zero repeat failures. Blink blocks: ps 40, id 964, pr 119, ae 79, fig 21; total 1,223. Their times and positions are in measure.json and measure.md. This is a flagged scan, not a visual pass: no local screenshot comparison/reviewer/critique was started and the flags await the specified external review. The output is about 671 KB, below 3 MB.
+
+C14 literal requirement not fully met: eight 775-pixel source frames at half size would require 3100 pixels across. The sheet cap is 1600, so the tool fits each frame to 200 pixels (25.806%, not 50%). This departure is recorded in the tool's report and README. Full-size 775 × 772 captures were used for pixel comparisons. All other C14 requested evidence was produced in the single run. Final status: C1–C13 complete; C14 complete except this contact-sheet scale conflict. External visual acceptance remains elsewhere, including classification of the blink flags.
+
+Final verification: checks.mjs last line is all clean; 5,443 frames, 364,051 pieces, maximum 152 pieces, five atlas pages, loop 80.240 seconds. The actual player stand-in also verifies that a one-second stall advances only 0.1 seconds, and a subsequent 0.1-second frame advances another 0.1. C14 syntax and Node-only image/scan controls passed before the one browser run. Measurement folder size is 671,133 bytes.
+
+Finished 2026-11-19T22:31:20.027Z; started 2026-11-19T22:02:30.000Z; elapsed 28.83 minutes, inside the 60-minute limit.
+
+## Owner corrections C15 and C16, 19 November 2026
+
+Started 22:32:56.838 UTC (17:32:56.838 EST). The owner's words override the older projected-centring rule. Acceptance: each complete footprint and the pool share the screen's world x within 0.001; preserve depth and z-only feed/return; retain the existing fit padding at 1440 x 900 and 390 x 664 through the widest leaves; waits hold a still, released cursor and never sink Export.
+
+C15: removed the camera solve and perspective comment. Screen, InDesign block, Premiere/After Effects/Figma rows and pool all have world-x middle 0.200. InDesign shifts left 1.860 units; the rows shift left 1.250. Depth, sizes, gaps and the undrawn slot stay. README records the authorized still change and world-x table. play.mjs needs no change: checks verify its existing 0.5-unit padding, full-loop visible fit, 1,201 additional reading poses, and z-only group travel at 120 Hz. A 4,821-frame structural comparison finds only the requested floor-x translations and released wait-cursor lifts; all six stills differ only by floor-x translation.
+
+C16: waits are excluded from the press expression. R8 checks released state, stationary cursor position/lift and released Export-button lift throughout sampled wait interiors; an existing export may keep filling. With the fix undone, the actual checker exited 1 with R8 failures, including shrink at 6.133333 s and InDesign land at 31.766667 s. The fix was restored in finally; checks print all clean (5,443 frames, 364,051 pieces, maximum 152, five atlas pages; unchanged 80.240-second loop). Evidence is under .scratch/c15-c16/.
+
+The existing measuring tool ran once for this build, 2026-11-19T22:40:45.497Z–2026-11-19T22:44:29.375Z: Edge 157.0.4341.60, RTX 4090, WebGL2, no software renderer, ready in 152.5 ms. Both sizes recorded 19,249 frames, median/P95 4.20/4.30 ms, zero >50 ms gaps; worst 4.50/5.10 ms, allocation estimates 152.74/179.44 MiB. Console/network errors and repeat failures: zero. The 569-frame scan flagged 1,355 blink blocks for external review. Output is about 754 KB; the spawned Edge closed and its throwaway profile was removed. The existing contact-sheet scale conflict remains as documented in README. No visual approval, reviewer agents, critique loop, installs, network sources, git commands or site build; only authorized files changed.
+
+Finished 2026-11-19T22:45:56.352Z; started 2026-11-19T22:32:56.838Z; elapsed 12.99 minutes. Final checker last line: all clean. Scope/hash audit confirms only the four authorized source/record files, measurement outputs and scratch evidence changed.
+
+
+## CORRECTIONS-2
+
+Started 19 November 2026 at 23:54:49 UTC. The controlling evidence is the supplied round-two text, the approved compositions retained in the source, the prior review record and the owner’s quoted directions. The mock image files are absent; their text specification is the available reference. This run performs no browser, pixel or hardware review. The prior hardware folder is unchanged and does not certify this revision.
+
+Acceptance carried through this revision: A1–A9, the exact callout words/anchors/timing, the open laptop plus 3:4 tablet and 9:19.5 phone, one synchronized three-second prototype, actual viewport cropping, 0.1-unit canvas clearance, whole-footprint world-x centring, the laptop-only entry exception, independent measurement phases, 70–86 seconds at unchanged PACE 1, five atlas pages, the pixel ceiling, no new fading/bouncing/blur, and a packed file with no external requests/links/addresses. The source object travels through each feed, carry and return; nothing is respawned visually.
+
+Only this prototype folder was written. The four briefs and the protected critique folder were not changed. No outside-repository files or installed skill files were read; the explicit repository-only boundary prevents reopening those skills. The motion/staging principles in the existing project record were retained. The independent visual critique is left with the external reviewer, as this run explicitly forbids local browser review. No git command, install, site build/deploy, network request or desktop-app/browser control was performed. Node/PowerShell/Python were used only for scoped file work and the requested verification.
+
+### Work by item
+
+| Item | Implementation and computed evidence |
+| --- | --- |
+| A1 | Carried post/mail photos stop on release. Finished post/mail pictures replace their construction in one frame, rather than covering pieces still being emitted. Bare crop pictures share the finished artwork’s photograph profiles; their windows maintain aspect through the drag. The cover’s carried photo aperture now matches the full-height image already in the approved cover. Reference points before/after all three photo releases shift by less than 2 px at 130 px/world unit, including face lift. This is a coordinate test, not a pixel comparison. |
+| A2 | Empty outlines and diagonals stop permanently at first carried-picture contact, including the dock rim and line thickness. The overlay flag is retained. Any earlier crossing drag can fill this condition, so another frame’s line cannot cross a carried photo. Dense samples test both overlap and non-return. The map’s finished selection is retained. |
+| A3 | `script()` accepts `start`, defaulting to Export; only InDesign passes the location dock centre. `actionCursor` uses that initial point. No time was added. |
+| A4 | `spreadType` lasts 0.3 s. Its six regions still fill in order, and the Amenities row arrives on completion. R10 samples the loop and seam at 240 Hz. |
+| A5 | Both large motion-word plates use face-only `cut: true`, keeping their existing fronts and removing side faces. The two backgrounds remain opaque paper. The 2x three-pixel edge-band comparison is unrun. |
+| A6 | R5 requires explicit `echo: sourceActionId` at each echo’s emission site; all region exemptions are gone. R8 checks every press against a real 0.05 s window or a continuous pressed action, while retaining wait/Export checks. R9 records emitted face births and checks each action end and +0.1 s for later art covering its document pieces. It includes plain document pieces, excludes named echoes/playback/overlays and equivalent mappings of the same picture, and does not trust the covering face’s document flag. R10 enforces the 0.3-unit step limit at 240 Hz. R9 also exposed two redundant covered plain pieces in the map block and wireframe picture box; those stop when their picture replaces them. |
+| A7 | README now describes the actual post/mail construction and replacement, frames, clocks, labels, Figma layout, timetable and memory. The earlier redundant R3-control claim above is withdrawn; its independent replacement is below. R9/R10 and every final control are recorded here. |
+| A8 | Both players use the specified 5.2e6-pixel DPR formula. The Node player test leaves 1440×900 at 2x and detects removal of the ceiling at 1920×1080. README distinguishes nominal pixels from renderer rounding and states the allocation terms. |
+| A9 | The identifying firm comment is generic. No new firm or agent names are included in source, pictures, records or the packed file. The immutable briefs remain untouched. |
+| B | Pure `calloutsAt(t)` supplies all twelve specified labels, with actual top-face marks, source-derived corners, exact wipes and scene cutoffs. The reused SVG/text overlay has square marks, six-dash deterministic rings, one-bend 45-degree paper leaders and real uppercase Outfit. Both players share it; seeks redraw immediately. InDesign’s land wait is 1.2 s. R11–R14 test words, poses, timing and independent face anchors; the laptop anchor is checked against the lid dimensions, not the last painted progress rail. Parametric layout checks cover conservative word widths, gutters, content models and reduced motion. `tools/browser-check.mjs` supplies the required actual-browser/font/DOM checks and laptop-path review; it has not been run. |
+| C | Floor: +x-facing lid tilted 12 degrees, square deck, simple keyboard/trackpad, 16:10 screen; portrait 3:4 tablet and 9:19.5 phone. The laptop picture is widest, gaps are equal at 0.3 units, footprint is inside the old mat ends/depth, and its world-x centre is 0.200 throughout the labelled hold. Whole/unclipped laptop entry runs 1.6 units in x for 0.5 s with enter ease. Others feed in z; all return in z. Canvas: matching ratios in two 0.86-high rows, retained construction beats, Video hotspot and an On tap / Change to Video / Instant inspector, without a second state frame. All six viewports remain static before the first landing, then use the specified tap/wipe/scroll/card-lift/back sequence on one 3 s export clock; three aspect-specific work-card drawings prevent stretching. Chrome stays fixed. Still is +1.10 s; return is +3.0 s for 0.4 s. Node checks cover device geometry, count, trajectories, centre, canvas rectangles, projected lid polygons and differences at every 0.6 s pair over the cycle. |
+| D1 | Each playback, flicker scan and sheets phase has its own caught error; all are attempted after playback failures. The report stores phase errors, says playback incomplete when needed, and maps any phase failure to exit 1. `--dpr` defaults to 1 and is used by both metric overrides; real backing dimensions/ratio are reported. `--playback-limit` enables the reviewer’s forced-timeout run. Scan capture is the whole hero, including the overlay, and its script-derived windows include labels and laptop entry/return. The browser-free phase fixture uses two failing playbacks, then four synthetic scan frames and a sheets callback; it exercises the actual report formatter. Its negative control proves that an early return before scan/sheets fails. **No invocation of tools/measure.mjs occurred.** |
+
+### Deliberate changes and unrun gates
+
+- The video and motion held stills move 0.016667667 s later. The old phase was 0.533333333 s after the first landing; the last phone lands 0.15 s later and needs a fixed 0.4 s label reveal, finishing at +0.55 s. Holding at +0.550001 s satisfies the new complete-label requirement. At equal playback phase, the first five scenes’ tone/art/geometry/window/clip/shade structures match the incoming snapshot within 1e-8; word face-only cuts are the intentional flag change. This is not a rendered comparison.
+- A cropped copy is reframed as the drag starts, then keeps its destination profile through release. The cover’s carried rectangle is full height rather than the earlier short landscape rectangle. These construction-only adaptations remove the computed drop-registration mismatch while retaining the approved final cover/post/mail artwork.
+- Tall-phone framing may reduce/shift the shared view to reserve the right word column, while preserving the stills’ left fit padding. A clamped upper leader can shorten its diagonal to clear its own words. This is needed because a simple inward gutter clamp could otherwise route the horizontal line through its label. World geometry is unchanged. Actual font/DOM clearance remains an external gate.
+- The requested off-frame laptop start is **not established at every phone height**. In the explicit minimum 390×664 model with a 240 px stage, S=33.609467, the initial laptop left bound is +85.611 px and it is fully on-frame; labels are suppressed because S<34. The exact 1.6-unit path and fit were kept. Forcing an off-frame start at that fit would require a longer path or a further framing change. The real browser’s flexed stage height and off-frame presentation remain for external review; no claim is made that this descriptive target passes on the short phone.
+- Atlas packing omits five obsolete baked UX/UI device drawings, retained as code references. New scrolling pages, aspect-specific cards and photo crops remain within five pages. Revised pages are 2048×1844, 1700, 1800, 1876 and 1244 high: 66.125 MiB base and 88.166667 MiB with mipmaps. README’s conservative cap arithmetic retains the incoming 92.25 MiB atlas allowance plus 16 MiB shadow plus 36 bytes per nominal device pixel: 286.78 MiB (about 287); the actual revised atlas yields 282.69 MiB before integer-rounding overhead. This is allocation arithmetic, not resident memory.
+- Browser rendering, actual-font overlap, the 2x word-edge test, frame-by-frame pixel comparisons, GPU performance/flicker, the forced-short-playback browser run and both D2 hardware runs remain unrun here under the explicit restriction. The old contact-sheet half-size-versus-1600-pixel conflict remains: sheets fit eight frames into the cap, and now report scale relative to actual captured pixels at the requested DPR. No passing visual score is claimed.
+
+### Negative controls
+
+The real checker ran once per temporary edit, then source was restored in `finally`. All final controls below exited 1 and included the intended gate. `--control` bypasses only the README action-table consistency assertion during temporary timing edits; it does not bypass any runtime rule. The D1 control runs the Node phase fixture, not the measurement entry point. Full exact edits and output are also retained in `.scratch/corrections2/controls/results.json` and each case’s JSON. In this table `\n` denotes a real newline; replacements are literal single-site edits in the named context.
+
+| Control | File | Exact before → after | First intended failure |
+| --- | --- | --- | --- |
+| R1 premature photo row | `stage.mjs` | `if (!visible) return;\n      const echoStart` → `if (!visible && !done(s, 'spreadType', t)) return;\n      const echoStart` | `24.050000s (id): R1: kCover precedes its photo release` |
+| R2 premature page row | `stage.mjs` | `if (!visible) return;\n      const echoStart` → `if (!visible && !done(s, 'spreadType', t)) return;\n      const echoStart` | `24.050000s (id): R2: page row 0 appeared outside coverTitle` |
+| R3 independent premature composite | `stage.mjs` | `if (done(s, key + 'Blob', t) && done(s, key === 'mail' ? 'mailFlyer' : 'postButton', t)) {` → `if (done(s, key + 'Photo', t)) {` | `27.480000s (id): R3: kPost precedes its drawn blob` |
+| R4 whole captions | `stage.mjs` | `repeated \|\| begun(s, 'play', t) ? 1 : phase(s, id, t)` → `1` | `43.670000s (pr): R4: cap1 first appeared without a typing prefix and caret` |
+| R5 lane from nowhere | `stage.mjs` | `function editedVideo(t) {\n  const P = [], D = [], s = SCRIPTS.pr;` → `function editedVideo(t) {\n  const P = [], D = [], s = SCRIPTS.pr;\n  if (t >= 12.5 * PACE && t < 12.8 * PACE) P.push({ ...on('paper', 0.45, 0.20, 0.12, 0.12, { lift: 0.3 }), document: true });` | `50.580000s (pr): R5: new paper is far from the cursor and action points` |
+| R5 panel from nowhere | `stage.mjs` | `function editedInDesign(t, { at: pages } = {}) {\n  const P = [], D = [], s = SCRIPTS.id;` → `function editedInDesign(t, { at: pages } = {}) {\n  const P = [], D = [], s = SCRIPTS.id;\n  if (t >= 6.5 * PACE && t < 6.7 * PACE) P.push({ ...on('paper', PANEL + 0.64, 0.12, 0.12, 0.12, { lift: 0.3 }), document: true });` | `25.400000s (id): R5: new paper is far from the cursor and action points` |
+| R6 buried map | `stage.mjs` | `...ID.frame, { lift: 0.08, t: 0.004, art: 'kMap' }` → `...ID.frame, { lift: 0.04, t: 0.004, art: 'kMap' }` | `22.590000s (id): R6: map is behind a plain overlapping face` |
+| R7 wrong accent tool | `stage.mjs` | `id: 'accent' + i, kind: 'set', from: centre(r), duration: 0.05, tool: 'arrow'` → `id: 'accent' + i, kind: 'set', from: centre(r), duration: 0.05` | `75.050500s (fig): R7: accent0 lights tType instead of tArrow` |
+| R8 unbacked press | `stage.mjs` | `  P.action = active?.id;` → `  if (s === SCRIPTS.pr && t >= 12.5 * PACE && t < 12.8 * PACE) P.pressed = true;\n  P.action = active?.id;` | `50.580000s (pr): R8: pressed cursor has no action behind it` |
+| R9 picture over post | `stage.mjs` | `  for (const key of ['map', 'loc', 'photo']) if (!begun` → `  if (t >= action(s, 'postButton').end && t < action(s, 'postButton').end + 0.3 * PACE) D.push(on('ink', ...ID.post, { lift: 0.4, t: 0.004, art: 'kPhoto' }));\n  for (const key of ['map', 'loc', 'photo']) if (!begun` | `28.680000s (id): R9: kPhoto covers the centre of kPost made by postButton` |
+| R9 A1 undone | `stage.mjs` | `if (!done(s, key + 'Photo', t)) dragPicture(D, s, key + 'Photo'` → `dragPicture(D, s, key + 'Photo'` | `27.480000s (id): R9: postImage covers the centre of postPhoto made by postPhoto` |
+| R10 A3 undone | `stage.mjs` | `{ tail: 0, start: centre(DOCK.loc) }` → `{ tail: 0 }` | `18.904167s (id): R10: cursor step exceeds 0.3 at 1/240 s` |
+| R10 A4 undone | `stage.mjs` | `count: 6, duration: 0.3` → `count: 6, duration: 0.08` | `23.770833s (id): R10: cursor step exceeds 0.3 at 1/240 s` |
+| R11 wrong words | `stage.mjs` | `pr: ['YouTube', 'TikTok', 'Instagram']` → `pr: ['Video', 'TikTok', 'Instagram']` | `49.700000s (pr): R11: incorrect label words, side or level` |
+| R12 early label | `stage.mjs` | `timing.spans.map(span => span[1]);` → `timing.spans.map(span => span[1] - 0.2 * PACE);` | `49.505000s (pr): R12: label while its asset moves or is absent` |
+| R13 reversed growth | `stage.mjs` | `const grow = progress(at, ends[i], ends[i] + 0.25 * PACE)` → `const grow = 1 - progress(at, ends[i], ends[i] + 0.25 * PACE)` | `31.983333s (id): R13: label growth decreased` |
+| R14 wrong corner inset | `stage.mjs` | `i === 0 ? x + 0.1` → `i === 0 ? x + 0` | `31.980000s (id): R14: anchor misses its specified face/corner` |
+| Figma device count | `stage.mjs` | `pc.deviceKind = ['laptop', 'tablet', 'phone'][i]` → `pc.deviceKind = ['laptop', 'phone', 'phone'][i]` | `77.990000s (fig): Figma devices: expected laptop, tablet, phone` |
+| Figma canvas tags beside top bar | `stage.mjs` | `r[1] + r[3] + 0.015` → `r[1] + r[3] + 0.035` | `68.713333s (fig): canvas clearance: piece reaches a bar or side panel` |
+| canvas pixel ceiling | `play.mjs` | `Math.min(2, devicePixelRatio \|\| 1, Math.sqrt(5.2e6 / (W * H)))` → `Math.min(2, devicePixelRatio \|\| 1)` | `AssertionError [ERR_ASSERTION]: pixel ceiling: backing store exceeds 5.2 million pixels` |
+| frame clearance A2 undone | `stage.mjs` | `const filled = [[` → `const filled = false && [[` | `22.258333s (id): frame clearance: outline crosses a travelling picture` |
+| word side faces A5 undone | `stage.mjs` | `if (pc.art === 'wMake' \|\| pc.art === 'wMove') pc.cut = true;` → `if (pc.art === 'wMake' \|\| pc.art === 'wMove') pc.cut = false;` | `54.883333s (ae): word side faces: opaque word plate retains a visible side` |
+| Figma canvas playback frozen | `stage.mjs` | `prototype(draw, i, clock, false);` → `prototype(draw, i, 0, false);` | `77.840000s (fig): Figma motion: canvas design unchanged after 0.6 s` |
+| Figma lid clearance | `stage.mjs` | `...device(x, MAT.z, w, ROW, undefined, { rim: g.rim, round: 0.03 })[0], deviceBody: true` → `...device(x, MAT.z, w, ROW, undefined, { rim: g.rim, round: 0.03 })[0], deviceBody: true, lid: i === 1` | `77.446667s (fig): laptop clearance: lid overlaps canvas, Export or tablet` |
+| Figma world centring | `stage.mjs` | `left = screenMiddle - width / 2` → `left = screenMiddle + 0.1 - width / 2` | `AssertionError [ERR_ASSERTION]: fig: footprint is not centred in world x` |
+| Figma tablet x drift | `stage.mjs` | `feed(P, pieces, t, ...spans[i]);\n    }` → `for (const pc of pieces) pc.p[0] += 0.1 * Math.sin(Math.PI * linear(t, ...spans[i]));\n      feed(P, pieces, t, ...spans[i]);\n    }` | `AssertionError [ERR_ASSERTION]: feed path: only the laptop entry may move in x` |
+| photo registration | `stage.mjs` | `key === 'mail' ? ID.mailPhoto : rect, key + 'Image'` → `key === 'mail' ? ID.mailPhoto : rect, 'kPhoto'` | `27.480000s (id): photo registration: missing carried or styled photograph` |
+| label gutter framing | `labels.mjs` | `if (view.W >= 720) return view;` → `if (view.W >= 0) return view;` | `50.250001s (pr): label layout: horizontal leader crosses its own words` |
+| R14 laptop wrong face | `stage.mjs` | `floor.find(pc => pc.lidPicture && pc.art === 'chromeLaptop')` → `floor.filter(pc => pc.lidPicture).at(-1)` | `77.840000s (fig): R14: anchor misses its specified face/corner` |
+| Figma phone aspect | `stage.mjs` | `phoneW = (ROW - rim * 2) * 9 / 19.5 + rim * 2` → `phoneW = (ROW - rim * 2) * 9 / 18 + rim * 2` | `77.990000s (fig): Figma device geometry: wrong screen ratios or picture sizes` |
+| measurement phase failure path | `tools/measure-phases.mjs` | `  await phase('flicker scan', scan);` → `  if (report.phases.some(p => !p.complete)) return false;\n  await phase('flicker scan', scan);` | `AssertionError [ERR_ASSERTION]: measurement phases: failed playback skipped scan/sheets` |
+| Figma early tap clock | `stage.mjs` | `if (p < 0) return { at: 0, scroll: 0, video: 0, lifted: false, tap: null };` → `if (false) return { at: 0, scroll: 0, video: 0, lifted: false, tap: null };` | `77.346667s (fig): Figma clock: prototype taps before the shared export clock starts` |
+| Figma laptop playback frozen | `stage.mjs` | `prototype(lidPainter(pieces), 0, t < spans[0][1] ? -1 : clock);` → `prototype(lidPainter(pieces), 0, t < spans[0][1] ? -1 : 0);` | `77.840000s (fig): Figma motion: device picture unchanged after 0.6 s` |
+
+The first trial R3 control changed the blob action kind and hit a cursor-endpoint assertion before R3. It is not counted as R3 evidence. The final premature-composite replacement above fails R3 on its own, without a redundant gate removal. That discarded trial’s JSON is marked superseded.
+
+### Derived timetable and final evidence
+
+| Scene | Global start | Length | Local still | Global still |
+| --- | ---: | ---: | ---: | ---: |
+| ps | 0.000000 | 7.500000 | 6.549000 | 6.549000 |
+| ai | 7.500000 | 11.400000 | 9.239000 | 16.739000 |
+| id | 18.900000 | 19.180000 | 16.277961 | 35.177961 |
+| pr | 38.080000 | 15.220000 | 12.170001 | 50.250001 |
+| ae | 53.300000 | 14.030000 | 10.980001 | 64.280001 |
+| fig | 67.330000 | 13.910000 | 11.610000 | 78.940000 |
+
+Loop: **81.240 seconds**, unchanged PACE 1. InDesign’s reading still has no labels; all labels in the last three stills have grow=1 and text=1. The structural snapshot and conditional short-stage computation are in `.scratch/corrections2/structure.json`.
+
+Final positive Node output:
+
+```text
+R9–R14 sampled: occlusion, cursor continuity, labels, landed poses, wipes, anchors; Figma devices, motion and canvas/lid clearance
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5503 frames, 378883 pieces (max 183); 5 atlas pages; loop 81.240s
+ps: 7.500s, ai: 11.400s, id: 19.180s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+all clean
+```
+
+The separate phase fixture passes without a browser. The packed preview is one offline file at `.scratch/preview.html`; its module parses, local fonts/styles/modules are embedded, and the static checks find no link/resource/address-bearing attributes or network APIs. No browser claim follows from these Node checks.
+
+Completed 2026-11-20T01:00:02.016Z. All 33 final controls caught their intended gate; the final packed artifact is 358295 bytes.
+
+## CORRECTIONS-3
+
+The round-three brief and the owner’s quoted directions in CORRECTIONS-2 control this bounded correction. The approved mock files are absent from the repository; their supplied specification and existing artwork are the reference. Acceptance: F1–F9, unchanged PACE/81.240 s loop/scene starts/six still times; own-picture contact and gap-free placement; intact crossed frames under travelling pictures; two outward label columns at maximum feasible scale; fixed landed-face anchors; frozen Figma withdrawal; 16 px stage gutters through 280 px; message-only relative error paths; exact single-site controls, including both R15 cases. Keep the existing artwork, hierarchy, house colours/type, hard edges and persistent object routes.
+
+Only files under take-2 are written. Protected briefs, hardware evidence and .scratch/crit are unchanged. No git command, install, network, site build/deploy, measurement run, external file read or process-name termination was used. The repository-only restriction prevents reading installed skill files; the retained motion/research guidance in this record was carried forward. The external reviewers retain visual acceptance; no local critique agents or visual scores were used.
+
+The browser command was run by the builder; Playwright is unavailable in the repository. The full output below will identify all eight sizes as unrun, rather than claiming a pass.
+
+### Work by item
+
+| Item | Change and evidence |
+| --- | --- |
+| F1 | Each frame uses only its paired drag (`map`, `photo`, `postPhoto`, `mailPhoto`). Its outline/cross stop at its own contact, its plate persists until its own placement, and the placed picture occupies that same frame. InDesign-only travelling pictures are raised over crossed frame overlays without deleting those frames; selections/cursor retain their own clearance. R15 samples 19.9–30.8 s at 0.005 s plus exact action boundaries and 25.229 s. The requested two post windows also have 0.02 s geometry samples. The first three stills and InDesign labels are compared with the saved incoming source output; rendered pixel identity remains unrun. |
+| F2 | The shared view fit solves left and right word-column bounds together with stage gutters, taking the largest feasible scale and clamping its centre to the feasible interval. Each scene’s left labels share one x. The route keeps a 12 px horizontal run (8 below S=70) and an elbow at least 3 px outward from its start. The browser gate checks each word box against all rings at radius + 2 px, all marks and all line segments, including its own. The four additional sizes are installed. The builder ran the eight-size command; Playwright is unavailable, so actual-font/page/mock/frame acceptance is unrun. The identical route assertions run on parametric Node layouts and have a caught negative control. |
+| F3 | Non-InDesign flat-device anchors use the device’s own landed body face, rather than the highest playback layer. The laptop’s own lid-screen face has a fixed plane above its changing page layers. R14 reconstructs those same body/screen faces independently; the full-window fixed-mark gate checks world points and the common low level at 60 Hz to 1e-9. InDesign anchors are unchanged. |
+| F4 | Figma’s export/device clocks stop at `off[0]`; phase 1 represents the completed cycle rather than a new tap. The 0.4 s return translates the held pictures in z. The return gate compares artwork, UVs, sizes and positions after subtracting that common translation. |
+| F5 | Stage extents enter the same fitting constraints even below S=34, where labels are suppressed. Numeric checks use every integer width 280–720 and the loop’s projected visible extents; there is a caught control with the fit removed. |
+| F6 | Failed phases and the measurement entry point record `reportError(error)`: message only, with filesystem paths relative to the repository. No stack is written. The browser-free phase fixture checks relative paths and rejects a deliberately supplied stack. `tools/measure.mjs` was not executed. |
+| F7 | R5 validates echo-source start time; Figma’s tree echoes its initial frame before details exists. The initial After Effects playhead has the explicit overlay role, rather than relying on a future head action. The 0.6 s picture signature excludes both progress-rail pieces, and a frozen-content/playing-rail control fails. Clearance includes the bottom toolbar at ≥0.1. New R15 controls cover the incoming post disappearance at exactly 25.229 s and the necessity of allowing valid same-frame placement. R14’s changed face selection, fixed marks and label routes each have controls below. |
+| F8 | The control tool counts literal matches and rejects zero or multiple matches before any mutation. It restores source bytes in `finally`. R1 and R2 now inject different premature rows. Exact edits, match counts and caught results are in the table below. New evidence uses `.txt` files; the tool writes no `results.json`. |
+| F9 | README identifies both committed `48aea47` hardware reports and their actual metrics; page 5 is 2048 × 1244. It records no hardware rerun for round 3, since this changes piece selection and label placement rather than the renderer. Phone entry, pack size and all requested command outputs are recorded below. |
+
+### Departures and limits
+
+- The eight-size browser command could not launch: Playwright is unavailable within permitted repository-only access. No browser frames, actual-font clearance, desktop mock comparison or rendered still pixel comparison were obtained. Numeric evidence is identified as such; none of these visual gates is claimed passed. No network/install/outside-repository fallback was attempted.
+- The laptop appears whole and fully on screen at 390 × 664 and 390 × 844, then slides 1.6 world units. This replaces the earlier brief’s off-frame phone description while retaining the owner’s whole-device/top-left slide and exact authorized path. Projected bounds are given below; a rendered claim remains unavailable.
+- Hardware evidence is intentionally retained from `48aea47`, with no remeasurement this round. No renderer change, loop retiming or still-time change was made.
+- The frame-under-picture rule necessarily exempts empty-frame overlays from the older “every overlay above every picture” assertion. The dedicated drawing-order gate checks those frames below travelling pictures; selections, handles and the cursor still clear picture stacks. The overlay flags themselves are retained.
+
+### Negative-control results
+
+All 43 final controls exited 1 and included their intended gate. Each exact search below matches **one** location in the final file; the tool refuses zero or multiple matches and restores source bytes in `finally`. R1 and R2 inject distinct rows. Full output is retained in `.scratch/corrections3/controls/*.txt`; no new results.json was written. In this table `\n` means an actual newline.
+
+The first optional Figma-return trial undid its clock cap and hit the earlier device/viewer clock gate, so it did not prove the return gate; it is superseded and excluded from the 43. The final cycle-boundary control below catches a new tap during withdrawal. The R15 placement control intentionally disables the checker’s replacement exception: its 25.510000 s failure demonstrates why a valid picture replacing its plate on that same frame must pass. The restored gate passes the build.
+
+| Rule / control | File | Exact search → replacement | Matches | Caught / first intended failure |
+| --- | --- | --- | ---: | --- |
+| R1 premature photo row | `stage.mjs` | `if (!visible) return;\n      const echoStart` → `if (!visible && !(i === 0 && done(s, 'spreadType', t))) return;\n      const echoStart` | 1 | Yes — 24.050000s (id): R1: kCover precedes its photo release |
+| R2 premature page row | `stage.mjs` | `if (!visible) return;\n      const echoStart` → `if (!visible && !(i === 1 && done(s, 'spreadType', t))) return;\n      const echoStart` | 1 | Yes — 24.050000s (id): R2: page row 1 appeared outside pages |
+| R3 independent premature composite | `stage.mjs` | `if (done(s, key + 'Blob', t) && done(s, key === 'mail' ? 'mailFlyer' : 'postButton', t)) {` → `if (done(s, key + 'Photo', t)) {` | 1 | Yes — 27.480000s (id): R3: kPost precedes its drawn blob |
+| R4 whole captions | `stage.mjs` | `repeated \|\| begun(s, 'play', t) ? 1 : phase(s, id, t)` → `1` | 1 | Yes — 43.670000s (pr): R4: cap1 first appeared without a typing prefix and caret |
+| R5 lane from nowhere | `stage.mjs` | `function editedVideo(t) {\n  const P = [], D = [], s = SCRIPTS.pr;` → `function editedVideo(t) {\n  const P = [], D = [], s = SCRIPTS.pr;\n  if (t >= 12.5 * PACE && t < 12.8 * PACE) P.push({ ...on('paper', 0.45, 0.20, 0.12, 0.12, { lift: 0.3 }), document: true });` | 1 | Yes — 50.580000s (pr): R5: new paper is far from the cursor and action points |
+| R5 panel from nowhere | `stage.mjs` | `function editedInDesign(t, { at: pages } = {}) {\n  const P = [], D = [], s = SCRIPTS.id;` → `function editedInDesign(t, { at: pages } = {}) {\n  const P = [], D = [], s = SCRIPTS.id;\n  if (t >= 6.5 * PACE && t < 6.7 * PACE) P.push({ ...on('paper', PANEL + 0.64, 0.12, 0.12, 0.12, { lift: 0.3 }), document: true });` | 1 | Yes — 25.400000s (id): R5: new paper is far from the cursor and action points |
+| R6 buried map | `stage.mjs` | `...ID.frame, { lift: 0.08, t: 0.004, art: 'kMap' }` → `...ID.frame, { lift: 0.04, t: 0.004, art: 'kMap' }` | 1 | Yes — 22.590000s (id): R6: map is behind a plain overlapping face |
+| R7 wrong accent tool | `stage.mjs` | `id: 'accent' + i, kind: 'set', from: centre(r), duration: 0.05, tool: 'arrow'` → `id: 'accent' + i, kind: 'set', from: centre(r), duration: 0.05` | 1 | Yes — 75.050500s (fig): R7: accent0 lights tType instead of tArrow |
+| R8 unbacked press | `stage.mjs` | `  P.action = active?.id;` → `  if (s === SCRIPTS.pr && t >= 12.5 * PACE && t < 12.8 * PACE) P.pressed = true;\n  P.action = active?.id;` | 1 | Yes — 50.580000s (pr): R8: pressed cursor has no action behind it |
+| R9 picture over post | `stage.mjs` | `  for (const key of ['map', 'loc', 'photo']) if (!begun` → `  if (t >= action(s, 'postButton').end && t < action(s, 'postButton').end + 0.3 * PACE) D.push(on('ink', ...ID.post, { lift: 0.4, t: 0.004, art: 'kPhoto' }));\n  for (const key of ['map', 'loc', 'photo']) if (!begun` | 1 | Yes — 28.680000s (id): R9: kPhoto covers the centre of kPost made by postButton |
+| R9 A1 undone | `stage.mjs` | `if (!done(s, key + 'Photo', t)) dragPicture(D, s, key + 'Photo'` → `dragPicture(D, s, key + 'Photo'` | 1 | Yes — 27.480000s (id): R9: postImage covers the centre of postPhoto made by postPhoto |
+| R10 A3 undone | `stage.mjs` | `{ tail: 0, start: centre(DOCK.loc) }` → `{ tail: 0 }` | 1 | Yes — 18.904167s (id): R10: cursor step exceeds 0.3 at 1/240 s |
+| R10 A4 undone | `stage.mjs` | `count: 6, duration: 0.3` → `count: 6, duration: 0.08` | 1 | Yes — 23.770833s (id): R10: cursor step exceeds 0.3 at 1/240 s |
+| R11 wrong words | `stage.mjs` | `pr: ['YouTube', 'TikTok', 'Instagram']` → `pr: ['Video', 'TikTok', 'Instagram']` | 1 | Yes — 49.700000s (pr): R11: incorrect label words, side or level |
+| R12 early label | `stage.mjs` | `timing.spans.map(span => span[1]);` → `timing.spans.map(span => span[1] - 0.2 * PACE);` | 1 | Yes — 49.505000s (pr): R12: label while its asset moves or is absent |
+| R13 reversed growth | `stage.mjs` | `const grow = progress(at, ends[i], ends[i] + 0.25 * PACE)` → `const grow = 1 - progress(at, ends[i], ends[i] + 0.25 * PACE)` | 1 | Yes — 31.983333s (id): R13: label growth decreased |
+| R14 wrong corner inset | `stage.mjs` | `i === 0 ? x + 0.1` → `i === 0 ? x + 0` | 1 | Yes — 31.980000s (id): R14: anchor misses its specified face/corner |
+| Figma device count | `stage.mjs` | `pc.deviceKind = ['laptop', 'tablet', 'phone'][i]` → `pc.deviceKind = ['laptop', 'phone', 'phone'][i]` | 1 | Yes — 77.990000s (fig): Figma devices: expected laptop, tablet, phone |
+| Figma canvas tags beside top bar | `stage.mjs` | `if (done(s, 'frame' + i, t)) D.push({ ...on('grey', r[0], r[1] + r[3] + 0.015` → `if (done(s, 'frame' + i, t)) D.push({ ...on('grey', r[0], r[1] + r[3] + 0.035` | 1 | Yes — 68.713333s (fig): canvas clearance: piece reaches a bar or side panel or bottom toolbar |
+| canvas pixel ceiling | `play.mjs` | `Math.min(2, devicePixelRatio \|\| 1, Math.sqrt(5.2e6 / (W * H)))` → `Math.min(2, devicePixelRatio \|\| 1)` | 1 | Yes — AssertionError [ERR_ASSERTION]: pixel ceiling: backing store exceeds 5.2 million pixels |
+| frame contact undone | `stage.mjs` | `const filled = frameContact(s, drag, t, from, to, frame)` → `const filled = false && frameContact(s, drag, t, from, to, frame)` | 1 | Yes — 22.260000s (id): R15: map frame survives its own contact |
+| word side faces A5 undone | `stage.mjs` | `if (pc.art === 'wMake' \|\| pc.art === 'wMove') pc.cut = true;` → `if (pc.art === 'wMake' \|\| pc.art === 'wMove') pc.cut = false;` | 1 | Yes — 54.883333s (ae): word side faces: opaque word plate retains a visible side |
+| Figma canvas playback frozen | `stage.mjs` | `prototype(draw, i, clock, false);` → `prototype(draw, i, 0, false);` | 1 | Yes — 77.840000s (fig): Figma motion: canvas design unchanged after 0.6 s |
+| Figma laptop playback frozen | `stage.mjs` | `prototype(lidPainter(pieces), 0, t < spans[0][1] ? -1 : clock);` → `prototype(lidPainter(pieces), 0, t < spans[0][1] ? -1 : 0);` | 1 | Yes — 77.840000s (fig): Figma motion: device picture unchanged after 0.6 s |
+| Figma lid clearance | `stage.mjs` | `...device(x, MAT.z, w, ROW, undefined, { rim: g.rim, round: 0.03 })[0], deviceBody: true` → `...device(x, MAT.z, w, ROW, undefined, { rim: g.rim, round: 0.03 })[0], deviceBody: true, lid: i === 1` | 1 | Yes — 77.446667s (fig): laptop clearance: lid overlaps canvas, Export or tablet |
+| Figma world centring | `stage.mjs` | `left = screenMiddle - width / 2` → `left = screenMiddle + 0.1 - width / 2` | 1 | Yes — AssertionError [ERR_ASSERTION]: fig: footprint is not centred in world x |
+| Figma tablet x drift | `stage.mjs` | `feed(P, pieces, t, ...spans[i]);\n    }` → `for (const pc of pieces) pc.p[0] += 0.1 * Math.sin(Math.PI * linear(t, ...spans[i]));\n      feed(P, pieces, t, ...spans[i]);\n    }` | 1 | Yes — AssertionError [ERR_ASSERTION]: feed path: only the laptop entry may move in x |
+| photo registration | `stage.mjs` | `key === 'mail' ? ID.mailPhoto : rect, key + 'Image'` → `key === 'mail' ? ID.mailPhoto : rect, 'kPhoto'` | 1 | Yes — 27.480000s (id): photo registration: missing carried or styled photograph |
+| label route fit undone | `labels.mjs` | `const { S, cx } = fit;` → `const S = view.S, cx = view.cx;` | 1 | Yes — 50.250001s (pr): parametric 390/50.25000100000001: label route: leader turns inward or has a short horizontal run |
+| stage gutter fit undone | `labels.mjs` | `const { S, cx } = fit;` → `const S = view.S, cx = view.cx;` | 1 | Yes — 0.000000s (ps): stage gutters: stage crossed a 16 px side gutter at width 280 |
+| R14 laptop wrong face | `stage.mjs` | `floor.find(pc => pc.lidPicture && pc.art === 'chromeLaptop')` → `floor.filter(pc => pc.lidPicture).at(-1)` | 1 | Yes — 77.840000s (fig): R14: anchor misses its specified face/corner |
+| Figma phone aspect | `stage.mjs` | `phoneW = (ROW - rim * 2) * 9 / 19.5 + rim * 2` → `phoneW = (ROW - rim * 2) * 9 / 18 + rim * 2` | 1 | Yes — 77.990000s (fig): Figma device geometry: wrong screen ratios or picture sizes |
+| measurement phase failure path | `tools/measure-phases.mjs` | `  await phase('flicker scan', scan);` → `  if (report.phases.some(p => !p.complete)) return false;\n  await phase('flicker scan', scan);` | 1 | Yes — AssertionError [ERR_ASSERTION]: measurement phases: failed playback skipped scan/sheets |
+| Figma early tap clock | `stage.mjs` | `if (p < 0) return { at: 0, scroll: 0, video: 0, lifted: false, tap: null };` → `if (false) return { at: 0, scroll: 0, video: 0, lifted: false, tap: null };` | 1 | Yes — 77.346667s (fig): Figma clock: prototype taps before the shared export clock starts |
+| R5 valid future action tag | `stage.mjs` | `function editedVideo(t) {\n  const P = [], D = [], s = SCRIPTS.pr;` → `function editedVideo(t) {\n  const P = [], D = [], s = SCRIPTS.pr;\n  if (t >= 2 * PACE && t < 2.3 * PACE) P.push({ ...on('paper', 0.45, 0.20, 0.12, 0.12, { lift: 0.3 }), document: true, echo: 'music' });` | 1 | Yes — AssertionError [ERR_ASSERTION]: R5: echo precedes source action music |
+| toolbar clearance undone | `stage.mjs` | `const designs = cols.map(([x, w]) => [x, 0.46, w, h])` → `const designs = cols.map(([x, w]) => [x, 0.459, w, h])` | 1 | Yes — 72.905000s (fig): toolbar clearance: canvas is less than 0.1 above bottom toolbar |
+| R14 playback face undone | `stage.mjs` | `if (key !== 'id' && (!pc.deviceBody \|\| pc.device !== i)) return false;` → `if (false) return false;` | 1 | Yes — 49.700000s (pr): R14: anchor misses its specified face/corner |
+| fixed mark face undone | `stage.mjs` | `if (key !== 'id' && (!pc.deviceBody \|\| pc.device !== i)) return false;` → `if (false) return false;` | 1 | Yes — 49.733333s (pr): fixed marks: playback moved an asset anchor |
+| R15 old post disappearance | `stage.mjs` | `const filled = frameContact(s, drag, t, from, to, frame), placed = done(s, id, t), before = D.length;` → `const filled = t >= 6.329 * PACE ? [['map', DOCK.map, ID.frame], ['photo', DOCK.photo, ID.photo], ['postPhoto', ID.photo, ID.post], ['mailPhoto', ID.photo, ID.mailPhoto]].some(([drag, from, to]) => frameContact(s, drag, t, from, to, frame)) : frameContact(s, drag, t, from, to, frame), placed = t >= 6.329 * PACE ? filled : done(s, id, t), before = D.length;` | 1 | Yes — 25.229000s (id): R15: postPhoto frame vanished before its own contact |
+| R15 placement exception disabled | `tools/correction-checks.mjs` | `&& !plates.length && !replacement)` → `&& !plates.length && true)` | 1 | Yes — 25.510000s (id): R15: photo plate disappeared without a same-frame replacement |
+| 0.6 s content frozen rail still plays | `stage.mjs` | `const state = prototypeState(p), suffix` → `const state = prototypeState(-1), suffix` | 1 | Yes — 77.840000s (fig): Figma motion: device picture unchanged after 0.6 s |
+| Figma return boundary undone | `stage.mjs` | `const at = p >= 1 ? 3 : ((p * 3) % 3 + 3) % 3;` → `const at = ((p * 3) % 3 + 3) % 3;` | 1 | Yes — 80.840000s (fig): Figma return: a new prototype tap started during withdrawal |
+| report path sanitizing undone | `tools/measure-phases.mjs` | `const message = String(error?.message ?? error);` → `return error.stack \|\| String(error);\n  const message = String(error?.message ?? error);` | 1 | Yes — AssertionError [ERR_ASSERTION]: report paths: message must be repository-relative |
+
+### Final computed evidence
+
+```text
+PACE 1; loop 81.240 s; all scene starts/lengths and six still times exactly unchanged.
+Photoshop, Illustrator and InDesign stills: identical emitted pieces/art/geometry/flags; InDesign labels unchanged. Pixel identity not rendered (Playwright unavailable).
+390x664: whole unclipped laptop at cut and landing; 584 projected samples over stage heights 240–312, word-width factors .55/.65/.75/.85; combined bounds 36.227, 157.579, 194.391, 299.445 CSS px.
+390x844: whole unclipped laptop at cut and landing; 1256 projected samples over stage heights 240–396, word-width factors .55/.65/.75/.85; combined bounds 21.226, 157.579, 194.391, 349.235 CSS px.
+1440x900 Figma model: S=103.629191, common left end x=740.781, LAPTOP horizontal run=12.000 px. DOM/page/mock appearance unverified.
+1920x1080 Figma model: S=128.836291, common left end x=1025.079, LAPTOP horizontal run=12.000 px. DOM/page/mock appearance unverified.
+Post-frame geometry sampled every 0.02 s at both requested windows; CSV retained. No browser frames captured.
+```
+
+Phone bounds are CSS-pixel projections over the stated stage-height and text-width models. The whole device is present at its cut, fully on screen, and slides to its slot. These models do not replace actual browser/font/page checks. The two desktop models give a shared left column and exactly 12 px for the LAPTOP horizontal run; the approved mock’s rendered agreement remains unverified. The shared two-column fit may shift/scale phone canvas framing as F2 requires; the first-three-still identity result concerns emitted pieces, not changed camera pixels.
+
+The round-three `e8cced5` preview was `.scratch/preview.html`: **361,587 bytes** (353.112 KiB). This is historical; the final CORRECTIONS-4 size is below. It remains one offline file with embedded fonts, styles and modules. Node parse/self-containment checks pass; a supplemental literal scan found no web addresses or network APIs. No actual browser request observation is claimed.
+
+`node design/journey-hero/take-2/tools/checks.mjs --metrics` — exit 0
+
+```text
+R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (636 samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5503 frames, 379765 pieces (max 183); 5 atlas pages; loop 81.240s
+ps: 7.500s, ai: 11.400s, id: 19.180s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+{"atlas":[[2048,1844],[2048,1700],[2048,1800],[2048,1876],[2048,1244]],"baseBytes":69337088,"mipBytes":92449450.66666666}
+all clean
+```
+
+`node design/journey-hero/take-2/tools/correction-checks.mjs` — exit 0
+
+```text
+R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (636 samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5503 frames, 379765 pieces (max 183); 5 atlas pages; loop 81.240s
+ps: 7.500s, ai: 11.400s, id: 19.180s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+all clean
+```
+
+`node design/journey-hero/take-2/tools/phase-checks.mjs` — exit 0
+
+```text
+phase fixture: both failed playbacks recorded; scan 4 frames; sheets attempted; report says playback incomplete; failed result maps to exit 1
+phase checks clean (no browser or hardware measurement run)
+report paths: message only; repository-relative path; stack omitted
+```
+
+`node design/journey-hero/take-2/tools/browser-check.mjs` — exit 2 (unavailable)
+
+```text
+browser-check UNAVAILABLE: Playwright is not installed in the repository; no browser launched.
+390x664: UNRUN (Playwright unavailable)
+390x844: UNRUN (Playwright unavailable)
+360x780: UNRUN (Playwright unavailable)
+375x667: UNRUN (Playwright unavailable)
+412x915: UNRUN (Playwright unavailable)
+768x1024: UNRUN (Playwright unavailable)
+1440x900: UNRUN (Playwright unavailable)
+1920x1080: UNRUN (Playwright unavailable)
+```
+
+The direct correction-checks entry initializes the same atlas/player fixtures through checks.mjs, then executes the correction gates; it is not a browser test. Final numeric status: all clean. Browser visual acceptance is incomplete for the availability reason above; no hardware rerun was attempted.
+
+## CORRECTIONS-3, addendum
+
+Acceptance follows F2's addendum and the retained label specification: left words at least 16 px right of page blocks sharing their rows, aligned left-column ends, outward 45-degree leaders, rising up labels, 8/12 px horizontal runs, clear rings/words and existing gutters. The supplied 768 × 1024 rectangles and 9 px Figma word widths are the measured reference; other word widths in the Node fixture are explicitly conservative models.
+
+`labels.mjs` now feeds the actual page blocks into `fitCalloutView` in both players. The fit solves their left-column boundary together with both route columns and stage gutters. It splits the scale range where a word row enters or leaves a page block, then takes the largest feasible scale while preserving the vertical centre. `labelLayout` uses the same 16 px boundary. Browser route checks now assert vertical direction and the 45-degree/horizontal shape as well as F2's existing rules, and check the 16 px page-text gap. `browser-check.mjs` includes 820 × 1180 and 1024 × 768: ten sizes total.
+
+The new `tools/label-page-checks.mjs` runs the real fit/layout with the addendum's five page blocks and LAPTOP/TABLET/PHONE widths 40.4/38.6/36.0 px. It checks the four reported times and the Figma label window at 60 Hz, including partial label groups, route geometry, gutters, alignment and page-text clearance; `checks.mjs` includes it. Before changing `labels.mjs`, this test exited **1** on the incoming e8cced5 behaviour:
+
+```text
+AssertionError [ERR_ASSERTION]: page labels 768x1024/78.240000: label route: leader turns inward or has a short horizontal run
+```
+
+After the fix, `node design/journey-hero/take-2/tools/label-page-checks.mjs` exits **0**:
+
+```text
+page labels 768x1024: 182 frames; S=54.612696; minimum text gap=16.000 px; routes clean
+```
+
+The three new reversible controls below were run separately and caught (each test exited 1); source was restored in `finally`. `controls.mjs --audit` exits 0: all **46** edits match exactly one place. The existing stage-gutter control was also rerun and caught. The other historical controls were not rerun. In the exact edits below, `\n` denotes one newline.
+
+| Control in `labels.mjs` | Exact search → replacement | Matches | Caught |
+| --- | --- | ---: | --- |
+| Page boundary omitted from fit | `export function fitCalloutView(view, need, boxLeft, widths, obstacles = []) {` → `export function fitCalloutView(view, need, boxLeft, widths, ignoredObstacles = []) {\n  const obstacles = [];` | 1 | Yes; the same 78.240000 route failure quoted above. This removes page boundaries from the fit while retaining them in layout. |
+| Up leader starts downward | `const delta = Math.abs(elbowX - mx), signY = c.level === 'up' ? -1 : 1;` → `const delta = Math.abs(elbowX - mx), signY = 1;` | 1 | Yes; `label route: leader goes in the wrong vertical direction` |
+| Diagonal/horizontal shape broken | `const points = [start, [elbowX, endY], [endX, endY]];` → `const points = [start, [elbowX, endY + 1], [endX, endY]];` | 1 | Yes; `label route: expected a 45-degree diagonal then a horizontal run` |
+
+`node design/journey-hero/take-2/tools/checks.mjs` — exit 0:
+
+```text
+R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (636 samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720
+page labels 768x1024: 182 frames; S=54.612696; minimum text gap=16.000 px; routes clean
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5503 frames, 379765 pieces (max 183); 5 atlas pages; loop 81.240s
+ps: 7.500s, ai: 11.400s, id: 19.180s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+all clean
+```
+
+Departures: none beyond the requested label layout, its checks and this record. PACE, loop length, scene starts, still times, artwork and motion source are unchanged. No browser command, browser launch, hardware measurement, installation, network or git command was run for this addendum. The ten-size browser run and rendered comparison remain for the external machine; the computed Node result does not certify those gates. Installed skill files and RTK.md are outside the permitted repository, so they were not read; the existing research and review record were carried forward.
+
+## CORRECTIONS-4
+
+Acceptance carried forward before the edit: G1 and G2; retain F1's paired contacts, gap-free plates and whole crossed frames; carry the backing, image and cursor with one offset; preserve the incoming 48aea47 projected image corners within 0.1 px; allow only the cursor and original spread guides above the stack; retain PACE, the 81.240 s loop, scene starts, action times and six still times. The approved artwork, hierarchy and motion laws remain the reference. Frame, wall-shadow and pixel-still acceptance belongs to the external browser review.
+
+### G1 - one stack, along the viewing direction
+
+`stage.mjs` now identifies the active carried faces by their action. After the existing separation pass, `liftDragStack` computes one clearance offset for the whole active stack, including its cursor. It considers projected overlap with the other pieces and clears their full depth. The offset follows `HOME.v`, the approved home camera's viewing direction; its dot products with the camera's right and up vectors are zero. **The viewing-direction lift is used; the constant-lift fallback is not used.** The per-face world-z lift and its separate follow-up mark lift are removed. Other apps do not receive this drawing-order lift.
+
+The lift can move a shadow caster even while preserving its projected picture. Each stack member therefore retains its pre-lift `shadowP`. One position override in `sq.mjs` uses that position only for the light's depth pass; the colour pass uses the lifted position. The computed sweep finds the caster positions identical to the incoming 48aea47 positions, and a Node WebGL-call recorder exercises the real renderer's shadow/colour uniform selection. This is position and call evidence, not a rendered shadow pass.
+
+`tools/drag-checks.mjs` is included in `checks.mjs`. It runs every 0.0005 s over map, loc, photo, postPhoto and mailPhoto, includes exact-boundary neighbours and the explicit 25.20-25.30 s fine window, and produces 4,105 active samples. It checks cursor/image/backing order and a common offset against the reference, every projected image-box corner at the 1440 x 900 initial desktop fit (S = 103.629191; label fitting can only reduce that scale), and both the image and backing footprints. For intersecting visible projected convex boxes, a conservative whole-box depth bound proves that no other piece can be in front; only matching original spread guides and the cursor are exempt. This is stronger than testing whether world-x/y rectangles overlap.
+
+F1's fine samples and the retained 0.005 s 19.9-30.8 s sweep use the original unlifted routes to determine own-picture contact. They check all six frame lines, their sizes/rotations/positions, visibility and clipping, and each plate through placement and its same-frame replacement. The legacy clearance checks now use projected polygons. The scheduler's cursor check removes the depth-only lift through its authored shadow position; the generic interaction check permits original spread guides under a carried image while still requiring the cursor above it.
+
+The reference sources are frozen, compressed source text in `tools/fixtures/drag-sources.json`, rather than a dependency on ignored `.scratch` files. They were copied from the existing round-three incoming-source record (`.scratch/corrections3/before/stage.mjs`, identified there as 48aea47) and the untouched source at the start of this round (incoming 50b51b8). Their SHA256 values are pinned in the checker and printed below; the modules are reconstructed only in memory with repository-local imports. No Git command was used to retrieve them. All six emitted stills, SHOW, SCRIPTS, PACE and LOOP compare exactly with the frozen incoming source. No pixel identity is claimed.
+
+### G2 - current records and pack
+
+README now identifies CORRECTIONS-4, states **ten** browser sizes, and describes the computed G1 gates and their external visual limits. The old 361,587-byte e8cced5 figure above is explicitly historical. The final `tools/preview.mjs` run reports:
+
+```text
+design/journey-hero/take-2/.scratch/preview.html (356 KB)
+```
+
+Final file size: **364,070 bytes** (355.537 KiB). A pack made on Windows can differ by source line endings. The preview remains one self-contained offline file; the checker parses and validates its packed module.
+
+### Negative controls
+
+All **14 final controls** exited 1 at their intended gate. Every edit matches exactly one place, counted before mutation; each source file is restored byte-for-byte in `finally`. `node design/journey-hero/take-2/tools/drag-controls.mjs --audit` prints `G1 controls: all 14 exact edits match one place`. The existing `controls.mjs --audit` also passes all 46 historical edits; those historical mutations were not rerun. Full final control outputs are retained in `.scratch/corrections4/controls/*.txt`; no results.json was written.
+
+The two old-lift controls replace the single new call with the **exact incoming round-three block**, including its mark lift. They independently fail order and corners: the latter detects a 2.392692 px step. Other controls cover omitted cursor motion, other geometry above the stack, crossed-frame lines, a hidden or prematurely removed post frame, premature plate loss, same-frame replacement, the shadow position and renderer override, the scheduler's coordinate transform, and the legacy projected-clearance/interaction checks.
+
+In the exact edits below, inline strings use JSON escaping (`\n` denotes a newline); the two long symbols expand to the literal blocks below. `OLD_PER_FACE` ends with one newline. An empty string deletes the search text.
+
+| Control | File | Exact search -> replacement | Matches | Caught / intended failure |
+| --- | --- | --- | ---: | --- |
+| authored cursor route transform removed | `tools/checks.mjs` | `"const p = pc.shadowP \|\| pc.p; // The drag's depth-only lift leaves its authored route intact."` -> `"const p = pc.p;"` | 1 | Yes, exit 1 - 0.5959749999999979 differs from 0.5009749999999995 |
+| crossed post frame disappears | `stage.mjs` | `"const filled = frameContact(s, drag, t, from, to, frame), placed = done(s, id, t), before = D.length;"` -> `UNPAIRED_POST_CONTACT` | 1 | Yes, exit 1 - G1 frames: 25.229000s: postPhoto crossed frame not whole through own contact |
+| crossed post frame hidden | `stage.mjs` | `"  if (i === 2) liftDragStack(P);\n"` -> `"  if (i === 2) liftDragStack(P);\n  for (const pc of P) if (pc.emptyFrame === 'postPhoto') pc.hide = true;\n"` | 1 | Yes, exit 1 - G1 frames: 21.365000s: postPhoto crossed frame was altered |
+| cursor beneath carried image | `stage.mjs` | `"  if (i === 2) liftDragStack(P);\n"` -> `"  if (i === 2) liftDragStack(P);\n  if (i === 2 && P.action === 'photo') P.find(pc => pc.art === 'cursor').p[2] -= 0.1;\n"` | 1 | Yes, exit 1 - 25.066667s (id): an interaction mark is below a picture stack |
+| cursor omitted from shared lift | `stage.mjs` | `"for (const pc of [...stack, cursor]) {"` -> `"for (const pc of stack) {"` | 1 | Yes, exit 1 - G1 order: 22.140000s: expected cursor above image above backing |
+| lift undone permits frame lines | `stage.mjs` | `"  if (i === 2) liftDragStack(P);\n"` -> `""` | 1 | Yes, exit 1 - G1 frames: 25.227500s: empty-frame line above carried image |
+| lift undone permits occlusion | `stage.mjs` | `"  if (i === 2) liftDragStack(P);\n"` -> `""` | 1 | Yes, exit 1 - G1 clearance: 22.188500s: grey drawn above carried image |
+| old per-face lift breaks order | `stage.mjs` | `"  if (i === 2) liftDragStack(P);\n"` -> `OLD_PER_FACE` | 1 | Yes, exit 1 - G1 order: 25.227000s: expected cursor above image above backing |
+| old per-face lift moves corners | `stage.mjs` | `"  if (i === 2) liftDragStack(P);\n"` -> `OLD_PER_FACE` | 1 | Yes, exit 1 - G1 corners: 25.227000s: corner moved 2.392692 px from 48aea47 |
+| plate removed before placement | `stage.mjs` | `"placed = done(s, id, t), before = D.length;"` -> `"placed = filled, before = D.length;"` | 1 | Yes, exit 1 - G1 frames: 25.225500s: photo plate vanished before placement |
+| R15 projected clearance lift undone | `stage.mjs` | `"  if (i === 2) liftDragStack(P);\n"` -> `""` | 1 | Yes, exit 1 - 25.233333s (id): frame clearance: outline crosses a travelling picture |
+| renderer shadow override removed | `sq.mjs` | `"      if (prog === depth && pc.shadowP) gl.uniform3fv(prog.u.uPos, pc.shadowP);\n"` -> `""` | 1 | Yes, exit 1 - G1 shadow: 22.144000s: renderer did not retain shadow position and lifted colour position |
+| shadow caster follows colour lift | `stage.mjs` | `"pc.shadowP = pc.p;"` -> `"pc.shadowP = pc.p.map((n, axis) => n + offset[axis]);"` | 1 | Yes, exit 1 - G1 shadow: 22.140000s: shadow caster differs from 48aea47 |
+| valid placement exception removed | `tools/drag-checks.mjs` | `"plates.length \|\| P.some(pc => pc.where === 'content' && !pc.echo && replacements[id].includes(pc.art))"` -> `"plates.length"` | 1 | Yes, exit 1 - G1 frames: 25.510000s: photo placement left bare wall |
+
+`OLD_PER_FACE`:
+
+```js
+  // Only InDesign carries photographs over other empty frames. Keep those frames whole below it.
+  if (i === 2) for (const pc of P.filter(pc => pc.where === 'travel')) {
+    const points = corners(pc), bounds = axis => [Math.min(...points.map(p => p[axis])), Math.max(...points.map(p => p[axis]))];
+    const [left, right] = bounds(0), [bottom, top] = bounds(1);
+    for (const line of P.filter(q => q.emptyFrame)) {
+      const cs = corners(line);
+      if (left < Math.max(...cs.map(p => p[0])) && right > Math.min(...cs.map(p => p[0])) && bottom < Math.max(...cs.map(p => p[1])) && top > Math.min(...cs.map(p => p[1]))) pc.p[2] = Math.max(pc.p[2], line.p[2] + line.s[2] + LAYER_STEP * U + pc.s[2]);
+    }
+  }
+  if (i === 2) {
+    const top = Math.max(...P.filter(pc => pc.where !== 'floor' && (pc.art || pc.paintLayer !== undefined) && !pc.overlay).map(pc => pc.p[2] + pc.s[2]));
+    const marks = P.filter(pc => pc.where !== 'floor' && pc.overlay && !pc.emptyFrame), bottom = Math.min(...marks.map(pc => pc.p[2] - pc.s[2]));
+    const rise = Math.max(0, top + LAYER_STEP * U - bottom);
+    for (const pc of marks) pc.p[2] += rise;
+  }
+```
+
+`UNPAIRED_POST_CONTACT` (one line):
+
+```js
+const filled = i === 2 && t >= 6.329 * PACE ? [['map', DOCK.map, ID.frame], ['photo', DOCK.photo, ID.photo], ['postPhoto', ID.photo, ID.post], ['mailPhoto', ID.photo, ID.mailPhoto]].some(([drag, from, to]) => frameContact(s, drag, t, from, to, frame)) : frameContact(s, drag, t, from, to, frame), placed = done(s, id, t), before = D.length;
+```
+
+An exploratory control that removed an authored-contact coordinate transform did not fail at the existing 0.005 s samples; it was not counted. That unnecessary checker edit was reverted. The new dense lifetime oracle instead uses independently reconstructed original routes. The final 14-control table above contains only observed failures at the intended gates.
+
+### Final checks and limits
+
+`node design/journey-hero/take-2/tools/checks.mjs` - exit 0:
+
+```text
+R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (636 samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720
+page labels 768x1024: 182 frames; S=54.612696; minimum text gap=16.000 px; routes clean
+G1 drags: 4105 samples at 0.0005 s, five drags including loc; order/one offset, projected occlusion and F1 lifetimes clean; max corner error=8.958e-14 px (S=103.629191); minimum cursor gap=0.000920; max offset=0.159436; shadow positions/uniforms unchanged; six emitted stills/timing unchanged.
+48aea47 snapshot SHA256 2df6ef35ad20837ad73d5c181cef1a404e4023545adeab99f8070c63697b195d; incoming 50b51b8 snapshot SHA256 1cb6842044168b12c4c4bf551e389b7adf31c2faf8b28f927a4282972ebb55ab. Rendered frames, shadows and pixel still identity UNRUN.
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5503 frames, 379765 pieces (max 183); 5 atlas pages; loop 81.240s
+ps: 7.500s, ai: 11.400s, id: 19.180s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+all clean
+```
+
+Departures from CORRECTIONS-4: none. The small renderer shadow-position override supports the requested shadow preservation; it does not certify the rendered result. No browser command or launch, frame capture, rendered wall-shadow comparison, six-still pixel comparison, hardware run, measurement tool, installation, network, Git command, deployment, outside-repository read/write or program termination was performed. The external reviewers still own G1's frame/shadow/still gates. Protected briefs, review/hardware and .scratch/crit were not changed. Installed skills and RTK.md were outside the allowed repository and were not read.
+
+## CORRECTIONS-5
+
+### H11/H12 second addendum — acceptance before editing
+
+The second addendum after `d7e0de5` is the current browser evidence. H9/H10 and the rest of round 5 are accepted; retain them. H11 changes only craft-number offsets: every desktop number and the first phone column align to the lede's ink within 1 px; the second phone column starts at its own column edge within 1 px. All four numbers must remain inside their own buttons, beside their own labels, with no pair overlapping. H12 centres from the maximum of the name's ink right and the lede/craft-list box rights, so wrapping cannot change that input. Retain the 555-size resize sweep at heights 640/900/1440 and compare equal side spaces against actual text ink (8 px tolerance) at widths 1280 and up, independently of the new centring input. Add exact one-site negative controls for both incoming faults. Node can exercise the actual layout function with deterministic DOM/glyph stand-ins and the same assertions; real font/layout/pixel and rendered comparison gates remain external. No external skill/RTK reads, browser or independent rendered critique are permitted in this run.
+
+### H9/H10 addendum — acceptance before editing
+
+The browser review in the addendum to CORRECTIONS-5 is the current evidence: H1, H2, H4, H5 and H7 passed externally; preserve them and the rest of round 5. H9 must measure the CSS stage rather than its expanded click target, remain stable through ten measurements and an away/back resize at all ten review sizes, and reject the old string comparison under shorter CSS serialisation. H10 must preserve the lower-left-facing laptop and row spacing while separating the complete projected laptop (lid, deck and picture layers) from the complete app-screen shell by at least 12 px at S=103.6, every 0.02 s throughout Figma; the Laptop ring's outer stroke must also clear that shell. Compare envelopes and modeled S before/after and retain the existing checks. Browser/font/pixel and resize-sweep verification stays with the external reviewer. No browser or independent rendered critique runs locally; installed skills and RTK are outside the expressly permitted repository and cannot be read in this run.
+
+Current acceptance is Dan's H1–H8, carried forward with the approved six-still structure, artwork, hierarchy, Outfit, square corners, hard wipes, centred floor groups, shared clocks and round-four drag/shadow rules. Earlier sections above are historical records; this section supersedes their current timing and laptop direction. The explicit local restrictions reserve layout, font ink, pixel, frame and independent visual critique gates for the external browser machine. They are **UNRUN**, with no visual pass claimed.
+
+### H1 — lasting spread pieces
+
+`spreadFrame` creates the two final coal-toned ink pages and the inset `ID.frame` outline/X from the first nonzero drag progress. Their x/y geometry grows proportionally about the spread's upper-left corner; normal lifts, normal thicknesses and tones retain their final values. At release the same builder stays in use. Sixty samples at 0.005 s prove every corner is inside the growing rectangle. The actual non-cursor arrays at global 20.28 s ±0.0005 are exactly identical.
+
+The final 0.000500001 s of this one draw settles to its exact endpoint. This sub-millisecond settlement is deliberate: without it, the wipe's last tiny floating-point position changes would prevent the literal equality required by H1. Action times and the cursor's route do not change. All 23 draw ends compare at ±0.0005 and ±0.005 s: other draws' emitted arrays on **each side** must match frozen round four within 1e-8. Existing construction-to-atlas substitutions (for example Illustrator's badge), echo additions and marquee removals mean those other before/after arrays are not literally identical. The oracle retains those incoming substitutions rather than misreporting them as identical pieces or claiming their rendered equivalence. A control changing another draw fails that oracle. Rendered draw-end frames remain for review.
+
+### H2 — labels and clocks
+
+InDesign's `land` is 3.0 s, up from 1.2 s; its labels remain present throughout 31.98–34.98 s and cut at pickup. PACE stays 1. The loop grows exactly 1.8 s to **83.040 s**. Every action and still shift is checked against round four; the three later apps' local playback and label clocks are unchanged. The five retained emitted stills, and Figma's screen/canvas still excluding its changed floor, compare within 1e-8 (global-clock addition introduces tiny floating-point differences). No pixel identity is claimed. The 768 × 1024 label fixture now derives its review times from Figma landing instead of stale global constants.
+
+| App | Global start | Local still | Global still |
+| --- | ---: | ---: | ---: |
+| Photoshop | 0.000000 | 6.549000 | 6.549000 |
+| Illustrator | 7.500000 | 9.239000 | 16.739000 |
+| InDesign | 18.900000 | 18.077961 | 36.977961 |
+| Premiere Pro | 39.880000 | 12.170001 | 52.050001 |
+| After Effects | 55.100000 | 10.980001 | 66.080001 |
+| Figma | 69.130000 | 11.610000 | 80.740000 |
+
+### H3 — laptop faces lower left
+
+The hinge runs in world x at the deck's low-z back edge. Local picture-right is +x, up is [0, 0.978147601, −0.207911691], and the outward normal is [0, 0.207911691, 0.978147601]: +z-facing, 12° back lean, unmirrored. Keyboard and trackpad turn with the deck. The same laptop enters along −x over 0.5 s without a clip and returns with the shared z withdrawal. The label is inset 0.08 along and 0.06 down from its actual lid-screen top-left corner. Existing label routes, fixed anchors and playback checks still run.
+
+750 computed poses at 0.005 s cover entry, landed play and return; the visible lid outline clears the canvas, Export, tablet and phone in HOME. The ordinary checks also cover screen ratios, gaps, complete footprint, moving designs and frozen withdrawal. The complete row stays centred on world x 0.200. Turning the 1.55-wide lid changes the laptop's x footprint; to retain equal 0.3 gaps and the overall row centre, tablet and phone both move right by **0.111174 world units**. Their shapes, z slots, chrome, clocks and relative spacing are unchanged. This uniform row recentering is the interpretation of “keep their places beside it”; keeping both old absolute x coordinates would break the new footprint's centre. Browser frames and page-text clearance are pending.
+
+### H4 — ink column
+
+`page-layout.mjs` wraps the two existing name lines without changing their words or weight animation. A DOM character range supplies each glyph's actual advance position, including wrapped lede lines; Canvas glyph ink metrics supply its side bearing. Both name-line left offsets use Outfit weight 800, while the lede and craft numbers use their actual styles. The name lines and numbers receive offsets to the lede's ink column. Measurements refresh on layout/font changes and while the existing name animation is active (including an animation already running when fonts finish). The 1 px pixel-ink gate at all sizes is **UNRUN**.
+
+### H5 — guarded rise
+
+At width ≥720, the whole `.hero-say` receives one extra upward translation, leaving its internal spacing intact. Rise = min(max(0, lede ink top − name ink bottom), max(0, name ink top − logo bottom − 48)). At ≤719 the rise is zero. `take-2.css` owns the offset after the borrowed stylesheet. Font/DOM computations are implemented, but no actual 1 px spacing or 48 px rendered-ink guard pass is claimed here.
+
+### H6 — equal side spaces and continuous placement
+
+The requested camera origin is `cx = (textInkRight + viewportWidth) / 2 - S * need.x`. Text ink right is the maximum glyph edge across the name, wrapped lede and craft list, not their block widths. The existing fit still solves the two label columns, content boundaries and gutters; its measurements are cached. The stage's actual click rectangle extends to include the shifted scene, while its original CSS box continues to set scale. Both player and stills use this layout. There are no per-playback-frame layout reads in player or callouts; hover reads cached hero geometry.
+
+The inherited abrupt 40→64 px gutter at 1200 would violate continuous resizing. The take-two override ramps it continuously from 1120 to 1200 (`--pad: clamp(40px, calc(30vw - 296px), 64px)`); supplied reference widths retain their original gutters. The real fit with a conservative word-width model is swept every 10 px from 720 through 2560 at heights 640, 900 and 1440: **555 samples** plus small one-sided perturbations. The maximum model centre movement per 10 px is 10.06 px. This is sampled computational continuity, not certification of font wrapping or actual DOM label constraints.
+
+Using the supplied text-ink edges as inputs, modeled left/right spaces are 131.36/131.36 px at 1280 × 800, 323.42/323.42 at 1920 × 1080 and 498.22/498.22 at 2560 × 1440. Target coverage and ≤2% scale-loss gates pass in that model. External `checkRound5Layout(page)` adds real font/DOM, target and resize checks; all ten-size label checks remain. None was executed here.
+
+### Envelope and size — before → after
+
+The six-still projected envelope, **without padding**, is unchanged:
+
+- camera-right x: −2.330956707 … 3.429467889 → −2.330956707 … 3.429467889;
+- camera-up y: −1.407385983 … 5.233459130 → −1.407385983 … 5.233459130;
+- scene width × height: **5.760424596 × 6.640845113 world projection units → the same**;
+- padded fit need: 6.260424596 × 7.140845113 → the same.
+
+The table below is a **Node model**, not measured browser pixels. It uses the retained test suite's explicit phone stage heights (240, 396, 366.6, 313.49 and 430.05 px in the listed phone order), CSS-derived desktop boxes, and conservative 0.75-em word widths. It runs both the frozen incoming label fit and current fit. Actual font/page obstacles can change the fit; external review must report actual sizes. The model shows no shrink; some phone fits gain room from the rotated laptop's new label anchor.
+
+| Viewport | S before → after | Scene px before | Scene px after | Scale change |
+| --- | ---: | ---: | ---: | ---: |
+| 390 × 664 | 33.609467 → 33.609467 | 193.60 × 223.20 | 193.60 × 223.20 | 0.00% |
+| 390 × 844 | 42.871487 → 44.300426 | 246.96 × 284.70 | 255.19 × 294.19 | 3.33% |
+| 360 × 780 | 36.896455 → 36.896455 | 212.54 × 245.02 | 212.54 × 245.02 | 0.00% |
+| 375 × 667 | 40.035446 → 40.598440 | 230.62 × 265.87 | 233.86 × 269.61 | 1.41% |
+| 412 × 915 | 47.031013 → 49.730004 | 270.92 × 312.33 | 286.47 × 330.25 | 5.74% |
+| 768 × 1024 | 62.308873 → 62.308873 | 358.93 × 413.78 | 358.93 × 413.78 | 0.00% |
+| 820 × 1180 | 66.960315 → 66.960315 | 385.72 × 444.67 | 385.72 × 444.67 | 0.00% |
+| 1024 × 768 | 85.143984 → 85.143984 | 490.47 × 565.43 | 490.47 × 565.43 | 0.00% |
+| 1440 × 900 | 103.629191 → 103.629191 | 596.95 × 688.19 | 596.95 × 688.19 | 0.00% |
+| 1920 × 1080 | 128.836291 → 128.836291 | 742.15 × 855.58 | 742.15 × 855.58 | 0.00% |
+
+### H7 — stationary floor hover
+
+`pointerFloor` inverts the current orthographic camera's right/up basis at y=0. 180 ray round trips across HOME, two changed cameras and three scales recover the source point within 1e-8. A dot's grid centre, not a fragment's distance, decides its whole red/grey state at radius 0.75; 10,404 samples test centres and nine locations within each dot. GLSL uses the same centre rule, brand red #C0262E, and the existing dot mask/pool/shadow terms. Only the tint changes: floor positions, pool and camera stay fixed. Shader-source/geometry evidence does not establish raster visibility.
+
+`floor-hover.mjs` accepts only a fine hovering mouse and rejects reduced motion/touch input. Pointer leave clears immediately in state and on the next drawing frame. Playback consumes the point on its next frame; held/paused/seeked playback coalesces moves into at most one animation-frame redraw and ignores unchanged coordinates. Node exercises coalescing, playback, held state, leave, identical moves, fine/reduced/touch gates and hidden state. Event listeners do not intercept stage, craft or Pause clicks; the existing player logic checks remain.
+
+### H8 — records, pack and limits
+
+README states current timing, new stylesheet/layout modules, floor hover, tools and review limits. `page.mjs` loads `take-2.css` after `journey.css`; `preview.mjs` inlines it in the same order. The page output guard now also protects rounds 4 and 5. The offline preview is `.scratch/preview.html`: **374,203 bytes** (366 KB as reported by the packer). Windows/source line endings can change this size. The packed module passes syntax and self-containment checks; no browser/offline-request run was made.
+
+No browser, network, installation, git command, deployment, measurement/hardware run, outside-repository read/write or program termination was performed. Public files and every protected brief/review directory were outside the writes. Installed skills and RTK.md are outside the permitted repository and were not read. Independent rendered critique, H4–H7 layout/pixel gates, H1/H3 frames, wall shadows and pixel still comparisons remain for the external machine. The small endpoint settlement, existing draw representations, uniform device-row shift and continuous gutter above are the explicit implementation qualifications; no other design departure is intended.
+
+### Negative controls
+
+All **17** controls below were observed to exit 1 at the named gate. Each exact search matched **one** site before mutation. Each file was restored byte-for-byte in `finally`. `round5-controls.mjs --audit` verifies the exact edit inventory without mutation. Exact outputs and the machine-readable inventory are in `.scratch/corrections5/controls/`. The 46 historical controls and 14 G1 controls were audited for one-site matches; their historical mutations were not rerun.
+
+In this table, strings use JSON escaping (`\n` denotes one newline).
+
+| Control | File | Exact search → replacement | Matches | Caught / gate |
+| --- | --- | --- | ---: | --- |
+| old spread drawing | `stage.mjs` | `"      if (i === 0) {\n        spreadFrame(D, t >= action(s, 'frame0').end - 0.000500001 * PACE ? 1 : eased(s, 'frame0', t), !filled);"` → `"      if (i === 0 && done(s, 'frame0', t)) {\n        for (const rect of [ID.left, ID.right]) D.push({ ...on('ink', ...rect, { lift: 0.06, t: 0.02 }), tones: FLYER.coal });\n        if (!filled) emptyFrame(D, ID.frame, false);"` | 1 | Yes; exit 1; `H1 spread: release swaps` |
+| other draw changes | `stage.mjs` | `"else P.push(on(tone, ...growing, { lift: 0.06, t: 0.02 }));"` → `"else P.push(on('red', ...growing, { lift: 0.06, t: 0.02 }));"` | 1 | Yes; exit 1; `H1 draw comparison:` |
+| spread grows outside rectangle | `stage.mjs` | `"pc.s[0] *= p; pc.s[1] *= p;"` → `"pc.s[0] *= 1; pc.s[1] *= p;"` | 1 | Yes; exit 1; `H1 spread: corner outside` |
+| short InDesign hold | `stage.mjs` | `"{ id: 'land', kind: 'wait', duration: 3.0 }"` → `"{ id: 'land', kind: 'wait', duration: 1.2 }"` | 1 | Yes; exit 1; `H2 loop` |
+| old laptop direction | `stage.mjs` | `"const lidU = [1, 0, 0], lidV = [0, Math.cos(LID_ANGLE), -Math.sin(LID_ANGLE)], lidN = [0, Math.sin(LID_ANGLE), Math.cos(LID_ANGLE)];"` → `"const lidU = [0, 0, -1], lidV = [-Math.sin(LID_ANGLE), Math.cos(LID_ANGLE), 0], lidN = [Math.cos(LID_ANGLE), Math.sin(LID_ANGLE), 0];"` | 1 | Yes; exit 1; `H3 orientation:` |
+| laptop label misses corner | `stage.mjs` | `"const local = [-face.s[0] + 0.08, face.s[1] - 0.06, face.s[2]];"` → `"const local = [0, 0, face.s[2]];"` | 1 | Yes; exit 1; `H3 laptop label top-left corner` |
+| laptop enters from wrong side | `stage.mjs` | `"const dx = -1.6 * (1 - EASE.enter(linear(t, ...spans[0])));"` → `"const dx = 1.6 * (1 - EASE.enter(linear(t, ...spans[0])));"` | 1 | Yes; exit 1; `H3 same-object x entry` |
+| wide centring undone | `view.mjs` | `"return { ...view, cx: (textRight + view.W) / 2 - view.S * need.x };"` → `"return view;"` | 1 | Yes; exit 1; `H6 equal side spaces` |
+| resize gutter jumps | `view.mjs` | `"export const sideGutter = width => Math.min(64, Math.max(40, 0.3 * width - 296));"` → `"export const sideGutter = width => Math.min(64, Math.max(40, 0.3 * width - 296)) + (width >= 1200 ? 1 : 0);"` | 1 | Yes; exit 1; `H6 discontinuity at` |
+| scene scale shrinks | `view.mjs` | `"return { ...view, cx: (textRight + view.W) / 2 - view.S * need.x };"` → `"return { ...view, S: view.S * 0.95, cx: (textRight + view.W) / 2 - view.S * need.x };"` | 1 | Yes; exit 1; `H6 scene shrank` |
+| stage target stays behind | `view.mjs` | `"return { left, width: right - left };"` → `"return { left: boxLeft, width: boxRight - boxLeft };"` | 1 | Yes; exit 1; `H6 stage target misses` |
+| floor ray shifted | `view.mjs` | `"return [(a * cam.u[2] - cam.r[2] * b) / d, 0, (cam.r[0] * b - cam.u[0] * a) / d];"` → `"return [1 + (a * cam.u[2] - cam.r[2] * b) / d, 0, (cam.r[0] * b - cam.u[0] * a) / d];"` | 1 | Yes; exit 1; `H7 current-view ray/floor point` |
+| dot decided per fragment | `view.mjs` | `"Math.hypot(centre[0] - pointer[0], centre[1] - pointer[2]) <= 0.75"` → `"Math.hypot(x - pointer[0], z - pointer[2]) <= 0.75"` | 1 | Yes; exit 1; `H7 whole dot centre/radius rule` |
+| shader decided per fragment | `sq.mjs` | `"distance(centre, uHover.xy) <= 0.75"` → `"distance(vW.xz, uHover.xy) <= 0.75"` | 1 | Yes; exit 1; `H7 shader must use centre distance` |
+| hover redraws not coalesced | `floor-hover.mjs` | `"if (!available() \|\| running() \|\| pending) return;"` → `"if (!available() \|\| running()) return;"` | 1 | Yes; exit 1; `H7 hover redraws are not coalesced` |
+| leave retains pointer | `floor-hover.mjs` | `"function clear() { if (pointer) { pointer = null; redraw(); } }"` → `"function clear() {}"` | 1 | Yes; exit 1; `H7 leave retains red dots` |
+| hover disconnected from renderer | `play.mjs` | `"pointer: hover.point(view)"` → `"pointer: null"` | 1 | Yes; exit 1; `H7 player does not bind` |
+
+### Checks output
+
+`node design/journey-hero/take-2/tools/checks.mjs` — exit 0:
+
+```text
+R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (744 samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720
+page labels 768x1024: 181 frames; S=59.601966; minimum text gap=16.000 px; routes clean
+G1 drags: 4105 samples at 0.0005 s, five drags including loc; order/one offset, projected occlusion and F1 lifetimes clean; max corner error=8.958e-14 px (S=103.629191); minimum cursor gap=0.000920; max offset=0.159436; shadow positions/uniforms unchanged; five retained emitted stills unchanged (H2 timing/H3 Figma checked separately).
+48aea47 snapshot SHA256 2df6ef35ad20837ad73d5c181cef1a404e4023545adeab99f8070c63697b195d; incoming 50b51b8 snapshot SHA256 1cb6842044168b12c4c4bf551e389b7adf31c2faf8b28f927a4282972ebb55ab. Rendered frames, shadows and pixel still identity UNRUN.
+H1–H7 computed: 23 draw ends, 60 spread samples; loop 83.040s, land 3.0s; 750 laptop poses; 555 resize samples; 180 floor rays, 10404 dot samples. Font ink, layout, pixels and frames UNRUN.
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5611 frames, 386385 pieces (max 183); 5 atlas pages; loop 83.040s
+ps: 7.500s, ai: 11.400s, id: 20.980s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+all clean
+```
+
+### H9/H10 — completed addendum to `796c0f1`
+
+The supplied browser review accepted the rest of round 5. This addendum changes only the measurement reset and the Figma floor row, with their checks and records. The earlier CORRECTIONS-5 implementation record above describes the incoming build; this addendum supersedes its H6 click-target reset, H3 depth slot, size evidence and current review status.
+
+**H9.** Before `measure()` reads any boxes, `page-layout.mjs` now removes both target-owned inline properties whenever it has applied a target. It does not compare their CSSOM strings. `cover()` still expands the click target after fitting; the next measurement always returns to the CSS sizing basis. H4/H5's ink/rise computation, H6's fit/centring, font refreshes and event behaviour stay as they were.
+
+`round5-addendum-checks.mjs` runs the actual `createPageLayout` function, including `measure()`, text traversal, `view()` and `cover()`, with deterministic glyph/DOM stand-ins and CSS-derived stage boxes. Each of the ten sizes gets ten repeated measurements and a resize away by +37/+31 px and back. Exact string storage, three-decimal serialisation and 1/64 px downward quantisation are exercised separately: **390 measurements**, with zero change in S, cx, cy or measured box on repeats/return (gate 0.01 px). This is a model of the failure mechanism, not browser certification. The external `checkRound5Layout(page)` now makes the same ten-repeat/away-back assertions on real layout metrics; its existing 555-step resize sweep is retained and **UNRUN locally**.
+
+With the exact old string comparison restored in memory, the 1/64 px model fails on the first 768 × 1024 repeat: **S 62.308873 → 67.856819**. It reproduces the brief's shorter value example, `306.388px` → `306.375px`. In the separately recorded 1/64 px model with the incoming row, the 820 × 1180 first/tenth S is **66.960315 → 121.071551**; the fixed S stays **66.960315**. Height-limited sizes can hide the bug in S, so the test checks cx, cy and the measured box as well.
+
+**H10.** `UI_ROW.forward = 0.4` translates every Figma floor piece by +z after its existing entry/withdrawal displacement. The slot plane translates by the same amount, as do the tablet/phone mark positions. The Laptop mark still comes from its emitted lid face. Moving only the row without its clipping plane would let the retreating lid approach the app again; translating both preserves its complete withdrawal while maintaining clearance. The laptop's dimensions, 12° lean, lower-left direction, keyboard, 0.3-unit gaps, world-x centre, -x entry, clocks and timings stay unchanged. Existing depth-band/slot assertions now check that same 0.4-unit translation; the older absolute depth band is deliberately superseded by H10's authorised forward move. No other departure from H9/H10 is intended.
+
+The geometry sweep covers **697 Figma times**, from global 69.130000 through 83.040000 minus 0.0000001 s, in integer 0.02 s steps plus that last instant. It has 191 visible-laptop poses and 150 Laptop-ring poses. The app outline conservatively includes the shell's thickness and all visible app furniture/art, excluding the cursor. Each laptop piece's clipped projected box outline is tested separately, including the deck, keyboard, lid and moving picture layers. Euclidean polygon distance includes containment and intersection. The ring uses the real label geometry's radius **8 px + half its 1.25 px stroke**; treating the dashed ring as a full circle is conservative.
+
+| Computed at 1440 × 900, fixed S=103.6 | Incoming | Fixed | Minimum occurs after fix |
+| --- | ---: | ---: | ---: |
+| Laptop/app outline gap | 0.000000 px | **15.730823 px** | 82.750000 s, during withdrawal |
+| Laptop ring outer-stroke clearance | −8.132410 px | **19.651534 px** | 79.650000 s |
+
+The frozen incoming sources in `tools/fixtures/round5-addendum-source.json` are SHA256-checked: stage `8bfd42a687f780f6e224f09a6a46c6fcb276b925745fc63c2ea2337ce7336cc8`, page layout `3ad80e6ae74572a36079a9a050f8b54159f3794adb4209d5d1e61175f8b6eed1`. Across 333 quarter-second loop samples, every emitted piece, including all non-floor Figma content, matches incoming within 1e-8 after applying only the authorised Figma floor/clip translation; playback/action/press/tool metadata also matches. Existing draw, drag, clock, label-route and fixed-anchor checks continue to pass. This establishes numeric preservation, not pixel identity.
+
+**Envelope and S before → after.** The actual six-still camera-space bounds stay exactly the same:
+
+- right: **−2.330956707 … 3.429467889 → the same**;
+- up: **−1.407385983 … 5.233459130 → the same**;
+- unpadded scene: **5.760424596 × 6.640845113 → the same**;
+- padded fit: **6.260424596 × 7.140845113 → the same**.
+
+The following is explicitly a **Node CSS/word model**, using the existing five phone stage heights and conservative 0.75-em word widths, without real font/page obstacles. “Incoming” is its first measurement with an unmodified CSS stage, before the growth bug accumulates; it is also the H9-only result before moving the row for H10. The frozen round-four source/label fitter supplies the comparison column. H9/H10 cause no change to those first-measure scales, and none shrink relative to modeled round four. The larger phone fits were already present in round 5; H6 does no desktop centring there. The known supplied browser round-four S values **54.7 at 768 × 1024** and **80.0 at 1024 × 768** include real obstacles and must not be replaced by this model's 62.308873 and 85.143984. Actual ten-size S, the 2% browser comparison and browser resize continuity remain external gates.
+
+| Viewport | Round-four model S | Incoming first S → fixed S |
+| --- | ---: | ---: |
+| 390 × 664 | 33.609467 | 33.609467 → 33.609467 |
+| 390 × 844 | 42.871487 | 44.300426 → 44.300426 |
+| 360 × 780 | 36.896455 | 36.896455 → 36.896455 |
+| 375 × 667 | 40.035446 | 40.598440 → 40.598440 |
+| 412 × 915 | 47.031013 | 49.730004 → 49.730004 |
+| 768 × 1024 | 62.308873 | 62.308873 → 62.308873 |
+| 820 × 1180 | 66.960315 | 66.960315 → 66.960315 |
+| 1024 × 768 | 85.143984 | 85.143984 → 85.143984 |
+| 1440 × 900 | 103.629191 | 103.629191 → 103.629191 |
+| 1920 × 1080 | 128.836291 | 128.836291 → 128.836291 |
+
+**Negative controls.** `node design/journey-hero/take-2/tools/round5-addendum-controls.mjs` observed all three exits below. Each exact edit matches **one** source location, and is applied only to an imported in-memory module; source bytes never change. `--audit` verifies the edit inventory. Restoring the single forward value also undoes its slot and mark translation, so these controls reproduce the incoming geometry rather than creating an unrelated fault.
+
+| Control / isolated gate | Exact edit | Observed result |
+| --- | --- | --- |
+| H9 / repeated measurement | `page-layout.mjs`: `for (const key of ['left', 'width']) stage.style.removeProperty(key);` → `for (const key of ['left', 'width']) if (stage.style[key] === target[key]) stage.style.removeProperty(key);` | Exit 1: `H9 repeated measurement 768x1024/call1/S: 62.30887283097424 != 67.8568192153103` |
+| H10 / outline | `stage.mjs`: `forward: 0.4` → `forward: 0` | Exit 1: `H10 projected gap: 0.000000 px at 79.150000s < 12 px` |
+| H10 / ring | `stage.mjs`: `forward: 0.4` → `forward: 0` | Exit 1: `H10 Laptop ring: -8.132410 px clearance at 79.650000s` |
+
+The incoming 17 round-five control edits were audited (all match one site), without rerunning their mutations. Full sample rows and model sizes are in `.scratch/corrections5-addendum/report.json`; exact control outputs/inventory are in `.scratch/corrections5-addendum/controls/`. The new checker and controls have documented commands in README and are included in the main checker. The offline preview was repacked to `.scratch/preview.html`: **374,525 bytes**, 366 KB from the packer (line endings can affect bytes).
+
+**Checks output.** `node design/journey-hero/take-2/tools/checks.mjs` — exit 0:
+
+```text
+R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (744 samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720
+page labels 768x1024: 181 frames; S=59.601966; minimum text gap=16.000 px; routes clean
+G1 drags: 4105 samples at 0.0005 s, five drags including loc; order/one offset, projected occlusion and F1 lifetimes clean; max corner error=8.958e-14 px (S=103.629191); minimum cursor gap=0.000920; max offset=0.159436; shadow positions/uniforms unchanged; five retained emitted stills unchanged (H2 timing/H3 Figma checked separately).
+48aea47 snapshot SHA256 2df6ef35ad20837ad73d5c181cef1a404e4023545adeab99f8070c63697b195d; incoming 50b51b8 snapshot SHA256 1cb6842044168b12c4c4bf551e389b7adf31c2faf8b28f927a4282972ebb55ab. Rendered frames, shadows and pixel still identity UNRUN.
+H1–H7 computed: 23 draw ends, 60 spread samples; loop 83.040s, land 3.0s; 750 laptop poses; 555 resize samples; 180 floor rays, 10404 dot samples. Font ink, layout, pixels and frames UNRUN.
+H9/H10 computed: 390 CSSOM-model measurements, ten repeats and away/back at ten sizes; 697 Figma poses at 0.02 s; laptop/app gap 15.730823 px, Laptop ring clearance 19.651534 px (S=103.6); 333 incoming-piece comparisons. Browser checks UNRUN.
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5611 frames, 386385 pieces (max 183); 5 atlas pages; loop 83.040s
+ps: 7.500s, ai: 11.400s, id: 20.980s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+all clean
+```
+
+Those UNRUN messages refer to this local checker; they do not undo the supplied browser acceptance of the rest of round 5. H9/H10's actual layout, font obstacles, frames, rendered side-by-side comparison and browser-check pass remain for the external machine. No local browser, network, installation, Git, deployment, `tools/measure.mjs`, hardware run, program termination, outside-repository read/write or protected-path modification occurred.
+
+### H11/H12 — completed second addendum after `d7e0de5`
+
+The supplied second browser addendum accepts H9/H10 and the rest of round 5. This revision changes only the two text measurements in `page-layout.mjs`, their regression tools, this record, README and the generated preview. No motion, geometry, art, timing, stylesheet, label-fitting or input code changes. No intended design departure.
+
+**H11.** Reset the existing number offsets before reading their unshifted boxes. A number whose box starts at the craft list's left edge aligns its ink to the lede; every other number removes only its own side bearing. This uses the actual column position rather than hard-coded item indices in production. The first phone column and all desktop numbers retain H4's alignment. The second phone column remains beside its own labels. Name alignment, the weight animation, H5 rise and measurement scheduling stay as before.
+
+`checkRound5Layout` now checks the name separately from the numbers. `checkCraftColumns` asserts all four number/label pairs, first-column alignment to the lede, second-column alignment to its button/column edge, the two-column phone arrangement, every number's containment in its own button, horizontal order and vertical overlap with its own label, and no pairwise number-ink overlaps. These run at the ten browser sizes and four wider references. The Node model calls the actual `createPageLayout` and these same browser assertions at those fourteen sizes plus 719/720 px, three measurements per size: **48 four-craft samples**, or **192 number placements**. Glyph bearings, label boxes and grid positions are deterministic stand-ins; no actual Outfit/pixel pass is claimed locally.
+
+**H12.** The centring input is now `max(name ink right, lede box right, craft-list box right) − hero left`. The cached `text` metrics remain glyph ink, so the external equal-spaces assertion can still compare against text ink independently of the centring input. The browser checker independently reads both boxes, asserts the mixed ink/box input, retains the existing 555-size resize sweep at 640/900/1440 tall and its scale/centre tolerances, and retains the 8 px equal-spaces gate at widths 1280 and up using glyph ink. Real raster comparison and these actual layout gates are **UNRUN here**; the Node result does not certify them.
+
+The new Node model passes all **555 resize samples** through the actual layout function and the shared browser assertions. It isolates centring from label fitting, whose existing real-fitter sweeps remain in the full checker. The model deliberately reproduces the supplied lede ink edges **357 → 396 px** between 990 and 1000 wide at 640 tall, while the boxes vary continuously. The fixed centre moves **6.800 px**; restoring only the old text-right expression moves it **24.500 px** and fails the existing 14 px resize gate. Maximum fixed centre step over the new model sweep is **8.300 px**. These are modeled values, not new browser measurements. The six-still scene envelope, device-row geometry, loop length and all retained geometry/action checks are unchanged.
+
+**Exact negative controls.** `node design/journey-hero/take-2/tools/round5-second-addendum-controls.mjs` observed both faults exiting 1 at the shared browser assertions below. Each exact search matches **one** source location (line endings normalised for the search). The replacement is imported only as an in-memory module; the runner verifies the source bytes are unchanged. `--audit` confirms both one-site matches. Exact searches, replacements and process output are also saved in `.scratch/corrections5-second-addendum/controls/controls.json`.
+
+H11 replaces this one loop in `page-layout.mjs`:
+
+```js
+    for (const number of numbers) {
+      const column = number.getBoundingClientRect().left;
+      // Only the text's first column shares the lede's ink edge; other columns keep their own start.
+      const left = Math.abs(column - craftLeft) <= 1 ? lede.left : column;
+      number.style.setProperty('--name-ink-shift', `${left - ink(number).left}px`);
+    }
+```
+
+with the incoming shift:
+
+```js
+    for (const number of numbers) number.style.setProperty('--name-ink-shift', `${lede.left - ink(number).left}px`);
+```
+
+Observed exit 1: `390x664/measure 1: H11 overlapping numbers`.
+
+H12 replaces this one line in `page-layout.mjs`:
+
+```js
+    const textRight = Math.max(text[0].right, ledeNode.getBoundingClientRect().right, crafts.getBoundingClientRect().right) - h.left;
+```
+
+with:
+
+```js
+    const textRight = Math.max(...text.map(r => r.right)) - h.left;
+```
+
+Observed exit 1: `1000x640: H6 resize step (H12 wrapping continuity); S step 0.000, centre step 24.500 px`.
+
+**Checks output.** `node design/journey-hero/take-2/tools/checks.mjs` — exit 0:
+
+```text
+R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (744 samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720
+page labels 768x1024: 181 frames; S=59.601966; minimum text gap=16.000 px; routes clean
+G1 drags: 4105 samples at 0.0005 s, five drags including loc; order/one offset, projected occlusion and F1 lifetimes clean; max corner error=8.958e-14 px (S=103.629191); minimum cursor gap=0.000920; max offset=0.159436; shadow positions/uniforms unchanged; five retained emitted stills unchanged (H2 timing/H3 Figma checked separately).
+48aea47 snapshot SHA256 2df6ef35ad20837ad73d5c181cef1a404e4023545adeab99f8070c63697b195d; incoming 50b51b8 snapshot SHA256 1cb6842044168b12c4c4bf551e389b7adf31c2faf8b28f927a4282972ebb55ab. Rendered frames, shadows and pixel still identity UNRUN.
+H1–H7 computed: 23 draw ends, 60 spread samples; loop 83.040s, land 3.0s; 750 laptop poses; 555 resize samples; 180 floor rays, 10404 dot samples. Font ink, layout, pixels and frames UNRUN.
+H9/H10 computed: 390 CSSOM-model measurements, ten repeats and away/back at ten sizes; 697 Figma poses at 0.02 s; laptop/app gap 15.730823 px, Laptop ring clearance 19.651534 px (S=103.6); 333 incoming-piece comparisons. Browser checks UNRUN.
+H11/H12 computed: 48 four-craft layout samples; 555 resize samples; 990/1000 centre step 6.800 px, maximum step 8.300 px. DOM/glyph model only; browser/pixel checks UNRUN.
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5611 frames, 386385 pieces (max 183); 5 atlas pages; loop 83.040s
+ps: 7.500s, ai: 11.400s, id: 20.980s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+all clean
+```
+
+The preview was repacked to `.scratch/preview.html`: **375,006 bytes**, 367 KB from the packer. Its module syntax and self-contained resources are checked by the full Node checker. The supplied acceptance of the other round-five work stands; no local browser, network, installation, Git command, deployment, `tools/measure.mjs`, program termination, outside-repository read/write or protected-path modification occurred. Installed skills and RTK remain outside the permitted read scope. Rendered side-by-side comparison and actual browser H11/H12 gates are reserved for the external reviewer.
+
+## CORRECTIONS-6
+
+Dan asked for "a nice in animation on everything when the page first loads". `CORRECTIONS-6.md` (E1 entrance, E2 review hold, E3 one browser-check tolerance) controls this round; everything from rounds 2–5 is kept.
+
+### E1 — the entrance
+
+`entrance.mjs` holds the timetable (`ENTRANCE`), the pure state at any time (`entranceAt`), the renderer values (`screenPlane`, `floorReach`, with JS mirrors `revealDot`/`revealPool` of the shader rule) and the page view (`createEntranceView`). Times run from the first frame that can draw (fonts and atlas ready). Wipes use `EASE.wipe`, the weight uses `EASE.enter` (the curve `name-in` used); `engine.mjs` is unchanged.
+
+| Time (s) | Part | How it is done |
+|---|---|---|
+| 0.00–0.30 | DG mark | `clip-path: inset(0 x% 0 0)` shrinking right edge. |
+| 0.24, 0.30 | Journey, Contact | Cut: clipped shut (`inset(0 100% 0 0)`) until their time, then no clip. |
+| 0.08–0.40, 0.16–0.48 | Danial, Endrawes | Each `.name-line` gets a polygon clip whose top edge rises from 3 px under its measured ink bottom (the baseline) to above its ink top; inline `font-weight` 300→800 over the same span. |
+| 0.40–0.75 | Lede | One `clip-path: path()` rectangle per rendered line (lines measured once from the lede's range rects), each wiping left to right; starts 0.06 s apart and the last ends at 0.75 whatever the line count. |
+| 0.55–0.95 | Craft list | Five hairlines (four row tops and the last row's bottom), starts 0.05 s apart, each 0.20 s. Each `li` gets a `path()` clip: the hairline strip up to the wipe's tip, plus the number's and the word's regions once the tip passes their right edges. Phones (no hairlines) use the same timing, so the numbers and words cut in at the same moments. |
+| 0.20–0.90 | Floor | New `uReach` uniform in `FRAG_FLOOR`: the pool is cut by a hard circle from `POOL`'s centre (`length(vW.xz - uFloor.xy) <= uReach`); a dot is on only if its grid centre is inside (`distance(centre, uFloor.xy) <= uReach`), so each dot is wholly on or off. Radius grows 0→4.8 (the pool's edge). |
+| 0.50–1.10 | App screen | New `uReveal` uniform in the shared `CLIP_FN`: one world plane `[0, -1, 0, y]` for the whole draw, keeping y ≤ edge, rising from 0.02 below the screen's bottom to 0.02 above its top. Colour, outline and the light's depth pass all clip with it, so the screen's shadow is revealed with it. Photoshop's empty shell and the cursor are on it. |
+| 1.10, 1.20 | Scroll for the journey, Pause | Cuts, as for the nav. |
+
+Player (`play.mjs`): the entrance starts at ready unless reduced motion or `?t=`. Its clock advances with the same 0.1 s-capped frame step as the loop, and the loop time is `max(0, entrance − 1.10)`, so the loop starts at 0 when the screen's wipe ends. At 1.4 the entrance clears its inline styles and the loop continues from 0.30. It is never restarted: resize only re-measures (inline styles off, measure, styles back on from fresh geometry), and tab return or scrolling back just resumes or continues the normal loop. Craft, stage and Pause clicks, `seek`, a reduced-motion change and `__hero.entrance(null)` call `endEntrance()` first and then act. The floor hover's point is passed as null until 0.90. No layout is read per frame: geometry is read once at start and on resize.
+
+`take-2.css`: `name-in` is switched off (the player owns the weight now). Until the first frame, the mark, nav links, name, lede and craft rows are `visibility: hidden` under `.hero.is-entering`, only inside `@media (scripting: enabled) and (prefers-reduced-motion: no-preference)`. The existing `is-entering` rule still hides the foot. Without scripts nothing is held back; with reduced motion the page shows as before.
+
+### E2 — `__hero.entrance(time)`
+
+`__hero.entrance(t)` clamps `t` to 0–1.4, stops ticking, shows the entrance at `t` (loop time `max(0, t − 1.10)`) and draws it. `__hero.entrance(null)` ends it and plays on. `__hero.entering` gives the entrance clock or null. `__hero.pieces` uses the same first-pass frame as the drawing.
+
+### E3 — browser check tolerance
+
+`checkRound5Layout` now allows 16 px for "H6 equal side spaces (H12 actual ink)" below 1440 wide and keeps 8 px at 1440 and up.
+
+### E4 — the labels leave the way they came in
+
+Added to the brief during this round. In `calloutsAt` (`stage.mjs`) each label keeps its entrance values (`growIn`, `textIn`, unchanged) and gains exit values that are the entrance played backwards, ending at the old cut `off`: `textOut = progress(off − at, 0.20, 0.30)` (the word wipes back toward the line's end over off−0.30 … off−0.20, same clip) and `growOut = progress(off − at, 0, 0.20)` (the line retracts into the mark over the last 0.20 s, same dash offset), all times × `PACE`. `grow` and `text` are the smaller of the two, so a label still coming in can never jump. All of a scene's labels share `off`, so they leave together. Each label stays listed until `off`, so the anchors and routes in `labels.mjs` do not change; the ring keeps turning and the mark stays until the cut at `off`, as before. No scene start, no length and not the loop (83.040 s) moves; `labels.mjs` is unchanged. A craft click still cuts the labels at once (it moves the clock), and stills, reduced motion and fitting (which use the stills) are unchanged — the InDesign still is after `off`, the others well before off−0.30.
+
+Existing checks updated for it: R13 in `correction-checks.mjs` now allows the line to shrink only inside the last 0.20 s before `off` (and fails if it grows there); the R13 control in `controls.mjs` follows the renamed `growIn` and is still caught.
+
+Filmed at 1440 × 900 (held with `seek`, every 0.05 s from off−0.35 to off+0.05, Premiere Pro and Figma): words wipe out toward their line's end, then the lines retract into their marks, then rings and marks cut out at `off`; values at off−0.25/−0.15/−0.10/−0.05 were 0.82/1, 0/0.97, 0/0.82, 0/0.21 (text/grow) for every label.
+
+### Departures and readings
+
+- **Name line spans.** The table's row is 0.08–0.48 with Endrawes 0.08 s later; each line therefore runs 0.32 s (Danial 0.08–0.40, Endrawes 0.16–0.48) rather than `name-in`'s 0.4 s, so the row ends at 0.48 as written.
+- **First pass of the shell.** At loop time 0 the shell is mid-change from Figma to Photoshop (Figma's tile and name, board layout). The brief says Photoshop's empty document is already on the screen and that no part of the loop is skipped, so `frameAt(t, { first: true })` (used only before the loop first wraps, and only below 0.5 s, after which the shell is identical) starts the Photoshop shell as itself: no tile flip, no name wipe, design layout. Content then wipes in at 0.5–0.8 as in every loop. Without this the filmed entrance showed the Figma tile flipping at 1.25–1.4 s.
+- **Cuts are clips.** "Cut in" is done with a fully-shut clip-path switched off, not `visibility`, so every page part animates by clip alone.
+- **Lede with many lines.** If a layout wraps the lede into more than four lines, the 0.06 s step shrinks to `0.35 / (lines + 1)` so the last line still ends at 0.75.
+- **Hidden tab mid-entrance.** The entrance clock pauses with the loop and resumes; it does not jump or replay.
+
+### Checks and negative controls
+
+`tools/entrance-checks.mjs` (run by `checks.mjs`):
+- Timetable: each part's start and end (nothing just before its start, something just after, incomplete just before its end, complete at it), weights 300/800, lede at 2, 3, 4, 5 and 7 lines, the five craft lines, cuts at 0.24/0.30/1.10/1.20, hover at 0.90, end at 1.4; the loop clock (0 until 1.10, 0.30 at 1.4); the screen plane below every piece of the first frame at 0 and 0.5, partway at 0.8, gone at 1.1, never falling; no Figma art on the first pass; the floor circle 0 until 0.2, growing below 4.8, gone from 0.9; 18,125 dot samples where five points inside each dot agree with its centre, and on-dots lie inside the pool circle; the shader source uses those two rules.
+- Player, with DOM/GL stand-ins and no `?t`: entrance clock, loop held then starting at 0 at 1.10, hover null before 0.90, reveal values passed and cleared, end at 1.4; craft click (chooses Motion and ends the entrance), stage click, Pause click (ends and pauses); E2 hold, hold after 1.1, release; reduced motion ends it.
+- E4: in each of the four labelled scenes, `text` and `grow` at off−0.30, 0.25, 0.20, 0.10 and 0.01 s (× `PACE`) against the exact `EASE.wipe` values (60 label samples); all three labels listed just before `off` and none at `off`; `LOOP` 83.04 and every scene's length unchanged; no still falls inside an exit.
+- Negative controls (in memory, one exact site each, all must fail at their gate): E4 exit removed, so labels cut as before (`grow: growIn, text: textIn`) → `E4 labels: id Flyer text at off-0.25: 1 != 0.8236…`; Endrawes moved to Danial's span in `entrance.mjs` → `E1 timetable: Endrawes before 0.16`; `endEntrance()` removed from `choose` in `play.mjs` → `E1 click: craft click leaves the entrance running`. All three caught.
+
+The player stand-in in `checks.mjs` gains the entrance exports. Control audits for rounds 4–5 still match one site each.
+
+**Checks output.** `node design/journey-hero/take-2/tools/checks.mjs` — exit 0, tail:
+
+```text
+H11/H12 computed: 48 four-craft layout samples; 555 resize samples; 990/1000 centre step 6.800 px, maximum step 8.300 px. DOM/glyph model only; browser/pixel checks UNRUN.
+E4 computed: 60 label samples at off-0.30/0.25/0.20/0.10/0.01 s in four scenes, all listed until off, none at off; LOOP 83.04 and scene lengths unchanged. E1/E2 computed: timetable of 11 parts and 5 lede line counts; screen plane at 0, 0.5, 0.8, 1.1; floor circle 18125 dot samples; 6 player runs (loop clock, hover gate, craft/stage/Pause clicks, hold, reduced motion). Frames UNRUN here.
+E1/E4 negative controls: timetable caught: E1 timetable: Endrawes before 0.16; labels-cut caught: E4 labels: id Flyer text at off-0.25: 1 != 0.8236004772467269; click caught: E1 click: craft click leaves the entrance running
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 5611 frames, 386385 pieces (max 183); 5 atlas pages; loop 83.040s
+ps: 7.500s, ai: 11.400s, id: 20.980s, pr: 15.220s, ae: 14.030s, fig: 13.910s
+all clean
+```
+
+### Browser evidence (this container, headless Chromium with SwiftShader)
+
+- Pack: `.scratch/review-out/r6-preview.html` (377 KB); no `mailto`, `href=` or `http`.
+- Filmed with `__hero.entrance(t)` every 0.05 s from 0 to 1.4 at 1440 × 900 and 390 × 844. The frame at 0 is plain ink (maximum red 21 at both sizes). A first film showed the Figma tile flipping at 1.25–1.4 s and a few pixels of round letter overshoot under the name at 0 on the phone; both were fixed (first pass shell; clip starts 3 px under the ink bottom). After the fixes nothing flashes, fades or pops early, and everything is shown by 1.4 s.
+- A real first load (no hold) at both sizes: no page or console errors; once the entrance has ended and 2 s more have passed, no entering part is clipped, hidden or weighted inline, the name is 800, `is-entering` is gone, Pause reads "Pause" and the loop clock advances.
+- The E4 exit was filmed separately (see E4 above). The entrance sheets were re-filmed from the final pack, which includes E4.
+- Browser check: `bcheck3.mjs` (the repository's `checkBrowser`, which ends with `checkRound5Layout`) on the final pack at 1440 × 900: **PASS 150 rows**, no page or console errors. It includes E3's 16 px allowance below 1440 wide.
+
+## CORRECTIONS-7
+
+Dan asked: "Do you think the mouse moves too fast at times?" `CORRECTIONS-7.md` (K1 one hand easing, K2 longer moves take longer, K3 checks) controls this round; everything from rounds 2–6 is kept. Only files in `take-2/` changed; `engine.mjs` is untouched.
+
+### K1 — one hand easing
+
+`stage.mjs` exports `HAND`, the minimum-jerk curve `x³(10 + x(6x − 15))` (top speed 1.875 × average, no overshoot), clamped to 0–1 only against rounding (the polynomial gives 1 + 2e-15 just before x = 1, which made a picture window negative). `HAND_KINDS` is drag, draw, slide, stroke, run.
+
+- Readers are explicit. `handed(s, id, t)` is `HAND(phase)` and throws for a non-hand action; `eased(s, id, t)` stays `EASE.wipe(phase)` and now throws for a hand action, so a hand action can no longer be read through the wipe by name.
+- Moved to `HAND`: the cursor's approach (`HAND(linear(t, approach, start))`) and its point during every hand action; `dragPicture` (Premiere transition/effect, Figma hero, InDesign photo/postPhoto/mailPhoto); `frameContact` (InDesign's four photo/map drags); `travel()` gained a curve argument, `HAND` for InDesign map/loc and Illustrator mapExport/locExport (Photoshop's export travel keeps the wipe); Photoshop grade (split line, dot, picture window, both slider knobs), black, white; Premiere clipA/B/C, effect (and its colour grade), music, duck, fade; After Effects ball, path (comp ball, thumbnail ball, motion-path dots), row, graph handles, staggerBall, head, marquee; Figma frame0–2, pictureBox, button, marquee, copies, link; InDesign frame0 (spread), frame1–3, blob, postBlob/mailBlob, postButton/mailButton; Illustrator board0/1, street, badge, block, streets, marquee, subway. Run counters keep reading linear phase (they count members, they carry nothing).
+- Still on `EASE.wipe`: shell changes, wipes, page flips, Photoshop open/sky/shrink, Premiere closeGap, After Effects comp, Illustrator close/closeBack, InDesign leaves, exports, playback, labels, entrance.
+- K1 alone: LOOP 83.040 unchanged; **peak cursor speed 3,073.1 px/s** (Illustrator subway stroke, whose path was walked one segment per equal share of time); `checks.mjs` all clean (saved state and log in the build's scratch).
+
+### K2 — longer moves take longer
+
+`script()`: an approach of distance d takes `min(0.5, 0.18 + 0.07 d)`; a hand action of path length d (its `path` segments, else from–to) takes at least `0.12 + 0.08 d`. With exactly that, the loop is 90.881 s (approaches +6.900, durations +0.941, as the brief expected) but the peak was still 3,073 px/s, then 1,895 px/s once the subway was fixed (below), with 14 moves over 1,500.
+
+**New LOOP 91.498 s** (91.49807…). Scenes: Photoshop 8.046, Illustrator 13.148, InDesign 23.091, Premiere 16.681, After Effects 15.082, Figma 15.449 (starts 0, 8.046, 21.194, 44.285, 60.967, 76.049). Stills (local): 7.095311, 10.835164, 20.189380, 13.631291, 12.032090, 13.149236. Peak cursor speed **1,499.7 px/s** (InDesign frame0 draw).
+
+Everything timed from actions followed (labels, exports, InDesign pickup/leaves/still, Figma taps, morphs, playback spans). One run was timed in absolute seconds: InDesign's page thumbnails appeared every 0.07 s of `pages`; they now appear each third of the run (identical at 0.21 s).
+
+### Departures and why
+
+- **Speed floor added to K2.** The brief's rule assumes about 86 px per unit; HOME draws a diagonal down-right move at up to 119 px per unit, so the rule alone left 14 moves at 1,530–1,895 px/s and K3 could not pass. Each approach and hand action also takes at least the time that keeps its projected peak (along its own route, at HAND) under 1,500 px/s at S 103.6 (`HAND_PAGE`, `handTime()`). This adds 0.617 s over the brief's 90.881 s.
+- **Paths walked by length.** `actionPoint` walked a `path` one segment per equal share of the phase, so the subway's cursor sped up on long segments (3,073 px/s). It now walks by length (`alongPath`), and the subway line is drawn to the same point, so the pen stays on the line.
+- **Loop range.** `checks.mjs` allowed 70–86 s (round 2); raised to 92 for K2's expected ~90.8 s. Dan's choice of 83.04 (K1 only) is still open.
+- **Lifted cursor tie.** With the new timing a sampled frame caught the lifted drag cursor level (within 0.0006) with a selection guide it covered (InDesign loc/photo drags). This existed before at unsampled instants (13 ties at 0.0005 s on the 83.04 s build). `liftDragStack` raises the one shared offset until the cursor clears any guide it covers; the stack only rises further from what it covers.
+- **Figma laptop entry and the phone gutters.** The H3 slide-in starts 1.6 units left with no entry clip; its first ~0.03 s passes the 16 px side gutter by up to 4.4 px at 441–454 px wide. The 83.04 s build had the same frames; the 1/30 s sample grid landed 0.027 s into the slide and missed them. The gutter check now samples the entry instant itself and bounds those first 0.03 s at 5 px instead of hiding them. Not fixed: changing H3 is outside this brief. Worth Dan's eye.
+- **Frozen snapshots.** Checks that compare with 48aea47, 50b51b8, round 4 and the round-5 incoming stage now apply round 7's edit to the frozen source in memory (`tools/hand-patch.mjs`, each edit must match exactly once; hashes are still of the frozen bytes), so they still prove nothing else moved. Instants named from the 83.04 s timetable (G1's 25.20–25.30 s window and shadow times, F1/R15 windows 1.0–11.9 s local, the 25.229 s fault) are mapped to now through the actions around them (`retimer`).
+- **R6 boundary.** A placed-image check sampled the exact release instant, which global-to-local rounding can read as still dragging; it now starts 1e-9 s after release.
+
+### K3 — checks
+
+`tools/hand-checks.mjs` (run by `checks.mjs`):
+- Speed: the cursor tip projected with HOME at S 103.6 every 1/120 s over the loop (10,979 samples), on the screen face (the press's depth step is a cut, the drag lift moves along the view); limit 1,500 px/s.
+- Together: for each of the 53 drags, draws, slides and strokes, some feature (corner, edge middle, centre) of a piece moved by the action keeps its grab offset to the cursor, or the cursor's progress along its own route, within 0.002 units at 19 phases (paths are judged segment by segment). The heals' carried piece is the brush ring. In all 1,458 approach and hand-action samples the cursor is exactly on its route at HAND.
+- Updated, derived rather than retyped: `round5-checks.mjs` H2 (loop = round-4 scripts under the same scheduler + 1.8 s, starts likewise; H1 spread growth reads HAND), `entrance-checks.mjs` E4 (loop and lengths from the pre-E4 stage under the same scheduler), `checks.mjs` R2 page rows (thirds of the run), ball halfway (HAND), README table check, loop range, drag/correction windows via `retimer`.
+
+Negative controls (in memory, one exact site each), all caught:
+- `EASE.wipe` back on the approach → `K3 speed: cursor peaks at 3025.0 px/s at 47.2750 s (pr/clipC approach) > 1500`.
+- `dragPicture` left on `EASE.wipe(phase)` → `K3 together: id/photo (drag) has no piece within 0.002 of the cursor: closest 0.46605`.
+- Photoshop grade left on `EASE.wipe(phase)` → `K3 together: ps/grade (slide) … closest 0.01817`.
+- Round 4–5 control suites rerun: round5 17/17, drag 14/14, addendum 3/3, second addendum 2/2 caught; `controls.mjs` audit: all 46 edits match one place (the full 46-run suite was not rerun).
+
+**Checks output.** `node design/journey-hero/take-2/tools/checks.mjs` — exit 0, tail:
+
+```text
+R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (744 samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720 (Figma laptop entry, first 0.03 s: 4.42 px into the gutter, bounded at 5)
+H11/H12 computed: 48 four-craft layout samples; 555 resize samples; 990/1000 centre step 6.800 px, maximum step 8.300 px. DOM/glyph model only; browser/pixel checks UNRUN.
+E4 computed: 60 label samples at off-0.30/0.25/0.20/0.10/0.01 s in four scenes, all listed until off, none at off; LOOP and scene lengths as the pre-E4 stage under the same scheduler. E1/E2 computed: timetable of 11 parts and 5 lede line counts; screen plane at 0, 0.5, 0.8, 1.1; floor circle 18125 dot samples; 6 player runs (loop clock, hover gate, craft/stage/Pause clicks, hold, reduced motion). Frames UNRUN here.
+E1/E4 negative controls: timetable caught: E1 timetable: Endrawes before 0.16; labels-cut caught: E4 labels: id Flyer text at off-0.25: 1 != 0.8236004772467269; click caught: E1 click: craft click leaves the entrance running
+K3 computed: cursor peak 1499.7 px/s at 22.6083 s (id/frame0 draw), 10979 samples at 1/120 s, S=103.6, limit 1500; 53 drags/draws/slides/strokes carry a piece within 0.002 (worst 9.93e-16, ae/path); cursor on HAND in 1458 approach/action samples.
+K3 negative controls: approach caught: K3 speed: cursor peaks at 3025.0 px/s at 47.2750 s (pr/clipC approach) > 1500; reader caught: K3 together: id/photo (drag) has no piece within 0.002 of the cursor: closest 0.46605; grade caught: K3 together: ps/grade (slide) has no piece within 0.002 of the cursor: closest 0.01817
+R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits
+checked 6117 frames, 413714 pieces (max 183); 5 atlas pages; loop 91.498s
+ps: 8.046s, ai: 13.148s, id: 23.091s, pr: 16.681s, ae: 15.082s, fig: 15.449s
+all clean
+```
+
+### Browser evidence
+
+- Film strips at 0.02 s, before (83.04 s build) and after, for the five worst moves: `.scratch/review-out/r7/{before,after}-{fig-details,pr-bin,id-spreadType,ai-board0,ps-export}.png`.
+- Pack: `.scratch/review-out/r7-preview.html` (381 KB); no `mailto`, `href` or `http`.
+- Browser check: the repository's `checkBrowser` (which ends with `checkRound5Layout`) on the final pack at 1440 × 900, headless Chromium with SwiftShader: **PASS 160 rows**, network requests 0, page/console errors 0 (18.1 min).
+
+## CORRECTIONS-8
+
+Dan asked for the live page's headline interaction on his name, and did not like the red-dot floor hover. The brief was rewritten during the round (F1/F2, the floor variants, withdrawn: "not the floor"). `CORRECTIONS-8.md` (N1 the name, F3 a plain floor, B1 a star field, B2 hold and blast, G1 no lifting frames) controls this round; rounds 2–7 are kept. Only files in `take-2/` changed; `public/` (including `holding/title.js` and `field.js`) and `engine.mjs` are untouched. LOOP is still 91.498 s.
+
+### N1 — the name reacts (`name-react.mjs`, `take-2.css`, `play.mjs`)
+
+- Numbers are title.js's, read from its source by the check: circle 0.95 em, opening within 1.2 em of the name's box with `smoothstep` and `open += (want − open) · min(1, 9 dt)`; lift 0.07 em felt within 1.3 em (vertical distance × 1.4), spring 240 / damping 12; knock 0.16 em (`vy += 0.16 × 26`), wave 55 ms per em from where it landed. Red `#F0484F`. Mouse only for hover; a tap or click knocks.
+- **Layout kept exact.** The flow text of each `.name-line` is not split. Splitting it into spans moved glyphs (inline spans: up to 0.08 px of subpixel drift; inline-block spans, which `transform` needs: the r–a kern in "Endrawes" was lost, 3.2 px). Instead each line holds an `aria-hidden` overlay (`.name-fx`, absolute, inset 0) of one span per letter, each placed at that letter's measured pen position (`Range` rect, measured on resize, scroll and `document.fonts.ready`), with the glyph drawn by `::before { content: attr(data-ch) }`, and a red copy (`.name-red`) of the same spans cut by `clip-path: circle()`. Once live, the flow text is painted with `-webkit-text-fill-color: transparent`; it still gives the layout, the ink measurement (generated content adds no text nodes) and the one accessible name. Each line's red copy takes the same circle in its own coordinates, so the copy overlays both lines exactly at every size. Per frame only `transform` and `clip-path` are written, from title.js's own rAF loop, which sleeps when settled.
+- Live only once the entrance has ended: `nameOn()` runs at start, at `startEntrance`/`endEntrance` and on a reduced-motion change, with `ready && !intro && !held && !reduced`. A click on the name is not on the stage, so the craft does not change.
+- Evidence: the name's region at 1440 × 900 (DPR 1 and 2), 1024 × 768, 1920 × 1080 and 390 × 844 (DPR 3) is pixel-identical (0 of 77,040–547,944 pixels differ) with the overlay live and with the plain text. All 544 layout numbers (`__hero.layout` name/lede/number inks, text right, gap, rise, base name top, `--name-ink-shift` on both lines, line and name boxes, `__need`) at eight sizes (1440 × 900, 1920 × 1080, 1280 × 800, 1024 × 768, 720 × 900, 719 × 900, 390 × 844, 360 × 640) are equal to `b5cce1d` after hovering, clicking and re-measuring.
+
+### F3 — the floor goes back to plain
+
+`floor-hover.mjs`, `redDot` (view.mjs), the floor shader's `uHover`/`uRed` and the player's hover binding are gone; round 5's H7 now checks that the floor shader, renderer and player have no hover path (its ray check stays), and its control puts the red dots back into the shader. The floor's colour is unchanged: it is now written premultiplied (`rgb = pool·k·(1 − dot) + dot·dotv`, `a = 1 − (1 − k)(1 − dotv)`), which over ink is exactly `mix(mix(ink, pool, k), dot, dotv)`, so the star field shows only where the floor adds nothing.
+
+### B1 — the star field (`stars.mjs`, `sq.mjs`, `entrance.mjs`, `play.mjs`)
+
+- Drawn by the existing renderer as its first pass after the clear: one `gl.POINTS` draw, no depth, premultiplied blending; the scene and the floor draw over it; the page's text is DOM above the canvas. Pointer events are untouched (the canvas already fills the hero).
+- 1,200 stars at 1440 × 900, `round(1200 · area / (1440 · 900))`, capped at 2,000. Hashed home, depth d, mass 0.6–1.6; 0.6–2.2 px across; paper mixed into ink 12 % (far) to 55 % (near); 3 % red `#F0484F` at the same mix (3.7 % of the 1,200 by the hash). Coverage anti-aliasing only; no twinkle, no fades.
+- Parallax: target `−f · 28 px · (0.12 + 0.88 d²)`, f the pointer's offset from the hero's centre as a fraction (−0.5…0.5), back to 0 when the pointer leaves the page; one shared value follows it critically damped with τ = 0.3 s, solved exactly per frame. Scroll: a star moves up `s · 0.12 · d` more than the page. Both are uniforms.
+- Stirring: the pointer's path since the last frame pushes stars within 60 px of the segment, weight `(1 − smoothstep(0, 60, r))²`; the impulse brings the star's speed along the segment up to `0.09 · w · min(speed, 1,500 px/s) / mass` (velocity matching, so it is in proportion to speed and capped). Each star coasts: shown offset `D = S·e^(−age)`, `S += v·dt`, `v *= e^(−2.3/√m · dt)`; an impulse rebases S to D and age to 0. No spring, no overshoot; offsets held under 40 px. The offsets (2 floats a star) are uploaded with `bufferSubData` only when they changed; the field sleeps when every star is home and the parallax has settled.
+- Entrance: `ENTRANCE.stars = [0.2, 0.9]` (the floor dots' span); `starReach` grows from the stage box's centre to the farthest hero corner and a star is on only if its home is inside (`distance(aHome, uRings.xy) <= uRings.z` in the shader), so each is wholly on or off. Also under `__hero.entrance(t)`. The pointer is taken from 0.90 s.
+- Off states: reduced motion, static (no parallax of either kind, no stirring, no hold); touch, scroll parallax only; Pause stops the loop, not the field (the field asks for its own coalesced redraws while busy); without JavaScript there is no canvas drawing at all. `?stars=0` turns it off for review.
+
+### B2 — hold to gather, release to blast
+
+- A mouse or pen press in the hero, except on links, buttons (crafts, Pause) and the name, starts a hold. Capture radius `80 + 260 · min(1, held/2.5)` px; a star inside it stays captured until release.
+- Captured stars move in polar coordinates round an anchor that follows the pointer (critically damped, 1/12 s): the radius goes critically damped (1/5 s), from rest, to a hashed orbit of 6–36 px × `(1 + 0.35 log2(1 + n/24))` (n captured), so it never passes the pointer; the angle turns π/2 per second.
+- Release: each captured star gets `(300 + 1700 · min(1, held/2.5)) / mass` px/s outward from the pointer; uncaptured stars within twice the radius get half that × `(1 − r/2R)²`. All coast home as in B1; offsets are held under 45 % of the hero's width.
+- The stage: a press shorter than 0.25 s that moves less than 6 px stays a click (next craft, with the small blast it gathered); a longer or moving press is a hold, and the stage's click handler asks `stars.swallowClick()` and does not change the craft. Touch and reduced motion do nothing.
+
+### G1 — nothing lifts while a picture is carried (`stage.mjs`)
+
+- Measured on `b5cce1d` (0.01 s samples): in 117 frames, non-carried pieces moved by up to 0.0717 units because of the carried stack (InDesign map 0.0516, loc 0.0516, photo 0.0717, postPhoto 0.0717, mailPhoto 0.0714; Figma copies 0.0543). Premiere's clips were not affected.
+- `carriedStack(P)`: the current action's `travel` pieces and the cursor. In `build()`, the whole frame is separated once (old rule) only to keep the stack's own placement, then everything else is separated again from its authored heights without the stack, and the stack is put back. `liftDragStack` (InDesign) runs as before; then `clearCarried` lifts the stack along the view vector (no move on the page) just enough to clear any face it would now tie with. Premiere's music drag piece now names its action (`'music'`), like the other drags.
+- Frozen comparisons (H1/H2/H10 and round 4's, which compare with older snapshots) get the same edit in memory (`g1Patch` in `tools/hand-patch.mjs`, applied after round 7's hand patch). checks.mjs's "interaction mark below a picture stack" rule now lets non-cursor marks sit under a carried stack in every app, as it already did for InDesign.
+
+### Departures and readings
+
+- **N1 letters are an overlay, not split flow text** (above): splitting changed the name's numbers; the overlay keeps every number and pixel.
+- **Stir push strength.** The brief gives the shape, not the gain; 0.09 keeps a fast flick inside 40 px (a hard cap at 0.995 of the limit) and a slow pass visible.
+- **Hard offset limits.** The 40 px and 45 %-of-width limits are clamps on the coasting displacement (direction kept), so an extreme blast star stops at the limit before drifting home. With a 2.5 s hold some stars reach the limit (644.8 px at 1440 wide).
+- **Star count cap** of 2,000 (2560 × 1440 would be 3,413), so the state stays a few thousand numbers.
+- **Hold radius uses the simulation's time** while held (frames at most 0.05 s), and the release uses the longer of that and the wall clock.
+- **G1 visual order.** The carried picture and cursor stay in front of what they pass over. InDesign's selection guides that sat above the carried picture now sit at their own height; only where they would tie with it does the stack rise.
+
+### Evidence
+
+- `node design/journey-hero/take-2/tools/checks.mjs` ends `all clean` (6117 frames, 413714 pieces, loop 91.498 s). Round 8 lines: N1 numbers equal title.js's, off during the entrance, a held entrance and reduced motion; F3 no floor hover; B1 1200 stars at 1440 × 900, follow 0.1321 of 0.5 at 0.3 s, a sweep moved 72 stars (largest 26.66 px), masses 16.78 vs 6.53 px; B2 capture 80/132/210/340/340 px, 0.3 s hold 31 stars (119.4 px), 2.5 s hold 336 stars (644.8 px), stage presses 0.1/0 and 0.24/5 next craft, longer or moving presses hold; G1 19 drags, 794 samples, 541 with a carried stack, no non-carried piece moves.
+- Negative controls (all caught): N1 live at the first frame of the entrance; B1 parallax d instead of d²; B2 a long hold changes the craft; G1 the stack back in `separateFaces()` (id/map at 25.211 s, piece 24 moves 0.00660).
+- Layout: all 544 layout numbers at eight sizes (1440 × 900 to 360 × 640) are equal to `b5cce1d`'s after hover, click and re-measure; the name region is pixel-identical live and plain at five size/DPR pairs.
+- Films and sheets in `.scratch/review-out/r8/`: `name-hover-click-1440.png`, `name-tap-390.png`, `stars-parallax-1440.png`, `stars-slow-pass-1440.png`, `stars-fast-flick-1440.png`, `stars-hold-0.3s-1440.png`, `stars-hold-2.5s-1440.png`, `stars-entrance-0.15-0.95.png`, `g1-before-{27.83,28.68,31.05,33.03}.png`, `g1-after-{…}.png`.
+- Pack: `.scratch/review-out/r8-preview.html` (411 KB; mailto 0, href 0, http 0).
+- Stage click in the browser (1440 × 900, Chromium/SwiftShader): an instant click on the stage changes the craft (t 0 → 57.92 s with the loop held); presses that last longer than 0.25 s of page time, including a scripted "80 ms" press that SwiftShader stretched to 375 ms, are holds and leave the craft alone (as B2 asks).
+- Browser check (`tools/browser-check.mjs` `checkBrowser` on the r8 pack, headless Chromium/SwiftShader, run once): PASS at all ten sizes (390 × 664 to 1920 × 1080), 160 held-frame rows, 0 network requests, 0 page or console errors, 21.3 min.
+
+## CORRECTIONS-9
+
+Dan, 20 November: "when i hold click for long enough, can the shape the stars make, resemble my logo?" `CORRECTIONS-9.md` (L1) controls this round; rounds 2–8 are kept, B2's capture radius, pull, blast impulse, weak push, offset caps and click rule included. Only files in `take-2/` changed (`stars.mjs`, `sq.mjs`, `play.mjs`, `tools/round8-checks.mjs`, `tools/round9-checks.mjs`, `tools/checks.mjs`, this file and README). `public/` is read only. LOOP is still 91.498 s; the layout, the loop and the scene are untouched.
+
+### L1 — a long hold draws the DG mark in stars (`stars.mjs`, `sq.mjs`, `play.mjs`)
+
+- **The shape is read from the page.** At measure time the controller reads the hero's `[data-mark]` paths (`d` and `fill`, `readMark`) and samples them once (cached by their text); the field is then made with the mark placed for that hero size. No path data is copied into a module.
+- **Sampler** (`sampleMark(paths, count)`, pure; Node runs it on the `d` strings in `public/journey/index.html`). `flattenPath` flattens M/L/C/Z (24 segments per cubic) into rings; a jittered grid of about 24,000 cells over the mark's box is tested with the nonzero rule (SVG's default), the topmost path that covers a cell owns it, and cells closer than 2 units to their own path's edge are dropped. The cells are put in farthest-point order from the cell nearest the box's centre, so any first N cover the whole mark evenly. Each point keeps its path and shape: paper `#F7F6F3` paths are G, any other fill (the red path) is D. 600 points, 45–100 ms once per page (row bands keep the fill test to the edges near each row).
+- **Placement** (`placeMark`, `markCentre`): 20 % of the hero's height (180 px at 1440 × 900; never wider than the hero less 32 px), the mark's own proportions, upright and not mirrored (SVG y down, like the page), centred on the mark's box. Its centre is the hold's anchor (critically damped, 1/12 s, as B2), clamped so the whole mark stays 16 px inside the hero.
+- **When.** Before 1.4 s held nothing changes (the check runs the same hold with and without the mark: identical offsets every frame). At 1.4 s the cluster stops turning; the captured stars take the first points of the order, paired by angle round the mark's centre (stars and points each sorted by angle, paired in order). A star captured later takes the next free points the same way. When points run out (600; a 2.5 s hold captures about 336), the stars nearest the centre take the last ones and the rest turn as a ring (π/2 per second, radius critically damped from rest with B2's 0.2 s to the mark's farthest point + 8–22 px, hashed).
+- **Formation.** Each assigned star keeps an offset e from its point, relative to the mark's centre, and e goes to 0 critically damped from rest. From rest both axes scale by the same factor (1 + t/τ)e^(−t/τ), so the star moves straight at its point and its distance never grows; the mark follows the pointer through the centre.
+- **Colour and size, hard cuts.** Each star has a code in a `Float32Array` uploaded with the offsets: 0 behind (own colour), 1 captured or still out (own colour, in front), 2 G and 3 D. When e falls within 1 px the code cuts to 2 or 3 in one frame: paper `#F7F6F3` or red `#F0484F` at full strength, `max(own size, 2.6 px)` across. It stays through the blast and cuts back to 0 (own colour and size, behind) in the frame the star comes to rest at home. No fades or in-between colours; the points keep round-edge coverage as before.
+- **In front of the scene.** The renderer's star pass takes `uPass`: pass 0 (before the scene) draws only code-0 stars, pass 1 (after the scene and the floor, no depth) draws the rest and runs only while any star has a non-zero code. One draw call when settled, two at most. The page's text stays above the canvas.
+- **Release.** As B2: captured stars get `(300 + 1700 · min(1, held/2.5)) / mass` px/s outward from the pointer, the rest the weak push; a release before 1.4 s has no mark, a release mid-formation blasts what is there.
+- `__hero.stars` adds `flags` and `mark` (`points`, `height`, `formed`, `assigned`, `arrived`, `ring`, `front`, `centre`).
+
+### Departures and readings
+
+- **Formation time constant 0.12 s, not B2's 0.2 s.** The brief asks for 0.2 s and also for the stars given points at 1.4 s to be within 1 px by 2.4 s. From rest, the critically damped distance after 1 s is e0 · (1 + 1/τ)e^(−1/τ): 4.0 % of e0 at 0.2 s, so a star starting more than 25 px from its point (most of them: 50–250 px, up to about 350 px when the mark is clamped at a corner) is still several px away at 2.4 s. 0.12 s leaves 0.23 % (under 1 px from 440 px). The shape of the motion is the one the brief asks for (critically damped, from rest, straight, never growing).
+- **"Formed by about 2.4 s"** holds for the stars given points at 1.4 s (all within 1 px by 2.4 s in every case checked). Captures go on until the radius stops growing at 2.5 s, and those stars arrive about 0.8–1 s after their capture, so a 2.5 s hold shows about half its stars in the mark colour (165 of 336 in the model at 700, 450) and the mark fills in to about 3.3 s if held. A release at 2.5 s blasts the mark with the late stars still travelling in their own colour.
+- **No overshoot after a kick (also fixes a round 8 case).** In B1's coast (D = S·e^(−age)), an impulse with a part toward home can carry a star past home and out the other side. Round 8's check passed at 2.5 s, but 3 s holds already had 3–6 such stars (up to 2.5 px of regrowth), and blasting a formed mark gave 6–24 (up to 15 px). Now, once a star's shown offset starts to shrink after a kick, it may not grow again (scaled back to the last length) nor cross the line through home perpendicular to where it started falling (projected back onto it). The check finds no such star at 1.0–3.0 s holds at three places, with and without the mark. B1's and B2's computed numbers in round 8's check are unchanged.
+- **Mark height 180 px, star size 2.6 px** (brief: 180 and 2.2 px, with 150–200 and 2–3 allowed). A first film at 2.4 px read as DG on ink at DPR 2 but looked thin over the big screen's grey panel and map; 2.6 px was chosen to hold better there without the dots merging (spacing about 10 px at 280 stars). 2.2 px was not filmed. 180 px kept: at 280–340 stars it reads as DG in the DPR 2 crops, and other heights were not filmed.
+- **Points 2 units inside each edge**, so the fill test does not depend on how finely the curves are flattened. **A resize mid-hold ends the hold** (a new field is made; round 8 would have thrown on the old cluster).
+- **Scroll.** A captured star still takes the field's scroll parallax (`0.12 · d` of the scrolled distance), so if the page scrolls during a hold the mark loosens slightly; at the top of the page there is none.
+- Round 8's renderer check now names the pass rule and the second, conditional draw instead of "one draw call".
+
+### Evidence
+
+- `node design/journey-hero/take-2/tools/checks.mjs` ends `all clean` (6117 frames, 413714 pieces, loop 91.498 s); round 8's lines are unchanged. Round 9 (`tools/round9-checks.mjs`, Node, pure model, mark read from `public/journey/index.html`):
+  - Sampler: 600 points, each inside its own path by the check's own fill test (64 segments per cubic); areas G 257,887 and D 306,813 units² (D 54.3 %); largest empty gap (diameter of the largest empty circle centred in the mark, on a 3-unit test grid) over `sqrt(area/N)`: 1.986, 1.808, 1.896, 1.836 for N 100, 200, 300, 600 (limit 2.2); D share 54.0, 54.0, 53.7, 54.2 %; 180 px tall at 1440 × 900, upright.
+  - Timing: 83 frames before 1.4 s identical to round 8's cluster; first points at 1.4 s.
+  - Formation: centre, a pointer moving during formation and all four corners: every star given a point at 1.4 s (144, 140, 36, 33, 34, 36) within 1 px by 2.4 s; distances never grow; centred on the clamped anchor; inside the hero 16 px.
+  - Colour: G 80 and D 85 cuts, each on arriving within 1 px; 165 cuts back, each at home; nothing else.
+  - Overflow (40 points): 296 of 336 stars turn in a ring outside the mark.
+  - Release at 2.5 s: 336 stars blasted at B2's 2000/mass px/s, largest 644.8 px, all home monotonically.
+  - Clicks: 0.1 and 0.24 s presses change the craft and form no mark; 0.3, 1.3 and 2.5 s presses keep the craft; only 2.5 s forms the mark.
+  - Negative controls, all caught: formation off (`L1 formation: no star given a point at 1.4 s`), D and G colours swapped (`L1 colour: a D star shows #F7F6F3`), one point moved outside (`L1 sampler: point 7 (-40.0, 21.5) is outside its path 2`).
+- Browser (packed `.scratch/review-out/r9/r9-preview.html`, Chromium/SwiftShader, 1440 × 900, loop held at t = 20 s, Playwright's fake clock, frames chosen by the hold's own time): `hold-3.0s-empty-1440.png` (420, 760) and `hold-3.0s-screen-1440.png` (1040, 380), frames at 0.5–3.0 s held and +0.05, 0.2, 0.5, 1.5 s after release (the hold ran to 3.0 s so the 3.0 s frame is held; release after it); `hold-0.3s-screen-1440.png` (no mark, no craft change); `mark-{empty,screen}-{2.5,3.0}s-dpr2.png`, the formed mark cropped at DPR 2. In the browser 152/173 stars had points at 1.5 s, 161/277 (empty) and 183/334 (screen) had arrived at 2.5 s, 221/277 and 252/334 at 3.0 s. Captured stars draw over the screen. 0 page or console errors.
+- A real `mouse.click` on the stage changes the craft (Graphic design → Video) and forms no mark. A scripted 100 ms press under the fake clock did not change the craft: the page clock jumped during the press, so the controller measured it as a hold (as round 8 saw with SwiftShader).
+- Layout: `.scratch/review-out/r9/layout.mjs` compares 127 numbers (`__hero.layout`, `__need`, hero, name, name lines, stage, crafts, mark, canvas, pause and lede boxes, `--name-ink-shift`, canvas size) between this pack and `152ee78`'s pack (made from `git archive 152ee78` in a scratch folder): 0 differ at 1440 × 900 and 0 at 390 × 844 (DPR 3, touch). `tools/browser-check.mjs` was not run (the brief asks not to).
+
+## CORRECTIONS-10
+
+Dan, 21 November: "the stars when they explode from the DG logo their color pops back to their original after a few seconds, can it fade back instead?" and "can they also fade in while i collect them?" `CORRECTIONS-10.md` (R1, R2) controls this round. It replaces round 9's hard cuts in the stars' look: the cut to the mark colour on arrival, and the cut back to the star's own colour, size and layer at home. Rounds 2–9 are kept otherwise: the hold, the capture, the formation's paths and timing, the blast's impulses, the caps, the coast home and its no-overshoot guard. Only files in `take-2/` changed (`stars.mjs`, `sq.mjs`, `play.mjs`, `tools/round8-checks.mjs`, `tools/round9-checks.mjs`, the new `tools/round10-checks.mjs`, `tools/checks.mjs`, this file and README). `public/` is read only. LOOP is still 91.498 s, and the layout, the loop and the scene are untouched.
+
+### R1, R2: two copies of each star that is out (`stars.mjs`, `sq.mjs`, `play.mjs`)
+
+- **Two passes.** The pass behind the scene (`uPass` 0) now draws every star in its own colour and size at its current position, stars that are out included. The pass in front (`uPass` 1, after the scene and the floor) draws each star that is out (colour code > 0) again over it. That front copy is drawn in the star's own look mixed toward its mark look by `aMix`, at opacity `aWeight`. Over ink, where the two copies overlap, the star's colour and size ease between the two looks. Over the big screen, which hides the copy behind, the star fades. Still one POINTS draw when no star is out and two at most. Three `Float32Array`s (codes, opacity, mix) are uploaded with the offsets, only while something moves. There are still no layout reads per frame, and the field still sleeps when settled.
+- **R2 fade-in.** A captured star's front copy has opacity 0 in the frame of its capture and rises by dt/0.4 s, reaching exactly 1 at 0.4 s. It never falls. A star captured while still out from an earlier release starts from the opacity it had.
+- **R2 mark weight m.** When a star is given a point, its code becomes that point's colour (2 G paper, 3 D `#F0484F`) and m = 0. After that, m = 1 − max(0, d − 1 px) / (d₀ − 1 px), where d is the distance to the point and d₀ that distance when the point was given. The front copy's colour is `mix(own, mark colour, m)` and its size `mix(own, max(own, 2.6 px), m)`. m never falls (d never grows) and rises at most 5.4 a second (0.09 a 60 Hz frame). Ring stars and stars without a point keep m = 0 and their own look. `c.arrived` (within 1 px) is unchanged, so `__hero.stars.mark.arrived` counts as before.
+- **R1 return weight w.** At the release, every star in front gets w = 1 (a star still out from an earlier release keeps its w). w stays 1 until round 9's guard sees the offset fall. After that, w = offset / (largest offset since the release), never growing, and falling at most 5.4 a second. The front copy is drawn at fade-in × w. A star keeps the m it had at the release all the way home. At home its code goes to 0 and the front copy leaves the front pass at w ≤ 0.02, so nothing pops.
+- `__hero.stars` adds `weights` (w), `alpha` (the front opacity) and `mixes` (m).
+
+### Departures and readings
+
+- **"1 px" in m.** The brief's m = 1 − d/d₀ would reach only 1 − 1/d₀ on arrival and then need a snap to 1, which is a jump of up to 0.1 or more for stars given a point within 10 px. Measuring d past the 1 px of arrival makes m exactly 1 on arrival and continuous.
+- **The 0.09-a-frame cap on both weights.** The pure ratios can jump. For w: a star blasted with a part toward home can lose most of its offset in a few frames, and the largest fall seen was 0.90 in one frame. For m: a star given a point within about 2 px of it arrives at once. Each weight is held back to 5.4 per second, which keeps the 0.1-a-frame rule. In the Node runs, 5,433 of the return frames were held back (w then sits a little above the ratio and always reaches ≤ 0.02 by home: the largest seen was 0.0021). For m, 4 of 787 stars reached 1 a few frames after arriving rather than on it (each given its point within 2.5 px).
+- **"Until the offset starts to shrink"** is read as round 9's guard reads it (`falling`): a dip in the kick's first frame, before the guard runs, does not count. Some stars dip in that first frame and then fly out, and counting the dip would fade them early. The ratio's largest offset still counts from the release.
+- **The fade-in continues after an early release.** A star released less than 0.4 s after its capture goes on fading in while w falls (it is drawn at fade-in × w). R1's w itself is 1 at the release, as the brief asks.
+- **Recapture.** A star captured again while still out from an earlier release keeps its opacity, but its mix restarts at 0 (its own look) until it is given a new point. A star recaptured right after a release could therefore change colour at once. This was not filmed.
+- **Checks rewritten.** Round 9's colour check now says that a code is its own point's colour from when the point is given, that m reaches 1 only once the star is within 1 px, and that the front copy leaves only at home. Round 8's renderer check names the new pass rule (`!front || (aFlag > 0.5 && aWeight > 0.0)`) in place of round 9's. Their other lines are unchanged.
+
+### Evidence
+
+- `node design/journey-hero/take-2/tools/checks.mjs` ends `all clean` (6117 frames, 413714 pieces, loop 91.498 s). Round 10 (`tools/round10-checks.mjs`):
+  - R2 gather: 4 holds to 3.0–3.5 s (at 700,450, 200,200 and 1300,800, plus one with 40 points), 1,083 captures. Each front copy is 0 at capture, never falls, and is 1 by 0.4 s. 787 stars were given points: m is 0 then, never falls, and its largest rise in a frame is 0.090. All 787 arrived, and m was exactly 1 on arrival except for the 4 above. 296 ring stars keep m 0. Every captured star is drawn at its fade-in.
+  - R1 weight: 15 holds (0.3–3.0 s at 3 places), 2,268 stars released. Each is 1 during the hold and at the release, 1 until its offset falls, and never grows. All come home at w ≤ 0.0021, and the largest fall in a frame is 0.090. Each star's m is unchanged from the release to home.
+  - R1 draw: the real `createRenderer` runs under a WebGL call recorder. A settled field is 1 POINTS draw. A hold is 2 (behind, then in front), with the captured stars' opacity and m uploaded. Each of 610 returning frames is 2 draws, with the codes and fade-in × w uploaded for each out star (51,660 star-frames partway). The field is back to 1 draw once home.
+  - Negative controls, both caught. Round 9's cut on arrival put back: `R2 mark: star 532's m rose by 1.000 in one frame`. w held at 1 until home (the old pop): `R1 weight: near 0 at home: star 1163 came home at weight 1.000`.
+- Browser (packed `.scratch/review-out/r10/r10-preview.html`, Chromium/SwiftShader, 1440 × 900, loop held at t = 20 s, Playwright's fake clock, hold frames chosen by the hold's own time; script `.scratch/review-out/r10/film-r10.mjs`):
+  - `release-3.0s-empty-1440.png` (420, 760) and `release-3.0s-screen-1440.png` (1040, 380) show the release of a 3.0 s hold, then frames every 0.25 s for 4 s. The mean front opacity of the out stars goes from 0.83 at +0.25 s to 0.014 at +4 s (empty) and from 0.75 to 0.012 (screen). By +3.5 s no out star is between 0.05 and 0.95. Most stars are still coasting in at +4 s, nearly transparent: this is round 9's long coast home, and its timing is unchanged.
+  - `gather-3.0s-screen-1440.png` shows a 3.0 s hold over the screen, every 0.2 s from the press. 25–61 front copies are fading in at each frame. 176 stars are partway to their mark colour at 1.6 s and 192 at 1.8 s, and 254 of 334 are in full mark colour at 3.0 s.
+  - The DPR 2 crops. `gather-screen-1.8s-dpr2.png` (196 stars partway in colour) and `gather-empty-1.8s-dpr2.png` (179) are centred on the mark. `release-{screen,empty}-+0.75s-dpr2.png` and `+1.5s` are 720 × 480 CSS px round the release point, and show stars partway home in between colours (278 and 252 out stars partway in opacity at +0.75 s).
+  - 0 page or console errors. `tools/browser-check.mjs` was not run (the brief asks not to).
+
+## CORRECTIONS-11
+
+Dan, 21 November, 1:38 AM ET: "when it moves from one category to the other can we do a transition animation on the left table?" `CORRECTIONS-11.md` (C1) controls this round: when the craft changes, a red hairline wipes across the new row, carrying its colour change, and the old row clears the same way. Rounds 2–10 are kept. Only files in `take-2/` changed: the new `craft-wipe.mjs` and `tools/round11-checks.mjs`; `play.mjs`, `take-2.css`, `tools/checks.mjs`, `tools/entrance-checks.mjs` and `tools/round8-checks.mjs` (their player stand-ins now supply `createCraftWipe`), this file and README. `public/` is read only. LOOP is still 91.498 s; the loop, the scene, the stars, the name and the entrance's timing are untouched.
+
+### C1: the craft list's wipe (`craft-wipe.mjs`, `take-2.css`, `play.mjs`)
+
+- **One span per row.** Each row's state is one span `[lo, hi]`, in fractions of the row's width, that holds both its red rule and its "on" colours: `[0, 1]` is the current row at rest, `[0, 0]` a row at rest off. Drawing is `[0, front]`, clearing `[front, 1]`. Because the rule and the text share the span, the colour change is the same hard edge as the rule's end.
+- **Timetable** (`CRAFT_WIPE`): the old row clears over 0.35 s from the change with `EASE.wipe` (imported from `public/journey/hero/engine.mjs`, as `entrance.mjs` does); the new row draws from +0.1 s to +0.5 s with `EASE.wipe`. Within 1e-9 of its end a wipe is over, so the list is exactly at rest at +0.5 s.
+- **Drawn with custom properties only.** `li::before` is the rule: absolutely placed 1 px tall at `top: -1px`, exactly over the `border-top` hairline (at `top: 0`, the cell's top edge, in the phone grid, which has no hairlines), cut by `clip-path: inset(0 calc(100% - var(--wb) * 100%) 0 calc(var(--wa) * 100%))`. The word is painted by a hard-stop `linear-gradient` (`--off`, then paper from `--xa` to `--xb`, then `--off`) under `background-clip: text` with a transparent text fill, so the front is a hard edge through the letters. `--xa/--xb` are the span in the word's own px (`lo × row width − word left`). The number is muted or red by `.is-lit` on the row, which is set when the front has passed the number's box right edge (the same edge the entrance cuts it in at). The `li` gains `position: relative` (no offsets). No padding, border, font or text node changes: the overlay is generated content and the word keeps its own text, so `page-layout.mjs`'s ink measures are unchanged.
+- **Hover and focus.** `--off` is muted, or paper under `:hover` (`@media (hover: hover)`), so a hovered row still lights as today; the focus ring and `aria-current` (still set by `play.mjs` each frame) are untouched. The `.n` colour rules are written above journey.css's `.hero-crafts button[aria-current] .n` (0,3,1) so the number follows the wipe, not `aria-current`.
+- **What triggers it.** `play.mjs`'s `draw()` hands the scene's craft to `craftWipe.follow(craft, { cut: !!intro })`. `followCraft()` sets the list at once on the first frame, during the entrance and with reduced motion, and otherwise any new craft is a change: the loop moving on (44.285, 60.967, 76.049 s and 3 to 0 at the wrap), a craft click (`choose()`), a stage click, and also `__hero.seek` and a click during the entrance (which ends it, then changes). It always runs from the model's own current craft (`const from = current;`), so 01 to 03 clears 01, draws 03 and leaves 02 alone.
+- **A change during a change.** A row still clearing finishes clearing on its schedule. The row that was drawing clears from where it is: its span becomes `[max(lo, front), hi]` with the clear's front sweeping on the full-width 0.35 s timetable, so it is empty as soon as the front reaches where the draw stopped. The newest row draws from the start (if it was itself still clearing, it cuts empty and draws from +0.1 s). At most one row is ever `[0, 1]`.
+- **Its clock.** `performance.now()`, with its own `requestAnimationFrame` loop that runs only while a wipe is busy (like `name-react.mjs`), so it finishes while the loop is paused and with the stage held. `__hero.crafts(p)` holds the latest change at progress p (0–1, time = change + p × 0.5 s; a change made while held shows at the same p); `__hero.crafts(null)` lets it run on from there. `__hero.craftWipe` reads `{ current, changes, held, busy, spans, lit }`.
+- **First load.** During the entrance the list is set, not changed, so the current row's rule sits at rest under the entrance's own clip on the `li` (`rect(0, -1, tip, 1)`), which draws it with its hairline in the same wipe at the same time. The loop's start after the entrance is the same craft, so no change. Reduced motion: every change cuts to the rest state. Without scripts the list has no `.is-wiped` class and no current row, as today.
+
+### Departures and readings
+
+- **"The number cuts as the front passes it"** is read as the front passing the right edge of the number's 1.6 em box, as the entrance does (`numberRight`). In the 1440 × 900 row (380 px) that is at front 0.088: the old number cuts at +0.070 s and the new one at +0.175 s.
+- **"Finishes clearing or cuts clear"**: finishes clearing was chosen.
+- **The text's colour change uses a hard-stop `background-clip: text` fill** rather than a second clipped copy of the text, so no new text nodes reach the list's ink measurement. The brief's "clipped overlay" is used for the rule.
+- **With a real mouse click** the pointer is over the new row, so its off colour is the hover paper and only the rule and the number show the draw on that row (filmed in `paused-01-03.png`). The other films click by `element.click()` with the pointer away, to show the text's front.
+
+### Evidence
+
+- `node design/journey-hero/take-2/tools/checks.mjs` ends `all clean` (6117 frames, 413714 pieces, loop 91.498 s). Round 11 (`tools/round11-checks.mjs`, on the pure model):
+  - One change 0 to 1, sampled 141 times at 0.005 s: row 01 is `[wipe(t/0.35), 1]`, row 02 `[0, 0]` to +0.1 s then `[0, wipe((t − 0.1)/0.4)]`, rows 03 and 04 untouched, fronts only move right, rule and word stops are one front, and the spans are exactly the rest state at +0.5 s (busy at 0.4999 s, not at 0.5 s).
+  - The numbers cut once each with the front: off at +0.070 s, on at +0.175 s.
+  - A second change at 0.2 s: 01 finishes clearing on its own schedule, 02 clears from `[0, wipe(0.25)]`, 03 draws from +0.3 s, and only 03 is at rest at 0.7 s. Back to a row still clearing (0 to 1 to 0 at 0.15 s) never shows two rows current.
+  - A click 01 to 03 through the player's own path (`sceneAt`) leaves 02 and 04 at `[0, 0]` throughout.
+  - Reduced motion cuts at once, also when it switches on mid-change.
+  - The entrance (60 Hz, `cut`) makes no change and leaves 01 at rest; then one loop pass and the wrap make exactly four changes: 1>2 at 44.300, 2>3 at 60.983, 3>4 at 76.050 and 4>1 at 0.002 s (first 60 Hz frame after each boundary).
+  - Negative control: `const from = current;` replaced by the loop's previous scene's craft (`(to + count − 1) % count`): caught, `C1 click 01 to 03: 01 does not clear or 03 does not draw` (01 stays lit and 02, already off, is "cleared").
+  - The real player under the entrance check's stand-ins, with the pure model behind `createCraftWipe`: follows through and after the entrance, with no change at the loop's start. Ad hoc (not kept as controls): `cut: false` during the entrance is caught (`C1 player: the craft list is not followed through and after the entrance`), and following 04 during the entrance is caught (`made a craft change (1)`).
+- Browser (packed `.scratch/review-out/r11/r11-preview.html`, Chromium/SwiftShader, Playwright's clock installed and paused so rAF, `performance.now` and the loop step together; script `.scratch/review-out/r11/film-r11.mjs`, report `film-report.json`; each frame's spans and the number's computed colour are recorded, and the colour matched `lit` in every frame; 0 page or console errors). Crops of the list at device pixel ratio 2, every 0.05 s, with each frame also saved alone in the folder of the same name:
+  - `loop-01-02.png`: 1440 × 900, the loop playing from 44.1 s, the change seen at loop t 44.292 s.
+  - `click-02-04.png`: 1440 × 900, a click from 02 to 04 while playing.
+  - `phone-01-04.png`: 390 × 844, the 2 × 2 grid, 01 to 04; the rule runs along the top edge of each cell.
+  - `paused-01-03.png`: a real mouse click on 03 while paused; the loop stays at 72.999 s while the list finishes.
+  - `held-01-02.png`: `__hero.crafts(p)` at p = 0, 0.1 … 1 and released; `entrance.png`: the entrance held at 0.55–1.4 s, the rule drawing with the hairline; `reduced.png`: reduced motion cuts in the same frame.
+- Layout (`.scratch/review-out/r11/layout.mjs`, round 9's script with the craft rows, numbers, words, list and the numbers' `--name-ink-shift` added): this tree's pack against a pack built from `git archive d9774ea`, at 1440 × 900 and 390 × 844: 183 numbers each (`__hero.layout` with the H12 number inks, `__need`, the rects, `--name-ink-shift`, the canvas size), 0 differ, 0 errors.
+- `tools/browser-check.mjs` was not run (the brief asks not to).
+
+## CORRECTIONS-12: S1 and L2
+
+Dan, 21 November, 2:35–2:37 AM ET: "can we make it so the treshold of stars collected is higher before it turns into the logo?" and "can we do something more creative than the line for the table?" This section covers only S1 and L2 of `CORRECTIONS-12.md`; D1, I1 and X1 were built separately and are recorded on their own. Rounds 2–11 are kept except where S1 and L2 change them (L2 replaces round 11's C1). Files changed: `stars.mjs`, `craft-wipe.mjs` (rewritten; file name and exports kept so the player and the stand-ins in `checks.mjs`, `entrance-checks.mjs` and `round8-checks.mjs` keep their seams), `take-2.css`, `play.mjs`, `tools/round9-checks.mjs`, `tools/checks.mjs`, the new `tools/round12-stars-list-checks.mjs`, this file and README; `tools/round11-checks.mjs` is removed (its wipe model is gone; its kept rules moved into the round 12 checks). `stage.mjs`, `art.mjs`, `labels.mjs`, `view.mjs` and `public/` are untouched. LOOP is still 91.498 s.
+
+### S1: the logo forms once 300 stars are gathered (`stars.mjs`)
+
+- **The rule.** `STARS.mark.threshold = 300` replaces `STARS.mark.at = 1.4`. In `gather()`, the formation starts (`hold.formedAt`) in the frame the cluster reaches 300 captured; from then on it is round 9's formation unchanged (later captures take the next free points, overflow turns in the ring, round 10's colours and fades). With a still pointer at the middle of a 1440 × 900 hero (720, 450) it starts at 2.400 s held (301 caught, radius 329.6 px); at (700, 450) 2.383 s. A uniform field holds 300 stars inside 321 px, which the radius reaches at 2.32 s; this field's hash has a few fewer stars there, hence 2.38–2.40 s, "about 2.3 s".
+- **Holds near an edge.** `holdRadius(held, extra, diagonal) = min(diagonal, captureRadius(held) + extra)`; while a mark exists and the formation has not started, `extra = max(0, held − 2.5) × 104` (`growthRate()` = 260 / 2.5). Once formed, `extra` is frozen, so the radius stops. In the four corners the formation starts at 5.33–5.38 s held with radii of 635–640 px (a quarter circle). A hero with fewer than 300 stars (600 × 400 has 222) grows to its diagonal (721.1 px, at 6.167 s) and forms with what it has. `captureRadius()` itself is unchanged (round 8's 80–340 px), and so is the blast: its impulse and its weak-push reach still use `captureRadius(held)` with the 2.5 s cap. Without a mark (`createField(W, H)` with no paths) there is no formation and no extra growth, as round 8.
+- **Reading.** "Once the formation starts, the radius stops growing" is read as stopping the extra growth past 2.5 s. A middle hold forms before 2.5 s and its radius goes on along round 8's curve to 340 px at 2.5 s, as before; stopping it at 2.4 s instead would have changed the middle's gathering, which the brief keeps.
+- **Exposed.** `__hero.stars.radius` (the hold's current radius, null when not holding) and `__hero.stars.mark.captured`.
+- **Round 9's checks follow the new start.** `tools/round9-checks.mjs` now checks "no point before the formation starts, identical to round 8 until then, first points in the starting frame", and "every star given a point at the start is within 1 px 1 s later" (1.25 s for the corner holds, whose stars start up to about 640 px out instead of 340: the formation's τ is unchanged). The colour and release holds run to 3.5 s instead of 2.5 s (the start moved from 1.4 to about 2.4 s), and the stage presses are 0.1, 0.24, 0.3, 1.3, 2.0 (no mark) and 3.0 s (mark, 320 stars). Its "formation off" control now edits `if (mark && hold.formedAt !== null) {`.
+
+### L2: the selected row (`craft-wipe.mjs`, `take-2.css`, `play.mjs`)
+
+- **At rest.** The list's `::before` is a 1 px `var(--red-bright)` (`#F0484F`) border box from `--sl/--st` to `--sr/--sb`, each a line's own pixel position in px from the list's top left. Desktop: the top line is the row's own top hairline, the bottom line the next row's top hairline (the last row's own bottom hairline), the sides at the row's left edge and right edge − 1. Phones (no hairlines): just inside the current cell. `::after` is the top left handle, 5 × 5 px solid red, at (`--sl` − 2, `--st` − 2), so it is centred on the corner pixel; its three `box-shadow`s at (`--sr` − `--sl`, 0), (0, `--sb` − `--st`) and both are the other three. Square corners, no fades. The list gets `position: relative`; both pseudo-elements are absolute, so nothing moves. Measured at 1440 × 900 the rows are 380 × 34.594 px (the last 35.594) and the rectangle for 01 is l 0, r 379, t 0, b 34.594; on the phone grid the cells are 171 × 44.391 px.
+- **Colours.** `.is-lit` on the row: text paper, number red; otherwise the button inherits muted (paper under hover, as before). These rules sit above journey.css's `aria-current` colours (0,2,1 and 0,3,1), so the colours follow the selection's cuts while `aria-current` still moves at once. Round 11's `li::before` rule, `--off`, `--wa/--wb/--xa/--xb` and the `background-clip: text` fill are removed.
+- **A change.** The model keeps four edges (l, r, t, b). On a change at time T, each edge goes from where it is at T to the new row's value: an edge moving outward (the max edges growing, the min edges shrinking: the side the selection moves toward) leads over T to T + 0.3 s; an edge moving inward trails over T + 0.1 to T + 0.45 s; both `EASE.wipe`, exactly on target within 1e-9 of the end (`CRAFT_SELECT`). Desktop 01 to 02: the bottom edge leads, the top trails. Phones move both axes at once by the same rule (01 to 04: right and bottom lead, left and top trail; 02 to 03: left and bottom lead). A change during a change is the same rule applied from where each edge is; an edge that does not move stays. An outward edge never crosses an inward one, so the rectangle never turns inside out (checked).
+- **The cuts.** The new row lights when the selection covers it, which is when its leading edge reaches the row's far side (+0.3 s). Any row that was lit stays lit while the selection overlaps it and cuts back when it no longer does, which is when the trailing edge leaves it (01 to 02: +0.45 s, the trailing top edge reaching 01's bottom hairline; 04 to 01: +0.205 s, the bottom edge passing 04's top hairline; phone cells about +0.315 s). Rows passed over are never lit, and a row that was the target of an interrupted change but never covered stays off. Cover and overlap are exact (1e-6 px), since edges land exactly on their targets and desktop rows share a hairline.
+- **Kept from round 11.** Own clock (`performance.now()` and its own rAF while busy), `__hero.crafts(p)` (time = change + p × 0.45 s) and `__hero.crafts(null)`, every trigger through `followCraft()`, always from the selection's actual place, the entrance and the loop's start make no change, reduced motion cuts, `aria-current`, hover and the focus ring. `__hero.craftWipe` now reads `{ current, changes, held, busy, rect, rects, lit }`. A resize re-measures and cuts the selection to rest on the current row.
+- **In the entrance.** `play.mjs` passes the entrance's five hairline progresses (`entranceAt(...).crafts`) to `craftWipe.follow(craft, { cut, entrance })`. While they are under 1, the rectangle's `clip-path` (`--sel-clip`) shows its top line to the same width as the current row's top hairline and its bottom line to the same width as the next hairline; each handle cuts in (`--h0`–`--h3`, red or transparent) when its line's tip reaches its corner pixel (left corners at once, right ones as the line ends), and each side when both its handles are in. At 1440 × 900 the order is top left, bottom left, top right, bottom right.
+
+### Readings
+
+- **"Leaves it"** is read as the trailing edge passing the old row's far side, so the old row stays lit while the selection still overlaps it. A consequence: in 04 to 01 the old row cuts back at +0.205 s and the new row lights at +0.3 s, so for about 0.1 s no row is lit while the selection is stretched over 02 and 03 (filmed). Lighting rows the selection covers in passing was not chosen, as the brief names only the new and old rows.
+- **The focus ring** (journey.css's red outline, unchanged) is a second red rectangle when a row other than the current one has keyboard focus (filmed in `focus-02.png`).
+
+### Evidence
+
+- `node design/journey-hero/take-2/tools/checks.mjs` ends `all clean` (6117 frames, 413714 pieces, loop 91.498 s). `tools/round12-stars-list-checks.mjs`:
+  - S1 threshold: holds at the middle, (200, 200), top left and bottom right, frame by frame to 7 s: no star has a point before 300 are captured, and the formation starts in the frame of the 300th capture (2.4, 3.133, 5.367 and 5.35 s); the middle's start is in 2.2–2.5 s.
+  - S1 radius: at the four corners the radius is round 8's to 2.5 s, then exactly 340 + 104 × (held − 2.5) px until the start (with fewer than 300 caught), then constant to 8 s (634.7–639.9 px); the middle stays on round 8's curve; the 600 × 400 hero forms at its diagonal and never passes it; a 6 s corner hold blasts at 2000 / mass.
+  - L2, on the measured 1440 × 900 and 390 × 844 geometry (and `rowRects` checked against it): one change 01 to 02 sampled 141 times at 0.005 s against the timetable, exactly on 02 at 0.45 s; leading edge first (the leading edge strictly further along than the trailing one at every sample in (0, 0.45) s); the cuts at +0.3 and +0.45 s, each a boolean that flips once and equals cover/overlap of the drawn rectangle; a change at 0.2 s (01 to 02 to 03) and a change back at 0.15 s; 04 to 01 (top leads, bottom trails, 02 and 03 each wholly inside the selection for a while and never lit); the phone grid 1 to 4, 2 to 3, 4 to 1 and 1 to 2 (both axes edge by edge); a click 01 to 03 from 01; reduced motion; the entrance and the loop's changes (1>2 at 44.300, 2>3 at 60.983, 3>4 at 76.050, 4>1 at 0.002 s); the entrance's handles; and the sources (round 11's rule gone, 1 px border, 5 px handles, only listed properties in the block, the view writes only custom properties and `.is-lit`).
+  - Negative controls, each one exact site in memory: `(cluster.size >= STARS.mark.threshold || R >= diagonal)` → `(hold.held >= 1.4)`: caught, `S1 threshold: a star has a point at 1.400 s held with 139 captured (middle)`. Every edge's role → `'lead'` (both edges move together): caught, `L2 leading edge first: 01 to 02 at 0.005 s, the leading b edge is 0.000 along, the trailing t 0.000`. The change from the loop's previous scene's row instead of where the selection is: caught, `L2 click 01 to 03: the selection does not start from 01`.
+  - Round 9's checks with the new start, and their three controls, pass; rounds 8 and 10 pass unchanged.
+- Browser (packed `.scratch/review-out/r12/stars-list/r12-preview.html`, Chromium/SwiftShader, Playwright's clock installed and paused; script `film-r12.mjs`, report `film-report.json`, 0 page or console errors; in every list frame the numbers' and words' computed colours match the painted `.is-lit` classes, and the `::before` box matches the painted `--sl/--st/--sr/--sb`):
+  - `hold-middle.png`: (720, 450), whole hero at 1.0, 2.0, 2.5, 3.0 and 3.5 s held: 99, 228 and 327 caught; formed at 2.400 s (301 caught, 329.6 px); all 327 arrived by 3.5 s.
+  - `hold-corner.png`: (8, 892), at 1.0 … 3.5 s and also 4.5, 5.5 and 6.5 s: radius 184.8, 288.0, 341.2, 392.8, 444.4, 549.2, then 639.1 px, still at 6.5 s; formed at 5.376 s with 302 caught.
+  - The craft list cropped at device pixel ratio 2, every 0.05 s: `list-01-02.png` (the loop's change at 44.285 s), `list-04-01.png` (a click while paused), `phone-01-04.png` and `phone-02-03.png` (390 × 844), plus `entrance.png` (held at 0.55–1.4 s), `reduced.png` (cuts in the same frame), `rest-1440.png`, `rest-390.png` and `focus-02.png`; each sequence's frames are also saved alone in the folder of the same name.
+- Layout (`.scratch/review-out/r12/stars-list/layout.mjs`, round 11's script): this tree's pack against a pack built from `git archive 067f70d`, at 1440 × 900 and 390 × 844: 183 numbers each (`__hero.layout`, `__need`, the hero, name, stage, rows, numbers, words, list, mark, canvas, pause and lede rects, `--name-ink-shift`, the canvas size), 0 differ, 0 errors.
+- `tools/browser-check.mjs` was not run (the brief asks not to for these parts).
+
+## CORRECTIONS-14
+
+Dan, 21 November, 3:21 AM ET, on round 12's selection box: "hmmm not a fan of this idea, can you look up a bunch of selection UI that would work in this scenario?" Of the eight live studies he chose "E. Letter roll" at 3:39 AM ET. `CORRECTIONS-14.md` (K1) controls this round and replaces round 12's L2 (the selection box), which replaced round 11's C1. Everything else from rounds 2–13 is kept. Files changed: `craft-wipe.mjs` (rewritten; the file name and its seams `createCraftModel`, `followCraft` and `createCraftWipe` are kept for the player and the stand-ins in `checks.mjs`, `entrance-checks.mjs` and `round8-checks.mjs`), `take-2.css`, `play.mjs`, `tools/checks.mjs`, `tools/round12-stars-list-checks.mjs` (L2 dropped, S1 kept), the new `tools/round14-checks.mjs`, this file and README. `entrance.mjs` is unchanged: it never drew round 12's selection (that lived in `craft-wipe.mjs`'s `entranceParts` and the player's `entrance:` option, both removed). `public/`, `stage.mjs`, `art.mjs`, `labels.mjs`, `stars.mjs` and the briefs are untouched. LOOP is still 91.498 s.
+
+### K1: the letter roll (`craft-wipe.mjs`, `take-2.css`, `play.mjs`)
+
+- **At rest.** The current row's number is red `#F0484F` and its text paper; the others are muted; the hairlines are journey.css's, with nothing over them. Round 12's `.is-selected`, its `::before`/`::after` rectangle and handles, `--sl/--sr/--st/--sb`, `--sel-*`, `--h0`–`--h3`, `.is-lit`, its model and its entrance step are gone.
+- **The overlay.** On construction each button gets one `<span class="craft-roll" aria-hidden="true">` holding, for every glyph of the row (the two digits, then each letter of the label, spaces included: 16, 7, 8 and 7), a mask `.craft-g` with two copies, `.craft-o` (out) and `.craft-i` (in; `.is-n` for the digits). The copies draw their letter with `content: attr(data-ch)`, so no text node is added and the page's ink measures (`page-layout.mjs`) see only the flow text. The flow text is never split or moved.
+- **Exact letters.** On measure, each glyph's pen position is read from the flow text with a range over that one character (its left edge carries the kerning and the 0.12 em tracking before it), and its line box from its span (`.n` or the label). The mask is placed at the pen position less 0.2 em, the line box's top and height, the advance plus 0.4 em wide, with `overflow: hidden` (a hard clip); the copies sit 0.2 em in. The slack is rounded to the layout's 1/64 px (2.59375 px at 13 px, 2.40625 px at 12 px), so every copy lands on its measured position exactly. Measured on start and from the player's `measure()` (the hero's ResizeObserver, which also catches the phone grid switching, fonts' `loadingdone`, the name's `animationend`), never per frame.
+- **Colours.** While the overlay is live the list has `.is-rolling`: the button's colour is `inherit` (muted), paper under hover (above journey.css's `aria-current` colours, 0,2,1), so the out copy follows the button's own colour and hover keeps working; the in copy is paper, red for the digits; the flow spans get `-webkit-text-fill-color: transparent`. Not live (before the first measure, without scripts, or with reduced motion), the flow text paints with journey.css's colours as before.
+- **The roll** (`CRAFT_ROLL`: 0.38 s, 0.018 s, 1.1, 0.2 em). The model keeps, for each glyph, a roll s from 0 (out at rest) to 1 (in at rest); `copyOffsets(s)` puts the out copy at −1.1 s and the in copy at 1.1 (1 − s) line boxes. On a change at T, each glyph of the new row goes from where it is to 1 and each glyph of the old row from where it is to 0, glyph i over [T + 0.018 i, T + 0.018 i + 0.38] with `EASE.wipe`, exactly on its target within 1e-9 of its end. So the digits lead and the roll sweeps the label left to right; "Graphic design" ends at T + 0.65 s, "Video" and "UX/UI" at + 0.488 s, "Motion" at + 0.506 s. Per frame the view writes only the copies' `transform` (`translateY(%)` of the line box; `none` at 0).
+- **A change during a change.** Each glyph of a row whose target changes goes on from where it is to its new target, starting again on the same timetable (its own delay, then 0.38 s). A row that was rolling in and is no longer current rolls back from where it got to. Never two rows lit.
+- **Kept from rounds 11 and 12.** Its own clock (`performance.now()` and its own rAF while busy), so it finishes while the loop is paused and with the stage held; every trigger through `followCraft()` (the loop moving on, the wrap from 04 to 01, a click on a row, a click on the stage); always from the craft actually current (01 to 03 rolls only 01 and 03); the entrance sets the list (`follow(craft, { cut: true })`), and because the overlay sits inside each `li`, the entrance's own clip cuts the lit row in with its row; the loop's first start is no change; reduced motion cuts; no current row without scripts; `aria-current` moves at once; the button keeps hover and its focus ring. `__hero.crafts(p)` holds the latest change at change + p × its length (the longest row it rolls: 0.65 s with 01), `null` lets it run on; a finished change keeps its schedules (each glyph exactly at its target), so it can still be held. `__hero.craftWipe` reads `{ current, changes, held, busy, length, live, rolls, lit, touched, shown }` (`shown`: the time and rolls of the last frame painted).
+
+### Readings
+
+- **"Each glyph of each row goes on … starting again"** is read for the rows whose target changes (the new row and the one losing current). A row still rolling out from an earlier change keeps its own timetable rather than restarting, which would stall it for its delay; it ends where it was going anyway (checked: 01 in the 01 to 02 to 03 case).
+- **Reduced motion** turns the overlay off rather than painting it at rest: the flow text with journey.css's `aria-current` colours is the same picture (identical pixels, below), and it cuts with `aria-current`.
+- **Re-measure on the phone grid switch** is the hero's ResizeObserver (the switch is a width change); no separate media listener.
+
+### Evidence
+
+- `node design/journey-hero/take-2/tools/checks.mjs` ends `all clean` (6117 frames, 413714 pieces, loop 91.498 s). `tools/round14-checks.mjs` (pure model):
+  - The table: 0.38 s, 0.018 s, 110 %, 0.2 em; 16, 7, 8 and 7 glyphs; "Graphic design" 0.65 s.
+  - One change 01 to 02: 7383 glyph samples every 2.5 ms against the brief's curve (written in the check), both copies' offsets; exactly in (all 1) at 0.488 s for 02 and exactly out at 0.650 s for 01; busy until 0.65 s; a finished change can still be held.
+  - The order: each glyph of 01 and 02 is still through its delay (i × 0.018 s) and moving 1 ms after; glyph i is never behind glyph i + 1, strictly ahead while both move.
+  - A change 0.2 s into the first (02 to 03), at 60 frames a second in four frame phases (292 frames): the bound is EASE.wipe's steepest 1/60 s step, 0.1632 of a roll (at u 0.276), × 1.1 = 0.1795 line boxes per frame; the largest step taken is 0.1795; no glyph moves at the change instant; 02 rolls back from where it got to, 03 rolls in, 01 keeps its timetable, every row ends at rest, never two rows lit; going back 01 to 02 to 01 at 0.15 s.
+  - 01 to 03 (a click from 01) touches only 01 and 03; reduced motion cuts (also when it comes on mid-change); the entrance makes no change and the loop's first frame is none; the loop's changes 1>2 at 44.300, 2>3 at 60.983, 3>4 at 76.050, 4>1 at 0.002 s.
+  - The sources: round 12's box (and round 11's rule) gone; no transition, opacity, animation, filter, blur or rounding; only paint and absolute-box properties; the overlay is `aria-hidden`, placed from ranges over the flow text, which is never written; a frame writes only `transform` and reads no layout; the player's seams.
+  - Negative controls, one exact site each in memory: every glyph starting together (`start: time + k * T.step` → `start: time`): caught, `K1 order: row 01 glyph 1 moves at 0.001 s, before its start at 0.018 s`. A restart from the rest it leaves instead of from where it is (`const from = at(g, time);` → `const from = 1 - target;`): caught, `K1 no jump: row 02 glyph 0's copies move 0.2153 line boxes in one frame at 0.2000 s, more than the curve's 0.1795`.
+  - `tools/round12-stars-list-checks.mjs` keeps S1 and its control; its L2 checks and controls are removed.
+- Browser (packed `.scratch/review-out/r14/r14-preview.html`, Chromium/SwiftShader, Playwright's clock installed and paused; script `film-r14.mjs`, report `film-report.json`, 0 page or console errors; in every filmed frame each copy's computed transform is its glyph's painted roll within 0.002 of a line box, every row is at rest at the end of each film, and rows other than the two a change names never move):
+  - Exact letters at rest, `rest-1440.png` and `rest-390.png` (dpr 2): all 38 glyphs at both sizes sit 0 px from their flow letters (left and top; heights equal), with 2.594 / 2.406 px of slack each side; the list painted by the overlay and by the flow text alone (`.is-rolling` taken off, journey.css's colours) differ in 0 of 249,600 and 0 of 158,760 pixels. The buttons' accessible names stay "01 Graphic design", "02 Video", "03 Motion", "04 UX/UI".
+  - Films of the list cropped at dpr 2, every 0.05 s: `loop-01-02.png` (the loop's own change at about 44.29 s), `click-02-04.png` (a click with the loop playing), `phone-01-04.png` (390 × 844, the 2 × 2 grid), `paused-01-03.png` (a click while paused; 02 and 04 never move), `held-01-03.png` (`__hero.crafts(p)` at 0, 0.25, 0.5, 0.75, 1, then `null`), `during-01-02-03.png` (03 clicked 0.2 s into 01 to 02) and `reduced.png` (cuts in the click's frame). Each sequence's frames are also saved alone in the folder of the same name.
+- Layout (`.scratch/review-out/r14/layout.mjs`, round 9's script as rounds 11 and 12 used it): this tree's pack against a pack built from `git archive 0bf5341`, at 1440 × 900 and 390 × 844: 183 numbers each (`__hero.layout` with the H12 craft-number ink measures, `__need`, the hero, name, stage, rows, numbers, words, list, mark, canvas, pause and lede rects, `--name-ink-shift` on the name and the numbers, the canvas size), 0 differ, 0 errors.
+- `tools/browser-check.mjs` was not run (the brief asks not to).
+
+## CORRECTIONS-12: D1, I1 and X1
+
+Dan, 21 November, 2:35 to 2:37 AM ET: "the phone is as big as the tablet", "can we just get rid of the frames in the indesign section?" and "the exports still look like they are a little too far to the right". This build covers D1, I1 and X1 of `CORRECTIONS-12.md` only; S1 and L2 (`stars.mjs`, `craft-wipe.mjs`, the craft list's styles) belong to another builder and are untouched. `EXPORT_SHIFT` is **-0.3**, Dan's pick from the comparison (the brief's -0.5 and the interim -0.6 are superseded).
+
+### D1: phones in true proportion (`stage.mjs`, `art.mjs`)
+
+- **One rule in code.** `BODY = { phone: [71.6, 147.6], tablet: [179.5, 248.6] }` and `PHONE_BESIDE = { upright: 147.6 / 248.6 = 0.5937, side: 147.6 / 179.5 = 0.8223 }`. Every phone's depth (its height lying flat) is its tablet's depth times the fitting factor, and its width is that depth times 71.6 / 147.6. Each phone's screen rim is solved (`rimFor`) so its screen keeps the picture's own aspect, so what plays fits the new screen as before.
+- **InDesign:** tablet 0.936 x 1.45 became **1.047 x 1.45** (179.5 : 248.6, widened within the width the phone frees); phone 0.70 x 1.45 became **0.418 x 0.861** (0.594). The e-blast picture (`mail` in `art.mjs`) is drawn 362 x 516 instead of 320 x 516 to fill the wider screen: its ground fills the new width and its content keeps its size, centred. Gaps (`GUT`) are kept; the block is re-centred on its middle; the phone and tablet share the stack's front edge.
+- **Video and motion:** the tablet stays 3.09 x 1.8 on its side; each phone 0.955 x 1.8 became **0.718 x 1.480** (0.822). The mat width follows (`MAT_W = WIDE + 2 SLIM + 2 gap`) and stays centred; phones sit on the tablet's front edge (`z = MAT.z + ROW − SLIM_D`); the 300 x 600 phone picture is centred along the phone's screen.
+- **UX/UI:** the tablet stays 1.38 x 1.8 upright; the phone 0.895 x 1.8 became **0.518 x 1.069** (0.594), front edge on the tablet's; the row stays centred, the laptop unchanged.
+- **Figma's canvas:** `FIG_PHONE` = the floor phone screen's depth over the floor tablet screen's depth (0.6083); the canvas phone frame is that share of the tablet frame's height, 9 : 19.5, top-aligned with the other frames in both rows (designs and wireframes). The marquee now ends at the row's foot, so Figma is 0.144 s shorter (15.449 to 15.305 s): the round 7 hand rule re-derives the drag from the shorter path.
+- **Labels** follow the new rects in `calloutsAt` (InDesign phone/tablet from `BLOCK_ROW`, video/motion phones from `SLIM`/`SLIM_D`, the Figma phone from `UI_ROW`). The existing label checks pass unchanged.
+
+### I1: InDesign without frames (`stage.mjs`)
+
+- `frame0`–`frame3` are gone from the id script, with `spreadFrame`, `frameContact`, `emptyFrame` and every crossed line. `blankPages()` draws the spread's two pages (as `frame0` left them) and the cover, post and e-blast pages (dark plate with its thin edge, as `frame1`–`frame3` left them, without the cross) from the scene's first frame. Each page's edge stops at its own picture's first contact (`pageContact`, the old frame-contact law), its plate stays until placement, and the placed picture replaces it in the same frame, as before. The map, photo, post photo and e-blast photo are dragged straight onto their pages; selection guides stay.
+- **Timing:** InDesign 23.091 s became **20.238 s** (−2.853 s: the four draws and their approaches). Loop 91.498 s became **88.500 s** (also Figma's −0.144 s). Starts: ps 0, ai 8.046, id 21.194, pr 41.432, ae 58.114, fig 73.196. The InDesign still is 17.336277 s local (leaf pose 1.82 unchanged). The README action table is regenerated from the scripts.
+
+### X1: one export shift (`stage.mjs`)
+
+- `export const EXPORT_SHIFT = -0.3;` and `exportMiddle = SCREEN.l + SCREEN.w / 2 + EXPORT_SHIFT` (0.200 − 0.3 = **−0.100**). `BLOCK` (and so the booklet's reading place, which is placed from it), `MAT`, `UI_ROW.left` (so the laptop's slide-in start, which is relative to its rest) and `POOL` are all placed from `exportMiddle`. Nothing else reads the shift, so it stays a one-number change; Dan's centring rule (on the screen's middle) is kept apart as `screenMiddle`.
+
+### Checks updated on purpose
+
+- `tools/checks.mjs`: centring is now on `SCREEN.l + SCREEN.w / 2 + EXPORT_SHIFT`; "document starts populated" and R5 allow InDesign's blank pages (`blankPage` exemption, at ≤ 0.8 s); runs round 12.
+- `tools/correction-checks.mjs`: R14's phone inset is `BLOCK_ROW.phoneRim`; the empty-frame clearance and R15's frame lifetimes are now page clearance and page lifetimes (plates present until placement, edges until first contact, replacement in the same frame); Figma centring on the export middle and its device rims from `UI_ROW`. The laptop entry gutter allowance is **8 px (was 5)**: the row now starts 0.3 further left, so in the first 0.03 s of the slide-in the laptop's lid is up to 7.66 px into the 280 px stage's gutter; sampling starts 1e-7 after entry.
+- `tools/hand-patch.mjs`: new `r12Patch` removes the frame steps from the frozen earlier sources in memory, so snapshot comparisons (drag, round 5, addendum, entrance) compare like with like; the retimer matches actions by id.
+- `tools/drag-checks.mjs`, `tools/round5-checks.mjs`, `tools/round5-addendum-checks.mjs`: still and retained-piece comparisons now compare screen pieces only (the floor moves on purpose by X1 and D1); round 5's H1 checks pages whole and no frame step instead of the spread's frame draw; H2/H3/H10 skip InDesign and Figma where D1/I1 change them on purpose; H6 and H9 give round 4's fit today's envelope (X1 widens the scene's box on purpose), and the envelope's own scale change is reported (0.9672–1.0163 at the ten sizes).
+- `tools/entrance-checks.mjs`: the frozen pre-exit stage is r12-patched; its LOOP comparison excludes Figma's length.
+- `tools/round8-checks.mjs`: LOOP 91.49807 became 88.50030. `tools/round11-checks.mjs`: the loop's craft change times are derived from `SHOW` (were 44.285/60.967/76.049).
+- `tools/controls.mjs`, `tools/round5-controls.mjs`, `tools/drag-controls.mjs`: controls that edited the removed frame code now edit the page code (page contact undone, post page leaves at its drag, spread pages arrive late, spread page grows, plate removed at contact, post page hidden) or today's Figma lines (lid clearance, world centring, phone aspect, toolbar clearance).
+- New `tools/round12-checks.mjs`: D1 sizes within 2 %, tablets kept, front edges, art aspect and the Figma frame share; I1 no frame step or empty/crossed piece in InDesign at 0.01 s, pages from the first frame, each picture on its own page, the loop printed; X1 centres of block, mat, pool, the four stills' floors and InDesign's landing, and moving the one number by −0.4 moves 748 pieces' floor exactly and nothing else, the laptop's slide-in included.
+
+### Negative controls
+
+- Round 12 (in `checks.mjs`): old InDesign phone (`PHONE_D = DEEP`) caught, `D1 InDesign phone: depth against the upright tablet: 1.00000 is not within 2 % of 0.59372`; phone set back caught, `D1 fig: a phone's front edge is not on the tablet's`; one frame step back (`frame0` restored in the id script) caught, `I1 steps: InDesign still draws a frame`; pool left behind (on the screen's middle) caught, `X1 centre: the light pool: 0.2 != -0.1`.
+- `tools/controls.mjs` (46), `tools/round5-controls.mjs` (13) and `tools/drag-controls.mjs` (14) were run in full. Retargeted this round and caught: page contact undone, R15 post page leaves at its drag, R15 placement exception disabled (rule now names the page), Figma lid clearance, Figma world centring, toolbar clearance undone, R5 panel from nowhere (its 0.2 s window moved from 6.5 s to 3.65 s, the same moment of the `loc` drag before the frame steps went; at 6.5 s it now falls on the `pages` run in the panel, beside the cursor), Figma phone aspect (now the floor phone's rim alone, 9 : 20, gated by round 12's screen-fit check: the round-3 geometry check reads the body with the nominal rim), spread pages arrive late, spread page grows, other draw changes, post page hidden, post page leaves at its drag, plate removed at contact.
+- Missed, and missed the same way at `067f70d` before this round (each rerun there): R1 premature photo row and R2 premature page row (exit 1, but stopped first by R5's `echo precedes source action` assertion rather than the R1/R2 rule), R10 A4 undone (exit 0: round 7's distance rule lengthens `spreadType` to 0.476 s whatever its authored 0.3 or 0.08), page text boundary fit undone (exit 0) and drag's old per-face lift moves corners (exit 0). Not changed here.
+- 0.6 s content frozen rail still plays and Figma return boundary undone timed out (90 s) while another checker ran beside them; rerun alone, both caught.
+
+### Evidence
+
+- `node design/journey-hero/take-2/tools/checks.mjs`: `all clean`, 5918 frames, 403974 pieces (max 183), loop 88.500 s; scenes 8.046, 13.148, 20.238, 16.681, 15.082, 15.305 s. K3 peak 1499.7 px/s (limit 1500). C1's loop changes now 41.433, 58.117, 73.200 s.
+- Layout (`round5-addendum-checks.mjs --only=H9` model, stage box unchanged at every size), S before → after: 390 × 664 33.61 → 34.16; 390 × 844 44.30 → 49.71; 360 × 780 36.90 → 41.40; 375 × 667 40.60 → 44.61; 412 × 915 49.73 → 55.80; 768 × 1024 62.31 → 60.27; 820 × 1180 66.96 → 64.77; 1024 × 768 85.14 → 82.42; 1440 × 900 103.63 → 105.31; 1920 × 1080 128.84 → 130.93. The smaller phones narrow the scene's envelope on phones (bigger scale); the shift left widens it beside the text column on tablets and the 1024 width.
+- Browser check, run once at the end: `tools/browser-check.mjs`'s own `checkBrowser` on its packed preview, headless Chromium/SwiftShader. The CLI reports UNAVAILABLE here (it accepts only a repository-installed Playwright, and nothing may be installed), so `.scratch/review-out/r12/browser-r12.mjs` repeats its CLI body with the machine's Playwright: **PASS at all ten sizes** (390 × 664 to 1920 × 1080, 15 held frames each, laptop entry/return, reduced motion), network requests 0, page errors 0, 18.7 min (`.scratch/review-out/r12/browser-r12.txt`).
+- Films and stills in `.scratch/review-out/r12/scene/`: `before-sheet.png`/`after-sheet.png`; InDesign's first 6 s at 0.25 s, `before-id-first6s.png`/`after-id-first6s.png` and `-phone` versions; `stills/{before,after}-{indesign,video,motion,uxui}-{1440x900,390x844}.png` (device pixel ratio 2; `stills-r12.mjs`). "Before" is `067f70d` from `git archive`.
+
+## CORRECTIONS-13: E1, E2, U1 and I2
+
+Dan, 21 November, 2:39–2:44 AM ET: "right now the exports look like they materialize out of nothing" ("Drop out of the screen"), and at 5:09 AM ET U1 ("the tablet is probably not that big, it can be the same height as the bottom half of the laptop") and I2 ("make sure the right edges align here"). Files changed: `stage.mjs`, `labels.mjs` (one timing, below), `README.md`, this file, `tools/checks.mjs`, `tools/controls.mjs`, `tools/correction-checks.mjs`, `tools/entrance-checks.mjs`, `tools/browser-check.mjs`, `tools/label-page-checks.mjs`, `tools/round5-checks.mjs`, `tools/round5-controls.mjs`, `tools/round5-addendum-checks.mjs`, `tools/round8-checks.mjs`, `tools/round12-checks.mjs` and the new `tools/round13-checks.mjs`. `art.mjs`, `play.mjs`, `sq.mjs`, `public/` and the briefs are untouched.
+
+### E1: the work drops out of the screen (`stage.mjs`)
+
+- `feed`, `takeBack`, `feedScreens`, `feedPrototype` and the slot clip at `MAT.z` are gone. `DROP = { peel 0.15, out 0.15, tip 0.5, split 0.35, become 0.25, slide 0.5, stagger 0.1, back 0.6 }`; `dropBeats`, `dropLength` (InDesign, video, motion 1.25 s; Figma 1.15 s) and `dropClock` (runs forward from the Export click, holds, and runs backwards over `DROP.back`) time every scene alike.
+- **Peel.** `copyOf` + `workIn` copy the work faces inside the screen's work rect (without overlays, carets or the cursor) and strip their screen roles; the copy is exactly over the work at the click, then moves 0.15 out along the screen's normal with `EASE.wipe`. The screen keeps its work.
+- **Tip and drop.** `carry` scales the copy in its plane, then turns it about x around a pivot on its top edge (the back face's top-edge middle), from upright to flat, while the pivot travels with `EASE.wipe` to the footprint's back edge. The pivot's height is kept at least the sheet's own lever (`k h cos`) so no corner passes below the floor. It lands flat, centred and fitted (contain) in the group's footprint (`sheetOf`).
+- **Split.** Each part's faces slide from their region of the landed sheet (`S`) to their format's screen rect (`F`), cut on hard edges; parts are lowered by their body's thickness so they finish on top of it.
+- **Become.** A device slab grows from its screen rect to its body rect as its thickness rises from the floor (`grow`); InDesign's stack rises under its top copy (`rise`).
+- **Video and motion** (`screensOut`): one viewer sheet onto `[MAT.x, MAT.z, MAT.w, ROW]`, split into the tablet (wide) and two phones (tall), each fitted to its screen.
+- **InDesign** (`bookletOut`): the sheet is the document as on screen, landing on `[BLOCK.x0, BLOCK.z0, 2 LEAF, DEEP]`; it splits into the flyer (the stack's top copy; the spread is a transient part that slides under the cover and is gone when the split ends), the LinkedIn post (phone) and the e-blast (tablet). The id script gains `{ id: 'drop', kind: 'wait' }` (0.45 s) after Export; the land hold, pickup, opening and leaf turns follow unchanged.
+- **Figma** (`prototypeOut`): each of the three canvas frames is its own sheet, 0.1 s apart (laptop 0–1.15 s, tablet 0.1–1.0 s, phone 0.2–1.1 s); no split. The tablet and phone build round their screens. The laptop's frame tips onto its lid screen's place at the 12 degree lean and waits; the body slides in from the top left under it (1.6 units over 0.5 s, `EASE.enter` as before) while its lid opens from shut on the deck to the 12 degree lean, meeting the screen as they arrive.
+- **Timing.** `playbackSpans(s).spans` are each piece's [peel start, become end]; `land` the last of them. Labels (`calloutsAt`), plays and the UX/UI cycle start there. Holds: video and motion `dropLength + 3.2 − 0.7`, Figma `dropLength + 3 − 0.7`, tail `DROP.back`. The cursor rests unpressed through the drop.
+- **Stills.** InDesign's still follows the drop wait (17.786277 s local). Video's and motion's keep round 12's play frame, 0.55 s into the plays (14.331291, 12.732090 s; labels complete at 0.4 s). Figma's stays 1.1 s into its cycle (13.545163 s).
+
+### E2: the return plays the drop backwards (`stage.mjs`)
+
+- Over `DROP.back` (0.6 s) the drop clock runs back from its end: each format turns back into its part, the parts close into one sheet, the sheet lifts and tips back up into the screen and cuts out on its face. Figma's frames go back to their places on the canvas; the laptop's lid folds shut as the body slides out to the top left. InDesign's return starts from the reading place: the open copy (faces and stack) and the flyer close into the document sheet. Nothing is left on the floor after the return.
+
+### U1: the UX/UI row (`stage.mjs`)
+
+- `UI_ROW.tabD = deck` (1.1); `tabW = (tabD − 2 rim) × 3/4 + 2 rim` = 0.855 (3 : 4 screen, rim 0.06 kept); `tabZ = lean` so the tablet's back and front edges lie on the deck's (MAT.z + lean, + deck). The phone is `tabD × PHONE_BESIDE.upright` deep (0.653 × 0.317, 9 : 19.5 screen) with `phoneZ = tabZ + tabD − phoneD`, so all three front edges are at z 0.3277 (with H10's 0.4 forward). Gaps (0.3), the laptop, its lid, `forward` (0.4) and the centring are unchanged; the lid's clearance from the app did not need `forward` changed (H10's projected gap at S 103.6 is 16.17 px, limit 12).
+- **Canvas.** `FIG_SCREENS = [lidH − 0.08, tabD − 2 rim, phoneD − 2 phoneRim]`; the canvas frames take those heights scaled so the tallest is 0.86, top-aligned (0.806, 0.860, 0.548); `FIG_PHONE` follows. The hotspot and inspector are placed from `FIG.designs[0]` as before; the toolbar and Export clearance checks hold.
+- **Labels** follow the new rects (`calloutsAt` reads `tabZ`, `tabD`). Figma is 0.06 s shorter before Export (the marquee follows the shorter frames under round 7's hand rule).
+
+### I2: InDesign's row behind (`stage.mjs`)
+
+- `ROW_GUT = GUT + BACK` (0.2059); `BLOCK_ROW.stack` at `BLOCK.x0`, the phone `LEAF + ROW_GUT` along, the tablet ending at `BLOCK.x1` (−1.9765 to 1.7765, exactly the open copy). Sizes, the front gutter, front edges and the block's centre are unchanged. The split lands the post and e-blast on these places.
+
+### Readings
+
+- **The tip** turns about the sheet's top edge, so the picture's top ends at the back, as every floor device shows it; the sheet is fitted (contain) inside its footprint rather than stretched, so it lands centred within the group's box (landed vs footprint, w × d: InDesign 1.969/1.45 in 3.753/1.45; video and motion 3.2/1.8 in 5.026/1.8).
+- **InDesign's spread** (the document shows the spread above the cover, post and e-blast) is a transient part that slides under the flyer's cover and is gone once the split ends; on the return the open copy is that part.
+- **The laptop** keeps `EASE.enter` for its slide (with `EASE.wipe` it lingers in the 280 px stage's left gutter longer than the existing 8 px allowance), and its body starts at −1.6 as before. Its lid opens from shut on the deck: a lid rising from flat behind the hinge (the first build) brought its projection to 3.2 px from the app at S 103.6, under H10's 12 px; shut, it reaches no further back than open. While opening it passes in front of the waiting screen for a moment; it never intersects it.
+- **Plays** keep running through the return, as they did through the old withdrawal; the return's devices hold their last frame only where they did before (Figma's frozen cycle).
+- **The return's sheet** reaches the screen while the shell transition to the next app is already running, so it cuts out on the next app's opening face; the brief's "as the app changes".
+
+### Labels (`labels.mjs`)
+
+- The view fit (`fitCalloutView`) and the player's word measurement (`createCallouts().measure`) read InDesign's labels at the end of the Export click + 0.41 s; with the drop that instant has no labels, so InDesign's words had no measured width (their leaders' ends were NaN in the browser at every size) and the fit ignored them. Both now read them at `playbackSpans(SCRIPTS.id).land + 0.41 s`. The same instant is used by `tools/label-page-checks.mjs` and by `round5-addendum-checks.mjs`'s `widthsFor` (the frozen stages keep their Export-end instant). Found by the browser check; the Node checks had been skipping InDesign's words the same way.
+
+### Checks updated on purpose
+
+- `tools/checks.mjs`: the floor slot plane check now requires no floor clip; the painted-stack check is per device; "feeding and returning translate only z" is replaced by "once every body is built nothing on the floor moves until pickup/return" (failing as `<scene>: export moved after it was built`); the play clock samples from `playbackSpans(s).land`; Figma's row back edge is the tablet's at `forward + tabZ` (U1) and nothing reaches behind the row line; runs round 13.
+- `tools/correction-checks.mjs`: label ends from `spans` in every scene (InDesign too) and fixed marks from `land`; the Figma return compares only playback pictures with the held frame (the devices now move back); InDesign's parametric label time uses the drop wait; the laptop entry window is the slide (`spans[0][1] − DROP.slide`), plus the mirrored leave window on the return; canvas frame lefts and widths are read from `FIG`.
+- `tools/round5-checks.mjs`: H2 adds each exporting scene's round 13 growth explicitly (InDesign `dropLength − 0.8 + DROP.back − 0.5`, video and motion `dropLength − 0.55 + DROP.back − 0.4`), skips the new `drop` step, checks the return's 0.6 s and the rows' land, plays (3.2 s) and return; H3 samples the slide (the last `DROP.slide` of the laptop's drop) for the body's x and z and the lid's x, samples the complete row from `land`, reads the lean at `land + 0.01` (the laptop is built last), and no longer compares the tablet with round 4 (U1 resizes it; round 12 and 13 hold both devices).
+- `tools/round5-addendum-checks.mjs`: H10's retained-pieces comparison is made at the same local time up to Export and, in the plays, at the same time from their start (playback pieces and the clock only); the drop and return are round 13's.
+- `tools/entrance-checks.mjs`: E4's LOOP and scene lengths add the same round 13 growth.
+- `tools/round8-checks.mjs`: LOOP 88.50030 became 91.59089.
+- `tools/round12-checks.mjs`: the Figma tablet expectations are `UI_ROW.tabD`/`tabW` (U1); X1's one-number sample in Figma is 0.9 s into the drop (mid slide, every sheet landed; at 0.1 s the sheets hang on the screen, which X1 does not move); the "phone set back" control edits `phoneZ = tabZ + tabD − phoneD`.
+- `tools/browser-check.mjs`: InDesign's held label frames are each piece's become end + 0.4 s, as for the other scenes (was the end of the Export click, now before InDesign's labels).
+- `tools/controls.mjs`: each control's checker run gets 480 s (was 90 s): round 13 lengthens checks.mjs, and at 90 s seven Figma controls timed out (exit null) before their rule ran; at 480 s all ten Figma controls are caught. "Figma device count" and "Figma laptop playback frozen" edit `prototypeOut`; "Figma tablet x drift" (its `feed path` rule is gone with `feed`) now drifts the tablet after it is built, against checks.mjs's `fig: export moved after it was built`. `tools/round5-controls.mjs`: "laptop enters from wrong side" edits the slide's `dx`.
+
+### New checks (`tools/round13-checks.mjs`)
+
+- **E1/E2**, every 0.01 s through each export and return (997 samples): no export piece before the peel (Figma's devices before their stagger); the copy exactly over the work at the peel; tilt monotonic from upright to flat and back; nothing through the floor or the screen; the sheet inside the stage's fit envelope; landing flat, centred and fitted on the footprint (the laptop's on its lid screen); no body before its part has arrived; no play before its body is built; every part at its piece's final place and size just before `land`; the return's last instant is the sheet alone, upright, and the floor empty after.
+- **U1/I2:** tablet depth = deck within 0.5 %; tablet back and all three front edges within 0.001; the phone by D1 within 2 %; the canvas frames against the screens within 2 %; centring; I2's outer edges within 0.001, equal gutters, block centre unchanged.
+- **Negative controls** (in memory, each caught): a body starts before its part arrives (the brief's control); a play starts before its body is built; the tilt goes back up on the way down; U1's tablet back to 1.8 deep (the depth check fails); I2's row back to centred with `GUT` gutters (the right-edge check fails).
+
+### Evidence
+
+- `node design/journey-hero/take-2/tools/checks.mjs`: `all clean` (`.scratch/r13/checks9.txt`): 6108 frames, 423106 pieces (max 183), loop **91.591 s**. Scenes 8.046, 13.148, 20.788, 17.581, 15.982 and 16.045 s; starts 0, 8.046, 21.194, 41.982, 59.564 and 75.546 s. Its round 13 lines: `Round 13 E1/E2 computed: 997 samples at 0.01 s through four drops and returns ...`; `Round 13 (E1, E2) negative controls: a body starts before its part arrives: caught; a play starts before its body is built: caught; the tilt goes back up on the way down: caught`; `U1 tablet 0.8550 x 1.1000 (deck 1.1000), phone 0.3168 x 0.6531, front edges 0.3277/0.3277/0.3277, canvas frames 0.806/0.860/0.548 high; I2 row -1.9765 to 1.7765 (open copy -1.9765 to 1.7765), gutters 0.2059/0.2059`; `Round 13 (U1, I2) negative controls: U1: the tablet back to 1.8 deep: caught; I2: the row back to centred with GUT gutters: caught`. K3's cursor peak stays 1499.7 px/s; the Figma laptop's entry is 0.00 px into the 280 px stage's gutter (allowance 8).
+- Standalone controls: `tools/controls.mjs Figma` 10 of 10 caught (`.scratch/r13/controls-figma.txt`); `tools/round5-controls.mjs` 13 of 13 caught; `--audit` of `drag-controls`, `round5-addendum-controls` and `round5-second-addendum-controls` match one place each; `round12-checks.mjs --controls` 4 of 4 caught.
+- Browser check, once at the end: `.scratch/review-out/r12/browser-r12.mjs` (round 12's runner of `tools/browser-check.mjs`'s own `checkBrowser`, machine Playwright, GL flags): **PASS at all ten sizes** (390 × 664 to 1920 × 1080, 12 held frames each, laptop entry/return, reduced motion), network requests 0, page errors 0, 19.2 min (`.scratch/review-out/r13/browser-r13.txt`). Its first run stopped at 390 × 664 on InDesign's NaN leaders, fixed in `labels.mjs` above.
+- Films in `.scratch/review-out/r13/` (`film-r13.mjs`: the packed preview driven by `__hero.seek`, cropped to the stage box, 0.05 s steps): `export-{id,pr,ae,fig}-1440.png` from 0.2 s before Export to 0.4 s after the last piece is built; `return-{id,pr,ae,fig}-1440.png` from 0.2 s before the return to 0.4 s after it; `export-fig-390.png` at 390 × 844.
+- U1/I2 stills at rest, before (`git archive HEAD`, round 12) and after: `u1i2-{before,after}-{uxui,indesign}-{1440x900,390x844}.png` (UX/UI at its still, InDesign 0.45 s into its land hold).
+
+## CORRECTIONS-15
+
+Dan, 21 November, 6:31–6:44 AM ET, four comments on the preview at 1474 x 996: N1 (no selection outline on InDesign's map), N2 (a dragged picture slides flat), S1 (Export pops a sphere that becomes the exports) and S2 (the exports sink into the floor). Files changed: `stage.mjs`, `sq.mjs` (one depth bias, below), `README.md`, this file, `tools/checks.mjs`, `tools/controls.mjs`, `tools/correction-checks.mjs`, `tools/drag-checks.mjs`, `tools/entrance-checks.mjs`, `tools/hand-patch.mjs`, `tools/round5-checks.mjs`, `tools/round5-controls.mjs`, `tools/round5-addendum-checks.mjs`, `tools/round8-checks.mjs`, `tools/round12-checks.mjs`, `tools/round13-checks.mjs`, and the new `tools/round15-checks.mjs` and `tools/fixtures/round13-stage.json`. `art.mjs`, `labels.mjs`, `play.mjs`, `public/` and the briefs are untouched.
+
+### N1: the map has no selection outline (`stage.mjs`)
+
+- The red outline bars and the eight handles round the placed map are gone from `editedInDesign` (once `map` is done) and from `approvedDocument`. The map is placed and shown as before. The Pages panel's red page selection stays.
+
+### N2: dragged pictures slide flat (`stage.mjs`)
+
+- Every `+ 0.08 sin(πp)` lift is gone: `travel()` (the dock pictures of Photoshop, Illustrator and InDesign: 0.06 leaving a dock, 0.055 otherwise, as their placed heights), its grey rim, `dragPicture()` (0.08) and its rim (0.06), the video clips (0.05) and Figma's copies (0.06). A carried picture keeps one height from pickup to drop on its straight `HAND` path.
+- `clearCarried` (round 8, G1) now clears every face the carried stack overlaps, not only near ties: the stack rises along the view direction by the largest `other top + step − carried top`, which does not move it in the picture. The cursor is not counted as the carried stack's own. Pieces a carry lifts are put back at their authored place after the faces' separation, so only the view-direction rise remains.
+- Illustrator's close-up keeps its arc: it is not a drag.
+
+### S1: the ball (`stage.mjs`)
+
+- `DROP`, `dropBeats`, `dropLength`, `dropClock`, `dropOut`, `sheetOf`, `carry`, `workIn`, `copyOf`, `SCREEN_ROLE` and `fitIn` are gone. `BALL = { pop 0.3, arc 0.8, rest 0.15, split 0.6, hold 0.15, become 0.6, stagger 0.1, lid 0.4, sink 0.5 }` (the brief's numbers) and `BALL_PATH = { size 0.6, start 0.1, out 0.45, up 0.15, rise 0.6 }`. `ballBeats(key, j)` gives piece j's beats from the Export click; `ballLength` is 2.8 s (InDesign, video, motion) and 3.0 s (Figma, the lid). `art.mjs`'s After Effects `BALL` is imported as `COMP_BALL`.
+- **Pop.** `ballAt`: the ball starts with radius 0.1 at the middle of the Export button's face (`BALL_START`, inside the 0.86 x 0.28 button), clipped at the face's plane (`[0, 0, 1, −face]`), and grows to radius 0.3 while it comes 0.45 out and 0.15 up (`EASE.wipe`).
+- **Arc.** x and z linear in time; y = y1 + vy s − g s²/2 with the peak exactly `rise` (0.6, one diameter) above the pop's end and y(0.8 s) = R, the ball sitting on the floor at the centre of the three blocks' combined footprint (`a = √g` solved in closed form). **The peak was not lowered**: the ball's projected box stays inside the stage's box in all four scenes at 0.6. It never passes the screen's face, the bar, the button or the floor; its shadow comes from the existing shadow map.
+- **Rest, split, hold.** It stops dead. The three pieces start as exact copies of the resting ball and move along the floor to their places while `s` and `e` go from the ball's to the block's (`EASE.wipe`), bottoms on the floor. Every piece has `LYING`'s rotation from the pop on, so nothing turns. The blocks (`lyingShape`): InDesign's stack `BLOCK_ROW.stack` x `COPIES · COPY` high, the phone and tablet bodies; video and motion the tablet body and the two phone bodies; Figma the tablet and phone bodies and the closed laptop (deck footprint, up to the top of the shut lid, the deck's sharp `e`).
+- **Become.** One plane `x = edge` (`EASE.wipe`, left to right, 0.1 s stagger): the red block keeps `[1, 0, 0, −edge]`, the format's pieces `[−1, 0, 0, edge]`, so the same plane with opposite signs, never a gap or an overlap. Behind the edge every piece is exactly round 13's landed pose (U1, I2, X1). Figma's lid (`poseLid`) is shut on the deck through the wipe, then opens to 12 degrees over `BALL.lid` (`EASE.wipe`); lid pictures are left out while they face away from the view (the lid's box is in front of them then).
+- **Figma's laptop no longer slides in from the top left.** Dan's new idea, that the sphere splits into the shapes and they morph into the devices, replaces that 19 November note (round 5's H3 slide, kept through round 13).
+- **Timing.** `playbackSpans(s).spans[j]` runs from Export to piece j's become end; `land` is the last. Plays, the UX/UI cycle and the labels start at `land` (so on the laptop after its lid has opened). The holds keep their form with `ballLength`; InDesign's `drop` wait is `ballLength('id') − 0.8` (2.0 s), so `land` is the end of `drop` as before.
+- **Cursor.** It clicks Export and stays unpressed. Where it overlaps the ball it is drawn in front (below).
+
+### S2: the sink (`stage.mjs`)
+
+- Where the return played (the scene's last 0.5 s, InDesign's `return` wait), every export piece, InDesign's copy lying open included, moves straight down by its group's highest point + 0.02 over `BALL.sink` with `EASE.wipe`, x and z fixed, clipped at `[0, 1, 0, 0]` (y ≥ 0; `clipAt` runs in the picture, flat and shadow passes). Nothing is left at the end. The plays hold their frame through the sink (`exportPlay` and the device clocks are held at `off[0]`); the labels are cut at `off[0]`, the sink's start.
+
+### The renderer (`sq.mjs`)
+
+- One new per-piece uniform, `near`: `gl_Position.z −= near / 60` (the view's depth scale), never in the shadow pass. `build()` gives it to the cursor while a solid red piece is on screen, so the cursor stays in front of the ball in the picture without moving. One clip plane per piece remains enough: no format piece needs a second clip while it is wiped (the wipe plane) or sunk (the floor plane), as the two never overlap in time.
+
+### Checks retired, updated and new
+
+- **Retired** (`tools/round13-checks.mjs`): E1/E2's drop and return sweep (`checkRound13`, `describe` and their helpers: nothing before the peel, the copy over the work, the monotonic tilt, the landing on the footprint, no body before its part, no play before its body, parts at their places, nothing through the floor or screen, the sheet inside the fit envelope, the floor empty after the return) and its three negative controls (`checkRound13Controls`: a body before its part, a play before its body, the tilt back up). U1/I2 (`checkRows`, `checkRowsControls`) stay and pass unchanged.
+- `tools/checks.mjs`: runs round 15 in place of E1/E2; a floor piece may be clipped only by the ball's pop, a wipe (one plane in x) or the sink's y = 0; the face overlap check skips the solid red volumes; the loop ceiling is 100 s (was 92).
+- `tools/correction-checks.mjs`: labels' fixed ends are `land`; the laptop entry window and its 8 px allowance are gone (no slide), so the stage gutters are checked at every instant with allowance 0 (0.00 px).
+- `tools/round5-checks.mjs`: H2's growth uses `ballLength` and `BALL.sink`; H3 samples the lid's opening (`BALL.lid` before the laptop's become end) and expects no x entry; H1/H2's frozen comparisons apply `r15Patch` and leave out N1's marks. `tools/round5-controls.mjs`: "laptop enters from wrong side" becomes "laptop slides while its lid opens" (same rule).
+- `tools/round5-addendum-checks.mjs`, `tools/drag-checks.mjs`: the frozen stages get `r15Patch` (new in `tools/hand-patch.mjs`: the five arc sites flattened in memory), and N1's marks are left out of the screen comparisons; InDesign's label instant uses `ballLength`'s `land`.
+- `tools/entrance-checks.mjs`: E4's growth uses `ballLength` and `BALL.sink`. `tools/round8-checks.mjs`: LOOP 91.59089 became 97.69089. `tools/round12-checks.mjs`: X1's Figma samples are the middle of the hold and of the lid's opening. `tools/controls.mjs`: "R12 early label" edits the new `land` line.
+- **New** `tools/round15-checks.mjs` (run by `checks.mjs`; `--controls` alone), every 0.01 s through the four exports and sinks: nothing before Export; the pop inside the button, full size at its end; the arc's height with a constant second difference, x and z linear, never below the floor or through the screen, inside the stage's box; resting on the floor at the blocks' centre within 1e-6; no rise after touchdown; the split's first frame equal to the ball and its end equal to the blocks (within 0.001, exact `e`), bottoms on the floor; one wipe plane with opposite signs, edge monotonic; no play before its wipe or the lid; at rest every piece equal to `e1e55af`'s (the frozen `tools/fixtures/round13-stage.json`, within 1e-9, label marks too); the sink straight down, clipped at y = 0 in every pass, nothing left; the cursor in front of the ball. N1: no outline bar or handle on `ID.frame`'s edges in any InDesign frame. N2: every drag in every app, its carried picture's projected corners against the same rect at one constant height on its straight path, within 0.1 px at S 103.6.
+- **Negative controls** (in memory, each caught): a bounce after touchdown; one device's play 0.3 s before its wipe ends; one piece unclipped in the sink; the map's outline restored; the drag arc restored.
+
+### Timing
+
+- Loop **97.691 s** (91.591 in round 13). Scenes 8.046, 13.148, 22.238, 19.031, 17.432 and 17.795 s; starts 0, 8.046, 21.194, 43.432, 62.464 and 79.896 s. Export / all built / sink, globally: InDesign 32.732 / 35.532 / 42.932–43.432; video 55.964 / 58.764 / 61.964–62.464; motion 73.396 / 76.196 / 79.396–79.896; Figma 91.191 / 94.191 / 97.191–97.691. Stills (local): InDesign 19.336277, video 15.881291, motion 14.282090, Figma 15.395163 (same offsets from `land` as round 13).
+
+### Readings
+
+- **Labels** start at `land`, when every piece of the row is built, rather than at each piece's own become end: the brief's "from the last piece's become end". In Figma they come after the lid has opened.
+- **Plays hold** their frame while they sink, so nothing moves but down; they start at `land`, after the last wipe.
+- **The closed laptop's block** is the deck's body (0.08) plus the shut lid, not the 0.09 face top of the keys.
+- **InDesign's waits** keep their ids `drop` and `return`; they now hold the ball and the sink.
+- **N2's flattening** also covers Photoshop's and Illustrator's dock travels, which go through `travel()`.
+- **Known standalone misses** in `tools/controls.mjs` are the ones round 12 recorded (D1/I1/X1 above): R1 premature photo row and R2 premature page row (exit 1, stopped first by R5's `echo precedes source action`; re-run on a `git archive HEAD` copy here, they miss the same way), R10 A4 undone (exit 0: the distance rule lengthens `spreadType` to 0.476 s whatever its authored length), page text boundary fit undone and drag's old per-face lift moves corners. Not changed by this round.

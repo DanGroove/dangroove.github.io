@@ -1,0 +1,137 @@
+/* Take two alone owns these offsets; the borrowed first-take stylesheet stays untouched. */
+.hero-name .name-line,
+.hero-crafts .n {
+  position: relative;
+  left: var(--name-ink-shift, 0px);
+}
+.hero-name .name-line {
+  display: block;
+}
+@media (min-width: 720px) {
+  .hero {
+    --pad: clamp(40px, calc(30vw - 296px), 64px);
+  }
+  .hero-say {
+    transform: translateY(-46%) translateY(calc(-1 * var(--say-rise, 0px)));
+  }
+}
+/* Round 6 entrance. The player animates the name's weight itself, from the entrance's own clock. Until the first frame can
+   draw, the parts that enter stay hidden, so nothing shows before its turn. Without scripts, or with reduced motion, nothing
+   is held back. */
+.hero-name {
+  animation: none;
+  /* Dan: the name can be clicked over and over without highlighting it (as on the live page's headline). */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .hero.is-entering .hero-mark,
+  .hero.is-entering .hero-links a,
+  .hero.is-entering .hero-name,
+  .hero.is-entering .hero-lede,
+  .hero.is-entering .hero-crafts li {
+    visibility: hidden;
+  }
+}
+/* Round 8, N1: the name reacts as the live page's headline does (name-react.mjs). The flow text keeps the layout and is
+   what screen readers get; once live, it is painted by an overlay of the same letters at their measured pen positions,
+   with a red copy cut to a circle around the pointer. Generated content keeps the overlay out of text measurement. */
+.hero-name .name-fx {
+  position: absolute;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+  user-select: none;
+  -webkit-text-fill-color: currentcolor;
+}
+.hero-name .name-line.is-live {
+  -webkit-text-fill-color: transparent;
+}
+.hero-name .name-line.is-live .name-fx {
+  display: block;
+}
+.hero-name .name-ch {
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: pre;
+}
+.hero-name .name-ch::before {
+  content: attr(data-ch);
+}
+.hero-name .name-red {
+  position: absolute;
+  inset: 0;
+  display: block;
+  color: #f0484f;
+  -webkit-text-fill-color: #f0484f;
+  clip-path: circle(0px at 0px 0px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-name .name-line.is-live {
+    -webkit-text-fill-color: currentcolor;
+  }
+  .hero-name .name-line.is-live .name-fx {
+    display: none;
+  }
+}
+/* Round 14, K1 (replaces round 12's selection box, which replaced round 11's red rule): the current craft's letters roll up
+   into place. craft-wipe.mjs adds .is-rolling to the list once its overlay is measured (never with reduced motion, never
+   without scripts). Then each button carries an aria-hidden overlay of glyph masks at the flow letters' measured pen
+   positions (left, top, width and height written on measure only); each mask is a hard clip of the line box with 0.2 em of
+   slack either side, and holds two copies drawn by generated content (so no text node reaches the page's ink measures): the
+   out copy in the button's own colour and the in copy in paper (the number's red). Per frame only the copies' transform is
+   written. The flow text keeps the layout and is what screen readers read; it is painted transparent only while the overlay
+   is live. Everything here is absolute or paint only, so no layout number changes. */
+.hero-crafts.is-rolling button {
+  position: relative;
+}
+/* Above journey.css's aria-current colours (0,2,1): the out copy is the row's colour when not current, muted or, under
+   hover, paper; the in copy carries the current look. */
+.hero-crafts.is-rolling li button {
+  color: inherit;
+}
+@media (hover: hover) {
+  .hero-crafts.is-rolling li button:hover {
+    color: var(--paper);
+  }
+}
+.hero-crafts.is-rolling button > span:not(.craft-roll) {
+  -webkit-text-fill-color: transparent;
+}
+.hero-crafts .craft-roll {
+  position: absolute;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+  user-select: none;
+  -webkit-text-fill-color: currentcolor;
+}
+.hero-crafts.is-rolling .craft-roll {
+  display: block;
+}
+.hero-crafts .craft-g {
+  position: absolute;
+  overflow: hidden;
+}
+.hero-crafts .craft-o,
+.hero-crafts .craft-i {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  white-space: pre;
+}
+.hero-crafts .craft-o::before,
+.hero-crafts .craft-i::before {
+  content: attr(data-ch);
+}
+.hero-crafts .craft-i {
+  color: var(--paper);
+  -webkit-text-fill-color: var(--paper);
+  transform: translateY(110%);
+}
+.hero-crafts .craft-i.is-n {
+  color: var(--red-bright);
+  -webkit-text-fill-color: var(--red-bright);
+}
