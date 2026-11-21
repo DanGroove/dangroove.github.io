@@ -29,7 +29,7 @@ change('R14 wrong corner inset', 'R14:', 'stage.mjs', 'i === 0 ? x + 0.1', 'i ==
 change('Figma device count', 'Figma devices:', 'stage.mjs', "const kind = ['laptop', 'tablet', 'phone'][i]", "const kind = ['laptop', 'phone', 'phone'][i]");   // CORRECTIONS-13: prototypeOut
 change('Figma canvas tags beside top bar', 'canvas clearance:', 'stage.mjs', "if (done(s, 'frame' + i, t)) D.push({ ...on('grey', r[0], r[1] + r[3] + 0.015", "if (done(s, 'frame' + i, t)) D.push({ ...on('grey', r[0], r[1] + r[3] + 0.035");
 change('canvas pixel ceiling', 'pixel ceiling:', 'play.mjs', 'Math.min(2, devicePixelRatio || 1, Math.sqrt(5.2e6 / (W * H)))', 'Math.min(2, devicePixelRatio || 1)');
-change('page contact undone', 'faces and cursor did not share one offset', 'stage.mjs', 'if (!pageContact(s, id, t, from, to, r)) for (const edge', 'if (true) for (const edge');   // CORRECTIONS-12 I1: was the frames' contact
+change('page contact undone', 'page edges still drawn under its carried picture', 'stage.mjs', 'if (!pageContact(s, id, t, from, to, r)) for (const edge', 'if (true) for (const edge');   // CORRECTIONS-12 I1: was the frames' contact. CORRECTIONS-15: its rule is now stated directly (correction-checks R15)
 change('word side faces A5 undone', 'word side faces:', 'stage.mjs', "if (pc.art === 'wMake' || pc.art === 'wMove') pc.cut = true;", "if (pc.art === 'wMake' || pc.art === 'wMove') pc.cut = false;");
 change('Figma canvas playback frozen', 'Figma motion:', 'stage.mjs', 'prototype(draw, i, clock, false);', 'prototype(draw, i, 0, false);');
 change('Figma laptop playback frozen', 'Figma motion:', 'stage.mjs', 'prototype(lidPainter(face), 0, shown);', 'prototype(lidPainter(face), 0, t < land ? -1 : 0);');   // CORRECTIONS-13: prototypeOut

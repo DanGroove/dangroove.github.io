@@ -189,8 +189,16 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
       const plateCount = plates.filter(pc => !pc.pageEdge).length, edges = plates.filter(pc => pc.pageEdge).length;
       if (at < place.end - 1e-9 && plateCount !== (i === 0 ? 2 : 1)) fail(time, 'R15: ' + id + ' page missing before placement');
       if (i && at < place.start - 1e-9 && edges !== 4) fail(time, 'R15: ' + id + ' page edges missing before its drag');
+      // CORRECTIONS-15: a page's thin edge stops at its picture's first contact (0.03 before it touches). Round 12 caught an edge
+      // left on through G1's offset rule, a side effect of round 8's near-tie lift; N2's clearCarried now lifts the picture over any
+      // face it overlaps, so the rule is stated directly: no edge while the carried picture overlaps its page.
+      if (i && edges) {
+        const carried = P.filter(pc => pc.where === 'travel' && pc.action === id && !pc.hide), page = plates.filter(pc => !pc.pageEdge && !pc.hide);
+        const box = list => list.map(rect).reduce((a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])]);
+        if (carried.length && page.length && overlap(box(carried), box(page))) fail(time, 'R15: ' + id + ' page edges still drawn under its carried picture');
+      }
       const replacement = P.some(pc => pc.where === 'content' && !pc.echo && arts.includes(pc.art));
-      if (at >= place.end - 1e-9 && !plates.length && true) fail(time, 'R15: ' + id + ' page disappeared without a same-frame replacement');
+      if (at >= place.end - 1e-9 && !plates.length && !replacement) fail(time, 'R15: ' + id + ' page disappeared without a same-frame replacement');
     }
   }
   let fixedSamples = 0, windowStart = 0;
