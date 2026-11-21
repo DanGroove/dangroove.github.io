@@ -99,3 +99,23 @@ Today the tablet lies 1.8 deep (`ROW`) from `MAT.z`, and the phone's front edge 
 - **negative control:** put the tablet back to 1.8 deep, and the depth check fails.
 
 Show this row in the films: a still of the UX/UI export at rest at 1440 x 900 and 390 x 844, before and after U1.
+
+## I2 (added, Dan 21 November, 5:09 AM ET). InDesign's row behind is squared up with the open copy
+
+Dan pinned this at the open copy's right corner, beside the tablet, in the round 12 before-and-after image: "make sure the right edges align here".
+
+Before round 12, the row behind (stack, phone, tablet) was exactly as wide as the open booklet. D1's smaller phone left `BACK` (about 0.086) free on each side, so the tablet's right edge now sits about 0.086 inside the open copy's right edge, and the stack's left edge sits the same distance inside its left edge.
+
+- **Squared up:** the row behind spans exactly the open copy's width. The stack's left edge lies on the open copy's left edge (`BLOCK.x0`), and the tablet's right edge lies on its right edge (`BLOCK.x1`).
+- **The slack goes into the row's two gutters,** shared equally: each is `GUT + BACK`, about 0.206. This supersedes D1's "keep the gaps" for this row only.
+- **Unchanged:** the devices' sizes and shapes, the front gutter between the row and the open copy, the front edges' alignment, and the block's centre.
+- **Round 13's split** lands the post and the e-blast on these places.
+- **Labels** follow, with no new collisions.
+
+**Checks:**
+- both outer edges of the row lie on the open copy's edges within 0.001;
+- the two gutters are equal;
+- the block's centre is unchanged;
+- **negative control:** put the row back to centred with `GUT` gutters, and the right-edge check fails.
+
+Add the InDesign export at rest, before and after I2, to the U1 stills.
