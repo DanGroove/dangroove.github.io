@@ -316,6 +316,61 @@ Unchanged from round 1's list: the browser check's H6 and H5 (failing since `d25
 
 BUILD.md: add a "Round 17, critique round 2" part: C3's cut-outs (how many for each picture, their atlas pages and gutters, the blended pass, the release frames), C4's halves (their pieces, heights, depths and crossings), C5's offset, the checks and controls added or changed, every earlier check changed with its old and new number, and how to run the pixel gate.
 
+## Critique round 3: C3 by building textures, C7 at the spine
+
+Build these on top of `9ba17ea` and keep everything else. Both critics re-reviewed `9ba17ea` in a real browser. C4, C5 and C6 pass: the five InDesign objects go under together, C5's gate passes in every sink at dpr 1 and dpr 2, and the new control fails at its gate. C3 still changes pictures at their releases. Change nothing else: no time, size, place, picture or colour that these corrections do not name.
+
+### C3 by building textures: a picture built on screen is one texture, so its last step changes nothing
+
+What shows: end - 0.002 s against end + 0.002 s at 1474 x 996, dpr 1, pixels over 8 levels inside the released pictures: every typed letter's edge (686 at 14.082, 446 at 16.806, 216 at 32.350); the cut-outs' edges (380, up to 71 levels, at 14.082; 202, up to 114, at 16.806; 60 at 26.470; 95, up to 166, at 29.779; 198 at 85.928); and base textures (the gold line at 14.082, the whole cover photo at 27.066).
+
+Causes, measured (`.scratch/crit17/evidence/r3/diag/`, a record kept in the cloud):
+1. The typed letters are still alpha-tested: `mapTyping` draws them `cut: true` (`stage.mjs` line 1498), discarded below alpha 0.5, so their edges are hard until the release and filtered after it.
+2. The bases are not on their finished picture's 8-texel grid; only the cut-outs are. Positions mod 8: `kMap` (0, 1) against `mapStreet` (0, 0); `kCover` (2, 2) against `coverPhoto` (6, 0); `kLoc` and the wireframes against all of their bases likewise. So mip levels 1 to 3 filter the bases' edges differently from the finished picture's.
+3. Atlas pages 1 (1700 tall) and 6 (412 tall) are not multiples of 8, so their level 2 has an odd height and the GPU's level 3 leaves the 8-texel grid: `kMap` at the same phase on a 1700-tall and a 1704-tall page gives identical levels 1 and 2 and a level 3 up to 78 levels apart. Nothing on another page can match `kMap` or `kPost` there.
+4. Even on aligned grids, blending separately filtered layers is not exact where layers overlap. Emulated at mip levels 1 to 3: the lower map's 44 cut-outs over their ground are up to 42 levels off `kLoc`, the mail's up to 13, the wireframes' up to 16.
+
+Repadding page 1 is not a way out: it holds ten other pictures (Photoshop's photos, the device screens, the interface builds), whose level 3 would move by 30 to 101 levels.
+
+Correction:
+- **Building textures.** Each place where one of these pictures is built on screen gets its own texture, kept for the whole loop: Illustrator's upper map (`kMap`) and lower map (`kLoc`); InDesign's cover (`kCover`), post (`kPost`) and mail (`eblast`); Figma's three wireframes (`wireWide`, `wireTablet`, `wireTall`). If one picture is built in two places, they get two textures. Every other use of every picture stays on the atlas as it is today.
+- **Its form.** The picture alone, at the atlas scale, with a transparent margin of at least 24 texels on every side, its origin at a multiple of 8 (phase 0, 0), and a width and height that are multiples of 8. Upload and filter it as the atlas pages are (premultiplied, `generateMipmap`, `LINEAR_MIPMAP_LINEAR`, `TEXTURE_MAX_LEVEL` 3, anisotropy 4, clamped to the edge). The face maps it the way `places` map the atlas, texel centre to texel centre, and draws it as an ordinary picture (`uArtMode` 1).
+- **What it holds.** The finished picture's own paint commands, in their original order, limited to what the build shows at that moment: the commands the build's current base shows; each mark's commands once its action has placed it (`CUTOUTS`' ownership of commands decides which commands are whose); a reveal (a wipe, a drag's growth, a frame being drawn) as a clip on the canvas before the upload, never as a window on the quad; typed text as the same text command limited to the letters typed so far, with the finished command's font, position, alignment and spacing, so that each typed letter sits exactly where it will sit at the end. Repaint and re-upload only when that set changes. You may repaint and upload only the changed region (its box plus the 24-texel margin, kept on the 8-texel grid) and then regenerate the texture's mipmaps.
+- **No swap.** The building texture stays in use after the build's last action, with every command painted, so the release frame draws the same texture as the frame before it. Every piece that shows a building's picture uses that building's texture until the picture leaves the screen, carried pieces included (the maps carried at `mapExport` 19.534 and `locExport` 20.394, a thumbnail of them, an export's travel, the sink). If a piece must change from the building texture to the atlas while the picture shows in the same place, list it in BUILD.md as a handover; the release test below applies there too.
+- **What goes.** For these eight pictures in their building uses: no base pictures, no cut-out pieces, no blended pass, no typed letters drawn `cut: true` or as separate letter pictures. Remove what then has no use. Atlas pages 0 to 4 stay byte-identical, with every picture's place, size and phase; page 1 above all is never repadded. Pages that held only cut-outs or bases may go.
+- **Fallback.** If a build cannot be expressed this way, that picture alone falls back to round 3's cut-outs with three changes: its typed letters become blended premultiplied pictures on its 8-texel grid; every base sits on its finished picture's grid; and the finished picture, its bases and its cut-outs are drawn from copies on a page whose height is a multiple of 8, on the same grid. Record each fallback and why. It must pass the same gates.
+
+Checks, Node:
+- Exactness, from the recorded paint commands: at each building use's last action, its painted list equals the finished picture's full list, in order and unclipped; before a mark's action, none of its commands are painted; a typed text command keeps the finished command's font, position and alignment; no building texture is used by two building uses in one frame; in their building uses, these pictures are never drawn with `uArtMode` 2 or 3, or as `cut` pieces.
+- The atlas: pages 0 to 4's packing (every place, size, phase and page height) equals `dcb8094`'s.
+- Negative controls, each failing at its own gate: a building texture one command short at its release; a mark painted one action early; typed letters drawn alpha-tested; one texture shared by two building uses; page 1 repadded to 1704. Remove round 3's cut-out controls that no longer apply, and list them. Every other control still fails at its gate.
+
+Checks, browser, in `tools/round17-pixel-checks.mjs` (the coordinator runs them in the cloud):
+- Readback: at end + 0.002 s of each building use's last action, levels 0 to 3 of its texture are byte-identical to a fresh paint of the finished picture into a texture of the same size and grid. Expose on `window.__hero` what this needs (for example, a building texture's levels read back, and the fresh paint to compare).
+- Release test, new scope: at every rule G and picture release (2.296, 2.991, 14.082, 14.528, 16.806, 26.470, 27.066, 29.779, 32.350, 85.928, and any other in BUILD.md's list) and at every handover, end - 0.002 s against end + 0.002 s at 1474 x 996, dpr 1 and dpr 2, and 390 x 844, dpr 2. Count only the pixels inside the released picture's own building face, present before and after, as projected, grown by 4 px x dpr, with the cursor's box and the caret masked: no pixel over 8 levels, at all three sizes. Round 2's 0.5 % allowance goes; record the whole-stage count and its percentage, without deciding on them. Outside the released picture's face and the faces of the other building textures on screen, the after-frame equals `dcb8094`'s after-frame within 8 levels; inside those other faces, the after-frame equals the before-frame within 8 levels. A piece that appears or goes at the release by design (Photoshop's new layer thumbnail at 2.296, the panel thumbnail at 27.066) is judged by that `dcb8094` rule, not counted as the released picture.
+- InDesign's placements at 22.667 and 25.233 change by design (the selection line goes; at 25.233 the loaded cursor's preview becomes the placed picture). There, the frames before and after each equal `dcb8094`'s within 8 levels.
+- Builds: every 1/60 s through each of the eight builds at 1474 x 996, dpr 1, each frame changes pixels only around the mark or reveal whose action is under way (its box on the picture plus 24 texels, projected, plus 4 px), the cursor, the caret and the tool rail; no mark shows before its action.
+- Stills: each still that shows one of these pictures matches, within 8 levels, a plain render of its finished picture painted fresh into a texture of the same size and grid as its building texture (the readback's reference). Against `dcb8094` it is recorded and judged as a side effect, below.
+- Cost: time the texture work of each build frame (repaint, upload, mipmaps) in the page and expose the times on `window.__hero`. Measured in the cloud's headless Chromium (software rendering) at 1474 x 996, dpr 1, and 390 x 844, dpr 2, worst and median frame of each build recorded: at most 16 ms in the worst frame and 4 ms at the median.
+
+Side effects accepted, judged by both critics:
+- Inside the eight pictures, the stills and rest frames may change at the mip levels, because the building textures' grid differs from the atlas places: recorded against `dcb8094`; at 2x on 18.881, 40.380 and 96.191, no change in tone, sharpness or weight. Softer edges on letters and marks during the builds are intended.
+- Nothing else: everything outside the eight pictures (Photoshop, Premiere Pro, After Effects and the device screens included) within 8 levels of `9ba17ea` in every frame checked; page 1 byte-identical; no change of time, crossing or loop length; no regression of C1, C2, C4, C5 or C6.
+
+How it will be judged: the gates above, frames at every release and handover, and the builds frame by frame. If round 4 still leaves a residual, round 5 only corrects it or puts the measured numbers to Dan; there is no further rewrite.
+
+### C7. The reading copy's halves meet at the spine
+
+Both critics saw a 1 px dark line at the spine in InDesign's last sink frames (43.30 to 43.42 s); it is not yet confirmed. Add a Node check: every 1 ms through InDesign's sink (42.782 to 43.782 s), every piece of each half that reaches the spine ends at the same x as the other half's (x = -0.1), with no gap. If it finds a gap, close it by deriving both edges from one number, and report it. Negative control: a 0.0001 gap must fail it. At review, the coordinator attributes the spine's pixels every 1 ms from 43.300 to 43.420 s at dpr 1 and dpr 2: floor at the spine is a C4 defect; an outline or a side wall is accepted and recorded.
+
+### Not in this run, still
+
+Unchanged from round 2's list.
+
+### Records for C3 by building textures and C7
+
+BUILD.md: add a "Round 17, critique round 3" part: the building uses and their textures (size, margin, grid, what each paints and when), the handovers, any fallback and why, the pieces and pages removed, the checks and controls added, removed or changed with their numbers, C7's result, and how to run the gates.
+
 ## G. The swap rule (R2, R3, R5 and their kin)
 
 Several notes are one fault. A scene builds something out of parts on the screen, then replaces the parts with the finished picture in one frame, and the finished picture does not sit where the parts were. So something jumps, or something the parts hid comes back.
