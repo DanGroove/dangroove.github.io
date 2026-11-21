@@ -76,57 +76,62 @@
     display: none;
   }
 }
-/* Round 12, L2 (replaces round 11's red rule): the current craft is selected like a layer in a design app. A 1 px red
-   rectangle runs round its row (top and bottom on the row's own hairlines, sides at its edges; round the current cell of the
-   phone grid), drawn by the list's ::before; ::after is the top left handle, 5 px square, centred on its corner, and its
-   three shadows are the other three. craft-wipe.mjs writes only custom properties on the list (--sl/--sr/--st/--sb, each
-   line's position in px; --sel-show; --sel-clip and --h0 to --h3 during the entrance) and .is-lit on a row (text paper,
-   number red: hard cuts). Both are absolute, so no layout number changes; the list's position: relative moves nothing. */
-.hero-crafts.is-selected {
+/* Round 14, K1 (replaces round 12's selection box, which replaced round 11's red rule): the current craft's letters roll up
+   into place. craft-wipe.mjs adds .is-rolling to the list once its overlay is measured (never with reduced motion, never
+   without scripts). Then each button carries an aria-hidden overlay of glyph masks at the flow letters' measured pen
+   positions (left, top, width and height written on measure only); each mask is a hard clip of the line box with 0.2 em of
+   slack either side, and holds two copies drawn by generated content (so no text node reaches the page's ink measures): the
+   out copy in the button's own colour and the in copy in paper (the number's red). Per frame only the copies' transform is
+   written. The flow text keeps the layout and is what screen readers read; it is painted transparent only while the overlay
+   is live. Everything here is absolute or paint only, so no layout number changes. */
+.hero-crafts.is-rolling button {
   position: relative;
 }
-.hero-crafts.is-selected::before,
-.hero-crafts.is-selected::after {
-  content: "";
-  position: absolute;
-  display: var(--sel-show, none);
-  box-sizing: border-box;
-  pointer-events: none;
-}
-.hero-crafts.is-selected::before {
-  left: var(--sl, 0px);
-  top: var(--st, 0px);
-  width: calc(var(--sr, 0px) - var(--sl, 0px) + 1px);
-  height: calc(var(--sb, 0px) - var(--st, 0px) + 1px);
-  border: 1px solid var(--red-bright);
-  clip-path: var(--sel-clip, none);
-}
-.hero-crafts.is-selected::after {
-  left: calc(var(--sl, 0px) - 2px);
-  top: calc(var(--st, 0px) - 2px);
-  width: 5px;
-  height: 5px;
-  background: var(--h0, var(--red-bright));
-  box-shadow:
-    calc(var(--sr, 0px) - var(--sl, 0px)) 0 0 0 var(--h1, var(--red-bright)),
-    0 calc(var(--sb, 0px) - var(--st, 0px)) 0 0 var(--h2, var(--red-bright)),
-    calc(var(--sr, 0px) - var(--sl, 0px)) calc(var(--sb, 0px) - var(--st, 0px)) 0 0 var(--h3, var(--red-bright));
-}
-/* Above journey.css's aria-current colours (0,2,1 and 0,3,1): the colours follow the selection's cuts, not aria-current. */
-.hero-crafts.is-selected li button {
+/* Above journey.css's aria-current colours (0,2,1): the out copy is the row's colour when not current, muted or, under
+   hover, paper; the in copy carries the current look. */
+.hero-crafts.is-rolling li button {
   color: inherit;
 }
 @media (hover: hover) {
-  .hero-crafts.is-selected li button:hover {
+  .hero-crafts.is-rolling li button:hover {
     color: var(--paper);
   }
 }
-.hero-crafts.is-selected li.is-lit button {
+.hero-crafts.is-rolling button > span:not(.craft-roll) {
+  -webkit-text-fill-color: transparent;
+}
+.hero-crafts .craft-roll {
+  position: absolute;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+  user-select: none;
+  -webkit-text-fill-color: currentcolor;
+}
+.hero-crafts.is-rolling .craft-roll {
+  display: block;
+}
+.hero-crafts .craft-g {
+  position: absolute;
+  overflow: hidden;
+}
+.hero-crafts .craft-o,
+.hero-crafts .craft-i {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  white-space: pre;
+}
+.hero-crafts .craft-o::before,
+.hero-crafts .craft-i::before {
+  content: attr(data-ch);
+}
+.hero-crafts .craft-i {
   color: var(--paper);
+  -webkit-text-fill-color: var(--paper);
+  transform: translateY(110%);
 }
-.hero-crafts.is-selected li button .n {
-  color: inherit;
-}
-.hero-crafts.is-selected li.is-lit button .n {
+.hero-crafts .craft-i.is-n {
   color: var(--red-bright);
+  -webkit-text-fill-color: var(--red-bright);
 }

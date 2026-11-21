@@ -21,6 +21,7 @@ import { checkRound8, checkRound8Controls } from './round8-checks.mjs';
 import { checkRound9, checkRound9Controls } from './round9-checks.mjs';
 import { checkRound10, checkRound10Controls } from './round10-checks.mjs';
 import { checkRound12StarsList, checkRound12Controls } from './round12-stars-list-checks.mjs';
+import { checkRound14, checkRound14Controls } from './round14-checks.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
@@ -371,7 +372,7 @@ scheduledTick(1000); near(win.__hero.t - beforeStall, 0.1);
 scheduledTick(1100); near(win.__hero.t - beforeStall, 0.2);
 pause.events.click();
 media.matches = true; media.change(); near(sceneAt(win.__hero.t).at, SHOW[3].still);
-// Round 11: every draw hands the craft list the scene's own craft; the stand-in page has no entrance (?t=0), so no cut.
+// Rounds 11-14: every draw hands the craft list the scene's own craft; the stand-in page has no entrance (?t=0), so no cut.
 assert.ok(craftFollows.length >= draws.length && craftFollows.at(-1)[0] === sceneAt(win.__hero.t).scene.craft && craftFollows.every(([, cut]) => !cut), 'C1: the player does not hand the craft list its craft on each draw');
 win.__hero.seek(-0.01); near(win.__hero.t, LOOP - 0.01);
 // Dense reading poses include the leaves at their widest, between the six fitted stills.
@@ -535,8 +536,10 @@ try { console.log(describe(await checkHand())); console.log('K3 negative control
 try { console.log(await checkRound8()); console.log('Round 8 negative controls: ' + await checkRound8Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound9()); console.log('Round 9 negative controls: ' + await checkRound9Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound10()); console.log('Round 10 negative controls: ' + await checkRound10Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
-// Round 12 (S1, L2): round 11's wipe checks are replaced by L2's, which carry round 11's kept rules.
-try { console.log(await checkRound12StarsList()); console.log('Round 12 (S1, L2) negative controls: ' + await checkRound12Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
+// Round 12 (S1): its L2 checks (the selection box) are gone with the box; round 14's letter roll (K1) carries round 11's
+// and round 12's kept rules for the craft list.
+try { console.log(await checkRound12StarsList()); console.log('Round 12 (S1) negative controls: ' + await checkRound12Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
+try { console.log(await checkRound14()); console.log('Round 14 (K1) negative controls: ' + await checkRound14Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {
