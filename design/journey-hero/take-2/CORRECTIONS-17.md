@@ -18,13 +18,15 @@ This brief is for the builder. Dan, 21 November, 9:33 to 9:42 AM ET, left eleven
 
 **Changed at 10:16 AM ET, after the first build was sent:** R9 was misread. Dan: "That's not what I was saying about after effects", then "They sink like a pixel or two". Revert the first build's R9 (After Effects sinking after one play); the R9 below replaces it.
 
+**Changed at 10:52 AM ET:** on R5, with a screenshot of the panels just after they move back, Dan: "the backwards position on these is the correct one, not what they were before". So the finished pictures' places are the reference: under rule G the build moves to where the finished picture sits, never the other way. R5 below says it for InDesign.
+
 Everything in `CORRECTIONS-2.md` to `CORRECTIONS-16.md` still holds unless it is changed here. The motion stays hard-edged: no fades and no blur. Nothing here touches anything outside `design/journey-hero/take-2/`.
 
 ## G. The swap rule (R2, R3, R5 and their kin)
 
 Several notes are one fault. A scene builds something out of parts on the screen, then replaces the parts with the finished picture in one frame, and the finished picture does not sit where the parts were. So something jumps, or something the parts hid comes back.
 
-**Rule:** wherever a build, a drag or a typed word is replaced by its finished picture, nothing moves and nothing appears or disappears except what the action itself adds. Every picture keeps its projected corners (within 0.1 px at 1474 x 996) and its face height (within one `LAYER_STEP`) across the replacement. Fix the cause, not the frame: make the build's layers register exactly with the finished picture, or put the finished picture exactly where the build was.
+**Rule:** wherever a build, a drag or a typed word is replaced by its finished picture, nothing moves and nothing appears or disappears except what the action itself adds. Every picture keeps its projected corners (within 0.1 px at 1474 x 996) and its face height (within one `LAYER_STEP`) across the replacement. Fix the cause, not the frame. The finished picture's place is the reference (Dan, 10:52 AM, on R5): make the build's layers sit at the finished picture's height and register exactly with it.
 
 Known places today, measured in a browser at the action's end, 2 ms each side:
 
@@ -75,9 +77,14 @@ The cause: `travel()` tags its pieces `action: key`, the picture's key (`map`, `
 - Every carried or travelling picture, in every app, is in front of everything it passes over at every instant, and stays flat: N2's one height on the page, raised only along the view. The cursor stays in front of it.
 - Fix the tagging so every carry is seen by `carriedStack()`, including Photoshop's export and InDesign's drags.
 
-## R5. InDesign: nothing moves when the finished document replaces the build
+## R5. InDesign: the panels sit back from the start
 
-At `mailFlyer`'s end (32.350 s) the build is replaced by `approvedDocument()`, which places every page at lift 0.06, thickness 0.02 (face 0.080). The build had the post at face 0.109 (since `postButton` ended) and the cover and spread at 0.084, so all of them move back in one frame. Apply rule G: one height per page from the moment it is placed to the end of the scene, the same in the build and in the approved document. The pages panel's thumbnails are included.
+At `mailFlyer`'s end (32.350 s) the build is replaced by `approvedDocument()`, which places every page at lift 0.06, thickness 0.02 (face 0.080). The build had the post at face 0.109 (since `postButton` ended) and the cover and spread at 0.084, so all of them move back in one frame.
+
+Dan: "the backwards position on these is the correct one, not what they were before". So:
+- Every page and panel sits where `approvedDocument()` puts it (face 0.080) from the moment it is placed, all through the build. That covers the spread's pages, the cover, the post, the e-blast and the pages panel's thumbnails.
+- What is drawn onto a page while it is built (typed words, drawn shapes, a dropped photo) sits on that page, at most a few layer steps above it, and never lifts the page itself.
+- At 32.350 s nothing moves (rule G).
 
 ## R6. The ball comes out of the top of the Export button, with momentum
 
