@@ -14,7 +14,7 @@ import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
 import { BROWSER_SIZES, checkLabelRoutes } from './browser-check.mjs';
 import { handPatch, r12Patch, r15Patch } from './hand-patch.mjs';
 import * as stageModule from '../stage.mjs';
-import { round17Changed as round15Changed } from './round17-checks.mjs';
+import { round17Changed as round15Changed, round17ScreenReference } from './round17-checks.mjs';
 
 const take = new URL('../', import.meta.url);
 const fixture = JSON.parse(fs.readFileSync(new URL('fixtures/round5-source.json', import.meta.url)));
@@ -32,7 +32,7 @@ async function reference() {
   const resolve = source => source.replace(/from (['"])([^'"]+)\1/g, (_, q, ref) => 'from ' + q + new URL(ref, take).href + q);
   // CORRECTIONS-7: round 7's hand edit is applied in memory; the hash above is still of the frozen bytes.
   // CORRECTIONS-12 I1: so is the removal of InDesign's frame steps, so both timetables agree up to Figma.
-  const stageURL = 'data:text/javascript;base64,' + Buffer.from(resolve(r15Patch(r12Patch(handPatch(raw))))).toString('base64');   // CORRECTIONS-15 N2: flat drags
+  const stageURL = 'data:text/javascript;base64,' + Buffer.from(resolve(round17ScreenReference(r15Patch(r12Patch(handPatch(raw)))))).toString('base64');   // N2 flat drags; F2 independent viewer bases
   const module = await import(stageURL);
   const labels = inflateRawSync(Buffer.from(fixture.labels.deflateBase64, 'base64')).toString('utf8');
   assert.equal(fixture.labels.sha256, 'f3b14cc19650b455e9a33bc8cf012b384aae2bd38c13b3c5d840567c582596a3');
@@ -83,7 +83,7 @@ export async function checkRound5(only = '') {
     const dropWait = SCRIPTS.id.actions.find(a => a.id === 'drop'), wait = dropWait.end - dropWait.start;
     // CORRECTIONS-15 S1/S2: the ball's entrance (ballLength) and the sink (BALL.sink) take the drop's and the return's places.
     close(wait, (ballLength('id') - 0.8) * PACE, 'H2 InDesign drop wait');
-    const grow = { ps: 0, ai: 0, id: wait + (BALL.sink - 0.5) * PACE, pr: (ballLength('pr') - 0.55 + BALL.sink - 0.4) * PACE, ae: (ballLength('ae') - 0.55 + BALL.sink - 0.4 - 1.6) * PACE };
+    const grow = { ps: 0, ai: 0, id: wait + (BALL.sink - 0.5) * PACE, pr: (ballLength('pr') - 0.55 + BALL.sink - 0.4) * PACE, ae: (ballLength('ae') - 0.55 + BALL.sink - 0.4) * PACE };
     const grown = i => SHOW.slice(0, i).reduce((n, scene) => n + (grow[scene.key] || 0), 0);
     close(LOOP - SHOW[5].len, old.LOOP - old.SHOW[5].len + 1.8 * PACE + grown(5), 'H2 loop'); assert.equal(PACE, 1, 'H2 pace');
     close(LOOP, SHOW.reduce((n, s) => n + s.len, 0), 'H2 loop is the scenes');
@@ -109,7 +109,7 @@ export async function checkRound5(only = '') {
       if (i >= 3) {   // CORRECTIONS-13: every piece is built at the drop's end; the plays keep their 3.2 s before the return.
         const now = playbackSpans(SCRIPTS[key]), then = old.playbackSpans(old.SCRIPTS[key]), exp = SCRIPTS[key].actions.find(a => a.id === 'export').start;
         close(now.land - exp, ballLength(key) * PACE, 'H2 row lands at the become end');
-        close(now.off[0] - now.land, then.off[0] - then.land - (key === 'ae' ? 1.6 * PACE : 0), 'H2 row playback changed');
+        close(now.off[0] - now.land, then.off[0] - then.land, 'H2 row playback changed');
         close(now.off[1] - now.off[0], BALL.sink * PACE, 'H2 row return');
       }
     }

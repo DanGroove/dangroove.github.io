@@ -801,6 +801,47 @@ function letterPictures(ctx, source) {
   });
 }
 
+// F3: the alpha test must see the support of the finished letters, not their antialiased stroke opacity. Grow that support by
+// one texel for filtering, and copy the finished picture's RGB there, including its already-composited antialiased edges.
+export function letterMask(letters, finished, w, h) {
+  const result = new Uint8ClampedArray(letters.length);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (!(letters[(y * w + x) * 4 + 3] > 0)) continue;
+    for (let v = Math.max(0, y - 1); v <= Math.min(h - 1, y + 1); v++) for (let u = Math.max(0, x - 1); u <= Math.min(w - 1, x + 1); u++) {
+      const i = (v * w + u) * 4;
+      result[i] = finished[i]; result[i + 1] = finished[i + 1]; result[i + 2] = finished[i + 2]; result[i + 3] = 255;
+    }
+  }
+  return result;
+}
+
+// Read both drawings from the completed atlas, so integer crop translations, source transforms and the browser's font
+// rasterisation are identical. The raw companion still executes exactly one source text call; no other paint defines its mask.
+export function maskLetterPictures(pages, spots) {
+  const byKey = new Map(spots.map(spot => [spot[0], spot])), sources = new Map();
+  for (const [key, a, px, py, w, h, page] of spots) {
+    if (!a.lettersOnly) continue;
+    const ctx = pages[page].getContext('2d'), letters = ctx.getImageData(px, py, w, h);
+    // The Node drawing/packing stand-ins have no pixel buffers. The separate F3 gate exercises this path with pixel fixtures.
+    if (!letters?.data) continue;
+    const [, source, sx, sy, sw, sh, sp] = byKey.get(a.source), [l, t, r, b] = a.sourceRect;
+    if (!sources.has(a.source)) sources.set(a.source, pages[sp].getContext('2d').getImageData(sx, sy, sw, sh));
+    const finished = sources.get(a.source), pixels = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      // Match the full picture's texel-centre UV map, including non-unit atlas scales.
+      const X = (l + x / Math.max(1, w - 1) * (r - l - 1)) / (source.w - 1) * (sw - 1);
+      const Y = (t + y / Math.max(1, h - 1) * (b - t - 1)) / (source.h - 1) * (sh - 1);
+      const x0 = Math.floor(X), y0 = Math.floor(Y), fx = X - x0, fy = Y - y0, i = (y * w + x) * 4;
+      for (let c = 0; c < 3; c++) {
+        const sample = (u, v) => finished.data[(Math.min(sh - 1, v) * sw + Math.min(sw - 1, u)) * 4 + c];
+        pixels[i + c] = (1 - fy) * ((1 - fx) * sample(x0, y0) + fx * sample(x0 + 1, y0)) + fy * ((1 - fx) * sample(x0, y0 + 1) + fx * sample(x0 + 1, y0 + 1));
+      }
+    }
+    letters.data.set(letterMask(letters.data, pixels, w, h));
+    ctx.putImageData(letters, px, py);
+  }
+}
+
 // Pack rows into pages no larger than 2048 square. Places include their page number.
 export function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
   if (size > 2048 || size < 1 || scale <= 0 || pad < 0) throw new Error('invalid atlas measures');
@@ -831,6 +872,7 @@ export function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
     }
     return canvas;
   });
+  maskLetterPictures(pages, sheets.flatMap((spots, page) => spots.map(spot => [...spot, page])));
   return { pages, places };
 }
 export const AM_MARKERS = SHOPS.flatMap(([x, step, above, below]) => [...above.map((_, i) => [x + i * step, 358, 30, 30]), ...below.map((_, i) => [x + i * step, 464, 30, 30])]);

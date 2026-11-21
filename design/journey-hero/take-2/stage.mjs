@@ -215,12 +215,26 @@ function approvedDocument() {
     if (r) P.push(on('ink', mid, y, tw, th, { lift: 0.065, t: 0.008, art: r }));
     tagEcho(P, ['coverTitle', 'pages', 'loc', 'spreadType', 'pages', 'pages'][i], echoStart);
   });
-  P.push({ ...on('ink', ...ID.left, { lift: 0.08, t: 0.004, art: 'kAmL' }), tones: FLYER.coal }, { ...on('ink', ...ID.right, { lift: 0.08, t: 0.004, art: 'kAmR' }), tones: FLYER.coal });
-  P.push(on('ink', ...ID.cover, { lift: 0.084, t: 0.004, art: 'kCover' }), on('ink', ...ID.post, { lift: 0.084, t: 0.004, art: 'kPost' }), on('ink', ...ID.mail, { lift: 0.084, t: 0.004, art: 'eblast' }));
+  P.push({ ...on('ink', ...ID.left, { lift: 0.06, t: 0.02, art: 'kAmL' }), tones: FLYER.coal, page: 'map' }, { ...on('ink', ...ID.right, { lift: 0.06, t: 0.02, art: 'kAmR' }), tones: FLYER.coal, page: 'map' });
+  finishedSpreadLayers(P);
+  P.push(on('ink', ...ID.cover, { lift: 0.06, t: 0.02, art: 'kCover' }), on('ink', ...ID.post, { lift: 0.06, t: 0.02, art: 'kPost' }), on('ink', ...ID.mail, { lift: 0.06, t: 0.02, art: 'eblast' }));
   // Keep the typed cut-outs in their own slots; a finished page must not collapse overlapping lines of type backward.
   mapTyping(P, ID.mail, 'eblast', 1, part => part.words !== 'View the flyer');
   // CORRECTIONS-15 N1: the placed amenities map has no selection outline or handles.
   return P;
+}
+function spreadPatches(P, n = 6) {
+  const first = P.length;
+  const patches = [[ID.left, 'kAmL', [0, 0, 0.2, 0.12]], [ID.right, 'kAmR', [0.84, 0, 0.16, 0.12]], [ID.left, 'kAmL', [0, 0.92, 0.1, 0.08]], [ID.right, 'kAmR', [0.9, 0.92, 0.1, 0.08]]];
+  patches.forEach(([r, art, region], i) => { if (n >= i) pictureRegion(P, r, art, region); });
+  // These finished-page pixels must keep their slot when the placed map below is replaced by the finished page.
+  for (const pc of P.slice(first)) Object.defineProperty(pc, 'depthSlot', { value: 2 });
+}
+function finishedSpreadLayers(P) {
+  // F1/G: retain the finished page's own region pixels, never a second rasterisation of its map.
+  const first = P.length;
+  spreadPatches(P);
+  for (const pc of P.slice(first)) registerPicture(pc, 0.080);
 }
 // ---- The screens the other crafts export to. They lie in one row across the mat: a tablet on its side, then two phones.
 // (ROW, SLIM, SLIM_D and WIDE are set with the mat above. D1: the tablet keeps its 3.09 x 1.8; each phone is in true proportion to
@@ -268,7 +282,7 @@ function chip(P, key) {
 // CORRECTIONS-15 N2: a carried picture keeps one height above the screen's face from pickup to drop, its placed height, and moves
 // on a straight line; where it passes over taller content it is raised only along the view (clearCarried).
 function travel(P, key, from, to, t, a, b, endWindow = [0, 0, 1, 1], curve = EASE.wipe, id = from === DOCK[key] ? key : key === 'photo' ? 'export' : key + 'Export') {
-  const p = curve(linear(t, a, b)), rect = rectMix(from, to, p), dockStart = from === DOCK[key], lift = dockStart ? (key === 'loc' ? 0.053 : 0.064) : 0.055, [x, y, w, h] = rect;
+  const p = curve(linear(t, a, b)), rect = rectMix(from, to, p), dockStart = from === DOCK[key], lift = dockStart ? (key === 'loc' ? 0.053 : 0.06) : 0.055, [x, y, w, h] = rect;
   // The picture is the same piece throughout. The dock's rim folds down as it leaves, or grows as it lands.
   const rim = 0.012 * (dockStart ? 1 - p : p);
   if (rim > 0) P.push({ ...on('grey', x - rim, y - rim, w + 2 * rim, h + 2 * rim, { lift: lift - 0.015, t: 0.012 }), where: 'travel', action: id });
@@ -451,15 +465,17 @@ function prototypeOut(P, t, s) {
 
 // A painter maps the same finished piece either onto a viewer or onto a device lying flat.
 // Cropping changes both the rectangle and its picture window; it never stretches a reveal.
-// Rounded faces need this much clearance. All painters in a frame share these two stacks.
+// Each viewer/device owns its depth stack. Counts only record drawing order across painters; they never set a face's height.
 const LAYER_STEP = 0.0008;
 let stacks;
 function screenPainter(P, rect, faceLift = 0.08, thickness = 0.004) {
+  let height = -Infinity;
   const draw = (tone, r, art, window, lift = faceLift) => {
-    const face = stacks.screen = Math.max(lift + thickness, stacks.screen + LAYER_STEP);
+    const face = height = Math.max(lift + thickness, height + LAYER_STEP);
     lift = face - thickness;
     const [x, y, w, h] = rect, pc = on(tone, x + r[0] * w, y + (1 - r[1] - r[3]) * h, r[2] * w, r[3] * h, { lift, t: thickness, art });
     pc.paintLayer = stacks.screenCount++;
+    Object.defineProperty(pc, 'paintStack', { value: draw });
     if (window) pc.window = window;
     P.push(pc); return pc;
   };
@@ -467,10 +483,13 @@ function screenPainter(P, rect, faceLift = 0.08, thickness = 0.004) {
   return draw;
 }
 function floorPainter(P, rect) {
+  let height = 0.09 - LAYER_STEP;
   const draw = (tone, r, art, window) => {
-    const face = stacks.floor = Math.max(0.09, stacks.floor + LAYER_STEP);
+    // Reserve the face above this device's maximum six content layers. Chrome cannot ride the changing content count.
+    const face = height = art?.startsWith('chrome') ? 0.09 + 8 * LAYER_STEP : height + LAYER_STEP;
     const [x, z, w, d] = rect, pc = flat(tone, x + r[0] * w, z + r[1] * d, r[2] * w, r[3] * d, 0.002, art, face - 0.002);
     pc.paintLayer = stacks.floorCount++;
+    Object.defineProperty(pc, 'paintStack', { value: draw });
     if (window) pc.window = window;
     P.push(pc); return pc;
   };
@@ -692,7 +711,7 @@ const AI = (() => {
 })();
 const mapPoint = (r, x, y, w, h) => [r[0] + x / w * r[2], r[1] + (1 - y / h) * r[3]];
 // After Export's 0.7 s: the ball, two video plays / one motion play / Figma's cycle and lid closing.
-const EXPORT_HOLD = { pr: ballLength('pr') + 3.2 - 0.7, ae: ballLength('ae') + 1.6 - 0.7, fig: ballLength('fig') + 3 + BALL.lid - 0.7 };
+const EXPORT_HOLD = { pr: ballLength('pr') + 3.2 - 0.7, ae: ballLength('ae') + 3.2 - 0.7, fig: ballLength('fig') + 3 + BALL.lid - 0.7 };
 export const SCRIPTS = {
   ps: script([
     { id: 'open', kind: 'click', from: centre(PHOTO), duration: 0.3, tool: 'tMove' },
@@ -891,7 +910,7 @@ function typedPicture(P, rect, art, words, p, { tone = 'paper', colour = 'ink', 
 function dragPicture(P, s, id, t, from, to, art, tone = 'ink') {
   if (!begun(s, id, t)) { P.push(on(tone, ...from, { lift: 0.07, t: 0.015, art })); return; }
   const p = handed(s, id, t), rect = rectMix(from, to, p);
-  const pc = on(tone, ...rect, { lift: 0.08, t: 0.015, art });   // N2: one height, no arc
+  const pc = on(tone, ...rect, { lift: s === SCRIPTS.id ? 0.065 : 0.08, t: 0.015, art });   // N2/F1: one height, landing on its page
   if (ART[art].photoProfile) {
     const aspect = ART[art].w / ART[art].h, ratio = rect[2] / rect[3];
     const w = Math.min(1, ratio / aspect), h = Math.min(1, aspect / ratio);
@@ -899,7 +918,7 @@ function dragPicture(P, s, id, t, from, to, art, tone = 'ink') {
     pc.photoProfile = ART[art].photoProfile;
     if (from === DOCK.photo && p < 1) {
       const rim = 0.012 * (1 - p);
-      P.push({ ...on('grey', rect[0] - rim, rect[1] - rim, rect[2] + rim * 2, rect[3] + rim * 2, { lift: 0.06, t: 0.012 }), where: 'travel', action: id });
+      P.push({ ...on('grey', rect[0] - rim, rect[1] - rim, rect[2] + rim * 2, rect[3] + rim * 2, { lift: s === SCRIPTS.id ? 0.045 : 0.06, t: 0.012 }), where: 'travel', action: id });
     }
   }
   if (!done(s, id, t)) { pc.where = 'travel'; pc.action = id; }
@@ -912,10 +931,10 @@ export function playbackSpans(s) {
   const key = Object.keys(SCRIPTS).find(k => SCRIPTS[k] === s), a = action(s, 'export').start;
   const spans = [0, 1, 2].map(j => { const b = ballBeats(key, j); return [a + b.start * PACE, a + b.become * PACE]; }), land = a + ballLength(key) * PACE;
   if (key === 'id') { const back = action(s, 'return'); return { spans, land, off: [back.start, back.end] }; }
-  return { spans, land, off: [land + (key === 'fig' ? 3 + BALL.lid : key === 'ae' ? 1.6 : 3.2) * PACE, s.len] };
+  return { spans, land, off: [land + (key === 'fig' ? 3 + BALL.lid : 3.2) * PACE, s.len] };
 }
 function playClock(t, land, stop, key) {
-  const elapsed = Math.max(0, (Math.min(t, stop) - land) / PACE), cycles = key === 'ae' ? 1 : 2;
+  const elapsed = Math.max(0, (Math.min(t, stop) - land) / PACE), cycles = 2;
   return elapsed >= cycles * 1.6 - 1e-9 ? 1 : elapsed % 1.6 / 1.6;
 }
 function exportPlay(s, t) {
@@ -1123,10 +1142,12 @@ function drawnFrame(P, r, p, tone = 'paper') {
 function blankPages(D, s, t) {
   [ID.spread, ID.cover, ID.post, ID.mail].forEach((r, i) => {
     const id = ['map', 'photo', 'postPhoto', 'mailPhoto'][i], before = D.length;
-    if (i === 0) for (const rect of [ID.left, ID.right]) D.push({ ...on('ink', ...rect, { lift: 0.06, t: 0.02 }), tones: FLYER.coal });
+    if (i === 0) {
+      if (!done(s, 'spreadType', t)) for (const rect of [ID.left, ID.right]) D.push({ ...on('ink', ...rect, { lift: 0.06, t: 0.02 }), tones: FLYER.coal });
+    }
     else if (!done(s, id, t)) {
       const [x, y, w, h] = r, line = 0.012, [from, to] = [[DOCK.photo, ID.photo], [ID.photo, ID.post], [ID.photo, ID.mailPhoto]][i - 1];
-      D.push(on('night', x, y, w, h, { lift: 0.05, t: 0.02 }));
+      D.push(on('night', x, y, w, h, { lift: 0.06, t: 0.02 }));
       if (!pageContact(s, id, t, from, to, r)) for (const edge of [[x, y, w, line], [x, y + h - line, w, line], [x, y, line, h], [x + w - line, y, line, h]]) D.push({ ...on('dark', ...edge, { lift: 0.075, t: 0.006 }), pageEdge: true });
     }
     for (const pc of D.slice(before)) pc.page = id;
@@ -1255,20 +1276,22 @@ function editedInDesign(t, { at: pages } = {}) {
   if (done(s, 'mailFlyer', t)) {
     // The approved finished document is also the destination of every construction region below.
     const final = approvedDocument();
-    final.forEach(pc => { if (!pc.furniture) pc.document = true; if (pc.labelSource) registerPicture(pc, 0.088); else if (pc.art && !pc.furniture) Object.defineProperty(pc, 'registered', { value: true }); }); P.push(...final);
+    final.forEach(pc => { if (!pc.furniture) pc.document = true; if (pc.labelSource) registerPicture(pc, 0.080); else if (pc.art && !pc.furniture) Object.defineProperty(pc, 'registered', { value: true }); }); P.push(...final);
   } else {
     rail(P, ['tArrow', 'tType', 'tFrame', 'tRect', 'tLine', 'tDrop'], P.tool === 'frame' ? 2 : P.tool === 'type' ? 1 : P.tool === 'rectangle' ? 3 : 0);
     blankPages(D, s, t);
-    if (done(s, 'spreadType', t)) D.push(on('ink', ...ID.left, { lift: 0.08, t: 0.004, art: 'kAmL' }), on('ink', ...ID.right, { lift: 0.08, t: 0.004, art: 'kAmR' }));
+    if (done(s, 'spreadType', t)) {
+      D.push({ ...on('ink', ...ID.left, { lift: 0.06, t: 0.02, art: 'kAmL' }), page: 'map' }, { ...on('ink', ...ID.right, { lift: 0.06, t: 0.02, art: 'kAmR' }), page: 'map' });
+      finishedSpreadLayers(D);
+    }
     else if (begun(s, 'map', t)) {
       const a = action(s, 'map'), window = [34 / 2200, 84 / 850, 2056 / 2200, 826 / 850];
-      if (done(s, 'map', t)) D.push({ ...on('ink', ...ID.frame, { lift: 0.08, t: 0.004, art: 'kMap' }), window, placed: 'map' });
+      if (done(s, 'map', t)) D.push({ ...on('ink', ...ID.frame, { lift: 0.076, t: 0.004, art: 'kMap' }), window, placed: 'map' });
       else travel(P, 'map', DOCK.map, ID.frame, t, a.start, a.end, window, HAND);
       if (begun(s, 'heading', t)) typedPicture(D, inRect(ID.right, [970 / 1100, 180 / 850, 100 / 1100, 500 / 850]), 'idHeading', 'Amenities', phase(s, 'heading', t), { colour: FLYER.gold, direction: 'up' });
       if (begun(s, 'spreadType', t)) {
         const n = Math.floor(phase(s, 'spreadType', t) * 6);
-        const patches = [[ID.left, 'kAmL', [0, 0, 0.2, 0.12]], [ID.right, 'kAmR', [0.84, 0, 0.16, 0.12]], [ID.left, 'kAmL', [0, 0.92, 0.1, 0.08]], [ID.right, 'kAmR', [0.9, 0.92, 0.1, 0.08]]];
-        patches.forEach(([r, art, region], i) => { if (n >= i) pictureRegion(D, r, art, region); });
+        spreadPatches(D, n);
       }
     }
     // CORRECTIONS-15 N1: once placed, the map shows as it is, with no selection outline or handles.
@@ -1288,24 +1311,24 @@ function editedInDesign(t, { at: pages } = {}) {
       if (!done(s, 'photo', t)) dragPicture(P, s, 'photo', t, DOCK.photo, ID.photo, 'coverImage');
       if (done(s, 'photo', t)) {
         // Cropped regions keep the final photograph and woven ground at their approved measures.
-        D.push(on('ink', ...ID.cover, { lift: 0.084, t: 0.004, art: begun(s, 'coverTitle', t) ? 'coverDecor' : done(s, 'blob', t) ? 'coverBlob' : 'coverPhoto' }));
+        D.push(on('ink', ...ID.cover, { lift: 0.06, t: 0.02, art: begun(s, 'coverTitle', t) ? 'coverDecor' : done(s, 'blob', t) ? 'coverBlob' : 'coverPhoto' }));
         if (!done(s, 'blob', t)) drawnRegion(D, ID.cover, 'coverBlob', [50 / 1100, 482 / 850, 588 / 1100, 320 / 850], handed(s, 'blob', t));
         if (begun(s, 'coverTitle', t)) typePatch(D, inRect(ID.cover, [311.6 / 440, 268 / 340, 128.4 / 440, 52 / 340]), 'idCover', phase(s, 'coverTitle', t));
       }
     }
-    if (done(s, 'coverTitle', t)) D.push(on('ink', ...ID.cover, { lift: 0.084, t: 0.004, art: 'kCover' }));
+    if (done(s, 'coverTitle', t)) D.push(on('ink', ...ID.cover, { lift: 0.06, t: 0.02, art: 'kCover' }));
     for (const [key, rect, art, patch, region] of [
       ['post', ID.post, 'kPost', 'idPost', [276 / 400, 315.2 / 400, 124 / 400, 58.4 / 400]],
       ['mail', ID.mail, 'eblast', 'idMail', [17.6 / 320, 268 / 472, 284.8 / 320, 28 / 472]],
     ]) {
       if (!begun(s, key + 'Photo', t)) continue;
       if (done(s, key + 'Blob', t) && done(s, key === 'mail' ? 'mailFlyer' : 'postButton', t)) {
-        D.push(on('ink', ...rect, { lift: 0.084, t: 0.004, art }));
+        D.push(on('ink', ...rect, { lift: 0.06, t: 0.02, art }));
         continue;
       }
       if (!done(s, key + 'Photo', t)) dragPicture(D, s, key + 'Photo', t, ID.photo, key === 'mail' ? ID.mailPhoto : rect, key + 'Image');
       if (done(s, key + 'Photo', t)) {
-        D.push(on('ink', ...rect, { lift: 0.084, t: 0.004, art: key === 'post' ? 'postPhoto' : 'mailPhoto' }));
+        D.push(on('ink', ...rect, { lift: 0.06, t: 0.02, art: key === 'post' ? 'postPhoto' : 'mailPhoto' }));
         if (begun(s, key + 'Title', t)) {
           if (key === 'post') typePatch(D, inRect(rect, region), patch, phase(s, key + 'Title', t));
           else mapTyping(D, rect, art, phase(s, key + 'Title', t), part => part.words !== 'View the flyer');
@@ -1322,7 +1345,7 @@ function editedInDesign(t, { at: pages } = {}) {
     }
   }
   for (const pc of D) if (pc.art && pc.where !== 'travel') {
-    const face = pc.p[0] > SCREEN.l + PANEL * U ? 0.073 : pc.p[1] > SCREEN.b + ID.spread[1] * U ? 0.084 : 0.088;
+    const face = pc.p[0] > SCREEN.l + PANEL * U ? 0.073 : 0.080;
     registerPicture(pc, face);
   }
   for (const key of ['map', 'loc', 'photo']) if (!begun(s, key, t)) chip(P, key);
@@ -1451,7 +1474,7 @@ export function sceneAt(t) {
   for (let i = SHOW.length - 1; i >= 0; i--) if (at >= starts[i]) return { i, scene: SHOW[i], at: at - starts[i] };
 }
 function build(i, at, o) {
-  stacks = { screen: -Infinity, floor: -Infinity, screenCount: 0, floorCount: 0 };
+  stacks = { screenCount: 0, floorCount: 0 };
   const app = builders[i](at, o), P = shell(i, at, app.cursor || EXPORT, app.pressed, !!o.first && i === 0);
   P.clock = app.clock;
   P.action = app.action;
@@ -1571,17 +1594,21 @@ function separateFaces(P) {
       const [x, y, z, w] = pc.q, normal = floor ? 2 * (y * z - w * x) : 1 - 2 * (x * x + y * y);
       if (normal < 1 - 1e-9) return [];
       const points = corners(pc), xs = points.map(p => p[0]), ys = points.map(p => p[across]);
-      return [{ pc, height: pc.p[axis] + pc.s[2], rect: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] }];
+      return [{ pc, height: pc.p[axis] + pc.s[2] + (floor ? 0 : pc.depthSlot || 0) * step, rect: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] }];
     });
     const placed = [];
-    let painted = -Infinity;
+    const painted = new Map();
     for (const overlay of [false, true]) {
       const group = faces.filter(f => !!f.pc.overlay === overlay);
       const top = Math.max(-Infinity, ...placed.filter(f => f.pc.art || f.pc.paintLayer !== undefined).map(f => f.height));
       if (overlay) for (const f of group) f.height = Math.max(f.height, top + step + 2 * f.pc.s[2]);
       group.sort((a, b) => a.height - b.height);
+      // Preserve paint order where independent painters overlap, without lifting disjoint viewers or devices.
+      const paints = group.filter(f => f.pc.paintLayer !== undefined).sort((a, b) => a.pc.paintLayer - b.pc.paintLayer);
+      let nextPaint = 0;
+      for (let i = 0; i < group.length; i++) if (group[i].pc.paintLayer !== undefined) group[i] = paints[nextPaint++];
       for (const f of group) {
-        if (!overlay && f.pc.paintLayer !== undefined) f.height = Math.max(f.height, painted + step);
+        if (!overlay && f.pc.paintLayer !== undefined) f.height = Math.max(f.height, (painted.get(f.pc.paintStack) ?? -Infinity) + step);
         const r = f.rect;
         for (const before of placed) {
           const b = before.rect;
@@ -1590,7 +1617,7 @@ function separateFaces(P) {
         const rise = f.height - f.pc.s[2] - f.pc.p[axis];
         if (!floor && f.pc.registered) { f.pc.p[0] += HOME.v[0] * rise / HOME.v[2]; f.pc.p[1] += HOME.v[1] * rise / HOME.v[2]; }
         f.pc.p[axis] += rise; placed.push(f);
-        if (!overlay && f.pc.paintLayer !== undefined) painted = f.height;
+        if (!overlay && f.pc.paintLayer !== undefined) painted.set(f.pc.paintStack, f.height);
       }
     }
   }

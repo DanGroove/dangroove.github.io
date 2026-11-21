@@ -45,7 +45,7 @@ export async function checkCarried(source = read('stage.mjs')) {
       }
     }
   }
-  assert.ok(Math.abs(LOOP - 97.89089) < 1e-4, 'G1: LOOP moved ' + LOOP);   // CORRECTIONS-17 timing; 97.69089 in round 15, 91.59089 in round 13.
+  assert.ok(Math.abs(LOOP - 99.49089) < 1e-4, 'G1: LOOP moved ' + LOOP);   // CORRECTIONS-17 F2 timing; 97.89089 in the first build, 97.69089 in round 15.
   return { drags, samples, carriedFrames, per, loop: LOOP };
 }
 

@@ -4,16 +4,28 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { HOME, dot, quatRotate, EASE } from '../../../../public/journey/hero/engine.mjs';
 import { corners } from '../kit.mjs';
-import { ART, ART_TEXT, HISTOGRAM, makeAtlas } from '../art.mjs';
+import { ART, ART_TEXT, HISTOGRAM, makeAtlas, letterMask, maskLetterPictures } from '../art.mjs';
 import { checkMapFrame, checkDragsFlat, checkRendererClips, onMapFrame } from './round15-checks.mjs';
 
 const url = new URL('../stage.mjs', import.meta.url);
 const source = () => fs.readFileSync(url, 'utf8');
+// Probe private painters in memory, without adding a testing API or writing a mutant into the prototype.
+const painterProbe = `
+export function round17PainterProbe(count, overlap, floor) {
+  stacks = { screenCount: 0, floorCount: 0 };
+  const P = [], painter = floor ? floorPainter : screenPainter;
+  const first = painter(P, [0, 0, 1, 1]);
+  for (let i = 0; i < count; i++) first('paper', [0, 0, 1, 1]);
+  const second = painter(P, [overlap ? 0 : 2, 0, 1, 1]);
+  second('paper', [0, 0, 1, 1]);
+  if (floor) for (const pc of P) pc.where = 'floor';
+  separateFaces(P); return P;
+}
+`;
 const load = async edit => {
-  if (!edit) return import(url.href);
-  const old = source(), changed = edit(old);
-  assert.notEqual(changed, old, 'negative control did not apply');
-  return import('data:text/javascript;base64,' + Buffer.from(changed.replace(/from (['"])(\.{1,2}\/[^'"]+)\1/g, (_, q, ref) => `from '${new URL(ref, url).href}'`)).toString('base64'));
+  const old = source(), changed = edit ? edit(old) : old;
+  if (edit) assert.notEqual(changed, old, 'negative control did not apply');
+  return import('data:text/javascript;base64,' + Buffer.from((changed + painterProbe).replace(/from (['"])(\.{1,2}\/[^'"]+)\1/g, (_, q, ref) => `from '${new URL(ref, url).href}'`)).toString('base64'));
 };
 const near = (a, b, gate, tolerance = 1e-9) => assert.ok(Math.abs(a - b) <= tolerance, `${gate}: ${a} versus ${b}`);
 const starts = M => M.SHOW.map((_, i) => M.SHOW.slice(0, i).reduce((n, s) => n + s.len, 0));
@@ -124,7 +136,7 @@ export async function checkDrawsAndLetters(M) {
     for (const t of grid(a.start + 0.01, a.end)) {
       const P = at(M, key, t), labels = P.filter(pc => pc.labelSource === art);
       assert.ok(labels.length, `R3 letters: ${key}/${id} missing letters`);
-      const rect = a.textRect, ref = M.on('ink', ...rect, { lift: key === 'ai' ? 0.08 : 0.084, t: 0.004 });
+      const rect = a.textRect, ref = M.on('ink', ...rect, { lift: key === 'ai' ? 0.08 : 0.076, t: 0.004 });
       for (const pc of labels) {
         assert.ok(pc.cut && ART[pc.art]?.lettersOnly, 'R3 letters: label shows ground');
         const crop = ART[pc.art].sourceRect, size = ART[art], uv = [crop[0] / (size.w - 1), crop[1] / (size.h - 1), (crop[2] - 1) / (size.w - 1), (crop[3] - 1) / (size.h - 1)];
@@ -142,6 +154,126 @@ export async function checkDrawsAndLetters(M) {
     assert.equal(log[0][1], ART_TEXT[picture.source][picture.labelIndex].words, 'R3 letters: wrong individual label');
   }
   return samples;
+}
+
+export async function checkDocumentHeights(M) {
+  M ??= await load(); prepareRound17Art();
+  const end = action(M, 'id', 'mailFlyer').end, panelX = M.SCREEN.l + (M.SCREEN.w / 1.15 - 0.93) * 1.15;
+  const face = pc => (top(pc) - M.SCREEN.z - M.SCREEN.t / 2) / 1.15;
+  const pageArt = new Set(['kAmL', 'kAmR', 'coverPhoto', 'coverBlob', 'coverDecor', 'kCover', 'postPhoto', 'kPost', 'mailPhoto', 'eblast']);
+  let samples = 0, pages = 0, layers = 0;
+  for (const t of [...grid(0.800001, end), end + 0.001]) {
+    const P = at(M, 'id', t);
+    for (const pc of P.filter(pc => pc.document && pc.where !== 'travel' && !pc.overlay && !pc.caret && !pc.furniture)) {
+      if (pc.page && !pc.pageEdge || pageArt.has(pc.art) && pc.p[0] < panelX && !pc.window) {
+        near(face(pc), 0.080, 'F1 page face', 1e-9);
+        near(pc.s[2] * 2 / 1.15, 0.02, 'F1 page thickness'); pages++;
+      } else if (pc.art && pc.p[0] < panelX) {
+        assert.ok(face(pc) >= 0.080 - 1e-9 && face(pc) <= 0.080 + 4 * 0.0008 + 1e-9, `F1 page layers: ${pc.art} at ${face(pc)}`); layers++;
+      } else if (pc.art) near(face(pc), 0.073, `F1 panel thumbnails unchanged: ${pc.art} at ${t}`, 1e-9);
+    }
+    for (const pc of P.filter(pc => pc.where === 'travel' && pc.art && ['map', 'loc', 'photo', 'postPhoto', 'mailPhoto'].includes(pc.action))) {
+      near(face(pc), pc.action === 'loc' ? 0.073 : 0.080, 'F1 carried landing face', 1e-9);
+    }
+    samples++;
+  }
+  assert.ok(pages > 100 && layers > 100, 'F1 height audit did not exercise pages and construction layers');
+  return { samples, pages, layers };
+}
+
+// Replaces the old frame-global increasing-stack assertion: depth is monotone within each painter, and overlapping painters
+// retain drawing order. Disjoint viewers/devices have no ordering requirement relative to one another.
+export function checkPainterStacks(list, floor) {
+  const axis = floor ? 1 : 2, unit = floor ? 1 : 1.15, previous = new Map(), placed = [];
+  for (const pc of list.filter(pc => (pc.where === 'floor') === floor && pc.paintLayer !== undefined && !pc.overlay).sort((a, b) => a.paintLayer - b.paintLayer)) {
+    const n = quatRotate(pc.q, [0, 0, 1]); if (n[axis] < 1 - 1e-9) continue;
+    const height = (pc.p[axis] + pc.s[2]) / unit, before = previous.get(pc.paintStack);
+    assert.ok(before === undefined || height >= before + 0.0008 - 1e-10, 'F2 own painter stack: layers out of order');
+    const points = corners(pc), across = floor ? 2 : 1, r = [Math.min(...points.map(p => p[0])), Math.min(...points.map(p => p[across])), Math.max(...points.map(p => p[0])), Math.max(...points.map(p => p[across]))];
+    for (const old of placed) if (overlaps(r, old.r)) assert.ok(height >= old.height + 0.0008 - 1e-10, 'F2 overlapping painters: drawing order changed');
+    previous.set(pc.paintStack, height); placed.push({ r, height });
+  }
+}
+
+export async function checkPlaybackStability(M) {
+  M ??= await load();
+  const S = scale(M); let samples = 0, faces = 0, worst = 0;
+  for (const key of ['pr', 'ae', 'fig']) {
+    const { land, off } = M.playbackSpans(M.SCRIPTS[key]), stop = key === 'fig' ? land + 3 * M.PACE : off[0];
+    if (key !== 'fig') near((off[0] - land) / M.PACE, 3.2, 'F2 two plays: ' + key);
+    const fixed = P => P.filter(pc => pc.where === 'floor' && (pc.deviceBody || pc.lid || pc.art?.startsWith('chrome') || !pc.lidPicture && (pc.art === 'paperTile' || !pc.window && /^shot[A-C]/.test(pc.art || ''))));
+    const baseline = fixed(at(M, key, land + 1e-7));
+    const times = [...grid(land + 1e-7, stop), stop - 1e-7];
+    if (key !== 'fig') times.push(land + (1.6 - 0.001) * M.PACE, land + (1.6 + 0.001) * M.PACE);
+    for (const t of times) {
+      const P = at(M, key, t), now = fixed(P);
+      assert.equal(now.length, baseline.length, 'F2 stationary faces: piece list changes');
+      for (let i = 0; i < now.length; i++) {
+        const pc = now[i], ref = baseline[i], error = distance(corners(pc), corners(ref), S);
+        assert.equal(pc.device, ref.device, 'F2 stationary faces: device changes');
+        assert.ok(error <= 0.1, `F2 stationary faces: ${key}/${pc.device}/${pc.art || 'body'} moves ${error.toFixed(5)} px`);
+        near(pc.p[1], ref.p[1], 'F2 stationary faces: base height', 1e-9);
+        worst = Math.max(worst, error); faces++;
+      }
+      checkPainterStacks(P, true); checkPainterStacks(P, false); samples++;
+    }
+    if (key !== 'fig') {
+      near(at(M, key, land + 1.599 * M.PACE).clock, 1.599 / 1.6, 'F2 first play');
+      near(at(M, key, land + 1.601 * M.PACE).clock, 0.001 / 1.6, 'F2 restart');
+      near(at(M, key, off[0] + 0.001 * M.PACE).clock, 1, 'F2 final frame held');
+    }
+  }
+  const probe = M.round17PainterProbe ? M : await load();
+  for (const floor of [false, true]) {
+    const axis = floor ? 1 : 2, a = probe.round17PainterProbe(1, false, floor), b = probe.round17PainterProbe(6, false, floor);
+    near(a.at(-1).p[axis], b.at(-1).p[axis], 'F2 independent painter bases');
+    const overlapping = probe.round17PainterProbe(6, true, floor);
+    assert.ok(overlapping.at(-1).p[axis] + overlapping.at(-1).s[2] >= Math.max(...overlapping.slice(0, -1).map(pc => pc.p[axis] + pc.s[2])) + 0.0008 * (floor ? 1 : 1.15) - 1e-10, 'F2 overlapping painters: lost drawing order');
+  }
+  return { samples, faces, worst };
+}
+
+export function checkLetterMasks(A = { letterMask, maskLetterPictures }) {
+  prepareRound17Art();
+  const all = Object.entries(ART).filter(([, a]) => a.lettersOnly), sources = new Map();
+  let texels = 0, covered = 0;
+  for (const [key, a] of all) {
+    const parent = ART[a.source], w = a.w, h = a.h, letters = new Uint8ClampedArray(w * h * 4);
+    // Low-coverage islands separated from opaque ones reproduce the regression without pretending to rasterise a font.
+    for (let y = 0; y < h; y += 7) for (let x = 0; x < w; x += 7) letters[(y * w + x) * 4 + 3] = 1 + (x + y * 17) % 127;
+    letters[3] = 1; letters[letters.length - 1] = 127;
+    if (!sources.has(a.source)) {
+      const data = new Uint8ClampedArray(parent.w * parent.h * 4);
+      for (let i = 0; i < data.length; i += 4) { data[i] = i / 4 % 251; data[i + 1] = Math.floor(i / 4 / parent.w) % 253; data[i + 2] = i / 4 * 17 % 255; data[i + 3] = 255; }
+      sources.set(a.source, { data });
+    }
+    const original = letters.slice(); let written = null;
+    const pages = [
+      { getContext: () => ({ getImageData(x, y, W, H) { assert.deepEqual([x, y, W, H], [2, 3, w, h], 'F3 crop read'); return { data: letters }; }, putImageData(image, x, y) { assert.deepEqual([x, y], [2, 3], 'F3 crop write'); written = image.data; } }) },
+      { getContext: () => ({ getImageData(x, y, W, H) { assert.deepEqual([x, y, W, H], [5, 7, parent.w, parent.h], 'F3 finished read'); return sources.get(a.source); } }) },
+    ];
+    A.maskLetterPictures(pages, [[a.source, parent, 5, 7, parent.w, parent.h, 1], [key, a, 2, 3, w, h, 0]]);
+    assert.ok(written, `F3 mask wiring: ${key} was not masked`);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      let support = false;
+      for (const dy of [-1, 0, 1]) for (const dx of [-1, 0, 1]) if (x + dx >= 0 && x + dx < w && y + dy >= 0 && y + dy < h && original[((y + dy) * w + x + dx) * 4 + 3] > 0) support = true;
+      assert.equal(written[i + 3], support ? 255 : 0, `F3 mask coverage: ${key} texel ${x},${y}`);
+      if (support) {
+        const j = ((a.sourceRect[1] + y) * parent.w + a.sourceRect[0] + x) * 4, finished = sources.get(a.source).data;
+        for (let c = 0; c < 3; c++) assert.equal(written[i + c], finished[j + c], `F3 finished pixels: ${key} texel ${x},${y}/${c}`);
+        covered++;
+      }
+      texels++;
+    }
+  }
+  const alpha = new Uint8ClampedArray(256 * 4), finished = new Uint8ClampedArray(alpha.length).fill(93);
+  for (let i = 0; i < 256; i++) alpha[i * 4 + 3] = i;
+  const mask = A.letterMask(alpha, finished, 256, 1);
+  for (let i = 1; i < 256; i++) assert.equal(mask[i * 4 + 3], 255, 'F3 mask coverage: every nonzero alpha byte');
+  assert.match(fs.readFileSync(new URL('../art.mjs', import.meta.url), 'utf8'), /maskLetterPictures\(pages, sheets\.flatMap/, 'F3 atlas: masks are not applied');
+  assert.equal(all.length, 54, 'F3 inventory: all individual cut-outs covered');
+  return { pictures: all.length, texels, covered };
 }
 
 const family = key => {
@@ -270,7 +402,7 @@ export async function checkLidAndSinks(M) {
   for (const key of ['id', 'pr', 'ae', 'fig']) {
     const { land, off } = M.playbackSpans(M.SCRIPTS[key]), floor = t => at(M, key, t).filter(pc => pc.where === 'floor');
     near(off[1] - off[0], 1, 'R8 sink length');
-    if (key === 'ae') near(off[0] - land, 1.6, 'R9 one AE cycle');
+    if (key === 'ae') near(off[0] - land, 3.2, 'R9 two AE cycles');
     if (key === 'pr') near(off[0] - land, 3.2, 'R9 two Premiere cycles');
     if (key === 'fig') {
       near(off[0] - land, 3 + M.BALL.lid, 'R11 close before sink');
@@ -324,7 +456,8 @@ export async function checkRound17(M) {
   M ??= await load();
   prepareRound17Art();
   const levels = await checkLevels(M), letters = await checkDrawsAndLetters(M), swaps = await checkSwaps(M), carries = await checkCarries(M), flight = await checkFlight(M), sinks = await checkLidAndSinks(M);
-  return `Round 17: G ${swaps.boundaries} action ends / ${swaps.comparisons} registrations, worst ${swaps.worst.toFixed(5)} px; R1 ${levels} levels samples; R2/R3 ${letters} draw/type samples; R4 ${carries.carries} carries / ${carries.samples} samples, flat worst ${carries.flat.worst.toFixed(5)} px; R6/R7 ${flight} flight samples; R8-R11 ${sinks.samples} sink samples (${JSON.stringify(sinks.endTimes)}).`;
+  const heights = await checkDocumentHeights(M), stable = await checkPlaybackStability(M), masks = checkLetterMasks();
+  return `Round 17: G ${swaps.boundaries} action ends / ${swaps.comparisons} registrations, worst ${swaps.worst.toFixed(5)} px; R1 ${levels} levels samples; R2/R3 ${letters} draw/type samples; R4 ${carries.carries} carries / ${carries.samples} samples, flat worst ${carries.flat.worst.toFixed(5)} px; R6/R7 ${flight} flight samples; R8-R11 ${sinks.samples} sink samples (${JSON.stringify(sinks.endTimes)}).\nFollow-up: F1 ${heights.samples} height samples / ${heights.pages} pages / ${heights.layers} layers; F2 ${stable.samples} playback samples / ${stable.faces} fixed faces, worst ${stable.worst.toFixed(5)} px; F3 ${masks.pictures} masks / ${masks.texels} fixture texels / ${masks.covered} covered, exact finished RGB.`;
 }
 
 // Register round 17's changed surfaces with the earlier frozen-picture comparisons. These surfaces now have the explicit
@@ -340,10 +473,23 @@ export const round17Changed = M => pc => {
   return false;
 };
 
-export const round17CarryReference = source => source
-  .replace('lift = dockStart ? 0.06 : 0.055', "lift = dockStart ? (key === 'loc' ? 0.053 : 0.064) : 0.055")
+// Register F2's painter/separation change in the frozen screen comparisons. All picture content, rectangles, script actions
+// and furniture still come from the hashed fixture; the independent F2 probes/controls hold these new height rules.
+export function round17ScreenReference(frozen) {
+  const live = source();
+  for (const name of ['screenPainter', 'separateFaces']) {
+    const body = code => { const a = code.indexOf('function ' + name + '('), b = code.indexOf('\n}', a) + 2; assert.ok(a >= 0 && b > a, 'F2 reference: missing ' + name); return code.slice(a, b); };
+    frozen = frozen.replace(body(frozen), body(live));
+  }
+  return frozen;
+}
+
+export const round17CarryReference = source => round17ScreenReference(source
+  .replace('lift = dockStart ? 0.06 : 0.055', "lift = dockStart ? (key === 'loc' ? 0.053 : 0.06) : 0.055")
+  .replace('const pc = on(tone, ...rect, { lift: 0.08, t: 0.015, art });', 'const pc = on(tone, ...rect, { lift: s === SCRIPTS.id ? 0.065 : 0.08, t: 0.015, art });')
+  .replace('{ lift: 0.06, t: 0.012 }), where:', '{ lift: s === SCRIPTS.id ? 0.045 : 0.06, t: 0.012 }), where:')
   // N2 applies to both picture and rim: the frozen stage's legacy separator must not raise their authored flat planes.
-  .replace('  separateFaces(P);\n  return P;', "  const travelPlanes = P.filter(pc => pc.where === 'travel').map(pc => [pc, pc.p.slice()]);\n  separateFaces(P);\n  for (const [pc, p] of travelPlanes) pc.p = p;\n  return P;");
+  .replace('  separateFaces(P);\n  return P;', "  const travelPlanes = P.filter(pc => pc.where === 'travel').map(pc => [pc, pc.p.slice()]);\n  separateFaces(P);\n  for (const [pc, p] of travelPlanes) pc.p = p;\n  return P;"));
 
 // Round 15's old pop/rest, shared-depth sink and exact old laptop pose are superseded by R6-R11. Keep its independent N1/N2
 // and renderer clip checks, and run the replacement export gates on the actual emitted pieces.
@@ -358,7 +504,7 @@ export async function checkRound17RetainedControls() {
   const out = [];
   for (const [name, edit, run, gate] of [
     ['map outline restored', s => s.replace('// CORRECTIONS-15 N1: once placed,', "if (done(s, 'map', t)) D.push(...outline(...ID.frame));\n    // CORRECTIONS-15 N1: once placed,"), checkMapFrame, 'N1:'],
-    ['drag arc restored', s => s.replace('const pc = on(tone, ...rect, { lift: 0.08, t: 0.015, art });', 'const pc = on(tone, ...rect, { lift: 0.08 + 0.08 * Math.sin(Math.PI * p), t: 0.015, art });'), checkDragsFlat, 'N2:'],
+    ['drag arc restored', s => s.replace('lift: s === SCRIPTS.id ? 0.065 : 0.08, t: 0.015, art', 'lift: (s === SCRIPTS.id ? 0.065 : 0.08) + 0.08 * Math.sin(Math.PI * p), t: 0.015, art'), checkDragsFlat, 'N2:'],
     ['early play', s => s.replace('const clock = playClock(t, land, off[0], key), widths', 'const clock = playClock(t + 0.3, land, off[0], key), widths'), checkFlight, 'R15 retained: play before built'],
     ['unclipped sink', s => s.replace('pc.clip = [0, 1, 0, 0]; pc.sink = true;', 'pc.clip = undefined; pc.sink = true;'), checkLidAndSinks, 'R11 sink floor clip'],
     ['landing bounce', s => s.replace('c: s === T ? end : c, r,', 'c: s === T ? [end[0], end[1] + 0.1, end[2]] : c, r,'), checkFlight, 'R6 flight:'],
@@ -386,10 +532,25 @@ export async function checkRound17Controls() {
     assert.equal(body.split("where: 'travel', action: id").length - 1, 2, 'travel control: both travelling pieces');
     return s.slice(0, a) + body.replaceAll("where: 'travel', action: id", "where: 'travel', action: key") + s.slice(b);
   }, 'R4 tagging:', checkCarries);
-  await control('approved document old lifts', s => {
+  await control('approved document raised at swap', s => {
     const a = s.indexOf('function approvedDocument('), b = s.indexOf('\n}', a) + 2;
-    return s.slice(0, a) + s.slice(a, b).replaceAll('lift: 0.084, t: 0.004', 'lift: 0.06, t: 0.02').replaceAll('lift: 0.08, t: 0.004', 'lift: 0.06, t: 0.02') + s.slice(b);
+    return s.slice(0, a) + s.slice(a, b).replaceAll('lift: 0.06, t: 0.02', 'lift: 0.064, t: 0.02') + s.slice(b);
   }, 'G ', checkSwaps);
+  await control('F1 old raised heights', s => {
+    const a = s.indexOf('function approvedDocument('), b = s.indexOf('\n}', a) + 2;
+    const body = s.slice(a, b).replaceAll("lift: 0.06, t: 0.02, art: 'kAm", "lift: 0.08, t: 0.004, art: 'kAm").replaceAll('lift: 0.06, t: 0.02', 'lift: 0.084, t: 0.004');
+    return s.slice(0, a) + body + s.slice(b);
+  }, 'F1 page face', checkDocumentHeights);
+  await control('F2 shared floor stack', s => s.replace("const face = height = art?.startsWith('chrome') ? 0.09 + 8 * LAYER_STEP : height + LAYER_STEP;", 'const face = height = stacks.floor = Math.max(0.09, (stacks.floor ?? -Infinity) + LAYER_STEP);'), 'F2 stationary faces:', checkPlaybackStability);
+  await control('F2 shared screen stack', s => s.replace('const face = height = Math.max(lift + thickness, height + LAYER_STEP);', 'const face = height = stacks.screen = Math.max(lift + thickness, (stacks.screen ?? -Infinity) + LAYER_STEP);'), 'F2 independent painter bases', checkPlaybackStability);
+  await control('F2 one After Effects play', s => s.replace("ae: ballLength('ae') + 3.2 - 0.7", "ae: ballLength('ae') + 1.6 - 0.7").replace("key === 'fig' ? 3 + BALL.lid : 3.2", "key === 'fig' ? 3 + BALL.lid : key === 'ae' ? 1.6 : 3.2").replace('cycles = 2;', "cycles = key === 'ae' ? 1 : 2;"), 'F2 two plays:', checkPlaybackStability);
+  const artURL = new URL('../art.mjs', import.meta.url), oldArt = fs.readFileSync(artURL, 'utf8');
+  const badArt = oldArt.replace('letters[(y * w + x) * 4 + 3] > 0', 'letters[(y * w + x) * 4 + 3] >= 127.5');
+  assert.notEqual(badArt, oldArt, 'F3 threshold control did not apply');
+  let maskFailed = false;
+  try { checkLetterMasks(await import('data:text/javascript;base64,' + Buffer.from(badArt).toString('base64'))); }
+  catch (error) { assert.ok(error.message.includes('F3 mask coverage:'), 'F3 threshold: wrong gate ' + error.message); maskFailed = true; }
+  assert.ok(maskFailed, 'F3 0.5 threshold: MISSED'); out.push('F3 0.5 threshold: failed at F3 mask coverage:');
   await control('ease between pop and arc', s => s.replace('s = clamp(u, 0, T);', 's = u < BALL.pop ? BALL.pop * EASE.wipe(clamp(u / BALL.pop, 0, 1)) : clamp(u, 0, T);'), 'R6 flight:', checkFlight);
   await control('rest 0.15', s => s.replace('rest: 0, split:', 'rest: 0.15, split:'), 'R7 immediate split', checkFlight);
   await control('lid lift 0.03', s => s.replace('const by = 12 - theta, lift = 0;', 'const by = 12 - theta, lift = 0.03 * Math.max(0, -Math.sin(theta * Math.PI / 180));'), 'R10 lid gap', checkLidAndSinks);

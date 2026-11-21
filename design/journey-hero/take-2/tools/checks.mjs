@@ -25,7 +25,7 @@ import { checkRound12StarsList, checkRound12Controls } from './round12-stars-lis
 import { checkRound14, checkRound14Controls } from './round14-checks.mjs';
 import { checkRound12 as checkRound12Scene, checkRound12Controls as checkRound12SceneControls } from './round12-checks.mjs';
 import { checkRows as checkRound13Rows, checkRowsControls as checkRound13RowsControls } from './round13-checks.mjs';
-import { checkRound17, checkRound17Controls, checkRound17Exports as checkRound15, checkRound17RetainedControls as checkRound15Controls, withSourceLines } from './round17-checks.mjs';
+import { checkRound17, checkRound17Controls, checkRound17Exports as checkRound15, checkRound17RetainedControls as checkRound15Controls, checkPainterStacks, withSourceLines } from './round17-checks.mjs';
 import * as stageModule from '../stage.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
@@ -118,13 +118,8 @@ function check(time) {
       const overlap = Math.min(a.rect[2], b.rect[2]) - Math.max(a.rect[0], b.rect[0]) > 1e-9 && Math.min(a.rect[3], b.rect[3]) - Math.max(a.rect[1], b.rect[1]) > 1e-9;
       if (overlap && Math.abs(a.height - b.height) < 0.0006 - 1e-10) fail(time, `${floor ? 'floor' : 'screen'} faces ${a.i}/${b.i} overlap with less than 0.0006 clearance`);
     }
-    // CORRECTIONS-13: on the floor the stack is shared within each device; Figma's devices are built 0.1 s apart, each face
-    // lowered by its own body's thickness until built, so one device may sit lower than the one painted before it.
-    const groups = floor ? [...new Set(faces.map(f => f.pc.device))] : [null];
-    for (const group of groups) {
-      const painted = faces.filter(f => f.pc.paintLayer !== undefined && !f.pc.overlay && (!floor || f.pc.device === group)).sort((a, b) => a.pc.paintLayer - b.pc.paintLayer);
-      for (let i = 1; i < painted.length; i++) if (painted[i].height - painted[i - 1].height < 0.0008 - 1e-10) fail(time, 'painters did not share one increasing stack');
-    }
+    // F2 replaces the frame-global stack with independent painter bases and retained order wherever painters overlap.
+    try { checkPainterStacks(list, floor); } catch (error) { fail(time, error.message); }
     for (const f of faces.filter(f => f.pc.overlay && !f.pc.emptyFrame)) {
       // The original spread guides may cross a carried image; the cursor must clear it. G1 (round 8): in every app, marks the
       // carried stack passes over stay where they are, under it; only the cursor must clear the carried picture.
@@ -301,7 +296,7 @@ for (const scene of SHOW) {
   if (['pr', 'ae', 'fig'].includes(scene.key)) {
     const exp = s.actions.find(a => a.id === 'export'), land = playbackSpans(s).land;   // CORRECTIONS-13: plays start once every body is built
     for (const f of [0.01, 0.2, 0.333333, 0.5, 0.7, 0.99, 1.2, 1.7, 1.99]) {
-      if (['fig', 'ae'].includes(scene.key) && f >= 1) continue;
+      if (scene.key === 'fig' && f >= 1) continue;
       const at = land + f * (scene.key === 'fig' ? 3 : 1.6) * PACE, list = frameAt(sceneStart + at);
       near(list.clock, f % 1);
       assert.ok(list.some(pc => pc.device === 0));
