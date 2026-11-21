@@ -26,16 +26,17 @@ change('R11 wrong words', 'R11:', 'stage.mjs', "pr: ['YouTube', 'TikTok', 'Insta
 change('R12 early label', 'R12:', 'stage.mjs', 'timing.spans.map(span => span[1]);', 'timing.spans.map(span => span[1] - 0.2 * PACE);');
 change('R13 reversed growth', 'R13:', 'stage.mjs', 'const growIn = progress(at, ends[i], ends[i] + 0.25 * PACE)', 'const growIn = 1 - progress(at, ends[i], ends[i] + 0.25 * PACE)');
 change('R14 wrong corner inset', 'R14:', 'stage.mjs', 'i === 0 ? x + 0.1', 'i === 0 ? x + 0');
-change('Figma device count', 'Figma devices:', 'stage.mjs', "pc.deviceKind = ['laptop', 'tablet', 'phone'][i]", "pc.deviceKind = ['laptop', 'phone', 'phone'][i]");
+change('Figma device count', 'Figma devices:', 'stage.mjs', "const kind = ['laptop', 'tablet', 'phone'][i]", "const kind = ['laptop', 'phone', 'phone'][i]");   // CORRECTIONS-13: prototypeOut
 change('Figma canvas tags beside top bar', 'canvas clearance:', 'stage.mjs', "if (done(s, 'frame' + i, t)) D.push({ ...on('grey', r[0], r[1] + r[3] + 0.015", "if (done(s, 'frame' + i, t)) D.push({ ...on('grey', r[0], r[1] + r[3] + 0.035");
 change('canvas pixel ceiling', 'pixel ceiling:', 'play.mjs', 'Math.min(2, devicePixelRatio || 1, Math.sqrt(5.2e6 / (W * H)))', 'Math.min(2, devicePixelRatio || 1)');
 change('page contact undone', 'faces and cursor did not share one offset', 'stage.mjs', 'if (!pageContact(s, id, t, from, to, r)) for (const edge', 'if (true) for (const edge');   // CORRECTIONS-12 I1: was the frames' contact
 change('word side faces A5 undone', 'word side faces:', 'stage.mjs', "if (pc.art === 'wMake' || pc.art === 'wMove') pc.cut = true;", "if (pc.art === 'wMake' || pc.art === 'wMove') pc.cut = false;");
 change('Figma canvas playback frozen', 'Figma motion:', 'stage.mjs', 'prototype(draw, i, clock, false);', 'prototype(draw, i, 0, false);');
-change('Figma laptop playback frozen', 'Figma motion:', 'stage.mjs', 'prototype(lidPainter(pieces), 0, t < spans[0][1] ? -1 : clock);', 'prototype(lidPainter(pieces), 0, t < spans[0][1] ? -1 : 0);');
+change('Figma laptop playback frozen', 'Figma motion:', 'stage.mjs', 'prototype(lidPainter(face), 0, shown);', 'prototype(lidPainter(face), 0, t < land ? -1 : 0);');   // CORRECTIONS-13: prototypeOut
 change('Figma lid clearance', 'laptop clearance:', 'stage.mjs', "...device(x, z, w, d, undefined, { rim, round: 0.03 })[0], deviceBody: true", "...device(x, z, w, d, undefined, { rim, round: 0.03 })[0], deviceBody: true, lid: i === 1");
 change('Figma world centring', 'fig: footprint is not centred in world x', 'stage.mjs', 'left = exportMiddle - width / 2', 'left = exportMiddle + 0.1 - width / 2');
-change('Figma tablet x drift', 'feed path:', 'stage.mjs', 'feed(P, pieces, t, ...spans[i]);\n    }', 'for (const pc of pieces) pc.p[0] += 0.1 * Math.sin(Math.PI * linear(t, ...spans[i]));\n      feed(P, pieces, t, ...spans[i]);\n    }');
+// CORRECTIONS-13: feed() is gone; the tablet now drifts in x after it is built, against checks.mjs's built-export rule.
+change('Figma tablet x drift', 'fig: export moved after it was built', 'stage.mjs', 'for (const pc of [...body, ...face]) { pc.p[2] += g.forward;', 'for (const pc of [...body, ...face]) { if (i === 1) pc.p[0] += 0.1 * Math.sin(Math.PI * linear(t, land, off[0])); pc.p[2] += g.forward;');
 change('photo registration', 'photo registration:', 'stage.mjs', "key === 'mail' ? ID.mailPhoto : rect, key + 'Image'", "key === 'mail' ? ID.mailPhoto : rect, 'kPhoto'");
 change('label route fit undone', 'label route:', 'labels.mjs', 'const { S, cx } = fit;', 'const S = view.S, cx = view.cx;');
 change('page text boundary fit undone', 'page labels 768x1024/', 'labels.mjs', 'export function fitCalloutView(view, need, boxLeft, widths, obstacles = []) {', 'export function fitCalloutView(view, need, boxLeft, widths, ignoredObstacles = []) {\n  const obstacles = [];');
@@ -60,6 +61,7 @@ change('0.6 s content frozen rail still plays', 'Figma motion:', 'stage.mjs', 'c
 change('Figma return boundary undone', 'Figma return:', 'stage.mjs', 'const at = p >= 1 ? 3 : ((p * 3) % 3 + 3) % 3;', 'const at = ((p * 3) % 3 + 3) % 3;');
 change('report path sanitizing undone', 'report paths:', 'tools/measure-phases.mjs', 'const message = String(error?.message ?? error);', 'return error.stack || String(error);\n  const message = String(error?.message ?? error);');
 tests.at(-1).checker = 'phase-checks.mjs';
+// CORRECTIONS-13: checks.mjs now runs round 13's 0.01 s sweeps before the Figma rules, so each control gets 480 s (was 90).
 const results = [];
 if (process.argv.includes('--audit')) {
   for (const test of tests) {
@@ -77,7 +79,7 @@ try {
     const mutated = normalized.replace(test.before, test.after);
     fs.writeFileSync(path.join(take, test.file), mutated);
     let result;
-    try { result = spawnSync(process.execPath, [path.join(take, 'tools', test.checker || 'checks.mjs'), '--control'], { cwd: root, encoding: 'utf8', timeout: 90000, windowsHide: true }); }
+    try { result = spawnSync(process.execPath, [path.join(take, 'tools', test.checker || 'checks.mjs'), '--control'], { cwd: root, encoding: 'utf8', timeout: 480000, windowsHide: true }); }
     finally { fs.writeFileSync(path.join(take, test.file), original); }
     const output = (result.stdout || '') + (result.stderr || ''), caught = result.status === 1 && output.includes(test.rule);
     const evidence = { ...test, matches, status: result.status, caught, output };

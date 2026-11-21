@@ -45,7 +45,7 @@ export async function checkCarried(source = read('stage.mjs')) {
       }
     }
   }
-  assert.ok(Math.abs(LOOP - 88.50030) < 1e-4, 'G1: LOOP moved ' + LOOP);   // 91.49807 until CORRECTIONS-12 (I1 shortens InDesign, D1 Figma)
+  assert.ok(Math.abs(LOOP - 91.59089) < 1e-4, 'G1: LOOP moved ' + LOOP);   // 88.50030 in round 12 (CORRECTIONS-13's drop and return, U1's canvas); 91.49807 until CORRECTIONS-12
   return { drags, samples, carriedFrames, per, loop: LOOP };
 }
 

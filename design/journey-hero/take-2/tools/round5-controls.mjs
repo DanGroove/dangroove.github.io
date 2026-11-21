@@ -16,7 +16,7 @@ const tests = [
   ['short InDesign hold', 'H2', 'stage.mjs', "{ id: 'land', kind: 'wait', duration: 3.0 }", "{ id: 'land', kind: 'wait', duration: 1.2 }", 'H2 loop'],
   ['old laptop direction', 'H3', 'stage.mjs', 'const lidU = [1, 0, 0], lidV = [0, Math.cos(LID_ANGLE), -Math.sin(LID_ANGLE)], lidN = [0, Math.sin(LID_ANGLE), Math.cos(LID_ANGLE)];', 'const lidU = [0, 0, -1], lidV = [-Math.sin(LID_ANGLE), Math.cos(LID_ANGLE), 0], lidN = [Math.cos(LID_ANGLE), Math.sin(LID_ANGLE), 0];', 'H3 orientation:'],
   ['laptop label misses corner', 'H3', 'stage.mjs', 'const local = [-face.s[0] + 0.08, face.s[1] - 0.06, face.s[2]];', 'const local = [0, 0, face.s[2]];', 'H3 laptop label top-left corner'],
-  ['laptop enters from wrong side', 'H3', 'stage.mjs', 'const dx = -1.6 * (1 - EASE.enter(linear(t, ...spans[0])));', 'const dx = 1.6 * (1 - EASE.enter(linear(t, ...spans[0])));', 'H3 same-object x entry'],
+  ['laptop enters from wrong side', 'H3', 'stage.mjs', 'dx = -1.6 * (1 - arrive)', 'dx = 1.6 * (1 - arrive)', 'H3 same-object x entry'],   // CORRECTIONS-13: dropOut's slide
   ['wide centring undone', 'H6', 'view.mjs', centre, 'return view;', 'H6 equal side spaces'],
   ['resize gutter jumps', 'H6', 'view.mjs', 'export const sideGutter = width => Math.min(64, Math.max(40, 0.3 * width - 296));', 'export const sideGutter = width => Math.min(64, Math.max(40, 0.3 * width - 296)) + (width >= 1200 ? 1 : 0);', 'H6 discontinuity at'],
   ['scene scale shrinks', 'H6', 'view.mjs', centre, 'return { ...view, S: view.S * 0.95, cx: (textRight + view.W) / 2 - view.S * need.x };', 'H6 scene shrank'],

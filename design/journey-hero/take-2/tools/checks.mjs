@@ -23,6 +23,8 @@ import { checkRound10, checkRound10Controls } from './round10-checks.mjs';
 import { checkRound12StarsList, checkRound12Controls } from './round12-stars-list-checks.mjs';
 import { checkRound14, checkRound14Controls } from './round14-checks.mjs';
 import { checkRound12 as checkRound12Scene, checkRound12Controls as checkRound12SceneControls } from './round12-checks.mjs';
+import { checkRound13, checkRound13Controls, checkRows as checkRound13Rows, checkRowsControls as checkRound13RowsControls, describe as describeRound13 } from './round13-checks.mjs';
+import * as stageModule from '../stage.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
@@ -93,8 +95,8 @@ function check(time) {
     if ('opacity' in pc || 'alpha' in pc) fail(time, `piece ${i}: transparency is not a motion tool`);
     if (pc.where === 'floor') {
       if (scene.key === 'ps' || scene.key === 'ai' || at < 0.1) fail(time, `piece ${i}: floor must be empty`);
-      const slot = scene.key === 'fig' ? MAT.z + UI_ROW.forward : MAT.z;
-      if (!(scene.key === 'fig' && pc.deviceKind === 'laptop' && !pc.clip) && (!pc.clip || pc.clip.some((n, j) => Math.abs(n - [0, 0, 1, -slot][j]) > 1e-9))) fail(time, `piece ${i}: floor slot plane changed`);
+      // CORRECTIONS-13 E2: the slot at the mat's back edge is gone; nothing on the floor is clipped.
+      if (pc.clip) fail(time, `piece ${i}: a floor piece is clipped (the slot is gone)`);
       const s = SCRIPTS[scene.key], exp = s?.actions.find(a => a.id === 'export');
       if (exp && at < exp.start) fail(time, `piece ${i}: floor before export`);
       if (pc.device !== undefined && list.clock !== null && list.clock !== undefined && Math.abs(pc.clock - list.clock) > 1e-8) fail(time, `piece ${i}: device and viewer clocks differ`);
@@ -113,8 +115,13 @@ function check(time) {
       const overlap = Math.min(a.rect[2], b.rect[2]) - Math.max(a.rect[0], b.rect[0]) > 1e-9 && Math.min(a.rect[3], b.rect[3]) - Math.max(a.rect[1], b.rect[1]) > 1e-9;
       if (overlap && Math.abs(a.height - b.height) < 0.0006 - 1e-10) fail(time, `${floor ? 'floor' : 'screen'} faces ${a.i}/${b.i} overlap with less than 0.0006 clearance`);
     }
-    const painted = faces.filter(f => f.pc.paintLayer !== undefined && !f.pc.overlay).sort((a, b) => a.pc.paintLayer - b.pc.paintLayer);
-    for (let i = 1; i < painted.length; i++) if (painted[i].height - painted[i - 1].height < 0.0008 - 1e-10) fail(time, 'painters did not share one increasing stack');
+    // CORRECTIONS-13: on the floor the stack is shared within each device; Figma's devices are built 0.1 s apart, each face
+    // lowered by its own body's thickness until built, so one device may sit lower than the one painted before it.
+    const groups = floor ? [...new Set(faces.map(f => f.pc.device))] : [null];
+    for (const group of groups) {
+      const painted = faces.filter(f => f.pc.paintLayer !== undefined && !f.pc.overlay && (!floor || f.pc.device === group)).sort((a, b) => a.pc.paintLayer - b.pc.paintLayer);
+      for (let i = 1; i < painted.length; i++) if (painted[i].height - painted[i - 1].height < 0.0008 - 1e-10) fail(time, 'painters did not share one increasing stack');
+    }
     for (const f of faces.filter(f => f.pc.overlay && !f.pc.emptyFrame)) {
       // The original spread guides may cross a carried image; the cursor must clear it. G1 (round 8): in every app, marks the
       // carried stack passes over stay where they are, under it; only the cursor must clear the carried picture.
@@ -236,25 +243,23 @@ for (const i of [2, 3, 4, 5]) {
   const xs = SCENES[i]().filter(pc => pc.where === 'floor').flatMap(corners).map(p => p[0]);
   centred((Math.min(...xs) + Math.max(...xs)) / 2, SHOW[i].key);
 }
-// Feeding and returning translate only z. Freeze the booklet pose; devices keep their own playback.
+// CORRECTIONS-13 (replaces "feeding and returning translate only z"): once every body is built, nothing on the floor moves
+// until the return, except the booklet's reading; the drop itself is checked by tools/round13-checks.mjs.
 sceneStart = 0;
 for (const scene of SHOW) {
   if (['id', 'pr', 'ae', 'fig'].includes(scene.key)) {
-    const s = SCRIPTS[scene.key], exp = s.actions.find(a => a.id === 'export');
+    const s = SCRIPTS[scene.key], { land, off } = playbackSpans(s), end = scene.key === 'id' ? s.actions.find(a => a.id === 'pickup').start : off[0];
     const floor = t => frameAt(sceneStart + t, { at: -1 }).filter(pc => pc.where === 'floor');
-    const landed = floor(exp.end + 0.01 * PACE);
-    const reference = scene.key === 'id' ? landed : landed.filter(pc => pc.deviceBody);
-    assert.equal(reference.length, scene.key === 'id' ? 16 : 3, scene.key + ': missing export bodies');
-    for (let n = 1; n < Math.ceil((scene.len - exp.start) * 120 / PACE); n++) {
-      const list = floor(exp.start + n * PACE / 120);
-      const bodies = scene.key === 'id' ? list : list.filter(pc => pc.deviceBody);
+    const landed = floor(land + 1e-6 * PACE);
+    const reference = scene.key === 'id' ? landed : landed.filter(pc => pc.deviceBody || pc.lid);
+    assert.equal(reference.length, scene.key === 'id' ? 16 : scene.key === 'fig' ? 4 : 3, scene.key + ': missing export bodies');
+    for (let n = 1; land + n * PACE / 120 < end; n++) {
+      const list = floor(land + n * PACE / 120), bodies = scene.key === 'id' ? list : list.filter(pc => pc.deviceBody || pc.lid);
+      assert.equal(bodies.length, reference.length, scene.key + ': export bodies changed');
       for (const pc of bodies) {
-        const match = scene.key === 'id' ? reference.find(p => p.art === pc.art && p.s.every((v, i) => Math.abs(v - pc.s[i]) < 1e-8) && Math.abs(p.p[0] - pc.p[0]) < 1e-8 && Math.abs(p.p[1] - pc.p[1]) < 1e-8) : reference.find(p => p.device === pc.device);
-        assert.ok(match, scene.key + ': export changed x/y or geometry');
-        const laptopEntry = scene.key === 'fig' && pc.deviceKind === 'laptop' && exp.start + n * PACE / 120 < playbackSpans(s).spans[0][1];
-        if (!laptopEntry) assert.ok(Math.abs(pc.p[0] - match.p[0]) < 1e-8, 'feed path: only the laptop entry may move in x');
-        near(pc.p[1], match.p[1]);
-        assert.deepEqual(pc.q, match.q); assert.deepEqual(pc.s, match.s);
+        const match = scene.key === 'id' ? reference.find(p => p.art === pc.art && p.tone === pc.tone && p.p.every((v, i) => Math.abs(v - pc.p[i]) < 1e-8)) : reference.find(p => p.device === pc.device && !!p.lid === !!pc.lid);
+        assert.ok(match, scene.key + ': export moved after it was built');
+        pc.p.forEach((v, i) => assert.ok(Math.abs(v - match.p[i]) < 1e-8, scene.key + ': export moved after it was built')); assert.deepEqual(pc.q, match.q); assert.deepEqual(pc.s, match.s);
       }
     }
   }
@@ -290,7 +295,7 @@ for (const scene of SHOW) {
   const s = SCRIPTS[scene.key];
   for (const a of s.actions) for (const f of [0, 0.25, 0.5, 0.75, 0.999999]) check(sceneStart + a.start + (a.end - a.start) * f);
   if (['pr', 'ae', 'fig'].includes(scene.key)) {
-    const exp = s.actions.find(a => a.id === 'export'), land = exp.start + 0.55 * PACE;
+    const exp = s.actions.find(a => a.id === 'export'), land = playbackSpans(s).land;   // CORRECTIONS-13: plays start once every body is built
     for (const f of [0.01, 0.2, 0.333333, 0.5, 0.7, 0.99, 1.2, 1.7, 1.99]) {
       if (scene.key === 'fig' && f >= 1) continue;
       const at = land + f * (scene.key === 'fig' ? 3 : 1.6) * PACE, list = frameAt(sceneStart + at);
@@ -298,12 +303,16 @@ for (const scene of SHOW) {
       assert.ok(list.some(pc => pc.device === 0));
       for (const pc of list.filter(pc => pc.device !== undefined)) near(pc.clock, list.clock);
     }
-    const list = frameAt(sceneStart + exp.end + 0.01 * PACE);
+    const list = frameAt(sceneStart + land + 0.16 * PACE);   // as before: 0.16 s into the plays
     const bodies = [0, 1, 2].map(i => list.find(pc => pc.where === 'floor' && pc.device === i && pc.deviceBody));
     assert.ok(bodies.every(Boolean), 'device row did not land');
     const footprint = (scene.key === 'fig' ? list.filter(pc => pc.where === 'floor') : bodies).flatMap(corners), xs = footprint.map(p => p[0]), zs = footprint.map(p => p[2]);
     centred((Math.min(...xs) + Math.max(...xs)) / 2, scene.key);
-    near(Math.min(...zs), MAT.z + (scene.key === 'fig' ? UI_ROW.forward : 0));
+    if (scene.key !== 'fig') near(Math.min(...zs), MAT.z);
+    else {   // CORRECTIONS-13 U1: the tablet's back edge now sits on the deck's (tabZ behind the row line), not on the mat's back edge.
+      near(Math.min(...corners(bodies[1]).map(p => p[2])), MAT.z + UI_ROW.forward + UI_ROW.tabZ);
+      assert.ok(Math.min(...zs) >= MAT.z + UI_ROW.forward - 1e-6, 'fig row reaches behind its row line');
+    }
     assert.ok(list.some(pc => pc.where === 'content' && ['shotA', 'shotB', 'shotCfx', 'wMake', 'uiPageWide0', 'uiPageWide1'].includes(pc.art)), 'viewer is not playing with the devices');
   }
   sceneStart += scene.len;
@@ -546,6 +555,8 @@ try { console.log(await checkRound10()); console.log('Round 10 negative controls
 try { console.log(await checkRound12StarsList()); console.log('Round 12 (S1) negative controls: ' + await checkRound12Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound14()); console.log('Round 14 (K1) negative controls: ' + await checkRound14Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound12Scene()); console.log('Round 12 (D1, I1, X1) negative controls: ' + await checkRound12SceneControls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
+try { console.log(describeRound13(await checkRound13(stageModule), stageModule)); console.log('Round 13 (E1, E2) negative controls: ' + await checkRound13Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
+try { console.log(await checkRound13Rows(stageModule)); console.log('Round 13 (U1, I2) negative controls: ' + await checkRound13RowsControls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {

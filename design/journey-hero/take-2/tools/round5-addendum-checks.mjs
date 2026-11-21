@@ -30,7 +30,8 @@ const widthsFor = module => {
   const widths = { small: {}, large: {} };
   let start = 0;
   for (const scene of module.SHOW) {
-    const time = start + (scene.key === 'id' ? module.SCRIPTS.id.actions.find(a => a.id === 'export').end + 0.41 : scene.still);
+    // CORRECTIONS-13: today's InDesign labels appear once its drop is built (land); the frozen stages' at the end of the Export click.
+    const time = start + (scene.key === 'id' ? (module.DROP ? module.playbackSpans(module.SCRIPTS.id).land : module.SCRIPTS.id.actions.find(a => a.id === 'export').end) + 0.41 : scene.still);
     for (const c of module.calloutsAt(time)) for (const [key, size] of [['small', 9], ['large', 11]]) widths[key][c.id] = c.words.length * size * 0.75;
     start += scene.len;
   }
@@ -216,12 +217,25 @@ export async function checkRound5Addendum({ only = '', control = '' } = {}) {
     // CORRECTIONS-12: the frozen stage runs without InDesign's frame steps (r12Patch), so the timetables agree up to Figma. D1
     // and X1 move the floor and I1 replaces InDesign's frames with pages, on purpose; so InDesign and Figma (whose canvas and
     // timing D1 changes) are left to their own checks, and elsewhere the screen is compared, not the floor.
+    // CORRECTIONS-13 lengthens InDesign (so later scenes start later) and moves video's and motion's plays from the first landing
+    // to the drop's become end: each instant is compared at the same local time up to Export, and in the plays at the same time
+    // from their start; the drop and the return themselves are round 13's (round13-checks.mjs).
+    const begin = module => Object.fromEntries(module.SHOW.map((scene, i) => [scene.key, module.SHOW.slice(0, i).reduce((n, s) => n + s.len, 0)]));
+    const nowStart = begin(current), oldStart = begin(incoming);
     for (let t = 0; t < current.LOOP; t += 0.25) {
-      if (['id', 'fig'].includes(current.sceneAt(t).scene.key)) continue;
-      const P = current.frameAt(t), old = incoming.frameAt(t), screen = list => list.filter(pc => pc.where !== 'floor');
+      const { scene, at } = current.sceneAt(t);
+      if (['id', 'fig'].includes(scene.key)) continue;
+      let local = at, plays = false;
+      if (['pr', 'ae'].includes(scene.key)) {
+        const s = current.SCRIPTS[scene.key], exp = s.actions.find(a => a.id === 'export').start, now = current.playbackSpans(s), then = incoming.playbackSpans(incoming.SCRIPTS[scene.key]);
+        if (at >= exp && (at < now.land || at >= now.off[0])) continue;
+        if (at >= now.land) { local = at - now.land + then.land; plays = true; }
+      }
+      // In the plays only what plays is compared (the Export button's own wipe keeps its time from the click).
+      const P = current.frameAt(t), old = incoming.frameAt(oldStart[scene.key] + local), screen = list => list.filter(pc => pc.where !== 'floor' && (!plays || pc.playback));
       const expected = old.map(pc => pc.where === 'floor' && incoming.sceneAt(t).scene.key === 'fig' ? { ...pc, p: pc.p.map((n, i) => n + (i === 2 ? current.UI_ROW.forward : 0)), ...(pc.clip ? { clip: pc.clip.map((n, i) => n - (i === 3 ? current.UI_ROW.forward : 0)) } : {}) } : pc);
-      equivalent(screen(P), screen(expected), 'H10 retained round-5 pieces');
-      for (const key of ['clock', 'action', 'pressed', 'tool']) equivalent(P[key], old[key], 'H10 retained round-5 ' + key);
+      equivalent(screen(P), screen(expected), `H10 retained round-5 pieces at ${t.toFixed(2)} s (${scene.key} ${local.toFixed(3)})`);
+      for (const key of plays ? ['clock', 'tool'] : ['clock', 'action', 'pressed', 'tool']) equivalent(P[key], old[key], 'H10 retained round-5 ' + key);
       preservedFrames++;
     }
     report.H10 = { forward: current.UI_ROW.forward, preservedFrames, before, after };

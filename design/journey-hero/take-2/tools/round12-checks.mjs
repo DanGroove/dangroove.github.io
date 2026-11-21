@@ -53,8 +53,9 @@ export function checkPhones(M) {
     const bodyOf = d => list.find(pc => pc.deviceBody && pc.device === d);
     const tab = bodyOf(key === 'fig' ? 1 : 0), phones = key === 'fig' ? [bodyOf(2)] : [bodyOf(1), bodyOf(2)];
     const [tW, tD] = size(tab, true);
-    near(tD, 1.8, `D1 ${key} tablet: its depth changed`);
-    near(tW, key === 'fig' ? 1.38 : 3.09, `D1 ${key} tablet: its width changed`, 1e-6);
+    // CORRECTIONS-13 U1 makes Figma's tablet as deep as the laptop's deck (1.1, 0.855 wide) on purpose; round13-checks checks it.
+    near(tD, key === 'fig' ? M.UI_ROW.tabD : 1.8, `D1 ${key} tablet: its depth changed`);
+    near(tW, key === 'fig' ? M.UI_ROW.tabW : 3.09, `D1 ${key} tablet: its width changed`, 1e-6);
     for (const p of phones) {
       const [w, d] = size(p, true);
       within(d / tD, kind === 'side' ? side : upright, `D1 ${key} phone: depth against the tablet ${kind === 'side' ? 'on its side' : 'upright'}`);
@@ -129,7 +130,7 @@ export async function checkShift(M, source = read('stage.mjs')) {
   assert.equal(source.split(search).length - 1, 1, 'X1 one number: EXPORT_SHIFT must be one constant');
   const N = await load('stage.mjs', source.replace(search, `export const EXPORT_SHIFT = ${EXPORT_SHIFT + d};`));
   near(N.POOL.x - POOL.x, d, 'X1 one number: the pool'); near(N.BLOCK.x0 - BLOCK.x0, d, 'X1 one number: the block');
-  const fig = SHOW.findIndex(s => s.key === 'fig'), entry = starts[fig] + M.playbackSpans(SCRIPTS.fig).spans[0][0] + 0.1;
+  const fig = SHOW.findIndex(s => s.key === 'fig'), entry = starts[fig] + M.playbackSpans(SCRIPTS.fig).spans[0][0] + 0.9 * M.PACE;   // CORRECTIONS-13: mid slide-in, every Figma sheet landed (at +0.1 they hang on the screen, which X1 does not move)
   let pieces = 0;
   for (const t of [...[2, 3, 4, 5].map(i => starts[i] + SHOW[i].still), starts[id] + land.start + 0.1, entry]) {
     const a = M.frameAt(t), b = N.frameAt(t);
@@ -151,7 +152,8 @@ export async function checkRound12(source = read('stage.mjs')) {
 
 const ROUND12_CONTROLS = [
   { id: 'old InDesign phone', search: 'PHONE_D = DEEP * PHONE_BESIDE.upright, PHONE = PHONE_D * PHONE_SHAPE,', replacement: 'PHONE_D = DEEP, PHONE = 0.7,', gate: 'D1 InDesign phone' },
-  { id: 'phone set back', search: 'phoneZ = ROW - phoneD;', replacement: 'phoneZ = 0;', gate: 'D1 fig: a phone\'s front edge' },
+  // CORRECTIONS-13 U1: phoneZ is now measured from the tablet's back edge (tabZ), not MAT.z.
+  { id: 'phone set back', search: 'phoneZ = tabZ + tabD - phoneD;', replacement: 'phoneZ = tabZ;', gate: 'D1 fig: a phone\'s front edge' },
   { id: 'one frame step back', search: "    // CORRECTIONS-12 I1: no frames are drawn.", replacement: "    { id: 'frame1', kind: 'draw', from: topLeft(ID.cover), to: bottomRight(ID.cover), duration: 0.3, tool: 'frame' },\n    // CORRECTIONS-12 I1: no frames are drawn.", gate: 'I1 steps' },
   { id: 'pool left behind', search: 'export const POOL = { x: exportMiddle,', replacement: 'export const POOL = { x: screenMiddle,', gate: 'X1 centre: the light pool' },
 ];

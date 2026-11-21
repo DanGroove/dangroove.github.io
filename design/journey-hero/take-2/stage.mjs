@@ -2,7 +2,7 @@
 // builds a piece of work, and on Export the piece lands in front of the screen, lying flat in one tidy block.
 // One clock builds every piece: the persistent shell, wiped content, travelling work and the floor.
 import { HOME, EASE, dot as dot3, quatFromBasis, quatRotate } from '../../../public/journey/hero/engine.mjs';
-import { box, cyl, turn, corners } from './kit.mjs';
+import { box, cyl, turn, corners, qAxis, qMul } from './kit.mjs';
 import { SPOT, subwayPath, BALL, BALL_FROM, BALL_VIA, ROWS, TYPE_EDGES, TYPE_BOXES, ART, ART_TEXT, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS } from './art.mjs';
 
 // All authored durations, including the cursor's journeys, share this one control.
@@ -49,6 +49,11 @@ export function floorAt(x, y) {
 // (Dan's centring rule of round 2, then this one shift). One number: Dan may pick another from a comparison sheet.
 export const EXPORT_SHIFT = -0.3;
 const screenMiddle = SCREEN.l + SCREEN.w / 2, exportMiddle = screenMiddle + EXPORT_SHIFT;
+// CORRECTIONS-13 E1, E2: the exports drop out of the screen. Each beat's length in seconds at PACE 1: the copy peels off the
+// screen (out: how far it moves along the screen's normal), tips down flat while it travels to the floor, splits into its parts,
+// and each part becomes its format. Figma's three frames start 0.1 s apart and its laptop's body slides in for 0.5 s. The return
+// plays the whole drop backwards in `back` seconds.
+export const DROP = { peel: 0.15, out: 0.15, tip: 0.5, split: 0.35, become: 0.25, slide: 0.5, stagger: 0.1, back: 0.6 };
 // CORRECTIONS-12 D1: phones in true proportion to the tablets beside them. The reference bodies, in mm: a phone 71.6 x 147.6
 // and a tablet 179.5 x 248.6. A phone is 147.6 / 248.6 of an upright tablet's height, 147.6 / 179.5 of one on its side.
 export const BODY = { phone: [71.6, 147.6], tablet: [179.5, 248.6] };
@@ -136,11 +141,14 @@ const DEEP = 1.45, LEAF = DEEP * 440 / 340;              // a page of the bookle
 // phone frees. The gutters stay; the row behind (stack, phone, tablet) is centred in the block, so the block keeps its middle
 // whether the copy lies on the stack or open in front. The phone's front edge lines up with the tablet's.
 const GUT = 0.12, PHONE_D = DEEP * PHONE_BESIDE.upright, PHONE = PHONE_D * PHONE_SHAPE, TABLET = DEEP * BODY.tablet[0] / BODY.tablet[1];
-const BACK = (2 * LEAF - (LEAF + PHONE + TABLET + 2 * GUT)) / 2;   // how far the row behind is set in from the block's left edge
+const BACK = (2 * LEAF - (LEAF + PHONE + TABLET + 2 * GUT)) / 2;   // the width D1's smaller phone freed on each side of the row
+// CORRECTIONS-13 I2: the row behind spans exactly the open copy's width, its outer edges on BLOCK.x0 and BLOCK.x1; the freed width
+// goes equally into its two gutters (this supersedes D1's "keep the gaps" for this row only).
+const ROW_GUT = GUT + BACK;
 const SHEET = 0.01, COPY = 5 * SHEET, COPIES = 6;        // how thick one leaf is, and one closed copy (the four leaves that turn, and the rest); how many copies land
 export const BLOCK = { x0: exportMiddle - LEAF, x1: exportMiddle + LEAF, z0: MAT.z, z1: MAT.z + 2 * DEEP + GUT, up: 0.6 };
 // where the three things in the row behind lie: [x, z, w, d]
-export const BLOCK_ROW = { stack: [BLOCK.x0 + BACK, BLOCK.z0, LEAF, DEEP], phone: [BLOCK.x0 + BACK + LEAF + GUT, BLOCK.z0 + DEEP - PHONE_D, PHONE, PHONE_D], tablet: [BLOCK.x0 + BACK + LEAF + 2 * GUT + PHONE, BLOCK.z0, TABLET, DEEP], phoneRim: rimFor(PHONE, PHONE_D, 300, 664) };
+export const BLOCK_ROW = { stack: [BLOCK.x0, BLOCK.z0, LEAF, DEEP], phone: [BLOCK.x0 + LEAF + ROW_GUT, BLOCK.z0 + DEEP - PHONE_D, PHONE, PHONE_D], tablet: [BLOCK.x0 + LEAF + 2 * ROW_GUT + PHONE, BLOCK.z0, TABLET, DEEP], gutter: ROW_GUT, phoneRim: rimFor(PHONE, PHONE_D, 300, 664) };
 export const POOL = { x: exportMiddle, z: MAT.z + DEEP };
 
 // A closed copy: the white edges of its pages under a dark cover. x, z: its back left corner. y: what it lies on.
@@ -261,34 +269,139 @@ function travel(P, key, from, to, t, a, b, endWindow = [0, 0, 1, 1], curve = EAS
   if (rim > 0) P.push({ ...on('grey', x - rim, y - rim, w + 2 * rim, h + 2 * rim, { lift: lift - 0.015, t: 0.012 }), where: 'travel', action: key });
   P.push({ ...on('ink', ...rect, { lift, t: 0.02, art: PICTURES[key] }), window: rectMix([0, 0, 1, 1], endWindow, p), where: 'travel', action: key });
 }
-function feed(P, pieces, t, a, b) {
-  if (t <= a) return;
-  const back = t < b ? Math.max(...pieces.flatMap(pc => corners(pc).map(p => p[2]))) - MAT.z + 0.05 : 0, dz = -back * (1 - EASE.enter(linear(t, a, b)));
-  for (const pc of pieces) { pc.where = 'floor'; pc.p[2] += dz; pc.clip = [0, 0, 1, -MAT.z]; P.push(pc); }
+// ---- CORRECTIONS-13 E1, E2: the drop. Times are local to the scene; beats are seconds after Export, at PACE 1.
+// Figma's frames start DROP.stagger apart and have no split; its laptop's body takes DROP.slide to slide in under its screen.
+export function dropBeats(key, j) {
+  const fig = key === 'fig', start = fig ? j * DROP.stagger : 0, peel = start + DROP.peel, tip = peel + DROP.tip, split = tip + (fig ? 0 : DROP.split);
+  return { start, peel, tip, split, become: split + (fig && j === 0 ? DROP.slide : DROP.become) };
 }
-function takeBack(P, t, a, b) {
-  if (t <= a) return;
-  // Every floor piece shares one displacement, including an open copy and all its strips.
-  const dz = -(BLOCK.z1 - MAT.z + 0.05) * EASE.exit(linear(t, a, b));
-  for (const pc of P) if (pc.where === 'floor') pc.p[2] += dz;
+export const dropLength = key => Math.max(...[0, 1, 2].map(j => dropBeats(key, j).become));
+// The drop's own clock: seconds since Export through the entrance, held once every part is built, then run backwards over the
+// return (E2), so the return is the drop played backwards, faster. null when nothing of the export exists.
+function dropClock(key, s, t) {
+  const a = action(s, 'export').start, length = dropLength(key) * PACE, off = playbackSpans(s).off;
+  if (t < a || t >= off[1]) return null;
+  if (t < off[0]) return Math.min(t - a, length);
+  return length * (1 - (t - off[0]) / (off[1] - off[0]));
 }
-function feedScreens(P, t, art, spans, off) {
-  if (t >= off[1]) return;
-  const kind = art[0] === 'playerWide' ? 'video' : 'motion';
-  const clock = Math.max(0, (t - spans[0][1]) / PACE) % 1.6 / 1.6;
-  const x = MAT.x, widths = [WIDE, SLIM, SLIM];
-  let left = x;
-  widths.forEach((w, i) => {
-    const pieces = [], rim = i ? SLIM_RIM : 0.075, d = i ? SLIM_D : ROW, z = MAT.z + ROW - d;
-    pieces.push({ ...device(left, z, w, d, undefined, { rim, round: i ? 0.16 : 0.09 })[0], deviceBody: true });
-    const draw = floorPainter(pieces, i ? [left + SLIM_SCREEN[0], z + SLIM_SCREEN[1], SLIM_SCREEN[2], SLIM_SCREEN[3]] : [left + rim, z + rim, w - 2 * rim, d - 2 * rim]);
-    playback(pieces, draw, kind, i, clock);
-    pieces.forEach(pc => { pc.clock = clock; pc.device = i; });
-    feed(P, pieces, t, ...spans[i]);
-    left += w + MAT.gap;
+// What a copy keeps of the piece it copies: its look, never its role on the screen.
+const SCREEN_ROLE = ['where', 'clip', 'document', 'echo', 'text', 'paintLayer', 'canvas', 'furniture', 'placed', 'page', 'pageEdge', 'action', 'caret', 'playback', 'progressRail', 'tones0'];
+function copyOf(pc) {
+  const c = { ...pc, p: pc.p.slice(), q: pc.q.slice(), s: pc.s.slice() };
+  for (const key of SCREEN_ROLE) delete c[key];
+  return c;
+}
+// The finished work on the screen inside rect (the screen's units): its faces, without marks, carets or the cursor.
+function workIn(P, rect) {
+  const [l, b, w, h] = rect, x0 = SCREEN.l + l * U, x1 = SCREEN.l + (l + w) * U, y0 = SCREEN.b + b * U, y1 = SCREEN.b + (b + h) * U;
+  return P.filter(pc => pc.where !== 'floor' && pc.where !== 'travel' && !pc.overlay && !pc.caret && pc.art !== 'cursor' && quatRotate(pc.q, [0, 0, 1])[2] > 1 - 1e-9 && corners(pc).every(p => p[0] >= x0 - 1e-6 && p[0] <= x1 + 1e-6 && p[1] >= y0 - 1e-6 && p[1] <= y1 + 1e-6)).map(copyOf);
+}
+// A rect of w : h, as large as fits in r = [x, z, w, d], centred in it.
+function fitIn(w, h, r) {
+  const k = Math.min(r[2] / w, r[3] / h);
+  return [r[0] + (r[2] - w * k) / 2, r[1] + (r[3] - h * k) / 2, w * k, h * k];
+}
+// The copy as one rigid sheet: scaled by k in its own plane (never across it, so its layers keep their gaps), turned about world
+// x by deg (0 upright facing us, -90 lying flat face up with its top edge at the back, as a floor device's picture lies), with
+// its pivot carried to `to`.
+function carry(pieces, pivot, to, k, deg) {
+  const q = qAxis([1, 0, 0], deg);
+  return pieces.map(pc => {
+    const d = [(pc.p[0] - pivot[0]) * k, (pc.p[1] - pivot[1]) * k, pc.p[2] - pivot[2]], r = quatRotate(q, d);
+    return { ...pc, p: [to[0] + r[0], to[1] + r[1], to[2] + r[2]], q: qMul(q, pc.q), s: [pc.s[0] * k, pc.s[1] * k, pc.s[2]] };
   });
+}
+// A sheet: the copy of the work in rect (screen units), landing on the floor rect `land` ([x, z, w, d], fitted, keeping its
+// shape) or, for Figma's laptop, on the lid's screen (`lid`). Its pivot is the middle of its top edge on its back face; that edge
+// becomes the landed sheet's back edge, so the sheet hangs down from it toward us while it tips, clear of the screen.
+function sheetOf(j, pieces, rect, { land, lid } = {}) {
+  const [l, b, w, h] = rect, base = Math.min(...pieces.map(pc => pc.p[2] - pc.s[2]));
+  const pivot = [SCREEN.l + (l + w / 2) * U, SCREEN.b + (b + h) * U, base];
+  let to, k, deg;
+  if (lid) {
+    const g = UI_ROW, sw = g.lidW - 0.08, sh = g.lidH - 0.08, top = lidPoint(0.04 + sw / 2, 0.04 + sh, 0.026);
+    to = [top[0], top[1], top[2] + g.forward]; k = sw / (w * U); deg = -12;
+  } else {
+    const r = fitIn(w, h, land);
+    to = [r[0] + r[2] / 2, 0, r[1]]; k = r[2] / (w * U); deg = -90;
+  }
+  // Where a rect of the screen (screen units) lies once the sheet has landed: [x, z, w, d] on the floor.
+  const landed = ([x, y, rw, rh]) => [to[0] + k * (SCREEN.l + x * U - pivot[0]), to[2] + k * (pivot[1] - SCREEN.b - (y + rh) * U), rw * U * k, rh * U * k];
+  return { j, pieces, rect, pivot, peeled: [pivot[0], pivot[1], pivot[2] + DROP.out], to, k, deg, landed, flat: landed(rect) };
+}
+// The drop at tau seconds into it (dropClock). sheets: as sheetOf. parts: what each becomes, each built in its final landed pose:
+//   faces: [{ pc, T }]  its face, lowered by T (the body under it) until it is built;
+//   F, S: the face's final rect and its rect on the landed sheet, the same shape ([x, z, w, d]); without S it lands at F;
+//   grow: device slabs, whose rim wipes out from F's edge while their thickness rises from the floor;
+//   rise: pieces whose thickness wipes up from the floor (the booklet stack);
+//   slide: the laptop's body, sliding in from its old 1.6 units to the left while its lid rises to its lean;
+//   transient: a part that goes under another and is gone once the split ends.
+// Once the drop is complete every piece is pushed exactly as built.
+function dropOut(P, tau, key, sheets, parts) {
+  if (tau === null || tau <= 0) return;
+  const beat = j => { const b = dropBeats(key, j); for (const k in b) b[k] *= PACE; return b; };
+  const done = tau >= dropLength(key) * PACE;
+  for (const sheet of done ? [] : sheets) {
+    const b = beat(sheet.j);
+    if (tau <= b.start || tau >= b.tip) continue;
+    const peel = EASE.wipe(linear(tau, b.start, b.peel)), tip = EASE.wipe(linear(tau, b.peel, b.tip));
+    const to = tau < b.peel ? rectMix(sheet.pivot, sheet.peeled, peel) : rectMix(sheet.peeled, sheet.to, tip), k = mix(1, sheet.k, tip), deg = sheet.deg * tip;
+    // Never through the floor: while it is still tipping, the sheet's lower edge (its top edge's height less its tilted height)
+    // stays on or above it, so a sheet that grows as it falls touches down with its lower edge and lies down from there.
+    to[1] = Math.max(to[1], k * sheet.rect[3] * U * Math.cos(deg * Math.PI / 180));
+    for (const pc of carry(sheet.pieces, sheet.pivot, to, k, deg)) { pc.where = 'floor'; pc.drop = 'sheet'; pc.device = sheet.device; P.push(pc); }
+  }
+  for (const part of parts) {
+    const b = beat(part.j), all = [...part.faces.map(f => f.pc), ...(part.grow || []), ...(part.rise || []), ...(part.slide || [])];
+    if (done) { if (!part.transient) for (const pc of all) { pc.where = 'floor'; P.push(pc); } continue; }
+    if (tau < b.tip || (part.transient && tau >= b.split)) continue;
+    const e = b.split > b.tip ? EASE.wipe(linear(tau, b.tip, b.split)) : 1, g = EASE.wipe(linear(tau, b.split, b.become));
+    if (part.F) {
+      const F = part.F, R = part.S ? rectMix(part.S, F, e) : F, k = R[2] / F[2];
+      for (const { pc } of part.faces) { pc.p[0] = R[0] + (pc.p[0] - F[0]) * k; pc.p[2] = R[1] + (pc.p[2] - F[1]) * k; pc.s[0] *= k; pc.s[1] *= k; }
+    }
+    for (const { pc, T } of part.faces) { pc.p[1] -= T * (1 - g); pc.drop = 'part'; }
+    for (const pc of part.grow || []) {
+      const B = [pc.p[0] - pc.s[0], pc.p[2] - pc.s[1], 2 * pc.s[0], 2 * pc.s[1]], R = rectMix(part.F, B, g), half = pc.s[2] * g;
+      pc.p = [R[0] + R[2] / 2, half, R[1] + R[3] / 2]; pc.s = [R[2] / 2, R[3] / 2, half];
+    }
+    for (const pc of part.rise || []) { pc.p[1] *= g; pc.s[2] *= g; }
+    if (part.slide) {
+      // The body comes in from the left as before (round 3, H3), closed, and its lid rises from lying shut on the deck to its
+      // 12 degree lean as they meet: it opens like a laptop, in front of the screen that waits for it, and never reaches further back
+      // (towards the app, in projection) than its open lid does. It keeps its old arrival curve (EASE.enter), so it leaves the left
+      // gutter as quickly as it always did. While it is forward of upright it is lifted clear of the keys.
+      const arrive = EASE.enter(linear(tau, b.split, b.become)), dx = -1.6 * (1 - arrive), lean = (-90 + 102 * arrive) * Math.PI / 180, v = [0, Math.cos(lean), -Math.sin(lean)];
+      const lift = 0.03 * Math.max(0, -Math.sin(lean));
+      for (const pc of part.slide) {
+        pc.p[0] += dx;
+        if (pc.lid) { const at = lidPoint(UI_ROW.lidW / 2, 0, 0); pc.p = [at[0] + dx, at[1] + v[1] * UI_ROW.lidH / 2 + lift, at[2] + v[2] * UI_ROW.lidH / 2 + UI_ROW.forward]; pc.q = quatFromBasis(lidU, v); }
+      }
+    }
+    for (const pc of all) { pc.where = 'floor'; if (pc.drop !== 'part') pc.drop = 'body'; if (pc.s.every(n => n > 0)) P.push(pc); }
+  }
+}
+// Video and motion: the viewer's picture drops and splits into three copies, cropped wide, tall and square, for the tablet on
+// its side and the two phones, whose bodies build round them. Then the plays start, in step with the viewer.
+function screensOut(P, t, s, art) {
+  const key = s === SCRIPTS.pr ? 'pr' : 'ae', tau = dropClock(key, s, t);
+  if (tau === null) return;
+  const kind = art[0] === 'playerWide' ? 'video' : 'motion', { land } = playbackSpans(s);
+  const clock = Math.max(0, (t - land) / PACE) % 1.6 / 1.6, widths = [WIDE, SLIM, SLIM];
+  let left = MAT.x;
+  const parts = widths.map((w, i) => {
+    const face = [], rim = i ? SLIM_RIM : 0.075, d = i ? SLIM_D : ROW, z = MAT.z + ROW - d;
+    const slab = { ...device(left, z, w, d, undefined, { rim, round: i ? 0.16 : 0.09 })[0], deviceBody: true };
+    const F = i ? [left + SLIM_SCREEN[0], z + SLIM_SCREEN[1], SLIM_SCREEN[2], SLIM_SCREEN[3]] : [left + rim, z + rim, w - 2 * rim, d - 2 * rim];
+    playback(face, floorPainter(face, F), kind, i, clock);
+    for (const pc of [slab, ...face]) { pc.clock = clock; pc.device = i; }
+    left += w + MAT.gap;
+    return { j: 0, faces: face.map(pc => ({ pc, T: slab.s[2] * 2 })), F, grow: [slab] };
+  });
+  const sheet = sheetOf(0, workIn(P, VIEW), VIEW, { land: [MAT.x, MAT.z, MAT.w, ROW] });
+  parts.forEach(part => { part.S = fitIn(part.F[2], part.F[3], sheet.flat); });
+  dropOut(P, tau, key, [sheet], parts);
   P.clock = clock;
-  takeBack(P, t, ...off);
 }
 
 // The laptop hinge runs in x along the back edge; its unmirrored screen faces +z.
@@ -297,10 +410,13 @@ const lidU = [1, 0, 0], lidV = [0, Math.cos(LID_ANGLE), -Math.sin(LID_ANGLE)], l
 export const UI_ROW = (() => {
   // D1: the phone is in true proportion to the upright tablet (1.8 deep), its front edge on the tablet's, and its rim keeps the
   // 9 : 19.5 screen the prototype's phone pictures are drawn for.
-  const depth = 1.65, lidW = 1.55, lidH = (lidW - 0.08) / 1.6 + 0.08, deck = 1.1, rim = 0.06, tabW = (ROW - rim * 2) * 3 / 4 + rim * 2, gap = 0.3;
-  const phoneD = ROW * PHONE_BESIDE.upright, phoneW = phoneD * PHONE_SHAPE, phoneRim = rimFor(phoneW, phoneD, 9, 19.5), phoneZ = ROW - phoneD;
-  const lean = lidH * Math.sin(LID_ANGLE) + 0.02, width = lidW + tabW + phoneW + 2 * gap, left = exportMiddle - width / 2;
-  return { depth, lidW, lidH, deck, rim, tabW, phoneW, phoneD, phoneRim, phoneZ, gap, left, lean, forward: 0.4, hinge: left, tablet: left + lidW + gap, phone: left + lidW + gap + tabW + gap };
+  // CORRECTIONS-13 U1: the tablet is as deep as the laptop's deck, its back and front edges on the deck's, its 3 : 4 screen and rim
+  // kept; the phone (D1's rule against this tablet) shares that front edge. tabZ, phoneZ: their back edges from MAT.z.
+  const depth = 1.65, lidW = 1.55, lidH = (lidW - 0.08) / 1.6 + 0.08, deck = 1.1, rim = 0.06, tabD = deck, tabW = (tabD - rim * 2) * 3 / 4 + rim * 2, gap = 0.3;
+  const lean = lidH * Math.sin(LID_ANGLE) + 0.02, tabZ = lean;
+  const phoneD = tabD * PHONE_BESIDE.upright, phoneW = phoneD * PHONE_SHAPE, phoneRim = rimFor(phoneW, phoneD, 9, 19.5), phoneZ = tabZ + tabD - phoneD;
+  const width = lidW + tabW + phoneW + 2 * gap, left = exportMiddle - width / 2;
+  return { depth, lidW, lidH, deck, rim, tabD, tabZ, tabW, phoneW, phoneD, phoneRim, phoneZ, gap, left, lean, forward: 0.4, hinge: left, tablet: left + lidW + gap, phone: left + lidW + gap + tabW + gap };
 })();
 function lidPoint(u, v, lift = 0) {
   const g = UI_ROW, origin = [g.hinge, 0.095, MAT.z + g.lean];
@@ -318,31 +434,35 @@ function lidPainter(P) {
   };
   draw.size = [w, h]; return draw;
 }
-function feedPrototype(P, t, spans, off) {
-  if (t >= off[1]) return;
-  const g = UI_ROW, clock = Math.max(0, (Math.min(t, off[0]) - spans[0][1]) / PACE) / 3;
-  for (let i = 0; i < 3; i++) {
-    const pieces = [];
+// UX/UI: each of the canvas's three frames peels off on its own, 0.1 s apart, and tips down to its device: the laptop's screen,
+// the tablet and the phone. The tablet's and phone's bodies build round their screens; the laptop's body slides in from the left
+// under its dropped screen and its lid rises to meet it. The shared cycle starts once the last body is built.
+function prototypeOut(P, t, s) {
+  const tau = dropClock('fig', s, t);
+  if (tau === null) return;
+  const g = UI_ROW, { land, off } = playbackSpans(s), clock = Math.max(0, (Math.min(t, off[0]) - land) / PACE) / 3, shown = t < land ? -1 : clock;
+  const parts = [0, 1, 2].map(i => {
+    const kind = ['laptop', 'tablet', 'phone'][i], body = [], face = [];
+    let part;
     if (i === 0) {
-      if (t < spans[0][0]) continue;
-      pieces.push({ ...flat('ink', g.hinge, MAT.z + g.lean, g.lidW, g.deck, 0.08), deviceBody: true });
-      pieces.push(flat('night', g.hinge + 0.065, MAT.z + g.lean + 0.12, 1.42, 0.62, 0.008, undefined, 0.081), flat('dark', g.hinge + 0.5, MAT.z + g.lean + 0.85, 0.55, 0.18, 0.008, undefined, 0.081));
-      for (let row = 0; row < 5; row++) for (let key = 0; key < 9; key++) pieces.push(flat('dark', g.hinge + 0.09 + key * 0.151, MAT.z + g.lean + 0.14 + row * 0.115, 0.115, 0.082, 0.005, undefined, 0.091));
-      pieces.push({ ...box('ink', lidPoint(g.lidW / 2, g.lidH / 2), [g.lidW, g.lidH, 0.04]), q: quatFromBasis(lidU, lidV), lid: true });
-      prototype(lidPainter(pieces), 0, t < spans[0][1] ? -1 : clock);
-      const dx = -1.6 * (1 - EASE.enter(linear(t, ...spans[0])));
-      for (const pc of pieces) { pc.p[0] += dx; pc.where = 'floor'; if (t >= off[0]) pc.clip = [0, 0, 1, -MAT.z]; P.push(pc); }
+      body.push({ ...flat('ink', g.hinge, MAT.z + g.lean, g.lidW, g.deck, 0.08), deviceBody: true });
+      body.push(flat('night', g.hinge + 0.065, MAT.z + g.lean + 0.12, 1.42, 0.62, 0.008, undefined, 0.081), flat('dark', g.hinge + 0.5, MAT.z + g.lean + 0.85, 0.55, 0.18, 0.008, undefined, 0.081));
+      for (let row = 0; row < 5; row++) for (let key = 0; key < 9; key++) body.push(flat('dark', g.hinge + 0.09 + key * 0.151, MAT.z + g.lean + 0.14 + row * 0.115, 0.115, 0.082, 0.005, undefined, 0.091));
+      body.push({ ...box('ink', lidPoint(g.lidW / 2, g.lidH / 2), [g.lidW, g.lidH, 0.04]), q: quatFromBasis(lidU, lidV), lid: true });
+      prototype(lidPainter(face), 0, shown);
+      part = { j: 0, faces: face.map(pc => ({ pc, T: 0 })), slide: body };
     } else {
-      const x = i === 1 ? g.tablet : g.phone, w = i === 1 ? g.tabW : g.phoneW, d = i === 1 ? ROW : g.phoneD, z = MAT.z + (i === 1 ? 0 : g.phoneZ), rim = i === 1 ? g.rim : g.phoneRim;
-      pieces.push({ ...device(x, z, w, d, undefined, { rim, round: 0.03 })[0], deviceBody: true });
-      prototype(floorPainter(pieces, [x + rim, z + rim, w - 2 * rim, d - 2 * rim]), i, t < spans[0][1] ? -1 : clock);
-      feed(P, pieces, t, ...spans[i]);
+      const x = i === 1 ? g.tablet : g.phone, w = i === 1 ? g.tabW : g.phoneW, d = i === 1 ? g.tabD : g.phoneD, z = MAT.z + (i === 1 ? g.tabZ : g.phoneZ), rim = i === 1 ? g.rim : g.phoneRim;
+      body.push({ ...device(x, z, w, d, undefined, { rim, round: 0.03 })[0], deviceBody: true });
+      prototype(floorPainter(face, [x + rim, z + rim, w - 2 * rim, d - 2 * rim]), i, shown);
+      part = { j: i, faces: face.map(pc => ({ pc, T: body[0].s[2] * 2 })), F: [x + rim, z + rim + g.forward, w - 2 * rim, d - 2 * rim], grow: body };
     }
-    for (const pc of pieces) { pc.device = i; pc.deviceKind = ['laptop', 'tablet', 'phone'][i]; pc.clock = clock; }
-  }
-  takeBack(P, t, ...off);
-  // Move the complete row and its slot together, keeping the lid clear of the app shell on return too.
-  for (const pc of P) if (pc.where === 'floor') { pc.p[2] += g.forward; if (pc.clip) pc.clip[3] -= g.forward; }
+    // The whole row sits 0.4 forward of the mat (round 5, H10).
+    for (const pc of [...body, ...face]) { pc.p[2] += g.forward; pc.device = i; pc.deviceKind = kind; pc.clock = clock; }
+    return part;
+  });
+  const sheets = FIG.designs.map((r, j) => ({ ...sheetOf(j, workIn(P, r), r, j ? { land: parts[j].F } : { lid: true }), device: j }));
+  dropOut(P, tau, 'fig', sheets, parts);
   P.clock = clock;
 }
 
@@ -557,13 +677,16 @@ const graphPoint = ([x, y]) => [3.74 + x / 240 * 0.95, 1.6 + (1 - y / 200) * 0.7
 function inPageSpot(x, y, w, h) { return [x + w * 0.045, y + h * (1 - 0.675 - 0.0225), w * 0.27, h * 0.045]; }
 // D1: the canvas mirrors the devices. The phone's frame is to the tablet's frame as the phone's screen is to the tablet's on the
 // floor (both 9 : 19.5 and 3 : 4 as before), top-aligned in its row as Figma lines frames up.
-export const FIG_PHONE = (UI_ROW.phoneD - 2 * UI_ROW.phoneRim) / (ROW - 2 * UI_ROW.rim);
-const FIG = (() => {
-  const h = 0.86, g = 0.14, dw = h * 1.6, tw = h * 3 / 4, ph = h * FIG_PHONE, pw = ph * 9 / 19.5, cl = 0.9, cr = PANEL - 0.1, x = cl + (cr - cl - dw - tw - pw - 2 * g) / 2;
-  const cols = [[x, dw], [x + dw + g, tw], [x + dw + g + tw + g, pw]], tall = [h, h, ph];
+export const FIG_PHONE = (UI_ROW.phoneD - 2 * UI_ROW.phoneRim) / (UI_ROW.tabD - 2 * UI_ROW.rim);
+// CORRECTIONS-13 U1: all three frames mirror their screens' heights (the laptop's lid screen, the tablet's and the phone's), the
+// tallest 0.86 high as before.
+export const FIG_SCREENS = [UI_ROW.lidH - 0.08, UI_ROW.tabD - 2 * UI_ROW.rim, UI_ROW.phoneD - 2 * UI_ROW.phoneRim];
+export const FIG = (() => {
+  const h = 0.86, k = h / Math.max(...FIG_SCREENS), tall = FIG_SCREENS.map(n => n * k), g = 0.14, dw = tall[0] * 1.6, tw = tall[1] * 3 / 4, pw = tall[2] * 9 / 19.5, cl = 0.9, cr = PANEL - 0.1, x = cl + (cr - cl - dw - tw - pw - 2 * g) / 2;
+  const cols = [[x, dw], [x + dw + g, tw], [x + dw + g + tw + g, pw]];
   const designs = cols.map(([x, w], i) => [x, 0.46 + h - tall[i], w, tall[i]]), wires = cols.map(([x, w], i) => [x, 1.58 + h - tall[i], w, tall[i]]);
-  const spot = inPageSpot(cols[0][0], 0.46, dw, h);
-  return { cols, designs, wires, spot, from: [spot[0] + spot[2], spot[1] + spot[3] / 2], to: [cols[0][0] + dw + 0.06, 0.46 + h * 0.325] };
+  const [lx, ly, , lh] = designs[0], spot = inPageSpot(lx, ly, dw, lh);
+  return { cols, designs, wires, spot, from: [spot[0] + spot[2], spot[1] + spot[3] / 2], to: [lx + dw + 0.06, ly + lh * 0.325] };
 })();
 const topLeft = r => [r[0], r[1] + r[3]], bottomRight = r => [r[0] + r[2], r[1]];
 const inRect = (outer, r) => [outer[0] + r[0] * outer[2], outer[1] + (1 - r[1] - r[3]) * outer[3], r[2] * outer[2], r[3] * outer[3]];
@@ -585,6 +708,8 @@ const AI = (() => {
   return { upper: [x, y, pw, ph], lower: [x, y2, lw, low], close, frame, at, segments, subway };
 })();
 const mapPoint = (r, x, y, w, h) => [r[0] + x / w * r[2], r[1] + (1 - y / h) * r[3]];
+// CORRECTIONS-13: after Export's 0.7 s, each row scene holds through its drop and its plays (two of 1.6 s, or Figma's 3.0 s cycle).
+const EXPORT_HOLD = { pr: dropLength('pr') + 3.2 - 0.7, ae: dropLength('ae') + 3.2 - 0.7, fig: dropLength('fig') + 3 - 0.7 };
 export const SCRIPTS = {
   ps: script([
     { id: 'open', kind: 'click', from: centre(PHOTO), duration: 0.3, tool: 'tMove' },
@@ -616,7 +741,7 @@ export const SCRIPTS = {
     { id: 'fade', kind: 'slide', from: [4.33, 0.31], to: [4.33, 0.16], duration: 0.25 },
     { id: 'play', kind: 'play', from: PLAY, duration: 1.6 },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.7 },
-  ], { hold: 3.05, tail: 0.4 }),
+  ], { hold: EXPORT_HOLD.pr, tail: DROP.back }),
   ae: script([
     { id: 'comp', kind: 'click', from: centre(VIEW), duration: 0.3 },
     { id: 'make', kind: 'type', from: compPoint([34, 98]), text: 'Make it', tool: 'type' },
@@ -634,7 +759,7 @@ export const SCRIPTS = {
     { id: 'graph', kind: 'slide', from: graphPoint([88, 176 - 152 / 3]), to: graphPoint([115.2, 176]), duration: 0.6 },
     { id: 'play', kind: 'play', from: PLAY, duration: 1.6 },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.7 },
-  ], { hold: 3.05, tail: 0.4 }),
+  ], { hold: EXPORT_HOLD.ae, tail: DROP.back }),
   fig: script([
     ...FIG.wires.map((r, i) => ({ id: 'frame' + i, kind: 'draw', from: topLeft(r), to: bottomRight(r), duration: 0.3, tool: 'frame' })),
     { id: 'pictureBox', kind: 'draw', from: topLeft(inRect(FIG.wires[0], HERO_REGION)), to: bottomRight(inRect(FIG.wires[0], HERO_REGION)), duration: 0.25, tool: 'rectangle' },
@@ -651,7 +776,7 @@ export const SCRIPTS = {
     { id: 'link', kind: 'drag', from: FIG.from, to: FIG.to, duration: 0.6 },
     { id: 'panel', kind: 'run', from: [PANEL + 0.2, TOP - 0.46], to: [PANEL + 0.45, 0.32], count: 5, duration: 0.2 },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.7 },
-  ], { hold: 2.85, tail: 0.4 }),
+  ], { hold: EXPORT_HOLD.fig, tail: DROP.back }),
   id: script([
     // CORRECTIONS-12 I1: no frames are drawn. The document opens with its blank pages already there (see blankPages).
     { id: 'map', kind: 'drag', from: centre(DOCK.map), to: centre(ID.frame), duration: 0.45, tool: 'arrow' },
@@ -672,6 +797,7 @@ export const SCRIPTS = {
     { id: 'mailButton', kind: 'draw', from: topLeft(inRect(ID.mail, [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180])), to: bottomRight(inRect(ID.mail, [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180])), duration: 0.18, tool: 'rectangle' },
     { id: 'mailFlyer', kind: 'type', from: topLeft(inRect(ID.mail, [70 / 800, 1057 / 1180, 225 / 800, 30 / 1180])), text: 'View the flyer', duration: 0.4, tool: 'type' },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.8 },
+    { id: 'drop', kind: 'wait', duration: dropLength('id') - 0.8 },   // CORRECTIONS-13: the drop goes on after the button has filled
     { id: 'land', kind: 'wait', duration: 3.0 },
     { id: 'pickup', kind: 'wait', duration: 0.7 },
     { id: 'open', kind: 'wait', duration: 0.1 },
@@ -683,7 +809,7 @@ export const SCRIPTS = {
     { id: 'pause3', kind: 'wait', duration: 0.3 },
     { id: 'leaf4', kind: 'wait', duration: 0.6 },
     { id: 'read', kind: 'wait', duration: 0.3 },
-    { id: 'return', kind: 'wait', duration: 0.5 },
+    { id: 'return', kind: 'wait', duration: DROP.back },
   ], { tail: 0, start: centre(DOCK.loc) }),
   ai: script([
     ...[AI.upper, AI.lower].map((r, i) => ({ id: 'board' + i, kind: 'draw', from: topLeft(r), to: bottomRight(r), duration: 0.3, tool: 'rectangle' })),
@@ -788,9 +914,14 @@ function dragPicture(P, s, id, t, from, to, art, tone = 'ink') {
   if (!done(s, id, t)) { pc.where = 'travel'; pc.action = id; }
   P.push(pc);
 }
+// CORRECTIONS-13: each piece's span runs from its peel to the end of its "become"; land is when every body is built, which starts
+// the plays (two of 1.6 s, or Figma's one 3.0 s cycle). off: the return, the drop played backwards over DROP.back. InDesign's
+// return is its own wait.
 export function playbackSpans(s) {
-  const a = action(s, 'export').start, land = a + 0.55 * PACE;
-  return { spans: [[a + 0.05 * PACE, land], [a + 0.15 * PACE, a + 0.65 * PACE], [a + 0.25 * PACE, a + 0.7 * PACE]], land, off: [land + (s === SCRIPTS.fig ? 3 : 3.2) * PACE, s.len] };
+  const key = Object.keys(SCRIPTS).find(k => SCRIPTS[k] === s), a = action(s, 'export').start;
+  const spans = [0, 1, 2].map(j => { const b = dropBeats(key, j); return [a + b.start * PACE, a + b.become * PACE]; }), land = a + dropLength(key) * PACE;
+  if (key === 'id') { const back = action(s, 'return'); return { spans, land, off: [back.start, back.end] }; }
+  return { spans, land, off: [land + (key === 'fig' ? 3 : 3.2) * PACE, s.len] };
 }
 function exportPlay(s, t) {
   const { land, off } = playbackSpans(s);
@@ -877,8 +1008,7 @@ function editedVideo(t) {
   if (begun(s, 'clipA', t)) D.push(on('red', 0.44 + at - 0.015, 0.13, 0.03, 0.95, { lift: 0.13, t: 0.01 }), on('red', 0.44 + at - 0.07, 1.01, 0.14, 0.1, { lift: 0.13, t: 0.02 }));
   tagEcho(D, 'clipA', headStart);
   D.forEach(pc => pc.document = true); P.push(...D);
-  const { spans, off } = playbackSpans(s);
-  feedScreens(P, t, ['playerWide', 'reel', 'feedSq'], spans, off);
+  screensOut(P, t, s, ['playerWide', 'reel', 'feedSq']);
   P.clock = exported;
   return P;
 }
@@ -965,7 +1095,7 @@ function editedMotion(t) {
   if (begun(s, 'head', t)) tagEcho(D, 'head', laneStart);
   for (const pc of D.slice(laneStart)) pc.overlay = true;
   D.forEach(pc => pc.document = true); P.push(...D);
-  const { spans, off } = playbackSpans(s); feedScreens(P, t, ['motWide', 'motTall', 'motSq'], spans, off); P.clock = exported;
+  screensOut(P, t, s, ['motWide', 'motTall', 'motSq']); P.clock = exported;
   return P;
 }
 // Reveal a rectangular part of a finished atlas picture at its original size and place.
@@ -1100,7 +1230,7 @@ function editedFigma(t) {
   TREE.slice(0, layerCount).forEach(([kind, set, len], i) => { const y = TOP - 0.58 - i * 0.145, x = 0.16 + set * 0.1, lit = i === 5 && begun(s, 'hotspot', t); if (lit) D.push(on('dark', 0.11, y - 0.025, 0.66, 0.13, { lift: 0.035, t: 0.006 })); D.push(icon(kind, x, y - 0.005, 0.09, 0.09, lit ? 'dark' : 'night', lit ? 0.042 : 0.051), on(lit ? 'paper' : 'grey', x + 0.13, y + 0.02, len, 0.04, { lift: 0.05, t: 0.01 })); });
   tagEcho(D, begun(s, 'details', t) ? 'details' : 'frame0', treeStart);
   D.forEach(pc => pc.document = true); P.push(...D);
-  const { spans, off } = playbackSpans(s); feedPrototype(P, t, spans, off); P.clock = clock;
+  prototypeOut(P, t, s); P.clock = clock;
   return P;
 }
 function typePatch(P, rect, key, p, length = 21) {
@@ -1194,13 +1324,43 @@ function editedInDesign(t, { at: pages } = {}) {
   }
   for (const key of ['map', 'loc', 'photo']) if (!begun(s, key, t)) chip(P, key);
   D.forEach(pc => pc.document = true); P.push(...D);
-  const a = action(s, 'export'), floor = [];
-  prints(floor, pages ?? readBook(s, t));
-  feed(P, [...floor.slice(0, 10), ...floor.slice(14)], t, a.start + 0.05 * PACE, a.start + 0.55 * PACE);
-  feed(P, floor.slice(10, 12), t, a.start + 0.2 * PACE, a.start + 0.65 * PACE);
-  feed(P, floor.slice(12, 14), t, a.start + 0.35 * PACE, a.end);
-  const back = action(s, 'return'); takeBack(P, t, back.start, back.end);
+  const floor = [], at = pages ?? readBook(s, t);
+  prints(floor, at);
+  bookletOut(P, s, t, floor, at);
   return P;
+}
+// InDesign: the finished document drops and splits into the flyer (the top copy of the stack, which then rises under it), the
+// LinkedIn post (into the phone) and the e-blast (into the tablet). The spread slides in under the flyer's cover and is gone with
+// the split. On the return the copy that was read, lying open, is the spread's part: it closes back into the sheet's spread.
+// floor: as prints() builds it: the stack's five copies (0-9), the phone (10, 11), the tablet (12, 13), then the copy that is
+// read: on the stack (14, 15), or open (14 its right pages, 15 its left pages, 16 the leaf that landed on them).
+function bookletOut(P, s, t, floor, at) {
+  const tau = dropClock('id', s, t);
+  if (tau === null) return;
+  if (tau >= dropLength('id') * PACE) { for (const pc of floor) { pc.where = 'floor'; P.push(pc); } return; }
+  const doc = [ID.spread[0], ID.cover[1], ID.spread[2], ID.spread[1] + ID.spread[3] - ID.cover[1]];
+  const sheet = sheetOf(0, workIn(P, doc), doc, { land: [BLOCK.x0, BLOCK.z0, 2 * LEAF, DEEP] });   // I2: the row behind spans the block
+  const bottom = pc => pc.p[1] - pc.s[2], device = (slab, screen) => {
+    const F = [screen.p[0] - screen.s[0], screen.p[2] - screen.s[1], 2 * screen.s[0], 2 * screen.s[1]];
+    return { j: 0, faces: [{ pc: screen, T: bottom(screen) }], F, grow: [slab] };
+  };
+  const post = device(floor[10], floor[11]), mail = device(floor[12], floor[13]);
+  post.S = fitIn(post.F[2], post.F[3], sheet.landed(ID.post)); mail.S = fitIn(mail.F[2], mail.F[3], sheet.landed(ID.mail));
+  const stack = [BLOCK_ROW.stack[0], BLOCK_ROW.stack[1], LEAF, DEEP];
+  let parts;
+  if (at < 0) {
+    // The spread's part is the sheet's own spread, landed; it slides in under the flyer's cover.
+    const spread = carry(workIn(P, ID.spread), sheet.pivot, sheet.to, sheet.k, sheet.deg), over = Math.max(...spread.map(pc => pc.p[1] + pc.s[2])) + 0.002;
+    const S = sheet.landed(ID.spread), F = fitIn(S[2], S[3], stack);
+    const cover = floor[15], flyer = { j: 0, faces: [{ pc: cover, T: bottom(cover) - over }], F: stack, S: sheet.landed(ID.cover), rise: [...floor.slice(0, 10), floor[14]] };
+    parts = [{ j: 0, faces: spread.map(pc => ({ pc, T: 0 })), F, S, transient: true }, flyer, post, mail];
+  } else {
+    const cover = floor[9], read = [BLOCK.x0, BLOCK.z0 + DEEP + GUT, 2 * LEAF, DEEP];
+    const flyer = { j: 0, faces: [{ pc: cover, T: bottom(cover) }], F: stack, S: sheet.landed(ID.cover), rise: floor.slice(0, 9) };
+    const open = floor.length > 16 ? { j: 0, faces: [floor[14], floor[16]].map(pc => ({ pc, T: bottom(pc) })), F: read, S: sheet.landed(ID.spread), rise: [floor[15]] } : { j: 0, faces: floor.slice(14).map(pc => ({ pc, T: 0 })), F: read, S: sheet.landed(ID.spread) };
+    parts = [open, flyer, post, mail];
+  }
+  dropOut(P, tau, 'id', [sheet], parts);
 }
 function mapRegion(P, rect, art, r, w, h, amount = 1, upward = false) {
   const [x, y, rw, rh] = r;
@@ -1294,8 +1454,9 @@ export const SHOW = [
   { key: 'ps', app: 'ps', layout: 'design', craft: 0, len: SCRIPTS.ps.len, still: action(SCRIPTS.ps, 'export').start - 0.001 * PACE },
   { key: 'ai', app: 'ai', layout: 'design', craft: 0, len: SCRIPTS.ai.len, still: action(SCRIPTS.ai, 'export').start - 0.001 * PACE },
   { key: 'id', app: 'id', layout: 'design', craft: 0, len: SCRIPTS.id.len, still: action(SCRIPTS.id, 'leaf2').start + 0.6 * PACE * inverseWipe(0.82) },
-  { key: 'pr', app: 'pr', layout: 'edit', craft: 1, len: SCRIPTS.pr.len, still: playbackSpans(SCRIPTS.pr).spans[2][1] + 0.400001 * PACE },
-  { key: 'ae', app: 'ae', layout: 'edit', craft: 2, len: SCRIPTS.ae.len, still: playbackSpans(SCRIPTS.ae).spans[2][1] + 0.400001 * PACE },
+  // CORRECTIONS-13: every device is built at land, so the held still keeps round 12's play frame (0.55 s into the plays, labels complete at 0.4).
+  { key: 'pr', app: 'pr', layout: 'edit', craft: 1, len: SCRIPTS.pr.len, still: playbackSpans(SCRIPTS.pr).land + 0.550001 * PACE },
+  { key: 'ae', app: 'ae', layout: 'edit', craft: 2, len: SCRIPTS.ae.len, still: playbackSpans(SCRIPTS.ae).land + 0.550001 * PACE },
   { key: 'fig', app: 'fig', layout: 'board', craft: 3, len: SCRIPTS.fig.len, still: playbackSpans(SCRIPTS.fig).land + 1.1 * PACE },
 ];
 export const LOOP = SHOW.reduce((sum, scene) => sum + scene.len, 0);
@@ -1452,12 +1613,12 @@ export function calloutsAt(t) {
   const { scene, at } = sceneAt(t), key = scene.key;
   if (!['id', 'pr', 'ae', 'fig'].includes(key)) return [];
   const s = SCRIPTS[key], timing = playbackSpans(s), exp = action(s, 'export');
-  const ends = key === 'id' ? Array(3).fill(exp.end) : timing.spans.map(span => span[1]);
+  const ends = timing.spans.map(span => span[1]);   // CORRECTIONS-13: each from its piece's "become" end
   const off = key === 'id' ? action(s, 'pickup').start : timing.off[0];
   if (at < Math.min(...ends) - 1e-9 || at >= off - 1e-9) return [];
   const P = frameAt(t), floor = P.filter(pc => pc.where === 'floor');
   const words = { id: ['Flyer', 'LinkedIn post', 'Email'], pr: ['YouTube', 'TikTok', 'Instagram'], ae: ['Website', 'Story', 'Feed post'], fig: ['Laptop', 'Tablet', 'Phone'] }[key];
-  const rects = key === 'id' ? [BLOCK_ROW.stack, BLOCK_ROW.phone, BLOCK_ROW.tablet] : key === 'fig' ? [null, [UI_ROW.tablet, MAT.z + UI_ROW.forward, UI_ROW.tabW, ROW], [UI_ROW.phone, MAT.z + UI_ROW.forward + UI_ROW.phoneZ, UI_ROW.phoneW, UI_ROW.phoneD]] : [[MAT.x, MAT.z, WIDE, ROW], [MAT.x + WIDE + MAT.gap, MAT.z + ROW - SLIM_D, SLIM, SLIM_D], [MAT.x + WIDE + SLIM + 2 * MAT.gap, MAT.z + ROW - SLIM_D, SLIM, SLIM_D]];
+  const rects = key === 'id' ? [BLOCK_ROW.stack, BLOCK_ROW.phone, BLOCK_ROW.tablet] : key === 'fig' ? [null, [UI_ROW.tablet, MAT.z + UI_ROW.forward + UI_ROW.tabZ, UI_ROW.tabW, UI_ROW.tabD], [UI_ROW.phone, MAT.z + UI_ROW.forward + UI_ROW.phoneZ, UI_ROW.phoneW, UI_ROW.phoneD]] : [[MAT.x, MAT.z, WIDE, ROW], [MAT.x + WIDE + MAT.gap, MAT.z + ROW - SLIM_D, SLIM, SLIM_D], [MAT.x + WIDE + SLIM + 2 * MAT.gap, MAT.z + ROW - SLIM_D, SLIM, SLIM_D]];
   return words.flatMap((word, i) => {
     if (at < ends[i]) return [];
     let mark;

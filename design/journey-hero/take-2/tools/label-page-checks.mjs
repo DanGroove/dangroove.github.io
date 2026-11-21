@@ -16,7 +16,7 @@ export function checkPageLabels() {
   const widths = { small: {}, large: {} };
   let start = 0;
   for (const scene of SHOW) {
-    const time = start + (scene.key === 'id' ? SCRIPTS.id.actions.find(a => a.id === 'export').end + 0.41 * PACE : scene.still);
+    const time = start + (scene.key === 'id' ? playbackSpans(SCRIPTS.id).land + 0.41 * PACE : scene.still);   // CORRECTIONS-13: after InDesign's drop
     for (const c of calloutsAt(time)) {
       // Only the Figma widths are measured in the addendum; the others are conservative models.
       widths.small[c.id] = c.id.startsWith('fig-') ? [40.4, 38.6, 36.0][Number(c.id.at(-1))] : c.words.length * 9 * 0.75;

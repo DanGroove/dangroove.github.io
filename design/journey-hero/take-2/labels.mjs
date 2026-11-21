@@ -1,7 +1,7 @@
 // Screen-space callouts share the renderer's projection. Geometry is pure; DOM nodes live for the player.
 import { dot } from '../../../public/journey/hero/engine.mjs';
 import { corners } from './kit.mjs';
-import { SCREEN, SHOW, SCRIPTS, PACE, calloutsAt, sceneAt } from './stage.mjs';
+import { SCREEN, SHOW, SCRIPTS, PACE, calloutsAt, sceneAt, playbackSpans } from './stage.mjs';
 
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const intersects = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
@@ -16,7 +16,7 @@ export function fitCalloutView(view, need, boxLeft, widths, obstacles = []) {
   if (!scenes) {
     let start = 0; scenes = [];
     for (const scene of SHOW) {
-      const time = start + (scene.key === 'id' ? SCRIPTS.id.actions.find(a => a.id === 'export').end + 0.41 * PACE : scene.still), labels = calloutsAt(time);
+      const time = start + (scene.key === 'id' ? playbackSpans(SCRIPTS.id).land + 0.41 * PACE : scene.still), labels = calloutsAt(time);   // CORRECTIONS-13: after InDesign's drop
       if (labels.length) scenes.push(labels);
       start += scene.len;
     }
@@ -155,7 +155,8 @@ export function createCallouts(hero) {
         word.style.display = ''; wordWidths = { small: {}, large: {} };
         let start = 0;
         for (const scene of SHOW) {
-          const time = start + (scene.key === 'id' ? SCRIPTS.id.actions.find(a => a.id === 'export').end + 0.41 * PACE : scene.still);
+          // CORRECTIONS-13: InDesign's labels appear once its drop is built (land), no longer at the end of the Export click.
+          const time = start + (scene.key === 'id' ? playbackSpans(SCRIPTS.id).land + 0.41 * PACE : scene.still);
           for (const c of calloutsAt(time)) for (const [key, size] of [['small', 9], ['large', 11]]) {
             word.style.fontSize = size + 'px'; word.textContent = c.words; wordWidths[key][c.id] = word.getBoundingClientRect().width;
           }

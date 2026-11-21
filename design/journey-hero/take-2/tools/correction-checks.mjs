@@ -7,7 +7,7 @@ import { HOME, EASE, dot, quatRotate } from '../../../../public/journey/hero/eng
 import { corners } from '../kit.mjs';
 import { labelLayout, fitCalloutView } from '../labels.mjs';
 import { checkLabelRoutes } from './browser-check.mjs';
-import { BLOCK_ROW, EXPORT_SHIFT } from '../stage.mjs';
+import { BLOCK_ROW, EXPORT_SHIFT, DROP, dropLength, FIG } from '../stage.mjs';
 
 const rect = pc => { const p = corners(pc); return [Math.min(...p.map(p => p[0])), Math.min(...p.map(p => p[1])), Math.max(...p.map(p => p[0])), Math.max(...p.map(p => p[1]))]; };
 const overlap = (a, b) => Math.min(a[2], b[2]) > Math.max(a[0], b[0]) + 1e-8 && Math.min(a[3], b[3]) > Math.max(a[1], b[1]) + 1e-8;
@@ -55,7 +55,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
   let start = 0;
   for (const scene of SHOW) {
     const s = SCRIPTS[scene.key], byId = Object.fromEntries(s.actions.map(a => [a.id, a])), spans = playbackSpans(s), isId = scene.key === 'id';
-    const ends = isId ? Array(3).fill(byId.export.end) : spans.spans.map(a => a[1]), off = isId ? byId.pickup.start : spans.off[0];
+    const ends = spans.spans.map(a => a[1]), off = isId ? byId.pickup.start : spans.off[0];
     const seenLabels = new Map(), vanishedFrames = new Set();
     if (isId) for (const [id, profile, style, crop] of [['photo', 'cover', 'coverPhoto', [380 / 1100, 0, 720 / 1100, 1]], ['postPhoto', 'post', 'postPhoto', [0, 0, 1, 1]], ['mailPhoto', 'mail', 'mailPhoto', [300 / 800, 168 / 1180, 456 / 800, 470 / 1180]]]) {
       const a = byId[id], before = frameAt(start + a.end - 1e-7 * PACE).find(pc => pc.photoProfile === profile), after = frameAt(start + a.end + 1e-7 * PACE).find(pc => pc.art === style && !pc.echo);
@@ -197,7 +197,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
   for (const scene of SHOW) {
     if (['id', 'pr', 'ae', 'fig'].includes(scene.key)) {
       const s = SCRIPTS[scene.key], spans = playbackSpans(s), end = scene.key === 'id' ? s.actions.find(a => a.id === 'pickup').start : spans.off[0];
-      const begin = scene.key === 'id' ? s.actions.find(a => a.id === 'export').end : spans.land;
+      const begin = spans.land;   // CORRECTIONS-13: every scene's pieces are built at land
       const reference = new Map(); let low;
       for (let at = begin; at < end - 1e-9; at += PACE / 60) {
         const labels = calloutsAt(windowStart + at); fixedSamples++;
@@ -215,13 +215,14 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
     }
     windowStart += scene.len;
   }
+  // CORRECTIONS-13 E2: the return now moves the devices (the drop played backwards), so only their pictures are compared with
+  // the held completed cycle: every picture on a device during the return is one the held frame already shows.
   const held = frameAt(figStart + timing.off[0]);
-  const pose = (P, offset) => P.filter(pc => pc.device !== undefined).map(pc => ({ art: pc.art, window: pc.window, s: pc.s, p: pc.p.map((n, i) => i === 2 ? n - offset : n) }));
+  const shown = new Set(held.filter(pc => pc.device !== undefined && pc.playback).map(pc => pc.art + '/' + JSON.stringify(pc.window)));
   for (let at = timing.off[0]; at < timing.off[1] - 1e-8; at += PACE / 60) {
-    const P = frameAt(figStart + at), base = held.find(pc => pc.deviceBody), body = P.find(pc => pc.deviceBody);
-    const a = pose(held, 0), b = pose(P, body.p[2] - base.p[2]);
+    const P = frameAt(figStart + at);
     if (P.some(pc => pc.device !== undefined && pc.art === 'tapDot')) fail(figStart + at, 'Figma return: a new prototype tap started during withdrawal');
-    if (a.length !== b.length || a.some((pc, i) => pc.art !== b[i].art || JSON.stringify(pc.window) !== JSON.stringify(b[i].window) || pc.s.some((n, j) => !near(n, b[i].s[j])) || pc.p.some((n, j) => !near(n, b[i].p[j])))) fail(figStart + at, 'Figma return: a new prototype frame started during withdrawal');
+    if (P.some(pc => pc.device !== undefined && pc.playback && !shown.has(pc.art + '/' + JSON.stringify(pc.window)))) fail(figStart + at, 'Figma return: a new prototype frame started during withdrawal');
   }
   const picture = pieces => JSON.stringify(pieces.filter(pc => pc.playback && !pc.progressRail).map(pc => [pc.art, pc.tone, pc.window, pc.p, pc.s]));
   for (let n = 0; n < 300; n++) {
@@ -229,8 +230,8 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
     for (let i = 0; i < 3; i++) {
       if (picture(first.filter(pc => pc.device === i)) === picture(second.filter(pc => pc.device === i))) fail(figStart + timing.land + at, 'Figma motion: device picture unchanged after 0.6 s');
       // Each canvas design is a distinct viewport, not a single changed frame standing in for the group.
-      const left = SCREEN.l + (i === 0 ? 1.020821070234 : i === 1 ? 2.536821070234 : 3.321821070234) * 1.15;
-      const right = left + [1.376, 0.645, 0.86 * 9 / 19.5][i] * 1.15;
+      const left = SCREEN.l + FIG.designs[i][0] * 1.15;   // CORRECTIONS-13 U1: the frames mirror the new screens; read from stage.mjs
+      const right = left + FIG.designs[i][2] * 1.15;
       const inDesign = pc => pc.canvas && pc.p[0] >= left - 1e-5 && pc.p[0] <= right + 1e-5 && pc.p[1] < SCREEN.b + 1.4 * 1.15;
       if (picture(first.filter(inDesign)) === picture(second.filter(inDesign))) fail(figStart + timing.land + at, 'Figma motion: canvas design unchanged after 0.6 s');
     }
@@ -244,7 +245,7 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
     const view = fitCalloutView(initial, need, b[0], 9 * size * widthFactor);
     let start = 0;
     for (const scene of SHOW) {
-      const time = start + (scene.key === 'id' ? SCRIPTS.id.actions.find(a => a.id === 'export').end + 0.41 * PACE : scene.still), data = calloutsAt(time), pieces = frameAt(time);
+      const time = start + (scene.key === 'id' ? SCRIPTS.id.actions.find(a => a.id === 'drop').end + 0.41 * PACE : scene.still), data = calloutsAt(time), pieces = frameAt(time);
       const widths = Object.fromEntries(data.map(c => [c.id, c.words.length * size * widthFactor]));
       const obstacles = W < 720 ? [{ left: 16, right: W - 16, top: b[1] + b[3] + 8, bottom: H - 35 }] : [];
       const layout = labelLayout(data, pieces, view, widths, obstacles, false, time);
@@ -264,9 +265,14 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
   // CORRECTIONS-7: the Figma laptop's H3 slide-in starts 1.6 units left with no entry clip. Its first 0.03 s
   // reaches past the fitted envelope; at 83.04 s the 1/30 s grid happened to land 0.027 s into the slide and missed
   // it, at 91.5 s it lands 0.002 s in. Those instants are bounded separately below (and the start itself is sampled).
-  const entry = figStart + timing.spans[0][0], inEntry = at => at >= entry - 1e-9 && at < entry + 0.03 * PACE;
+  // CORRECTIONS-13: the body now arrives once its screen has dropped (DROP.slide before its "become" end), and leaves the same
+  // way at the end of its return, where the drop runs backwards DROP.back / dropLength times as fast, so its last instants near
+  // the start are bounded the same way.
+  const arrive = timing.spans[0][1] - DROP.slide * PACE - timing.spans[0][0], speed = DROP.back / dropLength('fig');
+  const entry = figStart + timing.spans[0][0] + arrive, leave = figStart + timing.off[0] + (dropLength('fig') * PACE - arrive) * speed;
+  const inEntry = at => (at >= entry - 1e-9 && at < entry + 0.03 * PACE) || (at > leave - 0.03 * PACE * speed && at <= leave + 1e-9);
   const sampleAt = [...Array.from({ length: Math.ceil(LOOP * 30 / PACE) }, (_, n) => n * PACE / 30).filter(at => at < LOOP), entry, entry + 1e-7 * PACE];   // CORRECTIONS-12: the entry itself can round to just before the slide; a hair after is inside it
-  for (const at of sampleAt) for (const pc of frameAt(at)) for (const p of corners(pc)) if (!pc.clip || p.reduce((sum, n, i) => sum + n * pc.clip[i], pc.clip[3]) >= 0) (inEntry(at) && pc.deviceKind === 'laptop' ? entryPoints : allPoints).push(dot(HOME.r, p));
+  for (const at of [...sampleAt, leave, leave - 1e-7 * PACE]) for (const pc of frameAt(at)) for (const p of corners(pc)) if (!pc.clip || p.reduce((sum, n, i) => sum + n * pc.clip[i], pc.clip[3]) >= 0) (inEntry(at) && pc.deviceKind === 'laptop' ? entryPoints : allPoints).push(dot(HOME.r, p));
   const leftmost = allPoints.reduce((n, v) => Math.min(n, v), Infinity), rightmost = allPoints.reduce((n, v) => Math.max(n, v), -Infinity);
   const entryLeft = entryPoints.reduce((n, v) => Math.min(n, v), Infinity);
   let entryOver = 0;

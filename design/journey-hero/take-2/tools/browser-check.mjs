@@ -70,7 +70,7 @@ export async function checkBrowser(page) {
   for (const scene of SHOW) {
     times.push(start + scene.still);
     if (['id', 'pr', 'ae', 'fig'].includes(scene.key)) {
-      const s = SCRIPTS[scene.key], ends = scene.key === 'id' ? [s.actions.find(a => a.id === 'export').end] : playbackSpans(s).spans.map(span => span[1]);
+      const s = SCRIPTS[scene.key], ends = playbackSpans(s).spans.map(span => span[1]);   // CORRECTIONS-13: InDesign's labels also start at each piece's become end
       for (const t of ends) times.push(start + t + 0.4 * PACE + 1e-6);
     }
     start += scene.len;
