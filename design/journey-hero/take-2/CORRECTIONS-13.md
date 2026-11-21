@@ -69,3 +69,33 @@ In Figma, each frame goes back to its place on the canvas. Remove the slot clip 
 ## Records
 
 Add a "CORRECTIONS-13" section to BUILD.md, and update README's "Exports that play" and timetable.
+
+## U1 (added, Dan 21 November, 5:09 AM ET). The UX/UI row: a smaller tablet, all three aligned
+
+Dan pinned this on the tablet in the round 12 before-and-after image: "please align them, the tablet is probably not that big, it can be the same height as the bottomm half of the laptop".
+
+Today the tablet lies 1.8 deep (`ROW`) from `MAT.z`, and the phone's front edge sits on the tablet's. The laptop's base (its deck, the bottom half) is 1.1 deep and starts at `MAT.z + lean`, so its front edge is about 0.47 behind the others. The three read as staggered, and the tablet looks bigger than the laptop.
+
+- **The tablet's depth equals the laptop's deck** (`deck`, 1.1). Its screen keeps the 3 : 4 shape the prototype's pictures are drawn for, with the same rim, so its width follows: `(deck - 2 rim) x 3/4 + 2 rim`.
+- **Aligned:** the tablet's back and front edges lie exactly on the deck's back and front edges (`MAT.z + lean` and `MAT.z + lean + deck`). The phone's front edge lies on the same front line.
+- **The phone** follows round 12's D1 rule against the new tablet. It is 0.594 of the tablet's depth in the 71.6 : 147.6 shape, with its screen fitting its pictures as now.
+- **Unchanged:**
+  - the gaps between the devices;
+  - the laptop itself and its 12 degree lid;
+  - the row centred on the screen's middle plus `EXPORT_SHIFT`;
+  - the laptop's slide-in from the top left;
+  - the row's distance in front of the screen (`forward`), unless the lid's clearance from the app needs it. If it does, say so.
+- **Figma's canvas mirrors the devices.** On the big screen, the laptop, tablet and phone frames take the same proportions to each other as the three devices' screens, as round 12 already does for the phone against the tablet. Keep canvas content clear of the bar and Export.
+- **Round 13's drop** lands each Figma frame on these new screens.
+- **Labels** follow the new corners, with no new collisions.
+
+**Checks:**
+- the tablet's depth equals the deck within 0.5 %;
+- the three front edges lie on one line, and the tablet's back edge lies on the deck's, both within 0.001;
+- the phone against the tablet, by D1's rule, within 2 %;
+- the canvas frames' proportions against the devices' screens, within 2 %;
+- the row's centring;
+- the labels' existing checks;
+- **negative control:** put the tablet back to 1.8 deep, and the depth check fails.
+
+Show this row in the films: a still of the UX/UI export at rest at 1440 x 900 and 390 x 844, before and after U1.
