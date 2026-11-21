@@ -23,7 +23,7 @@ change('R9 A1 undone', 'R9:', 'stage.mjs', "if (!done(s, key + 'Photo', t)) drag
 change('R10 A3 undone', 'R10:', 'stage.mjs', "{ tail: 0, start: centre(DOCK.loc) }", '{ tail: 0 }');
 change('R10 A4 undone', 'R10:', 'stage.mjs', "count: 6, duration: 0.3", 'count: 6, duration: 0.08');
 change('R11 wrong words', 'R11:', 'stage.mjs', "pr: ['YouTube', 'TikTok', 'Instagram']", "pr: ['Video', 'TikTok', 'Instagram']");
-change('R12 early label', 'R12:', 'stage.mjs', 'timing.spans.map(span => span[1]);', 'timing.spans.map(span => span[1] - 0.2 * PACE);');
+change('R12 early label', 'R12:', 'stage.mjs', 'timing.spans.map(() => timing.land);', 'timing.spans.map(() => timing.land - 0.2 * PACE);');   // CORRECTIONS-15: labels from land
 change('R13 reversed growth', 'R13:', 'stage.mjs', 'const growIn = progress(at, ends[i], ends[i] + 0.25 * PACE)', 'const growIn = 1 - progress(at, ends[i], ends[i] + 0.25 * PACE)');
 change('R14 wrong corner inset', 'R14:', 'stage.mjs', 'i === 0 ? x + 0.1', 'i === 0 ? x + 0');
 change('Figma device count', 'Figma devices:', 'stage.mjs', "const kind = ['laptop', 'tablet', 'phone'][i]", "const kind = ['laptop', 'phone', 'phone'][i]");   // CORRECTIONS-13: prototypeOut

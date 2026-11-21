@@ -47,9 +47,9 @@ export async function checkLabelExit(stageSource = read('stage.mjs')) {
   const before = await preExit();
   // CORRECTIONS-12 D1 redraws Figma's canvas, which changes its own length; every other length is the frozen stage's.
   const figLen = scene => scene.SHOW.find(s => s.key === 'fig').len;
-  // CORRECTIONS-13 E1/E2 lengthen the exporting scenes' tails on purpose: the drop (InDesign's 'drop' wait; the rows' become end at
-  // dropLength instead of round 12's 0.55 s first landing) and the 0.6 s return (was 0.5 s InDesign, 0.4 s rows).
-  const grow = { id: (S.dropLength('id') - 0.8 + S.DROP.back - 0.5) * PACE, pr: (S.dropLength('pr') - 0.55 + S.DROP.back - 0.4) * PACE, ae: (S.dropLength('ae') - 0.55 + S.DROP.back - 0.4) * PACE };
+  // CORRECTIONS-13 E1/E2, then CORRECTIONS-15 S1/S2, lengthen the exporting scenes' tails on purpose: the entrance (InDesign's 'drop'
+  // wait; the rows' become end at ballLength instead of round 12's 0.55 s first landing) and the sink (was 0.5 s InDesign, 0.4 s rows).
+  const grow = { id: (S.ballLength('id') - 0.8 + S.BALL.sink - 0.5) * PACE, pr: (S.ballLength('pr') - 0.55 + S.BALL.sink - 0.4) * PACE, ae: (S.ballLength('ae') - 0.55 + S.BALL.sink - 0.4) * PACE };
   close(loop - figLen(S), before.LOOP - figLen(before) + grow.id + grow.pr + grow.ae, 'E4 labels: LOOP moved', 1e-9);
   const lens = Object.fromEntries(before.SHOW.map(scene => [scene.key, scene.len + (grow[scene.key] || 0)]));
   let start = 0, samples = 0;

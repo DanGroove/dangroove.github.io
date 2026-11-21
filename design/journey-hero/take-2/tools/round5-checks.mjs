@@ -6,13 +6,15 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { HOME, makeCamera, dot, quatRotate, EASE } from '../../../../public/journey/hero/engine.mjs';
-import { HAND, SHOW, LOOP, SCRIPTS, SCENES, SCREEN, MAT, PACE, UI_ROW, EXPORT_SHIFT, DROP, dropLength, frameAt, calloutsAt, playbackSpans } from '../stage.mjs';
+import { HAND, SHOW, LOOP, SCRIPTS, SCENES, SCREEN, MAT, PACE, UI_ROW, EXPORT_SHIFT, BALL, ballLength, frameAt, calloutsAt, playbackSpans } from '../stage.mjs';
 import { corners } from '../kit.mjs';
 import { centreScene, sideGutter, stageTarget, equivalent, pointerFloor, sceneEnvelope } from '../view.mjs';
 import { fitCalloutView, labelLayout } from '../labels.mjs';
 import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
 import { BROWSER_SIZES, checkLabelRoutes } from './browser-check.mjs';
-import { handPatch, r12Patch } from './hand-patch.mjs';
+import { handPatch, r12Patch, r15Patch } from './hand-patch.mjs';
+import * as stageModule from '../stage.mjs';
+import { round15Changed } from './round15-checks.mjs';
 
 const take = new URL('../', import.meta.url);
 const fixture = JSON.parse(fs.readFileSync(new URL('fixtures/round5-source.json', import.meta.url)));
@@ -30,7 +32,7 @@ async function reference() {
   const resolve = source => source.replace(/from (['"])([^'"]+)\1/g, (_, q, ref) => 'from ' + q + new URL(ref, take).href + q);
   // CORRECTIONS-7: round 7's hand edit is applied in memory; the hash above is still of the frozen bytes.
   // CORRECTIONS-12 I1: so is the removal of InDesign's frame steps, so both timetables agree up to Figma.
-  const stageURL = 'data:text/javascript;base64,' + Buffer.from(resolve(r12Patch(handPatch(raw)))).toString('base64');
+  const stageURL = 'data:text/javascript;base64,' + Buffer.from(resolve(r15Patch(r12Patch(handPatch(raw))))).toString('base64');   // CORRECTIONS-15 N2: flat drags
   const module = await import(stageURL);
   const labels = inflateRawSync(Buffer.from(fixture.labels.deflateBase64, 'base64')).toString('utf8');
   assert.equal(fixture.labels.sha256, 'f3b14cc19650b455e9a33bc8cf012b384aae2bd38c13b3c5d840567c582596a3');
@@ -64,7 +66,8 @@ export async function checkRound5(only = '') {
         // The incoming build already substitutes some construction/echo representations at release.
         // Compare both actual piece arrays to that frozen evidence, rather than silently exempting them.
         // I1: InDesign's pages stand where its frames stood; everything else is compared.
-        const unframed = list => list.filter(pc => !pc.page && !pc.framePlate && !pc.emptyFrame);
+        // CORRECTIONS-15: N1's map marks and N2's carried pictures change on purpose (round15-checks.mjs).
+        const changed = round15Changed(stageModule), unframed = list => list.filter(pc => !pc.page && !pc.framePlate && !pc.emptyFrame && !changed(pc));
         equivalent(unframed(emitted({ frameAt }, times[i] + a.end + delta)), unframed(emitted(old, oldStarts[i] + prior.end + delta)), `H1 draw comparison: ${SHOW[i].key}/${a.id}/${delta}`);
       }
       draws++;
@@ -78,8 +81,9 @@ export async function checkRound5(only = '') {
     // CORRECTIONS-13 E1/E2: each exporting scene's tail grows by its longer drop (InDesign's new 'drop' wait after Export; video
     // and motion from round 12's 0.55 s first landing to the 1.25 s become end) and its 0.6 s return (0.5 s InDesign, 0.4 s rows).
     const dropWait = SCRIPTS.id.actions.find(a => a.id === 'drop'), wait = dropWait.end - dropWait.start;
-    close(wait, (dropLength('id') - 0.8) * PACE, 'H2 InDesign drop wait');
-    const grow = { ps: 0, ai: 0, id: wait + (DROP.back - 0.5) * PACE, pr: (dropLength('pr') - 0.55 + DROP.back - 0.4) * PACE, ae: (dropLength('ae') - 0.55 + DROP.back - 0.4) * PACE };
+    // CORRECTIONS-15 S1/S2: the ball's entrance (ballLength) and the sink (BALL.sink) take the drop's and the return's places.
+    close(wait, (ballLength('id') - 0.8) * PACE, 'H2 InDesign drop wait');
+    const grow = { ps: 0, ai: 0, id: wait + (BALL.sink - 0.5) * PACE, pr: (ballLength('pr') - 0.55 + BALL.sink - 0.4) * PACE, ae: (ballLength('ae') - 0.55 + BALL.sink - 0.4) * PACE };
     const grown = i => SHOW.slice(0, i).reduce((n, scene) => n + (grow[scene.key] || 0), 0);
     close(LOOP - SHOW[5].len, old.LOOP - old.SHOW[5].len + 1.8 * PACE + grown(5), 'H2 loop'); assert.equal(PACE, 1, 'H2 pace');
     close(LOOP, SHOW.reduce((n, s) => n + s.len, 0), 'H2 loop is the scenes');
@@ -93,19 +97,20 @@ export async function checkRound5(only = '') {
         const r13 = at => key === 'id' && at >= dropWait.end - 1e-8 ? wait : 0;
         const prior = old.SCRIPTS[key].actions.find(b => b.id === a.id), shift = (key === 'id' && a.start >= land.end - 1e-8 ? 1.8 : 0) + r13(a.start);
         close(a.start, prior.start + shift, 'H2 action start ' + key + '/' + a.id);
-        if (key === 'id' && a.id === 'return') { close(a.end - a.start, DROP.back * PACE, 'H2 InDesign return'); continue; }
+        if (key === 'id' && a.id === 'return') { close(a.end - a.start, BALL.sink * PACE, 'H2 InDesign return'); continue; }
         close(a.end, prior.end + (key === 'id' && a.end >= land.end - 1e-8 ? 1.8 : 0) + r13(a.end), 'H2 action end ' + key + '/' + a.id);
       }
       // CORRECTIONS-13: InDesign's still follows the drop wait; video's and motion's keep their play frame, 0.55 s after the plays start.
-      const stillShift = key === 'id' ? wait : ['pr', 'ae'].includes(key) ? (dropLength(key) - 0.55) * PACE : 0;
+      const stillShift = key === 'id' ? wait : ['pr', 'ae'].includes(key) ? (ballLength(key) - 0.55) * PACE : 0;
       close(SHOW[i].still, old.SHOW[i].still + (i === 2 ? 1.8 : 0) + stillShift, 'H2 local still');
       // D1 and X1 move the floor on purpose; the screen is compared.
-      equivalent(SCENES[i]().filter(pc => pc.where !== 'floor'), old.SCENES[i]().filter(pc => pc.where !== 'floor'), 'H2 retained still picture');
+      const changed15 = round15Changed(stageModule);   // CORRECTIONS-15 N1/N2, held by round15-checks.mjs
+      equivalent(SCENES[i]().filter(pc => pc.where !== 'floor' && !changed15(pc)), old.SCENES[i]().filter(pc => pc.where !== 'floor' && !changed15(pc)), 'H2 retained still picture');
       if (i >= 3) {   // CORRECTIONS-13: every piece is built at the drop's end; the plays keep their 3.2 s before the return.
         const now = playbackSpans(SCRIPTS[key]), then = old.playbackSpans(old.SCRIPTS[key]), exp = SCRIPTS[key].actions.find(a => a.id === 'export').start;
-        close(now.land - exp, dropLength(key) * PACE, 'H2 row lands at the become end');
+        close(now.land - exp, ballLength(key) * PACE, 'H2 row lands at the become end');
         close(now.off[0] - now.land, then.off[0] - then.land, 'H2 row playback changed');
-        close(now.off[1] - now.off[0], DROP.back * PACE, 'H2 row return');
+        close(now.off[1] - now.off[0], BALL.sink * PACE, 'H2 row return');
       }
     }
     for (let t = land.start + 1e-7; t < land.end - 1e-8; t += 0.005) assert.equal(calloutsAt(times[2] + t).length, 3, 'H2 label hold shortened');
@@ -129,15 +134,16 @@ export async function checkRound5(only = '') {
       equivalent(currentFloor.filter(pc => pc.device === device), prior, 'H3 tablet/phone changed beyond shared row recentering and H10 forward shift');
     }
     let samples = 0;
-    // CORRECTIONS-13: the body slides in over the last DROP.slide of the laptop's drop (under its dropped screen) and out again at
-    // the start of the return; its lid opens from shut on the deck, so the lid is checked in x and the body in x and z.
-    const slide = [timing.spans[0][1] - DROP.slide * PACE, timing.spans[0][1]];
+    // CORRECTIONS-15: the laptop no longer slides in from the top left (round 13's slide is replaced by the ball): its body is built
+    // where it lies and its lid opens over the last BALL.lid of its become, about the hinge, so the body stays put in x and z and the
+    // lid in x (the same-object rule of round 3's H3, now with no slide).
+    const slide = [timing.spans[0][1] - BALL.lid * PACE + 1e-6, timing.spans[0][1]];   // from just after the wipe's last instant
     for (const [from, to] of [slide, [timing.land, timing.off[0]], timing.off]) for (let at = from; at <= to; at += 0.005) {
       const parts = frameAt(times[5] + at), body = parts.filter(pc => pc.device === 0), lid = body.find(pc => pc.lid);
       if (!lid) continue;
       const outline = visibleProjection(lid);
       for (const pc of parts.filter(pc => pc.canvas || pc.art === 'export' || pc.deviceKind === 'tablet' || pc.deviceKind === 'phone')) assert.ok(!polygonsOverlap(outline, visibleProjection(pc)), 'H3 lid hides canvas, toolbar or another device');
-      if (at < timing.spans[0][1]) for (const pc of body) { assert.ok(!pc.clip, 'H3 entry clipped'); const landed = floor.find(q => q.device === 0 && q.art === pc.art && q.lid === pc.lid && q.deviceBody === pc.deviceBody && q.s.every((v, i) => Math.abs(v - pc.s[i]) < 1e-9)); if (pc.lid || pc.deviceBody) { close(pc.p[0] - landed.p[0], -1.6 * (1 - EASE.enter((at - from) / (to - from))), 'H3 same-object x entry'); if (pc.deviceBody) close(pc.p[2], landed.p[2], 'H3 entry z'); } }
+      if (at < timing.spans[0][1]) for (const pc of body) { assert.ok(!pc.clip, 'H3 entry clipped'); const landed = floor.find(q => q.device === 0 && q.art === pc.art && q.lid === pc.lid && q.deviceBody === pc.deviceBody && q.s.every((v, i) => Math.abs(v - pc.s[i]) < 1e-9)); if (pc.lid || pc.deviceBody) { close(pc.p[0] - landed.p[0], 0, 'H3 same-object x entry'); if (pc.deviceBody) close(pc.p[2], landed.p[2], 'H3 entry z'); } }
       if (at >= timing.land && at <= timing.off[0]) {
         const xs = parts.filter(pc => pc.where === 'floor').flatMap(corners).map(p => p[0]);
         close((Math.min(...xs) + Math.max(...xs)) / 2, SCREEN.l + SCREEN.w / 2 + EXPORT_SHIFT, 'H3 complete row centre');   // plus X1's shift

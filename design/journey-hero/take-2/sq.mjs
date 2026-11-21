@@ -6,7 +6,8 @@
 //            art: 'key' a picture from the atlas on its local +z face, cut: true to keep only the picture (a flat cut-out shape),
 //            window: [u0, v0, u1, v1] the part of the picture to show (default all of it),
 //            clip: [a, b, c, d] keeps world points where ax + by + cz + d >= 0 in every pass,
-//            shade: true to dim the picture where its face turns from the light (a sheet that bends shows its bend that way) }
+//            shade: true to dim the picture where its face turns from the light (a sheet that bends shows its bend that way),
+//            near: world units by which it is drawn nearer the viewer in depth only (never moved in the picture, nor in the shadow pass) }
 // shadowP optionally keeps a depth-only colour lift's shadow caster at its authored position.
 
 export const TONES = {
@@ -42,7 +43,7 @@ uniform mat4 uVP;
 uniform vec3 uPos, uSize;
 uniform vec4 uQuat;
 uniform vec2 uExp, uTaper;
-uniform float uShear, uGrow;
+uniform float uShear, uGrow, uNear;
 out vec3 vN, vW, vL;
 out float vFace;
 vec2 superellipse(float ang, float e) {
@@ -73,6 +74,7 @@ void main() {
   vec3 wp = uPos + turn(uQuat, p) + wn * uGrow;
   vN = wn; vW = wp; vL = unit;
   gl_Position = uVP * vec4(wp, 1.0);
+  gl_Position.z -= uNear / 60.0;      // the view's depth is -v.p / 60 (draw's vp): nearer in depth only
 }`;
 
 const SHADOW_FN = `
@@ -359,6 +361,8 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       if (mesh !== boundMesh) { gl.bindVertexArray(mesh.vao); boundMesh = mesh; }
       setPiece(prog.u, pc, typeof grow === 'function' ? grow(pc) : grow);
       if (prog === depth && pc.shadowP) gl.uniform3fv(prog.u.uPos, pc.shadowP);
+      // CORRECTIONS-15: the cursor stays in front of the export's ball in the picture; its shadow is cast where it is.
+      if (prog.u.uNear) gl.uniform1f(prog.u.uNear, prog === depth ? 0 : pc.near || 0);
       if (tone) tone(prog.u, pc);
       gl.drawElements(gl.TRIANGLES, boundMesh.count, gl.UNSIGNED_SHORT, 0);
     }

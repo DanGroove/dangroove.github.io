@@ -130,9 +130,9 @@ export async function checkShift(M, source = read('stage.mjs')) {
   assert.equal(source.split(search).length - 1, 1, 'X1 one number: EXPORT_SHIFT must be one constant');
   const N = await load('stage.mjs', source.replace(search, `export const EXPORT_SHIFT = ${EXPORT_SHIFT + d};`));
   near(N.POOL.x - POOL.x, d, 'X1 one number: the pool'); near(N.BLOCK.x0 - BLOCK.x0, d, 'X1 one number: the block');
-  const fig = SHOW.findIndex(s => s.key === 'fig'), entry = starts[fig] + M.playbackSpans(SCRIPTS.fig).spans[0][0] + 0.9 * M.PACE;   // CORRECTIONS-13: mid slide-in, every Figma sheet landed (at +0.1 they hang on the screen, which X1 does not move)
+  const fig = SHOW.findIndex(s => s.key === 'fig'), b0 = M.ballBeats('fig', 0), exp = starts[fig] + M.playbackSpans(SCRIPTS.fig).spans[0][0], entry = [exp + (b0.split + b0.hold) / 2 * M.PACE, exp + (b0.wiped + b0.become) / 2 * M.PACE];   // CORRECTIONS-15: the red blocks in their places during the hold, and the laptop's lid half open
   let pieces = 0;
-  for (const t of [...[2, 3, 4, 5].map(i => starts[i] + SHOW[i].still), starts[id] + land.start + 0.1, entry]) {
+  for (const t of [...[2, 3, 4, 5].map(i => starts[i] + SHOW[i].still), starts[id] + land.start + 0.1, ...entry]) {
     const a = M.frameAt(t), b = N.frameAt(t);
     assert.equal(a.length, b.length, 'X1 one number: the pieces changed');
     a.forEach((pc, k) => {
@@ -141,7 +141,7 @@ export async function checkShift(M, source = read('stage.mjs')) {
       pieces++;
     });
   }
-  return `X1 shift: EXPORT_SHIFT ${EXPORT_SHIFT}; block, mat, pool and the floor at the four stills and InDesign's landing centred on ${middle.toFixed(4)}; moving the one number by ${d} moves ${pieces} pieces' floor exactly and nothing else, the laptop's slide-in included`;
+  return `X1 shift: EXPORT_SHIFT ${EXPORT_SHIFT}; block, mat, pool and the floor at the four stills and InDesign's landing centred on ${middle.toFixed(4)}; moving the one number by ${d} moves ${pieces} pieces' floor exactly and nothing else, the ball's red blocks and the laptop's opening lid included`;
 }
 
 export async function checkRound12(source = read('stage.mjs')) {

@@ -15,7 +15,8 @@ import { BROWSER_SIZES } from './browser-check.mjs';
 import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
 
 const take = new URL('../', import.meta.url);
-import { handPatch, r12Patch } from './hand-patch.mjs';
+import { handPatch, r12Patch, r15Patch } from './hand-patch.mjs';
+import { round15Changed } from './round15-checks.mjs';
 const fixture = JSON.parse(fs.readFileSync(new URL('fixtures/round5-addendum-source.json', import.meta.url)));
 const sha = source => createHash('sha256').update(source).digest('hex');
 const close = (a, b, message, epsilon = 0.01) => assert.ok(Math.abs(a - b) <= epsilon, `${message}: ${a} != ${b}`);
@@ -31,7 +32,7 @@ const widthsFor = module => {
   let start = 0;
   for (const scene of module.SHOW) {
     // CORRECTIONS-13: today's InDesign labels appear once its drop is built (land); the frozen stages' at the end of the Export click.
-    const time = start + (scene.key === 'id' ? (module.DROP ? module.playbackSpans(module.SCRIPTS.id).land : module.SCRIPTS.id.actions.find(a => a.id === 'export').end) + 0.41 : scene.still);
+    const time = start + (scene.key === 'id' ? (module.DROP || module.ballLength ? module.playbackSpans(module.SCRIPTS.id).land : module.SCRIPTS.id.actions.find(a => a.id === 'export').end) + 0.41 : scene.still);
     for (const c of module.calloutsAt(time)) for (const [key, size] of [['small', 9], ['large', 11]]) widths[key][c.id] = c.words.length * size * 0.75;
     start += scene.len;
   }
@@ -150,7 +151,7 @@ export async function checkRound5Addendum({ only = '', control = '' } = {}) {
   assert.equal(fixture.sources['stage.mjs'].sha256, '8bfd42a687f780f6e224f09a6a46c6fcb276b925745fc63c2ea2337ce7336cc8');
   assert.equal(fixture.sources['page-layout.mjs'].sha256, '3ad80e6ae74572a36079a9a050f8b54159f3794adb4209d5d1e61175f8b6eed1');
   // CORRECTIONS-7: the frozen incoming stage gets round 7's hand edit in memory, so H10 still proves nothing else moved.
-  const oldStageURL = moduleURL(r12Patch(handPatch(decode(fixture.sources['stage.mjs']))), 'stage.mjs');
+  const oldStageURL = moduleURL(r15Patch(r12Patch(handPatch(decode(fixture.sources['stage.mjs'])))), 'stage.mjs');   // CORRECTIONS-15 N2: flat drags
   const incoming = await import(oldStageURL), incomingLabels = await import(moduleURL(source('labels.mjs'), 'labels.mjs', { './stage.mjs': oldStageURL }));
   const need = sceneEnvelope(current.SCENES, corners, dot, HOME), beforeNeed = sceneEnvelope(incoming.SCENES, corners, dot, HOME);
   const report = { computedOnly: true, beforeEnvelope: beforeNeed, afterEnvelope: need };
@@ -232,7 +233,7 @@ export async function checkRound5Addendum({ only = '', control = '' } = {}) {
         if (at >= now.land) { local = at - now.land + then.land; plays = true; }
       }
       // In the plays only what plays is compared (the Export button's own wipe keeps its time from the click).
-      const P = current.frameAt(t), old = incoming.frameAt(oldStart[scene.key] + local), screen = list => list.filter(pc => pc.where !== 'floor' && (!plays || pc.playback));
+      const P = current.frameAt(t), old = incoming.frameAt(oldStart[scene.key] + local), changed = round15Changed(current), screen = list => list.filter(pc => pc.where !== 'floor' && (!plays || pc.playback) && !changed(pc));   // CORRECTIONS-15 N1/N2 on purpose
       const expected = old.map(pc => pc.where === 'floor' && incoming.sceneAt(t).scene.key === 'fig' ? { ...pc, p: pc.p.map((n, i) => n + (i === 2 ? current.UI_ROW.forward : 0)), ...(pc.clip ? { clip: pc.clip.map((n, i) => n - (i === 3 ? current.UI_ROW.forward : 0)) } : {}) } : pc);
       equivalent(screen(P), screen(expected), `H10 retained round-5 pieces at ${t.toFixed(2)} s (${scene.key} ${local.toFixed(3)})`);
       for (const key of plays ? ['clock', 'tool'] : ['clock', 'action', 'pressed', 'tool']) equivalent(P[key], old[key], 'H10 retained round-5 ' + key);

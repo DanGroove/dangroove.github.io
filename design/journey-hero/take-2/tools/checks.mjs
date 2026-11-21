@@ -23,7 +23,8 @@ import { checkRound10, checkRound10Controls } from './round10-checks.mjs';
 import { checkRound12StarsList, checkRound12Controls } from './round12-stars-list-checks.mjs';
 import { checkRound14, checkRound14Controls } from './round14-checks.mjs';
 import { checkRound12 as checkRound12Scene, checkRound12Controls as checkRound12SceneControls } from './round12-checks.mjs';
-import { checkRound13, checkRound13Controls, checkRows as checkRound13Rows, checkRowsControls as checkRound13RowsControls, describe as describeRound13 } from './round13-checks.mjs';
+import { checkRows as checkRound13Rows, checkRowsControls as checkRound13RowsControls } from './round13-checks.mjs';
+import { checkAll as checkRound15, checkRound15Controls } from './round15-checks.mjs';
 import * as stageModule from '../stage.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
@@ -95,8 +96,9 @@ function check(time) {
     if ('opacity' in pc || 'alpha' in pc) fail(time, `piece ${i}: transparency is not a motion tool`);
     if (pc.where === 'floor') {
       if (scene.key === 'ps' || scene.key === 'ai' || at < 0.1) fail(time, `piece ${i}: floor must be empty`);
-      // CORRECTIONS-13 E2: the slot at the mat's back edge is gone; nothing on the floor is clipped.
-      if (pc.clip) fail(time, `piece ${i}: a floor piece is clipped (the slot is gone)`);
+      // CORRECTIONS-13 E2: the slot at the mat's back edge is gone. CORRECTIONS-15: the only clips on the floor are the ball's at the
+      // button's face while it pops, a format's or block's become wipe (one plane in x) and the sink's plane at y = 0.
+      if (pc.clip && !(pc.morph === 'ball' && pc.clip[2] === 1 && !pc.clip[0] && !pc.clip[1]) && !(pc.edge !== undefined && Math.abs(pc.clip[0]) === 1 && !pc.clip[1] && !pc.clip[2]) && !(pc.sink && pc.clip.join() === '0,1,0,0')) fail(time, `piece ${i}: a floor piece is clipped outside the ball's pop, its wipes and the sink`);
       const s = SCRIPTS[scene.key], exp = s?.actions.find(a => a.id === 'export');
       if (exp && at < exp.start) fail(time, `piece ${i}: floor before export`);
       if (pc.device !== undefined && list.clock !== null && list.clock !== undefined && Math.abs(pc.clock - list.clock) > 1e-8) fail(time, `piece ${i}: device and viewer clocks differ`);
@@ -106,7 +108,7 @@ function check(time) {
   for (const floor of [false, true]) {
     const axis = floor ? 1 : 2, across = floor ? 2 : 1, unit = floor ? 1 : 1.15;
     const faces = list.flatMap((pc, i) => {
-      if ((pc.where === 'floor') !== floor || quatRotate(pc.q, [0, 0, 1])[axis] < 1 - 1e-9) return [];
+      if ((pc.where === 'floor') !== floor || pc.solid || quatRotate(pc.q, [0, 0, 1])[axis] < 1 - 1e-9) return [];   // CORRECTIONS-15: the ball's red volumes are not stacked faces
       const points = corners(pc), x = points.map(p => p[0]), y = points.map(p => p[across]);
       return [{ i, pc, height: (pc.p[axis] + pc.s[2]) / unit, rect: [Math.min(...x), Math.min(...y), Math.max(...x), Math.max(...y)] }];
     });
@@ -143,7 +145,8 @@ for (let i = 0; i < SHOW.length; i++) {
   start += scene.len;
 }
 // CORRECTIONS-7 K2 lengthens the loop (about 90.8 s expected, 91.5 s with K3's speed floor); the round-2 ceiling of 86 s is raised to 92.
-if (Object.keys(SCRIPTS).length === 6) assert.ok(LOOP / PACE >= 70 && LOOP / PACE <= 92, `loop is ${LOOP / PACE}s`);
+// CORRECTIONS-15 raises it to 100 for the ball and the sink (about 97.7 s).
+if (Object.keys(SCRIPTS).length === 6) assert.ok(LOOP / PACE >= 70 && LOOP / PACE <= 100, `loop is ${LOOP / PACE}s`);
 assert.equal(sceneAt(LOOP).i, 0);
 assert.equal(sceneAt(-0.01).scene.key, 'fig');
 assert.deepEqual(frameAt(-0.01), frameAt(LOOP - 0.01));
@@ -555,8 +558,9 @@ try { console.log(await checkRound10()); console.log('Round 10 negative controls
 try { console.log(await checkRound12StarsList()); console.log('Round 12 (S1) negative controls: ' + await checkRound12Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound14()); console.log('Round 14 (K1) negative controls: ' + await checkRound14Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound12Scene()); console.log('Round 12 (D1, I1, X1) negative controls: ' + await checkRound12SceneControls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
-try { console.log(describeRound13(await checkRound13(stageModule), stageModule)); console.log('Round 13 (E1, E2) negative controls: ' + await checkRound13Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound13Rows(stageModule)); console.log('Round 13 (U1, I2) negative controls: ' + await checkRound13RowsControls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
+// CORRECTIONS-15: the ball and the sink (S1, S2), the map without its selection box (N1) and flat drags (N2); round 13's E1/E2 are retired.
+try { console.log(await checkRound15(stageModule)); console.log('Round 15 (S1, S2, N1, N2) negative controls: ' + await checkRound15Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 
 if (errors.length) {

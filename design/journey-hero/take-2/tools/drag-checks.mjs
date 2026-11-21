@@ -11,7 +11,9 @@ import { createRenderer } from '../sq.mjs';
 import { SHOW, LOOP, PACE, SCRIPTS, SCENES, frameAt } from '../stage.mjs';
 import { visibleProjection, polygonsOverlap } from './correction-checks.mjs';
 import { equivalent } from '../view.mjs';
-import { handPatch, retimer, r12Patch } from './hand-patch.mjs';
+import { handPatch, retimer, r12Patch, r15Patch } from './hand-patch.mjs';   // r15Patch: CORRECTIONS-15 N2's flat drags
+import * as stageModule from '../stage.mjs';
+import { round15Changed } from './round15-checks.mjs';
 
 const take = new URL('../', import.meta.url);
 const sources = JSON.parse(fs.readFileSync(new URL('fixtures/drag-sources.json', import.meta.url), 'utf8'));
@@ -25,7 +27,7 @@ async function snapshot(name) {
   // The saved source used paths relative to take-2. Resolve imports there, in memory.
   // CORRECTIONS-7: round 7's hand edit is applied in memory; the hash below is still of the frozen bytes.
   // CORRECTIONS-12 I1: and without InDesign's frame steps, so its drags fall at today's instants.
-  const source = r12Patch(handPatch(raw)).replace(/from (['"])([^'"]+)\1/g, (_, q, ref) => 'from ' + q + new URL(ref, take).href + q);
+  const source = r15Patch(r12Patch(handPatch(raw))).replace(/from (['"])([^'"]+)\1/g, (_, q, ref) => 'from ' + q + new URL(ref, take).href + q);
   return { module: await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64')), hash: createHash('sha256').update(raw).digest('hex') };
 }
 function stack(P, id) {
@@ -64,7 +66,8 @@ export async function checkDrags(only = '') {
   assert.equal(PACE, incoming.module.PACE);
   // H2 moves later clocks; H3 rotates only the Figma laptop and recentres its footprint.
   // CORRECTIONS-12 D1/X1 move the floor on purpose; the screen at each still is compared as before.
-  const screen = list => list.filter(pc => pc.where !== 'floor');
+  // CORRECTIONS-15 N1 removes the map's selection marks and N2 flattens carried pictures on purpose (round15-checks.mjs holds both).
+  const changed = round15Changed(stageModule), screen = list => list.filter(pc => pc.where !== 'floor' && !changed(pc));
   for (let i = 0; i < 5; i++) equivalent(screen(SCENES[i]()), screen(incoming.module.SCENES[i]()), 'G1 retained still differs from incoming 50b51b8');
   const points = SCENES.flatMap(make => make().flatMap(corners));
   const xs = points.map(p => dot(HOME.r, p)), ys = points.map(p => dot(HOME.u, p));

@@ -7,7 +7,7 @@ import { HOME, EASE, dot, quatRotate } from '../../../../public/journey/hero/eng
 import { corners } from '../kit.mjs';
 import { labelLayout, fitCalloutView } from '../labels.mjs';
 import { checkLabelRoutes } from './browser-check.mjs';
-import { BLOCK_ROW, EXPORT_SHIFT, DROP, dropLength, FIG } from '../stage.mjs';
+import { BLOCK_ROW, EXPORT_SHIFT, FIG } from '../stage.mjs';
 
 const rect = pc => { const p = corners(pc); return [Math.min(...p.map(p => p[0])), Math.min(...p.map(p => p[1])), Math.max(...p.map(p => p[0])), Math.max(...p.map(p => p[1]))]; };
 const overlap = (a, b) => Math.min(a[2], b[2]) > Math.max(a[0], b[0]) + 1e-8 && Math.min(a[3], b[3]) > Math.max(a[1], b[1]) + 1e-8;
@@ -18,7 +18,6 @@ function samePicture(a, b) {
   const x = mapping(a), y = mapping(b); return x.every((n, i) => Math.abs(n - y[i]) < 1e-7);
 }
 const near = (a, b, eps = 1e-7) => Math.abs(a - b) <= eps;
-const LAPTOP_ENTRY_ALLOWANCE = 8;   // px; 5 until round 11 (see CORRECTIONS-12 X1 below)
 const projection = pc => { const p = corners(pc).map(p => [dot(HOME.r, p), dot(HOME.u, p)]); return [Math.min(...p.map(p => p[0])), Math.min(...p.map(p => p[1])), Math.max(...p.map(p => p[0])), Math.max(...p.map(p => p[1]))]; };
 function hull(points) {
   const p = points.slice().sort((a, b) => a[0] - b[0] || a[1] - b[1]), cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
@@ -55,7 +54,8 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
   let start = 0;
   for (const scene of SHOW) {
     const s = SCRIPTS[scene.key], byId = Object.fromEntries(s.actions.map(a => [a.id, a])), spans = playbackSpans(s), isId = scene.key === 'id';
-    const ends = spans.spans.map(a => a[1]), off = isId ? byId.pickup.start : spans.off[0];
+    const ends = spans.spans.map(() => spans.land), off =   // CORRECTIONS-15: every label from the last piece's become end (land)
+      isId ? byId.pickup.start : spans.off[0];
     const seenLabels = new Map(), vanishedFrames = new Set();
     if (isId) for (const [id, profile, style, crop] of [['photo', 'cover', 'coverPhoto', [380 / 1100, 0, 720 / 1100, 1]], ['postPhoto', 'post', 'postPhoto', [0, 0, 1, 1]], ['mailPhoto', 'mail', 'mailPhoto', [300 / 800, 168 / 1180, 456 / 800, 470 / 1180]]]) {
       const a = byId[id], before = frameAt(start + a.end - 1e-7 * PACE).find(pc => pc.photoProfile === profile), after = frameAt(start + a.end + 1e-7 * PACE).find(pc => pc.art === style && !pc.echo);
@@ -265,14 +265,12 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
   // CORRECTIONS-7: the Figma laptop's H3 slide-in starts 1.6 units left with no entry clip. Its first 0.03 s
   // reaches past the fitted envelope; at 83.04 s the 1/30 s grid happened to land 0.027 s into the slide and missed
   // it, at 91.5 s it lands 0.002 s in. Those instants are bounded separately below (and the start itself is sampled).
-  // CORRECTIONS-13: the body now arrives once its screen has dropped (DROP.slide before its "become" end), and leaves the same
-  // way at the end of its return, where the drop runs backwards DROP.back / dropLength times as fast, so its last instants near
-  // the start are bounded the same way.
-  const arrive = timing.spans[0][1] - DROP.slide * PACE - timing.spans[0][0], speed = DROP.back / dropLength('fig');
-  const entry = figStart + timing.spans[0][0] + arrive, leave = figStart + timing.off[0] + (dropLength('fig') * PACE - arrive) * speed;
-  const inEntry = at => (at >= entry - 1e-9 && at < entry + 0.03 * PACE) || (at > leave - 0.03 * PACE * speed && at <= leave + 1e-9);
-  const sampleAt = [...Array.from({ length: Math.ceil(LOOP * 30 / PACE) }, (_, n) => n * PACE / 30).filter(at => at < LOOP), entry, entry + 1e-7 * PACE];   // CORRECTIONS-12: the entry itself can round to just before the slide; a hair after is inside it
-  for (const at of [...sampleAt, leave, leave - 1e-7 * PACE]) for (const pc of frameAt(at)) for (const p of corners(pc)) if (!pc.clip || p.reduce((sum, n, i) => sum + n * pc.clip[i], pc.clip[3]) >= 0) (inEntry(at) && pc.deviceKind === 'laptop' ? entryPoints : allPoints).push(dot(HOME.r, p));
+  // CORRECTIONS-15: the laptop no longer slides in (or out): it is built where it lies, so it has no entry window and no allowance;
+  // every instant of the loop counts for the gutters below, and the Figma laptop must not reach into one at all.
+  const entry = NaN, leave = NaN;
+  const inEntry = () => false;
+  const sampleAt = Array.from({ length: Math.ceil(LOOP * 30 / PACE) }, (_, n) => n * PACE / 30).filter(at => at < LOOP);   // CORRECTIONS-12: the entry itself can round to just before the slide; a hair after is inside it
+  for (const at of sampleAt) for (const pc of frameAt(at)) for (const p of corners(pc)) if (!pc.clip || p.reduce((sum, n, i) => sum + n * pc.clip[i], pc.clip[3]) >= 0) (inEntry(at) && pc.deviceKind === 'laptop' ? entryPoints : allPoints).push(dot(HOME.r, p));
   const leftmost = allPoints.reduce((n, v) => Math.min(n, v), Infinity), rightmost = allPoints.reduce((n, v) => Math.max(n, v), -Infinity);
   const entryLeft = entryPoints.reduce((n, v) => Math.min(n, v), Infinity);
   let entryOver = 0;
@@ -284,9 +282,9 @@ export function runCorrections({ fail, frameAt, calloutsAt, SHOW, LOOP, SCREEN, 
   }
   // CORRECTIONS-12 X1 moves the laptop's slide-in path left with its row. Sampled at the entry itself (it used to round to just
   // before it), the first 0.03 s reached 4.42 px into the gutter at round 11 and 7.66 px with EXPORT_SHIFT -0.3, at 424 px wide.
-  if (!(entryPoints.length && entryOver <= LAPTOP_ENTRY_ALLOWANCE)) fail(0, `stage gutters: the Figma laptop's first 0.03 s enters the 16 px gutter by ${entryOver.toFixed(2)} px (allowed ${LAPTOP_ENTRY_ALLOWANCE})`);
+  if (entryPoints.length || entryOver > 0) fail(0, `stage gutters: the Figma laptop enters the 16 px gutter by ${entryOver.toFixed(2)} px (round 15: no slide-in, no allowance)`);
   gutterEntry.over = entryOver;
-  console.log('R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (' + fixedSamples + ' samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720 (Figma laptop entry, first 0.03 s: ' + gutterEntry.over.toFixed(2) + ' px into the gutter, bounded at ' + LAPTOP_ENTRY_ALLOWANCE + ')');
+  console.log('R9–R15 sampled: occlusion, cursor continuity, labels, landed faces, wipes; R15 frames/plates at 0.005 s; fixed marks at 60 Hz (' + fixedSamples + ' samples); Figma devices, 0.6 s pictures, frozen return, canvas/toolbar/lid clearance; stage gutters 280–720 (Figma laptop: no slide-in since round 15, ' + gutterEntry.over.toFixed(2) + ' px into the gutter, allowed 0)');
 }
 // Direct use initializes the same atlas/player fixtures in a child to avoid an ESM entry-point cycle.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

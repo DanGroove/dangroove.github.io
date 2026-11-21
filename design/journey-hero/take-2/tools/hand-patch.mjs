@@ -137,3 +137,15 @@ export function r12Patch(source) {
   if (/s, 'frame/.test(body)) throw new Error('r12Patch: a frame step is still read');
   return s.slice(0, from) + body + s.slice(to);
 }
+
+// CORRECTIONS-15 N2: a carried picture keeps one height from pickup to drop, with no arc toward the viewer. A check that compares
+// today's drags with a frozen stage applies the same flattening to the frozen source in memory, so the comparison still means
+// "nothing else moved". Sites a frozen source does not have are left as they are.
+export function r15Patch(source) {
+  return source
+    .replace('lift = (dockStart ? mix(0.055, 0.06, p) : mix(0.06, 0.055, p)) + 0.08 * Math.sin(Math.PI * p)', 'lift = dockStart ? 0.06 : 0.055')
+    .replace('{ lift: 0.08 + 0.08 * Math.sin(Math.PI * p), t: 0.015, art }', '{ lift: 0.08, t: 0.015, art }')
+    .replace('{ lift: 0.06 + 0.08 * Math.sin(Math.PI * p), t: 0.012 }', '{ lift: 0.06, t: 0.012 }')
+    .replace('const lift = 0.05 + 0.08 * Math.sin(Math.PI * p), clip = ', 'const lift = 0.05, clip = ')
+    .replace('{ lift: 0.06 + 0.08 * Math.sin(Math.PI * p), t: 0.02, art }', '{ lift: 0.06, t: 0.02, art }');
+}

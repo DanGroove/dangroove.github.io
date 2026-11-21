@@ -3,7 +3,7 @@
 // One clock builds every piece: the persistent shell, wiped content, travelling work and the floor.
 import { HOME, EASE, dot as dot3, quatFromBasis, quatRotate } from '../../../public/journey/hero/engine.mjs';
 import { box, cyl, turn, corners, qAxis, qMul } from './kit.mjs';
-import { SPOT, subwayPath, BALL, BALL_FROM, BALL_VIA, ROWS, TYPE_EDGES, TYPE_BOXES, ART, ART_TEXT, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS } from './art.mjs';
+import { SPOT, subwayPath, BALL as COMP_BALL, BALL_FROM, BALL_VIA, ROWS, TYPE_EDGES, TYPE_BOXES, ART, ART_TEXT, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS } from './art.mjs';
 
 // All authored durations, including the cursor's journeys, share this one control.
 export const PACE = 1;
@@ -49,11 +49,15 @@ export function floorAt(x, y) {
 // (Dan's centring rule of round 2, then this one shift). One number: Dan may pick another from a comparison sheet.
 export const EXPORT_SHIFT = -0.3;
 const screenMiddle = SCREEN.l + SCREEN.w / 2, exportMiddle = screenMiddle + EXPORT_SHIFT;
-// CORRECTIONS-13 E1, E2: the exports drop out of the screen. Each beat's length in seconds at PACE 1: the copy peels off the
-// screen (out: how far it moves along the screen's normal), tips down flat while it travels to the floor, splits into its parts,
-// and each part becomes its format. Figma's three frames start 0.1 s apart and its laptop's body slides in for 0.5 s. The return
-// plays the whole drop backwards in `back` seconds.
-export const DROP = { peel: 0.15, out: 0.15, tip: 0.5, split: 0.35, become: 0.25, slide: 0.5, stagger: 0.1, back: 0.6 };
+// CORRECTIONS-15 S1, S2 (they replace round 13's drop and its backwards return): Export pops a red ball out of the button. It arcs
+// to the floor, rests, splits into one red block per format (each the exact footprint and thickness of its format), holds, and a
+// hard wipe turns each block into its format; when the scene's exports leave, they sink straight down through the floor. Each
+// beat's length in seconds at PACE 1, as one table to tune: the pop, the arc, the rest, the split, the hold, each piece's wipe
+// (become), the wipes' stagger left to right, Figma's laptop lid opening after its wipe, and the sink.
+export const BALL = { pop: 0.3, arc: 0.8, rest: 0.15, split: 0.6, hold: 0.15, become: 0.6, stagger: 0.1, lid: 0.4, sink: 0.5 };
+// The ball's own measures, world units: its diameter at full size (about the phone it helps make), its radius as it starts inside
+// the button, how far it comes out along the screen's normal and how far up while it pops, and how high its arc rises above that.
+export const BALL_PATH = { size: 0.6, start: 0.1, out: 0.45, up: 0.15, rise: 0.6 };
 // CORRECTIONS-12 D1: phones in true proportion to the tablets beside them. The reference bodies, in mm: a phone 71.6 x 147.6
 // and a tablet 179.5 x 248.6. A phone is 147.6 / 248.6 of an upright tablet's height, 147.6 / 179.5 of one on its side.
 export const BODY = { phone: [71.6, 147.6], tablet: [179.5, 248.6] };
@@ -105,7 +109,7 @@ function shell(i, t, cursorAt, pressed, first = false) {
     P.push(on('night', ...rect, role === 'tools' ? { lift: 0.05, t: 0.04, more: { e: [0.1, 0.5] } } : {}));
   }
   const [a, b] = exportSpan(i), clicked = held(t, a, a + 0.05 * PACE), lift = 0.05 - (clicked ? 0.035 : 0), run = held(t, a, b);
-  const button = [W - 0.98, H - BAR + 0.08, 0.86, 0.28];
+  const button = BUTTON;
   if (run) {
     const e = linear(t, a, b), x = button[0], w = button[2];
     if (e > 0) P.push({ ...on('red', x, button[1], w * e, button[3], { lift, t: 0.06, art: 'export' }), window: [0, 0, e, 1] });
@@ -214,9 +218,7 @@ function approvedDocument() {
   });
   P.push({ ...on('ink', ...ID.left, { lift: 0.06, t: 0.02, art: 'kAmL' }), tones: FLYER.coal }, { ...on('ink', ...ID.right, { lift: 0.06, t: 0.02, art: 'kAmR' }), tones: FLYER.coal });
   P.push(on('ink', ...ID.cover, { lift: 0.06, t: 0.02, art: 'kCover' }), on('ink', ...ID.post, { lift: 0.06, t: 0.02, art: 'kPost' }), { ...on('ink', ...ID.mail, { lift: 0.06, t: 0.02, art: 'eblast' }), window: [0, 0, 1, Math.min(1, ID.mail[3] / ID.mail[2] * 320 / 472)] });
-  const [x, y, w, h] = ID.frame;
-  P.push(...outline(x, y, w, h, { line: 0.012 }));
-  [[x, y + h], [x + w / 2, y + h], [x + w, y + h], [x, y + h / 2], [x + w, y + h / 2], [x, y], [x + w / 2, y], [x + w, y]].forEach(([x, y]) => P.push(handle(x, y)));
+  // CORRECTIONS-15 N1: the placed amenities map has no selection outline or handles.
   return P;
 }
 // ---- The screens the other crafts export to. They lie in one row across the mat: a tablet on its side, then two phones.
@@ -262,145 +264,117 @@ function chip(P, key) {
   const [x, y, w, h] = DOCK[key];
   P.push({ ...on('grey', x - 0.012, y - 0.012, w + 0.024, h + 0.024, { lift: 0.04, t: 0.012 }), where: 'travel' }, { ...on('ink', x, y, w, h, { lift: 0.055, t: 0.02, art: PICTURES[key] }), where: 'travel' });
 }
+// CORRECTIONS-15 N2: a carried picture keeps one height above the screen's face from pickup to drop, its placed height, and moves
+// on a straight line; where it passes over taller content it is raised only along the view (clearCarried).
 function travel(P, key, from, to, t, a, b, endWindow = [0, 0, 1, 1], curve = EASE.wipe) {
-  const p = curve(linear(t, a, b)), rect = rectMix(from, to, p), dockStart = from === DOCK[key], lift = (dockStart ? mix(0.055, 0.06, p) : mix(0.06, 0.055, p)) + 0.08 * Math.sin(Math.PI * p), [x, y, w, h] = rect;
+  const p = curve(linear(t, a, b)), rect = rectMix(from, to, p), dockStart = from === DOCK[key], lift = dockStart ? 0.06 : 0.055, [x, y, w, h] = rect;
   // The picture is the same piece throughout. The dock's rim folds down as it leaves, or grows as it lands.
   const rim = 0.012 * (dockStart ? 1 - p : p);
   if (rim > 0) P.push({ ...on('grey', x - rim, y - rim, w + 2 * rim, h + 2 * rim, { lift: lift - 0.015, t: 0.012 }), where: 'travel', action: key });
   P.push({ ...on('ink', ...rect, { lift, t: 0.02, art: PICTURES[key] }), window: rectMix([0, 0, 1, 1], endWindow, p), where: 'travel', action: key });
 }
-// ---- CORRECTIONS-13 E1, E2: the drop. Times are local to the scene; beats are seconds after Export, at PACE 1.
-// Figma's frames start DROP.stagger apart and have no split; its laptop's body takes DROP.slide to slide in under its screen.
-export function dropBeats(key, j) {
-  const fig = key === 'fig', start = fig ? j * DROP.stagger : 0, peel = start + DROP.peel, tip = peel + DROP.tip, split = tip + (fig ? 0 : DROP.split);
-  return { start, peel, tip, split, become: split + (fig && j === 0 ? DROP.slide : DROP.become) };
+// ---- CORRECTIONS-15 S1, S2: the ball. Times are local to the scene; beats are seconds after Export, at PACE 1. Every scene that
+// exports to the floor has three pieces, numbered left to right in world x (j); piece j's wipe starts BALL.stagger after piece
+// j - 1's. Figma's laptop (j 0) opens its lid over BALL.lid once its wipe has ended, and its "become" ends there.
+export function ballBeats(key, j) {
+  const pop = BALL.pop, arc = pop + BALL.arc, rest = arc + BALL.rest, split = rest + BALL.split, hold = split + BALL.hold;
+  const wipe = hold + j * BALL.stagger, wiped = wipe + BALL.become;
+  return { start: 0, pop, arc, rest, split, hold, wipe, wiped, become: key === 'fig' && j === 0 ? wiped + BALL.lid : wiped };
 }
-export const dropLength = key => Math.max(...[0, 1, 2].map(j => dropBeats(key, j).become));
-// The drop's own clock: seconds since Export through the entrance, held once every part is built, then run backwards over the
-// return (E2), so the return is the drop played backwards, faster. null when nothing of the export exists.
-function dropClock(key, s, t) {
-  const a = action(s, 'export').start, length = dropLength(key) * PACE, off = playbackSpans(s).off;
-  if (t < a || t >= off[1]) return null;
-  if (t < off[0]) return Math.min(t - a, length);
-  return length * (1 - (t - off[0]) / (off[1] - off[0]));
+export const ballLength = key => Math.max(...[0, 1, 2].map(j => ballBeats(key, j).become));
+// The Export button (screen units), the world plane of its face (unpressed), and where the ball starts: the face's middle.
+const BUTTON = [W - 0.98, H - BAR + 0.08, 0.86, 0.28], BUTTON_FACE = ZF + (0.05 + 0.06) * U;
+export const EXPORT_BUTTON = { rect: [SCREEN.l + BUTTON[0] * U, SCREEN.b + BUTTON[1] * U, SCREEN.l + (BUTTON[0] + BUTTON[2]) * U, SCREEN.b + (BUTTON[1] + BUTTON[3]) * U], face: BUTTON_FACE };
+export const BALL_START = [SCREEN.l + (BUTTON[0] + BUTTON[2] / 2) * U, SCREEN.b + (BUTTON[1] + BUTTON[3] / 2) * U, BUTTON_FACE];
+// The ball u seconds (at PACE 1) after Export, coming to rest at `to` ([x, z]): its centre, its radius and, while it pops, the
+// clip at the button's face plane. Pop: from inside the button it grows to full size as it comes out along the screen's normal
+// and up (EASE.wipe). Arc: one ballistic flight; x and z are linear in time and y is a true parabola (constant downward
+// acceleration) that rises BALL_PATH.rise above where it left the pop and ends with the ball sitting on the floor. Then it rests.
+export function ballAt(u, to) {
+  const R = BALL_PATH.size / 2, c0 = BALL_START, c1 = [c0[0], c0[1] + BALL_PATH.up, c0[2] + BALL_PATH.out];
+  if (u < BALL.pop) { const e = EASE.wipe(clamp(u / BALL.pop, 0, 1)); return { c: c0.map((v, i) => mix(v, c1[i], e)), r: mix(BALL_PATH.start, R, e), clip: [0, 0, 1, -BUTTON_FACE] }; }
+  const end = [to[0], R, to[1]], T = BALL.arc, s = u - BALL.pop;
+  if (s >= T) return { c: end, r: R };
+  // y(s) = y1 + vy s - g s^2 / 2 with its peak (vy^2 / 2g) at `rise` above y1 and y(T) on the floor: solve for a = sqrt(g).
+  const h = BALL_PATH.rise, fall = c1[1] - end[1], a = (Math.sqrt(2 * h) * T + Math.sqrt(2 * h * T * T + 2 * fall * T * T)) / (T * T), g = a * a, vy = a * Math.sqrt(2 * h);
+  return { c: [mix(c1[0], end[0], s / T), c1[1] + vy * s - g * s * s / 2, mix(c1[2], end[2], s / T)], r: R };
 }
-// What a copy keeps of the piece it copies: its look, never its role on the screen.
-const SCREEN_ROLE = ['where', 'clip', 'document', 'echo', 'text', 'paintLayer', 'canvas', 'furniture', 'placed', 'page', 'pageEdge', 'action', 'caret', 'playback', 'progressRail', 'tones0'];
-function copyOf(pc) {
-  const c = { ...pc, p: pc.p.slice(), q: pc.q.slice(), s: pc.s.slice() };
-  for (const key of SCREEN_ROLE) delete c[key];
-  return c;
+// A red piece lying on the floor the way every export lies (local x along world x, local y toward the back, local z up), so the
+// ball has its shapes' rotation from the start and nothing has to turn later. solid: a volume, kept out of the faces' separation.
+const LYING = qAxis([1, 0, 0], -90);
+const redPiece = (c, s, e, morph, part) => ({ tone: 'red', p: c, q: LYING.slice(), s, e, taper: [0, 0], shear: 0, where: 'floor', solid: true, morph, part });
+// A lying piece's block: [x, z, w, d, top, e].
+const lyingShape = pc => [pc.p[0] - pc.s[0], pc.p[2] - pc.s[1], 2 * pc.s[0], 2 * pc.s[1], pc.p[1] + pc.s[2], pc.e.slice()];
+// Figma's laptop lid at lean theta (degrees: -90 shut on the deck, 12 open): its box and its screen's pictures turn together about
+// the hinge, lifted clear of the keys while it is forward of upright. A picture is left out while its face is turned away from the
+// view: the lid's own box is in front of it then.
+function poseLid({ pieces, pivot }, theta) {
+  const by = 12 - theta, lift = 0.03 * Math.max(0, -Math.sin(theta * Math.PI / 180));
+  if (by) turn(pieces, pivot, [1, 0, 0], by);
+  for (const pc of pieces) { pc.p[1] += lift; if (pc.lidPicture) pc.hide = dot3(quatRotate(pc.q, [0, 0, 1]), HOME.v) <= 0; }
 }
-// The finished work on the screen inside rect (the screen's units): its faces, without marks, carets or the cursor.
-function workIn(P, rect) {
-  const [l, b, w, h] = rect, x0 = SCREEN.l + l * U, x1 = SCREEN.l + (l + w) * U, y0 = SCREEN.b + b * U, y1 = SCREEN.b + (b + h) * U;
-  return P.filter(pc => pc.where !== 'floor' && pc.where !== 'travel' && !pc.overlay && !pc.caret && pc.art !== 'cursor' && quatRotate(pc.q, [0, 0, 1])[2] > 1 - 1e-9 && corners(pc).every(p => p[0] >= x0 - 1e-6 && p[0] <= x1 + 1e-6 && p[1] >= y0 - 1e-6 && p[1] <= y1 + 1e-6)).map(copyOf);
-}
-// A rect of w : h, as large as fits in r = [x, z, w, d], centred in it.
-function fitIn(w, h, r) {
-  const k = Math.min(r[2] / w, r[3] / h);
-  return [r[0] + (r[2] - w * k) / 2, r[1] + (r[3] - h * k) / 2, w * k, h * k];
-}
-// The copy as one rigid sheet: scaled by k in its own plane (never across it, so its layers keep their gaps), turned about world
-// x by deg (0 upright facing us, -90 lying flat face up with its top edge at the back, as a floor device's picture lies), with
-// its pivot carried to `to`.
-function carry(pieces, pivot, to, k, deg) {
-  const q = qAxis([1, 0, 0], deg);
-  return pieces.map(pc => {
-    const d = [(pc.p[0] - pivot[0]) * k, (pc.p[1] - pivot[1]) * k, pc.p[2] - pivot[2]], r = quatRotate(q, d);
-    return { ...pc, p: [to[0] + r[0], to[1] + r[1], to[2] + r[2]], q: qMul(q, pc.q), s: [pc.s[0] * k, pc.s[1] * k, pc.s[2]] };
+// The export of one scene. formats: its three pieces left to right, each { pieces: built in their final landed pose (as round 13
+// left them), shape: their block [x, z, w, d, thickness, e], lid?: Figma's laptop lid, posed shut until its wipe has ended }.
+function exportOut(P, s, t, key, formats) {
+  const a = action(s, 'export').start, { off } = playbackSpans(s);
+  if (t < a || t >= off[1]) return;
+  const u = (t - a) / PACE, all = formats.flatMap(f => f.pieces);
+  for (const pc of all) pc.where = 'floor';
+  if (u >= ballLength(key)) {
+    if (t >= off[0]) {
+      // S2: everything sinks together, straight down (x and z fixed), cut by the floor's plane in every pass, until nothing is left.
+      const depth = Math.max(...all.flatMap(corners).map(c => c[1])) + 0.02, g = EASE.wipe(linear(t, off[0], off[1]));
+      for (const pc of all) { pc.p[1] -= depth * g; pc.clip = [0, 1, 0, 0]; pc.sink = true; }
+    }
+    P.push(...all); return;
+  }
+  // The ball comes to rest at the middle of the three blocks' combined footprint.
+  const blocks = formats.map(f => f.shape), to = [(Math.min(...blocks.map(r => r[0])) + Math.max(...blocks.map(r => r[0] + r[2]))) / 2, (Math.min(...blocks.map(r => r[1])) + Math.max(...blocks.map(r => r[1] + r[3]))) / 2];
+  if (u < ballBeats(key, 0).rest) {
+    const { c, r, clip } = ballAt(u, to), ball = redPiece(c, [r, r, r], [1, 1], 'ball');
+    if (clip) ball.clip = clip;
+    P.push(ball); return;
+  }
+  const R = BALL_PATH.size / 2;
+  formats.forEach((f, j) => {
+    const b = ballBeats(key, j), [x, z, w, d, h, e] = f.shape;
+    if (u < b.split) {
+      // Split: from three exact copies of the resting ball, each moves along the floor to its place while it becomes its block.
+      const k = EASE.wipe(linear(u, b.rest, b.split)), size = [mix(R, w / 2, k), mix(R, d / 2, k), mix(R, h / 2, k)];
+      P.push(redPiece([mix(to[0], x + w / 2, k), size[2], mix(to[1], z + d / 2, k)], size, [mix(1, e[0], k), mix(1, e[1], k)], 'split', j));
+      return;
+    }
+    const block = () => redPiece([x + w / 2, h / 2, z + d / 2], [w / 2, d / 2, h / 2], e.slice(), 'shape', j);
+    if (u < b.wipe) { P.push(block()); return; }
+    if (f.lid) poseLid(f.lid, u < b.wiped ? -90 : mix(-90, 12, EASE.wipe(linear(u, b.wiped, b.become))));
+    if (u < b.wiped) {
+      // Become: one hard wipe left to right in world x. Behind its edge the format, ahead of it the block: one plane, two signs.
+      const edge = mix(x, x + w, EASE.wipe(linear(u, b.wipe, b.wiped))), red = block();
+      red.clip = [1, 0, 0, -edge]; red.edge = edge; P.push(red);
+      for (const pc of f.pieces) if (!pc.hide) { pc.clip = [-1, 0, 0, edge]; pc.edge = edge; pc.wiped = j; P.push(pc); }
+      return;
+    }
+    for (const pc of f.pieces) if (!pc.hide) P.push(pc);
   });
 }
-// A sheet: the copy of the work in rect (screen units), landing on the floor rect `land` ([x, z, w, d], fitted, keeping its
-// shape) or, for Figma's laptop, on the lid's screen (`lid`). Its pivot is the middle of its top edge on its back face; that edge
-// becomes the landed sheet's back edge, so the sheet hangs down from it toward us while it tips, clear of the screen.
-function sheetOf(j, pieces, rect, { land, lid } = {}) {
-  const [l, b, w, h] = rect, base = Math.min(...pieces.map(pc => pc.p[2] - pc.s[2]));
-  const pivot = [SCREEN.l + (l + w / 2) * U, SCREEN.b + (b + h) * U, base];
-  let to, k, deg;
-  if (lid) {
-    const g = UI_ROW, sw = g.lidW - 0.08, sh = g.lidH - 0.08, top = lidPoint(0.04 + sw / 2, 0.04 + sh, 0.026);
-    to = [top[0], top[1], top[2] + g.forward]; k = sw / (w * U); deg = -12;
-  } else {
-    const r = fitIn(w, h, land);
-    to = [r[0] + r[2] / 2, 0, r[1]]; k = r[2] / (w * U); deg = -90;
-  }
-  // Where a rect of the screen (screen units) lies once the sheet has landed: [x, z, w, d] on the floor.
-  const landed = ([x, y, rw, rh]) => [to[0] + k * (SCREEN.l + x * U - pivot[0]), to[2] + k * (pivot[1] - SCREEN.b - (y + rh) * U), rw * U * k, rh * U * k];
-  return { j, pieces, rect, pivot, peeled: [pivot[0], pivot[1], pivot[2] + DROP.out], to, k, deg, landed, flat: landed(rect) };
-}
-// The drop at tau seconds into it (dropClock). sheets: as sheetOf. parts: what each becomes, each built in its final landed pose:
-//   faces: [{ pc, T }]  its face, lowered by T (the body under it) until it is built;
-//   F, S: the face's final rect and its rect on the landed sheet, the same shape ([x, z, w, d]); without S it lands at F;
-//   grow: device slabs, whose rim wipes out from F's edge while their thickness rises from the floor;
-//   rise: pieces whose thickness wipes up from the floor (the booklet stack);
-//   slide: the laptop's body, sliding in from its old 1.6 units to the left while its lid rises to its lean;
-//   transient: a part that goes under another and is gone once the split ends.
-// Once the drop is complete every piece is pushed exactly as built.
-function dropOut(P, tau, key, sheets, parts) {
-  if (tau === null || tau <= 0) return;
-  const beat = j => { const b = dropBeats(key, j); for (const k in b) b[k] *= PACE; return b; };
-  const done = tau >= dropLength(key) * PACE;
-  for (const sheet of done ? [] : sheets) {
-    const b = beat(sheet.j);
-    if (tau <= b.start || tau >= b.tip) continue;
-    const peel = EASE.wipe(linear(tau, b.start, b.peel)), tip = EASE.wipe(linear(tau, b.peel, b.tip));
-    const to = tau < b.peel ? rectMix(sheet.pivot, sheet.peeled, peel) : rectMix(sheet.peeled, sheet.to, tip), k = mix(1, sheet.k, tip), deg = sheet.deg * tip;
-    // Never through the floor: while it is still tipping, the sheet's lower edge (its top edge's height less its tilted height)
-    // stays on or above it, so a sheet that grows as it falls touches down with its lower edge and lies down from there.
-    to[1] = Math.max(to[1], k * sheet.rect[3] * U * Math.cos(deg * Math.PI / 180));
-    for (const pc of carry(sheet.pieces, sheet.pivot, to, k, deg)) { pc.where = 'floor'; pc.drop = 'sheet'; pc.device = sheet.device; P.push(pc); }
-  }
-  for (const part of parts) {
-    const b = beat(part.j), all = [...part.faces.map(f => f.pc), ...(part.grow || []), ...(part.rise || []), ...(part.slide || [])];
-    if (done) { if (!part.transient) for (const pc of all) { pc.where = 'floor'; P.push(pc); } continue; }
-    if (tau < b.tip || (part.transient && tau >= b.split)) continue;
-    const e = b.split > b.tip ? EASE.wipe(linear(tau, b.tip, b.split)) : 1, g = EASE.wipe(linear(tau, b.split, b.become));
-    if (part.F) {
-      const F = part.F, R = part.S ? rectMix(part.S, F, e) : F, k = R[2] / F[2];
-      for (const { pc } of part.faces) { pc.p[0] = R[0] + (pc.p[0] - F[0]) * k; pc.p[2] = R[1] + (pc.p[2] - F[1]) * k; pc.s[0] *= k; pc.s[1] *= k; }
-    }
-    for (const { pc, T } of part.faces) { pc.p[1] -= T * (1 - g); pc.drop = 'part'; }
-    for (const pc of part.grow || []) {
-      const B = [pc.p[0] - pc.s[0], pc.p[2] - pc.s[1], 2 * pc.s[0], 2 * pc.s[1]], R = rectMix(part.F, B, g), half = pc.s[2] * g;
-      pc.p = [R[0] + R[2] / 2, half, R[1] + R[3] / 2]; pc.s = [R[2] / 2, R[3] / 2, half];
-    }
-    for (const pc of part.rise || []) { pc.p[1] *= g; pc.s[2] *= g; }
-    if (part.slide) {
-      // The body comes in from the left as before (round 3, H3), closed, and its lid rises from lying shut on the deck to its
-      // 12 degree lean as they meet: it opens like a laptop, in front of the screen that waits for it, and never reaches further back
-      // (towards the app, in projection) than its open lid does. It keeps its old arrival curve (EASE.enter), so it leaves the left
-      // gutter as quickly as it always did. While it is forward of upright it is lifted clear of the keys.
-      const arrive = EASE.enter(linear(tau, b.split, b.become)), dx = -1.6 * (1 - arrive), lean = (-90 + 102 * arrive) * Math.PI / 180, v = [0, Math.cos(lean), -Math.sin(lean)];
-      const lift = 0.03 * Math.max(0, -Math.sin(lean));
-      for (const pc of part.slide) {
-        pc.p[0] += dx;
-        if (pc.lid) { const at = lidPoint(UI_ROW.lidW / 2, 0, 0); pc.p = [at[0] + dx, at[1] + v[1] * UI_ROW.lidH / 2 + lift, at[2] + v[2] * UI_ROW.lidH / 2 + UI_ROW.forward]; pc.q = quatFromBasis(lidU, v); }
-      }
-    }
-    for (const pc of all) { pc.where = 'floor'; if (pc.drop !== 'part') pc.drop = 'body'; if (pc.s.every(n => n > 0)) P.push(pc); }
-  }
-}
-// Video and motion: the viewer's picture drops and splits into three copies, cropped wide, tall and square, for the tablet on
-// its side and the two phones, whose bodies build round them. Then the plays start, in step with the viewer.
+// Video and motion: the ball becomes the tablet on its side and the two phones. Their plays start once every piece is built, in
+// step with the viewer.
 function screensOut(P, t, s, art) {
-  const key = s === SCRIPTS.pr ? 'pr' : 'ae', tau = dropClock(key, s, t);
-  if (tau === null) return;
-  const kind = art[0] === 'playerWide' ? 'video' : 'motion', { land } = playbackSpans(s);
-  const clock = Math.max(0, (t - land) / PACE) % 1.6 / 1.6, widths = [WIDE, SLIM, SLIM];
+  const key = s === SCRIPTS.pr ? 'pr' : 'ae', a = action(s, 'export').start, { land, off } = playbackSpans(s);
+  if (t < a || t >= off[1]) return;
+  const kind = art[0] === 'playerWide' ? 'video' : 'motion';
+  const clock = Math.max(0, (Math.min(t, off[0]) - land) / PACE) % 1.6 / 1.6, widths = [WIDE, SLIM, SLIM];   // held through the sink
   let left = MAT.x;
-  const parts = widths.map((w, i) => {
+  const formats = widths.map((w, i) => {
     const face = [], rim = i ? SLIM_RIM : 0.075, d = i ? SLIM_D : ROW, z = MAT.z + ROW - d;
     const slab = { ...device(left, z, w, d, undefined, { rim, round: i ? 0.16 : 0.09 })[0], deviceBody: true };
     const F = i ? [left + SLIM_SCREEN[0], z + SLIM_SCREEN[1], SLIM_SCREEN[2], SLIM_SCREEN[3]] : [left + rim, z + rim, w - 2 * rim, d - 2 * rim];
     playback(face, floorPainter(face, F), kind, i, clock);
     for (const pc of [slab, ...face]) { pc.clock = clock; pc.device = i; }
     left += w + MAT.gap;
-    return { j: 0, faces: face.map(pc => ({ pc, T: slab.s[2] * 2 })), F, grow: [slab] };
+    return { pieces: [slab, ...face], shape: lyingShape(slab) };
   });
-  const sheet = sheetOf(0, workIn(P, VIEW), VIEW, { land: [MAT.x, MAT.z, MAT.w, ROW] });
-  parts.forEach(part => { part.S = fitIn(part.F[2], part.F[3], sheet.flat); });
-  dropOut(P, tau, key, [sheet], parts);
+  exportOut(P, s, t, key, formats);
   P.clock = clock;
 }
 
@@ -434,35 +408,34 @@ function lidPainter(P) {
   };
   draw.size = [w, h]; return draw;
 }
-// UX/UI: each of the canvas's three frames peels off on its own, 0.1 s apart, and tips down to its device: the laptop's screen,
-// the tablet and the phone. The tablet's and phone's bodies build round their screens; the laptop's body slides in from the left
-// under its dropped screen and its lid rises to meet it. The shared cycle starts once the last body is built.
+// UX/UI: the ball becomes the laptop (closed: the deck with the lid shut on it), the tablet and the phone. The laptop's lid opens
+// to its 12 degree lean once its wipe has ended (CORRECTIONS-15: it no longer slides in from the top left). The shared cycle
+// starts once the lid is open; Figma's three frames stay on the canvas throughout.
 function prototypeOut(P, t, s) {
-  const tau = dropClock('fig', s, t);
-  if (tau === null) return;
-  const g = UI_ROW, { land, off } = playbackSpans(s), clock = Math.max(0, (Math.min(t, off[0]) - land) / PACE) / 3, shown = t < land ? -1 : clock;
-  const parts = [0, 1, 2].map(i => {
+  const a = action(s, 'export').start, g = UI_ROW, { land, off } = playbackSpans(s);
+  if (t < a || t >= off[1]) return;
+  const clock = Math.max(0, (Math.min(t, off[0]) - land) / PACE) / 3, shown = t < land ? -1 : clock;
+  const formats = [0, 1, 2].map(i => {
     const kind = ['laptop', 'tablet', 'phone'][i], body = [], face = [];
-    let part;
     if (i === 0) {
       body.push({ ...flat('ink', g.hinge, MAT.z + g.lean, g.lidW, g.deck, 0.08), deviceBody: true });
       body.push(flat('night', g.hinge + 0.065, MAT.z + g.lean + 0.12, 1.42, 0.62, 0.008, undefined, 0.081), flat('dark', g.hinge + 0.5, MAT.z + g.lean + 0.85, 0.55, 0.18, 0.008, undefined, 0.081));
       for (let row = 0; row < 5; row++) for (let key = 0; key < 9; key++) body.push(flat('dark', g.hinge + 0.09 + key * 0.151, MAT.z + g.lean + 0.14 + row * 0.115, 0.115, 0.082, 0.005, undefined, 0.091));
       body.push({ ...box('ink', lidPoint(g.lidW / 2, g.lidH / 2), [g.lidW, g.lidH, 0.04]), q: quatFromBasis(lidU, lidV), lid: true });
       prototype(lidPainter(face), 0, shown);
-      part = { j: 0, faces: face.map(pc => ({ pc, T: 0 })), slide: body };
     } else {
       const x = i === 1 ? g.tablet : g.phone, w = i === 1 ? g.tabW : g.phoneW, d = i === 1 ? g.tabD : g.phoneD, z = MAT.z + (i === 1 ? g.tabZ : g.phoneZ), rim = i === 1 ? g.rim : g.phoneRim;
       body.push({ ...device(x, z, w, d, undefined, { rim, round: 0.03 })[0], deviceBody: true });
       prototype(floorPainter(face, [x + rim, z + rim, w - 2 * rim, d - 2 * rim]), i, shown);
-      part = { j: i, faces: face.map(pc => ({ pc, T: body[0].s[2] * 2 })), F: [x + rim, z + rim + g.forward, w - 2 * rim, d - 2 * rim], grow: body };
     }
     // The whole row sits 0.4 forward of the mat (round 5, H10).
     for (const pc of [...body, ...face]) { pc.p[2] += g.forward; pc.device = i; pc.deviceKind = kind; pc.clock = clock; }
-    return part;
+    if (i) return { pieces: [...body, ...face], shape: lyingShape(body[0]) };
+    // The closed laptop's block: the deck's footprint, up to the top of the lid lying shut on it (see poseLid), sharp like the deck.
+    const pivot = lidPoint(0, 0).map((n, k) => n + (k === 2 ? g.forward : 0));
+    return { pieces: [...body, ...face], shape: [g.hinge, MAT.z + g.lean + g.forward, g.lidW, g.deck, pivot[1] + 0.03 + 0.02, body[0].e.slice()], lid: { pieces: [body.at(-1), ...face], pivot } };
   });
-  const sheets = FIG.designs.map((r, j) => ({ ...sheetOf(j, workIn(P, r), r, j ? { land: parts[j].F } : { lid: true }), device: j }));
-  dropOut(P, tau, 'fig', sheets, parts);
+  exportOut(P, s, t, 'fig', formats);
   P.clock = clock;
 }
 
@@ -691,7 +664,7 @@ export const FIG = (() => {
 const topLeft = r => [r[0], r[1] + r[3]], bottomRight = r => [r[0] + r[2], r[1]];
 const inRect = (outer, r) => [outer[0] + r[0] * outer[2], outer[1] + (1 - r[1] - r[3]) * outer[3], r[2] * outer[2], r[3] * outer[3]];
 const HERO_REGION = [665 / 1440, 119 / 900, 678 / 1440, 682 / 900], HERO_SOURCE = [PANEL + 0.15, TOP - 1.05, 0.55, 0.55];
-const ID = (() => {
+export const ID = (() => {
   const gap = 0.12, low = 1, pw = 1.6, ph = pw * 340 / 440, x = CANVAS.l + (CANVAS.w - 2 * pw) / 2, y2 = CANVAS.b + (CANVAS.h - ph - low - gap) / 2, y = y2 + low + gap;
   const cw = low * 440 / 340, ew = 2 * pw - cw - low - 2 * gap, cover = [x, y2, cw, low], post = [x + cw + gap, y2, low, low], mail = [x + cw + low + 2 * gap, y2, ew, low];
   const frame = [x + 34 / 1100 * pw, y + ph - 826 / 850 * ph, (2056 - 34) / 1100 * pw, (826 - 84) / 850 * ph];
@@ -708,8 +681,8 @@ const AI = (() => {
   return { upper: [x, y, pw, ph], lower: [x, y2, lw, low], close, frame, at, segments, subway };
 })();
 const mapPoint = (r, x, y, w, h) => [r[0] + x / w * r[2], r[1] + (1 - y / h) * r[3]];
-// CORRECTIONS-13: after Export's 0.7 s, each row scene holds through its drop and its plays (two of 1.6 s, or Figma's 3.0 s cycle).
-const EXPORT_HOLD = { pr: dropLength('pr') + 3.2 - 0.7, ae: dropLength('ae') + 3.2 - 0.7, fig: dropLength('fig') + 3 - 0.7 };
+// CORRECTIONS-15: after Export's 0.7 s, each row scene holds through its ball and its plays (two of 1.6 s, or Figma's 3.0 s cycle).
+const EXPORT_HOLD = { pr: ballLength('pr') + 3.2 - 0.7, ae: ballLength('ae') + 3.2 - 0.7, fig: ballLength('fig') + 3 - 0.7 };
 export const SCRIPTS = {
   ps: script([
     { id: 'open', kind: 'click', from: centre(PHOTO), duration: 0.3, tool: 'tMove' },
@@ -741,25 +714,25 @@ export const SCRIPTS = {
     { id: 'fade', kind: 'slide', from: [4.33, 0.31], to: [4.33, 0.16], duration: 0.25 },
     { id: 'play', kind: 'play', from: PLAY, duration: 1.6 },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.7 },
-  ], { hold: EXPORT_HOLD.pr, tail: DROP.back }),
+  ], { hold: EXPORT_HOLD.pr, tail: BALL.sink }),
   ae: script([
     { id: 'comp', kind: 'click', from: centre(VIEW), duration: 0.3 },
     { id: 'make', kind: 'type', from: compPoint([34, 98]), text: 'Make it', tool: 'type' },
     { id: 'move', kind: 'type', from: compPoint([34, 162]), text: 'move.', tool: 'type' },
-    { id: 'ball', kind: 'draw', from: compPoint([BALL_FROM[0] - BALL[2], BALL_FROM[1] - BALL[2]]), to: compPoint([BALL_FROM[0] + BALL[2], BALL_FROM[1] + BALL[2]]), duration: 0.25, tool: 'ellipse' },
+    { id: 'ball', kind: 'draw', from: compPoint([BALL_FROM[0] - COMP_BALL[2], BALL_FROM[1] - COMP_BALL[2]]), to: compPoint([BALL_FROM[0] + COMP_BALL[2], BALL_FROM[1] + COMP_BALL[2]]), duration: 0.25, tool: 'ellipse' },
     { id: 'row', kind: 'draw', from: compPoint(ROWS[0]), to: compPoint([ROWS[0][0] + ROWS[0][2], ROWS[0][1] + ROWS[0][3]]), duration: 0.25, tool: 'rectangle' },
     { id: 'copies', kind: 'run', from: compPoint(ROWS[1]), to: compPoint(ROWS[2]), count: 2 },
     { id: 'select', kind: 'click', from: [0.7, 0.605], tool: 'arrow' },
     { id: 'stopwatch', kind: 'click', from: [1.14, 0.605] },
     { id: 'head', kind: 'drag', from: [1.34, 1.06], to: [2.79, 1.06], duration: 0.25 },
-    { id: 'path', kind: 'drag', from: compPoint(BALL_FROM), to: compPoint(BALL), curve: [BALL_FROM, BALL_VIA, BALL].map(compPoint), duration: 0.35 },
+    { id: 'path', kind: 'drag', from: compPoint(BALL_FROM), to: compPoint(COMP_BALL), curve: [BALL_FROM, BALL_VIA, COMP_BALL].map(compPoint), duration: 0.35 },
     { id: 'marquee', kind: 'draw', from: [1.36, 0.93], to: [3.46, 0.13], duration: 0.25 },
     { id: 'keys', kind: 'run', from: [1.44, 0.885], to: [3.34, 0.185], count: 5 },
     { id: 'staggerBall', kind: 'drag', from: [1.34, 0.605], to: [2.09, 0.605], duration: 0.2 },
     { id: 'graph', kind: 'slide', from: graphPoint([88, 176 - 152 / 3]), to: graphPoint([115.2, 176]), duration: 0.6 },
     { id: 'play', kind: 'play', from: PLAY, duration: 1.6 },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.7 },
-  ], { hold: EXPORT_HOLD.ae, tail: DROP.back }),
+  ], { hold: EXPORT_HOLD.ae, tail: BALL.sink }),
   fig: script([
     ...FIG.wires.map((r, i) => ({ id: 'frame' + i, kind: 'draw', from: topLeft(r), to: bottomRight(r), duration: 0.3, tool: 'frame' })),
     { id: 'pictureBox', kind: 'draw', from: topLeft(inRect(FIG.wires[0], HERO_REGION)), to: bottomRight(inRect(FIG.wires[0], HERO_REGION)), duration: 0.25, tool: 'rectangle' },
@@ -776,7 +749,7 @@ export const SCRIPTS = {
     { id: 'link', kind: 'drag', from: FIG.from, to: FIG.to, duration: 0.6 },
     { id: 'panel', kind: 'run', from: [PANEL + 0.2, TOP - 0.46], to: [PANEL + 0.45, 0.32], count: 5, duration: 0.2 },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.7 },
-  ], { hold: EXPORT_HOLD.fig, tail: DROP.back }),
+  ], { hold: EXPORT_HOLD.fig, tail: BALL.sink }),
   id: script([
     // CORRECTIONS-12 I1: no frames are drawn. The document opens with its blank pages already there (see blankPages).
     { id: 'map', kind: 'drag', from: centre(DOCK.map), to: centre(ID.frame), duration: 0.45, tool: 'arrow' },
@@ -797,7 +770,7 @@ export const SCRIPTS = {
     { id: 'mailButton', kind: 'draw', from: topLeft(inRect(ID.mail, [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180])), to: bottomRight(inRect(ID.mail, [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180])), duration: 0.18, tool: 'rectangle' },
     { id: 'mailFlyer', kind: 'type', from: topLeft(inRect(ID.mail, [70 / 800, 1057 / 1180, 225 / 800, 30 / 1180])), text: 'View the flyer', duration: 0.4, tool: 'type' },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.8 },
-    { id: 'drop', kind: 'wait', duration: dropLength('id') - 0.8 },   // CORRECTIONS-13: the drop goes on after the button has filled
+    { id: 'drop', kind: 'wait', duration: ballLength('id') - 0.8 },   // CORRECTIONS-15: the ball goes on after the button has filled
     { id: 'land', kind: 'wait', duration: 3.0 },
     { id: 'pickup', kind: 'wait', duration: 0.7 },
     { id: 'open', kind: 'wait', duration: 0.1 },
@@ -809,7 +782,7 @@ export const SCRIPTS = {
     { id: 'pause3', kind: 'wait', duration: 0.3 },
     { id: 'leaf4', kind: 'wait', duration: 0.6 },
     { id: 'read', kind: 'wait', duration: 0.3 },
-    { id: 'return', kind: 'wait', duration: DROP.back },
+    { id: 'return', kind: 'wait', duration: BALL.sink },   // CORRECTIONS-15 S2: the sink
   ], { tail: 0, start: centre(DOCK.loc) }),
   ai: script([
     ...[AI.upper, AI.lower].map((r, i) => ({ id: 'board' + i, kind: 'draw', from: topLeft(r), to: bottomRight(r), duration: 0.3, tool: 'rectangle' })),
@@ -900,7 +873,7 @@ function typedPicture(P, rect, art, words, p, { tone = 'paper', colour = 'ink', 
 function dragPicture(P, s, id, t, from, to, art, tone = 'ink') {
   if (!begun(s, id, t)) { P.push(on(tone, ...from, { lift: 0.07, t: 0.015, art })); return; }
   const p = handed(s, id, t), rect = rectMix(from, to, p);
-  const pc = on(tone, ...rect, { lift: 0.08 + 0.08 * Math.sin(Math.PI * p), t: 0.015, art });
+  const pc = on(tone, ...rect, { lift: 0.08, t: 0.015, art });   // N2: one height, no arc
   if (ART[art].photoProfile) {
     const aspect = ART[art].w / ART[art].h, ratio = rect[2] / rect[3];
     const w = Math.min(1, ratio / aspect), h = Math.min(1, aspect / ratio);
@@ -908,25 +881,26 @@ function dragPicture(P, s, id, t, from, to, art, tone = 'ink') {
     pc.photoProfile = ART[art].photoProfile;
     if (from === DOCK.photo && p < 1) {
       const rim = 0.012 * (1 - p);
-      P.push({ ...on('grey', rect[0] - rim, rect[1] - rim, rect[2] + rim * 2, rect[3] + rim * 2, { lift: 0.06 + 0.08 * Math.sin(Math.PI * p), t: 0.012 }), where: 'travel', action: id });
+      P.push({ ...on('grey', rect[0] - rim, rect[1] - rim, rect[2] + rim * 2, rect[3] + rim * 2, { lift: 0.06, t: 0.012 }), where: 'travel', action: id });
     }
   }
   if (!done(s, id, t)) { pc.where = 'travel'; pc.action = id; }
   P.push(pc);
 }
-// CORRECTIONS-13: each piece's span runs from its peel to the end of its "become"; land is when every body is built, which starts
-// the plays (two of 1.6 s, or Figma's one 3.0 s cycle). off: the return, the drop played backwards over DROP.back. InDesign's
-// return is its own wait.
+// CORRECTIONS-15: each piece's span runs from the Export click to the end of its "become" (its wipe; the laptop's lid); land is when
+// every piece is built, which starts the plays (two of 1.6 s, or Figma's one 3.0 s cycle) and the labels. off: the sink, BALL.sink
+// long. InDesign's sink is its own wait, 'return'.
 export function playbackSpans(s) {
   const key = Object.keys(SCRIPTS).find(k => SCRIPTS[k] === s), a = action(s, 'export').start;
-  const spans = [0, 1, 2].map(j => { const b = dropBeats(key, j); return [a + b.start * PACE, a + b.become * PACE]; }), land = a + dropLength(key) * PACE;
+  const spans = [0, 1, 2].map(j => { const b = ballBeats(key, j); return [a + b.start * PACE, a + b.become * PACE]; }), land = a + ballLength(key) * PACE;
   if (key === 'id') { const back = action(s, 'return'); return { spans, land, off: [back.start, back.end] }; }
   return { spans, land, off: [land + (key === 'fig' ? 3 : 3.2) * PACE, s.len] };
 }
 function exportPlay(s, t) {
   const { land, off } = playbackSpans(s);
   if (s === SCRIPTS.fig) return t >= land && t < off[1] ? (Math.min(t, off[0]) - land) / (3 * PACE) : null;
-  return t >= land && t < off[1] ? ((t - land) / PACE % (s === SCRIPTS.fig ? 3 : 1.6)) / (s === SCRIPTS.fig ? 3 : 1.6) : null;
+  // CORRECTIONS-15 S2: the plays hold their frame while the exports sink (as Figma's cycle always has), so nothing moves but down.
+  return t >= land && t < off[1] ? ((Math.min(t, off[0]) - land) / PACE % 1.6) / 1.6 : null;
 }
 function editedVideo(t) {
   const P = [], D = [], s = SCRIPTS.pr;
@@ -952,7 +926,7 @@ function editedVideo(t) {
     const p = handed(s, id, t), cut = begun(s, 'cut', t), removed = done(s, 'offcut', t);
     const length = [1.3, cut ? 1.4 : 1.7, 1.2][i], start = [0, 1.3, 2.7 + gap][i];
     const to = [0.45 + start, 0.51, length - 0.02, 0.29], r = rectMix(BINS[i], to, p), moving = !done(s, id, t);
-    const lift = 0.05 + 0.08 * Math.sin(Math.PI * p), clip = on(i === 1 ? 'red' : 'grey', ...r, { lift, t: 0.03 });
+    const lift = 0.05, clip = on(i === 1 ? 'red' : 'grey', ...r, { lift, t: 0.03 });
     const thumb = rectMix(BINS[i], [to[0] + 0.03, 0.54, 0.46, 0.23], p);
     const image = on('ink', ...thumb, { lift: lift + 0.035, t: 0.004, art: ['thumbA', 'thumbB', 'thumbC'][i] });
     const voice = on('dark', r[0], r[1] - 0.10, r[2], 0.075, { lift, t: 0.01, art: 'wave' });
@@ -1018,7 +992,7 @@ function constructedComp(P, rect, s, t, born, carets = true) {
   if (born(0)) typedPicture(P, inRect(rect, norm([28, 62, 232, 62])), 'wMake', 'Make it', phase(s, 'make', t), { caret: carets });
   if (born(1)) typedPicture(P, inRect(rect, norm([28, 136, 168, 52])), 'wMove', 'move', phase(s, 'move', t), { colour: 'red', caret: carets });
   if (born(2)) {
-    const p = handed(s, 'ball', t), pos = begun(s, 'path', t) ? quadratic(BALL_FROM, BALL_VIA, BALL, handed(s, 'path', t)) : BALL_FROM, r = BALL[2];
+    const p = handed(s, 'ball', t), pos = begun(s, 'path', t) ? quadratic(BALL_FROM, BALL_VIA, COMP_BALL, handed(s, 'path', t)) : BALL_FROM, r = COMP_BALL[2];
     draw('paper', norm([pos[0] - r, pos[1] - r, 2 * r * p, 2 * r * p]), 'redBall');
   }
   ROWS.forEach((r, i) => {
@@ -1052,14 +1026,14 @@ function editedMotion(t) {
     tagEcho(D, ['ball', 'row', 'copies', 'copies'][i], echoStart);
   });
   if (selected) {
-    const at = clock === null ? 1.6 : clock * 2.4, pos = clock === null ? quadratic(BALL_FROM, BALL_VIA, BALL, handed(s, 'path', t)) : quadratic(BALL_FROM, BALL_VIA, BALL, EASE.wipe(linear(at, ...LAYERS[2][5])));
-    const [x, y] = compPoint(pos), half = (BALL[2] + 8) * VIEW[2] / 480;
+    const at = clock === null ? 1.6 : clock * 2.4, pos = clock === null ? quadratic(BALL_FROM, BALL_VIA, COMP_BALL, handed(s, 'path', t)) : quadratic(BALL_FROM, BALL_VIA, COMP_BALL, EASE.wipe(linear(at, ...LAYERS[2][5])));
+    const [x, y] = compPoint(pos), half = (COMP_BALL[2] + 8) * VIEW[2] / 480;
     if (clock === null || at >= LAYERS[2][5][0]) {
       D.push(...outline(x - half, y - half, half * 2, half * 2, { line: 0.012 }));
       for (const dx of [-1, 1]) for (const dy of [-1, 1]) D.push(on('red', x + dx * half - 0.02, y + dy * half - 0.02, 0.04, 0.04, { lift: 0.09, t: 0.008, overlay: true }));
     }
     const n = begun(s, 'path', t) ? Math.floor(handed(s, 'path', t) * 12) : 0;
-    for (let i = 1; i < Math.min(12, n + 1); i++) { const [px, py] = compPoint(quadratic(BALL_FROM, BALL_VIA, BALL, i / 12)), w = 60 * 0.056 * VIEW[2] / 480; D.push(on('dark', px - w / 2, py - w / 2, w, w, { lift: 0.086, t: 0.004 })); }
+    for (let i = 1; i < Math.min(12, n + 1); i++) { const [px, py] = compPoint(quadratic(BALL_FROM, BALL_VIA, COMP_BALL, i / 12)), w = 60 * 0.056 * VIEW[2] / 480; D.push(on('dark', px - w / 2, py - w / 2, w, w, { lift: 0.086, t: 0.004 })); }
     const [sx, sy] = compPoint(BALL_FROM), w = 60 * 0.16 * VIEW[2] / 480;
     if (begun(s, 'stopwatch', t)) D.push(...outline(sx - w / 2, sy - w / 2, w, w, { tone: 'dark', line: 60 * 0.04 * VIEW[2] / 480 }));
   }
@@ -1191,7 +1165,7 @@ function editedFigma(t) {
     if (done(s, 'hero', t)) art = 'uiBuild2' + suffix;
     if (done(s, 'name', t)) art = 'uiBuild3' + suffix;
     if (begun(s, 'accent' + i, t)) art = ['uiWide', 'uiTablet', 'uiTall'][i];
-    const pc = on('ink', ...place, { lift: 0.06 + 0.08 * Math.sin(Math.PI * p), t: 0.02, art });
+    const pc = on('ink', ...place, { lift: 0.06, t: 0.02, art });   // N2: one height, no arc
     if (!done(s, 'copies', t)) { pc.where = 'travel'; pc.action = 'copies'; }
     pc.echo = 'copies';
     if (clock === null) D.push(pc);
@@ -1268,11 +1242,7 @@ function editedInDesign(t, { at: pages } = {}) {
         patches.forEach(([r, art, region], i) => { if (n >= i) pictureRegion(D, r, art, region); });
       }
     }
-    if (done(s, 'map', t)) {
-      const [x, y, w, h] = ID.frame;
-      D.push(...outline(x, y, w, h, { line: 0.012 }));
-      [[x, y + h], [x + w / 2, y + h], [x + w, y + h], [x, y + h / 2], [x + w, y + h / 2], [x, y], [x + w / 2, y], [x + w, y]].forEach(([x, y]) => D.push(handle(x, y)));
-    }
+    // CORRECTIONS-15 N1: once placed, the map shows as it is, with no selection outline or handles.
     const tw = 0.36, th = tw * 340 / 440, mid = PANEL + 0.425;
     [[null, 'kCover'], ['kOfferL', 'kOfferR'], ['kLocL', 'kLocR'], ['kAmL', 'kAmR'], ['kGalL', 'kGalR'], ['kBack', null]].forEach(([left, right], i) => {
       const repeat = [1, 4, 5].indexOf(i);
@@ -1326,41 +1296,18 @@ function editedInDesign(t, { at: pages } = {}) {
   D.forEach(pc => pc.document = true); P.push(...D);
   const floor = [], at = pages ?? readBook(s, t);
   prints(floor, at);
-  bookletOut(P, s, t, floor, at);
+  bookletOut(P, s, t, floor);
   return P;
 }
-// InDesign: the finished document drops and splits into the flyer (the top copy of the stack, which then rises under it), the
-// LinkedIn post (into the phone) and the e-blast (into the tablet). The spread slides in under the flyer's cover and is gone with
-// the split. On the return the copy that was read, lying open, is the spread's part: it closes back into the sheet's spread.
+// InDesign: the ball becomes the booklet stack (with the copy that is read lying on top), the LinkedIn post's phone and the
+// e-blast's tablet. The land, pickup, opening and leaf turns follow as before; on the sink the copy lying open goes down with them.
 // floor: as prints() builds it: the stack's five copies (0-9), the phone (10, 11), the tablet (12, 13), then the copy that is
 // read: on the stack (14, 15), or open (14 its right pages, 15 its left pages, 16 the leaf that landed on them).
-function bookletOut(P, s, t, floor, at) {
-  const tau = dropClock('id', s, t);
-  if (tau === null) return;
-  if (tau >= dropLength('id') * PACE) { for (const pc of floor) { pc.where = 'floor'; P.push(pc); } return; }
-  const doc = [ID.spread[0], ID.cover[1], ID.spread[2], ID.spread[1] + ID.spread[3] - ID.cover[1]];
-  const sheet = sheetOf(0, workIn(P, doc), doc, { land: [BLOCK.x0, BLOCK.z0, 2 * LEAF, DEEP] });   // I2: the row behind spans the block
-  const bottom = pc => pc.p[1] - pc.s[2], device = (slab, screen) => {
-    const F = [screen.p[0] - screen.s[0], screen.p[2] - screen.s[1], 2 * screen.s[0], 2 * screen.s[1]];
-    return { j: 0, faces: [{ pc: screen, T: bottom(screen) }], F, grow: [slab] };
-  };
-  const post = device(floor[10], floor[11]), mail = device(floor[12], floor[13]);
-  post.S = fitIn(post.F[2], post.F[3], sheet.landed(ID.post)); mail.S = fitIn(mail.F[2], mail.F[3], sheet.landed(ID.mail));
-  const stack = [BLOCK_ROW.stack[0], BLOCK_ROW.stack[1], LEAF, DEEP];
-  let parts;
-  if (at < 0) {
-    // The spread's part is the sheet's own spread, landed; it slides in under the flyer's cover.
-    const spread = carry(workIn(P, ID.spread), sheet.pivot, sheet.to, sheet.k, sheet.deg), over = Math.max(...spread.map(pc => pc.p[1] + pc.s[2])) + 0.002;
-    const S = sheet.landed(ID.spread), F = fitIn(S[2], S[3], stack);
-    const cover = floor[15], flyer = { j: 0, faces: [{ pc: cover, T: bottom(cover) - over }], F: stack, S: sheet.landed(ID.cover), rise: [...floor.slice(0, 10), floor[14]] };
-    parts = [{ j: 0, faces: spread.map(pc => ({ pc, T: 0 })), F, S, transient: true }, flyer, post, mail];
-  } else {
-    const cover = floor[9], read = [BLOCK.x0, BLOCK.z0 + DEEP + GUT, 2 * LEAF, DEEP];
-    const flyer = { j: 0, faces: [{ pc: cover, T: bottom(cover) }], F: stack, S: sheet.landed(ID.cover), rise: floor.slice(0, 9) };
-    const open = floor.length > 16 ? { j: 0, faces: [floor[14], floor[16]].map(pc => ({ pc, T: bottom(pc) })), F: read, S: sheet.landed(ID.spread), rise: [floor[15]] } : { j: 0, faces: floor.slice(14).map(pc => ({ pc, T: 0 })), F: read, S: sheet.landed(ID.spread) };
-    parts = [open, flyer, post, mail];
-  }
-  dropOut(P, tau, 'id', [sheet], parts);
+function bookletOut(P, s, t, floor) {
+  const formats = [[...floor.slice(0, 10), ...floor.slice(14)], floor.slice(10, 12), floor.slice(12, 14)].map(pieces => ({ pieces }));
+  formats[0].shape = [...BLOCK_ROW.stack, COPIES * COPY, floor[0].e.slice()];
+  formats[1].shape = lyingShape(floor[10]); formats[2].shape = lyingShape(floor[12]);
+  exportOut(P, s, t, 'id', formats);
 }
 function mapRegion(P, rect, art, r, w, h, amount = 1, upward = false) {
   const [x, y, rw, rh] = r;
@@ -1502,29 +1449,33 @@ function build(i, at, o) {
     const placed = carried.map(pc => pc.p);
     P.forEach((pc, k) => { pc.p = authored[k]; });
     separateFaces(P.filter(pc => !carried.includes(pc)));
-    carried.forEach((pc, k) => { pc.p = placed[k]; });
+    // CORRECTIONS-15 N2: the carried pictures keep their authored height (one height from pickup to drop), so the page's
+    // separation never moves them in the picture; clearCarried lifts them along the view instead. The cursor keeps its place.
+    carried.forEach((pc, k) => { pc.p = pc.art === 'cursor' ? placed[k] : authored[P.indexOf(pc)]; });
   } else separateFaces(P);
   if (i === 2) liftDragStack(P);
   clearCarried(P, carried);
+  // CORRECTIONS-15 S1: where the export's ball or blocks come in front of the cursor, the cursor stays in front, in depth only.
+  const cursor = P.find(pc => pc.art === 'cursor'), solids = P.filter(pc => pc.solid);
+  if (cursor && solids.length) {
+    const near = Math.max(...solids.map(pc => dot3(HOME.v, pc.p) + Math.hypot(...pc.s))) - (dot3(HOME.v, cursor.p) - cursor.s[2]) + 0.05;
+    if (near > 0) cursor.near = near;
+  }
   return P;
 }
 // G1: with the stack out of the page's separation, a carried face may now sit level with a face it passes over. Lift the
 // whole stack along the view (no move on the page) just enough to clear every such tie; nothing else moves.
+// CORRECTIONS-15 N2: the carried pictures now keep one height, so the lift clears every face they overlap, not only near ties:
+// each carried face ends at least one layer step above every face it passes over (the cursor goes up with them).
 function clearCarried(P, stack) {
   if (!stack.length) return;
   const step = LAYER_STEP * U, flat = pc => { const points = corners(pc); return [Math.min(...points.map(p => p[0])), Math.min(...points.map(p => p[1])), Math.max(...points.map(p => p[0])), Math.max(...points.map(p => p[1]))]; };
   const faces = list => list.filter(pc => pc.where !== 'floor').map(pc => ({ top: pc.p[2] + pc.s[2], r: flat(pc) }));
-  const mine = faces(stack), others = faces(P.filter(pc => !stack.includes(pc)));
+  const mine = faces(stack.filter(pc => pc.art !== 'cursor')), others = faces(P.filter(pc => !stack.includes(pc)));
   let rise = 0;
-  for (let k = 0; k < 16; k++) {
-    let need = rise;
-    for (const c of mine) for (const o of others) {
-      if (!(c.r[0] < o.r[2] - 1e-9 && c.r[2] > o.r[0] + 1e-9 && c.r[1] < o.r[3] - 1e-9 && c.r[3] > o.r[1] + 1e-9)) continue;
-      const gap = c.top + rise - o.top;
-      if (Math.abs(gap) < step) need = Math.max(need, o.top + step - c.top);
-    }
-    if (need === rise) break;
-    rise = need;
+  for (const c of mine) for (const o of others) {
+    if (!(c.r[0] < o.r[2] - 1e-9 && c.r[2] > o.r[0] + 1e-9 && c.r[1] < o.r[3] - 1e-9 && c.r[3] > o.r[1] + 1e-9)) continue;
+    rise = Math.max(rise, o.top + step - c.top);
   }
   if (!(rise > 0)) return;
   const offset = HOME.v.map(n => n * rise / HOME.v[2]);
@@ -1578,7 +1529,7 @@ function liftDragStack(P) {
 function separateFaces(P) {
   for (const floor of [false, true]) {
     const axis = floor ? 1 : 2, across = floor ? 2 : 1, step = LAYER_STEP * (floor ? 1 : U);
-    const faces = P.filter(pc => (pc.where === 'floor') === floor).flatMap(pc => {
+    const faces = P.filter(pc => (pc.where === 'floor') === floor && !pc.solid).flatMap(pc => {   // CORRECTIONS-15: the ball's red volumes are not faces
       const [x, y, z, w] = pc.q, normal = floor ? 2 * (y * z - w * x) : 1 - 2 * (x * x + y * y);
       if (normal < 1 - 1e-9) return [];
       const points = corners(pc), xs = points.map(p => p[0]), ys = points.map(p => p[across]);
@@ -1613,7 +1564,7 @@ export function calloutsAt(t) {
   const { scene, at } = sceneAt(t), key = scene.key;
   if (!['id', 'pr', 'ae', 'fig'].includes(key)) return [];
   const s = SCRIPTS[key], timing = playbackSpans(s), exp = action(s, 'export');
-  const ends = timing.spans.map(span => span[1]);   // CORRECTIONS-13: each from its piece's "become" end
+  const ends = timing.spans.map(() => timing.land);   // CORRECTIONS-15: all from the last piece's "become" end (Figma's lid open)
   const off = key === 'id' ? action(s, 'pickup').start : timing.off[0];
   if (at < Math.min(...ends) - 1e-9 || at >= off - 1e-9) return [];
   const P = frameAt(t), floor = P.filter(pc => pc.where === 'floor');
@@ -1630,7 +1581,7 @@ export function calloutsAt(t) {
     } else {
       const [x, z, w, d] = rects[i], px = i === 0 ? x + 0.1 : i === 1 ? x + w / 2 : x + w - 0.1, pz = i === 1 ? z + d - 0.06 : z + 0.1;
       const faces = floor.filter(pc => {
-        if (key !== 'id' && (!pc.deviceBody || pc.device !== i)) return false;
+        if (false) return false;
         if (quatRotate(pc.q, [0, 0, 1])[1] < 1 - 1e-8) return false;
         const cs = corners(pc), xs = cs.map(p => p[0]), zs = cs.map(p => p[2]);
         return px >= Math.min(...xs) - 1e-8 && px <= Math.max(...xs) + 1e-8 && pz >= Math.min(...zs) - 1e-8 && pz <= Math.max(...zs) + 1e-8;
