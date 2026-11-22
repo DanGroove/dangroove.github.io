@@ -45,6 +45,14 @@ Dan's second note, pinned on v28 at Loop 82.85 s (Figma +1.90 s): "The mouse dra
 2. Fix the cause where it is (the growing shape's anchor, or the mapping between the cursor's space and the board's), not by moving the cursor. The drags' paths, timing and end states stay as they are.
 3. Add to the `consistency` check: for every such action in every scene, at five points of its duration, the shape's corner at the drag start stays put and its opposite corner is at the cursor's tip within 0.5 px in board units. Add a negative control that grows one frame from the opposite corner; the check must fail.
 
+## C18-5 The rows run 1 left open
+
+Run 1 (31150ff) built C18-1 to C18-3 and listed these in BUILD.md's audit table as "different" or "unsure".
+
+1. **The head before play (C18-1.4).** Keep the `head` action's start time and duration, and end its drag at 2.0 s instead of 1.45 s, so the head sits on the frame the viewer shows. The cursor travels a little further in the same time; no time changes and the loop stays 99.491 s. If that moves anything else (the ball's path, a later action), keep the fallback and say what moved.
+2. **Editor-only marks on exported screens.** The dotted motion path and the start key belong only in the in-app viewer. If a still that carries them (`motWide`, `motTall`, `motSq`, `compWide`) is drawn on an exported screen at any time, drop them there.
+3. **Premiere's posters** (`playerWide`, `reel`, `feedSq`). Find whether each is ever on screen. If one is, its caption must match the live caption tile at that moment. If none is, say so.
+
 ## Done when
 
 - `node design/journey-hero/take-2/tools/checks.mjs` prints `all clean`, and `node design/journey-hero/take-2/tools/round17-checks.mjs --controls` makes every negative control fail at its gate, the new controls of C18-3 and C18-4 included.
