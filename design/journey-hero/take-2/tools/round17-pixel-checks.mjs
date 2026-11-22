@@ -76,10 +76,69 @@ export function growMask(mask,width,height,radius) {
   return result;
 }
 export function intersectMasks(a,b) {assert.equal(a.length,b.length);return a.map((v,i)=>v&&b[i]?1:0);}
-export function textureVerdict(actual,reference) {
+export function textureVerdict(actual,reference,threshold=0) {
   const levels=[];
-  for(let n=0;n<4;n++) {const a=actual[n],b=reference[n];assert.ok(a&&b,'missing texture mip');assert.equal(a.level,n);assert.equal(b.level,n);assert.equal(a.width,b.width);assert.equal(a.height,b.height);assert.equal(a.pixels.length,a.width*a.height*4);assert.equal(a.pixels.length,b.pixels.length);let changed=0,maximum=0;for(let i=0;i<a.pixels.length;i++){const d=Math.abs(a.pixels[i]-b.pixels[i]);if(d)changed++;maximum=Math.max(maximum,d);}levels.push({level:n,width:a.width,height:a.height,changed,maximum});}
-  return {levels,pass:levels.every(p=>p.changed===0)};
+  for(let n=0;n<4;n++) {const a=actual[n],b=reference[n];assert.ok(a&&b,'missing texture mip');assert.equal(a.level,n);assert.equal(b.level,n);assert.equal(a.width,b.width);assert.equal(a.height,b.height);assert.equal(a.pixels.length,a.width*a.height*4);assert.equal(a.pixels.length,b.pixels.length);let changed=0,maximum=0;for(let i=0;i<a.pixels.length;i++){const d=Math.abs(a.pixels[i]-b.pixels[i]);if(d>threshold)changed++;maximum=Math.max(maximum,d);}levels.push({level:n,width:a.width,height:a.height,changed,maximum});}
+  return {levels,threshold,pass:levels.every(p=>p.changed===0)};
+}
+// A selection is four actual thin pieces, never a box hiding the picture inside it.
+export function strokePolygon(a,b,width) {
+  const dx=b[0]-a[0],dy=b[1]-a[1],length=Math.hypot(dx,dy);assert.ok(length>0&&width>0,'empty selection stroke');
+  const x=-dy/length*width/2,y=dx/length*width/2;
+  return [[a[0]+x,a[1]+y],[b[0]+x,b[1]+y],[b[0]-x,b[1]-y],[a[0]-x,a[1]-y]];
+}
+export function spineLines(points,dpr) {
+  assert.ok(points.length>1,'empty spine line');const dx=points.at(-1)[0]-points[0][0],dy=points.at(-1)[1]-points[0][1],length=Math.hypot(dx,dy);assert.ok(length>0,'empty spine span');
+  return [-dpr,0,dpr].map(offset=>points.map(([x,y])=>[x-dy/length*offset,y+dx/length*offset]));
+}
+export function spineAttribution(image,points,dpr) {
+  const lines=spineLines(points,dpr).map((line,i)=>{
+    const mask=new Uint8Array(image.width*image.height);
+    const first=line[0],last=line.at(-1),steps=Math.ceil(Math.hypot(last[0]-first[0],last[1]-first[1])*2);
+    for(let n=0;n<=steps;n++){const x=Math.floor(first[0]+(last[0]-first[0])*n/steps),y=Math.floor(first[1]+(last[1]-first[1])*n/steps);if(x>=0&&y>=0&&x<image.width&&y<image.height)mask[y*image.width+x]=1;}
+    return {offset:(i-1)*dpr,...attributionCounts(image,mask),samplePixels:mask.reduce((a,b)=>a+b,0)};
+  });
+  return {lines,pass:lines.every(p=>p.pass&&p.samplePixels>0),samplePixels:lines.reduce((n,p)=>n+p.samplePixels,0),floor:lines.reduce((n,p)=>n+p.floor,0),side:lines.reduce((n,p)=>n+p.side,0),outline:lines.reduce((n,p)=>n+p.outline,0)};
+}
+export function parsePixelOptions(args) {
+  const result={releases:false,uses:[],previewPath:null};
+  for(let i=0;i<args.length;i++) {
+    const arg=args[i];
+    if(arg==='--releases') {result.releases=true;continue;}
+    if(arg==='--uses') {
+      assert.ok(args[i+1]&&!args[i+1].startsWith('--'),'--uses requires id[:from-to],...');
+      for(const token of args[++i].split(',')) {
+        const use=BUILDING_USES.find(u=>token===u.id||token.startsWith(u.id+':'));assert.ok(use,'unknown building use '+token);
+        const suffix=token.slice(use.id.length),m=suffix.match(/^:(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)$/);
+        assert.ok(!suffix||m,'invalid use window '+token);
+        const from=m?+m[1]:null,to=m?+m[2]:null;
+        assert.ok(!m||Number.isFinite(from)&&Number.isFinite(to)&&from<=to&&to<=SHOW.reduce((n,s)=>n+s.len,0),'invalid loop-second window '+token);
+        assert.ok(!result.uses.some(u=>u.id===use.id),'duplicate building use '+use.id);result.uses.push({id:use.id,from,to});
+      }
+      continue;
+    }
+    assert.ok(!arg.startsWith('--'),'unknown option '+arg);assert.equal(result.previewPath,null,'only one preview path is allowed');result.previewPath=arg;
+  }
+  return result;
+}
+export function buildWindow(use,options={}) {
+  const selected=options.uses?.find(u=>u.id===use.id);
+  if(options.uses?.length&&!selected||options.releases&&!selected)return null;
+  const first=globalStart(use.scene)+SCRIPTS[use.scene].actions.find(a=>a.id===use.first).start,end=useEnd(use);
+  const from=Math.max(first,selected?.from??first),to=Math.min(end,selected?.to??end);
+  return from<=to?{first:from,end:to,screenshots:!!options.uses?.length}:null;
+}
+export function ownReleasePiece(pc,release) {
+  return pictureOf(pc,release.picture)&&pc.where!=='floor'&&(release.scene==='id'&&['map','loc'].includes(release.action)||pc.where!=='travel'&&(!pc.echo||release.picture==='photo'));
+}
+export function placementMapPiece(pc) {return /^(?:kMap|kLoc(?:L|R)?|kAm(?:L|R))$/.test(pc.art||'');}
+export function requireOwnFaces(a,b) {
+  const before=a.reduce((n,v)=>n+v,0),after=b.reduce((n,v)=>n+v,0);assert.ok(before&&after,'empty own-face mask');return {before,after};
+}
+export function placementVerdict(current,reference,inside,visible) {
+  assert.ok(inside.some(Boolean),'empty placement map mask');
+  const outside=countDifferences(current,reference,maskWithout(visible,inside));
+  return {outside:{...outside,pass:outside.changed===0},inside:{...countDifferences(current,reference,inside),pass:null}};
 }
 export function costVerdict(samples) {
   assert.ok(samples.length,'no build cost samples');const sorted=[...samples].sort((a,b)=>a-b),mid=Math.floor(sorted.length/2),median=sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2,worst=sorted.at(-1);
@@ -126,6 +185,42 @@ export function checkPixelHelpers() {
   assert.equal(growMask(Uint8Array.of(0,0,0,0,1,0,0,0,0),3,3,1).reduce((a,b)=>a+b),5);
   const levels=Array.from({length:4},(_,level)=>({level,width:1,height:1,pixels:[17,0,0,255]}));
   assert.equal(textureVerdict(levels,levels).pass,true);assert.equal(textureVerdict(levels,levels.map((p,i)=>i===3?{...p,pixels:[18,0,0,255]}:p)).pass,false);
+  assert.equal(textureVerdict(levels,levels.map(p=>({...p,pixels:[25,0,0,255]})),8).pass,true,'endpoint mip: eight levels allowed');
+  assert.equal(textureVerdict(levels,levels.map((p,i)=>i===3?{...p,pixels:[26,0,0,255]}:p),8).pass,false,'endpoint mip: nine at level 3 fails');
+  assert.throws(()=>releaseVerdict({changed:0},0),/empty changed-picture/);
+  assert.throws(()=>requireOwnFaces(Uint8Array.of(0),Uint8Array.of(1)),/empty own-face/);
+  assert.throws(()=>requireOwnFaces(Uint8Array.of(1),Uint8Array.of(0)),/empty own-face/);
+  assert.deepEqual(requireOwnFaces(Uint8Array.of(1),Uint8Array.of(1)),{before:1,after:1});
+  assert.equal(ownReleasePiece({art:'photoRaw',echo:'open',where:'content'},{scene:'ps',picture:'photo'}),true,'photo echo remains its own face');
+  assert.equal(ownReleasePiece({art:'kLocL',echo:'loc',where:'content'},{scene:'id',action:'loc',picture:'kLoc'}),true,'placed location thumbnail is a map face');
+  assert.equal(placementMapPiece({art:'kLocR'}),true);assert.equal(placementMapPiece({art:'kCover'}),false);
+  const insideMask=Uint8Array.from({length:16},(_,i)=>i===1?1:0),visible=new Uint8Array(16).fill(1),reference={...a,pixels:new Uint8Array(64)},current={...a,pixels:new Uint8Array(64)};
+  current.pixels[4]=43;
+  assert.equal(placementVerdict(current,reference,insideMask,visible).outside.pass,true);assert.equal(placementVerdict(current,reference,insideMask,visible).inside.pass,null);
+  assert.equal(placementVerdict(current,reference,insideMask,visible).inside.maximum,43);
+  current.pixels[0]=9;assert.equal(placementVerdict(current,reference,insideMask,visible).outside.pass,false,'placement outside maps still fails');
+  assert.deepEqual(strokePolygon([1,2],[5,2],2),[[1,3],[5,3],[5,1],[1,1]]);
+  assert.equal(rasterMask(8,8,[strokePolygon([1,1],[7,7],1)])[3*8+4],0,'diagonal outline is not its bounding box');
+  const selectionState={view:{S:1,cx:0,cy:10,cam:{r:[1,0,0],u:[0,1,0]}},hero:{x:0,y:0},pieces:[[5,1,4,.1],[5,9,4,.1],[1,5,.1,4],[9,5,.1,4]].map(([x,y,w,h])=>({p:[x,y,0],s:[w,h,.001],q:[0,0,0,1],overlay:true,selectionRelease:'postButton',selectionLineWidth:.2}))};
+  const selected=selectionOutlines(selectionState,{action:'postButton'},{x:0,y:0},1),selectionMask=rasterMask(10,10,selected);
+  assert.equal(selected.length,4);assert.equal(selectionMask[5*10+5],0,'selection mask leaves picture centre exposed');assert.ok(selectionMask.some(Boolean));
+  assert.throws(()=>selectionOutlines({...selectionState,pieces:[{...selectionState.pieces[0],art:'wireWide'}]},{action:'postButton'},{x:0,y:0},1),/cannot hide picture ink/);
+  assert.equal(selectionOutlines(selectionState,{action:'details'},{x:0,y:0},1).length,0,'no separate details selection is inferred');
+  const parsed=parsePixelOptions(['--releases','--uses','ai:kMap:13.9-14.082,fig:wireTablet','preview.html']);
+  assert.deepEqual(parsed,{releases:true,uses:[{id:'ai:kMap',from:13.9,to:14.082},{id:'fig:wireTablet',from:null,to:null}],previewPath:'preview.html'});
+  for(const args of [['--uses'],['--uses','bad'],['--uses','ai:kMap:14-13'],['--uses','ai:kMap:0-1000'],['--uses','ai:kMap,ai:kMap'],['--bad'],['a','b']])assert.throws(()=>parsePixelOptions(args));
+  assert.equal(buildWindow(BUILDING_USES[0],{releases:true}),null);
+  assert.equal(buildWindow(BUILDING_USES[1],parsed),null);
+  const window=buildWindow(BUILDING_USES[0],parsed);assert.equal(window.first,13.9);assert.equal(window.screenshots,true);assert.ok(Math.abs(window.end-14.081676572)<1e-9,'window clamps to authored last action');
+  assert.equal(buildWindow(BUILDING_USES[0],{uses:[{id:'ai:kMap',from:50,to:51}]}),null);
+  assert.equal(buildWindow(BUILDING_USES[0]).screenshots,false);
+  for(const dpr of [1,2]) {
+    const image={width:9,height:9,channels:3,pixels:Uint8Array.from({length:9*9*3},(_,i)=>i%3===0?255:0)},points=Array.from({length:5},(_,i)=>[4.5,2.5+i]);
+    const clean=spineAttribution(image,points,dpr);assert.equal(clean.pass,true);assert.equal(clean.lines.length,3);assert.equal(clean.samplePixels,15);
+    const flankX=4+dpr;image.pixels[(4*9+flankX)*3]=0;
+    const fault=spineAttribution(image,points,dpr);assert.equal(fault.pass,false,'C7 floor on flank fails');assert.equal(fault.lines[1].pass,true,'C7 centre alone would miss it');
+    const diagonal=spineLines([[0,0],[3,4]],dpr);assert.ok(Math.abs(Math.hypot(...diagonal[0][0])-dpr)<1e-9,'C7 perpendicular one-device-pixel offset');
+  }
   assert.equal(costVerdict([0,4,16]).pass,true);assert.equal(costVerdict([0,4,16.001]).pass,false);assert.equal(costVerdict([4.001]).pass,false);
   assert.equal(costVerdict([0,8]).median,4);
   const region=faceRegion({p:[0,0,0],q:[0,0,0,1],s:[2,3,1]},[.25,.25,.75,.75]);
@@ -135,7 +230,7 @@ export function checkPixelHelpers() {
   assert.equal(sinkVerdict([{t:0,changed:100},{t:.001,changed:95},{t:.002,changed:0}],.002).pass,true);
   assert.equal(sinkVerdict([{t:0,changed:100},{t:.001,changed:94},{t:.002,changed:0}],.002).pass,false);
   assert.equal(sinkVerdict([{t:0,changed:100},{t:.003,changed:1}],.002).pass,false);
-  return {pngCases:cases,filters:5,channels:[3,4],maskPixels:12,threshold:8};
+  return {pngCases:cases,filters:5,channels:[3,4],maskPixels:12,threshold:8,endpointMipThreshold:8,selectionStrokes:4,spineLines:3,optionWindows:true,nonemptyOwnFaces:true,placementScopes:true};
 }
 
 const starts=SHOW.map((_,i)=>SHOW.slice(0,i).reduce((n,s)=>n+s.len,0));
@@ -205,18 +300,32 @@ function faceRegion(pc,r=[0,0,1,1]) {
   return {...pc,p:pc.p.map((v,i)=>v+offset[i]),s:[pc.s[0]*(right-l),pc.s[1]*(b-t),1e-9]};
 }
 function facePolygons(state,predicate,clip,dpr) {return polygons({...state,pieces:state.pieces.filter(predicate).map(pc=>faceRegion(pc))},()=>true,clip,dpr);}
+export function selectionOutlines(state,release,clip,dpr) {
+  const outlines=[];
+  for(const pc of state.pieces.filter(p=>p.selectionRelease===release.action)) {
+    assert.ok(pc.overlay&&!pc.art&&!pc.building,'selection mask cannot hide picture ink');
+    const axis=pc.s[0]>=pc.s[1]?0:1,short=1-axis;
+    const local=(along,across)=>{const p=[0,0,pc.s[2]];p[axis]=along;p[short]=across;return quatRotate(pc.q,p).map((v,i)=>v+pc.p[i]);};
+    const project=world=>devicePolygon([[dot(state.view.cam.r,world),dot(state.view.cam.u,world)]],state.view,state.hero,clip,dpr)[0];
+    const a=project(local(-pc.s[axis],0)),b=project(local(pc.s[axis],0)),v=project(local(0,pc.s[short])),u=project(local(0,-pc.s[short]));
+    const dx=b[0]-a[0],dy=b[1]-a[1],width=Math.abs((v[0]-u[0])*dy-(v[1]-u[1])*dx)/Math.hypot(dx,dy);
+    assert.ok(Math.abs(2*pc.s[short]-pc.selectionLineWidth)<1e-8,'selection own line width');
+    outlines.push(strokePolygon(a,b,width+dpr));
+  }
+  return outlines;
+}
 const maskWithout=(mask,exclude)=>mask.map((v,i)=>v&&!exclude[i]?1:0);
 const maskUnion=(a,b)=>a.map((v,i)=>v||b[i]?1:0);
 function polygonMask(image,polys) {return polys.length?rasterMask(image.width,image.height,polys):new Uint8Array(image.width*image.height);}
 function maskedRegion(image,polys,exclude,dpr,grow=4) {return maskWithout(growMask(polygonMask(image,polys),image.width,image.height,grow*dpr),exclude);}
 async function capture(page,t,clip) {const state=await frame(page,t);return {state,image:await screenshot(page,clip)};}
 
-export async function checkRound17Pixels(chromium,previewPath) {
+export async function checkRound17Pixels(chromium,previewPath,options={}) {
   const rows=[],failures=[],browser=await chromium.launch({headless:true,args:GL});
   const add=row=>{rows.push(row);if(row.pass===false)failures.push(row);};
   const references={};
-  for(const revision of ['dcb8094','9ba17ea']) {
-    try {fs.mkdirSync(WORK,{recursive:true});const file=path.join(WORK,'critique3-reference-'+revision+'.html');fs.writeFileSync(file,referencePreview(revision));references[revision]=file;}
+  for(const revision of options.releases&&!options.uses?.length?['dcb8094']:['dcb8094','9ba17ea']) {
+    try {fs.mkdirSync(WORK,{recursive:true});const file=path.join(WORK,'critique4-reference-'+revision+'.html');fs.writeFileSync(file,referencePreview(revision));references[revision]=file;}
     catch(error){add({gate:'historical reference',revision,pass:false,error:error.message});}
   }
   try {
@@ -228,45 +337,63 @@ export async function checkRound17Pixels(chromium,previewPath) {
         const page=await open(previewPath),old={};for(const [revision,file] of Object.entries(references))old[revision]=await open(file);
         assert.ok(await page.evaluate(()=>!!window.__hero.buildings),'building review API missing');
         if(old.dcb8094)try {const actual=await page.evaluate(()=>window.__hero.buildings.atlasHashes()),reference=await old.dcb8094.evaluate(()=>window.__r17Atlas());add({gate:'C3 atlas pages 0–4 bytes',size,actual,reference,pass:JSON.stringify(actual)===JSON.stringify(reference)});}catch(error){add({gate:'C3 atlas pages 0–4 bytes',size,pass:false,error:error.message});}
-        // Exact GPU readback: each use's final texture versus an independent full-source fresh paint.
+        // Exact GPU readback after release, then the exact progress-one state WITH its reveal clips still applied.
         for(const use of BUILDING_USES)try {
           await frame(page,useEnd(use)+.002);
           const data=await page.evaluate(id=>({actual:window.__hero.buildings.readback(id),reference:window.__hero.buildings.reference(id),texture:window.__hero.buildings.inspect(id)}),use.id);
           add({gate:'C3 mip readback',size,id:use.id,t:useEnd(use)+.002,texture:data.texture,...textureVerdict(data.actual,data.reference)});
+          const last=await page.evaluate(id=>{const data=window.__hero.buildings.lastState(id);return {...data,reference:window.__hero.buildings.reference(id)};},use.id);
+          add({gate:'C8 last state before release',size,id:use.id,t:useEnd(use),progress:1,clipsRetained:true,texture:last.texture,...textureVerdict(last.actual,last.reference,8)});
+          await frame(page,useEnd(use)-.002);
+          const prior=await page.evaluate(id=>({actual:window.__hero.buildings.readback(id),reference:window.__hero.buildings.reference(id)}),use.id);
+          add({gate:'C8 end minus .002 readback record',size,id:use.id,t:useEnd(use)-.002,...textureVerdict(prior.actual,prior.reference,8),pass:null});
         }catch(error){add({gate:'C3 mip readback',size,id:use.id,pass:false,error:error.message});}
         // There are no same-picture atlas handovers: original instances, copies, thumbnails and travels retain their use.
         for(const release of PIXEL_RELEASES)try {
-          const a=await capture(page,release.t-.002,clip),b=await capture(page,release.t+.002,clip),masks=[...exclusions(a.state,clip,dpr),...exclusions(b.state,clip,dpr)];
+          const a=await capture(page,release.t-.002,clip),b=await capture(page,release.t+.002,clip);
           // C3 no longer masks the tool rail on releases. Its intended changes are compared with the historical after-frame.
           const cursorCaret=state=>polygons(state,p=>p.art==='cursor'||p.caret,clip,dpr).map(p=>boxPolygon(bounds([p]),4*dpr));
-          const exclude=rasterMask(a.image.width,a.image.height,[boxPolygon([0,0,a.image.width,a.image.height])],[...cursorCaret(a.state),...cursorCaret(b.state)]);
+          const selection=[...selectionOutlines(a.state,release,clip,dpr),...selectionOutlines(b.state,release,clip,dpr)];
+          const exclude=rasterMask(a.image.width,a.image.height,[boxPolygon([0,0,a.image.width,a.image.height])],[...cursorCaret(a.state),...cursorCaret(b.state),...selection]);
           const hidden=exclude.map(v=>v?0:1),stage=await page.locator('[data-stage-box]').boundingBox();assert.ok(stage,'missing stage box');
           const stageMask=intersectMasks(exclude,rasterMask(a.image.width,a.image.height,[boxPolygon([stage.x*dpr,stage.y*dpr,(stage.x+stage.width)*dpr,(stage.y+stage.height)*dpr])]));
           const whole=countDifferences(a.image,b.image,stageMask);
-          const own=state=>facePolygons(state,p=>pictureOf(p,release.picture)&&!p.echo&&p.where!=='floor'&&p.where!=='travel',clip,dpr);
+          const own=state=>facePolygons(state,p=>ownReleasePiece(p,release),clip,dpr);
           const A=maskedRegion(a.image,own(a.state),hidden,dpr),B=maskedRegion(b.image,own(b.state),hidden,dpr),common=intersectMasks(A,B);
           const placement=release.scene==='id'&&['map','loc'].includes(release.action);
+          const ownFaces=requireOwnFaces(A,B);
+          add({gate:'release own-face coverage',size,...release,...ownFaces,selectionPieces:selection.length,paintedSelection:release.scene==='fig'&&release.action==='details'?'wireframe borders are source paint; none masked':null,pass:true});
           add({gate:'whole-stage release record',size,...release,...whole,percentage:100*whole.changed/Math.max(1,whole.total),pass:null});
           if(!placement)add({gate:'C3 scoped release',size,...release,...releaseVerdict(countDifferences(a.image,b.image,common),common.reduce((n,v)=>n+v,0))});
           const other=facePolygons(b.state,p=>!!p.building&&!pictureOf(p,release.picture),clip,dpr);
-          if(other.length) {const mask=maskedRegion(b.image,other,hidden,dpr);const result=countDifferences(a.image,b.image,mask);add({gate:'C3 other buildings stable',size,...release,...result,pass:result.changed===0});}
+          if(other.length&&!placement) {const mask=maskedRegion(b.image,other,hidden,dpr);const result=countDifferences(a.image,b.image,mask);add({gate:'C3 other buildings stable',size,...release,...result,pass:result.changed===0});}
           if(old.dcb8094) {
             const ref=await capture(old.dcb8094,release.t+.002,clip);
             const buildings=facePolygons(b.state,p=>!!p.building,clip,dpr),allFaces=[...own(b.state),...buildings];
-            const protectedMask=placement?exclude:maskWithout(exclude,growMask(polygonMask(b.image,allFaces),b.image.width,b.image.height,4*dpr));
-            const result=countDifferences(b.image,ref.image,protectedMask);add({gate:placement?'G designed placement after':'C3 outside faces versus dcb8094',size,...release,...result,pass:result.changed===0});
-            if(placement){const refBefore=await capture(old.dcb8094,release.t-.002,clip),result=countDifferences(a.image,refBefore.image,exclude);add({gate:'G designed placement before',size,...release,...result,pass:result.changed===0});}
+            if(placement) {
+              const refBefore=await capture(old.dcb8094,release.t-.002,clip);
+              for(const [phase,current,reference] of [['before',a,refBefore],['after',b,ref]]) {
+                const faces=[...facePolygons(current.state,placementMapPiece,clip,dpr),...facePolygons(reference.state,placementMapPiece,clip,dpr)];
+                assert.ok(faces.length,'empty placement map faces');
+                const inside=maskedRegion(current.image,faces,hidden,dpr,0),result=placementVerdict(current.image,reference.image,inside,exclude);
+                add({gate:'G designed placement '+phase+' outside maps',size,...release,...result.outside});
+                add({gate:'G designed placement '+phase+' inside maps record',size,...release,...result.inside});
+              }
+            } else {
+              const protectedMask=maskWithout(exclude,growMask(polygonMask(b.image,allFaces),b.image.width,b.image.height,4*dpr));
+              const result=countDifferences(b.image,ref.image,protectedMask);add({gate:'C3 outside faces versus dcb8094',size,...release,...result,pass:result.changed===0});
+            }
           }
         }catch(error){add({gate:'C3 release',size,...release,pass:false,error:error.message});}
         // Build changes are confined to the active source mark/reveal (+24 atlas texels), cursor/caret and rail.
-        for(const use of BUILDING_USES)try {
-          const first=globalStart(use.scene)+SCRIPTS[use.scene].actions.find(a=>a.id===use.first).start,end=useEnd(use),cost=[];
+        for(const use of BUILDING_USES.filter(use=>buildWindow(use,options)))try {
+          const {first,end,screenshots:allSizes}=buildWindow(use,options),screenshots=allSizes||W===1474&&dpr===1,cost=[];
           await page.evaluate(()=>window.__hero.buildings.resetTimes());let previous=await capture(page,first,clip),samples=0,changedOutside=0,baselineOutside=0;
           cost.push(await page.evaluate(id=>window.__hero.buildings.times.filter(p=>p.id===id).reduce((n,p)=>n+p.total,0),use.id));
           for(let t=first+1/60;t<=end+1e-9;t+=1/60) {
             await page.evaluate(()=>window.__hero.buildings.resetTimes());const state=await frame(page,t);
             const timing=await page.evaluate(()=>window.__hero.buildings.times);cost.push(timing.filter(p=>p.id===use.id).reduce((n,p)=>n+p.total,0));
-            const current={state,image:W===1474&&dpr===1?await screenshot(page,clip):null};
+            const current={state,image:screenshots?await screenshot(page,clip):null};
             if(current.image) {
               const parts=[];
               for(const pc of state.pieces.filter(p=>p.building&&!p.echo&&p.where==='content')) {
@@ -283,10 +410,11 @@ export async function checkRound17Pixels(chromium,previewPath) {
             }
             previous=current;
           }
-          if(W===1474&&dpr===1)add({gate:'C3 build locality',size,id:use.id,samples,changedOutside,pass:changedOutside===0});
-          if(W===1474&&dpr===1&&old['9ba17ea'])add({gate:'C3 build preservation',size,id:use.id,samples,baselineOutside,pass:baselineOutside===0});
-          if((W===1474&&dpr===1)||W===390)add({gate:'C3 build cost',size,id:use.id,...costVerdict(cost)});
+          if(screenshots)add({gate:'C3 build locality',size,id:use.id,from:first,to:end,samples,changedOutside,pass:changedOutside===0});
+          if(screenshots&&old['9ba17ea'])add({gate:'C3 build preservation',size,id:use.id,from:first,to:end,samples,baselineOutside,pass:baselineOutside===0});
+          if(!options.releases&&((W===1474&&dpr===1)||W===390))add({gate:'C3 build cost',size,id:use.id,...costVerdict(cost)});
         }catch(error){add({gate:'C3 build/cost',size,id:use.id,pass:false,error:error.message});}
+        if(!options.releases) {
         // Finished stills versus a plain fresh texture in the same grid; historical differences inside are records only.
         const stills=SHOW.map((s,i)=>starts[i]+s.still),rests=['id','pr','ae','fig'].map(scene=>globalStart(scene)+playbackSpans(SCRIPTS[scene]).land+.8),early=['id','pr','ae','fig'].map(scene=>globalStart(scene)+playbackSpans(SCRIPTS[scene]).off[0]+.15);
         for(const t of [...stills,...rests,...early])try {
@@ -311,12 +439,13 @@ export async function checkRound17Pixels(chromium,previewPath) {
             const top=pc=>Math.max(...[-1,1].flatMap(x=>[-1,1].flatMap(y=>[-1,1].map(z=>quatRotate(pc.q,[x*pc.s[0],y*pc.s[1],z*pc.s[2]]).map((v,i)=>v+pc.p[i])))).map(p=>p[1]));
             const left=Math.max(...reading.filter(p=>p.p[0]<-.1).map(top)),right=Math.max(...reading.filter(p=>p.p[0]>=-.1).map(top)),z0=Math.min(...reading.map(p=>p.p[2]-p.s[1])),z1=Math.max(...reading.map(p=>p.p[2]+p.s[1]));
             await page.evaluate(z=>{window.__hero.buildings.spineAttribution={z};},zBoundary);await frame(page,t);const diagnostic=await screenshot(page,clip);await page.evaluate(()=>{window.__hero.buildings.spineAttribution=false;});
-            const mask=new Uint8Array(diagnostic.width*diagnostic.height);
-            for(let j=1;j<100;j++){const world=[-.1,(left+right)/2,z0+(z1-z0)*j/100],point=devicePolygon([[dot(state.view.cam.r,world),dot(state.view.cam.u,world)]],state.view,state.hero,clip,dpr)[0],x=Math.floor(point[0]),y=Math.floor(point[1]);if(x>=0&&y>=0&&x<diagnostic.width&&y<diagnostic.height)mask[y*diagnostic.width+x]=1;}
-            samples.push({t,...attributionCounts(diagnostic,mask),samplePixels:mask.reduce((a,b)=>a+b,0)});
+            const points=[];
+            for(let j=1;j<100;j++){const world=[-.1,(left+right)/2,z0+(z1-z0)*j/100];points.push(devicePolygon([[dot(state.view.cam.r,world),dot(state.view.cam.u,world)]],state.view,state.hero,clip,dpr)[0]);}
+            samples.push({t,...spineAttribution(diagnostic,points,dpr)});
           }
           add({gate:'C7 spine attribution',size,samples,pass:samples.every(p=>p.pass&&p.samplePixels>0),floorPixels:samples.reduce((n,p)=>n+p.floor,0),sidePixels:samples.reduce((n,p)=>n+p.side,0),outlinePixels:samples.reduce((n,p)=>n+p.outline,0)});
         }catch(error){await page.evaluate(()=>{window.__hero.buildings.spineAttribution=false;});add({gate:'C7 spine attribution',size,pass:false,error:error.message});}
+        }
         add({gate:'offline/render errors',size,pass:!requests.length&&!errors.length,requests,errors});
       }catch(error){add({gate:'preview ready',size,pass:false,error:error.message,requests,errors});}
       finally {await context.close();}
@@ -326,21 +455,22 @@ export async function checkRound17Pixels(chromium,previewPath) {
 }
 
 async function main() {
+  const options=parsePixelOptions(process.argv.slice(2));
   const require=createRequire(path.join(ROOT,'package.json'));let playwright;
   for(const name of ['playwright','@playwright/test','playwright-core']) {
     try {const resolved=require.resolve(name);if(resolved.startsWith(ROOT+path.sep)){playwright=require(resolved);break;}}
     catch(error){if(error.code!=='MODULE_NOT_FOUND')throw error;}
   }
   if(!playwright){console.log('round17-pixel-checks UNAVAILABLE: Playwright is not installed in the repository.');process.exitCode=2;return;}
-  let preview=process.argv[2];
-  if(!preview){fs.mkdirSync(WORK,{recursive:true});preview=path.join(WORK,'critique3-pixel-preview.html');fs.writeFileSync(preview,previewMarkup());}
+  let preview=options.previewPath;
+  if(!preview){fs.mkdirSync(WORK,{recursive:true});preview=path.join(WORK,'critique4-pixel-preview.html');fs.writeFileSync(preview,previewMarkup());}
   let result;
-  try {result=await checkRound17Pixels(playwright.chromium,preview);}
+  try {result=await checkRound17Pixels(playwright.chromium,preview,options);}
   catch(error){console.log('round17-pixel-checks UNAVAILABLE: '+error.message);process.exitCode=2;return;}
-  fs.mkdirSync(WORK,{recursive:true});fs.writeFileSync(path.join(WORK,'critique3-pixels.json'),JSON.stringify(result,null,2));
+  fs.mkdirSync(WORK,{recursive:true});fs.writeFileSync(path.join(WORK,'critique4-pixels.json'),JSON.stringify({...result,options},null,2));
   for(const row of result.rows) {
     const {samples,...summary}=row;
-    console.log((row.pass?'PASS ':'FAIL ')+JSON.stringify({...summary,...(samples?{sampleCount:samples.length,firstCount:samples[0]?.changed,lastCount:samples.at(-1)?.changed}: {})}));
+    console.log((row.pass===null?'RECORD ':row.pass?'PASS ':'FAIL ')+JSON.stringify({...summary,...(samples?{sampleCount:samples.length,firstCount:samples[0]?.changed,lastCount:samples.at(-1)?.changed}: {})}));
   }
   process.exitCode=result.failures.length?1:0;
 }

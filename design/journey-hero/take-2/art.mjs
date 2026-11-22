@@ -872,6 +872,7 @@ export function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
   const context = measure.getContext('2d');
   for (const source of ['kMap', 'kLoc', 'eblast']) letterPictures(context, source);
   prepareWireCutouts(context);
+  for (const source of BUILDING_PICTURES) measureBuildingPaint(source, context);
   const sheets = [[]], positions = new Map();
   let x = pad, y = pad, row = 0;
   // Keep every existing atlas page and mip phase. Only the isolated pictures and their new grounds get additional pages.
@@ -970,6 +971,98 @@ export function prepareWireCutouts(ctx = null) {
 prepareWireCutouts();
 
 export const BUILDING_PICTURES = ['kMap', 'kLoc', 'kCover', 'kPost', 'eblast', 'wireWide', 'wireTablet', 'wireTall'];
+const buildingPaints = new Map(), revealSpecs = new Map();
+const unionBounds = boxes => boxes.length ? [Math.min(...boxes.map(b => b[0])), Math.min(...boxes.map(b => b[1])), Math.max(...boxes.map(b => b[2])), Math.max(...boxes.map(b => b[3]))] : null;
+const intersectBounds = (a, b) => {
+  const r = [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])];
+  return r[2] >= r[0] && r[3] >= r[1] ? r : null;
+};
+// Record the source commands without painting. Bounds are conservative control hulls, centred strokes (including caps
+// and miter joins), actual font ink and one atlas texel of AA. Source clips and the final page clip still apply.
+export function measureBuildingPaint(source, measure = null) {
+  const a = ART[source], paints = [], saved = [];
+  let matrix = [1, 0, 0, 1, 0, 0], points = [], clip = [0, 0, a.w, a.h], joined = false, subpath = 0;
+  const state = {font:'10px sans-serif', textAlign:'left', letterSpacing:'0px', lineWidth:1, lineCap:'butt', lineJoin:'miter', miterLimit:10, shadowBlur:0, shadowOffsetX:0, shadowOffsetY:0, shadowColor:'rgba(0,0,0,0)'};
+  const point = (x, y) => [matrix[0]*x+matrix[2]*y+matrix[4], matrix[1]*x+matrix[3]*y+matrix[5]];
+  const rect = (x, y, w, h) => [[x,y],[x+w,y],[x+w,y+h],[x,y+h]].map(p => point(...p));
+  const box = p => unionBounds(p.map(([x,y]) => [x,y,x,y]));
+  const metrics = words => {
+    if (!measure) {const px=+(state.font.match(/([\d.]+)px/)?.[1]||10);return {width:words.length*px*.55,actualBoundingBoxAscent:px*.8,actualBoundingBoxDescent:px*.2};}
+    measure.save();
+    try {for (const k of ['font','textAlign','letterSpacing']) measure[k]=state[k];return measure.measureText(words);}
+    finally {measure.restore();}
+  };
+  const c = new Proxy(state, {get(target, key) {
+    if (key === 'getTransform') return () => Object.fromEntries(['a','b','c','d','e','f'].map((k,i) => [k,matrix[i]]));
+    if (key === 'save') return () => saved.push({state:{...state},matrix:[...matrix],clip:clip && [...clip]});
+    if (key === 'restore') return () => {const s=saved.pop();Object.assign(state,s.state);matrix=s.matrix;clip=s.clip;};
+    if (key === 'translate') return (x,y) => {matrix[4]+=matrix[0]*x+matrix[2]*y;matrix[5]+=matrix[1]*x+matrix[3]*y;};
+    if (key === 'scale') return (x,y) => {matrix[0]*=x;matrix[1]*=x;matrix[2]*=y;matrix[3]*=y;};
+    if (key === 'rotate') return angle => {const [x,y,z,w]=matrix,c=Math.cos(angle),s=Math.sin(angle);matrix[0]=x*c+z*s;matrix[1]=y*c+w*s;matrix[2]=-x*s+z*c;matrix[3]=-y*s+w*c;};
+    if (key === 'measureText') return metrics;
+    if (key === 'createLinearGradient') return () => ({addColorStop() {}});
+    if (key === 'beginPath') return () => {points=[];joined=false;subpath=0;};
+    if (key === 'moveTo') return (x,y) => {points.push(point(x,y));subpath=1;};
+    if (key === 'lineTo') return (x,y) => {joined ||= subpath++ > 1;points.push(point(x,y));};
+    if (key === 'rect' || key === 'roundRect') return (x,y,w,h) => points.push(...rect(x,y,w,h));
+    if (key === 'bezierCurveTo' || key === 'quadraticCurveTo') return (...args) => {for(let i=0;i<args.length;i+=2)points.push(point(args[i],args[i+1]));};
+    if (key === 'arc') return (x,y,r) => points.push(...rect(x-r,y-r,2*r,2*r));
+    if (key === 'ellipse') return (x,y,rx,ry,angle=0) => {const dx=Math.hypot(rx*Math.cos(angle),ry*Math.sin(angle)),dy=Math.hypot(rx*Math.sin(angle),ry*Math.cos(angle));points.push(...rect(x-dx,y-dy,2*dx,2*dy));};
+    if (key === 'clip') return () => {const b=box(points);clip=clip&&b?intersectBounds(clip,b):null;};
+    if (PAINT_CALLS.has(key)) return (...args) => {
+      let geometry;
+      if (key === 'fillRect' || key === 'strokeRect' || key === 'clearRect') geometry=box(rect(...args));
+      else if (key.endsWith('Text')) {
+        const [words,x,y]=args,m=metrics(words),shift=state.textAlign==='center'?.5:['right','end'].includes(state.textAlign)?1:0;
+        const l=x-(m.actualBoundingBoxLeft??shift*m.width),r=x+(m.actualBoundingBoxRight??(1-shift)*m.width);
+        geometry=box(rect(l,y-(m.actualBoundingBoxAscent??10),r-l,(m.actualBoundingBoxAscent??10)+(m.actualBoundingBoxDescent??2)));
+      } else geometry=box(points);
+      if (!geometry) throw new Error('unmeasured building command '+source+'/'+key);
+      const sx=Math.abs(matrix[0])+Math.abs(matrix[2]),sy=Math.abs(matrix[1])+Math.abs(matrix[3]);
+      const radius=key.startsWith('stroke')?state.lineWidth/2*Math.max(joined&&state.lineJoin==='miter'?state.miterLimit:1,state.lineCap==='square'?Math.SQRT2:1):0;
+      // Canvas shadows use device-space blur/offsets; three blur widths conservatively contain their finite raster support.
+      const shadow=state.shadowColor!=='rgba(0,0,0,0)'?3*state.shadowBlur:0;
+      const fringe=[radius*sx+1,radius*sy+1];
+      let ink=[geometry[0]-fringe[0],geometry[1]-fringe[1],geometry[2]+fringe[0],geometry[3]+fringe[1]];
+      if (shadow) ink=unionBounds([ink,[ink[0]+state.shadowOffsetX-shadow,ink[1]+state.shadowOffsetY-shadow,ink[2]+state.shadowOffsetX+shadow,ink[3]+state.shadowOffsetY+shadow]]);
+      const n=paints.length,group=currentPaintGroup,own=Object.values(CUTOUTS).find(p=>p.source===source&&p.accept(group,key,n));
+      paints.push({n,group,method:key,owner:own?.id??(key.endsWith('Text')?'text':group==='tab'?'tab':'base'),geometry:clip&&intersectBounds(geometry,clip),ink:clip&&intersectBounds(ink,clip),fringe:[geometry[0]-ink[0],geometry[1]-ink[1],ink[2]-geometry[2],ink[3]-geometry[3]]});
+    };
+    return key in target ? target[key] : () => {};
+  }});
+  ART[source].draw(c,a.w,a.h);
+  buildingPaints.set(source,paints);
+  for (const [key,spec] of revealSpecs) if(spec.source===source) revealSpecs.delete(key);
+  return paints;
+}
+export function buildingPaint(source) {return buildingPaints.get(source)||measureBuildingPaint(source);}
+export function buildingRevealInventory() {return [...revealSpecs.values()];}
+export function buildingRevealSpec(source, id, region) {
+  const key=JSON.stringify([source,id,region]);
+  if (revealSpecs.has(key)) return revealSpecs.get(key);
+  const a=ART[source],[u,v,w,h]=region,nominal=[u*a.w,v*a.h,(u+w)*a.w,(v+h)*a.h];
+  const commands=buildingPaint(source).filter(p=>p.owner===id&&p.geometry&&p.ink),slices=[];
+  for(const p of commands) {
+    const part=intersectBounds(p.geometry,nominal);
+    if(part) slices.push(intersectBounds([part[0]-p.fringe[0],part[1]-p.fringe[1],part[2]+p.fringe[2],part[3]+p.fringe[3]],p.ink));
+  }
+  const ink=unionBounds(slices.filter(Boolean)),padding=ink?[Math.max(0,nominal[0]-ink[0]),Math.max(0,nominal[1]-ink[1]),Math.max(0,ink[2]-nominal[2]),Math.max(0,ink[3]-nominal[3])]:[0,0,0,0];
+  const spec={source,id,region,nominal,ink,padding};revealSpecs.set(key,spec);return spec;
+}
+export function buildingReveal(source, id, region, amount, direction = 'corner') {
+  const a=ART[source],{padding:[l,t,r,b]}=buildingRevealSpec(source,id,region),[u,v,w,h]=region;
+  // Grow at the authored speed. Only the group's own stroke/AA fringe follows its moving edge.
+  const clip=direction==='up'?[u,v+h*(1-amount),u+w,v+h]:direction==='upCorner'?[u,v+h*(1-amount),u+w*amount,v+h]:[u,v,u+w*amount,v+h*(direction==='x'?1:amount)];
+  return [Math.max(0,clip[0]-l/a.w),Math.max(0,clip[1]-t/a.h),Math.min(1,clip[2]+r/a.w),Math.min(1,clip[3]+b/a.h)];
+}
+export function typingReveal(c, args, count, texel = 1) {
+  const [words,x]=args,shift=c.textAlign==='center'?.5:['right','end'].includes(c.textAlign)?1:0;
+  const full=c.measureText(words),prefix=c.measureText(words.slice(0,count));
+  const edge=x-shift*full.width+prefix.width;
+  const overhang=Math.max(0,(prefix.actualBoundingBoxRight??(1-shift)*prefix.width)-(1-shift)*prefix.width);
+  const transform=c.getTransform(),scale=Math.hypot(transform.a,transform.b);
+  return {edge,padding:overhang+texel/scale,right:edge+overhang+texel/scale};
+}
 export function buildingSize(source, scale = 1) {
   const a = ART[source], w = Math.round(a.w * scale), h = Math.round(a.h * scale);
   return { w, h, x: 24, y: 24, width: Math.ceil((w + 48) / 8) * 8, height: Math.ceil((h + 48) / 8) * 8, scale };
@@ -1011,13 +1104,11 @@ export function paintBuilding(c, source, plan, observe = null) {
         const n = index++, ti = key.endsWith('Text') ? textIndex++ : -1;
         const rule = buildingCommand(source, plan, currentPaintGroup, key, n, ti);
         if (rule === false) return;
-        const original = args.slice(), partialText = key.endsWith('Text') && rule?.count < args[0].length;
+        const original = args.slice(), partialText = key.endsWith('Text') && rule?.count !== undefined && (rule.count < args[0].length || plan.keepTextClips);
         observe?.({ n, group: currentPaintGroup, method: key, original, args: args.slice(), rule,
           font: target.font, align: target.textAlign, spacing: target.letterSpacing, matrix: target.getTransform() });
         if (partialText) {
-          const full=args[0], shift=target.textAlign==='center'?.5:['right','end'].includes(target.textAlign)?1:0;
-          const edge=args[1]-shift*target.measureText(full).width+target.measureText(full.slice(0,rule.count)).width;
-          const path=new Path2D();path.rect(-1e6,-1e6,1e6+edge,2e6);
+          const reveal=typingReveal(target,args,rule.count),path=new Path2D();path.rect(-1e6,-1e6,1e6+reveal.right,2e6);
           // Keep the entire finished command (including shaping/kerning). Only its original typing half-plane changes.
           target.save();target.clip(path);value.apply(target,args);target.restore();
         } else if (rule?.clips) {

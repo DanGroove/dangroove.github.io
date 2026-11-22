@@ -3,7 +3,7 @@
 // One clock builds every piece: the persistent shell, wiped content, travelling work and the floor.
 import { HOME, EASE, dot as dot3, quatFromBasis, quatRotate } from '../../../public/journey/hero/engine.mjs';
 import { box, cyl, turn, corners, qAxis, qMul } from './kit.mjs';
-import { SPOT, subwayPath, BALL as COMP_BALL, BALL_FROM, BALL_VIA, ROWS, TYPE_EDGES, TYPE_BOXES, ART, ART_TEXT, HISTOGRAM, CUTOUTS, BUILDING_PICTURES, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS } from './art.mjs';
+import { SPOT, subwayPath, BALL as COMP_BALL, BALL_FROM, BALL_VIA, ROWS, TYPE_EDGES, TYPE_BOXES, ART, ART_TEXT, HISTOGRAM, CUTOUTS, BUILDING_PICTURES, buildingReveal, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS } from './art.mjs';
 
 // All authored durations, including the cursor's journeys, share this one control.
 export const PACE = 1;
@@ -1168,7 +1168,8 @@ function pictureRegion(P, rect, art, region, amount = 1) {
   P.push({ ...on('paper', ...r, { lift: 0.084, t: 0.004, art }), window: [u, v, u + w * amount, v + h] });
 }
 // Global-to-local subtraction can miss an authored end by a few ulps. C3's replacement belongs to that end frame.
-function released(s, id, t) { return t >= action(s, id).end - 1e-9; }
+let reviewActionEnd = null;
+function released(s, id, t) { return !(reviewActionEnd?.script === s && reviewActionEnd.id === id) && t >= action(s, id).end - 1e-9; }
 function cutoutRegion(P, rect, source, id, reveal = null) {
   const key = source + 'Part' + id, part = CUTOUTS[key];
   if (!part) throw new Error('missing isolated picture ' + key);
@@ -1187,11 +1188,8 @@ function cutoutRegion(P, rect, source, id, reveal = null) {
 function isolatedDraw(P, rect, source, id, region, p, upward = false) {
   if (p <= 0) return;
   cutoutRegion(P, rect, source, id);
-  if (p < 1) {
-    const [u,v,w,h] = region;
-    // Clip the original paint BEFORE mip filtering. The quad still includes its whole transparent margin.
-    P.at(-1).artReveal = upward ? [u,v+h*(1-p),u+w,v+h] : [u,v,u+w*p,v+h*p];
-  }
+  // The review API keeps the clip at progress 1 as well; completed playback recipes stay unclipped as before.
+  if (p < 1 || reviewActionEnd) P.at(-1).artReveal = buildingReveal(source, id, region, p, upward ? 'up' : 'corner');
 }
 function drawnRegion(P, rect, art, region, p, stroke = 0) {
   if (p <= 0) return;
@@ -1253,11 +1251,13 @@ function pageContact(s, id, t, from, to, page) {
 }
 function wireRegion(P, rect, source, [u,v,w,h], amount = 1) {
   if (amount <= 0) return;
-  const a = ART[source], reveal = [u,v,u+w*amount,v+h];
+  const a = ART[source];
   for (const part of Object.values(CUTOUTS).filter(part => part.source === source)) {
     const [x,y,rw,rh] = part.rect;
     if (x+rw < u*a.w || x > (u+w)*a.w || y+rh < v*a.h || y > (v+h)*a.h) continue;
-    cutoutRegion(P, rect, source, part.id); P.at(-1).artReveal = reveal;
+    cutoutRegion(P, rect, source, part.id);
+    P.at(-1).artReveal = buildingReveal(source, part.id, [u,v,w,h], amount, 'x');
+    P.at(-1).revealComplete = amount >= 1;
   }
 }
 function mergeWireParts(D, rect, source) {
@@ -1270,7 +1270,8 @@ function mergeWireParts(D, rect, source) {
     const part=CUTOUTS[source+'Part'+id], [x,y,w,h]=part.rect;
     let missing=[[x/(a.w-1),y/(a.h-1),(x+w)/(a.w-1),(y+h)/(a.h-1)]];
     for(const r of regions) missing=missing.flatMap(q=>subtract(q,r));
-    if(!missing.length) {cutoutRegion(D,rect,source,id);continue;}
+    // A fringe may cover the last ink before the nominal edge arrives. Keep the moving clip until the authored end.
+    if(!missing.length && !reviewActionEnd && parts.filter(pc=>pc.cutoutId===id).every(pc=>pc.revealComplete)) {cutoutRegion(D,rect,source,id);continue;}
     const drawn=[];
     for(const r of regions) {let next=[r];for(const q of drawn)next=next.flatMap(v=>subtract(v,q));for(const q of next){cutoutRegion(D,rect,source,id);D.at(-1).artReveal=q;drawn.push(q);}}
   }
@@ -1446,7 +1447,7 @@ function editedInDesign(t, { at: pages } = {}) {
         if (begun(s, key + 'Button', t)) {
           const p = handed(s, key + 'Button', t), a = action(s, key + 'Button'), r = [a.from[0], a.to[1], a.to[0] - a.from[0], a.from[1] - a.to[1]];
           if (key === 'mail') isolatedDraw(D, rect, 'eblast', 'button', [44 / 800, 1040 / 1180, 262 / 800, 72 / 1180], p);
-          else if (p > 0 && p < 1) D.push(...outline(r[0], r[1] + r[3] * (1 - p), r[2] * p, r[3] * p, { tone: 'grey', line: 0.01 }));
+          else if (p > 0 && p < 1) D.push(...outline(r[0], r[1] + r[3] * (1 - p), r[2] * p, r[3] * p, { tone: 'grey', line: 0.01 }).map(pc => ({...pc,selectionRelease:'postButton',selectionLineWidth:0.01*U})));
         }
         if (key === 'mail' && begun(s, 'mailFlyer', t)) typePatch(D, inRect(rect, [17.6 / 320, 416 / 472, 105 / 320, 29 / 472]), 'idFlyer', phase(s, 'mailFlyer', t), 14);
       }
@@ -1647,6 +1648,20 @@ export const BUILDING_USES = [
   ['fig','wireWide','details','frame0'], ['fig','wireTablet','details','frame1'], ['fig','wireTall','details','frame2'],
 ].map(([scene,source,last,first]) => ({id: scene + ':' + source, scene, source, last, first}));
 
+// Review only. Sample the exact authored endpoint while its last reveal is still present; never seek to end-epsilon.
+// This calls the same scheduler/painters as playback, with only that release withheld, and restores state synchronously.
+export function buildingLastState(id, last = null) {
+  const use=BUILDING_USES.find(u=>u.id===id);
+  if(!use) throw new Error('unknown building use '+id);
+  const script=SCRIPTS[use.scene],actionId=last||use.last,previous=reviewActionEnd;
+  reviewActionEnd={script,id:actionId};
+  try {
+    const pc=build(SHOW.findIndex(s=>s.key===use.scene),action(script,actionId).end,{}).find(p=>p.building?.id===id&&!p.echo&&p.where==='content');
+    if(!pc) throw new Error('missing last-state building '+id);
+    return {...pc.building,plan:{...pc.building.plan,keepTextClips:true}};
+  } finally {reviewActionEnd=previous;}
+}
+
 function typedCounts(source, filter, p, target) {
   const parts = (ART_TEXT[source] || []).map((part,i) => ({...part,i})).filter(filter)
     .sort((a,b) => a.region[1]-b.region[1] || a.region[0]-b.region[0]);
@@ -1673,7 +1688,7 @@ function buildingFaces(P, scene, t) {
       bases = source === 'kMap' ? ['mapStreet','kMap'] : ['locGround','kLoc'];
       active = begun(s,use.first,t);
       const p = handed(s,source === 'kMap' ? 'street' : 'streets',t);
-      plan.base = p >= 1 ? true : p > 0 ? {clips:[[0,0,p,1]]} : false;
+      plan.base = p >= 1 && !reviewActionEnd ? true : p > 0 ? {clips:[buildingReveal(source,'base',[0,0,1,1],p,'x')]} : false;
       if (source === 'kMap') {
         typedCounts(source,p=>!p.words.startsWith('King Street')&&p.words!=='N',phase(s,'labels',t),text);
         typedCounts(source,p=>p.words.startsWith('King Street'),phase(s,'title',t),text);
@@ -1693,7 +1708,7 @@ function buildingFaces(P, scene, t) {
     } else {
       const i = ['wireWide','wireTablet','wireTall'].indexOf(source), p = handed(s,'frame'+i,t);
       rect = FIG.wires[i]; bases = [source+'Base',source]; active = p > 0;
-      plan.base = p >= 1 ? true : {clips:[[0,1-p,p,1]]};
+      plan.base = p >= 1 && !reviewActionEnd ? true : {clips:[buildingReveal(source,'base',[0,0,1,1],p,'upCorner')]};
     }
     if (finished) {full();plan.base=true;plan.tab=true;(ART_TEXT[source]||[]).forEach((p,i)=>{text[i]=p.words.length;});if(source==='kCover'||source==='kPost'){text[0]=12;text[1]=8;}}
     const owned = pc => pc.cutoutSource===source || pc.labelSource===source ||

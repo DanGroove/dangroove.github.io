@@ -407,6 +407,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     resetTimes() {buildingTimes.length=0;},
     inspect(id) {const e=buildingTextures.get(id);return e&&{source:e.source,width:e.width,height:e.height,x:e.x,y:e.y,w:e.w,h:e.h,signature:e.signature};},
     readback(id) {const entry=buildingTextures.get(id);if(!entry)throw new Error('building not painted '+id);return readBuildingLevels(entry);},
+    readPlan(building) {return {actual:readBuildingLevels(buildingPicture(building)),texture:buildings.inspect(building.id)};},
     reference(id) {const entry=buildingTextures.get(id);if(!entry)throw new Error('building not painted '+id);return readBuildingLevels(buildingPicture({id,source:entry.source,plan:{}},true));},
     referenceOnly: false,
     spineAttribution: false,

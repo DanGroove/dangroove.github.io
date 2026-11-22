@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { HOME, dot, quatRotate, EASE, makeCamera } from '../../../../public/journey/hero/engine.mjs';
 import { corners } from '../kit.mjs';
 import { createRenderer } from '../sq.mjs';
-import { ART, ART_TEXT, HISTOGRAM, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS, makeAtlas, letterMask, maskLetterPictures, CUTOUTS, CUTOUT_MARGIN, CUTOUT_GUTTER, drawPictureParts, paintGroupName, BUILDING_PICTURES, buildingSize, buildingCommand, paintBuilding, buildingChanges } from '../art.mjs';
+import { ART, ART_TEXT, HISTOGRAM, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS, makeAtlas, letterMask, maskLetterPictures, CUTOUTS, CUTOUT_MARGIN, CUTOUT_GUTTER, drawPictureParts, paintGroupName, BUILDING_PICTURES, buildingSize, buildingCommand, paintBuilding, buildingChanges, buildingPaint, buildingReveal, buildingRevealSpec, buildingRevealInventory, measureBuildingPaint, typingReveal } from '../art.mjs';
 import { checkMapFrame, checkDragsFlat, checkRendererClips, onMapFrame } from './round15-checks.mjs';
 
 const url = new URL('../stage.mjs', import.meta.url);
@@ -30,7 +30,12 @@ export function round17PainterProbe(count, overlap, floor) {
   separateFaces(P); return P;
 }
 export function round17RevealProbe(source, id, region, amount, upward) {
-  const P=[]; isolatedDraw(P,[0,0,1,1],source,id,region,amount,upward); return P;
+  const P=[],previous=reviewActionEnd;reviewActionEnd={};
+  try {isolatedDraw(P,[0,0,1,1],source,id,region,amount,upward);return P;}
+  finally {reviewActionEnd=previous;}
+}
+export function round17WireRevealProbe(source, id, region) {
+  const P=[]; wireRegion(P,[0,0,1,1],source,region,1); return P.find(pc=>pc.cutoutId===id);
 }
 `;
 const load = async edit => {
@@ -135,7 +140,8 @@ export async function checkDrawsAndLetters(M) {
       assert.ok(pc&&!pc.cut&&!pc.blend,'R2 draw: missing ordinary building face');
       assert.ok(distance(fullCorners(pc),fullCorners(ref),scale(M))<=.1,'R2 draw: unregistered face');
       const [u,v,w,h]=nominal,clip=pc.building.plan.marks[mark]?.clips?.[0];
-      assert.ok(clip,'R2 draw: missing canvas reveal');[u,v,u+w*p,v+h*p].forEach((n,i)=>near(clip[i],n,'R2 growing paint clip'));samples++;
+      const pad=source==='kMap'?[2.5/1100,2.5/425]:[1/541,1/340];
+      assert.ok(clip,'R2 draw: missing canvas reveal');[u-pad[0],v-pad[1],u+w*p+pad[0],v+h*p+pad[1]].forEach((n,i)=>near(clip[i],n,'R2 growing paint clip'));samples++;
     }
   }
   for(const [key,ids] of [['ai',['labels','title','cityLabels']],['id',['mailTitle']]])for(const id of ids) {
@@ -666,6 +672,57 @@ export async function checkCutouts(M) {
   const atlas=checkAtlasPacking();return {pictures:rows,atlas};
 }
 export const checkCropFringes=checkCutouts;
+export async function checkRevealBounds(M) {
+  M ??=await load();prepareRound17Art();const probe=M.round17RevealProbe?M:await load();let commands=0,clipped=0,textPlanes=0;
+  assert.deepEqual(buildingRevealSpec('kMap','badge',[1273/2200,457/850,72/2200,146/850]).ink,[634,226,675,304],'C8 badge command bounds: 6-unit stroke plus one texel');
+  // Exercise transformed centred strokes/caps and glyph overhang without a canvas or pixel buffer.
+  ART.__c8={w:100,h:100,draw(c){c.scale(2,2);c.lineWidth=4;c.lineCap='round';c.beginPath();c.moveTo(10,10);c.lineTo(20,10);c.stroke();c.lineCap='square';c.beginPath();c.moveTo(10,10);c.lineTo(20,20);c.stroke();}};
+  try {
+    const paints=measureBuildingPaint('__c8');assert.deepEqual(paints[0].ink,[15,15,45,25],'C8 transformed cap/stroke/AA support');
+    const extra=4*Math.SQRT2+1;assert.deepEqual(paints[1].ink,[20-extra,20-extra,40+extra,40+extra],'C8 diagonal square caps');
+  }
+  finally {delete ART.__c8;}
+  const metrics={textAlign:'center',measureText:s=>({width:s.length*10,actualBoundingBoxRight:s.length*5+3}),getTransform:()=>({a:0,b:.5})};
+  assert.deepEqual(typingReveal(metrics,['abcd',100,20],4),{edge:120,padding:5,right:125},'C8 glyph overhang plus one texel');
+  for(const use of M.BUILDING_USES) {
+    // Every authored reveal endpoint is sampled, including intermediate blobs, base wipes and the stepped bars.
+    const script=M.SCRIPTS[use.scene];
+    for(const a of script.actions.filter(a=>a.end>=action(M,use.scene,use.first).end&&a.end<=action(M,use.scene,use.last).end)) M.buildingLastState(use.id,a.id);
+    const plan=M.buildingLastState(use.id).plan,paints=buildingPaint(use.source),full=recordPicture(use.source);let ti=0;
+    assert.equal(paints.length,full.length,'C8 own command inventory');
+    for(const p of paints) {
+      assert.equal(p.method,full[p.n].method,'C8 measured source command');
+      const isText=p.method.endsWith('Text'),rule=buildingCommand(use.source,plan,p.group,p.method,p.n,isText?ti++:-1);
+      assert.notEqual(rule,false,'C8 missing endpoint command '+use.id+'/'+p.n);
+      if(rule?.clips&&p.ink) {
+        const a=ART[use.source],clips=rule.clips.map(r=>r.map((v,i)=>v*(i%2?a.h:a.w)));
+        const missing=clips.reduce((remaining,r)=>remaining.flatMap(q=>subtract(q,r)),[p.ink]);
+        assert.ok(missing.every(r=>r[2]-r[0]<=1e-8||r[3]-r[1]<=1e-8),'C8 reveal contains ink: '+use.id+'/'+p.owner+'/'+p.n+' '+JSON.stringify(missing));clipped++;
+      }
+      if(isText&&rule?.count!==undefined) {
+        assert.equal(rule.count,full[p.n].args[0].length,'C8 full text at endpoint');
+        const rec=full[p.n],px=+(rec.state.font.match(/([\d.]+)px/)?.[1]||10),ctx={textAlign:rec.state.textAlign,measureText:s=>({width:s.length*px*.55}),getTransform:()=>({a:rec.matrix[0],b:rec.matrix[1]})};
+        const reveal=typingReveal(ctx,rec.args,rule.count);
+        assert.ok(reveal.right>=reveal.edge+1/Math.hypot(rec.matrix[0],rec.matrix[1])-1e-9,'C8 full typing half-plane');textPlanes++;
+      }
+      commands++;
+    }
+  }
+  const inventory=buildingRevealInventory();
+  for(const spec of inventory) {
+    if(!spec.ink)continue;
+    const pc=spec.id==='base'?null:spec.source.startsWith('wire')?probe.round17WireRevealProbe(spec.source,spec.id,spec.region):probe.round17RevealProbe(spec.source,spec.id,spec.region,1,false)[0];
+    const a=ART[spec.source],end=(pc?.artReveal||buildingReveal(spec.source,spec.id,spec.region,1)).map((v,i)=>v*(i%2?a.h:a.w));
+    assert.ok(spec.id==='base'||pc?.artReveal,'C8 reveal contains ink: missing endpoint clip');
+    assert.ok(end[0]<=spec.ink[0]+1e-8&&end[1]<=spec.ink[1]+1e-8&&end[2]>=spec.ink[2]-1e-8&&end[3]>=spec.ink[3]-1e-8,'C8 reveal contains ink: '+spec.source+'/'+spec.id+' endpoint support');
+    for(const p of [.125,.5]) {
+      const [u,v,w,h]=spec.region,clip=buildingReveal(spec.source,spec.id,spec.region,p,'up'),pad=spec.padding;
+      near(clip[1],Math.max(0,v+h*(1-p)-pad[1]/a.h),'C8 upward pace');
+      near(buildingReveal(spec.source,spec.id,spec.region,p)[2],Math.min(1,u+w*p+pad[2]/a.w),'C8 corner pace');
+    }
+  }
+  return {commands,clipped,textPlanes,reveals:inventory.length,padded:inventory.filter(s=>s.padding.some(p=>p>1e-8)).map(s=>({source:s.source,id:s.id,region:s.region,padding:s.padding}))};
+}
 export function checkBuildingMode(code=fs.readFileSync(new URL('../sq.mjs',import.meta.url),'utf8')) {
   const start=code.indexOf('if (pc.building && u.uArtMode)'),end=code.indexOf('\n\n  };',start),body=code.slice(start,end);
   assert.match(body,/gl\.uniform1f\(u\.uArtMode,1\)/,'C3 alpha-tested building: ordinary mode 1 required');
@@ -771,7 +828,9 @@ export async function checkRound17(M) {
   const levels = await checkLevels(M), letters = await checkDrawsAndLetters(M), swaps = await checkSwaps(M), carries = await checkCarries(M), flight = await checkFlight(M), sinks = await checkLidAndSinks(M);
   const devices = await checkDeviceModels(M), camera = await checkPinnedCamera(M);
   const heights = await checkDocumentHeights(M), stable = await checkPlaybackStability(M), masks = checkLetterMasks();
-  const contact = await checkDeviceGlass(M), clearance = await checkDeviceGlass(M,true), fringes = await checkCutouts(M);checkBuildingMode();checkCarryClipRenderer();checkFloorOffset();console.log('C7 spine: '+JSON.stringify(await checkSpine(M)));console.log('Pixel helper synthetic tests: '+JSON.stringify(checkPixelHelpers()));
+  const contact = await checkDeviceGlass(M), clearance = await checkDeviceGlass(M,true), fringes = await checkCutouts(M);checkBuildingMode();checkCarryClipRenderer();checkFloorOffset();
+  const {padded,...reveals}=await checkRevealBounds(M);console.log('C8 reveals: '+JSON.stringify({...reveals,padded:padded.length}));
+  console.log('C7 spine: '+JSON.stringify(await checkSpine(M)));console.log('Pixel helper synthetic tests: '+JSON.stringify(checkPixelHelpers()));
   console.log(`Critique round 2: retained C1 ${JSON.stringify({contact,clearance})}; C2 own-body depths, carry clips and renderer cull; C3 ${JSON.stringify(fringes)} exact paint partition; C4 five InDesign objects; C5 floor offset 1/2.`);
   return `R12: ${JSON.stringify({devices,camera})}\nRound 17: G ${swaps.boundaries} action ends / ${swaps.comparisons} registrations, worst ${swaps.worst.toFixed(5)} px; R1 ${levels} levels samples; R2/R3 ${letters} draw/type samples; R4 ${carries.carries} carries / ${carries.samples} samples, flat worst ${carries.flat.worst.toFixed(5)} px; R6/R7 ${flight} flight samples; R8-R11 ${sinks.samples} sink samples (${JSON.stringify(sinks.endTimes)}).\nFollow-up: F1 ${heights.samples} height samples / ${heights.pages} pages / ${heights.layers} layers; F2 ${stable.samples} playback samples / ${stable.faces} fixed faces, worst ${stable.worst.toFixed(5)} px; F3 ${masks.pictures} masks / ${masks.texels} fixture texels / ${masks.covered} covered, exact finished RGB.`;
 }
@@ -912,6 +971,8 @@ export async function checkRound17Controls() {
   });
   let packingFailed=false;try {const atlas=prepareRound17Art();checkAtlasPacking({...atlas,pages:atlas.pages.map((p,i)=>i===1?{...p,height:1704}:p)});}catch(e){assert.ok(e.message.includes('C3 atlas packing:'),e.message);packingFailed=true;}assert.ok(packingFailed,'C3 repadded page MISSED');out.push('C3 page 1 1704: failed at C3 atlas packing:');
   await control('C7 0.0001 gap',s=>s.replace('const reading = floor.slice(18), spine = -0.1;', 'const reading = floor.slice(18), spine = -0.1; for(const pc of reading)if(pc.p[0]>=spine)pc.p[0]+=.0001;'),'C7 spine gap',checkSpine);
+  await control('C8 badge without padding',s=>s.replace("buildingReveal(source, id, region, p, upward ? 'up' : 'corner')", "source === 'kMap' && id === 'badge' ? (([u,v,w,h]) => [u,v,u+w*p,v+h*p])(region) : buildingReveal(source, id, region, p, upward ? 'up' : 'corner')"),'C8 reveal contains ink:',checkRevealBounds);
+  await control('C8 details without padding',s=>s.replace("buildingReveal(source, part.id, [u,v,w,h], amount, 'x')", "[u,v,u+w*amount,v+h]"),'C8 reveal contains ink:',checkRevealBounds);
   return out.join('\n');
 }
 
