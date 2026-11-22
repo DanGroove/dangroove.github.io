@@ -332,13 +332,12 @@ const redPiece = (c, s, e, morph, part) => ({ tone: 'red', p: c, q: LYING.slice(
 // A lying piece's block: [x, z, w, d, top, e].
 const lyingShape = pc => [pc.p[0] - pc.s[0], pc.p[2] - pc.s[1], 2 * pc.s[0], 2 * pc.s[1], pc.p[1] + pc.s[2], pc.e.slice()];
 // Figma's laptop lid at lean theta (degrees: -90 shut on the deck, 12 open): its box and its screen's pictures turn together about
-// the hinge. Keys and trackpad are left out while it is forward of upright. A picture is left out while its face is turned away from the
-// view: the lid's own box is in front of it then.
-function poseLid({ pieces, pivot, details = [] }, theta) {
+// the hinge. The keys and trackpad stay on the deck; the opaque lid hides them through the renderer's depth test, even when shut.
+// A picture is left out while its face is turned away from the view: the lid's own box is in front of it then.
+function poseLid({ pieces, pivot }, theta) {
   const by = 12 - theta, lift = 0;
   if (by) turn(pieces, pivot, [1, 0, 0], by);
   for (const pc of pieces) { pc.p[1] += lift; if (pc.lidPicture) pc.hide = dot3(quatRotate(pc.q, [0, 0, 1]), HOME.v) <= 0; }
-  for (const pc of details) pc.hide = theta < 0;
 }
 // The export of one scene. formats: its three pieces left to right, each { pieces: built in their final landed pose (as round 13
 // left them), shape: their block [x, z, w, d, thickness, e], lid?: Figma's laptop lid, posed shut until its wipe has ended }.
@@ -480,7 +479,7 @@ function prototypeOut(P, t, s) {
     if (i) return { pieces: [...body, ...face], shape: lyingShape(body[0]) };
     // The closed laptop's block: the deck's footprint, up to the top of the lid lying shut on it (see poseLid), sharp like the deck.
     const pivot = lidHinge().map((n, k) => n + (k === 2 ? g.forward : 0));
-    return { pieces: [...body, ...face], shape: [g.hinge, MAT.z + g.lean + g.forward, g.lidW, g.deck, pivot[1] + 0.04, body[0].e.slice()], lid: { pieces: [body.at(-1), ...face], details: body.slice(1, -1), pivot } };
+    return { pieces: [...body, ...face], shape: [g.hinge, MAT.z + g.lean + g.forward, g.lidW, g.deck, pivot[1] + 0.04, body[0].e.slice()], lid: { pieces: [body.at(-1), ...face], pivot } };
   });
   exportOut(P, s, t, 'fig', formats);
   P.clock = clock;

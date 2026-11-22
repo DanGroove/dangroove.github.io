@@ -439,7 +439,8 @@ export async function checkLidAndSinks(M, behaviourOnly = false) {
         l.slice(0, 4).forEach((v, i) => near(v, d[i], 'R10 shut footprint', 0.001)); near(l[5], d[4], 'R10 lid gap', 1e-6);
         const block = floor(action(M, key, 'export').start + M.ballBeats(key, 0).hold - 0.001).find(pc => pc.part === 0);
         bounds([block]).slice(0, 5).forEach((v, i) => near(v, i === 4 ? l[4] : d[i], 'R10 red block equals shut laptop', 0.001));
-        assert.ok(!P.some(pc => pc.device === 0 && !pc.lid && !pc.lidPicture && !pc.deviceBody && bounds([pc])[4] > d[4] + 1e-6), 'R10 keys/trackpad above deck');
+        // C18-8 keeps the original raised details drawn, enclosed by the shut lid rather than omitted at theta < 0.
+        checkClosedDeck(lid, deckDetails(P), 'R10 keys/trackpad under shut lid');
         near(Math.abs(quatRotate(lid.q, [0, 1, 0])[1]), 0, 'R11 lid shut before sink', 1e-6);
       }
       for (const t of grid(land + 3, off[0])) {
@@ -764,8 +765,8 @@ export async function checkSpine(M) {
 }
 
 function rendererTrace(code = null) {
-  let next=0,program,depthWrite=true,depthTest=false,blend=false,offset=false,factor=0,units=0;const calls=[],uniforms=new Map();
-  const names=['uArtMode','uClip','uCarryClip','uPos'];
+  let next=0,program,depthWrite=true,depthTest=false,blend=false,offset=false,factor=0,units=0,depthFunction;const calls=[],uniforms=new Map();
+  const names=['uArtMode','uClip','uCarryClip','uPos','uSize','uQuat','uGrow','uNear'];
   const gl=new Proxy({}, {get:(_,key)=>{
     if(/^[A-Z_0-9]+$/.test(key))return key;
     if(key==='createProgram')return ()=>++next;
@@ -775,10 +776,12 @@ function rendererTrace(code = null) {
     if(key==='getUniformLocation')return (_,name)=>({name});
     if(key==='useProgram')return p=>{program=p;};
     if(key==='uniform1f'||key==='uniform3fv'||key==='uniform4fv')return (u,p)=>{if(u)uniforms.set(u.name,Array.isArray(p)?[...p]:p);};
+    if(key==='uniform3f')return (u,...p)=>{if(u)uniforms.set(u.name,p);};
     if(key==='enable'||key==='disable')return state=>{if(state==='DEPTH_TEST')depthTest=key==='enable';if(state==='BLEND')blend=key==='enable';if(state==='POLYGON_OFFSET_FILL')offset=key==='enable';};
     if(key==='depthMask')return value=>{depthWrite=value;};
+    if(key==='depthFunc')return value=>{depthFunction=value;};
     if(key==='polygonOffset')return (f,u)=>{factor=f;units=u;};
-    if(key==='drawElements'||key==='drawArrays')return ()=>calls.push({program,depthWrite,depthTest,blend,offset,factor,units,mode:uniforms.get('uArtMode'),position:uniforms.get('uPos')});
+    if(key==='drawElements'||key==='drawArrays')return ()=>calls.push({program,depthWrite,depthTest,depthFunction,blend,offset,factor,units,mode:uniforms.get('uArtMode'),position:uniforms.get('uPos'),size:uniforms.get('uSize'),rotation:uniforms.get('uQuat'),grow:uniforms.get('uGrow'),near:uniforms.get('uNear')});
     return ()=>({});
   }});
   const make=code ? new Function('ART','buildingSize','paintBuilding','buildingChanges',code.replace(/^import .*;$/gm,'').replaceAll('export ','')+'; return createRenderer;')(ART,buildingSize,paintBuilding,buildingChanges) : createRenderer;
@@ -903,6 +906,79 @@ export async function checkLidGlass(M) {
   return {windows:Object.fromEntries(Object.entries(windows).map(([k,v])=>[k,v.map(t=>start+t)])),samples,pictures,vertices,triangles,minBack,minFront,worstPlane,worstLayout};
 }
 
+const deckDetails = P => P.filter(pc => pc.where === 'floor' && pc.device === 0 && !pc.deviceBody && !pc.lid && !pc.lidPicture);
+// All eight corners must fit well inside the sharp lid, away from its rounded edges. Its convex central 96% box is
+// contained in the .03 superquadric (and its sharp mesh), so it encloses the entire detail, not only its top face.
+function checkClosedDeck(lid, details, gate) {
+  assert.equal(details.length,47,`${gate}: all 45 keys, keyboard well and trackpad drawn`);
+  assert.deepEqual(lid.e,[0.03,0.03],`${gate}: sharp opaque lid`);
+  assert.deepEqual(lid.taper,[0,0],`${gate}: untapered lid`);near(lid.shear,0,`${gate}: unsheared lid`);
+  const axes=[[1,0,0],[0,1,0],[0,0,1]].map(v=>quatRotate(lid.q,v));
+  let vertices=0,worstFraction=0;
+  for(const pc of details)for(const point of corners(pc))for(let k=0;k<3;k++) {
+    const fraction=Math.abs(dot(axes[k],point.map((v,i)=>v-lid.p[i])))/lid.s[k];
+    worstFraction=Math.max(worstFraction,fraction);
+    assert.ok(fraction<=0.96+1e-9,`${gate}: detail outside closed lid, axis ${k}, fraction ${fraction}`);
+    if(k===0)vertices++;
+  }
+  return {vertices,worstFraction};
+}
+
+// C18-8: prove continuous submission and the renderer's occlusion contract. With opaque, depth-writing solids at their
+// actual world depths, LEQUAL retains the nearest surface at every shared pixel; no finite ray sample is substituted for it.
+export async function checkLidDeck(M) {
+  M ??=await load();const gate='C18 lid deck:',start=starts(M)[5],exp=action(M,'fig','export').start,beat=M.ballBeats('fig',0);
+  const {land,off}=M.playbackSpans(M.SCRIPTS.fig),reference=deckDetails(at(M,'fig',land+0.1));
+  assert.equal(reference.length,47,`${gate} open reference details`);
+  const fields=['p','q','s','e','taper','shear','tones','tone'];
+  const {renderer,calls}=rendererTrace(),view={W:1474,H:988,S:100,cx:737,cy:494,cam:HOME};
+  const windows={opening:[exp+beat.wiped,exp+beat.become],shutting:[off[0]-M.BALL.lid*M.PACE,off[0]]};
+  let details=0,draws=0,closedVertices=0,worstClosedFraction=0;const samples={};
+  for(const [name,[from,to]] of Object.entries(windows)) {
+    const times=new Set([from,to,...Array.from({length:Math.ceil((to-from)*60)},(_,i)=>from+i/60)]);
+    if(name==='opening')times.add(94.91-start);
+    samples[name]={frames:0,forwardOfUpright:0};
+    for(const t of [...times].sort((a,b)=>a-b)) {
+      const P=at(M,'fig',t),lid=P.find(pc=>pc.lid),deck=P.find(pc=>pc.device===0&&pc.deviceBody),shown=deckDetails(P);
+      assert.ok(lid&&deck,`${gate} lid and deck present`);
+      assert.equal(shown.length,47,`${gate} all deck details drawn at loop ${start+t}`);
+      const theta=Math.atan2(-quatRotate(lid.q,[0,1,0])[2],quatRotate(lid.q,[0,1,0])[1])*180/Math.PI;
+      samples[name].frames++;if(theta<0)samples[name].forwardOfUpright++;
+      for(const [i,pc] of shown.entries()) {
+        assert.ok(!pc.hide,`${gate} detail switched off`);
+        if(pc.sink) {
+          // The shutting endpoint is also the unchanged first sink frame. Its original floor clips leave every detail intact.
+          near(t,off[0],`${gate} sink only at closed endpoint`);
+          assert.deepEqual(pc.clip,[0,1,0,0],`${gate} existing floor clip`);
+          assert.deepEqual(pc.carryClip,[0,1,0,-0],`${gate} existing body clip`);
+          assert.ok(corners(pc).every(p=>p[1]>0),`${gate} floor clip leaves whole detail`);
+        } else assert.ok(!pc.clip&&!pc.carryClip,`${gate} no detail clip during turn`);
+        for(const field of fields)assert.deepEqual(pc[field],reference[i][field],`${gate} fixed detail ${i}/${field}`);
+        details++;
+      }
+      if(Math.abs(theta+90)<1e-6) {
+        const r=checkClosedDeck(lid,shown,gate);closedVertices+=r.vertices;worstClosedFraction=Math.max(worstClosedFraction,r.worstFraction);
+      }
+      // Exercise the actual renderer, including its outline and shadow passes, without a raster or a GPU.
+      const pieces=[...shown,lid];calls.length=0;renderer.draw(pieces,view);
+      for(const pass of [1,2,3]) {
+        const emitted=calls.filter(c=>c.program===pass);assert.equal(emitted.length,48,`${gate} renderer submits every detail and lid, pass ${pass}`);
+        for(const [i,call] of emitted.entries()) {
+          const pc=pieces[i];assert.deepEqual(call.position,pc.p,`${gate} actual world depth`);
+          assert.deepEqual(call.rotation,pc.q,`${gate} actual rotation`);assert.deepEqual(call.size,pc.s,`${gate} actual size`);
+          assert.ok(call.depthTest&&call.depthWrite&&call.depthFunction==='LEQUAL'&&!call.blend&&!call.offset,`${gate} lid occludes details in pass ${pass}`);
+          near(call.near,0,`${gate} no view-depth override`);near(call.mode,0,`${gate} opaque solid`);
+          if(pass!==2)near(call.grow,0,`${gate} unexpanded colour/shadow`);
+          draws++;
+        }
+      }
+    }
+  }
+  assert.ok(Object.values(samples).every(s=>s.forwardOfUpright>0),`${gate} negative angles exercised in both directions`);
+  assert.equal(closedVertices,2*47*8,`${gate} both shut endpoints enclosed`);
+  return {windows:Object.fromEntries(Object.entries(windows).map(([k,v])=>[k,v.map(t=>start+t)])),samples,details,draws,closedVertices,worstClosedFraction};
+}
+
 export async function checkRound17(M) {
   M ??= await load();
   prepareRound17Art();
@@ -913,6 +989,7 @@ export async function checkRound17(M) {
   const {padded,...reveals}=await checkRevealBounds(M);console.log('C8 reveals: '+JSON.stringify({...reveals,padded:padded.length}));
   console.log('C7 spine: '+JSON.stringify(await checkSpine(M)));console.log('Pixel helper synthetic tests: '+JSON.stringify(checkPixelHelpers()));
   console.log('C18 lid glass: '+JSON.stringify(await checkLidGlass(M)));
+  console.log('C18 lid deck: '+JSON.stringify(await checkLidDeck(M)));
   console.log(`Critique round 2: retained C1 ${JSON.stringify({contact,clearance})}; C2 own-body depths, carry clips and renderer cull; C3 ${JSON.stringify(fringes)} exact paint partition; C4 five InDesign objects; C5 floor offset 1/2.`);
   return `R12: ${JSON.stringify({devices,camera})}\nRound 17: G ${swaps.boundaries} action ends / ${swaps.comparisons} registrations, worst ${swaps.worst.toFixed(5)} px; R1 ${levels} levels samples; R2/R3 ${letters} draw/type samples; R4 ${carries.carries} carries / ${carries.samples} samples, flat worst ${carries.flat.worst.toFixed(5)} px; R6/R7 ${flight} flight samples; R8-R11 ${sinks.samples} sink samples (${JSON.stringify(sinks.endTimes)}).\nFollow-up: F1 ${heights.samples} height samples / ${heights.pages} pages / ${heights.layers} layers; F2 ${stable.samples} playback samples / ${stable.faces} fixed faces, worst ${stable.worst.toFixed(5)} px; F3 ${masks.pictures} masks / ${masks.texels} fixture texels / ${masks.covered} covered, exact finished RGB.`;
 }
@@ -1225,6 +1302,7 @@ export async function checkRound17Controls() {
   await control('C18 picture box grows at full height',s=>s.replace("handed(s, 'pictureBox', t), 'corner'","handed(s, 'pictureBox', t), 'x'"),'consistency: draw anchors fig/pictureBox',checkDrawAnchors);
   await control('C18 pre-play head fallback restored',s=>s.replace('motionHead.to = [3.34, 1.06]','motionHead.to = [2.79, 1.06]'),'consistency: head reaches 2.0 s',consistency);
   await control('C18 laptop picture coplanar with lid',s=>s.replaceAll('0.0205','0.0195'),'C18 lid glass:',checkLidGlass);
+  await control('C18 deck hidden at theta < 0',s=>s.replace('function poseLid({ pieces, pivot }, theta) {','function poseLid({ pieces, pivot, details = [] }, theta) {\n  for (const pc of details) pc.hide = theta < 0;').replace('lid: { pieces: [body.at(-1), ...face], pivot }','lid: { pieces: [body.at(-1), ...face], details: body.slice(1, -1), pivot }'),'C18 lid deck:',checkLidDeck);
   out.push(await checkHeldStarsControl());
   await control('done() photo choice', s => s.replace("pc.artMix = handed(s, white ? 'white' : 'black', t);", "pc.artMix = done(s, white ? 'white' : 'black', t) ? 1 : 0;"), 'R1 photo mix', checkLevels);
   await control('travel action:key', s => {
