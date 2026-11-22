@@ -371,6 +371,42 @@ Unchanged from round 2's list.
 
 BUILD.md: add a "Round 17, critique round 3" part: the building uses and their textures (size, margin, grid, what each paints and when), the handovers, any fallback and why, the pieces and pages removed, the checks and controls added, removed or changed with their numbers, C7's result, and how to run the gates.
 
+## Critique round 4: C8, every reveal holds its whole ink; the gate's last gaps
+
+Build this on top of `e7e0df8` and keep everything else. Both critics re-reviewed `e7e0df8` in a real browser. C3 by building textures works: 14.528, 16.806, 26.470, 27.066 and 32.350 change nothing inside their pictures at all three sizes, the handovers are pure carries, the stills keep their tone, sharpness and weight, nothing outside the eight pictures changes, and C7's halves meet. This is the last build of round 17's loop: round 5 only corrects what is below. Change no time, size, place, picture or colour that this section does not name.
+
+### C8. At its last frame, every reveal holds all of its group's ink
+
+What shows: two releases still add ink inside their pictures.
+- 14.082, the badge: its ring gets about a pixel thicker on every side. 53 to 60 px over 8 levels at 1474 x 996 dpr 1 (max 69), 208 to 233 at dpr 2 (max 77), 38 to 43 at 390 x 844 dpr 2 (max 69).
+- 85.928, Figma's details: the heading region's outline and the hero image box's border darken by 10 to 16 levels. 166 px at dpr 1 (max 21), 698 at dpr 2 (max 26), 155 at 390 x 844 (max 16).
+
+Cause (both critics, from the pixels: at 85.928 the borders darken by about 13 levels, and the frame after the release equals the 96.191 still exactly): a reveal clips its group's paint to the nominal region: `isolatedDraw()` to `[u, v, u + w*p, v + h*p]` (the badge's draw rectangle `[1273, 457, 72, 146]` of 2200 x 850), the details to their regions. A stroke centred on that edge (the badge's 6-unit ring, `art.mjs`; the wireframes' outlines) has its outer half outside the clip for the whole build, so it appears only when the release paints the group unclipped. The Node proof and the readback did not see it, because neither looks at the frame before a release.
+
+Correction:
+- Every reveal of a building texture (every `isolatedDraw()`, the Figma detail regions, the typing half-planes and any other canvas clip) is padded so that, at the end of its action, it contains every pixel its group paints: strokes, line caps, glyph overhangs and antialiasing. Take the padding from the group's own painted bounds (as `cropFringe()` pads by the stroke plus one texel), not from a guess. The padding reveals only that group's own paint, so nothing else in the picture changes.
+- How the reveal grows stays as it is: the same start corner or edge, the same pace. The padding only follows the growing edge out to the ink.
+- Report every reveal that needed padding and by how much.
+- If a release still changes something by design, such as an action's own selection frame going (29.779's white frame round the post's button), say whether that frame is a separate piece or painted into the building texture.
+
+Checks, Node: for every reveal, at its action's end the reveal contains its group's painted bounds, measured from the group's own commands (geometry, stroke width, caps and one texel). Negative controls: the badge's reveal without its padding fails it, and so do the Figma detail regions' reveals without theirs.
+
+### The pixel gate's last gaps
+
+In `tools/round17-pixel-checks.mjs`:
+- **The last state before each release.** For each building use, paint and read back its texture for its last action at progress exactly 1 with that action's reveal clips still applied (the last state before the release), and compare it with `reference(id)`: within 8 levels at levels 0 to 3. Also report the readback at the last action's end minus 0.002 s, with no pass or fail (a typed title shows one letter fewer there, by design). On screen, the release test already compares the frames 0.002 s either side of the release inside the face, at the three sizes.
+- **A release's own selection frame is masked like the cursor and the caret, only if it is a separate piece:** at 29.779, the white frame round the post's button; at 85.928, only a selection piece that `__hero.pieces` lists as separate from the wireframe pictures, if there is one. Take each from `__hero.pieces` as the frame's own projected outline, stroked at its line width plus 1 px x dpr, never its bounding box, which would hide the face it surrounds. No mask may cover a picture's own painted ink. If a selection frame is painted into a building texture, it is not masked: report it. Everything else inside the face still counts, at 0 px over 8.
+- **The two placements, 22.667 and 25.233,** are judged outside the carried and placed maps' faces against `dcb8094`, within 8 levels. Inside those faces the change against `dcb8094` comes from the maps keeping their Illustrator building textures (mip filtering only; no texture change at 21.194, as rule G asks): record its count and maximum, with no pass or fail. Measured on `e7e0df8`: 1,661 px (max 42) at 22.665, 291 px (max 43) at 25.231, 0 at 25.235; by eye at 3x they are the same.
+- **Releases with no building face** (Photoshop's 2.296 and 2.991) are judged inside the released picture's own face, the photo, with the same rule, so the test is not vacuous. Every release row fails if its own-face mask is empty, at any size.
+- **A fast mode,** `--releases`: only the atlas hashes, the readback, the last state before each release, the release test and the placements, at the three sizes, so a review can run it in about 10 minutes. With `--uses <id[:from-to],...>` it also runs the builds every 1/60 s rows for those building uses only, optionally limited to a window of loop seconds, with screenshots at all three sizes (the full run keeps its screenshots at 1474 x 996 dpr 1). The full run stays as it is otherwise.
+- **C7's attribution samples three lines:** the spine line and one line either side at plus and minus 1 px x dpr; floor in any of the three fails.
+
+Checks for the gate: test its new pure parts in Node on small synthetic data, as before.
+
+### Records for C8 and the gate
+
+BUILD.md: add a "Round 17, critique round 4" part: each reveal padded and by how much, the selection frames and what they are, the checks, controls and gate changes with their numbers. In the round 3 part, give page 4 as "1492 in the Node model, 1480 in the browser". Say which code produces the preview's console performance warnings ("GPU stall due to ReadPixels", repeated `getImageData`), and whether they occur in normal playback or only in the review API (from the code; you cannot run the browser).
+
 ## G. The swap rule (R2, R3, R5 and their kin)
 
 Several notes are one fault. A scene builds something out of parts on the screen, then replaces the parts with the finished picture in one frame, and the finished picture does not sit where the parts were. So something jumps, or something the parts hid comes back.
