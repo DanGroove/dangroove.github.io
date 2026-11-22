@@ -283,7 +283,7 @@ const context = new Proxy({
 globalThis.Path2D = class {};
 globalThis.document = { createElement: () => ({ getContext: () => context }) };
 const atlas = makeAtlas();
-assert.equal(atlas.pages.length, 5, 'C3 building textures retain five atlas pages');
+assert.equal(atlas.pages.length, 6, 'C18-9 appends one lid-mark page to the five retained atlas pages');
 assert.ok(atlas.pages.every(p => p.width <= 2048 && p.height <= 2048));
 assert.ok(ART_TEXT.kMap.length > 10 && ART_TEXT.kLoc.length > 20, 'map lettering was not recorded');
 const skyColours = key => { const first = gradients.length, art = ART[key]; art.draw(context, art.w, art.h); return gradients[first]; };

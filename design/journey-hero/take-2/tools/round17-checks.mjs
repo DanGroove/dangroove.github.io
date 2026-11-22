@@ -104,7 +104,7 @@ export function prepareRound17Art() {
   }, { get: (o, k) => k in o ? o[k] : () => {} });
   const doc = globalThis.document, path = globalThis.Path2D;
   globalThis.Path2D = class {}; globalThis.document = { createElement: () => ({ getContext: () => ctx }) };
-  try { const atlas = preparedAtlas = makeAtlas(); assert.equal(atlas.pages.length, 5, 'C3 atlas: original five pages'); return atlas; }
+  try { const atlas = preparedAtlas = makeAtlas(); assert.equal(atlas.pages.length, 6, 'C3 atlas: original five pages plus C18-9 mark'); return atlas; }
   finally { if (doc === undefined) delete globalThis.document; else globalThis.document = doc; if (path === undefined) delete globalThis.Path2D; else globalThis.Path2D = path; }
 }
 
@@ -653,9 +653,13 @@ export function recordPicture(source, accept = null, offset = [0,0], plan = unde
 
 export function checkAtlasPacking(atlas=prepareRound17Art()) {
   const before=JSON.parse(inflateRawSync(Buffer.from('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','base64')));
-  assert.deepEqual(atlas.pages.map(p=>[p.width,p.height]),before.pages,'C3 atlas packing: page heights');
-  assert.deepEqual(atlas.places,before.places,'C3 atlas packing: places/sizes/phases');
-  return {pages:before.pages,places:Object.keys(before.places).length};
+  assert.deepEqual(atlas.pages.slice(0,5).map(p=>[p.width,p.height]),before.pages,'C3 atlas packing: page heights');
+  const {lidMark,...originals}=atlas.places;
+  assert.deepEqual(originals,before.places,'C3 atlas packing: places/sizes/phases');
+  assert.equal(atlas.pages.length,6,'C3 atlas packing: only one appended mark page');
+  assert.deepEqual([atlas.pages[5].width,atlas.pages[5].height],[2048,184],'C3 atlas packing: mark page');
+  assert.deepEqual(lidMark,[5,8.5/2048,8.5/184,223/2048,167/184],'C3 atlas packing: new mark place');
+  return {pages:before.pages,places:Object.keys(before.places).length,appended:{pages:1,places:1}};
 }
 export async function checkCutouts(M) {
   M ??= await load();prepareRound17Art();const rows=[];
@@ -781,7 +785,7 @@ function rendererTrace(code = null) {
     if(key==='depthMask')return value=>{depthWrite=value;};
     if(key==='depthFunc')return value=>{depthFunction=value;};
     if(key==='polygonOffset')return (f,u)=>{factor=f;units=u;};
-    if(key==='drawElements'||key==='drawArrays')return ()=>calls.push({program,depthWrite,depthTest,depthFunction,blend,offset,factor,units,mode:uniforms.get('uArtMode'),position:uniforms.get('uPos'),size:uniforms.get('uSize'),rotation:uniforms.get('uQuat'),grow:uniforms.get('uGrow'),near:uniforms.get('uNear')});
+    if(key==='drawElements'||key==='drawArrays')return ()=>calls.push({program,depthWrite,depthTest,depthFunction,blend,offset,factor,units,mode:uniforms.get('uArtMode'),position:uniforms.get('uPos'),size:uniforms.get('uSize'),rotation:uniforms.get('uQuat'),grow:uniforms.get('uGrow'),near:uniforms.get('uNear'),clip:uniforms.get('uClip'),carryClip:uniforms.get('uCarryClip')});
     return ()=>({});
   }});
   const make=code ? new Function('ART','buildingSize','paintBuilding','buildingChanges',code.replace(/^import .*;$/gm,'').replaceAll('export ','')+'; return createRenderer;')(ART,buildingSize,paintBuilding,buildingChanges) : createRenderer;
@@ -906,7 +910,7 @@ export async function checkLidGlass(M) {
   return {windows:Object.fromEntries(Object.entries(windows).map(([k,v])=>[k,v.map(t=>start+t)])),samples,pictures,vertices,triangles,minBack,minFront,worstPlane,worstLayout};
 }
 
-const deckDetails = P => P.filter(pc => pc.where === 'floor' && pc.device === 0 && !pc.deviceBody && !pc.lid && !pc.lidPicture);
+const deckDetails = P => P.filter(pc => pc.where === 'floor' && pc.device === 0 && !pc.deviceBody && !pc.lid && !pc.lidPicture && !pc.lidMark);
 // All eight corners must fit well inside the sharp lid, away from its rounded edges. Its convex central 96% box is
 // contained in the .03 superquadric (and its sharp mesh), so it encloses the entire detail, not only its top face.
 function checkClosedDeck(lid, details, gate) {
@@ -979,6 +983,81 @@ export async function checkLidDeck(M) {
   return {windows:Object.fromEntries(Object.entries(windows).map(([k,v])=>[k,v.map(t=>start+t)])),samples,details,draws,closedVertices,worstClosedFraction};
 }
 
+// C18-9: inspect the emitted decal in the lid's coordinates, including hidden/back-facing and below-floor states.
+// The full padded plate bounds the ink and its sharp mesh; rigid attachment and normal depth testing do the occlusion.
+export async function checkLidMark(M) {
+  M ??=await load();prepareRound17Art();const gate='C18 lid mark:',g=M.UI_ROW,start=starts(M)[5];
+  const exp=action(M,'fig','export').start,beat=M.ballBeats('fig',0),{off}=M.playbackSpans(M.SCRIPTS.fig);
+  const a=ART.lidMark,paint=recordPicture('lidMark'),header=recordPicture('uiWide').filter(p=>p.method==='fill'&&p.args.length===1);
+  assert.equal(paint.length,3,`${gate} only the three filled paths`);
+  assert.deepEqual(paint.map(p=>p.args[0]),header.slice(0,3).map(p=>p.args[0]),`${gate} exact header paths`);
+  assert.deepEqual([a.w,a.h],[224,168],`${gate} padded tile size`);
+  a.ink.forEach((n,i)=>near(n,[4,4.27,216,159.46][i],`${gate} ink rectangle`));
+  for(const p of paint) {
+    assert.equal(p.method,'fill',`${gate} flat fill without outline`);assert.equal(p.state.fillStyle,'#5A5552',`${gate} single grey`);
+    assert.equal(p.state.globalAlpha,1,`${gate} opaque ink`);near(p.state.shadowBlur,0,`${gate} no gloss/shadow`);
+    p.matrix.forEach((n,i)=>near(n,[.2,0,0,.2,4,4.27][i],`${gate} unchanged path proportions`));
+  }
+  const {renderer,calls}=rendererTrace(),view={W:1474,H:988,S:100,cx:737,cy:494,cam:HOME};
+  renderer.setAtlas({pages:[{}],places:{lidMark:[0,0,0,1,1]}});
+  const windows={shut:[exp+beat.wipe,exp+beat.wiped],opening:[exp+beat.wiped,exp+beat.become],shutting:[off[0]-M.BALL.lid*M.PACE,off[0]],sinking:[off[0],off[1]]};
+  let vertices=0,triangles=0,draws=0,culled=0,worstPlane=0,worstCentre=0;const samples={};
+  const height=.22*Math.min(g.lidW,g.lidH),width=height*1080/797.3;
+  for(const [name,[from,to]] of Object.entries(windows)) {
+    const times=new Set([from,to,...Array.from({length:Math.ceil((to-from)*60)},(_,i)=>from+i/60)]);
+    if(name==='sinking')times.add(98.85-start);
+    samples[name]={frames:0,backFacing:0,frontFacing:0};
+    for(let t of [...times].sort((a,b)=>a-b)) {
+      // Global-to-scene subtraction rounds the exact first wipe boundary 4e-15 s early; inspect its emitted side.
+      if(name==='shut'&&t===from)t+=1e-9;
+      if(t>=off[1]-1e-10) {assert.equal(at(M,'fig',t).filter(p=>p.lidMark).length,0,`${gate} gone at sink end`);continue;}
+      const P=at(M,'fig',t),lid=P.find(p=>p.lid),marks=P.filter(p=>p.lidMark);
+      assert.ok(lid,`${gate} lid present`);assert.equal(marks.length,1,`${gate} exactly one mark`);const pc=marks[0];
+      const axes=[[1,0,0],[0,1,0],[0,0,1]].map(v=>quatRotate(lid.q,v)),out=axes[2].map(v=>-v);
+      const local=point=>axes.map(axis=>dot(axis,point.map((v,i)=>v-lid.p[i]))),centre=local(pc.p);
+      samples[name].frames++;samples[name][dot(out,HOME.v)>0?'backFacing':'frontFacing']++;
+      for(let i=0;i<2;i++) {worstCentre=Math.max(worstCentre,Math.abs(centre[i]));near(centre[i],0,`${gate} centred on lid`);}
+      near(centre[2],-lid.s[2]-.0005,`${gate} on outer face plane`);
+      const expected=[axes[0].map(v=>-v),axes[1],out];
+      [[1,0,0],[0,1,0],[0,0,1]].map(v=>quatRotate(pc.q,v)).forEach((axis,i)=>axis.forEach((v,k)=>near(v,expected[i][k],`${gate} outward unmirrored basis`)));
+      near(2*pc.s[0]*a.ink[2]/a.w,width,`${gate} ink width`);near(2*pc.s[1]*a.ink[3]/a.h,height,`${gate} ink height 22 percent`);
+      near(2*pc.s[2],.001,`${gate} C18-6 thickness/clearance`);
+      for(const v of corners(pc)) {
+        const p=local(v);vertices++;
+        assert.ok(Math.abs(p[0])<lid.s[0]&&Math.abs(p[1])<lid.s[1],`${gate} wholly inside lid`);
+        assert.ok(p[2]<=-lid.s[2]+1e-9&&p[2]>=-lid.s[2]-.001-1e-9,`${gate} no vertex in lid`);
+      }
+      const points=front(pc);
+      for(const point of points) {const error=Math.abs(local(point)[2]+lid.s[2]+.001);worstPlane=Math.max(worstPlane,error);near(error,0,`${gate} flat outward face`);}
+      for(const [a,b,c] of [[0,2,3],[0,3,1]]) {
+        const u=points[b].map((n,i)=>n-points[a][i]),v=points[c].map((n,i)=>n-points[a][i]);
+        assert.ok(dot(out,[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]])>0,`${gate} positive outward area`);triangles++;
+      }
+      assert.equal(pc.art,'lidMark',`${gate} correct artwork`);assert.equal(pc.deviceKind,'laptop',`${gate} only laptop`);
+      assert.ok(pc.cut&&pc.solid&&pc.shade&&pc.noLine&&pc.noShadow&&!pc.hide&&!pc.blend&&!pc.near,`${gate} depth-owned decal without outline/gloss`);
+      assert.deepEqual(pc.tones,['#5A5552','#5A5552','#353230'],`${gate} one step lighter in light and shade`);
+      if(name==='shut'&&t<to)assert.deepEqual(pc.clip,lid.clip,`${gate} same become wipe`);
+      if(pc.sink) {
+        assert.deepEqual(pc.clip,[0,1,0,0],`${gate} normal floor clip`);
+        near(pc.sinkTop,lid.sinkTop,`${gate} same body lifetime`);
+        near(pc.carryClip[3],-.001,`${gate} original body-relative sink clearance`);
+      }
+      calls.length=0;renderer.draw([lid,pc],view);
+      const colour=calls.filter(c=>c.program===1),gone=pc.sink&&pc.sinkTop<0;
+      assert.equal(colour.length,gone?0:2,`${gate} normal body culling`);
+      if(gone) {culled++;continue;}
+      const draw=colour[1];assert.deepEqual(draw.position,pc.p,`${gate} actual depth`);assert.deepEqual(draw.rotation,pc.q,`${gate} actual rotation`);assert.deepEqual(draw.size,pc.s,`${gate} actual size`);
+      assert.ok(draw.depthTest&&draw.depthWrite&&draw.depthFunction==='LEQUAL'&&!draw.blend&&!draw.offset,`${gate} depth occlusion`);
+      near(draw.mode,2,`${gate} hard alpha cut`);near(draw.near,0,`${gate} no view lift`);near(draw.grow,0,`${gate} no expansion`);
+      assert.deepEqual(draw.clip,pc.clip||[0,0,0,1],`${gate} clip submitted`);assert.deepEqual(draw.carryClip,pc.carryClip||[0,0,0,1],`${gate} body clip submitted`);
+      assert.equal(calls.filter(c=>JSON.stringify(c.position)===JSON.stringify(draw.position)&&c.program!==1).length,0,`${gate} no decal outline/shadow`);
+      draws++;
+    }
+  }
+  assert.ok(samples.opening.backFacing&&samples.opening.frontFacing&&samples.shutting.backFacing&&samples.shutting.frontFacing,`${gate} both sides of both turns`);
+  return {windows:Object.fromEntries(Object.entries(windows).map(([k,v])=>[k,v.map(t=>start+t)])),samples,vertices,triangles,draws,culled,width,height,frontClearance:.001,worstPlane,worstCentre};
+}
+
 export async function checkRound17(M) {
   M ??= await load();
   prepareRound17Art();
@@ -990,6 +1069,7 @@ export async function checkRound17(M) {
   console.log('C7 spine: '+JSON.stringify(await checkSpine(M)));console.log('Pixel helper synthetic tests: '+JSON.stringify(checkPixelHelpers()));
   console.log('C18 lid glass: '+JSON.stringify(await checkLidGlass(M)));
   console.log('C18 lid deck: '+JSON.stringify(await checkLidDeck(M)));
+  console.log('C18 lid mark: '+JSON.stringify(await checkLidMark(M)));
   console.log(`Critique round 2: retained C1 ${JSON.stringify({contact,clearance})}; C2 own-body depths, carry clips and renderer cull; C3 ${JSON.stringify(fringes)} exact paint partition; C4 five InDesign objects; C5 floor offset 1/2.`);
   return `R12: ${JSON.stringify({devices,camera})}\nRound 17: G ${swaps.boundaries} action ends / ${swaps.comparisons} registrations, worst ${swaps.worst.toFixed(5)} px; R1 ${levels} levels samples; R2/R3 ${letters} draw/type samples; R4 ${carries.carries} carries / ${carries.samples} samples, flat worst ${carries.flat.worst.toFixed(5)} px; R6/R7 ${flight} flight samples; R8-R11 ${sinks.samples} sink samples (${JSON.stringify(sinks.endTimes)}).\nFollow-up: F1 ${heights.samples} height samples / ${heights.pages} pages / ${heights.layers} layers; F2 ${stable.samples} playback samples / ${stable.faces} fixed faces, worst ${stable.worst.toFixed(5)} px; F3 ${masks.pictures} masks / ${masks.texels} fixture texels / ${masks.covered} covered, exact finished RGB.`;
 }
@@ -1303,6 +1383,7 @@ export async function checkRound17Controls() {
   await control('C18 pre-play head fallback restored',s=>s.replace('motionHead.to = [3.34, 1.06]','motionHead.to = [2.79, 1.06]'),'consistency: head reaches 2.0 s',consistency);
   await control('C18 laptop picture coplanar with lid',s=>s.replaceAll('0.0205','0.0195'),'C18 lid glass:',checkLidGlass);
   await control('C18 deck hidden at theta < 0',s=>s.replace('function poseLid({ pieces, pivot }, theta) {','function poseLid({ pieces, pivot, details = [] }, theta) {\n  for (const pc of details) pc.hide = theta < 0;').replace('lid: { pieces: [body.at(-1), ...face], pivot }','lid: { pieces: [body.at(-1), ...face], details: body.slice(1, -1), pivot }'),'C18 lid deck:',checkLidDeck);
+  await control('C18 mark left on deck',s=>s.replace('if (by) turn(pieces, pivot, [1, 0, 0], by);', 'if (by) turn(pieces.filter(pc => !pc.lidMark), pivot, [1, 0, 0], by);\n  for (const pc of pieces.filter(pc => pc.lidMark)) { pc.p = [UI_ROW.hinge + UI_ROW.lidW / 2, 0.0805, MAT.z + UI_ROW.lean + UI_ROW.forward + UI_ROW.deck / 2]; pc.q = LYING.slice(); }'),'C18 lid mark:',checkLidMark);
   out.push(await checkHeldStarsControl());
   await control('done() photo choice', s => s.replace("pc.artMix = handed(s, white ? 'white' : 'black', t);", "pc.artMix = done(s, white ? 'white' : 'black', t) ? 1 : 0;"), 'R1 photo mix', checkLevels);
   await control('travel action:key', s => {

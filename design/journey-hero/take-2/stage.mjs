@@ -467,6 +467,10 @@ function prototypeOut(P, t, s) {
       body.push(detail(['#121111', '#121111', '#121111'], 0.065, 0.12, 1.42, 0.62, 0.008, 0.081), detail(['#86807A', '#4A4643', '#252220'], 0.5, 0.85, 0.55, 0.18, 0.008, 0.081));
       for (let row = 0; row < 5; row++) for (let key = 0; key < 9; key++) body.push(detail(['#2C2928', '#1B1918', '#111010'], 0.09 + key * 0.151, 0.14 + row * 0.115, 0.115, 0.082, 0.005, 0.091));
       body.push({ ...box('ink', lidPoint(g.lidW / 2, g.lidH / 2), [g.lidW, g.lidH, 0.04]), tones: ['#86807A', '#3E3A37', '#252220'], q: quatFromBasis(lidU, lidV), lid: true });
+      // The decal's underside rests on the outer face; its front clears it by .001, as the glass picture does in C18-6.
+      // Reverse x and the normal together so the header mark reads correctly from the back. Depth hides it from the front.
+      const logo = ART.lidMark, k = 0.22 * Math.min(g.lidW, g.lidH) / logo.ink[3];
+      face.push({ ...box('ink', lidPoint(g.lidW / 2, g.lidH / 2, -0.0205), [logo.w * k, logo.h * k, 0.001]), q: quatFromBasis(lidU.map(v => -v), lidV), art: 'lidMark', cut: true, shade: true, tones: ['#5A5552', '#5A5552', '#353230'], solid: true, lidMark: true, noLine: true, noShadow: true });
       prototype(lidPainter(face), 0, shown);
     } else {
       const x = i === 1 ? g.tablet : g.phone, w = i === 1 ? g.tabW : g.phoneW, d = i === 1 ? g.tabD : g.phoneD, z = MAT.z + (i === 1 ? g.tabZ : g.phoneZ), rim = i === 1 ? g.rim : g.phoneRim;

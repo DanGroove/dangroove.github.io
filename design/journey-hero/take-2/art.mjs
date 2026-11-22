@@ -773,6 +773,8 @@ export const ART = {
   tMarquee: { w: 64, h: 64, draw(c) { stroke(c, C.paper, 5); c.setLineDash([9, 6]); c.strokeRect(12, 14, 40, 36); c.setLineDash([]); } },
   tBrush: { w: 64, h: 64, draw(c) { c.save(); c.translate(32, 32); c.rotate(Math.PI / 4); fill(c, C.paper, -5, -28, 10, 30); fill(c, C.paper, -8, 6, 16, 8); c.beginPath(); c.moveTo(-8, 16); c.lineTo(8, 16); c.lineTo(0, 30); c.closePath(); c.fill(); c.restore(); } },
   tDrop: { w: 64, h: 64, draw(c) { stroke(c, C.paper, 8); c.beginPath(); c.moveTo(14, 50); c.lineTo(38, 26); c.stroke(); c.save(); c.translate(44, 20); c.rotate(Math.PI / 4); fill(c, C.paper, -9, -14, 18, 24); c.restore(); } },
+  // C18-9: the header's exact paths, in one warm grey. Transparent padding keeps the hard cut clear of the tile edge.
+  lidMark: { w: 224, h: 168, atlasTail: true, ink: [4, (168 - 216 * 797.3 / 1080) / 2, 216, 216 * 797.3 / 1080], draw(c, w, h) { mark(c, 4, (h - 216 * 797.3 / 1080) / 2, 216, '#5A5552', '#5A5552'); } },
 };
 
 // These small patches carry real prefixes, rather than slicing through a letter while it is typed.
@@ -889,13 +891,19 @@ export function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
   const referenceOnly = new Set(['siteWide', 'siteTall', 'siteTall2', 'chromeBrowser', 'chromePhone']);
   const drawings = Object.entries(ART).filter(([key]) => !referenceOnly.has(key));
   const extra = a => a.cutout || a.constructionBase;
-  for (const [key, a] of drawings.filter(([,a]) => !extra(a)).sort((p,q) => q[1].h-p[1].h)) {
+  for (const [key, a] of drawings.filter(([,a]) => !extra(a) && !a.atlasTail).sort((p,q) => q[1].h-p[1].h)) {
     const w=Math.round(a.w*scale),h=Math.round(a.h*scale);
     if(w+2*pad>size||h+2*pad>size)throw new Error('picture too large: '+key);
     if(x+w+pad>size){x=pad;y+=row+pad;row=0;}
     if(y+h+pad>size){sheets.push([]);x=pad;y=pad;row=0;}
     sheets.at(-1).push([key,a,x,y,w,h,pad]);positions.set(key,[x,y]);
     x+=w+pad;row=Math.max(row,h);
+  }
+  // A new lid decal must not repack, repaint or change the mip phase of any approved picture on pages 0-4.
+  for (const [key, a] of drawings.filter(([,a]) => a.atlasTail)) {
+    const w = Math.round(a.w * scale), h = Math.round(a.h * scale);
+    if (w + 2 * pad > size || h + 2 * pad > size) throw new Error('picture too large: ' + key);
+    sheets.push([[key, a, pad, pad, w, h, pad]]);
   }
   // Building uses have independent textures. Keep the original packing, including its old prefix/letter slots,
   // byte-for-byte; the added cutout/base pages have no rendered uses any more.
