@@ -26,7 +26,7 @@ import { checkRound12StarsList, checkRound12Controls } from './round12-stars-lis
 import { checkRound14, checkRound14Controls } from './round14-checks.mjs';
 import { checkRound12 as checkRound12Scene, checkRound12Controls as checkRound12SceneControls } from './round12-checks.mjs';
 import { checkRows as checkRound13Rows, checkRowsControls as checkRound13RowsControls } from './round13-checks.mjs';
-import { checkRound17, checkRound17Controls, checkRound17Exports as checkRound15, checkRound17RetainedControls as checkRound15Controls, checkPainterStacks, withSourceLines } from './round17-checks.mjs';
+import { consistency, checkRound17, checkRound17Controls, checkRound17Exports as checkRound15, checkRound17RetainedControls as checkRound15Controls, checkPainterStacks, withSourceLines } from './round17-checks.mjs';
 import * as stageModule from '../stage.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
@@ -181,7 +181,7 @@ for (const scene of SHOW) {
   sceneStart += scene.len;
 }
 function actionStart(s, id) { return s.actions.find(a => a.id === id).start; }
-// The new slide law must leave the approved parked list in exactly its old place.
+// C18: the constructed list and the held clip now land on the same left-aligned rest rectangles.
 const rows = frameAt(SHOW.slice(0, 4).reduce((n, s) => n + s.len, 0) + (SCRIPTS.ae ? actionStart(SCRIPTS.ae, 'export') - 1e-6 : 4.4)).filter(pc => pc.where === 'content' && pc.p[0] > SCREEN.l + 1.33 * 1.15 && (pc.art === 'rowA' || pc.art === 'rowB'));
 assert.equal(rows.length, 3);
 ROWS.forEach(([x, y, w, h], i) => {
@@ -189,7 +189,7 @@ ROWS.forEach(([x, y, w, h], i) => {
   near(rows[i].p[1], SCREEN.b + (1.5 + 1.08 - (y + h / 2) * 1.08 / 270) * 1.15);
   assert.deepEqual(rows[i].window || [0, 0, 1, 1], [0, 0, 1, 1]);
 });
-// The comp and its thumbnail build together, without applying playback's reveal or row offsets.
+// The comp and its thumbnail build together, without applying playback's entrance reveals.
 const aeStart = SHOW.slice(0, 4).reduce((n, s) => n + s.len, 0), ae = SCRIPTS.ae;
 const atAction = (s, id, f) => { const a = s.actions.find(a => a.id === id); return a.start + (a.end - a.start) * f; };
 for (const [id, art] of [['make', 'wMake'], ['move', 'wMove']]) {
@@ -560,6 +560,7 @@ try { console.log(await checkRound12Scene()); console.log('Round 12 (D1, I1, X1)
 try { console.log(await checkRound13Rows(stageModule)); console.log('Round 13 (U1, I2) negative controls: ' + await checkRound13RowsControls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 // CORRECTIONS-15: the ball and the sink (S1, S2), the map without its selection box (N1) and flat drags (N2); round 13's E1/E2 are retired.
 try { console.log(await checkRound15(stageModule)); console.log('Round 15 (S1, S2, N1, N2) negative controls: ' + await checkRound15Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
+try { console.log('consistency: ' + JSON.stringify(await consistency(stageModule))); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound17(stageModule)); console.log('Round 17 negative controls:\n' + await checkRound17Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 console.log('R1–R8 sampled: photo releases, pages, blobs, typing, births, placed images, tools, resting waits');
 

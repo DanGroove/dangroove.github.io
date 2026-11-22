@@ -3,7 +3,7 @@
 // One clock builds every piece: the persistent shell, wiped content, travelling work and the floor.
 import { HOME, EASE, dot as dot3, quatFromBasis, quatRotate } from '../../../public/journey/hero/engine.mjs';
 import { box, cyl, turn, corners, qAxis, qMul } from './kit.mjs';
-import { SPOT, subwayPath, BALL as COMP_BALL, BALL_FROM, BALL_VIA, ROWS, TYPE_EDGES, TYPE_BOXES, ART, ART_TEXT, HISTOGRAM, CUTOUTS, BUILDING_PICTURES, buildingReveal, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS } from './art.mjs';
+import { SPOT, subwayPath, BALL as COMP_BALL, BALL_FROM, BALL_VIA, ROWS, MOTION_LAYOUTS, motionCards, TYPE_EDGES, TYPE_BOXES, ART, ART_TEXT, HISTOGRAM, CUTOUTS, BUILDING_PICTURES, buildingReveal, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS } from './art.mjs';
 
 // All authored durations, including the cursor's journeys, share this one control.
 export const PACE = 1;
@@ -549,9 +549,9 @@ function movie(draw, shape, p) {
 }
 function animatedComp(draw, shape, p) {
   draw = replayPainter(draw);
-  const o = shape === 4 ? { w: 472, h: 328, x: 34, y: 133, px: 60, rows: [288, 91, 140, 3] } : shape === 0 || shape === 3 ? { w: 480, h: 270, x: 34, y: shape === 3 ? 116 : 104, px: 60, rows: [296, 62, 140, 3] } : shape === 1 ? { w: 300, h: 650, x: 26, y: 236, px: 62, rows: [26, 366, 180, 3] } : { w: 300, h: 650, x: 20, y: 276, px: 50, rows: [146, 364, 120, 2] };
-  const { w, h, x, y, px, rows: [rx, ry, rw, n] } = o, k = px / 60, at = p * 2.4;
-  draw('paper', shape === 2 ? [0, 184 / 650, 1, 300 / 650] : [0, 0, 1, 1], shape === 4 ? 'paperTablet' : shape === 1 ? 'paperPhone' : shape === 2 ? 'paperSq' : 'paperTile');
+  const o = MOTION_LAYOUTS[shape];
+  const { w, h, x, y, px, offset } = o, k = px / 60, at = p * 2.4;
+  draw('paper', shape === 2 ? [0, offset / h, 1, w / h] : [0, 0, 1, 1], shape === 4 ? 'paperTablet' : shape === 1 ? 'paperPhone' : shape === 2 ? 'paperSq' : 'paperTile');
   const norm = r => [r[0] / w, r[1] / h, r[2] / w, r[3] / h];
   cropPicture(draw, 'paper', norm([x - 6 * k, y - 54 * k, 232 * k, 62 * k]), 'wMake', EASE.wipe(linear(at, ...LAYERS[0][5])));
   cropPicture(draw, 'paper', norm([x - 6 * k, y + px * 1.07 - 44.2 * k, 168 * k, 52 * k]), 'wMove', EASE.wipe(linear(at, ...LAYERS[1][5])));
@@ -560,15 +560,14 @@ function animatedComp(draw, shape, p) {
     const pos = quadratic(from, via, end, EASE.wipe(linear(at, ...LAYERS[2][5]))), r = px * 0.15;
     draw('paper', norm([pos[0] - r, pos[1] - r, r * 2, r * 2]), 'redBall');
   }
-  for (let i = 0; i < n; i++) {
+  motionCards(o).forEach(([rx, ry, rw, rh], i) => {
     const f = EASE.enter(linear(at, ...LAYERS[i + 3][5]));
-    if (f <= 0) continue;
-    const parked = 1 - EASE.enter(linear(1.6, ...LAYERS[i + 3][5]));
-    const l = rx + [0, 0.09, 0.24][i] * rw - parked * 0.75 * rw + (1 - f) * 0.75 * rw;
+    if (f <= 0) return;
+    const l = rx + (1 - f) * 0.75 * rw;
     const visible = clamp((w - l) / rw, 0, 1);
     // Device rows keep their 37.8px height; crop only the 0.2px blank foot of the 38px tile.
-    if (visible > 0) draw('paper', norm([l, ry + i * rw * 0.27 * 1.3, rw * visible, rw * 0.27]), i ? 'rowB' : 'rowA', [0, 0, visible, shape === 0 || shape === 3 ? 1 : 37.8 / 38]);
-  }
+    if (visible > 0) draw('paper', norm([l, ry, rw * visible, rh]), i ? 'rowB' : 'rowA', [0, 0, visible, shape === 0 || shape === 3 ? 1 : 37.8 / 38]);
+  });
 }
 // One tall page is viewed through a moving window. Intersection changes both geometry and UVs.
 export function prototypeState(p) {
@@ -798,7 +797,8 @@ export const SCRIPTS = {
     { id: 'move', kind: 'type', from: compPoint([34, 162]), text: 'move.', tool: 'type' },
     { id: 'ball', kind: 'draw', from: compPoint([BALL_FROM[0] - COMP_BALL[2], BALL_FROM[1] - COMP_BALL[2]]), to: compPoint([BALL_FROM[0] + COMP_BALL[2], BALL_FROM[1] + COMP_BALL[2]]), duration: 0.25, tool: 'ellipse' },
     { id: 'row', kind: 'draw', from: compPoint(ROWS[0]), to: compPoint([ROWS[0][0] + ROWS[0][2], ROWS[0][1] + ROWS[0][3]]), duration: 0.25, tool: 'rectangle' },
-    { id: 'copies', kind: 'run', from: compPoint(ROWS[1]), to: compPoint(ROWS[2]), count: 2 },
+    // Keep the established cursor route: moving these anchors would retime later actions outside the cards.
+    { id: 'copies', kind: 'run', from: [2.5644, 2.13544], to: [2.6484, 1.93888], count: 2 },
     { id: 'select', kind: 'click', from: [0.7, 0.605], tool: 'arrow' },
     { id: 'stopwatch', kind: 'click', from: [1.14, 0.605] },
     { id: 'head', kind: 'drag', from: [1.34, 1.06], to: [2.79, 1.06], duration: 0.25 },
@@ -1028,7 +1028,8 @@ function editedVideo(t) {
     }
   });
   const exported = exportPlay(s, t), playing = begun(s, 'play', t) && !done(s, 'play', t);
-  const clock = exported ?? (playing ? phase(s, 'play', t) : null);
+  // C18 audit: a finished preview holds the exported clip's end rather than jumping back to 0.9 s.
+  const clock = exported ?? (playing ? phase(s, 'play', t) : begun(s, 'play', t) ? 1 : null);
   const repeated = begun(s, 'captions', t) ? Math.min(2, 1 + Math.floor(phase(s, 'captions', t) * 2)) : 0;
   const captionIndex = begun(s, 'play', t) ? 1 : repeated ? repeated + 2 : begun(s, 'caption3', t) ? 2 : begun(s, 'caption2', t) ? 1 : 0;
   const at = clock === null ? begun(s, 'play', t) ? 0.9 : CAPTIONS[captionIndex][0] : clock * 3.9;
@@ -1098,7 +1099,8 @@ function editedMotion(t) {
   P.push(on('red', 0.15, 1.025, 0.18, 0.18, { lift: 0.05, t: 0.012 }), icon(P.tool === 'type' ? 'tType' : P.tool === 'ellipse' ? 'tCircle' : P.tool === 'rectangle' ? 'tRect' : 'tArrow', 0.17, 1.045, 0.14, 0.14, 'red', 0.065));
   if (!begun(s, 'comp', t)) return P;
   const born = i => i === 0 ? begun(s, 'make', t) : i === 1 ? begun(s, 'move', t) : i === 2 ? begun(s, 'ball', t) : i === 3 ? begun(s, 'row', t) : begun(s, 'copies', t) && phase(s, 'copies', t) * 2 >= i - 4;
-  const selected = begun(s, 'select', t), exported = exportPlay(s, t), playing = begun(s, 'play', t) && !done(s, 'play', t), clock = exported ?? (playing ? phase(s, 'play', t) : null);
+  // After Play, keep its last frame in both viewers until the exported devices start their own plays.
+  const selected = begun(s, 'select', t), exported = exportPlay(s, t), playing = begun(s, 'play', t) && !done(s, 'play', t), clock = exported ?? (playing ? phase(s, 'play', t) : begun(s, 'play', t) ? 1 : null);
   const draw = screenPainter(D, VIEW);
   const thumb = [0.14, TOP - 0.5, 0.74, 0.416], thumbnail = screenPainter(D, thumb, 0.05, 0.015);
   if (clock === null) {

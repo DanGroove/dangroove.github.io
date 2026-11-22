@@ -76,28 +76,38 @@ function heart(c, col, x, y, r) { c.fillStyle = col; c.beginPath(); c.moveTo(x, 
 
 // ---- motion: one animation of words and shapes, the way a SaaS promo moves, in Dan's own colours. It is drawn to fill any frame,
 // so the wide, tall and square exports are the same animation laid out again. The full stop is a ball that has just flown in along
-// its path, and the rows of the list slide in one after another: the last one is still on its way.
+// its path, and the rows of the list slide in one after another to one left-aligned stack.
 // o: where the words start and their size, and the list's left edge, top, width and number of rows.
 const MOVE = 2.462;                                           // how wide "move" is set in Outfit 800, in ems
 const ballAt = ({ x, y, px }) => [x + (MOVE + 0.2) * px, y + px * 0.92, px * 0.15];
-const WIDE = { x: 34, y: 116, px: 60, rows: [296, 62, 140, 3] };
+// Shape numbers are shared with animatedComp. Coordinates include the feed's offset in its phone frame.
+export const MOTION_LAYOUTS = {
+  0: { w: 480, h: 270, x: 34, y: 104, px: 60, rows: [296, 62, 140, 3], offset: 0 },
+  1: { w: 300, h: 650, x: 26, y: 236, px: 62, rows: [26, 366, 180, 3], offset: 0 },
+  2: { w: 300, h: 650, x: 20, y: 276, px: 50, rows: [146, 364, 120, 2], offset: 184 },
+  3: { w: 480, h: 270, x: 34, y: 116, px: 60, rows: [296, 62, 140, 3], offset: 0 },
+  4: { w: 472, h: 328, x: 34, y: 133, px: 60, rows: [288, 91, 140, 3], offset: 0 },
+};
+export function motionCards({ rows: [x, y, w, count] }) {
+  return Array.from({ length: count }, (_, i) => [x, y + i * w * 0.27 * 1.3, w, w * 0.27]);
+}
+const WIDE = MOTION_LAYOUTS[3];
 export const BALL = ballAt(WIDE);
 export const BALL_FROM = [BALL[0] + WIDE.px * 0.9, WIDE.y - WIDE.px * 1.3];
 export const BALL_VIA = [BALL[0] + WIDE.px, BALL[1] - WIDE.px * 0.3];
-export const ROWS = [0, 1, 2].map(i => [WIDE.rows[0] + [0, 0.09, 0.24][i] * WIDE.rows[2], WIDE.rows[1] + i * WIDE.rows[2] * 0.27 * 1.3, WIDE.rows[2], WIDE.rows[2] * 0.27]);                             // where the ball is in the wide frame, and its radius, for the selection drawn around it
+export const ROWS = motionCards(WIDE);
 function saas(c, w, h, o = WIDE) {
-  const { x, y, px, rows: [rx, ry, rw, n] } = o, [bx, by, r] = ballAt(o);
+  const { x, px, offset } = o, y = o.y - offset, [bx, fullY, r] = ballAt(o), by = fullY - offset;
   fill(c, C.paper, 0, 0, w, h);
   text(c, 'Make it', x, y, px); text(c, 'move', x, y + px * 1.07, px, { fill: C.red });
   const from = [bx + px * 0.9, y - px * 1.3], via = [bx + px * 1.0, by - px * 0.3];                             // the ball's path: a curve of dots, with a keyframe at its start
   for (let i = 1; i < 12; i++) { const t = i / 12, u = 1 - t; disc(c, C.slate, u * u * from[0] + 2 * u * t * via[0] + t * t * bx, u * u * from[1] + 2 * u * t * via[1] + t * t * by, px * 0.028); }
   stroke(c, C.slate, px * 0.04); c.strokeRect(from[0] - px * 0.08, from[1] - px * 0.08, px * 0.16, px * 0.16);
   disc(c, C.red, bx, by, r);
-  const rh = rw * 0.27;
-  for (let i = 0; i < n; i++) {
-    const ox = rx + [0, 0.09, 0.24][i] * rw, oy = ry + i * rh * 1.3;
+  motionCards(o).forEach(([ox, fullY, rw, rh], i) => {
+    const oy = fullY - offset;
     fill(c, C.ink, ox, oy, rw, rh); fill(c, i === 0 ? C.red : C.paper, ox + rh * 0.25, oy + rh * 0.25, rh * 0.5, rh * 0.5); fill(c, C.paper, ox + rh, oy + rh * 0.28, rw * 0.45, rh * 0.16); fill(c, C.slate, ox + rh, oy + rh * 0.58, rw * 0.3, rh * 0.13);
-  }
+  });
 }
 
 // ---- UX/UI: the work is this page's own hero, as its wireframe and as its finished design, on a desktop and on a phone. It is
@@ -536,7 +546,7 @@ export const ART = {
     disc(c, C.ink, 34, 82, 13); fill(c, C.ink, 56, 74, 90, 8); fill(c, C.grey, 56, 88, 56, 6);
     fill(c, C.red, 90, 598, 120, 30); fill(c, C.paper, 118, 610, 64, 6); fill(c, C.ink, 100, 638, 100, 5);
   } },
-  chromeMotionFeed: { w: 300, h: 650, draw(c, w, h) { ART.motSq.draw(c, w, h); c.clearRect(0, 184, 300, 300); } },
+  chromeMotionFeed: { w: 300, h: 650, draw(c, w, h) { ART.motSq.draw(c, w, h); c.clearRect(0, MOTION_LAYOUTS[2].offset, 300, 300); } },
   chromeBrowser: { w: 480, h: 270, draw(c, w, h) { ART.siteWide.draw(c, w, h); c.clearRect(0, 24, w, h - 24); } },
   chromePhone: { w: 300, h: 650, draw(c, w, h) { ART.siteTall.draw(c, w, h); c.clearRect(0, 74, w, 550); } },
   // ---- the building's photograph, before and after its edit in Photoshop, and that app's own bits
@@ -682,10 +692,10 @@ export const ART = {
   graphGrid: { w: 240, h: 200, draw(c, w, h) { for (let i = 0; i < 5; i++) { fill(c, C.dark, 0, 19 + i * 40, w, 2); fill(c, C.dark, 19 + i * 50, 0, 2, h); } } },
   compWide: { w: 480, h: 270, draw(c, w, h) { saas(c, w, h); } },
   motWide: { w: 472, h: 328, draw(c, w, h) {               // in a player
-    saas(c, w, h, { x: 34, y: 133, px: 60, rows: [288, 91, 140, 3] }); playIcon(c, C.ink, 30, 303, 9); fill(c, 'rgba(21,19,20,0.25)', 54, 301, 392, 5); fill(c, C.ink, 54, 301, 250, 5); fill(c, C.ink, 300, 295, 6, 17);
+    saas(c, w, h, MOTION_LAYOUTS[4]); playIcon(c, C.ink, 30, 303, 9); fill(c, 'rgba(21,19,20,0.25)', 54, 301, 392, 5); fill(c, C.ink, 54, 301, 250, 5); fill(c, C.ink, 300, 295, 6, 17);
   } },
   motTall: { w: 300, h: 650, draw(c, w, h) {               // as a story, with its call to act
-    saas(c, w, h, { x: 26, y: 236, px: 62, rows: [26, 366, 180, 3] });
+    saas(c, w, h, MOTION_LAYOUTS[1]);
     for (let i = 0; i < 3; i++) fill(c, i === 0 ? C.ink : 'rgba(21,19,20,0.25)', 20 + i * 88, 50, 84, 4);
     disc(c, C.ink, 34, 82, 13); fill(c, C.ink, 56, 74, 90, 8); fill(c, C.grey, 56, 88, 56, 6);
     fill(c, C.red, 90, 598, 120, 30); fill(c, C.paper, 118, 610, 64, 6); fill(c, C.ink, 100, 638, 100, 5);
@@ -696,7 +706,7 @@ export const ART = {
     c.fillStyle = '#EEF0F2'; c.beginPath(); c.roundRect(56, 52, 176, 24, 12); c.fill(); disc(c, C.grey, 264, 64, 9); fill(c, '#E4E3DF', 0, 90, w, 1.5);
     disc(c, C.ink, 36, 122, 17); fill(c, C.ink, 64, 111, 96, 9); fill(c, C.grey, 64, 127, 62, 6); for (let i = 0; i < 3; i++) disc(c, C.slate, 262 + i * 9, 120, 2.6);
     lines(c, C.grey, 18, 150, [250, 190], 6, 8);
-    c.save(); c.translate(0, 184); c.beginPath(); c.rect(0, 0, 300, 300); c.clip(); saas(c, 300, 300, { x: 20, y: 92, px: 50, rows: [146, 180, 120, 2] }); c.restore();
+    c.save(); c.translate(0, MOTION_LAYOUTS[2].offset); c.beginPath(); c.rect(0, 0, 300, 300); c.clip(); saas(c, 300, 300, MOTION_LAYOUTS[2]); c.restore();
     [0, 1, 2, 3].forEach(i => { stroke(c, C.slate, 3); c.strokeRect(32 + i * 68, 500, 16, 14); fill(c, C.grey, 24 + i * 68, 522, 32, 5); });
     disc(c, C.ink, 36, 564, 13); fill(c, C.ink, 64, 554, 96, 9); fill(c, C.grey, 64, 570, 62, 6); fill(c, '#E4E3DF', 0, 590, w, 1.5); for (let i = 0; i < 5; i++) fill(c, i === 0 ? C.ink : C.grey, 27 + i * 56, 604, 20, 20); fill(c, C.ink, 100, 638, 100, 5);
   } },

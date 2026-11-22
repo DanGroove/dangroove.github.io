@@ -38,7 +38,10 @@ async function loadStage(source) {
 async function preExit() {
   const record = JSON.parse(read('tools/fixtures/round5-addendum-source.json')).sources['stage.mjs'];
   // CORRECTIONS-12 I1: without InDesign's frame steps, as today.
-  return loadStage(r12Patch(handPatch(inflateRawSync(Buffer.from(record.deflateBase64, 'base64')).toString('utf8'))));
+  // C18 changes ROWS, but not the old cursor route or its derived approach durations.
+  const source = inflateRawSync(Buffer.from(record.deflateBase64, 'base64')).toString('utf8')
+    .replace('from: compPoint(ROWS[1]), to: compPoint(ROWS[2])', 'from: [2.5644, 2.13544], to: [2.6484, 1.93888]');
+  return loadStage(r12Patch(handPatch(source)));
 }
 export async function checkLabelExit(stageSource = read('stage.mjs')) {
   const S = await loadStage(stageSource), { EASE } = await import('../../../../public/journey/hero/engine.mjs');

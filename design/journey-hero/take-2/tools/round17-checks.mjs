@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { HOME, dot, quatRotate, EASE, makeCamera } from '../../../../public/journey/hero/engine.mjs';
 import { corners } from '../kit.mjs';
 import { createRenderer } from '../sq.mjs';
-import { ART, ART_TEXT, HISTOGRAM, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS, makeAtlas, letterMask, maskLetterPictures, CUTOUTS, CUTOUT_MARGIN, CUTOUT_GUTTER, drawPictureParts, paintGroupName, BUILDING_PICTURES, buildingSize, buildingCommand, paintBuilding, buildingChanges, buildingPaint, buildingReveal, buildingRevealSpec, buildingRevealInventory, measureBuildingPaint, typingReveal } from '../art.mjs';
+import { ART, ART_TEXT, C, MOTION_LAYOUTS, motionCards, HISTOGRAM, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS, makeAtlas, letterMask, maskLetterPictures, CUTOUTS, CUTOUT_MARGIN, CUTOUT_GUTTER, drawPictureParts, paintGroupName, BUILDING_PICTURES, buildingSize, buildingCommand, paintBuilding, buildingChanges, buildingPaint, buildingReveal, buildingRevealSpec, buildingRevealInventory, measureBuildingPaint, typingReveal } from '../art.mjs';
 import { checkMapFrame, checkDragsFlat, checkRendererClips, onMapFrame } from './round15-checks.mjs';
 
 const url = new URL('../stage.mjs', import.meta.url);
@@ -38,10 +38,17 @@ export function round17WireRevealProbe(source, id, region) {
   const P=[]; wireRegion(P,[0,0,1,1],source,region,1); return P.find(pc=>pc.cutoutId===id);
 }
 `;
+const consistencyProbe = `
+export function round18CompProbe(shape, clock) {
+  const pieces = [], draw = (tone, rect, art, window) => { const pc = {tone, rect, art, window}; pieces.push(pc); return pc; };
+  draw.size = [480, 270]; animatedComp(draw, shape, clock); return pieces;
+}
+export function round18ViewerRects() { return [VIEW, [0.14, TOP - 0.5, 0.74, 0.416]]; }
+`;
 const load = async edit => {
   const old = source(), changed = edit ? edit(old) : old;
   if (edit) assert.notEqual(changed, old, 'negative control did not apply');
-  return import('data:text/javascript;base64,' + Buffer.from((changed + painterProbe).replace(/from (['"])(\.{1,2}\/[^'"]+)\1/g, (_, q, ref) => `from '${new URL(ref, url).href}'`)).toString('base64'));
+  return import('data:text/javascript;base64,' + Buffer.from((changed + painterProbe + consistencyProbe).replace(/from (['"])(\.{1,2}\/[^'"]+)\1/g, (_, q, ref) => `from '${new URL(ref, url).href}'`)).toString('base64'));
 };
 const near = (a, b, gate, tolerance = 1e-9) => assert.ok(Math.abs(a - b) <= tolerance, `${gate}: ${a} versus ${b}`);
 const starts = M => M.SHOW.map((_, i) => M.SHOW.slice(0, i).reduce((n, s) => n + s.len, 0));
@@ -852,6 +859,11 @@ export const round17Changed = M => pc => {
 // Register F2's painter/separation change in the frozen screen comparisons. All picture content, rectangles, script actions
 // and furniture still come from the hashed fixture; the independent F2 probes/controls hold these new height rules.
 export function round17ScreenReference(frozen) {
+  // C18: the rest rectangles move, but the established copies cursor anchors and timetable do not.
+  frozen = frozen.replace('from: compPoint(ROWS[1]), to: compPoint(ROWS[2])', 'from: [2.5644, 2.13544], to: [2.6484, 1.93888]');
+  frozen = frozen.replace('const l = rx + [0, 0.09, 0.24][i] * rw - parked * 0.75 * rw + (1 - f) * 0.75 * rw;', 'const l = rx + (1 - f) * 0.75 * rw;');
+  // Only these two authored post-play holds change; the independent consistency gate covers their new endpoints.
+  frozen = frozen.replaceAll("clock = exported ?? (playing ? phase(s, 'play', t) : null)", "clock = exported ?? (playing ? phase(s, 'play', t) : begun(s, 'play', t) ? 1 : null)");
   const live = source();
   for (const name of ['screenPainter', 'separateFaces']) {
     const body = code => { const a = code.indexOf('function ' + name + '('), b = code.indexOf('\n}', a) + 2; assert.ok(a >= 0 && b > a, 'F2 reference: missing ' + name); return code.slice(a, b); };
@@ -898,6 +910,122 @@ export async function checkRound17RetainedControls() {
   return out.join('; ');
 }
 
+// C18: compare actual emitted rectangles in each picture's own coordinates, without rendering pixels.
+export async function consistency(M) {
+  if (!M?.round18CompProbe) M = await load();
+  const gate = 'consistency:', arts = new Set(['wMake', 'wMove', 'redBall', 'rowA', 'rowB']);
+  let comparisons = 0, worst = 0, headSamples = 0, fallbackSamples = 0;
+  const equalRect = (a, b, label) => {
+    assert.equal(a.length, b.length, `${gate} ${label} rectangle count`);
+    a.forEach((pc, i) => {
+      assert.equal(pc.art, b[i].art, `${gate} ${label} art ${i}`);
+      pc.rect.forEach((v, k) => { const error = Math.abs(v - b[i].rect[k]); worst = Math.max(worst, error); assert.ok(error <= 0.5, `${gate} ${label} ${pc.art}/${i} axis ${k}: ${v} versus ${b[i].rect[k]}`); });
+      comparisons++;
+    });
+  };
+  const pixels = (shape, clock) => {
+    const { w, h } = MOTION_LAYOUTS[shape];
+    return M.round18CompProbe(shape, clock).filter(pc => arts.has(pc.art)).map(pc => ({ ...pc, rect: pc.rect.map((n, i) => n * (i % 2 ? h : w)) }));
+  };
+  const onScreen = (list, rect) => list.filter(pc => arts.has(pc.art) && pc.where === 'content' &&
+    pc.p[0] > M.SCREEN.l + rect[0] * 1.15 && pc.p[0] < M.SCREEN.l + (rect[0] + rect[2]) * 1.15).map(pc => ({ art: pc.art, rect: [
+      ((pc.p[0] - pc.s[0] - M.SCREEN.l) / 1.15 - rect[0]) / rect[2] * 480,
+      (rect[1] + rect[3] - (pc.p[1] + pc.s[1] - M.SCREEN.b) / 1.15) / rect[3] * 270,
+      2 * pc.s[0] / 1.15 / rect[2] * 480, 2 * pc.s[1] / 1.15 / rect[3] * 270,
+    ] }));
+  const last = pixels(3, 1), s = M.SCRIPTS.ae, play = action(M, 'ae', 'play'), exp = action(M, 'ae', 'export');
+  const rects = M.round18ViewerRects(), builtTime = Math.max(action(M, 'ae', 'copies').end, action(M, 'ae', 'path').end) + 1e-6;
+  assert.equal(last.length, 6, `${gate} clip's last frame has six pieces`);
+  for (const rect of rects) equalRect(onScreen(at(M, 'ae', builtTime), rect), last, 'built/last');
+  for (const clock of [2 / 2.4, 1, 1.1]) equalRect(pixels(3, clock), last, '2.0 s and after');
+  for (const shape of [0, 4, 1, 2]) for (const clock of [2 / 2.4, 1]) {
+    const expected = motionCards(MOTION_LAYOUTS[shape]).map((rect, i) => ({ art: i ? 'rowB' : 'rowA', rect }));
+    equalRect(pixels(shape, clock).filter(pc => /^row[AB]$/.test(pc.art)), expected, `shape ${shape} rest`);
+  }
+  // Preserve each stagger, EASE.enter and the .75-row entrance distance, including clipping at the frame's right edge.
+  for (const shape of [0, 1, 2, 3, 4]) motionCards(MOTION_LAYOUTS[shape]).forEach(([x, y, w, h], i) => {
+    const [start, end] = M.LAYERS[i + 3][5], layout = MOTION_LAYOUTS[shape];
+    for (const fraction of [0.2, 0.5, 0.8]) {
+      const clock = (start + fraction * (end - start)) / 2.4;
+      const left = x + (1 - EASE.enter(fraction)) * .75 * w, visible = Math.max(0, Math.min(1, (layout.w - left) / w));
+      const pc = pixels(shape, clock).filter(pc => /^row[AB]$/.test(pc.art)).find(pc => Math.abs(pc.rect[1] - y) < 1e-8);
+      if (!visible) assert.ok(!pc, `${gate} off-frame entrance`);
+      else { assert.ok(pc, `${gate} staggered entrance`); equalRect([pc], [{art:i?'rowB':'rowA',rect:[left,y,w*visible,h]}], `shape ${shape} row ${i} entrance`); }
+    }
+  });
+  // A fresh return value cannot mutate the table or the next caller's rest rectangles.
+  const saved = JSON.stringify(MOTION_LAYOUTS), changed = motionCards(MOTION_LAYOUTS[3]); changed[0][0]++;
+  assert.equal(JSON.stringify(MOTION_LAYOUTS), saved, `${gate} pure rest table`);
+  assert.equal(motionCards(MOTION_LAYOUTS[3])[0][0], 296, `${gate} independent rest results`);
+
+  // Read the actual still drawing commands, including the feed translation and the row tiles' crops.
+  const stillCards = (key, width, height) => {
+    let matrix = [1, 1, 0, 0], fillStyle; const stack = [], out = [];
+    const c = new Proxy({
+      save() { stack.push({ matrix: matrix.slice(), fillStyle }); },
+      restore() { const state = stack.pop(); matrix = state.matrix; fillStyle = state.fillStyle; },
+      translate(x, y) { matrix[2] += matrix[0] * x; matrix[3] += matrix[1] * y; },
+      scale(x, y) { matrix[0] *= x; matrix[1] *= y; },
+      measureText: words => ({ width: words.length * 20 }),
+      fillRect(x, y, w, h) { if (fillStyle === C.ink && Math.abs(w - width) < 1e-8 && Math.abs(h - height) < 1e-8) out.push([matrix[2] + matrix[0] * x, matrix[3] + matrix[1] * y, matrix[0] * w, matrix[1] * h]); },
+    }, { get: (o, k) => k === 'fillStyle' ? fillStyle : k in o ? o[k] : () => {}, set: (o, k, v) => { if (k === 'fillStyle') fillStyle = v; else o[k] = v; return true; } });
+    ART[key].draw(c, ART[key].w, ART[key].h); return out;
+  };
+  for (const [key, shape] of [['compWide', 3], ['motWide', 4], ['motTall', 1], ['motSq', 2]]) {
+    const expected = motionCards(MOTION_LAYOUTS[shape]), [,, w, h] = expected[0];
+    equalRect(stillCards(key, w, h).map(rect => ({ art: 'card', rect })), expected.map(rect => ({ art: 'card', rect })), key);
+  }
+  for (const key of ['rowA', 'rowB']) equalRect(stillCards(key, 140, 37.8).filter(r => Math.abs(r[1]) < 1e-8).map(rect => ({ art: key, rect })), [{ art: key, rect: [0, 0, 140, 37.8] }], key);
+
+  const lane = (P, origin) => {
+    const heads = P.filter(pc => pc.where === 'content' && pc.tone === 'red' && !pc.art && Math.abs(pc.s[0] * 2 - 0.03 * 1.15) < 1e-9 && Math.abs(pc.s[1] * 2 - 0.95 * 1.15) < 1e-9);
+    assert.equal(heads.length, 1, `${gate} one timeline head`);
+    return (heads[0].p[0] - M.SCREEN.l) / 1.15 - origin;
+  };
+  const { land, off } = M.playbackSpans(s), head = action(M, 'ae', 'head');
+  // C18-1.4's explicit fallback: extending this drag retimes the path and all later actions, outside the timeline lane.
+  assert.deepEqual(head.to, [2.79, 1.06], `${gate} retained head fallback endpoint`);
+  for (const t of [head.start, (head.start + head.end) / 2, head.end + 0.001, builtTime, play.start - 0.001]) {
+    const hand = M.HAND(Math.max(0, Math.min(1, (t - head.start) / (head.end - head.start))));
+    near(lane(at(M, 'ae', t), 1.34), 1.45 * hand, `${gate} pre-play head fallback`); fallbackSamples++;
+  }
+  const samples = [play.start, ...[0.23, 0.47, 0.73, 0.91].map(f => play.start + f * (play.end - play.start)), play.end,
+    exp.start - 0.001, exp.end + 0.001, land - 0.001, ...[0, 0.51, 1.599, 1.6, 1.601, 3.199, 3.2].map(t => land + t * M.PACE), off[1] - 0.301 * M.PACE];
+  for (const t of samples) {
+    const P = at(M, 'ae', t), local = M.sceneAt(starts(M)[4] + t).at;
+    const clock = local >= land ? P.clock : local < play.end ? (local - play.start) / (play.end - play.start) : 1;
+    near(lane(P, 1.34), clock * 2.4, `${gate} head/frame time`, 1e-8);
+    const expected = pixels(3, clock);
+    for (const rect of rects) equalRect(onScreen(P, rect), expected, `viewer/thumbnail at head, AE ${t.toFixed(6)} s`);
+    headSamples++;
+  }
+  const floor = at(M, 'ae', off[0]);
+  for (const [device, shape] of [[0, 4], [1, 1], [2, 2]]) {
+    const body = floor.find(pc => pc.where === 'floor' && pc.device === device && pc.deviceBody);
+    assert.ok(body, `${gate} exported device ${device}`);
+    const [x, z, w, h] = body.screenRect, o = MOTION_LAYOUTS[shape];
+    const cards = floor.filter(pc => pc.device === device && /^row[AB]$/.test(pc.art)).map(pc => ({ art: pc.art, rect: [
+      (pc.p[0] - pc.s[0] - x) / w * o.w, (pc.p[2] - pc.s[1] - z) / h * o.h, 2 * pc.s[0] / w * o.w, 2 * pc.s[1] / h * o.h,
+    ] }));
+    equalRect(cards, motionCards(o).map((rect, i) => ({ art: i ? 'rowB' : 'rowA', rect })), `device ${device} rest`);
+  }
+  // C18 audit: Premiere's post-play monitor was rewound to .9 s while its export held 3.9 s.
+  const videoPlay = action(M, 'pr', 'play'), videoLand = M.playbackSpans(M.SCRIPTS.pr).land;
+  for (const t of [videoPlay.end, action(M, 'pr', 'export').start - 0.001, videoLand - 0.001, M.playbackSpans(M.SCRIPTS.pr).off[0]]) {
+    const P = at(M, 'pr', t), pictures = P.filter(pc => pc.where === 'content' && pc.playback && /^(shot|cap)/.test(pc.art));
+    assert.equal(pictures.length, 1, `${gate} Premiere last frame piece count`);
+    assert.equal(pictures[0].art, 'shotCfx', `${gate} Premiere last frame content`);
+    near(lane(P, 0.44), 3.9, `${gate} Premiere last frame head`, 1e-8);
+    headSamples++;
+  }
+  const videoFloor = at(M, 'pr', M.playbackSpans(M.SCRIPTS.pr).off[0]);
+  for (const [device, suffix] of [[0, 'Tablet'], [1, 'Tall'], [2, 'Sq']]) {
+    const pictures = videoFloor.filter(pc => pc.device === device && /^(shot|cap)/.test(pc.art));
+    assert.deepEqual(pictures.map(pc => pc.art), ['shotCfx' + suffix], `${gate} Premiere exported last frame ${device}`);
+  }
+  return { comparisons, worst, headSamples, fallbackSamples, prePlayException: 'C18-1.4: retained 1.45 s head over the built 2.0 s frame; moving its drag retimes outside the AE timeline lane' };
+}
+
 export async function checkRound17Controls() {
   prepareRound17Art(); const out = [];
   const control = async (name, edit, gate, run) => {
@@ -906,6 +1034,7 @@ export async function checkRound17Controls() {
     catch (error) { assert.ok(error.message.includes(gate), `${name}: wrong gate: ${error.message}`); caught = true; }
     assert.ok(caught, `${name}: MISSED`); out.push(`${name}: failed at ${gate}`);
   };
+  await control('C18 one card offset 0.09 rw', s => s.replace('const l = rx + (1 - f) * 0.75 * rw;', 'const l = rx + (i === 1 ? 0.09 * rw : 0) + (1 - f) * 0.75 * rw;'), 'consistency:', consistency);
   await control('done() photo choice', s => s.replace("pc.artMix = handed(s, white ? 'white' : 'black', t);", "pc.artMix = done(s, white ? 'white' : 'black', t) ? 1 : 0;"), 'R1 photo mix', checkLevels);
   await control('travel action:key', s => {
     const a = s.indexOf('function travel('), b = s.indexOf('\n}', a) + 2, body = s.slice(a, b);

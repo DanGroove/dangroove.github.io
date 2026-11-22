@@ -1949,3 +1949,115 @@ New pixel-helper synthetic checks cover mip differences **8 pass / 9 fail** (inc
 **Verification and limits.** Required full Node suite: **all clean**, **6,582 frames / 470,872 pieces / max 187**, unchanged from critique 3; all **35** controls fail at their named gates. Final logs are `critique4-checks-final.txt` and `critique4-controls-final.txt`; changed modules pass `node --check`, including the pixel gate. The preservation audit (`critique4-audit.json`) deep-compares clocks, all **308** retained drawing definitions and **5,970** evenly spaced frames: **0 changed drawing commands / 0 changed geometry frames** (paint plans and the selection-identification metadata are the authorized differences). The loop remains **99.490894748 s**; all six scene starts, device models, picture geometry, colours, atlas packing and earlier C1/C2/C4/C5/C6/C7 fixes remain. K3 still checks **49** carried actions at **.002**, with all three negative controls caught.
 
 No browser/pixel gate, screenshot, visual score, shader compilation, real-font raster-bound verification, GPU-byte result or cost/duration measurement is claimed. Those required browser gates are prepared for the separate review environment, as instructed. There is no design fallback or deliberate departure from C8; bounds are conservative where a command's exact raster support is unavailable in Node. The one-texel-plus-overhang font values and actual release pixel counts remain browser measurements, not synthetic evidence substituted for them.
+
+
+## Round 18
+
+Built C18 on the retained round-17/critique-4 code. Read AGENTS.md, CORRECTIONS-18.md and G/R2/R3 in the requested order before writing; carried forward README, BUILD's round-17 and current critique records and the original source drawings. Acceptance/decision notes are in `.scratch/review-out/r18/acceptance.md`. All earlier work remains except the changes named here. No outside-repository read (including installed skills/RTK), reviewer agent, network, browser, screenshot, pixel gate, installation, site build, publication, git mutation or fixture change occurred. This is code/Node evidence, not visual approval.
+
+**C18-1 / C18-2.** `art.mjs` exports `MOTION_LAYOUTS` and the pure `motionCards(layout)`. The table covers all five existing shapes, including the unused/retained y-104 wide variant, the y-116 in-app comp, the tablet/player, story and feed square. Coordinates below are source pixels in each full frame; the square has its existing 184 px phone offset. Both `saas()` and `animatedComp()` use `motionCards()`, and `ROWS` is its wide result. The feed's still translation, animated frame and chrome's clear rectangle also read that offset from the table.
+
+| Shape / use | Frame w × h | Word origin x,y / px | Rows x,y,w,count | Feed offset | Card rest rectangles [x,y,w,h] |
+| --- | --- | --- | --- | ---: | --- |
+| 0, retained y-104 wide | 480 × 270 | 34,104 / 60 | 296,62,140,3 | 0 | [296,62,140,37.8]; [296,111.14,140,37.8]; [296,160.28,140,37.8] |
+| 3, in-app / `compWide` | 480 × 270 | 34,116 / 60 | 296,62,140,3 | 0 | [296,62,140,37.8]; [296,111.14,140,37.8]; [296,160.28,140,37.8] |
+| 4, player / tablet / `motWide` | 472 × 328 | 34,133 / 60 | 288,91,140,3 | 0 | [288,91,140,37.8]; [288,140.14,140,37.8]; [288,189.28,140,37.8] |
+| 1, story / `motTall` | 300 × 650 | 26,236 / 62 | 26,366,180,3 | 0 | [26,366,180,48.6]; [26,429.18,180,48.6]; [26,492.36,180,48.6] |
+| 2, feed / `motSq` | 300 × 650 | 20,276 / 50 | 146,364,120,2 | 184 | [146,364,120,32.4]; [146,406.12,120,32.4]. Within the square, y = 180 / 222.12. |
+
+For `[x,y,w,count]`, `motionCards()` returns a fresh array of `[x, y + i*w*.27*1.3, w, w*.27]` for each row. It mutates neither the table nor previous results. The offsets and `parked` shift are gone. Entrance x remains `restX + (1 - EASE.enter(linear(clipTime, ...LAYERS[i+3][5]))) * .75 * rowWidth`, with the original right-edge clip. Windows remain **1.2–1.7 / 1.35–1.85 / 1.5–2.0 s**. All words, ball path, keys, graph, sizes, row y/spacing, colours and original drawing commands outside the named cards remain. By 2.0 s all six comp pieces equal the built rest; 2.4 s and later retain that same end layout.
+
+The AE viewer and thumbnail now retain animated clock **1** after Play instead of returning to construction; their head holds **2.4 s** until exported playback begins, which still starts at 0 and runs twice. The code audit also found a definite equivalent fault in Premiere: its monitor/head returned to **.9 s**, showing shot A/caption 2, while the exported last frame was **3.9 s**, graded shot C without a caption. C18-3 authorizes that rest-content fix: it now holds clock **1 / 3.9 s** until the existing export plays. No Premiere action time, footage, format layout or chrome changed.
+
+**C18-1.4 fallback, explicit limit.** The head's pre-play drag is retained, from lane x **1.34** to **2.79** (1.45 clip seconds), over local **5.045305030–5.295305030 s**. Changing its endpoint to x **3.34** would increase the hand-rule duration **.25 → .28 s**, move `path` from **5.576539106 → 5.624716692 s**, shift all subsequent AE actions by **.048177585695 s** and the loop **99.490894747815 → 99.539072333510 s**. Those changes touch outside the timeline lane, so the brief says to keep the head. The complete built viewer remains the **2.0 s** frame while the pre-play head remains at **1.45 s**; this is an expressly reported exception, not a head/frame equality pass. During Play, after Play and during export, the head does match the displayed frame. The old after-play 1.6 s head is now 2.4 s.
+
+Correcting `ROWS` would also change the `copies` cursor path if it still derived its anchors from the cards. Its old local-screen anchors **[2.5644,2.13544] → [2.6484,1.93888]** are therefore retained verbatim, keeping all routes and clocks bit-for-bit. These are cursor targets, not rest-card offsets. No invented timing override or new motion curve was needed.
+
+**C18-3 consistency.** `tools/checks.mjs` runs the named `consistency` check, implemented/exported in `round17-checks.mjs` so the same gate can exercise in-memory mutants. It compares actual built/viewer/thumbnail pieces to `animatedComp(shape=3, clock=1)` in 480 × 270 source coordinates; checks 2.0/2.4/later endpoints; all five format rest sets; the original stagger/ease/distance during entrances; actual canvas card commands in all four stills and the two row tiles; and actual last-frame rectangles on all three exported devices. Rectangle tolerance is **.5 px**, worst observed **2.7711166694643907e-13 px**, **263 comparisons**. It checks **21** head/frame samples during/after play and export, including the Premiere hold and each exported last shot; **5** pre-play samples explicitly test and report the fallback. Fresh-return/mutation tests cover the pure rest helper. No pixel equality is claimed.
+
+The new negative control adds **.09 rw** to card index 1's `animatedComp` rest x. It fails **`consistency: built/last rowB/4 axis 0`**, with **296 versus 308.6**. All **35** earlier controls remain and still fail at their named gates; **36** total. Mutants and private painter probes exist only in memory.
+
+**Code audit in full.** Every pair below was read in `art.mjs`/`stage.mjs`; six attributes are compared: content, layout, position, count, colour and crop. A same-source claim concerns the design in its host coordinates, not measured browser raster equality. The full table follows.
+
+| Pair | Result | Rest comparison / action |
+| --- | --- | --- |
+| AE built viewer ↔ clip last frame | same | Fixed: six pieces; words, landed ball and three cards now share rectangles. |
+| AE viewer ↔ comp thumbnail | same | Same construction/clock; host scale only; both hold 2.4 s after Play. |
+| AE `compWide` ↔ built wide artwork | same | Same words/ball/cards at x 296; editor path marks considered separately below. |
+| AE `rowA` ↔ first wide card | same | Same red icon, bars, tones and 140 × 37.8 card; 38 px atlas tile retained. |
+| AE `rowB` ↔ second wide card | same | Same paper icon/bars/tones; tile origin follows its corrected card. |
+| AE `rowB` ↔ third wide card | same | Same repeated card content and size; its own row y retained. |
+| AE `motWide` ↔ tablet/player clip | intended | Same three-card rest at x 288; player controls/progress are chrome. |
+| AE `motTall` ↔ story clip | intended | Same three-card rest at x 26; story segments/profile/CTA are chrome. |
+| AE `motSq` ↔ feed clip | intended | Same two-card rest at x 146, full-phone y 364/406.12; square offset 184 and feed chrome retained. |
+| AE wide ↔ story | intended | Format layout: 480 × 270 / 300 × 650; three cards retain each format's own size and spacing. |
+| AE wide ↔ feed square | intended | Format layout: 300 × 300 square inside phone; two cards rather than three. |
+| AE static `saas` path marks ↔ device clip | unsure | Stills retain dotted path/start-key art; clip has no such decoration. C18-1.2 protects the path/keys; no unrequested art removal. |
+| AE pre-play head ↔ completed built viewer | unsure | C18-1.4 fallback: 1.45 s head over the completed 2.0 s frame; extending the drag retimes outside the lane. |
+| AE post-play viewer/head ↔ clip end | same | Fixed hold at 2.4 s, until exported playback starts; both exported cycles remain. |
+| Premiere post-play monitor/head ↔ clip end | same | Different before: .9 s/shot A/caption 2 versus 3.9 s/graded shot C/no caption. Fixed hold at 3.9 s. |
+| Premiere monitor ↔ exported tablet | intended | Same movie/clock and final graded C; 472 × 328 recomposition plus player chrome. |
+| Premiere monitor ↔ exported story | intended | Same movie/clock and final C; portrait shot layout and reel chrome. |
+| Premiere monitor ↔ exported feed | intended | Same movie/clock and final C; 300 × 300 crop at phone y 112 plus feed chrome. |
+| Premiere bin `thumbA` ↔ timeline clip A thumbnail | same | Same uncaptioned source shot A, one image in each host box. |
+| Premiere bin `thumbB` ↔ timeline clip B thumbnail | same | Same source sun/horizon, colours and count. |
+| Premiere bin `thumbC` ↔ timeline clip C thumbnail | same | Same ungraded source skyline and grey ground. |
+| Premiere source C thumbnail ↔ program/export C | intended | Source thumbnail is ungraded; `effect` makes final skyline ground red. |
+| Premiere `playerWide` poster ↔ live tablet first shot | unsure | Legacy first-shot poster has its own burned caption size/position/progress; not drawn by `screensOut`, which uses `movie`. Retained. |
+| Premiere `reel` poster ↔ live story first shot | unsure | Legacy burned caption differs from separate live caption tile; live uses `movie` + `chromeReel`. Retained. |
+| Premiere `feedSq` poster ↔ live feed first shot | unsure | Legacy burned caption differs; live chrome clears its whole 300 × 300 picture before moving footage is drawn. Retained. |
+| InDesign cover canvas/page thumbnail ↔ exported stack/reading cover | same | Same complete `kCover`, typography, woven ground, blob and full crop; host scale only. |
+| InDesign Offering-left thumbnail ↔ reading leaf back | same | Same complete `kOfferL`; one visible page when turned. |
+| InDesign Offering-right thumbnail ↔ reading right page | same | Same complete `kOfferR`, content/tones/crop. |
+| InDesign Location-left thumbnail ↔ reading leaf back | same | Same complete `kLocL`; source city map layout retained. |
+| InDesign Location-right thumbnail ↔ reading right page | same | Same complete `kLocR`, transport labels/folio/crop. |
+| InDesign Amenities-left canvas/thumbnail ↔ reading leaf back | same | Same `kAmL` source design; prior retained map texture rules unchanged. |
+| InDesign Amenities-right canvas/thumbnail ↔ reading right page | same | Same `kAmR`, title, blob, folio and map design; prior texture rules unchanged. |
+| InDesign Gallery-left thumbnail ↔ reading leaf back | same | Same complete `kGalL`; photograph arrangement and crop unchanged. |
+| InDesign Gallery-right thumbnail ↔ final revealed right page | same | Same complete `kGalR`; photograph arrangement and crop unchanged. |
+| InDesign back thumbnail ↔ exported booklet's hidden back | intended | `kBack` exists in the pages panel; the scripted four turns expose cover through gallery, not the back. Visibility/page count, not a substituted design. |
+| InDesign `kPost` canvas ↔ phone post | intended | `post` directly draws complete `kPost` at (0,184), 300 × 300; feed chrome surrounds it. |
+| InDesign `eblast` canvas ↔ tablet mail | intended | `mail` directly draws complete `eblast`, proportionally contained below its 58 px header; app ground in side margins. |
+| InDesign construction ↔ approved document | same | Prior G/F1/C3/C8 rules: finished sources at face .080; retained original paint, text and padded reveals; no changes this round. |
+| InDesign building page thumbnails ↔ approved page thumbnails | same | Same ten page assets, six rows, positions/tones/crops; red selection on Amenities retained. |
+| Photoshop final viewer ↔ exported/dock photo | same | Same complete graded `kPhoto`, same crop and no distraction objects. |
+| Photoshop graded layer thumbnail ↔ final viewer | same | Same `kPhoto`; thumbnail host position/size only. |
+| Photoshop raw layer thumbnail ↔ live editing photo | intended | `kPhotoB` identifies the raw source; `photoRaw/Half/Levels/Sky/NoCone/Clean` explicitly show successive edits. |
+| Photo dock ↔ InDesign cover/post/mail pictures | intended | Same building subject, deliberately different `PHOTO_VIEWS` and destination frame/crop; original crop rules retained. |
+| Illustrator upper map ↔ exported/dock upper map | same | Same `kMap` construction texture through travel/dock; whole source layout/content/colour/count retained. |
+| Illustrator lower map ↔ exported/dock lower map | same | Same `kLoc` construction texture through travel/dock; no source replacement. |
+| Upper map dock ↔ placed InDesign Amenities map | intended | Explicit placed UV crop [34,84,2056,826]/[2200,850]; finished-page furniture overlays are retained. |
+| Lower map dock ↔ InDesign Location page thumbnails | intended | Source map is reused within the Location pages; page crops, folios and transport copy belong to the publication. The carried map keeps its source texture through placement. |
+| Illustrator lower map ↔ `kLocClose` inspection | intended | Explicit magnified source region plus subway editing marks, not a different finished map. |
+| Figma wireframes ↔ duplicated design frames | intended | Same starting frame layouts; fills, hero, typed name and accent actions intentionally turn wireframes into finished designs. |
+| Figma wide canvas ↔ laptop prototype at rest | intended | Same graphic-design hero; browser top bar and progress rail change viewport/crop, not page content. |
+| Figma tablet canvas ↔ tablet prototype at rest | unsure | `uiTablet` source h 236; `uiPageTablet0` source h 330 / 1.4 = 235.714286 before chrome. Existing .285714 px source-height rounding retained. |
+| Figma phone canvas ↔ phone prototype at rest | intended | Same tall hero; device bars/progress change viewport/crop. |
+| Figma canvas playback ↔ laptop playback | intended | Same `prototype(0, clock)` content, scroll, gallery and count; canvas omits browser chrome. |
+| Figma canvas playback ↔ tablet playback | intended | Same `prototype(1, clock)` recipe; canvas omits tablet bars. Source rounding uncertainty is listed above. |
+| Figma canvas playback ↔ phone playback | intended | Same `prototype(2, clock)` recipe; canvas omits handset bars. |
+| Figma graphic state ↔ video state | intended | Explicit tap/wipe changes selected craft and embedded stage; return ends on graphic state. |
+| Figma hero source ↔ inserted wide hero | same | Same source crop from `site`, transferred into the authored hero region; no second factual content source. |
+| Figma reference `siteWide/siteTall/siteTall2` ↔ current prototype | intended | Explicit `referenceOnly` art, excluded from atlas; older browser furniture is not live prototype content. |
+| Nested `littleStage` ↔ full app scenes | intended | Deliberate reduced pictogram of each craft, not a second literal rendering of the detailed app. |
+
+**Every earlier check changed, old → new.** Only `tools/checks.mjs`, `round17-checks.mjs` and `entrance-checks.mjs` changed. No fixture or pixel-gate file changed, and no earlier tolerance was relaxed.
+
+| Earlier check / reference | Old → new numbers or expectation |
+| --- | --- |
+| Main parked-row / construction checks; `ROWS`-based reference | Wide built x **296 / 308.6 / 329.6 → 296 / 296 / 296**. y **62 / 111.14 / 160.28**, w **140**, h **37.8**, count **3** unchanged. The check still compares emitted positions, full windows and six comp/thumbnail cards. |
+| H10's frozen screen-row reference, through `round17ScreenReference` | Its row formula loses only `[0,.09,.24]*rw - parked*.75*rw`. Wide clip rest x **295.869022869 / 305.028168828 / 296.196201734 → 296 / 296 / 296**. No whole live animator is copied into this reference: historical word, ball, window and ease code still supplies those expectations. |
+| H10 post-play AE reference | Built/cascade viewer and **1.6 s** head → held clip end and **2.4 s** head. Exact screen comparison remains; **205** incoming-piece samples unchanged. |
+| H10 post-play Premiere reference | **.9 s**, shot A/caption 2 → **3.9 s**, graded shot C/no caption. No changed action time or source thumbnail. |
+| H2/H10 frozen cursor reference, in `round17ScreenReference` | Runtime `compPoint(ROWS[1/2])` → original local-screen **[2.5644,2.13544] / [2.6484,1.93888]**. With the new `ROWS`, leaving the historical derivation would accidentally give x **2.514 / 2.514**. Pinning original cursor numbers preserves the existing clocks and strict furniture comparison; fixture bytes remain unchanged. |
+| E4 frozen cursor reference, in `entrance-checks.mjs` | Same cursor-number correction as above. The unadapted recomputation would produce loop-before-Figma **80.941574070119 → original 80.945732163335 s** after adaptation. The accepted live loop remains **99.490894747815 → 99.490894747815 s**, tolerance **1e-9** unchanged. |
+| Control inventory | **35 → 36**; one new .09 rw control, none removed. |
+| Full-suite piece-count record | **470,872 → 470,687** across the same **6,582** sampled frames; max **187 → 187**. This is a record, not a relaxed acceptance threshold. The post-play holds account for the changed emitted piece inventory. |
+
+Other newly corrected rest x values (not additional edits to old checker files): tablet static **288/300.6/321.6 → 288/288/288**; tablet clip **287.869022869/297.028168828/288.196201734 → 288/288/288**; story static **26/42.2/69.2 → 26/26/26**, story clip **25.831600831/37.607645636/26.252259372 → 26/26/26**; square static **146/156.8 → 146/146**, square clip **145.887733887/153.738430424 → 146/146**. All corresponding sizes, counts, margins and row y values stay as in the layout table.
+
+**Verification.** `node --check` passes for every edited module. Required `node design/journey-hero/take-2/tools/checks.mjs` prints **all clean**, **6,582 frames / 470,687 pieces / max 187 / five atlas pages / 99.491 s**; `node design/journey-hero/take-2/tools/round17-checks.mjs --controls` reports all **36** failures at their intended gates. Logs: `.scratch/review-out/r18/checks-final.txt` and `controls-final.txt`. Pure Node probes exercise the rest function, entrances, still command coordinates, emitted comp/device pieces and synthetic corruption; no browser is loaded.
+
+`preservation.mjs` compares separate baseline/current modules and records `preservation.json`: every one of **115** action definitions, derived times and cursor routes, every scene/still time, all picture dimensions, **251** non-target drawing definitions / **623,129** command records and **1,870** complete PS/AI/ID/Figma frames / **107,528** pieces match. The seven drawing uses that depend on the corrected motion cards are intentionally excluded from that unchanged-art comparison and covered by consistency instead. The loop is **99.49089474781469 s**; scene starts are **0 / 8.046310592 / 21.194036350 / 43.782352702 / 63.163643141 / 80.945732163**. PACE remains **1**.
+
+**Unfinished/departures.** The requested pre-play head correction uses the permitted C18-1.4 fallback for the proved timing spill. The audit's `unsure` differences remain for external review; the static path/key artwork is explicitly protected and was not removed. Browser raster/font/colour/crop judgement, pixel gate and visual approval remain external, as instructed. No other design departure or unreported fix was made.
