@@ -39,6 +39,17 @@ export function round17WireRevealProbe(source, id, region) {
 }
 `;
 const consistencyProbe = `
+var round18OutlineCalls;
+function outline(...args) {
+  const pieces = round18Outline(...args);
+  round18OutlineCalls?.push({rect:args.slice(0,4),pieces}); return pieces;
+}
+export function round18DrawProbe(key, id, fraction) {
+  const i=SHOW.findIndex(s=>s.key===key),s=SCRIPTS[key],a=action(s,id),t=a.start+(a.end-a.start)*fraction;
+  round18OutlineCalls=[];
+  try {const frame=build(i,t,{});return {frame,outlines:round18OutlineCalls};}
+  finally {round18OutlineCalls=null;}
+}
 export function round18CompProbe(shape, clock) {
   const pieces = [], draw = (tone, rect, art, window) => { const pc = {tone, rect, art, window}; pieces.push(pc); return pc; };
   draw.size = [480, 270]; animatedComp(draw, shape, clock); return pieces;
@@ -48,7 +59,7 @@ export function round18ViewerRects() { return [VIEW, [0.14, TOP - 0.5, 0.74, 0.4
 const load = async edit => {
   const old = source(), changed = edit ? edit(old) : old;
   if (edit) assert.notEqual(changed, old, 'negative control did not apply');
-  return import('data:text/javascript;base64,' + Buffer.from((changed + painterProbe + consistencyProbe).replace(/from (['"])(\.{1,2}\/[^'"]+)\1/g, (_, q, ref) => `from '${new URL(ref, url).href}'`)).toString('base64'));
+  return import('data:text/javascript;base64,' + Buffer.from((changed.replace('const outline =', 'const round18Outline =') + painterProbe + consistencyProbe).replace(/from (['"])(\.{1,2}\/[^'"]+)\1/g, (_, q, ref) => `from '${new URL(ref, url).href}'`)).toString('base64'));
 };
 const near = (a, b, gate, tolerance = 1e-9) => assert.ok(Math.abs(a - b) <= tolerance, `${gate}: ${a} versus ${b}`);
 const starts = M => M.SHOW.map((_, i) => M.SHOW.slice(0, i).reduce((n, s) => n + s.len, 0));
@@ -911,10 +922,117 @@ export async function checkRound17RetainedControls() {
 }
 
 // C18: compare actual emitted rectangles in each picture's own coordinates, without rendering pixels.
+export async function checkDrawAnchors(M) {
+  if (!M?.round18DrawProbe) M=await load();
+  prepareRound17Art();
+  const gate='consistency: draw anchors', U=1.15, inventory=[], fractions=[.2,.35,.5,.65,.8];
+  let samples=0,clips=0,worst=0;
+  const localRect=pc=>[(pc.p[0]-pc.s[0]-M.SCREEN.l)/U,(pc.p[1]-pc.s[1]-M.SCREEN.b)/U,2*pc.s[0]/U,2*pc.s[1]/U];
+  const compare=(a,b,scale,label)=>a.forEach((v,i)=>{const error=Math.abs(v-b[i])*scale[i%2];worst=Math.max(worst,error);assert.ok(error<=.5,`${gate} ${label} axis ${i}: ${error} px`);});
+  const painted={
+    'ai/badge':['kMap','badge'],'ai/block':['kLoc','block0'],
+    'id/blob':['kCover','blob'],'id/postBlob':['kPost','blob'],'id/mailBlob':['eblast','blob'],'id/mailButton':['eblast','button'],
+    'fig/frame0':['wireWide','base'],'fig/frame1':['wireTablet','base'],'fig/frame2':['wireTall','base'],
+    'fig/pictureBox':['wireWide',null],'fig/button':['wireWide',null],
+  };
+  for(const scene of M.SHOW) {
+    const actions=M.SCRIPTS[scene.key].actions.filter(a=>a.kind==='draw');
+    inventory.push({scene:scene.key,actions:actions.map(a=>a.id)});
+    for(const a of actions) for(const fraction of fractions) {
+      const name=scene.key+'/'+a.id,{frame,outlines}=M.round18DrawProbe(scene.key,a.id,fraction),p=M.HAND(fraction);
+      const cursor=frame.find(pc=>pc.art==='cursor'),position=cursor.shadowP||cursor.p;
+      const tip=[(position[0]-.46*(.5-10/96)-M.SCREEN.l)/U,(position[1]+.46*(.5-6/96)-M.SCREEN.b)/U];
+      const expectedTip=a.from.map((v,i)=>v+(a.to[i]-v)*p);
+      compare(tip,expectedTip,[480,480],name+' cursor route');
+      const growing=[a.from[0],tip[1],tip[0]-a.from[0],a.from[1]-tip[1]],paint=painted[name];
+      if(paint) {
+        const [source,mark]=paint,pc=frame.find(pc=>pc.building?.source===source&&pc.where==='content');
+        assert.ok(pc,`${gate} ${name} missing building face`);
+        const rect=localRect(pc),art=ART[source],region=[(a.from[0]-rect[0])/rect[2],(rect[1]+rect[3]-a.from[1])/rect[3],(a.to[0]-a.from[0])/rect[2],(a.from[1]-a.to[1])/rect[3]];
+        const [u,v,w,h]=region,nominal=[u,v,u+w*p,v+h*p],plan=pc.building.plan;
+        const ids=mark?[mark]:Object.values(CUTOUTS).filter(part=>part.source===source&&part.rect[0]+part.rect[2]>=u*art.w&&part.rect[0]<=(u+w)*art.w&&part.rect[1]+part.rect[3]>=v*art.h&&part.rect[1]<=(v+h)*art.h).map(part=>part.id);
+        assert.ok(ids.length,`${gate} ${name} empty paint inventory`);
+        for(const id of ids) {
+          const rule=id==='base'?plan.base:plan.marks[id],actual=rule?.clips;
+          assert.ok(actual?.length,`${gate} ${name}/${id} missing moving paint clip`);
+          // C8's stroke/cap/AA support is deliberate. Check the actual padded clip against an independent
+          // top-left-to-tip rectangle; never mistake that fringe for a different drag anchor.
+          const spec=buildingRevealInventory().find(spec=>spec.source===source&&spec.id===id&&spec.region.every((n,i)=>Math.abs(n-region[i])<1e-9));
+          assert.ok(spec,`${gate} ${name}/${id} measured fringe`);
+          const {padding}=spec;
+          const expected=nominal.map((n,i)=>Math.max(0,Math.min(1,n+(i<2?-1:1)*padding[i]/(i%2?art.h:art.w))));
+          assert.equal(actual.length,1,`${gate} ${name}/${id} single drag clip`);
+          compare(actual[0],expected,[art.w,art.h],name+'/'+id);clips++;
+        }
+      } else {
+        const scale=scene.key==='ae'?[480/M.round18ViewerRects()[0][2],270/M.round18ViewerRects()[0][3]]:[480/(M.SCREEN.w/U),480/(M.SCREEN.w/U)];
+        let rect;
+        if(a.id==='marquee'||name==='id/postButton') {
+          const candidates=outlines.filter(o=>Math.abs(o.rect[2]-growing[2])<1e-8&&Math.abs(o.rect[3]-growing[3])<1e-8);
+          assert.equal(candidates.length,1,`${gate} ${name} one selection box`);
+          const o=candidates[0];rect=o.rect;
+          assert.equal(o.pieces.length,4,`${gate} ${name} four selection edges`);
+          // Check the emitted outer edges too, even when a very small box's strokes overlap.
+          const edges=o.pieces.map(localRect),actual=[edges[2][0],edges[0][1],edges[3][0]+edges[3][2]-edges[2][0],edges[1][1]+edges[1][3]-edges[0][1]];
+          compare(actual,rect,scale,name+' emitted edges');
+        } else {
+          const candidates=frame.filter(pc=>pc.where==='content'&&(name==='ae/ball'?pc.art==='redBall':!pc.art&&!pc.overlay)).map(localRect).filter(r=>Math.abs(r[2]-growing[2])<1e-8&&Math.abs(r[3]-growing[3])<1e-8);
+          assert.equal(candidates.length,1,`${gate} ${name} one growing shape`);rect=candidates[0];
+        }
+        compare([rect[0],rect[1]+rect[3]],a.from,scale,name+' fixed corner');
+        compare([rect[0]+rect[2],rect[1]],tip,scale,name+' opposite corner');
+      }
+      samples++;
+    }
+  }
+  assert.equal(samples,95,`${gate} all 19 draw actions at five points (including inherited tools and marquees)`);
+  return {samples,clips,worst,inventory};
+}
+
+export function checkExportMarks(M) {
+  const gate='consistency: exported artwork',forbidden=new Set(['motWide','motTall','motSq','compWide','playerWide','reel','feedSq']);
+  let frames=0,pictures=0;
+  for(const key of ['pr','ae']) {
+    const s=M.SCRIPTS[key],times=[...Array.from({length:Math.ceil(s.len*30)},(_,i)=>i/30),...s.actions.flatMap(a=>[a.start,a.end])];
+    for(const t of times) {
+      for(const pc of at(M,key,t).filter(pc=>pc.where==='floor'&&pc.art)) {
+        assert.ok(!forbidden.has(pc.art),`${gate} ${key} directly exports ${pc.art}`);pictures++;
+      }
+      frames++;
+    }
+  }
+  // These two chrome recipes draw a legacy still, then clear its whole picture area. Prove that every
+  // editor mark / burned caption is inside a LATER clear, including its stroke and one AA texel.
+  const rectBounds=(command,rect,fringe=0)=>{
+    const [x,y,w,h]=rect,m=command.matrix,points=[[x-fringe,y-fringe],[x+w+fringe,y-fringe],[x-fringe,y+h+fringe],[x+w+fringe,y+h+fringe]].map(([x,y])=>[m[0]*x+m[2]*y+m[4],m[1]*x+m[3]*y+m[5]]);
+    return [Math.min(...points.map(p=>p[0])),Math.min(...points.map(p=>p[1])),Math.max(...points.map(p=>p[0])),Math.max(...points.map(p=>p[1]))];
+  };
+  const erased=(commands,command,bounds,label)=>{
+    assert.ok(commands.some(c=>c.n>command.n&&c.method==='clearRect'&&(()=>{const b=rectBounds(c,c.args);return bounds[0]>=b[0]&&bounds[1]>=b[1]&&bounds[2]<=b[2]&&bounds[3]<=b[3];})()),`${gate} surviving ${label}`);
+  };
+  const motion=recordPicture('chromeMotionFeed'),dots=motion.filter(c=>c.method==='fill'&&c.state.fillStyle===C.slate&&c.path.some(p=>p[0]==='arc'&&Math.abs(p[3]-MOTION_LAYOUTS[2].px*.028)<1e-9));
+  assert.equal(dots.length,11,`${gate} motion dotted path inventory`);
+  for(const c of dots) {const [,x,y,r]=c.path.find(p=>p[0]==='arc');erased(motion,c,rectBounds(c,[x-r,y-r,2*r,2*r],1),'motion path dot');}
+  const keys=motion.filter(c=>c.method==='strokeRect'&&Math.abs(c.args[2]-MOTION_LAYOUTS[2].px*.16)<1e-9);
+  assert.equal(keys.length,1,`${gate} motion start-key inventory`);
+  for(const c of keys)erased(motion,c,rectBounds(c,c.args,c.state.lineWidth/2+1),'motion start key');
+  const feed=recordPicture('chromeFeed'),captions=feed.filter(c=>c.method==='fillText'&&c.args[0]==='Move well.');
+  assert.equal(captions.length,1,`${gate} feed poster caption inventory`);
+  for(const c of captions) {
+    const plate=feed.find(q=>q.n===c.n-1&&q.method==='fillRect'&&q.state.fillStyle===C.paper);
+    assert.ok(plate,`${gate} feed caption's own measured plate`);
+    erased(feed,plate,rectBounds(plate,plate.args,1),'feed poster caption plate');
+    const px=+(c.state.font.match(/([\d.]+)px/)?.[1]||10),[words,x,y]=c.args,w=words.length*px*.55;
+    erased(feed,c,rectBounds(c,[x-w/2,y-px*.8,w,px],1),'feed poster caption');
+  }
+  for(const key of ['chromePlayer','chromeReel'])assert.ok(recordPicture(key).every(c=>!c.method.endsWith('Text')),`${gate} ${key} has no poster caption`);
+  return {frames,pictures,erasedMotionMarks:dots.length+keys.length,erasedPosterCaptions:captions.length,visiblePosters:0};
+}
+
 export async function consistency(M) {
   if (!M?.round18CompProbe) M = await load();
   const gate = 'consistency:', arts = new Set(['wMake', 'wMove', 'redBall', 'rowA', 'rowB']);
-  let comparisons = 0, worst = 0, headSamples = 0, fallbackSamples = 0;
+  let comparisons = 0, worst = 0, headSamples = 0, prePlaySamples = 0;
   const equalRect = (a, b, label) => {
     assert.equal(a.length, b.length, `${gate} ${label} rectangle count`);
     a.forEach((pc, i) => {
@@ -983,11 +1101,15 @@ export async function consistency(M) {
     return (heads[0].p[0] - M.SCREEN.l) / 1.15 - origin;
   };
   const { land, off } = M.playbackSpans(s), head = action(M, 'ae', 'head');
-  // C18-1.4's explicit fallback: extending this drag retimes the path and all later actions, outside the timeline lane.
-  assert.deepEqual(head.to, [2.79, 1.06], `${gate} retained head fallback endpoint`);
+  assert.deepEqual(head.to, [3.34, 1.06], `${gate} head reaches 2.0 s`);
+  near(head.start,5.045305029997129,`${gate} head keeps start`);near(head.end-head.start,.25,`${gate} head keeps duration`);
+  const path=action(M,'ae','path');
+  near(path.start,5.576539105853828,`${gate} ball path keeps start`);near(path.end,5.926539105853828,`${gate} ball path keeps end`);
+  assert.deepEqual(path.previous,head.to,`${gate} continuous approach after head`);
+  near(M.LOOP,99.49089474781469,`${gate} unchanged loop`);
   for (const t of [head.start, (head.start + head.end) / 2, head.end + 0.001, builtTime, play.start - 0.001]) {
     const hand = M.HAND(Math.max(0, Math.min(1, (t - head.start) / (head.end - head.start))));
-    near(lane(at(M, 'ae', t), 1.34), 1.45 * hand, `${gate} pre-play head fallback`); fallbackSamples++;
+    near(lane(at(M, 'ae', t), 1.34), 2.0 * hand, `${gate} pre-play head`); prePlaySamples++;
   }
   const samples = [play.start, ...[0.23, 0.47, 0.73, 0.91].map(f => play.start + f * (play.end - play.start)), play.end,
     exp.start - 0.001, exp.end + 0.001, land - 0.001, ...[0, 0.51, 1.599, 1.6, 1.601, 3.199, 3.2].map(t => land + t * M.PACE), off[1] - 0.301 * M.PACE];
@@ -1023,7 +1145,7 @@ export async function consistency(M) {
     const pictures = videoFloor.filter(pc => pc.device === device && /^(shot|cap)/.test(pc.art));
     assert.deepEqual(pictures.map(pc => pc.art), ['shotCfx' + suffix], `${gate} Premiere exported last frame ${device}`);
   }
-  return { comparisons, worst, headSamples, fallbackSamples, prePlayException: 'C18-1.4: retained 1.45 s head over the built 2.0 s frame; moving its drag retimes outside the AE timeline lane' };
+  return { comparisons, worst, headSamples, prePlaySamples,draws:await checkDrawAnchors(M),exports:checkExportMarks(M) };
 }
 
 export async function checkRound17Controls() {
@@ -1035,6 +1157,9 @@ export async function checkRound17Controls() {
     assert.ok(caught, `${name}: MISSED`); out.push(`${name}: failed at ${gate}`);
   };
   await control('C18 one card offset 0.09 rw', s => s.replace('const l = rx + (1 - f) * 0.75 * rw;', 'const l = rx + (i === 1 ? 0.09 * rw : 0) + (1 - f) * 0.75 * rw;'), 'consistency:', consistency);
+  await control('C18 frame grows from opposite corner',s=>s.replace("buildingReveal(source,'base',[0,0,1,1],p,'corner')","buildingReveal(source,'base',[0,0,1,1],p,i===0?'upCorner':'corner')"),'consistency: draw anchors fig/frame0',checkDrawAnchors);
+  await control('C18 picture box grows at full height',s=>s.replace("handed(s, 'pictureBox', t), 'corner'","handed(s, 'pictureBox', t), 'x'"),'consistency: draw anchors fig/pictureBox',checkDrawAnchors);
+  await control('C18 pre-play head fallback restored',s=>s.replace('motionHead.to = [3.34, 1.06]','motionHead.to = [2.79, 1.06]'),'consistency: head reaches 2.0 s',consistency);
   await control('done() photo choice', s => s.replace("pc.artMix = handed(s, white ? 'white' : 'black', t);", "pc.artMix = done(s, white ? 'white' : 'black', t) ? 1 : 0;"), 'R1 photo mix', checkLevels);
   await control('travel action:key', s => {
     const a = s.indexOf('function travel('), b = s.indexOf('\n}', a) + 2, body = s.slice(a, b);
@@ -1101,7 +1226,7 @@ export async function checkRound17Controls() {
   let packingFailed=false;try {const atlas=prepareRound17Art();checkAtlasPacking({...atlas,pages:atlas.pages.map((p,i)=>i===1?{...p,height:1704}:p)});}catch(e){assert.ok(e.message.includes('C3 atlas packing:'),e.message);packingFailed=true;}assert.ok(packingFailed,'C3 repadded page MISSED');out.push('C3 page 1 1704: failed at C3 atlas packing:');
   await control('C7 0.0001 gap',s=>s.replace('const reading = floor.slice(18), spine = -0.1;', 'const reading = floor.slice(18), spine = -0.1; for(const pc of reading)if(pc.p[0]>=spine)pc.p[0]+=.0001;'),'C7 spine gap',checkSpine);
   await control('C8 badge without padding',s=>s.replace("buildingReveal(source, id, region, p, upward ? 'up' : 'corner')", "source === 'kMap' && id === 'badge' ? (([u,v,w,h]) => [u,v,u+w*p,v+h*p])(region) : buildingReveal(source, id, region, p, upward ? 'up' : 'corner')"),'C8 reveal contains ink:',checkRevealBounds);
-  await control('C8 details without padding',s=>s.replace("buildingReveal(source, part.id, [u,v,w,h], amount, 'x')", "[u,v,u+w*amount,v+h]"),'C8 reveal contains ink:',checkRevealBounds);
+  await control('C8 details without padding',s=>s.replace("buildingReveal(source, part.id, [u,v,w,h], amount, direction)", "[u,v,u+w*amount,v+h]"),'C8 reveal contains ink:',checkRevealBounds);
   return out.join('\n');
 }
 

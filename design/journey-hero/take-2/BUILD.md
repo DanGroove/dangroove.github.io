@@ -2061,3 +2061,75 @@ Other newly corrected rest x values (not additional edits to old checker files):
 `preservation.mjs` compares separate baseline/current modules and records `preservation.json`: every one of **115** action definitions, derived times and cursor routes, every scene/still time, all picture dimensions, **251** non-target drawing definitions / **623,129** command records and **1,870** complete PS/AI/ID/Figma frames / **107,528** pieces match. The seven drawing uses that depend on the corrected motion cards are intentionally excluded from that unchanged-art comparison and covered by consistency instead. The loop is **99.49089474781469 s**; scene starts are **0 / 8.046310592 / 21.194036350 / 43.782352702 / 63.163643141 / 80.945732163**. PACE remains **1**.
 
 **Unfinished/departures.** The requested pre-play head correction uses the permitted C18-1.4 fallback for the proved timing spill. The audit's `unsure` differences remain for external review; the static path/key artwork is explicitly protected and was not removed. Browser raster/font/colour/crop judgement, pixel gate and visual approval remain external, as instructed. No other design departure or unreported fix was made.
+
+### Round 18, C18-4 / C18-5 follow-up
+
+This follow-up supersedes run 1's **head fallback** and its **motion-mark / Premiere-poster uncertainties** above. C18-1–3's card stack, shared layout table, entrances, post-play holds and all other fixes remain. Before editing, read repository AGENTS.md, all of CORRECTIONS-18.md, then G/R2/R3 of CORRECTIONS-17.md, the existing Round 18 record and its acceptance/preservation notes. Acceptance for this run is recorded in `.scratch/review-out/r18/run2-acceptance.md`. The exact incoming source and schedule are saved in `run2-baseline.json` there. No external reference content was reused.
+
+**C18-4: actual cause and correction.** `drawnFrame()` already has the correct board-space top-left anchor: board y goes **up**, so `[x, y+h*(1-p), w*p, h*p]` fixes the top edge. The later `buildingFaces()` pass consumes that piece and emits a full-size face with a canvas paint plan. Its `upCorner` clip used **downward** canvas v coordinates `[u,v+h*(1-p),u+w*p,v+h]`, fixing the bottom edge. That renderer-facing replacement caused the reported bottom-left growth. It now uses `corner`: `[u,v,u+w*p,v+h*p]`. Changing the corner helpers or moving the cursor would have introduced another error; neither changed.
+
+The same audit found Figma's picture box and button using `wireRegion()`'s x-only reveal, which exposed their full height immediately. Those two calls now request `corner` too. The default remains `x` for typed fragments and the details action. Original paint, command order, mask padding, glyph weight, source sampling, face registration and final states remain, as G/R2/R3 and the later construction-texture corrections require. All other draw actions were already correctly anchored and were retained.
+
+Every `kind: 'draw'` action is below, including `block` with its inherited rectangle tool, the tool-less AE marquee, and the two arrow-tool marquees. “Right now” means the Node corner/paint-plan check passes; it does not claim browser visual approval.
+
+| Scene | Draw action | Wrong before? | Right now / action taken |
+| --- | --- | --- | --- |
+| Photoshop | none | — | No draw actions; healing strokes are not shape draws. |
+| Illustrator | `board0` | No | Yes; retained the opaque top-anchored artboard. |
+| Illustrator | `board1` | No | Yes; retained the opaque top-anchored artboard. |
+| Illustrator | `badge` | No | Yes; retained the finished badge's registered corner reveal, including its own stroke fringe. |
+| Illustrator | `block` | No | Yes; retained the finished block's registered corner reveal. |
+| Illustrator | `marquee` | No | Yes; retained the top-left-to-cursor selection box. |
+| InDesign | `blob` | No | Yes; retained the cover blob's corner reveal. |
+| InDesign | `postBlob` | No | Yes; retained the post blob's corner reveal. |
+| InDesign | `postButton` | No | Yes; retained its growing selection outline over the existing tab design; no new painted button was substituted. |
+| InDesign | `mailBlob` | No | Yes; retained the mail blob's corner reveal. |
+| InDesign | `mailButton` | No | Yes; retained the mail button's corner reveal. |
+| Premiere | none | — | No draw actions. |
+| After Effects | `ball` | No | Yes; its bounding rectangle remains fixed at the drag start while its opposite corner follows the tip. |
+| After Effects | `row` | No | Yes; retained the top-anchored row rectangle. |
+| After Effects | `marquee` | No | Yes; retained the timeline selection box. |
+| Figma | `frame0` | Yes, bottom-left paint clip | Yes; canvas base now uses `corner`. |
+| Figma | `frame1` | Yes, bottom-left paint clip | Yes; canvas base now uses `corner`. |
+| Figma | `frame2` | Yes, bottom-left paint clip | Yes; canvas base now uses `corner`. |
+| Figma | `pictureBox` | Yes, full height while dragging diagonally | Yes; both reveal dimensions follow the same hand progress. |
+| Figma | `button` | Yes, full height while dragging diagonally | Yes; both reveal dimensions follow the same hand progress. |
+| Figma | `marquee` | No | Yes; retained the whole-row selection box. |
+
+**New consistency gate and controls.** `checkDrawAnchors()` runs within the existing named `consistency` gate. It inventories **all 19 draws**, tests each at duration fractions **.20 / .35 / .50 / .65 / .80**, and compares both corners with the start and the actual emitted cursor tip. It examines emitted shape geometry and selection edges, and the **75 actual building-plan clips** used by the renderer, rather than trusting the superseded helper alone. Its independent expected rectangle comes from the action endpoints and HAND; existing C8 stroke/cap/AA padding is applied separately from the nominal rectangle. Tolerance is **0.5 native artwork px** for paint clips and AE geometry; selections without their own source use the 480-px-wide app-board scale. Worst error is **2.7711166694643907e-12 px** across **95** action samples. The existing **263** motion-layout comparisons and **21** play/post-play/export head samples remain.
+
+The required new control gives **only frame0** the opposite `upCorner` base clip again; it fails at **`consistency: draw anchors fig/frame0`**. Two additional controls restore the picture box's x-only/full-height reveal and the 1.45 s head fallback; they fail at **`consistency: draw anchors fig/pictureBox`** and **`consistency: head reaches 2.0 s`** respectively. The earlier **.09 rw** card-offset control still fails at **`consistency:`**. All **36** incoming controls remain; **39** total fail at their intended gates. Probes and mutants exist only in memory, with no fixture edits or testing API added to the prototype.
+
+**C18-5.1, the head.** The drag now ends at screen-local x **3.34** instead of **2.79**: **2.0** instead of **1.45** clip seconds from origin **1.34**. Its local start/end remain exactly **5.045305029997129 / 5.295305029997129 s**, a **.25 s** span. Its lane geometry uses **2.0 × handed(head)** and then parks at **2.0 s** before Play. Play still starts at 0, then holds **2.4 s** afterward.
+
+The original scheduler route is retained when deriving the schedule, then only the head endpoint and the next cursor approach's origin are retargeted. That keeps the hand continuous without recalculating any beat. The ball action retains its exact `from`, `to`, three-point curve and **5.576539105853828 / 5.926539105853828 s** span; no later action endpoint or clock changes. The next approach naturally begins at the head's new endpoint, over its original span, and still reaches the same ball-path start. The hand-speed suite remains under **1500 px/s** (whole-loop peak **1499.7 px/s**, unchanged). The loop is still **99.49089474781469 s**, displayed as **99.491 s**. No fallback is needed.
+
+**C18-5.2, editor marks.** `motWide`, `motTall` and `compWide` are never emitted as export faces. `screensOut()` uses the names only to select motion versus video, creates the device with no poster art, then calls `playback()` / `animatedComp()`. `chromeMotion` and `chromeStory` contain only chrome. `chromeMotionFeed` does draw `motSq` while assembling its atlas tile, then clears **[0,184,300,300]**. All **11** dotted-path discs and the **one** start key, including stroke and one texel of AA support, lie inside that later clear. No editor mark survives onto an exported screen at any clock. The manually drawn marks remain in the in-app viewer. Nothing needed removal from `art.mjs`.
+
+**C18-5.3, Premiere posters.** `playerWide` and `reel` are never emitted as pictures; the export path selects `movie()` and `chromePlayer` / `chromeReel`. `feedSq` is invoked only as the chrome feed's underlay; its whole poster picture and burned `Move well.` caption are erased by the later **[0,112,300,300]** clear. Feed furniture outside the picture survives, while the live shot and separate `cap1` / `cap2` / `cap3` tiles supply the displayed caption. Thus no legacy poster caption is ever visible and none needs changing. This distinction between a drawing call and surviving output resolves the earlier “unsure” rows.
+
+The added export-art check samples **1,184** frames, including all action boundaries and 30 Hz scene samples, and examines **3,540** exported picture pieces. It rejects direct use of all seven legacy still/poster names on export faces. Pure command/compositing checks prove that the **12** motion marks and **one** feed poster caption/plate are inside their later clears; player and reel chrome contain no caption text. This is command/geometry evidence, not a raster or font measurement.
+
+| Previously open pair | Current result | Resolution |
+| --- | --- | --- |
+| AE pre-play head ↔ complete built viewer | same | At rest both are at 2.0 s; viewer and thumbnail still equal the last comp frame after the path is built. |
+| AE still path/start-key marks ↔ exported motion | intended | Editor marks are visible only in the editor; no mark survives export chrome assembly. |
+| Premiere `playerWide` ↔ live tablet picture | intended | Poster is never displayed; `movie` plus player chrome is used. |
+| Premiere `reel` ↔ live story picture | intended | Poster is never displayed; `movie` plus reel chrome is used. |
+| Premiere `feedSq` ↔ live feed picture | intended | Only outside-picture feed furniture survives; its poster/caption are cleared before compositing live footage/caption. |
+
+**Every earlier check changed in this follow-up, old → new.** Only `tools/round17-checks.mjs` changes; main `checks.mjs` already invokes `consistency`. No existing tolerance is relaxed and no fixture or pixel-gate file changes.
+
+| Check/control | Old → new |
+| --- | --- |
+| Consistency pre-play head endpoint/lane | `[2.79,1.06]` / **1.45 s** → `[3.34,1.06]` / **2.0 s**; **5 fallback assertions** → **5 actual corrected-head assertions**. The reported pre-play exception is removed. Start **5.045305029997129 → same**, duration **.25 → .25 s**; added assertions also pin the ball-path clocks and unchanged loop. |
+| C8 details-without-padding control's mutation site | Literal `buildingReveal(..., amount, 'x')` → `buildingReveal(..., amount, direction)` after the helper gains its explicit direction argument. No numeric expectation changes; it still removes padding and fails **C8 reveal contains ink**. |
+| Control inventory | **36 → 39**, adding opposite frame corner, full-height picture box and head-fallback controls; none removed. |
+
+All other earlier numbers remain: C8 **447 commands / 262 clipped / 57 text planes / 228 reveals / 162 padded specs**; the main suite **6,582 frames / 470,687 pieces / max 187 / five atlas pages**; motion rectangle comparisons **263**, worst **2.7711166694643907e-13 px**. H2/H10, E4, R2/R3, G, device sizes, atlas packing and every other earlier check needed no changed expectation. In particular, the production art is byte-identical, not replaced with a new texture or a simplified drawing.
+
+**Preservation and verification.** `run2-preservation.mjs` independently loads the incoming and current stage modules. It proves all **115** action definitions/clocks/routes equal except **`ae/head.to`** and **`ae/path.previous`** as described above; all scene lengths, starts and held still times equal; and `art.mjs` byte-identical. Across **3,331** 30 Hz/action-end±.001 samples and **236,967** compared pieces, **3,150** full frames match exactly after rounding to 1e-10. The other **136 AE** samples differ only in the named head pieces/cursor interval, and **45 Figma** samples differ only in the five named draw actions' paint clips. Unrelated geometry and every final state match. Scene starts remain **0 / 8.04631059223572 / 21.194036349675287 / 43.78235270175257 / 63.16364314101056 / 80.94573216333546 s**.
+
+`node --check` passes for the edited stage/check modules and the preservation probe. New pure Node checks pass. Required `node design/journey-hero/take-2/tools/checks.mjs` exits 0 and ends **all clean**; `node design/journey-hero/take-2/tools/round17-checks.mjs --controls` exits 0 with **39** intended gate failures. Logs/evidence: `.scratch/review-out/r18/run2-checks-final.txt`, `run2-controls-final.txt`, `run2-preservation.json` and `run2-preservation.mjs`.
+
+**Limits/departures.** No C18-4/5 item remains open, and no unrelated design change was made. The only implementation difference from the brief's suggested diagnosis is correcting the later canvas mapping rather than the already-correct board helper. Browser pixels, real font rasterization and visual approval remain external as requested; no browser, screenshot, pixel gate or reviewer agent was used. The linked RTK/installed skills are outside the repository and were not opened under the explicit read boundary. Only the permitted stage/check/docs files and this run's notes were written; no site build, installation, network call or git mutation was run.

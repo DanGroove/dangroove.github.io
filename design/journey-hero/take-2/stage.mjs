@@ -883,6 +883,11 @@ export const SCRIPTS = {
     { id: 'locExport', kind: 'drag', from: centre(AI.lower), to: centre(DOCK.loc), duration: 0.5 },
   ]),
 };
+// C18-5 fixes the head's destination inside its existing .25 s beat. Schedule with the original route above, then
+// retarget the hand and its next approach; recomputing the schedule would also delay the ball path and the export.
+const motionHead = action(SCRIPTS.ae, 'head');
+motionHead.to = [3.34, 1.06];
+action(SCRIPTS.ae, 'path').previous = motionHead.to;
 function exportSpan(i) {
   const s = SCRIPTS[SHOW[i].key];
   const a = action(s, 'export'); return [a.start, SHOW[i].key === 'ai' ? action(s, 'locExport').end : a.end];
@@ -1154,7 +1159,7 @@ function editedMotion(t) {
     tagEcho(D, ['make', 'move', 'ball', 'row', 'copies', 'copies'][i], echoStart);
   });
   const laneStart = D.length;
-  const head = 1.34 + (clock !== null ? clock * 2.4 : begun(s, 'play', t) ? 1.6 : 1.45 * handed(s, 'head', t));
+  const head = 1.34 + (clock !== null ? clock * 2.4 : 2.0 * handed(s, 'head', t));
   D.push(on('red', head - 0.015, 0.13, 0.03, 0.95, { lift: 0.13, t: 0.01 }), on('red', head - 0.07, 1.01, 0.14, 0.1, { lift: 0.13, t: 0.02 }));
   if (begun(s, 'marquee', t) && !done(s, 'marquee', t)) { const p = handed(s, 'marquee', t); D.push(...outline(1.36, 0.93 - 0.8 * p, 2.1 * p, 0.8 * p, { line: 0.012 })); }
   if (begun(s, 'head', t)) tagEcho(D, 'head', laneStart);
@@ -1251,14 +1256,14 @@ function pageContact(s, id, t, from, to, page) {
   }
   return first <= last && handed(s, id, t) >= first;
 }
-function wireRegion(P, rect, source, [u,v,w,h], amount = 1) {
+function wireRegion(P, rect, source, [u,v,w,h], amount = 1, direction = 'x') {
   if (amount <= 0) return;
   const a = ART[source];
   for (const part of Object.values(CUTOUTS).filter(part => part.source === source)) {
     const [x,y,rw,rh] = part.rect;
     if (x+rw < u*a.w || x > (u+w)*a.w || y+rh < v*a.h || y > (v+h)*a.h) continue;
     cutoutRegion(P, rect, source, part.id);
-    P.at(-1).artReveal = buildingReveal(source, part.id, [u,v,w,h], amount, 'x');
+    P.at(-1).artReveal = buildingReveal(source, part.id, [u,v,w,h], amount, direction);
     P.at(-1).revealComplete = amount >= 1;
   }
 }
@@ -1292,7 +1297,7 @@ function editedFigma(t) {
     else { const before = D.length; drawnFrame(D, r, handed(s, 'frame' + i, t)); for (const pc of D.slice(before)) pc.art = wireArts[i] + 'Base'; }
     if (!released(s, 'details', t) && i === 0) {
       const box = inRect(r, HERO_REGION);
-      wireRegion(D, r, wireArts[i], HERO_REGION, handed(s, 'pictureBox', t), 0.5);
+      wireRegion(D, r, wireArts[i], HERO_REGION, handed(s, 'pictureBox', t), 'corner');
       if (begun(s, 'heading', t)) {
         const birth = D.length;
         const p = phase(s, 'heading', t), chars = Math.floor(p * 9) / 9;
@@ -1301,7 +1306,7 @@ function editedFigma(t) {
         if (p < 1) { const j = chars < 0.5 ? 0 : 1, caret = inRect(r, regions[j]); D.push(on('grey', caret[0] + caret[2] * clamp(chars * 2 - j, 0, 1), caret[1], 0.012, caret[3], { lift: 0.095, t: 0.004, overlay: true })); }
         for (const pc of D.slice(birth)) { pc.text = { key: 'wireHeading', count: Math.floor(p * 9), total: 9, prefix: p < 1 }; if (pc.overlay) pc.caret = 'wireHeading'; }
       }
-      const p = handed(s, 'button', t); wireRegion(D, r, wireArts[i], [64 / 1440, 555 / 900, 380 / 1440, 35 / 900], p);
+      const p = handed(s, 'button', t); wireRegion(D, r, wireArts[i], [64 / 1440, 555 / 900, 380 / 1440, 35 / 900], p, 'corner');
       if (begun(s, 'details', t)) {
         const n = Math.floor(phase(s, 'details', t) * 9);
         [[0, 0, 1, 0.13], [0, 0.49, 0.46, 0.13], [0, 0.61, 1, 0.39]].forEach((region, j) => { if (n >= j) wireRegion(D, r, wireArts[i], region); });
@@ -1710,7 +1715,8 @@ function buildingFaces(P, scene, t) {
     } else {
       const i = ['wireWide','wireTablet','wireTall'].indexOf(source), p = handed(s,'frame'+i,t);
       rect = FIG.wires[i]; bases = [source+'Base',source]; active = p > 0;
-      plan.base = p >= 1 && !reviewActionEnd ? true : {clips:[buildingReveal(source,'base',[0,0,1,1],p,'upCorner')]};
+      // Board y goes up; canvas v goes down. The old upCorner clip replaced drawnFrame's correct top anchor.
+      plan.base = p >= 1 && !reviewActionEnd ? true : {clips:[buildingReveal(source,'base',[0,0,1,1],p,'corner')]};
     }
     if (finished) {full();plan.base=true;plan.tab=true;(ART_TEXT[source]||[]).forEach((p,i)=>{text[i]=p.words.length;});if(source==='kCover'||source==='kPost'){text[0]=12;text[1]=8;}}
     const owned = pc => pc.cutoutSource===source || pc.labelSource===source ||
