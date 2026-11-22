@@ -77,6 +77,15 @@ Dan's fourth note, pinned on v30 (b3c9e26) at Loop 94.91 s (Figma +13.96 s, 1474
 2. Nothing else changes: the lid's angles and times, the screen fix from C18-6, sizes and pictures.
 3. Add a check over the opening and shutting at 1/60 s: the keys and trackpad are drawn in every frame, and no part of them is drawn in front of the lid. Add a negative control that brings back `theta < 0` hiding; the check must fail.
 
+## C18-9 A mark on the laptop lid's back
+
+Dan, on v30 at Loop 98.85 s (Figma +17.90 s, the laptop shut and sinking): "laptop lids usually show something on the back". His earlier note at 98.20 s ("it also disappears when the lid is closing as well") is C18-8's shutting.
+
+1. Put the DG mark (`MARK_D` in `art.mjs`, as drawn in the page header) on the lid's outer face, centred on it, like a maker's logo. Its height is about 22% of the lid's shorter side. Tone on tone: a flat fill one step lighter than the lid's own grey (no red, no outline, no gloss), hard edges.
+2. It belongs to the lid: it turns with the lid through the opening and shutting, and it shows wherever the lid's back faces the view (shut on the deck, and while the lid turns, if its back is in view). It is hidden by depth like the rest of the lid, never drawn in front of anything that covers it. Use the same clearance rule as C18-6 so it never fights with the lid's face.
+3. Only Figma's laptop has a lid. Nothing else changes.
+4. Add a check that the mark is on the lid's outer face plane, inside the face, centred, at its size, in every frame from 1/60 s sampling of the shut, opening, shutting and sinking spans, and a negative control that puts it on the deck instead; the check must fail.
+
 ## Done when
 
 - `node design/journey-hero/take-2/tools/checks.mjs` prints `all clean`, and `node design/journey-hero/take-2/tools/round17-checks.mjs --controls` makes every negative control fail at its gate, the new controls of C18-3 and C18-4 included.
