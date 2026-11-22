@@ -53,6 +53,14 @@ Run 1 (31150ff) built C18-1 to C18-3 and listed these in BUILD.md's audit table 
 2. **Editor-only marks on exported screens.** The dotted motion path and the start key belong only in the in-app viewer. If a still that carries them (`motWide`, `motTall`, `motSq`, `compWide`) is drawn on an exported screen at any time, drop them there.
 3. **Premiere's posters** (`playerWide`, `reel`, `feedSq`). Find whether each is ever on screen. If one is, its caption must match the live caption tile at that moment. If none is, say so.
 
+## C18-6 The laptop's screen while its lid opens and shuts
+
+Dan's third note, pinned on v29 (e9153ad) at Loop 95.05 s (Figma +14.10 s, 1474 x 988): "this looks weird". While Figma's laptop opens its lid after landing, its screen breaks into grey and black shards fanning out from the screen's middle. Cloud frames at 1474 x 988, dpr 2: the lid is shut at 94.7 s, there are shards at 94.9, 95.05 and 95.25 s, and the screen is whole by 95.5 s. v28 (6ee3a6d) shows the same shards at 95.05 s, so it predates round 18. The lid opens from -90 to 12 degrees between `wiped` and `become` (`poseLid`, stage.mjs, near line 395) and shuts again over `BALL.lid` before the sink (near line 352), so the shutting may show it too.
+
+1. Find the cause. Likely places: `poseLid` and the lid's pictures (`lidPicture`, `hide`), the screen pieces drawn with `cut` (sq.mjs sorts them into `cuts`), and how the prototype page is clipped to the glass while the lid turns. Say which it is, with the numbers that show it.
+2. Fix it so the screen's picture stays whole and flat on the glass through the whole opening and shutting, exactly as it looks once open (95.5 s). It turns with the lid as one flat picture. No time, angle, size or picture changes.
+3. Add a check that runs every 1/60 s through the lid's opening and shutting: every piece drawn on the screen lies on the glass plane, inside the glass rectangle, with no vertex off the glass and no flipped or zero-area triangle (or whatever measure fits the cause you find). Add a negative control that brings the fault back; the check must fail. Look for the same fault anywhere else a device's picture turns with a moving part, and list what you checked.
+
 ## Done when
 
 - `node design/journey-hero/take-2/tools/checks.mjs` prints `all clean`, and `node design/journey-hero/take-2/tools/round17-checks.mjs --controls` makes every negative control fail at its gate, the new controls of C18-3 and C18-4 included.
