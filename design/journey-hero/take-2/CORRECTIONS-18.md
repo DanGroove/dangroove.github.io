@@ -37,8 +37,16 @@ Dan wants inconsistencies like this caught before he sees them. A design that ap
    - Fix a "different" row only when the same design shows a different layout or content at rest in two places, the same way as C18-1 (the export is the reference), and add it to the `consistency` check.
    - If you are not sure whether a difference is intended, do not change it; list it as "unsure" with the two places and what differs.
 
+## C18-4 What the cursor draws grows from where the drag starts (every scene)
+
+Dan's second note, pinned on v28 at Loop 82.85 s (Figma +1.90 s): "The mouse draws these from top left but they grow from bottom left". The cursor drags each wireframe from its top-left corner to its bottom-right, but on screen the frame grows out of its bottom-left corner (cloud frames at 82.45, 82.65, 82.85 and 83.05 s, 411 x 730). `drawnFrame` in `stage.mjs` grows `[x, y + h * (1 - p), w * p, h * p]`, and the corner helpers are `topLeft = r => [r[0], r[1] + r[3]]` and `bottomRight = r => [r[0] + r[2], r[1]]`, so the growing piece and the cursor do not agree on which way is up. Illustrator's artboards (`board0`, `board1`) use the same `drawnFrame`.
+
+1. Every shape the cursor draws (each `kind: 'draw'` action with a tool: the Figma frames, picture box and button, Illustrator's boards, badge and block, InDesign's blobs and buttons, After Effects' row and ball) keeps one corner fixed where the drag starts, and has its opposite corner under the cursor's tip in every frame of the drag, as Figma, Illustrator and After Effects draw. A marquee's selection box also runs from the drag start to the cursor; check it too.
+2. Fix the cause where it is (the growing shape's anchor, or the mapping between the cursor's space and the board's), not by moving the cursor. The drags' paths, timing and end states stay as they are.
+3. Add to the `consistency` check: for every such action in every scene, at five points of its duration, the shape's corner at the drag start stays put and its opposite corner is at the cursor's tip within 0.5 px in board units. Add a negative control that grows one frame from the opposite corner; the check must fail.
+
 ## Done when
 
-- `node design/journey-hero/take-2/tools/checks.mjs` prints `all clean`, and `node design/journey-hero/take-2/tools/round17-checks.mjs --controls` makes every negative control fail at its gate, C18-3's new control included.
+- `node design/journey-hero/take-2/tools/checks.mjs` prints `all clean`, and `node design/journey-hero/take-2/tools/round17-checks.mjs --controls` makes every negative control fail at its gate, the new controls of C18-3 and C18-4 included.
 - The loop is still 99.491 s, and no time changes except the head's in C18-1.4.
 - BUILD.md has a "Round 18" part: what changed, the audit table, every earlier check that got new numbers (old and new), and anything you could not do or decided differently, with why.
