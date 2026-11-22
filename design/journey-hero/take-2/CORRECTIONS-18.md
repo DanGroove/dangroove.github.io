@@ -69,6 +69,14 @@ Dan, 22 Nov, 2:57 AM ET: "lets also remove the jitter from the stars when grabbe
 2. Everything else about holding stays as it is: gathering, the mark, the ring, its spin, and the release. If the charge also feeds the release or anything else, keep that part and remove only the visible movement.
 3. Update the round 16 checks that expect the tremble, so they now check that a held star does not move between frames once it has reached its place. Add a negative control that brings the tremble back; the check must fail.
 
+## C18-8 The keyboard is there while the lid opens and shuts
+
+Dan's fourth note, pinned on v30 (b3c9e26) at Loop 94.91 s (Figma +13.96 s, 1474 x 988): "why does the laptop keyboard not show up here?". `poseLid` hides the keys and trackpad (`details`) while `theta < 0`, so the deck is blank until the lid passes upright (about 95.0 s), then they pop in; they vanish again the same way as it shuts.
+
+1. The keys and trackpad are on the deck the whole time, as on a real laptop: while the lid lifts they come into view from under it, and while it shuts they go under it. Where the lid covers them they are hidden by the lid itself (depth, or a clip to what the lid leaves uncovered), never by switching them off. Shut, the lid covers them entirely.
+2. Nothing else changes: the lid's angles and times, the screen fix from C18-6, sizes and pictures.
+3. Add a check over the opening and shutting at 1/60 s: the keys and trackpad are drawn in every frame, and no part of them is drawn in front of the lid. Add a negative control that brings back `theta < 0` hiding; the check must fail.
+
 ## Done when
 
 - `node design/journey-hero/take-2/tools/checks.mjs` prints `all clean`, and `node design/journey-hero/take-2/tools/round17-checks.mjs --controls` makes every negative control fail at its gate, the new controls of C18-3 and C18-4 included.
