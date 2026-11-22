@@ -61,6 +61,14 @@ Dan's third note, pinned on v29 (e9153ad) at Loop 95.05 s (Figma +14.10 s, 1474 
 2. Fix it so the screen's picture stays whole and flat on the glass through the whole opening and shutting, exactly as it looks once open (95.5 s). It turns with the lid as one flat picture. No time, angle, size or picture changes.
 3. Add a check that runs every 1/60 s through the lid's opening and shutting: every piece drawn on the screen lies on the glass plane, inside the glass rectangle, with no vertex off the glass and no flipped or zero-area triangle (or whatever measure fits the cause you find). Add a negative control that brings the fault back; the check must fail. Look for the same fault anywhere else a device's picture turns with a moving part, and list what you checked.
 
+## C18-7 No tremble on held stars
+
+Dan, 22 Nov, 2:57 AM ET: "lets also remove the jitter from the stars when grabbed for long, it doesnt look good". This undoes round 16's R4 tremble (`tremble`, `trembleHz`, `tremblePhase` and the charge's amplitude in `stars.mjs`).
+
+1. Held stars stay perfectly still in their places however long they are held: no tremble, no shake, at any hold length, in the ring and in the mark.
+2. Everything else about holding stays as it is: gathering, the mark, the ring, its spin, and the release. If the charge also feeds the release or anything else, keep that part and remove only the visible movement.
+3. Update the round 16 checks that expect the tremble, so they now check that a held star does not move between frames once it has reached its place. Add a negative control that brings the tremble back; the check must fail.
+
 ## Done when
 
 - `node design/journey-hero/take-2/tools/checks.mjs` prints `all clean`, and `node design/journey-hero/take-2/tools/round17-checks.mjs --controls` makes every negative control fail at its gate, the new controls of C18-3 and C18-4 included.
