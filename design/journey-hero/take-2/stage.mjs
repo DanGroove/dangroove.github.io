@@ -441,12 +441,13 @@ function lidPoint(u, v, lift = 0) {
   return lidHinge().map((n, i) => n + lidU[i] * u + lidV[i] * v + lidN[i] * (lift - 0.02));
 }
 function lidPainter(P) {
-  let height = 0.0195 - 0.0008;
+  // The picture's back rests on the glass at 0.02. Its front must clear the lid's face, not share its depth.
+  let height = 0.0205 - 0.0008;
   const g = UI_ROW, w = g.lidW - 2 * g.bezel, h = g.screenH, chin = g.lidH - h - g.bezel;
   const draw = (tone, r, art, window) => {
     height += LAYER_STEP;
     // The screen's own face is fixed; page layers below it may change their count.
-    if (art === 'chromeLaptop') height = 0.0195 + 8 * LAYER_STEP;
+    if (art === 'chromeLaptop') height = 0.0205 + 8 * LAYER_STEP;
     const pc = { ...box(tone, lidPoint(g.bezel + (r[0] + r[2] / 2) * w, chin + (1 - r[1] - r[3] / 2) * h, height), [r[2] * w, r[3] * h, 0.001]), q: quatFromBasis(lidU, lidV), art, window, lidPicture: true };
     P.push(pc); return pc;
   };

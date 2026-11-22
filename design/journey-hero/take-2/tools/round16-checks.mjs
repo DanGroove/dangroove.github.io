@@ -1,5 +1,5 @@
 // Round 16 (CORRECTIONS-16): the ring round the DG mark, centred by eye (R1), scattered all the way round (R2), on the screen
-// (R3); the held stars tremble as the charge builds (R4); the hold keeps gathering (R5). Node only, on the pure model.
+// (R3); C18-7 replaces R4's tremble with steady held stars; the hold keeps gathering (R5). Node only, on the pure model.
 //   node design/journey-hero/take-2/tools/round16-checks.mjs [--controls]
 // The mark's paths are read from public/journey/index.html (read only). The negative controls edit one exact site in memory
 // and must fail at their gate.
@@ -214,7 +214,7 @@ export async function checkClamp(source = read('stars.mjs')) {
   return out;
 }
 
-// ================================================================ R4: the tremble
+// ================================================================ C18-7: no held tremble; retain charge/release diagnostics
 export async function checkCharge(source = read('stars.mjs')) {
   // Dan, 9:32 AM on version 26: the start is 5.6 s after the formation, about 8 s held (round 16 built it at 1.5 s).
   const START = 5.6, site = `charge: { start: ${START}, ramp: 2, amp: 1.5, hz: [10, 16] },`;
@@ -222,8 +222,9 @@ export async function checkCharge(source = read('stars.mjs')) {
   const M = await load('stars.mjs', source), Q = await load('stars.mjs', source.replace(site, `charge: { start: ${START}, ramp: 2, amp: 0, hz: [10, 16] },`));
   const W = 1474, H = 996, P = [820, 470], n = M.makeStars(W, H).length;
   const A = fieldFor(M, W, H), B = fieldFor(Q, W, H), ha = A.F.press(...P), hb = B.F.press(...P);
-  let worstShown = 0, trembling = 0, t0 = null, frames = 0;
-  while (ha.formedAt === null || ha.held < ha.formedAt + START + 2 + 1) {
+  let worstShown = 0, heldSamples = 0, t0 = null, frames = 0, markStill = 0, ringStill = 0, worstRing = 0;
+  let previous = null;
+  while (ha.held < 30 - 1e-9) {
     A.F.gather(ha, P, DT); A.F.step(DT); B.F.gather(hb, P, DT); B.F.step(DT); frames++;
     const t = ha.held;
     if (ha.formedAt !== null) t0 = ha.formedAt + START;
@@ -231,29 +232,49 @@ export async function checkCharge(source = read('stars.mjs')) {
     assert.ok(Math.abs(ha.charge - want) < 1e-9 && A.F.markState().charge === ha.charge, `R4 amplitude: ${ha.charge} px at ${t.toFixed(3)} s, not the ramp's ${want}`);
     assert.ok(ha.charge <= 1.5, `R4 amplitude: ${ha.charge} px is past amp at ${t.toFixed(3)} s`);
     if (t0 !== null && t >= t0 + 2) assert.equal(ha.charge, 1.5, `R4 amplitude: not amp at ${t.toFixed(3)} s`);
-    // Without the tremble, every star is where it is without R4 (the model is the same; only what is shown differs).
+    // Charge cannot affect any path or shown offset, even after the old onset/full-charge times.
     for (let k = 0; k < 2 * n; k++) assert.ok(Math.abs(A.F.base[k] - B.F.base[k]) < 1e-9, `R4 path: star ${k >> 1}'s path differs from the one without R4 at ${t.toFixed(3)} s`);
-    if (!(t0 !== null && t >= t0)) {
-      for (let k = 0; k < 2 * n; k++) assert.equal(A.F.offsets[k], B.F.offsets[k], `R4 start: star ${k >> 1} trembles at ${t.toFixed(3)} s, before formedAt + start`);
-    } else for (const i of A.F.cluster.keys()) {
-      // Every captured star shows its own tremble on top of where it is placed (float32 offsets: within 1e-3 px).
-      const tr = M.tremble(i, t, ha.charge), d = Math.hypot(A.F.offsets[2 * i] - A.F.base[2 * i] - tr[0], A.F.offsets[2 * i + 1] - A.F.base[2 * i + 1] - tr[1]);
-      worstShown = Math.max(worstShown, d); trembling++;
-      assert.ok(d < 1e-3, `R4 shown: star ${i} is ${d} px from its place plus its tremble`);
+    const state = A.F.markState();
+    for (const [i, c] of A.F.cluster) {
+      for (const k of [2 * i, 2 * i + 1]) {
+        assert.equal(A.F.offsets[k], Math.fround(A.F.base[k]), `C18 held stars: star ${i} moves off its unshaken place at ${t.toFixed(3)} s`);
+        assert.equal(A.F.offsets[k], B.F.offsets[k], `C18 held stars: charge moves star ${i} at ${t.toFixed(3)} s`);
+      }
+      worstShown = Math.max(worstShown, Math.hypot(A.F.offsets[2 * i] - A.F.base[2 * i], A.F.offsets[2 * i + 1] - A.F.base[2 * i + 1])); heldSamples++;
+      if (previous && t >= 20) {
+        if (c.point !== undefined) {
+          assert.equal(A.F.offsets[2 * i], previous.offsets[2 * i], `C18 held stars: settled mark star ${i} moves in x`);
+          assert.equal(A.F.offsets[2 * i + 1], previous.offsets[2 * i + 1], `C18 held stars: settled mark star ${i} moves in y`); markStill++;
+        } else if (c.ring) {
+          // Undo only the preserved rigid spin. Float32 uploads round positions by at most 1e-4 px.
+          const local = (phase, offsets) => {
+            const x = A.F.stars[i].x + offsets[2 * i] - state.centre[0] - A.mark.ring.centre[0];
+            const y = A.F.stars[i].y + offsets[2 * i + 1] - state.centre[1] - A.mark.ring.centre[1];
+            return [x * Math.cos(phase) + y * Math.sin(phase), -x * Math.sin(phase) + y * Math.cos(phase)];
+          };
+          const before = local(previous.phase, previous.offsets), now = local(state.ring.phase, A.F.offsets), delta = Math.hypot(now[0] - before[0], now[1] - before[1]);
+          worstRing = Math.max(worstRing, delta); ringStill++;
+          assert.ok(delta < 0.0002, `C18 held stars: settled ring star ${i} moves ${delta} px beyond its spin`);
+        }
+      }
     }
+    previous = { offsets: A.F.offsets.slice(), phase: state.ring.phase };
   }
   const s = A.F.markState();
   assert.ok(s.arrived === B.F.markState().arrived && s.ring.count === B.F.markState().ring.count, 'R4 path: arrival or the ring differs from the one without R4');
   for (let i = 0; i < n; i++) assert.equal(A.F.mixes[i], B.F.mixes[i], `R4 path: star ${i}'s mark weight differs from the one without R4`);
-  // Each star's own tremble: frequencies in 10 to 16 Hz, x and y different, no two of 100 the same in all four.
-  const seen = new Set();
-  for (let i = 0; i < 100; i++) {
-    const f = [M.trembleHz(i, 0), M.trembleHz(i, 1)], p = [M.tremblePhase(i, 0), M.tremblePhase(i, 1)];
-    assert.ok(f.every(v => v >= 10 && v <= 16) && f[0] !== f[1], `R4 own: star ${i}'s frequencies ${f} are not in 10-16 Hz or are equal`);
-    const key = [...f, ...p].join(',');
-    assert.ok(!seen.has(key), `R4 own: star ${i} shares its tremble with another`); seen.add(key);
+  assert.ok(markStill > 0 && ringStill > 0, 'C18 held stars: settled mark/ring checks must not be empty');
+  // Long holds and the no-mark fallback use the same unshaken placement rule. No charge-dependent displacement is allowed.
+  const plain = M.createField(W, H), hp = plain.press(...P), longHolds = [60, 3600, 86400];
+  for (const t of longHolds) {
+    for (const [F, h] of [[A.F, ha], [plain, hp]]) {
+      const dt = t - h.held; F.gather(h, P, dt); F.step(DT);
+      for (const i of F.cluster.keys()) for (const k of [2 * i, 2 * i + 1]) {
+        assert.equal(F.offsets[k], Math.fround(F.base[k]), `C18 held stars: long hold ${t} s moves star ${i}`); heldSamples++;
+      }
+    }
   }
-  // The release: every star's blast starts where it was shown, tremble included; after it, no tremble.
+  // Release uses held duration/mass and starts exactly at the displayed, now steady position.
   const ids = [...A.F.cluster.keys()], before = ids.map(i => [A.F.offsets[2 * i], A.F.offsets[2 * i + 1]]);
   A.F.blast(ha, P);
   let worstRelease = 0;
@@ -264,7 +285,7 @@ export async function checkCharge(source = read('stars.mjs')) {
     A.F.step(DT);
     for (const i of ids.slice(0, 200)) { const sh = A.F.shown(i); assert.ok(Math.abs(sh[0] - A.F.offsets[2 * i]) < 1e-3 && Math.abs(sh[1] - A.F.offsets[2 * i + 1]) < 1e-3, `R4 release: star ${i} trembles after the release`); }
   }
-  return { formedAt: +ha.formedAt.toFixed(3), start: +(ha.formedAt + START).toFixed(3), full: +(ha.formedAt + START + 2).toFixed(3), frames, trembling, worstShown, worstRelease, captured: ids.length };
+  return { formedAt: +ha.formedAt.toFixed(3), start: +(ha.formedAt + START).toFixed(3), full: +(ha.formedAt + START + 2).toFixed(3), frames, heldSamples, markStill, ringStill, worstRing, longHolds, worstShown, worstRelease, captured: ids.length };
 }
 
 // ================================================================ R5: the hold keeps gathering
@@ -286,10 +307,25 @@ export async function checkGather(source = read('stars.mjs')) {
 }
 
 // ================================================================ controls
+const HELD_STARS_CONTROL = {
+  id: 'C18 held tremble restored',
+  search: 'const place = (i, x, y) => { base[2 * i] = S[2 * i] = x; base[2 * i + 1] = S[2 * i + 1] = y; };',
+  replacement: 'const place = (i, x, y) => { base[2 * i] = x; base[2 * i + 1] = y; const tr = k => charge * Math.sin(2 * Math.PI * (10 + 6 * hash(i, 9 + k)) * hold.held + 2 * Math.PI * hash(i, 11 + k)); S[2 * i] = x + tr(0); S[2 * i + 1] = y + tr(1); };',
+  gate: 'C18 held stars:', run: s => checkCharge(s),
+};
+export async function checkHeldStarsControl() {
+  const c = HELD_STARS_CONTROL, source = read('stars.mjs');
+  assert.equal(source.split(c.search).length - 1, 1, 'C18 held tremble control must match one site');
+  let message = '';
+  try { await c.run(source.replace(c.search, c.replacement)); } catch (error) { message = error.message; }
+  assert.ok(message.startsWith(c.gate), `C18 held tremble control missed its gate (${message || 'passed'})`);
+  return `${c.id}: failed at ${c.gate} (${message.split('\n')[0]})`;
+}
 export const ROUND16_CONTROLS = [
+  HELD_STARS_CONTROL,
   { id: 'growth frozen at the formation', search: '    if (mark) hold.extra = ', replacement: '    if (mark && !formed) hold.extra = ', gate: 'R5 radius:', run: s => checkGather(s) },
-  { id: 'a tremble that starts at the press', search: 'const t0 = mark ? (hold.formedAt === null ? null : hold.formedAt + STARS.charge.start) : STARS.hold.full + STARS.charge.start;', replacement: 'const t0 = 0;', gate: 'R4 amplitude:', run: s => checkCharge(s) },
-  { id: 'a tremble that grows past amp', search: 'STARS.charge.amp * smooth((t - t0) / STARS.charge.ramp)', replacement: 'STARS.charge.amp * (t - t0) / STARS.charge.ramp', gate: 'R4 amplitude:', run: s => checkCharge(s) },
+  { id: 'a charge that starts at the press', search: 'const t0 = mark ? (hold.formedAt === null ? null : hold.formedAt + STARS.charge.start) : STARS.hold.full + STARS.charge.start;', replacement: 'const t0 = 0;', gate: 'R4 amplitude:', run: s => checkCharge(s) },
+  { id: 'a charge that grows past amp', search: 'STARS.charge.amp * smooth((t - t0) / STARS.charge.ramp)', replacement: 'STARS.charge.amp * (t - t0) / STARS.charge.ramp', gate: 'R4 amplitude:', run: s => checkCharge(s) },
   { id: 'the box centre for the ring', search: 'ring: { centre: weight,', replacement: 'ring: { centre: [0, 0],', gate: 'R1 centre:', run: s => checkCentre(s) },
   { id: 'one radius for every ring star', search: 'mark.ring.radius + hash(i, 6) * mark.ring.band;', replacement: 'mark.ring.radius + 0.5 * mark.ring.band;', gate: 'R2 band:', run: s => checkRing(s) },
   { id: 'a 14 px band', search: 'ringGap: 0.095, ringBand: 0.1,', replacement: 'ringGap: 0.095, ringBand: 14 / 199.2,', gate: 'R1 band:', run: s => checkCentre(s) },
@@ -317,7 +353,7 @@ export async function checkRound16() {
   return `R1 centre: at 1474 x 996 the weight is (${d.weight.join(', ')}) px from the box centre, the smallest circle round the outline at (${d.enclosing.join(', ')}), ${d.off} px away; band ${d.far} + ${d.gap} = ${d.inner} to ${d.outer} px; clearance to the D's top and bottom corners ${d.clearances[0].join('-')} and ${d.clearances[1].join('-')} px, to the G's right edge ${d.clearances[2].join('-')} px; weight, inner edge, depth and centre exact at ${Object.keys(c).filter(x => x !== 'dan').join(', ')}.
 R2 ring: ${ring}.
 R3 clamp: ${k.length} still holds at the edges and corners of 1474 x 996, 1280 x 800 and 1024 x 640, every mark point and the ring's outer circle 16 px inside in every frame, the centre still when the ring appears; furthest in than the mark-only clamp ${Math.max(...k.map(v => v.inward)).toFixed(1)} px (${k.filter(v => v.size === '1474x996').map(v => `${v.name} ${v.inward}`).join(', ')} at 1474 x 996); fallbacks to the mark-only clamp and the middle.
-R4 charge: formed at ${q.formedAt} s, trembling from ${q.start} s, full ${q.full} s; ${q.trembling} star-frames each within ${q.worstShown.toExponential(1)} px of place + own tremble; paths, arrival, mark weight and ring identical to R4 off; ${q.captured} blasted from where shown (within ${q.worstRelease} px), none trembling after.
+C18-7 held stars: ${q.frames} frames through 30 s / ${q.heldSamples} held samples, offsets exactly float32(base); ${q.markStill} settled mark star-frames unchanged, ${q.ringStill} settled ring star-frames within ${q.worstRing.toExponential(1)} px after undoing only spin; holds ${q.longHolds.join('/')} s with/without mark stay on base. Retained charge: formed ${q.formedAt} s, starts ${q.start} s, full ${q.full} s; paths, arrival, weights and ring identical at amp 0/1.5. ${q.captured} blasts start where shown (${q.worstRelease} px).
 R5 gather: radius min(diagonal, captureRadius + 104 px/s past 2.5 s) in all ${g.beforeFormed} frames before and ${g.afterFormed} after the formation (${g.formedAt} s); still hold at [700, 450], 1474 x 996 (${g.stars} stars): ${Object.entries(g.counts).map(([t, v]) => `${t} s ring ${v.ring} (captured ${v.captured}, mark ${v.assigned}/600, ${v.arrived} arrived)`).join(', ')}.`;
 }
 

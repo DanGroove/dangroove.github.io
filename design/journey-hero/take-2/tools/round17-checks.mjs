@@ -14,6 +14,7 @@ import { corners } from '../kit.mjs';
 import { createRenderer } from '../sq.mjs';
 import { ART, ART_TEXT, C, MOTION_LAYOUTS, motionCards, HISTOGRAM, AM_MARKERS, AM_LABEL_BARS, CITY_BLOCKS, CITY_PINS, makeAtlas, letterMask, maskLetterPictures, CUTOUTS, CUTOUT_MARGIN, CUTOUT_GUTTER, drawPictureParts, paintGroupName, BUILDING_PICTURES, buildingSize, buildingCommand, paintBuilding, buildingChanges, buildingPaint, buildingReveal, buildingRevealSpec, buildingRevealInventory, measureBuildingPaint, typingReveal } from '../art.mjs';
 import { checkMapFrame, checkDragsFlat, checkRendererClips, onMapFrame } from './round15-checks.mjs';
+import { checkHeldStarsControl } from './round16-checks.mjs';
 
 const url = new URL('../stage.mjs', import.meta.url);
 const source = () => fs.readFileSync(url, 'utf8');
@@ -55,6 +56,9 @@ export function round18CompProbe(shape, clock) {
   draw.size = [480, 270]; animatedComp(draw, shape, clock); return pieces;
 }
 export function round18ViewerRects() { return [VIEW, [0.14, TOP - 0.5, 0.74, 0.416]]; }
+export function round18LidPictures(clock) {
+  const P=[]; prototype(lidPainter(P),0,clock); return P;
+}
 `;
 const load = async edit => {
   const old = source(), changed = edit ? edit(old) : old;
@@ -581,7 +585,7 @@ export async function checkDeviceModels(M) {
   const laptopTones=['#86807A','#3E3A37','#252220'];
   assert.deepEqual(lid.tones,laptopTones,'R12 laptop scale: lid metal'); assert.deepEqual(deck.tones,laptopTones,'R12 laptop scale: deck metal');
   const first=open.find(pc=>pc.lidPicture), normal=quatRotate(lid.q,[0,0,1]);
-  near(dot(normal,first.p.map((n,i)=>n-lid.p[i]))+first.s[2],lid.s[2],'R12 no gap: laptop glass',1e-9);
+  near(dot(normal,first.p.map((n,i)=>n-lid.p[i]))-first.s[2],lid.s[2],'R12 no gap: laptop glass underside',1e-9);
   const well=open.find(pc=>pc.device===0&&pc.tones?.[1]==='#121111'), track=open.find(pc=>pc.device===0&&pc.tones?.[1]==='#4A4643'), keys=open.filter(pc=>pc.device===0&&pc.tones?.[1]==='#1B1918');
   near(2*well.s[0],1.42*1.4,'R12 laptop scale: keyboard well');near(2*track.s[0],0.55*1.4,'R12 laptop scale: trackpad');assert.equal(keys.length,45,'R12 laptop scale: keys');near(2*keys[0].s[0],0.115*1.4,'R12 laptop scale: key width');near(2*deck.s[2],0.08,'R12 laptop scale: deck thickness');
   near(M.UI_ROW.lidW,2.17,'R12 laptop scale: width'); near(M.UI_ROW.lidH,1.54,'R12 laptop scale: lid'); near(M.UI_ROW.deck,1.54,'R12 laptop scale: deck'); near(M.UI_ROW.bezel,0.056,'R12 laptop scale: bezel');
@@ -840,6 +844,65 @@ export async function checkPinnedCamera(M, envelope=sceneEnvelope) {
   return {left,right,bottom,top,scales,clearance};
 }
 
+// C18-6: in the lid's own coordinates, every picture is a rectangular plate on the glass. Testing the full bounding plate
+// contains every vertex of its untapered superquadric, including its bevels; clearance is the relevant depth-fighting measure.
+export async function checkLidGlass(M) {
+  M ??= await load();
+  const probe = M.round18LidPictures ? M : await load(), gate = 'C18 lid glass:', g = M.UI_ROW;
+  const start = starts(M)[5], exp = action(M, 'fig', 'export').start, beat = M.ballBeats('fig', 0);
+  const {land, off} = M.playbackSpans(M.SCRIPTS.fig);
+  const openLid = at(M, 'fig', land + 0.001).find(pc => pc.lid);
+  const basis = pc => [[1,0,0],[0,1,0],[0,0,1]].map(v => quatRotate(pc.q,v));
+  const local = (point, lid) => basis(lid).map(axis => dot(axis, point.map((v,i) => v-lid.p[i])));
+  const glass = [-g.lidW/2+g.bezel, g.lidH/2-g.bezel-g.screenH, g.lidW/2-g.bezel, g.lidH/2-g.bezel];
+  const windows = {opening:[exp+beat.wiped, exp+beat.become], shutting:[off[0]-M.BALL.lid*M.PACE, off[0]]};
+  let pictures=0, vertices=0, triangles=0, minBack=Infinity, minFront=Infinity, worstPlane=0, worstLayout=0;
+  const samples={};
+  for (const [name,[from,to]] of Object.entries(windows)) {
+    const times=new Set([from,to,...Array.from({length:Math.ceil((to-from)*60)},(_,i)=>from+i/60)]);
+    // Include Dan's pinned samples in addition to the exact 60 Hz opening/shutting grids.
+    if(name==='opening')for(const t of [94.7,94.9,95.05,95.25,95.5])times.add(t-start);
+    samples[name]={frames:0,visible:0,hidden:0};
+    for(const t of [...times].sort((a,b)=>a-b)) {
+      const P=at(M,'fig',t),lid=P.find(pc=>pc.lid),shown=P.filter(pc=>pc.lidPicture),N=basis(lid)[2];
+      const visible=dot(N,HOME.v)>0;samples[name].frames++;
+      if(!visible) {assert.equal(shown.length,0,`${gate} back-facing screen hidden`);samples[name].hidden++;continue;}
+      samples[name].visible++;
+      assert.ok(shown.length>0,`${gate} visible screen must not be empty`);
+      const actualTime=M.sceneAt(start+t).at;
+      const reference=probe.round18LidPictures(actualTime<land?-1:shown[0].clock).filter(pc=>pc.s.every(v=>v>0));
+      assert.equal(shown.length,reference.length,`${gate} picture count`);
+      for(const [i,pc] of shown.entries()) {
+        const r=reference[i],q=local(pc.p,lid),expected=local(r.p.map((v,k)=>v+(k===2?g.forward:0)),openLid);
+        assert.equal(pc.art,r.art,`${gate} content`);assert.deepEqual(pc.window,r.window,`${gate} picture crop`);
+        assert.deepEqual(pc.s,r.s,`${gate} picture size`);assert.deepEqual(pc.e,[0.03,0.03],`${gate} bounded sharp plate`);
+        assert.deepEqual(pc.taper,[0,0],`${gate} no taper`);near(pc.shear,0,`${gate} no shear`);
+        q.forEach((v,k)=>{worstLayout=Math.max(worstLayout,Math.abs(v-expected[k]));near(v,expected[k],`${gate} rigid local layout`,1e-9);});
+        basis(pc).forEach((axis,k)=>basis(lid)[k].forEach((v,j)=>near(axis[j],v,`${gate} parallel glass plane`,1e-9)));
+        const back=q[2]-pc.s[2]-lid.s[2],face=q[2]+pc.s[2]-lid.s[2];
+        minBack=Math.min(minBack,back);minFront=Math.min(minFront,face);
+        assert.ok(back>=-1e-9,`${gate} ${name} ${pc.art||'rail'} underside ${q[2]-pc.s[2]} penetrates glass ${lid.s[2]} at loop ${start+t}`);
+        assert.ok(face>=0.001-1e-9,`${gate} front must clear lid by its 0.001 thickness`);
+        if(i===0)near(back,0,`${gate} first underside on glass`,1e-9);
+        for(const v of corners(pc)) {
+          const p=local(v,lid);vertices++;
+          assert.ok(p[0]>=glass[0]-1e-9&&p[0]<=glass[2]+1e-9&&p[1]>=glass[1]-1e-9&&p[1]<=glass[3]+1e-9,`${gate} vertex outside glass rectangle`);
+        }
+        const points=front(pc),sub=(a,b)=>a.map((v,k)=>v-b[k]);
+        for(const v of points) {const error=Math.abs(local(v,lid)[2]-q[2]-pc.s[2]);worstPlane=Math.max(worstPlane,error);near(error,0,`${gate} flat face`,1e-9);}
+        for(const [a,b,c] of [[0,2,3],[0,3,1]]) {
+          const u=sub(points[b],points[a]),v=sub(points[c],points[a]);
+          const area=dot(N,[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]]);
+          assert.ok(Number.isFinite(area)&&area>0,`${gate} flipped or zero-area picture triangle`);triangles++;
+        }
+        pictures++;
+      }
+    }
+  }
+  assert.ok(Object.values(samples).every(s=>s.visible>0&&s.hidden>0),`${gate} both sides of both turns exercised`);
+  return {windows:Object.fromEntries(Object.entries(windows).map(([k,v])=>[k,v.map(t=>start+t)])),samples,pictures,vertices,triangles,minBack,minFront,worstPlane,worstLayout};
+}
+
 export async function checkRound17(M) {
   M ??= await load();
   prepareRound17Art();
@@ -849,6 +912,7 @@ export async function checkRound17(M) {
   const contact = await checkDeviceGlass(M), clearance = await checkDeviceGlass(M,true), fringes = await checkCutouts(M);checkBuildingMode();checkCarryClipRenderer();checkFloorOffset();
   const {padded,...reveals}=await checkRevealBounds(M);console.log('C8 reveals: '+JSON.stringify({...reveals,padded:padded.length}));
   console.log('C7 spine: '+JSON.stringify(await checkSpine(M)));console.log('Pixel helper synthetic tests: '+JSON.stringify(checkPixelHelpers()));
+  console.log('C18 lid glass: '+JSON.stringify(await checkLidGlass(M)));
   console.log(`Critique round 2: retained C1 ${JSON.stringify({contact,clearance})}; C2 own-body depths, carry clips and renderer cull; C3 ${JSON.stringify(fringes)} exact paint partition; C4 five InDesign objects; C5 floor offset 1/2.`);
   return `R12: ${JSON.stringify({devices,camera})}\nRound 17: G ${swaps.boundaries} action ends / ${swaps.comparisons} registrations, worst ${swaps.worst.toFixed(5)} px; R1 ${levels} levels samples; R2/R3 ${letters} draw/type samples; R4 ${carries.carries} carries / ${carries.samples} samples, flat worst ${carries.flat.worst.toFixed(5)} px; R6/R7 ${flight} flight samples; R8-R11 ${sinks.samples} sink samples (${JSON.stringify(sinks.endTimes)}).\nFollow-up: F1 ${heights.samples} height samples / ${heights.pages} pages / ${heights.layers} layers; F2 ${stable.samples} playback samples / ${stable.faces} fixed faces, worst ${stable.worst.toFixed(5)} px; F3 ${masks.pictures} masks / ${masks.texels} fixture texels / ${masks.covered} covered, exact finished RGB.`;
 }
@@ -1160,6 +1224,8 @@ export async function checkRound17Controls() {
   await control('C18 frame grows from opposite corner',s=>s.replace("buildingReveal(source,'base',[0,0,1,1],p,'corner')","buildingReveal(source,'base',[0,0,1,1],p,i===0?'upCorner':'corner')"),'consistency: draw anchors fig/frame0',checkDrawAnchors);
   await control('C18 picture box grows at full height',s=>s.replace("handed(s, 'pictureBox', t), 'corner'","handed(s, 'pictureBox', t), 'x'"),'consistency: draw anchors fig/pictureBox',checkDrawAnchors);
   await control('C18 pre-play head fallback restored',s=>s.replace('motionHead.to = [3.34, 1.06]','motionHead.to = [2.79, 1.06]'),'consistency: head reaches 2.0 s',consistency);
+  await control('C18 laptop picture coplanar with lid',s=>s.replaceAll('0.0205','0.0195'),'C18 lid glass:',checkLidGlass);
+  out.push(await checkHeldStarsControl());
   await control('done() photo choice', s => s.replace("pc.artMix = handed(s, white ? 'white' : 'black', t);", "pc.artMix = done(s, white ? 'white' : 'black', t) ? 1 : 0;"), 'R1 photo mix', checkLevels);
   await control('travel action:key', s => {
     const a = s.indexOf('function travel('), b = s.indexOf('\n}', a) + 2, body = s.slice(a, b);

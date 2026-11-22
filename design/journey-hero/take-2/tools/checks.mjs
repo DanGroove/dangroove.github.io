@@ -554,7 +554,7 @@ try { console.log(await checkRound10()); console.log('Round 10 negative controls
 // and round 12's kept rules for the craft list.
 try { console.log(await checkRound12StarsList()); console.log('Round 12 (S1) negative controls: ' + await checkRound12Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound14()); console.log('Round 14 (K1) negative controls: ' + await checkRound14Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
-// Round 16 (R1-R5): the ring round the mark, the tremble, the hold that keeps gathering.
+// Round 16 (R1-R5), with C18-7: the ring, steady held stars, retained charge and continued gathering.
 try { console.log(await checkRound16()); console.log('Round 16 (R1-R5) negative controls: ' + await checkRound16Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound12Scene()); console.log('Round 12 (D1, I1, X1) negative controls: ' + await checkRound12SceneControls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound13Rows(stageModule)); console.log('Round 13 (U1, I2) negative controls: ' + await checkRound13RowsControls()); } catch (error) { fail(0, error.message.split('\n')[0]); }

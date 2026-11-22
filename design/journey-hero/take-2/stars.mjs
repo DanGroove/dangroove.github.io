@@ -25,10 +25,7 @@ export const STARS = {
   // Round 16 (R1): the extra stars make a band round the mark's weight centre: its inner edge ringGap of the mark's height
   // outside the farthest point, ringBand of the mark's height deep, outward.
   mark: { threshold: 300, height: 0.2, margin: 16, count: 600, tau: 0.12, arrive: 1, size: 2.6, ringGap: 0.095, ringBand: 0.1, cells: 24000, edge: 2 },
-  // Round 16 (R4): every captured star trembles from start s after the formation starts (after hold.full without a mark), its
-  // amplitude rising to amp px over ramp s (smooth), at its own hashed frequencies in hz (x and y) and phases.
-  // Dan, 21 November, 9:31 AM, on version 26: 1.5 s started "too quickly", before the logo's last stars had landed. He chose
-  // "about 8 s into the hold": a long calm logo first (about 8 s held at 1474 x 996, where it forms at 2.4 s; full at about 10 s).
+  // C18-7: keep the charge's diagnostic ramp, but it no longer displaces held stars.
   charge: { start: 5.6, ramp: 2, amp: 1.5, hz: [10, 16] },
 };
 
@@ -107,7 +104,7 @@ export function createField(W, H, mark = null) {
   let awake = false, version = 0, par = [0, 0], cluster = null, front = 0, centre = null, formed = false;
   // Round 16 (R2): the ring of the hold: its members in cyclic order and its phase (radians turned since the press).
   let ring = null, charge = 0;
-  // Round 16 (R4): each captured star's offset without the tremble, in float64.
+  // Each captured star's authored offset, in float64; shown positions have only float32 rounding.
   const base = new Float64Array(n * 2);
   const diagonal = Math.hypot(W, H);
   // The largest offsets: under 40 px for stirring, under 45 % of the hero's width after a blast (a hard limit, kept just inside).
@@ -244,11 +241,10 @@ export function createField(W, H, mark = null) {
     // once the threshold is captured (or, short of it, once the radius has reached the hero's diagonal).
     centre = mark ? markCentre(hold.anchor, mark, W, H) : null;
     if (mark && !formed && (cluster.size >= STARS.mark.threshold || R >= diagonal)) hold.formedAt = hold.held;
-    // Round 16 (R4): the charge's tremble rides on each captured star's offset (base keeps it without the tremble, for the
-    // checks); it feeds back into nothing (targets, arrival, mark weight, ring), and its amplitude is the same for every star.
+    // C18-7: charge remains observable, but holding adds no movement to the mark or its rotating ring.
     const t0 = mark ? (hold.formedAt === null ? null : hold.formedAt + STARS.charge.start) : STARS.hold.full + STARS.charge.start;
-    const a = charge = hold.charge = chargeAmp(hold.held, t0);
-    const place = (i, x, y) => { const [tx, ty] = tremble(i, hold.held, a); base[2 * i] = x; base[2 * i + 1] = y; S[2 * i] = x + tx; S[2 * i + 1] = y + ty; };
+    charge = hold.charge = chargeAmp(hold.held, t0);
+    const place = (i, x, y) => { base[2 * i] = S[2 * i] = x; base[2 * i + 1] = S[2 * i + 1] = y; };
     if (mark && hold.formedAt !== null) {
       const fresh = [];
       for (const [i, c] of cluster) if (c.point === undefined && !c.ring) fresh.push(i);
@@ -361,7 +357,7 @@ export function createField(W, H, mark = null) {
     let assigned = 0, arrived = 0;
     if (cluster) for (const c of cluster.values()) if (c.point !== undefined) { assigned++; if (c.arrived) arrived++; }
     // Round 16 (R2): the ring, its centre in the hero's px (null before the hold has a mark centre), radius, phase and count;
-    // R4: charge, the tremble's amplitude now.
+    // The retained charge diagnostic; it never offsets a held star.
     const circle = mark ? { centre: centre && [centre[0] + mark.ring.centre[0], centre[1] + mark.ring.centre[1]], radius: mark.ring.radius, phase: ring ? ring.phase : 0, count: ring ? ring.order.length : 0 } : null;
     return { points: mark ? mark.points.length : 0, height: mark ? mark.height : 0, formed, assigned, arrived, ring: circle, charge, front, centre: centre && centre.slice(), captured: cluster ? cluster.size : 0 };
   }
@@ -490,11 +486,8 @@ export const markCentre = (anchor, mark, W, H) => [W, H].map((L, k) => {
 // Round 16 (R1): a ring star's own radius in the band (today's hash channel); R2: its own offset in its slot, in slots.
 export const ringRadius = (i, mark) => mark.ring.radius + hash(i, 6) * mark.ring.band;
 export const ringJitter = i => 0.7 * (hash(i, 7) - 0.5);
-// Round 16 (R4): the tremble's amplitude t s held for a charge that starts at t0 (formedAt + start), and a star's offset.
+// The charge diagnostic t seconds held, starting at t0 (formedAt + start). Release uses held time, not this value.
 export const chargeAmp = (t, t0) => t0 === null || t < t0 ? 0 : STARS.charge.amp * smooth((t - t0) / STARS.charge.ramp);
-export const trembleHz = (i, k) => STARS.charge.hz[0] + (STARS.charge.hz[1] - STARS.charge.hz[0]) * hash(i, 9 + k);
-export const tremblePhase = (i, k) => 2 * Math.PI * hash(i, 11 + k);
-export const tremble = (i, t, a) => a ? [0, 1].map(k => a * Math.sin(2 * Math.PI * trembleHz(i, k) * t + tremblePhase(i, k))) : [0, 0];
 // The page's own mark, read from the DOM: the [data-mark] link's paths, their d and fill.
 export function readMark(root) {
   const link = root?.querySelector?.('[data-mark]') || root?.ownerDocument?.querySelector?.('[data-mark]');
