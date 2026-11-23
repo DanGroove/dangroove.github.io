@@ -22,10 +22,11 @@ export function findBeacon(svg) {
     o.manualTs = FD.now; found(o.id); opened(o);
     if (FD.rm && i >= 0) { o.head = angle; read(n, i); o.snap = null; }
   };
-  el.addEventListener('pointerdown', e => { o.drag = true; el.setPointerCapture(e.pointerId); aimAt(e); el._dragged = true; });
-  el.addEventListener('pointermove', e => { if (o.drag) aimAt(e); });
+  // A drag aims the beam. A plain press or tap (the pointer has not travelled beacon.slop px) turns it to the next unread note, as Enter does.
+  el.addEventListener('pointerdown', e => { o.drag = true; o.downAt = [e.clientX, e.clientY]; o.dragged = false; el.setPointerCapture(e.pointerId); });
+  el.addEventListener('pointermove', e => { if (!o.drag || !o.dragged && Math.hypot(e.clientX - o.downAt[0], e.clientY - o.downAt[1]) < FIND_PLAY.beacon.slop) return; o.dragged = el._dragged = true; aimAt(e); });
   el.addEventListener('pointerup', () => o.drag = false); el.addEventListener('pointercancel', () => o.drag = false);
-  press(el, e => { if (e.type === 'keydown' || !e.detail) snapNext(); else aimAt(e); });
+  press(el, () => snapNext());
   el.addEventListener('keydown', e => { if (!['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(e.key)) return; e.preventDefault(); o.head += FIND_PLAY.beacon.arrow * (['ArrowLeft', 'ArrowUp'].includes(e.key) ? -1 : 1); o.snap = null; o.manualTs = FD.now; found(o.id); opened(o); });
   o.undo = () => { o.manualTs = -Infinity; o.drag = false; }; o.hear = () => o.hearTs = FD.now;
   o.tick = (t, dt) => {
@@ -36,12 +37,12 @@ export function findBeacon(svg) {
     attr(beam, 'transform', `translate(${B.origin[0]} ${B.origin[1]}) rotate(${o.head - FIND_PLAY.kit.deg}) scale(${lit && !manual ? B.reach : 1})`); attr(beam, 'opacity', manual ? 1 : B.idle);
     notes.forEach((n, i) => {
       const dx = n.d.x - O[0], dy = n.d.y - O[1], angle = Math.atan2(dy, dx) * FIND_PLAY.kit.deg / Math.PI, diff = Math.abs(((angle - o.head + FIND_PLAY.kit.turn * 1.5) % FIND_PLAY.kit.turn) - FIND_PLAY.kit.deg), inside = diff < half && Math.hypot(dx, dy) < reach;
-      if (inside && !o.snap) n.time += dt;
+      if (inside && !o.snap && manual) n.time += dt; // only a beam somebody aims reads a note; the idle sweep just shows it
       if (!n.read && n.time >= B.read) read(n, i);
       n.v = FD.rm ? n.read || inside ? 1 : 0 : lerp(n.v, inside ? 1 : n.read ? B.rest : 0, Math.min(1, dt * B.noteEase));
       n.ev = FD.rm ? n.read || inside ? 1 : 0 : lerp(n.ev, n.read || inside && n.time >= FIND_TIMING.noteDelay ? 1 : 0, Math.min(1, dt * B.englishEase));
       attr(n.g, 'opacity', n.v); attr(n.en, 'opacity', n.ev);
-      const flash = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - n.flash) / B.flash)); attr(n.inner, 'transform', `scale(${1 + (B.noteScale - 1) * flash})`);
+      const flash = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - n.flash) / B.flash)); attr(n.inner, 'transform', `scale(${(1 + (B.noteScale - 1) * flash) * (VIEW.phone ? B.notePhone : 1)})`);
     });
     const F = B.flicker, foot = B.flameFoot, burst = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - o.litTs) / B.leap[1]));
     const hearAge = t - o.hearTs, hear = FD.rm ? 1 : hearAge < B.hear[1] ? lerp(B.hear[0], 1, clamp01(hearAge / B.hear[1])) : 1 + (B.hear[2] - 1) * Math.sin(Math.PI * clamp01((hearAge - B.hear[1]) / B.hear[3]));

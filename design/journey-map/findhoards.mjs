@@ -1,9 +1,10 @@
 // Part A: the instrument and the five persistent, hand-dug chests.
 import { C, COPY, CRAFTS, STOPS, MAP, FIND_COPY, FIND_PLAY, PALETTES } from './data.mjs';
-import { clamp01, lerp, toScreen } from './trip.mjs';
+import { clamp01, lerp, toScreen, VIEW } from './trip.mjs';
 import { pieceIcon } from './art.mjs';
 import { cardsSetCraft, arrowSvg } from './cards.mjs';
 import { tlSetCraft } from './timeline.mjs';
+import { JOURNEY, stepsFocus } from './steps.mjs';
 import { FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, attend, findBits, findSvg, findFormat, findRange, findLife, findAngleDelta } from './findkit.mjs';
 
 export const wayAllStops = () => STOPS.map(s => CRAFTS.every(c => s.crafts.includes(c)));
@@ -33,6 +34,9 @@ export function findWay(svg) {
     const mask = i < 0 ? null : i === CRAFTS.length ? wayAllStops() : STOPS.map(s => s.crafts.includes(CRAFTS[i]));
     if (i >= 0) { o.kept = true; if (i < CRAFTS.length && !o.picked.includes(i)) o.picked.push(i); o.unlocked = o.picked.length === CRAFTS.length && wayAllStops().some(Boolean); found(o.id); opened(o); }
     applyMask(mask);
+    // With a craft chosen the lines have to be seen arriving, so on a wide screen the camera pulls back for them.
+    document.documentElement.classList.toggle('jm-way', i >= 0);
+    if (JOURNEY.focus === o.id && !VIEW.phone) stepsFocus(o.id, i < 0 ? f.view : FIND_PLAY.way.wide);
     tally.textContent = i < 0 ? '' : i === CRAFTS.length ? findFormat(FIND_COPY.wayAll, { names: STOPS.filter((s, j) => mask[j]).map(s => s.short + ', ' + s.dates).join('; ') }) : findFormat(FIND_COPY.wayTally, { craft: FIND_COPY.crafts[i], n: mask.filter(Boolean).length, t: STOPS.length });
     o.retract = o.lines.map(l => l.v); o.lineTs = FD.now; o.linePhase = 'retract'; if (FD.rm || o.retract.every(v => v === 0)) { startLines(); if (FD.rm) o.lines.forEach(l => l.v = l.lit ? 1 : 0); }
   };
@@ -64,6 +68,8 @@ export function findWay(svg) {
     const pulse = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - (o.pickTs ?? -Infinity)) / W.pulse[1]));
     arms.forEach((arm, i) => attr(arm, 'transform', `rotate(${i * FIND_PLAY.kit.turn / CRAFTS.length}) scale(${1 + (W.pulse[0] - 1) * pulse * (o.craft === i || o.craft === CRAFTS.length ? 1 : 0)})`));
     if (o.kept && !FD.rm) { o.runesAngle += W.runes * dt; attr(runes, 'transform', `rotate(${o.runesAngle})`); }
+    // The tally is read from far out as well: it never falls under tally[3] px on screen, up to tally[4] units.
+    attr(tally, 'font-size', Math.min(W.tally[4], Math.max(W.tally[1], W.tally[3] / FD.st.cam.s)));
     attr(ring, 'opacity', o.unlocked ? 1 : 0);
     if (o.unlocked && !FD.rm) attr(ring, 'transform', `scale(${lerp(W.ring[0], W.ring[1], (1 - Math.cos(t * Math.PI * 2 / W.ring[2])) / 2) / W.ring[0]})`);
     if (o.linePhase === 'retract') { const q = FD.rm ? 1 : clamp01((t - o.lineTs) / W.line); o.lines.forEach((l, i) => l.v = o.retract[i] * (1 - ease(q))); if (q === 1) queueMicrotask(startLines); }
