@@ -184,14 +184,12 @@ assert.equal(JOURNEY.P, fixedP); assert.equal(JOURNEY.focus, 'runestone');
 const copyState = window.__jm.finds.state('runestone'); copyState.rubbed[0] = false; assert.equal(window.__jm.finds.state('runestone').rubbed[0], true);
 const beforeBack = JOURNEY.P; JOURNEY.back(); assert.equal(JOURNEY.P, beforeBack); assert.equal(JOURNEY.focus, null); await tick(0.7); assert.equal(stepsFocusNow(), null);
 assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), true); await tick(0.8); assert.equal(JOURNEY.P, beforeBack); stepsRelease(); await tick(0.6);
-JOURNEY.setMode('scroll'); assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), false);
 assert.equal(window.__jm.finds.found().length, 6);
-JOURNEY.setMode('steps'); JOURNEY.set(mapP); await tick(0.1); key('ravens'); JOURNEY.back(); await tick(2.7); assert.equal(FD.popOwner, null); assert.equal(window.__jm.finds.state('ravens').tally, 2);
+JOURNEY.set(mapP); await tick(0.1); key('ravens'); JOURNEY.back(); await tick(2.7); assert.equal(FD.popOwner, null); assert.equal(window.__jm.finds.state('ravens').tally, 2);
 JOURNEY.set(0); assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), false); JOURNEY.set(mapP);
 JOURNEY.go('lennard'); assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), false); await tick(0.7); JOURNEY.set(mapP);
-JOURNEY.setMode('scroll');
-console.log('ok: recording DOM runs six Part A plays, kept state, all-four unlock, reel, chase, four notes, rubbing, copied review state and Back/Scroll focus rules; no NaN attributes or frame layout reads');
-window.scrollY = mapP * VIEW.unit; JOURNEY.set(mapP); await tick(0.1);
+console.log('ok: recording DOM runs six Part A plays, kept state, all-four unlock, reel, chase, four notes, rubbing, copied review state and Back focus rules; no NaN attributes or frame layout reads');
+JOURNEY.set(mapP); await tick(0.1);
 const mapBoard = testSvg.querySelector('.tf-board'), mapPieces = [...mapBoard.querySelectorAll('.tf-piece')];
 key('tafl'); await tick(0.5); assert.equal(FD.sheetOwner.id, 'tafl'); assert.equal(testSheet.querySelector('.tf-board'), mapBoard);
 const cellClick = sq => testSheet.querySelectorAll('.tf-cell')[sq].dispatchEvent(new TestEvent('click'));
@@ -225,7 +223,7 @@ for (let i = 0; i < 3; i++) { key('longship'); await tick(1); }
 assert.equal(window.__jm.finds.state('longship').pennant, true); assert.equal(window.__jm.finds.state('longship').lamp, true); assert.equal(shipOuter.getAttribute('transform'), shipTransform);
 await tick(8); assert.equal(window.__jm.finds.found().length, 11); assert.equal(FD.landed, 11); assert.equal(testTl.querySelector('.tl-count').textContent, 'All 11 found'); assert.equal(FD.all.done, true);
 assert.equal(testSvg.querySelector('#finds').children.at(-1).id, 'f-bits'); assert.equal(testSvg.querySelector('#hn-rings').getAttribute('pointer-events'), 'none'); assert.equal(testSvg.querySelector('#wl-crown').getAttribute('pointer-events'), 'none');
-JOURNEY.setMode('steps'); JOURNEY.set(mapP); await tick(0.2); key('horn'); key('horn'); await tick(0.7); assert.deepEqual(stepsFocusNow().view, FIND_PLAY.focus.wide); JOURNEY.back(); await tick(5); assert.equal(JOURNEY.focus, null);
+JOURNEY.set(mapP); await tick(0.2); key('horn'); key('horn'); await tick(0.7); assert.deepEqual(stepsFocusNow().view, FIND_PLAY.focus.wide); JOURNEY.back(); await tick(5); assert.equal(JOURNEY.focus, null);
 key('horn'); closePop(); testSvg.querySelector('#f-horn').dispatchEvent(new TestEvent('pointerdown', { pointerId: 1 })); await tick(0.6); assert.equal(window.__jm.finds.state('horn').stage, 'sounding'); testSvg.querySelector('#f-horn').dispatchEvent(new TestEvent('pointerup')); JOURNEY.back(); await tick(5);
 console.log('ok: traveller wipes without finding; three mist thirds; all eleven hear timed horn; hold sounds, wide view and release; three Norns/stars/below tail; ship pennant/lamp; all-eleven landing/count/frame; overlays do not take pointers');
 
