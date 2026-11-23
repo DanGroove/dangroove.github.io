@@ -108,6 +108,10 @@ for(const phone of [false,true])for(let ms=0;ms<=2984;ms++){
   const a=novaBuild(ms/3000,phone),b=novaBuild((ms+16)/3000,phone);
   for(const key of ['glowAlpha','veil','coreAlpha','heat'])assert.ok(Math.abs(a[key]-b[key])<=.08+1e-9,key+' 16 ms delta at '+ms);
 }
+// Dan, 2026-11-23: the stepped build-up looked staggered. Before the draw-in the stars' gather and the spikes' growth only speed up,
+// and no 16 ms frame moves a star more than 2 % of its way in (the old throbs lurched about 4 % in a frame, then nearly froze).
+for(const order of [0,.5,1]){let last=0;for(let ms=16;ms<=3000;ms+=16){const v=novaBuildGather(ms/3000,order)-novaBuildGather((ms-16)/3000,order);assert.ok(v<=.02,'gather lurch at '+ms+' ms, order '+order);if(ms/3000<=NOVA.build.draw){assert.ok(v>=last-2e-4,'gather slows before the draw-in at '+ms+' ms, order '+order);last=v;}}}
+{let last=0;for(let ms=16;ms/3000<=NOVA.build.draw;ms+=16){const v=novaBuild(ms/3000).len-novaBuild((ms-16)/3000).len;assert.ok(v>=last-1e-9,'spike growth slows before the draw-in at '+ms+' ms');last=v;}}
 assert.ok(novaBuild(.93).len<novaBuild(.72).len);assert.equal(novaBuild(1).len,NOVA.build.compressed);assert.deepEqual(novaBuild(.93).jitter,[0,0]);
 for(let order=0;order<=1;order+=.01){const q=novaBuildGather(.93,order);assert.equal(q,1);assert.deepEqual(novaGatherPoint([10,20],[500,400],order*6,150,q),[500,400]);}
 for(const size of [[1440,900,120],[390,844,96]]){
@@ -138,7 +142,7 @@ for(const [t,frame] of starForward.slice().reverse())assert.ok(starSnapshot(t,20
 starSnapshot(.93,1);const heldState=segment('rush',.93),heldX=[MAP.x[0]*heldState.cam.s+heldState.cam.tx,MAP.x[1]*heldState.cam.s+heldState.cam.ty];assert.ok(!starCanvas.ctx.calls.some(c=>(c.name==='fillRect'||c.name==='arc')&&Math.hypot(c.args[0]-heldX[0],c.args[1]-heldX[1])<3),'gathered stars vanish before held breath');
 // The actual writer already has zero identical-frame map writes; reject new SVG effects too.
 assert.ok(!/createElementNS|findSvg\(/.test(readFileSync(new URL('../footer.mjs',import.meta.url),'utf8')));
-console.log('ok: D3 3 s reversible canvas/star score; four increasing throbs >=340 ms apart; 16 ms alpha deltas <=.08; gather complete at .93; compressed blast, anchored push/recoil and rough 3.6-width handoff at DPR 1/3');
+console.log('ok: D3 3 s reversible canvas/star score; four increasing throbs >=340 ms apart (light only); stars and spikes speed up without lurches; 16 ms alpha deltas <=.08; gather complete at .93; compressed blast, anchored push/recoil and rough 3.6-width handoff at DPR 1/3');
 const rmX=new NovaNode(),rmCanvas=novaCanvas();footerBuildX(rmX,true,rmCanvas,hit);footerNovaResize(390,844);footerMotion(2,.016,segment('rest',0),[0,0],true);
 assert.equal(rmCanvas.ctx.calls.length,0);assert.equal(rmX.style.visibility,undefined);assert.ok(!/fx-hit|fx-white/.test(rmX.innerHTML));
 console.log('ok: rough sprite grows on resize; reduced motion leaves canvas empty and static SVG X unchanged');

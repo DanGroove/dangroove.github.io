@@ -353,11 +353,11 @@ export const DEPTH = {
 
 export const NOVA_CANVAS = { dpr: 2, glowSprite: 512 };
 export const NOVA = {
-  build: { kindle: 0.2, draw: 0.76, hold: 0.93, throbs: [0.26, 0.45, 0.60, 0.72], rise: 0.08, fall: 0.25,
+  build: { kindle: 0.2, draw: 0.76, hold: 0.93, throbs: [0.26, 0.45, 0.60, 0.72], rise: 0.12, fall: 0.32, pull: 1.8,
     push: 0.08, pushPhone: 0.06, recoil: 0.4, veil: 0.65, veilPhone: 0.45, veilOut: 0.25, hole: [0.6, 0.18], holeBreath: 0.04,
     kindleGlow: 36, kindleAlpha: 0.025, kindleHeat: 0.015, glow: [104, 22], swell: [0.15, 0.22, 0.29, 0.35], glowAlpha: [0.18, 0.44, 0.56], throbAlpha: [0.08, 0.11, 0.14, 0.18],
-    spikeStep: 0.28, spikeKick: 0.08, compressed: 0.6, thickness: 1.12, heat: [0.15, 0.9, 1], core: [4, 13, 9],
-    gatherKindle: 0.04, gatherDrift: 0.18, gatherStep: 0.13, gatherStagger: 0.035, jitter: [0.5, 2], jitterHz: 24 },
+    spikeGrow: 1.12, compressed: 0.6, thickness: 1.12, heat: [0.15, 0.9, 1], core: [4, 13, 9],
+    gatherTop: 0.7, gatherStagger: 0.035, jitter: [0.5, 2], jitterHz: 24 },
   pulse: [2.6, 0.12, 0.9, 0.06], spike: [1.7, 0.2, 3.14], glow: [4.2, 0.07],
   rays: { n: 22, len: [4, 12], alpha: [0.3, 0.7], turn: 0.12, start: 1.1, width: 1, breathe: 0.7, period: [1.2, 3.2], peak: 0.16 },
   lobes: { n: 6, nPhone: 4, r: [120, 260], orbit: [40, 170], speed: [0.12, 0.3], alpha: [0.22, 0.42], breathe: 0.2 },
