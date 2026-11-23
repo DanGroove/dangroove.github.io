@@ -30,7 +30,7 @@ export function exploreGlide(cam, velocity, dt, bounds, view, fit, top) {
 
 const EX = { active: false, k: 0, cam: null, target: null, end: null, bounds: null, view: null, fit: 1, top: 1,
   motion: null, velocity: [0, 0], pointers: new Map(), gesture: null, samples: [], layer: { c: 1, dx: 0, dy: 0 },
-  stage: null, world: null, journey: null, rm: true, hint: null, hintUsed: false, hintLeft: 0, changed: false, suppress: false, departing: false };
+  stage: null, world: null, journey: null, rm: true, hint: null, hintUsed: false, hintLeft: 0, changed: false, suppress: false, suppressTimer: null, owners: new Set(), footer: 1, departing: false };
 export const exploreActive = () => EX.active;
 export const exploreBusy = () => EX.active || EX.k > 0;
 export const exploreTransform = () => EX.layer;
@@ -39,37 +39,43 @@ const exploreBound = cam => exploreClamp(cam, EX.bounds, EX.view, EX.fit, EX.top
 const exploreFitCam = () => ({ s: EX.fit, tx: EX.view.w / 2 - (EX.bounds[0] + EX.bounds[2]) / 2 * EX.fit, ty: EX.view.h / 2 - (EX.bounds[1] + EX.bounds[3]) / 2 * EX.fit });
 const exploreNotify = () => { EX.changed = true; window.dispatchEvent(new Event('jm-explore')); };
 const exploreHintOff = () => { EX.hintLeft = 0; EX.hint?.classList.remove('on'); };
+const exploreSuppressClear = () => { EX.suppress = false; clearTimeout(EX.suppressTimer); EX.suppressTimer = null; };
+const exploreWorldStyle = (key, value) => { if (EX.world && EX.world.style[key] !== value) EX.world.style[key] = value; };
+const explorePromote = () => exploreWorldStyle('willChange', EX.motion || EX.velocity.some(Boolean) || EX.gesture || (EX.active && JSON.stringify(EX.cam) !== JSON.stringify(EX.target)) ? 'transform' : '');
 function exploreClearPointers() {
   for (const id of EX.pointers.keys()) if (EX.stage.hasPointerCapture?.(id)) EX.stage.releasePointerCapture(id);
-  EX.pointers.clear(); EX.gesture = null; EX.samples = []; EX.stage?.classList.remove('is-dragging');
+  EX.pointers.clear(); EX.owners.clear(); EX.gesture = null; EX.samples = []; EX.stage?.classList.remove('is-dragging');
 }
 export function exploreReset() {
+  exploreSuppressClear();
   if (!EX.active && !EX.k && !EX.departing) return;
   EX.active = false; EX.k = 0; EX.departing = false; EX.motion = null; EX.velocity = [0, 0]; EX.cam = EX.end && { ...EX.end }; EX.target = EX.cam && { ...EX.cam };
   exploreClearPointers(); exploreHintOff(); EX.layer = { c: 1, dx: 0, dy: 0 };
-  if (EX.world) EX.world.style.transform = 'none';
+  EX.footer = 1; exploreWorldStyle('transform', 'none'); explorePromote();
   document.documentElement.classList.remove('jm-explore'); exploreNotify();
 }
 // A cut ends input immediately, retaining the painted view only until its cover is opaque and P changes.
 export function exploreDepart() {
+  exploreSuppressClear();
   if (!exploreBusy()) return;
   EX.active = false; EX.departing = true; EX.motion = null; EX.velocity = [0, 0];
-  exploreClearPointers(); exploreHintOff(); document.documentElement.classList.remove('jm-explore'); exploreNotify();
+  exploreClearPointers(); exploreHintOff(); explorePromote(); document.documentElement.classList.remove('jm-explore'); exploreNotify();
 }
 export function exploreStart() {
   if (!exploreAllowed() || exploreBusy()) return false;
-  EX.active = true; EX.departing = false; EX.cam = { ...EX.end }; EX.target = exploreFitCam(); EX.velocity = [0, 0];
+  EX.active = true; EX.departing = false; EX.footer = 1; EX.cam = { ...EX.end }; EX.target = exploreFitCam(); EX.velocity = [0, 0];
   EX.motion = { from: { ...EX.cam }, to: { ...EX.target }, k0: 0, k1: 1, elapsed: 0, duration: EXPLORE.in };
   document.documentElement.classList.add('jm-explore');
   if (!EX.hintUsed) { EX.hintUsed = true; EX.hintLeft = EXPLORE.hintTime; EX.hint.textContent = VIEW.phone ? COPY.explore.hintPhone : COPY.explore.hint; EX.hint.classList.add('on'); }
   document.getElementById('go-say').textContent = COPY.explore.say;
-  exploreNotify(); return true;
+  explorePromote(); exploreNotify(); return true;
 }
 export function exploreEnd() {
+  exploreSuppressClear();
   if (!EX.active) return false;
   EX.active = false; EX.target = { ...EX.end }; EX.velocity = [0, 0];
-  EX.motion = { from: { ...EX.cam }, to: { ...EX.end }, k0: EX.k, k1: 0, elapsed: 0, duration: EXPLORE.out };
-  exploreClearPointers(); exploreHintOff(); document.documentElement.classList.remove('jm-explore'); exploreNotify(); return true;
+  EX.motion = { from: { ...EX.cam }, to: { ...EX.end }, k0: EX.k, k1: 0, elapsed: 0, duration: EXPLORE.out, footer0: EX.footer };
+  exploreClearPointers(); exploreHintOff(); explorePromote(); document.documentElement.classList.remove('jm-explore'); exploreNotify(); return true;
 }
 // Called on resize with the new trip view already measured. No frame reads layout.
 export function exploreResize() {
@@ -86,7 +92,7 @@ export function exploreResize() {
   EX.top = Math.max(EX.fit, EXPLORE.most * VIEW.sT);
   if (exploreBusy() && world) {
     const s = lerp(EX.fit, EX.top, share); EX.cam = exploreBound({ s, tx: EX.view.w / 2 - world[0] * s, ty: EX.view.stageH / 2 - world[1] * s }); EX.target = { ...EX.cam };
-    if (EX.motion) EX.motion = { from: { ...EX.cam }, to: EX.active ? exploreFitCam() : { ...EX.end }, k0: EX.k, k1: EX.active ? 1 : 0, elapsed: 0, duration: EX.active ? EXPLORE.in : EXPLORE.out };
+    if (EX.motion) EX.motion = { from: { ...EX.cam }, to: EX.active ? exploreFitCam() : { ...EX.end }, k0: EX.k, k1: EX.active ? 1 : 0, elapsed: 0, duration: EX.active ? EXPLORE.in : EXPLORE.out, footer0: EX.footer };
     exploreClearPointers(); EX.velocity = [0, 0];
   } else { EX.cam = { ...EX.end }; EX.target = { ...EX.end }; }
   EX.changed = true;
@@ -103,11 +109,13 @@ export function exploreApply(st, dt) {
   if (EX.rm) return false;
   const coveredDeparture = EX.departing && EX.journey.moving && EX.journey.P === EX.journey.beats.at(-1).P;
   if (exploreBusy() && !exploreAllowed() && !coveredDeparture) exploreReset();
-  const before = JSON.stringify([EX.cam, EX.k]), motion = EX.motion;
+  const before = JSON.stringify([EX.cam, EX.k, EX.footer]), motion = EX.motion;
+  if (EX.active) EX.footer = Math.max(0, EX.footer - dt / EXPLORE.footerFade);
   if (motion) {
     motion.elapsed = Math.min(motion.duration, motion.elapsed + dt);
     const q = easeIO(motion.duration ? motion.elapsed / motion.duration : 1);
     EX.k = lerp(motion.k0, motion.k1, q);
+    if (!EX.active) EX.footer = lerp(motion.footer0 ?? EX.footer, 1, clamp01((motion.elapsed - motion.duration + EXPLORE.footerFade) / EXPLORE.footerFade));
     if (motion.from) EX.cam = exploreMix(motion.from, motion.to, q);
     if (motion.elapsed === motion.duration) { EX.motion = null; if (!EX.active) { EX.cam = { ...EX.end }; EX.target = { ...EX.end }; exploreNotify(); } }
   }
@@ -120,26 +128,27 @@ export function exploreApply(st, dt) {
     }
   }
   if (EX.hintLeft > 0) { EX.hintLeft = Math.max(0, EX.hintLeft - dt); if (!EX.hintLeft) exploreHintOff(); }
-  st.exploreK = EX.k; st.exploring = EX.active; st.sEnd = EX.end?.s || st.cam.s;
+  st.exploreK = EX.k; st.exploring = EX.active; st.exploreFooter = EX.footer; st.sEnd = EX.end?.s || st.cam.s;
   if (EX.k > 0 || EX.active) {
     st.cam = { ...EX.cam, ax: VIEW.w / 2, ay: VIEW.h / 2 };
     st.cardK = st.cardK.map(() => 0); st.cardOpen = 0;
     EX.layer = exploreLayer(st.cam, EX.end);
   } else EX.layer = { c: 1, dx: 0, dy: 0 };
-  if (EX.world) EX.world.style.transform = EX.k > 0 || EX.active ? `translate(${EX.layer.dx}px,${EX.layer.dy}px) scale(${EX.layer.c})` : 'none';
-  const changed = EX.changed || before !== JSON.stringify([EX.cam, EX.k]); EX.changed = false; return changed;
+  exploreWorldStyle('transform', EX.k > 0 || EX.active ? `translate(${EX.layer.dx}px,${EX.layer.dy}px) scale(${EX.layer.c})` : 'none'); explorePromote();
+  const changed = EX.changed || before !== JSON.stringify([EX.cam, EX.k, EX.footer]); EX.changed = false; return changed;
 }
-const exploreExcluded = target => target?.closest?.('.find, button, a, input, textarea, select, .stop, .tl, .pop, .sheet, [data-review], .ft-name, [role="button"]');
+const exploreExcluded = target => target?.closest?.('.sheet.on, input, textarea, select, .tl, [data-review]');
+const exploreOwned = target => target?.closest?.('#f-wayfinder, #f-beacon, .find.hoard, .rubbing, #f-mist, #f-horn, .hm-canvas, .ft-name');
 const explorePoint = e => [e.clientX, e.clientY];
 function exploreSample(e) {
   const time = e.timeStamp / 1000; EX.samples.push({ time, tx: EX.cam.tx, ty: EX.cam.ty });
   while (EX.samples.length > 1 && time - EX.samples[0].time > EXPLORE.velocityWindow) EX.samples.shift();
 }
-function exploreGesture() {
+function exploreGesture(dragged = false) {
   const points = [...EX.pointers.values()];
   if (!points.length) { EX.gesture = null; return; }
   const midpoint = points.length > 1 ? points[0].map((v, i) => (v + points[1][i]) / 2) : points[0];
-  EX.gesture = { from: midpoint, world: exploreWorld(EX.cam, midpoint), cam: { ...EX.cam }, distance: points.length > 1 ? Math.hypot(points[0][0] - points[1][0], points[0][1] - points[1][1]) : 0, dragged: points.length > 1 };
+  EX.gesture = { from: midpoint, world: exploreWorld(EX.cam, midpoint), cam: { ...EX.cam }, distance: points.length > 1 ? Math.hypot(points[0][0] - points[1][0], points[0][1] - points[1][1]) : 0, dragged: dragged || points.length > 1, owned: !dragged && points.length === 1 && EX.owners.has(EX.pointers.keys().next().value) };
   EX.samples = [];
 }
 export function exploreBuild({ stage, world, journey, rm }) {
@@ -155,36 +164,40 @@ export function exploreBuild({ stage, world, journey, rm }) {
     EX.target = exploreBound(exploreZoom(EX.cam, explorePoint(e), EX.target.s * factor / EX.cam.s, EX.fit, EX.top));
   }, { passive: false });
   stage.addEventListener('pointerdown', e => {
+    exploreSuppressClear();
     if (!EX.active || exploreExcluded(e.target) || EX.pointers.size >= 2 || (e.pointerType === 'mouse' && e.button !== 0)) return;
-    EX.pointers.set(e.pointerId, explorePoint(e)); stage.setPointerCapture(e.pointerId);
-    if (EX.pointers.size === 2) exploreTakeover();
-    exploreGesture(); exploreSample(e);
-  });
-  stage.addEventListener('pointerdown', () => { EX.suppress = false; }, true);
+    EX.pointers.set(e.pointerId, explorePoint(e)); if (exploreOwned(e.target)) EX.owners.add(e.pointerId);
+    if (EX.pointers.size === 2) { exploreTakeover(); for (const id of EX.pointers.keys()) stage.setPointerCapture(id); EX.suppress = true; stage.classList.add('is-dragging'); e.preventDefault(); e.stopImmediatePropagation(); }
+    exploreGesture(); exploreSample(e); explorePromote();
+  }, true);
   stage.addEventListener('pointermove', e => {
     if (!EX.active || !EX.pointers.has(e.pointerId)) return;
     EX.pointers.set(e.pointerId, explorePoint(e));
     const points = [...EX.pointers.values()], g = EX.gesture;
+    if (g.owned) return;
     const mid = points.length > 1 ? points[0].map((v, i) => (v + points[1][i]) / 2) : points[0];
     if (!g.dragged && Math.hypot(mid[0] - g.from[0], mid[1] - g.from[1]) <= EXPLORE.slop) return;
-    if (!g.dragged) { exploreTakeover(); g.cam = { ...EX.cam }; g.world = exploreWorld(EX.cam, g.from); g.dragged = true; }
+    if (!g.dragged) { exploreTakeover(); g.cam = { ...EX.cam }; g.world = exploreWorld(EX.cam, g.from); g.dragged = true; for (const id of EX.pointers.keys()) stage.setPointerCapture(id); }
     e.preventDefault(); EX.suppress = true; stage.classList.add('is-dragging');
     const distance = points.length > 1 ? Math.hypot(points[0][0] - points[1][0], points[0][1] - points[1][1]) : g.distance;
     const s = Math.max(EX.fit, Math.min(EX.top, g.cam.s * (g.distance ? distance / g.distance : 1)));
     EX.cam = exploreBound({ s, tx: mid[0] - g.world[0] * s, ty: mid[1] - g.world[1] * s }); EX.target = { ...EX.cam }; EX.changed = true; exploreSample(e);
-  });
+  }, true);
   const release = e => {
     if (!EX.pointers.has(e.pointerId)) return;
-    const dragged = EX.gesture?.dragged; exploreSample(e); EX.pointers.delete(e.pointerId);
+    const dragged = EX.gesture?.dragged, samples = EX.samples; exploreSample(e); EX.pointers.delete(e.pointerId); EX.owners.delete(e.pointerId);
+    if (dragged) EX.suppress = true;
+    if (EX.suppress) { clearTimeout(EX.suppressTimer); EX.suppressTimer = setTimeout(exploreSuppressClear, EXPLORE.clickRelease); }
     if (stage.hasPointerCapture?.(e.pointerId)) stage.releasePointerCapture(e.pointerId);
-    if (EX.pointers.size) { exploreGesture(); return; }
-    if (dragged && e.type === 'pointerup' && EX.samples.length > 1) { const a = EX.samples[0], b = EX.samples.at(-1), dt = b.time - a.time; EX.velocity = dt ? [(b.tx - a.tx) / dt, (b.ty - a.ty) / dt] : [0, 0]; }
+    if (EX.pointers.size) { exploreGesture(dragged); return; }
+    if (dragged && e.type === 'pointerup' && samples.length > 1) { const a = samples[0], b = samples.at(-1), dt = b.time - a.time; EX.velocity = dt ? [(b.tx - a.tx) / dt, (b.ty - a.ty) / dt] : [0, 0]; }
     else EX.velocity = [0, 0];
-    EX.gesture = null; stage.classList.remove('is-dragging');
+    EX.gesture = null; stage.classList.remove('is-dragging'); explorePromote();
   };
-  stage.addEventListener('pointerup', release); stage.addEventListener('pointercancel', release);
-  stage.addEventListener('lostpointercapture', e => { if (EX.pointers.has(e.pointerId)) { EX.pointers.delete(e.pointerId); EX.velocity = [0, 0]; exploreGesture(); stage.classList.remove('is-dragging'); } });
-  stage.addEventListener('click', e => { if (EX.suppress) { EX.suppress = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+  stage.addEventListener('pointerup', release, true); stage.addEventListener('pointercancel', release, true);
+  stage.addEventListener('lostpointercapture', e => { if (e.target === stage && !stage.hasPointerCapture?.(e.pointerId) && EX.pointers.has(e.pointerId)) { const dragged = EX.gesture?.dragged; EX.pointers.delete(e.pointerId); EX.owners.delete(e.pointerId); EX.velocity = [0, 0]; exploreGesture(dragged); stage.classList.remove('is-dragging'); explorePromote(); } });
+  stage.addEventListener('click', e => { if (EX.suppress && e.detail !== 0) { exploreSuppressClear(); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+  window.addEventListener('keydown', exploreSuppressClear, true);
   window.addEventListener('keydown', e => {
     if (!EX.active || e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'Escape' || e.key === '0') { e.preventDefault(); exploreEnd(); return; }
@@ -194,5 +207,5 @@ export function exploreBuild({ stage, world, journey, rm }) {
     if (!['+', '=', '-'].includes(e.key)) return;
     e.preventDefault(); exploreTakeover(); EX.target = exploreBound(exploreZoom(EX.cam, [VIEW.w / 2, VIEW.h / 2], EX.target.s * (e.key === '-' ? 1 / EXPLORE.key : EXPLORE.key) / EX.cam.s, EX.fit, EX.top));
   });
-  window.addEventListener('blur', () => { exploreClearPointers(); EX.velocity = [0, 0]; });
+  window.addEventListener('blur', () => { exploreClearPointers(); exploreSuppressClear(); EX.velocity = [0, 0]; explorePromote(); });
 }

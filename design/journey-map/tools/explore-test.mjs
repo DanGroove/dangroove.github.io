@@ -3,7 +3,7 @@ import { strict as assert } from 'node:assert';
 import { EXPLORE, MAP, FOOT_NAME } from '../data.mjs';
 import { tripResize, tripState, VIEW } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
-import { exploreClamp, exploreZoom, exploreWorld, exploreGlide, exploreLayer, exploreLayerPoint, exploreLayerInverse, exploreBuild, exploreResize, exploreStart, exploreApply, exploreEnd, exploreActive, exploreBusy, exploreReset } from '../explore.mjs';
+import { exploreClamp, exploreZoom, exploreWorld, exploreGlide, exploreLayer, exploreLayerPoint, exploreLayerInverse, exploreBuild, exploreResize, exploreStart, exploreApply, exploreEnd, exploreActive, exploreBusy, exploreReset, exploreDepart } from '../explore.mjs';
 import { footerBuild, footerFrame } from '../footer.mjs';
 import { footBezier, footLetterStep, footOpenTarget, footRest } from '../footname.mjs';
 
@@ -46,7 +46,8 @@ console.log('ok: desktop/phone zoom limits, bounded/centred cameras, fixed zoom 
 // Exercise end gating, entry interruption, exit, pointer input, resize and progress invariance.
 const listeners = {}, classes = new Set(), hint = { classList: { add() {}, remove() {} }, setAttribute() {} }, world = { style: {} }, status = {};
 const eventTarget = { closest: () => null };
-const stage = { classList: hint.classList, appendChild() {}, addEventListener(type, fn) { (listeners['stage:' + type] ??= []).push(fn); }, setPointerCapture() {}, releasePointerCapture() {}, hasPointerCapture: () => false };
+const captures = new Set(), listenerOptions = {};
+const stage = { classList: hint.classList, appendChild() {}, addEventListener(type, fn, options) { (listeners['stage:' + type] ??= []).push(fn); (listenerOptions[type] ??= []).push(options); }, setPointerCapture(id) { captures.add(id); }, releasePointerCapture(id) { captures.delete(id); }, hasPointerCapture: id => captures.has(id) };
 globalThis.window = { addEventListener(type, fn) { (listeners[type] ??= []).push(fn); }, dispatchEvent() {}, getComputedStyle() { throw new Error('frame layout read'); } };
 globalThis.document = { createElement: () => hint, getElementById: () => status, documentElement: { classList: { add: c => classes.add(c), remove: c => classes.delete(c) } } };
 const journey = { P: 0, moving: false, beats: BEATS }, endP = BEATS.at(-1).P;
@@ -54,7 +55,7 @@ exploreBuild({ stage, world, journey, rm: false }); tripResize(1440, 900, 120); 
 journey.P = endP; journey.moving = true; assert.equal(exploreStart(), false); journey.moving = false; assert.equal(exploreStart(), true);
 const apply = dt => { const st = tripState(journey.P), before = structuredClone(st); exploreApply(st, dt); assert.equal(st.P, before.P); assert.deepEqual(st.trav, before.trav); return st; };
 let st = apply(EXPLORE.in / 2); assert.ok(st.exploreK > 0 && st.exploreK < 1);
-const dispatch = (type, fields = {}, prefix = '') => { const e = { target: eventTarget, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...fields }; (listeners[prefix + type] || []).forEach(fn => fn(e)); return e; };
+const dispatch = (type, fields = {}, prefix = '') => { const e = { type, target: eventTarget, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, stopImmediatePropagation() { this.stopped = true; }, ...fields }; (listeners[prefix + type] || []).forEach(fn => fn(e)); return e; };
 dispatch('wheel', { deltaY: -50, deltaMode: 0, clientX: 700, clientY: 450 }); st = apply(0); // takeover has no discontinuity at the instant of the event
 const beforePan = st.cam.tx;
 // Zoom enough to leave room for keyboard pan, then verify arrow ownership and bounded movement.
@@ -86,5 +87,43 @@ const footerPart = name => ({ style:{}, classList:{contains:cls=>cls===name} });
 const footerInner=footerPart('ft-in'),footerName=footerPart('ft-name'),footerSpan=footerPart('span'),footerRule=footerPart('ft-rule'),footerRows=[footerPart('ft-cta'),footerName,footerPart('ft-tag'),footerPart('ft-links')];
 const footerSurface={style:{},set innerHTML(html){this.html=html;},querySelector:s=>s==='.ft-in'?footerInner:s==='.ft-name span'?footerSpan:footerRule,querySelectorAll:()=>footerRows};
 footerBuild(footerSurface,true);
-for(const k of [0,.1,.25,.5,.75,1]){const state=tripState(endP);state.exploreK=k;state.exploring=k>0;footerFrame(state);near(footerInner.style.opacity,1-k,'footer explore opacity');assert.equal(footerSurface.inert,k>0);}
-console.log('ok: actual footer writer sets opacity to 1 - exploreK and disables its controls while exploring');
+journey.P=endP; exploreReset(); assert.equal(exploreStart(),true);
+let entryElapsed=0;
+for(const dt of [0,.1,.15,.35,1]){entryElapsed+=dt;const state=apply(dt);footerFrame(state);near(+footerInner.style.opacity,Math.max(0,1-entryElapsed/EXPLORE.footerFade),'linear footer opacity');assert.equal(footerSurface.inert,true);if(entryElapsed>=.6)assert.equal(+footerInner.style.opacity,0,'footer is gone at 600 ms');}
+assert.equal(+footerInner.style.opacity,0,'footer is gone by 600 ms and stays gone');
+exploreEnd(); let exit=apply(EXPLORE.out-EXPLORE.footerFade);footerFrame(exit);near(+footerInner.style.opacity,0,'footer waits until last half second of exit');
+exit=apply(EXPLORE.footerFade/2);footerFrame(exit);near(+footerInner.style.opacity,.5,'footer returns linearly');
+exit=apply(EXPLORE.footerFade/2);footerFrame(exit);near(+footerInner.style.opacity,1,'footer restored');assert.equal(footerSurface.inert,false);
+console.log('ok: actual footer fades in linear time, is gone by 600 ms, returns over last 500 ms of exit, and stays inert while exploring');
+
+// Synthetic targets stand in for hit elements. These checks exercise event ownership, not browser hit testing.
+const fakeTarget = selectors => ({ closest: query => query.split(',').some(s => selectors.includes(s.trim())) ? {} : null });
+const novaTarget=fakeTarget(['button','[role="button"]']), stopTarget=fakeTarget(['.stop']), hornTarget=fakeTarget(['.find','#f-horn']), wayTarget=fakeTarget(['.find','#f-wayfinder']);
+const point=(type,id,x,y,target=eventTarget)=>dispatch(type,{pointerId:id,pointerType:'touch',button:0,clientX:x,clientY:y,timeStamp:2000+x,target},'stage:');
+const click=detail=>dispatch('click',{detail},'stage:');
+const fresh=()=>{exploreReset();journey.P=endP;assert.equal(exploreStart(),true);apply(EXPLORE.in);};
+const pinch=(a,b)=>{
+  const before=apply(0).cam.s;
+  point('pointerdown',21,100,200,a);assert.equal(captures.size,0,'first pointer is not captured');
+  point('pointerdown',22,200,200,b);assert.deepEqual([...captures],[21,22],'pinch captures both pointers');
+  point('pointermove',22,300,200,b);assert.ok(apply(0).cam.s>=before*1.2,'pinch must change scale by at least 20 percent');
+  point('pointerup',22,300,200,b);point('pointerup',21,100,200,a);assert.equal(captures.size,0);
+};
+for(const target of [novaTarget,stopTarget,hornTarget])for(const pair of [[target,eventTarget],[target,target],[eventTarget,target]]){fresh();pinch(...pair);assert.equal(click(1).defaultPrevented,true,'pinch-ending click is eaten');assert.equal(click(1).defaultPrevented,false,'only one click is eaten');}
+fresh();point('pointerdown',1,100,200,novaTarget);point('pointermove',1,103,202,novaTarget);point('pointerup',1,103,202,novaTarget);assert.equal(click(1).defaultPrevented,false,'nova tap is a press');assert.equal(captures.size,0);
+const drag=target=>{point('pointerdown',1,100,200,target);point('pointermove',1,130,220,target);point('pointerup',1,130,220,target);};
+const zoomForPan=()=>{for(let i=0;i<6;i++){dispatch('keydown',{key:'+'});apply(1);}apply(1);};
+for(const target of [novaTarget,stopTarget,eventTarget])for(const detail of [1,0]){fresh();zoomForPan();const before=apply(0).cam;drag(target);assert.notDeepEqual(apply(0).cam,before,'ordinary target can pan');assert.equal(click(detail).defaultPrevented,detail===1,'pointer clicks only after drag');}
+fresh();pinch(novaTarget,hornTarget);dispatch('keydown',{key:'Tab'});assert.equal(click(1).defaultPrevented,false,'any key clears suppression');
+fresh();pinch(novaTarget,hornTarget);exploreEnd();assert.equal(click(1).defaultPrevented,false,'exit clears suppression');
+fresh();pinch(novaTarget,hornTarget);exploreDepart();assert.equal(click(1).defaultPrevented,false,'departure clears suppression');
+fresh();pinch(novaTarget,hornTarget);exploreReset();assert.equal(click(1).defaultPrevented,false,'reset clears suppression');
+fresh();pinch(novaTarget,hornTarget);await new Promise(resolve=>setTimeout(resolve,EXPLORE.clickRelease+30));assert.equal(click(1).defaultPrevented,false,'release timeout clears suppression');
+fresh();pinch(novaTarget,hornTarget);point('pointerdown',1,100,200,novaTarget);point('pointerup',1,100,200,novaTarget);assert.equal(click(1).defaultPrevented,false,'next pointerdown clears suppression');
+fresh();zoomForPan();const beforeOwn=apply(0).cam;drag(wayTarget);assert.deepEqual(apply(0).cam,beforeOwn,'wayfinder owns a single drag');assert.equal(click(1).defaultPrevented,false);
+assert.equal(world.style.willChange,'','no world promotion at rest');
+point('pointerdown',1,100,200,novaTarget);assert.equal(world.style.willChange,'transform');point('pointerup',1,100,200,novaTarget);assert.equal(world.style.willChange,'');
+for(const target of [fakeTarget(['.sheet.on']),fakeTarget(['input']),fakeTarget(['textarea']),fakeTarget(['select']),fakeTarget(['.tl']),fakeTarget(['[data-review]'])]){point('pointerdown',1,100,200,target);assert.equal(captures.size,0);point('pointermove',1,300,200,target);point('pointerup',1,300,200,target);assert.deepEqual(apply(0).cam,beforeOwn);}
+assert.equal(listenerOptions.pointerdown[0],true,'pointerdown precedes find capture');assert.equal(listenerOptions.pointermove[0],true);assert.equal(listenerOptions.pointerup[0],true);
+exploreReset();
+console.log('ok: capture-phase pinch on nova/stop/horn; nova taps; owned single drags; drag-only pointer clicks; key/end/depart/reset/down/500 ms suppression clearing; temporary world promotion');

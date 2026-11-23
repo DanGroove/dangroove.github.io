@@ -18,9 +18,9 @@ button { font-family: inherit; }
 
 .trip { position: relative; }
 .stage { position: sticky; top: 0; height: 100vh; overflow: clip; }
-.map, #stars { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.map, #nova, #stars { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
 .map { display: block; }
-#stars { pointer-events: none; }
+#nova, #stars { pointer-events: none; }
 #deep, #air, #sky { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .map text { font-family: Outfit, system-ui, sans-serif; }
 .ov { position: absolute; inset: 0; pointer-events: none; }
@@ -274,9 +274,9 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-review button { background: none; border: 0; padding: 3px 2px; color: var(--dim); font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
 .jm-review button[aria-pressed="true"] { color: var(--paper); }
 .jm-review [data-depth] { border-left: var(--depth-rule) solid var(--dim); margin-left: var(--depth-gap); padding-left: var(--depth-gap); }
-.fx-hit { cursor: pointer; }
+.fx-hit { position: absolute; left: 0; top: 0; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .fx-hit[aria-disabled="true"] { pointer-events: none; }
-.fx-hit:focus-visible { outline: none; stroke: var(--paper); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.fx-hit:focus-visible { outline: 2px solid var(--paper); outline-offset: 0; }
 @media (max-width: 640px) {
   .jm-steps .tl { bottom: var(--go-bar); }
   .go { left: 0; right: 0; bottom: 0; transform: none; height: var(--go-bar); background: var(--ink); gap: 0; }
@@ -1284,6 +1284,7 @@ const STEPS = {
 };
 
 const EXPLORE = { in: 1.6, out: 0.9, most: 3, margin: 24, marginPhone: 12, wheel: 0.0016, wheelMax: 120, pinchWheel: 0.01,
+  footerFade: 0.5, clickRelease: 500,
   keyPan: 90, keyShift: 3, calmAlpha: 0.35, calmScale: 0.6, autoReserve: 2,
   ease: 0.12, slop: 6, friction: 5, velocityWindow: 0.08, key: 1.25, hintTime: 8, linePx: 16,
   bar: { edgePhone: 16, padStart: 14, padEnd: 34, arrowPhone: 12 } };
@@ -1338,6 +1339,7 @@ const DEPTH = {
   },
 };
 
+const NOVA_CANVAS = { dpr: 2, glowSprite: 512 };
 const NOVA = {
   pulse: [2.6, 0.12, 0.9, 0.06], spike: [1.7, 0.2, 3.14], glow: [4.2, 0.07],
   rays: { n: 22, len: [4, 12], alpha: [0.3, 0.7], turn: 0.12, start: 1.1, width: 1, breathe: 0.7, period: [1.2, 3.2], peak: 0.16 },
@@ -2429,33 +2431,42 @@ function tripBuild(els) {
   TRIP_EL.mmView = els.mini.querySelector('.mm-view'); TRIP_EL.mmTrav = els.mini.querySelector('.mm-trav');
   TRIP_EL.mmStops = [...els.mini.querySelectorAll('.mm-stop')];
 }
+const tripWrites = new WeakMap();
+function tripWrite(el, key, value, attribute = false) {
+  const text = String(value), cache = tripWrites.get(el) || {}; tripWrites.set(el, cache);
+  const slot = (attribute ? 'attr:' : 'style:') + key;
+  if (cache[slot] === text) return; cache[slot] = text;
+  if (attribute) el.setAttribute(key, text); else el.style[key] = text;
+}
 function tripApply(st) {
   const E = TRIP_EL, c = st.cam;
   const labelFade = smooth(...LABELS.fade, c.s / VIEW.s0);
   if (E.phone !== VIEW.phone) { E.phone = VIEW.phone; (VIEW.phone ? E.tier2 : E.subHome).appendChild(E.subs); }
   E.labels.forEach(label => { const k = VIEW.phone && label.stopSub ? 1 : labelScale(label.kind, c.s); if (label.k === null || Math.abs(k / label.k - 1) > LABELS.epsilon) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; } });
-  E.tier2.style.opacity = labelFade; E.scrim.style.opacity = labelFade;
-  E.cam.setAttribute('transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`);
+  tripWrite(E.tier2, 'opacity', labelFade); tripWrite(E.scrim, 'opacity', labelFade);
+  tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true);
   const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
-  E.sea.style.opacity = smooth(...DEPTH.fade.sea, h) * fade; E.fill.style.opacity = smooth(.25, .75, h) * fade;
-  E.detail.style.opacity = smooth(.45, .95, h) * fade; E.finds.style.opacity = smooth(.5, 1, h) * fade;
-  E.coastG.style.opacity = fade;
+  tripWrite(E.sea, 'opacity', smooth(...DEPTH.fade.sea, h)); tripWrite(E.fill, 'opacity', smooth(.25, .75, h));
+  tripWrite(E.detail, 'opacity', smooth(.45, .95, h)); tripWrite(E.finds, 'opacity', smooth(.5, 1, h));
+  tripWrite(E.coastG, 'opacity', 1);
   const dr = smooth(.12, .75, h);
-  E.coasts.forEach((p, i) => { if (dr >= 1) { p.style.strokeDasharray = 'none'; return; } const L = E.coastLen[i] * c.s; p.style.strokeDasharray = `${L.toFixed(1)} ${L.toFixed(1)}`; p.style.strokeDashoffset = (L * (1 - dr)).toFixed(1); });
+  E.coasts.forEach((p, i) => { if (dr >= 1) { tripWrite(p, 'strokeDasharray', 'none'); return; } const L = E.coastLen[i] * c.s; tripWrite(p, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(p, 'strokeDashoffset', (L * (1 - dr)).toFixed(1)); });
   // solid trail behind the traveller (dash in screen units because the stroke does not scale)
-  const L = TRAIL_LEN * c.s; E.done.style.strokeDasharray = `${L.toFixed(1)} ${L.toFixed(1)}`; E.done.style.strokeDashoffset = (st.exploreK ? 0 : (TRAIL_LEN - st.u) * c.s).toFixed(1);
-  E.done.style.opacity = st.inTrip ? fade : 0;
+  const L = TRAIL_LEN * c.s; tripWrite(E.done, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(E.done, 'strokeDashoffset', (st.exploreK ? 0 : (TRAIL_LEN - st.u) * c.s).toFixed(1));
+  tripWrite(E.done, 'opacity', st.inTrip ? 1 : 0);
   // the longship rides the crossing
-  const sp = pointAt(Math.max(WATER[0], Math.min(WATER[1], st.u))); E.ship.setAttribute('transform', `translate(${n2(sp[0])} ${n2(sp[1] + 5)}) scale(.55)`);
-  E.svg.style.opacity = st.dim;
-  E.caption.style.opacity = 1 - smooth(0, .3, h);
-  E.cue.style.opacity = smooth(.2, .5, st.overviewT) * (1 - smooth(0, .3, st.pushT));
+  const sp = pointAt(Math.max(WATER[0], Math.min(WATER[1], st.u))); tripWrite(E.ship, 'transform', `translate(${n2(sp[0])} ${n2(sp[1] + 5)}) scale(.55)`, true);
+  const opacity = st.dim * fade;
+  tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
+  tripWrite(E.svg, 'willChange', fade > 0 && fade < 1 ? 'opacity' : '');
+  tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
+  tripWrite(E.cue, 'opacity', smooth(.2, .5, st.overviewT) * (1 - smooth(0, .3, st.pushT)));
   // mini-map
   const mo = smooth(.5, 1, st.pushT) * (1 - smooth(0, .4, st.rushT));
-  E.mini.style.opacity = mo; E.mini.style.visibility = mo > .01 ? 'visible' : 'hidden';
+  tripWrite(E.mini, 'opacity', mo); tripWrite(E.mini, 'visibility', mo > .01 ? 'visible' : 'hidden');
   if (mo > .01) {
-    E.mmView.setAttribute('transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`);
-    const tp = pointAt(st.u); E.mmTrav.setAttribute('transform', `translate(${n2(tp[0])} ${n2(tp[1])})`);
+    tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
+    const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
 }
 const n2 = v => v.toFixed(2);
@@ -3299,7 +3310,7 @@ function exploreGlide(cam, velocity, dt, bounds, view, fit, top) {
 
 const EX = { active: false, k: 0, cam: null, target: null, end: null, bounds: null, view: null, fit: 1, top: 1,
   motion: null, velocity: [0, 0], pointers: new Map(), gesture: null, samples: [], layer: { c: 1, dx: 0, dy: 0 },
-  stage: null, world: null, journey: null, rm: true, hint: null, hintUsed: false, hintLeft: 0, changed: false, suppress: false, departing: false };
+  stage: null, world: null, journey: null, rm: true, hint: null, hintUsed: false, hintLeft: 0, changed: false, suppress: false, suppressTimer: null, owners: new Set(), footer: 1, departing: false };
 const exploreActive = () => EX.active;
 const exploreBusy = () => EX.active || EX.k > 0;
 const exploreTransform = () => EX.layer;
@@ -3308,37 +3319,43 @@ const exploreBound = cam => exploreClamp(cam, EX.bounds, EX.view, EX.fit, EX.top
 const exploreFitCam = () => ({ s: EX.fit, tx: EX.view.w / 2 - (EX.bounds[0] + EX.bounds[2]) / 2 * EX.fit, ty: EX.view.h / 2 - (EX.bounds[1] + EX.bounds[3]) / 2 * EX.fit });
 const exploreNotify = () => { EX.changed = true; window.dispatchEvent(new Event('jm-explore')); };
 const exploreHintOff = () => { EX.hintLeft = 0; EX.hint?.classList.remove('on'); };
+const exploreSuppressClear = () => { EX.suppress = false; clearTimeout(EX.suppressTimer); EX.suppressTimer = null; };
+const exploreWorldStyle = (key, value) => { if (EX.world && EX.world.style[key] !== value) EX.world.style[key] = value; };
+const explorePromote = () => exploreWorldStyle('willChange', EX.motion || EX.velocity.some(Boolean) || EX.gesture || (EX.active && JSON.stringify(EX.cam) !== JSON.stringify(EX.target)) ? 'transform' : '');
 function exploreClearPointers() {
   for (const id of EX.pointers.keys()) if (EX.stage.hasPointerCapture?.(id)) EX.stage.releasePointerCapture(id);
-  EX.pointers.clear(); EX.gesture = null; EX.samples = []; EX.stage?.classList.remove('is-dragging');
+  EX.pointers.clear(); EX.owners.clear(); EX.gesture = null; EX.samples = []; EX.stage?.classList.remove('is-dragging');
 }
 function exploreReset() {
+  exploreSuppressClear();
   if (!EX.active && !EX.k && !EX.departing) return;
   EX.active = false; EX.k = 0; EX.departing = false; EX.motion = null; EX.velocity = [0, 0]; EX.cam = EX.end && { ...EX.end }; EX.target = EX.cam && { ...EX.cam };
   exploreClearPointers(); exploreHintOff(); EX.layer = { c: 1, dx: 0, dy: 0 };
-  if (EX.world) EX.world.style.transform = 'none';
+  EX.footer = 1; exploreWorldStyle('transform', 'none'); explorePromote();
   document.documentElement.classList.remove('jm-explore'); exploreNotify();
 }
 // A cut ends input immediately, retaining the painted view only until its cover is opaque and P changes.
 function exploreDepart() {
+  exploreSuppressClear();
   if (!exploreBusy()) return;
   EX.active = false; EX.departing = true; EX.motion = null; EX.velocity = [0, 0];
-  exploreClearPointers(); exploreHintOff(); document.documentElement.classList.remove('jm-explore'); exploreNotify();
+  exploreClearPointers(); exploreHintOff(); explorePromote(); document.documentElement.classList.remove('jm-explore'); exploreNotify();
 }
 function exploreStart() {
   if (!exploreAllowed() || exploreBusy()) return false;
-  EX.active = true; EX.departing = false; EX.cam = { ...EX.end }; EX.target = exploreFitCam(); EX.velocity = [0, 0];
+  EX.active = true; EX.departing = false; EX.footer = 1; EX.cam = { ...EX.end }; EX.target = exploreFitCam(); EX.velocity = [0, 0];
   EX.motion = { from: { ...EX.cam }, to: { ...EX.target }, k0: 0, k1: 1, elapsed: 0, duration: EXPLORE.in };
   document.documentElement.classList.add('jm-explore');
   if (!EX.hintUsed) { EX.hintUsed = true; EX.hintLeft = EXPLORE.hintTime; EX.hint.textContent = VIEW.phone ? COPY.explore.hintPhone : COPY.explore.hint; EX.hint.classList.add('on'); }
   document.getElementById('go-say').textContent = COPY.explore.say;
-  exploreNotify(); return true;
+  explorePromote(); exploreNotify(); return true;
 }
 function exploreEnd() {
+  exploreSuppressClear();
   if (!EX.active) return false;
   EX.active = false; EX.target = { ...EX.end }; EX.velocity = [0, 0];
-  EX.motion = { from: { ...EX.cam }, to: { ...EX.end }, k0: EX.k, k1: 0, elapsed: 0, duration: EXPLORE.out };
-  exploreClearPointers(); exploreHintOff(); document.documentElement.classList.remove('jm-explore'); exploreNotify(); return true;
+  EX.motion = { from: { ...EX.cam }, to: { ...EX.end }, k0: EX.k, k1: 0, elapsed: 0, duration: EXPLORE.out, footer0: EX.footer };
+  exploreClearPointers(); exploreHintOff(); explorePromote(); document.documentElement.classList.remove('jm-explore'); exploreNotify(); return true;
 }
 // Called on resize with the new trip view already measured. No frame reads layout.
 function exploreResize() {
@@ -3355,7 +3372,7 @@ function exploreResize() {
   EX.top = Math.max(EX.fit, EXPLORE.most * VIEW.sT);
   if (exploreBusy() && world) {
     const s = lerp(EX.fit, EX.top, share); EX.cam = exploreBound({ s, tx: EX.view.w / 2 - world[0] * s, ty: EX.view.stageH / 2 - world[1] * s }); EX.target = { ...EX.cam };
-    if (EX.motion) EX.motion = { from: { ...EX.cam }, to: EX.active ? exploreFitCam() : { ...EX.end }, k0: EX.k, k1: EX.active ? 1 : 0, elapsed: 0, duration: EX.active ? EXPLORE.in : EXPLORE.out };
+    if (EX.motion) EX.motion = { from: { ...EX.cam }, to: EX.active ? exploreFitCam() : { ...EX.end }, k0: EX.k, k1: EX.active ? 1 : 0, elapsed: 0, duration: EX.active ? EXPLORE.in : EXPLORE.out, footer0: EX.footer };
     exploreClearPointers(); EX.velocity = [0, 0];
   } else { EX.cam = { ...EX.end }; EX.target = { ...EX.end }; }
   EX.changed = true;
@@ -3372,11 +3389,13 @@ function exploreApply(st, dt) {
   if (EX.rm) return false;
   const coveredDeparture = EX.departing && EX.journey.moving && EX.journey.P === EX.journey.beats.at(-1).P;
   if (exploreBusy() && !exploreAllowed() && !coveredDeparture) exploreReset();
-  const before = JSON.stringify([EX.cam, EX.k]), motion = EX.motion;
+  const before = JSON.stringify([EX.cam, EX.k, EX.footer]), motion = EX.motion;
+  if (EX.active) EX.footer = Math.max(0, EX.footer - dt / EXPLORE.footerFade);
   if (motion) {
     motion.elapsed = Math.min(motion.duration, motion.elapsed + dt);
     const q = easeIO(motion.duration ? motion.elapsed / motion.duration : 1);
     EX.k = lerp(motion.k0, motion.k1, q);
+    if (!EX.active) EX.footer = lerp(motion.footer0 ?? EX.footer, 1, clamp01((motion.elapsed - motion.duration + EXPLORE.footerFade) / EXPLORE.footerFade));
     if (motion.from) EX.cam = exploreMix(motion.from, motion.to, q);
     if (motion.elapsed === motion.duration) { EX.motion = null; if (!EX.active) { EX.cam = { ...EX.end }; EX.target = { ...EX.end }; exploreNotify(); } }
   }
@@ -3389,26 +3408,27 @@ function exploreApply(st, dt) {
     }
   }
   if (EX.hintLeft > 0) { EX.hintLeft = Math.max(0, EX.hintLeft - dt); if (!EX.hintLeft) exploreHintOff(); }
-  st.exploreK = EX.k; st.exploring = EX.active; st.sEnd = EX.end?.s || st.cam.s;
+  st.exploreK = EX.k; st.exploring = EX.active; st.exploreFooter = EX.footer; st.sEnd = EX.end?.s || st.cam.s;
   if (EX.k > 0 || EX.active) {
     st.cam = { ...EX.cam, ax: VIEW.w / 2, ay: VIEW.h / 2 };
     st.cardK = st.cardK.map(() => 0); st.cardOpen = 0;
     EX.layer = exploreLayer(st.cam, EX.end);
   } else EX.layer = { c: 1, dx: 0, dy: 0 };
-  if (EX.world) EX.world.style.transform = EX.k > 0 || EX.active ? `translate(${EX.layer.dx}px,${EX.layer.dy}px) scale(${EX.layer.c})` : 'none';
-  const changed = EX.changed || before !== JSON.stringify([EX.cam, EX.k]); EX.changed = false; return changed;
+  exploreWorldStyle('transform', EX.k > 0 || EX.active ? `translate(${EX.layer.dx}px,${EX.layer.dy}px) scale(${EX.layer.c})` : 'none'); explorePromote();
+  const changed = EX.changed || before !== JSON.stringify([EX.cam, EX.k, EX.footer]); EX.changed = false; return changed;
 }
-const exploreExcluded = target => target?.closest?.('.find, button, a, input, textarea, select, .stop, .tl, .pop, .sheet, [data-review], .ft-name, [role="button"]');
+const exploreExcluded = target => target?.closest?.('.sheet.on, input, textarea, select, .tl, [data-review]');
+const exploreOwned = target => target?.closest?.('#f-wayfinder, #f-beacon, .find.hoard, .rubbing, #f-mist, #f-horn, .hm-canvas, .ft-name');
 const explorePoint = e => [e.clientX, e.clientY];
 function exploreSample(e) {
   const time = e.timeStamp / 1000; EX.samples.push({ time, tx: EX.cam.tx, ty: EX.cam.ty });
   while (EX.samples.length > 1 && time - EX.samples[0].time > EXPLORE.velocityWindow) EX.samples.shift();
 }
-function exploreGesture() {
+function exploreGesture(dragged = false) {
   const points = [...EX.pointers.values()];
   if (!points.length) { EX.gesture = null; return; }
   const midpoint = points.length > 1 ? points[0].map((v, i) => (v + points[1][i]) / 2) : points[0];
-  EX.gesture = { from: midpoint, world: exploreWorld(EX.cam, midpoint), cam: { ...EX.cam }, distance: points.length > 1 ? Math.hypot(points[0][0] - points[1][0], points[0][1] - points[1][1]) : 0, dragged: points.length > 1 };
+  EX.gesture = { from: midpoint, world: exploreWorld(EX.cam, midpoint), cam: { ...EX.cam }, distance: points.length > 1 ? Math.hypot(points[0][0] - points[1][0], points[0][1] - points[1][1]) : 0, dragged: dragged || points.length > 1, owned: !dragged && points.length === 1 && EX.owners.has(EX.pointers.keys().next().value) };
   EX.samples = [];
 }
 function exploreBuild({ stage, world, journey, rm }) {
@@ -3424,36 +3444,40 @@ function exploreBuild({ stage, world, journey, rm }) {
     EX.target = exploreBound(exploreZoom(EX.cam, explorePoint(e), EX.target.s * factor / EX.cam.s, EX.fit, EX.top));
   }, { passive: false });
   stage.addEventListener('pointerdown', e => {
+    exploreSuppressClear();
     if (!EX.active || exploreExcluded(e.target) || EX.pointers.size >= 2 || (e.pointerType === 'mouse' && e.button !== 0)) return;
-    EX.pointers.set(e.pointerId, explorePoint(e)); stage.setPointerCapture(e.pointerId);
-    if (EX.pointers.size === 2) exploreTakeover();
-    exploreGesture(); exploreSample(e);
-  });
-  stage.addEventListener('pointerdown', () => { EX.suppress = false; }, true);
+    EX.pointers.set(e.pointerId, explorePoint(e)); if (exploreOwned(e.target)) EX.owners.add(e.pointerId);
+    if (EX.pointers.size === 2) { exploreTakeover(); for (const id of EX.pointers.keys()) stage.setPointerCapture(id); EX.suppress = true; stage.classList.add('is-dragging'); e.preventDefault(); e.stopImmediatePropagation(); }
+    exploreGesture(); exploreSample(e); explorePromote();
+  }, true);
   stage.addEventListener('pointermove', e => {
     if (!EX.active || !EX.pointers.has(e.pointerId)) return;
     EX.pointers.set(e.pointerId, explorePoint(e));
     const points = [...EX.pointers.values()], g = EX.gesture;
+    if (g.owned) return;
     const mid = points.length > 1 ? points[0].map((v, i) => (v + points[1][i]) / 2) : points[0];
     if (!g.dragged && Math.hypot(mid[0] - g.from[0], mid[1] - g.from[1]) <= EXPLORE.slop) return;
-    if (!g.dragged) { exploreTakeover(); g.cam = { ...EX.cam }; g.world = exploreWorld(EX.cam, g.from); g.dragged = true; }
+    if (!g.dragged) { exploreTakeover(); g.cam = { ...EX.cam }; g.world = exploreWorld(EX.cam, g.from); g.dragged = true; for (const id of EX.pointers.keys()) stage.setPointerCapture(id); }
     e.preventDefault(); EX.suppress = true; stage.classList.add('is-dragging');
     const distance = points.length > 1 ? Math.hypot(points[0][0] - points[1][0], points[0][1] - points[1][1]) : g.distance;
     const s = Math.max(EX.fit, Math.min(EX.top, g.cam.s * (g.distance ? distance / g.distance : 1)));
     EX.cam = exploreBound({ s, tx: mid[0] - g.world[0] * s, ty: mid[1] - g.world[1] * s }); EX.target = { ...EX.cam }; EX.changed = true; exploreSample(e);
-  });
+  }, true);
   const release = e => {
     if (!EX.pointers.has(e.pointerId)) return;
-    const dragged = EX.gesture?.dragged; exploreSample(e); EX.pointers.delete(e.pointerId);
+    const dragged = EX.gesture?.dragged, samples = EX.samples; exploreSample(e); EX.pointers.delete(e.pointerId); EX.owners.delete(e.pointerId);
+    if (dragged) EX.suppress = true;
+    if (EX.suppress) { clearTimeout(EX.suppressTimer); EX.suppressTimer = setTimeout(exploreSuppressClear, EXPLORE.clickRelease); }
     if (stage.hasPointerCapture?.(e.pointerId)) stage.releasePointerCapture(e.pointerId);
-    if (EX.pointers.size) { exploreGesture(); return; }
-    if (dragged && e.type === 'pointerup' && EX.samples.length > 1) { const a = EX.samples[0], b = EX.samples.at(-1), dt = b.time - a.time; EX.velocity = dt ? [(b.tx - a.tx) / dt, (b.ty - a.ty) / dt] : [0, 0]; }
+    if (EX.pointers.size) { exploreGesture(dragged); return; }
+    if (dragged && e.type === 'pointerup' && samples.length > 1) { const a = samples[0], b = samples.at(-1), dt = b.time - a.time; EX.velocity = dt ? [(b.tx - a.tx) / dt, (b.ty - a.ty) / dt] : [0, 0]; }
     else EX.velocity = [0, 0];
-    EX.gesture = null; stage.classList.remove('is-dragging');
+    EX.gesture = null; stage.classList.remove('is-dragging'); explorePromote();
   };
-  stage.addEventListener('pointerup', release); stage.addEventListener('pointercancel', release);
-  stage.addEventListener('lostpointercapture', e => { if (EX.pointers.has(e.pointerId)) { EX.pointers.delete(e.pointerId); EX.velocity = [0, 0]; exploreGesture(); stage.classList.remove('is-dragging'); } });
-  stage.addEventListener('click', e => { if (EX.suppress) { EX.suppress = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+  stage.addEventListener('pointerup', release, true); stage.addEventListener('pointercancel', release, true);
+  stage.addEventListener('lostpointercapture', e => { if (e.target === stage && !stage.hasPointerCapture?.(e.pointerId) && EX.pointers.has(e.pointerId)) { const dragged = EX.gesture?.dragged; EX.pointers.delete(e.pointerId); EX.owners.delete(e.pointerId); EX.velocity = [0, 0]; exploreGesture(dragged); stage.classList.remove('is-dragging'); explorePromote(); } });
+  stage.addEventListener('click', e => { if (EX.suppress && e.detail !== 0) { exploreSuppressClear(); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+  window.addEventListener('keydown', exploreSuppressClear, true);
   window.addEventListener('keydown', e => {
     if (!EX.active || e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'Escape' || e.key === '0') { e.preventDefault(); exploreEnd(); return; }
@@ -3463,7 +3487,7 @@ function exploreBuild({ stage, world, journey, rm }) {
     if (!['+', '=', '-'].includes(e.key)) return;
     e.preventDefault(); exploreTakeover(); EX.target = exploreBound(exploreZoom(EX.cam, [VIEW.w / 2, VIEW.h / 2], EX.target.s * (e.key === '-' ? 1 / EXPLORE.key : EXPLORE.key) / EX.cam.s, EX.fit, EX.top));
   });
-  window.addEventListener('blur', () => { exploreClearPointers(); EX.velocity = [0, 0]; });
+  window.addEventListener('blur', () => { exploreClearPointers(); exploreSuppressClear(); EX.velocity = [0, 0]; explorePromote(); });
 }
 
 // ---- steps.mjs ----
@@ -3798,29 +3822,19 @@ function footnameFrame(time, dt, shift) {
 
 
 
-const FT = { g: {}, items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], flares: [], config: '', pending: false, nextFlare: null, lastFlare: null };
+const FT = { items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], streaks: [], config: '', nextFlare: null, lastFlare: null, canvas: null, ctx: null, dpr: 1, drawing: false, sprites: {}, rough: null, roughPending: null };
 const upRight = '<svg class="ne" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 8.5L8.5 1.5M3 1.5H8.5V7"/></svg>';
 const arrowR = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
 
-const xStroke = rot => `<g class="fx-s" transform="rotate(${rot})"><path class="fx-red" d="M-12.7 0H12.7" stroke="${C.red}" stroke-width="3.6" stroke-linecap="round" fill="none" filter="url(#rough)"/><path class="fx-white" d="M-12.7 0L0 -1.7L12.7 0L0 1.7Z" fill="url(#spike)" opacity="0"/></g>`;
+const xStroke = rot => `<g class="fx-s" transform="rotate(${rot})"><path class="fx-red" d="M-12.7 0H12.7" stroke="${C.red}" stroke-width="3.6" stroke-linecap="round" fill="none" filter="url(#rough)"/></g>`;
 
-function footerBuildX(g, rm = false) {
-  FT.rm = rm;
-  const r = rnd(43); let streaks = '';
-  for (let i = 0; i < 60; i++) { const a = r() * 6.283, d1 = .3 + r() * .5, d2 = d1 + .2 + r() * .6, c = Math.cos(a), sn = Math.sin(a); streaks += `<path d="M${n1(c * d1 * 10)} ${n1(sn * d1 * 10)}L${n1(c * d2 * 10)} ${n1(sn * d2 * 10)}" stroke="${r() < .3 ? C.red : C.paper}" stroke-opacity="${n1(.3 + r() * .6)}" stroke-width="${n1(.6 + r())}" vector-effect="non-scaling-stroke" stroke-linecap="round"/>`; }
-  g.innerHTML = `<defs><linearGradient id="fxray" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${C.paper}" stop-opacity="0"/><stop offset="${NOVA.rays.peak}" stop-color="${C.paper}" stop-opacity="1"/><stop offset="1" stop-color="${C.paper}" stop-opacity="0"/></linearGradient></defs><circle class="fx-rg" r="1" fill="url(#rglow)" opacity="0"/><circle class="fx-og" r="1" fill="url(#oglow)" opacity="0"/>`
-    + `<g class="fx-rays" opacity="0"></g><g class="fx-lobes" opacity="0"></g><g class="fx-waves" opacity="0"></g><g class="fx-flares">${Array.from({ length: NOVA.flare.cap }, () => `<circle class="fx-flare" r="1" fill="none" stroke="${C.paper}" vector-effect="non-scaling-stroke" opacity="0"/>`).join('')}</g>`
-    + `<g class="fx-streaks" opacity="0">${streaks}</g>`
-    + `<circle class="fx-ringr" r="1" fill="none" stroke="${C.red}" stroke-width="8" vector-effect="non-scaling-stroke" opacity="0"/><circle class="fx-ring" r="1" fill="none" stroke="${C.paper}" stroke-width="2" vector-effect="non-scaling-stroke" opacity="0"/>`
-    + `<circle class="fx-r1" r="1" fill="none" stroke="${C.paper}" stroke-width=".8" vector-effect="non-scaling-stroke" opacity="0"/><circle class="fx-r2" r="1" fill="none" stroke="${C.paper}" stroke-width=".6" vector-effect="non-scaling-stroke" opacity="0"/>`
-    + `<circle class="fx-core" r="1" fill="url(#glow)" opacity="0"/>` + xStroke(45) + xStroke(-45)
-    + (rm ? '' : `<circle class="fx-hit hit" r="1" role="button" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true" pointer-events="all" style="outline:none"/>`);
-  // Only the hit circle takes the pointer: the glows, lobes and rings lie over the whole map and are often invisible.
+function footerBuildX(g, rm = false, canvas = null, hit = null) {
+  FT.rm = rm; FT.x = g; FT.canvas = canvas; FT.ctx = !rm && canvas ? canvas.getContext('2d') : null; FT.hit = rm ? null : hit;
+  FT.drawing = false; FT.hitState = ''; FT.config = ''; FT.rays = []; FT.lobes = []; FT.waves = []; FT.streaks = [];
+  g.innerHTML = xStroke(45) + xStroke(-45);
   g.setAttribute('pointer-events', 'none');
-  ['fx-rg', 'fx-og', 'fx-rays', 'fx-lobes', 'fx-waves', 'fx-streaks', 'fx-ringr', 'fx-ring', 'fx-r1', 'fx-r2', 'fx-core'].forEach(k => FT.g[k] = g.querySelector('.' + k));
-  FT.flares = [...g.querySelectorAll('.fx-flare')];
-  FT.g.s = [...g.querySelectorAll('.fx-s')]; FT.g.red = [...g.querySelectorAll('.fx-red')]; FT.g.white = [...g.querySelectorAll('.fx-white')];
-  FT.hit = g.querySelector('.fx-hit');
+  const r = rnd(43);
+  for (let i = 0; i < 60; i++) { const a = r() * 6.283, d1 = .3 + r() * .5, d2 = d1 + .2 + r() * .6, c = Math.cos(a), sn = Math.sin(a); FT.streaks.push({ from: [+n1(c * d1 * 10), +n1(sn * d1 * 10)], to: [+n1(c * d2 * 10), +n1(sn * d2 * 10)], colour: r() < .3 ? C.red : C.paper, alpha: +n1(.3 + r() * .6), width: +n1(.6 + r()) }); }
   if (FT.hit) {
     const dig = () => {
       if (FT.hit.getAttribute('aria-disabled') === 'true') return;
@@ -3829,7 +3843,6 @@ function footerBuildX(g, rm = false) {
       else JOURNEY.go('x');
     };
     FT.hit.addEventListener('click', dig);
-    FT.hit.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dig(); } });
   }
   footerConfigure();
 }
@@ -3853,7 +3866,7 @@ function footerResize() {
   s.style.fontSize = (FOOT_NAME.measureSize * avail / w).toFixed(2) + 'px'; footnameMeasure({ c: 1, dx: 0, dy: 0 }); s.style.fontWeight = weight;
   return FT.rule.getBoundingClientRect();
 }
-const T = (el, x) => el.setAttribute('transform', x);
+const footerStyle = (el, key, value) => { const text = String(value); if (el && el.style[key] !== text) el.style[key] = text; };
 function footerFrame(st) {
   if (FT.hit) {
     FT.settled = st.settleT >= 1;
@@ -3862,37 +3875,80 @@ function footerFrame(st) {
       FT.hitState = state; FT.hit.tabIndex = available ? 0 : -1; FT.hit.setAttribute('aria-disabled', String(!available));
       FT.hit.setAttribute('aria-label', FT.settled ? COPY.nova : COPY.steps.dig);
     }
+    const s = st.exploreK ? st.sEnd : st.cam.s, radius = FT.settled ? NOVA.flare.hit * st.cam.s / s : NOVA.base.digHit * st.cam.s;
+    footerStyle(FT.hit, 'width', (radius * 2).toFixed(2) + 'px'); footerStyle(FT.hit, 'height', (radius * 2).toFixed(2) + 'px');
+    footerStyle(FT.hit, 'transform', `translate(${(MAP.x[0] * st.cam.s + st.cam.tx).toFixed(2)}px,${(MAP.x[1] * st.cam.s + st.cam.ty).toFixed(2)}px) translate(-50%,-50%)`);
   }
   // Progress owns the text's reveal. All X transforms and opacities have one writer, footerMotion.
   const b = NOVA.base;
   FT.items.forEach((it, j) => { if (it.classList.contains('ft-name')) { it.style.opacity = 1; it.style.transform = ''; return; } const o = smooth(b.textIn[0] + j * b.textGap, b.textIn[1] + j * b.textGap, st.settleT); it.style.opacity = o; it.style.transform = `translateY(${((1 - o) * b.textRise).toFixed(1)}px)`; });
-  FT.inner.style.opacity = 1 - (st.exploreK || 0);
+  footerStyle(FT.inner, 'opacity', st.exploreFooter ?? 1);
   const exploring = !!st.exploring || (st.exploreK || 0) > 0; if (FT.exploring !== exploring) { FT.exploring = exploring; FT.el.inert = exploring; }
   footnameReveal(st);
   FT.el.style.visibility = st.settleT > b.textShow ? 'visible' : 'hidden';
 }
-const footerConfigKey = () => JSON.stringify([NOVA.rays.n, VIEW.phone ? NOVA.lobes.nPhone : NOVA.lobes.n, NOVA.waves.n, NOVA.rays.width, NOVA.waves.width, NOVA.shellDash]);
+const footerConfigKey = () => JSON.stringify([NOVA.seed, NOVA.rays.n, VIEW.phone ? NOVA.lobes.nPhone : NOVA.lobes.n, NOVA.waves.n]);
 function footerConfigure() {
   if (FT.rm) return;
   const count = VIEW.phone ? NOVA.lobes.nPhone : NOVA.lobes.n, key = footerConfigKey();
   if (key === FT.config) return; FT.config = key;
-  const add = (list, n, parent, type, cls) => {
-    while (list.length < n) {
-      const el = document.createElementNS('http://www.w3.org/2000/svg', type), i = list.length, r = rnd(NOVA.seed + i);
-      el.setAttribute('class', cls); el.setAttribute('vector-effect', 'non-scaling-stroke');
-      el.setAttribute('opacity', 0);
-      if (type === 'circle') el.setAttribute('r', 1); else el.setAttribute('d', 'M0 0H1');
-      el.setAttribute('fill', cls === 'fx-lobe' ? `url(#${i % 2 ? 'oglow' : 'rglow'})` : 'none');
-      if (cls !== 'fx-lobe') el.setAttribute('stroke', cls === 'fx-ray' ? 'url(#fxray)' : C.paper);
-      parent.appendChild(el); list.push({ el, u: Array.from({ length: 7 }, () => r()) });
-    }
+  const seeds = n => Array.from({ length: n }, (_, i) => { const r = rnd(NOVA.seed + i); return { u: Array.from({ length: 7 }, () => r()) }; });
+  FT.rays = seeds(NOVA.rays.n); FT.lobes = seeds(count); FT.waves = seeds(NOVA.waves.n);
+}
+const footerColour = (colour, alpha) => `rgba(${colour.slice(1).match(/../g).map(n => parseInt(n, 16)).join(',')},${alpha})`;
+function footerGlowSprite(key) {
+  if (FT.sprites[key]) return FT.sprites[key];
+  const cv = document.createElement('canvas'), size = NOVA_CANVAS.glowSprite; cv.width = cv.height = size;
+  const ctx = cv.getContext('2d'), r = size / 2, gradient = ctx.createRadialGradient(r, r, 0, r, r, r);
+  const stops = key === 'red' ? [[0, C.red, .75], [.55, C.red, .22], [1, C.red, 0]] : key === 'orange' ? [[0, C.warm, .6], [1, C.warm, 0]] : [[0, C.paper, .85], [1, C.paper, 0]];
+  stops.forEach(([at, colour, alpha]) => gradient.addColorStop(at, footerColour(colour, alpha)));
+  ctx.fillStyle = gradient; ctx.fillRect(0, 0, size, size); FT.sprites[key] = cv; return cv;
+}
+// Rasterise the map's actual filter in its original user space, then scale that picture with the stroke.
+// Keep the old sprite until the replacement finishes. A missing image uses the plain round line.
+function footerRough(scale) {
+  const density = Math.ceil(scale * FT.dpr);
+  if (FT.rough?.density >= density || FT.roughPending?.density >= density || FT.roughFailed >= density || typeof Image === 'undefined') return;
+  const cv = document.createElement('canvas'); cv.width = 40 * density; cv.height = 16 * density;
+  const pending = { cv, density }, img = new Image(); FT.roughPending = pending;
+  img.onload = () => {
+    if (FT.roughPending !== pending) return;
+    cv.getContext('2d').drawImage(img, 0, 0); FT.rough = pending; FT.roughPending = null;
   };
-  add(FT.rays, NOVA.rays.n, FT.g['fx-rays'], 'path', 'fx-ray');
-  add(FT.lobes, count, FT.g['fx-lobes'], 'circle', 'fx-lobe');
-  add(FT.waves, NOVA.waves.n, FT.g['fx-waves'], 'circle', 'fx-wave');
-  FT.rays.forEach(ray => ray.el.setAttribute('stroke-width', NOVA.rays.width));
-  FT.waves.forEach(wave => wave.el.setAttribute('stroke-width', NOVA.waves.width)); FT.flares.forEach(circle => circle.setAttribute('stroke-width', NOVA.waves.width));
-  ['fx-r1', 'fx-r2'].forEach(k => FT.g[k].setAttribute('stroke-dasharray', NOVA.shellDash.join(' ')));
+  img.onerror = () => { if (FT.roughPending === pending) { FT.roughPending = null; FT.roughFailed = density; } };
+  const filter = mapDefs().match(/<filter id="rough"[^]*?<\/filter>/)[0];
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${cv.width}" height="${cv.height}" viewBox="-20 -8 40 16"><defs>${filter}</defs><path d="M-12.7 0H12.7" stroke="${C.red}" stroke-width="3.6" stroke-linecap="round" fill="none" filter="url(#rough)"/></svg>`);
+}
+function footerNovaResize(w, h) {
+  if (!FT.canvas) return;
+  FT.dpr = Math.min(NOVA_CANVAS.dpr, window.devicePixelRatio || 1);
+  FT.canvas.width = Math.round(w * FT.dpr); FT.canvas.height = Math.round(h * FT.dpr);
+  FT.roughFailed = 0;
+  if (!FT.rm) footerRough(Math.max(VIEW.s0, VIEW.sT * EXPLORE.most) * NOVA.base.rushLen);
+}
+function footerGlow(ctx, key, x, y, rx, ry, alpha) {
+  if (!(rx > 0 && ry > 0 && alpha > 0)) return;
+  ctx.globalAlpha = alpha; ctx.drawImage(footerGlowSprite(key), x - rx, y - ry, rx * 2, ry * 2);
+}
+function footerLine(ctx, from, to, colour, width, alpha, cap = 'round') {
+  if (!(alpha > 0)) return;
+  ctx.globalAlpha = alpha; ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.lineCap = cap;
+  ctx.beginPath(); ctx.moveTo(...from); ctx.lineTo(...to); ctx.stroke();
+}
+function footerRing(ctx, radius, colour, width, alpha, angle = 0, dash = []) {
+  if (!(radius > 0 && alpha > 0)) return;
+  ctx.save(); ctx.rotate(angle * Math.PI / 180); ctx.globalAlpha = alpha; ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.lineCap = 'butt'; ctx.setLineDash(dash);
+  ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+}
+// SVG group opacity composites overlapping children together. Reuse one scratch layer for that same operation.
+function footerGroup(ctx, alpha, paint) {
+  if (!(alpha > 0)) return;
+  if (!FT.layer) { FT.layer = document.createElement('canvas'); FT.layerCtx = FT.layer.getContext('2d'); }
+  const layer = FT.layer, c = FT.layerCtx;
+  if (layer.width !== FT.canvas.width || layer.height !== FT.canvas.height) { layer.width = FT.canvas.width; layer.height = FT.canvas.height; }
+  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, layer.width, layer.height);
+  c.setTransform(FT.dpr, 0, 0, FT.dpr, ...FT.centre); paint(c);
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = alpha; ctx.drawImage(layer, 0, 0); ctx.restore();
 }
 function footerMotion(time, dt, st, look, moved) {
   if (FT.rm) return;
@@ -3904,9 +3960,20 @@ function footerMotion(time, dt, st, look, moved) {
     if (FT.nextFlare === null || NOVA_LIVE.serial !== FT.lastFlare) { FT.lastFlare = NOVA_LIVE.serial; FT.nextFlare = NOVA_LIVE.time + lerp(...NOVA.flare.auto, rnd(NOVA.seed + NOVA_LIVE.serial)()); }
     else if (NOVA_LIVE.time >= FT.nextFlare && NOVA_LIVE.flares.length < NOVA.flare.cap - EXPLORE.autoReserve) { novaPress(); FT.nextFlare = null; }
   } else FT.nextFlare = null;
-  if (footerConfigKey() !== FT.config && !FT.pending) { FT.pending = true; queueMicrotask(() => { footerConfigure(); FT.pending = false; }); }
-  if (!moved && st.blastT <= 0) return;
-  const s = st.exploreK ? st.sEnd : st.cam.s, rT = st.rushT, bT = st.blastT, sT = st.settleT, G = FT.g, u = px => px / s, B = NOVA.base;
+  footerConfigure();
+  const showing = st.rushT > 0 || st.blastT > 0 || st.settleT > 0 || st.exploreK > 0;
+  if (showing !== FT.drawing) { FT.drawing = showing; footerStyle(FT.x, 'visibility', showing ? 'hidden' : 'visible'); }
+  footerStyle(FT.canvas, 'opacity', st.dim);
+  const ctx = FT.ctx;
+  if (!showing) {
+    if (FT.painted && ctx) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, FT.canvas.width, FT.canvas.height); FT.painted = false; }
+    return;
+  }
+  if (!ctx) return;
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, FT.canvas.width, FT.canvas.height); FT.painted = true;
+  FT.centre = [(MAP.x[0] * st.cam.s + st.cam.tx) * FT.dpr, (MAP.x[1] * st.cam.s + st.cam.ty) * FT.dpr];
+  ctx.setTransform(FT.dpr, 0, 0, FT.dpr, ...FT.centre);
+  const s = st.exploreK ? st.sEnd : st.cam.s, rT = st.rushT, bT = st.blastT, sT = st.settleT, u = px => px / s, B = NOVA.base, z = st.cam.s;
   const big = Math.max(VIEW.w, VIEW.h), calm = lerp(1, EXPLORE.calmScale, st.exploreK || 0), calmAlpha = lerp(1, EXPLORE.calmAlpha, st.exploreK || 0);
   const clock = FT.clock, strength = smooth(...NOVA.motionIn, bT), flare = novaShare(NOVA.flare.core, NOVA.flare.coreMax) * strength;
   const wave = period => Math.sin(Math.PI * 2 * clock / period);
@@ -3918,52 +3985,69 @@ function footerMotion(time, dt, st, look, moved) {
   if (sT > 0) len = lerp(B.endLen, u(B.spikeEnd) / B.spikeLength, easeIO(sT));
   if (bT > 0) thin = lerp(B.thin[1], B.thin[2], out(clamp01(bT / B.spikePeak)));
   if (sT > 0) thin = lerp(B.thin[2], B.thin[3], sT);
-  G.s.forEach((g, i) => T(g, `rotate(${B.angles[i]}) scale(${len * (1 + strength * NOVA.spike[1] * Math.sin(Math.PI * 2 * clock / NOVA.spike[0] + i * NOVA.spike[2])) * pulse} ${thin})`));
   const heat = smooth(...B.heat, rT);
-  G.white.forEach(w => w.setAttribute('opacity', heat.toFixed(3)));
-  G.red.forEach(w => w.setAttribute('opacity', (1 - smooth(...B.redOut, rT)).toFixed(3)));
   // glow
   let rg = lerp(0, B.redGlow[0], rT), rgo = B.rushGlowAlpha * rT;
   if (bT > 0) { rg = bT < B.glowPeak ? lerp(B.redGlow[0], big * B.redGlow[1], out(bT / B.glowPeak)) : lerp(big * B.redGlow[1], big * B.redGlow[2], easeIO((bT - B.glowPeak) / (1 - B.glowPeak))); rgo = 1; }
   if (sT > 0) rg = lerp(big * B.redGlow[2], big * B.redGlow[3], sT);
   rg *= 1 + strength * NOVA.glow[1] * wave(NOVA.glow[0]);
-  T(G['fx-rg'], `scale(${u(rg) * calm} ${u(rg) * B.glowAspect * calm})`); G['fx-rg'].setAttribute('opacity', rgo * calmAlpha);
+  footerGlow(ctx, 'red', 0, 0, u(rg) * calm * z, u(rg) * B.glowAspect * calm * z, rgo * calmAlpha);
   const og = bT > 0 ? lerp(...B.orangeGlow, out(bT)) : lerp(0, B.orangeGlow[0], rT);
-  T(G['fx-og'], `scale(${u(og) * calm})`); G['fx-og'].setAttribute('opacity', (bT > 0 ? B.orangeAlpha : B.rushGlowAlpha * rT) * calmAlpha);
+  footerGlow(ctx, 'orange', 0, 0, u(og) * calm * z, u(og) * calm * z, (bT > 0 ? B.orangeAlpha : B.rushGlowAlpha * rT) * calmAlpha);
   const core = bT > 0 ? lerp(B.core[0], B.core[1], bT) * (sT > 0 ? lerp(1, B.core[2], sT) : 1) : lerp(0, B.core[3], heat);
-  T(G['fx-core'], `scale(${u(core * pulse) * calm})`); G['fx-core'].setAttribute('opacity', heat * calmAlpha);
   // the blast: ring and streaks
   const ringR = novaRingRadius(st), ringO = bT > 0 ? (1 - smooth(...B.ringFade, bT)) : 0;
-  T(G['fx-ring'], `scale(${u(ringR)})`); G['fx-ring'].setAttribute('opacity', ringO * B.ringAlpha[0]);
-  T(G['fx-ringr'], `scale(${u(ringR)})`); G['fx-ringr'].setAttribute('opacity', ringO * B.ringAlpha[1]);
   const stS = lerp(B.streak[0], big * B.streak[1], out(bT));
-  T(G['fx-streaks'], `scale(${u(stS)})`); G['fx-streaks'].setAttribute('opacity', bT > 0 ? smooth(...B.streakIn, bT) * (1 - smooth(...B.streakOut, bT)) : 0);
   // settled: two faint rings
   const ro = smooth(...B.shellIn, sT);
-  ['fx-r1', 'fx-r2'].forEach((key, i) => { T(G[key], `rotate(${clock * NOVA.shells[i]}) scale(${u((VIEW.phone ? B.shellPhone : B.shellR)[i])})`); G[key].setAttribute('opacity', B.shellAlpha[i] * ro); });
-  G['fx-rays'].setAttribute('opacity', strength * calmAlpha); T(G['fx-rays'], `scale(${calm}) rotate(${clock * NOVA.rays.turn * 180 / Math.PI})`);
+  // Paint in the former SVG order. Widths below stay in screen pixels.
+  footerGroup(ctx, strength * calmAlpha, ctx => {
+  ctx.save(); ctx.rotate(clock * NOVA.rays.turn);
   FT.rays.forEach((ray, i) => {
-    if (i >= NOVA.rays.n) { ray.el.setAttribute('opacity', 0); return; }
+    if (i >= NOVA.rays.n) return;
     const a = i / NOVA.rays.n * Math.PI * 2, start = core * NOVA.rays.start, len = lerp(...NOVA.rays.len, ray.u[0]) * core;
-    T(ray.el, `translate(${u(Math.cos(a) * start)} ${u(Math.sin(a) * start)}) rotate(${a * 180 / Math.PI}) scale(${u(len - start)} 1)`);
-    ray.el.setAttribute('opacity', i < NOVA.rays.n ? lerp(...NOVA.rays.alpha, ray.u[1]) * (1 - NOVA.rays.breathe * (.5 + .5 * Math.sin(clock * Math.PI * 2 / lerp(...NOVA.rays.period, ray.u[3]) + ray.u[2] * Math.PI * 2))) : 0);
+    const alpha = lerp(...NOVA.rays.alpha, ray.u[1]) * (1 - NOVA.rays.breathe * (.5 + .5 * Math.sin(clock * Math.PI * 2 / lerp(...NOVA.rays.period, ray.u[3]) + ray.u[2] * Math.PI * 2)));
+    const from = [u(Math.cos(a) * start) * calm * z, u(Math.sin(a) * start) * calm * z], to = [u(Math.cos(a) * len) * calm * z, u(Math.sin(a) * len) * calm * z];
+    const gradient = ctx.createLinearGradient(...from, ...to); gradient.addColorStop(0, footerColour(C.paper, 0)); gradient.addColorStop(NOVA.rays.peak, footerColour(C.paper, 1)); gradient.addColorStop(1, footerColour(C.paper, 0));
+    footerLine(ctx, from, to, gradient, NOVA.rays.width, alpha, 'butt');
   });
-  G['fx-lobes'].setAttribute('opacity', strength * calmAlpha); T(G['fx-lobes'], 'scale(' + calm + ')');
+  ctx.restore();
+  });
+  footerGroup(ctx, strength * calmAlpha, ctx => {
   FT.lobes.forEach((lobe, i) => {
     const L = NOVA.lobes, a = lobe.u[0] * Math.PI * 2 + clock * lerp(...L.speed, lobe.u[1]) * (i % 2 ? -1 : 1), orbit = lerp(...L.orbit, lobe.u[2]), r = lerp(...L.r, lobe.u[3]) * (1 + L.breathe * Math.sin(clock * lerp(...L.speed, lobe.u[4]) + lobe.u[5] * Math.PI * 2));
-    T(lobe.el, `translate(${u(Math.cos(a) * orbit + look[0] * DEPTH.foot.lobes)} ${u(Math.sin(a) * orbit + look[1] * DEPTH.foot.lobes)}) scale(${u(r)})`);
-    lobe.el.setAttribute('opacity', i < (VIEW.phone ? L.nPhone : L.n) ? lerp(...L.alpha, lobe.u[6]) : 0);
+    footerGlow(ctx, i % 2 ? 'orange' : 'red', u(Math.cos(a) * orbit + look[0] * DEPTH.foot.lobes) * calm * z, u(Math.sin(a) * orbit + look[1] * DEPTH.foot.lobes) * calm * z, u(r) * calm * z, u(r) * calm * z, i < (VIEW.phone ? L.nPhone : L.n) ? lerp(...L.alpha, lobe.u[6]) : 0);
   });
-  G['fx-waves'].setAttribute('opacity', strength);
+  });
+  footerGroup(ctx, strength, ctx => {
   FT.waves.forEach((circle, i) => {
-    if (i >= NOVA.waves.n) { circle.el.setAttribute('opacity', 0); return; }
+    if (i >= NOVA.waves.n) return;
     const age = clock / NOVA.waves.every - i, q = ((age / NOVA.waves.n) % 1 + 1) % 1;
-    T(circle.el, `scale(${u(lerp(core, big * NOVA.waves.reach, q))})`);
-    circle.el.setAttribute('opacity', i < NOVA.waves.n && age >= 0 ? NOVA.waves.alpha * (1 - q) : 0);
+    footerRing(ctx, u(lerp(core, big * NOVA.waves.reach, q)) * z, C.paper, NOVA.waves.width, age >= 0 ? NOVA.waves.alpha * (1 - q) : 0);
   });
-  FT.flares.forEach((circle, i) => { const live = NOVA_LIVE.flares.find(f => f.serial % FT.flares.length === i); if (!live) { circle.setAttribute('opacity', 0); return; } const fq = novaFlare(live); T(circle, `scale(${u(lerp(core, big * NOVA.flare.reach, out(fq)))})`); circle.setAttribute('opacity', NOVA.flare.alpha * (1 - fq) * strength); });
-  if (FT.hit) T(FT.hit, `scale(${FT.settled ? u(NOVA.flare.hit) : B.digHit})`);
-  FT.inner.style.translate = `${-look[0] * DEPTH.foot.text}px ${-look[1] * DEPTH.foot.text}px`;
+  });
+  for (let i = 0; i < NOVA.flare.cap; i++) { const live = NOVA_LIVE.flares.find(f => f.serial % NOVA.flare.cap === i); if (!live) continue; const fq = novaFlare(live); footerRing(ctx, u(lerp(core, big * NOVA.flare.reach, out(fq))) * z, C.paper, NOVA.waves.width, NOVA.flare.alpha * (1 - fq) * strength); }
+  const streakO = bT > 0 ? smooth(...B.streakIn, bT) * (1 - smooth(...B.streakOut, bT)) : 0;
+  footerGroup(ctx, streakO, ctx => FT.streaks.forEach(line => footerLine(ctx, line.from.map(v => v * u(stS) * z), line.to.map(v => v * u(stS) * z), line.colour, line.width, line.alpha)));
+  footerRing(ctx, u(ringR) * z, C.red, 8, ringO * B.ringAlpha[1]); footerRing(ctx, u(ringR) * z, C.paper, 2, ringO * B.ringAlpha[0]);
+  [0, 1].forEach(i => footerRing(ctx, u((VIEW.phone ? B.shellPhone : B.shellR)[i]) * z, C.paper, i ? .6 : .8, B.shellAlpha[i] * ro, clock * NOVA.shells[i], NOVA.shellDash));
+  footerGlow(ctx, 'core', 0, 0, u(core * pulse) * calm * z, u(core * pulse) * calm * z, heat * calmAlpha);
+  B.angles.forEach((angle, i) => {
+    const stretch = len * (1 + strength * NOVA.spike[1] * Math.sin(Math.PI * 2 * clock / NOVA.spike[0] + i * NOVA.spike[2])) * pulse;
+    const red = +(1 - smooth(...B.redOut, rT)).toFixed(3), white = +heat.toFixed(3);
+    if (red > 0) footerRough(Math.max(z * stretch, z * thin));
+    ctx.save(); ctx.rotate(angle * Math.PI / 180); ctx.scale(stretch * z, thin * z);
+    if (red > 0) {
+      if (FT.rough) { ctx.globalAlpha = red; ctx.drawImage(FT.rough.cv, -20, -8, 40, 16); }
+      else footerLine(ctx, [-12.7, 0], [12.7, 0], C.red, 3.6, red);
+    }
+    if (white > 0) {
+      const gradient = ctx.createLinearGradient(-12.7, 0, 12.7, 0); gradient.addColorStop(0, footerColour(C.red, 0)); gradient.addColorStop(.5, C.white); gradient.addColorStop(1, footerColour(C.red, 0));
+      ctx.globalAlpha = white; ctx.fillStyle = gradient; ctx.beginPath(); ctx.moveTo(-12.7, 0); ctx.lineTo(0, -1.7); ctx.lineTo(12.7, 0); ctx.lineTo(0, 1.7); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  });
+  footerStyle(FT.inner, 'translate', `${-look[0] * DEPTH.foot.text}px ${-look[1] * DEPTH.foot.text}px`);
 }
 
 // ---- findkit.mjs ----
@@ -5530,8 +5614,9 @@ const M = bigMap();
 MAIN.innerHTML = `<h1 class="sr">${COPY.title}</h1><section class="trip" id="trip" aria-label="${COPY.srMap}"><div class="stage" id="stage">
 <canvas id="deep" aria-hidden="true"></canvas>
 <svg id="map" class="map" role="group" aria-label="${COPY.srMap}">${mapDefs()}<g id="cam"><g id="b-all"><g id="b-sea">${M.sea}</g><g id="b-fill">${M.fill}</g><g id="b-coast">${M.coast}</g><g id="b-detail">${M.detail}</g></g><path id="trail-done" class="done" d="${pathD(TRAIL)}"/><g id="finds">${M.finds}</g><g id="fxg" transform="translate(${MAP.x[0]} ${MAP.x[1]})"></g></g></svg>
-<canvas id="stars" aria-hidden="true"></canvas>
+<canvas id="nova" aria-hidden="true"></canvas><canvas id="stars" aria-hidden="true"></canvas>
 <canvas id="air" aria-hidden="true"></canvas><svg id="sky" aria-hidden="true"></svg>
+${RM ? '' : `<button type="button" class="fx-hit" id="nova-hit" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true"></button>`}
 <div class="ov">${stoneDefs()}<p class="caption">${COPY.heroCaption}</p><p class="cue">${COPY.cue}</p><div class="cards" id="cards"></div><div class="mini" id="mini" role="navigation" aria-label="${COPY.miniMap}"></div><div class="pop" id="pop" role="status"></div><div class="sheet" id="sheet" role="dialog" aria-modal="false"></div><footer class="ft" id="ft"></footer></div>
 </div></section><div class="rm-cards" id="rmcards"></div><div class="tl" id="tl"></div>`;
 
@@ -5551,7 +5636,7 @@ starsBuild(CANVAS);
 depthBuild($('deep'), $('air'), $('sky'), RM);
 cardsBuild(RM ? $('rmcards') : $('cards'), goStop, RM);
 tlBuild(TLEL, { jump: goStop, scrub: p => JOURNEY.set(p) }, RM);
-footerBuild($('ft'), RM); footerBuildX($('fxg'), RM);
+footerBuild($('ft'), RM); footerBuildX($('fxg'), RM, $('nova'), $('nova-hit'));
 if (RM) $('rmcards').appendChild(TLEL);
 stepsBuild({ stage: $('stage'), rm: RM, resize, joinedTop: () => JOIN.heroStart });
 findsBuild(SVG, $('pop'), $('sheet'), $('b-all'), RM);
@@ -5566,6 +5651,7 @@ function resize() {
   tripResize(w, h, RM ? 0 : (phone ? 44 : 56) + room);
   SVG.setAttribute('width', w); SVG.setAttribute('height', h); SVG.setAttribute('viewBox', `0 0 ${w} ${h}`);
   starsResize(w, h);
+  footerNovaResize(w, h);
   depthResize(w, h);
   if (!RM) cardsResize(stepMode);
   if (FTWORLD) FTWORLD.style.transform = 'none';
@@ -5631,7 +5717,7 @@ const JN = {
   api: null, away: null, op: '', lastP: -1, dirty: true, lift: null,
   rm: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
-JN.svg = document.getElementById('map'); JN.fxg = document.getElementById('fxg'); JN.fx = null; JN.ov = JN.stage.querySelector('.ov');
+JN.svg = document.getElementById('map'); JN.hit = document.getElementById('nova-hit'); JN.fxg = document.getElementById('fxg'); JN.fx = null; JN.ov = JN.stage.querySelector('.ov');
 // vh of scroll: the leave ends at the end of the hero act; the canvas fades in over its last JOIN_OVERLAP vh
 const LEAVE_END = ACTS.hero, JOIN_OVERLAP = 1;
 
@@ -5667,6 +5753,7 @@ function place(P = stepsProgress()) {
     JN.away = away;
     JN.hero.classList.toggle('jm-away', away);
     JN.svg.inert = !away; JN.ov.inert = !away;
+    if (JN.hit) JN.hit.inert = !away;
     JN.dirty = true;
   }
 }

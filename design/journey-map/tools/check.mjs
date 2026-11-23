@@ -167,6 +167,9 @@ const rb=[Math.min(...restLocal.map(p=>p[0])),Math.min(...restLocal.map(p=>p[1])
 ok(rb[0]-RG.hit[0]>=3&&rb[1]-RG.hit[1]>=3&&RG.hit[0]+RG.hit[2]-rb[2]>=3&&RG.hit[1]+RG.hit[3]-rb[3]>=3,'raven hit area 3-unit padding');
 const hoardTag=c1map.finds.match(/<g id="f-hoards"[^>]*>/)?.[0];ok(hoardTag?.includes('role="group"')&&hoardTag.includes('aria-label="')&&!hoardTag.includes('tabindex'),'hoards labelled group without tabindex');
 const sourceC2=name=>readFileSync(join(ROOT,name),'utf8');
+const flashFooter = sourceC2('footer.mjs'), flashX = flashFooter.slice(flashFooter.indexOf('const xStroke'), flashFooter.indexOf('export function footerBuild(el'));
+ok(!/fx-(?:rg|og|rays|lobes|waves|flares|streaks|ringr|ring|r1|r2|core|white)\b|fxray/.test(flashX), 'animated nova classes/gradient must leave the SVG build string');
+ok(/<svg id="map"[^]*?<\/svg>\s*<canvas id="nova" aria-hidden="true"><\/canvas>\s*<canvas id="stars"/.test(sourceC2('main.mjs')), 'nova canvas must be directly after map and before stars');
 ok(/\['ArrowLeft', 'ArrowRight', 'Home', 'End'\]/.test(sourceC2('timeline.mjs'))&&/TL\.hooks\.jump\(e\.key === 'Home' \? 0 : STOPS\.length - 1\)/.test(sourceC2('timeline.mjs')),'timeline Home/End stop navigation');
 ok(/P = stepsFrame\(ts\);\s*if \(JOIN.leave\) JOIN.leave\(P\);/.test(sourceC2('main.mjs')),'hero leave hook directly after stepsFrame');ok(/JOIN.leave = place;/.test(sourceC2('join.mjs'))&&!/JOIN.frame =[^]*?\{\s*place\(P\)/.test(sourceC2('join.mjs')),'join frame no longer writes leave');
 ok(/\.jm-sheet-open \.find-hint\s*\{\s*opacity: 0;/.test(sourceC2('map.css'))&&sourceC2('findkit.mjs').includes("classList.add('jm-sheet-open')")&&sourceC2('findkit.mjs').includes("classList.remove('jm-sheet-open')"),'sheet hides find hint and close clears class');

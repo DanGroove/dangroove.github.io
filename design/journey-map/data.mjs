@@ -293,6 +293,7 @@ export const STEPS = {
 };
 
 export const EXPLORE = { in: 1.6, out: 0.9, most: 3, margin: 24, marginPhone: 12, wheel: 0.0016, wheelMax: 120, pinchWheel: 0.01,
+  footerFade: 0.5, clickRelease: 500,
   keyPan: 90, keyShift: 3, calmAlpha: 0.35, calmScale: 0.6, autoReserve: 2,
   ease: 0.12, slop: 6, friction: 5, velocityWindow: 0.08, key: 1.25, hintTime: 8, linePx: 16,
   bar: { edgePhone: 16, padStart: 14, padEnd: 34, arrowPhone: 12 } };
@@ -347,6 +348,7 @@ export const DEPTH = {
   },
 };
 
+export const NOVA_CANVAS = { dpr: 2, glowSprite: 512 };
 export const NOVA = {
   pulse: [2.6, 0.12, 0.9, 0.06], spike: [1.7, 0.2, 3.14], glow: [4.2, 0.07],
   rays: { n: 22, len: [4, 12], alpha: [0.3, 0.7], turn: 0.12, start: 1.1, width: 1, breathe: 0.7, period: [1.2, 3.2], peak: 0.16 },

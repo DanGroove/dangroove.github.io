@@ -5,7 +5,7 @@ import { tripBuild, tripResize, tripState, tripFocus, tripApply, tripMiniVisited
 import { starsBuild, starsResize, starsFrame, starsStill, starsTick, starsSkyVisible } from './stars.mjs';
 import { cardsBuild, cardsResize, cardsFrame, cardsList, cardsOverride, cardsClose } from './cards.mjs';
 import { tlBuild, tlResize, tlFrame } from './timeline.mjs';
-import { footerBuild, footerBuildX, footerResize, footerFrame, footerMotion } from './footer.mjs';
+import { footerBuild, footerBuildX, footerResize, footerNovaResize, footerFrame, footerMotion } from './footer.mjs';
 import { findsBuild, findsFrame, findsPointer } from './finds.mjs';
 import { JOURNEY, stepsBuild, stepsFrame, stepsResize, stepsProgress, stepsPause, stepsFocusNow } from './steps.mjs';
 import { depthBuild, depthResize, depthFrame, depthLook, depthInvalidate } from './depth.mjs';
@@ -25,8 +25,9 @@ const M = bigMap();
 MAIN.innerHTML = `<h1 class="sr">${COPY.title}</h1><section class="trip" id="trip" aria-label="${COPY.srMap}"><div class="stage" id="stage">
 <canvas id="deep" aria-hidden="true"></canvas>
 <svg id="map" class="map" role="group" aria-label="${COPY.srMap}">${mapDefs()}<g id="cam"><g id="b-all"><g id="b-sea">${M.sea}</g><g id="b-fill">${M.fill}</g><g id="b-coast">${M.coast}</g><g id="b-detail">${M.detail}</g></g><path id="trail-done" class="done" d="${pathD(TRAIL)}"/><g id="finds">${M.finds}</g><g id="fxg" transform="translate(${MAP.x[0]} ${MAP.x[1]})"></g></g></svg>
-<canvas id="stars" aria-hidden="true"></canvas>
+<canvas id="nova" aria-hidden="true"></canvas><canvas id="stars" aria-hidden="true"></canvas>
 <canvas id="air" aria-hidden="true"></canvas><svg id="sky" aria-hidden="true"></svg>
+${RM ? '' : `<button type="button" class="fx-hit" id="nova-hit" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true"></button>`}
 <div class="ov">${stoneDefs()}<p class="caption">${COPY.heroCaption}</p><p class="cue">${COPY.cue}</p><div class="cards" id="cards"></div><div class="mini" id="mini" role="navigation" aria-label="${COPY.miniMap}"></div><div class="pop" id="pop" role="status"></div><div class="sheet" id="sheet" role="dialog" aria-modal="false"></div><footer class="ft" id="ft"></footer></div>
 </div></section><div class="rm-cards" id="rmcards"></div><div class="tl" id="tl"></div>`;
 
@@ -46,7 +47,7 @@ starsBuild(CANVAS);
 depthBuild($('deep'), $('air'), $('sky'), RM);
 cardsBuild(RM ? $('rmcards') : $('cards'), goStop, RM);
 tlBuild(TLEL, { jump: goStop, scrub: p => JOURNEY.set(p) }, RM);
-footerBuild($('ft'), RM); footerBuildX($('fxg'), RM);
+footerBuild($('ft'), RM); footerBuildX($('fxg'), RM, $('nova'), $('nova-hit'));
 if (RM) $('rmcards').appendChild(TLEL);
 stepsBuild({ stage: $('stage'), rm: RM, resize, joinedTop: () => JOIN.heroStart });
 findsBuild(SVG, $('pop'), $('sheet'), $('b-all'), RM);
@@ -61,6 +62,7 @@ function resize() {
   tripResize(w, h, RM ? 0 : (phone ? 44 : 56) + room);
   SVG.setAttribute('width', w); SVG.setAttribute('height', h); SVG.setAttribute('viewBox', `0 0 ${w} ${h}`);
   starsResize(w, h);
+  footerNovaResize(w, h);
   depthResize(w, h);
   if (!RM) cardsResize(stepMode);
   if (FTWORLD) FTWORLD.style.transform = 'none';

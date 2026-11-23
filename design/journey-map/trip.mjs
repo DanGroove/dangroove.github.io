@@ -134,33 +134,42 @@ export function tripBuild(els) {
   TRIP_EL.mmView = els.mini.querySelector('.mm-view'); TRIP_EL.mmTrav = els.mini.querySelector('.mm-trav');
   TRIP_EL.mmStops = [...els.mini.querySelectorAll('.mm-stop')];
 }
+const tripWrites = new WeakMap();
+function tripWrite(el, key, value, attribute = false) {
+  const text = String(value), cache = tripWrites.get(el) || {}; tripWrites.set(el, cache);
+  const slot = (attribute ? 'attr:' : 'style:') + key;
+  if (cache[slot] === text) return; cache[slot] = text;
+  if (attribute) el.setAttribute(key, text); else el.style[key] = text;
+}
 export function tripApply(st) {
   const E = TRIP_EL, c = st.cam;
   const labelFade = smooth(...LABELS.fade, c.s / VIEW.s0);
   if (E.phone !== VIEW.phone) { E.phone = VIEW.phone; (VIEW.phone ? E.tier2 : E.subHome).appendChild(E.subs); }
   E.labels.forEach(label => { const k = VIEW.phone && label.stopSub ? 1 : labelScale(label.kind, c.s); if (label.k === null || Math.abs(k / label.k - 1) > LABELS.epsilon) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; } });
-  E.tier2.style.opacity = labelFade; E.scrim.style.opacity = labelFade;
-  E.cam.setAttribute('transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`);
+  tripWrite(E.tier2, 'opacity', labelFade); tripWrite(E.scrim, 'opacity', labelFade);
+  tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true);
   const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
-  E.sea.style.opacity = smooth(...DEPTH.fade.sea, h) * fade; E.fill.style.opacity = smooth(.25, .75, h) * fade;
-  E.detail.style.opacity = smooth(.45, .95, h) * fade; E.finds.style.opacity = smooth(.5, 1, h) * fade;
-  E.coastG.style.opacity = fade;
+  tripWrite(E.sea, 'opacity', smooth(...DEPTH.fade.sea, h)); tripWrite(E.fill, 'opacity', smooth(.25, .75, h));
+  tripWrite(E.detail, 'opacity', smooth(.45, .95, h)); tripWrite(E.finds, 'opacity', smooth(.5, 1, h));
+  tripWrite(E.coastG, 'opacity', 1);
   const dr = smooth(.12, .75, h);
-  E.coasts.forEach((p, i) => { if (dr >= 1) { p.style.strokeDasharray = 'none'; return; } const L = E.coastLen[i] * c.s; p.style.strokeDasharray = `${L.toFixed(1)} ${L.toFixed(1)}`; p.style.strokeDashoffset = (L * (1 - dr)).toFixed(1); });
+  E.coasts.forEach((p, i) => { if (dr >= 1) { tripWrite(p, 'strokeDasharray', 'none'); return; } const L = E.coastLen[i] * c.s; tripWrite(p, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(p, 'strokeDashoffset', (L * (1 - dr)).toFixed(1)); });
   // solid trail behind the traveller (dash in screen units because the stroke does not scale)
-  const L = TRAIL_LEN * c.s; E.done.style.strokeDasharray = `${L.toFixed(1)} ${L.toFixed(1)}`; E.done.style.strokeDashoffset = (st.exploreK ? 0 : (TRAIL_LEN - st.u) * c.s).toFixed(1);
-  E.done.style.opacity = st.inTrip ? fade : 0;
+  const L = TRAIL_LEN * c.s; tripWrite(E.done, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(E.done, 'strokeDashoffset', (st.exploreK ? 0 : (TRAIL_LEN - st.u) * c.s).toFixed(1));
+  tripWrite(E.done, 'opacity', st.inTrip ? 1 : 0);
   // the longship rides the crossing
-  const sp = pointAt(Math.max(WATER[0], Math.min(WATER[1], st.u))); E.ship.setAttribute('transform', `translate(${n2(sp[0])} ${n2(sp[1] + 5)}) scale(.55)`);
-  E.svg.style.opacity = st.dim;
-  E.caption.style.opacity = 1 - smooth(0, .3, h);
-  E.cue.style.opacity = smooth(.2, .5, st.overviewT) * (1 - smooth(0, .3, st.pushT));
+  const sp = pointAt(Math.max(WATER[0], Math.min(WATER[1], st.u))); tripWrite(E.ship, 'transform', `translate(${n2(sp[0])} ${n2(sp[1] + 5)}) scale(.55)`, true);
+  const opacity = st.dim * fade;
+  tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
+  tripWrite(E.svg, 'willChange', fade > 0 && fade < 1 ? 'opacity' : '');
+  tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
+  tripWrite(E.cue, 'opacity', smooth(.2, .5, st.overviewT) * (1 - smooth(0, .3, st.pushT)));
   // mini-map
   const mo = smooth(.5, 1, st.pushT) * (1 - smooth(0, .4, st.rushT));
-  E.mini.style.opacity = mo; E.mini.style.visibility = mo > .01 ? 'visible' : 'hidden';
+  tripWrite(E.mini, 'opacity', mo); tripWrite(E.mini, 'visibility', mo > .01 ? 'visible' : 'hidden');
   if (mo > .01) {
-    E.mmView.setAttribute('transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`);
-    const tp = pointAt(st.u); E.mmTrav.setAttribute('transform', `translate(${n2(tp[0])} ${n2(tp[1])})`);
+    tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
+    const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
 }
 const n2 = v => v.toFixed(2);

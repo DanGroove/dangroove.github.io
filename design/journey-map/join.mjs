@@ -12,7 +12,7 @@ const JN = {
   api: null, away: null, op: '', lastP: -1, dirty: true, lift: null,
   rm: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
-JN.svg = document.getElementById('map'); JN.fxg = document.getElementById('fxg'); JN.fx = null; JN.ov = JN.stage.querySelector('.ov');
+JN.svg = document.getElementById('map'); JN.hit = document.getElementById('nova-hit'); JN.fxg = document.getElementById('fxg'); JN.fx = null; JN.ov = JN.stage.querySelector('.ov');
 // vh of scroll: the leave ends at the end of the hero act; the canvas fades in over its last JOIN_OVERLAP vh
 const LEAVE_END = ACTS.hero, JOIN_OVERLAP = 1;
 
@@ -48,6 +48,7 @@ function place(P = stepsProgress()) {
     JN.away = away;
     JN.hero.classList.toggle('jm-away', away);
     JN.svg.inert = !away; JN.ov.inert = !away;
+    if (JN.hit) JN.hit.inert = !away;
     JN.dirty = true;
   }
 }
