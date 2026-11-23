@@ -147,6 +147,21 @@ Remove the board's rows (`FIND_PLAY.tafl`, the `tafl*` copy) and add `HAMMER` (e
 - `node tools/check.mjs`, `node tools/finds-test.mjs`, `node tools/hammer-test.mjs`, `node tools/steps-test.mjs`, `node tools/depth-test.mjs`, `node tools/explore-test.mjs` all pass.
 - Pack both pages: `node tools/pack.mjs` and `node tools/pack-joined.mjs`.
 
+## 6b. Additions from the review (these override anything above that disagrees)
+
+A review of version 6 found gaps this brief must close.
+
+- **Keep throwing without holding a key.** A toggle button under the field, "Keep throwing" (`aria-pressed`), and the key T, switch automatic throwing on and off for keyboard and switch users (touch already throws by itself). Name it in the controls line.
+- **The field** is a focusable element (`tabindex="0"`) with a name that gives the controls. Its keydown calls `preventDefault` and `stopPropagation` for every key the game uses. While the sheet is open, no key reaches the journey or part A's explore camera (its 0, + and - keys included); Escape still closes the sheet.
+- **Pause** also when focus leaves the sheet or the window loses focus (blur), as well as on close, page hidden and P.
+- **The status line** says at most one message per kind of event per second; a lost heart is always said.
+- **The rune choice** moves focus to the first rune card, and each card's name includes its key ("1", "2", "3").
+- **The slot fact** (`FIND_COPY.hammerFact`) shows at the foot of the start card as well as on the end card, so it can be read without winning.
+- **Reduced motion** also stops the map find's idle sparks, its tremble and its `hear` hop.
+- **Tests to add:** in `tools/finds-test.mjs`, keys pressed in the field never move the journey (`P` unchanged); the run pauses on close, blur and hidden; the best-run read and write survive a `localStorage` that throws. In `tools/hammer-test.mjs`, the pools' sizes are the same before and after 10,000 steps. In `tools/check.mjs`, the game's rune list never holds Algiz, Sowilo, Tiwaz or Othala (`z`, `s`, `t`, `o` in `RUNES`).
+- **Weight:** `hammer.mjs`, `findhammer.mjs` and the game's data and drawings together stay under 30 KB gzipped. Add gzip budgets to `tools/check.mjs` (with Node's `zlib`): every `*.mjs` plus `map.css` in this folder (not `hero-copy/`) at most 150 KB gzipped; the packed `dist/journey-map.html` at most 320 KB and `dist/journey-joined.html` at most 540 KB gzipped (check the packed files only when they exist). Print the numbers.
+- **Frame cost:** design for a browser frame of at most 4 ms of script (95th percentile) at 1440 x 900 in the busiest wave with every pool full; the review will measure it.
+
 ## 7. Report: `HAMMER-BUILD.md`
 
 What you built, file by file; the bots' rates; where you differ from this brief and why; anything you left out (and which rule stopped you); what a browser review should look at first. Plain ASCII punctuation.
