@@ -21,6 +21,12 @@ for (const view of [{ w: 1440, h: 800 }, { w: 390, h: 612 }]) {
     if ((bounds[2] - bounds[0]) * cam.s <= view.w) near(centre[0], (bounds[0] + bounds[2]) / 2, 'small bounds centred x');
     if ((bounds[3] - bounds[1]) * cam.s <= view.h) near(centre[1], (bounds[1] + bounds[3]) / 2, 'small bounds centred y');
   }
+  // polish round 1 (L-15): pans keep a share of the view on the map frame, or the whole frame where it is smaller
+  const keep = { frame: [14.5, 14.5, 585.5, 885.5], share: EXPLORE.keep };
+  for (const scale of [fit, fit * 2, fit * 5, top]) for (const x of [-1e6, 0, 1e6]) for (const y of [-1e6, 0, 1e6]) {
+    const kept = exploreClamp({ s: scale, tx: x, ty: y }, bounds, view, fit, top, keep), a = exploreWorld(kept, [0, 0]), b = exploreWorld(kept, [view.w, view.h]);
+    for (const i of [0, 1]) { const over = Math.min(b[i], keep.frame[i + 2]) - Math.max(a[i], keep.frame[i]), need = Math.min(keep.share * (b[i] - a[i]), keep.frame[i + 2] - keep.frame[i]); assert.ok(over >= need - 1e-6, 'pan keeps the map frame in view'); }
+  }
   const cam = { s: fit * 3, tx: -130, ty: -270 }, point = [view.w * .31, view.h * .67];
   for (const factor of [.0001, .7, 1.25, 1000]) {
     const zoomed = exploreZoom(cam, point, factor, fit, top), a = exploreWorld(cam, point), b = exploreWorld(zoomed, point);

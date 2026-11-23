@@ -1,8 +1,8 @@
 // Part A: thought and memory return; deadlines become a three-poke chase.
-import { C, STOPS, MAP, FIND_COPY, FIND_PLAY, FIND_TIMING, RAVEN_RIG } from './data.mjs';
+import { STOPS, MAP, FIND_COPY, FIND_PLAY, FIND_TIMING, RAVEN_RIG } from './data.mjs';
 import { JORM, jormPoint, ravenPose, ravenPoseTransforms } from './art.mjs';
 import { clamp01, lerp, VIEW } from './trip.mjs';
-import { FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, closeSheet, attend, findBits, findFormat, findRange, findSheet, findSlot, findReady } from './findkit.mjs';
+import { FD, FIND_BY, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, closeSheet, attend, findBits, findFormat, findRange, findSheet, findSlot, findReady } from './findkit.mjs';
 
 export function findRavens(svg) {
   const R = FIND_PLAY.raven, G = RAVEN_RIG, f = FIND_BY.ravens, el = svg.querySelector('#f-ravens'), gifts = el.querySelector('.rv-gifts');

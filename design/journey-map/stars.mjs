@@ -2,7 +2,7 @@
 // On the joined page (join.mjs) the list is built from the real hero's stars instead of the stand-in field.
 import { STARS, C, MAP, NOVA, DEPTH, STEPS } from './data.mjs';
 import { rnd, onLand, COAST_A, COAST_B, polyLen } from './art.mjs';
-import { TRAIL_DOTS, VIEW, toScreen, smooth, lerp, clamp01, easeIO, novaBuildGather } from './trip.mjs';
+import { TRAIL_DOTS, VIEW, toScreen, smooth, lerp, clamp01, easeIO, novaBuildGather, coastAt } from './trip.mjs';
 import { depthFrameBox, depthFrameCovers, novaRingRadius, novaFlare, novaShare, NOVA_LIVE } from './depth.mjs';
 
 const SK = { cv: null, ctx: null, dpr: 1, list: [], trav: null, src: null, n: -1, standN: 0, seaN: 0, keepP: .3, bins: new Map(), tails: new Map(), pt: [0, 0], drift: 0, orbit: 0, burn: 0, skyPointer: [0.5, 0.5], skyCount: 0, tuning: '', assignment: '', skyVisible: false, rushAnchor: null };
@@ -32,7 +32,8 @@ function starsAngles() {
   const r = rnd(NOVA.seed), map = SK.list.filter(s => s.kind !== 'sky'), sky = SK.list.filter(s => s.kind === 'sky');
   for (const list of [map, sky]) {
     for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
-    list.forEach((s, i) => { s.ang = (i * NOVA.gather.golden % 1) * Math.PI * 2; s.gather = s.kind !== 'sky' || i < Math.floor(sky.length * NOVA.gather.sky); s.ord2 ??= r(); });
+    // gr: the star's share of the ring's spread, hashed from its index
+    list.forEach((s, i) => { s.ang = (i * NOVA.gather.golden % 1) * Math.PI * 2; s.gather = s.kind !== 'sky' || i < Math.floor(sky.length * NOVA.gather.sky); s.ord2 ??= r(); s.gr = Math.abs(Math.sin((i + (list === sky ? .5 : 0)) * 12.9898) * 43758.5453) % 1; });
   }
 }
 // One C1 path: a cubic meets the ring with the spiral's exact tangent, then curls into the X.
@@ -51,8 +52,6 @@ function seaPoint(r) { let p; for (let t = 0; t < 60; t++) { p = [30 + r() * 540
 export function starsJoin(src) { SK.src = src; SK.n = -1; }
 const COASTS = [COAST_A, COAST_B].map(P => { const cum = [0]; for (let i = 1; i <= P.length; i++) { const a = P[i - 1], b = P[i % P.length]; cum.push(cum[i - 1] + Math.hypot(b[0] - a[0], b[1] - a[1])); } return { P, cum, L: polyLen(P, 1) }; });
 const alongCoast = (c, d) => { const { P, cum } = c; let i = 1; while (i < cum.length - 1 && cum[i] < d) i++; const t = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1), a = P[i - 1], b = P[i % P.length]; return [lerp(a[0], b[0], t), lerp(a[1], b[1], t)]; };
-// the progress of the fall at which the coast line has drawn itself to fraction u (trip.mjs draws it by smooth(.12, .75, h))
-const coastAt = u => .12 + .63 * (.5 - Math.sin(Math.asin(1 - 2 * clamp01(u)) / 3));
 const ANGLE = (x, y) => Math.atan2(y, x);
 
 function heroList() {
@@ -86,8 +85,8 @@ function heroList() {
   const total = COASTS[0].L + COASTS[1].L, places = [];
   for (let j = 0; j < nCoast; j++) {
     let d = (j + .5) / nCoast * total, c = 0; if (d > COASTS[0].L) { d -= COASTS[0].L; c = 1; }
-    const u = d / COASTS[c].L, m = alongCoast(COASTS[c], d), hu = coastAt(u), t1 = hu - .02, t0 = t1 - Math.min(.45, Math.max(.06, t1 - .02));
-    places.push({ m, hu, t0: Math.max(.02, t0), t1 });
+    const u = d / COASTS[c].L, m = alongCoast(COASTS[c], d), hu = coastAt(u), t1 = Math.max(.1, hu - .02), t0 = t1 - Math.min(.45, Math.max(.1, t1 - .02));
+    places.push({ m, hu, t0: Math.max(0, t0), t1 });
   }
   places.sort((a, b) => ANGLE(a.m[0] / MAP.w - .5, a.m[1] / MAP.h - .5) - ANGLE(b.m[0] / MAP.w - .5, b.m[1] / MAP.h - .5));
   rest.forEach((i, j) => { const s = star(i), p = places[j]; s.kind = 'coast'; s.map = p.m; s.hu = p.hu; s.t0 = p.t0; s.t1 = p.t1; s.ord = 0; list.push(s); });
@@ -151,7 +150,8 @@ export function starsFrame(time, st, pointer, opt = {}) {
   if (K <= 0) { flush(ctx); ctx.globalAlpha = 1; return; }
   const h = st.handoffT, px = (pointer[0] - .5) * STARS.parallax, py = (pointer[1] - .5) * STARS.parallax;
   const Xs = toScreen(st, MAP.x), diag = Math.hypot(W, H), worldScale = st.exploreK ? st.cam.s / st.sEnd : 1;
-  const gatherRadius = NOVA.gather.ring * Math.min(W, H), gatherT = s => novaBuildGather(st.rushT, s.ord2);
+  const gatherRadius = NOVA.gather.ring * Math.min(W, H), gatherT = s => novaBuildGather(st.rushT, s.ord2), G = NOVA.gather;
+  const ringOf = s => gatherRadius * (1 + G.spread * (s.gr - .5)), tailOf = q => G.tailGain / G.tail * (1 - (1 - G.ringTail) * smooth(G.join - .15, G.join, q));
   const dotR = Math.min(2.1, .75 + .38 * st.cam.s);
   if (h <= 0) SK.skyPointer = pointer.slice();
   const heroPos = (s, sky = false) => { const pt = sky && h > 0 ? SK.skyPointer : pointer; return [(((s.hx + SK.drift * STARS.drift * s.z) % 1) + 1) % 1 * W + (pt[0] - .5) * STARS.parallax * s.z, s.hy * H + (pt[1] - .5) * STARS.parallax * s.z]; };
@@ -180,8 +180,8 @@ export function starsFrame(time, st, pointer, opt = {}) {
       }
       if (s.gather && st.rushT > 0 && !opt.still) {
         const home = [x, y], gt = gatherT(s), q = st.blastT > 0 ? 1 - easeIO(st.blastT) : gt;
-        const at = novaGatherPoint(home, Xs, s.ang, gatherRadius, q), prior = novaGatherPoint(home, Xs, s.ang, gatherRadius, Math.max(0, q - NOVA.gather.tail));
-        x = at[0]; y = at[1]; tail = [(at[0] - prior[0]) * NOVA.gather.tailGain / NOVA.gather.tail, (at[1] - prior[1]) * NOVA.gather.tailGain / NOVA.gather.tail];
+        const R = ringOf(s), at = novaGatherPoint(home, Xs, s.ang, R, q), prior = novaGatherPoint(home, Xs, s.ang, R, Math.max(0, q - G.tail)), k = tailOf(q);
+        x = at[0]; y = at[1]; tail = [(at[0] - prior[0]) * k, (at[1] - prior[1]) * k];
         if (st.blastT > 0) tail = tail.map(v => -v);
         else al *= 1 - smooth(.94, 1, gt);
       } else if (st.blastT > 0 && !opt.still) {
@@ -213,8 +213,8 @@ export function starsFrame(time, st, pointer, opt = {}) {
       if (st.rushT === 0 && pullTail) tail = pullTail;
       if (st.rushT > 0 && st.blastT === 0) {
         const tt = gatherT(s), e = tt, home = [x, y], join = smooth(0, NOVA.gather.join, tt);
-        const at = novaGatherPoint(home, Xs, s.ang, gatherRadius, e), prior = novaGatherPoint(home, Xs, s.ang, gatherRadius, Math.max(0, e - NOVA.gather.tail));
-        tail = [(at[0] - prior[0]) * NOVA.gather.tailGain / NOVA.gather.tail, (at[1] - prior[1]) * NOVA.gather.tailGain / NOVA.gather.tail]; x = at[0]; y = at[1]; al = s.kind === 'coast' ? .6 * join : lerp(al, Math.max(al, .6), join);
+        const R = ringOf(s), at = novaGatherPoint(home, Xs, s.ang, R, e), prior = novaGatherPoint(home, Xs, s.ang, R, Math.max(0, e - G.tail)), k = tailOf(e);
+        tail = [(at[0] - prior[0]) * k, (at[1] - prior[1]) * k]; x = at[0]; y = at[1]; al = s.kind === 'coast' ? .6 * join : lerp(al, Math.max(al, .6), join);
         if (pullTail) tail = [tail[0] + pullTail[0] * (1 - join), tail[1] + pullTail[1] * (1 - join)];
         al *= 1 - smooth(.94, 1, tt);
       }
@@ -228,7 +228,7 @@ export function starsFrame(time, st, pointer, opt = {}) {
         col = s.red && s.keep ? C.red : C.paper;
         if (st.exploreK > 0) {
           const q = smooth(s.ord2 * NOVA.gather.stagger, s.ord2 * NOVA.gather.stagger + NOVA.gather.time, st.exploreK);
-          const at = novaGatherPoint(m, Xs, s.ang, gatherRadius * worldScale, 1 - q), remaining = (1 - q) ** 3;
+          const at = novaGatherPoint(m, Xs, s.ang, ringOf(s) * worldScale, 1 - q), remaining = (1 - q) ** 3;
           x = at[0] + (x - Xs[0]) * remaining; y = at[1] + (y - Xs[1]) * remaining;
           rad = lerp(rad, endR, q); al = lerp(al, endA, q); col = C.paper; tail = null;
         }
@@ -262,9 +262,9 @@ export function starsFrame(time, st, pointer, opt = {}) {
   const ta = (1 - smooth(.2, .7, st.rushT)) * K;
   if (lk && g < 1) { put(tx, ty, lightR(lk.size / 2), lk.alpha * (1 - g) * K, lk.colour); flush(ctx); }
   if (ta > 0 && g > 0) {
-    const r0 = lk ? lightR(lk.size / 2) : 7;
-    ctx.fillStyle = C.red; ctx.globalAlpha = .22 * ta * g; ctx.beginPath(); ctx.arc(tx, ty, lerp(r0, 11, g), 0, 6.2832); ctx.fill();
-    ctx.globalAlpha = ta * g; fourStar(ctx, tx, ty, lerp(r0, 7, g));
+    const r0 = lk ? lightR(lk.size / 2) : 7, zk = lerp(STARS.travZoomed, 1, smooth(VIEW.s0, VIEW.sT, st.cam.s));
+    ctx.fillStyle = C.red; ctx.globalAlpha = .22 * ta * g; ctx.beginPath(); ctx.arc(tx, ty, lerp(r0, 11 * zk, g), 0, 6.2832); ctx.fill();
+    ctx.globalAlpha = ta * g; fourStar(ctx, tx, ty, lerp(r0, 7 * zk, g));
   }
   ctx.globalAlpha = 1;
 }

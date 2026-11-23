@@ -4,11 +4,6 @@ import { C, MAP, COPY, STOPS, FINDS, FIND_COPY, FIND_PLAY, HAMMER, YGG, MARK, LA
 export const rnd = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 export const n1 = n => +(+n).toFixed(1);
 export const spline = (P, closed, seg = 10) => { const n = P.length, out = [], g = i => closed ? P[(i + n) % n] : P[Math.max(0, Math.min(n - 1, i))]; for (let i = 0; i < (closed ? n : n - 1); i++) { const p0 = g(i - 1), p1 = g(i), p2 = g(i + 1), p3 = g(i + 2); for (let j = 0; j < seg; j++) { const t = j / seg, t2 = t * t, t3 = t2 * t; out.push([0, 1].map(k => .5 * (2 * p1[k] + (p2[k] - p0[k]) * t + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t2 + (3 * p1[k] - p0[k] - 3 * p2[k] + p3[k]) * t3))); } } if (!closed) out.push(P[n - 1]); return out; };
-export const scallop = (P, b, closed = true) => {
-  let d = `M${n1(P[0][0])} ${n1(P[0][1])}`; const n = P.length, m = closed ? n : n - 1;
-  for (let i = 0; i < m; i++) { const a = P[i], c = P[(i + 1) % n], mx = (a[0] + c[0]) / 2, my = (a[1] + c[1]) / 2, dx = c[0] - a[0], dy = c[1] - a[1], L = Math.hypot(dx, dy) || 1; const bb = typeof b === 'function' ? b(i) : b; d += `Q${n1(mx + dy / L * bb)} ${n1(my - dx / L * bb)} ${n1(c[0])} ${n1(c[1])}`; }
-  return d + (closed ? 'Z' : '');
-};
 // a tapered tube round a centreline: width w0 at the start to w1 at the end, optional wobble
 export const tube = (P, w0, w1 = 0, wob = 0, seed = 1) => {
   const S = spline(P, false, YGG.tube.seg), n = S.length, L = [], Rt = [];
@@ -210,14 +205,18 @@ export function bigMap() {
   const r = rnd(11); let s = '', top = '', top2 = '';  const LB = []; GROVE.length = 0;
   const lab = (x, y, t, o = {}) => { const sz = o.s || 8, w = t.length * (sz * .56 + (o.ls || 0)), x1 = o.a == 'end' ? x - w : o.a == 'middle' ? x - w / 2 : x; LB.push([x1 - 3, y - sz - 2, x1 + w + 3, y + 3]); return svgText(x, y, t, { ...o, h: 1 }); };
   const W = MAP.waypoints;
-  const tier = row => { const text = row.lines ? row.lines.map((line,i)=>'<tspan x="0" y="' + i * row.unit * LABELS.line + '">' + line + (i < row.lines.length-1 ? ' ' : '') + '</tspan>').join('') : row.text; return '<g class="label-anchor" transform="translate(' + row.x + ' ' + row.y + ')"><g class="label-scale" data-label="' + row.kind + '" data-unit="' + row.unit + '" data-stop-sub="' + !!row.stopSub + '">' + lab(0, 0, text, { s: row.unit, w: row.name ? 700 : 500, c: row.red ? C.red : row.name ? C.paper : C.note, a: row.anchor, ls: row.ls }) + '</g></g>'; };
+  const tier = row => { const text = row.lines ? row.lines.map((line,i)=>'<tspan x="0" y="' + i * row.unit * LABELS.line + '">' + line + (i < row.lines.length-1 ? ' ' : '') + '</tspan>').join('') : row.text; return '<g class="label-anchor" data-row="' + row.i + '" transform="translate(' + row.x + ' ' + row.y + ')"><g class="label-scale" data-label="' + row.kind + '" data-unit="' + row.unit + '" data-stop-sub="' + !!row.stopSub + '">' + lab(0, 0, text, { s: row.unit, w: row.name ? 700 : 500, c: row.red ? C.red : row.name ? C.paper : C.note, a: row.anchor, ls: row.ls }) + '</g></g>'; };
   const labelRows = mapLabelRows(); labelRows.forEach(row => { const width = row.text.length * row.unit * LABELS.width, left = row.anchor === 'end' ? row.x - width : row.anchor === 'middle' ? row.x - width / 2 : row.x; LB.push([left - 3, row.y - row.unit - 2, left + width + 3, row.y + 3]); }); top += labelRows.filter(row => !row.stopSub).map(tier).join('');
   top2 += '<g class="map-subs">' + labelRows.filter(row => row.stopSub).map(tier).join('') + '</g>';
-  COPY.regions.forEach(g => { top2 += lab(g.x, g.y, g.t, { s: 5.8, ls: 1.6, c: C.dim, a: 'middle', i: g.i }); if (g.rune) { const rw = runeWord(g.rune, 3.2, g.x, g.y + 2.6, 'middle'); LB.push([g.x - rw.w / 2 - 2, g.y + 2, g.x + rw.w / 2 + 2, g.y + 7]); top2 += '<path class="rn rn-dim" d="' + rw.d + '"/>'; } });
-  COPY.notes.forEach(nt => top2 += lab(nt.x, nt.y, nt.t, { s: nt.s, i: 1, c: nt.dim ? C.dim : C.note, a: nt.a }));
-  top2 += svgText(40, 380, COPY.sea, { s: 5.8, ls: 2.4, a: 'middle', t: 'rotate(-90 40 380)' });
+  // regions, notes and captions carry their map-unit box, for trip.mjs's fade under the timeline, step bar and hint (L-17)
+  const t2 = (box, inner) => '<g class="t2b" data-b="' + box.map(v => +v.toFixed(1)).join(' ') + '">' + inner + '</g>';
+  const lab2 = (...a) => { const piece = lab(...a); return t2(LB.at(-1), piece); };
+  COPY.regions.forEach(g => { let piece = lab(g.x, g.y, g.t, { s: 5.8, ls: 1.6, c: C.dim, a: 'middle', i: g.i }), box = LB.at(-1).slice(); if (g.rune) { const rw = runeWord(g.rune, 3.2, g.x, g.y + 2.6, 'middle'), rb = [g.x - rw.w / 2 - 2, g.y + 2, g.x + rw.w / 2 + 2, g.y + 7]; LB.push(rb); box = [Math.min(box[0], rb[0]), box[1], Math.max(box[2], rb[2]), rb[3]]; piece += '<path class="rn rn-dim" d="' + rw.d + '"/>'; } top2 += t2(box, piece); });
+  COPY.notes.forEach(nt => top2 += lab2(nt.x, nt.y, nt.t, { s: nt.s, i: 1, c: nt.dim ? C.dim : C.note, a: nt.a }));
+  const seaW = COPY.sea.length * (5.8 * .56 + 2.4);
+  top2 += t2([33, 380 - seaW / 2, 42, 380 + seaW / 2], svgText(40, 380, COPY.sea, { s: 5.8, ls: 2.4, a: 'middle', t: 'rotate(-90 40 380)' }));
   const [gx, gy] = MAP.ygg, [wx, wy] = MAP.well;
-  top2 += lab(...YGG.label, COPY.ygg, { s: 5.4, ls: 1.4, c: C.dim }) + lab(wx, wy + 1, COPY.well, { s: 4.8, ls: .8, c: C.note, a: 'middle' }) + lab(wx, wy + 8, COPY.wellSub, { s: 4.4, i: 1, c: C.dim, a: 'middle' });
+  top2 += lab2(...YGG.label, COPY.ygg, { s: 5.4, ls: 1.4, c: C.dim }) + lab2(wx, wy + 1, COPY.well, { s: 4.8, ls: .8, c: C.note, a: 'middle' }) + lab2(wx, wy + 8, COPY.wellSub, { s: 4.4, i: 1, c: C.dim, a: 'middle' });
 
   // sea
   let rh = ''; for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8 + .2; rh += `M92 716L${n1(92 + Math.cos(a) * 1200)} ${n1(716 + Math.sin(a) * 1200)}`; }
@@ -254,16 +253,15 @@ export function bigMap() {
   FINDS.filter(f => f.n).forEach(f => s += marker(f.mark[0], f.mark[1], f.n, f.id));
 
   // title, legend, frame, knots
-  // The map's title and kicker sit in a group of their own: tripApply fades it out as the journey sets out, so it is never a giant
-  // cut-off line across the top of a stop or a glide, and back in at the overview and in explore.
+  // The title and kicker's own group: tripApply fades it out as the journey sets out, back in at the overview and in explore.
   top += '<g class="map-title">' + svgText(44, 78, COPY.title, { s: 30, w: 800, c: C.paper, ls: -.6 });
   const K = LABELS.kicker, P = LABELS.plate, rule = LABELS.rule;
-  top += '<g transform="translate(' + K.join(' ') + ')"><g class="label-scale" data-label="small" data-unit="' + LABELS.small.unit + '"><rect x="' + P[0] + '" y="' + P[1] + '" width="' + P[2] + '" height="' + P[3] + '" fill="' + C.ink + '"/>' + svgText(0, 0, COPY.kicker, { s: LABELS.small.unit, ls: 1.8 }) + '<path class="t" d="M' + rule[0] + ' ' + rule[1] + 'h' + rule[2] + '"/></g></g></g>';
+  top += '<g transform="translate(' + K.join(' ') + ')"><g class="label-scale" data-label="small" data-unit="' + LABELS.small.unit + '"><rect x="' + P[0] + '" y="' + P[1] + '" width="' + P[2] + '" height="' + P[3] + '" fill="' + C.ink + '" class="kick-r"/>' + svgText(0, 0, COPY.kicker, { s: LABELS.small.unit, ls: 1.8, cls: 'kick' }) + '<path class="t kick-r" d="M' + rule[0] + ' ' + rule[1] + 'h' + rule[2] + '"/></g></g></g>';
   s += `<rect x="23" y="822" width="554" height="55" fill="${C.ink}"/><line x1="23" y1="822.5" x2="577" y2="822.5" stroke="${C.paper}" stroke-opacity=".3"/>`;
   const M = MARK.legend, [sx, sy, sr, sw, sb, sa] = M;
   s += '<g transform="translate(' + sx + ' ' + sy + ')"><circle class="o" r="' + sr + '"/><path d="M0 0V-' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 ' + sr + ' 0ZM0 0V' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 -' + sr + ' 0Z" fill="' + C.note + '" opacity="' + sa + '"/><circle class="l" r="' + sr + '" stroke-width="' + sw + '"/><circle class="pf" r="' + sb + '"/></g>';
   s += '<path d="M64 853l8 8m0 -8l-8 8" stroke="' + C.red + '" stroke-width="2" stroke-linecap="round"/>' + marker(140, 838, 1) + '<path d="M133 857h14" stroke="' + C.paper + '" stroke-width="2.3" stroke-linecap="round" stroke-dasharray=".1 4.5"/>';
-  top += Object.values(COPY.legend).map((text, i) => { const p = LABELS.legendAt[i]; return '<g transform="translate(' + p.join(' ') + ')"><g class="label-scale" data-label="legend" data-unit="' + LABELS.legend.unit + '">' + svgText(0, 0, text, { s: LABELS.legend.unit, c: C.note }) + '</g></g>'; }).join('');
+  top += Object.values(COPY.legend).map((text, i) => { const p = LABELS.legendAt[i]; return '<g class="lg" transform="translate(' + p.join(' ') + ')"><g class="label-scale" data-label="legend" data-unit="' + LABELS.legend.unit + '">' + svgText(0, 0, text, { s: LABELS.legend.unit, c: C.note }) + '</g></g>'; }).join('');
   s += '<g class="map-tier1">' + top + '</g>';
 
   s += `<rect x="14.5" y="14.5" width="571" height="871" fill="none" stroke="${C.paper}" stroke-opacity=".35"/><rect x="18" y="18" width="564" height="864" fill="none" stroke="${C.paper}" stroke-opacity=".28" stroke-width="5" stroke-dasharray="1 15"/><rect x="22.5" y="22.5" width="555" height="855" fill="none" stroke="${C.paper}" stroke-opacity=".2"/>`;
@@ -337,8 +335,9 @@ export function jormungandr() {
 }
 
 export function mapLabelRows() {
-  const rows = []; STOPS.forEach(st => { const L = st.label; rows.push({ kind: 'name', unit: LABELS.name.unit, text: L.t, x: L.x, y: L.y + LABELS.nameDY, anchor: L.a, name: true, ls: L.tracking }); rows.push({ kind: 'sub', unit: LABELS.sub.unit, text: L.sub, x: L.x + (st.id === 'hmc1' ? LABELS.hmcSubDX : st.id === 'hmc2' ? LABELS.hmcAgainSubDX : 0), y: L.y + LABELS.subOffset + LABELS.subDY + (st.id === 'hmc1' ? LABELS.hmcSubDY : 0), anchor: L.a, stopSub: true, ls: st.id === 'hmc2' ? LABELS.hmcAgainTracking : 0 }); });
-  rows.push({ kind: 'x', unit: LABELS.x.unit, text: COPY.xLabel, lines: COPY.xLabel.split(LABELS.xBreak).map((s,i)=>i ? LABELS.xBreak.trimStart()+s : s), x: MAP.x[0] + LABELS.xAt[0], y: MAP.x[1] + LABELS.xAt[1] + LABELS.nameDY, anchor: 'start', name: true, red: true }, { kind: 'sub', unit: LABELS.sub.unit, text: COPY.xSub, x: MAP.x[0] + LABELS.xSubAt[0], y: MAP.x[1] + LABELS.xSubAt[1] + LABELS.xSubDY, anchor: 'start', stopSub: true }); return rows;
+  const rows = []; STOPS.forEach(st => { const L = st.label; rows.push({ kind: 'name', unit: LABELS.name.unit, text: L.t, x: L.x, y: L.y + LABELS.nameDY, anchor: L.a, name: true, ls: L.tracking, stop: st.id }); rows.push({ kind: 'sub', unit: LABELS.sub.unit, text: L.sub, x: L.x + (st.id === 'hmc1' ? LABELS.hmcSubDX : st.id === 'hmc2' ? LABELS.hmcAgainSubDX : 0), y: L.y + LABELS.subOffset + LABELS.subDY + (L.subDY || 0) + (st.id === 'hmc1' ? LABELS.hmcSubDY : 0), anchor: L.a, stopSub: true, ls: st.id === 'hmc2' ? LABELS.hmcAgainTracking : 0, stop: st.id }); });
+  rows.push({ kind: 'x', unit: LABELS.x.unit, text: COPY.xLabel, lines: COPY.xLabel.split(LABELS.xBreak).map((s,i)=>i ? LABELS.xBreak.trimStart()+s : s), x: MAP.x[0] + LABELS.xAt[0], y: MAP.x[1] + LABELS.xAt[1] + LABELS.nameDY, anchor: 'start', name: true, red: true, stop: 'x' }, { kind: 'sub', unit: LABELS.sub.unit, text: COPY.xSub, x: MAP.x[0] + LABELS.xSubAt[0], y: MAP.x[1] + LABELS.xSubAt[1] + LABELS.xSubDY, anchor: 'start', stopSub: true, stop: 'x' });
+  rows.forEach((row, i) => { row.i = i; }); return rows;
 }
 
 export function mapLabelBox(row, s, phone) {

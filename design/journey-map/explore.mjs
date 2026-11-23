@@ -8,35 +8,38 @@ export const exploreLayerPoint = (p, layer) => [p[0] * layer.c + layer.dx, p[1] 
 export const exploreLayerInverse = (p, layer) => [(p[0] - layer.dx) / layer.c, (p[1] - layer.dy) / layer.c];
 export const exploreWorld = (cam, p) => [(p[0] - cam.tx) / cam.s, (p[1] - cam.ty) / cam.s];
 export const exploreMix = (a, b, k) => ({ s: a.s * (b.s / a.s) ** k, tx: lerp(a.tx, b.tx, k), ty: lerp(a.ty, b.ty, k) });
-export function exploreClamp(cam, bounds, view, fit, top) {
-  const s = Math.max(fit, Math.min(top, cam.s));
-  const axis = (lo, hi, size, translation) => {
+// keep ({ frame, share }) holds share of the view's width and height on the map frame, or all of a smaller frame (L-15)
+export function exploreClamp(cam, bounds, view, fit, top, keep) {
+  const s = Math.max(fit, Math.min(top, cam.s)), f = keep ? keep.frame : [];
+  const axis = (lo, hi, size, translation, f0, f1) => {
     const half = size / (2 * s), centre = (size / 2 - translation) / s;
-    const at = hi - lo <= 2 * half ? (lo + hi) / 2 : Math.max(lo + half, Math.min(hi - half, centre));
+    let a = lo + half, b = hi - half;
+    if (keep) { const need = Math.min(keep.share * 2 * half, f1 - f0); a = Math.max(a, f0 + need - half); b = Math.min(b, f1 - need + half); }
+    const at = hi - lo <= 2 * half ? (lo + hi) / 2 : Math.max(a, Math.min(b, centre));
     return size / 2 - at * s;
   };
-  return { s, tx: axis(bounds[0], bounds[2], view.w, cam.tx), ty: axis(bounds[1], bounds[3], view.h, cam.ty) };
+  return { s, tx: axis(bounds[0], bounds[2], view.w, cam.tx, f[0], f[2]), ty: axis(bounds[1], bounds[3], view.h, cam.ty, f[1], f[3]) };
 }
 export function exploreZoom(cam, point, factor, fit, top) {
   const s = Math.max(fit, Math.min(top, cam.s * factor)), p = exploreWorld(cam, point);
   return { s, tx: point[0] - p[0] * s, ty: point[1] - p[1] * s };
 }
-export function exploreGlide(cam, velocity, dt, bounds, view, fit, top) {
+export function exploreGlide(cam, velocity, dt, bounds, view, fit, top, keep) {
   const damp = Math.exp(-EXPLORE.friction * dt), distance = (1 - damp) / EXPLORE.friction;
   const desired = { ...cam, tx: cam.tx + velocity[0] * distance, ty: cam.ty + velocity[1] * distance };
-  const next = exploreClamp(desired, bounds, view, fit, top);
+  const next = exploreClamp(desired, bounds, view, fit, top, keep);
   const v = velocity.map((speed, i) => Math.abs(speed * damp) < DEPTH.epsilon || Math.abs(next[i ? 'ty' : 'tx'] - desired[i ? 'ty' : 'tx']) > DEPTH.epsilon ? 0 : speed * damp);
   return { cam: next, velocity: v };
 }
 
-const EX = { active: false, k: 0, cam: null, target: null, end: null, bounds: null, view: null, fit: 1, top: 1,
+const EX = { active: false, k: 0, cam: null, target: null, end: null, bounds: null, keep: null, view: null, fit: 1, top: 1,
   motion: null, velocity: [0, 0], pointers: new Map(), gesture: null, samples: [], layer: { c: 1, dx: 0, dy: 0 },
   stage: null, world: null, journey: null, rm: true, hint: null, hintUsed: false, hintLeft: 0, changed: false, suppress: false, suppressTimer: null, owners: new Set(), footer: 1, departing: false };
 export const exploreActive = () => EX.active;
 export const exploreBusy = () => EX.active || EX.k > 0;
 export const exploreTransform = () => EX.layer;
 const exploreAllowed = () => !EX.rm && EX.end && !EX.journey.moving && Math.abs(EX.journey.P - EX.journey.beats.at(-1).P) < Number.EPSILON;
-const exploreBound = cam => exploreClamp(cam, EX.bounds, EX.view, EX.fit, EX.top);
+const exploreBound = cam => exploreClamp(cam, EX.bounds, EX.view, EX.fit, EX.top, EX.keep);
 const exploreFitCam = () => ({ s: EX.fit, tx: EX.view.w / 2 - (EX.bounds[0] + EX.bounds[2]) / 2 * EX.fit, ty: EX.view.h / 2 - (EX.bounds[1] + EX.bounds[3]) / 2 * EX.fit });
 const exploreNotify = () => { EX.changed = true; window.dispatchEvent(new Event('jm-explore')); };
 const exploreHintOff = () => { EX.hintLeft = 0; EX.hint?.classList.remove('on'); };
@@ -77,6 +80,7 @@ export function exploreEnd() {
   if (!EX.active) return false;
   EX.active = false; EX.target = { ...EX.end }; EX.velocity = [0, 0];
   EX.motion = { from: { ...EX.cam }, to: { ...EX.end }, k0: EX.k, k1: 0, elapsed: 0, duration: EXPLORE.out, footer0: EX.footer };
+  const say = document.getElementById?.('go-say'); if (say) say.textContent = COPY.steps.say.end;
   exploreClearPointers(); exploreHintOff(); explorePromote(); document.documentElement.classList.remove('jm-explore'); exploreNotify(); return true;
 }
 // Called on resize with the new trip view already measured. No frame reads layout.
@@ -88,6 +92,7 @@ export function exploreResize() {
   const end = tripState(EX.journey.beats.at(-1).P).cam, f = DEPTH.frame.outer;
   EX.end = { s: end.s, tx: end.tx, ty: end.ty };
   EX.bounds = [Math.min(f[0], -end.tx / end.s), Math.min(f[1], -end.ty / end.s), Math.max(f[2], (VIEW.w - end.tx) / end.s), Math.max(f[3], (VIEW.h - end.ty) / end.s)];
+  EX.keep = { frame: f, share: EXPLORE.keep };
   const margin = VIEW.phone ? EXPLORE.marginPhone : EXPLORE.margin;
   EX.view = { w: VIEW.w, h: VIEW.h - (VIEW.phone ? STEPS.nav.bar : STEPS.nav.h + STEPS.nav.gap), stageH: VIEW.h };
   EX.fit = Math.min((EX.view.w - 2 * margin) / (EX.bounds[2] - EX.bounds[0]), (EX.view.h - 2 * margin) / (EX.bounds[3] - EX.bounds[1]));
@@ -122,7 +127,7 @@ export function exploreApply(st, dt) {
     if (motion.elapsed === motion.duration) { EX.motion = null; if (!EX.active) { EX.cam = { ...EX.end }; EX.target = { ...EX.end }; exploreNotify(); } }
   }
   if (EX.active && !EX.motion?.from && !EX.gesture?.dragged) {
-    if (EX.velocity.some(Boolean)) { const glide = exploreGlide(EX.cam, EX.velocity, dt, EX.bounds, EX.view, EX.fit, EX.top); EX.cam = glide.cam; EX.target = { ...EX.cam }; EX.velocity = glide.velocity; }
+    if (EX.velocity.some(Boolean)) { const glide = exploreGlide(EX.cam, EX.velocity, dt, EX.bounds, EX.view, EX.fit, EX.top, EX.keep); EX.cam = glide.cam; EX.target = { ...EX.cam }; EX.velocity = glide.velocity; }
     else {
       const q = 1 - Math.exp(-dt / EXPLORE.ease);
       EX.cam = exploreBound({ s: lerp(EX.cam.s, EX.target.s, q), tx: lerp(EX.cam.tx, EX.target.tx, q), ty: lerp(EX.cam.ty, EX.target.ty, q) });

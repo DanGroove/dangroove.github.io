@@ -1,5 +1,5 @@
 // A single completion accent, started by the eleventh count landing.
-import { C, FINDS, FIND_PLAY } from './data.mjs';
+import { FINDS, FIND_PLAY } from './data.mjs';
 import { clamp01 } from './trip.mjs';
 import { JOURNEY, stepsFocus } from './steps.mjs';
 import { FD, attr, ease, findSvg, findView } from './findkit.mjs';

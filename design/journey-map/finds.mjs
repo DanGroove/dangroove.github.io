@@ -1,5 +1,5 @@
 // Eleven finds share the camera/life/overlay kit.
-import { FINDS, FIND_COPY, FIND_PLAY, FIND_TIMING } from './data.mjs';
+import { FIND_COPY, FIND_PLAY } from './data.mjs';
 import { toScreen } from './trip.mjs';
 import { JOURNEY } from './steps.mjs';
 import { depthBeam } from './depth.mjs';

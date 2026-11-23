@@ -1,6 +1,6 @@
 // Scroll progress, acts, camera, traveller. Everything here is a pure function of progress P (in viewport heights).
 import { ACTS, CAMERA, HOLD, MAP, STOPS, COPY, DEPTH, FIND_PLAY, LABELS, WORLD, STEPS, NOVA } from './data.mjs';
-import { TRAIL, polyLen, COAST_A, COAST_B, onLand, miniMapSvg } from './art.mjs';
+import { TRAIL, polyLen, COAST_A, COAST_B, onLand, miniMapSvg, mapLabelRows, mapLabelBox } from './art.mjs';
 
 export const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
 export const lerp = (a, b, t) => a + (b - a) * t;
@@ -88,8 +88,7 @@ export function tripResize(w, h, tlH) {
   VIEW.sT = VIEW.s0 * (VIEW.phone ? CAMERA.pushScalePhone : CAMERA.pushScale);
   if (TRIP_EL.scrim) TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px';
 }
-// Each glide's path table costs about 2,000 camera samples. Once the journey rests on a beat, build the tables of the glides on
-// either side of it, one per task, so the next move's first frame does not build one (polish after critique round 5, M5-1).
+// A glide's path table is about 2,000 camera samples: at rest, build the glides either side of the beat, one per task (M5-1).
 let glideWarmTimer = null;
 export function tripWarmGlides(P) {
   if (typeof setTimeout !== 'function') return;
@@ -104,9 +103,8 @@ const camMix = (a, b, t) => ({ cx: lerp(a.cx, b.cx, t), cy: lerp(a.cy, b.cy, t),
 const camFinal = c => ({ s: c.s, tx: c.ax - c.cx * c.s, ty: c.ay - c.cy * c.s, ax: c.ax, ay: c.ay });
 
 export const labelScale = (kind, s, phone = VIEW.phone) => { const L = LABELS[kind]; return Math.max(1, (phone ? L.phone : L.floor) / (L.unit * s)); };
-// The X beat's view. Phones: the X and its label, as one group, centred across the screen at the trip's scale; the X then
-// sits as low as lets the map's bottom edge rest on the floor above the timeline (inside the xBand), so the screen below the
-// map is not left empty. Portrait tablets keep the desktop scale and take the same floor rule. Desktop is unchanged.
+// The X beat's view. Phones: the X and its label centred across the screen at the trip's scale, as low as lets the map's
+// bottom edge rest on the floor above the timeline (inside the xBand). Portrait tablets keep the desktop scale and the floor.
 export function tripXCamera() {
   const band = CAMERA.xBand;
   if (VIEW.phone) {
@@ -245,6 +243,9 @@ const TRIP_EL = {};
 export function tripBuild(els) {
   Object.assign(TRIP_EL, els);
   TRIP_EL.labels = [...els.svg.querySelectorAll('.label-scale')].map(el => ({ el, kind: el.dataset.label, stopSub: el.dataset.stopSub === 'true', k: null }));
+  TRIP_EL.rows = mapLabelRows().map(row => ({ row, el: els.svg.querySelector(`.label-anchor[data-row="${row.i}"]`), stop: STOPS.findIndex(s => s.id === row.stop), o: '' })).filter(r => r.el);
+  TRIP_EL.legend = [...els.svg.querySelectorAll('.lg')].map((el, i) => ({ el, p: LABELS.legendAt[i], n: Object.values(COPY.legend)[i].length, o: '' }));
+  TRIP_EL.t2 = [...els.svg.querySelectorAll('.t2b')].map(el => ({ el, b: String(el.dataset?.b || el.getAttribute?.('data-b') || '').split(' ').map(Number), o: '' })).filter(t => t.b.length === 4 && t.b.every(Number.isFinite));
   TRIP_EL.title = els.svg.querySelector('.map-title'); TRIP_EL.tier1 = els.svg.querySelector('.map-tier1'); TRIP_EL.tier2 = els.svg.querySelector('.map-tier2'); TRIP_EL.subs = els.svg.querySelector('.map-subs');
   TRIP_EL.secondary = [...els.svg.querySelectorAll('.map-tier2')]; if (!TRIP_EL.secondary.length) TRIP_EL.secondary = [TRIP_EL.tier2];
   TRIP_EL.focusFade = null;
@@ -252,8 +253,12 @@ export function tripBuild(els) {
   TRIP_EL.coasts = [...els.svg.querySelectorAll('.coast')];
   TRIP_EL.coastLen = [polyLen(COAST_A, 1), polyLen(COAST_B, 1)];
   TRIP_EL.ship = els.svg.querySelector('.ls-ship');
+  // 24 px stone targets (B-9): overlapping ones (the HMC stops) push apart along the axis that parts them, the dots stay put.
+  // 104 / 600: the mini-map's CSS width over the map's (25: 24 and its 1 px border's share).
+  const mm = STOPS.map(s => MAP.waypoints[s.w].map(v => v * 104 / 600)), off = mm.map(() => [0, 0]);
+  for (let n = 0; n < 12; n++) mm.forEach((a, i) => mm.forEach((b, j) => { if (j <= i) return; const p = [0, 1].map(k => a[k] + off[i][k] - b[k] - off[j][k]), k = +(Math.abs(p[1]) >= Math.abs(p[0])), o = 25 - Math.abs(p[k]); if (Math.abs(p[1 - k]) < 25 && o > 0) { const m = Math.sign(p[k] || 1) * o / 2; off[i][k] += m; off[j][k] -= m; } }));
   els.mini.innerHTML = `<svg viewBox="0 0 600 900" aria-hidden="true">${miniMapSvg()}<rect class="mm-view" x="0" y="0" width="1" height="1"/><circle class="mm-trav" r="10"/></svg>`
-    + STOPS.map((s, i) => `<button class="mm-stop" data-i="${i}" style="left:${(MAP.waypoints[s.w][0] / 6).toFixed(2)}%;top:${(MAP.waypoints[s.w][1] / 9).toFixed(2)}%" aria-label="${COPY.stoneGo.replace('{name}', s.name).replace('{dates}', s.dates)}"><i></i></button>`).join('');
+    + STOPS.map((s, i) => `<button class="mm-stop" data-i="${i}" style="left:${(MAP.waypoints[s.w][0] / 6).toFixed(2)}%;top:${(MAP.waypoints[s.w][1] / 9).toFixed(2)}%;--ox:${off[i][0].toFixed(1)}px;--oy:${off[i][1].toFixed(1)}px" aria-label="${COPY.stoneGo.replace('{name}', s.name).replace('{dates}', s.dates)}"><i></i></button>`).join('');
   TRIP_EL.mmView = els.mini.querySelector('.mm-view'); TRIP_EL.mmTrav = els.mini.querySelector('.mm-trav');
   TRIP_EL.mmStops = [...els.mini.querySelectorAll('.mm-stop')];
 }
@@ -264,8 +269,34 @@ function tripWrite(el, key, value, attribute = false) {
   if (cache[slot] === text) return; cache[slot] = text;
   if (attribute) el.setAttribute(key, text); else el.style[key] = text;
 }
+// The coasts draw over WORLD.coastDraw of the fall, slowing as they close; coastAt is the inverse, for the coast stars.
+export const coastDrawn = h => { const [a, b] = WORLD.coastDraw, x = clamp01((h - a) / (b - a)); return x * (2 - x); };
+export const coastAt = u => { const [a, b] = WORLD.coastDraw; return a + (b - a) * (1 - Math.sqrt(1 - clamp01(u))); };
+// Labels give way (polish round 1): a stop's label fades as its card opens (L-6) and the map's other words dim (L-8); all of
+// them fade under the timeline, the step bar and a find's hint, and off the screen's sides (K-2, L-17). Explore frees them.
+function tripLabels(st) {
+  const E = TRIP_EL, c = st.cam, phone = VIEW.phone, L = LABELS, open = Math.max(0, ...st.cardK), dim = 1 - L.cardDim[phone ? 1 : 0];
+  const free = !!st.exploring || st.exploreK > 0, lift = st.focusK > 0 ? L.hint : 0, timeline = VIEW.h - (phone ? STEPS.nav.bar : 0) - CAMERA.timeline;
+  const floor = phone ? timeline - lift : timeline, bar = phone ? null : [VIEW.w / 2 - L.bar[0], timeline - STEPS.nav.gap - STEPS.nav.h - L.bar[1] - lift, VIEW.w / 2 + L.bar[0]];
+  const gone = b => { const x0 = b[0] * c.s + c.tx, x1 = b[2] * c.s + c.tx, y0 = b[1] * c.s + c.ty, y1 = b[3] * c.s + c.ty, tall = Math.max(1, y1 - y0);
+    let under = clamp01((y1 - floor) / tall);
+    if (bar && x1 > bar[0] && x0 < bar[2]) under = Math.max(under, clamp01((y1 - bar[1]) / tall));
+    return (1 - smooth(0, L.underFade, under)) * (1 - smooth(0, L.sideFade, Math.max(-x0, x1 - VIEW.w) / Math.max(1, x1 - x0))); };
+  const put = (r, o) => { const v = o > .995 ? '' : o.toFixed(3); if (v !== r.o) { r.o = v; r.el.style.opacity = v; } };
+  E.rows.forEach(r => {
+    let o = 1;
+    if (r.stop >= 0) { let other = 0; st.cardK.forEach((k, i) => { if (i !== r.stop && k > other) other = k; }); o = (1 - st.cardK[r.stop]) * (1 - dim * other); }
+    else o = 1 - dim * open;
+    if (!free && o > 0) o *= gone(mapLabelBox(r.row, c.s, phone));
+    put(r, o);
+  });
+  const u = L.legend.unit * labelScale('legend', c.s), back = 1 - dim * open;
+  (E.t2 || []).forEach(t => put(t, free ? 1 : back * gone(t.b)));
+  (E.legend || []).forEach(g => put(g, free ? 1 : back * gone([g.p[0], g.p[1] - u * L.ascent, g.p[0] + g.n * u * L.width, g.p[1] + u * L.descent])));
+}
 export function tripApply(st) {
   const E = TRIP_EL, c = st.cam;
+  if (E.rows) tripLabels(st);
   const labelFade = smooth(...LABELS.fade, c.s / VIEW.s0);
   E.labels.forEach(label => { const k = labelScale(label.kind, c.s); if (label.k === null || Math.abs(k / label.k - 1) > LABELS.epsilon) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; } });
   const focusFade = 1 - smooth(0, .4, st.focusK || 0);
@@ -279,7 +310,7 @@ export function tripApply(st) {
   tripWrite(E.sea, 'opacity', smooth(...DEPTH.fade.sea, h)); tripWrite(E.fill, 'opacity', smooth(.25, .75, h));
   tripWrite(E.detail, 'opacity', smooth(.45, .95, h)); tripWrite(E.finds, 'opacity', smooth(.5, 1, h));
   tripWrite(E.coastG, 'opacity', 1);
-  const dr = smooth(.12, .75, h);
+  const dr = coastDrawn(h);
   E.coasts.forEach((p, i) => { if (dr >= 1) { tripWrite(p, 'strokeDasharray', 'none'); return; } const L = E.coastLen[i] * c.s; tripWrite(p, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(p, 'strokeDashoffset', (L * (1 - dr)).toFixed(1)); });
   // solid trail behind the traveller (dash in screen units because the stroke does not scale)
   const L = TRAIL_LEN * c.s; tripWrite(E.done, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(E.done, 'strokeDashoffset', (st.exploreK ? 0 : (TRAIL_LEN - st.u) * c.s).toFixed(1));
@@ -290,6 +321,8 @@ export function tripApply(st) {
   tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
   tripWrite(E.svg, 'willChange', fade > 0 && fade < 1 ? 'opacity' : '');
   tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
+  // the X fades in with the sea, so neither page shows it before the map exists
+  if (E.x) tripWrite(E.x, 'opacity', h < 1 ? smooth(.2, .7, h).toFixed(3) : '');
   if (E.title) { const t = 1 - smooth(...WORLD.titleOut, st.pushT) * (1 - (st.exploreK || 0)); tripWrite(E.title, 'opacity', t); tripWrite(E.title, 'visibility', t === 0 ? 'hidden' : 'visible'); }
   tripWrite(E.cue, 'opacity', smooth(.2, .5, st.overviewT) * (1 - smooth(0, .3, st.pushT)));
   // mini-map

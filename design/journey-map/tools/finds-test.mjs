@@ -27,15 +27,17 @@ const original = { sea: [100054, 3547300242], fill: [12855, 3665486802], coast: 
 for (const [key, [length, hash]] of Object.entries(original)) { assert.equal(chart[key].length, length); assert.equal(digest(chart[key]), hash); }
 console.log('ok: C1 ring sea baseline; original fill/coast lengths and hashes unchanged');
 // D3 adds NOVA.build; the full data digest is re-recorded for that authorized table (and again for the continuous pull, 2026-11-23,
-// and for polish round 1: the held breath's white cross and halo, and the softer cloud deck).
-assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 2849262987);
+// and for polish round 1: the held breath's white cross and halo, the softer cloud deck, the traveller's size at the overview
+// and the gather ring's spread).
+assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 4178723640);
 console.log('ok: STARS/DEPTH preserved; NOVA.build data digest recorded');
 // D4 authorizes the pure rest-to-rest glide in trip. Depth remains protected.
 // Line endings are evened out so the numbers are the same on Windows and in the cloud.
 const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.meta.url), 'utf8').replace(/\r\n/g, '\n'));
 // Polish round 1 (2026-11-23) re-records both: trip.mjs for the X view on phones and portrait tablets and the map title's fade,
-// depth.mjs for the lantern's darkness the nova canvas holds through the rush.
-assert.equal(sourceDigest('trip.mjs'), 1995553361, 'trip.mjs changed');
+// depth.mjs for the lantern's darkness the nova canvas holds through the rush; its second batch re-records trip.mjs for the
+// labels that give way, the coasts' draw-on, the X's fade-in with the sea and the mini-map's targets.
+assert.equal(sourceDigest('trip.mjs'), 3765033147, 'trip.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 4010889213, 'depth.mjs changed');
 console.log('ok: C1 camera/labels/tripS and deck source digests recorded');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];

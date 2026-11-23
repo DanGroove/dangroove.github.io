@@ -28,7 +28,6 @@ export const JOURNEY = {
 };
 export const stepsProgress = () => SC.P;
 export const stepsPause = () => { SC.lastTs = null; };
-export const stepsJumping = () => !!SC.cut;
 
 export function stepsFocusNow() {
   const f = SC.focus; if (!f) return null;
@@ -65,7 +64,14 @@ function stepsButtons() {
   const top = SC.P <= 1e-6, end = !JOURNEY.moving && Math.abs(SC.P - stepsEnd) < 1e-6;
   const beatState = tripState(SC.P), blasting = beatState.kind === 'rush' ? JOURNEY.moving || beatState.t > 0 : ['blast', 'settle'].includes(beatState.kind);
   if (blasting && !SC.go.hidden) { SC.returnFocus = SC.go.contains(document.activeElement); SC.shown = false; }
-  SC.go.hidden = !SC.ready || SC.mode !== 'steps' || (top && SC.joinedTop()) || blasting;
+  // Joined page: the bar waits for the map, so one Start shows at a time; focus follows (the bar at the map, the hero's Start above).
+  const hero = SC.joinedTop() && SC.P < stepsMap - 1e-6, wasHidden = SC.go.hidden;
+  if (hero && !wasHidden && SC.go.contains(document.activeElement)) SC.heroFocus = true;
+  SC.go.hidden = !SC.ready || SC.mode !== 'steps' || hero || blasting;
+  const lost = !document.activeElement || document.activeElement === document.body || !!document.activeElement.closest?.('[data-hero]');
+  if (SC.heroFocus && top && !JOURNEY.moving) { SC.heroFocus = false; const start = document.querySelector?.('.jm-start'); if (start && lost) start.focus({ preventScroll: true }); }
+  if (SC.joinedTop() && wasHidden && !SC.go.hidden && !hero && !blasting && lost && !JOURNEY.moving && Math.abs(SC.P - stepsMap) < 1e-6) SC.go.querySelector('.go-next').focus({ preventScroll: true });
+  if (!hero) SC.heroFocus = false;
   SC.go.classList.toggle('go-end', end);
   const back = SC.go.querySelector('.go-back'), next = SC.go.querySelector('.go-next'), home = SC.go.querySelector('.go-top');
   const focus = document.activeElement;
@@ -113,7 +119,7 @@ function stepsCancel() {
 function stepsPlay(target, next = false) {
   const p = stepsClamp(target);
   SC.move = SC.move ? stepsCarry(SC.move, p, next && Math.abs(SC.move.P1 - p) < 1e-6) : { ...(glideMove(SC.P, p) || paceMove(SC.P, p)), elapsed: 0, baseFill: 0 };
-  SC.root.dataset.beat = ''; stepsButtons();
+  SC.root.dataset.beat = ''; SC.announced = null; stepsButtons();
 }
 // Exact position and derivative of the active clock. Camera/cards remain pure P functions.
 function stepsCarryAt(move, q, speed = false) {
@@ -185,7 +191,8 @@ function stepsCarry(old, target, hurry) {
     if (D > cfg.searchMax || hurry && D >= left) break;
     const curve = stepsCarryCurve(SC.P, target, D, v0, v1, g ? g.a : lo, g ? g.b : hi);
     if (!curve) break;
-    const move = { ...normal, ...curve, D, carry: true, hurry, elapsed: 0, baseFill: hurry ? SC.fill : 0 };
+    // the fill never jumps (K-7): a hurry carries it on to full, a new target eases it onto the new move's progress
+    const move = { ...normal, ...curve, D, carry: true, hurry, elapsed: 0, baseFill: hurry ? SC.fill : 0, fill0: SC.fill };
     if (stepsCarryGate(move, old)) return move;
   }
   // An arbitrarily late hurry cannot both last >= hurryMin and arrive earlier.
@@ -259,6 +266,7 @@ export function stepsFrame(ts) {
     const q = move.D ? move.elapsed / move.D : 1;
     SC.P = stepsMoveAt(move, move.elapsed);
     SC.fill = move.baseFill + (1 - move.baseFill) * q;
+    if (move.fill0 !== undefined && !move.hurry) SC.fill = lerp(move.fill0, SC.fill, easeIO(Math.min(1, q / STEPS.carry.fillBlend)));
     if (q >= 1) { SC.P = move.P1; SC.move = null; stepsArrive(); }
   } else if (cut) {
     cut.elapsed += dt;

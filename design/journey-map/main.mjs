@@ -28,7 +28,7 @@ MAIN.innerHTML = `<h1 class="sr">${COPY.title}</h1><section class="trip" id="tri
 <canvas id="nova" aria-hidden="true"></canvas><canvas id="stars" aria-hidden="true"></canvas>
 <canvas id="air" aria-hidden="true"></canvas><svg id="sky" aria-hidden="true"></svg>
 ${RM ? '' : `<button type="button" class="fx-hit" id="nova-hit" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true"></button>`}
-<div class="ov">${stoneDefs()}<p class="caption">${COPY.heroCaption}</p><p class="cue">${COPY.cue}</p><div class="cards" id="cards"></div><div class="mini" id="mini" role="navigation" aria-label="${COPY.miniMap}"></div><div class="pop" id="pop" role="status"></div><div class="sheet" id="sheet" role="dialog" aria-modal="false"></div><footer class="ft" id="ft"></footer></div>
+<div class="ov">${stoneDefs()}<p class="caption">${COPY.heroCaption}</p><p class="cue">${COPY.cue}</p><div class="cards" id="cards"></div><div class="mini" id="mini" role="navigation" aria-label="${COPY.miniMap}"></div><div class="pop" id="pop" role="status"></div><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div><footer class="ft" id="ft"></footer></div>
 </div></section><div class="rm-cards" id="rmcards"></div><div class="tl" id="tl"></div>`;
 
 const $ = id => document.getElementById(id);
@@ -41,12 +41,12 @@ else { $('rmcards').appendChild(TLEL); MAIN.appendChild($('ft')); }
 let P = 0, dirty = true;
 const goStop = i => { if (RM) { cardsList()[i].el.scrollIntoView({ behavior: 'auto', block: 'start' }); return; } JOURNEY.go(STOPS[i].id, { jump: exploreActive() }); };
 
-tripBuild({ svg: SVG, cam: $('cam'), sea: $('b-sea'), fill: $('b-fill'), coastG: $('b-coast'), detail: $('b-detail'), finds: $('finds'), done: $('trail-done'), caption: document.querySelector('.caption'), cue: document.querySelector('.cue'), mini: $('mini') });
+tripBuild({ svg: SVG, cam: $('cam'), sea: $('b-sea'), fill: $('b-fill'), coastG: $('b-coast'), detail: $('b-detail'), finds: $('finds'), done: $('trail-done'), x: $('fxg'), caption: document.querySelector('.caption'), cue: document.querySelector('.cue'), mini: $('mini') });
 $('mini').querySelectorAll('.mm-stop').forEach(b => { b.style.setProperty('--mk', PALETTES[STOPS[+b.dataset.i].palette].mark); b.addEventListener('click', () => goStop(+b.dataset.i)); });
 starsBuild(CANVAS);
 depthBuild($('deep'), $('air'), $('sky'), RM);
 cardsBuild(RM ? $('rmcards') : $('cards'), goStop, RM);
-tlBuild(TLEL, { jump: goStop, scrub: p => JOURNEY.set(p) }, RM);
+tlBuild(TLEL, { jump: goStop, scrub: p => JOURNEY.set(p), moving: () => JOURNEY.moving }, RM);
 footerBuild($('ft'), RM); footerBuildX($('fxg'), RM, $('nova'), $('nova-hit'));
 if (RM) $('rmcards').appendChild(TLEL);
 stepsBuild({ stage: $('stage'), rm: RM, resize, joinedTop: () => JOIN.heroStart });
@@ -95,8 +95,7 @@ function frame(ts) {
   const st = tripState(P); const f = stepsFocusNow(); if (f) tripFocus(st, f.view, f.k);
   const explored = exploreApply(st, dt), folded = cardsOverride(st, dt, JOURNEY.moving);
   st.visiting = JOURNEY.visiting;
-  // Nothing the eye cannot see takes the keyboard: the stone marks and the timeline wait for the map's hand-over (the title
-  // screen and the hero show neither), and the timeline also leaves while exploring, when it is part of the hidden footer.
+  // Nothing unseen takes the keyboard: the stone marks and the timeline wait for the map's hand-over; the timeline leaves in explore.
   const keys = `${st.handoffT >= 1}/${st.handoffT >= 1 && !st.exploring && !(st.exploreK > 0)}`;
   if (keys !== mainKeys) { mainKeys = keys; $('cards').inert = st.handoffT < 1; TLEL.inert = !(st.handoffT >= 1 && !st.exploring && !(st.exploreK > 0)); }
   const focusKey = JSON.stringify(f), tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || explored || folded || P !== lastP || tuning !== mainTuning || focusKey !== mainFocus;

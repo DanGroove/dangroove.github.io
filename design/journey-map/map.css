@@ -55,7 +55,7 @@ button { font-family: inherit; }
 .c-in { height: 100%; display: flex; flex-direction: column; padding: 20px 24px 20px; }
 .c-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-bottom: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--hair); }
 .lay-band .c-top { background: var(--band); margin: -20px -24px 16px; padding: 18px 24px; border-bottom: 0; }
-.c-logo { display: block; height: 44px; width: auto; max-width: 210px; object-fit: contain; object-position: left center; }
+.c-logo { display: block; height: var(--logo-h, 44px); width: auto; max-width: 210px; object-fit: contain; object-position: left center; }
 .c-pill { flex: none; background: var(--pill); color: var(--ptx); border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .c-body { display: grid; grid-template-columns: 1fr 210px; gap: 24px; min-height: 0; }
 .c-main { min-width: 0; }
@@ -85,8 +85,8 @@ button { font-family: inherit; }
 .mm-trail { fill: none; stroke: var(--note); stroke-width: 1; stroke-dasharray: 1 2; vector-effect: non-scaling-stroke; }
 .mm-view { fill: none; stroke: var(--paper); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .mm-trav { fill: var(--red); }
-.mm-stop { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
-.mm-stop i { width: 6px; height: 6px; border-radius: 50%; border: 1px solid var(--paper); background: var(--ink); }
+.mm-stop { position: absolute; width: 24px; height: 24px; margin: calc(var(--oy) - 12px) 0 0 calc(var(--ox) - 12px); padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
+.mm-stop i { width: 6px; height: 6px; border-radius: 50%; border: 1px solid var(--paper); background: var(--ink); transform: translate(calc(0px - var(--ox)), calc(0px - var(--oy))); }
 .mm-stop.on i { background: var(--mk); border-color: var(--mk); }
 
 /* find popups */
@@ -184,7 +184,7 @@ button { font-family: inherit; }
   .face { border-radius: 16px 16px 0 0; overflow-y: auto; overscroll-behavior: contain; }
   .c-in { height: auto; min-height: 100%; padding: 16px 16px 18px; }
   .lay-band .c-top { margin: -16px -16px 14px; padding: 14px 16px; }
-  .c-logo { height: 34px; max-width: 170px; }
+  .c-logo { height: calc(var(--logo-h, 44px) * .773); max-width: 170px; }
   .c-body { grid-template-columns: 1fr; gap: 14px; }
   .c-h { font-size: 22px; }
   .c-piece img, .c-empty { aspect-ratio: 16 / 7; }
@@ -236,7 +236,10 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-explore .go { animation: exploreRow var(--explore-row-fade) var(--explore-row-delay) linear both; }
 @keyframes exploreRow { from { opacity: 0; } to { opacity: 1; } }
 .jm-explore .go-back { width: auto; padding: 0 var(--go-gap); display: flex; align-items: center; gap: var(--go-gap); border-radius: var(--go-h); }
-.jm-steps .c-close { position: absolute; top: var(--card-close-inset); right: var(--card-close-inset); width: var(--card-close-hit); height: var(--card-close-hit); display: none; place-items: center; padding: 0; border: 0; border-radius: 0 var(--card-close-radius) 0 0; color: var(--tx); background: var(--g); cursor: pointer; }
+.jm-steps .c-close { position: absolute; top: calc(var(--close-pad, 20px) + var(--logo-h, 44px) / 2 - var(--card-close-hit) / 2); right: var(--card-close-inset); width: var(--card-close-hit); height: var(--card-close-hit); display: none; place-items: center; padding: 0; border: 0; border-radius: 50%; color: var(--tx); background: var(--g); cursor: pointer; }
+/* L-10: the close on the date pill's line; on a band card, in the band */
+.jm-steps .lay-band .c-close { --close-pad: 18px; color: var(--g); background: var(--band); }
+@media (max-width: 640px) { .jm-steps .c-close { top: calc(var(--close-pad, 16px) + var(--logo-h, 44px) * .773 / 2 - var(--card-close-hit) / 2); } .jm-steps .lay-band .c-close { --close-pad: 14px; } }
 .jm-steps .stop[data-state="open"] > .c-close { display: grid; pointer-events: auto; }
 .c-close i { position: relative; width: var(--card-close-icon); height: var(--card-close-icon); }
 .c-close i::before, .c-close i::after { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: var(--card-close-stroke); background: currentColor; transform: rotate(45deg); }
@@ -247,6 +250,10 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-steps .face { touch-action: pan-y pinch-zoom; overflow-y: auto; overscroll-behavior: contain; }
 .jm-steps .c-in { height: auto; min-height: 100%; }
 .jm-steps .cue { display: none; }
+/* K-4: the phone kicker ends before the serpent; its rule and plate shorten with it */
+@media (max-width: 640px) { .kick { letter-spacing: .8px; } .kick-r { transform: scaleX(.82); transform-box: view-box; transform-origin: 0 0; } }
+.jm-steps .caption { bottom: max(12vh, calc(56px + var(--go-gap) + var(--go-h) + 28px)); }
+@media (max-width: 640px) { .jm-steps .caption { bottom: max(12vh, calc(var(--go-bar) + 28px)); } }
 .jm-steps #stars { z-index: 2; }
 .jm-steps #air, .jm-steps #sky { z-index: 2; }
 .jm-steps .ov { z-index: 3; }

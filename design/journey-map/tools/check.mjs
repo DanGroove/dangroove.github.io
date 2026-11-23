@@ -33,7 +33,7 @@ ok(STOPS.map(s => s.w).join() === '0,7,17,26,29,35' && MAP.xIdx === 37, 'stops m
 const HEX = /^#[0-9A-Fa-f]{6}$/, PK = ['ground', 'text', 'sub', 'button', 'buttonText', 'pill', 'pillText', 'band', 'headline', 'mark', 'hairline'];
 Object.entries(PALETTES).forEach(([k, p]) => { PK.forEach(f => ok(HEX.test(p[f] || ''), `palette ${k}: ${f} missing or not a colour`)); ok(/^assets\/logos\/\w+\.png$/.test(p.logo), `palette ${k}: logo`); ok(['ground', 'band'].includes(p.layout), `palette ${k}: layout`); });
 Object.entries(PALETTES).forEach(([k, p]) => {
-  Object.keys(p).forEach(f => ok([...PK, 'logo', 'layout', 'smallWeight', 'chip', 'chipText', 'arrow', 'panel', 'panelText', 'panelHair', 'panelButton', 'panelButtonText'].includes(f), `palette ${k}: unknown key ${f}`));
+  Object.keys(p).forEach(f => ok([...PK, 'logo', 'logoH', 'layout', 'smallWeight', 'chip', 'chipText', 'arrow', 'panel', 'panelText', 'panelHair', 'panelButton', 'panelButtonText'].includes(f), `palette ${k}: unknown key ${f}`));
   if (p.smallWeight !== undefined) ok(Number.isFinite(p.smallWeight) && p.smallWeight > 0, `palette ${k}: smallWeight`);
   ['chip', 'chipText'].forEach(f => { if (p[f] !== undefined) ok(HEX.test(p[f]), `palette ${k}: ${f}`); });
   if (k !== 'lennard') ok(['smallWeight', 'chip', 'chipText'].every(f => p[f] === undefined), `palette ${k}: Lennard-only keys`);

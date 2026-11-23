@@ -12,7 +12,7 @@ const JN = {
   api: null, away: null, op: '', lastP: -1, dirty: true, lift: null,
   rm: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
-JN.svg = document.getElementById('map'); JN.hit = document.getElementById('nova-hit'); JN.fxg = document.getElementById('fxg'); JN.fx = null; JN.ov = JN.stage.querySelector('.ov');
+JN.svg = document.getElementById('map'); JN.hit = document.getElementById('nova-hit'); JN.ov = JN.stage.querySelector('.ov');
 // vh of scroll: the leave ends at the end of the hero act; the canvas fades in over its last JOIN_OVERLAP vh
 const LEAVE_END = ACTS.hero, JOIN_OVERLAP = 1;
 
@@ -58,9 +58,6 @@ JOIN.leave = place;
 JOIN.frame = (st, moved, P) => {
   const a = smooth(LEAVE_END - JOIN_OVERLAP, LEAVE_END, P);
   if (!JN.rm) {
-    // the X is drawn from the start of the fall in the map as built; here it fades in with the sea, so the switch shows no pop
-    const fx = st.handoffT < 1 ? smooth(.2, .7, st.handoffT).toFixed(3) : '';
-    if (fx !== JN.fx) { JN.fx = fx; JN.fxg.style.opacity = fx; }
     if (P >= LEAVE_END) { setOp(st.dim); return undefined; }
     setOp(a);
     // the canvas is opaque while the hero is behind it, so its stars replace the hero's rather than adding to them

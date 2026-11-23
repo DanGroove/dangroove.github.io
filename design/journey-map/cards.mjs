@@ -21,6 +21,7 @@ export function cardsBuild(container, onGo, rm = false) {
     if (p.arrow) vars['--arrow'] = p.arrow;
     if (p.smallWeight !== undefined) vars['--sw'] = p.smallWeight;
     if (p.chip) vars['--chip'] = p.chip;
+    if (p.logoH) vars['--logo-h'] = p.logoH + 'px';
     if (p.chipText) vars['--chtx'] = p.chipText;
     Object.entries(vars).forEach(([k, v]) => a.style.setProperty(k, v));
     const piece = cp.piece ? `<img src="${cp.piece}" alt="${esc(cp.caption)}">` : `<div class="c-empty">${COPY.pieceToCome}</div>`;
@@ -32,7 +33,7 @@ export function cardsBuild(container, onGo, rm = false) {
 <p class="c-kick">${COPY.took}</p><p class="c-took">${esc(cp.took)}</p></div>
 <div class="c-side"><figure class="c-piece">${piece}${cp.caption ? `<figcaption>${esc(cp.caption)}</figcaption>` : ''}</figure></div></div>
 <div class="c-foot"><ul class="c-crafts">${CRAFTS.map(c => `<li class="${s.crafts.includes(c) ? 'lit' : ''}"><i></i>${c}</li>`).join('')}</ul>
-<button class="c-btn" type="button">${COPY.caseStudy}${arrowSvg}</button></div></div></div></div>${rm ? '' : `<button class="c-close" type="button" aria-label="${esc(COPY.cardClose.replace('{name}', s.name))}"><i aria-hidden="true"></i></button>`}`;
+<button class="c-btn" type="button" aria-label="${esc(COPY.caseStudy + ': ' + s.name)}">${COPY.caseStudy}${arrowSvg}</button></div></div></div></div>${rm ? '' : `<button class="c-close" type="button" aria-label="${esc(COPY.cardClose.replace('{name}', s.name))}"><i aria-hidden="true"></i></button>`}`;
     a.querySelector('.st-btn').addEventListener('click', () => {
       if (CD.closed?.i === i && CD.last?.P === CD.closed.P && !JOURNEY.moving) { CD.closed = { ...CD.closed, from: CD.closed.k, to: 1, elapsed: 0 }; CD.list[i].reopenFocus = true; return; }
       CD.onGo(i);
@@ -45,7 +46,6 @@ export function cardsBuild(container, onGo, rm = false) {
 }
 export function cardsResize(steps = false) {
   CD.steps = steps;
-  document.documentElement.style.setProperty('--card-close-radius', (VIEW.phone ? CARD_CLOSE.radiusPhone : CARD_CLOSE.radius) + 'px');
   const Q = WORLD.card; CD.W = VIEW.phone ? VIEW.w : Math.min(Q.w, VIEW.w - Q.edge);
   const cap = VIEW.phone ? Math.round(VIEW.h * Q.phoneShare) - (steps ? STEPS.nav.bar : 0) : steps ? Math.max(1, Math.min(Q.cap, VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h - Q.gap * 2)) : Q.cap;
   CD.list.forEach(c => { c.el.style.width = CD.W + 'px'; c.el.style.height = 'auto'; c.inn.style.minHeight = '0'; c.H = Math.min(cap, c.inn.scrollHeight + Q.slack); c.el.style.height = c.H + 'px'; cardsDepthConfig(c); });
@@ -59,7 +59,6 @@ function cardsDepthConfig(c) {
   c.depthPending = false;
 }
 export const cardsSetCraft = mask => { CD.craft = mask; };
-export const cardsLitBy = craft => STOPS.map(s => s.crafts.includes(craft));
 
 export function cardsClose(index = CD.last?.i) {
   const st = CD.last;
@@ -100,8 +99,7 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     c.el.style.transform = `translate(${(cx - W * k / 2).toFixed(2)}px,${(cy - H * k / 2).toFixed(2)}px) scale(${k.toFixed(5)})`;
     const lit = CD.craft ? CD.craft[i] : false;
     c.el.style.opacity = op * (CD.craft && !lit ? .55 : 1);
-    // Size, not the score, hands the stone mark over to the card: while the card is mark-sized the mark shows, and the face
-    // and its words come in together as it grows, so it never travels as a flat, square-cornered slab over the stop's label.
+    // Size, not the score, hands the mark over to the card: the face and its words come in together as it grows (no flat slab).
     c.btn.style.opacity = 1 - smooth(...CARD_GROW.face, k);
     c.face.style.opacity = smooth(...CARD_GROW.face, k);
     const cfg = DEPTH.card, lift = !!VIEW.depth && !VIEW.phone;

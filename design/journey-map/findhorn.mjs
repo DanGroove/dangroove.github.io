@@ -1,6 +1,6 @@
 // Sound is represented by travelling rings and timed calls to the existing hear() kit.
 import { FIND_PLAY, FIND_COPY, FINDS } from './data.mjs';
-import { clamp01, lerp } from './trip.mjs';
+import { clamp01 } from './trip.mjs';
 import { starPath } from './art.mjs';
 import { JOURNEY, stepsFocus } from './steps.mjs';
 import { findPointer, FD, FIND_BY, ease, attr, fEsc, found, opened, press, showPop, closePop, attend, findSlot, findPlace, findView, findSvg } from './findkit.mjs';

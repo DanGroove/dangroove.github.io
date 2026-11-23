@@ -1,5 +1,5 @@
 // The timeline bar: a quiet instrument pinned to the bottom; in the footer it becomes the rule under the name.
-import { STOPS, PALETTES, COPY, FINDS, FIND_PLAY } from './data.mjs';
+import { STOPS, PALETTES, COPY, FIND_PLAY } from './data.mjs';
 import { yearOf, DATE_NOW, progressForStop, progressForDate, holdStart, VIEW, smooth, lerp, easeIO } from './trip.mjs';
 
 const TL = { el: null, track: null, head: null, rows: null, fades: [], blocks: [], tip: null, count: null, trackW: 1, viewW: 1, sx: 1, dx: 0, dy: 0, ox: 0, oy: 0, val: '', drag: null, off: 0, rm: false };
@@ -12,11 +12,12 @@ export function tlBuild(el, hooks, rm) {
   let ticks = ''; for (let y = Y0; y <= Math.floor(DATE_NOW); y++) ticks += `<i class="tl-tick" style="left:${(xOf(y) * 100).toFixed(3)}%"><b>'${String(y % 100).padStart(2, '0')}</b></i>`;
   let blocks = { school: '', work: '' };
   STOPS.forEach((s, i) => s.spans.forEach(sp => { const a = xOf(yearOf(sp[0])), b = xOf(yearOf(sp[1], 1)); blocks[s.track] += `<span class="tl-blk" data-i="${i}" style="left:${(a * 100).toFixed(3)}%;width:${((b - a) * 100).toFixed(3)}%;--mk:${PALETTES[s.palette].mark}"><em></em></span>`; }));
-  el.innerHTML = `<div class="tl-bg tl-f"></div><div class="tl-view"><div class="tl-track"><div class="tl-ticks tl-f">${ticks}</div><div class="tl-rows tl-f"><div class="tl-row">${blocks.school}</div><div class="tl-row">${blocks.work}</div></div><div class="tl-head"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0 -7Q0 0 7 0Q0 0 0 7Q0 0 -7 0Q0 0 0 -7Z"/></svg></div></div></div><div class="tl-base"></div><span class="tl-count tl-f" aria-live="polite"></span><div class="tl-tip" aria-hidden="true"></div>`;
+  el.innerHTML = `<div class="tl-bg tl-f"></div><div class="tl-view"><div class="tl-track"><div class="tl-ticks tl-f">${ticks}</div><div class="tl-rows tl-f"><div class="tl-row">${blocks.school}</div><div class="tl-row">${blocks.work}</div></div><div class="tl-head"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0 -7Q0 0 7 0Q0 0 0 7Q0 0 -7 0Q0 0 0 -7Z"/></svg></div></div></div><div class="tl-base"></div><span class="tl-count tl-f" aria-hidden="true"></span><div class="tl-tip" aria-hidden="true"></div>`;
   el.setAttribute('role', 'slider'); el.tabIndex = 0; el.setAttribute('aria-label', COPY.timeline);
   el.setAttribute('aria-valuemin', Y0); el.setAttribute('aria-valuemax', Math.floor(DATE_NOW));
   TL.track = el.querySelector('.tl-track'); TL.head = el.querySelector('.tl-head'); TL.rows = el.querySelector('.tl-rows');
   TL.fades = [...el.querySelectorAll('.tl-f')]; TL.tip = el.querySelector('.tl-tip'); TL.count = el.querySelector('.tl-count');
+  TL.say = document.createElement?.('span'); if (TL.say && el.after) { TL.say.className = 'sr'; TL.say.setAttribute('aria-live', 'polite'); el.after(TL.say); }
   TL.blocks = [...el.querySelectorAll('.tl-blk')].map(b => ({ el: b, em: b.firstChild, i: +b.dataset.i }));
   TL.view = el.querySelector('.tl-view'); TL.base = el.querySelector('.tl-base');
   TL.blocks.forEach(b => {
@@ -28,9 +29,9 @@ export function tlBuild(el, hooks, rm) {
   el.addEventListener('keydown', e => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return; e.preventDefault();
     if (e.key === 'Home' || e.key === 'End') { TL.hooks.jump(e.key === 'Home' ? 0 : STOPS.length - 1); return; }
-    const P = TL.lastP || 0, cur = currentStop(P);
-    let i = e.key === 'ArrowRight' ? cur + 1 : (P > progressForStop(Math.max(cur, 0)) + 1 ? cur : cur - 1);
-    i = Math.max(0, Math.min(STOPS.length - 1, i)); TL.hooks.jump(i);
+    const P = TL.lastP || 0, cur = currentStop(P), on = TL.hooks.moving?.() && TL.pending != null;
+    let i = on ? TL.pending + (e.key === 'ArrowRight' ? 1 : -1) : e.key === 'ArrowRight' ? cur + 1 : (P > progressForStop(Math.max(cur, 0)) + 1 ? cur : cur - 1);
+    i = Math.max(0, Math.min(STOPS.length - 1, i)); TL.pending = i; TL.hooks.jump(i);
   });
   el.addEventListener('pointerdown', e => {
     TL.drag = { x: e.clientX, moved: false, P: TL.lastP || 0, blk: e.target.closest('.tl-blk') };
@@ -55,7 +56,7 @@ function tipFor(i, blk) {
   TL.tip.classList.add('on');
 }
 const currentStop = P => { let c = -1; STOPS.forEach((s, i) => { if (P >= holdStart(i)) c = i; }); return c; };
-export const tlSetCount = (n, t) => { TL.count.textContent = fmt(n === t ? COPY.countAll : COPY.count, { n, t }); };
+export const tlSetCount = (n, t) => { TL.count.textContent = fmt(n === t ? COPY.countAll : COPY.count, { n, t }); if (TL.say) TL.say.textContent = TL.count.textContent; };
 export const tlSetCraft = mask => TL.blocks.forEach(b => { b.el.classList.toggle('craft-lit', !!mask?.[b.i]); b.el.style.opacity = mask && !mask[b.i] ? FIND_PLAY.way.timelineDim : 1; });
 
 export function tlResize(ruleRect) {
@@ -85,5 +86,6 @@ export function tlFrame(st) {
   TL.head.style.transform = `translateX(${hx.toFixed(2)}px) scaleX(${(1 / sx).toFixed(4)})`;
   TL.blocks.forEach(b => b.em.style.opacity = st.visited[b.i] ? 1 : 0);
   const i = currentStop(st.P), v = i < 0 ? COPY.timelineStart : fmt(COPY.timelineValue, { name: STOPS[i].name, dates: STOPS[i].dates });
-  if (v !== TL.val) { TL.val = v; TL.el.setAttribute('aria-valuetext', v); TL.el.setAttribute('aria-valuenow', Math.floor(st.date)); }
+  const now = Math.floor(st.date); if (!TL.hooks?.moving?.()) TL.pending = null;
+  if (v !== TL.val || now !== TL.now) { TL.val = v; TL.now = now; TL.el.setAttribute('aria-valuetext', v); TL.el.setAttribute('aria-valuenow', now); }
 }

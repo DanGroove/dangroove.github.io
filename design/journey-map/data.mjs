@@ -12,7 +12,8 @@ export const C = {
 // headline: the headline colour. mark: the place's colour wherever it sits on the Ink ground
 // (lit stop mark, timeline block, mini-map). hairline: rules and empty frames on the card.
 export const PALETTES = {
-  hmc: { logo: 'assets/logos/hmc.png', layout: 'ground', ground: '#1E345D', text: '#FFFFFF', sub: '#B8C4DA', button: '#0D7247', buttonText: '#FFFFFF', pill: '#0D7247', pillText: '#FFFFFF', band: '#FFFFFF', headline: '#FFFFFF', mark: '#0D7247', hairline: '#B8C4DA' },
+  // logoH: HMC's stacked lockup stands taller than the wordmarks' 44 px (L-9)
+  hmc: { logo: 'assets/logos/hmc.png', logoH: 64, layout: 'ground', ground: '#1E345D', text: '#FFFFFF', sub: '#B8C4DA', button: '#0D7247', buttonText: '#FFFFFF', pill: '#0D7247', pillText: '#FFFFFF', band: '#FFFFFF', headline: '#FFFFFF', mark: '#0D7247', hairline: '#B8C4DA' },
   laurier: { logo: 'assets/logos/laurier.png', layout: 'band', ground: '#330172', text: '#FFFFFF', sub: '#CFC3E0', button: '#EAA41E', buttonText: '#330172', pill: '#EAA41E', pillText: '#330172', band: '#FFFFFF', headline: '#FFFFFF', mark: '#EAA41E', hairline: '#CFC3E0' },
   mohawk: { logo: 'assets/logos/mohawk.png', layout: 'ground', ground: '#030303', text: '#F4F4F4', sub: '#A3A3A3', button: '#FB9632', buttonText: '#030303', pill: '#991030', pillText: '#FFFFFF', band: '#FFFFFF', headline: '#F4F4F4', mark: '#FB9632', hairline: '#A3A3A3' },
   interkom: { logo: 'assets/logos/interkom.png', layout: 'ground', ground: '#F7F3E2', text: '#242021', sub: '#5E5A56', button: '#242021', buttonText: '#F7F3E2', arrow: '#E85155', pill: '#242021', pillText: '#F7F3E2', band: '#FFFFFF', headline: '#242021', mark: '#E85155', hairline: '#5E5A56' },
@@ -28,13 +29,15 @@ export const PIECE_IMAGE = 'assets/hmc-report.jpg';
 // crafts: draft for Dan to correct.
 export const STOPS = [
   { id: 'laurier', palette: 'laurier', name: 'Wilfrid Laurier University', short: 'Laurier', dates: '2016 to 2017', spans: [['2016-09', '2017-12']], track: 'school', role: 'Game Design and Development', crafts: ['Screen'], w: 0, rune: 'l',
-    label: { t: 'Laurier', sub: '2016 to 2017, game design', x: 158, y: 236, a: 'middle' },
+    // the name 4 units lower, its dates unmoved: the traveller's glow stays off the L (K-3)
+    label: { t: 'Laurier', sub: '2016 to 2017, game design', x: 158, y: 240, subDY: -4, a: 'middle' },
     copy: { draft: true, headline: 'Where it started.', para: 'I went to Laurier for game design. Systems, rules and play came first, before I ever chose graphic design.', took: 'Think about how someone moves through it.', piece: null, caption: '' } },
   { id: 'hmc1', palette: 'hmc', name: 'HMC Connections', short: 'HMC Connections', dates: 'Summers 2018 and 2020', spans: [['2018-04', '2018-08'], ['2020-06', '2020-08']], track: 'work', role: 'Graphic designer, video editor, web designer', crafts: ['Print', 'Video', 'Screen'], w: 7, rune: 'h',
     label: { t: 'HMC Connections', sub: 'summers 2018 and 2020', x: 431, y: 271, a: 'end', tracking: -0.55 },
     copy: { draft: true, headline: 'First job, three hats.', para: 'Two summers as the student who did design, video and web at once. I designed the SafetyDrivesUs logo and built its website, plus flyers and infographics.', took: 'One person can carry a job across print, video and web.', piece: null, caption: '' } },
   { id: 'mohawk', palette: 'mohawk', name: 'Mohawk College', short: 'Mohawk', dates: '2019 to 2021', spans: [['2019-01', '2021-04']], track: 'school', role: 'Advanced Diploma, Graphic Design', crafts: ['Print', 'Screen'], w: 17, rune: 'm',
-    label: { t: 'Mohawk', sub: '2019 to 2021', x: 131, y: 392, a: 'middle' },
+    // tracked in, 2 left and 4 down (was 131, 392): the k clears the trail's dots (K-5); phones leave no more room
+    label: { t: 'Mohawk', sub: '2019 to 2021', x: 129, y: 396, a: 'middle', tracking: -0.5 },
     copy: { draft: true, headline: 'Where the craft got formal.', para: 'Type, layout and critique, every week, until the reasons behind a good page became habit.', took: 'Type first.', piece: null, caption: '' } },
   { id: 'hmc2', palette: 'hmc', name: 'HMC Connections', short: 'HMC, again', dates: '2021 to 2022', spans: [['2021-06', '2022-03']], track: 'work', role: 'Graphic designer, on contract', crafts: ['Print', 'Screen'], w: 26, rune: 'h',
     label: { t: 'HMC, again', sub: 'on contract, 2021 to 2022', x: 461, y: 297, a: 'start' },
@@ -286,7 +289,7 @@ export const HOLD = { zoomIn: [0, 0.18], zoomOut: [0.86, 1], open: [0.1, 0.32], 
 // Clock-driven journey. Pace and animation durations are seconds.
 export const STEPS = {
   // A move pressed while moving (D5): shortest durations in seconds; centre acceleration caps in lengths of the screen's longer side per second squared (D5-1); the duration search's step, sample and limit.
-  carry: { min: 0.35, hurryMin: 0.45, acceleration: 1.2, hurryAcceleration: 3, searchStep: 0.05, sample: 0.016, searchMax: 30 },
+  carry: { min: 0.35, hurryMin: 0.45, acceleration: 1.2, hurryAcceleration: 3, searchStep: 0.05, sample: 0.016, searchMax: 30, fillBlend: 0.3 },
   scroll: { ease: 0.12, settle: 0.4, threshold: 0.12, flick: 0.5, slop: 6, line: 16, velocityWindow: 80 },
   glide: { seconds: [2.6, 4.2], ease: 'cosine-ramp', ramp: 0.18, cruiseSwell: 0.05, distancePower: 0.5, fold: 0.5, open: 0.5, openWindow: 0.6,
     zoomOut: 0.26, zoomLength: 160, overviewDistance: 300, controls: 8, samples: 2048, warmDelay: 0.1, warmGap: 0.05 },
@@ -301,10 +304,12 @@ export const EXPLORE = { in: 1.6, out: 0.9, most: 3, margin: 24, marginPhone: 12
   footerFade: 0.5, clickRelease: 500, pressWait: 120, rowDelay: 0.4, rowFade: 0.2,
   keyPan: 90, keyShift: 3, calmAlpha: 0.35, calmScale: 0.6, autoReserve: 2,
   ease: 0.12, slop: 6, friction: 5, velocityWindow: 0.08, key: 1.25, hintTime: 8, linePx: 16,
-  bar: { edgePhone: 16, padStart: 14, padEnd: 34, arrowPhone: 12 } };
+  bar: { edgePhone: 16, padStart: 14, padEnd: 34, arrowPhone: 12 },
+  // keep: the share of the view's width and height a pan keeps on the map frame (L-15)
+  keep: 0.65 };
 // A growing card's scale (1 = open) at which the stone mark hands over to the card's face, and at which its words come in.
 export const CARD_GROW = { face: [0.12, 0.3], words: [0.16, 0.42] };
-export const CARD_CLOSE = { time: 0.45, hit: 44, inset: 0, icon: 12, stroke: 1.6, radius: 14, radiusPhone: 16 };
+export const CARD_CLOSE = { time: 0.45, hit: 44, inset: 0, icon: 12, stroke: 1.6 };
 // Copied from the hero's NAME table, entrance name renderer and EASE curves.
 export const FOOT_NAME = { radius: 0.95, near: 1.2, hop: 0.16, rise: 0.07, feel: 1.3, wave: 55, open: 9,
   spring: 240, damp: 12, kick: 26, red: C.red, dy: 1.4, far: -1e5, fallbackEm: 16,
@@ -313,7 +318,8 @@ export const FOOT_NAME = { radius: 0.95, near: 1.2, hop: 0.16, rise: 0.07, feel:
   openEpsilon: 0.003, radiusEpsilon: 0.5, paintEpsilon: 0.001, restEpsilon: 0.0005, speedEpsilon: 0.005,
   solveIterations: 40, solveEpsilon: 1e-7, measureSize: 100 };
 
-export const STARS = { count: 420, red: 0.05, dprCap: 2, drift: 0.012, parallax: 14,
+// travZoomed: the traveller's size at the overview against its size at a stop (K-3)
+export const STARS = { count: 420, red: 0.05, dprCap: 2, drift: 0.012, parallax: 14, travZoomed: 0.75,
   sky: 300, skyShare: 0.38, skyLook: 0.5, skyFollow: 0.04, twinkle: 0.35, skyPush: 26,
   skyReserve: 200, skyMargin: 10, skyEdge: 14, skyShock: 90, skyF: [0.5, 1.6], skyMove: [0, 0.3], skyCover: [0.25, 0.75],
   skySeed: 157, fieldZ: [0.25, 1], fieldR: [0.5, 1.6], fieldAlpha: [0.35, 0.95],
@@ -332,8 +338,7 @@ export const DEPTH = {
   light: { on: 1, dark: 0.45, darkPhone: 0.25, r: 0.55, core: 0.35, ptrR: 0.3, ptrCore: 0.3, amb: 0.35, card: 0.6, visit: 0.35, rush: [0, 0.5] },
   field: { area: [-100, -50, 700, 950], wrapFade: 60, sprite: 128, spriteMid: 0.4, spriteAlpha: 0.5 },
   mist: { on: 1, n: 120, nPhone: 60, a: [0.5, 1.8], r: [14, 36], stretch: [2.2, 3.4], turn: 0.2, alpha: [0.06, 0.14], near: [0.12, 0.42], thin: 0.35, show: [1.1, 1.3], pass: [2.4, 3.4], wind: 2.2 },
-  // The cloud deck the Set out dive passes through: a soft veil of mist, never a wash (polish round 1: its peak had lifted the
-  // screen's mean brightness about four times on desktop; now it stays under about 1.6 times the overview's).
+  // The cloud deck the Set out dive passes through: a soft veil, never a wash (at most about 1.6 times the overview's brightness).
   deck: { on: 1, n: 60, nPhone: 34, a: [6.5, 11], r: [50, 120], stretch: [1.6, 2.6], alpha: 0.035, boost: 1, show: [1.6, 1.9], peak: [1.8, 2.3], pass: [2.3, 3.0] },
   clouds: { on: 1, show: [0.3, 0.8], pass: [2.0, 2.9], sway: [14, 26], period: [50, 90], low: 2,
     list: [[-150, 150, 1.5, 3, 1, 7.0], [-250, 520, 1.1, 1, -1, 6.4], [-90, 800, 0.9, 2, 1, 7.6], [760, 110, 1.2, 1, 1, 6.8], [860, 430, 1.6, 3, -1, 7.4],
@@ -367,7 +372,8 @@ export const NOVA = {
     // The white along each arm: half its share of the arm at full heat, grown over this heat range (the held breath's white cross),
     // and gone within this many seconds of the blast, under its first flash.
     whiteReach: 0.34, whiteFrom: [0.6, 1], whiteOut: 0.06 },
-  // The X's hand-over from the map to the canvas, in seconds of the rush: the canvas X fading in under the exact sprite, then the sprite fading out; the sprite's reach in map units; the largest scale drift and screen slip (CSS px) it is shown at.
+  // The X's hand-over to the canvas: the canvas X's fade-in and the sprite's fade-out (s), the sprite's reach (map units), the
+  // largest scale drift and screen slip (CSS px) it is shown at.
   handover: { fadeIn: 0.12, fadeOut: 0.12, reach: 20, drift: 0.02, slip: 0.5 },
   pulse: [2.6, 0.12, 0.9, 0.06], spike: [1.7, 0.2, 3.14], glow: [4.2, 0.07],
   rays: { n: 22, len: [4, 12], alpha: [0.3, 0.7], turn: 0.12, start: 1.1, width: 1, breathe: 0.7, period: [1.2, 3.2], peak: 0.16 },
@@ -376,7 +382,8 @@ export const NOVA = {
   shells: [6, -4], shellDash: [2, 10],
   orbit: 0.06, embers: { n: 40, nPhone: 20, life: [2.5, 5], reach: [0.16, 0.45], alpha: 1, r: [1, 2.4], slow: 3, burst: 2, fade: [0.15, 1] },
   flare: { time: 1.6, core: 0.5, kick: 0.12, hit: 70, alpha: 0.9, reach: 0.85, auto: [7, 12], cap: 8, coreMax: 1.2, kickMax: 0.3 },
-  gather: { ring: 0.32, swirl: 0.35, sky: 0.5, join: 0.5, stagger: 0.35, time: 0.6, tail: 0.02, tailGain: 0.08, golden: 0.6180339887498949 },
+  // spread: each star's ring radius varies by up to this share; ringTail: the tails shorten to it as the stars join (L-12)
+  gather: { ring: 0.32, swirl: 0.35, sky: 0.5, join: 0.5, stagger: 0.35, time: 0.6, tail: 0.02, tailGain: 0.08, golden: 0.6180339887498949, spread: 0.24, ringTail: 0.3 },
   motionIn: [0, 1], orbitIn: [0.5, 1], seed: 149,
   base: { spikeLength: 12.7, angles: [45, -45], rushLen: 2.4, peakLen: 10, endLen: 5, spikePeak: 0.3, spikeEnd: 58,
     thin: [1, 0.55, 0.8, 0.5], heat: [0.05, 0.7], redOut: [0.2, 0.9],
@@ -1003,7 +1010,12 @@ export const YGG = {
   }
 };
 export const MARK = { k: 10, min: 14, max: 36, stand: 3, box: 400, centre: 200, radius: 176, rim: 20, boss: 54, bossLine: 16, highlight: [186,186,12,.55], shadow: [200,392,120,10,.35], planks: [-120,-72,-24,24,72,120], plankLine: 7, plankAlpha: .28, paintAlpha: .35, studs: 8, stud: 9, studLine: 5, quarters: 'M200 200L200 24A176 176 0 0 1 376 200ZM200 200L200 376A176 176 0 0 1 24 200Z', legend: [68,836,4.6,.9,1.2,.45] };
-export const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -8, hmcSubDY: -27.5, hmcAgainSubDX: 3, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [16,8], xSubAt: [16,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]] };
+export const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -8, hmcSubDY: -27.5, hmcAgainSubDX: 3, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [16,8], xSubAt: [16,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]],
+  // cardDim: other stops' labels behind an open card (desktop, phone); underFade: the share of a label under the timeline or
+  // step bar at which it has gone (sideFade: off the screen's side); bar: the bar's keep-out (half width, pad); hint: a find
+  // view's lift of it, for the hint (px)
+  cardDim: [0.35, 0.12], underFade: 0.4, sideFade: 0.1, bar: [190, 6], hint: 44 };
 // titleOut: the push-in share over which the map's title and kicker fade out (back in at the overview and in explore).
-export const WORLD = { scrim: [150,190,.85], titleOut: [.3, .8], card: { w:640, edge:32, cap:420, phoneShare:.82, phoneBottom:6, slack:2, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
+// coastDraw: the share of the fall over which the coasts draw, from its first moments
+export const WORLD = { scrim: [150,190,.85], titleOut: [.3, .8], coastDraw: [.04, .72], card: { w:640, edge:32, cap:420, phoneShare:.82, phoneBottom:6, slack:2, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
 export const PHONE_LAYOUT = { gap: 16, edge: 16, ctaShare: .14, headlineGap: 20, exploreGap: 8, exploreBottom: 8, exploreBack: 152, exploreTop: 172 };

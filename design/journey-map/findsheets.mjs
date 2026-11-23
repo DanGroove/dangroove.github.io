@@ -1,9 +1,9 @@
 // Part A: persistent beacon reading and a rub/read/flip sheet.
 import { C, COPY, FIND_COPY, FIND_PLAY, FIND_TIMING } from './data.mjs';
 import { VIEW, clamp01, lerp } from './trip.mjs';
-import { rubbingSvg, rubbingRunes } from './art.mjs';
+import { rubbingSvg } from './art.mjs';
 import { depthBeam } from './depth.mjs';
-import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, closeSheet, attend, findBits, findSvg, findSheet, findSlot, findAngleDelta } from './findkit.mjs';
+import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, closeSheet, findBits, findSvg, findSheet, findSlot, findAngleDelta } from './findkit.mjs';
 
 export function findBeacon(svg) {
   const f = FIND_BY.beacon, el = svg.querySelector('#f-beacon'), beam = el.querySelector('.bc-beam'), flame = el.querySelector('.bc-flame'), glow = el.querySelector('.bc-glow');

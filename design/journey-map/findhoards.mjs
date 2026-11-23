@@ -1,6 +1,6 @@
 // Part A: the instrument and the five persistent, hand-dug chests.
 import { C, COPY, CRAFTS, STOPS, MAP, FIND_COPY, FIND_PLAY, PALETTES } from './data.mjs';
-import { clamp01, lerp, toScreen, VIEW } from './trip.mjs';
+import { clamp01, lerp, VIEW } from './trip.mjs';
 import { pieceIcon, hoardInside } from './art.mjs';
 import { cardsSetCraft, arrowSvg } from './cards.mjs';
 import { tlSetCraft } from './timeline.mjs';

@@ -80,8 +80,7 @@ const footerStyle = (el, key, value) => { const text = String(value); if (el && 
 export function footerFrame(st) {
   if (FT.hit) {
     FT.settled = st.settleT >= 1;
-    // A pointer may press the X wherever it shows (it travels there); the keyboard reaches it only where it is the view's own
-    // goal: resting at the X beat, or the settled supernova. Elsewhere it is off screen or far away, so it leaves the tab order.
+    // A pointer may press the X wherever it shows; the keyboard only at the X beat or the settled supernova.
     FT.xP ??= JOURNEY.beats.find(b => b.id === 'x').P;
     const available = (st.handoffT >= 1 && st.rushT === 0) || FT.settled, keyed = available && (FT.settled || (!JOURNEY.moving && Math.abs(JOURNEY.P - FT.xP) < NOVA.base.hitTolerance));
     const state = `${available}/${FT.settled}/${keyed}`;
@@ -134,10 +133,9 @@ function footerRough(scale) {
   const filter = mapDefs().match(/<filter id="rough"[^]*?<\/filter>/)[0];
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${cv.width}" height="${cv.height}" viewBox="-20 -8 40 16"><defs>${filter}</defs><path d="M-12.7 0H12.7" stroke="${C.red}" stroke-width="3.6" stroke-linecap="round" fill="none" filter="url(#rough)"/></svg>`);
 }
-// The hand-over sprite (critique round 4, V4-1): the map's own X, both strokes and the rough filter, rendered once at rest
-// at the X beat's camera scale on the screen's own pixel grid. It sits in a canvas of its own just above the nova canvas,
-// because that one is capped at NOVA_CANVAS.dpr and cannot match the SVG on denser screens. The first rush frame shows it
-// 1:1 in place of the map's X; the stretchable canvas X fades in under it, then it fades out. It is freed once the X is gone.
+// The hand-over sprite (V4-1): the map's own X, rough filter and all, rendered once at the X beat's scale on the screen's pixel
+// grid, in its own canvas (the nova canvas is capped at NOVA_CANVAS.dpr). The first rush frame shows it 1:1 in place of the
+// map's X; the canvas X fades in under it, then it fades out, and it is freed once the X is gone.
 const rushStart = () => SEQ.find(s => s.kind === 'rush').a;
 function footerExactFree() {
   FT.exact = FT.exactPending = null; FT.exactFailed = '';
@@ -245,9 +243,8 @@ export function footerMotion(time, dt, st, look, moved) {
   if (bT > 0) thin = lerp(held.thin, B.thin[2], blastJoin);
   if (sT > 0) thin = lerp(B.thin[2], B.thin[3], sT);
   const heat = build.heat;
-  // The lantern's darkness, handed over from canvas#air as the rush lifts it there (depth.mjs), so the map keeps dimming under
-  // the build-up instead of first brightening: here it makes up exactly what the lifted lantern no longer draws, with the
-  // lantern's own hole around the traveller, and it is blown away with the veil at the blast.
+  // The lantern's darkness, handed over from canvas#air as the rush lifts it (depth.mjs), so the map keeps dimming under the
+  // build-up: exactly what the lifted lantern no longer draws, with its hole round the traveller, blown away at the blast.
   const lantern = depthLantern(st) * (VIEW.phone ? DEPTH.light.darkPhone : DEPTH.light.dark), kept = depthLanternHeld(st);
   if (lantern > 0 && kept > 0 && st.trav) {
     const L = DEPTH.light, r = L.r * Math.min(VIEW.w, VIEW.h), left = 1 - smooth(...L.rush, rT), at = [(st.trav[0] - MAP.x[0]) * st.cam.s, (st.trav[1] - MAP.x[1]) * st.cam.s];
@@ -322,9 +319,8 @@ export function footerMotion(time, dt, st, look, moved) {
       else footerLine(ctx, [-12.7, 0], [12.7, 0], C.red, 3.6, red);
     }
     if (white > 0) {
-      // The heat whitens the stroke from the crossing out: a point of light at first, and, as the heat nears full in the
-      // draw-in, a white bar along most of the arm with red left only at the tips (the held breath's small white cross).
-      // Only the build-up's X carries the bar: it is gone in the blast's first flash, so the blast and the settled star keep their look.
+      // The heat whitens the stroke from the crossing out, to a white bar with red only at the tips (the held breath's small
+      // white cross); only the build-up's X carries it, gone in the blast's first flash.
       const whiteK = smooth(...NOVA.build.whiteFrom, heat) * (1 - smooth(0, NOVA.build.whiteOut / STEPS.pace.blast, bT)), plateau = NOVA.build.whiteReach * whiteK, gradient = ctx.createLinearGradient(-12.7, 0, 12.7, 0), hot = footerHeatColour(heat);
       gradient.addColorStop(0, footerColour(C.red, 0)); gradient.addColorStop(.5 - plateau, hot); gradient.addColorStop(.5 + plateau, hot); gradient.addColorStop(1, footerColour(C.red, 0));
       const taper = 12.7 * (1 - .7 * whiteK);
