@@ -3870,7 +3870,7 @@ function findRavens(svg) {
         const locked = flying || hearing || o.stage === 'reel';
         if (!locked) {
           const pointer = FD.hover && t - FD.pointerT <= FIND_PLAY.fresh ? toMap(FD.pointer) : null, base = G.PERCHES[b.i], bx = f.x + base[0] * R.scale, by = f.y + base[1] * R.scale;
-          const shy = pointer && o.awake && (pointer[0] - bx) * b.side < 0 && Math.hypot(pointer[0] - bx, pointer[1] - by) < R.near ? R.shy : 0;
+          const shy = !FD.rm && pointer && o.awake && (pointer[0] - bx) * b.side < 0 && Math.hypot(pointer[0] - bx, pointer[1] - by) < R.near ? R.shy : 0;
           if (shy !== b.shyTo) { b.shyFrom = b.shy; b.shyTo = shy; b.shyTs = t; }
           const u = clamp01((t - b.shyTs) / G.shyTime); b.shy = lerp(b.shyFrom, b.shyTo, ease(u)); xy = baseAt(b); xy[1] -= Math.abs(b.shyTo - b.shyFrom) / R.shy * G.hopHeight * Math.sin(Math.PI * u);
         }

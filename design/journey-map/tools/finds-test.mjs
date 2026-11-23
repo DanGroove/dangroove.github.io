@@ -417,11 +417,12 @@ for (let i = 0; i < 4; i++) { rmKey('hoard-hmc1'); await rmTick(); }
 assert.equal(window.__jm.finds.state('hoard-hmc1').open, true);
 rmKey('ravens'); await rmTick(); assert.equal(window.__jm.finds.state('ravens').tally, 1);
 rmKey('ravens'); await rmTick(); await rmTick(0.1); assert.equal(window.__jm.finds.state('ravens').stage, 'reel'); await rmTick(5.1); assert.equal(window.__jm.finds.state('ravens').stage, 'rest');
+{ const b = FD.list.ravens.birds[0], before = b.g.getAttribute('transform'); FD.pointer = [(ravenFind.x + rig.PERCHES[0][0] * FIND_PLAY.raven.scale + 2) * rmCamera.s + rmCamera.tx, (ravenFind.y + rig.PERCHES[0][1] * FIND_PLAY.raven.scale) * rmCamera.s + rmCamera.ty]; for (let i = 0; i < 8; i++) { FD.pointerT = testClock; await rmTick(0.05); } assert.ok(FD.list.ravens.awake, 'pointer reaches Huginn'); assert.equal(b.shy, 0, 'no shy hop under reduced motion'); assert.equal(b.g.getAttribute('transform'), before); FD.pointer = [-Infinity, -Infinity]; }
 for (let i = 0; i < 3; i++) { rmKey('serpent'); await rmTick(); }
 assert.equal(window.__jm.finds.state('serpent').stage, 'asleep');
 assert.ok(FD.list.serpent.swells.every(s=>!s.live));assert.equal(rmSvg.querySelector('.jg-eye').getAttribute('opacity'),'0');assert.equal(FD.list.serpent.tailOut,0);
 const rmActors=['.yg-eagle','.yg-wings','.yg-rat','.yg-tail','.yg-nid-head'].map(s=>rmSvg.querySelector(s)), rmTransforms=rmActors.map(n=>n.getAttribute('transform'));FD.list.well.hear();await rmTick(3);assert.deepEqual(rmActors.map(n=>n.getAttribute('transform')),rmTransforms);
-console.log('ok: reduced-motion serpent consumes leaves immediately with no swell; all tree actors stay still on hear');
+console.log('ok: reduced-motion serpent consumes leaves immediately with no swell; no shy hop; all tree actors stay still on hear');
 for (let i = 0; i < 4; i++) { rmKey('beacon'); await rmTick(); }
 assert.equal(window.__jm.finds.state('beacon').fire, 4);
 rmKey('runestone'); await rmTick(); assert.equal(window.__jm.finds.state('runestone').read, true);
