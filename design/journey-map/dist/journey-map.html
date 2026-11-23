@@ -112,7 +112,7 @@ button { font-family: inherit; }
 .sh { position: absolute; left: 50%; top: 50%; }
 .sh1 { width: 46px; height: 46px; margin: -23px; border-radius: 50%; background: var(--note); }
 .sh2 { width: 40px; height: 40px; margin: -20px; background: var(--paper); }
-.sh3 { width: 0; height: 0; margin: -22px -20px; border-left: 20px solid transparent; border-right: 20px solid transparent; border-bottom: 36px solid var(--mid); }
+.sh3 { width: 40px; height: 36px; margin: -22px -20px; background: var(--mid); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
 .ring { position: absolute; right: 10px; bottom: 10px; width: 30px; height: 30px; transform: rotate(-90deg); }
 .ring circle { fill: none; stroke: var(--mid); stroke-width: 3; }
 .ring .ring-p { stroke: var(--paper); }
@@ -132,7 +132,7 @@ button { font-family: inherit; }
 .pz-rw { display: block; margin-top: 16px; color: var(--posterRed); font-size: 16px; font-weight: 800; }
 .pz-stamp { position: absolute; right: 18px; bottom: 50px; width: 46px; height: 46px; border: 1.5px solid var(--posterRed); border-radius: 50%; display: grid; place-items: center; font-size: 8.5px; font-weight: 800; letter-spacing: .08em; color: var(--posterRed); transform: rotate(-14deg); }
 .pz-pin { position: absolute; left: 12px; top: 12px; width: 5px; height: 5px; border-radius: 50%; background: var(--posterRed); } .pz-pin.r { left: auto; right: 12px; }
-.pz-fold { position: absolute; right: 0; bottom: 0; border-left: 30px solid transparent; border-bottom: 30px solid var(--posterCorner); }
+.pz-fold { position: absolute; right: 0; bottom: 0; width: 30px; height: 30px; background: var(--posterCorner); clip-path: polygon(100% 0, 100% 100%, 0 100%); }
 .pz-ctl { position: absolute; top: 214px; left: -150px; width: 300px; display: flex; justify-content: center; gap: 8px; pointer-events: auto; }
 .pz-ctl button { background: var(--ink); color: var(--paper); border: 1px solid var(--note); border-radius: 999px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
 
