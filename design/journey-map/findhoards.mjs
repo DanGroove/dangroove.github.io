@@ -68,6 +68,8 @@ export function findWay(svg) {
     const pulse = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - (o.pickTs ?? -Infinity)) / W.pulse[1]));
     arms.forEach((arm, i) => attr(arm, 'transform', `rotate(${i * FIND_PLAY.kit.turn / CRAFTS.length}) scale(${1 + (W.pulse[0] - 1) * pulse * (o.craft === i || o.craft === CRAFTS.length ? 1 : 0)})`));
     if (o.kept && !FD.rm) { o.runesAngle += W.runes * dt; attr(runes, 'transform', `rotate(${o.runesAngle})`); }
+    // The tally is read from far out as well: it never falls under tally[3] px on screen, up to tally[4] units.
+    attr(tally, 'font-size', Math.min(W.tally[4], Math.max(W.tally[1], W.tally[3] / FD.st.cam.s)));
     attr(ring, 'opacity', o.unlocked ? 1 : 0);
     if (o.unlocked && !FD.rm) attr(ring, 'transform', `scale(${lerp(W.ring[0], W.ring[1], (1 - Math.cos(t * Math.PI * 2 / W.ring[2])) / 2) / W.ring[0]})`);
     if (o.linePhase === 'retract') { const q = FD.rm ? 1 : clamp01((t - o.lineTs) / W.line); o.lines.forEach((l, i) => l.v = o.retract[i] * (1 - ease(q))); if (q === 1) queueMicrotask(startLines); }

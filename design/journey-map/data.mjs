@@ -120,7 +120,7 @@ export const COPY = {
 
 // Finds. n is the number on the Red marker (main finds only). x, y are map units.
 export const FINDS = [
-  { id: 'wayfinder', n: 1, x: 92, y: 716, view: [240, 660, 150], mark: [148, 672], label: 'The wayfinder. Pick a craft to light up the stops that used it. Arrow keys turn it, Enter on the centre clears it.' },
+  { id: 'wayfinder', n: 1, x: 92, y: 716, view: [240, 660, 150], viewPhone: [108, 716, 75, 0], mark: [148, 672], label: 'The wayfinder. Pick a craft to light up the stops that used it. Arrow keys turn it, Enter on the centre clears it.' },
   { id: 'hoards', n: 2, x: 366, y: 354, mark: [382, 346], label: 'Hoards. Five buried chests, each near a stop.' },
   { id: 'ravens', n: 3, x: 456, y: 192, view: [456, 164, 44], mark: [478, 176], label: 'Huginn and Muninn, two ravens on a standing stone. Press to send the next raven for a thought or memory.' },
   { id: 'serpent', n: 4, x: 486, y: 98, view: [430, 78, 118], mark: [550, 74], label: 'The serpent. Poke three times to feed it a deadline.' },
@@ -151,10 +151,10 @@ export const FIND_COPY = {
   serpentLines: [{ t: 'A deadline story goes here.', todo: 1 }, { t: 'A deadline story goes here.', todo: 1 }, { t: 'A deadline story goes here.', todo: 1 }],
   serpentLeaf: ['FRI', '5 PM'],
   beaconNotes: [
-    { x: 420, y: 476, rune: 'note one', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
-    { x: 424, y: 520, rune: 'note two', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
-    { x: 446, y: 562, rune: 'note three', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
-    { x: 446, y: 434, rune: 'note four', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
+    { x: 442, y: 418, rune: 'note one', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
+    { x: 413, y: 454, rune: 'note two', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
+    { x: 410, y: 495, rune: 'note three', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
+    { x: 432, y: 533, rune: 'note four', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
   ],
   runestoneRunes: 'first sketch final cut',
   poster: { head: 'WANTED', who: 'ONE DESIGNER', line1: 'who sees a job through, from', line2: 'first sketch to final cut', reward: 'REWARD: THE WORK', stamp: 'PRINT', back: ['Stock: to come', 'The brief: to come'], foot: { t: 'Stock: to come. The brief: to come.', todo: 1 } },
@@ -418,7 +418,7 @@ export const FIND_PLAY = {
   star: { time: 0.75, arc: 46, bump: 0.3, size: 14, peak: 1.3 },
   kit: { margin: 40, rad: 70, shipY: 5, starZ: 7, dt: 0.05, popup: { scale: 0.6, over: 1.08, time: 0.22, edge: 8, tail: [10, 6], width: 240, radius: 10, pad: [10, 14], font: 13, line: 1.4, kicker: 9.5, gap: 4 }, slot: { font: 11, weight: 500, border: 1, pad: 6 }, target: 17, sheet: { from: 0.06, edge: 24, grow: 0.35, offset: 20 }, deg: 180, turn: 360 },
   way: { stiff: 90, damp: 9, near: 70, line: 0.45, gap: 0.1, short: 9, ping: 0.5, runes: 0.6, spin: 0.8, timelineDim: 0.35, lineWidth: 1, wide: [300, 480, 250, 0],
-    drift: [0.8, 4, 0.31, 2], dim: 0.55, armWidth: 2.2, pulse: [1.12, 0.25], dash: [2, 4], alpha: 0.6, solidAlpha: 0.9, pingR: [6, 14], pingAlpha: 0.7, tally: [22, 5.2, 1], ring: [4, 9, 1.6], allSpeed: 40, hub: 6,
+    drift: [0.8, 4, 0.31, 2], dim: 0.55, armWidth: 2.2, pulse: [1.12, 0.25], dash: [2, 4], alpha: 0.6, solidAlpha: 0.9, pingR: [6, 14], pingAlpha: 0.7, tally: [22, 5.2, 1, 10.5, 9], ring: [4, 9, 1.6], allSpeed: 40, hub: 6,
   },
   hoard: { hole: [12, 20, 27], rise: 0.28, over: 1.6, repeat: 0.3, rattle: 0.36, openHold: 0.3, near: 26, glint: [5, 8],
     scale: 0.3, travel: 60, holeRatio: 0.28, pile: [0.5, 0.75, 1], scratchWidth: 1.6, glintAt: [0, -4], glintSize: 5, glintTime: 0.5, glintTurn: 45, clods: 7, puffs: 2, rattleAngle: 4, rattleCycles: 3, lidPivot: [30, -34], lidAngle: -32, lidLift: -6, lidTime: 0.25, lidOver: 1.7, glowTime: 0.3, glowPeak: 1, glowRest: 0.6, glowKept: 0.35, stars: 6, burstTravel: [48, 34], burstLift: 14, anchor: 18, width: 260, top: 3, icon: 64, iconBox: [-32, -32, 64, 64], rad: 35, scratchHop: 2, hopClods: 2,
@@ -436,7 +436,7 @@ export const FIND_PLAY = {
     tonguePath: 'M-101 -40l-8 1.5M-109 -38.5l-3.5 -2.5M-109 -38.5l-3 3', shutPath: 'M-86.2 -43q2.2 1.8 4.4 0', snout: [-101, -40],
   },
   beacon: { rad: 200, read: 1.2, flame: [1, 1.3, 1.6, 1.9, 2.3], leap: [3, 0.3], embers: 1.5, turn: 30, reach: 1.4, idle: 0.7, snap: 0.4,
-    scale: 0.6, origin: [0, -50], flameFoot: [0, -47], glowR: 16, glowAlpha: 0.15, flicker: [0.08, 11, 0.05, 17.3, 0.12, 13.1], baseAngle: 176, sweep: 36, baseReach: 230, manual: 6, arrow: 6, soft: 4, wedgeSteps: 32, rest: 0.55, sparkN: 6, burstN: 14, noteScale: 1.12, flash: 0.3, hear: [0.6, 0.3, 1.3, 0.3], englishEase: 5, noteEase: 6, noteFont: 4.6, todoFont: 3.4, runeY: -4, lineY: 7, todoY: 1, runeSize: 4.2,
+    scale: 0.6, origin: [0, -50], flameFoot: [0, -47], glowR: 16, glowAlpha: 0.15, flicker: [0.08, 11, 0.05, 17.3, 0.12, 13.1], baseAngle: 176, sweep: 36, baseReach: 230, manual: 6, arrow: 6, slop: 6, notePhone: 1.7, soft: 4, wedgeSteps: 32, rest: 0.55, sparkN: 6, burstN: 14, noteScale: 1.12, flash: 0.3, hear: [0.6, 0.3, 1.3, 0.3], englishEase: 5, noteEase: 6, noteFont: 4.6, todoFont: 3.4, runeY: -7, lineY: 7, todoY: 1, runeSize: 4.2,
   },
   rune: { carving: 0.6, grow: 0.4, r: 34, step: 12, grid: [5, 7], done: 0.8, auto: [1.2, 1.6, 7], fill: 0.25,
     letter: [0.05, 0.18], stamp: [0.45, 0.12, 2.4], shake: [3, 0.16], tilt: 5, close: 0.3,
