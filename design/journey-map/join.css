@@ -1,0 +1,22 @@
+/* The joined page: the real hero fills the map's sticky stage. Loaded after map.css and the hero's own stylesheets. */
+
+/* One rectangle: the hero's box is the stage's box (and so the star canvas's), at the stage's height. Below 640 px tall the
+   hero is squeezed rather than given its own minimum. */
+.jm-joined .stage > .hero { position: absolute; inset: 0; height: 100%; min-height: 0 !important; z-index: 1; }
+.jm-joined #stars { z-index: 2; opacity: 0; }
+.jm-joined .ov { z-index: 3; }
+/* the stand-in's caption belonged to the stand-in hero */
+.jm-joined .caption { display: none; }
+
+/* The leave: the hero's own DOM rises one for one with the scroll. translate, because the hero's CSS already uses transform. */
+.jm-joined .hero .hero-nav,
+.jm-joined .hero .hero-say,
+.jm-joined .hero .hero-foot,
+.jm-joined .hero .hero-box { translate: 0 calc(-1 * var(--leave, 0px)); }
+
+/* Away: hidden, so it takes no pointer and no focus (also over any inline visibility its parts set). */
+.jm-joined .hero.jm-away,
+.jm-joined .hero.jm-away * { visibility: hidden !important; }
+
+/* Reduced motion: the stage stays sticky through the leave and the cross-fade (join.mjs sets the section's height). */
+.jm-joined.rm .stage { position: sticky; }

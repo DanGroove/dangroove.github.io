@@ -9,6 +9,9 @@ import { footerBuild, footerBuildX, footerResize, footerFrame } from './footer.m
 import { findsBuild, findsFrame, findsPointer } from './finds.mjs';
 
 const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Set by join.mjs on the joined page only (the real hero in the stage): frame(st, moved, P) returns false to leave the star
+// canvas alone, options for starsFrame, or nothing for the map's own rule; resize(w, h) follows the map's resize.
+export const JOIN = { frame: null, resize: null };
 const ROOT = document.documentElement;
 Object.entries(C).forEach(([k, v]) => ROOT.style.setProperty('--' + k, v));
 if (RM) ROOT.classList.add('rm');
@@ -51,6 +54,7 @@ function resize() {
   if (!RM) $('trip').style.height = (TOTAL_P * VIEW.unit + h) + 'px';
   P = window.scrollY / VIEW.unit; dirty = true;
   if (RM) still();
+  if (JOIN.resize) JOIN.resize(w, h);
 }
 const OVERVIEW_P = SEQ.find(s => s.kind === 'overview').a + 1;
 function still() { const st = tripState(OVERVIEW_P); tripApply(st); starsStill(st); FIXED = st; }
@@ -64,11 +68,12 @@ window.addEventListener('pointermove', e => { PTR[0] = e.clientX / VIEW.w; PTR[1
 let raf = 0, lastP = -1, lastVisited = '';
 function frame(ts) {
   const time = ts / 1000;
-  if (RM) { findsFrame(time, FIXED); raf = requestAnimationFrame(frame); return; }
+  if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], jr); raf = requestAnimationFrame(frame); return; }
   const st = tripState(P);
   const moved = dirty || P !== lastP;
   if (moved) { tripApply(st); tlFrame(st); footerFrame(st); CANVAS.style.opacity = st.dim; lastP = P; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
-  if (moved || st.handoffT < 1) starsFrame(time, st, PTR);
+  const jo = JOIN.frame ? JOIN.frame(st, moved, P) : undefined;
+  if (jo !== false && (moved || st.handoffT < 1 || jo)) starsFrame(time, st, PTR, jo || undefined);
   cardsFrame(st);
   findsFrame(time, st);
   raf = requestAnimationFrame(frame);

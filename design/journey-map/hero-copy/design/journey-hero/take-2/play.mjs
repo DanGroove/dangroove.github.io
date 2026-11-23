@@ -31,6 +31,8 @@ let stopped = query.has('t'), visible = true, ready = false, request = 0, previo
 // Round 6: the entrance plays once per load. intro is its clock while it shows; held is a review hold (__hero.entrance).
 // first keeps Photoshop's own shell on the first pass, until the loop first wraps or is moved.
 let intro = null, held = false, first = false;
+// JOIN: lift is how far the map's scroll has carried the hero's content up (CSS px); away is set once the map has taken the stars.
+let lift = 0, away = false;
 const entrance = createEntranceView(hero);
 const frameNow = () => frameAt(t, first && t < 0.5 ? { first: true } : {});
 // Round 8: the name reacts once the entrance has ended (N1); the star field (B1, B2) is drawn first in every frame and takes
@@ -40,9 +42,10 @@ const nameReact = createNameReact(hero, { reduced });
 // clock; the entrance sets it, so the current row appears lit as its row cuts in.
 const craftWipe = createCraftWipe(hero, { reduced });
 const nameOn = () => nameReact.setLive(ready && !intro && !held && !reduced.matches);
-const stars = query.get('stars') === '0' ? null : createStars(hero, { reduced, draw, running, available: () => ready && visible && !document.hidden, open: () => !intro || intro.time >= ENTRANCE.stars[1] });
+const stars = query.get('stars') === '0' ? null : createStars(hero, { reduced, draw, running, /* JOIN: away and lift */ available: () => ready && visible && !document.hidden && !away, lift: () => lift, open: () => !intro || intro.time >= ENTRANCE.stars[1] });
 
 function draw() {
+  if (away) return; // JOIN: nothing draws while away
   const { h, b } = layout.metrics;
   if (!b.width || !b.height || !h.width || !h.height) return;
   const W = h.width, H = h.height, dpr = Math.min(2, devicePixelRatio || 1, Math.sqrt(5.2e6 / (W * H)));
@@ -54,8 +57,10 @@ function draw() {
   if (state) floor.reveal = floorReach(state.floor, floor.radius);
   const centre = [b.left - h.left + b.width / 2, b.top - h.top + b.height / 2];
   const field = stars?.frame(state ? starReach(state.stars, centre, W, H) : null, centre);
-  renderer.draw(pieces, view, { outline: 0, floor, reveal: state ? screenPlane(state.screen) : null, stars: field });
-  callouts.draw(calloutsAt(t), pieces, view, t, reduced.matches);
+  // JOIN: the scene and its labels are drawn from a copy of the view, lifted; the cached view stays as it was.
+  const shown = lift ? { ...view, cy: view.cy - lift } : view;
+  renderer.draw(pieces, shown, { outline: 0, floor, reveal: state ? screenPlane(state.screen) : null, stars: field });
+  callouts.draw(calloutsAt(t), pieces, shown, t, reduced.matches);
   if (state) entrance.apply(state);
   hero.classList.remove('is-entering');
   const { scene } = sceneAt(t);
@@ -68,7 +73,7 @@ function draw() {
   stars?.after();
 }
 
-function running() { return ready && !stopped && !held && !reduced.matches && visible && !document.hidden; }
+function running() { return ready && !away /* JOIN */ && !stopped && !held && !reduced.matches && visible && !document.hidden; }
 function tick(now) {
   request = 0;
   if (!running()) { previous = null; return; }
@@ -140,10 +145,12 @@ new IntersectionObserver(entries => {
 // The entrance's inline weights and clips come off while the page is measured, then go back on from fresh geometry.
 function measure() {
   if (!ready) return;
+  hero.style.setProperty('--leave', '0px'); // JOIN: geometry is read unlifted
   if (intro) entrance.clear();
   layout.measure();
   if (intro) entrance.measure(layout.metrics.nameLines);
   stars?.measure(layout.metrics.h); nameReact.measure(); craftWipe.measure();
+  hero.style.setProperty('--leave', lift + 'px'); // JOIN: and the lift goes back on
   if (visible && !document.hidden) draw();
 }
 new ResizeObserver(measure).observe(hero);
@@ -171,3 +178,19 @@ ready = true; layout.measure(); stars?.measure(layout.metrics.h); craftWipe.meas
 if (!query.has('t') && !reduced.matches) { first = true; startEntrance(0); }
 nameOn(); document.fonts.ready.then(() => nameReact.measure());
 draw(); window.__ready = true; schedule(); watchName();
+// JOIN: the one handle the journey map's join uses. setLeave lifts everything but the stars; setAway stops the hero altogether.
+function setLeave(px) {
+  px = Math.max(0, +px || 0);
+  if (px === lift) return;
+  if (px > 0) { endEntrance(); stars?.letGo(); }
+  lift = px; hero.style.setProperty('--leave', px + 'px');
+  if (!running()) draw();
+}
+function setAway(on) {
+  on = !!on;
+  if (on === away) return;
+  away = on;
+  schedule();
+  if (!away && !running()) draw();
+}
+window.__heroJoin = { setLeave, setAway, stars: { get count() { return stars?.field?.stars.length ?? 0; }, drawn: (i, out) => stars.drawn(i, out), look: i => stars.look(i) } };

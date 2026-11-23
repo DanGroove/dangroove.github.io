@@ -496,9 +496,11 @@ export function readMark(root) {
 }
 
 // ---- the controller. frame(view) is called by each draw and returns the renderer's star values.
-export function createStars(hero, { reduced, win = hero.ownerDocument.defaultView, raf = f => win.requestAnimationFrame(f), draw, running, available, open = () => true, clock = () => win.performance.now() / 1000 } = {}) {
+// JOIN: lift (CSS px) is the journey map's lift, the hero's scroll term now that the hero is pinned in the map's stage.
+export function createStars(hero, { reduced, win = hero.ownerDocument.defaultView, raf = f => win.requestAnimationFrame(f), draw, running, available, lift = () => 0, open = () => true, clock = () => win.performance.now() / 1000 } = {}) {
   let field = null, box = null, top = 0, scrollY = 0, pointer = null, previous = null, target = [0, 0], f = [0, 0], fv = [0, 0];
   let hold = null, holdStart = null, swallow = false, last = null, pending = false, attrs = null, attrsVersion = 0, markKey = null, sample = null;
+  let shownPar = [0, 0], shownScroll = 0; // JOIN: the parallax and scroll term of the last frame handed to the renderer
   const usable = e => !reduced.matches && (e.pointerType === 'mouse' || e.pointerType === 'pen');
   function redraw() {
     if (!available() || running() || pending) return;
@@ -519,7 +521,7 @@ export function createStars(hero, { reduced, win = hero.ownerDocument.defaultVie
       field.stars.forEach((s, i) => attrs.set([s.x, s.y, s.d, s.size, s.red ? 1 : 0], i * 5));
     }
   }
-  const local = e => box ? [e.clientX - box.left, e.clientY - (top - scrollY)] : null;
+  const local = e => box ? [e.clientX - box.left, e.clientY - box.top] : null; // JOIN: pinned, the hero no longer scrolls with the window
   win.addEventListener('scroll', () => { scrollY = win.scrollY || 0; redraw(); }, { passive: true });
   win.addEventListener('pointermove', e => {
     if (!usable(e) || !box) return;
@@ -567,14 +569,35 @@ export function createStars(hero, { reduced, win = hero.ownerDocument.defaultVie
     previous = live && pointer ? pointer.slice() : null;
     if (live && hold) field.gather(hold, pointer || hold.anchor, dt);
     field.step(dt);
+    // JOIN: the scroll term is the lift, not the window's scroll; both values are kept for drawn().
+    shownPar = [f[0] * STARS.parallax, f[1] * STARS.parallax]; shownScroll = still ? 0 : lift();
     return {
       count: field.stars.length, attrs, attrsVersion, offsets: field.offsets, flags: field.flags, weights: field.weights, alpha: field.alpha, mixes: field.mixes, front: field.front, markSize: STARS.mark.size, version: field.version,
-      par: [f[0] * STARS.parallax, f[1] * STARS.parallax], scroll: still ? 0 : Math.max(0, scrollY - top), reveal, centre,
+      par: shownPar, scroll: shownScroll, reveal, centre,
     };
   }
   const settled = () => Math.hypot(f[0] - target[0], f[1] - target[1]) < 1e-4 && Math.hypot(fv[0], fv[1]) < 1e-4;
   const busy = () => !!field && !reduced.matches && (!!hold || field.awake || !settled());
+  // JOIN: where the renderer draws star i, in the hero's px: VERT_STARS's p (home, own offset, less parallax by depth weight,
+  // less the scroll term by depth).
+  function drawn(i, out = [0, 0]) {
+    const s = field.stars[i], w = depthWeight(s.d);
+    out[0] = s.x + field.offsets[2 * i] - shownPar[0] * w;
+    out[1] = s.y + field.offsets[2 * i + 1] - shownPar[1] * w - shownScroll * STARS.scroll * s.d;
+    return out;
+  }
+  // JOIN: its drawn look: size across (CSS px), colour, and opacity on the ink ground (paper or red mixed into ink by depth).
+  // A star still out after a hold also has its front copy, at its weight, eased toward the mark's look by its mark weight;
+  // the two are folded into one look (the larger size, the copy's colour once past half, opacity laid over).
+  function look(i) {
+    const s = field.stars[i], own = s.red ? STARS.redInk : STARS.paper, a = field.flags[i] ? field.alpha[i] : 0;
+    if (!(a > 0)) return { size: s.size, colour: own, alpha: s.mix };
+    const k = field.flags[i] > 1.5 ? clamp01(field.mixes[i]) : 0, mark = FLAG_INK[field.flags[i]] || own;
+    const fa = s.mix + (1 - s.mix) * k;
+    return { size: s.size + (Math.max(s.size, STARS.mark.size) - s.size) * k, colour: k > 0.5 ? mark : own, alpha: s.mix + (1 - s.mix) * fa * a };
+  }
   return {
+    drawn, look, letGo() { release(null); }, // JOIN: drawn, look; letGo releases any hold (for the lift)
     measure, frame, after() { if (busy()) redraw(); }, busy,
     // The stage's click handler asks once: was that a hold (no craft change)?
     swallowClick() { const s = swallow; swallow = false; return s; },
