@@ -1,8 +1,10 @@
 // Data sanity checks for the journey map. Run: node tools/check.mjs
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
+import { gzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { STOPS, PALETTES, FINDS, FIND_COPY, COPY, ACTS, CRAFTS, MAP, STEPS, DEPTH, NOVA, STARS, C, FIND_PLAY, EXPLORE, FOOT_NAME, CARD_CLOSE } from '../data.mjs';
+import { STOPS, PALETTES, FINDS, FIND_COPY, COPY, ACTS, CRAFTS, MAP, STEPS, DEPTH, NOVA, STARS, C, FIND_PLAY, EXPLORE, FOOT_NAME, CARD_CLOSE, HAMMER } from '../data.mjs';
+import { RUNES } from '../art.mjs';
 import { SEQ, TOTAL_P, tripState, tripResize } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
 
@@ -80,16 +82,20 @@ ok(FIND_PLAY.serpent.spots.length === 3, 'three serpent spots');
 FIND_PLAY.serpent.spots.forEach((p, i) => { const b = FIND_PLAY.serpent.bounds, s = FIND_PLAY.serpent.scale; ok(p.length === 2 && p.every(Number.isFinite) && p[0] + b[0] * s >= 22 && p[1] + b[1] * s >= 22 && p[0] + b[2] * s <= 578 && p[1] + b[3] * s <= 878, `serpent spot ${i}: drawing must stay inside inner frame`); });
 ok(FINDS.filter(f => f.view).length === 9, 'nine finds have fixed camera views');
 FINDS.forEach(f => ok(['hoards', 'longship'].includes(f.id) ? !f.view : f.view?.length === 3 && f.view.every(Number.isFinite) && f.view[2] > 0, `${f.id}: camera view`));
-['tafl', 'mist', 'horn', 'well', 'ship', 'all'].forEach(k => ok(FIND_PLAY[k] && typeof FIND_PLAY[k] === 'object', `Part B needs FIND_PLAY.${k}`));
-ok(FIND_COPY.tafl.t && FIND_COPY.horn[1].t && FIND_COPY.longship.t, 'three Part B author lines have text');
+['mist', 'horn', 'well', 'ship', 'all'].forEach(k => ok(FIND_PLAY[k] && typeof FIND_PLAY[k] === 'object', `Part B needs FIND_PLAY.${k}`));
+ok(FIND_COPY.hammerFact.t && FIND_COPY.horn[1].t && FIND_COPY.longship.t, 'three Part B author lines have text');
 ok(FIND_COPY.norns.length === 3 && FIND_COPY.norns.every(row => row.length === 2 && row.every(t => typeof t === 'string' && t.trim())), 'three named Norns with meanings');
 ok(FIND_PLAY.mist.ellipses.length === 6 && FIND_PLAY.mist.cairns.length === 3 && FIND_PLAY.mist.grid.join() === '8,4', 'six fog ellipses, three cairns and 8x4 coverage grid');
 ok(FIND_PLAY.well.stars.length === 3 && FIND_PLAY.well.stars.every(row => row.length === 5 && row.every(p => p.length === 2 && p.every(Number.isFinite))), 'fifteen crown stars in three batches');
 ok(FIND_PLAY.ship.shields.length === STOPS.length, 'one longship shield per stop');
-const taflConfig = FIND_PLAY.tafl, taflRules = taflConfig.rules;
-ok(taflRules.size === 7 && taflRules.attackers.length === 8 && taflRules.defenders.length === 4 && taflRules.corners.join() === '0,6,42,48' && taflRules.centre === 24, 'brandubh board and start counts');
-ok(new Set([taflRules.king, ...taflRules.attackers, ...taflRules.defenders]).size === 13, 'thirteen separate tafl start squares');
-ok(taflConfig.cell * taflRules.size === taflConfig.board && taflConfig.board + 2 * (taflConfig.pad + taflConfig.border) === taflConfig.width, 'board fits the sheet content width');
+checkDepthNumbers(HAMMER, 'HAMMER');
+ok(FINDS.some(f => f.id === 'hammer' && f.n === 0 && f.x === 112 && f.y === 222 && f.view.join() === '112,218,34'), 'hammer replaces board at its original place/view');
+ok(!FINDS.some(f => f.id === 'tafl') && !FIND_PLAY.tafl && !Object.keys(FIND_COPY).some(k => k.startsWith('tafl')), 'retired board data removed');
+ok(HAMMER.runes.map(r => r.key).join() === 'th,r,k,g,h,n,i,j,ei,l,d,e', 'game needs exactly the twelve approved runes');
+HAMMER.runes.forEach(r => { ok(RUNES.some(row => row[1] === r.key), `unknown game rune ${r.key}`); ok(!['z', 's', 't', 'o'].includes(r.key), `excluded game rune ${r.key}`); });
+ok(HAMMER.field.w === 300 && HAMMER.field.h === 400 && HAMMER.step === 1 / 120 && HAMMER.steps === 8, 'field/fixed-step geometry');
+ok(HAMMER.ui.w === HAMMER.ui.fieldW + 2 * (HAMMER.ui.pad + HAMMER.ui.border), 'hammer field fits panel');
+ok(HAMMER.ui.h === HAMMER.ui.header + HAMMER.ui.fieldH + HAMMER.ui.status + HAMMER.ui.buttons + HAMMER.ui.gap * 3 + 2 * (HAMMER.ui.pad + HAMMER.ui.border), 'hammer rows fit panel');
 DEPTH.clouds.list.forEach((row, i) => {
   ok(row.length === 6 && row.every(Number.isFinite), `DEPTH.clouds.list[${i}]: needs six finite numbers`);
   ok([1, 2, 3].includes(row[3]) && [1, -1].includes(row[4]), `DEPTH.clouds.list[${i}]: bad drawing/flip`);
@@ -119,5 +125,17 @@ mods.forEach(f => {
 });
 ok(!/#[0-9A-Fa-f]{3,6}\b(?![\w-]*\))/.test(readFileSync(join(ROOT, 'map.css'), 'utf8').replace(/url\([^)]*\)/g, '')), 'map.css: colour literal');
 
+// Compressed delivery budgets include all top-level runtime modules and CSS, never hero-copy.
+const gzipKB = content => gzipSync(content).length / 1024;
+const runtimeSources = [...mods, 'map.css'].map(f => { const src = readFileSync(join(ROOT, f)); ok(gzipKB(src) <= 150, `${f}: exceeds 150 KB gzip`); return src; });
+const runtimeKB = gzipKB(Buffer.concat(runtimeSources)); ok(runtimeKB <= 150, 'combined map modules/CSS exceed 150 KB gzip');
+const hammerKB = gzipKB(readFileSync(join(ROOT, 'hammer.mjs'), 'utf8') + readFileSync(join(ROOT, 'findhammer.mjs'), 'utf8') + JSON.stringify([HAMMER, FIND_COPY.hammer, FIND_COPY.hammerFact, FIND_COPY.hints.hammer]) + readFileSync(join(ROOT, 'art.mjs'), 'utf8').match(/const hammerMapArt[^\n]+/)[0]);
+ok(hammerKB < 30, 'hammer rules/find/data/drawings exceed 30 KB gzip');
+console.log(`gzip: hammer ${hammerKB.toFixed(2)} KB / 30; all map modules + CSS ${runtimeKB.toFixed(2)} KB / 150`);
+for (const [file, budget] of [['dist/journey-map.html', 320], ['dist/journey-joined.html', 540]]) {
+  if (!existsSync(join(ROOT, file))) continue;
+  const kb = gzipKB(readFileSync(join(ROOT, file))); ok(kb <= budget, `${file}: exceeds ${budget} KB gzip`); console.log(`gzip: ${file} ${kb.toFixed(2)} KB / ${budget}`);
+}
+
 if (errs.length) { console.error('FAIL\n' + errs.map(e => ' - ' + e).join('\n')); process.exit(1); }
-console.log(`ok: 6 stops, ${Object.keys(PALETTES).length} palettes (Lennard band verified), 11 finds, acts total ${TOTAL_P.toFixed(1)} vh, ${mods.length} modules with unique top-level names; STEPS numbers finite/positive; 10 strictly rising beats; X camera continuous at desktop/phone sizes; DEPTH/NOVA/STARS numbers finite; ${DEPTH.clouds.list.length} cloud rows valid; rings.colour in C; FIND_PLAY finite, slots have text, five known hoard kinds, three bounded serpent spots/leaves, nine fixed views; Part B tables, Norns, fog, crown stars, shields and board dimensions valid`);
+console.log(`ok: 6 stops, ${Object.keys(PALETTES).length} palettes (Lennard band verified), 11 finds, acts total ${TOTAL_P.toFixed(1)} vh, ${mods.length} modules with unique top-level names; STEPS numbers finite/positive; 10 strictly rising beats; X camera continuous at desktop/phone sizes; DEPTH/NOVA/STARS numbers finite; ${DEPTH.clouds.list.length} cloud rows valid; rings.colour in C; FIND_PLAY finite, slots have text, five known hoard kinds, three bounded serpent spots/leaves, nine fixed views; Part B tables, Norns, fog, crown stars, shields, hammer rows and approved runes valid`);

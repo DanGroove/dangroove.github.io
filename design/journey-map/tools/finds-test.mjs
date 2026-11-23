@@ -2,7 +2,7 @@
 import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { bigMap, rubbingRunes, pieceIcon } from '../art.mjs';
-import { STARS, DEPTH, NOVA, FINDS, FIND_PLAY, FIND_COPY, STOPS } from '../data.mjs';
+import { STARS, DEPTH, NOVA, FINDS, FIND_PLAY, FIND_COPY, STOPS, HAMMER } from '../data.mjs';
 import { tripFocus, tripState, tripResize, toScreen, VIEW, SEQ, WATER, pointAt } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
 import { wayAllStops } from '../findhoards.mjs';
@@ -11,7 +11,7 @@ import { tlBuild } from '../timeline.mjs';
 import { JOURNEY, stepsBuild, stepsFrame, stepsFocus, stepsFocusNow, stepsRelease } from '../steps.mjs';
 import { findsBuild, findsFrame } from '../finds.mjs';
 import { FD, closeSheet, closePop } from '../findkit.mjs';
-import { taflPanelHeight } from '../findboard.mjs';
+import { hammerBestRead, hammerBestWrite } from '../findhammer.mjs';
 
 
 
@@ -71,6 +71,13 @@ assert.ok(FIND_COPY.hoards.every(h => pieceIcon(h.kind).length));
 console.log('ok: all-four mask derived from STOPS is Lennard alone; nineteen rune middles/letters; all piece icons available');
 
 // A small recording DOM, not a browser: exercise state transitions and reject NaN writes/layout reads in frame callbacks.
+class TestHammerContext {
+  constructor() { this.commands = 0; }
+  record(...args) { this.commands++; for (const a of args) if (typeof a === 'number') assert.ok(Number.isFinite(a), 'nonfinite canvas command'); }
+  setTransform(...args) { this.record(...args); } scale(...args) { this.record(...args); } translate(...args) { this.record(...args); }
+  rotate(...args) { this.record(...args); } fillRect(...args) { this.record(...args); } drawImage(...args) { this.record(...args); }
+  stroke(...args) { this.record(...args); } save() {} restore() {}
+}
 class TestNode {
   constructor(tag = 'div') { this.tagName = tag; this.attrs = {}; this.children = []; this.listeners = {}; this.nodeType = 1; this.style = { setProperty(k, v) { this[k] = v; } }; this.dataset = {}; this.hidden = false; this.classList = { add: (...xs) => xs.forEach(x => this.toggleClass(x, true)), remove: (...xs) => xs.forEach(x => this.toggleClass(x, false)), toggle: (x, force) => this.toggleClass(x, force), contains: x => this.className.split(/\s+/).includes(x) }; }
   get id() { return this.attrs.id || ''; } set id(v) { this.attrs.id = v; }
@@ -120,11 +127,13 @@ class TestNode {
   }
   querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
   closest(selector) { for (let node = this; node; node = node.parentElement) if (selector.split(',').some(s => node.matches(s.trim()))) return node; return null; }
+  contains(node) { for (let n = node; n; n = n.parentElement) if (n === this) return true; return false; }
+  getContext() { return this.context ??= new TestHammerContext(); }
   addEventListener(type, fn, capture = false) { (this.listeners[type] ??= []).push({ fn, capture: capture === true }); }
   dispatchEvent(event) {
     event.target = this; const path = []; for (let p = this; p; p = p.parentElement) path.push(p);
     for (const node of path.slice().reverse()) for (const l of node.listeners[event.type] || []) { if (l.capture && !event.stopped) l.fn(event); }
-    for (const node of path) { for (const l of node.listeners[event.type] || []) if (!l.capture && !event.stopped) l.fn(event); if (!event.bubbles) break; }
+    for (const node of path) { if (event.stopped) break; for (const l of node.listeners[event.type] || []) { if (event.immediate) break; if (!l.capture) l.fn(event); } if (!event.bubbles) break; }
     return !event.defaultPrevented;
   }
   focus() { document.activeElement = this; }
@@ -134,7 +143,7 @@ class TestNode {
   getBoundingClientRect() { assert.equal(testInFrame, false, 'layout read in frame callback'); return { left: 30, top: 40, width: this.classList.contains('tl-count') ? 90 : 240, height: this.classList.contains('tl-count') ? 20 : 140 }; }
 }
 class TestEvent {
-  constructor(type, props = {}) { Object.assign(this, { type, bubbles: true, detail: 0, preventDefault() { this.defaultPrevented = true; }, stopPropagation() { this.stopped = true; }, stopImmediatePropagation() { this.stopped = true; } }, props); }
+  constructor(type, props = {}) { Object.assign(this, { type, bubbles: true, detail: 0, preventDefault() { this.defaultPrevented = true; }, stopPropagation() { this.stopped = true; }, stopImmediatePropagation() { this.stopped = this.immediate = true; } }, props); }
 }
 let testInFrame = false;
 const htmlNode = new TestNode('html'), bodyNode = new TestNode('body'); htmlNode.appendChild(bodyNode);
@@ -142,7 +151,8 @@ const testDocument = new TestNode('document'); testDocument.appendChild(htmlNode
 Object.assign(testDocument, { documentElement: htmlNode, body: bodyNode, activeElement: bodyNode, createElement: tag => new TestNode(tag), createElementNS: (ns, tag) => new TestNode(tag), getElementById: id => htmlNode.querySelector('#' + id) });
 const testWindow = new TestNode('window');
 Object.assign(testWindow, { location: { search: '' }, innerWidth: 1440, innerHeight: 900, scrollY: 0, scrollTo() {}, matchMedia: () => ({ matches: true, addEventListener() {} }) });
-Object.assign(globalThis, { window: testWindow, document: testDocument, history: { scrollRestoration: 'auto' }, sessionStorage: { getItem() { return null; }, setItem() {} }, matchMedia: testWindow.matchMedia, innerWidth: 1440, innerHeight: 900, Event: TestEvent, KeyboardEvent: TestEvent });
+let storageReads = 0, storageWrites = 0;
+Object.assign(globalThis, { window: testWindow, document: testDocument, history: { scrollRestoration: 'auto' }, sessionStorage: { getItem() { return null; }, setItem() {} }, localStorage: { getItem() { storageReads++; throw Error('storage blocked'); }, setItem() { storageWrites++; throw Error('storage blocked'); } }, Path2D: class { constructor(path) { assert.ok(typeof path === 'string' && path.length); this.path = path; } }, matchMedia: testWindow.matchMedia, innerWidth: 1440, innerHeight: 900, Event: TestEvent, KeyboardEvent: TestEvent });
 async function testPlays() {
 const testStage = new TestNode('div'), testSvg = new TestNode('svg'), testBase = new TestNode('g'), testPop = new TestNode('div'), testSheet = new TestNode('div'), testTl = new TestNode('div');
 bodyNode.appendChild(testStage); testStage.append(testSvg, testPop, testSheet, testTl); testBase.id = 'b-all';
@@ -190,28 +200,43 @@ JOURNEY.set(0); assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), false); J
 JOURNEY.go('lennard'); assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), false); await tick(0.7); JOURNEY.set(mapP);
 console.log('ok: recording DOM runs six Part A plays, kept state, all-four unlock, reel, chase, four notes, rubbing, copied review state and Back focus rules; no NaN attributes or frame layout reads');
 JOURNEY.set(mapP); await tick(0.1);
-const mapBoard = testSvg.querySelector('.tf-board'), mapPieces = [...mapBoard.querySelectorAll('.tf-piece')];
-key('tafl'); await tick(0.5); assert.equal(FD.sheetOwner.id, 'tafl'); assert.equal(testSheet.querySelector('.tf-board'), mapBoard);
-const cellClick = sq => testSheet.querySelectorAll('.tf-cell')[sq].dispatchEvent(new TestEvent('click'));
-cellClick(17); assert.equal(window.__jm.finds.state('tafl').selected, 17); cellClick(16); await tick(1.5);
-assert.equal(window.__jm.finds.state('tafl').game.moves, 2); assert.equal(window.__jm.finds.state('tafl').game.turn, 'king');
-assert.deepEqual([...mapBoard.querySelectorAll('.tf-piece')], mapPieces);
-const keptBoard = window.__jm.finds.state('tafl').game.board; closeSheet(); assert.equal(testSvg.querySelector('.tf-board'), mapBoard);
-key('tafl'); assert.deepEqual(window.__jm.finds.state('tafl').game.board, keptBoard);
-const cursor = window.__jm.finds.state('tafl').cursor; testSheet.querySelectorAll('.tf-cell')[cursor].dispatchEvent(new TestEvent('keydown', { key: 'ArrowLeft' })); assert.equal(window.__jm.finds.state('tafl').cursor, cursor - 1);
-testSheet.querySelector('.tf-new').dispatchEvent(new TestEvent('click')); await tick(0.4); assert.equal(window.__jm.finds.state('tafl').game.moves, 0);
-FD.list.tafl.game.moves = FIND_PLAY.tafl.rules.limit - 1; cellClick(17); cellClick(16); await tick(0.4); assert.equal(window.__jm.finds.state('tafl').game.winner, 'draw'); assert.equal(testSheet.querySelector('.tf-slot').hidden, false); closeSheet();
-const T = FIND_PLAY.tafl; assert.equal(T.cell * T.rules.size, T.board); assert.equal(T.width - 2 * (T.pad + T.border), T.board); assert.equal(taflPanelHeight(), 534); assert.ok(taflPanelHeight() + FIND_PLAY.kit.sheet.edge * 2 <= 664); assert.ok(T.width + FIND_PLAY.kit.sheet.edge * 2 <= 390);
-console.log('ok: same board/pieces lift, slide, reply, persist, restart and end; keyboard cursor and end slot; 312x534 sheet fits 390x664 with separate 324/54/70/36 px rows');
-// Regression: a captured king shares the defenders' tray, including their occupied slots.
-key('tafl');
-const captureBoard = FD.list.tafl; captureBoard.pieces.forEach(p => p.sq = p.start); captureBoard.pieces[0].sq = 9; captureBoard.pieces[1].sq = -1; captureBoard.pieces[5].sq = 2; captureBoard.pieces[7].sq = 16; // the king on c2 with attackers on c1, d2 and c3: b4-b2 shuts the fourth side
-const priorDefender = captureBoard.pieces[1]; priorDefender.point = priorDefender.to = [T.trayInset, -T.tray / 2, T.capturedScale]; priorDefender.from = priorDefender.to.slice();
-captureBoard.game = { ...captureBoard.game, board: Array(49).fill(null), turn: 'attackers', winner: null, moves: 10 }; captureBoard.pieces.filter(p => p.sq >= 0).forEach(p => captureBoard.game.board[p.sq] = p.kind);
-captureBoard.busy = false; captureBoard.stage = 'reply'; captureBoard.replyAt = FD.now; await tick(1.2);
-assert.equal(captureBoard.game.winner, 'attackers');
-const topCaptures = captureBoard.pieces.filter(p => p.sq < 0 && p.kind !== 'a'); assert.ok(topCaptures.some(p => p.kind === 'k')); assert.ok(topCaptures.some(p => p.kind === 'd')); assert.equal(new Set(topCaptures.map(p => p.to.slice(0, 2).join())).size, topCaptures.length); closeSheet();
-console.log('ok: captured king and defenders occupy distinct positions in their shared upper tray');
+assert.equal(FD.found.has('hammer'), false); key('hammer'); await tick(0.5);
+assert.equal(FD.sheetOwner.id, 'hammer'); assert.equal(FD.found.has('hammer'), true);
+assert.ok(testSheet.querySelector('.find-slot')); assert.equal(document.activeElement, testSheet.querySelector('.hm-start'));
+for (const k of [' ', 'Enter']) { const e = new TestEvent('keydown', { key: k }); testSheet.querySelector('.hm-start').dispatchEvent(e); assert.ok(!e.defaultPrevented, 'button activation stays native'); assert.equal(e.stopped, true); }
+testSheet.querySelector('.hm-start').dispatchEvent(new TestEvent('click')); await tick(0.2);
+const hammerFind = FD.list.hammer, game = hammerFind.game, field = testSheet.querySelector('.hm-canvas'), hammerP = JOURNEY.P;
+assert.equal(document.activeElement, field); assert.equal(field.getAttribute('tabindex'), '0'); assert.equal(field.getAttribute('role'), 'img'); assert.ok(field.getAttribute('aria-label').includes('T'));
+for (const k of ['ArrowLeft', 'ArrowRight', 'a', 'd', ' ', 'ArrowUp', 'w', 'p', 'p', 't', '1', '2', '3', '0', '+', '-', '=', 'PageDown', 'Home', 'End', 'ArrowDown']) {
+  const e = new TestEvent('keydown', { key: k }); field.dispatchEvent(e); assert.equal(e.defaultPrevented, true, `hammer key ${k} default`); assert.equal(e.stopped, true, `hammer key ${k} propagation`);
+  field.dispatchEvent(new TestEvent('keyup', { key: k })); assert.equal(JOURNEY.P, hammerP);
+}
+assert.equal(hammerFind.auto, true); assert.equal(testSheet.querySelector('.hm-auto').getAttribute('aria-pressed'), 'true');
+await tick(0.2); assert.ok(game.throwId > 0); assert.ok(field.context.commands > 0);
+const sprites = hammerFind.sprites; closeSheet(); assert.equal(game.paused, true); const heldTime = game.time; await tick(0.2); assert.equal(game.time, heldTime);
+key('hammer'); assert.equal(hammerFind.game, game); assert.equal(hammerFind.sprites, sprites); assert.ok(testSheet.querySelector('.hm-resume'));
+const resumeHammer = () => testSheet.querySelector('.hm-resume').dispatchEvent(new TestEvent('click'));
+resumeHammer(); testWindow.dispatchEvent(new TestEvent('blur')); assert.equal(game.paused, true);
+resumeHammer(); testDocument.hidden = true; testDocument.dispatchEvent(new TestEvent('visibilitychange')); assert.equal(game.paused, true); testDocument.hidden = false;
+resumeHammer(); testSheet.querySelector('.hm-canvas').dispatchEvent(new TestEvent('focusout', { relatedTarget: bodyNode })); assert.equal(game.paused, true);
+resumeHammer();
+// A cleared formation opens three named, keyboard-pickable rune buttons and focuses the first.
+game.foes.forEach(f => f.live = false); game.count = 0; await tick(0.1);
+const runeButtons = testSheet.querySelectorAll('.hm-rune'); assert.equal(runeButtons.length, 3); assert.equal(document.activeElement, runeButtons[0]);
+runeButtons.forEach((b, i) => assert.ok(b.getAttribute('aria-label').startsWith(`${i + 1}.`)));
+runeButtons[0].dispatchEvent(new TestEvent('keydown', { key: '1' })); assert.equal(game.wave, 2); assert.equal(document.activeElement, testSheet.querySelector('.hm-canvas'));
+// Pointer input follows at the configured maximum speed, never jumps, and holds throw.
+const playCanvas = testSheet.querySelector('.hm-canvas'), xBefore = game.x;
+playCanvas.dispatchEvent(new TestEvent('pointerdown', { pointerType: 'touch', pointerId: 8, clientX: 265 })); await tick(0.05); assert.ok(Math.abs(game.x - xBefore) <= HAMMER.glove.follow * 0.05 + 1e-6); assert.equal(hammerFind.held, true);
+playCanvas.dispatchEvent(new TestEvent('pointercancel', { pointerId: 8 })); assert.equal(hammerFind.held, false);
+// Force a finished run to exercise the end-slot and storage write in the recording DOM.
+Object.assign(game, { phase: 'end', reason: 'hearts', silver: 123, version: game.version + 1 }); game.events.end++; await tick(0.05);
+assert.ok(testSheet.querySelector('.hm-end-close')); assert.ok(testSheet.querySelector('.find-slot')); assert.equal(hammerFind.best, 123);
+assert.equal(hammerBestRead(123), 123); assert.equal(hammerBestWrite(111, 123), 123); assert.ok(storageReads > 0 && storageWrites > 0);
+testSheet.querySelector('.hm-new').dispatchEvent(new TestEvent('click')); assert.equal(hammerFind.game.wave, 1); assert.notEqual(hammerFind.game.seed, game.seed);
+testSheet.querySelector('.hm-canvas').dispatchEvent(new TestEvent('keydown', { key: 'Escape' })); assert.equal(FD.sheetOwner, null); assert.equal(hammerFind.game.paused, true);
+assert.ok(HAMMER.ui.w + FIND_PLAY.kit.sheet.edge * 2 <= 390); assert.ok(HAMMER.ui.h + FIND_PLAY.kit.sheet.edge * 2 <= 664);
+console.log('ok: hammer press/found/sheet; start/end fact; real button/rune focus; every game/explore key isolated, P unchanged; auto throwing; pointer speed; close/blur/hidden/focusout pause; resume/new seed; cached sprites; throwing storage reads/writes survive');
 const autoState = tripState(mapP); autoState.trav = [154, 436]; findsFrame(testClock + 0.01, autoState); await Promise.resolve(); assert.ok(!FD.found.has('mist'));
 key('mist'); key('mist'); key('mist'); await tick(2); assert.equal(window.__jm.finds.state('mist').lifted, true); assert.equal(window.__jm.finds.state('mist').stage, 'lifted');
 key('horn'); assert.equal(window.__jm.finds.state('horn').up, 1); key('horn'); await tick(5.5); assert.equal(window.__jm.finds.state('horn').heard.length, 11); assert.equal(window.__jm.finds.state('horn').up, 0);
@@ -248,11 +273,11 @@ assert.equal(window.__jm.finds.state('beacon').fire, 4);
 rmKey('runestone'); await rmTick(); assert.equal(window.__jm.finds.state('runestone').read, true);
 assert.ok(FD.bits.every(b => !b.live)); assert.equal(FD.flight, null); assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), false);
 console.log('ok: reduced-motion Part A plays land immediately, memory remains readable for five seconds, no live bits/flights/focus, camera unchanged');
-rmKey('tafl'); const rmCells = rmSheet.querySelectorAll('.tf-cell'); rmCells[17].dispatchEvent(new TestEvent('click')); rmCells[16].dispatchEvent(new TestEvent('click')); assert.equal(window.__jm.finds.state('tafl').game.moves, 2); closeSheet();
+rmKey('hammer'); rmSheet.querySelector('.hm-start').dispatchEvent(new TestEvent('click')); const rmHammer = FD.list.hammer; rmHammer.hear(); await rmTick(); assert.equal(rmHammer.game.reduced, true); assert.equal(rmSvg.querySelector('.hm-spark').getAttribute('opacity'), '0'); assert.equal(rmSvg.querySelector('.hm-lift').getAttribute('transform'), 'translate(0 0)'); assert.equal(rmHammer.game.sparks.some(p => p.live), false); closeSheet(); assert.equal(rmHammer.game.paused, true);
 for (let i = 0; i < 3; i++) rmKey('mist'); rmKey('horn'); rmKey('horn');
 for (let i = 0; i < 3; i++) { rmKey('well'); await rmTick(); rmKey('longship'); await rmTick(); }
 assert.equal(window.__jm.finds.state('mist').lifted, true); assert.equal(window.__jm.finds.state('well').watered, 3); assert.equal(window.__jm.finds.state('longship').pennant, true); assert.equal(window.__jm.finds.state('horn').heard.length, 11);
 assert.equal(FD.landed, 11); assert.equal(FD.all.done, true); assert.equal(rmTl.querySelector('.tl-count').textContent, 'All 11 found'); assert.ok(FD.bits.every(b => !b.live)); assert.equal(FD.flight, null);
-console.log('ok: reduced-motion Part B game/reply, mist, horn, Norns, stars, pennant and all-eleven feedback land immediately with no bits, flights or camera change');
+console.log('ok: reduced-motion hammer plays/pauses without map sparks/tremble/hop; mist, horn, Norns, stars, pennant and all-eleven feedback land immediately with no bits, flights or camera change');
 }
 testPlays().catch(error => { console.error(error); process.exitCode = 1; });

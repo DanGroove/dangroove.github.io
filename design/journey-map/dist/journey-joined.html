@@ -343,21 +343,36 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 }
 .rm .rubbing-sheet .pz-in { transition: none; }
 
-/* Part B: board dialog and non-interactive find decorations. */
-.tafl-sheet .tf-panel { position: absolute; left: calc(var(--tf-w) / -2); top: calc(var(--tf-h) / -2); width: var(--tf-w); height: var(--tf-h); padding: var(--tf-pad); border: var(--tf-border) solid var(--line); border-radius: var(--tf-radius); background: var(--ink); color: var(--paper); pointer-events: auto; display: grid; grid-template-rows: var(--tf-surface) var(--tf-status) var(--tf-slot) var(--tf-buttons); gap: var(--tf-gap); font-size: var(--tf-font); line-height: var(--tf-line); }
-.tf-panel p { margin: 0; }
-.tf-surface { display: block; width: var(--tf-board); height: var(--tf-surface); overflow: visible; touch-action: none; }
-.tf-board .tf-piece { pointer-events: none; }
-.tf-cell { cursor: pointer; outline: none; }
-.tf-cell:focus-visible rect { stroke: var(--paper); stroke-width: var(--tf-border); }
-.tf-cursor { opacity: 0; }
-.tf-input:has(.tf-cell:focus-visible) .tf-cursor { opacity: 1; }
-.tf-rule { color: var(--dim); font-size: var(--tf-small); line-height: var(--tf-small-line); }
-.tf-slot-space { min-height: 0; }
-.tf-slot .find-slot { margin: 0; }
-.tf-slot .find-slot p { font-size: var(--tf-small); line-height: var(--tf-small-line); }
-.tf-buttons { display: flex; gap: var(--tf-gap); }
-.tf-buttons button { flex: 1; min-width: 0; padding: 0 var(--tf-gap); border: var(--tf-border) solid var(--mid); border-radius: var(--tf-gap); color: var(--paper); background: var(--ink); font: inherit; cursor: pointer; }
+/* Hammer sheet: the same Ink panel, quiet rules and Paper strokes as the finds. */
+.hm-panel { box-sizing: border-box; position: absolute; left: calc(var(--hm-w) / -2); top: calc(var(--hm-h) / -2); width: var(--hm-w); height: var(--hm-h); padding: var(--hm-pad); border: var(--hm-border) solid var(--line); border-radius: var(--hm-radius); background: var(--ink); color: var(--paper); pointer-events: auto; display: grid; grid-template-rows: var(--hm-header) var(--hm-fieldH) var(--hm-status) var(--hm-buttons); gap: var(--hm-gap); font-size: var(--hm-font); line-height: var(--hm-line); }
+.hm-panel p, .hm-panel h2 { margin: 0; }
+.hm-header { display: flex; align-items: center; justify-content: space-between; gap: var(--hm-gap); font-size: var(--hm-small); line-height: var(--hm-heartH); }
+.hm-wave { max-width: var(--hm-waveShare); }
+.hm-vitals { display: flex; flex-direction: column; align-items: end; gap: var(--hm-heartGap); }
+.hm-hearts { display: flex; gap: var(--hm-heartGap); }
+.hm-hearts svg { width: var(--hm-heartW); height: var(--hm-heartH); stroke: var(--paper); stroke-width: var(--hm-border); }
+.hm-field { position: relative; width: var(--hm-fieldW); height: var(--hm-fieldH); }
+.hm-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.hm-canvas:focus-visible { outline: var(--hm-border) solid var(--paper); outline-offset: calc(var(--hm-border) * -1); }
+.hm-card { box-sizing: border-box; position: absolute; inset: var(--hm-inset); padding: var(--hm-cardPad); border: var(--hm-border) solid var(--mid); border-radius: var(--hm-radius); background: var(--ink); display: flex; flex-direction: column; justify-content: center; gap: var(--hm-gap); overflow: auto; }
+.hm-card[hidden] { display: none; }
+.hm-card h2 { font-size: var(--hm-title); line-height: 1; font-weight: var(--hm-titleWeight); }
+.hm-quiet, .hm-status { color: var(--dim); font-size: var(--hm-small); }
+.hm-card .find-slot { margin: 0; }
+.hm-card .find-slot p { font-size: var(--hm-small); }
+.hm-panel button { min-height: var(--hm-buttons); padding: 0 var(--hm-gap); border: var(--hm-border) solid var(--mid); border-radius: var(--hm-gap); color: var(--paper); background: var(--ink); font: inherit; cursor: pointer; }
+.hm-panel button:focus-visible { outline: var(--hm-border) solid var(--paper); outline-offset: var(--hm-border); }
+.hm-panel button[aria-pressed="true"] { color: var(--ink); background: var(--paper); }
+.hm-panel button:disabled { color: var(--dim); cursor: default; }
+.hm-buttons { display: flex; gap: var(--hm-gap); }
+.hm-buttons button { flex: 1; min-width: 0; }
+.hm-buttons .hm-auto { flex: var(--hm-autoFlex); }
+.hm-card .hm-rune { display: flex; align-items: center; gap: var(--hm-gap); padding: var(--hm-gap); text-align: left; }
+.hm-rune svg { width: var(--hm-runeW); height: var(--hm-rune); flex-shrink: 0; fill: none; stroke: var(--paper); stroke-width: var(--hm-glyphLine); }
+.hm-rune span span { display: block; color: var(--note); font-size: var(--hm-small); }
+.hm-taken { display: flex; flex-wrap: wrap; gap: var(--hm-gap); }
+.hm-taken > span { display: flex; align-items: center; gap: var(--hm-heartGap); }
+.hm-taken svg { width: var(--hm-miniW); height: var(--hm-mini); fill: none; stroke: var(--paper); stroke-width: var(--hm-border); }
 #f-mist, #f-horn { touch-action: none; }
 .mist-wisp { fill: url(#find-mist-soft); }
 #hn-rings .hn-ring { fill: none; stroke: var(--paper); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
@@ -1090,12 +1105,74 @@ const FINDS = [
   { id: 'serpent', n: 4, x: 486, y: 98, view: [430, 78, 118], mark: [550, 74], label: 'The serpent. Poke three times to feed it a deadline.' },
   { id: 'beacon', n: 5, x: 536, y: 514, view: [468, 498, 92], mark: [558, 478], label: 'The beacon. Drag or arrows aim; Enter finds the next unread note.' },
   { id: 'runestone', n: 6, x: 250, y: 516, view: [250, 500, 40], mark: [270, 492], label: 'The rune stone. Press, rub, read, then flip the sheet.' },
-  { id: 'tafl', n: 0, x: 112, y: 222, view: [112, 218, 34], label: 'A hnefatafl board. Play the king to a corner.' },
+  { id: 'hammer', n: 0, x: 112, y: 222, view: [112, 218, 34], label: 'Mjölnir on a stone near Laurier. Press it to hold the bridge.' },
   { id: 'mist', n: 0, x: 156, y: 438, view: [154, 436, 62], label: 'The mist of 2020. Press or wipe to clear it.' },
   { id: 'horn', n: 0, x: 46, y: 476, view: [46, 470, 30], label: 'A horn on the shore. Press to raise it, press again to sound it.' },
   { id: 'well', n: 0, x: 302, y: 392, view: [300, 367, 66], label: "Urd's Well. Drop a pebble in. The Norns answer." },
   { id: 'longship', n: 0, x: 452, y: 622, label: 'The longship. Pull three times to fly its pennant.' },
 ];
+
+// All hammer tuning, geometry and paths. Foe rows: columns, rows, weights, speed, shot interval, cap, gaps, elites.
+const HAMMER = {
+  field: { w: 300, h: 400, margin: 16, top: 34, bridge: 378, line: 1.2, dpr: 2 },
+  step: 1 / 120, steps: 8, limit: 1200, hearts: 3, most: 5, hurt: 1.75, waveBonus: 50, perfect: 35,
+  pools: { foes: 60, shots: 80, hail: 12, sparks: 64, cells: 126 },
+  seed: { first: 719, span: 2147483647, add: 0x6D2B79F5, div: 4294967296 },
+  throw: { speed: 650, back: 720, turn: 14, radius: 5, catch: 9, spin: 13, pierce: 1, ride: 0.2, bend: 1.8 },
+  glove: { x: 150, y: 378, min: 16, max: 284, speed: 148, follow: 190, radius: 9, horse: 0.2, flicker: 18 },
+  march: { column: 26, row: 22, down: 10, boost: 1.3, chiefStop: 1.3 },
+  waves: [
+    { columns: [5, 7], rows: [2, 2], weights: [7, 2, 1, 0, 0], speed: 12, rate: 1.7, cap: 5, gaps: 0.08, elites: [0, 0] },
+    { columns: [6, 8], rows: [2, 3], weights: [5, 3, 2, 0, 0], speed: 14, rate: 1.45, cap: 7, gaps: 0.1, elites: [0, 0] },
+    { columns: [6, 8], rows: [3, 3], weights: [4, 3, 2, 3, 0], speed: 17, rate: 1.3, cap: 9, gaps: 0.12, elites: [0, 0] },
+    { columns: [7, 9], rows: [3, 3], weights: [3, 3, 3, 3, 0], speed: 17, rate: 1.25, cap: 11, gaps: 0.12, elites: [1, 2] },
+    { columns: [7, 9], rows: [3, 4], weights: [2, 4, 3, 4, 0], speed: 20, rate: 1.05, cap: 13, gaps: 0.14, elites: [1, 3] },
+    { columns: [8, 10], rows: [3, 4], weights: [2, 4, 4, 4, 0], speed: 23, rate: 0.9, cap: 15, gaps: 0.14, elites: [2, 3] },
+  ],
+  kinds: ['draugr', 'rime', 'fire', 'wolf', 'chief'],
+  foes: {
+    draugr: { hearts: 1, silver: 10, speed: 88 }, rime: { hearts: 2, silver: 20, speed: 135 },
+    fire: { hearts: 1, silver: 15, speed: 102 }, wolf: { hearts: 1, silver: 25, speed: 104 }, chief: { hearts: 4, silver: 60, speed: 124 },
+  },
+  foe: { rx: 10, ry: 8, bossRX: 56, bossRY: 23, clayRX: 21, clayRY: 27 },
+  shot: { radius: 3, splitY: 202, splitAgain: 282, angle: 0.36, fan: 0.28, dead: 412 },
+  wolf: { every: [10, 16], time: 3.4, curve: 24, pack: 3 },
+  shield: { walls: 3, columns: 7, rows: 3, x: 47, gap: 100, y: 340, cell: 5, radius: 3.5, stagger: 2.5, double: 2 },
+  valkyrie: { every: [14, 21], speed: 51, y: 18, silver: 75, rx: 14, ry: 7 },
+  fates: { chance: 0.66, count: 5, cold: 0.72 },
+  runes: [
+    { key: 'th', max: 3 }, { key: 'r', max: 3 }, { key: 'k', max: 3 }, { key: 'g', max: 2 },
+    { key: 'h', max: 3 }, { key: 'n', max: 2 }, { key: 'i', max: 3 }, { key: 'j', max: 3 },
+    { key: 'ei', max: 3 }, { key: 'l', max: 3 }, { key: 'd', max: 3 }, { key: 'e', max: 3 },
+  ],
+  rune: { burn: 0.8, spread: 32, ice: 0.12, hail: 2, hailSpeed: 150, hailRise: 22, hailLife: 1.6 },
+  boss: { hearts: 64, fan: 1.6, fans: 5, speed: 17, x: [72, 228], y: 59, shardSpeed: 124, aimSpread: 0.23, clay: 13, clayAt: 0.6, heartAt: 0.3, clayY: 203, claySpeed: 30, clayX: [72, 228], faster: 0.66, exposed: 2, heartRX: 13, heartRY: 15, heartY: 17, silver: 500, fall: 1.3, gravity: 90 },
+  fx: { sparks: 4, life: 0.25, speed: 40, shake: 1.8, flash: 0.09, flashAlpha: 0.65, trail: 12 },
+  map: { near: 20, scale: 0.7, hit: [-6, -6, 34, 34], centre: [10.5, 10.5], stone: 'M-3 23L0 20L24 20L27 23L25 25L-2 25Z', hammer: 'M8 14V3Q7 1 10 1Q13 1 12 3V14M8 4H12M8 7H12M8 10H12M2 12L5 14H15L18 12L20 13V21L18 22L15 20H5L2 22L0 21V13ZM4 15L8 18L12 15L16 18M4 18L8 15L12 18L16 15M2 13V21M18 13V21', spark: 'M-2 12L-5 10L-4 7M21 16L25 14L24 11M9 23L11 26', every: 4.3, sparkTime: 0.18, tremble: 0.55, trembleRate: 33, hop: 2, hopTime: 0.3 },
+  ui: { w: 330, h: 550, fieldW: 300, fieldH: 400, pad: 14, border: 1, radius: 10, gap: 8, header: 24, status: 36, buttons: 36, font: 12, line: 17, small: 11, title: 22, titleWeight: '600', autoFlex: '2', waveShare: '50%', cardPad: 14, inset: 12, rune: 32, runeW: 18, mini: 17, miniW: 11, spritePad: 4, glyphLine: 1.4, heartW: 10, heartH: 9, heartGap: 2, notice: 1, bestKey: 'jm-hammer-best' },
+  paths: {
+    bridge: ['M0 386Q150 364 300 386', 'M0 391Q150 369 300 391', 'M0 396Q150 374 300 396'],
+    heart: 'M0 3C-6 -3 -6 -7 -2 -7Q0 -7 0 -5Q0 -7 2 -7C6 -7 6 -3 0 3Z', heartBox: '-6 -8 12 12',
+    crack: 'M-3 -6L1 -2L-2 1L3 6', stoneHeart: 'M0 -9L-9 7L10 6ZM0 -5L-3 2L5 3',
+    shot: ['M-1 -3L1 3M-2 -2L1 -3M-1 3L2 2', 'M-2 -4L2 -4L0 5Z', 'M0 4Q-4 0 0 -4Q4 0 0 4Z'],
+    shield: 'M-3 0A3 3 0 1 0 3 0A3 3 0 1 0 -3 0M-2 -2L2 2M-2 2L2 -2',
+    spark: 'M-2 0H2M0 -2V2',
+    sprites: {
+      glove: [24, 20, 'M-10 7L-8 1L-7 -5L-3 -7L0 -5L3 -7L6 -5L8 -1L7 2L10 7ZM-8 2H8M-4 -5V0M0 -5V0M4 -5V0M-7 5H-5M0 5H2M6 5H7'],
+      hammer: [20, 20, 'M-1 1V8Q-3 11 0 11Q3 11 1 8V1M-8 -7L-5 -5H5L8 -7L9 -6V1L8 2L5 0H-5L-8 2L-9 1V-6ZM-5 -4L0 -1L5 -4M-5 -1L0 -4L5 -1'],
+      draugr: [24, 20, 'M-8 6L-6 -1L-4 -2L-4 -6L0 -7L4 -5L4 -2L7 0L9 6M-5 2H5M-3 -4H-1M2 -4H3M-2 -1H2M-3 3L-4 7M3 3L4 7M-8 0L-10 -3'],
+      rime: [24, 20, 'M-9 7L-7 -2L-3 -4L-4 -7L1 -8L5 -5L4 -2L8 0L10 7ZM-3 -3L0 -1L3 -3M-5 2L-1 3M2 3L6 2M-5 5V7M5 5V7'],
+      fire: [24, 20, 'M-8 7L-7 0L-3 -2Q-7 -7 -2 -8L0 -4L3 -8Q8 -4 4 -1L8 1L9 7ZM-3 1L0 3L3 1M-4 5L-5 8M4 5L5 8'],
+      wolf: [26, 20, 'M-10 1L-7 -5L-4 -2L1 -3L4 -7L6 -3L10 -1L8 2L5 2L3 5H-4L-7 7M-3 4L-2 8M3 4L5 8M7 -1H8M-9 0L-12 -3'],
+      chief: [26, 22, 'M-11 8L-9 -1L-5 -3L-5 -8L0 -10L5 -8L5 -3L9 -1L11 8ZM-4 -3L0 -1L4 -3M-4 1H4M-5 4V8M5 4V8M0 -8V-4M-2 -7L2 -5'],
+      valkyrie: [36, 22, 'M-15 5L-9 1L-4 2L0 -1L5 0L8 -3L13 -2L16 1L12 4H6L4 8M-8 4L-9 8M-3 4L-1 8M1 -1V-8L4 -10L6 -7L4 -4L7 -1M2 -7L-6 -9L-2 -5L-8 -6L-2 -2M7 -7L13 -10'],
+      hrungnir: [128, 62, 'M-60 27L-54 7L-28 -3L-23 -22L-7 -28L17 -26L27 -17L24 -3L53 8L60 27ZM-23 -13L-9 -8L-1 -10M8 -10L21 -14M-8 -3L9 -2M-17 9L-8 13L-13 21M23 4L15 9L20 17M-35 7L-31 20M40 11L35 24'],
+      clay: [52, 64, 'M-22 28L-18 1L-10 -6L-11 -20L-2 -27L9 -22L11 -8L19 0L23 28ZM-7 -15L-3 -14M4 -14L7 -15M-5 -8L4 -7M-12 6L-6 9L-9 17M13 4L7 12M-6 23L-8 30M7 22L10 30'],
+    },
+    fragments: [[-32, -8, 'M-25 -9L-7 -14L5 0L-12 13Z'], [0, -14, 'M-18 -13L12 -12L23 2L0 17L-13 4Z'], [32, 1, 'M-8 -11L17 3L10 20L-17 6Z']],
+  },
+  tests: { quick: 60, full: 200, seeds: 1001, botStep: 1 / 120, think: 12, dodge: 0.5, dodgeX: 27, threat: 18, reach: 0.6, win: [0.15, 0.45], idle: 0.8, poolSteps: 10000, determinism: 3000, averageMS: 0.3 },
+};
 
 const FIND_COPY = {
   crafts: ['PRINT', 'VIDEO', 'MOTION', 'SCREEN'],
@@ -1122,13 +1199,35 @@ const FIND_COPY = {
   ],
   runestoneRunes: 'first sketch final cut',
   poster: { head: 'WANTED', who: 'ONE DESIGNER', line1: 'who sees a job through, from', line2: 'first sketch to final cut', reward: 'REWARD: THE WORK', stamp: 'PRINT', back: ['Stock: to come', 'The brief: to come'], foot: { t: 'Stock: to come. The brief: to come.', todo: 1 } },
-  tafl: { t: 'A fact from the game design year goes here.', todo: 1 },
-  taflYou: 'Your move. Get the king to a corner.', taflThem: 'The attackers move.', taflWin: 'The king is away.',
-  taflLose: 'The king is taken.', taflStuck: 'Nothing of yours can move. The king is caught.', taflDraw: 'No way through. A draw.', taflNew: 'New game',
-  taflRule: 'Pieces slide in straight lines. Trap one between two of yours to take it. The king is taken only when shut in on all four sides.',
-  taflBoard: 'Brandubh. You play the king and defenders.', taflColumns: 'abcdefg',
-  taflKinds: { a: 'attacker', d: 'defender', k: 'king', empty: 'empty' },
-  taflCell: '{cell}, {piece}', taflMove: '{from} to {to}.', taflTaken: ' {n} taken.', taflStatus: '{move} {turn}',
+  hammerFact: { t: 'A fact from the game design year goes here.', todo: 1 },
+  hammer: {
+    title: 'Hold the bridge', intro: 'Giants march on Bifröst. Throw Mjölnir at them; it always flies back to your hand.',
+    controls: 'Move: arrows or A/D, or point. Throw: hold Space, Up or W, or press. T or Keep throwing toggles automatic throws. P pauses.',
+    controlsTouch: 'Drag anywhere to move Járngreipr. Keep a finger down to throw. Keep throwing toggles automatic throws. Pause takes a breath.',
+    field: 'Hold the bridge playfield. Left/Right or A/D move; Space, Up or W throw; T keeps throwing; P pauses; 1, 2, 3 choose a rune; Escape closes.',
+    start: 'Start a run', waveLine: 'Wave {n} of 7', waveStart: 'Wave {n} begins.',
+    runeTitle: 'Wave {n} held. Take a rune.', runeKeys: 'Choose with 1, 2 or 3, or press a rune.',
+    runeTaken: '{name}, level {n}, taken.', runeLevel: '{key}. {name}, level {n}. {line}',
+    pause: 'Paused', pauseButton: 'Pause', resume: 'Resume', newRun: 'New run', close: 'Close', auto: 'Keep throwing',
+    lost: 'The bridge fell at wave {n}.', lostHearts: 'Your hearts gave out at wave {n}.', won: 'Hrungnir falls. The bridge holds.',
+    heartLost: 'A heart lost. {n} remain.', gift: 'A Valkyrie leaves a heart and silver.',
+    stats: '{silver} silver. {foes} foes felled.', best: 'Best run: {silver} silver.', silver: '{n} silver', hearts: '{n} of {max} hearts', runes: 'Runes taken',
+    boss: 'Hrungnir', clay: 'Mökkurkálfi rises.', heart: "Hrungnir's stone heart is bare.",
+    foes: { draugr: 'Draugr', rime: 'Rime giant', fire: 'Son of Múspell', wolf: 'Wolf', chief: 'Giant chief' },
+    fates: [
+      ['Fimbulwinter', 'Everything moves slower in the cold, the glove too.'],
+      ["Múspell's heat", 'Embers split twice.'], ['Wolf-age', 'Wolves run in packs.'],
+      ['Shield-maidens', 'The shield wall stands doubled.'], ["Hel's tide", 'A fallen draugr rises once.'],
+    ],
+    runes: [
+      ['Thurisaz, thorn', 'Pass through {n} more foes on the way up.'], ['Raidho, ride', 'Fly {n}% faster, out and back.'],
+      ['Kenaz, torch', 'Burn for 1 damage after 0.8 s; spread to {n} neighbours.'], ['Gebo, gift', 'Gain one heart now; hold {n} hearts at most.'],
+      ['Hagalaz, hail', 'Throw {n} hail shards sideways when the hammer turns.'], ['Naudiz, need', 'With one heart, hit {n} times as hard.'],
+      ['Isa, ice', 'Foes and their shots move {n}% slower.'], ['Jera, harvest', 'Heal {n} hearts when a wave is held.'],
+      ['Eihwaz, yew', 'Hit {n} harder on the way back.'], ['Laguz, water', 'Bend toward the nearest foe at strength {n}.'],
+      ['Dagaz, day', 'Survive {n} ending blows per run; clear the falling shots.'], ['Ehwaz, horse', 'Move the glove {n}% faster.'],
+    ],
+  },
   horn: ['Skál.', { t: 'A line from someone I worked with goes here.', todo: 1 }],
   norns: [['Urd', 'what was'], ['Verdandi', 'what is'], ['Skuld', 'what shall be']],
   nornKicker: '{name}, {time}', wellStop: '{name}, {dates}',
@@ -1136,7 +1235,7 @@ const FIND_COPY = {
   // One short line of what to do, shown above the step buttons while a find has the camera. Draft copy.
   hints: { wayfinder: 'Pick a craft to light the stops that used it.', hoards: 'Dig three times, then open it.', ravens: 'Press to send a raven out.',
     serpent: 'Poke it.', beacon: 'Press the tower for the next note, or drag to aim the beam.', runestone: 'Rub the stone to lift its carving.',
-    tafl: 'Press the board to play.', mist: 'Wipe the mist away.', horn: 'Press to raise it, press again to sound it.',
+    hammer: 'Press the hammer to play.', mist: 'Wipe the mist away.', horn: 'Press to raise it, press again to sound it.',
     well: 'Drop a pebble in. The Norns answer.', longship: 'Press to pull the oars.' },
   shipLog: 'The 2023 crossing', longship: { t: '2023: Dan to write this line.', todo: 1 },
 };
@@ -1301,16 +1400,6 @@ const FIND_PLAY = {
     screen: '<rect class="l" x="-22" y="-16" width="44" height="32" rx="2"/><path class="t" d="M-22 -9H22"/><circle class="pf" cx="-18" cy="-12.5" r="1"/><circle class="pf" cx="-14.5" cy="-12.5" r="1"/><path class="t" d="M-16 -3H2M-16 3H10M-16 9H-2"/><rect class="t" x="8" y="-4" width="10" height="10"/>',
     bundle: '<rect class="l" x="-16" y="-12" width="32" height="26"/><path class="t" d="M0 -12V14M-16 1H16"/><path class="l" d="M0 -12q-6 -8 -9 -3q-1 4 9 3q10 1 9 -3q-3 -5 -9 3"/>',
   },
-  tafl: { near: 20, scale: 0.7, mapCell: 3, mapHit: [-4, -4, 29, 29], kingPulse: [1.3, 1.7, 1], mapKing: 1.3,
-    cell: 40, board: 280, width: 312, border: 1, pad: 15, radius: 10, gap: 6, tray: 22,
-    statusH: 54, slotH: 70, buttonsH: 36, win: [0.22, 0.9, 2], font: 13, line: 18, small: 11, smallLine: 15,
-    gridAlpha: 0.28, outline: 1.1, pieceLine: 1.6, pieceR: 13, kingR: 15.5, kingStar: 9, cross: 18,
-    diamond: 9, dotR: 4, dotAlpha: 0.55, selectR: 18, selectDash: [3, 3], cursorInset: 3, cursorLine: 2,
-    slide: [0.05, 0.12, 0.3], reply: 0.45, grow: 0.35, close: 0.25, capturedScale: 0.5, trayInset: 17,
-    hop: 1.2, hopTime: 0.22, hopGap: 0.045,
-    rules: { size: 7, centre: 24, corners: [0, 6, 42, 48], king: 24, defenders: [17, 23, 25, 31], attackers: [3, 10, 21, 22, 26, 27, 38, 45], limit: 80, kingSides: 4, kingEdge: false,
-      score: { king: 1000, corner: 900, edge: 120, defender: 30, attacker: 25, mobility: 2, adjacent: 1 } },
-  },
   mist: { near: 62, rad: 70, box: [102, 410, 104, 50], alpha: 0.62, grid: [8, 4], cellR: 10, done: 0.75, thirds: 3,
     wipe: 9, press: 16, finger: 14, soft: [1.7, 0.4], step: 0.4, traveller: 7, travellerEdge: 10, lift: 1.2, hear: [6, 0.8],
     ellipses: [[150, 428, 26, 11], [180, 444, 24, 10], [134, 446, 18, 8], [117, 426, 19, 12], [158, 450, 25, 10], [192, 429, 22, 12]],
@@ -1459,16 +1548,7 @@ const ravens = () => findDrawing('ravens');
 const serpent = () => findDrawing('serpent');
 const beacon = () => findDrawing('beacon');
 const runestone = () => findDrawing('runestone');
-const tafl = () => {
-  const T = FIND_PLAY.tafl, R = T.rules, [hx, hy, hw, hh] = T.mapHit;
-  let s = `<rect class="hit" x="${hx}" y="${hy}" width="${hw}" height="${hh}"/><g class="tf-board" transform="scale(${T.mapCell / T.cell})"><rect class="o" width="${T.board}" height="${T.board}"/>`;
-  for (let i = 1; i < R.size; i++) s += `<path class="l" style="stroke-width:${T.outline}" opacity="${T.gridAlpha}" d="M${i * T.cell} 0V${T.board}M0 ${i * T.cell}H${T.board}"/>`;
-  R.corners.forEach(sq => { const x = (sq % R.size + 0.5) * T.cell, y = (Math.floor(sq / R.size) + 0.5) * T.cell, r = T.cross / 2; s += `<path class="l" d="M${x - r} ${y}H${x + r}M${x} ${y - r}V${y + r}"/>`; });
-  const mid = T.board / 2; s += `<path class="l" d="M${mid} ${mid - T.diamond}l${T.diamond} ${T.diamond}l${-T.diamond} ${T.diamond}l${-T.diamond} ${-T.diamond}Z"/>`;
-  const pieces = [{ sq: R.king, kind: 'k' }, ...R.defenders.map(sq => ({ sq, kind: 'd' })), ...R.attackers.map(sq => ({ sq, kind: 'a' }))];
-  s += pieces.map((p, i) => `<g class="tf-piece" data-piece="${i}" aria-hidden="true" transform="translate(${(p.sq % R.size + 0.5) * T.cell} ${(Math.floor(p.sq / R.size) + 0.5) * T.cell})"><circle class="${p.kind === 'a' ? 'o' : 'pf'}" style="stroke-width:${T.pieceLine}" r="${p.kind === 'k' ? T.kingR : T.pieceR}"/>${p.kind === 'k' ? `<path fill="${C.ink}" d="${starPath(0, 0, T.kingStar)}"/>` : ''}</g>`).join('');
-  return s + '</g>';
-};
+const hammerMapArt = () => { const M = HAMMER.map, h = M.hit; return `<rect class="hit" x="${h[0]}" y="${h[1]}" width="${h[2]}" height="${h[3]}"/><path class="g" d="${M.stone}"/><g class="hm-lift"><path class="l" d="${M.hammer}"/><path class="l hm-spark" d="${M.spark}" opacity="0" pointer-events="none"/></g>`; };
 const horn = () => { const H = FIND_PLAY.horn, [x, y, w, h] = H.hit; return `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="hn-horn"><path class="g" d="${H.paths[0]}"/><path class="t" d="${H.paths[1]}"/><path class="l" d="${H.paths[2]}"/></g><path class="t" d="${H.paths[3]}"/>`; };
 const mist = () => { const M = FIND_PLAY.mist, [x, y, w, h] = M.box; return `<defs><radialGradient id="find-mist-soft"><stop stop-color="${C.paper}"/><stop offset="1" stop-color="${C.paper}" stop-opacity="0"/></radialGradient><radialGradient id="find-mist-wipe"><stop offset="${M.soft[1]}" stop-color="${C.black}"/><stop offset="1" stop-color="${C.black}" stop-opacity="0"/></radialGradient></defs>` + M.cairns.map(p => `<g transform="translate(${p[0]} ${p[1]}) scale(${M.cairnScale})">${M.cairn}<path class="pf mist-glint" pointer-events="none" d="${starPath(...M.glintAt, M.glintSize)}" opacity="0"/></g>`).join('') + `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="mist-drift" pointer-events="none"><g mask="url(#mistMask)"><g class="mist-cloud" opacity="${M.alpha}">${M.ellipses.map(p => `<ellipse cx="${p[0]}" cy="${p[1]}" rx="${p[2]}" ry="${p[3]}" fill="url(#find-mist-soft)"/>`).join('')}</g></g></g>`; };
 const well = () => { const W = FIND_PLAY.well; return `<ellipse class="hit" rx="${W.hit[0]}" ry="${W.hit[1]}"/><g class="wl-rip" pointer-events="none">${Array.from({ length: W.rings }, () => `<ellipse class="t" rx="${W.ringR[0]}" ry="${W.ringR[1]}" opacity="0"/>`).join('')}</g><circle class="pf wl-pebble" r="${W.pebbleR}" opacity="0" pointer-events="none"/>`; };
@@ -1560,7 +1640,7 @@ function bigMap() {
   fd += `<g id="wf-lines" pointer-events="none"></g>` + at('wayfinder', 1, wayfinder());
   fd += `<g id="f-hoards" role="button" tabindex="0" aria-label="${F.hoards.label}" data-x="${F.hoards.x}" data-y="${F.hoards.y}">` + FIND_COPY.hoards.map(h => `<g class="find hoard" id="f-${h.id}" role="button" tabindex="0" aria-label="${h.label}" data-x="${h.x}" data-y="${h.y}">${grp(h.x, h.y, FIND_PLAY.hoard.scale, hoard())}</g>`).join('') + `</g>`;
   fd += at('ravens', FIND_PLAY.raven.scale, ravens()) + at('serpent', FIND_PLAY.serpent.scale, `<g class="sp-swim">${serpent(FIND_PLAY.serpent.scale)}</g>`) + at('beacon', FIND_PLAY.beacon.scale, beacon()) + at('runestone', FIND_PLAY.rune.scale, runestone());
-  fd += at('tafl', FIND_PLAY.tafl.scale, tafl()) + findWrap('mist', F.mist.label, mist(), F.mist.x, F.mist.y) + at('horn', FIND_PLAY.horn.scale, horn()) + at('well', 1, well());
+  fd += at('hammer', HAMMER.map.scale, hammerMapArt()) + findWrap('mist', F.mist.label, mist(), F.mist.x, F.mist.y) + at('horn', FIND_PLAY.horn.scale, horn()) + at('well', 1, well());
   fd += `<g id="bc-notes">` + FIND_COPY.beaconNotes.map(n => { const B = FIND_PLAY.beacon; return `<g class="bc-note" opacity="0" transform="translate(${n.x} ${n.y})"><g class="bc-note-in">${runeSvg(n.rune, B.runeSize, 0, B.runeY, 'middle', 'rn rn-note')}<g class="bc-en" opacity="0">${n.t.todo ? svgText(0, B.todoY, COPY.todo, { s: B.todoFont, c: C.dim, a: 'middle' }) : ''}${svgText(0, B.lineY, typeof n.t === 'object' ? n.t.t : n.t, { s: B.noteFont, c: C.paper, a: 'middle', i: 1 })}</g></g></g>`; }).join('') + `</g>`;
   fd += findWrap('longship', F.longship.label, `<g class="ls-ship" transform="translate(${F.longship.x} ${F.longship.y}) scale(${FIND_PLAY.ship.scale})">${longship()}</g>`, F.longship.x, F.longship.y);
 
@@ -3364,7 +3444,7 @@ function findKitBuild(svg, pop, sheet, base, rm) {
   FD.star = document.createElement('div'); FD.star.className = 'find-star'; FD.star.setAttribute('aria-hidden', 'true');
   FD.star.innerHTML = `<svg viewBox="-1 -1 2 2"><path d="${starPath(0, 0, 1)}"/></svg>`; pop.parentElement.appendChild(FD.star);
   findKitStyle();
-  sheet.addEventListener('keydown', e => { if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) { e.preventDefault(); e.stopPropagation(); } });
+  sheet.addEventListener('keydown', e => { if (FD.sheetOwner?.id === 'hammer') return; if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) { e.preventDefault(); e.stopPropagation(); } });
   sheet.addEventListener('wheel', e => { e.preventDefault(); e.stopPropagation(); }, { passive: false });
   document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (FD.popOwner || FD.sheetOwner) { e.preventDefault(); closePop(); closeSheet(); } else stepsRelease(); });
   matchMedia('(hover: hover)').addEventListener('change', e => FD.hover = e.matches);
@@ -3374,8 +3454,6 @@ function findKitStyle() {
   const P = FIND_PLAY, root = document.documentElement;
   const vars = { 'find-pop-edge': P.kit.popup.edge + 'px', 'find-pop-w': P.kit.popup.width + 'px', 'find-pop-r': P.kit.popup.radius + 'px', 'find-pop-pad': P.kit.popup.pad.map(n => n + 'px').join(' '), 'find-pop-font': P.kit.popup.font + 'px', 'find-pop-line': P.kit.popup.line, 'find-kicker': P.kit.popup.kicker + 'px', 'find-gap': P.kit.popup.gap + 'px', 'find-tail-w': P.kit.popup.tail[0] + 'px', 'find-tail-h': P.kit.popup.tail[1] + 'px', 'find-slot-weight': P.kit.slot.weight, 'find-star-z': P.kit.starZ, 'find-slot-font': P.kit.slot.font + 'px', 'find-slot-rule': P.kit.slot.border + 'px', 'find-slot-pad': P.kit.slot.pad + 'px', 'find-star': P.star.size + 'px', 'find-piece': P.hoard.width + 'px', 'find-piece-top': P.hoard.top + 'px', 'find-icon': P.hoard.icon + 'px', 'find-arm': P.way.armWidth + 'px', 'find-rune-flip': P.rune.flipTime + 's', 'find-rune-w': P.rune.width + 'px', 'find-rune-h': P.rune.height + 'px', 'find-rune-perspective': P.rune.perspective + 'px', 'find-ctl-top': P.rune.controlTop + 'px', 'find-reel-w': P.raven.reel.width + 'px', 'find-iris': P.raven.reel.iris + 'px', 'find-reel-label': P.raven.reel.labelTop + 'px', 'find-reel-slot': P.raven.reel.slotBottom + 'px' };
   Object.entries(vars).forEach(([k, v]) => root.style.setProperty('--' + k, v));
-  const T = P.tafl, boardVars = { w: T.width, h: T.board + T.tray * 2 + T.statusH + T.slotH + T.buttonsH + T.gap * 3 + T.pad * 2 + T.border * 2, board: T.board, surface: T.board + T.tray * 2, pad: T.pad, border: T.border, radius: T.radius, gap: T.gap, status: T.statusH, slot: T.slotH, buttons: T.buttonsH, font: T.font, line: T.line, small: T.small, 'small-line': T.smallLine };
-  Object.entries(boardVars).forEach(([k, v]) => root.style.setProperty('--tf-' + k, v + 'px'));
 }
 function findKitFrame() {
   const dt = FD.dt;
@@ -3850,195 +3928,460 @@ function findRune(svg) {
   return o;
 }
 
-// ---- tafl.mjs ----
-// Brandubh rules and a deliberately beatable, one-ply attacker. No DOM or hidden state.
+// ---- hammer.mjs ----
+// Seeded rules only. Pools belong to a run; stepping neither grows them nor touches the page.
 
-const taflSide = piece => piece === 'a' ? 'attackers' : piece ? 'king' : null;
-const taflOther = side => side === 'king' ? 'attackers' : 'king';
-const taflNeighbour = (square, dx, dy) => {
-  const n = FIND_PLAY.tafl.rules.size, x = square % n + dx, y = Math.floor(square / n) + dy;
-  return x >= 0 && x < n && y >= 0 && y < n ? y * n + x : -1;
-};
-const taflDirections = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-function taflReach(board, from) {
-  const R = FIND_PLAY.tafl.rules, piece = board[from], moves = [];
-  if (!piece) return moves;
-  for (const [dx, dy] of taflDirections) {
-    for (let to = taflNeighbour(from, dx, dy); to !== -1 && !board[to]; to = taflNeighbour(to, dx, dy)) {
-      if (piece === 'k' || to !== R.centre && !R.corners.includes(to)) moves.push(to);
+const hammerRandom = seed => () => { seed |= 0; seed = seed + HAMMER.seed.add | 0; let v = Math.imul(seed ^ seed >>> 15, 1 | seed); v = v + Math.imul(v ^ v >>> 7, 61 | v) ^ v; return ((v ^ v >>> 14) >>> 0) / HAMMER.seed.div; };
+const hammerBetween = (s, a, b) => a + (b - a) * s.random();
+const hammerInteger = (s, range) => Math.floor(hammerBetween(s, range[0], range[1] + 1));
+const hammerClamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const hammerCold = s => s.fate === 0 ? HAMMER.fates.cold : 1;
+const hammerSlow = s => hammerCold(s) * (1 - s.levels[6] * HAMMER.rune.ice);
+const hammerPower = s => s.hearts === 1 && s.levels[5] ? 1 + s.levels[5] : 1;
+const hammerFlightSpeed = s => HAMMER.throw.speed * (1 + s.levels[1] * HAMMER.throw.ride) * hammerCold(s);
+const hammerGloveSpeed = (s, pointer = false) => (pointer ? HAMMER.glove.follow : HAMMER.glove.speed) * (1 + s.levels[11] * HAMMER.glove.horse) * hammerCold(s);
+
+function hammerStart(seed = HAMMER.seed.first) {
+  const s = {
+    seed, random: typeof seed === 'function' ? seed : hammerRandom(seed), time: 0, wave: 0, phase: 'play', paused: false,
+    hearts: HAMMER.hearts, maxHearts: HAMMER.hearts, silver: 0, felled: 0, hurt: 0, losses: 0, waveLosses: 0, reason: '',
+    levels: HAMMER.runes.map(() => 0), choices: [-1, -1, -1], fates: Array(HAMMER.fates.count).fill(false), fate: -1, dagazUsed: 0,
+    x: HAMMER.glove.x, dir: 1, offset: 0, descent: 0, columns: 0, rows: 0, total: 0, count: 0,
+    shotAt: 0, wolfAt: 0, valkAt: 0, throwId: 0, shake: 0, reduced: false, fall: 0, version: 0,
+    events: { wave: 0, hurt: 0, rune: 0, gift: 0, clay: 0, heart: 0, end: 0 },
+    hammer: { mode: 'held', x: HAMMER.glove.x, y: HAMMER.glove.y, vx: 0, vy: 0, angle: 0, passed: 0 },
+    valk: { live: false, x: 0, y: HAMMER.valkyrie.y },
+    foes: Array.from({ length: HAMMER.pools.foes }, () => ({ live: false, kind: '', x: 0, y: 0, bx: 0, by: 0, col: 0, row: 0, hp: 0, max: 0, last: -1, burn: 0, spread: 0, freeze: 0, flash: 0, revived: false, raid: 0, target: 0, rx: 0, ry: 0 })),
+    shots: Array.from({ length: HAMMER.pools.shots }, () => ({ live: false, x: 0, y: 0, vx: 0, vy: 0, kind: '', split: 0 })),
+    hail: Array.from({ length: HAMMER.pools.hail }, () => ({ live: false, x: 0, y: 0, vx: 0, age: 0 })),
+    sparks: Array.from({ length: HAMMER.pools.sparks }, () => ({ live: false, x: 0, y: 0, vx: 0, vy: 0, age: 0 })),
+    cells: Array.from({ length: HAMMER.pools.cells }, () => ({ live: false, x: 0, y: 0 })),
+  };
+  hammerWave(s); return s;
+}
+
+function hammerFoe(s, kind, x, y, col, row) {
+  let f; for (let i = 0; i < s.foes.length; i++) if (!s.foes[i].live) { f = s.foes[i]; break; }
+  if (!f) return null;
+  const boss = kind === 'hrungnir', clay = kind === 'clay';
+  f.live = true; f.kind = kind; f.x = f.bx = x; f.y = f.by = y; f.col = col; f.row = row;
+  f.hp = f.max = boss ? HAMMER.boss.hearts : clay ? HAMMER.boss.clay : HAMMER.foes[kind].hearts;
+  f.rx = boss ? HAMMER.foe.bossRX : clay ? HAMMER.foe.clayRX : HAMMER.foe.rx;
+  f.ry = boss ? HAMMER.foe.bossRY : clay ? HAMMER.foe.clayRY : HAMMER.foe.ry;
+  f.last = -1; f.burn = f.spread = f.freeze = f.flash = f.raid = 0; f.revived = false; s.count++; return f;
+}
+
+function hammerWave(s) {
+  s.wave++; s.phase = 'play'; s.offset = s.descent = 0; s.dir = s.random() < 0.5 ? -1 : 1; s.count = 0; s.waveLosses = s.losses;
+  s.hammer.mode = 'held'; s.hammer.x = s.x; s.hammer.y = HAMMER.glove.y;
+  for (let i = 0; i < s.foes.length; i++) s.foes[i].live = false;
+  for (let i = 0; i < s.shots.length; i++) s.shots[i].live = false;
+  for (let i = 0; i < s.hail.length; i++) s.hail[i].live = false;
+  s.fate = -1;
+  if (s.wave >= 2 && s.random() < HAMMER.fates.chance) {
+    const start = Math.floor(s.random() * HAMMER.fates.count);
+    for (let i = 0; i < HAMMER.fates.count; i++) { const f = (start + i) % HAMMER.fates.count; if (!s.fates[f]) { s.fate = f; s.fates[f] = true; break; } }
+  }
+  const W = HAMMER.shield; let cell = 0;
+  for (let wall = 0; wall < W.walls; wall++) for (let row = 0; row < W.rows * W.double; row++) for (let col = 0; col < W.columns; col++) {
+    const c = s.cells[cell++]; c.x = W.x + wall * W.gap + (col - (W.columns - 1) / 2) * W.cell + row % 2 * W.stagger;
+    c.y = W.y - row * W.cell; c.live = row < W.rows * (s.fate === 3 ? W.double : 1);
+  }
+  s.clayRisen = false; s.heartShown = false; s.clayDir = 1;
+  if (s.wave === HAMMER.waves.length + 1) {
+    hammerFoe(s, 'hrungnir', HAMMER.glove.x, HAMMER.boss.y, 0, 0); s.columns = s.rows = 1;
+  } else {
+    const w = HAMMER.waves[s.wave - 1]; s.columns = hammerInteger(s, w.columns); s.rows = hammerInteger(s, w.rows);
+    let weight = 0; for (let k = 0; k < w.weights.length; k++) weight += w.weights[k];
+    for (let row = 0; row < s.rows; row++) for (let col = 0; col < s.columns; col++) {
+      if (s.random() < w.gaps && row !== s.rows - 1) continue;
+      let roll = s.random() * weight, kind = 0; while (roll >= w.weights[kind]) roll -= w.weights[kind++];
+      hammerFoe(s, HAMMER.kinds[kind], HAMMER.field.w / 2 + (col - (s.columns - 1) / 2) * HAMMER.march.column, HAMMER.field.top + row * HAMMER.march.row, col, row);
+    }
+    const elites = hammerInteger(s, w.elites);
+    for (let i = 0; i < elites; i++) { const f = s.foes[i]; f.kind = 'chief'; f.hp = f.max = HAMMER.foes.chief.hearts; }
+  }
+  s.total = s.count; s.shotAt = 0; s.wolfAt = hammerBetween(s, ...HAMMER.wolf.every); s.valkAt = hammerBetween(s, ...HAMMER.valkyrie.every); s.valk.live = false;
+  s.events.wave++; s.version++;
+}
+
+function hammerPick(s, choice) {
+  if (s.phase !== 'runes' || choice < 0 || choice >= s.choices.length) return false;
+  const rune = s.choices[choice]; if (rune < 0 || s.levels[rune] >= HAMMER.runes[rune].max) return false;
+  s.levels[rune]++;
+  if (rune === 3) { s.maxHearts = Math.min(HAMMER.most, s.maxHearts + 1); s.hearts = Math.min(s.maxHearts, s.hearts + 1); }
+  s.taken = rune; s.events.rune++; hammerWave(s); return true;
+}
+
+function hammerEnd(s, reason) { s.phase = 'end'; s.reason = reason; s.fall = 0; s.events.end++; s.version++; }
+function hammerHurt(s) {
+  if (s.hurt > 0 || s.phase !== 'play') return;
+  s.hearts--; s.losses++; s.events.hurt++; s.version++; s.hurt = HAMMER.hurt;
+  if (s.hearts <= 0) {
+    if (s.dagazUsed < s.levels[10]) { s.dagazUsed++; s.hearts = 1; for (let i = 0; i < s.shots.length; i++) s.shots[i].live = false; }
+    else hammerEnd(s, 'hearts');
+  }
+}
+
+function hammerSpark(s, x, y) {
+  if (s.reduced) return;
+  s.shake = HAMMER.fx.life;
+  let made = 0;
+  for (let i = 0; i < s.sparks.length && made < HAMMER.fx.sparks; i++) {
+    const p = s.sparks[i]; if (p.live) continue;
+    p.live = true; p.x = x; p.y = y; p.age = 0; const a = s.random() * Math.PI * 2;
+    p.vx = Math.cos(a) * HAMMER.fx.speed; p.vy = Math.sin(a) * HAMMER.fx.speed; made++;
+  }
+}
+
+function hammerDamage(s, f, power, ignite = false) {
+  if (!f.live) return;
+  f.hp -= power; f.flash = s.reduced ? 0 : HAMMER.fx.flash; hammerSpark(s, f.x, f.y);
+  if (f.hp > 0) {
+    if (ignite && s.levels[2] && !f.burn) { f.burn = HAMMER.rune.burn; f.spread = s.levels[2]; }
+    return;
+  }
+  if (s.fate === 4 && f.kind === 'draugr' && !f.revived) { f.hp = 1; f.revived = true; f.freeze = HAMMER.rune.burn; return; }
+  f.live = false; s.count--; s.felled++; s.silver += f.kind === 'hrungnir' ? HAMMER.boss.silver : f.kind === 'clay' ? 0 : HAMMER.foes[f.kind].silver; s.version++;
+  if (f.kind === 'chief') for (let i = 0; i < s.foes.length; i++) { const n = s.foes[i]; if (n.live && n.row === f.row && Math.abs(n.col - f.col) === 1) n.freeze = HAMMER.march.chiefStop; }
+  if (f.kind === 'hrungnir') { s.hearts = Math.min(s.maxHearts, s.hearts + s.levels[7]); s.silver += HAMMER.waveBonus * s.wave + (s.losses === s.waveLosses ? HAMMER.perfect * s.wave : 0); hammerEnd(s, 'won'); }
+}
+
+function hammerShotLoad(s) {
+  let count = 0;
+  for (let i = 0; i < s.shots.length; i++) { const p = s.shots[i]; if (p.live) count += p.kind === 'fire' ? 2 ** ((s.fate === 1 ? 2 : 1) - p.split) : 1; }
+  return count;
+}
+function hammerShot(s, x, y, vx, vy, kind, split = 0) {
+  // Reserve a fire shot's descendants, so the cap never clips a promised split.
+  const cost = kind === 'fire' ? 2 ** ((s.fate === 1 ? 2 : 1) - split) : 1;
+  if (hammerShotLoad(s) + cost > (s.wave <= HAMMER.waves.length ? HAMMER.waves[s.wave - 1].cap : HAMMER.pools.shots)) return;
+  for (let i = 0; i < s.shots.length; i++) { const p = s.shots[i]; if (p.live) continue; p.live = true; p.x = x; p.y = y; p.vx = vx; p.vy = vy; p.kind = kind; p.split = split; return; }
+}
+function hammerTurn(s) {
+  const h = s.hammer; if (h.mode !== 'out') return;
+  h.mode = 'back'; h.vx = 0; h.vy = HAMMER.throw.back * (1 + s.levels[1] * HAMMER.throw.ride) * hammerCold(s);
+  const n = s.levels[4] * HAMMER.rune.hail; let made = 0;
+  for (let i = 0; i < s.hail.length && made < n; i++) { const p = s.hail[i]; if (p.live) continue; p.live = true; p.age = 0; p.x = h.x; p.y = h.y; p.vx = (made % 2 ? 1 : -1) * HAMMER.rune.hailSpeed * (1 + Math.floor(made / 2) / HAMMER.rune.hail); made++; }
+}
+function hammerHeld(s) {
+  s.silver += HAMMER.waveBonus * s.wave + (s.losses === s.waveLosses ? HAMMER.perfect * s.wave : 0);
+  s.hearts = Math.min(s.maxHearts, s.hearts + s.levels[7]); s.phase = 'runes';
+  for (let c = 0; c < s.choices.length; c++) {
+    let available = 0;
+    for (let r = 0; r < HAMMER.runes.length; r++) { let used = false; for (let k = 0; k < c; k++) if (s.choices[k] === r) used = true; if (s.levels[r] < HAMMER.runes[r].max && !used) available++; }
+    let roll = Math.floor(s.random() * available); s.choices[c] = -1;
+    for (let r = 0; r < HAMMER.runes.length; r++) {
+      let used = false; for (let k = 0; k < c; k++) if (s.choices[k] === r) used = true;
+      if (!used && s.levels[r] < HAMMER.runes[r].max && roll-- === 0) { s.choices[c] = r; break; }
     }
   }
-  return moves;
+  s.version++;
 }
-function taflCaptures(board, from, to) {
-  const R = FIND_PLAY.tafl.rules, side = taflSide(board[from]), taken = [];
-  const at = square => square === from ? null : square === to ? board[from] : board[square];
-  // With rules.kingSides at 4 the king is taken only when shut in on every side: by attackers, a corner, the empty centre,
-  // and the board's edge if rules.kingEdge says so. At 2 he is taken like any other piece.
-  const wall = square => square === -1 ? R.kingEdge : at(square) === 'a' || R.corners.includes(square) || square === R.centre && !at(square);
-  for (const [dx, dy] of taflDirections) {
-    const enemy = taflNeighbour(to, dx, dy); if (enemy === -1 || !at(enemy) || taflSide(at(enemy)) === side) continue;
-    if (at(enemy) === 'k' && R.kingSides === 4) { if (taflDirections.every(([ex, ey]) => wall(taflNeighbour(enemy, ex, ey)))) taken.push(enemy); continue; }
-    const beyond = taflNeighbour(enemy, dx, dy); if (beyond === -1) continue;
-    if (taflSide(at(beyond)) === side || R.corners.includes(beyond) || beyond === R.centre && !at(beyond)) taken.push(enemy);
+
+function hammerStep(s, input, dt) {
+  if (s.paused || s.phase === 'runes') return;
+  if (s.phase === 'end') { if (s.reason === 'won') s.fall = Math.min(HAMMER.boss.fall, s.fall + dt); return; }
+  s.time += dt; if (s.time >= HAMMER.limit) { hammerEnd(s, 'bridge'); return; }
+  s.hurt = Math.max(0, s.hurt - dt); s.shake = Math.max(0, s.shake - dt);
+  const slow = hammerSlow(s), h = s.hammer;
+  const target = Number.isFinite(input.target) ? input.target : s.x + (input.move || 0) * hammerGloveSpeed(s) * dt;
+  const step = hammerGloveSpeed(s, Number.isFinite(input.target)) * dt;
+  s.x = hammerClamp(s.x + hammerClamp(target - s.x, -step, step), HAMMER.glove.min, HAMMER.glove.max);
+  if (h.mode === 'held') {
+    h.x = s.x; h.y = HAMMER.glove.y;
+    if (input.throw) { s.throwId++; h.mode = 'out'; h.vx = 0; h.vy = -hammerFlightSpeed(s); h.passed = 0; }
   }
-  return taken;
-}
-function taflApply(state, from, to) {
-  const board = state.board.slice(), taken = taflCaptures(board, from, to), piece = board[from];
-  board[to] = piece; board[from] = null; taken.forEach(s => board[s] = null);
-  return { board, turn: taflOther(state.turn), moves: state.moves + 1, taken, last: { from, to, piece }, winner: !board.includes('k') ? 'attackers' : FIND_PLAY.tafl.rules.corners.includes(board.indexOf('k')) ? 'king' : null };
-}
-const taflHasMove = (board, side) => board.some((p, s) => taflSide(p) === side && taflReach(board, s).length);
-function taflStart() {
-  const R = FIND_PLAY.tafl.rules, board = Array(R.size ** 2).fill(null);
-  R.attackers.forEach(s => board[s] = 'a'); R.defenders.forEach(s => board[s] = 'd'); board[R.king] = 'k';
-  return { board, turn: 'king', moves: 0, taken: [], last: null, winner: null };
-}
-function taflMoves(state, from) {
-  return state.winner || taflSide(state.board[from]) !== state.turn ? [] : taflReach(state.board, from);
-}
-function taflPlay(state, from, to) {
-  if (!taflMoves(state, from).includes(to)) throw new RangeError('Illegal tafl move');
-  const next = taflApply(state, from, to);
-  if (!next.winner && !taflHasMove(next.board, next.turn)) next.winner = taflOther(next.turn);
-  if (!next.winner && next.moves >= FIND_PLAY.tafl.rules.limit) next.winner = 'draw';
-  return next;
-}
-function taflReply(state, random) {
-  if (state.winner || state.turn !== 'attackers') return state;
-  const R = FIND_PLAY.tafl.rules, S = R.score;
-  let best = -Infinity, choices = [];
-  state.board.forEach((piece, from) => {
-    if (piece !== 'a') return;
-    taflReach(state.board, from).forEach(to => {
-      const next = taflApply(state, from, to), king = next.board.indexOf('k'), reach = king < 0 ? [] : taflReach(next.board, king);
-      let score = king < 0 ? S.king : 0;
-      if (reach.some(s => R.corners.includes(s))) score -= S.corner;
-      for (const edge of reach) {
-        const x = edge % R.size, y = Math.floor(edge / R.size);
-        if (x && x !== R.size - 1 && y && y !== R.size - 1 || R.corners.includes(edge)) continue;
-        const board = next.board.slice(); board[king] = null; board[edge] = 'k';
-        if (taflReach(board, edge).some(s => R.corners.includes(s))) score -= S.edge;
+  if (s.wave <= HAMMER.waves.length) {
+    const w = HAMMER.waves[s.wave - 1]; let left = Infinity, right = -Infinity;
+    for (let i = 0; i < s.foes.length; i++) { const f = s.foes[i]; if (f.live && !f.raid) { left = Math.min(left, f.x - f.rx); right = Math.max(right, f.x + f.rx); } }
+    const dx = s.dir * w.speed * (1 + HAMMER.march.boost * (1 - s.count / s.total)) * slow * dt;
+    if (left + dx <= HAMMER.field.margin || right + dx >= HAMMER.field.w - HAMMER.field.margin) { s.dir *= -1; s.descent += HAMMER.march.down; }
+    else s.offset += dx;
+  }
+  for (let i = 0; i < s.foes.length; i++) {
+    const f = s.foes[i]; if (!f.live) continue;
+    f.flash = Math.max(0, f.flash - dt);
+    if (f.burn > 0) {
+      f.burn -= dt;
+      if (f.burn <= 0) {
+        f.burn = 0;
+        if (f.spread > 0) { let near = null, distance = HAMMER.rune.spread;
+          for (let j = 0; j < s.foes.length; j++) { const n = s.foes[j], d = Math.hypot(n.x - f.x, n.y - f.y); if (n !== f && n.live && !n.burn && d < distance) { near = n; distance = d; } }
+          if (near) { near.burn = HAMMER.rune.burn; near.spread = f.spread - 1; }
+        }
+        hammerDamage(s, f, 1); if (!f.live) continue;
       }
-      score += S.defender * next.taken.filter(s => state.board[s] === 'd').length;
-      let worst = 0;
-      next.board.forEach((p, s) => { if (p && p !== 'a') for (const dest of taflReach(next.board, s)) worst = Math.max(worst, taflCaptures(next.board, s, dest).filter(k => next.board[k] === 'a').length); });
-      score -= S.attacker * worst + S.mobility * reach.length;
-      if (king >= 0 && taflDirections.some(([dx, dy]) => taflNeighbour(king, dx, dy) === to)) score += S.adjacent;
-      if (score > best) { best = score; choices = [[from, to]]; } else if (score === best) choices.push([from, to]);
-    });
-  });
-  if (!choices.length) return { ...state, board: state.board.slice(), taken: [], winner: 'king' };
-  const choice = choices[Math.min(choices.length - 1, Math.floor(Math.max(0, random()) * choices.length))];
-  return taflPlay(state, ...choice);
+    }
+    if (f.freeze > 0) { f.freeze = Math.max(0, f.freeze - dt * slow); continue; }
+    if (f.kind === 'hrungnir') {
+      f.x += s.dir * HAMMER.boss.speed * slow * dt;
+      if (f.x < HAMMER.boss.x[0] || f.x > HAMMER.boss.x[1]) s.dir *= -1;
+      if (!s.clayRisen && f.hp <= f.max * HAMMER.boss.clayAt) { s.clayRisen = true; hammerFoe(s, 'clay', HAMMER.glove.x, HAMMER.boss.clayY, 0, 0); s.events.clay++; s.version++; }
+      if (!s.heartShown && f.hp <= f.max * HAMMER.boss.heartAt) { s.heartShown = true; s.events.heart++; s.version++; }
+    } else if (f.kind === 'clay') {
+      f.x += s.clayDir * HAMMER.boss.claySpeed * slow * dt;
+      if (f.x < HAMMER.boss.clayX[0] || f.x > HAMMER.boss.clayX[1]) s.clayDir *= -1;
+    } else if (f.raid > 0) {
+      f.raid += dt * slow; const q = Math.min(1, f.raid / HAMMER.wolf.time), k = Math.sin(Math.PI * q);
+      f.x = (f.bx + s.offset) * (1 - k) + f.target * k + Math.sin(Math.PI * 2 * q) * HAMMER.wolf.curve;
+      f.y = (f.by + s.descent) * (1 - k) + HAMMER.glove.y * k;
+      if (Math.abs(f.x - s.x) < f.rx + HAMMER.glove.radius && Math.abs(f.y - HAMMER.glove.y) < f.ry + HAMMER.glove.radius) hammerHurt(s);
+      if (s.phase === 'end') return;
+      if (q === 1) f.raid = 0;
+    } else { f.x = f.bx + s.offset; f.y = f.by + s.descent; }
+    if (!f.raid && f.y + f.ry >= HAMMER.field.bridge) { hammerEnd(s, 'bridge'); return; }
+    if (f.y + f.ry >= HAMMER.shield.y - HAMMER.shield.rows * HAMMER.shield.cell) for (let j = 0; j < s.cells.length; j++) { const c = s.cells[j]; if (c.live && Math.abs(c.x - f.x) < f.rx && Math.abs(c.y - f.y) < f.ry) c.live = false; }
+  }
+  s.wolfAt -= dt * slow;
+  if (s.wave >= 3 && s.wave <= HAMMER.waves.length && s.wolfAt <= 0) {
+    let pack = s.fate === 2 ? HAMMER.wolf.pack : 1;
+    for (let i = 0; i < s.foes.length && pack; i++) { const f = s.foes[i]; if (!f.live || f.kind !== 'wolf' || f.raid) continue;
+      let front = true; for (let j = 0; j < s.foes.length; j++) { const n = s.foes[j]; if (n.live && n.col === f.col && n.y > f.y) front = false; }
+      if (front) { f.raid = dt; f.target = s.x; pack--; }
+    }
+    s.wolfAt = hammerBetween(s, ...HAMMER.wolf.every);
+  }
+  s.shotAt -= dt * slow;
+  if (s.shotAt <= 0) {
+    const live = hammerShotLoad(s);
+    if (s.wave <= HAMMER.waves.length) {
+      const w = HAMMER.waves[s.wave - 1], col = Math.floor(s.random() * s.columns); let f = null;
+      for (let i = 0; i < s.foes.length; i++) { const n = s.foes[i]; if (n.live && !n.raid && n.col === col && (!f || n.y > f.y)) f = n; }
+      if (f && live + (f.kind === 'chief' ? 3 : 1) <= w.cap) {
+        const speed = HAMMER.foes[f.kind].speed;
+        if (f.kind === 'chief') for (let j = -1; j <= 1; j++) hammerShot(s, f.x, f.y + f.ry, Math.sin(j * HAMMER.shot.fan) * speed, Math.cos(j * HAMMER.shot.fan) * speed, 'rime');
+        else hammerShot(s, f.x, f.y + f.ry, 0, speed, f.kind);
+      }
+      s.shotAt = w.rate;
+    } else {
+      const f = s.foes[0]; let clay = false; for (let i = 1; i < s.foes.length; i++) if (s.foes[i].live && s.foes[i].kind === 'clay') clay = true;
+      const aim = Math.atan2(s.x - f.x, HAMMER.glove.y - f.y);
+      for (let j = 0; j < HAMMER.boss.fans; j++) { const a = aim + (j - (HAMMER.boss.fans - 1) / 2) * HAMMER.boss.aimSpread; hammerShot(s, f.x, f.y + f.ry, Math.sin(a) * HAMMER.boss.shardSpeed, Math.cos(a) * HAMMER.boss.shardSpeed, 'rime'); }
+      s.shotAt = HAMMER.boss.fan * (clay ? HAMMER.boss.faster : 1);
+    }
+  }
+  for (let i = 0; i < s.shots.length; i++) {
+    const p = s.shots[i]; if (!p.live) continue; p.x += p.vx * dt * slow; p.y += p.vy * dt * slow;
+    if (p.kind === 'fire' && p.split < (s.fate === 1 ? 2 : 1) && p.y >= (p.split ? HAMMER.shot.splitAgain : HAMMER.shot.splitY)) {
+      const stage = p.split + 1, speed = HAMMER.foes.fire.speed; p.live = false;
+      hammerShot(s, p.x, p.y, -Math.sin(HAMMER.shot.angle * stage) * speed, speed, 'fire', stage);
+      hammerShot(s, p.x, p.y, Math.sin(HAMMER.shot.angle * stage) * speed, speed, 'fire', stage); continue;
+    }
+    if (p.y > HAMMER.shot.dead || p.x < 0 || p.x > HAMMER.field.w) { p.live = false; continue; }
+    if (p.y >= HAMMER.shield.y - HAMMER.shield.rows * HAMMER.shield.double * HAMMER.shield.cell - HAMMER.shield.radius && p.y <= HAMMER.shield.y + HAMMER.shield.radius) {
+      for (let j = 0; j < s.cells.length; j++) { const c = s.cells[j]; if (c.live && Math.abs(c.x - p.x) < HAMMER.shield.radius && Math.abs(c.y - p.y) < HAMMER.shield.radius) { c.live = p.live = false; break; } }
+    }
+    if (p.live && Math.abs(p.x - s.x) < HAMMER.glove.radius + HAMMER.shot.radius && Math.abs(p.y - HAMMER.glove.y) < HAMMER.glove.radius + HAMMER.shot.radius) { p.live = false; hammerHurt(s); }
+    if (s.phase === 'end') return;
+  }
+  if (h.mode !== 'held') {
+    const oldX = h.x, oldY = h.y, speed = hammerFlightSpeed(s);
+    if (h.mode === 'out' && s.levels[9]) {
+      let f = null, distance = Infinity;
+      for (let i = 0; i < s.foes.length; i++) { const n = s.foes[i], d = Math.hypot(n.x - h.x, n.y - h.y); if (n.live && n.last !== s.throwId && n.y < h.y && d < distance) { f = n; distance = d; } }
+      if (f) h.vx += (hammerClamp((f.x - h.x) * HAMMER.throw.bend * s.levels[9], -speed, speed) - h.vx) * Math.min(1, HAMMER.throw.turn * dt);
+      h.vy = -Math.sqrt(Math.max(0, speed * speed - h.vx * h.vx));
+    }
+    if (h.mode === 'back') {
+      const dx = s.x - h.x, dy = HAMMER.glove.y - h.y, distance = Math.hypot(dx, dy), back = HAMMER.throw.back * (1 + s.levels[1] * HAMMER.throw.ride) * hammerCold(s);
+      if (distance <= Math.max(HAMMER.throw.catch, back * dt)) h.mode = 'held';
+      else { const turn = Math.min(1, HAMMER.throw.turn * dt); h.vx += (dx / distance * back - h.vx) * turn; h.vy += (dy / distance * back - h.vy) * turn; }
+    }
+    if (h.mode !== 'held') {
+      h.x = hammerClamp(h.x + h.vx * dt, 0, HAMMER.field.w); h.y += h.vy * dt; h.angle += HAMMER.throw.spin * dt * hammerCold(s);
+      // Order candidate intersections by distance along this short swept segment.
+      let searching = true;
+      while (searching && h.mode !== 'held') {
+        let hit = null, nearest = Infinity;
+        for (let i = 0; i < s.foes.length; i++) { const f = s.foes[i]; if (!f.live || f.last === s.throwId) continue;
+          if (Math.abs(f.x - h.x) <= f.rx + HAMMER.throw.radius && f.y + f.ry + HAMMER.throw.radius >= Math.min(oldY, h.y) && f.y - f.ry - HAMMER.throw.radius <= Math.max(oldY, h.y)) { const d = Math.hypot(f.x - oldX, f.y - oldY); if (d < nearest) { nearest = d; hit = f; } }
+        }
+        if (!hit) searching = false;
+        else {
+          hit.last = s.throwId;
+          let power = hammerPower(s) * (1 + (h.mode === 'back' ? s.levels[8] : 0));
+          if (hit.kind === 'hrungnir' && s.heartShown && Math.abs(h.x - hit.x) <= HAMMER.boss.heartRX && Math.abs(h.y - hit.y - HAMMER.boss.heartY) <= HAMMER.boss.heartRY + HAMMER.throw.radius) power *= HAMMER.boss.exposed;
+          hammerDamage(s, hit, power, true);
+          if (h.mode === 'out' && ++h.passed >= HAMMER.throw.pierce + s.levels[0]) { hammerTurn(s); searching = false; }
+        }
+      }
+      if (h.mode === 'out' && h.y <= 0) hammerTurn(s);
+      if (s.valk.live && Math.abs(h.x - s.valk.x) <= HAMMER.valkyrie.rx && Math.abs(h.y - s.valk.y) <= HAMMER.valkyrie.ry) { s.valk.live = false; s.hearts = Math.min(s.maxHearts, s.hearts + 1); s.silver += HAMMER.valkyrie.silver; s.events.gift++; s.version++; if (h.mode === 'out') hammerTurn(s); }
+    }
+  }
+  for (let i = 0; i < s.hail.length; i++) { const p = s.hail[i]; if (!p.live) continue; p.age += dt; p.x += p.vx * dt * hammerCold(s); p.y -= HAMMER.rune.hailRise * dt * hammerCold(s);
+    if (p.age >= HAMMER.rune.hailLife || p.x < 0 || p.x > HAMMER.field.w) { p.live = false; continue; }
+    for (let j = 0; j < s.foes.length; j++) { const f = s.foes[j]; if (f.live && Math.abs(f.x - p.x) < f.rx && Math.abs(f.y - p.y) < f.ry) { hammerDamage(s, f, 1); p.live = false; break; } }
+  }
+  s.valkAt -= dt;
+  if (s.valkAt <= 0) { s.valk.live = true; s.valk.x = -HAMMER.valkyrie.rx; s.valkAt = hammerBetween(s, ...HAMMER.valkyrie.every); }
+  if (s.valk.live) { s.valk.x += HAMMER.valkyrie.speed * slow * dt; if (s.valk.x > HAMMER.field.w + HAMMER.valkyrie.rx) s.valk.live = false; }
+  for (let i = 0; i < s.sparks.length; i++) { const p = s.sparks[i]; if (!p.live) continue; p.age += dt; if (p.age >= HAMMER.fx.life) p.live = false; else { p.x += p.vx * dt; p.y += p.vy * dt; } }
+  if (s.count === 0 && s.phase === 'play') hammerHeld(s);
 }
 
-// ---- findboard.mjs ----
-// One board and thirteen persistent pieces move between the map and the dialog.
+// ---- findhammer.mjs ----
+// The map find, accessible sheet and cached line-art renderer. The kit owns the frame clock.
 
 
 
 
-const taflPanelHeight = () => { const T = FIND_PLAY.tafl; return T.board + T.tray * 2 + T.statusH + T.slotH + T.buttonsH + T.gap * 3 + T.pad * 2 + T.border * 2; };
-const taflCellName = sq => FIND_COPY.taflColumns[sq % FIND_PLAY.tafl.rules.size] + (Math.floor(sq / FIND_PLAY.tafl.rules.size) + 1);
-const taflPoint = sq => { const T = FIND_PLAY.tafl; return [(sq % T.rules.size + 0.5) * T.cell, (Math.floor(sq / T.rules.size) + 0.5) * T.cell, 1]; };
 
-function findBoard(svg) {
-  const f = FIND_BY.tafl, el = svg.querySelector('#f-tafl'), board = el.querySelector('.tf-board'), home = board.parentElement;
-  const T = FIND_PLAY.tafl, R = T.rules, starts = [R.king, ...R.defenders, ...R.attackers];
-  const o = { id: f.id, el, game: taflStart(), stage: 'rest', kept: false, selected: null, cursor: R.king, busy: false, replyAt: null, hearTs: -Infinity, endTs: -Infinity, moveText: '', pieces: [] };
-  o.pieces = [...board.querySelectorAll('.tf-piece')].map((g, i) => ({ g, kind: i === 0 ? 'k' : i <= R.defenders.length ? 'd' : 'a', sq: starts[i], start: starts[i], point: taflPoint(starts[i]), from: taflPoint(starts[i]), to: taflPoint(starts[i]), ts: -Infinity, duration: T.slide[1] }));
-  const statusText = () => o.game.winner === 'king' ? FIND_COPY.taflWin : o.game.winner === 'attackers' ? (o.game.board.includes('k') ? FIND_COPY.taflStuck : FIND_COPY.taflLose) : o.game.winner === 'draw' ? FIND_COPY.taflDraw : o.game.turn === 'attackers' || o.busy ? FIND_COPY.taflThem : FIND_COPY.taflYou;
-  const refresh = () => {
+function hammerBestRead(fallback = 0) { try { const value = Number(localStorage.getItem(HAMMER.ui.bestKey)); return Number.isFinite(value) && value >= 0 ? Math.max(fallback, value) : fallback; } catch { return fallback; } }
+function hammerBestWrite(score, fallback = 0) { const best = Math.max(score, hammerBestRead(fallback)); try { localStorage.setItem(HAMMER.ui.bestKey, String(best)); } catch {} return best; }
+const hammerText = (key, values = {}) => findFormat(FIND_COPY.hammer[key], values);
+const hammerRuneNumber = (r, n) => r === 1 || r === 11 ? n * HAMMER.throw.ride * 100 : r === 3 ? HAMMER.hearts + n : r === 4 ? n * HAMMER.rune.hail : r === 5 ? n + 1 : r === 6 ? n * HAMMER.rune.ice * 100 : n;
+const hammerRuneArt = (r, small = false) => { const U = HAMMER.ui, h = small ? U.mini : U.rune, w = small ? U.miniW : U.runeW, g = runeGlyph(HAMMER.runes[r].key, h); return `<svg viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${g.d}"/></svg>`; };
+
+function findHammer(svg) {
+  const f = FIND_BY.hammer, el = svg.querySelector('#f-hammer'), lift = el.querySelector('.hm-lift'), spark = el.querySelector('.hm-spark');
+  const o = { id: f.id, el, stage: 'rest', game: null, best: hammerBestRead(), serial: HAMMER.seed.first, accumulator: 0, hearTs: -Infinity, canvas: null, ctx: null, version: -1, queued: false, input: { move: 0, target: NaN, throw: false }, keys: { left: false, right: false, fire: false }, pointer: null, auto: false, held: false, sprites: {}, paths: {}, seen: {}, notices: {}, last: 0 };
+  const announce = (kind, text, always = false) => { if (!o.status || FD.sheetOwner !== o) return; if (always || FD.now - (o.notices[kind] ?? -Infinity) >= HAMMER.ui.notice) { o.announcement += (o.announcement ? ' ' : '') + text; o.notices[kind] = FD.now; } };
+  const clearInput = () => { o.keys.left = o.keys.right = o.keys.fire = o.held = false; o.pointer = null; o.input.move = 0; o.input.target = NaN; o.input.throw = false; o.accumulator = 0; };
+  const focusField = () => o.canvas?.focus({ preventScroll: true });
+  const pause = () => { if (!o.game || o.game.phase === 'end' || o.game.paused) return; o.game.paused = true; clearInput(); refresh(); };
+  const run = () => { o.game = hammerStart(o.serial++); o.game.reduced = FD.rm; o.auto = false; o.seen = {}; o.version = -1; clearInput(); refresh(); focusField(); };
+  const resume = () => { if (!o.game) return; o.game.paused = false; clearInput(); refresh(); if (o.game.phase === 'play') focusField(); };
+  const toggle = () => { o.auto = !o.auto; if (o.autoButton) attr(o.autoButton, 'aria-pressed', o.auto); };
+  const choose = i => { if (o.game && !o.game.paused && hammerPick(o.game, i)) { refresh(); focusField(); } };
+  const runeCards = () => o.game.choices.map((r, i) => { const n = o.game.levels[r] + 1, row = FIND_COPY.hammer.runes[r], line = findFormat(row[1], { n: hammerRuneNumber(r, n) }); return `<button type="button" class="hm-rune" data-rune="${i}" aria-label="${hammerText('runeLevel', { key: i + 1, name: row[0], n, line })}">${hammerRuneArt(r)}<span><strong>${i + 1}. ${row[0]}</strong><span>${line}</span></span></button>`; }).join('');
+  function refresh() {
+    if (FD.sheetOwner !== o || !o.canvas) return;
+    const s = o.game, H = FIND_COPY.hammer; let html = '';
+    if (!s) html = `<h2>${H.title}</h2><p>${H.intro}</p><p class="hm-quiet">${FD.hover ? H.controls : H.controlsTouch}</p><button type="button" class="hm-start">${H.start}</button>${findSlot(FIND_COPY.hammerFact)}`;
+    else if (s.paused) html = `<h2>${H.pause}</h2><button type="button" class="hm-resume">${H.resume}</button><button type="button" class="hm-new">${H.newRun}</button>`;
+    else if (s.phase === 'runes') html = `<h2>${hammerText('runeTitle', { n: s.wave })}</h2><p class="hm-quiet">${H.runeKeys}</p>${runeCards()}`;
+    else if (s.phase === 'end') {
+      o.best = hammerBestWrite(s.silver, o.best);
+      html = `<h2>${s.reason === 'won' ? H.won : hammerText(s.reason === 'hearts' ? 'lostHearts' : 'lost', { n: s.wave })}</h2><p>${hammerText('stats', { silver: s.silver, foes: s.felled })}</p><div class="hm-taken" aria-label="${H.runes}">${s.levels.map((n, r) => n ? `<span aria-label="${H.runes[r][0]}, ${n}">${hammerRuneArt(r, true)}<span>${n}</span></span>` : '').join('')}</div><p>${hammerText('best', { silver: o.best })}</p>${findSlot(FIND_COPY.hammerFact)}<button type="button" class="hm-new">${H.newRun}</button><button type="button" class="hm-end-close">${H.close}</button>`;
+    }
+    const cardKey = !s ? 'start' : s.paused ? 'pause' : s.phase === 'runes' ? 'runes' + s.wave : s.phase;
+    if (o.cardKey !== cardKey) {
+      o.cardKey = cardKey; o.card.innerHTML = html; o.card.hidden = !html;
+      o.card.querySelector('.hm-start')?.addEventListener('click', run); o.card.querySelector('.hm-resume')?.addEventListener('click', resume);
+      o.card.querySelectorAll('.hm-new').forEach(b => b.addEventListener('click', run)); o.card.querySelector('.hm-end-close')?.addEventListener('click', () => closeSheet());
+      o.card.querySelectorAll('.hm-rune').forEach((b, i) => b.addEventListener('click', () => choose(i)));
+      const first = o.card.querySelector('button'); if (first) first.focus({ preventScroll: true });
+    }
+    o.wave.textContent = hammerText('waveLine', { n: s ? s.wave : 1 }) + (s && s.fate >= 0 ? ' / ' + H.fates[s.fate][0] : '');
+    const hearts = s ? s.hearts : HAMMER.hearts, most = s ? s.maxHearts : HAMMER.hearts;
+    o.hearts.innerHTML = Array.from({ length: most }, (_, i) => `<svg viewBox="${HAMMER.paths.heartBox}" aria-hidden="true"><path d="${HAMMER.paths.heart}" fill="${i < hearts ? C.paper : C.ink}"/></svg>`).join('');
+    attr(o.hearts, 'aria-label', hammerText('hearts', { n: hearts, max: most })); o.silver.textContent = hammerText('silver', { n: s ? s.silver : 0 });
+    attr(o.autoButton, 'aria-pressed', o.auto); o.pauseButton.disabled = !s || s.phase === 'end'; o.pauseButton.textContent = s?.paused ? H.resume : H.pauseButton;
+    if (s) {
+      o.announcement = '';
+      if (s.events.rune !== (o.seen.rune || 0)) announce('rune', hammerText('runeTaken', { name: H.runes[s.taken][0], n: s.levels[s.taken] }));
+      if (s.events.wave !== (o.seen.wave || 0)) announce('wave', hammerText('waveStart', { n: s.wave }) + (s.fate >= 0 ? ' ' + H.fates[s.fate].join('. ') : ''));
+      if (s.events.gift !== (o.seen.gift || 0)) announce('gift', H.gift);
+      if (s.events.clay !== (o.seen.clay || 0)) announce('clay', H.clay);
+      if (s.events.heart !== (o.seen.heart || 0)) announce('heart', H.heart);
+      if (s.events.end !== (o.seen.end || 0)) announce('end', s.reason === 'won' ? H.won : hammerText(s.reason === 'hearts' ? 'lostHearts' : 'lost', { n: s.wave }));
+      if (s.events.hurt !== (o.seen.hurt || 0)) announce('hurt', hammerText('heartLost', { n: s.hearts }), true);
+      if (o.announcement) o.status.textContent = o.announcement;
+      Object.assign(o.seen, s.events); o.version = s.version;
+    }
+  }
+  const measure = () => {
+    if (FD.sheetOwner !== o || !o.canvas) return;
+    const U = HAMMER.ui; o.fit = Math.min(1, (VIEW.w - FIND_PLAY.kit.sheet.edge * 2) / U.w, (VIEW.h - FIND_PLAY.kit.sheet.edge * 2) / U.h);
+    const scale = Math.min(HAMMER.field.dpr, window.devicePixelRatio || 1) * o.fit;
+    o.canvas.width = Math.round(HAMMER.field.w * scale); o.canvas.height = Math.round(HAMMER.field.h * scale); const previous = o.scale; o.scale = scale;
+    o.ctx = o.canvas.getContext('2d');
+    if (previous === scale && o.sprites.glove) return;
+    o.sprites = {};
+    for (const [name, row] of Object.entries(HAMMER.paths.sprites)) {
+      const c = document.createElement('canvas'), pad = U.spritePad;
+      c.width = Math.ceil((row[0] + pad * 2) * scale); c.height = Math.ceil((row[1] + pad * 2) * scale);
+      const ctx = c.getContext('2d'); ctx.scale(scale, scale); ctx.translate(row[0] / 2 + pad, row[1] / 2 + pad); ctx.lineWidth = HAMMER.field.line; ctx.strokeStyle = C.paper; ctx.lineCap = ctx.lineJoin = 'round'; ctx.stroke(new Path2D(row[2]));
+      o.sprites[name] = { canvas: c, w: row[0] + pad * 2, h: row[1] + pad * 2 };
+    }
+  };
+  const paintSprite = (name, x, y) => { const p = o.sprites[name]; o.ctx.drawImage(p.canvas, x - p.w / 2, y - p.h / 2, p.w, p.h); };
+  const paintPath = (p, x, y, colour) => { const c = o.ctx; c.save(); c.translate(x, y); c.strokeStyle = colour; c.stroke(p); c.restore(); };
+  const draw = () => {
+    const c = o.ctx, s = o.game; if (!c) return;
+    c.setTransform(o.scale, 0, 0, o.scale, 0, 0); c.fillStyle = C.ink; c.fillRect(0, 0, HAMMER.field.w, HAMMER.field.h); c.lineWidth = HAMMER.field.line; c.lineCap = c.lineJoin = 'round';
+    c.save(); if (s && !FD.rm && s.shake > 0) c.translate(Math.sin(s.time * HAMMER.map.trembleRate) * HAMMER.fx.shake * s.shake / HAMMER.fx.life, 0);
+    for (let i = 0; i < o.paths.bridge.length; i++) paintPath(o.paths.bridge[i], 0, 0, i % 2 ? C.note : C.dim);
+    if (s) {
+      for (let i = 0; i < s.cells.length; i++) { const p = s.cells[i]; if (p.live) paintPath(o.paths.shield, p.x, p.y, C.dim); }
+      for (let i = 0; i < s.foes.length; i++) {
+        const p = s.foes[i]; if (!p.live) continue; c.globalAlpha = !FD.rm && p.flash ? HAMMER.fx.flashAlpha : 1; paintSprite(p.kind, p.x, p.y); c.globalAlpha = 1;
+        if (p.kind === 'rime' && p.hp < p.max) paintPath(o.paths.crack, p.x, p.y, C.note);
+        if (p.burn > 0) paintPath(o.paths.shot[2], p.x, p.y, C.warm);
+        if (p.kind === 'hrungnir') { c.fillStyle = C.mid; c.fillRect(p.x - HAMMER.foe.bossRX, p.y + HAMMER.foe.bossRY, HAMMER.foe.bossRX * 2, HAMMER.shield.cell); c.fillStyle = C.note; c.fillRect(p.x - HAMMER.foe.bossRX, p.y + HAMMER.foe.bossRY, HAMMER.foe.bossRX * 2 * p.hp / p.max, HAMMER.shield.cell); if (s.heartShown) paintPath(o.paths.stoneHeart, p.x, p.y + HAMMER.boss.heartY, C.paper); }
+      }
+      for (let i = 0; i < s.shots.length; i++) { const p = s.shots[i]; if (p.live) paintPath(o.paths.shot[p.kind === 'fire' ? 2 : p.kind === 'rime' ? 1 : 0], p.x, p.y, p.kind === 'fire' ? C.warm : C.paper); }
+      for (let i = 0; i < s.hail.length; i++) { const p = s.hail[i]; if (p.live) paintPath(o.paths.shot[1], p.x, p.y, C.paper); }
+      if (!FD.rm) for (let i = 0; i < s.sparks.length; i++) { const p = s.sparks[i]; if (p.live) { c.globalAlpha = 1 - p.age / HAMMER.fx.life; paintPath(o.paths.spark, p.x, p.y, C.paper); } } c.globalAlpha = 1;
+      if (s.valk.live) paintSprite('valkyrie', s.valk.x, s.valk.y);
+      if (s.reason === 'won' && !FD.rm) for (let i = 0; i < o.paths.fragments.length; i++) { const row = HAMMER.paths.fragments[i], t = s.fall; c.globalAlpha = 1 - t / HAMMER.boss.fall; paintPath(o.paths.fragments[i], s.foes[0].x + row[0] * (1 + t), s.foes[0].y + row[1] + HAMMER.boss.gravity * t * t, C.paper); } c.globalAlpha = 1;
+    }
+    const x = s ? s.x : HAMMER.glove.x;
+    if (!s || FD.rm || !s.hurt || Math.sin(s.time * HAMMER.glove.flicker) >= 0) paintSprite('glove', x, HAMMER.glove.y);
+    const h = s?.hammer; c.save(); c.translate(h && h.mode !== 'held' ? h.x : x, h && h.mode !== 'held' ? h.y : HAMMER.glove.y - HAMMER.ui.mini);
+    if (h && h.mode !== 'held') c.rotate(h.angle); paintSprite('hammer', 0, 0); c.restore(); c.restore();
+  };
+  const handleKey = e => {
     if (FD.sheetOwner !== o) return;
-    const Q = FIND_PLAY.tafl, moves = o.selected === null ? [] : taflMoves(o.game, o.selected);
-    o.status.textContent = findFormat(FIND_COPY.taflStatus, { move: o.moveText, turn: statusText() }).trim();
-    o.slot.hidden = !o.game.winner; o.rule.hidden = !!o.game.winner; // one row: the rules while a game is on, the slot when it is over
-    const line = FIND_COPY.tafl; o.slot.innerHTML = typeof line === 'object' && line.todo ? `<div class="find-slot"><span class="pop-k">${fEsc(COPY.todo)}</span><p>${fEsc(line)}</p></div>` : `<p>${fEsc(line)}</p>`;
-    o.cells.forEach((cell, i) => { cell.tabIndex = i === o.cursor ? 0 : -1; attr(cell, 'aria-label', findFormat(FIND_COPY.taflCell, { cell: taflCellName(i), piece: FIND_COPY.taflKinds[o.game.board[i] || 'empty'] })); attr(cell, 'aria-selected', i === o.selected); attr(o.dots[i], 'opacity', moves.includes(i) && !o.busy ? Q.dotAlpha : 0); });
-    attr(o.selection, 'opacity', o.selected === null ? 0 : 1);
-    if (o.selected !== null) { const p = taflPoint(o.selected); attr(o.selection, 'transform', `translate(${p[0]} ${p[1]})`); }
-    const p = taflPoint(o.cursor); attr(o.cursorRing, 'transform', `translate(${p[0] - Q.cell / 2} ${p[1] - Q.cell / 2})`);
-  };
-  const destination = (piece, point, duration) => { piece.from = piece.point.slice(); piece.to = point; piece.ts = FD.now; piece.duration = duration; if (FD.rm) piece.point = point.slice(); };
-  const finish = () => {
-    o.busy = false;
-    o.stage = FD.sheetOwner === o ? 'sheet' : 'rest';
-    if (o.game.winner && o.game.last) o.endTs = FD.now;
-    if (!o.game.winner && o.game.turn === 'attackers') { o.replyAt = FD.now + FIND_PLAY.tafl.reply; o.stage = 'reply'; }
-    refresh();
-  };
-  const move = next => {
-    const Q = FIND_PLAY.tafl, last = next.last, moving = o.pieces.find(p => p.sq === last.from), distance = Math.abs(last.from % R.size - last.to % R.size) + Math.abs(Math.floor(last.from / R.size) - Math.floor(last.to / R.size));
-    const duration = Math.max(Q.slide[1], Math.min(Q.slide[2], Q.slide[0] * distance));
-    destination(moving, taflPoint(last.to), duration); moving.sq = last.to;
-    next.taken.forEach(sq => {
-      const p = o.pieces.find(piece => piece.sq === sq), count = o.pieces.filter(piece => (piece.kind === 'a') === (p.kind === 'a') && piece.sq < 0).length;
-      p.sq = -1; destination(p, [Q.trayInset + count * (Q.board - Q.trayInset * 2) / (R.attackers.length - 1), p.kind === 'a' ? Q.board + Q.tray / 2 : -Q.tray / 2, Q.capturedScale], duration);
-    });
-    o.game = next; o.kept = true; o.selected = null; o.busy = true; o.stage = 'sliding'; o.replyAt = null;
-    o.moveText = findFormat(FIND_COPY.taflMove, { from: taflCellName(last.from), to: taflCellName(last.to) }) + (next.taken.length ? findFormat(FIND_COPY.taflTaken, { n: next.taken.length }) : '');
-    refresh(); if (FD.rm) finish();
-  };
-  const reply = () => { o.replyAt = null; if (o.game.winner || o.game.turn !== 'attackers') return; move(taflReply(o.game, findRandom)); };
-  const choose = sq => {
-    if (o.busy || o.game.winner || o.game.turn !== 'king') return;
-    o.cursor = sq;
-    if (o.selected !== null && taflMoves(o.game, o.selected).includes(sq)) { move(taflPlay(o.game, o.selected, sq)); if (FD.rm && o.game.turn === 'attackers' && !o.game.winner) reply(); }
-    else { o.selected = o.game.board[sq] && o.game.board[sq] !== 'a' ? sq : null; refresh(); }
-  };
-  const newGame = () => {
-    o.game = taflStart(); o.selected = null; o.cursor = R.king; o.replyAt = null; o.moveText = ''; o.busy = true; o.stage = 'sliding';
-    o.pieces.forEach(p => { p.sq = p.start; destination(p, taflPoint(p.start), FIND_PLAY.tafl.slide[2]); }); refresh(); if (FD.rm) finish();
+    const key = e.key.toLowerCase(), used = ['arrowleft', 'arrowright', 'a', 'd', ' ', 'arrowup', 'w', 'p', 't', '1', '2', '3', 'escape'].includes(key);
+    e.stopPropagation();
+    const nativeButton = key === ' ' && e.target.closest?.('button');
+    if (!nativeButton && (used || ['0', '+', '-', '=', 'arrowdown', 'pageup', 'pagedown', 'home', 'end'].includes(key))) e.preventDefault();
+    if (e.type === 'keyup') { if (['arrowleft', 'a'].includes(key)) o.keys.left = false; if (['arrowright', 'd'].includes(key)) o.keys.right = false; if ([' ', 'arrowup', 'w'].includes(key)) o.keys.fire = false; return; }
+    if (key === 'escape') { closeSheet(); return; }
+    if (!e.repeat) {
+      if (key === 'p') { if (o.game?.paused) resume(); else pause(); }
+      if (key === 't') toggle();
+      if (['1', '2', '3'].includes(key)) choose(Number(key) - 1);
+    }
+    if (e.target !== o.canvas || !o.game || o.game.paused || o.game.phase !== 'play') return;
+    if (['arrowleft', 'a'].includes(key)) { o.keys.left = true; o.input.target = NaN; }
+    if (['arrowright', 'd'].includes(key)) { o.keys.right = true; o.input.target = NaN; }
+    if ([' ', 'arrowup', 'w'].includes(key)) o.keys.fire = true;
   };
   const sheet = () => {
-    opened(o);
-    const Q = FIND_PLAY.tafl;
-    if (!findSheet(o, 'tafl-sheet', `<div class="tf-panel"><svg class="tf-surface" viewBox="0 ${-Q.tray} ${Q.board} ${Q.board + Q.tray * 2}" role="grid" aria-label="${fEsc(FIND_COPY.taflBoard)}"></svg><p class="tf-status" role="status" aria-live="polite" aria-atomic="true"></p><div class="tf-slot-space"><p class="tf-rule">${fEsc(FIND_COPY.taflRule)}</p><div class="tf-slot" hidden></div></div><div class="tf-buttons"><button class="tf-new" type="button">${fEsc(FIND_COPY.taflNew)}</button><button class="tf-close" type="button">${fEsc(COPY.close)}</button></div></div>`, [f.x, f.y])) return;
-    FD.sheet.querySelector('.tf-surface').appendChild(board); attr(board, 'transform', 'scale(1)');
-    o.status = FD.sheet.querySelector('.tf-status'); o.rule = FD.sheet.querySelector('.tf-rule'); o.slot = FD.sheet.querySelector('.tf-slot'); o.cells = []; o.dots = [];
-    o.input = findSvg('g', { class: 'tf-input', role: 'rowgroup' }); board.appendChild(o.input);
-    const rows = Array.from({ length: R.size }, () => findSvg('g', { role: 'row' })); rows.forEach(row => o.input.appendChild(row));
-    for (let sq = 0; sq < R.size ** 2; sq++) {
-      const p = taflPoint(sq), g = findSvg('g', { class: 'tf-cell', role: 'gridcell', 'data-square': sq, 'aria-rowindex': Math.floor(sq / R.size) + 1, 'aria-colindex': sq % R.size + 1 }), hit = findSvg('rect', { x: p[0] - Q.cell / 2, y: p[1] - Q.cell / 2, width: Q.cell, height: Q.cell, fill: 'transparent' }), dot = findSvg('circle', { cx: p[0], cy: p[1], r: Q.dotR, fill: C.paper, opacity: 0, 'pointer-events': 'none' });
-      g.append(hit, dot); rows[Math.floor(sq / R.size)].appendChild(g); o.cells.push(g); o.dots.push(dot);
-    }
-    o.selection = findSvg('circle', { r: Q.selectR, fill: 'none', stroke: C.paper, 'stroke-width': Q.outline, 'stroke-dasharray': Q.selectDash.join(' '), 'pointer-events': 'none', opacity: 0 });
-    o.cursorRing = findSvg('rect', { class: 'tf-cursor', x: Q.cursorInset, y: Q.cursorInset, width: Q.cell - Q.cursorInset * 2, height: Q.cell - Q.cursorInset * 2, fill: 'none', stroke: C.paper, 'stroke-width': Q.cursorLine, 'pointer-events': 'none' }); o.input.append(o.selection, o.cursorRing);
-    o.input.addEventListener('click', e => { const cell = e.target.closest('.tf-cell'); if (cell) { choose(+cell.dataset.square); o.cells[o.cursor].focus({ preventScroll: true }); } });
-    o.input.addEventListener('keydown', e => {
-      const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
-      if (delta) { e.preventDefault(); e.stopPropagation(); const x = Math.max(0, Math.min(R.size - 1, o.cursor % R.size + delta[0])), y = Math.max(0, Math.min(R.size - 1, Math.floor(o.cursor / R.size) + delta[1])); o.cursor = y * R.size + x; refresh(); o.cells[o.cursor].focus({ preventScroll: true }); }
-      else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); choose(o.cursor); }
-    });
-    FD.sheet.querySelector('.tf-new').addEventListener('click', newGame); FD.sheet.querySelector('.tf-close').addEventListener('click', () => closeSheet());
-    o.sheetTs = FD.now; o.stage = o.busy ? 'sliding' : o.replyAt !== null ? 'reply' : 'sheet'; refresh(); o.cells[o.cursor].focus({ preventScroll: true }); found(o.id);
+    opened(o); const H = FIND_COPY.hammer;
+    if (!findSheet(o, 'hammer-sheet', `<div class="hm-panel"><div class="hm-header"><span class="hm-wave"></span><span class="hm-vitals"><span class="hm-hearts" role="img"></span><span class="hm-silver"></span></span></div><div class="hm-field"><canvas class="hm-canvas" tabindex="0" role="img" aria-label="${H.field}"></canvas><div class="hm-card"></div></div><p class="hm-status" role="status" aria-live="polite" aria-atomic="true"></p><div class="hm-buttons"><button class="hm-auto" type="button" aria-pressed="false">${H.auto}</button><button class="hm-pause" type="button">${H.pauseButton}</button><button class="hm-close" type="button">${H.close}</button></div></div>`, [f.x, f.y])) return;
+    for (const [name, value] of Object.entries(HAMMER.ui)) if (name !== 'bestKey') FD.sheet.style.setProperty('--hm-' + name, typeof value === 'number' ? value + 'px' : value);
+    const q = selector => FD.sheet.querySelector(selector);
+    o.canvas = q('.hm-canvas'); o.card = q('.hm-card'); o.status = q('.hm-status'); o.wave = q('.hm-wave'); o.hearts = q('.hm-hearts'); o.silver = q('.hm-silver'); o.autoButton = q('.hm-auto'); o.pauseButton = q('.hm-pause'); o.cardKey = null;
+    o.paths = { bridge: HAMMER.paths.bridge.map(d => new Path2D(d)), shot: HAMMER.paths.shot.map(d => new Path2D(d)), fragments: HAMMER.paths.fragments.map(row => new Path2D(row[2])) };
+    for (const key of ['shield', 'spark', 'crack', 'stoneHeart']) o.paths[key] = new Path2D(HAMMER.paths[key]);
+    measure(); refresh(); draw();
+    q('.hm-close').addEventListener('click', () => closeSheet()); o.autoButton.addEventListener('click', toggle); o.pauseButton.addEventListener('click', () => o.game?.paused ? resume() : pause());
+    const point = e => { const box = o.canvas.getBoundingClientRect(); o.input.target = (e.clientX - box.left) * HAMMER.field.w / box.width; };
+    o.canvas.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' && e.button !== 0 || o.pointer !== null) return; e.preventDefault(); e.stopPropagation(); point(e); o.pointer = e.pointerId; o.held = true; o.canvas.setPointerCapture(e.pointerId); focusField(); });
+    o.canvas.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || o.pointer === e.pointerId) point(e); });
+    const release = e => { if (o.pointer === e.pointerId) { o.pointer = null; o.held = false; } };
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) o.canvas.addEventListener(type, release);
+    found(o.id); o.stage = 'sheet'; o.sheetTs = FD.now; o.accumulator = 0;
   };
   press(el, sheet);
-  o.onSheetClose = () => {
-    if (o.input) { o.input.remove(); o.input = null; }
-    home.appendChild(board); attr(board, 'transform', `scale(${FIND_PLAY.tafl.mapCell / FIND_PLAY.tafl.cell})`);
-    if (!o.busy && o.replyAt === null) o.stage = 'rest';
-  };
-  o.hear = () => { if (!FD.rm) { o.hearTs = FD.now; o.hearing = true; } };
+  o.onSheetClose = () => { if (o.game && o.game.phase !== 'end') o.game.paused = true; clearInput(); o.canvas = o.ctx = null; o.stage = 'rest'; };
+  o.hear = () => { if (!FD.rm) o.hearTs = FD.now; };
+  window.addEventListener('resize', measure);
+  window.addEventListener('blur', pause);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+  FD.sheet.addEventListener('focusout', e => { if (FD.sheetOwner === o && !FD.sheet.contains(e.relatedTarget)) pause(); });
+  FD.sheet.addEventListener('keydown', handleKey); FD.sheet.addEventListener('keyup', handleKey);
+  // Also isolate page hotkeys if focus has left the open sheet. Tab remains native.
+  window.addEventListener('keydown', e => { if (FD.sheetOwner === o && !FD.sheet.contains(e.target)) { if (e.key !== 'Tab') e.preventDefault(); e.stopImmediatePropagation(); if (e.key === 'Escape') closeSheet(); } }, true);
   o.tick = t => {
-    const Q = FIND_PLAY.tafl;
-    o.pieces.forEach((p, i) => {
-      const q = FD.rm ? 1 : ease((t - p.ts) / p.duration); p.point = p.from.map((v, j) => lerp(v, p.to[j], q));
-      const hop = FD.rm || FD.sheetOwner === o ? 0 : Q.hop / (Q.scale * Q.mapCell / Q.cell) * Math.sin(Math.PI * clamp01((t - o.hearTs - i * Q.hopGap) / Q.hopTime));
-      let scale = p.point[2];
-      if (p.kind === 'k' && FD.sheetOwner === o && o.game.winner === 'king' && !FD.rm) scale *= 1 + Q.win[0] * Math.abs(Math.sin(Math.PI * Q.win[2] * clamp01((t - o.endTs) / Q.win[1]))); // the king who got away swells twice
-      if (p.kind === 'k' && FD.sheetOwner !== o) scale *= (o.awake && !FD.rm ? lerp(Q.kingPulse[0], Q.kingPulse[1], (1 - Math.cos(Math.PI * 2 * t / Q.kingPulse[2])) / 2) : Q.mapKing) / (Q.kingR * Q.mapCell / Q.cell);
-      attr(p.g, 'transform', `translate(${p.point[0]} ${p.point[1] - hop}) scale(${scale})`);
-    });
-    if (o.hearing && t - o.hearTs >= Q.hopTime + (o.pieces.length - 1) * Q.hopGap) o.hearing = false;
-    if (o.busy && o.pieces.every(p => FD.rm || t - p.ts >= p.duration)) { o.busy = false; queueMicrotask(finish); }
-    if (!o.busy && o.replyAt !== null && t >= o.replyAt) { o.replyAt = null; queueMicrotask(reply); }
-    if (FD.sheetOwner === o) {
-      const q = FD.rm ? 1 : ease((t - o.sheetTs) / Q.grow), fit = Math.min(1, (VIEW.w - FIND_PLAY.kit.sheet.edge * 2) / Q.width, (VIEW.h - FIND_PLAY.kit.sheet.edge * 2) / taflPanelHeight()), from = FD.sheetFrom;
-      FD.sheet.style.transform = `translate(${lerp(from[0], VIEW.w / 2, q)}px,${lerp(from[1], VIEW.h / 2, q)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, fit, q)})`;
+    const M = HAMMER.map, age = t - o.hearTs, ringing = age >= 0 && age < M.hopTime;
+    const hop = !FD.rm && ringing ? M.hop * Math.sin(Math.PI * age / M.hopTime) : 0, tremble = !FD.rm && attend(o, M.near) ? M.tremble * Math.sin(t * M.trembleRate) : 0;
+    attr(lift, 'transform', `translate(${tremble} ${-hop})`); attr(spark, 'opacity', !FD.rm && (ringing || t % M.every < M.sparkTime) ? 1 : 0);
+    if (FD.sheetOwner !== o) return;
+    const q = FD.rm ? 1 : ease((t - o.sheetTs) / FIND_PLAY.kit.sheet.grow), from = FD.sheetFrom;
+    FD.sheet.style.transform = `translate(${lerp(from[0], VIEW.w / 2, q)}px,${lerp(from[1], VIEW.h / 2, q)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, o.fit, q)})`;
+    const s = o.game;
+    if (s && !s.paused) {
+      o.input.move = Number(o.keys.right) - Number(o.keys.left); o.input.throw = o.auto || o.keys.fire || o.held; o.accumulator = Math.min(o.accumulator + FD.dt, HAMMER.step * HAMMER.steps);
+      let n = 0; while (o.accumulator >= HAMMER.step && n++ < HAMMER.steps) { hammerStep(s, o.input, HAMMER.step); o.accumulator -= HAMMER.step; }
+      if (s.version !== o.version && !o.queued) { o.queued = true; queueMicrotask(() => { o.queued = false; refresh(); }); }
     }
+    draw();
   };
   return o;
 }
@@ -4296,7 +4639,7 @@ function findPlain(value, seen = new Set()) {
 }
 function findsBuild(svg, pop, sheet, base, rm) {
   findKitBuild(svg, pop, sheet, base, rm);
-  const builders = { wayfinder: findWay, hoards: findHoards, ravens: findRavens, serpent: findSerpent, beacon: findBeacon, runestone: findRune, tafl: findBoard, mist: findMist, horn: findHorn, well: findWell, longship: findShip };
+  const builders = { wayfinder: findWay, hoards: findHoards, ravens: findRavens, serpent: findSerpent, beacon: findBeacon, runestone: findRune, hammer: findHammer, mist: findMist, horn: findHorn, well: findWell, longship: findShip };
   Object.entries(builders).forEach(([id, build]) => { const o = build(svg); o.el ??= svg.querySelector('#f-' + id); o.stage ??= 'rest'; o.kept ??= false; FD.list[id] = o; });
   FD.all = findAll(svg);
   // Builders add non-interactive decorations. The one reusable bit pool remains last.

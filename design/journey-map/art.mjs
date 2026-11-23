@@ -1,5 +1,5 @@
 // Every drawing as a function that returns an SVG string. Geometry and glyphs ported from reference/round2.cjs.
-import { C, MAP, COPY, STOPS, FINDS, FIND_COPY, FIND_PLAY } from './data.mjs';
+import { C, MAP, COPY, STOPS, FINDS, FIND_COPY, FIND_PLAY, HAMMER } from './data.mjs';
 
 export const rnd = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 export const n1 = n => +(+n).toFixed(1);
@@ -115,16 +115,7 @@ const ravens = () => findDrawing('ravens');
 const serpent = () => findDrawing('serpent');
 const beacon = () => findDrawing('beacon');
 const runestone = () => findDrawing('runestone');
-const tafl = () => {
-  const T = FIND_PLAY.tafl, R = T.rules, [hx, hy, hw, hh] = T.mapHit;
-  let s = `<rect class="hit" x="${hx}" y="${hy}" width="${hw}" height="${hh}"/><g class="tf-board" transform="scale(${T.mapCell / T.cell})"><rect class="o" width="${T.board}" height="${T.board}"/>`;
-  for (let i = 1; i < R.size; i++) s += `<path class="l" style="stroke-width:${T.outline}" opacity="${T.gridAlpha}" d="M${i * T.cell} 0V${T.board}M0 ${i * T.cell}H${T.board}"/>`;
-  R.corners.forEach(sq => { const x = (sq % R.size + 0.5) * T.cell, y = (Math.floor(sq / R.size) + 0.5) * T.cell, r = T.cross / 2; s += `<path class="l" d="M${x - r} ${y}H${x + r}M${x} ${y - r}V${y + r}"/>`; });
-  const mid = T.board / 2; s += `<path class="l" d="M${mid} ${mid - T.diamond}l${T.diamond} ${T.diamond}l${-T.diamond} ${T.diamond}l${-T.diamond} ${-T.diamond}Z"/>`;
-  const pieces = [{ sq: R.king, kind: 'k' }, ...R.defenders.map(sq => ({ sq, kind: 'd' })), ...R.attackers.map(sq => ({ sq, kind: 'a' }))];
-  s += pieces.map((p, i) => `<g class="tf-piece" data-piece="${i}" aria-hidden="true" transform="translate(${(p.sq % R.size + 0.5) * T.cell} ${(Math.floor(p.sq / R.size) + 0.5) * T.cell})"><circle class="${p.kind === 'a' ? 'o' : 'pf'}" style="stroke-width:${T.pieceLine}" r="${p.kind === 'k' ? T.kingR : T.pieceR}"/>${p.kind === 'k' ? `<path fill="${C.ink}" d="${starPath(0, 0, T.kingStar)}"/>` : ''}</g>`).join('');
-  return s + '</g>';
-};
+const hammerMapArt = () => { const M = HAMMER.map, h = M.hit; return `<rect class="hit" x="${h[0]}" y="${h[1]}" width="${h[2]}" height="${h[3]}"/><path class="g" d="${M.stone}"/><g class="hm-lift"><path class="l" d="${M.hammer}"/><path class="l hm-spark" d="${M.spark}" opacity="0" pointer-events="none"/></g>`; };
 const horn = () => { const H = FIND_PLAY.horn, [x, y, w, h] = H.hit; return `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="hn-horn"><path class="g" d="${H.paths[0]}"/><path class="t" d="${H.paths[1]}"/><path class="l" d="${H.paths[2]}"/></g><path class="t" d="${H.paths[3]}"/>`; };
 const mist = () => { const M = FIND_PLAY.mist, [x, y, w, h] = M.box; return `<defs><radialGradient id="find-mist-soft"><stop stop-color="${C.paper}"/><stop offset="1" stop-color="${C.paper}" stop-opacity="0"/></radialGradient><radialGradient id="find-mist-wipe"><stop offset="${M.soft[1]}" stop-color="${C.black}"/><stop offset="1" stop-color="${C.black}" stop-opacity="0"/></radialGradient></defs>` + M.cairns.map(p => `<g transform="translate(${p[0]} ${p[1]}) scale(${M.cairnScale})">${M.cairn}<path class="pf mist-glint" pointer-events="none" d="${starPath(...M.glintAt, M.glintSize)}" opacity="0"/></g>`).join('') + `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="mist-drift" pointer-events="none"><g mask="url(#mistMask)"><g class="mist-cloud" opacity="${M.alpha}">${M.ellipses.map(p => `<ellipse cx="${p[0]}" cy="${p[1]}" rx="${p[2]}" ry="${p[3]}" fill="url(#find-mist-soft)"/>`).join('')}</g></g></g>`; };
 const well = () => { const W = FIND_PLAY.well; return `<ellipse class="hit" rx="${W.hit[0]}" ry="${W.hit[1]}"/><g class="wl-rip" pointer-events="none">${Array.from({ length: W.rings }, () => `<ellipse class="t" rx="${W.ringR[0]}" ry="${W.ringR[1]}" opacity="0"/>`).join('')}</g><circle class="pf wl-pebble" r="${W.pebbleR}" opacity="0" pointer-events="none"/>`; };
@@ -216,7 +207,7 @@ export function bigMap() {
   fd += `<g id="wf-lines" pointer-events="none"></g>` + at('wayfinder', 1, wayfinder());
   fd += `<g id="f-hoards" role="button" tabindex="0" aria-label="${F.hoards.label}" data-x="${F.hoards.x}" data-y="${F.hoards.y}">` + FIND_COPY.hoards.map(h => `<g class="find hoard" id="f-${h.id}" role="button" tabindex="0" aria-label="${h.label}" data-x="${h.x}" data-y="${h.y}">${grp(h.x, h.y, FIND_PLAY.hoard.scale, hoard())}</g>`).join('') + `</g>`;
   fd += at('ravens', FIND_PLAY.raven.scale, ravens()) + at('serpent', FIND_PLAY.serpent.scale, `<g class="sp-swim">${serpent(FIND_PLAY.serpent.scale)}</g>`) + at('beacon', FIND_PLAY.beacon.scale, beacon()) + at('runestone', FIND_PLAY.rune.scale, runestone());
-  fd += at('tafl', FIND_PLAY.tafl.scale, tafl()) + findWrap('mist', F.mist.label, mist(), F.mist.x, F.mist.y) + at('horn', FIND_PLAY.horn.scale, horn()) + at('well', 1, well());
+  fd += at('hammer', HAMMER.map.scale, hammerMapArt()) + findWrap('mist', F.mist.label, mist(), F.mist.x, F.mist.y) + at('horn', FIND_PLAY.horn.scale, horn()) + at('well', 1, well());
   fd += `<g id="bc-notes">` + FIND_COPY.beaconNotes.map(n => { const B = FIND_PLAY.beacon; return `<g class="bc-note" opacity="0" transform="translate(${n.x} ${n.y})"><g class="bc-note-in">${runeSvg(n.rune, B.runeSize, 0, B.runeY, 'middle', 'rn rn-note')}<g class="bc-en" opacity="0">${n.t.todo ? svgText(0, B.todoY, COPY.todo, { s: B.todoFont, c: C.dim, a: 'middle' }) : ''}${svgText(0, B.lineY, typeof n.t === 'object' ? n.t.t : n.t, { s: B.noteFont, c: C.paper, a: 'middle', i: 1 })}</g></g></g>`; }).join('') + `</g>`;
   fd += findWrap('longship', F.longship.label, `<g class="ls-ship" transform="translate(${F.longship.x} ${F.longship.y}) scale(${FIND_PLAY.ship.scale})">${longship()}</g>`, F.longship.x, F.longship.y);
 

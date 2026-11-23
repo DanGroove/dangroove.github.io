@@ -7,7 +7,7 @@ import { FD, FIND_BY, findKitBuild, findKitFrame, findCapture, findPlace, findLi
 import { findWay, findHoards } from './findhoards.mjs';
 import { findRavens, findSerpent } from './findcreatures.mjs';
 import { findBeacon, findRune } from './findsheets.mjs';
-import { findBoard } from './findboard.mjs';
+import { findHammer } from './findhammer.mjs';
 import { findMist, findWell, findShip } from './findwater.mjs';
 import { findHorn } from './findhorn.mjs';
 import { findAll } from './findall.mjs';
@@ -27,7 +27,7 @@ function findPlain(value, seen = new Set()) {
 }
 export function findsBuild(svg, pop, sheet, base, rm) {
   findKitBuild(svg, pop, sheet, base, rm);
-  const builders = { wayfinder: findWay, hoards: findHoards, ravens: findRavens, serpent: findSerpent, beacon: findBeacon, runestone: findRune, tafl: findBoard, mist: findMist, horn: findHorn, well: findWell, longship: findShip };
+  const builders = { wayfinder: findWay, hoards: findHoards, ravens: findRavens, serpent: findSerpent, beacon: findBeacon, runestone: findRune, hammer: findHammer, mist: findMist, horn: findHorn, well: findWell, longship: findShip };
   Object.entries(builders).forEach(([id, build]) => { const o = build(svg); o.el ??= svg.querySelector('#f-' + id); o.stage ??= 'rest'; o.kept ??= false; FD.list[id] = o; });
   FD.all = findAll(svg);
   // Builders add non-interactive decorations. The one reusable bit pool remains last.

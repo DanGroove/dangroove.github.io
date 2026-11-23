@@ -335,21 +335,36 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 }
 .rm .rubbing-sheet .pz-in { transition: none; }
 
-/* Part B: board dialog and non-interactive find decorations. */
-.tafl-sheet .tf-panel { position: absolute; left: calc(var(--tf-w) / -2); top: calc(var(--tf-h) / -2); width: var(--tf-w); height: var(--tf-h); padding: var(--tf-pad); border: var(--tf-border) solid var(--line); border-radius: var(--tf-radius); background: var(--ink); color: var(--paper); pointer-events: auto; display: grid; grid-template-rows: var(--tf-surface) var(--tf-status) var(--tf-slot) var(--tf-buttons); gap: var(--tf-gap); font-size: var(--tf-font); line-height: var(--tf-line); }
-.tf-panel p { margin: 0; }
-.tf-surface { display: block; width: var(--tf-board); height: var(--tf-surface); overflow: visible; touch-action: none; }
-.tf-board .tf-piece { pointer-events: none; }
-.tf-cell { cursor: pointer; outline: none; }
-.tf-cell:focus-visible rect { stroke: var(--paper); stroke-width: var(--tf-border); }
-.tf-cursor { opacity: 0; }
-.tf-input:has(.tf-cell:focus-visible) .tf-cursor { opacity: 1; }
-.tf-rule { color: var(--dim); font-size: var(--tf-small); line-height: var(--tf-small-line); }
-.tf-slot-space { min-height: 0; }
-.tf-slot .find-slot { margin: 0; }
-.tf-slot .find-slot p { font-size: var(--tf-small); line-height: var(--tf-small-line); }
-.tf-buttons { display: flex; gap: var(--tf-gap); }
-.tf-buttons button { flex: 1; min-width: 0; padding: 0 var(--tf-gap); border: var(--tf-border) solid var(--mid); border-radius: var(--tf-gap); color: var(--paper); background: var(--ink); font: inherit; cursor: pointer; }
+/* Hammer sheet: the same Ink panel, quiet rules and Paper strokes as the finds. */
+.hm-panel { box-sizing: border-box; position: absolute; left: calc(var(--hm-w) / -2); top: calc(var(--hm-h) / -2); width: var(--hm-w); height: var(--hm-h); padding: var(--hm-pad); border: var(--hm-border) solid var(--line); border-radius: var(--hm-radius); background: var(--ink); color: var(--paper); pointer-events: auto; display: grid; grid-template-rows: var(--hm-header) var(--hm-fieldH) var(--hm-status) var(--hm-buttons); gap: var(--hm-gap); font-size: var(--hm-font); line-height: var(--hm-line); }
+.hm-panel p, .hm-panel h2 { margin: 0; }
+.hm-header { display: flex; align-items: center; justify-content: space-between; gap: var(--hm-gap); font-size: var(--hm-small); line-height: var(--hm-heartH); }
+.hm-wave { max-width: var(--hm-waveShare); }
+.hm-vitals { display: flex; flex-direction: column; align-items: end; gap: var(--hm-heartGap); }
+.hm-hearts { display: flex; gap: var(--hm-heartGap); }
+.hm-hearts svg { width: var(--hm-heartW); height: var(--hm-heartH); stroke: var(--paper); stroke-width: var(--hm-border); }
+.hm-field { position: relative; width: var(--hm-fieldW); height: var(--hm-fieldH); }
+.hm-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.hm-canvas:focus-visible { outline: var(--hm-border) solid var(--paper); outline-offset: calc(var(--hm-border) * -1); }
+.hm-card { box-sizing: border-box; position: absolute; inset: var(--hm-inset); padding: var(--hm-cardPad); border: var(--hm-border) solid var(--mid); border-radius: var(--hm-radius); background: var(--ink); display: flex; flex-direction: column; justify-content: center; gap: var(--hm-gap); overflow: auto; }
+.hm-card[hidden] { display: none; }
+.hm-card h2 { font-size: var(--hm-title); line-height: 1; font-weight: var(--hm-titleWeight); }
+.hm-quiet, .hm-status { color: var(--dim); font-size: var(--hm-small); }
+.hm-card .find-slot { margin: 0; }
+.hm-card .find-slot p { font-size: var(--hm-small); }
+.hm-panel button { min-height: var(--hm-buttons); padding: 0 var(--hm-gap); border: var(--hm-border) solid var(--mid); border-radius: var(--hm-gap); color: var(--paper); background: var(--ink); font: inherit; cursor: pointer; }
+.hm-panel button:focus-visible { outline: var(--hm-border) solid var(--paper); outline-offset: var(--hm-border); }
+.hm-panel button[aria-pressed="true"] { color: var(--ink); background: var(--paper); }
+.hm-panel button:disabled { color: var(--dim); cursor: default; }
+.hm-buttons { display: flex; gap: var(--hm-gap); }
+.hm-buttons button { flex: 1; min-width: 0; }
+.hm-buttons .hm-auto { flex: var(--hm-autoFlex); }
+.hm-card .hm-rune { display: flex; align-items: center; gap: var(--hm-gap); padding: var(--hm-gap); text-align: left; }
+.hm-rune svg { width: var(--hm-runeW); height: var(--hm-rune); flex-shrink: 0; fill: none; stroke: var(--paper); stroke-width: var(--hm-glyphLine); }
+.hm-rune span span { display: block; color: var(--note); font-size: var(--hm-small); }
+.hm-taken { display: flex; flex-wrap: wrap; gap: var(--hm-gap); }
+.hm-taken > span { display: flex; align-items: center; gap: var(--hm-heartGap); }
+.hm-taken svg { width: var(--hm-miniW); height: var(--hm-mini); fill: none; stroke: var(--paper); stroke-width: var(--hm-border); }
 #f-mist, #f-horn { touch-action: none; }
 .mist-wisp { fill: url(#find-mist-soft); }
 #hn-rings .hn-ring { fill: none; stroke: var(--paper); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
