@@ -15,7 +15,7 @@ button { font-family: inherit; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 .trip { position: relative; }
-.stage { position: sticky; top: 0; height: 100vh; overflow: hidden; }
+.stage { position: sticky; top: 0; height: 100vh; overflow: clip; }
 .map, #stars { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
 .map { display: block; }
 #stars { pointer-events: none; }
@@ -157,7 +157,8 @@ button { font-family: inherit; }
 
 /* timeline */
 .tl { position: absolute; left: 0; right: 0; bottom: 0; height: 56px; padding: 0 28px; display: flex; align-items: stretch; gap: 20px; pointer-events: auto; touch-action: none; z-index: 3; opacity: 0; cursor: pointer; }
-.tl-view { position: relative; flex: 1; overflow: hidden; }
+.tl-bg { position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: linear-gradient(to top, var(--ink) 62%, transparent); pointer-events: none; }
+.tl-view { position: relative; flex: 1; overflow: clip; }
 .tl-track { position: absolute; left: 0; top: 0; height: 100%; width: 100%; }
 .tl-rows { position: absolute; left: 0; right: 0; top: 10px; transform-origin: 0 100%; }
 .tl-row { position: relative; height: 6px; margin-bottom: 3px; }
@@ -569,7 +570,7 @@ const mapDefs = () => `<defs>
 <linearGradient id="spike" x1="0" x2="1"><stop offset="0" stop-color="${C.red}" stop-opacity="0"/><stop offset=".5" stop-color="${C.white}"/><stop offset="1" stop-color="${C.red}" stop-opacity="0"/></linearGradient>
 <linearGradient id="beam" x1="1" x2="0"><stop offset="0" stop-color="${C.paper}" stop-opacity=".5"/><stop offset="1" stop-color="${C.paper}" stop-opacity="0"/></linearGradient>
 <pattern id="win" width="4" height="5" patternUnits="userSpaceOnUse"><rect x="1" y="1" width="1.6" height="2.2" fill="${C.paper}" opacity=".55"/></pattern>
-<filter id="rough"><feTurbulence type="fractalNoise" baseFrequency=".05" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
+<filter id="rough" filterUnits="userSpaceOnUse" x="-20" y="-8" width="40" height="16"><feTurbulence type="fractalNoise" baseFrequency=".05" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
 <filter id="blur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6"/></filter>
 <clipPath id="cA"><path d="${pathD(COAST_A, 1)}"/></clipPath><clipPath id="cB"><path d="${pathD(COAST_B, 1)}"/></clipPath><clipPath id="neat"><rect x="22" y="22" width="556" height="856"/></clipPath>
 <clipPath id="kq"><rect x="0" y="-14" width="14" height="14"/><rect x="-14" y="0" width="14" height="14"/></clipPath>
@@ -923,7 +924,7 @@ function cardsFrame(st) {
   CD.list.forEach((c, i) => {
     const e = st.cardK[i], p = toScreen(st, MAP.waypoints[c.stop.w]);
     const k0 = stonePx / (H * .95), k = Math.pow(k0, 1 - e);
-    const cx = p[0] + (oc[0] - p[0]) * e, cy = p[1] - stonePx * .38 + (oc[1] - p[1] + stonePx * .38) * e;
+    const cx = p[0] + (oc[0] - p[0]) * e, ry = p[1] - stonePx * .5 - 5, cy = ry + (oc[1] - ry) * e;
     c.el.style.transform = `translate(${(cx - W * k / 2).toFixed(2)}px,${(cy - H * k / 2).toFixed(2)}px) scale(${k.toFixed(5)})`;
     const lit = CD.craft ? c.stop.crafts.includes(CD.craft) : false;
     c.el.style.opacity = op * (CD.craft && !lit ? .55 : 1);
@@ -952,7 +953,7 @@ function tlBuild(el, hooks, rm) {
   let ticks = ''; for (let y = Y0; y <= Math.floor(DATE_NOW); y++) ticks += `<i class="tl-tick" style="left:${(xOf(y) * 100).toFixed(3)}%"><b>'${String(y % 100).padStart(2, '0')}</b></i>`;
   let blocks = { school: '', work: '' };
   STOPS.forEach((s, i) => s.spans.forEach(sp => { const a = xOf(yearOf(sp[0])), b = xOf(yearOf(sp[1], 1)); blocks[s.track] += `<span class="tl-blk" data-i="${i}" style="left:${(a * 100).toFixed(3)}%;width:${((b - a) * 100).toFixed(3)}%;--mk:${PALETTES[s.palette].mark}"><em></em></span>`; }));
-  el.innerHTML = `<div class="tl-view"><div class="tl-track"><div class="tl-ticks tl-f">${ticks}</div><div class="tl-rows tl-f"><div class="tl-row">${blocks.school}</div><div class="tl-row">${blocks.work}</div></div><div class="tl-head"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0 -7Q0 0 7 0Q0 0 0 7Q0 0 -7 0Q0 0 0 -7Z"/></svg></div></div></div><div class="tl-base"></div><span class="tl-count tl-f" aria-live="polite"></span><div class="tl-tip" aria-hidden="true"></div>`;
+  el.innerHTML = `<div class="tl-bg tl-f"></div><div class="tl-view"><div class="tl-track"><div class="tl-ticks tl-f">${ticks}</div><div class="tl-rows tl-f"><div class="tl-row">${blocks.school}</div><div class="tl-row">${blocks.work}</div></div><div class="tl-head"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0 -7Q0 0 7 0Q0 0 0 7Q0 0 -7 0Q0 0 0 -7Z"/></svg></div></div></div><div class="tl-base"></div><span class="tl-count tl-f" aria-live="polite"></span><div class="tl-tip" aria-hidden="true"></div>`;
   el.setAttribute('role', 'slider'); el.tabIndex = 0; el.setAttribute('aria-label', COPY.timeline);
   el.setAttribute('aria-valuemin', Y0); el.setAttribute('aria-valuemax', Math.floor(DATE_NOW));
   TL.track = el.querySelector('.tl-track'); TL.head = el.querySelector('.tl-head'); TL.rows = el.querySelector('.tl-rows');

@@ -174,7 +174,7 @@ export const mapDefs = () => `<defs>
 <linearGradient id="spike" x1="0" x2="1"><stop offset="0" stop-color="${C.red}" stop-opacity="0"/><stop offset=".5" stop-color="${C.white}"/><stop offset="1" stop-color="${C.red}" stop-opacity="0"/></linearGradient>
 <linearGradient id="beam" x1="1" x2="0"><stop offset="0" stop-color="${C.paper}" stop-opacity=".5"/><stop offset="1" stop-color="${C.paper}" stop-opacity="0"/></linearGradient>
 <pattern id="win" width="4" height="5" patternUnits="userSpaceOnUse"><rect x="1" y="1" width="1.6" height="2.2" fill="${C.paper}" opacity=".55"/></pattern>
-<filter id="rough"><feTurbulence type="fractalNoise" baseFrequency=".05" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
+<filter id="rough" filterUnits="userSpaceOnUse" x="-20" y="-8" width="40" height="16"><feTurbulence type="fractalNoise" baseFrequency=".05" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
 <filter id="blur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6"/></filter>
 <clipPath id="cA"><path d="${pathD(COAST_A, 1)}"/></clipPath><clipPath id="cB"><path d="${pathD(COAST_B, 1)}"/></clipPath><clipPath id="neat"><rect x="22" y="22" width="556" height="856"/></clipPath>
 <clipPath id="kq"><rect x="0" y="-14" width="14" height="14"/><rect x="-14" y="0" width="14" height="14"/></clipPath>

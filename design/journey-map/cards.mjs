@@ -47,7 +47,7 @@ export function cardsFrame(st) {
   CD.list.forEach((c, i) => {
     const e = st.cardK[i], p = toScreen(st, MAP.waypoints[c.stop.w]);
     const k0 = stonePx / (H * .95), k = Math.pow(k0, 1 - e);
-    const cx = p[0] + (oc[0] - p[0]) * e, cy = p[1] - stonePx * .38 + (oc[1] - p[1] + stonePx * .38) * e;
+    const cx = p[0] + (oc[0] - p[0]) * e, ry = p[1] - stonePx * .5 - 5, cy = ry + (oc[1] - ry) * e;
     c.el.style.transform = `translate(${(cx - W * k / 2).toFixed(2)}px,${(cy - H * k / 2).toFixed(2)}px) scale(${k.toFixed(5)})`;
     const lit = CD.craft ? c.stop.crafts.includes(CD.craft) : false;
     c.el.style.opacity = op * (CD.craft && !lit ? .55 : 1);
