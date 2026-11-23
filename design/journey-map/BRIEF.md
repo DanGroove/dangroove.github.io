@@ -78,9 +78,9 @@ The map is 600 by 900 units. Coasts are `A` and `Bz`, the trail is the spline `T
 | laurier | `laurier.png` (on white) | white top band holds the logo, field below | `#330172` | `#FFFFFF` | `#CFC3E0` | `#EAA41E` / `#330172` | `#EAA41E` / `#330172` |
 | mohawk | `mohawk.png` (on black) | logo on the ground | `#030303` | `#F4F4F4` | `#A3A3A3` | `#FB9632` / `#030303` | `#991030` / `#FFFFFF` |
 | interkom | `interkom.png` (on cream) | logo on the ground | `#F7F3E2` | `#242021` | `#5E5A56` | `#E85155` / `#F7F3E2` | `#242021` / `#F7F3E2` |
-| lennard | `lennard.png` (on white) | white top band holds the logo, field below | `#FF4E02` | `#FFFFFF` | `#FFE1D2` | `#FFFFFF` / `#FF4E02` | `LENNARD_DARK` / `#FFFFFF` |
+| lennard | `lennard.png` (on white) | white top band holds the logo, field below | `#FF4C00` | `#FFFFFF` | `#FFFFFF` | `#FFFFFF` / `#706259` | `#706259` / `#FFFFFF` |
 
-`LENNARD_DARK`: Dan says the dark in the sketch (`#0F151E`) is wrong and has not yet given the right one. Use `#1A1A1A` in one named constant with the comment `TODO(Dan): Lennard's real dark`. Every palette value must be changeable in this one table.
+Lennard's values come from Lennard's own design system: the orange is PMS 1655, `#FF4C00`, and the only dark is Warm Gray 11, `#706259`, which is also its text colour. Never use `#0F151E`, `#1A1A1A` or black on that card. HMC's navy and green were sampled from Dan's annual report and will be checked against HMC's brand guide. Every palette value must be changeable in this one table.
 
 ### Card copy (drafts in Dan's voice; he will rewrite them; keep them in data with `draft: true`)
 
