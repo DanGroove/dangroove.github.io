@@ -1,14 +1,15 @@
 // The joined page: Dan's real hero (hero-copy/) sits in the map's sticky stage. Through the hero act its content rises with
 // the scroll and its stars stay as the sky; over the last vh of that act the map's star canvas takes the same stars over,
 // then the hero goes away and the fall (the handoff act) carries every one of them onto the map.
-import { ACTS } from './data.mjs';
+import { ACTS, COPY } from './data.mjs';
 import { smooth } from './trip.mjs';
 import { starsJoin } from './stars.mjs';
 import { JOIN } from './main.mjs';
+import { JOURNEY, stepsProgress } from './steps.mjs';
 
 const JN = {
   hero: document.querySelector('[data-hero]'), stage: document.getElementById('stage'), cv: document.getElementById('stars'),
-  api: null, away: null, op: '', lastP: -1, dirty: true,
+  api: null, away: null, op: '', lastP: -1, dirty: true, lift: null,
   rm: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
 JN.svg = document.getElementById('map'); JN.fxg = document.getElementById('fxg'); JN.fx = null; JN.ov = JN.stage.querySelector('.ov');
@@ -18,15 +19,32 @@ const LEAVE_END = ACTS.hero, JOIN_OVERLAP = 1;
 // the hero's box is the stage's box: first in the stage (so it comes first in the tab order), above the map, under the canvas
 JN.stage.prepend(JN.hero);
 document.documentElement.classList.add('jm-joined');
+JOIN.heroStart = true;
+
+// Run before the hero's own entry script, without changing the copied hero files.
+JN.cue = JN.hero.querySelector('[data-cue]'); JN.cueText = JN.cue ? JN.cue.textContent : '';
+function joinStart() {
+  if (JN.rm || !JN.cue) return;
+  if (JOURNEY.mode === 'scroll') { JN.cue.textContent = JN.cueText; return; }
+  const button = document.createElement('button'); button.type = 'button'; button.className = 'jm-start'; button.textContent = COPY.steps.start;
+  button.addEventListener('click', () => JOURNEY.next()); JN.cue.replaceChildren(button);
+}
+joinStart(); window.addEventListener('jm-mode', joinStart);
 
 const unit = () => window.innerHeight / 100;
-const progress = () => Math.max(0, window.scrollY / unit());
 // The hero is present until the end of the leave, away from then on. Present, it takes every pointer and key and the map
 // is inert; away, it is hidden, takes nothing, and draws nothing.
-function place() {
-  const P = progress(), away = P >= LEAVE_END, api = JN.api;
-  if (api && !away) { api.setAway(false); api.setLeave(Math.min(P, LEAVE_END) * unit()); }
-  if (api && away) { api.setLeave(LEAVE_END * unit()); api.setAway(true); }
+function place(P = stepsProgress()) {
+  const away = P >= LEAVE_END, api = JN.api;
+  if (api) {
+    if (!away) api.setAway(false);
+    const lift = Math.min(P, LEAVE_END) * unit();
+    if (lift !== JN.lift) {
+      JN.lift = lift; api.setLeave(lift);
+      if (JOURNEY.mode === 'steps') window.dispatchEvent(new Event('scroll'));
+    }
+    if (away) api.setAway(true);
+  }
   if (away !== JN.away) {
     JN.away = away;
     JN.hero.classList.toggle('jm-away', away);
@@ -37,7 +55,7 @@ function place() {
 const setOp = v => { const s = String(v); if (s !== JN.op) { JN.op = s; JN.cv.style.opacity = s; } };
 
 JOIN.frame = (st, moved, P) => {
-  place();
+  place(P);
   const a = smooth(LEAVE_END - JOIN_OVERLAP, LEAVE_END, P);
   if (!JN.rm) {
     // the X is drawn from the start of the fall in the map as built; here it fades in with the sea, so the switch shows no pop
@@ -61,7 +79,7 @@ JOIN.resize = (w, h) => {
   if (JN.rm) document.getElementById('trip').style.height = ((ACTS.hero + ACTS.handoff) * h / 100 + h) + 'px';
   JN.dirty = true; place();
 };
-window.addEventListener('scroll', place, { passive: true });
+window.addEventListener('scroll', () => { if (JOURNEY.mode === 'scroll') place(); }, { passive: true });
 place();
 
 // the hero's script has a top-level await: wait for its handle

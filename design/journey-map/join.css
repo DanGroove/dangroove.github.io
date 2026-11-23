@@ -5,6 +5,8 @@
 .jm-joined .stage > .hero { position: absolute; inset: 0; height: 100%; min-height: 0 !important; z-index: 1; }
 .jm-joined #stars { z-index: 2; opacity: 0; }
 .jm-joined .ov { z-index: 3; }
+.jm-joined .jm-cut { z-index: 4; }
+.jm-joined .go { z-index: 5; }
 /* the stand-in's caption belonged to the stand-in hero */
 .jm-joined .caption { display: none; }
 
@@ -20,3 +22,5 @@
 
 /* Reduced motion: the stage stays sticky through the leave and the cross-fade (join.mjs sets the section's height). */
 .jm-joined.rm .stage { position: sticky; }
+
+.jm-start { font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }

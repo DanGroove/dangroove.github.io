@@ -1,17 +1,18 @@
 // Wires the journey map together: builds the stage, listens to scroll and resize, runs the one frame loop.
-import { C, COPY, MAP, CAMERA, PALETTES, STOPS } from './data.mjs';
+import { C, COPY, MAP, CAMERA, PALETTES, STOPS, STEPS } from './data.mjs';
 import { bigMap, mapDefs, stoneDefs, pathD, TRAIL } from './art.mjs';
-import { tripBuild, tripResize, tripState, tripApply, tripMiniVisited, TOTAL_P, VIEW, progressForStop, SEQ } from './trip.mjs';
+import { tripBuild, tripResize, tripState, tripApply, tripMiniVisited, TOTAL_P, VIEW, SEQ } from './trip.mjs';
 import { starsBuild, starsResize, starsFrame, starsStill } from './stars.mjs';
 import { cardsBuild, cardsResize, cardsFrame, cardsList } from './cards.mjs';
 import { tlBuild, tlResize, tlFrame } from './timeline.mjs';
 import { footerBuild, footerBuildX, footerResize, footerFrame } from './footer.mjs';
 import { findsBuild, findsFrame, findsPointer } from './finds.mjs';
+import { JOURNEY, stepsBuild, stepsFrame, stepsResize, stepsProgress, stepsPause } from './steps.mjs';
 
 const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Set by join.mjs on the joined page only (the real hero in the stage): frame(st, moved, P) returns false to leave the star
 // canvas alone, options for starsFrame, or nothing for the map's own rule; resize(w, h) follows the map's resize.
-export const JOIN = { frame: null, resize: null };
+export const JOIN = { frame: null, resize: null, heroStart: false };
 const ROOT = document.documentElement;
 Object.entries(C).forEach(([k, v]) => ROOT.style.setProperty('--' + k, v));
 if (RM) ROOT.classList.add('rm');
@@ -31,28 +32,30 @@ const SVG = $('map'), CANVAS = $('stars'), TLEL = $('tl');
 if (!RM) $('stage').querySelector('.ov').appendChild(TLEL); else { $('rmcards').appendChild(TLEL); MAIN.appendChild($('ft')); }
 
 let P = 0, dirty = true;
-const scrollToP = (p, smooth) => window.scrollTo({ top: p * VIEW.unit, behavior: smooth && !RM ? 'smooth' : 'auto' });
-const goStop = i => { if (RM) { cardsList()[i].el.scrollIntoView({ behavior: 'auto', block: 'start' }); return; } scrollToP(progressForStop(i), true); };
+const goStop = i => { if (RM) { cardsList()[i].el.scrollIntoView({ behavior: 'auto', block: 'start' }); return; } JOURNEY.go(STOPS[i].id); };
 
 tripBuild({ svg: SVG, cam: $('cam'), sea: $('b-sea'), fill: $('b-fill'), coastG: $('b-coast'), detail: $('b-detail'), finds: $('finds'), done: $('trail-done'), caption: document.querySelector('.caption'), cue: document.querySelector('.cue'), mini: $('mini') });
 $('mini').querySelectorAll('.mm-stop').forEach(b => { b.style.setProperty('--mk', PALETTES[STOPS[+b.dataset.i].palette].mark); b.addEventListener('click', () => goStop(+b.dataset.i)); });
 starsBuild(CANVAS);
 cardsBuild(RM ? $('rmcards') : $('cards'), goStop);
-tlBuild(TLEL, { jump: goStop, scrub: p => scrollToP(p, false) }, RM);
-footerBuild($('ft')); footerBuildX($('fxg'));
+tlBuild(TLEL, { jump: goStop, scrub: p => JOURNEY.set(p) }, RM);
+footerBuild($('ft')); footerBuildX($('fxg'), RM);
 findsBuild(SVG, $('pop'), $('sheet'), $('b-all'), RM);
 if (RM) $('rmcards').appendChild(TLEL);
+stepsBuild({ stage: $('stage'), rm: RM, resize, joinedTop: () => JOIN.heroStart });
 
 function resize() {
   const w = window.innerWidth, h = window.innerHeight, phone = w <= CAMERA.phoneMax;
-  tripResize(w, h, RM ? 0 : (phone ? 44 : 56));
+  const stepMode = !RM && JOURNEY.mode === 'steps';
+  const room = stepMode ? (phone ? STEPS.nav.bar : STEPS.nav.h + STEPS.nav.gap + 6) : 0;
+  tripResize(w, h, RM ? 0 : (phone ? 44 : 56) + room);
   SVG.setAttribute('width', w); SVG.setAttribute('height', h); SVG.setAttribute('viewBox', `0 0 ${w} ${h}`);
   starsResize(w, h);
-  if (!RM) cardsResize();
+  if (!RM) cardsResize(stepMode);
   const rule = footerResize();
   tlResize(RM ? null : rule);
-  if (!RM) $('trip').style.height = (TOTAL_P * VIEW.unit + h) + 'px';
-  P = window.scrollY / VIEW.unit; dirty = true;
+  if (!RM) $('trip').style.height = (stepMode ? h : TOTAL_P * VIEW.unit + h) + 'px';
+  stepsResize(); P = stepsProgress(); dirty = true;
   if (RM) still();
   if (JOIN.resize) JOIN.resize(w, h);
 }
@@ -60,7 +63,7 @@ const OVERVIEW_P = SEQ.find(s => s.kind === 'overview').a + 1;
 function still() { const st = tripState(OVERVIEW_P); tripApply(st); starsStill(st); FIXED = st; }
 let FIXED = null;
 
-window.addEventListener('scroll', () => { P = window.scrollY / VIEW.unit; dirty = true; }, { passive: true });
+window.addEventListener('scroll', () => { if (JOURNEY.mode === 'scroll') dirty = true; }, { passive: true });
 window.addEventListener('resize', resize);
 const PTR = [.5, .5];
 window.addEventListener('pointermove', e => { PTR[0] = e.clientX / VIEW.w; PTR[1] = e.clientY / VIEW.h; findsPointer(e.clientX, e.clientY); }, { passive: true });
@@ -68,6 +71,7 @@ window.addEventListener('pointermove', e => { PTR[0] = e.clientX / VIEW.w; PTR[1
 let raf = 0, lastP = -1, lastVisited = '';
 function frame(ts) {
   const time = ts / 1000;
+  P = stepsFrame(ts);
   if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], jr); raf = requestAnimationFrame(frame); return; }
   const st = tripState(P);
   const moved = dirty || P !== lastP;
@@ -78,6 +82,6 @@ function frame(ts) {
   findsFrame(time, st);
   raf = requestAnimationFrame(frame);
 }
-document.addEventListener('visibilitychange', () => { if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else if (!raf) raf = requestAnimationFrame(frame); });
+document.addEventListener('visibilitychange', () => { stepsPause(); if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else if (!raf) raf = requestAnimationFrame(frame); });
 const start = () => { resize(); raf = requestAnimationFrame(frame); };
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();

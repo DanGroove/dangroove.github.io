@@ -1,8 +1,9 @@
 // Eleven things to play with. Each runs on its own clock; the trip never waits for them.
 import { C, FINDS, FIND_COPY, FIND_TIMING, COPY, CRAFTS, STOPS } from './data.mjs';
-import { VIEW, toScreen, clamp01, lerp, easeIO } from './trip.mjs';
+import { VIEW, toScreen, clamp01, lerp, easeIO, tripState, SEQ } from './trip.mjs';
 import { cardsSetCraft } from './cards.mjs';
 import { tlSetCount } from './timeline.mjs';
+import { JOURNEY, stepsFind, stepsJumping } from './steps.mjs';
 
 const FD = { st: null, now: 0, pointer: [-1e4, -1e4], found: new Set(), last: null, list: {}, pop: null, popAnchor: null, popP: 0, popOwner: null, sheet: null, sheetP: 0, sheetOwner: null, rm: false, base: null };
 const D = s => FD.rm ? 1e-4 : s;
@@ -51,6 +52,7 @@ function find_wayfinder(svg) {
   el.addEventListener('pointermove', e => { if (!o.drag) return; o.moved = true; pick(e, false); });
   el.addEventListener('pointerup', e => { if (o.drag) pick(e, !o.moved); o.drag = false; });
   el.addEventListener('pointercancel', () => { o.drag = false; });
+  el.addEventListener('click', e => { if (e === FD.replayEvent) pick(e, true); });
   el.addEventListener('keydown', e => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); set((o.craft + 1) % 4); }
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); set((o.craft + 3) % 4); }
@@ -167,6 +169,8 @@ function find_beacon(svg) {
   el.addEventListener('pointermove', e => { if (o.drag) aimAt(e); });
   el.addEventListener('pointerup', () => { o.drag = false; }); el.addEventListener('pointercancel', () => { o.drag = false; });
   el.addEventListener('keydown', e => { const d = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -6 : e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 6 : 0; if (!d) return; e.preventDefault(); o.head += d; o.manualT = FD.now; found('beacon'); opened(o); });
+  el.addEventListener('click', e => { if (e === FD.replayEvent) aimAt(e); });
+  el.addEventListener('keydown', e => { if (JOURNEY.mode === 'steps' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); o.manualT = FD.now; found('beacon'); opened(o); } });
   o.undo = () => { o.manualT = -99; };
   o.tick = (t, dt) => {
     const manual = o.drag || t - o.manualT < 6;
@@ -251,10 +255,48 @@ function find_longship(svg) {
   return o;
 }
 
+// A keyboard press can reach a find even when the camera or an open card hides it.
+function findNeedsVisit(el) {
+  const st = tripState(JOURNEY.P), p = toScreen(st, [+el.dataset.x, +el.dataset.y]);
+  return st.cam.s < VIEW.sT * .8 || st.cardOpen > .5 || p[0] < VIEW.w * .1 || p[0] > VIEW.w * .9 || p[1] < VIEW.h * .1 || p[1] > VIEW.h * .9;
+}
+function findVisitP(el) {
+  const place = [+el.dataset.x, +el.dataset.y]; let best = JOURNEY.P, distance = Infinity;
+  const sample = P => {
+    const p = toScreen(tripState(P), place), d = Math.pow(p[0] - VIEW.w * .5, 2) + Math.pow(p[1] - VIEW.h * .46, 2);
+    if (d < distance) { distance = d; best = P; }
+  };
+  SEQ.filter(s => s.kind === 'leg' || s.kind === 'legX').forEach(s => { for (let p = s.a; p < s.a + s.len; p += 2) sample(p); sample(s.a + s.len); });
+  return best;
+}
+function findCapture(e) {
+  if (FD.rm || JOURNEY.mode !== 'steps' || e === FD.replayEvent) return;
+  if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+  const el = e.target.closest && e.target.closest('.find'); if (!el) return;
+  if (stepsJumping()) { e.preventDefault(); e.stopImmediatePropagation(); return; }
+  if (!findNeedsVisit(el)) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  const st = tripState(JOURNEY.P), point = e.type === 'click' ? [(e.clientX - st.cam.tx) / st.cam.s, (e.clientY - st.cam.ty) / st.cam.s] : null;
+  const key = { key: e.key, code: e.code, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey };
+  stepsFind(findVisitP(el), () => {
+    const p = point ? toScreen(tripState(JOURNEY.P), point) : null;
+    const pressEvent = p ? new MouseEvent('click', { bubbles: true, cancelable: true, clientX: p[0], clientY: p[1], detail: e.detail }) : new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...key });
+    FD.replayEvent = pressEvent;
+    try { el.dispatchEvent(pressEvent); } finally { FD.replayEvent = null; }
+  });
+}
 export function findsBuild(svg, pop, sheet, base, rm) {
   FD.pop = pop; FD.sheet = sheet; FD.base = base; FD.rm = rm;
   const builders = { wayfinder: find_wayfinder, hoards: find_hoards, ravens: find_ravens, serpent: find_serpent, beacon: find_beacon, runestone: find_runestone, tafl: find_tafl, mist: find_mist, horn: find_horn, well: find_well, longship: find_longship };
   Object.entries(builders).forEach(([k, b]) => { FD.list[k] = b(svg); });
+  if (!rm) {
+    svg.addEventListener('click', findCapture, true); svg.addEventListener('keydown', findCapture, true);
+    // These two finds use pointerdown/up for aiming; keep that from acting before the captured click's visit.
+    svg.addEventListener('pointerdown', e => {
+      const el = e.target.closest && e.target.closest('.find');
+      if (JOURNEY.mode === 'steps' && el && (stepsJumping() || findNeedsVisit(el))) { e.preventDefault(); e.stopImmediatePropagation(); }
+    }, true);
+  }
   document.addEventListener('keydown', e => { if (e.key === 'Escape') findsCloseAll(); });
   tlSetCount(0, FINDS.length);
 }

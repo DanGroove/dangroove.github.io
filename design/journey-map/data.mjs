@@ -16,8 +16,8 @@ export const PALETTES = {
   laurier: { logo: 'assets/logos/laurier.png', layout: 'band', ground: '#330172', text: '#FFFFFF', sub: '#CFC3E0', button: '#EAA41E', buttonText: '#330172', pill: '#EAA41E', pillText: '#330172', band: '#FFFFFF', headline: '#FFFFFF', mark: '#EAA41E', hairline: '#CFC3E0' },
   mohawk: { logo: 'assets/logos/mohawk.png', layout: 'ground', ground: '#030303', text: '#F4F4F4', sub: '#A3A3A3', button: '#FB9632', buttonText: '#030303', pill: '#991030', pillText: '#FFFFFF', band: '#FFFFFF', headline: '#F4F4F4', mark: '#FB9632', hairline: '#A3A3A3' },
   interkom: { logo: 'assets/logos/interkom.png', layout: 'ground', ground: '#F7F3E2', text: '#242021', sub: '#5E5A56', button: '#E85155', buttonText: '#F7F3E2', pill: '#242021', pillText: '#F7F3E2', band: '#FFFFFF', headline: '#242021', mark: '#E85155', hairline: '#5E5A56' },
-  // Lennard follows its own design system: white ground, Warm Gray 11 text, one orange idea (the headline).
-  lennard: { logo: 'assets/logos/lennard.png', layout: 'ground', ground: '#FFFFFF', text: '#706259', sub: '#706259', button: '#706259', buttonText: '#FFFFFF', pill: '#F1EFEF', pillText: '#706259', band: '#FFFFFF', headline: '#FF4C00', mark: '#FF4C00', hairline: '#D8D1CA' },
+  // Lennard: white logo band over orange; Warm Gray 11 is its only dark, on the pill, button and chips.
+  lennard: { logo: 'assets/logos/lennard.png', layout: 'band', ground: '#FF4C00', text: '#FFFFFF', sub: '#FFFFFF', button: '#FFFFFF', buttonText: '#706259', pill: '#706259', pillText: '#FFFFFF', band: '#FFFFFF', headline: '#FFFFFF', mark: '#FF4C00', hairline: '#FFFFFF', smallWeight: 500, chip: '#FFFFFF', chipText: '#706259' },
 };
 
 export const CRAFTS = ['Print', 'Video', 'Motion', 'Screen'];
@@ -98,7 +98,15 @@ export const COPY = {
   timelineStart: 'Before the first stop',
   close: 'Close',
   flip: 'Flip it over',
+  steps: {
+    group: 'Move through the journey', start: 'Start the journey', setOut: 'Set out', next: 'Next: {name}',
+    toX: 'Next: the X', dig: 'Dig here', top: 'Back to the top', back: 'Back: {name}', returnTo: 'Back to where you were',
+    names: { top: 'the top', map: 'the whole map', x: 'the X', end: 'the end' },
+    say: { top: 'The top of the page', map: 'The whole map', stop: 'Stop {n} of {t}: {name}, {dates}', x: 'The X', end: 'The end of the trail: contact and links' },
+    review: { label: 'Preview only', steps: 'Steps', scroll: 'Scroll' },
+  },
   footer: {
+    label: 'Footer',
     cta: 'Got an idea that needs carrying to the final cut?',
     talk: "Let's talk",
     name: 'Danial Endrawes',
@@ -163,6 +171,15 @@ export const CAMERA = {
 };
 
 export const HOLD = { zoomIn: [0, 0.18], zoomOut: [0.86, 1], open: [0.1, 0.32], fold: [0.72, 0.92], visited: 0.3 };
+
+// Clock-driven journey. Pace and animation durations are seconds; wheel.quiet is milliseconds.
+export const STEPS = {
+  pace: { hero: 0.9, handoff: 2.8, overview: 0.8, pushIn: 1.6, holdIn: 1.0, holdOpen: 0.4, holdOut: 0.6,
+    legBase: 0.8, legPerVh: 0.006, legMax: 2.4, legX: 1.2, rush: 1.3, blast: 1.6, settle: 1.3 },
+  ramp: 0.35, back: 0.6, hurry: 0.3, minMove: 0.3, cut: [0.18, 0.32],
+  wheel: { min: 24, quiet: 180 }, swipe: { min: 48, slope: 1.5 }, nav: { h: 44, gap: 14, bar: 52 },
+  frameMax: 0.05, reveal: 0.3,
+};
 
 export const STARS = { count: 420, red: 0.05, dprCap: 2, drift: 0.012, parallax: 14 };
 

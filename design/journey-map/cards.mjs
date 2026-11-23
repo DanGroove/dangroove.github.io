@@ -1,11 +1,11 @@
 // Stop marks that grow into cards. Each card is one article: the standing stone at rest, the card when open.
-import { STOPS, PALETTES, COPY, CRAFTS, MAP } from './data.mjs';
+import { STOPS, PALETTES, COPY, CRAFTS, MAP, STEPS } from './data.mjs';
 import { stoneSvg } from './art.mjs';
 import { VIEW, toScreen, smooth } from './trip.mjs';
 
 const CD = { list: [], W: 640, H: 420, craft: null, onGo: null };
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-const arrowSvg = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
+export const arrowSvg = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
 
 export function cardsBuild(container, onGo) {
   CD.onGo = onGo;
@@ -13,6 +13,9 @@ export function cardsBuild(container, onGo) {
     const p = PALETTES[s.palette], cp = s.copy, a = document.createElement('article');
     a.className = `stop lay-${p.layout}`; a.id = `stop-${s.id}`; a.setAttribute('aria-labelledby', `h-${s.id}`);
     const vars = { '--g': p.ground, '--tx': p.text, '--sub': p.sub, '--btn': p.button, '--btx': p.buttonText, '--pill': p.pill, '--ptx': p.pillText, '--band': p.band, '--hd': p.headline, '--mk': p.mark, '--hair': p.hairline };
+    if (p.smallWeight !== undefined) vars['--sw'] = p.smallWeight;
+    if (p.chip) vars['--chip'] = p.chip;
+    if (p.chipText) vars['--chtx'] = p.chipText;
     Object.entries(vars).forEach(([k, v]) => a.style.setProperty(k, v));
     const piece = cp.piece ? `<img src="${cp.piece}" alt="${esc(cp.caption)}">` : `<div class="c-empty">${COPY.pieceToCome}</div>`;
     const steps = cp.steps ? `<ol class="c-steps">${cp.steps.map(t => `<li>${esc(t)}</li>`).join('')}</ol>` : '';
@@ -29,12 +32,15 @@ export function cardsBuild(container, onGo) {
     CD.list.push({ el: a, face: a.querySelector('.face'), inn: a.querySelector('.c-in'), btn: a.querySelector('.st-btn'), fill: a.querySelector('.st-fill'), glow: a.querySelector('.st-glow'), stop: s, state: '' });
   });
 }
-export function cardsResize() {
+export function cardsResize(steps = false) {
+  CD.steps = steps;
   if (VIEW.phone) {
     CD.W = VIEW.w; let hmax = 0;
     CD.list.forEach(c => { c.el.style.width = CD.W + 'px'; c.el.style.height = 'auto'; hmax = Math.max(hmax, c.inn.scrollHeight); });
-    CD.H = Math.min(Math.round(VIEW.h * .82), hmax + 2);
-  } else { CD.W = Math.min(640, VIEW.w - 32); CD.H = 420; }
+    CD.H = Math.min(Math.round(VIEW.h * .82) - (steps ? STEPS.nav.bar : 0), hmax + 2);
+  } else {
+    CD.W = Math.min(640, VIEW.w - 32); CD.H = steps ? Math.max(1, Math.min(420, VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h - 24)) : 420;
+  }
   CD.list.forEach(c => { c.el.style.width = CD.W + 'px'; c.el.style.height = CD.H + 'px'; });
 }
 export const cardsSetCraft = craft => { CD.craft = craft; };
@@ -43,7 +49,9 @@ export const cardsLitBy = craft => STOPS.map(s => s.crafts.includes(craft));
 export function cardsFrame(st) {
   const W = CD.W, H = CD.H, op = smooth(.5, 1, st.handoffT) * (1 - smooth(0, .4, st.blastT));
   const stonePx = Math.max(15, Math.min(44, 12.5 * st.cam.s));
-  const oc = VIEW.phone ? [VIEW.w / 2, VIEW.h - H / 2 - 6] : [VIEW.w / 2, VIEW.h / 2 - 12];
+  const stepTop = VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h;
+  const oc = VIEW.phone ? [VIEW.w / 2, VIEW.h - H / 2 - 6 - (CD.steps ? STEPS.nav.bar : 0)]
+    : [VIEW.w / 2, CD.steps ? Math.max(12 + H / 2, Math.min(VIEW.h / 2 - 12, stepTop - 12 - H / 2)) : VIEW.h / 2 - 12];
   CD.list.forEach((c, i) => {
     const e = st.cardK[i], p = toScreen(st, MAP.waypoints[c.stop.w]);
     const k0 = stonePx / (H * .95), k = Math.pow(k0, 1 - e);

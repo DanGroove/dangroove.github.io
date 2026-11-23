@@ -91,9 +91,10 @@ export function tripState(P) {
     const u0 = STOP_U[seg.i], u1 = seg.kind === 'leg' ? STOP_U[seg.i + 1] : X_U;
     st.u = lerp(u0, u1, easeIO(st.t)); cam = camTrip(st.u, 1);
   } else { // footer acts: X fixed, anchor slides
-    st.u = X_U; const base = camTrip(X_U, 1); base.cx = MAP.x[0]; base.cy = MAP.x[1];
+    st.u = X_U; const base = camTrip(X_U, 1);
     const fx = VIEW.phone ? CAMERA.footerXPhone : CAMERA.footerX;
     const e1 = easeIO(st.rushT), e2 = easeIO(smooth(0, .8, st.settleT));
+    base.cx = lerp(base.cx, MAP.x[0], e1); base.cy = lerp(base.cy, MAP.x[1], e1);
     base.ax = lerp(lerp(CAMERA.anchorX * VIEW.w, VIEW.w / 2, e1), fx[0] * VIEW.w, e2);
     base.ay = lerp(lerp(CAMERA.anchorY * VIEW.h, VIEW.h / 2, e1), fx[1] * VIEW.h, e2);
     cam = base;

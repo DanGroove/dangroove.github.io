@@ -2,6 +2,7 @@
 import { C, COPY } from './data.mjs';
 import { rnd, n1 } from './art.mjs';
 import { VIEW, smooth, lerp, easeIO, clamp01 } from './trip.mjs';
+import { JOURNEY } from './steps.mjs';
 
 const FT = { g: {}, items: [], name: null, el: null, rule: null };
 const upRight = '<svg class="ne" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 8.5L8.5 1.5M3 1.5H8.5V7"/></svg>';
@@ -9,16 +10,28 @@ const arrowR = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d=
 
 const xStroke = rot => `<g class="fx-s" transform="rotate(${rot})"><path class="fx-red" d="M-12.7 0H12.7" stroke="${C.red}" stroke-width="3.6" stroke-linecap="round" fill="none" filter="url(#rough)"/><path class="fx-white" d="M-12.7 0L0 -1.7L12.7 0L0 1.7Z" fill="url(#spike)" opacity="0"/></g>`;
 
-export function footerBuildX(g) {
+export function footerBuildX(g, rm = false) {
   const r = rnd(43); let streaks = '';
   for (let i = 0; i < 60; i++) { const a = r() * 6.283, d1 = .3 + r() * .5, d2 = d1 + .2 + r() * .6, c = Math.cos(a), sn = Math.sin(a); streaks += `<path d="M${n1(c * d1 * 10)} ${n1(sn * d1 * 10)}L${n1(c * d2 * 10)} ${n1(sn * d2 * 10)}" stroke="${r() < .3 ? C.red : C.paper}" stroke-opacity="${n1(.3 + r() * .6)}" stroke-width="${n1(.6 + r())}" vector-effect="non-scaling-stroke" stroke-linecap="round"/>`; }
   g.innerHTML = `<circle class="fx-rg" r="1" fill="url(#rglow)" opacity="0"/><circle class="fx-og" r="1" fill="url(#oglow)" opacity="0"/>`
     + `<g class="fx-streaks" opacity="0">${streaks}</g>`
     + `<circle class="fx-ringr" r="1" fill="none" stroke="${C.red}" stroke-width="8" vector-effect="non-scaling-stroke" opacity="0"/><circle class="fx-ring" r="1" fill="none" stroke="${C.paper}" stroke-width="2" vector-effect="non-scaling-stroke" opacity="0"/>`
     + `<circle class="fx-r1" r="1" fill="none" stroke="${C.paper}" stroke-width=".8" vector-effect="non-scaling-stroke" opacity="0"/><circle class="fx-r2" r="1" fill="none" stroke="${C.paper}" stroke-width=".6" vector-effect="non-scaling-stroke" opacity="0"/>`
-    + `<circle class="fx-core" r="1" fill="url(#glow)" opacity="0"/>` + xStroke(45) + xStroke(-45);
+    + `<circle class="fx-core" r="1" fill="url(#glow)" opacity="0"/>` + xStroke(45) + xStroke(-45)
+    + (rm ? '' : `<circle class="fx-hit hit" r="26" role="button" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true"/>`);
   ['fx-rg', 'fx-og', 'fx-streaks', 'fx-ringr', 'fx-ring', 'fx-r1', 'fx-r2', 'fx-core'].forEach(k => FT.g[k] = g.querySelector('.' + k));
   FT.g.s = [...g.querySelectorAll('.fx-s')]; FT.g.red = [...g.querySelectorAll('.fx-red')]; FT.g.white = [...g.querySelectorAll('.fx-white')];
+  FT.hit = g.querySelector('.fx-hit');
+  if (FT.hit) {
+    const dig = () => {
+      if (FT.hit.getAttribute('aria-disabled') === 'true') return;
+      if (JOURNEY.mode === 'scroll') JOURNEY.go('end');
+      else if (Math.abs(JOURNEY.P - JOURNEY.beats.find(b => b.id === 'x').P) < .5) JOURNEY.next();
+      else JOURNEY.go('x');
+    };
+    FT.hit.addEventListener('click', dig);
+    FT.hit.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dig(); } });
+  }
 }
 
 export function footerBuild(el) {
@@ -29,7 +42,7 @@ export function footerBuild(el) {
 <p class="ft-name ft-r"><span>${f.name}</span></p>
 <p class="ft-tag ft-r">${f.tagline}</p>
 <div class="ft-rule" aria-hidden="true"></div>
-<nav class="ft-links ft-r" aria-label="Footer"><span class="ft-big">${f.links.map(l => `<button type="button" class="ft-link">${l}${upRight}</button>`).join('')}</span><span class="ft-small">${f.small.split(' / ').map(l => `<button type="button" class="ft-link">${l}</button>`).join('<i>/</i>')}</span></nav></div>`;
+<nav class="ft-links ft-r" aria-label="${f.label}"><span class="ft-big">${f.links.map(l => `<button type="button" class="ft-link">${l}${upRight}</button>`).join('')}</span><span class="ft-small">${f.small.split(' / ').map(l => `<button type="button" class="ft-link">${l}</button>`).join('<i>/</i>')}</span></nav></div>`;
   FT.items = [...el.querySelectorAll('.ft-r')]; FT.name = el.querySelector('.ft-name span'); FT.rule = el.querySelector('.ft-rule');
 }
 export function footerResize() {
@@ -40,6 +53,11 @@ export function footerResize() {
 }
 const T = (el, x) => el.setAttribute('transform', x);
 export function footerFrame(st) {
+  if (FT.hit) {
+    const available = st.handoffT >= 1 && st.rushT === 0;
+    FT.hit.tabIndex = available ? 0 : -1; FT.hit.setAttribute('aria-disabled', String(!available));
+    FT.hit.style.pointerEvents = available ? 'all' : 'none';
+  }
   const s = st.cam.s, rT = st.rushT, bT = st.blastT, sT = st.settleT, G = FT.g, u = px => px / s;
   const big = Math.max(VIEW.w, VIEW.h);
   // the two strokes: thin, whiten from the centre, stretch into spikes, then cool to a small star
