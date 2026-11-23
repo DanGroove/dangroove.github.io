@@ -328,6 +328,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .tf-buttons button { flex: 1; min-width: 0; padding: 0 var(--tf-gap); border: var(--tf-border) solid var(--mid); border-radius: var(--tf-gap); color: var(--paper); background: var(--ink); font: inherit; cursor: pointer; }
 #f-mist, #f-horn { touch-action: none; }
 .mist-wisp { fill: url(#find-mist-soft); }
+#hn-rings .hn-ring { fill: none; stroke: var(--paper); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
 #hn-rings, #wl-crown, .wl-rip, .wl-pebble, .mist-drift, .mist-glint, .ls-lamp { pointer-events: none; }
 
 </style>
@@ -467,7 +468,7 @@ const FINDS = [
   { id: 'tafl', n: 0, x: 112, y: 222, view: [112, 218, 34], label: 'A hnefatafl board. Play the king to a corner.' },
   { id: 'mist', n: 0, x: 156, y: 438, view: [154, 436, 62], label: 'The mist of 2020. Press or wipe to clear it.' },
   { id: 'horn', n: 0, x: 46, y: 476, view: [46, 470, 30], label: 'A horn on the shore. Press to raise it, press again to sound it.' },
-  { id: 'well', n: 0, x: 302, y: 392, view: [300, 352, 66], label: "Urd's Well. Drop a pebble in. The Norns answer." },
+  { id: 'well', n: 0, x: 302, y: 392, view: [300, 367, 66], label: "Urd's Well. Drop a pebble in. The Norns answer." },
   { id: 'longship', n: 0, x: 452, y: 622, label: 'The longship. Pull three times to fly its pennant.' },
 ];
 
@@ -672,11 +673,11 @@ const FIND_PLAY = {
     ellipses: [[150, 428, 26, 11], [180, 444, 24, 10], [134, 446, 18, 8], [117, 426, 19, 12], [158, 450, 25, 10], [192, 429, 22, 12]],
     cairns: [[138, 418], [166, 452], [200, 440]], cairnScale: 0.8, glintAt: [0, -10.4], glintSize: 5, glintTime: 0.5, glintGap: 0.15, glintTurn: 45,
     cairn: '<path class="g" d="M-6.5 0L-5.6 -2.8L5.2 -3.2L6.8 0Z"/><path class="g" d="M-4.8 -3L-4.2 -5.6L4.6 -5.9L4 -3.1Z"/><path class="g" d="M-3.4 -5.7L-3 -8L2.6 -8.3L3.4 -5.9Z"/><path class="g" d="M-1.6 -8.1L-1 -10.2L1.6 -10.4L1.4 -8.2Z"/>',
-    puffs: 8, puff: { speed: [3, 7], life: [0.8, 0.8], size: [0.6, 1.3], alpha: 0.55 }, east: [0, 0],
+    puffs: 8, puff: { speed: [6, 12], life: [0.8, 0.8], size: [0.6, 1.3], alpha: 0.3 }, east: [0, 0], wisps: [3, 35],
   },
   horn: { near: 24, scale: 0.7, rad: 40, soundRad: 700, tip: 6, raise: 0.35, lift: [3, -7], turn: -30, pivot: [-8, -4], anchor: [0, -42],
-    hold: 0.45, swell: [1.12, 6, 0.9], bell: [7, -14], rings: 4, gap: 0.18, radius: 4, speed: 150, life: 1.8, alpha: 0.7, power: 1.5,
-    glint: [5, 0.6, 90], hit: [-18, -30, 34, 38],
+    hold: 0.45, swell: [1.12, 6, 0.9], bell: [7, -14], rings: 4, gap: 0.18, radius: 4, speed: 300, life: 2.2, alpha: 0.8, power: 0.7,
+    glint: [11, 0.6, 90], hit: [-18, -30, 34, 38],
     paths: ['M-12 -4C-14 -16 -2 -24 10 -22L10 -16C0 -17 -6 -12 -5 -4Z', 'M5 -21.5L5.5 -16.5M0 -20L1.5 -15.5M-5 -16L-2.5 -12.5', 'M10 -22L10 -16', 'M-16 3q4 -3 8 0t8 0t8 0'],
   },
   well: { near: 38, rad: 116, hit: [38, 22], water: [300, 390], root: [300, 381], drip: [4, 7], dripTime: 0.35,
@@ -694,7 +695,7 @@ const FIND_PLAY = {
     paths: { hull: 'M-26 -6Q-20 5 -10 5H12Q22 5 26 -6Z', ends: 'M-26 -6Q-33 -13 -29 -20Q-25 -25 -22 -20Q-21 -16 -24.5 -16.5M26 -6Q31 -11 28 -15Q26 -17 25 -15', mast: 'M0 -6V-38', sail: 'M-12 -35H12V-15H-12Z', stripes: 'M-6 -35V-15M0 -35V-15M6 -35V-15', water: 'M-36 8q4 -3 8 0t8 0M16 9q4 -3 8 0t8 0',
       oars: 'M-18 -5L-25 8M-11 -5L-18 8M-4 -5L-11 8M3 -5L-4 8M10 -5L3 8M17 -5L10 8', pennant: 'M0 -39.5L24 -38L18 -36.5L24 -35L0 -33.5Z' },
   },
-  all: { frame: [18, 18, 564, 864], length: 100, width: 2, dash: [6, 94], time: 2.6, fade: 0.4, knotTime: 0.8, markerTime: 0.4, markerScale: 1.25, frameAlpha: 0.5,
+  all: { frame: [18, 18, 564, 864], length: 100, width: 2, dash: [6, 94], time: 2.6, fade: 0.4, wait: 0.6, knotTime: 0.8, markerTime: 0.4, markerScale: 1.25, frameAlpha: 0.5,
     knots: [[36, 36], [564, 36], [36, 864], [564, 864]], corners: [0, 564, 2286, 1428] },
 };
 
@@ -2346,7 +2347,10 @@ function showPop(owner, anchor, html, cls = '', side = 'auto') {
   FD.pop.className = 'pop on ' + cls;
   FD.pop.innerHTML = `<div class="pop-in"><div class="pop-body">${html}</div><i class="pop-tail" aria-hidden="true"></i></div>`;
   FD.popInner = FD.pop.firstElementChild; FD.popTail = FD.pop.querySelector('.pop-tail');
-  const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height]; placePop();
+  const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height];
+  // A popup stays above the step buttons and the timeline: their tops are read once here, when it opens, never in the frame loop.
+  FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go, .tl')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
+  placePop();
   FD.popInner.style.transformOrigin = `${FD.popOrigin[0]}px ${FD.popOrigin[1]}px`;
 }
 function closePop() {
@@ -2358,7 +2362,7 @@ function placePop() {
   const K = FIND_PLAY.kit.popup, anchor = typeof FD.popAnchor === 'function' ? FD.popAnchor() : FD.popAnchor, p = toScreen(FD.st, anchor), [w, h] = FD.popSize;
   const below = FD.popSide === 'below' || FD.popSide !== 'above' && p[1] - h - K.tail[1] < K.edge;
   const x = Math.max(K.edge, Math.min(VIEW.w - w - K.edge, p[0] - w / 2));
-  const y = Math.max(K.edge, Math.min(VIEW.h - h - K.edge, below ? p[1] + K.tail[1] : p[1] - h - K.tail[1]));
+  const y = Math.max(K.edge, Math.min((FD.popFloor ?? VIEW.h) - h - K.edge, below ? p[1] + K.tail[1] : p[1] - h - K.tail[1]));
   FD.popOrigin = [Math.max(0, Math.min(w, p[0] - x)), below ? 0 : h];
   FD.pop.style.transform = `translate(${x}px,${y}px)`;
   const q = FD.rm ? 1 : clamp01((FD.now - FD.popTs) / K.time), back = 1 + (K.over - 1) / (1 - K.scale);
@@ -3101,7 +3105,7 @@ function findMist(svg) {
     wipes.appendChild(findSvg('circle', { cx: p[0], cy: p[1], r: r * Q.soft[0], fill: 'url(#find-mist-wipe)' }));
     centres().forEach((c, i) => { if (Math.hypot(c[0] - p[0], c[1] - p[1]) <= Q.cellR) o.cleared[i] = true; });
     const dir = previous ? Math.atan2(p[1] - previous[1], p[0] - previous[0]) * FIND_PLAY.kit.deg / Math.PI : Q.east[0];
-    findBits('wisp', ...p, 1, { ...Q.puff, dir: [dir, dir] });
+    o.wipes = (o.wipes || 0) + 1; if (o.wipes % Q.wisps[0] === 0) findBits('wisp', ...p, 1, { ...Q.puff, dir: [dir - Q.wisps[1], dir + Q.wisps[1]] });
     if (o.cleared.filter(Boolean).length / o.cleared.length >= Q.done) lift();
   };
   const pointer = (e, r) => {
@@ -3219,7 +3223,7 @@ function findHorn(svg) {
   const f = FIND_BY.horn, el = svg.querySelector('#f-horn'), horn = el.querySelector('.hn-horn');
   const o = { id: f.id, el, stage: 'rest', kept: false, up: 0, v: 0, hold: false, sounded: 0, ts: -Infinity, heard: [], hearTs: -Infinity, glints: [] };
   const ringsGroup = findSvg('g', { id: 'hn-rings', 'pointer-events': 'none' }); svg.querySelector('#finds').appendChild(ringsGroup);
-  const rings = Array.from({ length: FIND_PLAY.horn.rings }, () => { const c = findSvg('circle', { class: 't', r: 1, opacity: 0 }); ringsGroup.appendChild(c); return c; });
+  const rings = Array.from({ length: FIND_PLAY.horn.rings }, () => { const c = findSvg('circle', { class: 'hn-ring', r: 1, opacity: 0 }); ringsGroup.appendChild(c); return c; });
   const glints = FINDS.map(d => { const g = findSvg('g'), star = findSvg('path', { class: 'pf', d: starPath(0, 0, FIND_PLAY.horn.glint[0]), opacity: 0 }); star.style.stroke = 'none'; g.appendChild(star); ringsGroup.appendChild(g); return { id: d.id, g, star, ts: -Infinity }; });
   const deliver = id => {
     const object = FD.list[id]; object?.hear?.();
@@ -3229,7 +3233,7 @@ function findHorn(svg) {
   const sound = () => {
     if (o.stage === 'sounding' || o.stage === 'echo') return;
     const H = FIND_PLAY.horn; opened(o); o.stage = 'sounding'; o.ts = FD.now; o.sounded++; o.hold = false; o.heard = []; o.glints = []; o.up = 1;
-    o.wide = stepsFocus(o.id, FIND_PLAY.focus.wide);
+    o.wide = stepsFocus(o.id, FIND_PLAY.focus.wide); if (FD.popOwner === o) closePop();
     if (FD.rm) { FINDS.forEach(d => deliver(d.id)); o.up = o.v = 0; o.stage = 'rest'; if (FD.popOwner === o) closePop(); }
   };
   const raise = () => {
@@ -3273,26 +3277,30 @@ function findHorn(svg) {
 
 
 
+
 function findAll(svg) {
   const A = FIND_PLAY.all, frame = svg.querySelector('rect[x="18"][y="18"]'), knots = [...svg.querySelectorAll('.chart-knot')], markers = FINDS.filter(f => f.n).map(f => ({ el: svg.querySelector('#mk-' + f.id), at: f.mark }));
   const comet = findSvg('rect', { class: 'l', x: A.frame[0], y: A.frame[1], width: A.frame[2], height: A.frame[3], pathLength: A.length, 'stroke-dasharray': A.dash.join(' '), 'stroke-dashoffset': A.length, 'pointer-events': 'none', opacity: 0 }); comet.style.strokeWidth = A.width; svg.querySelector('#finds').appendChild(comet);
-  const o = { done: false, ts: null };
+  const o = { done: false, ts: null, wide: null };
   o.start = () => {
     if (o.done) return; o.done = true; o.ts = FD.now;
     const Q = FIND_PLAY.all;
+    // A find that has the camera hands it to the whole chart while the comet goes round, then takes it back.
+    if (!FD.rm && JOURNEY.focus) { o.wide = JOURNEY.focus; stepsFocus(o.wide, FIND_PLAY.focus.wide); o.ts += Q.wait; }
     if (FD.rm) attr(frame, 'stroke-opacity', Q.frameAlpha);
     else {
-      comet.animate([{ strokeDashoffset: Q.length }, { strokeDashoffset: 0 }], { duration: Q.time * 1000, fill: 'forwards' });
-      frame.animate([{ strokeOpacity: frame.getAttribute('stroke-opacity') }, { strokeOpacity: Q.frameAlpha }], { delay: Q.time * 1000, duration: Q.fade * 1000, fill: 'forwards' });
+      const wait = (o.ts - FD.now) * 1000;
+      comet.animate([{ strokeDashoffset: Q.length }, { strokeDashoffset: 0 }], { delay: wait, duration: Q.time * 1000, fill: 'forwards' });
+      frame.animate([{ strokeOpacity: frame.getAttribute('stroke-opacity') }, { strokeOpacity: Q.frameAlpha }], { delay: wait + Q.time * 1000, duration: Q.fade * 1000, fill: 'forwards' });
     }
   };
   o.tick = t => {
     if (o.ts === null || FD.rm) return;
     const Q = FIND_PLAY.all, age = t - o.ts, perimeter = 2 * (Q.frame[2] + Q.frame[3]);
-    attr(comet, 'opacity', age <= Q.time ? 1 : 1 - clamp01((age - Q.time) / Q.fade));
+    attr(comet, 'opacity', age < 0 ? 0 : age <= Q.time ? 1 : 1 - clamp01((age - Q.time) / Q.fade));
     knots.forEach((knot, i) => { const q = clamp01((age - Q.time * Q.corners[i] / perimeter) / Q.knotTime), at = Q.knots[i]; attr(knot, 'transform', `translate(${at[0]} ${at[1]}) rotate(${FIND_PLAY.kit.turn * ease(q)})`); });
     const pulse = Math.sin(Math.PI * clamp01(age / Q.markerTime)); markers.forEach(m => { const p = m.at; attr(m.el, 'transform', `translate(${p[0]} ${p[1]}) scale(${1 + (Q.markerScale - 1) * pulse}) translate(${-p[0]} ${-p[1]})`); });
-    if (age >= Q.time + Math.max(Q.fade, Q.knotTime)) o.ts = null;
+    if (age >= Q.time + Math.max(Q.fade, Q.knotTime)) { o.ts = null; if (o.wide && JOURNEY.focus === o.wide) queueMicrotask(() => stepsFocus(o.wide, findView(o.wide))); }
   };
   return o;
 }
