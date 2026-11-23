@@ -3,7 +3,7 @@ import { FINDS, FIND_COPY, FIND_PLAY, FIND_TIMING } from './data.mjs';
 import { toScreen } from './trip.mjs';
 import { JOURNEY } from './steps.mjs';
 import { depthBeam } from './depth.mjs';
-import { FD, FIND_BY, findKitBuild, findKitFrame, findCapture, findPlace, findLife, closePop, closeSheet, findKitStyle } from './findkit.mjs';
+import { FD, FIND_BY, findKitBuild, findKitFrame, findCapture, findPlace, findLife, closePop, closeSheet, findKitStyle, findHint } from './findkit.mjs';
 import { findWay, findHoards } from './findhoards.mjs';
 import { findRavens, findSerpent } from './findcreatures.mjs';
 import { findBeacon, findRune } from './findsheets.mjs';
@@ -57,5 +57,5 @@ export function findsFrame(time, st) {
     if (o.id === 'hoards' || o.onScreen || playing || FD.sheetOwner === o) o.tick?.(time, FD.rm ? 0 : FD.dt);
     else if (o.id === 'beacon') depthBeam(null);
   });
-  findKitFrame(); FD.all.tick(time); FD.focusId = JOURNEY.focus;
+  findKitFrame(); FD.all.tick(time); if (JOURNEY.focus !== FD.focusId) findHint(JOURNEY.focus); FD.focusId = JOURNEY.focus;
 }

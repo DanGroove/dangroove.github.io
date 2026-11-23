@@ -272,6 +272,9 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .mk.found circle { fill: var(--red); }
 .mk.found text { fill: var(--ink); }
 .mk { transition: opacity .3s; }
+.find-hint { position: absolute; z-index: 5; left: 50%; bottom: 124px; transform: translateX(-50%); margin: 0; max-width: calc(100% - 32px); text-align: center; white-space: nowrap; font-size: 12px; line-height: 1.4; letter-spacing: .02em; color: var(--dim); opacity: 0; transition: opacity .3s; pointer-events: none; }
+.jm-focus .find-hint { opacity: 1; }
+@media (max-width: 640px) { .find-hint { bottom: 104px; white-space: normal; width: calc(100% - 32px); } }
 .jm-focus .mk { opacity: 0; }
 #b-detail text { transition: opacity .4s; }
 .jm-focus #b-detail text { opacity: .3; }
@@ -508,6 +511,11 @@ const FIND_COPY = {
   norns: [['Urd', 'what was'], ['Verdandi', 'what is'], ['Skuld', 'what shall be']],
   nornKicker: '{name}, {time}', wellStop: '{name}, {dates}',
   wellNone: 'nothing yet', wellMap: 'the whole map', wellNext: 'not yet carved',
+  // One short line of what to do, shown above the step buttons while a find has the camera. Draft copy.
+  hints: { wayfinder: 'Pick a craft to light the stops that used it.', hoards: 'Dig three times, then open it.', ravens: 'Press to send a raven out.',
+    serpent: 'Poke it.', beacon: 'Press the tower for the next note, or drag to aim the beam.', runestone: 'Rub the stone to lift its carving.',
+    tafl: 'Press the board to play.', mist: 'Wipe the mist away.', horn: 'Press to raise it, press again to sound it.',
+    well: 'Drop a pebble in. The Norns answer.', longship: 'Press to pull the oars.' },
   shipLog: 'The 2023 crossing', longship: { t: '2023: Dan to write this line.', todo: 1 },
 };
 
@@ -2349,7 +2357,7 @@ function showPop(owner, anchor, html, cls = '', side = 'auto') {
   FD.popInner = FD.pop.firstElementChild; FD.popTail = FD.pop.querySelector('.pop-tail');
   const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height];
   // A popup stays above the step buttons and the timeline: their tops are read once here, when it opens, never in the frame loop.
-  FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go, .tl')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
+  FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go, .tl, .jm-focus .find-hint')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
   placePop();
   FD.popInner.style.transformOrigin = `${FD.popOrigin[0]}px ${FD.popOrigin[1]}px`;
 }
@@ -2400,6 +2408,7 @@ function findBits(kind, x, y, n, options = {}) {
 function findKitBuild(svg, pop, sheet, base, rm) {
   Object.assign(FD, { svg, pop, sheet, base, rm, hover: matchMedia('(hover: hover)').matches, count: document.querySelector('.tl-count') });
   const pool = findSvg('g', { id: 'f-bits', 'pointer-events': 'none' }); svg.querySelector('#finds').appendChild(pool);
+  FD.hint = document.createElement('p'); FD.hint.className = 'find-hint'; FD.hint.setAttribute('aria-hidden', 'true'); (document.getElementById('go')?.parentElement || document.body).appendChild(FD.hint);
   for (let i = 0; i < FIND_PLAY.bits.pool; i++) { const el = findSvg('path'); el.style.display = 'none'; pool.appendChild(el); FD.bits.push({ el, live: false, serial: -1 }); }
   FD.star = document.createElement('div'); FD.star.className = 'find-star'; FD.star.setAttribute('aria-hidden', 'true');
   FD.star.innerHTML = `<svg viewBox="-1 -1 2 2"><path d="${starPath(0, 0, 1)}"/></svg>`; pop.parentElement.appendChild(FD.star);
@@ -2437,6 +2446,8 @@ function findKitFrame() {
   if (FD.popOwner && Math.abs(FD.st.P - FD.popP) > FIND_TIMING.closeScroll) closePop();
   if (FD.sheetOwner && Math.abs(FD.st.P - FD.sheetP) > FIND_TIMING.closeScroll) closeSheet();
 }
+// The hint line keeps its words while it fades out, so it changes only when a find takes the camera.
+function findHint(id) { if (FD.hint && id) FD.hint.textContent = FIND_COPY.hints[id.startsWith('hoard') ? 'hoards' : id] || ''; }
 function findCapture(e) {
   if (FD.rm || JOURNEY.mode !== 'steps' || !FD.st) return;
   if (e.type === 'keydown' && !['Enter', ' '].includes(e.key)) return;
@@ -3364,7 +3375,7 @@ function findsFrame(time, st) {
     if (o.id === 'hoards' || o.onScreen || playing || FD.sheetOwner === o) o.tick?.(time, FD.rm ? 0 : FD.dt);
     else if (o.id === 'beacon') depthBeam(null);
   });
-  findKitFrame(); FD.all.tick(time); FD.focusId = JOURNEY.focus;
+  findKitFrame(); FD.all.tick(time); if (JOURNEY.focus !== FD.focusId) findHint(JOURNEY.focus); FD.focusId = JOURNEY.focus;
 }
 
 // ---- main.mjs ----

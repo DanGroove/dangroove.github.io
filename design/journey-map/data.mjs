@@ -169,6 +169,11 @@ export const FIND_COPY = {
   norns: [['Urd', 'what was'], ['Verdandi', 'what is'], ['Skuld', 'what shall be']],
   nornKicker: '{name}, {time}', wellStop: '{name}, {dates}',
   wellNone: 'nothing yet', wellMap: 'the whole map', wellNext: 'not yet carved',
+  // One short line of what to do, shown above the step buttons while a find has the camera. Draft copy.
+  hints: { wayfinder: 'Pick a craft to light the stops that used it.', hoards: 'Dig three times, then open it.', ravens: 'Press to send a raven out.',
+    serpent: 'Poke it.', beacon: 'Press the tower for the next note, or drag to aim the beam.', runestone: 'Rub the stone to lift its carving.',
+    tafl: 'Press the board to play.', mist: 'Wipe the mist away.', horn: 'Press to raise it, press again to sound it.',
+    well: 'Drop a pebble in. The Norns answer.', longship: 'Press to pull the oars.' },
   shipLog: 'The 2023 crossing', longship: { t: '2023: Dan to write this line.', todo: 1 },
 };
 

@@ -67,7 +67,7 @@ export function showPop(owner, anchor, html, cls = '', side = 'auto') {
   FD.popInner = FD.pop.firstElementChild; FD.popTail = FD.pop.querySelector('.pop-tail');
   const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height];
   // A popup stays above the step buttons and the timeline: their tops are read once here, when it opens, never in the frame loop.
-  FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go, .tl')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
+  FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go, .tl, .jm-focus .find-hint')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
   placePop();
   FD.popInner.style.transformOrigin = `${FD.popOrigin[0]}px ${FD.popOrigin[1]}px`;
 }
@@ -118,6 +118,7 @@ export function findBits(kind, x, y, n, options = {}) {
 export function findKitBuild(svg, pop, sheet, base, rm) {
   Object.assign(FD, { svg, pop, sheet, base, rm, hover: matchMedia('(hover: hover)').matches, count: document.querySelector('.tl-count') });
   const pool = findSvg('g', { id: 'f-bits', 'pointer-events': 'none' }); svg.querySelector('#finds').appendChild(pool);
+  FD.hint = document.createElement('p'); FD.hint.className = 'find-hint'; FD.hint.setAttribute('aria-hidden', 'true'); (document.getElementById('go')?.parentElement || document.body).appendChild(FD.hint);
   for (let i = 0; i < FIND_PLAY.bits.pool; i++) { const el = findSvg('path'); el.style.display = 'none'; pool.appendChild(el); FD.bits.push({ el, live: false, serial: -1 }); }
   FD.star = document.createElement('div'); FD.star.className = 'find-star'; FD.star.setAttribute('aria-hidden', 'true');
   FD.star.innerHTML = `<svg viewBox="-1 -1 2 2"><path d="${starPath(0, 0, 1)}"/></svg>`; pop.parentElement.appendChild(FD.star);
@@ -155,6 +156,8 @@ export function findKitFrame() {
   if (FD.popOwner && Math.abs(FD.st.P - FD.popP) > FIND_TIMING.closeScroll) closePop();
   if (FD.sheetOwner && Math.abs(FD.st.P - FD.sheetP) > FIND_TIMING.closeScroll) closeSheet();
 }
+// The hint line keeps its words while it fades out, so it changes only when a find takes the camera.
+export function findHint(id) { if (FD.hint && id) FD.hint.textContent = FIND_COPY.hints[id.startsWith('hoard') ? 'hoards' : id] || ''; }
 export function findCapture(e) {
   if (FD.rm || JOURNEY.mode !== 'steps' || !FD.st) return;
   if (e.type === 'keydown' && !['Enter', ' '].includes(e.key)) return;
