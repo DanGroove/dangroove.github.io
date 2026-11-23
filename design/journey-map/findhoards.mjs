@@ -1,9 +1,10 @@
 // Part A: the instrument and the five persistent, hand-dug chests.
 import { C, COPY, CRAFTS, STOPS, MAP, FIND_COPY, FIND_PLAY, PALETTES } from './data.mjs';
-import { clamp01, lerp, toScreen } from './trip.mjs';
+import { clamp01, lerp, toScreen, VIEW } from './trip.mjs';
 import { pieceIcon } from './art.mjs';
 import { cardsSetCraft, arrowSvg } from './cards.mjs';
 import { tlSetCraft } from './timeline.mjs';
+import { JOURNEY, stepsFocus } from './steps.mjs';
 import { FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, attend, findBits, findSvg, findFormat, findRange, findLife, findAngleDelta } from './findkit.mjs';
 
 export const wayAllStops = () => STOPS.map(s => CRAFTS.every(c => s.crafts.includes(c)));
@@ -33,6 +34,9 @@ export function findWay(svg) {
     const mask = i < 0 ? null : i === CRAFTS.length ? wayAllStops() : STOPS.map(s => s.crafts.includes(CRAFTS[i]));
     if (i >= 0) { o.kept = true; if (i < CRAFTS.length && !o.picked.includes(i)) o.picked.push(i); o.unlocked = o.picked.length === CRAFTS.length && wayAllStops().some(Boolean); found(o.id); opened(o); }
     applyMask(mask);
+    // With a craft chosen the lines have to be seen arriving, so on a wide screen the camera pulls back for them.
+    document.documentElement.classList.toggle('jm-way', i >= 0);
+    if (JOURNEY.focus === o.id && !VIEW.phone) stepsFocus(o.id, i < 0 ? f.view : FIND_PLAY.way.wide);
     tally.textContent = i < 0 ? '' : i === CRAFTS.length ? findFormat(FIND_COPY.wayAll, { names: STOPS.filter((s, j) => mask[j]).map(s => s.short + ', ' + s.dates).join('; ') }) : findFormat(FIND_COPY.wayTally, { craft: FIND_COPY.crafts[i], n: mask.filter(Boolean).length, t: STOPS.length });
     o.retract = o.lines.map(l => l.v); o.lineTs = FD.now; o.linePhase = 'retract'; if (FD.rm || o.retract.every(v => v === 0)) { startLines(); if (FD.rm) o.lines.forEach(l => l.v = l.lit ? 1 : 0); }
   };

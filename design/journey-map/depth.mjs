@@ -162,7 +162,7 @@ function depthAir(st, look, pointer, fine) {
   const c = DP.ac, w = VIEW.w, h = VIEW.h, small = Math.min(w, h), L = DEPTH.light, M = DEPTH.mist, D = DEPTH.deck;
   c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w, h);
   const trav = toScreen(st, st.trav || MAP.waypoints[0]), pt = fine ? [pointer[0] * w, pointer[1] * h] : null;
-  const v = L.on ? smooth(0, 1, st.pushT) * (1 - L.card * st.cardOpen) * (1 - smooth(...L.rush, st.rushT)) * (st.visiting ? L.visit : 1) : 0;
+  const v = L.on ? smooth(0, 1, st.pushT) * (1 - L.card * st.cardOpen) * (1 - smooth(...L.rush, st.rushT)) * lerp(1, L.visit, st.focusK ?? (st.visiting ? 1 : 0)) : 0;
   const B = DP.beam, beam = B && v > 0 ? { p: toScreen(st, [B.x, B.y]), radius: B.reach * st.cam.s, angle: B.angle, half: B.half, soft: B.soft } : null;
   DP.light = { trav, pointer: pt, r: L.r * small, pr: L.ptrR * small, v, beam };
   if (v > 0) {
@@ -193,7 +193,7 @@ function depthAir(st, look, pointer, fine) {
       const start = lerp(field[0], field[2], u[0]), x = deck ? start : field[0] + ((start - field[0] + DP.wind * (0.5 + a)) % width + width) % width;
       const p = depthPoint(st, [x, lerp(field[1], field[3], u[1])], a, look), radius = depthRange(layer.r, u[3]) * p.s, rx = radius * depthRange(layer.stretch, u[4]);
       if (p.x + rx < 0 || p.x - rx > w || p.y + rx < 0 || p.y - rx > h) continue;
-      let alpha = deck ? depthDeckAlpha(st, a) : depthRange(layer.alpha, u[6]) * depthVisibility(p.k, layer);
+      let alpha = deck ? depthDeckAlpha(st, a) * (1 - (st.focusK || 0)) : depthRange(layer.alpha, u[6]) * depthVisibility(p.k, layer);
       if (!deck) {
         const wrap = DEPTH.field.wrapFade, fade = smooth(0, wrap, x - field[0]) * (1 - smooth(width - wrap, width, x - field[0]));
         alpha *= fade * lightAt(p.x, p.y) * st.dim * (M.thin + (1 - M.thin) * smooth(...M.near, Math.hypot(p.x - trav[0], p.y - trav[1]) / small));
@@ -219,7 +219,7 @@ function depthSky(st, look, time) {
   });
   const flight = Rv.on && st.kind === 'leg' && Rv.legs.includes(st.i) ? clamp01((st.t - Rv.from) / (Rv.to - Rv.from)) : 0;
   DP.birds.forEach((bird, i) => {
-    const alpha = smooth(0, Rv.ramp, flight) * (1 - smooth(1 - Rv.ramp, 1, flight)) * depthSeaFade(st);
+    const alpha = smooth(0, Rv.ramp, flight) * (1 - smooth(1 - Rv.ramp, 1, flight)) * depthSeaFade(st) * (1 - (st.focusK || 0));
     bird.el.style.opacity = alpha; if (!alpha) return;
     const A = MAP.waypoints[STOPS[st.i].w], B = MAP.waypoints[STOPS[st.i + 1].w], dx = B[0] - A[0], dy = B[1] - A[1], len = Math.hypot(dx, dy), d = [dx / len, dy / len], normal = [-d[1], d[0]];
     const start = [A[0] + normal[0] * Rv.side, A[1] + normal[1] * Rv.side], end = [B[0] - normal[0] * Rv.side, B[1] - normal[1] * Rv.side];

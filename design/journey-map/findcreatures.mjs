@@ -33,7 +33,7 @@ export function findRavens(svg) {
     if (index === 0) {
       const stop = STOPS[o.thoughts % STOPS.length]; o.thoughts++; o.tally = Math.min(STOPS.length, o.thoughts); o.kept = true;
       scratches.forEach((s, i) => attr(s, 'opacity', i < o.tally ? R.tallyAlpha : 0));
-      showPop(o, [f.x, f.y - Math.abs(R.perches[0][1]) * R.scale], `<p class="pop-k">${fEsc(FIND_COPY.huginn)}<br>${fEsc(findFormat(FIND_COPY.ravenFrom, { name: stop.short }))}</p><p class="pop-t">${fEsc(stop.copy.took)}</p><p class="pop-k">${fEsc(stop.dates)}</p>`);
+      showPop(o, [f.x, f.y - R.popupAt * R.scale], `<p class="pop-k">${fEsc(FIND_COPY.huginn)}<br>${fEsc(findFormat(FIND_COPY.ravenFrom, { name: stop.short }))}</p><p class="pop-t">${fEsc(stop.copy.took)}</p><p class="pop-k">${fEsc(stop.dates)}</p>`);
     } else reel();
   };
   o.tick = (t, dt) => {

@@ -271,6 +271,11 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 /* Part A kit: sizes are set from FIND_PLAY, including the popup's animated inner. */
 .mk.found circle { fill: var(--red); }
 .mk.found text { fill: var(--ink); }
+.mk { transition: opacity .3s; }
+.jm-focus .mk { opacity: 0; }
+#b-detail text { transition: opacity .4s; }
+.jm-focus #b-detail text { opacity: .3; }
+.jm-focus.jm-way #b-detail text { opacity: 1; }
 .wf-arm.on .l { stroke-width: var(--find-arm); }
 .tl-blk.craft-lit { outline: var(--find-slot-rule) solid var(--paper); }
 .pop-in { position: relative; transform: none; max-width: min(var(--find-pop-w), calc(100vw - var(--find-pop-edge) * 2)); width: max-content; border-radius: var(--find-pop-r); padding: var(--find-pop-pad); font-size: var(--find-pop-font); line-height: var(--find-pop-line); transform-origin: center bottom; }
@@ -1203,11 +1208,11 @@ const FIND_PLAY = {
     'find-box-42-width': '100%',
     'find-box-43-height': '100%',
     'find-box-44-width': '360px',
-    'find-box-45-aspect-ratio': '16 / 9',
+    'find-box-45-aspect-ratio': '16 / 11',
     'find-box-46-border': '1px solid var(--paper)',
     'find-box-47-border-radius': '6px',
     'find-box-48-left': '50%',
-    'find-box-49-top': '50%',
+    'find-box-49-top': '36%',
     'find-box-50-width': '46px',
     'find-box-51-height': '46px',
     'find-box-52-margin': '-23px',
@@ -1321,7 +1326,7 @@ const FIND_PLAY = {
   },
   star: { time: 0.75, arc: 46, bump: 0.3, size: 14, peak: 1.3 },
   kit: { margin: 40, rad: 70, shipY: 5, starZ: 7, dt: 0.05, popup: { scale: 0.6, over: 1.08, time: 0.22, edge: 8, tail: [10, 6], width: 240, radius: 10, pad: [10, 14], font: 13, line: 1.4, kicker: 9.5, gap: 4 }, slot: { font: 11, weight: 500, border: 1, pad: 6 }, target: 17, sheet: { from: 0.06, edge: 24, grow: 0.35, offset: 20 }, deg: 180, turn: 360 },
-  way: { stiff: 90, damp: 9, near: 70, line: 0.45, gap: 0.1, short: 9, ping: 0.5, runes: 0.6, spin: 0.8, timelineDim: 0.35, lineWidth: 1,
+  way: { stiff: 90, damp: 9, near: 70, line: 0.45, gap: 0.1, short: 9, ping: 0.5, runes: 0.6, spin: 0.8, timelineDim: 0.35, lineWidth: 1, wide: [300, 480, 250, 0],
     drift: [0.8, 4, 0.31, 2], dim: 0.55, armWidth: 2.2, pulse: [1.12, 0.25], dash: [2, 4], alpha: 0.6, solidAlpha: 0.9, pingR: [6, 14], pingAlpha: 0.7, tally: [22, 5.2, 1], ring: [4, 9, 1.6], allSpeed: 40, hub: 6,
   },
   hoard: { hole: [12, 20, 27], rise: 0.28, over: 1.6, repeat: 0.3, rattle: 0.36, openHold: 0.3, near: 26, glint: [5, 8],
@@ -1329,10 +1334,10 @@ const FIND_PLAY = {
     pilePath: 'M14 2q6 -10 13 0z',
   },
   raven: { near: 30, shy: 3, preen: [6, 10], out: 0.9, away: 0.5, back: 0.9, reach: 150, rise: 1.4, flap: 5, land: 0.15, loop: 1.2,
-    headAt: [5, -9], wingNearX: 2, scale: 0.72, birdScale: 0.85, perches: [[-5.5, -34], [6, -33.5]], attend: 120, bend: 26, fade: 0.65, tilt: 25, squash: 0.85, preenAngle: 70, preenTime: 0.5, ruffle: [1.1, 0.3], headLimit: 35, headEase: 6, idle: [0.7, 0.43], feathers: 2, hearReach: 40, wingNear: [1, -0.5], wingFar: [0.9, -0.45], wingY: -3.5, strip: [4, 1.6], frame: [4, 3], beak: [15, -2], tallyAlpha: 0.9,
+    headAt: [5, -9], wingNearX: 2, scale: 0.72, birdScale: 0.85, perches: [[-5.5, -34], [6, -33.5]], popupAt: 52, attend: 120, bend: 26, fade: 0.65, tilt: 25, squash: 0.85, preenAngle: 70, preenTime: 0.5, ruffle: [1.1, 0.3], headLimit: 35, headEase: 6, idle: [0.7, 0.43], feathers: 2, hearReach: 40, wingNear: [1, -0.5], wingFar: [0.9, -0.45], wingY: -3.5, strip: [4, 1.6], frame: [4, 3], beak: [15, -2], tallyAlpha: 0.9,
     tally: ['M13 -8V-1', 'M15.5 -8V-1', 'M18 -8V-1', 'M20.5 -8V-1', 'M11.5 -2.5L22 -6.5', 'M24.5 -8V-1'],
     fly: ['M-2 -3Q-4 -17 5 -22L4.5 -17L8.5 -17.5L6 -13L9.5 -12.5Q5 -6 2 -3.5Z', 'M-11 -1L-19 -4.5L-20 -.5L-18.5 3L-11 1.5Z', 'M-12 0Q-6 -5.5 3 -5.5Q8 -5.5 10.5 -3.5L15 -2L10.5 -.8Q6 3 -3 2.2Q-9 2 -12 0Z', 'M0 -3.5Q1 -18 12 -23L10.5 -17.8L15 -18L11.5 -13.5L15 -12.5L11 -9.5Q7 -4.5 4.5 -2.5Z'], eye: [8.6, -3.4, 0.5],
-    reel: { ringSvg: '<svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16"/><circle class="ring-p" cx="20" cy="20" r="16" pathLength="100" stroke-dasharray="100 100"/></svg>', timeJoin: ' / ', iris: 414, width: 360, ratio: [16, 9], motion: [1.3, 0.4, 2, 60, 1.1, 0.3, 22, 40], ring: 100, tc: '00:0{n} / {end}', labelTop: 12, slotBottom: 36 },
+    reel: { ringSvg: '<svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16"/><circle class="ring-p" cx="20" cy="20" r="16" pathLength="100" stroke-dasharray="100 100"/></svg>', timeJoin: ' / ', iris: 440, width: 360, ratio: [16, 11], motion: [1.3, 0.4, 2, 60, 1.1, 0.3, 22, 40], ring: 100, tc: '00:0{n} / {end}', labelTop: 12, slotBottom: 36 },
   },
   serpent: { spots: [[486, 98], [372, 84], [470, 56]], bob: [1.6, 3.2], near: 34, tongue: [0.25, 0.7], flinch: 0.12,
     swim: [0.9, 0.65, 0.45], speed: [1, 0.8, 0.6], bulge: 14, gulp: [0.14, 0.26, 1.18], settle: 6, breathe: [0.8, 4.8], wake: 0.2,
@@ -1770,6 +1775,7 @@ function tripFocus(st, view, k) {
   const s = st.cam.s * (target / st.cam.s) ** k;
   st.cam = { s, tx: lerp(before[0], at[0], k) - x * s, ty: lerp(before[1], at[1], k) - y * s, ax: lerp(st.cam.ax, at[0], k), ay: lerp(st.cam.ay, at[1], k) };
   st.cardK = st.cardK.map(v => v * (1 - k)); st.cardOpen *= 1 - k; st.dim = lerp(st.dim, 1, k);
+  st.focusK = k;
 }
 
 // ---- depth.mjs ----
@@ -1936,7 +1942,7 @@ function depthAir(st, look, pointer, fine) {
   const c = DP.ac, w = VIEW.w, h = VIEW.h, small = Math.min(w, h), L = DEPTH.light, M = DEPTH.mist, D = DEPTH.deck;
   c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w, h);
   const trav = toScreen(st, st.trav || MAP.waypoints[0]), pt = fine ? [pointer[0] * w, pointer[1] * h] : null;
-  const v = L.on ? smooth(0, 1, st.pushT) * (1 - L.card * st.cardOpen) * (1 - smooth(...L.rush, st.rushT)) * (st.visiting ? L.visit : 1) : 0;
+  const v = L.on ? smooth(0, 1, st.pushT) * (1 - L.card * st.cardOpen) * (1 - smooth(...L.rush, st.rushT)) * lerp(1, L.visit, st.focusK ?? (st.visiting ? 1 : 0)) : 0;
   const B = DP.beam, beam = B && v > 0 ? { p: toScreen(st, [B.x, B.y]), radius: B.reach * st.cam.s, angle: B.angle, half: B.half, soft: B.soft } : null;
   DP.light = { trav, pointer: pt, r: L.r * small, pr: L.ptrR * small, v, beam };
   if (v > 0) {
@@ -1967,7 +1973,7 @@ function depthAir(st, look, pointer, fine) {
       const start = lerp(field[0], field[2], u[0]), x = deck ? start : field[0] + ((start - field[0] + DP.wind * (0.5 + a)) % width + width) % width;
       const p = depthPoint(st, [x, lerp(field[1], field[3], u[1])], a, look), radius = depthRange(layer.r, u[3]) * p.s, rx = radius * depthRange(layer.stretch, u[4]);
       if (p.x + rx < 0 || p.x - rx > w || p.y + rx < 0 || p.y - rx > h) continue;
-      let alpha = deck ? depthDeckAlpha(st, a) : depthRange(layer.alpha, u[6]) * depthVisibility(p.k, layer);
+      let alpha = deck ? depthDeckAlpha(st, a) * (1 - (st.focusK || 0)) : depthRange(layer.alpha, u[6]) * depthVisibility(p.k, layer);
       if (!deck) {
         const wrap = DEPTH.field.wrapFade, fade = smooth(0, wrap, x - field[0]) * (1 - smooth(width - wrap, width, x - field[0]));
         alpha *= fade * lightAt(p.x, p.y) * st.dim * (M.thin + (1 - M.thin) * smooth(...M.near, Math.hypot(p.x - trav[0], p.y - trav[1]) / small));
@@ -1993,7 +1999,7 @@ function depthSky(st, look, time) {
   });
   const flight = Rv.on && st.kind === 'leg' && Rv.legs.includes(st.i) ? clamp01((st.t - Rv.from) / (Rv.to - Rv.from)) : 0;
   DP.birds.forEach((bird, i) => {
-    const alpha = smooth(0, Rv.ramp, flight) * (1 - smooth(1 - Rv.ramp, 1, flight)) * depthSeaFade(st);
+    const alpha = smooth(0, Rv.ramp, flight) * (1 - smooth(1 - Rv.ramp, 1, flight)) * depthSeaFade(st) * (1 - (st.focusK || 0));
     bird.el.style.opacity = alpha; if (!alpha) return;
     const A = MAP.waypoints[STOPS[st.i].w], B = MAP.waypoints[STOPS[st.i + 1].w], dx = B[0] - A[0], dy = B[1] - A[1], len = Math.hypot(dx, dy), d = [dx / len, dy / len], normal = [-d[1], d[0]];
     const start = [A[0] + normal[0] * Rv.side, A[1] + normal[1] * Rv.side], end = [B[0] - normal[0] * Rv.side, B[1] - normal[1] * Rv.side];
@@ -3109,6 +3115,7 @@ function findCapture(e) {
 
 
 
+
 const wayAllStops = () => STOPS.map(s => CRAFTS.every(c => s.crafts.includes(c)));
 function findWay(svg) {
   const f = FIND_BY.wayfinder, el = svg.querySelector('#f-wayfinder'), needle = el.querySelector('.wf-needle'), words = [...el.querySelectorAll('.wf-word')], arms = [...el.querySelectorAll('.wf-arm')], runes = el.querySelector('.wf-runes'), tally = el.querySelector('.wf-tally'), ring = el.querySelector('.wf-all');
@@ -3136,6 +3143,9 @@ function findWay(svg) {
     const mask = i < 0 ? null : i === CRAFTS.length ? wayAllStops() : STOPS.map(s => s.crafts.includes(CRAFTS[i]));
     if (i >= 0) { o.kept = true; if (i < CRAFTS.length && !o.picked.includes(i)) o.picked.push(i); o.unlocked = o.picked.length === CRAFTS.length && wayAllStops().some(Boolean); found(o.id); opened(o); }
     applyMask(mask);
+    // With a craft chosen the lines have to be seen arriving, so on a wide screen the camera pulls back for them.
+    document.documentElement.classList.toggle('jm-way', i >= 0);
+    if (JOURNEY.focus === o.id && !VIEW.phone) stepsFocus(o.id, i < 0 ? f.view : FIND_PLAY.way.wide);
     tally.textContent = i < 0 ? '' : i === CRAFTS.length ? findFormat(FIND_COPY.wayAll, { names: STOPS.filter((s, j) => mask[j]).map(s => s.short + ', ' + s.dates).join('; ') }) : findFormat(FIND_COPY.wayTally, { craft: FIND_COPY.crafts[i], n: mask.filter(Boolean).length, t: STOPS.length });
     o.retract = o.lines.map(l => l.v); o.lineTs = FD.now; o.linePhase = 'retract'; if (FD.rm || o.retract.every(v => v === 0)) { startLines(); if (FD.rm) o.lines.forEach(l => l.v = l.lit ? 1 : 0); }
   };
@@ -3275,7 +3285,7 @@ function findRavens(svg) {
     if (index === 0) {
       const stop = STOPS[o.thoughts % STOPS.length]; o.thoughts++; o.tally = Math.min(STOPS.length, o.thoughts); o.kept = true;
       scratches.forEach((s, i) => attr(s, 'opacity', i < o.tally ? R.tallyAlpha : 0));
-      showPop(o, [f.x, f.y - Math.abs(R.perches[0][1]) * R.scale], `<p class="pop-k">${fEsc(FIND_COPY.huginn)}<br>${fEsc(findFormat(FIND_COPY.ravenFrom, { name: stop.short }))}</p><p class="pop-t">${fEsc(stop.copy.took)}</p><p class="pop-k">${fEsc(stop.dates)}</p>`);
+      showPop(o, [f.x, f.y - R.popupAt * R.scale], `<p class="pop-k">${fEsc(FIND_COPY.huginn)}<br>${fEsc(findFormat(FIND_COPY.ravenFrom, { name: stop.short }))}</p><p class="pop-t">${fEsc(stop.copy.took)}</p><p class="pop-k">${fEsc(stop.dates)}</p>`);
     } else reel();
   };
   o.tick = (t, dt) => {
