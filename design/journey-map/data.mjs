@@ -285,6 +285,7 @@ export const HOLD = { zoomIn: [0, 0.18], zoomOut: [0.86, 1], open: [0.1, 0.32], 
 
 // Clock-driven journey. Pace and animation durations are seconds.
 export const STEPS = {
+  carry: { min: 0.35, hurryMin: 0.45, acceleration: 1.2, hurryAcceleration: 3, searchStep: 0.05, sample: 0.016, searchMax: 30 },
   scroll: { ease: 0.12, settle: 0.4, threshold: 0.12, flick: 0.5, slop: 6, line: 16, velocityWindow: 80 },
   glide: { seconds: [2.6, 4.2], ease: 'cosine-ramp', ramp: 0.18, cruiseSwell: 0.05, distancePower: 0.5, fold: 0.5, open: 0.5, openWindow: 0.6,
     zoomOut: 0.26, zoomLength: 160, overviewDistance: 300, controls: 8, samples: 2048 },

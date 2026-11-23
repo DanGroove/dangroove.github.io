@@ -698,6 +698,7 @@ const HOLD = { zoomIn: [0, 0.18], zoomOut: [0.86, 1], open: [0.1, 0.32], fold: [
 
 // Clock-driven journey. Pace and animation durations are seconds.
 const STEPS = {
+  carry: { min: 0.35, hurryMin: 0.45, acceleration: 1.2, hurryAcceleration: 3, searchStep: 0.05, sample: 0.016, searchMax: 30 },
   scroll: { ease: 0.12, settle: 0.4, threshold: 0.12, flick: 0.5, slop: 6, line: 16, velocityWindow: 80 },
   glide: { seconds: [2.6, 4.2], ease: 'cosine-ramp', ramp: 0.18, cruiseSwell: 0.05, distancePower: 0.5, fold: 0.5, open: 0.5, openWindow: 0.6,
     zoomOut: 0.26, zoomLength: 160, overviewDistance: 300, controls: 8, samples: 2048 },
@@ -3260,14 +3261,86 @@ function stepsCancel() {
   SC.move = null; SC.cut = null; SC.fill = 0;
   if (SC.cover) { SC.cover.style.opacity = 0; SC.cover.hidden = true; }
 }
-function stepsPlay(target) {
+function stepsPlay(target, next = false) {
   const p = stepsClamp(target);
-  if (SC.move && Math.abs(SC.move.P1 - p) < 1e-6) {
-    const left = SC.move.D - SC.move.elapsed;
-    const move = glideMove(SC.P, p) || paceMove(SC.P, p);
-    SC.move = { ...move, D: Math.min(left, STEPS.hurry), elapsed: 0, hurry: true, baseFill: SC.fill };
-  } else SC.move = { ...(glideMove(SC.P, p) || paceMove(SC.P, p)), elapsed: 0, baseFill: 0 };
+  SC.move = SC.move ? stepsCarry(SC.move, p, next && Math.abs(SC.move.P1 - p) < 1e-6) : { ...(glideMove(SC.P, p) || paceMove(SC.P, p)), elapsed: 0, baseFill: 0 };
   SC.root.dataset.beat = ''; stepsButtons();
+}
+// Exact position and derivative of the active clock. Camera/cards remain pure P functions.
+function stepsCarryAt(move, q, speed = false) {
+  const u = 1 - q, B = [u ** 5, 5 * u ** 4 * q, 10 * u ** 3 * q * q, 10 * u * u * q ** 3, 5 * u * q ** 4, q ** 5];
+  const N = B.reduce((s, b, i) => s + b * move.points[i], 0), Z = B.reduce((s, b, i) => s + b * move.weights[i], 0);
+  if (!speed) return N / Z;
+  const dB = [u ** 4, 4 * u ** 3 * q, 6 * u * u * q * q, 4 * u * q ** 3, q ** 4];
+  const dN = 5 * dB.reduce((s, b, i) => s + b * (move.points[i + 1] - move.points[i]), 0), dZ = 5 * dB.reduce((s, b, i) => s + b * (move.weights[i + 1] - move.weights[i]), 0);
+  return (dN * Z - N * dZ) / (move.D * Z * Z);
+}
+function stepsMoveAt(move, t) {
+  if (t <= 0) return move.P0;
+  if (t >= move.D) return move.P1;
+  const q = t / move.D;
+  return move.carry ? move.P0 + stepsCarryAt(move, q) : move.glide ? lerp(move.P0, move.P1, q) : paceAt(move, t);
+}
+function stepsMoveSpeed(move, t) {
+  if (t < 0 || t > move.D) return 0;
+  const q = t / move.D;
+  if (move.carry) return stepsCarryAt(move, q, true);
+  if (move.glide) return (move.P1 - move.P0) / move.D;
+  const r = Math.min(.5, STEPS.ramp / move.D), slope = q < r ? q / r : q > 1 - r ? (1 - q) / r : 1;
+  const T = move.T0 + (move.T1 - move.T0) * paceEase(q, move.D);
+  const part = PACE_PARTS.find(s => move.T1 > move.T0 ? T < s.t + s.seconds : T <= s.t + s.seconds) || PACE_PARTS.at(-1);
+  return (part.b - part.a) / part.seconds * (move.T1 - move.T0) / move.D * slope / (1 - r);
+}
+function stepsCarryCurve(P0, P1, D, v0, v1, lo, hi) {
+  // One rational quintic Hermite curve, with exact endpoint velocities and zero
+  // endpoint P acceleration. Positive weights shorten handles near a beat while
+  // keeping those derivatives. Its entire control hull stays in the stretch.
+  const room0 = v0 > 0 ? hi - P0 : P0 - lo, room1 = v1 > 0 ? P1 - lo : hi - P1;
+  if (P1 < lo || P1 > hi || v0 && room0 <= 0 || v1 && room1 <= 0) return null;
+  const w = Math.max(1, v0 ? Math.abs(v0) * D / (5 * room0) : 1, v1 ? Math.abs(v1) * D / (5 * room1) : 1), delta = P1 - P0;
+  const z = Math.max(1, v0 ? Math.abs(v0) * D * (5 * w - 1) / (10 * room0) : 1, v1 ? Math.abs(v1) * D * (5 * w - 1) / (10 * room1) : 1);
+  const handle = (5 * w - 1) / (10 * z), weights = [1, w, z, z, w, 1];
+  const points = [0, v0 * D / (5 * w), v0 * D * handle, delta - v1 * D * handle, delta - v1 * D / (5 * w), delta];
+  return { weights, points: points.map((p, i) => p * weights[i]) };
+}
+function stepsCarryGate(move, old) {
+  const dt = STEPS.carry.sample;
+  if (!move.glide) {
+    // Pace-score continuity uses the uninterrupted move's largest 16 ms speed change.
+    let largest = 0, before = stepsMoveSpeed(old, 0);
+    for (let t = dt; t < old.D + dt; t += dt) { const v = stepsMoveSpeed(old, Math.min(t, old.D)); largest = Math.max(largest, Math.abs(v - before)); before = v; }
+    return Math.abs(stepsMoveSpeed(move, dt) - stepsMoveSpeed(old, old.elapsed - dt)) <= largest + 1e-9;
+  }
+  const points = [[.5,.5],[.25,.25],[.75,.25],[.25,.75],[.75,.75]].map(p => [p[0] * VIEW.w, p[1] * VIEW.h]);
+  const velocity = (a, b) => points.map(p => [(b.tx + (p[0] - a.tx) * b.s / a.s - p[0]) / dt, (b.ty + (p[1] - a.ty) * b.s / a.s - p[1]) / dt]);
+  let camera = tripState(move.P0).cam;
+  let speed = velocity(tripState(stepsMoveAt(old, old.elapsed - dt)).cam, camera);
+  const limit = VIEW.w * (move.hurry ? STEPS.carry.hurryAcceleration : STEPS.carry.acceleration);
+  for (let t = dt; t < move.D + 2 * dt; t += dt) {
+    const next = tripState(stepsMoveAt(move, t)).cam, v = velocity(camera, next);
+    if (!v.flat().every(Number.isFinite) || Math.hypot(...v[0].map((x, k) => (x - speed[0][k]) / dt)) > limit) return false;
+    camera = next; speed = v;
+  }
+  return true;
+}
+function stepsCarry(old, target, hurry) {
+  const cfg = STEPS.carry, normal = glideMove(SC.P, target) || paceMove(SC.P, target);
+  const left = old.D - old.elapsed;
+  const g = normal.glide && GLIDES.find(g => SC.P >= g.a && SC.P <= g.b && target >= g.a && target <= g.b);
+  const lo = BEATS.filter(b => b.P <= SC.P).at(-1).P, hi = BEATS.find(b => b.P > SC.P)?.P ?? stepsEnd;
+  const v0 = stepsMoveSpeed(old, old.elapsed), v1 = g ? Math.sign(target - SC.P) * (g.b - g.a) / glideSeconds(g) : 0;
+  const start = hurry ? cfg.hurryMin : Math.max(cfg.min, normal.D);
+  for (let n = 0; ; n++) {
+    const D = start + n * cfg.searchStep;
+    if (D > cfg.searchMax || hurry && D >= left) break;
+    const curve = stepsCarryCurve(SC.P, target, D, v0, v1, g ? g.a : lo, g ? g.b : hi);
+    if (!curve) break;
+    const move = { ...normal, ...curve, D, carry: true, hurry, elapsed: 0, baseFill: hurry ? SC.fill : 0 };
+    if (stepsCarryGate(move, old)) return move;
+  }
+  // An arbitrarily late hurry cannot both last >= hurryMin and arrive earlier.
+  // Keep the current curve if no bounded candidate satisfies all constraints.
+  return old;
 }
 function stepsJump(target, after) {
   if (target !== stepsEnd) exploreDepart();
@@ -3282,7 +3355,7 @@ function stepsNavigate(target, opts = {}) {
   if (opts.instant) { if (target !== stepsEnd) exploreReset(); stepsCancel(); SC.P = stepsClamp(target); if (SC.restoreP !== null) SC.restoreP = SC.P; stepsArrive(); return; }
   const lo = Math.min(SC.P, target), hi = Math.max(SC.P, target);
   if (opts.jump || (!opts.move && BEATS.some(b => b.P > lo + 1e-6 && b.P < hi - 1e-6))) stepsJump(target);
-  else { if (target !== stepsEnd) exploreReset(); stepsPlay(target); }
+  else { if (target !== stepsEnd) exploreReset(); stepsPlay(target, opts.next); }
 }
 function stepsGo(id, opts = {}) {
   if (SC.cut) return;
@@ -3291,7 +3364,7 @@ function stepsGo(id, opts = {}) {
 }
 function stepsNext() {
   if (SC.cut) return;
-  stepsRelease(); const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true, start: true });
+  stepsRelease(); const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true, start: true, next: true });
   stepsButtons();
 }
 function stepsBack() {
@@ -3334,8 +3407,7 @@ function stepsFrame(ts) {
   if (move) {
     move.elapsed = Math.min(move.D, move.elapsed + dt);
     const q = move.D ? move.elapsed / move.D : 1;
-    const fraction = move.hurry ? 1 - Math.pow(1 - q, 3) : q;
-    SC.P = move.glide ? lerp(move.P0, move.P1, fraction) : move.hurry ? paceP(move.T0 + (move.T1 - move.T0) * fraction) : paceAt(move, move.elapsed);
+    SC.P = stepsMoveAt(move, move.elapsed);
     SC.fill = move.baseFill + (1 - move.baseFill) * q;
     if (q >= 1) { SC.P = move.P1; SC.move = null; stepsArrive(); }
   } else if (cut) {

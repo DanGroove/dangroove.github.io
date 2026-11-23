@@ -153,6 +153,31 @@ for(const [w,h,tl] of [[1440,900,120],[390,844,96]]){
 const rush=SEQ.find(s=>s.kind==='rush'),rest=SEQ.find(s=>s.kind==='rest');JOURNEY.set(rush.a);stepsFrame(stepClock+=50);stepAssert(!go.hidden,'X beat needs its Dig control');go.querySelector('.go-next').focus();JOURNEY.next();stepAssert(go.hidden,'rush start must hide stepper');
 for(let P=rush.a+.001;P<rest.a;P+=1){JOURNEY.set(P);stepsFrame(stepClock+=50);stepAssert(go.hidden,'stepper shown during rush/blast/settle');}
 JOURNEY.set(rest.a);stepsFrame(stepClock+=50);stepAssert(!go.hidden,'settle end must return stepper');stepAssert(document.activeElement===go.querySelector('.go-next'),'stepper main focus must return');
+// D5: compare the cross-press 16 ms velocity change with the same uninterrupted
+// move's largest 16 ms change. A tiny one-sided probe checks the new derivative
+// independently of the runtime derivative and carry builder.
+const continuityFailures=[];
+for(const view of [[1440,900,120],[390,844,96]])for(const test of [{kind:'joined leave',from:'top',at:400},{kind:'joined fall',from:'top',at:1600},{kind:'X rush',from:'x',at:1280}]){
+  stepJoined=true;tripResize(...view);const label=view[0]+' '+test.kind;
+  const from=BEATS.find(b=>b.id===test.from), to=BEATS[BEATS.indexOf(from)+1];
+  JOURNEY.set(from.P);tick(16);JOURNEY.next();
+  let before=JOURNEY.P,lastV=0,largest=0;
+  while(JOURNEY.moving){tick(16);const v=(JOURNEY.P-before)/.016;largest=Math.max(largest,Math.abs(v-lastV));before=JOURNEY.P;lastV=v;}
+  JOURNEY.set(from.P);tick(16);JOURNEY.next();const positions=[JOURNEY.P];
+  for(let ms=16;ms<=test.at;ms+=16){tick(16);positions.push(JOURNEY.P);}
+  const p0=positions.at(-1),incoming=(11*p0-18*positions.at(-2)+9*positions.at(-3)-2*positions.at(-4))/(6*.016),vBefore=(p0-positions.at(-2))/.016;
+  JOURNEY.back();tick(.0001);const outgoing=(JOURNEY.P-p0)/1e-7;tick(16-.0001);
+  const cross=Math.abs((JOURNEY.P-p0)/.016-vBefore);
+  const continuous=Math.abs(incoming-outgoing)<.002&&cross<=largest+1e-6;
+  if(!continuous)continuityFailures.push(label);
+  let high=p0,elapsed=16;for(let n=0;JOURNEY.moving&&n<2000;n++){tick(16);elapsed+=16;high=Math.max(high,JOURNEY.P);stepAssert(JOURNEY.P>=from.P&&JOURNEY.P<=to.P,'pace carry crossed a beat');}
+  console.log(`D5 pace ${label}: incoming ${incoming.toFixed(6)}, outgoing ${outgoing.toFixed(6)} P/s; cross-frame change ${cross.toFixed(6)}, uninterrupted maximum ${largest.toFixed(6)} P/s; arrival ${(elapsed/1000).toFixed(3)} s; ${continuous?'PASS':'FAIL'}`);
+  stepAssert(!JOURNEY.moving&&JOURNEY.P===from.P,'pace carry must arrive exactly');
+  if(high<=p0)continuityFailures.push(label+' did not slow before returning');
+  const settled=JOURNEY.P;tick(32);stepAssert(JOURNEY.P===settled,'pace carry arrival must stay settled');
+}
+stepAssert(continuityFailures.length===0,'D5 pace continuity failed: '+continuityFailures.join(', '));
+console.log('ok: joined leave/fall and X rush Back carry exact dP/dt, meet the uninterrupted 16 ms continuity gate, turn within their beat and settle exactly');
 const beforeRmTouch=stepWindow.listeners.touchstart.length;tripResize(1440,900,120);stepsBuild({stage:stepStage,rm:true,joinedTop:()=>stepJoined});
 window.scrollY=900;stepsFrame(stepClock+=50);stepAssert(JOURNEY.mode==='scroll'&&JOURNEY.P===100,'reduced motion must read native scroll');
 stepAssert(!wheel(100).defaultPrevented&&stepWindow.listeners.touchstart.length===beforeRmTouch,'reduced motion must leave native input alone');
