@@ -4344,7 +4344,9 @@ function findHammer(svg) {
   window.addEventListener('resize', measure);
   window.addEventListener('blur', pause);
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
-  FD.sheet.addEventListener('focusout', e => { if (FD.sheetOwner === o && !FD.sheet.contains(e.relatedTarget)) pause(); });
+  // Chrome and Edge send focusout when a focused button is removed (Start, a rune, Resume), so the check waits until the
+  // press has finished and the field has its focus back; only focus that really left the sheet pauses the run.
+  FD.sheet.addEventListener('focusout', () => { if (FD.sheetOwner === o) setTimeout(() => { if (FD.sheetOwner === o && !FD.sheet.contains(document.activeElement)) pause(); }, 0); });
   FD.sheet.addEventListener('keydown', handleKey); FD.sheet.addEventListener('keyup', handleKey);
   // Also isolate page hotkeys if focus has left the open sheet. Tab remains native.
   window.addEventListener('keydown', e => { if (FD.sheetOwner === o && !FD.sheet.contains(e.target)) { if (e.key !== 'Tab') e.preventDefault(); e.stopImmediatePropagation(); if (e.key === 'Escape') closeSheet(); } }, true);

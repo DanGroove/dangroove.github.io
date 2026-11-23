@@ -233,8 +233,9 @@ key('hammer'); assert.equal(hammerFind.game, game); assert.equal(hammerFind.spri
 const resumeHammer = () => testSheet.querySelector('.hm-resume').dispatchEvent(new TestEvent('click'));
 resumeHammer(); testWindow.dispatchEvent(new TestEvent('blur')); assert.equal(game.paused, true);
 resumeHammer(); testDocument.hidden = true; testDocument.dispatchEvent(new TestEvent('visibilitychange')); assert.equal(game.paused, true); testDocument.hidden = false;
-resumeHammer(); testSheet.querySelector('.hm-canvas').dispatchEvent(new TestEvent('focusout', { relatedTarget: bodyNode })); assert.equal(game.paused, true);
-resumeHammer();
+resumeHammer(); bodyNode.focus(); testSheet.querySelector('.hm-canvas').dispatchEvent(new TestEvent('focusout', { relatedTarget: bodyNode })); await new Promise(r => setTimeout(r, 0)); assert.equal(game.paused, true);
+// Chrome and Edge also send focusout when the pressed button is removed (Start, a rune, Resume); focus that ends inside the sheet does not pause.
+resumeHammer(); testSheet.querySelector('.hm-canvas').focus(); testSheet.querySelector('.hm-canvas').dispatchEvent(new TestEvent('focusout', { relatedTarget: null })); await new Promise(r => setTimeout(r, 0)); assert.equal(game.paused, false);
 // A cleared formation opens three named, keyboard-pickable rune buttons and focuses the first.
 game.foes.forEach(f => f.live = false); game.count = 0; await tick(0.1);
 const runeButtons = testSheet.querySelectorAll('.hm-rune'); assert.equal(runeButtons.length, 3); assert.equal(document.activeElement, runeButtons[0]);
