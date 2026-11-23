@@ -127,8 +127,8 @@ export const COPY = {
 export const FINDS = [
   { id: 'wayfinder', n: 1, x: 102, y: 716, view: [250, 660, 150], viewPhone: [118, 716, 75, 0], mark: [148, 672], label: 'The wayfinder. Pick a craft to light up the stops that used it. Arrow keys turn it, Enter on the centre clears it.' },
   { id: 'hoards', n: 2, x: 366, y: 354, mark: [382, 346], label: 'Hoards. Five buried chests, each near a stop.' },
-  { id: 'ravens', n: 3, x: 442, y: 200, view: [444, 180, 42], mark: [464, 192], label: 'Huginn and Muninn, two ravens in a bare tree. Press to send the next raven for a thought or memory.' },
-  { id: 'serpent', n: 4, x: 500, y: 101, view: [478, 96, 50], mark: [550, 74], label: 'J?rmungandr, the world serpent. Poke it three times to feed it a deadline.' },
+  { id: 'ravens', n: 3, x: 440.5, y: 201.5, view: [442.5, 181.5, 42], mark: [462.5, 193.5], label: 'Huginn and Muninn, two ravens in a bare tree. Press to send the next raven for a thought or memory.' },
+  { id: 'serpent', n: 4, x: 500, y: 101, view: [478, 96, 50], mark: [550, 74], label: 'Jörmungandr, the world serpent. Poke it three times to feed it a deadline.' },
   { id: 'beacon', n: 5, x: 536, y: 514, view: [468, 498, 92], mark: [558, 478], label: 'The beacon. Drag or arrows aim; Enter finds the next unread note.' },
   { id: 'runestone', n: 6, x: 250, y: 516, view: [250, 500, 40], mark: [270, 492], label: 'The rune stone. Press, rub, read, then flip the sheet.' },
   { id: 'hammer', n: 0, x: 112, y: 222, view: [112, 218, 34], label: 'Mjölnir on a stone near Laurier. Press it to hold the bridge.' },
@@ -261,7 +261,7 @@ export const FIND_COPY = {
   wellNone: 'nothing yet', wellMap: 'the whole map', wellNext: 'not yet carved',
   // One short line of what to do, shown above the step buttons while a find has the camera. Draft copy.
   hints: { wayfinder: 'Pick a craft to light the stops that used it.', hoards: 'Dig three times, then open it.', ravens: 'Press to send a raven out.',
-    serpent: 'J?rmungandr, the world serpent. Poke it.', beacon: 'Press the tower for the next note, or drag to aim the beam.', runestone: 'Rub the stone to lift its carving.',
+    serpent: 'Jörmungandr, the world serpent. Poke it.', beacon: 'Press the tower for the next note, or drag to aim the beam.', runestone: 'Rub the stone to lift its carving.',
     hammer: 'Press the hammer to play.', mist: 'Wipe the mist away.', horn: 'Press to raise it, press again to sound it.',
     well: 'Drop a pebble in. The Norns answer.', longship: 'Press to pull the oars.' },
   shipLog: 'The 2023 crossing', longship: { t: '2023: Dan to write this line.', todo: 1 },
@@ -440,9 +440,9 @@ export const RAVEN_RIG = (() => {
     crouch: 0.12, unfold: 0.18, outPower: 1.6, backPower: 2, controls: [[10, -26], [55, -32]], endY: -29,
     turn: 0.12, hysteresis: 0.1, perchTurn: 0.16, settle: 0.2, land: 0.35, level: 0.3,
     dip: 0.15, dipAngle: 25, itemFade: 0.2, offFrame: 12, birdMargin: 18,
-    loopRadius: 24, loopCentre: [20.8, -12], loopTakeoff: 0.2, loopTime: 1.1, loopGap: 0.55,
+    loopRadius: 20, loopCentre: [20, 0], loopTakeoff: 0.2, loopTime: 1.1, loopGap: 0.55,
     returnBeat: 0.35, returnFlaps: 0.7, beat: ['up', 'mid', 'down', 'mid', 'up'],
-    preenMove: [-1.5, 1.5], breathe: [0.012, 2.8], areaTolerance: 0.15,
+    preenMove: [-1.5, 1.5], breathe: [0.012, 2.8],
   };
 })();
 export const FIND_PLAY = {

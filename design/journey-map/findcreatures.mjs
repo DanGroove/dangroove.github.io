@@ -133,7 +133,8 @@ export function findRavens(svg) {
         q.sq = q.sq.map(v => v * (1 + (R.ruffle[0] - 1) * ruffle + breathe));
       }
       if (b.giftDown && !active) {
-        if (FD.popOwner === o || FD.sheetOwner === o) b.giftTs = t;
+        // Only the overlay this bird brought keeps its item: Huginn's popup, Muninn's reel. The other bird's old item stays faded.
+        if (b.i ? FD.sheetOwner === o : FD.popOwner === o) b.giftTs = t;
         b.giftAlpha = FD.rm ? 0 : 1 - clamp01((t - b.giftTs) / G.itemFade); attr(b.item, 'opacity', b.giftAlpha);
       }
       const T = ravenPoseTransforms(q);

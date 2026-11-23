@@ -195,7 +195,7 @@ Every link and button here is inert in the prototype: no `href` to anywhere, no 
 
 ## 13. Performance floor
 
-Animate only transform and opacity on DOM and SVG nodes. One `requestAnimationFrame` loop, paused when the tab is hidden. The star canvas uses the device pixel ratio, capped at 2. Build the map SVG once. Read layout only on load and resize, never inside the frame loop. Aim for a steady 60 frames a second on an ordinary laptop. Keep the unpacked CSS and JavaScript under 300 KB.
+Animate only transform and opacity on DOM and SVG nodes. One `requestAnimationFrame` loop, paused when the tab is hidden. The star canvas uses the device pixel ratio, capped at 2. Build the map SVG once. Read layout only on load and resize, never inside the frame loop. Aim for a steady 60 frames a second on an ordinary laptop. Keep within the compressed (gzip) budgets that `tools/check.mjs` enforces: the map's modules and CSS together 150 KB, the hammer game's rules, find, data and drawings 30 KB, the packed map page 320 KB and the packed joined page 540 KB. (Round 1 of the round 7 critique replaced the old 300 KB unpacked limit, which the eleven finds had outgrown.)
 
 ## 14. Checks to run before you finish
 
