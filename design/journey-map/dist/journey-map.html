@@ -96,48 +96,48 @@ button { font-family: inherit; }
 .mm-stop.on i { background: var(--mk); border-color: var(--mk); }
 
 /* find popups */
-.pop { position: absolute; left: var(--find-box-1-left); top: var(--find-box-2-top); z-index: var(--find-box-3-z-index); pointer-events: none; display: none; }
+.pop { position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none; display: none; }
 .pop.on { display: block; }
-.pop-in { position: absolute; transform: var(--find-box-4-transform); width: max-content; max-width: var(--find-box-5-max-width); background: var(--ink); border: var(--find-box-6-border); border-radius: var(--find-box-7-border-radius); padding: var(--find-box-8-padding); font-size: var(--find-box-9-font-size); line-height: var(--find-box-10-line-height); color: var(--paper); pointer-events: auto; }
-.pop p { margin: var(--find-box-11-margin); }
-.pop-k { font-size: var(--find-box-12-font-size); letter-spacing: var(--find-box-13-letter-spacing); text-transform: uppercase; color: var(--dim); margin-bottom: var(--find-box-14-margin-bottom); }
-.pop-t { font-weight: var(--find-box-15-font-weight); }
-.pop-big { font-size: var(--find-box-16-font-size); font-weight: var(--find-box-17-font-weight); }
-.pop-late { margin-top: var(--find-box-18-margin-top); animation: var(--find-box-19-animation); }
-@keyframes popLate { from { opacity: var(--find-box-20-opacity); transform: var(--find-box-21-transform); } }
-.pop.card img { display: block; width: var(--find-box-22-width); aspect-ratio: var(--find-box-23-aspect-ratio); object-fit: cover; border-radius: var(--find-box-24-border-radius); margin: var(--find-box-25-margin); }
-.pop-link { margin-top: var(--find-box-26-margin-top); padding: var(--find-box-27-padding); border: var(--find-box-28-border); background: none; color: var(--paper); font-weight: var(--find-box-29-font-weight); font-size: var(--find-box-30-font-size); display: inline-flex; gap: var(--find-box-31-gap); align-items: center; text-decoration: underline; text-underline-offset: var(--find-box-32-text-underline-offset); cursor: pointer; }
-.sheet { position: absolute; left: var(--find-box-33-left); top: var(--find-box-34-top); z-index: var(--find-box-35-z-index); pointer-events: none; display: none; transform-origin: var(--find-box-36-transform-origin); }
+.pop-in { position: absolute; transform: translate(-50%, calc(-100% - 8px)); width: max-content; max-width: 240px; background: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 13px; line-height: 1.4; color: var(--paper); pointer-events: auto; }
+.pop p { margin: 0; }
+.pop-k { font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin-bottom: 4px !important; }
+.pop-t { font-weight: 600; }
+.pop-big { font-size: 18px; font-weight: 800; }
+.pop-late { margin-top: 4px !important; animation: popLate .4s 1.1s both; }
+@keyframes popLate { from { opacity: 0; transform: translateY(4px); } }
+.pop.card img { display: block; width: 210px; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 4px; margin: 4px 0 8px; }
+.pop-link { margin-top: 8px; padding: 0; border: 0; background: none; color: var(--paper); font-weight: 700; font-size: 12.5px; display: inline-flex; gap: 6px; align-items: center; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.sheet { position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none; display: none; transform-origin: 0 0; }
 .sheet.on { display: block; }
-.iris { position: absolute; width: var(--find-box-37-width); height: var(--find-box-38-height); left: var(--find-box-39-left); top: var(--find-box-40-top); border-radius: var(--find-box-41-border-radius); overflow: hidden; pointer-events: auto; }
-.iris-in { width: var(--find-box-42-width); height: var(--find-box-43-height); display: grid; place-items: center; }
-.player { position: relative; width: var(--find-box-44-width); aspect-ratio: var(--find-box-45-aspect-ratio); background: var(--screenBg); border: var(--find-box-46-border); border-radius: var(--find-box-47-border-radius); overflow: hidden; }
-.sh { position: absolute; left: var(--find-box-48-left); top: var(--find-box-49-top); }
-.sh1 { width: var(--find-box-50-width); height: var(--find-box-51-height); margin: var(--find-box-52-margin); border-radius: var(--find-box-53-border-radius); background: var(--note); }
-.sh2 { width: var(--find-box-54-width); height: var(--find-box-55-height); margin: var(--find-box-56-margin); background: var(--paper); }
-.sh3 { width: var(--find-box-57-width); height: var(--find-box-58-height); margin: var(--find-box-59-margin); background: var(--mid); clip-path: var(--find-box-60-clip-path); }
-.ring { position: absolute; right: var(--find-box-61-right); bottom: var(--find-box-62-bottom); width: var(--find-box-63-width); height: var(--find-box-64-height); transform: var(--find-box-65-transform); }
-.ring circle { fill: none; stroke: var(--mid); stroke-width: var(--find-box-66-stroke-width); }
+.iris { position: absolute; width: 414px; height: 414px; left: -207px; top: -207px; border-radius: 50%; overflow: hidden; pointer-events: auto; }
+.iris-in { width: 100%; height: 100%; display: grid; place-items: center; }
+.player { position: relative; width: 360px; aspect-ratio: 16 / 11; background: var(--screenBg); border: 1px solid var(--paper); border-radius: 6px; overflow: hidden; }
+.sh { position: absolute; left: 50%; top: 36%; }
+.sh1 { width: 46px; height: 46px; margin: -23px; border-radius: 50%; background: var(--note); }
+.sh2 { width: 40px; height: 40px; margin: -20px; background: var(--paper); }
+.sh3 { width: 40px; height: 36px; margin: -22px -20px; background: var(--mid); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.ring { position: absolute; right: 10px; bottom: 10px; width: 30px; height: 30px; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke: var(--mid); stroke-width: 3; }
 .ring .ring-p { stroke: var(--paper); }
-.tc { position: absolute; left: var(--find-box-67-left); bottom: var(--find-box-68-bottom); font-size: var(--find-box-69-font-size); font-weight: var(--find-box-70-font-weight); font-variant-numeric: tabular-nums; }
-.pz { position: absolute; width: var(--find-box-71-width); height: var(--find-box-72-height); left: var(--find-box-73-left); top: var(--find-box-74-top); transform-origin: var(--find-box-75-transform-origin); perspective: var(--find-box-76-perspective); pointer-events: auto; }
-.pz-in { position: relative; width: var(--find-box-77-width); height: var(--find-box-78-height); transform-style: var(--find-box-79-transform-style); transition: var(--find-box-80-transition); }
-.pz-in.flip { transform: var(--find-box-81-transform); }
-.pz-front, .pz-back { position: absolute; inset: var(--find-box-82-inset); backface-visibility: hidden; background: var(--paper); color: var(--ink); text-align: center; padding: var(--find-box-83-padding); box-shadow: var(--find-box-84-box-shadow); }
-.pz-back { transform: var(--find-box-85-transform); display: flex; flex-direction: column; justify-content: center; gap: var(--find-box-86-gap); font-size: var(--find-box-87-font-size); font-weight: var(--find-box-88-font-weight); }
-.pz-back p, .pz-front p { margin: var(--find-box-89-margin); }
-.pz-h { display: block; font-size: var(--find-box-90-font-size); font-weight: var(--find-box-91-font-weight); letter-spacing: var(--find-box-92-letter-spacing); line-height: var(--find-box-93-line-height); }
-.pz-pic { position: relative; height: var(--find-box-94-height); margin: var(--find-box-95-margin); background: var(--posterShade); overflow: hidden; }
-.pz-pic i { position: absolute; left: var(--find-box-96-left); top: var(--find-box-97-top); width: var(--find-box-98-width); height: var(--find-box-99-height); margin-left: var(--find-box-100-margin-left); border-radius: var(--find-box-101-border-radius); background: var(--ink); }
-.pz-pic s { position: absolute; left: var(--find-box-102-left); bottom: var(--find-box-103-bottom); width: var(--find-box-104-width); height: var(--find-box-105-height); margin-left: var(--find-box-106-margin-left); border-radius: var(--find-box-107-border-radius); background: var(--ink); }
-.pz-who { display: block; font-size: var(--find-box-108-font-size); font-weight: var(--find-box-109-font-weight); margin-bottom: var(--find-box-110-margin-bottom); }
-.pz-front p { font-size: var(--find-box-111-font-size); line-height: var(--find-box-112-line-height); }
-.pz-rw { display: block; margin-top: var(--find-box-113-margin-top); color: var(--posterRed); font-size: var(--find-box-114-font-size); font-weight: var(--find-box-115-font-weight); }
-.pz-stamp { position: absolute; right: var(--find-box-116-right); bottom: var(--find-box-117-bottom); width: var(--find-box-118-width); height: var(--find-box-119-height); border: var(--find-box-120-border); border-radius: var(--find-box-121-border-radius); display: grid; place-items: center; font-size: var(--find-box-122-font-size); font-weight: var(--find-box-123-font-weight); letter-spacing: var(--find-box-124-letter-spacing); color: var(--posterRed); transform: var(--find-box-125-transform); }
-.pz-pin { position: absolute; left: var(--find-box-126-left); top: var(--find-box-127-top); width: var(--find-box-128-width); height: var(--find-box-129-height); border-radius: var(--find-box-130-border-radius); background: var(--posterRed); } .pz-pin.r { left: auto; right: var(--find-box-131-right); }
-.pz-fold { position: absolute; right: var(--find-box-132-right); bottom: var(--find-box-133-bottom); width: var(--find-box-134-width); height: var(--find-box-135-height); background: var(--posterCorner); clip-path: var(--find-box-136-clip-path); }
-.pz-ctl { position: absolute; top: var(--find-box-137-top); left: var(--find-box-138-left); width: var(--find-box-139-width); display: flex; justify-content: center; gap: var(--find-box-140-gap); pointer-events: auto; }
-.pz-ctl button { background: var(--ink); color: var(--paper); border: var(--find-box-141-border); border-radius: var(--find-box-142-border-radius); padding: var(--find-box-143-padding); font-size: var(--find-box-144-font-size); font-weight: var(--find-box-145-font-weight); cursor: pointer; }
+.tc { position: absolute; left: 12px; bottom: 12px; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pz { position: absolute; width: 300px; height: 400px; left: -150px; top: -200px; transform-origin: 50% 0; perspective: 1400px; pointer-events: auto; }
+.pz-in { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .6s; }
+.pz-in.flip { transform: rotateY(180deg); }
+.pz-front, .pz-back { position: absolute; inset: 0; backface-visibility: hidden; background: var(--paper); color: var(--ink); text-align: center; padding: 22px 26px; box-shadow: 6px 8px 0 color-mix(in srgb, var(--black) 40%, transparent); }
+.pz-back { transform: rotateY(180deg); display: flex; flex-direction: column; justify-content: center; gap: 12px; font-size: 16px; font-weight: 600; }
+.pz-back p, .pz-front p { margin: 0; }
+.pz-h { display: block; font-size: 46px; font-weight: 800; letter-spacing: .02em; line-height: 1; }
+.pz-pic { position: relative; height: 128px; margin: 12px 0; background: var(--posterShade); overflow: hidden; }
+.pz-pic i { position: absolute; left: 50%; top: 22px; width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; background: var(--ink); }
+.pz-pic s { position: absolute; left: 50%; bottom: -36px; width: 104px; height: 84px; margin-left: -52px; border-radius: 50% 50% 0 0; background: var(--ink); }
+.pz-who { display: block; font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+.pz-front p { font-size: 12.5px; line-height: 1.35; }
+.pz-rw { display: block; margin-top: 16px; color: var(--posterRed); font-size: 16px; font-weight: 800; }
+.pz-stamp { position: absolute; right: 18px; bottom: 50px; width: 46px; height: 46px; border: 1.5px solid var(--posterRed); border-radius: 50%; display: grid; place-items: center; font-size: 8.5px; font-weight: 800; letter-spacing: .08em; color: var(--posterRed); transform: rotate(-14deg); }
+.pz-pin { position: absolute; left: 12px; top: 12px; width: 5px; height: 5px; border-radius: 50%; background: var(--posterRed); } .pz-pin.r { left: auto; right: 12px; }
+.pz-fold { position: absolute; right: 0; bottom: 0; width: 30px; height: 30px; background: var(--posterCorner); clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+.pz-ctl { position: absolute; top: 214px; left: -150px; width: 300px; display: flex; justify-content: center; gap: 8px; pointer-events: auto; }
+.pz-ctl button { background: var(--ink); color: var(--paper); border: 1px solid var(--note); border-radius: 999px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
 
 /* footer */
 .ft { position: absolute; inset: 0; z-index: 4; visibility: hidden; }
@@ -271,6 +271,11 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 /* Part A kit: sizes are set from FIND_PLAY, including the popup's animated inner. */
 .mk.found circle { fill: var(--red); }
 .mk.found text { fill: var(--ink); }
+.mk { transition: opacity .3s; }
+.jm-focus .mk { opacity: 0; }
+#b-detail text { transition: opacity .4s; }
+.jm-focus #b-detail text { opacity: .3; }
+.jm-focus.jm-way #b-detail text { opacity: 1; }
 .wf-arm.on .l { stroke-width: var(--find-arm); }
 .tl-blk.craft-lit { outline: var(--find-slot-rule) solid var(--paper); }
 .pop-in { position: relative; transform: none; max-width: min(var(--find-pop-w), calc(100vw - var(--find-pop-edge) * 2)); width: max-content; border-radius: var(--find-pop-r); padding: var(--find-pop-pad); font-size: var(--find-pop-font); line-height: var(--find-pop-line); transform-origin: center bottom; }
@@ -450,7 +455,7 @@ const COPY = {
 
 // Finds. n is the number on the Red marker (main finds only). x, y are map units.
 const FINDS = [
-  { id: 'wayfinder', n: 1, x: 92, y: 716, view: [240, 660, 150], mark: [148, 672], label: 'The wayfinder. Pick a craft to light up the stops that used it. Arrow keys turn it, Enter on the centre clears it.' },
+  { id: 'wayfinder', n: 1, x: 92, y: 716, view: [240, 660, 150], viewPhone: [108, 716, 75, 0], mark: [148, 672], label: 'The wayfinder. Pick a craft to light up the stops that used it. Arrow keys turn it, Enter on the centre clears it.' },
   { id: 'hoards', n: 2, x: 366, y: 354, mark: [382, 346], label: 'Hoards. Five buried chests, each near a stop.' },
   { id: 'ravens', n: 3, x: 456, y: 192, view: [456, 164, 44], mark: [478, 176], label: 'Huginn and Muninn, two ravens on a standing stone. Press to send the next raven for a thought or memory.' },
   { id: 'serpent', n: 4, x: 486, y: 98, view: [430, 78, 118], mark: [550, 74], label: 'The serpent. Poke three times to feed it a deadline.' },
@@ -481,10 +486,10 @@ const FIND_COPY = {
   serpentLines: [{ t: 'A deadline story goes here.', todo: 1 }, { t: 'A deadline story goes here.', todo: 1 }, { t: 'A deadline story goes here.', todo: 1 }],
   serpentLeaf: ['FRI', '5 PM'],
   beaconNotes: [
-    { x: 420, y: 476, rune: 'note one', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
-    { x: 424, y: 520, rune: 'note two', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
-    { x: 446, y: 562, rune: 'note three', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
-    { x: 446, y: 434, rune: 'note four', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
+    { x: 442, y: 418, rune: 'note one', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
+    { x: 413, y: 454, rune: 'note two', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
+    { x: 410, y: 495, rune: 'note three', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
+    { x: 432, y: 533, rune: 'note four', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
   ],
   runestoneRunes: 'first sketch final cut',
   poster: { head: 'WANTED', who: 'ONE DESIGNER', line1: 'who sees a job through, from', line2: 'first sketch to final cut', reward: 'REWARD: THE WORK', stamp: 'PRINT', back: ['Stock: to come', 'The brief: to come'], foot: { t: 'Stock: to come. The brief: to come.', todo: 1 } },
@@ -593,153 +598,6 @@ const FIND_TIMING = { burst: 0.7, dig: 0.6, ravenLoop: 1.1, reel: 5, iris: 0.5, 
 
 // Part A live tuning. Geometry, copy, dimensions and clocks are read by the find kit.
 const FIND_PLAY = {
-  css: {
-    'find-box-1-left': '0',
-    'find-box-2-top': '0',
-    'find-box-3-z-index': '5',
-    'find-box-4-transform': 'translate(-50%, calc(-100% - 8px))',
-    'find-box-5-max-width': '240px',
-    'find-box-6-border': '1px solid var(--line)',
-    'find-box-7-border-radius': '10px',
-    'find-box-8-padding': '10px 14px',
-    'find-box-9-font-size': '13px',
-    'find-box-10-line-height': '1.4',
-    'find-box-11-margin': '0',
-    'find-box-12-font-size': '9.5px',
-    'find-box-13-letter-spacing': '.14em',
-    'find-box-14-margin-bottom': '4px !important',
-    'find-box-15-font-weight': '600',
-    'find-box-16-font-size': '18px',
-    'find-box-17-font-weight': '800',
-    'find-box-18-margin-top': '4px !important',
-    'find-box-19-animation': 'popLate .4s 1.1s both',
-    'find-box-20-opacity': '0',
-    'find-box-21-transform': 'translateY(4px)',
-    'find-box-22-width': '210px',
-    'find-box-23-aspect-ratio': '3 / 2',
-    'find-box-24-border-radius': '4px',
-    'find-box-25-margin': '4px 0 8px',
-    'find-box-26-margin-top': '8px',
-    'find-box-27-padding': '0',
-    'find-box-28-border': '0',
-    'find-box-29-font-weight': '700',
-    'find-box-30-font-size': '12.5px',
-    'find-box-31-gap': '6px',
-    'find-box-32-text-underline-offset': '3px',
-    'find-box-33-left': '0',
-    'find-box-34-top': '0',
-    'find-box-35-z-index': '6',
-    'find-box-36-transform-origin': '0 0',
-    'find-box-37-width': '414px',
-    'find-box-38-height': '414px',
-    'find-box-39-left': '-207px',
-    'find-box-40-top': '-207px',
-    'find-box-41-border-radius': '50%',
-    'find-box-42-width': '100%',
-    'find-box-43-height': '100%',
-    'find-box-44-width': '360px',
-    'find-box-45-aspect-ratio': '16 / 9',
-    'find-box-46-border': '1px solid var(--paper)',
-    'find-box-47-border-radius': '6px',
-    'find-box-48-left': '50%',
-    'find-box-49-top': '50%',
-    'find-box-50-width': '46px',
-    'find-box-51-height': '46px',
-    'find-box-52-margin': '-23px',
-    'find-box-53-border-radius': '50%',
-    'find-box-54-width': '40px',
-    'find-box-55-height': '40px',
-    'find-box-56-margin': '-20px',
-    'find-box-57-width': '40px',
-    'find-box-58-height': '36px',
-    'find-box-59-margin': '-22px -20px',
-    'find-box-60-clip-path': 'polygon(50% 0, 100% 100%, 0 100%)',
-    'find-box-61-right': '10px',
-    'find-box-62-bottom': '10px',
-    'find-box-63-width': '30px',
-    'find-box-64-height': '30px',
-    'find-box-65-transform': 'rotate(-90deg)',
-    'find-box-66-stroke-width': '3',
-    'find-box-67-left': '12px',
-    'find-box-68-bottom': '12px',
-    'find-box-69-font-size': '12px',
-    'find-box-70-font-weight': '600',
-    'find-box-71-width': '300px',
-    'find-box-72-height': '400px',
-    'find-box-73-left': '-150px',
-    'find-box-74-top': '-200px',
-    'find-box-75-transform-origin': '50% 0',
-    'find-box-76-perspective': '1400px',
-    'find-box-77-width': '100%',
-    'find-box-78-height': '100%',
-    'find-box-79-transform-style': 'preserve-3d',
-    'find-box-80-transition': 'transform .6s',
-    'find-box-81-transform': 'rotateY(180deg)',
-    'find-box-82-inset': '0',
-    'find-box-83-padding': '22px 26px',
-    'find-box-84-box-shadow': '6px 8px 0 color-mix(in srgb, var(--black) 40%, transparent)',
-    'find-box-85-transform': 'rotateY(180deg)',
-    'find-box-86-gap': '12px',
-    'find-box-87-font-size': '16px',
-    'find-box-88-font-weight': '600',
-    'find-box-89-margin': '0',
-    'find-box-90-font-size': '46px',
-    'find-box-91-font-weight': '800',
-    'find-box-92-letter-spacing': '.02em',
-    'find-box-93-line-height': '1',
-    'find-box-94-height': '128px',
-    'find-box-95-margin': '12px 0',
-    'find-box-96-left': '50%',
-    'find-box-97-top': '22px',
-    'find-box-98-width': '40px',
-    'find-box-99-height': '40px',
-    'find-box-100-margin-left': '-20px',
-    'find-box-101-border-radius': '50%',
-    'find-box-102-left': '50%',
-    'find-box-103-bottom': '-36px',
-    'find-box-104-width': '104px',
-    'find-box-105-height': '84px',
-    'find-box-106-margin-left': '-52px',
-    'find-box-107-border-radius': '50% 50% 0 0',
-    'find-box-108-font-size': '22px',
-    'find-box-109-font-weight': '800',
-    'find-box-110-margin-bottom': '4px',
-    'find-box-111-font-size': '12.5px',
-    'find-box-112-line-height': '1.35',
-    'find-box-113-margin-top': '16px',
-    'find-box-114-font-size': '16px',
-    'find-box-115-font-weight': '800',
-    'find-box-116-right': '18px',
-    'find-box-117-bottom': '50px',
-    'find-box-118-width': '46px',
-    'find-box-119-height': '46px',
-    'find-box-120-border': '1.5px solid var(--posterRed)',
-    'find-box-121-border-radius': '50%',
-    'find-box-122-font-size': '8.5px',
-    'find-box-123-font-weight': '800',
-    'find-box-124-letter-spacing': '.08em',
-    'find-box-125-transform': 'rotate(-14deg)',
-    'find-box-126-left': '12px',
-    'find-box-127-top': '12px',
-    'find-box-128-width': '5px',
-    'find-box-129-height': '5px',
-    'find-box-130-border-radius': '50%',
-    'find-box-131-right': '12px',
-    'find-box-132-right': '0',
-    'find-box-133-bottom': '0',
-    'find-box-134-width': '30px',
-    'find-box-135-height': '30px',
-    'find-box-136-clip-path': 'polygon(100% 0, 100% 100%, 0 100%)',
-    'find-box-137-top': '214px',
-    'find-box-138-left': '-150px',
-    'find-box-139-width': '300px',
-    'find-box-140-gap': '8px',
-    'find-box-141-border': '1px solid var(--note)',
-    'find-box-142-border-radius': '999px',
-    'find-box-143-padding': '6px 14px',
-    'find-box-144-font-size': '12px',
-    'find-box-145-font-weight': '600',
-  },
   fresh: 3, seed: 171,
   focus: { fill: 0.72, least: 0.85, most: 3, at: [0.5, 0.46], in: 0.7, out: 0.5, swap: 0.6, chest: [0, -16, 30], ship: [0, -10, 34], wide: [300, 450, 330, 0] },
   bits: { pool: 96, starSize: 2.2, puffAlpha: 0.22,
@@ -756,18 +614,18 @@ const FIND_PLAY = {
   },
   star: { time: 0.75, arc: 46, bump: 0.3, size: 14, peak: 1.3 },
   kit: { margin: 40, rad: 70, shipY: 5, starZ: 7, dt: 0.05, popup: { scale: 0.6, over: 1.08, time: 0.22, edge: 8, tail: [10, 6], width: 240, radius: 10, pad: [10, 14], font: 13, line: 1.4, kicker: 9.5, gap: 4 }, slot: { font: 11, weight: 500, border: 1, pad: 6 }, target: 17, sheet: { from: 0.06, edge: 24, grow: 0.35, offset: 20 }, deg: 180, turn: 360 },
-  way: { stiff: 90, damp: 9, near: 70, line: 0.45, gap: 0.1, short: 9, ping: 0.5, runes: 0.6, spin: 0.8, timelineDim: 0.35, lineWidth: 1,
-    drift: [0.8, 4, 0.31, 2], dim: 0.55, armWidth: 2.2, pulse: [1.12, 0.25], dash: [2, 4], alpha: 0.6, solidAlpha: 0.9, pingR: [6, 14], pingAlpha: 0.7, tally: [22, 5.2, 1], ring: [4, 9, 1.6], allSpeed: 40, hub: 6,
+  way: { stiff: 90, damp: 9, near: 70, line: 0.45, gap: 0.1, short: 9, ping: 0.5, runes: 0.6, spin: 0.8, timelineDim: 0.35, lineWidth: 1, wide: [300, 480, 250, 0],
+    drift: [0.8, 4, 0.31, 2], dim: 0.55, armWidth: 2.2, pulse: [1.12, 0.25], dash: [2, 4], alpha: 0.6, solidAlpha: 0.9, pingR: [6, 14], pingAlpha: 0.7, tally: [22, 5.2, 1, 10.5, 9], ring: [4, 9, 1.6], allSpeed: 40, hub: 6,
   },
   hoard: { hole: [12, 20, 27], rise: 0.28, over: 1.6, repeat: 0.3, rattle: 0.36, openHold: 0.3, near: 26, glint: [5, 8],
     scale: 0.3, travel: 60, holeRatio: 0.28, pile: [0.5, 0.75, 1], scratchWidth: 1.6, glintAt: [0, -4], glintSize: 5, glintTime: 0.5, glintTurn: 45, clods: 7, puffs: 2, rattleAngle: 4, rattleCycles: 3, lidPivot: [30, -34], lidAngle: -32, lidLift: -6, lidTime: 0.25, lidOver: 1.7, glowTime: 0.3, glowPeak: 1, glowRest: 0.6, glowKept: 0.35, stars: 6, burstTravel: [48, 34], burstLift: 14, anchor: 18, width: 260, top: 3, icon: 64, iconBox: [-32, -32, 64, 64], rad: 35, scratchHop: 2, hopClods: 2,
     pilePath: 'M14 2q6 -10 13 0z',
   },
   raven: { near: 30, shy: 3, preen: [6, 10], out: 0.9, away: 0.5, back: 0.9, reach: 150, rise: 1.4, flap: 5, land: 0.15, loop: 1.2,
-    headAt: [5, -9], wingNearX: 2, scale: 0.72, birdScale: 0.85, perches: [[-5.5, -34], [6, -33.5]], attend: 120, bend: 26, fade: 0.65, tilt: 25, squash: 0.85, preenAngle: 70, preenTime: 0.5, ruffle: [1.1, 0.3], headLimit: 35, headEase: 6, idle: [0.7, 0.43], feathers: 2, hearReach: 40, wingNear: [1, -0.5], wingFar: [0.9, -0.45], wingY: -3.5, strip: [4, 1.6], frame: [4, 3], beak: [15, -2], tallyAlpha: 0.9,
+    headAt: [5, -9], wingNearX: 2, scale: 0.72, birdScale: 0.85, perches: [[-5.5, -34], [6, -33.5]], popupAt: 52, attend: 120, bend: 26, fade: 0.65, tilt: 25, squash: 0.85, preenAngle: 70, preenTime: 0.5, ruffle: [1.1, 0.3], headLimit: 35, headEase: 6, idle: [0.7, 0.43], feathers: 2, hearReach: 40, wingNear: [1, -0.5], wingFar: [0.9, -0.45], wingY: -3.5, strip: [4, 1.6], frame: [4, 3], beak: [15, -2], tallyAlpha: 0.9,
     tally: ['M13 -8V-1', 'M15.5 -8V-1', 'M18 -8V-1', 'M20.5 -8V-1', 'M11.5 -2.5L22 -6.5', 'M24.5 -8V-1'],
     fly: ['M-2 -3Q-4 -17 5 -22L4.5 -17L8.5 -17.5L6 -13L9.5 -12.5Q5 -6 2 -3.5Z', 'M-11 -1L-19 -4.5L-20 -.5L-18.5 3L-11 1.5Z', 'M-12 0Q-6 -5.5 3 -5.5Q8 -5.5 10.5 -3.5L15 -2L10.5 -.8Q6 3 -3 2.2Q-9 2 -12 0Z', 'M0 -3.5Q1 -18 12 -23L10.5 -17.8L15 -18L11.5 -13.5L15 -12.5L11 -9.5Q7 -4.5 4.5 -2.5Z'], eye: [8.6, -3.4, 0.5],
-    reel: { ringSvg: '<svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16"/><circle class="ring-p" cx="20" cy="20" r="16" pathLength="100" stroke-dasharray="100 100"/></svg>', timeJoin: ' / ', iris: 414, width: 360, ratio: [16, 9], motion: [1.3, 0.4, 2, 60, 1.1, 0.3, 22, 40], ring: 100, tc: '00:0{n} / {end}', labelTop: 12, slotBottom: 36 },
+    reel: { ringSvg: '<svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16"/><circle class="ring-p" cx="20" cy="20" r="16" pathLength="100" stroke-dasharray="100 100"/></svg>', timeJoin: ' / ', iris: 440, width: 360, ratio: [16, 11], motion: [1.3, 0.4, 2, 60, 1.1, 0.3, 22, 40], ring: 100, tc: '00:0{n} / {end}', labelTop: 12, slotBottom: 36 },
   },
   serpent: { spots: [[486, 98], [372, 84], [470, 56]], bob: [1.6, 3.2], near: 34, tongue: [0.25, 0.7], flinch: 0.12,
     swim: [0.9, 0.65, 0.45], speed: [1, 0.8, 0.6], bulge: 14, gulp: [0.14, 0.26, 1.18], settle: 6, breathe: [0.8, 4.8], wake: 0.2,
@@ -775,7 +633,7 @@ const FIND_PLAY = {
     tonguePath: 'M-101 -40l-8 1.5M-109 -38.5l-3.5 -2.5M-109 -38.5l-3 3', shutPath: 'M-86.2 -43q2.2 1.8 4.4 0', snout: [-101, -40],
   },
   beacon: { rad: 200, read: 1.2, flame: [1, 1.3, 1.6, 1.9, 2.3], leap: [3, 0.3], embers: 1.5, turn: 30, reach: 1.4, idle: 0.7, snap: 0.4,
-    scale: 0.6, origin: [0, -50], flameFoot: [0, -47], glowR: 16, glowAlpha: 0.15, flicker: [0.08, 11, 0.05, 17.3, 0.12, 13.1], baseAngle: 176, sweep: 36, baseReach: 230, manual: 6, arrow: 6, soft: 4, wedgeSteps: 32, rest: 0.55, sparkN: 6, burstN: 14, noteScale: 1.12, flash: 0.3, hear: [0.6, 0.3, 1.3, 0.3], englishEase: 5, noteEase: 6, noteFont: 4.6, todoFont: 3.4, runeY: -4, lineY: 7, todoY: 1, runeSize: 4.2,
+    scale: 0.6, origin: [0, -50], flameFoot: [0, -47], glowR: 16, glowAlpha: 0.15, flicker: [0.08, 11, 0.05, 17.3, 0.12, 13.1], baseAngle: 176, sweep: 36, baseReach: 230, manual: 6, arrow: 6, slop: 6, notePhone: 1.7, soft: 4, wedgeSteps: 32, rest: 0.55, sparkN: 6, burstN: 14, noteScale: 1.12, flash: 0.3, hear: [0.6, 0.3, 1.3, 0.3], englishEase: 5, noteEase: 6, noteFont: 4.6, todoFont: 3.4, runeY: -7, lineY: 7, todoY: 1, runeSize: 4.2,
   },
   rune: { carving: 0.6, grow: 0.4, r: 34, step: 12, grid: [5, 7], done: 0.8, auto: [1.2, 1.6, 7], fill: 0.25,
     letter: [0.05, 0.18], stamp: [0.45, 0.12, 2.4], shake: [3, 0.16], tilt: 5, close: 0.3,
@@ -1248,6 +1106,7 @@ function tripFocus(st, view, k) {
   const s = st.cam.s * (target / st.cam.s) ** k;
   st.cam = { s, tx: lerp(before[0], at[0], k) - x * s, ty: lerp(before[1], at[1], k) - y * s, ax: lerp(st.cam.ax, at[0], k), ay: lerp(st.cam.ay, at[1], k) };
   st.cardK = st.cardK.map(v => v * (1 - k)); st.cardOpen *= 1 - k; st.dim = lerp(st.dim, 1, k);
+  st.focusK = k;
 }
 
 // ---- depth.mjs ----
@@ -1414,7 +1273,7 @@ function depthAir(st, look, pointer, fine) {
   const c = DP.ac, w = VIEW.w, h = VIEW.h, small = Math.min(w, h), L = DEPTH.light, M = DEPTH.mist, D = DEPTH.deck;
   c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w, h);
   const trav = toScreen(st, st.trav || MAP.waypoints[0]), pt = fine ? [pointer[0] * w, pointer[1] * h] : null;
-  const v = L.on ? smooth(0, 1, st.pushT) * (1 - L.card * st.cardOpen) * (1 - smooth(...L.rush, st.rushT)) * (st.visiting ? L.visit : 1) : 0;
+  const v = L.on ? smooth(0, 1, st.pushT) * (1 - L.card * st.cardOpen) * (1 - smooth(...L.rush, st.rushT)) * lerp(1, L.visit, st.focusK ?? (st.visiting ? 1 : 0)) : 0;
   const B = DP.beam, beam = B && v > 0 ? { p: toScreen(st, [B.x, B.y]), radius: B.reach * st.cam.s, angle: B.angle, half: B.half, soft: B.soft } : null;
   DP.light = { trav, pointer: pt, r: L.r * small, pr: L.ptrR * small, v, beam };
   if (v > 0) {
@@ -1445,7 +1304,7 @@ function depthAir(st, look, pointer, fine) {
       const start = lerp(field[0], field[2], u[0]), x = deck ? start : field[0] + ((start - field[0] + DP.wind * (0.5 + a)) % width + width) % width;
       const p = depthPoint(st, [x, lerp(field[1], field[3], u[1])], a, look), radius = depthRange(layer.r, u[3]) * p.s, rx = radius * depthRange(layer.stretch, u[4]);
       if (p.x + rx < 0 || p.x - rx > w || p.y + rx < 0 || p.y - rx > h) continue;
-      let alpha = deck ? depthDeckAlpha(st, a) : depthRange(layer.alpha, u[6]) * depthVisibility(p.k, layer);
+      let alpha = deck ? depthDeckAlpha(st, a) * (1 - (st.focusK || 0)) : depthRange(layer.alpha, u[6]) * depthVisibility(p.k, layer);
       if (!deck) {
         const wrap = DEPTH.field.wrapFade, fade = smooth(0, wrap, x - field[0]) * (1 - smooth(width - wrap, width, x - field[0]));
         alpha *= fade * lightAt(p.x, p.y) * st.dim * (M.thin + (1 - M.thin) * smooth(...M.near, Math.hypot(p.x - trav[0], p.y - trav[1]) / small));
@@ -1471,7 +1330,7 @@ function depthSky(st, look, time) {
   });
   const flight = Rv.on && st.kind === 'leg' && Rv.legs.includes(st.i) ? clamp01((st.t - Rv.from) / (Rv.to - Rv.from)) : 0;
   DP.birds.forEach((bird, i) => {
-    const alpha = smooth(0, Rv.ramp, flight) * (1 - smooth(1 - Rv.ramp, 1, flight)) * depthSeaFade(st);
+    const alpha = smooth(0, Rv.ramp, flight) * (1 - smooth(1 - Rv.ramp, 1, flight)) * depthSeaFade(st) * (1 - (st.focusK || 0));
     bird.el.style.opacity = alpha; if (!alpha) return;
     const A = MAP.waypoints[STOPS[st.i].w], B = MAP.waypoints[STOPS[st.i + 1].w], dx = B[0] - A[0], dy = B[1] - A[1], len = Math.hypot(dx, dy), d = [dx / len, dy / len], normal = [-d[1], d[0]];
     const start = [A[0] + normal[0] * Rv.side, A[1] + normal[1] * Rv.side], end = [B[0] - normal[0] * Rv.side, B[1] - normal[1] * Rv.side];
@@ -2445,7 +2304,8 @@ const findPlace = id => {
 };
 const findView = id => {
   const p = findPlace(id), delta = id.startsWith('hoard') ? FIND_PLAY.focus.chest : id === 'longship' ? FIND_PLAY.focus.ship : null;
-  return delta ? [p[0] + delta[0], p[1] + delta[1], delta[2]] : FIND_BY[id].view;
+  if (delta) return [p[0] + delta[0], p[1] + delta[1], delta[2]];
+  const d = FIND_BY[id]; return VIEW.phone && d.viewPhone ? d.viewPhone : d.view; // a find may give a narrow screen a view of its own
 };
 function attend(find, reach) {
   if (!FD.st) return null;
@@ -2547,7 +2407,6 @@ function findKitStyle() {
   const P = FIND_PLAY, root = document.documentElement;
   const vars = { 'find-pop-edge': P.kit.popup.edge + 'px', 'find-pop-w': P.kit.popup.width + 'px', 'find-pop-r': P.kit.popup.radius + 'px', 'find-pop-pad': P.kit.popup.pad.map(n => n + 'px').join(' '), 'find-pop-font': P.kit.popup.font + 'px', 'find-pop-line': P.kit.popup.line, 'find-kicker': P.kit.popup.kicker + 'px', 'find-gap': P.kit.popup.gap + 'px', 'find-tail-w': P.kit.popup.tail[0] + 'px', 'find-tail-h': P.kit.popup.tail[1] + 'px', 'find-slot-weight': P.kit.slot.weight, 'find-star-z': P.kit.starZ, 'find-slot-font': P.kit.slot.font + 'px', 'find-slot-rule': P.kit.slot.border + 'px', 'find-slot-pad': P.kit.slot.pad + 'px', 'find-star': P.star.size + 'px', 'find-piece': P.hoard.width + 'px', 'find-piece-top': P.hoard.top + 'px', 'find-icon': P.hoard.icon + 'px', 'find-arm': P.way.armWidth + 'px', 'find-rune-flip': P.rune.flipTime + 's', 'find-rune-w': P.rune.width + 'px', 'find-rune-h': P.rune.height + 'px', 'find-rune-perspective': P.rune.perspective + 'px', 'find-ctl-top': P.rune.controlTop + 'px', 'find-reel-w': P.raven.reel.width + 'px', 'find-iris': P.raven.reel.iris + 'px', 'find-reel-label': P.raven.reel.labelTop + 'px', 'find-reel-slot': P.raven.reel.slotBottom + 'px' };
   Object.entries(vars).forEach(([k, v]) => root.style.setProperty('--' + k, v));
-  Object.entries(P.css).forEach(([k, v]) => root.style.setProperty('--' + k, v));
   const T = P.tafl, boardVars = { w: T.width, h: T.board + T.tray * 2 + T.statusH + T.ruleH + T.slotH + T.buttonsH + T.gap * 4 + T.pad * 2 + T.border * 2, board: T.board, surface: T.board + T.tray * 2, pad: T.pad, border: T.border, radius: T.radius, gap: T.gap, status: T.statusH, rule: T.ruleH, slot: T.slotH, buttons: T.buttonsH, font: T.font, line: T.line, small: T.small, 'small-line': T.smallLine };
   Object.entries(boardVars).forEach(([k, v]) => root.style.setProperty('--tf-' + k, v + 'px'));
 }
@@ -2590,6 +2449,7 @@ function findCapture(e) {
 
 
 
+
 const wayAllStops = () => STOPS.map(s => CRAFTS.every(c => s.crafts.includes(c)));
 function findWay(svg) {
   const f = FIND_BY.wayfinder, el = svg.querySelector('#f-wayfinder'), needle = el.querySelector('.wf-needle'), words = [...el.querySelectorAll('.wf-word')], arms = [...el.querySelectorAll('.wf-arm')], runes = el.querySelector('.wf-runes'), tally = el.querySelector('.wf-tally'), ring = el.querySelector('.wf-all');
@@ -2617,6 +2477,9 @@ function findWay(svg) {
     const mask = i < 0 ? null : i === CRAFTS.length ? wayAllStops() : STOPS.map(s => s.crafts.includes(CRAFTS[i]));
     if (i >= 0) { o.kept = true; if (i < CRAFTS.length && !o.picked.includes(i)) o.picked.push(i); o.unlocked = o.picked.length === CRAFTS.length && wayAllStops().some(Boolean); found(o.id); opened(o); }
     applyMask(mask);
+    // With a craft chosen the lines have to be seen arriving, so on a wide screen the camera pulls back for them.
+    document.documentElement.classList.toggle('jm-way', i >= 0);
+    if (JOURNEY.focus === o.id && !VIEW.phone) stepsFocus(o.id, i < 0 ? f.view : FIND_PLAY.way.wide);
     tally.textContent = i < 0 ? '' : i === CRAFTS.length ? findFormat(FIND_COPY.wayAll, { names: STOPS.filter((s, j) => mask[j]).map(s => s.short + ', ' + s.dates).join('; ') }) : findFormat(FIND_COPY.wayTally, { craft: FIND_COPY.crafts[i], n: mask.filter(Boolean).length, t: STOPS.length });
     o.retract = o.lines.map(l => l.v); o.lineTs = FD.now; o.linePhase = 'retract'; if (FD.rm || o.retract.every(v => v === 0)) { startLines(); if (FD.rm) o.lines.forEach(l => l.v = l.lit ? 1 : 0); }
   };
@@ -2648,6 +2511,8 @@ function findWay(svg) {
     const pulse = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - (o.pickTs ?? -Infinity)) / W.pulse[1]));
     arms.forEach((arm, i) => attr(arm, 'transform', `rotate(${i * FIND_PLAY.kit.turn / CRAFTS.length}) scale(${1 + (W.pulse[0] - 1) * pulse * (o.craft === i || o.craft === CRAFTS.length ? 1 : 0)})`));
     if (o.kept && !FD.rm) { o.runesAngle += W.runes * dt; attr(runes, 'transform', `rotate(${o.runesAngle})`); }
+    // The tally is read from far out as well: it never falls under tally[3] px on screen, up to tally[4] units.
+    attr(tally, 'font-size', Math.min(W.tally[4], Math.max(W.tally[1], W.tally[3] / FD.st.cam.s)));
     attr(ring, 'opacity', o.unlocked ? 1 : 0);
     if (o.unlocked && !FD.rm) attr(ring, 'transform', `scale(${lerp(W.ring[0], W.ring[1], (1 - Math.cos(t * Math.PI * 2 / W.ring[2])) / 2) / W.ring[0]})`);
     if (o.linePhase === 'retract') { const q = FD.rm ? 1 : clamp01((t - o.lineTs) / W.line); o.lines.forEach((l, i) => l.v = o.retract[i] * (1 - ease(q))); if (q === 1) queueMicrotask(startLines); }
@@ -2756,7 +2621,7 @@ function findRavens(svg) {
     if (index === 0) {
       const stop = STOPS[o.thoughts % STOPS.length]; o.thoughts++; o.tally = Math.min(STOPS.length, o.thoughts); o.kept = true;
       scratches.forEach((s, i) => attr(s, 'opacity', i < o.tally ? R.tallyAlpha : 0));
-      showPop(o, [f.x, f.y - Math.abs(R.perches[0][1]) * R.scale], `<p class="pop-k">${fEsc(FIND_COPY.huginn)}<br>${fEsc(findFormat(FIND_COPY.ravenFrom, { name: stop.short }))}</p><p class="pop-t">${fEsc(stop.copy.took)}</p><p class="pop-k">${fEsc(stop.dates)}</p>`);
+      showPop(o, [f.x, f.y - R.popupAt * R.scale], `<p class="pop-k">${fEsc(FIND_COPY.huginn)}<br>${fEsc(findFormat(FIND_COPY.ravenFrom, { name: stop.short }))}</p><p class="pop-t">${fEsc(stop.copy.took)}</p><p class="pop-k">${fEsc(stop.dates)}</p>`);
     } else reel();
   };
   o.tick = (t, dt) => {
@@ -2896,10 +2761,11 @@ function findBeacon(svg) {
     o.manualTs = FD.now; found(o.id); opened(o);
     if (FD.rm && i >= 0) { o.head = angle; read(n, i); o.snap = null; }
   };
-  el.addEventListener('pointerdown', e => { o.drag = true; el.setPointerCapture(e.pointerId); aimAt(e); el._dragged = true; });
-  el.addEventListener('pointermove', e => { if (o.drag) aimAt(e); });
+  // A drag aims the beam. A plain press or tap (the pointer has not travelled beacon.slop px) turns it to the next unread note, as Enter does.
+  el.addEventListener('pointerdown', e => { o.drag = true; o.downAt = [e.clientX, e.clientY]; o.dragged = false; el.setPointerCapture(e.pointerId); });
+  el.addEventListener('pointermove', e => { if (!o.drag || !o.dragged && Math.hypot(e.clientX - o.downAt[0], e.clientY - o.downAt[1]) < FIND_PLAY.beacon.slop) return; o.dragged = el._dragged = true; aimAt(e); });
   el.addEventListener('pointerup', () => o.drag = false); el.addEventListener('pointercancel', () => o.drag = false);
-  press(el, e => { if (e.type === 'keydown' || !e.detail) snapNext(); else aimAt(e); });
+  press(el, () => snapNext());
   el.addEventListener('keydown', e => { if (!['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(e.key)) return; e.preventDefault(); o.head += FIND_PLAY.beacon.arrow * (['ArrowLeft', 'ArrowUp'].includes(e.key) ? -1 : 1); o.snap = null; o.manualTs = FD.now; found(o.id); opened(o); });
   o.undo = () => { o.manualTs = -Infinity; o.drag = false; }; o.hear = () => o.hearTs = FD.now;
   o.tick = (t, dt) => {
@@ -2910,12 +2776,12 @@ function findBeacon(svg) {
     attr(beam, 'transform', `translate(${B.origin[0]} ${B.origin[1]}) rotate(${o.head - FIND_PLAY.kit.deg}) scale(${lit && !manual ? B.reach : 1})`); attr(beam, 'opacity', manual ? 1 : B.idle);
     notes.forEach((n, i) => {
       const dx = n.d.x - O[0], dy = n.d.y - O[1], angle = Math.atan2(dy, dx) * FIND_PLAY.kit.deg / Math.PI, diff = Math.abs(((angle - o.head + FIND_PLAY.kit.turn * 1.5) % FIND_PLAY.kit.turn) - FIND_PLAY.kit.deg), inside = diff < half && Math.hypot(dx, dy) < reach;
-      if (inside && !o.snap) n.time += dt;
+      if (inside && !o.snap && manual) n.time += dt; // only a beam somebody aims reads a note; the idle sweep just shows it
       if (!n.read && n.time >= B.read) read(n, i);
       n.v = FD.rm ? n.read || inside ? 1 : 0 : lerp(n.v, inside ? 1 : n.read ? B.rest : 0, Math.min(1, dt * B.noteEase));
       n.ev = FD.rm ? n.read || inside ? 1 : 0 : lerp(n.ev, n.read || inside && n.time >= FIND_TIMING.noteDelay ? 1 : 0, Math.min(1, dt * B.englishEase));
       attr(n.g, 'opacity', n.v); attr(n.en, 'opacity', n.ev);
-      const flash = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - n.flash) / B.flash)); attr(n.inner, 'transform', `scale(${1 + (B.noteScale - 1) * flash})`);
+      const flash = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - n.flash) / B.flash)); attr(n.inner, 'transform', `scale(${(1 + (B.noteScale - 1) * flash) * (VIEW.phone ? B.notePhone : 1)})`);
     });
     const F = B.flicker, foot = B.flameFoot, burst = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - o.litTs) / B.leap[1]));
     const hearAge = t - o.hearTs, hear = FD.rm ? 1 : hearAge < B.hear[1] ? lerp(B.hear[0], 1, clamp01(hearAge / B.hear[1])) : 1 + (B.hear[2] - 1) * Math.sin(Math.PI * clamp01((hearAge - B.hear[1]) / B.hear[3]));
