@@ -1,7 +1,7 @@
 // Fog reveals path markers; the well reads the existing journey; the ship keeps its own inner motion.
-import { C, STOPS, MAP, FIND_COPY, FIND_PLAY } from './data.mjs';
+import { C, STOPS, MAP, FIND_COPY, FIND_PLAY, YGG } from './data.mjs';
 import { clamp01, lerp } from './trip.mjs';
-import { starPath } from './art.mjs';
+import { starPath, rnd } from './art.mjs';
 import { beaconLit } from './findsheets.mjs';
 import { FD, FIND_BY, ease, out3, attr, fEsc, found, opened, press, showPop, toMap, findBits, findSvg, findRange, findFormat, findSlot, findPlace } from './findkit.mjs';
 
@@ -79,9 +79,33 @@ export function findWell(svg) {
     o.pebbleFrom = e.type === 'keydown' || !e.detail ? [W.water[0] + W.pebbleFrom[0], W.water[1] + W.pebbleFrom[1]] : toMap([e.clientX, e.clientY]); o.ts = FD.now; o.stage = 'pebble';
     if (FD.rm) land(); else attr(pebble, 'opacity', 1);
   });
-  o.hear = () => { ring(1); o.playing = !FD.rm; };
+  const eagle = svg.querySelector('.yg-eagle'), wings = svg.querySelector('.yg-wings'), rat = svg.querySelector('.yg-rat'), tail = svg.querySelector('.yg-tail'), nid = svg.querySelector('.yg-nid-head');
+  const treeRandom = rnd(YGG.life.seed), treeInterval = pair => lerp(pair[0], pair[1], treeRandom());
+  o.ratAt = FD.now + treeInterval(YGG.life.ratEvery); o.eagleAt = FD.now + treeInterval(YGG.life.eagleEvery); o.ratTs = o.eagleTs = o.flightTs = -Infinity;
+  o.hear = () => { if (FD.rm) return; ring(1); o.flightTs = FD.now; o.playing = true; };
   o.tick = t => {
-    const W = FIND_PLAY.well;
+    const W = FIND_PLAY.well, Y = YGG, L = Y.life;
+    if (!FD.rm && t >= o.ratAt) { o.ratTs = t; o.ratAt = t + treeInterval(L.ratEvery); }
+    if (!FD.rm && t >= o.eagleAt) { o.eagleTs = t; o.eagleAt = t + treeInterval(L.eagleEvery); }
+    const ratAge = t - o.ratTs, run = FD.rm ? 0 : ratAge < L.climb ? ease(ratAge / L.climb) : ratAge < L.climb + L.pause ? 1 : 1 - ease((ratAge - L.climb - L.pause) / L.climb);
+    const restRat = Y.ratAt, fork = Y.fork.map((v, i) => v - MAP.ygg[i]);
+    attr(rat, 'transform', 'translate(' + lerp(restRat[0], fork[0], run) + ' ' + lerp(restRat[1], fork[1], run) + ')');
+    const flick = FD.rm || ratAge < L.climb || ratAge > L.climb + L.pause ? 0 : L.tail * Math.sin(Math.PI * 2 * (ratAge - L.climb) / L.pause) ** 2;
+    attr(tail, 'transform', 'rotate(' + flick + ' ' + L.tailRoot.join(' ') + ')');
+    let ex = Y.eagleAt[0], ey = Y.eagleAt[1], wingY = L.wingY[0]; const flightAge = t - o.flightTs;
+    const flying = !FD.rm && flightAge < L.flight;
+    if (flying) {
+      const q = clamp01(flightAge / L.flight), F = L.flightStops; let dy;
+      if (q < F[0]) dy = -L.rise * ease(q / F[0]);
+      else if (q < F[1]) dy = lerp(-L.rise, -L.centre - L.radius, ease((q - F[0]) / (F[1] - F[0])));
+      else if (q <= F[2]) { const a = Math.PI * 2 * (q - F[1]) / (F[2] - F[1]); ex += L.radius * Math.sin(a); dy = -L.centre - L.radius * Math.cos(a); }
+      else if (q < F[3]) dy = lerp(-L.centre - L.radius, -L.rise, ease((q - F[2]) / (F[3] - F[2])));
+      else dy = -L.rise * (1 - ease((q - F[3]) / (1 - F[3])));
+      ey += dy; wingY = lerp(...L.flapY, (1 + Math.sin(Math.PI * 2 * L.flap * flightAge)) / 2);
+    } else if (!FD.rm) wingY = lerp(...L.wingY, Math.sin(Math.PI * clamp01((t - o.eagleTs) / L.stretch)));
+    attr(eagle, 'transform', 'translate(' + ex + ' ' + ey + ')'); attr(wings, 'transform', 'scale(' + L.wingX + ' ' + wingY + ')');
+    const gnawAge = t % L.gnawEvery, gnaw = FD.rm ? 0 : L.gnaw * Math.sin(Math.PI * clamp01(gnawAge / (L.gnawTime * 2)));
+    attr(nid, 'transform', 'translate(' + gnaw + ' 0)');
     if (!FD.rm && o.onScreen && t >= o.dripAt && o.dripLand === null && o.stage !== 'pebble') { findBits('drop', ...W.root, 1, { speed: [(W.water[1] - W.root[1]) / W.dripTime, (W.water[1] - W.root[1]) / W.dripTime], dir: [FIND_PLAY.kit.deg / 2, FIND_PLAY.kit.deg / 2], life: [W.dripTime, W.dripTime] }); o.dripLand = t + W.dripTime; o.dripAt = t + findRange(W.drip); }
     if (o.dripLand !== null && t >= o.dripLand) { o.dripLand = null; ring(1); }
     if (o.stage === 'pebble') {
@@ -96,7 +120,7 @@ export function findWell(svg) {
       attr(batch.stream, 'transform', `translate(${lerp(p[0][0], p[1][0], ease(q))} ${lerp(p[0][1], p[1][1], ease(q))})`); attr(batch.stream, 'opacity', !FD.rm && q < 1 ? 1 : 0);
       batch.stars.forEach((s, j) => { const k = FD.rm ? 1 : clamp01((age - W.trunkTime - j * W.starGap) / W.starTime), scale = k < 0.5 ? lerp(0, W.starOver, ease(k * 2)) : lerp(W.starOver, 1, ease((k - 0.5) * 2)); attr(s, 'transform', `scale(${scale})`); attr(s, 'opacity', k === 0 ? 0 : FD.rm ? 1 : lerp(W.twinkle[0], W.twinkle[1], (1 + Math.sin(Math.PI * 2 * t / W.twinkleTime[(i + j) % W.twinkleTime.length] + i + j)) / 2)); });
     });
-    const last = o.starBatches[o.starBatches.length - 1]; o.playing = o.stage === 'pebble' || o.stage === 'landing' || o.dripLand !== null || t - o.ringTs < W.ringTime + (o.ringCount - 1) * W.ringGap || last !== undefined && t - last < W.trunkTime + W.starGap * (W.stars[0].length - 1) + W.starTime;
+    const last = o.starBatches[o.starBatches.length - 1]; o.playing = flying || o.stage === 'pebble' || o.stage === 'landing' || o.dripLand !== null || t - o.ringTs < W.ringTime + (o.ringCount - 1) * W.ringGap || last !== undefined && t - last < W.trunkTime + W.starGap * (W.stars[0].length - 1) + W.starTime;
   };
   return o;
 }

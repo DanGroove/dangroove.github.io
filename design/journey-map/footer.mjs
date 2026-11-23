@@ -1,5 +1,5 @@
 // The X, its supernova and the footer that settles over the glow.
-import { C, COPY, NOVA, DEPTH, FOOT_NAME } from './data.mjs';
+import { C, COPY, NOVA, DEPTH, FOOT_NAME, EXPLORE } from './data.mjs';
 import { rnd, n1 } from './art.mjs';
 import { VIEW, smooth, lerp, easeIO, clamp01 } from './trip.mjs';
 import { JOURNEY } from './steps.mjs';
@@ -74,6 +74,8 @@ export function footerFrame(st) {
   // Progress owns the text's reveal. All X transforms and opacities have one writer, footerMotion.
   const b = NOVA.base;
   FT.items.forEach((it, j) => { if (it.classList.contains('ft-name')) { it.style.opacity = 1; it.style.transform = ''; return; } const o = smooth(b.textIn[0] + j * b.textGap, b.textIn[1] + j * b.textGap, st.settleT); it.style.opacity = o; it.style.transform = `translateY(${((1 - o) * b.textRise).toFixed(1)}px)`; });
+  FT.inner.style.opacity = 1 - (st.exploreK || 0);
+  const exploring = !!st.exploring || (st.exploreK || 0) > 0; if (FT.exploring !== exploring) { FT.exploring = exploring; FT.el.inert = exploring; }
   footnameReveal(st);
   FT.el.style.visibility = st.settleT > b.textShow ? 'visible' : 'hidden';
 }
@@ -108,12 +110,12 @@ export function footerMotion(time, dt, st, look, moved) {
   if (st.blastT > 0) FT.clock += dt; else { FT.clock = 0; NOVA_LIVE.flares = []; }
   if (st.settleT >= 1 && NOVA.flare.auto[1] > 0) {
     if (FT.nextFlare === null || NOVA_LIVE.serial !== FT.lastFlare) { FT.lastFlare = NOVA_LIVE.serial; FT.nextFlare = NOVA_LIVE.time + lerp(...NOVA.flare.auto, rnd(NOVA.seed + NOVA_LIVE.serial)()); }
-    else if (NOVA_LIVE.time >= FT.nextFlare) { novaPress(); FT.nextFlare = null; }
+    else if (NOVA_LIVE.time >= FT.nextFlare && NOVA_LIVE.flares.length < NOVA.flare.cap - EXPLORE.autoReserve) { novaPress(); FT.nextFlare = null; }
   } else FT.nextFlare = null;
   if (footerConfigKey() !== FT.config && !FT.pending) { FT.pending = true; queueMicrotask(() => { footerConfigure(); FT.pending = false; }); }
   if (!moved && st.blastT <= 0) return;
   const s = st.exploreK ? st.sEnd : st.cam.s, rT = st.rushT, bT = st.blastT, sT = st.settleT, G = FT.g, u = px => px / s, B = NOVA.base;
-  const big = Math.max(VIEW.w, VIEW.h);
+  const big = Math.max(VIEW.w, VIEW.h), calm = lerp(1, EXPLORE.calmScale, st.exploreK || 0), calmAlpha = lerp(1, EXPLORE.calmAlpha, st.exploreK || 0);
   const clock = FT.clock, strength = smooth(...NOVA.motionIn, bT), flare = novaShare(NOVA.flare.core, NOVA.flare.coreMax) * strength;
   const wave = period => Math.sin(Math.PI * 2 * clock / period);
   const pulse = 1 + strength * (NOVA.pulse[1] * wave(NOVA.pulse[0]) + NOVA.pulse[3] * wave(NOVA.pulse[2])) + flare;
@@ -133,11 +135,11 @@ export function footerMotion(time, dt, st, look, moved) {
   if (bT > 0) { rg = bT < B.glowPeak ? lerp(B.redGlow[0], big * B.redGlow[1], out(bT / B.glowPeak)) : lerp(big * B.redGlow[1], big * B.redGlow[2], easeIO((bT - B.glowPeak) / (1 - B.glowPeak))); rgo = 1; }
   if (sT > 0) rg = lerp(big * B.redGlow[2], big * B.redGlow[3], sT);
   rg *= 1 + strength * NOVA.glow[1] * wave(NOVA.glow[0]);
-  T(G['fx-rg'], `scale(${u(rg)} ${u(rg) * B.glowAspect})`); G['fx-rg'].setAttribute('opacity', rgo);
+  T(G['fx-rg'], `scale(${u(rg) * calm} ${u(rg) * B.glowAspect * calm})`); G['fx-rg'].setAttribute('opacity', rgo * calmAlpha);
   const og = bT > 0 ? lerp(...B.orangeGlow, out(bT)) : lerp(0, B.orangeGlow[0], rT);
-  T(G['fx-og'], `scale(${u(og)})`); G['fx-og'].setAttribute('opacity', bT > 0 ? B.orangeAlpha : B.rushGlowAlpha * rT);
+  T(G['fx-og'], `scale(${u(og) * calm})`); G['fx-og'].setAttribute('opacity', (bT > 0 ? B.orangeAlpha : B.rushGlowAlpha * rT) * calmAlpha);
   const core = bT > 0 ? lerp(B.core[0], B.core[1], bT) * (sT > 0 ? lerp(1, B.core[2], sT) : 1) : lerp(0, B.core[3], heat);
-  T(G['fx-core'], `scale(${u(core * pulse)})`); G['fx-core'].setAttribute('opacity', heat);
+  T(G['fx-core'], `scale(${u(core * pulse) * calm})`); G['fx-core'].setAttribute('opacity', heat * calmAlpha);
   // the blast: ring and streaks
   const ringR = novaRingRadius(st), ringO = bT > 0 ? (1 - smooth(...B.ringFade, bT)) : 0;
   T(G['fx-ring'], `scale(${u(ringR)})`); G['fx-ring'].setAttribute('opacity', ringO * B.ringAlpha[0]);
@@ -147,14 +149,14 @@ export function footerMotion(time, dt, st, look, moved) {
   // settled: two faint rings
   const ro = smooth(...B.shellIn, sT);
   ['fx-r1', 'fx-r2'].forEach((key, i) => { T(G[key], `rotate(${clock * NOVA.shells[i]}) scale(${u((VIEW.phone ? B.shellPhone : B.shellR)[i])})`); G[key].setAttribute('opacity', B.shellAlpha[i] * ro); });
-  G['fx-rays'].setAttribute('opacity', strength); T(G['fx-rays'], `rotate(${clock * NOVA.rays.turn * 180 / Math.PI})`);
+  G['fx-rays'].setAttribute('opacity', strength * calmAlpha); T(G['fx-rays'], `scale(${calm}) rotate(${clock * NOVA.rays.turn * 180 / Math.PI})`);
   FT.rays.forEach((ray, i) => {
     if (i >= NOVA.rays.n) { ray.el.setAttribute('opacity', 0); return; }
     const a = i / NOVA.rays.n * Math.PI * 2, start = core * NOVA.rays.start, len = lerp(...NOVA.rays.len, ray.u[0]) * core;
     T(ray.el, `translate(${u(Math.cos(a) * start)} ${u(Math.sin(a) * start)}) rotate(${a * 180 / Math.PI}) scale(${u(len - start)} 1)`);
     ray.el.setAttribute('opacity', i < NOVA.rays.n ? lerp(...NOVA.rays.alpha, ray.u[1]) * (1 - NOVA.rays.breathe * (.5 + .5 * Math.sin(clock * Math.PI * 2 / lerp(...NOVA.rays.period, ray.u[3]) + ray.u[2] * Math.PI * 2))) : 0);
   });
-  G['fx-lobes'].setAttribute('opacity', strength);
+  G['fx-lobes'].setAttribute('opacity', strength * calmAlpha); T(G['fx-lobes'], 'scale(' + calm + ')');
   FT.lobes.forEach((lobe, i) => {
     const L = NOVA.lobes, a = lobe.u[0] * Math.PI * 2 + clock * lerp(...L.speed, lobe.u[1]) * (i % 2 ? -1 : 1), orbit = lerp(...L.orbit, lobe.u[2]), r = lerp(...L.r, lobe.u[3]) * (1 + L.breathe * Math.sin(clock * lerp(...L.speed, lobe.u[4]) + lobe.u[5] * Math.PI * 2));
     T(lobe.el, `translate(${u(Math.cos(a) * orbit + look[0] * DEPTH.foot.lobes)} ${u(Math.sin(a) * orbit + look[1] * DEPTH.foot.lobes)}) scale(${u(r)})`);

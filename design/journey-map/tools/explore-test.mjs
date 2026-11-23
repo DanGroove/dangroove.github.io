@@ -4,6 +4,7 @@ import { EXPLORE, MAP, FOOT_NAME } from '../data.mjs';
 import { tripResize, tripState, VIEW } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
 import { exploreClamp, exploreZoom, exploreWorld, exploreGlide, exploreLayer, exploreLayerPoint, exploreLayerInverse, exploreBuild, exploreResize, exploreStart, exploreApply, exploreEnd, exploreActive, exploreBusy, exploreReset } from '../explore.mjs';
+import { footerBuild, footerFrame } from '../footer.mjs';
 import { footBezier, footLetterStep, footOpenTarget, footRest } from '../footname.mjs';
 
 const near = (a, b, message) => assert.ok(Math.abs(a - b) < 1e-7, `${message}: ${a}/${b}`);
@@ -56,12 +57,19 @@ let st = apply(EXPLORE.in / 2); assert.ok(st.exploreK > 0 && st.exploreK < 1);
 const dispatch = (type, fields = {}, prefix = '') => { const e = { target: eventTarget, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...fields }; (listeners[prefix + type] || []).forEach(fn => fn(e)); return e; };
 dispatch('wheel', { deltaY: -50, deltaMode: 0, clientX: 700, clientY: 450 }); st = apply(0); // takeover has no discontinuity at the instant of the event
 const beforePan = st.cam.tx;
+// Zoom enough to leave room for keyboard pan, then verify arrow ownership and bounded movement.
+dispatch('wheel',{deltaY:-120,deltaMode:0,clientX:700,clientY:450});apply(.3);
+for(let i=0;i<24;i++){dispatch('keydown',{key:'+'});apply(.5);}
+const keyTravel=[0,0];
+for(const key of ['ArrowRight','ArrowLeft','ArrowUp','ArrowDown']){const before=apply(0).cam,e=dispatch('keydown',{key,shiftKey:key==='ArrowDown'});assert.equal(e.defaultPrevented,true);st=apply(1);assert.equal(journey.P,endP);const axis=['ArrowRight','ArrowLeft'].includes(key)?0:1,prop=axis?'ty':'tx',delta=st.cam[prop]-before[prop],sign=['ArrowRight','ArrowDown'].includes(key)?-1:1;assert.ok(delta*sign>=-1e-8,'arrow pans in its direction');assert.ok(Math.abs(delta)<=EXPLORE.keyPan*(key==='ArrowDown'?3:1)+1e-8,'arrow overshot target');keyTravel[axis]+=Math.abs(delta);}
+assert.ok(keyTravel.every(d=>d>0),'arrow keys must move both camera axes');
+
 dispatch('pointerdown', { pointerId: 1, pointerType: 'mouse', button: 0, clientX: 700, clientY: 450, timeStamp: 1000 }, 'stage:');
 dispatch('pointermove', { pointerId: 1, clientX: 730, clientY: 460, timeStamp: 1020 }, 'stage:'); assert.equal(apply(0).exploring, true);
 dispatch('pointerup', { type: 'pointerup', pointerId: 1, timeStamp: 1030 }, 'stage:');
 st = apply(EXPLORE.in); assert.equal(st.exploreK, 1); assert.equal(journey.P, endP); assert.ok(Number.isFinite(beforePan));
 tripResize(390, 664, 96); exploreResize(); st = apply(0); assert.ok(Number.isFinite(st.cam.s));
-assert.equal(exploreEnd(), true); assert.equal(exploreActive(), false); st = apply(EXPLORE.out); assert.equal(st.exploreK, 0); assert.equal(exploreBusy(), false); assert.equal(world.style.transform, 'none');
+assert.equal(dispatch('keydown',{key:'Escape'}).defaultPrevented,true); assert.equal(exploreActive(), false); st = apply(EXPLORE.out); assert.equal(st.exploreK, 0); assert.equal(exploreBusy(), false); assert.equal(world.style.transform, 'none');
 assert.equal(exploreStart(), true); apply(EXPLORE.in); journey.P = BEATS[2].P; st = apply(0); assert.equal(exploreBusy(), false); assert.equal(st.exploreK, 0); exploreReset();
 console.log('ok: end-only CTA entry, input takeover, pan/release, resize, exit and immediate departure reset; P and traveller unchanged');
 
@@ -70,3 +78,13 @@ assert.equal(footOpenTarget(50, 20, { left: 0, top: 0, right: 100, bottom: 40 },
 const letter = { y: 0, vy: 0, kick: 1 }; footLetterStep(letter, 0, 1 / 60, 2); assert.ok(letter.y > 0);
 for (let i = 0; i < 1000; i++) footLetterStep(letter, 0, 1 / 60, i + 3); assert.ok(Math.abs(letter.y) < 1e-6);
 console.log('ok: copied name curves monotone, lens/rest geometry and knock spring settling');
+
+console.log('ok: arrows pan during explore without changing P; Escape ends explore');
+
+// Record the actual footer writer with its name animation disabled; no layout/rendering is simulated.
+const footerPart = name => ({ style:{}, classList:{contains:cls=>cls===name} });
+const footerInner=footerPart('ft-in'),footerName=footerPart('ft-name'),footerSpan=footerPart('span'),footerRule=footerPart('ft-rule'),footerRows=[footerPart('ft-cta'),footerName,footerPart('ft-tag'),footerPart('ft-links')];
+const footerSurface={style:{},set innerHTML(html){this.html=html;},querySelector:s=>s==='.ft-in'?footerInner:s==='.ft-name span'?footerSpan:footerRule,querySelectorAll:()=>footerRows};
+footerBuild(footerSurface,true);
+for(const k of [0,.1,.25,.5,.75,1]){const state=tripState(endP);state.exploreK=k;state.exploring=k>0;footerFrame(state);near(footerInner.style.opacity,1-k,'footer explore opacity');assert.equal(footerSurface.inert,k>0);}
+console.log('ok: actual footer writer sets opacity to 1 - exploreK and disables its controls while exploring');

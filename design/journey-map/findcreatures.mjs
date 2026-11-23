@@ -1,5 +1,6 @@
 // Part A: thought and memory return; deadlines become a three-poke chase.
 import { C, STOPS, MAP, FIND_COPY, FIND_PLAY, FIND_TIMING } from './data.mjs';
+import { JORM, jormPoint } from './art.mjs';
 import { clamp01, lerp } from './trip.mjs';
 import { FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, closeSheet, attend, findBits, findFormat, findRange, findSheet, findSlot } from './findkit.mjs';
 
@@ -96,55 +97,82 @@ export function findRavens(svg) {
 }
 
 export function findSerpent(svg) {
-  const f = FIND_BY.serpent, el = svg.querySelector('#f-serpent'), inner = el.querySelector('.sp-swim'), loops = [...el.querySelectorAll('.sp-loop')], head = el.querySelector('.sp-head'), leaf = el.querySelector('.sp-leaf'), eye = el.querySelector('.sp-eye'), shut = el.querySelector('.sp-shut'), tongue = el.querySelector('.sp-tongue');
-  const o = { id: f.id, el, stage: 'up', pokes: 0, round: 0, spot: 0, kept: false, ts: -Infinity, headAngle: 0, current: FIND_PLAY.serpent.spots[0].slice(), hearTs: -Infinity, wakeTs: -Infinity };
-  o.place = () => o.current.slice();
+  const f = FIND_BY.serpent, el = svg.querySelector('#f-serpent'), head = el.querySelector('.jg-head'), jaw = el.querySelector('.jg-jaw'), tail = el.querySelector('.jg-tail'), pad = el.querySelector('.jg-pad'), eye = el.querySelector('.jg-eye'), shut = el.querySelector('.jg-shut'), tongue = el.querySelector('.jg-tongue'), joint = head.parentElement;
+  const leaves = [...el.querySelectorAll('.jg-leaf')].sort((a, b) => +a.dataset.i - +b.dataset.i);
+  const swells = [...svg.querySelectorAll('.jg-swell')].map(g => ({ g, gulp: g.querySelector('.jg-gulp'), hearPath: g.querySelector('.jg-hear'), live: false }));
+  const o = { id: f.id, el, stage: 'ready', pokes: 0, round: 0, kept: false, ts: -Infinity, headAngle: 0, headTurn: 0, jawAngle: 0, tailOut: 0, queued: false, held: false, hearTs: -Infinity, padTs: -Infinity, swells };
+  o.place = () => [f.x, f.y];
+  const remaining = () => leaves.forEach((leaf, i) => { if (i >= o.pokes) { attr(leaf, 'opacity', 1); const offset = (i - o.pokes) * FIND_PLAY.serpent.leafOffset; attr(leaf, 'transform', 'translate(' + offset + ' ' + offset + ')'); } });
+  const reward = () => { o.stage = 'asleep'; o.kept = true; o.held = false; o.tailOut = 0; o.jawAngle = 0; attr(tail, 'transform', 'translate(0 0)'); attr(eye, 'opacity', 0); attr(shut, 'opacity', 1); queueMicrotask(() => showPop(o, [f.x + FIND_PLAY.serpent.popup[0], f.y + FIND_PLAY.serpent.popup[1]], '<p class="pop-k">' + fEsc(FIND_COPY.serpentFed) + '</p>' + findSlot(FIND_COPY.serpentLines[o.round % FIND_COPY.serpentLines.length]), '', 'above')); };
+  const swell = (duration, horn = false) => { if (FD.rm) return; const slot = swells.find(s => !s.live); if (slot) Object.assign(slot, { live: true, ts: FD.now, duration, horn, last: !horn && o.pokes === leaves.length }); };
   const start = () => {
-    if (!['up', 'asleep'].includes(o.stage)) return;
-    if (o.stage === 'asleep') { o.stage = 'waking'; o.ts = FD.now; o.pokes = 0; o.round++; o.kept = false; return; }
-    o.pokes++; o.stage = 'chase'; o.ts = FD.now; o.from = o.current.slice(); o.toSpot = (o.spot + 1) % FIND_PLAY.serpent.spots.length; o.to = FIND_PLAY.serpent.spots[o.toSpot].slice(); o.dropSent = new Set(); o.nextWake = 0;
-    const texts = FIND_COPY.serpentLeaves[o.pokes - 1]; el.querySelector('.sp-day').textContent = texts[0]; el.querySelector('.sp-date').textContent = texts[1];
-    attr(leaf, 'opacity', 0); closePop(); found(o.id); opened(o);
-  };
-  press(el, start); o.undo = () => { if (FD.popOwner === o) closePop(); };
-  o.hear = () => o.hearTs = FD.now;
-  o.tick = (t, dt) => {
-    const S = FIND_PLAY.serpent, e = t - o.ts, asleep = o.stage === 'asleep', here = { x: o.current[0] + S.head[0] * S.scale, y: o.current[1] + S.head[1] * S.scale }, target = attend(here, S.attend);
-    let angle = target ? Math.atan2(target[1] - here.y, target[0] - here.x) * FIND_PLAY.kit.deg / Math.PI - FIND_PLAY.kit.deg : 0;
-    angle = ((angle + FIND_PLAY.kit.turn * 1.5) % FIND_PLAY.kit.turn) - FIND_PLAY.kit.deg; angle = Math.max(-S.headLimit, Math.min(S.headLimit, angle));
-    o.headAngle = FD.rm ? angle : lerp(o.headAngle, angle, Math.min(1, dt * S.headEase));
-    let headTurn = asleep ? S.restAngle : o.headAngle, offsets = loops.map((g, j) => FD.rm ? 0 : S.bob[0] * Math.sin(Math.PI * 2 * (t / S.bob[1] - j / loops.length))), gulpAge = -Infinity;
-    if (o.stage === 'chase') {
-      const speed = S.speed[o.pokes - 1], sinkTotal = ((loops.length - 1) * S.sinkStep + S.sinkTime) * speed, sinkEnd = S.flinch + sinkTotal, swimEnd = sinkEnd + S.swim[o.pokes - 1], end = swimEnd + ((loops.length - 1) * S.surfStep + S.surfTime) * speed;
-      const swim = FD.rm ? 1 : ease((e - sinkEnd) / S.swim[o.pokes - 1]);
-      o.current = [lerp(o.from[0], o.to[0], swim), lerp(o.from[1], o.to[1], swim) - S.bulge * Math.sin(Math.PI * swim)];
-      headTurn += S.rear * Math.sin(Math.PI * clamp01(e / S.flinch));
-      offsets = loops.map((g, j) => {
-        const down = FD.rm ? 1 : ease((e - S.flinch - j * S.sinkStep * speed) / (S.sinkTime * speed)), up = FD.rm ? 1 : ease((e - swimEnd - (loops.length - 1 - j) * S.surfStep * speed) / (S.surfTime * speed));
-        if (down === 1 && !o.dropSent.has(j)) { o.dropSent.add(j); findBits('drop', o.from[0] + (j - loops.length / 2) * S.sink * S.scale, o.from[1], S.drops, FIND_PLAY.bits.drops); }
-        return S.sink * down * (1 - up);
-      });
-      if (e >= sinkEnd && e < swimEnd && t >= o.nextWake) { o.nextWake = t + S.wakeGap; findBits('ring', o.current[0], o.current[1], 1, FIND_PLAY.bits.wake); }
-      attr(leaf, 'opacity', e >= swimEnd || FD.rm ? 1 : 0);
-      if (FD.rm || e >= end) { o.current = o.to.slice(); o.spot = o.toSpot; o.stage = o.pokes === S.spots.length ? 'eating' : 'up'; o.ts = t; }
+    if (o.stage === 'step') { o.queued = true; return; }
+    if (o.stage === 'waking' || o.stage === 'closing') return;
+    if (o.stage === 'asleep') {
+      o.round++; o.pokes = 0; o.kept = false; o.queued = false; o.ts = o.padTs = FD.now; o.stage = FD.rm ? 'ready' : 'waking'; closePop(); opened(o);
+      leaves.slice().reverse().forEach(leaf => pad.appendChild(leaf)); remaining();
+      if (!FD.rm) findBits('ring', f.x + FIND_PLAY.serpent.pad[0], f.y + FIND_PLAY.serpent.pad[1], 1, FIND_PLAY.bits.wake);
+      attr(eye, 'opacity', 1); attr(shut, 'opacity', 0); return;
     }
-    if (o.stage === 'eating') {
-      const age = t - o.ts, q = FD.rm ? 1 : clamp01((age - S.eatWait) / S.eatTime); gulpAge = age - S.eatWait - S.eatTime;
-      attr(leaf, 'transform', `translate(${lerp(S.leaf[0], S.head[0], q)} ${lerp(S.leaf[1], S.head[1], q)}) scale(${1 - q})`);
-      if (FD.rm || gulpAge >= loops.length * S.gulp[0] + S.gulp[1]) {
-        o.stage = 'asleep'; o.kept = true; o.ts = t; attr(leaf, 'opacity', 0);
-        queueMicrotask(() => showPop(o, () => [o.current[0] + S.popup[0] * S.scale, o.current[1] + S.popup[1] * S.scale], `<p class="pop-k">${fEsc(FIND_COPY.serpentFed)}</p>${findSlot(FIND_COPY.serpentLines[o.round % FIND_COPY.serpentLines.length])}`));
+    if (o.pokes >= leaves.length) return;
+    closePop(); found(o.id); opened(o); o.pokes++; o.ts = FD.now; o.stepPart = -1; o.stage = 'step'; o.bitten = false; o.gulped = false; o.leaf = leaves[o.pokes - 1];
+    if (FD.rm) { attr(o.leaf, 'opacity', 0); remaining(); o.tailOut = o.pokes === leaves.length ? 0 : 1; o.jawAngle = o.pokes === leaves.length ? 0 : FIND_PLAY.serpent.hungryJaw; o.stage = 'hungry'; if (o.pokes === leaves.length) { attr(pad, 'opacity', 0); reward(); } }
+    o.playing = !FD.rm;
+  };
+  press(el, start); remaining(); attr(pad, 'transform', 'translate(' + FIND_PLAY.serpent.pad.join(' ') + ')');
+  o.undo = () => { if (FD.popOwner === o) closePop(); };
+  o.hear = () => { if (!FD.rm) { o.hearTs = FD.now; swell(FIND_PLAY.serpent.hear[2], true); o.playing = true; } };
+  o.tick = (t, dt) => {
+    const S = FIND_PLAY.serpent, J = MAP.jorm, e = t - o.ts, asleep = o.stage === 'asleep', here = { x: f.x + S.head[0], y: f.y + S.head[1] }, target = attend(here, S.attend);
+    let aim = target ? Math.atan2(-(target[1] - here.y), -(target[0] - here.x)) * FIND_PLAY.kit.deg / Math.PI : 0; aim = Math.max(-S.headLimit, Math.min(S.headLimit, aim));
+    o.headAngle = FD.rm ? 0 : lerp(o.headAngle, aim, Math.min(1, dt * S.headEase));
+    let angle = asleep ? S.restAngle + (FD.rm ? 0 : S.breathe[0] * Math.sin(Math.PI * 2 * t / S.breathe[1])) : o.headAngle;
+    let jawTurn = o.stage === 'hungry' ? S.hungryJaw : 0, tailK = o.stage === 'hungry' ? 1 : 0, padK = o.pokes === leaves.length && o.gulped ? clamp01((t - o.padTs) / S.padTime) : 0;
+    if (o.stage === 'step') {
+      let part = 0, age = e; while (part < S.steps.length - 1 && age >= S.steps[part]) { age -= S.steps[part]; part++; }
+      const q = clamp01(age / S.steps[part]); o.stepPart = part;
+      const turn = S.lunge;
+      if (part === 0) { jawTurn = lerp(o.pokes > 1 ? S.hungryJaw : 0, S.jaw, ease(q)); tailK = lerp(o.pokes > 1 ? 1 : 0, 1, ease(q)); }
+      if (part === 1) { const back = S.overEase, z = q - 1; angle = turn * (1 + (back + 1) * z ** 3 + back * z ** 2); jawTurn = S.jaw; tailK = 1; }
+      if (part >= 2 && !o.bitten) { o.bitten = true; o.held = true; joint.appendChild(o.leaf); remaining(); findBits('drop', f.x + S.pad[0], f.y + S.pad[1], S.drops, FIND_PLAY.bits.drops); }
+      if (part === 2) { angle = turn; jawTurn = S.jaw * (1 - ease(q)); tailK = 1; }
+      if (part === 3) { angle = turn * (1 - ease(q)); tailK = 1; }
+      if (part === 4) {
+        angle = S.swallow * Math.sin(Math.PI * q); tailK = 1;
+        if (!o.gulped) { o.gulped = true; swell(S.swell[o.pokes - 1]); if (o.pokes === leaves.length) { o.padTs = t; findBits('ring', f.x + S.pad[0], f.y + S.pad[1], 1, FIND_PLAY.bits.wake); } }
+        padK = o.pokes === leaves.length ? clamp01((t - o.padTs) / S.padTime) : 0;
       }
-    } else attr(leaf, 'transform', `translate(${S.leaf[0]} ${S.leaf[1]}) rotate(${S.leaf[2] + (FD.rm ? 0 : S.flutter[0] * Math.sin(Math.PI * 2 * S.flutter[1] * t))})`);
-    if (o.stage === 'waking' && (FD.rm || e >= S.wake)) o.stage = 'up';
-    const sleeping = o.stage === 'asleep';
-    const heard = t - o.hearTs; if (!FD.rm && heard < S.hear[1]) headTurn += S.hear[0] * Math.sin(Math.PI * heard / S.hear[1]);
-    attr(eye, 'opacity', sleeping && heard >= S.hear[2] ? 0 : 1); attr(shut, 'opacity', sleeping && heard >= S.hear[2] ? 1 : 0);
-    loops.forEach((g, j) => { const order = loops.length - 1 - j, pulse = FD.rm ? 0 : Math.sin(Math.PI * clamp01((gulpAge - order * S.gulp[0]) / S.gulp[1])); const settle = sleeping ? S.settle + (FD.rm ? 0 : S.breathe[0] * Math.sin(Math.PI * 2 * t / S.breathe[1])) : offsets[j]; attr(g, 'transform', `translate(0 ${settle}) scale(${1 + (S.gulp[2] - 1) * pulse})`); });
-    attr(head, 'transform', `rotate(${sleeping ? S.restAngle : headTurn} ${S.pivot[0]} ${S.pivot[1]})`);
-    const near = attend(here, S.near), tongueAge = t % S.tongue[1], flick = !FD.rm && !sleeping && near && tongueAge < S.tongue[0] ? Math.sin(Math.PI * tongueAge / S.tongue[0]) : 0;
-    attr(tongue, 'opacity', flick > 0 ? 1 : 0); attr(tongue, 'transform', `translate(${S.snout[0]} ${S.snout[1]}) scale(${flick} 1) translate(${-S.snout[0]} ${-S.snout[1]})`);
-    attr(inner, 'transform', `translate(${(o.current[0] - f.x) / S.scale} ${(o.current[1] - f.y) / S.scale})`);
+      if (o.held) {
+        const shrink = part === 4 ? 1 - ease(q) : 1, flutter = S.flutter[0] * Math.sin(Math.PI * 2 * S.flutter[1] * t), at = part === 4 ? S.mouth.map((v, i) => lerp(v, S.corner[i], ease(q))) : S.mouth;
+        attr(o.leaf, 'transform', 'rotate(' + angle + ') translate(' + at.join(' ') + ') rotate(' + flutter + ') scale(' + shrink + ')'); attr(o.leaf, 'opacity', shrink > 0 ? 1 : 0); o.leafTurn = angle;
+      }
+      if (e >= S.steps.reduce((sum, v) => sum + v, 0)) { attr(o.leaf, 'opacity', 0); o.held = false; o.stage = 'hungry'; if (o.queued && o.pokes < leaves.length) { o.queued = false; start(); } else o.queued = false; }
+    }
+    if (o.stage === 'waking') { const q = clamp01(e / S.padTime); padK = 1 - q; if (e >= S.wake) attr(eye, 'opacity', 1); if (q === 1) o.stage = 'ready'; }
+    swells.forEach(s => {
+      if (!s.live) { attr(s.g, 'opacity', 0); return; }
+      const q = clamp01((t - s.ts) / s.duration), u = JORM.L * ease(q), p = jormPoint(u), fade = Math.min(1, u / J.swellRamp, (JORM.L - u) / J.swellRamp);
+      const surface = Math.max(0, ...J.surf.map(([a, b]) => Math.max(0, Math.min(1, (u - a * JORM.L) / J.swellRamp, (b * JORM.L - u) / J.swellRamp))));
+      attr(s.g, 'transform', 'translate(' + p.x + ' ' + p.y + ') rotate(' + p.angle + ')'); attr(s.g, 'opacity', fade * lerp(J.swellSub, 1, surface)); attr(s.gulp, 'opacity', s.horn ? 0 : 1); attr(s.hearPath, 'opacity', s.horn ? 1 : 0);
+      if (q === 1) { s.live = false; if (!s.horn) o.twitchTs = t; if (s.last) { o.stage = 'closing'; o.ts = t; } }
+    });
+    if (o.stage === 'closing') {
+      const age = t - o.ts, A = S.close, q = age < A[0] ? age / A[0] : age < A[0] + A[1] ? (age - A[0]) / A[1] : (age - A[0] - A[1]) / A[2];
+      jawTurn = age < A[0] ? lerp(S.hungryJaw, S.jaw, ease(q)) : age < A[0] + A[1] ? S.jaw : S.jaw * (1 - ease(q)); tailK = age < A[0] ? 1 : 1 - ease((age - A[0]) / A[1]); angle = 0;
+      if (age >= A.reduce((sum, v) => sum + v, 0)) reward();
+    }
+    const heard = FD.rm ? 1 : clamp01((t - o.hearTs) / S.hear[1]); angle += S.hear[0] * Math.sin(Math.PI * heard);
+    if (o.stage === 'asleep') { jawTurn = 0; tailK = 0; }
+    o.headTurn = angle; o.jawAngle = jawTurn; o.tailOut = tailK;
+    attr(head, 'transform', 'rotate(' + angle + ')'); attr(jaw, 'transform', 'rotate(' + (-jawTurn) + ' ' + S.jawPivot.join(' ') + ')');
+    const twitch = FD.rm ? 0 : S.tailTwitch[0] * Math.sin(Math.PI * clamp01((t - (o.twitchTs ?? -Infinity)) / S.tailTwitch[1]));
+    attr(tail, 'transform', 'translate(' + (tailK * S.tailOut[0]) + ' ' + (tailK * S.tailOut[1] + twitch) + ')');
+    const sleeping = o.stage === 'asleep'; attr(eye, 'opacity', sleeping ? 0 : 1); attr(shut, 'opacity', sleeping ? 1 : 0);
+    const pointer = FD.hover && FD.now - FD.pointerT <= FIND_PLAY.fresh ? toMap(FD.pointer) : null, near = pointer && Math.hypot(pointer[0] - here.x, pointer[1] - here.y) <= S.near, ta = t % S.tongue[1], flick = !FD.rm && !sleeping && near && ta < S.tongue[0] ? Math.sin(Math.PI * ta / S.tongue[0]) : 0;
+    attr(tongue, 'opacity', flick > 0 ? 1 : 0); attr(tongue, 'transform', 'translate(' + S.snout.join(' ') + ') scale(' + flick + ' 1) translate(' + S.snout.map(v => -v).join(' ') + ')');
+    const bob = FD.rm || sleeping || o.stage === 'waking' ? 0 : Math.sin(Math.PI * 2 * t / S.bob[2]);
+    attr(pad, 'transform', 'translate(' + S.pad[0] + ' ' + (S.pad[1] + S.padSink * padK + S.bob[1] * bob) + ') rotate(' + S.bob[0] * bob + ')'); attr(pad, 'opacity', 1 - padK);
+    o.playing = ['step', 'waking', 'closing'].includes(o.stage) || swells.some(s => s.live) || t - (o.twitchTs ?? -Infinity) < S.tailTwitch[1];
   };
   return o;
 }

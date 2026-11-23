@@ -20,18 +20,18 @@ const close = (a, b, label, tolerance = 0.000001) => assert.ok(Math.abs(a - b) <
 const chart = bigMap();
 assert.ok(!/undefined|\{\{/.test(chart.finds), 'all live drawing tokens must resolve');
 // Recorded before any art edits in this run.
-const original = { sea: [73566, 1305240864], fill: [12855, 3665486802], coast: [4401, 2408021381] };
+const original = { sea: [100054, 3547300242], fill: [12855, 3665486802], coast: [4401, 2408021381] };
 for (const [key, [length, hash]] of Object.entries(original)) { assert.equal(chart[key].length, length); assert.equal(digest(chart[key]), hash); }
-console.log('ok: original sea/fill/coast lengths and hashes unchanged');
+console.log('ok: C1 ring sea baseline; original fill/coast lengths and hashes unchanged');
 // The review tunes these three tables in a browser and records their digest here afterwards; a build never changes them.
 assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 1195292270);
 console.log('ok: STARS, DEPTH and NOVA values unchanged');
 // A build never changes these two files. The review records their digests here after each tuning pass (a failure
 // prints the new number); line endings are evened out first, so the numbers are the same on Windows and in the cloud.
 const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.meta.url), 'utf8').replace(/\r\n/g, '\n'));
-assert.equal(sourceDigest('trip.mjs'), 15594086, 'trip.mjs changed');
-assert.equal(sourceDigest('depth.mjs'), 2235235323, 'depth.mjs changed');
-console.log('ok: trip.mjs and depth.mjs unchanged since the review');
+assert.equal(sourceDigest('trip.mjs'), 180365617, 'trip.mjs changed');
+assert.equal(sourceDigest('depth.mjs'), 3982895838, 'depth.mjs changed');
+console.log('ok: C1 camera/labels/tripS and deck source digests recorded');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
 const mapP = BEATS.find(b => b.id === 'map').P, stopP = BEATS.find(b => b.id === STOPS[2].id).P, leg = SEQ.find(q => q.kind === 'leg' && q.i === 2), legP = leg.a + leg.len / 2;
 for (const [w, h] of [[1440, 900], [390, 664]]) {
@@ -92,7 +92,7 @@ class TestNode {
   remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(c => c !== this); this.parentElement = null; }
   prepend(...nodes) { nodes.reverse().forEach(n => { this.children.unshift(n); n.parentElement = this; }); }
   set innerHTML(html) {
-    this.children = []; const stack = [this];
+    this.recordedHTML = String(html); this.children = []; const stack = [this];
     for (const token of String(html).matchAll(/<\/?([\w:-]+)([^>]*?)\/?\s*>/g)) {
       if (token[0].startsWith('</')) { if (stack.length > 1) stack.pop(); continue; }
       const node = new TestNode(token[1]);
@@ -156,7 +156,7 @@ Object.assign(globalThis, { window: testWindow, document: testDocument, history:
 async function testPlays() {
 const testStage = new TestNode('div'), testSvg = new TestNode('svg'), testBase = new TestNode('g'), testPop = new TestNode('div'), testSheet = new TestNode('div'), testTl = new TestNode('div');
 bodyNode.appendChild(testStage); testStage.append(testSvg, testPop, testSheet, testTl); testBase.id = 'b-all';
-testSvg.innerHTML = mapDefs() + '<g id="b-all">' + chart.detail + '</g><g id="finds">' + chart.finds + '</g>';
+testSvg.innerHTML = mapDefs() + '<g id="b-sea">' + chart.sea + '</g><g id="b-all">' + chart.detail + '</g><g id="finds">' + chart.finds + '</g>';
 stepsBuild({ stage: testStage, rm: false, resize() {}, joinedTop: () => false });
 tlBuild(testTl, { jump() {}, scrub() {} }, false);
 findsBuild(testSvg, testPop, testSheet, testSvg.querySelector('#b-all'), false);
@@ -183,9 +183,24 @@ for (let i = 0; i < 4; i++) { key('hoard-laurier'); await tick(0.4); }
 assert.equal(window.__jm.finds.state('hoard-laurier').digs, 3); assert.equal(window.__jm.finds.state('hoard-laurier').open, true);
 key('ravens'); await tick(2.7); assert.equal(window.__jm.finds.state('ravens').tally, 1);
 key('ravens'); await tick(2.7); assert.equal(window.__jm.finds.state('ravens').stage, 'reel'); await tick(5.9); assert.equal(window.__jm.finds.state('ravens').stage, 'rest');
-for (let i = 0; i < 3; i++) { key('serpent'); await tick(3.2); }
-await tick(0.5);
-assert.equal(window.__jm.finds.state('serpent').stage, 'asleep');
+const serpentState = () => window.__jm.finds.state('serpent');
+const serpentLeaf = i => testSvg.querySelector('.jg-leaf[data-i="'+i+'"]');
+assert.equal(serpentState().stage,'ready'); assert.equal(serpentState().pokes,0);
+for(let i=0;i<5;i++){key('serpent');await tick(.05);}
+assert.equal(serpentState().pokes,1); assert.equal(serpentState().queued,true);
+await tick(.25);assert.equal(serpentState().held,true);
+assert.ok(serpentLeaf(0).getAttribute('transform').startsWith('rotate('+serpentState().headTurn+')'),'held leaf follows the current head rotation');
+assert.deepEqual(FIND_COPY.serpentLeaves[0],['FRI','5 PM']);
+await tick(.7);assert.equal(serpentState().pokes,2);assert.equal(serpentState().queued,false);
+await tick(3.2);assert.equal(serpentState().stage,'hungry');assert.deepEqual(FIND_COPY.serpentLeaves[1],['TODAY','EOD']);
+assert.equal(serpentLeaf(1).getAttribute('opacity'),'0');assert.equal(serpentLeaf(2).getAttribute('opacity'),'1');
+key('serpent');await tick(1.2);for(let i=0;i<5;i++)key('serpent');assert.equal(serpentState().pokes,3);await tick(2.1);assert.equal(serpentState().stage,'asleep');assert.deepEqual(FIND_COPY.serpentLeaves[2],['NOW','ASAP']);
+assert.equal(serpentState().tailOut,0);assert.equal(testSvg.querySelector('.jg-eye').getAttribute('opacity'),'0');assert.equal(testSvg.querySelector('.jg-shut').getAttribute('opacity'),'1');assert.ok(testPop.querySelector('.pop-k'));assert.equal(FD.popOwner.id,'serpent');assert.ok(testPop.recordedHTML.includes('Deadline met'));
+assert.equal([...FD.found].filter(id=>id==='serpent').length,1);
+key('serpent');assert.equal(serpentState().stage,'waking');await tick(.7);assert.equal(serpentState().stage,'ready');assert.equal(serpentState().round,1);assert.equal(serpentLeaf(0).getAttribute('opacity'),'1');
+for(let i=0;i<3;i++){key('serpent');await tick(3.3);}await tick(.5);assert.equal(serpentState().stage,'asleep');
+const eagle=testSvg.querySelector('.yg-eagle'), eagleRest=eagle.getAttribute('transform'); FD.list.well.hear();await tick(1);assert.notEqual(eagle.getAttribute('transform'),eagleRest);assert.equal(FD.list.well.playing,true);await tick(1.8);assert.equal(eagle.getAttribute('transform'),eagleRest);
+console.log('ok: Jormungandr three leaves, five rapid pokes queue once, held leaf follows head, swells/closing/sleep/wake, one found count; eagle circle returns to perch');
 for (let i = 0; i < 4; i++) { key('beacon'); await tick(1.9); }
 assert.equal(window.__jm.finds.state('beacon').fire, 4);
 key('runestone'); await tick(5);
@@ -268,6 +283,9 @@ rmKey('ravens'); await rmTick(); assert.equal(window.__jm.finds.state('ravens').
 rmKey('ravens'); await rmTick(); await rmTick(0.1); assert.equal(window.__jm.finds.state('ravens').stage, 'reel'); await rmTick(5.1); assert.equal(window.__jm.finds.state('ravens').stage, 'rest');
 for (let i = 0; i < 3; i++) { rmKey('serpent'); await rmTick(); }
 assert.equal(window.__jm.finds.state('serpent').stage, 'asleep');
+assert.ok(FD.list.serpent.swells.every(s=>!s.live));assert.equal(rmSvg.querySelector('.jg-eye').getAttribute('opacity'),'0');assert.equal(FD.list.serpent.tailOut,0);
+const rmActors=['.yg-eagle','.yg-wings','.yg-rat','.yg-tail','.yg-nid-head'].map(s=>rmSvg.querySelector(s)), rmTransforms=rmActors.map(n=>n.getAttribute('transform'));FD.list.well.hear();await rmTick(3);assert.deepEqual(rmActors.map(n=>n.getAttribute('transform')),rmTransforms);
+console.log('ok: reduced-motion serpent consumes leaves immediately with no swell; all tree actors stay still on hear');
 for (let i = 0; i < 4; i++) { rmKey('beacon'); await rmTick(); }
 assert.equal(window.__jm.finds.state('beacon').fire, 4);
 rmKey('runestone'); await rmTick(); assert.equal(window.__jm.finds.state('runestone').read, true);

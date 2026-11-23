@@ -1,9 +1,9 @@
 // Node-only pace checks, including every neighbouring beat in both directions.
 import { BEATS, paceT, paceP, paceMove, paceAt } from '../pace.mjs';
 import { JOURNEY, stepsBuild, stepsFrame } from '../steps.mjs';
-import { tripResize, tripState } from '../trip.mjs';
+import { tripResize, tripState, toScreen, SEQ } from '../trip.mjs';
 import { cardsBuild, cardsOverride, cardsClose, cardsList } from '../cards.mjs';
-import { CARD_CLOSE } from '../data.mjs';
+import { CARD_CLOSE, CAMERA, MAP, STEPS } from '../data.mjs';
 import { exploreBuild, exploreResize, exploreApply, exploreActive, exploreEnd } from '../explore.mjs';
 
 const stepAssert = (condition, message) => { if (!condition) throw new Error(message); };
@@ -86,3 +86,13 @@ cardsList()[0].btn.fire('click'); cardState = tripState(stopP); cardsOverride(ca
 cardsClose(); cardsOverride(tripState(BEATS[3].P), 0, false); cardState = tripState(stopP); cardsOverride(cardState, 0, false); stepAssert(cardState.cardK[0] === 1, 'leaving stop must forget closed state');
 const reducedCards = new StepNode(); cardsBuild(reducedCards, () => {}, true); stepAssert(reducedCards.querySelectorAll('.c-close').length === 0, 'reduced-motion cards must have no close button');
 console.log('ok: six card X controls; reversible local fold, fixed P, mark reopens, departure forgets override, reduced-motion list has no X');
+
+for(const [w,h,tl] of [[1440,900,120],[390,844,96]]){
+  tripResize(w,h,tl);const x=tripState(BEATS.find(b=>b.id==='x').P);
+  if(w>640){const bottom=toScreen(x,[0,CAMERA.frameBottom])[1],top=h-56-STEPS.nav.gap-STEPS.nav.h;stepAssert(bottom<=top-12,'desktop X frame crosses stepper');}
+  else{const b=CAMERA.xBoxPhone,A=toScreen(x,b.slice(0,2)),B=toScreen(x,b.slice(2));stepAssert(A[0]>=16-1e-8&&A[1]>=16&&B[0]<=w-16+1e-8&&B[1]<=h-STEPS.nav.bar-16,'phone X/Lennard/skyline fit');}
+}
+const rush=SEQ.find(s=>s.kind==='rush'),rest=SEQ.find(s=>s.kind==='rest');JOURNEY.set(rush.a);stepsFrame(stepClock+=50);stepAssert(!go.hidden,'X beat needs its Dig control');go.querySelector('.go-next').focus();JOURNEY.next();stepAssert(go.hidden,'rush start must hide stepper');
+for(let P=rush.a+.001;P<rest.a;P+=1){JOURNEY.set(P);stepsFrame(stepClock+=50);stepAssert(go.hidden,'stepper shown during rush/blast/settle');}
+JOURNEY.set(rest.a);stepsFrame(stepClock+=50);stepAssert(!go.hidden,'settle end must return stepper');stepAssert(document.activeElement===go.querySelector('.go-next'),'stepper main focus must return');
+console.log('ok: X frame/phone box clear controls; rush through settle hides stepper and restores main focus');

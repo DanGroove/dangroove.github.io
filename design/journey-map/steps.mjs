@@ -1,5 +1,5 @@
 // The single progress owner: button/key Steps, with scroll only for the reduced-motion page.
-import { STEPS, COPY, STOPS, DEPTH, NOVA, FIND_PLAY, EXPLORE } from './data.mjs';
+import { STEPS, COPY, STOPS, DEPTH, NOVA, FIND_PLAY, EXPLORE, WORLD } from './data.mjs';
 import { VIEW, TOTAL_P, tripState, easeIO, lerp } from './trip.mjs';
 import { BEATS, paceMove, paceAt, paceP } from './pace.mjs';
 import { arrowSvg } from './cards.mjs';
@@ -60,7 +60,9 @@ function stepsSetDepth(on) {
 function stepsButtons() {
   if (!SC.go) return;
   const top = SC.P <= 1e-6, end = !JOURNEY.moving && Math.abs(SC.P - stepsEnd) < 1e-6;
-  SC.go.hidden = !SC.ready || SC.mode !== 'steps' || (top && SC.joinedTop());
+  const beatState = tripState(SC.P), blasting = beatState.kind === 'rush' ? JOURNEY.moving || beatState.t > 0 : ['blast', 'settle'].includes(beatState.kind);
+  if (blasting && !SC.go.hidden) { SC.returnFocus = SC.go.contains(document.activeElement); SC.shown = false; }
+  SC.go.hidden = !SC.ready || SC.mode !== 'steps' || (top && SC.joinedTop()) || blasting;
   SC.go.classList.toggle('go-end', end);
   const back = SC.go.querySelector('.go-back'), next = SC.go.querySelector('.go-next'), home = SC.go.querySelector('.go-top');
   const focus = document.activeElement;
@@ -73,6 +75,7 @@ function stepsButtons() {
   back.setAttribute('aria-label', returning || stepsFormat(COPY.steps.back, { name: stepsName(stepsBackBeat()) }));
   back.querySelector('span').textContent = returning;
   if (end) SC.go.querySelector('.go-t').textContent = COPY.explore.button;
+  if (!SC.go.hidden && SC.returnFocus) { SC.returnFocus = false; next.focus({ preventScroll: true }); }
   if (!SC.go.hidden && !SC.shown) { SC.shown = true; SC.go.classList.add('go-reveal'); }
   SC.root.classList.toggle('jm-moving', JOURNEY.moving);
   SC.go.querySelector('.go-fill').style.transform = `scaleX(${SC.move ? SC.fill : 0})`;
@@ -184,7 +187,7 @@ function stepsBlockWheel(e) {
   e.preventDefault();
 }
 function stepsKey(e) {
-  if (SC.mode !== 'steps' || SC.rm || e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (SC.mode !== 'steps' || SC.rm || exploreActive() || e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
   const target = stepsTarget(e);
   if (target && target.closest('.tl')) return;
   if (e.key === ' ' && target && target.closest('button, a, input, textarea, select, .find, [role="button"]')) return;
@@ -218,7 +221,7 @@ export function stepsBuild({ stage, rm, joinedTop }) {
   SC.review = document.createElement('div'); SC.review.className = 'jm-review'; SC.review.dataset.review = ''; SC.review.setAttribute('role', 'group'); SC.review.setAttribute('aria-label', s.review.label);
   SC.review.innerHTML = `<span>${s.review.label}</span><button type="button" data-depth aria-pressed="${!!VIEW.depth}">${s.review.depth}</button>`;
   SC.review.querySelector('[data-depth]').addEventListener('click', () => stepsSetDepth(!VIEW.depth)); document.body.appendChild(SC.review);
-  const vars = { 'go-h': STEPS.nav.h + 'px', 'go-gap': STEPS.nav.gap + 'px', 'go-bar': STEPS.nav.bar + 'px', 'go-reveal': STEPS.reveal + 's' };
+  const vars = { 'go-h': STEPS.nav.h + 'px', 'go-gap': STEPS.nav.gap + 'px', 'go-bar': STEPS.nav.bar + 'px', 'go-reveal': STEPS.reveal + 's', 'go-top-pad': WORLD.card.topPad + 'px', 'go-top-pad-x': WORLD.card.topPadX + 'px' };
   Object.entries(vars).forEach(([k, v]) => SC.root.style.setProperty('--' + k, v));
   Object.entries(EXPLORE.bar).forEach(([k, v]) => SC.root.style.setProperty('--explore-' + k, v + 'px'));
   stepsClasses(); stepsArrive();

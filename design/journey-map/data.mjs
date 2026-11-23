@@ -15,9 +15,9 @@ export const PALETTES = {
   hmc: { logo: 'assets/logos/hmc.png', layout: 'ground', ground: '#1E345D', text: '#FFFFFF', sub: '#B8C4DA', button: '#0D7247', buttonText: '#FFFFFF', pill: '#0D7247', pillText: '#FFFFFF', band: '#FFFFFF', headline: '#FFFFFF', mark: '#0D7247', hairline: '#B8C4DA' },
   laurier: { logo: 'assets/logos/laurier.png', layout: 'band', ground: '#330172', text: '#FFFFFF', sub: '#CFC3E0', button: '#EAA41E', buttonText: '#330172', pill: '#EAA41E', pillText: '#330172', band: '#FFFFFF', headline: '#FFFFFF', mark: '#EAA41E', hairline: '#CFC3E0' },
   mohawk: { logo: 'assets/logos/mohawk.png', layout: 'ground', ground: '#030303', text: '#F4F4F4', sub: '#A3A3A3', button: '#FB9632', buttonText: '#030303', pill: '#991030', pillText: '#FFFFFF', band: '#FFFFFF', headline: '#F4F4F4', mark: '#FB9632', hairline: '#A3A3A3' },
-  interkom: { logo: 'assets/logos/interkom.png', layout: 'ground', ground: '#F7F3E2', text: '#242021', sub: '#5E5A56', button: '#E85155', buttonText: '#F7F3E2', pill: '#242021', pillText: '#F7F3E2', band: '#FFFFFF', headline: '#242021', mark: '#E85155', hairline: '#5E5A56' },
+  interkom: { logo: 'assets/logos/interkom.png', layout: 'ground', ground: '#F7F3E2', text: '#242021', sub: '#5E5A56', button: '#242021', buttonText: '#F7F3E2', arrow: '#E85155', pill: '#242021', pillText: '#F7F3E2', band: '#FFFFFF', headline: '#242021', mark: '#E85155', hairline: '#5E5A56' },
   // Lennard: white logo band over orange; Warm Gray 11 is its only dark, on the pill, button and chips.
-  lennard: { logo: 'assets/logos/lennard.png', layout: 'band', ground: '#FF4C00', text: '#FFFFFF', sub: '#FFFFFF', button: '#FFFFFF', buttonText: '#706259', pill: '#706259', pillText: '#FFFFFF', band: '#FFFFFF', headline: '#FFFFFF', mark: '#FF4C00', hairline: '#FFFFFF', smallWeight: 500, chip: '#FFFFFF', chipText: '#706259' },
+  lennard: { logo: 'assets/logos/lennard.png', layout: 'band', ground: '#FF4C00', text: '#FFFFFF', sub: '#FFFFFF', button: '#FFFFFF', buttonText: '#706259', pill: '#706259', pillText: '#FFFFFF', band: '#FFFFFF', headline: '#FFFFFF', mark: '#FF4C00', hairline: '#FFFFFF', panel: '#FFFFFF', panelText: '#706259', panelHair: '#706259', panelButton: '#706259', panelButtonText: '#FFFFFF', smallWeight: 500, chip: '#FFFFFF', chipText: '#706259' },
 };
 
 export const CRAFTS = ['Print', 'Video', 'Motion', 'Screen'];
@@ -56,7 +56,9 @@ export const MAP = {
   xIdx: 37, trailSeg: 8, dotGap: 5.6,
   x: [256, 768],
   well: [302, 392],
-  ygg: [300, 374],
+  ygg: [304, 374],
+  jorm: {"ring":[[500,101],[524,106],[546,122],[558,150],[563,190],[562,240],[560,290],[563,340],[563,390],[562,440],[563,490],[563,535],[552,572],[524,604],[484,622],[440,626],[396,622],[350,614],[300,618],[252,624],[204,618],[160,600],[124,572],[98,532],[80,490],[62,446],[56,400],[56,350],[56,300],[62,252],[76,206],[98,166],[128,132],[168,116],[214,112],[262,116],[312,120],[362,113],[410,108],[444,105],[468,102.5]],"surf":[[0,0.085],[0.235,0.29],[0.43,0.5],[0.655,0.715],[0.885,1]],"w":6.4,"seg":10,"tail":9,"taper":[0.9,0.1,0.7],"subAlpha":0.55,"edgeAlpha":0.22,"edgeWidth":0.8,"dash":"3 2.2","surfaceTaper":0.012,"edgeNarrow":[0.45,0.55],"scaleStep":2,"chevron":[1.8,0.6],"water":"q2.4 -2 4.8 0t4.8 0t4.8 0","waterAt":[-7,1],"waterAlpha":0.8,"swellPath":"M-7 -3.2Q0 -6.2 7 -3.2L7 3.2Q0 6.2 -7 3.2Z","hornPath":"M-7 -3.2Q0 -4.7 7 -3.2L7 3.2Q0 4.7 -7 3.2Z","swellLength":14,"swellExtra":3,"hornExtra":1.5,"swellSub":0.45,"swellRamp":3},
+  toronto: {"at":[368,752],"k":0.105,"facts":{"cn":553.3,"cnMain":346,"cnSky":447,"cnMastFoot":457,"rogers":86,"fcp":298,"scotia":275,"cibc":241,"ccw":239,"td":223,"bac":218,"brookfield":207,"rbp":180},"box":[362,688,494,758],"width":114.4,"back":[[18.5,4,15],[30.5,4,18],[33.6,3.4,13.5],[40.5,4.2,23],[52,3.6,26.5],[60.5,4,21],[77,3.6,24],[86,4.2,20],[101,4,17.5],[111,3.6,14]],"buildings":[["rogers",0,20],["cn",26,8.4],["rbp",36,6.4],["brookfield",43.6,6],["td",50.8,7],["fcp",59,6.4],["ccw",66.6,6],["scotia",73.8,7.2],["bac",82.2,6],["cibc",89.4,6.4]],"east":[[97,4.2,12],[102.4,4.6,16],[108.2,5,10]],"drawing":"<path class=\"t\" d=\"M18.5 0V-15H22.5V0M30.5 0V-18H34.5V0M33.6 0V-13.5H37V0M40.5 0V-23H44.7V0M52 0V-26.5H55.6V0M60.5 0V-21H64.5V0M77 0V-24H80.6V0M86 0V-20H90.2V0M101 0V-17.5H105V0M111 0V-14H114.6V0\"/><path class=\"g\" d=\"M0 0V-4.6Q10 -13.4 20 -4.6V0Z\"/><path class=\"t\" d=\"M0 -4.6H20M3.4 -7Q10 -10.6 16.6 -7\"/><path class=\"g\" d=\"M21.8 0C23.4 -6 24.5 -16 24.8 -34.3H27.2C27.5 -16 28.6 -6 30.2 0Z\"/><path class=\"t\" d=\"M26 -1V-33.9\"/><path class=\"g\" d=\"M22.2 -35.099999999999994Q21.4 -36.9 23 -37.9H29Q30.6 -36.9 29.8 -35.099999999999994Z\"/><path class=\"t\" d=\"M21.9 -36.3H30.1\"/><path class=\"g\" d=\"M25.1 -37.9V-46.1H26.9V-37.9\"/><path class=\"g\" d=\"M24.3 -46.1H27.7V-47.9H24.3Z\"/><path class=\"l\" d=\"M26 -47.9V-48\"/><path class=\"l\" d=\"M26 -48V-58.1\" stroke-opacity=\".8\"/><path class=\"g\" d=\"M36 0V-18.3L37.6 -18.9L39.2 -18.3L40.8 -18.9L42.4 -18.3V0\"/><path class=\"t\" d=\"M37.6 -1V-18.9M40.8 -1V-18.9\"/><path class=\"g\" d=\"M43.6 0V-19.7H44.6V-21.7H48.6V-19.7H49.6V0\"/><path class=\"t\" d=\"M44.6 -2.4H48.6M44.6 -4.8H48.6M44.6 -7.2H48.6M44.6 -9.6H48.6M44.6 -12.0H48.6M44.6 -14.4H48.6M44.6 -16.8H48.6\"/><path class=\"o\" d=\"M50.800000000000004 0V-23.4H57.800000000000004V0\"/><path class=\"t\" d=\"M52.2 -1V-22.4M53.6 -1V-22.4M55.0 -1V-22.4M56.4 -1V-22.4\"/><path class=\"t\" d=\"M51.300000000000004 -1.8H57.3M51.300000000000004 -3.6H57.3M51.300000000000004 -5.4H57.3M51.300000000000004 -7.2H57.3M51.300000000000004 -9.0H57.3M51.300000000000004 -10.8H57.3M51.300000000000004 -12.6H57.3M51.300000000000004 -14.4H57.3M51.300000000000004 -16.2H57.3M51.300000000000004 -18.0H57.3M51.300000000000004 -19.8H57.3M51.300000000000004 -21.6H57.3\"/><path class=\"g\" d=\"M59 0V-30.5L59.8 -31.3H64.6L65.4 -30.5V0\"/><path class=\"t\" d=\"M59.8 -1V-31.3M64.6 -1V-31.3\"/><path class=\"g\" d=\"M66.6 0V-25.1H72.6V0\"/><path class=\"t\" d=\"M66.6 -23.5H72.6M66.6 -22.900000000000002H72.6\"/><path class=\"t\" d=\"M68.1 -1V-21.7M69.6 -1V-21.7M71.1 -1V-21.7\"/><path class=\"g\" d=\"M73.8 0V-25.9L75.2 -27.5V-28.9L77.39999999999999 -26.5L79.6 -28.9V-27.5L81 -25.9V0\"/><path class=\"t\" d=\"M76.2 -1V-24.9M78.6 -1V-24.9\"/><path class=\"g\" d=\"M82.2 0V-21.5H83V-22.9H87.4V-21.5H88.2V0\"/><path class=\"t\" d=\"M83.2 -2.2H87.2M83.2 -4.4H87.2M83.2 -6.6H87.2M83.2 -8.8H87.2M83.2 -11.0H87.2M83.2 -13.2H87.2M83.2 -15.4H87.2M83.2 -17.6H87.2M83.2 -19.8H87.2\"/><path class=\"g\" d=\"M89.4 0V-25.3H95.80000000000001V0\"/><path class=\"t\" d=\"M89.4 -2L95.80000000000001 -8M89.4 -9L95.80000000000001 -15M89.4 -16L95.80000000000001 -22\"/><path class=\"g\" d=\"M97 0V-12H101.2V0\"/><path class=\"t\" d=\"M97.6 -1.6H100.6M97.6 -3.2H100.6M97.6 -4.8H100.6M97.6 -6.4H100.6M97.6 -8.0H100.6M97.6 -9.6H100.6\"/><path class=\"g\" d=\"M102.4 0V-16H107V0\"/><path class=\"t\" d=\"M103 -1.6H106.4M103 -3.2H106.4M103 -4.8H106.4M103 -6.4H106.4M103 -8.0H106.4M103 -9.6H106.4M103 -11.2H106.4M103 -12.8H106.4M103 -14.4H106.4\"/><path class=\"g\" d=\"M108.2 0V-10H113.2V0\"/><path class=\"t\" d=\"M108.8 -1.6H112.6M108.8 -3.2H112.6M108.8 -4.8H112.6M108.8 -6.4H112.6M108.8 -8.0H112.6\"/><path class=\"l\" d=\"M-4 0H118.4\"/><path class=\"t\" d=\"M2 2.6q2.4 -1.8 4.8 0t4.8 0M94.4 2.6q2.4 -1.8 4.8 0t4.8 0t4.8 0\"/>"},
 };
 
 // Copy outside the cards
@@ -123,16 +125,16 @@ export const COPY = {
 
 // Finds. n is the number on the Red marker (main finds only). x, y are map units.
 export const FINDS = [
-  { id: 'wayfinder', n: 1, x: 92, y: 716, view: [240, 660, 150], viewPhone: [108, 716, 75, 0], mark: [148, 672], label: 'The wayfinder. Pick a craft to light up the stops that used it. Arrow keys turn it, Enter on the centre clears it.' },
+  { id: 'wayfinder', n: 1, x: 102, y: 716, view: [250, 660, 150], viewPhone: [118, 716, 75, 0], mark: [148, 672], label: 'The wayfinder. Pick a craft to light up the stops that used it. Arrow keys turn it, Enter on the centre clears it.' },
   { id: 'hoards', n: 2, x: 366, y: 354, mark: [382, 346], label: 'Hoards. Five buried chests, each near a stop.' },
   { id: 'ravens', n: 3, x: 456, y: 192, view: [456, 164, 44], mark: [478, 176], label: 'Huginn and Muninn, two ravens on a standing stone. Press to send the next raven for a thought or memory.' },
-  { id: 'serpent', n: 4, x: 486, y: 98, view: [430, 78, 118], mark: [550, 74], label: 'The serpent. Poke three times to feed it a deadline.' },
+  { id: 'serpent', n: 4, x: 500, y: 101, view: [478, 96, 50], mark: [550, 74], label: 'J?rmungandr, the world serpent. Poke it three times to feed it a deadline.' },
   { id: 'beacon', n: 5, x: 536, y: 514, view: [468, 498, 92], mark: [558, 478], label: 'The beacon. Drag or arrows aim; Enter finds the next unread note.' },
   { id: 'runestone', n: 6, x: 250, y: 516, view: [250, 500, 40], mark: [270, 492], label: 'The rune stone. Press, rub, read, then flip the sheet.' },
   { id: 'hammer', n: 0, x: 112, y: 222, view: [112, 218, 34], label: 'Mjölnir on a stone near Laurier. Press it to hold the bridge.' },
   { id: 'mist', n: 0, x: 156, y: 438, view: [154, 436, 62], label: 'The mist of 2020. Press or wipe to clear it.' },
   { id: 'horn', n: 0, x: 46, y: 476, view: [46, 470, 30], label: 'A horn on the shore. Press to raise it, press again to sound it.' },
-  { id: 'well', n: 0, x: 302, y: 392, view: [300, 367, 66], label: "Urd's Well. Drop a pebble in. The Norns answer." },
+  { id: 'well', n: 0, x: 302, y: 392, view: [306, 350, 72], label: "Urd's Well. Drop a pebble in. The Norns answer." },
   { id: 'longship', n: 0, x: 452, y: 622, label: 'The longship. Pull three times to fly its pennant.' },
 ];
 
@@ -208,7 +210,7 @@ export const FIND_COPY = {
   hoards: [
     { id: 'hoard-laurier', kind: 'bundle', stop: 'laurier', x: 208, y: 266, title: 'Piece to come', image: null, label: 'A scratch in the ground near Laurier. Dig three times, then open it.' },
     { id: 'hoard-hmc1', kind: 'screen', stop: 'hmc1', x: 404, y: 304, title: 'SafetyDrivesUs logo and website', image: null, label: 'A scratch in the ground near HMC Connections. Dig three times, then open it.' },
-    { id: 'hoard-hmc2', kind: 'book', stop: 'hmc2', x: 366, y: 354, title: '2020/2021 annual report', image: PIECE_IMAGE, label: 'A scratch in the ground near HMC, again. Dig three times, then open it.' },
+    { id: 'hoard-hmc2', kind: 'book', stop: 'hmc2', x: 372, y: 368, title: '2020/2021 annual report', image: PIECE_IMAGE, label: 'A scratch in the ground near HMC, again. Dig three times, then open it.' },
     { id: 'hoard-interkom', kind: 'book', stop: 'interkom', x: 452, y: 558, title: 'Melanoma Canada booklet', image: null, label: 'A scratch in the ground near Interkom. Dig three times, then open it.' },
     { id: 'hoard-lennard', kind: 'sheet', stop: 'lennard', x: 228, y: 728, title: '1 King Street W flyer', image: null, label: 'A scratch in the ground near Lennard. Dig three times, then open it.' },
   ],
@@ -258,7 +260,7 @@ export const FIND_COPY = {
   wellNone: 'nothing yet', wellMap: 'the whole map', wellNext: 'not yet carved',
   // One short line of what to do, shown above the step buttons while a find has the camera. Draft copy.
   hints: { wayfinder: 'Pick a craft to light the stops that used it.', hoards: 'Dig three times, then open it.', ravens: 'Press to send a raven out.',
-    serpent: 'Poke it.', beacon: 'Press the tower for the next note, or drag to aim the beam.', runestone: 'Rub the stone to lift its carving.',
+    serpent: 'J?rmungandr, the world serpent. Poke it.', beacon: 'Press the tower for the next note, or drag to aim the beam.', runestone: 'Rub the stone to lift its carving.',
     hammer: 'Press the hammer to play.', mist: 'Wipe the mist away.', horn: 'Press to raise it, press again to sound it.',
     well: 'Drop a pebble in. The Norns answer.', longship: 'Press to pull the oars.' },
   shipLog: 'The 2023 crossing', longship: { t: '2023: Dan to write this line.', todo: 1 },
@@ -274,6 +276,7 @@ export const ACTS = {
 export const CAMERA = {
   pushScale: 3.2, pushScalePhone: 2.6, holdZoom: 1.35, holdDim: 0.35, craftDim: 0.55,
   anchorX: 0.45, anchorY: 0.55, smooth: 30, phoneMax: 640,
+  xEase: [0.5, 1], xAnchorY: 0.42, xFloor: 0.85, xBoxPhone: [244, 690, 494, 792], xMargin: 16, frameBottom: 885.5, xGap: 12, timeline: 56,
   footerX: [0.68, 0.3], footerXPhone: [0.66, 0.22],
 };
 
@@ -289,6 +292,7 @@ export const STEPS = {
 };
 
 export const EXPLORE = { in: 1.6, out: 0.9, most: 3, margin: 24, marginPhone: 12, wheel: 0.0016, wheelMax: 120, pinchWheel: 0.01,
+  keyPan: 90, keyShift: 3, calmAlpha: 0.35, calmScale: 0.6, autoReserve: 2,
   ease: 0.12, slop: 6, friction: 5, velocityWindow: 0.08, key: 1.25, hintTime: 8, linePx: 16,
   bar: { edgePhone: 16, padStart: 14, padEnd: 34, arrowPhone: 12 } };
 export const CARD_CLOSE = { time: 0.45, hit: 44, inset: 0, icon: 12, stroke: 1.6, radius: 14, radiusPhone: 16 };
@@ -397,11 +401,7 @@ export const FIND_PLAY = {
     fly: ['M-2 -3Q-4 -17 5 -22L4.5 -17L8.5 -17.5L6 -13L9.5 -12.5Q5 -6 2 -3.5Z', 'M-11 -1L-19 -4.5L-20 -.5L-18.5 3L-11 1.5Z', 'M-12 0Q-6 -5.5 3 -5.5Q8 -5.5 10.5 -3.5L15 -2L10.5 -.8Q6 3 -3 2.2Q-9 2 -12 0Z', 'M0 -3.5Q1 -18 12 -23L10.5 -17.8L15 -18L11.5 -13.5L15 -12.5L11 -9.5Q7 -4.5 4.5 -2.5Z'], eye: [8.6, -3.4, 0.5],
     reel: { ringSvg: '<svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16"/><circle class="ring-p" cx="20" cy="20" r="16" pathLength="100" stroke-dasharray="100 100"/></svg>', timeJoin: ' / ', iris: 440, width: 360, ratio: [16, 11], motion: [1.3, 0.4, 2, 60, 1.1, 0.3, 22, 40], ring: 100, tc: '00:0{n} / {end}', labelTop: 12, slotBottom: 36 },
   },
-  serpent: { spots: [[486, 98], [372, 84], [470, 56]], bob: [1.6, 3.2], near: 34, tongue: [0.25, 0.7], flinch: 0.12,
-    swim: [0.9, 0.65, 0.45], speed: [1, 0.8, 0.6], bulge: 14, gulp: [0.14, 0.26, 1.18], settle: 6, breathe: [0.8, 4.8], wake: 0.2,
-    scale: 0.52, bounds: [-114, -60, 118, 44], head: [-86, -42], pivot: [-72, -40], attend: 140, headLimit: 25, headEase: 5, rear: 18, sink: 34, sinkStep: 0.12, sinkTime: 0.35, surfStep: 0.08, surfTime: 0.5, wakeGap: 0.06, drops: 4, flutter: [6, 3], eatWait: 0.5, eatTime: 0.3, leaf: [-104, -40, 8], restAngle: 10, hear: [25, 0.5, 1], popup: [-60, -70],
-    tonguePath: 'M-101 -40l-8 1.5M-109 -38.5l-3.5 -2.5M-109 -38.5l-3 3', shutPath: 'M-86.2 -43q2.2 1.8 4.4 0', snout: [-101, -40],
-  },
+  serpent: {"near":34,"tongue":[0.25,0.7],"scale":1,"bounds":[-50,-30,12,12],"head":[-18,-4],"attend":140,"headLimit":10,"headEase":5,"bob":[2.5,0.5,3.4],"steps":[0.14,0.2,0.08,0.35,0.3],"jaw":20,"hungryJaw":6,"jawPivot":[-14,1.6],"lunge":24,"over":3,"overEase":1.94335,"tailOut":[3,1],"tailTwitch":[1.5,0.3],"flutter":[6,3],"mouth":[-32,1.5],"corner":[-24,-0.6],"pad":[-41,-20],"leafSize":[11,13],"leafOffset":0.6,"swallow":10,"swell":[2.4,2.1,1.8],"close":[0.1,0.25,0.08],"restAngle":-3,"breathe":[1,4.8],"wake":0.2,"padTime":0.6,"padSink":4,"hear":[8,0.8,4],"popup":[-65,-34],"drops":2,"tonguePath":"M-37 -1l-6 0m0 0l-3 -2m3 2l-3 2","shutPath":"M-22.6 -4.6Q-18 -1.8 -12 -4.2","snout":[-37,-1],"tailPath":"M-40.8 3.5L-39.3 3.3L-37 3.1L-35 2.8L-33.3 2.6L-31.9 2.5L-32.1 0.5L-33.5 0.7L-35.2 0.8L-37.2 1L-39.5 1.2L-41.1 1.4Z","padBoard":"M-6 -7H6V7H-6Z","leafPath":"M-5.5 -6.5H5.5V6.5H-5.5Z","padWave":"M-48 -10q3 -2 6 0t6 0t6 0","binding":[-5.5,-6.5,11,1.6],"rings":[-3,3,-5.7,0.45],"dayY":-0.5,"timeY":4,"daySize":3,"timeSize":3.6,"weight":700,"hit":[-50,-30,62,42]},
   beacon: { rad: 200, read: 1.2, flame: [1, 1.3, 1.6, 1.9, 2.3], leap: [3, 0.3], embers: 1.5, turn: 30, reach: 1.4, idle: 0.7, snap: 0.4,
     scale: 0.6, origin: [0, -50], flameFoot: [0, -47], glowR: 16, glowAlpha: 0.15, flicker: [0.08, 11, 0.05, 17.3, 0.12, 13.1], baseAngle: 176, sweep: 36, baseReach: 230, manual: 6, arrow: 6, slop: 6, notePhone: 1.7, soft: 4, wedgeSteps: 32, rest: 0.55, sparkN: 6, burstN: 14, noteScale: 1.12, flash: 0.3, hear: [0.6, 0.3, 1.3, 0.3], englishEase: 5, noteEase: 6, noteFont: 4.6, todoFont: 3.4, runeY: -7, lineY: 7, todoY: 1, runeSize: 4.2,
   },
@@ -411,10 +411,10 @@ export const FIND_PLAY = {
     hatch: [[-200, 520, 7, 231, 2.6, 0.42], [-100, 420, 11, 107, 1.6, 0.3]], jitter: 2, charcoal: 0.34, guide: 0.1, outlineAlpha: 0.45, outlineWidth: 1.5, carvingWidth: 4.4, maskCore: 0.6, runeHeight: 30, runeGap: 0.32, tops: [92, 158, 224, 290], cx: 150, cells: [40, 30, 260, 390], cellR: 30, letterSize: 13, letterWeight: 800, letterDown: 15, letterRise: 4, near: 24, dash: [6, 200], dashTime: 1.5, scale: 0.55, anchor: -20, stampAngle: -14, flipTime: 0.6, perspective: 1400, controlTop: 214,
   },
   drawings: {
-    wayfinder: `<circle class="hit" r="58"/><circle class="o" r="42"/><circle class="t" r="34.4"/><g class="wf-runes"><path class="rn" transform="rotate(8) translate(-0.7 -40.5)" d="M0 0L0 4.6M0 0L1.4 1.2M1.4 1.2L0.8 1.7M0 4.6L1.4 3.5M1.4 3.5L0.8 2.9"/><path class="rn" transform="rotate(24.4) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(40.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(57.1) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(73.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(89.8) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3"/><path class="rn" transform="rotate(106.2) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(122.5) translate(-0.7 -40.5)" d="M0 0L0 4.6L1.4 0L1.4 4.6L0 0"/><path class="rn" transform="rotate(138.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(155.3) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(171.6) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.7M1.4 4.6L1.4 0L0 1.7"/><path class="rn" transform="rotate(188) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(204.4) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(220.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(237.1) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(253.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(269.8) translate(-0.7 -40.5)" d="M1.4 0L0 1.7L1.4 2.9L0 4.6"/><path class="rn" transform="rotate(286.2) translate(-0.6 -40.5)" d="M1.3 0L0 1.2L1.3 2.3"/><path class="rn" transform="rotate(302.5) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(318.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(335.3) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(351.6) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/></g><g class="wf-arm" data-i="0" transform="rotate(0)"><path class="l" d="M0 0V-31.08M0 -31.08l-4 -4M0 -31.08l4 -4M0 -31.08v-5"/></g><g class="wf-arm" data-i="1" transform="rotate(90)"><path class="l" d="M0 0V-31.08M0 -34.08m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/></g><g class="wf-arm" data-i="2" transform="rotate(180)"><path class="l" d="M0 0V-31.08M-4 -27.08L0 -33.08L4 -27.08"/></g><g class="wf-arm" data-i="3" transform="rotate(270)"><path class="l" d="M0 0V-31.08M-5 -31.08H5M-3 -35.08H3"/></g><g transform="rotate(45)"><path class="l" d="M0 0V-17.64M0 -17.64l-3 -3"/></g><g transform="rotate(135)"><path class="l" d="M0 0V-17.64M0 -17.64l3 -3"/></g><g transform="rotate(225)"><path class="l" d="M0 0V-17.64M-3 -17.64H3"/></g><g transform="rotate(315)"><path class="l" d="M0 0V-17.64M0 -17.64m-1.5 -2a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0"/></g><text x="0" y="-48" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[0]}</text><text x="49" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="start" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[1]}</text><text x="0" y="54" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[2]}</text><text x="-49" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="end" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[3]}</text><g class="wf-needle"><path class="pf" d="M0 -26L3 0L-3 0Z"/><path class="o" d="M0 26L3 0L-3 0Z"/></g><circle class="o wf-hub" r="3.4"/><circle class="t wf-all" r="{{way.ring.0}}" opacity="0"/><text x="0" y="64" font-size="{{way.tally.1}}" fill="${C.note}" font-weight="500" text-anchor="middle" letter-spacing="{{way.tally.2}}" class="wf-tally"></text>`,
+    wayfinder: `<circle class="hit" r="58"/><circle class="o" r="42"/><circle class="t" r="34.4"/><g class="wf-runes"><path class="rn" transform="rotate(8) translate(-0.7 -40.5)" d="M0 0L0 4.6M0 0L1.4 1.2M1.4 1.2L0.8 1.7M0 4.6L1.4 3.5M1.4 3.5L0.8 2.9"/><path class="rn" transform="rotate(24.4) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(40.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(57.1) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(73.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(89.8) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3"/><path class="rn" transform="rotate(106.2) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(122.5) translate(-0.7 -40.5)" d="M0 0L0 4.6L1.4 0L1.4 4.6L0 0"/><path class="rn" transform="rotate(138.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(155.3) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(171.6) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.7M1.4 4.6L1.4 0L0 1.7"/><path class="rn" transform="rotate(188) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(204.4) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(220.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(237.1) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(253.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(269.8) translate(-0.7 -40.5)" d="M1.4 0L0 1.7L1.4 2.9L0 4.6"/><path class="rn" transform="rotate(286.2) translate(-0.6 -40.5)" d="M1.3 0L0 1.2L1.3 2.3"/><path class="rn" transform="rotate(302.5) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(318.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(335.3) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(351.6) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/></g><g class="wf-arm" data-i="0" transform="rotate(0)"><path class="l" d="M0 0V-31.08M0 -31.08l-4 -4M0 -31.08l4 -4M0 -31.08v-5"/></g><g class="wf-arm" data-i="1" transform="rotate(90)"><path class="l" d="M0 0V-31.08M0 -34.08m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/></g><g class="wf-arm" data-i="2" transform="rotate(180)"><path class="l" d="M0 0V-31.08M-4 -27.08L0 -33.08L4 -27.08"/></g><g class="wf-arm" data-i="3" transform="rotate(270)"><path class="l" d="M0 0V-31.08M-5 -31.08H5M-3 -35.08H3"/></g><g transform="rotate(45)"><path class="l" d="M0 0V-17.64M0 -17.64l-3 -3"/></g><g transform="rotate(135)"><path class="l" d="M0 0V-17.64M0 -17.64l3 -3"/></g><g transform="rotate(225)"><path class="l" d="M0 0V-17.64M-3 -17.64H3"/></g><g transform="rotate(315)"><path class="l" d="M0 0V-17.64M0 -17.64m-1.5 -2a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0"/></g><text x="0" y="-48" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[0]}</text><text x="46" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="start" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[1]}</text><text x="0" y="54" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[2]}</text><text x="-46" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="end" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[3]}</text><g class="wf-needle"><path class="pf" d="M0 -26L3 0L-3 0Z"/><path class="o" d="M0 26L3 0L-3 0Z"/></g><circle class="o wf-hub" r="3.4"/><circle class="t wf-all" r="{{way.ring.0}}" opacity="0"/><text x="0" y="64" font-size="{{way.tally.1}}" fill="${C.note}" font-weight="500" text-anchor="middle" letter-spacing="{{way.tally.2}}" class="wf-tally"></text>`,
     hoard: `<rect class="hit" x="-40" y="-60" width="80" height="72"/><path class="l hd-scratch" d="M-12 -6l14 8M2 -6l-14 8M-24 2l-3 -6M-20 2l1 -7M14 2l3 -6M20 2l-1 -6"/><ellipse class="o hd-hole" rx="0" ry="0"/><path class="g hd-pile" d="{{hoard.pilePath}}" opacity="0"/><path class="pf hd-glint" d="{{hoard.glintPath}}" opacity="0"/><circle class="hd-glow" cx="0" cy="-20" r="46" fill="url(#litGlow)" opacity="0"/><g clip-path="url(#hclip)"><g class="hd-chest" transform="translate(0 60)"><rect class="g" x="-30" y="-34" width="60" height="34" rx="2"/><path class="t" d="M-18 -34V0M18 -34V0M-30 -22H30"/><rect class="pf" x="-4.5" y="-27" width="9" height="10" rx="1.5"/><g class="hd-lid"><path class="g" d="M-30 -34Q0 -56 30 -34Z"/><path class="t" d="M-18 -42V-34M18 -42V-34"/></g></g></g><g class="hd-stars"><path class="pf hd-star" d="M0 -50Q0 -44 6 -44Q0 -44 0 -38Q0 -44 -6 -44Q0 -44 0 -50Z" opacity="0"/><path class="pf hd-star" d="M0 -48Q0 -44 4 -44Q0 -44 0 -40Q0 -44 -4 -44Q0 -44 0 -48Z" opacity="0"/><path class="pf hd-star" d="M0 -50Q0 -44 6 -44Q0 -44 0 -38Q0 -44 -6 -44Q0 -44 0 -50Z" opacity="0"/><path class="pf hd-star" d="M0 -48Q0 -44 4 -44Q0 -44 0 -40Q0 -44 -4 -44Q0 -44 0 -48Z" opacity="0"/><path class="pf hd-star" d="M0 -50Q0 -44 6 -44Q0 -44 0 -38Q0 -44 -6 -44Q0 -44 0 -50Z" opacity="0"/><path class="pf hd-star" d="M0 -48Q0 -44 4 -44Q0 -44 0 -40Q0 -44 -4 -44Q0 -44 0 -48Z" opacity="0"/><path class="pf hd-star" d="M0 -50Q0 -44 6 -44Q0 -44 0 -38Q0 -44 -6 -44Q0 -44 0 -50Z" opacity="0"/><path class="pf hd-star" d="M0 -48Q0 -44 4 -44Q0 -44 0 -40Q0 -44 -4 -44Q0 -44 0 -48Z" opacity="0"/></g>`,
     ravens: `<rect class="hit" x="-20" y="-56" width="40" height="60"/><path class="g" d="M-9 0L-10 -24Q-7 -34 0 -35Q8 -34 10 -22L9 0Z"/><path class="rn" d="M-2.5 -26L-2.5 -20M-0.6 -26L-0.6 -20M-2.5 -23.8L-0.6 -22.3M1.3 -20L1.3 -26L3.2 -23.8M3.2 -20L3.2 -26L1.3 -23.8"/><path class="t" d="M-16 0H16"/><g class="rv-a"><g class="rv-sit"><g class="rv-body"><path class="g" d="M-11 1L-6 -2Q-3 -8 4 -8Q8 -7 7 -3Q3 1 -4 0Z"/><path class="t" d="M-4 -4Q0 -7 4 -5M0 0v2.5M2.5 0v2.5"/></g><g class="rv-head" transform="translate(5 -9)"><circle class="g" r="2.6"/><path class="pf" d="M2 -1L6 .3L2 1.3Z"/><circle class="pf" cx=".8" cy="-.6" r=".5"/></g></g><g class="rv-fly" opacity="0"><g class="rv-far"><path class="g" d="{{raven.fly.0}}"/></g><path class="g" d="{{raven.fly.1}}"/><path class="g" d="{{raven.fly.2}}"/><circle class="pf" cx="{{raven.eye.0}}" cy="{{raven.eye.1}}" r="{{raven.eye.2}}"/><g class="rv-near"><path class="g" d="{{raven.fly.3}}"/></g></g><g class="rv-item"></g></g><g class="rv-b"><g class="rv-sit"><g class="rv-body"><path class="g" d="M-11 1L-6 -2Q-3 -8 4 -8Q8 -7 7 -3Q3 1 -4 0Z"/><path class="t" d="M-4 -4Q0 -7 4 -5M0 0v2.5M2.5 0v2.5"/></g><g class="rv-head" transform="translate(5 -9)"><circle class="g" r="2.6"/><path class="pf" d="M2 -1L6 .3L2 1.3Z"/><circle class="pf" cx=".8" cy="-.6" r=".5"/></g></g><g class="rv-fly" opacity="0"><g class="rv-far"><path class="g" d="{{raven.fly.0}}"/></g><path class="g" d="{{raven.fly.1}}"/><path class="g" d="{{raven.fly.2}}"/><circle class="pf" cx="{{raven.eye.0}}" cy="{{raven.eye.1}}" r="{{raven.eye.2}}"/><g class="rv-near"><path class="g" d="{{raven.fly.3}}"/></g></g><g class="rv-item"></g></g><g class="rv-tally"><path class="t" d="M13 -8V-1" opacity="0"/><path class="t" d="M15.5 -8V-1" opacity="0"/><path class="t" d="M18 -8V-1" opacity="0"/><path class="t" d="M20.5 -8V-1" opacity="0"/><path class="t" d="M11.5 -2.5L22 -6.5" opacity="0"/><path class="t" d="M24.5 -8V-1" opacity="0"/></g>`,
-    serpent: `<rect class="hit" x="-112" y="-60" width="230" height="78"/><g class="sp-tail sp-loop"><path d="M58 4C60 -20 86 -24 84 -6C82 8 64 6 66 -8" fill="none" stroke="${C.paper}" stroke-width="7" stroke-linecap="round"/><path d="M58 4C60 -20 86 -24 84 -6C82 8 64 6 66 -8" fill="none" stroke="${C.land}" stroke-width="2.8" stroke-linecap="round"/><path d="M66 -8C68 -20 84 -26 96 -18" fill="none" stroke="${C.paper}" stroke-width="7" stroke-linecap="round"/><path d="M66 -8C68 -20 84 -26 96 -18" fill="none" stroke="${C.land}" stroke-width="2.8" stroke-linecap="round"/><path class="g" d="M95 -19l10 -6l-2 12z"/></g><g class="sp-loop"><path d="M23 4A11 11 0 0 1 45 4" fill="none" stroke="${C.paper}" stroke-width="9" stroke-linecap="round"/><path d="M23 4A11 11 0 0 1 45 4" fill="none" stroke="${C.land}" stroke-width="4.8" stroke-linecap="round"/><path class="t" d="M27.1 0L21.9 -3"/><path class="t" d="M30 -2.9L27 -8.1"/><path class="t" d="M34 -4L34 -10"/><path class="t" d="M38 -2.9L41 -8.1"/><path class="t" d="M40.9 0L46.1 -3"/><path class="g" d="M30 -11l4 -8l4 8z"/></g><g class="sp-loop"><path d="M-10 4A14 14 0 0 1 18 4" fill="none" stroke="${C.paper}" stroke-width="9" stroke-linecap="round"/><path d="M-10 4A14 14 0 0 1 18 4" fill="none" stroke="${C.land}" stroke-width="4.8" stroke-linecap="round"/><path class="t" d="M-5.5 -1.5L-10.7 -4.5"/><path class="t" d="M-1.5 -5.5L-4.5 -10.7"/><path class="t" d="M4 -7L4 -13"/><path class="t" d="M9.5 -5.5L12.5 -10.7"/><path class="t" d="M13.5 -1.5L18.7 -4.5"/><path class="g" d="M0 -14l4 -8l4 8z"/></g><g class="sp-loop"><path d="M-44 4A16 16 0 0 1 -12 4" fill="none" stroke="${C.paper}" stroke-width="9" stroke-linecap="round"/><path d="M-44 4A16 16 0 0 1 -12 4" fill="none" stroke="${C.land}" stroke-width="4.8" stroke-linecap="round"/><path class="t" d="M-39.3 -2.5L-44.5 -5.5"/><path class="t" d="M-34.5 -7.3L-37.5 -12.5"/><path class="t" d="M-28 -9L-28 -15"/><path class="t" d="M-21.5 -7.3L-18.5 -12.5"/><path class="t" d="M-16.7 -2.5L-11.5 -5.5"/><path class="g" d="M-32 -16l4 -8l4 8z"/></g><g class="sp-loop sp-neck"><path d="M-58 6C-58 -22 -62 -34 -76 -40" fill="none" stroke="${C.paper}" stroke-width="10" stroke-linecap="round"/><path d="M-58 6C-58 -22 -62 -34 -76 -40" fill="none" stroke="${C.land}" stroke-width="5.8" stroke-linecap="round"/><g class="sp-head"><path class="l sp-tongue" d="{{serpent.tonguePath}}" opacity="0"/><path class="l sp-shut" d="{{serpent.shutPath}}" opacity="0"/><path class="g" d="M-70 -47Q-86 -55 -101 -40Q-88 -29 -70 -34Z"/><circle class="pf sp-eye" cx="-84" cy="-43" r="1.5"/><path class="t" d="M-100 -40l6 -1M-73 -48l4 -8l3 8"/><g class="sp-leaf" opacity="0" transform="translate(-104 -40) rotate(8)"><rect x="-9" y="0" width="18" height="21" fill="${C.paper}"/><rect x="-9" y="0" width="18" height="6" fill="${C.note}"/><text class="sp-day" x="0" y="4.8" font-size="4.2" font-weight="800" text-anchor="middle" fill="${C.ink}">${FIND_COPY.serpentLeaves[0][0]}</text><text class="sp-date" x="0" y="15.5" font-size="6.4" font-weight="800" text-anchor="middle" fill="${C.ink}">${FIND_COPY.serpentLeaves[0][1]}</text></g></g></g><rect x="-114" y="4" width="232" height="40" fill="${C.ink}"/><g class="sp-rip"><ellipse class="t" cx="-40" cy="6" rx="18" ry="3" opacity="0"/><ellipse class="t" cx="0" cy="6" rx="18" ry="3" opacity="0"/><ellipse class="t" cx="40" cy="6" rx="18" ry="3" opacity="0"/></g><path class="t" d="M-98 7q4 -3 8 0t8 0"/><path class="t" d="M-72 10q4 -3 8 0t8 0"/><path class="t" d="M-44 7q4 -3 8 0t8 0"/><path class="t" d="M-12 10q4 -3 8 0t8 0"/><path class="t" d="M20 7q4 -3 8 0t8 0"/><path class="t" d="M50 10q4 -3 8 0t8 0"/><path class="t" d="M76 7q4 -3 8 0t8 0"/><path class="t" d="M100 10q4 -3 8 0t8 0"/>`,
+    serpent: `<g class="jg-tail"><path class="o" d="{{serpent.tailPath}}"/></g><g class="jg-head"><g class="jg-skull"><path fill="${C.ink}" stroke="none" d="M0 -3.2C-3 -6.4 -7 -8.8 -12 -9.4C-16 -9.8 -20 -9.6 -23 -8.4C-26 -7.2 -29 -6.4 -32 -6.6C-34 -6.8 -35.6 -8 -36.6 -7.6C-37.8 -7 -37.6 -5 -36.2 -3.8C-35 -2.8 -33.4 -2.4 -32 -2.4L-24 -.6L4 1.6L4 -3.2Z"/><path class="l" d="M0 -3.2C-3 -6.4 -7 -8.8 -12 -9.4C-16 -9.8 -20 -9.6 -23 -8.4C-26 -7.2 -29 -6.4 -32 -6.6C-34 -6.8 -35.6 -8 -36.6 -7.6C-37.8 -7 -37.6 -5 -36.2 -3.8C-35 -2.8 -33.4 -2.4 -32 -2.4L-24 -.6"/><path class="l" d="M-7 -8.4C-4 -12.6 1 -15.4 7 -15C11 -14.6 13 -11.8 11.6 -9.4C10.4 -7.6 7.8 -7.8 7.4 -9.6C7.2 -10.8 8.6 -11.4 9.4 -10.6"/><g class="jg-eye"><path class="l" d="M-22.6 -4.6C-21 -6.4 -17.6 -6.6 -15.6 -5.2C-14.6 -4.6 -13.4 -4.2 -12 -4.2C-13.6 -3 -15.4 -2.6 -17.2 -2.8C-19.4 -3 -21.4 -3.6 -22.6 -4.6Z"/><circle class="pf" cx="-18.6" cy="-4.4" r="1"/></g><path class="l jg-shut" d="{{serpent.shutPath}}" opacity="0"/><path class="l" d="M-24 -.6C-20 1.6 -15 2.2 -11 1C-8.6 .2 -8 -2.2 -9.8 -2.8C-11.2 -3.2 -12 -1.8 -11 -1.2M-33.6 -6.6C-33 -5.6 -32.2 -5.2 -31.4 -5.4"/><path class="pf" d="M-30.6 -2.2L-29.6 .2L-28.8 -1.9ZM-27 -1.4L-26.2 .4L-25.4 -1.1Z"/><path class="t" d="M-6 -6.6C-4 -4.2 -2.6 -1.6 -2 1.2M-10 -8.6C-8 -6 -6.8 -3 -6.4 0"/></g><g class="jg-jaw"><path fill="${C.ink}" stroke="none" d="M-24 -.6L-33.6 1.8C-35 2.2 -35.6 3.4 -35 4.4C-33.6 6.4 -29.6 7.4 -25 7.6C-20 7.8 -14 8 -9 7C-5 6.2 -2 5 0 3.2L4 3.2L4 -.6Z"/><path class="l" d="M-24 -.6L-33.6 1.8C-35 2.2 -35.6 3.4 -35 4.4C-33.6 6.4 -29.6 7.4 -25 7.6C-20 7.8 -14 8 -9 7C-5 6.2 -2 5 0 3.2"/><path class="pf" d="M-31.6 1.6L-30.8 -.6L-29.9 1.3Z"/></g><path class="l jg-tongue" d="{{serpent.tonguePath}}" opacity="0"/></g><g class="jg-pad"><path class="g" d="{{serpent.padBoard}}"/><g class="jg-leaf" data-i="2"><path class="o" d="{{serpent.leafPath}}"/><rect class="pf" x="{{serpent.binding.0}}" y="{{serpent.binding.1}}" width="{{serpent.binding.2}}" height="{{serpent.binding.3}}"/><circle class="o" cx="{{serpent.rings.0}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><circle class="o" cx="{{serpent.rings.1}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><text text-anchor="middle" y="{{serpent.dayY}}" font-size="{{serpent.daySize}}" font-weight="{{serpent.weight}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[2][0]}</text><text text-anchor="middle" y="{{serpent.timeY}}" font-size="{{serpent.timeSize}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[2][1]}</text></g><g class="jg-leaf" data-i="1"><path class="o" d="{{serpent.leafPath}}"/><rect class="pf" x="{{serpent.binding.0}}" y="{{serpent.binding.1}}" width="{{serpent.binding.2}}" height="{{serpent.binding.3}}"/><circle class="o" cx="{{serpent.rings.0}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><circle class="o" cx="{{serpent.rings.1}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><text text-anchor="middle" y="{{serpent.dayY}}" font-size="{{serpent.daySize}}" font-weight="{{serpent.weight}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[1][0]}</text><text text-anchor="middle" y="{{serpent.timeY}}" font-size="{{serpent.timeSize}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[1][1]}</text></g><g class="jg-leaf" data-i="0"><path class="o" d="{{serpent.leafPath}}"/><rect class="pf" x="{{serpent.binding.0}}" y="{{serpent.binding.1}}" width="{{serpent.binding.2}}" height="{{serpent.binding.3}}"/><circle class="o" cx="{{serpent.rings.0}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><circle class="o" cx="{{serpent.rings.1}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><text text-anchor="middle" y="{{serpent.dayY}}" font-size="{{serpent.daySize}}" font-weight="{{serpent.weight}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[0][0]}</text><text text-anchor="middle" y="{{serpent.timeY}}" font-size="{{serpent.timeSize}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[0][1]}</text></g></g><path class="t" d="{{serpent.padWave}}"/><rect class="hit" x="{{serpent.hit.0}}" y="{{serpent.hit.1}}" width="{{serpent.hit.2}}" height="{{serpent.hit.3}}"/>`,
     beacon: `<circle class="bc-glow" cx="{{beacon.flameFoot.0}}" cy="{{beacon.flameFoot.1}}" r="{{beacon.glowR}}" fill="url(#glow)" opacity="0"/><g class="bc-beam" transform="translate(0 -50) rotate(0)"><path d="M0 0L-230 -44.7L-230 44.7Z" fill="url(#beam)"/></g><rect class="hit" x="-26" y="-66" width="52" height="70"/><path class="g" d="M-20 0q4 -9 11 -4q8 -7 15 0q7 -5 14 4z"/><path class="g" d="M-9 -3L-7 -40H7L9 -3Z"/><path class="t" d="M-8.4 -12H8.4M-8 -21H8M-7.6 -30H7.6M-2 -3V-12M3 -12V-21M-3 -21V-30M2 -30V-40"/><rect class="o" x="-1.8" y="-10" width="3.6" height="7"/><path class="l" d="M-10 -40H10"/><path class="l" d="M-4 -40L-6 -46M4 -40L6 -46"/><path class="o" d="M-7 -47L-5 -42H5L7 -47Z"/><path class="pf bc-flame" d="M-3 -47Q-4 -53 0 -58Q1 -53 3 -51Q4 -49 3 -47Z"/>`,
     runestone: `<rect class="hit" x="-20" y="-66" width="40" height="70"/><path class="g" d="M-14 0L-16 -40Q-12 -60 0 -62Q13 -60 15 -38L13 0Z"/><path d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3" fill="none" stroke="${C.paper}" stroke-width="4" stroke-linecap="round"/><path d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3" fill="none" stroke="${C.land}" stroke-width="2.2" stroke-linecap="round"/><path class="l rs-trace" d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3"/><circle class="pf" cx="5" cy="-3" r="1"/><g transform="translate(2.2 -9) rotate(-90)"><path class="rn" d="M0 0L0 3.4M0 1.4L1.1 0.4M0 2.3L1.1 1.4M2.2 0L2.2 3.4M3.2 3.4L3.2 0L4.3 0.8L3.2 1.7L4.3 3.4M6.5 0L5.4 1.3L6.5 2.1L5.4 3.4M8.1 0L8.1 3.4M7.5 0.8L8.1 0L8.6 0.8M13.1 0L12.1 1.3L13.1 2.1L12.1 3.4M15.2 0L14.2 0.8L15.2 1.7M16.2 3.4L16.2 0L16.8 0.8L17.3 0L17.3 3.4M18.9 0L18.9 3.4M18.4 0.8L18.9 0L19.5 0.8M21.5 0L20.5 0.8L21.5 1.7M22.6 0L22.6 3.4M23.6 0L23.6 3.4M22.6 1.3L23.6 2.1M27.1 0L27.1 3.4M27.1 1.4L28.2 0.4M27.1 2.3L28.2 1.4M29.2 0L29.2 3.4M30.9 0L30.9 3.4M30.3 1.3L31.4 2.1M32.5 0L32.5 3.4M32.5 0L33.5 0.8M32.5 1.1L33.5 2M34.6 3.4L34.6 0L35.7 0.8M40.1 0L39.2 0.8L40.1 1.7M41.2 3.4L41.2 0L42.3 1.1L42.3 3.4M43.9 0L43.9 3.4M43.3 0.8L43.9 0L44.4 0.8"/></g><path class="t" d="M-20 0H20"/>`,
   },
@@ -436,13 +436,13 @@ export const FIND_PLAY = {
     glint: [11, 0.6, 90], hit: [-18, -30, 34, 38],
     paths: ['M-12 -4C-14 -16 -2 -24 10 -22L10 -16C0 -17 -6 -12 -5 -4Z', 'M5 -21.5L5.5 -16.5M0 -20L1.5 -15.5M-5 -16L-2.5 -12.5', 'M10 -22L10 -16', 'M-16 3q4 -3 8 0t8 0t8 0'],
   },
-  well: { near: 38, rad: 116, hit: [38, 22], water: [300, 390], root: [300, 381], drip: [4, 7], dripTime: 0.35,
+  well: { near: 38, rad: 116, hit: [38, 22], water: [300, 390], root: [303, 389], drip: [4, 7], dripTime: 0.35,
     pebbleR: 1.2, pebbleFrom: [-30, -34], pebbleTime: 0.45, arc: 16, anchor: [0, 26],
     rings: 3, ringR: [30, 15], ringTime: 0.9, ringGap: 0.18, ringScale: [0.2, 1.25], ringAlpha: 0.9,
     drops: 6, splash: { speed: [22, 22], dir: [-120, -60], g: 80, life: [0.45, 0.6] },
-    trunk: [[300, 374], [300, 338]], trunkTime: 0.4, starSize: 2.4, starTime: 0.3, starGap: 0.06, starOver: 1.3,
+    trunk: [[304, 373], [304, 323]], trunkTime: 0.4, starSize: 2.4, starTime: 0.3, starGap: 0.06, starOver: 1.3,
     twinkle: [0.6, 1], twinkleTime: [3.1, 4.7, 5.3, 3.9, 6.1],
-    stars: [[[-24, -44], [-6, -56], [12, -60], [26, -50], [2, -40]], [[-30, -52], [-14, -66], [8, -70], [28, -60], [16, -38]], [[-33, -42], [-22, -60], [-2, -64], [20, -66], [31, -46]]],
+    stars: [[[-44,-46],[-24,-60],[-2,-64],[23,-61],[50,-48]],[[-48,-39],[-30,-53],[-10,-56],[29,-52],[58,-40]],[[-39,-57],[-17,-69],[8,-69],[37,-63],[43,-40]]],
   },
   ship: { near: 34, rad: 38, scale: 0.55, anchor: [0, -34], rock: [2.2, 1.3, 0.8, 1.9], breathe: [0.04, 1.7],
     pull: [-18, 14, 0.35, 0.5], rail: [0, -5], surge: 3, pulls: 3, window: 4, pennantTime: 0.4, ripple: [6, 2.5],
@@ -454,3 +454,443 @@ export const FIND_PLAY = {
   all: { frame: [18, 18, 564, 864], length: 100, width: 2, dash: [6, 94], time: 2.6, fade: 0.4, wait: 0.6, knotTime: 0.8, markerTime: 0.4, markerScale: 1.25, frameAlpha: 0.5,
     knots: [[36, 36], [564, 36], [36, 864], [564, 864]], corners: [0, 564, 2286, 1428] },
 };
+
+// Round 7 C1: ported reference paths and independent layout/motion tuning.
+export const YGG = {
+  "crown": [
+    [
+      -50,
+      -31
+    ],
+    [
+      -59,
+      -36
+    ],
+    [
+      -64,
+      -45
+    ],
+    [
+      -61,
+      -55
+    ],
+    [
+      -53,
+      -63
+    ],
+    [
+      -43,
+      -70
+    ],
+    [
+      -31,
+      -73
+    ],
+    [
+      -17,
+      -77
+    ],
+    [
+      -2,
+      -79
+    ],
+    [
+      13,
+      -78
+    ],
+    [
+      27,
+      -76
+    ],
+    [
+      41,
+      -71
+    ],
+    [
+      54,
+      -66
+    ],
+    [
+      65,
+      -57
+    ],
+    [
+      71,
+      -47
+    ],
+    [
+      71,
+      -38
+    ],
+    [
+      63,
+      -31
+    ],
+    [
+      50,
+      -28
+    ],
+    [
+      37,
+      -31
+    ],
+    [
+      24,
+      -34
+    ],
+    [
+      12,
+      -39
+    ],
+    [
+      0,
+      -41
+    ],
+    [
+      -12,
+      -38
+    ],
+    [
+      -24,
+      -34
+    ],
+    [
+      -37,
+      -30
+    ]
+  ],
+  "layers": [
+    [
+      [
+        -55,
+        -48
+      ],
+      [
+        -42,
+        -55
+      ],
+      [
+        -28,
+        -58
+      ],
+      [
+        -14,
+        -60
+      ],
+      [
+        -2,
+        -63
+      ]
+    ],
+    [
+      [
+        6,
+        -66
+      ],
+      [
+        20,
+        -68
+      ],
+      [
+        34,
+        -65
+      ],
+      [
+        48,
+        -59
+      ],
+      [
+        60,
+        -51
+      ]
+    ],
+    [
+      [
+        -48,
+        -38
+      ],
+      [
+        -34,
+        -44
+      ],
+      [
+        -20,
+        -46
+      ],
+      [
+        -6,
+        -49
+      ],
+      [
+        8,
+        -50
+      ],
+      [
+        22,
+        -48
+      ],
+      [
+        36,
+        -45
+      ],
+      [
+        50,
+        -42
+      ],
+      [
+        62,
+        -40
+      ]
+    ],
+    [
+      [
+        -30,
+        -64
+      ],
+      [
+        -18,
+        -68
+      ],
+      [
+        -4,
+        -70
+      ],
+      [
+        10,
+        -70
+      ],
+      [
+        24,
+        -67
+      ]
+    ]
+  ],
+  "roots": [
+    [
+      [
+        [
+          -5,
+          -7
+        ],
+        [
+          -14,
+          -4
+        ],
+        [
+          -24,
+          -1
+        ],
+        [
+          -32,
+          3
+        ],
+        [
+          -41,
+          5
+        ]
+      ],
+      7,
+      0.6,
+      0.25,
+      3
+    ],
+    [
+      [
+        [
+          5,
+          -7
+        ],
+        [
+          15,
+          -4
+        ],
+        [
+          27,
+          0
+        ],
+        [
+          38,
+          4
+        ],
+        [
+          49,
+          5
+        ]
+      ],
+      7,
+      0.6,
+      0.25,
+      4
+    ],
+    [
+      [
+        [
+          -1,
+          -2
+        ],
+        [
+          -2,
+          5
+        ],
+        [
+          0,
+          11
+        ],
+        [
+          -1,
+          17
+        ]
+      ],
+      6,
+      0.8,
+      0.2,
+      5
+    ],
+    [
+      [
+        [
+          -4,
+          -2
+        ],
+        [
+          -10,
+          3
+        ],
+        [
+          -16,
+          8
+        ],
+        [
+          -20,
+          11
+        ]
+      ],
+      4,
+      0.5,
+      0.2,
+      6
+    ],
+    [
+      [
+        [
+          4,
+          -2
+        ],
+        [
+          9,
+          3
+        ],
+        [
+          14,
+          7
+        ],
+        [
+          18,
+          9
+        ]
+      ],
+      4,
+      0.5,
+      0.2,
+      7
+    ]
+  ],
+  "rootlets": "<path class=\"t\" d=\"M-1 17C-2 20 -1 23 1 25M0 16C2 19 4 21 7 22M-1 14C-4 16 -6 18 -7 21M-20 11C-22 13 -22 15 -21 17M18 9C20 11 21 13 21 15\"/>",
+  "trunk": "<path class=\"g\" d=\"M-9 1C-6 -5 -5 -12 -5.5 -19C-6 -24 -9 -30 -15 -36C-19 -40 -23 -43 -27 -46L-22 -47C-18 -43 -13 -39 -8 -34C-6 -32 -4 -31 -3 -34C-3 -40 -3 -46 -2 -52L2.5 -52C3 -46 3 -40 3.5 -34C4.5 -31 6.5 -32 9 -35C13 -39 18 -43 23 -47L27 -45C22 -41 16 -36 11 -31C7 -27 5.5 -23 5.5 -18C5.5 -11 6.5 -5 9 1C3 -.5 -3 -.5 -9 1Z\"/><path class=\"t\" d=\"M-2.5 -3C-2.6 -10 -2.2 -18 -1.6 -26M1.8 -3C2 -10 1.8 -17 1.6 -24M-5 -1C-4 -5 -3.6 -8 -3.7 -11M5 -1C4.3 -4 4 -7 4 -10M-1 -14C0 -15.5 1 -15.5 1.6 -14C1 -12 -0.4 -12 -1 -14Z\"/>",
+  "leaves": "<path class=\"t\" d=\"M9.4 -47.5q1.8 1.5 3.6 0M17.9 -79.3q1.8 1.5 3.6 0M-3.3 -44q1.8 1.5 3.6 0M-25.3 -53.9q1.8 1.5 3.6 0M-18.5 -44.4q1.8 1.5 3.6 0M-30.1 -43.9q1.8 1.5 3.6 0M46.6 -52.4q1.8 1.5 3.6 0M11.7 -74.4q1.8 1.5 3.6 0M-48 -67.9q1.8 1.5 3.6 0M44.5 -69.8q1.8 1.5 3.6 0M31.3 -55.2q1.8 1.5 3.6 0M10.1 -52.7q1.8 1.5 3.6 0M43.8 -50.4q1.8 1.5 3.6 0M-6.4 -50q1.8 1.5 3.6 0M49.2 -49.3q1.8 1.5 3.6 0M-14.2 -40.5q1.8 1.5 3.6 0M45.6 -55.9q1.8 1.5 3.6 0M11.9 -74.3q1.8 1.5 3.6 0M-8 -69.7q1.8 1.5 3.6 0M5.4 -43.1q1.8 1.5 3.6 0M-38.9 -39.8q1.8 1.5 3.6 0M16.5 -40.9q1.8 1.5 3.6 0M-10.6 -67.5q1.8 1.5 3.6 0M-47.3 -63.6q1.8 1.5 3.6 0M-49.1 -52.1q1.8 1.5 3.6 0M2.8 -67.9q1.8 1.5 3.6 0M-6.3 -45.4q1.8 1.5 3.6 0M33.2 -41.5q1.8 1.5 3.6 0M33.7 -45.8q1.8 1.5 3.6 0M-50.6 -55.3q1.8 1.5 3.6 0M38.6 -42.9q1.8 1.5 3.6 0M26.9 -47.3q1.8 1.5 3.6 0M-13.6 -37.8q1.8 1.5 3.6 0M-32 -59q1.8 1.5 3.6 0M-50.3 -56.8q1.8 1.5 3.6 0M-0.3 -43q1.8 1.5 3.6 0M-11.4 -57.6q1.8 1.5 3.6 0M-7.3 -58.4q1.8 1.5 3.6 0\"/>",
+  "eagle": "<g class=\"yg-wings\" transform=\"scale(1.1 .78)\"><path class=\"g\" d=\"M-1.3 -7.6C-3.4 -9.6 -6.2 -12.4 -9.4 -15C-9.2 -13.8 -8.8 -13.2 -8.3 -12.8L-9.8 -12.6C-9.2 -11.6 -8.6 -11.2 -7.9 -11L-9.4 -10.4C-8.4 -9.6 -7.4 -9.3 -6.4 -9.2L-7.4 -8.4C-5.4 -7.8 -3.4 -6.8 -1.6 -5.6Z\"/><path class=\"g\" d=\"M1.2 -7.6C3.4 -9.8 6.4 -12.6 9.8 -15.2C9.6 -14 9.2 -13.4 8.7 -13L10.2 -12.8C9.6 -11.8 9 -11.4 8.3 -11.2L9.8 -10.6C8.8 -9.8 7.8 -9.5 6.8 -9.4L7.8 -8.6C5.8 -8 3.6 -6.9 1.6 -5.6Z\"/></g><path class=\"g\" d=\"M-1.4 0L1.4 0L1.8 -3C2.2 -5 1.9 -7 1.1 -8.4C1.6 -9.3 1.5 -10.6 .5 -11.3C-.6 -12 -2 -11.6 -2.6 -10.8C-3.4 -11 -4.4 -10.7 -4.7 -9.7C-4.3 -10 -3.7 -9.9 -3.2 -9.4C-2.7 -9 -2.1 -8.7 -1.5 -8.6C-2.1 -7 -2.2 -5 -1.9 -3Z\"/><circle class=\"pf\" cx=\"-1.3\" cy=\"-10.4\" r=\".35\"/><path class=\"t\" d=\"M-2 -1.5L-2.6 .8M2 -1.5L2.6 .8\"/>",
+  "rat": "<g class=\"yg-tail\"><path class=\"g\" d=\"M.6 -.6C2.4 -.4 3.4 -1.8 3.2 -3.6C3 -5.2 3.8 -6.6 5 -6.6C4.4 -5.6 4.4 -4.6 4.6 -3.4C4.9 -1.4 3.2 .6 .8 .4Z\"/></g><path class=\"g\" d=\"M-.8 0C-1.4 -1.4 -1.4 -3 -.9 -4.2C-.6 -5 -.6 -5.6 -1 -6.2C-1.2 -6.8 -.9 -7.4 -.3 -7.5C.3 -7.6 .8 -7.2 .9 -6.6C1.4 -6.2 1.4 -5.4 1 -4.8C1.4 -3.6 1.4 -1.6 .8 0Z\"/><path class=\"l\" d=\"M.3 -7.4L.5 -8.2M-1 -3.4L-1.8 -2.8\"/><circle class=\"pf\" cx=\"-.2\" cy=\"-6.7\" r=\".25\"/>",
+  "nid": "<path class=\"g\" d=\"M-9.3 -0.4L-9.5 -0.2L-9.7 0L-10.1 0.2L-10.5 0.5L-10.9 0.8L-11.3 1.1L-11.7 1.5L-12.1 1.9L-12.3 2.4L-12.5 2.8L-12.7 3.2L-12.8 3.7L-12.9 4.2L-12.9 4.6L-12.9 5.1L-12.9 5.5L-12.7 6L-12.5 6.4L-12.3 6.8L-12 7.2L-11.7 7.5L-11.4 7.8L-11 8L-10.7 8.2L-10.2 8.3L-9.8 8.3L-9.4 8.3L-9 8.2L-8.6 8.1L-8.3 7.9L-8 7.8L-7.7 7.6L-7.5 7.3L-7.3 7L-7.3 6.7L-7.3 6.4L-7.3 6.2L-7.3 5.9L-7.3 5.8L-7.3 5.6L-7.9 5.6L-7.9 5.7L-8 5.9L-8 6.1L-8 6.3L-8.1 6.5L-8.2 6.7L-8.2 6.8L-8.3 6.8L-8.4 6.9L-8.7 7L-8.9 7L-9.2 7.1L-9.5 7.1L-9.8 7.1L-10 7L-10.1 7L-10.3 6.9L-10.4 6.7L-10.6 6.5L-10.8 6.2L-10.9 6L-11 5.7L-11.1 5.5L-11.1 5.3L-11.1 5.1L-11.1 4.8L-11 4.5L-10.9 4.2L-10.8 4L-10.6 3.7L-10.5 3.5L-10.3 3.3L-10.2 3.1L-9.9 3L-9.6 2.8L-9.2 2.6L-8.8 2.4L-8.5 2.2L-8.1 2.1L-7.9 2Z\"/><g class=\"yg-nid-head\"><path class=\"g\" d=\"M1 -1.4C-.6 -2.6 -2.6 -3.4 -4.6 -3.4C-6.4 -3.4 -7.8 -2.8 -8.8 -1.8C-9.6 -1 -9.8 .2 -9.2 1.2C-8.6 2.2 -7.2 2.6 -5.6 2.4C-3.8 2.2 -1.6 1.6 .6 .8L-2.4 .2L.8 -.6Z\"/><path class=\"l\" d=\"M-6.8 -3L-8.6 -5.6M-5 -3.4L-5.8 -6.2M-.4 -.9L-.9 -.2L-1.4 -.8M-.4 .6L-.9 0L-1.4 .5\"/><circle class=\"pf\" cx=\"-5.2\" cy=\"-1.4\" r=\".45\"/></g>",
+  "eagleAt": [
+    -4,
+    -77
+  ],
+  "ratAt": [
+    0.6,
+    -9
+  ],
+  "nidAt": [
+    -40.5,
+    5
+  ],
+  "fork": [
+    304,
+    336
+  ],
+  "label": [
+    318,
+    361
+  ],
+  "labelBox": [
+    318,
+    355,
+    359,
+    363
+  ],
+  "crownSeed": 7,
+  "layerSeed": 20,
+  "leafSeed": 33,
+  "leafCount": 46,
+  "crownBump": [
+    0.42,
+    0.16
+  ],
+  "layerBump": [
+    0.38,
+    0.15
+  ],
+  "layerAlpha": 0.75,
+  "clearance": 6,
+  "groveReach": 13,
+  "labelGap": 2,
+  "starInset": 5,
+  "starSame": 7,
+  "starOther": 4,
+  "eagleClear": 6,
+  "tube": {
+    "seg": 8,
+    "power": 0.8,
+    "mult": 16807,
+    "mod": 2147483647
+  },
+  "life": {
+    "seed": 73,
+    "ratEvery": [
+      9,
+      15
+    ],
+    "climb": 0.9,
+    "pause": 1.2,
+    "tail": 15,
+    "tailRoot": [
+      0.8,
+      0
+    ],
+    "eagleEvery": [
+      6,
+      10
+    ],
+    "stretch": 0.7,
+    "wingX": 1.1,
+    "wingY": [
+      0.78,
+      0.95
+    ],
+    "gnawEvery": 2.5,
+    "gnawTime": 0.3,
+    "gnaw": 0.5,
+    "flight": 2.6,
+    "flightStops": [.1,.2,.8,.9],
+    "rise": 6,
+    "radius": 16,
+    "centre": 14,
+    "flap": 4,
+    "flapY": [
+      0.6,
+      1
+    ]
+  }
+};
+export const MARK = { k: 10, min: 14, max: 36, stand: 3, box: 400, centre: 200, radius: 176, rim: 20, boss: 54, bossLine: 16, highlight: [186,186,12,.55], shadow: [200,392,120,10,.35], planks: [-120,-72,-24,24,72,120], plankLine: 7, plankAlpha: .28, paintAlpha: .35, studs: 8, stud: 9, studLine: 5, quarters: 'M200 200L200 24A176 176 0 0 1 376 200ZM200 200L200 376A176 176 0 0 1 24 200Z', legend: [68,836,4.6,.9,1.2,.45] };
+export const LABELS = { name: { unit: 9.5, floor: 10, cap: 1.6, phone: 7.5, phoneCap: 1.4 }, x: { unit: 8.5, floor: 10, cap: 1.6, phone: 7.5, phoneCap: 1.4 }, sub: { unit: 6.3, floor: 7.6, cap: 1.6, phone: 7, phoneCap: 1.8 }, small: { unit: 6.5, floor: 8, cap: 1.6, phone: 7, phoneCap: 1.8 }, legend: { unit: 6.5, floor: 8, cap: 1.6, phone: 7, phoneCap: 1.8 }, fade: [1.3,1.5], epsilon: .005, width: .56, ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 3.5, hmcSubDX: -4.4, subOffset: 9.5, xAt: [16,8], xSubAt: [16,17.5], kicker: [45,95], plate: [-3,-9,204,13], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]] };
+export const WORLD = { scrim: [150,190,.85], card: { w:640, edge:32, cap:420, phoneShare:.82, phoneBottom:6, slack:2, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };

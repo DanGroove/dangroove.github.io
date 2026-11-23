@@ -64,7 +64,7 @@ export function showPop(owner, anchor, html, cls = '', side = 'auto') {
   closePop(); FD.popOwner = owner; FD.popAnchor = anchor; FD.popSide = side; FD.popP = FD.st.P; FD.popTs = FD.now;
   FD.pop.className = 'pop on ' + cls;
   FD.pop.innerHTML = `<div class="pop-in"><div class="pop-body">${html}</div><i class="pop-tail" aria-hidden="true"></i></div>`;
-  FD.popInner = FD.pop.firstElementChild; FD.popTail = FD.pop.querySelector('.pop-tail');
+  FD.popInner = FD.pop.firstElementChild; FD.popTail = FD.pop.querySelector('.pop-tail'); FD.popBody = FD.pop.querySelector('.pop-body');
   const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height];
   // A popup stays above the step buttons and the timeline: their tops are read once here, when it opens, never in the frame loop.
   FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go, .tl, .jm-focus .find-hint')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
@@ -85,7 +85,7 @@ export function placePop() {
   FD.pop.style.transform = `translate(${x}px,${y}px)`;
   const q = FD.rm ? 1 : clamp01((FD.now - FD.popTs) / K.time), back = 1 + (K.over - 1) / (1 - K.scale);
   const v = 1 + (back + 1) * (q - 1) ** 3 + back * (q - 1) ** 2;
-  FD.popInner.style.transform = `scale(${lerp(K.scale, 1, q === 1 ? 1 : v)})`; FD.popInner.style.opacity = q;
+  FD.popInner.style.transform = `scale(${lerp(K.scale, 1, q === 1 ? 1 : v)})`; FD.popBody.style.opacity = q;
   FD.popTail.style.transform = `translate(${Math.max(0, Math.min(w - K.tail[0], p[0] - x - K.tail[0] / 2))}px,${below ? -K.tail[1] : h}px) rotate(${below ? FIND_PLAY.kit.deg : 0}deg)`;
 }
 export function findSheet(owner, cls, html, anchor) {

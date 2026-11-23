@@ -3,9 +3,9 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { STOPS, PALETTES, FINDS, FIND_COPY, COPY, ACTS, CRAFTS, MAP, STEPS, DEPTH, NOVA, STARS, C, FIND_PLAY, EXPLORE, FOOT_NAME, CARD_CLOSE, HAMMER } from '../data.mjs';
-import { RUNES } from '../art.mjs';
-import { SEQ, TOTAL_P, tripState, tripResize } from '../trip.mjs';
+import { STOPS, PALETTES, FINDS, FIND_COPY, COPY, ACTS, CRAFTS, MAP, STEPS, DEPTH, NOVA, STARS, C, FIND_PLAY, EXPLORE, FOOT_NAME, CARD_CLOSE, HAMMER, YGG, MARK, LABELS, WORLD } from '../data.mjs';
+import { RUNES, bigMap, GROVE, YGG_CROWN, YGG_ROOTS, yggClear, insidePoly, outlineGap, JORM, TRAIL, COAST_A, COAST_B, mapLabelRows, toronto } from '../art.mjs';
+import { SEQ, TOTAL_P, tripState, tripResize, VIEW, labelScale } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -32,7 +32,7 @@ ok(STOPS.map(s => s.w).join() === '0,7,17,26,29,35' && MAP.xIdx === 37, 'stops m
 const HEX = /^#[0-9A-Fa-f]{6}$/, PK = ['ground', 'text', 'sub', 'button', 'buttonText', 'pill', 'pillText', 'band', 'headline', 'mark', 'hairline'];
 Object.entries(PALETTES).forEach(([k, p]) => { PK.forEach(f => ok(HEX.test(p[f] || ''), `palette ${k}: ${f} missing or not a colour`)); ok(/^assets\/logos\/\w+\.png$/.test(p.logo), `palette ${k}: logo`); ok(['ground', 'band'].includes(p.layout), `palette ${k}: layout`); });
 Object.entries(PALETTES).forEach(([k, p]) => {
-  Object.keys(p).forEach(f => ok([...PK, 'logo', 'layout', 'smallWeight', 'chip', 'chipText'].includes(f), `palette ${k}: unknown key ${f}`));
+  Object.keys(p).forEach(f => ok([...PK, 'logo', 'layout', 'smallWeight', 'chip', 'chipText', 'arrow', 'panel', 'panelText', 'panelHair', 'panelButton', 'panelButtonText'].includes(f), `palette ${k}: unknown key ${f}`));
   if (p.smallWeight !== undefined) ok(Number.isFinite(p.smallWeight) && p.smallWeight > 0, `palette ${k}: smallWeight`);
   ['chip', 'chipText'].forEach(f => { if (p[f] !== undefined) ok(HEX.test(p[f]), `palette ${k}: ${f}`); });
   if (k !== 'lennard') ok(['smallWeight', 'chip', 'chipText'].every(f => p[f] === undefined), `palette ${k}: Lennard-only keys`);
@@ -78,8 +78,8 @@ const findSlots = (v, path) => { if (!v || typeof v !== 'object') return; if (v.
 findSlots(FIND_COPY, 'FIND_COPY');
 ok(FIND_COPY.hoards.length === 5 && FIND_COPY.hoards.every(h => Object.hasOwn(FIND_PLAY.icons, h.kind)), 'five hoards need known piece kinds');
 ok(FIND_COPY.serpentLeaves.length === 3 && FIND_COPY.serpentLeaves.every(row => row.length === 2 && row.every(t => typeof t === 'string' && t.length)), 'three serpent calendar leaves');
-ok(FIND_PLAY.serpent.spots.length === 3, 'three serpent spots');
-FIND_PLAY.serpent.spots.forEach((p, i) => { const b = FIND_PLAY.serpent.bounds, s = FIND_PLAY.serpent.scale; ok(p.length === 2 && p.every(Number.isFinite) && p[0] + b[0] * s >= 22 && p[1] + b[1] * s >= 22 && p[0] + b[2] * s <= 578 && p[1] + b[3] * s <= 878, `serpent spot ${i}: drawing must stay inside inner frame`); });
+ok(FIND_PLAY.serpent.scale === 1 && !FIND_PLAY.serpent.spots, 'world serpent has one fixed joint');
+const serpentFind = FINDS.find(f => f.id === 'serpent'), sb = FIND_PLAY.serpent.bounds; ok(serpentFind.x + sb[0] >= 22.5 && serpentFind.x + sb[2] <= 577.5 && serpentFind.y + sb[1] >= 22.5 && serpentFind.y + sb[3] <= 877.5, 'serpent head/pad inside inner frame');
 ok(FINDS.filter(f => f.view).length === 9, 'nine finds have fixed camera views');
 FINDS.forEach(f => ok(['hoards', 'longship'].includes(f.id) ? !f.view : f.view?.length === 3 && f.view.every(Number.isFinite) && f.view[2] > 0, `${f.id}: camera view`));
 ['mist', 'horn', 'well', 'ship', 'all'].forEach(k => ok(FIND_PLAY[k] && typeof FIND_PLAY[k] === 'object', `Part B needs FIND_PLAY.${k}`));
@@ -110,6 +110,48 @@ for (const [w, h] of [[1440, 900], [390, 664]]) {
   ok(['s', 'tx', 'ty'].every(k => Math.abs(before[k] - at[k]) < 1e-3), `camera jumps at the X (${w}x${h})`);
 }
 
+// Round 7 C1 acceptance gates. Text boxes use conservative analytic metrics, not browser measurements.
+const c1map = bigMap();
+GROVE.forEach((tree, i) => ok(yggClear(tree, YGG.clearance + YGG.groveReach), 'grove ' + i + ': crown/trunk/root clearance'));
+const labelBoxPoints = []; for (let x = YGG.labelBox[0]; x <= YGG.labelBox[2]; x++) for (let y = YGG.labelBox[1]; y <= YGG.labelBox[3]; y++) labelBoxPoints.push([x,y]);
+labelBoxPoints.forEach(p => { ok(!insidePoly(p, YGG_CROWN) && outlineGap(p, YGG_CROWN) >= YGG.labelGap, 'Yggdrasil label crown clearance'); ok(YGG_ROOTS.every(P => outlineGap(p, P, false) >= YGG.labelGap), 'Yggdrasil label root clearance'); ok(Math.abs(p[0] - MAP.ygg[0]) >= YGG.labelGap + YGG.roots[0][1], 'Yggdrasil label trunk/Ratatoskr clearance'); const h = FIND_COPY.hoards.find(h => h.id === 'hoard-hmc2'); ok(Math.hypot(p[0] - h.x, p[1] - h.y) >= YGG.labelGap + FIND_PLAY.hoard.scale * 27, 'Yggdrasil label scratch clearance'); });
+const allStars = FIND_PLAY.well.stars.flatMap((row, batch) => row.map(p => ({ batch, p: p.map((v,i) => v + MAP.ygg[i]) })));
+allStars.forEach((star, i) => { ok(insidePoly(star.p,YGG_CROWN) && outlineGap(star.p,YGG_CROWN) >= YGG.starInset, 'well star crown inset'); ok(Math.hypot(...star.p.map((v,k) => v - MAP.ygg[k] - YGG.eagleAt[k])) >= YGG.eagleClear, 'well star eagle clearance'); allStars.slice(0,i).forEach(other => ok(Math.hypot(...star.p.map((v,k) => v - other.p[k])) >= (star.batch === other.batch ? YGG.starSame : YGG.starOther), 'well star spacing')); });
+JORM.S.forEach(p => { ok(p[0] >= 22.5 && p[0] <= 577.5 && p[1] >= 22.5 && p[1] <= 877.5, 'ring sample outside inner frame'); [COAST_A, COAST_B].forEach(coast => ok(outlineGap(p,coast) >= MAP.jorm.w / 2 + 6, 'ring coast clearance')); });
+const cross2 = (a,b,c) => (b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+let crossings = 0; TRAIL.slice(1).forEach((b,i) => JORM.S.slice(1).forEach((d,j) => { const a=TRAIL[i],c=JORM.S[j]; if(cross2(a,b,c)*cross2(a,b,d)<0 && cross2(c,d,a)*cross2(c,d,b)<0)crossings++; })); ok(crossings === 1, 'trail must cross ring exactly once');
+const T = MAP.toronto, heights = T.buildings.map(([id]) => T.facts[id] * T.k);
+ok(heights[1] === Math.max(...heights) && T.facts.fcp > Math.max(...T.buildings.filter(([id])=>!['cn','fcp'].includes(id)).map(([id])=>T.facts[id])), 'Toronto tallest landmarks');
+ok(T.buildings.every((row,i)=>!i||row[1]>T.buildings[i-1][1]), 'Toronto west-to-east order');
+const drawnBuildings = [...toronto().matchAll(/<path class="[go]" d="([^"]+)"/g)].map(m=>m[1]);
+T.buildings.forEach(([id,x]) => { const path = drawnBuildings.find(p=>Math.abs(Number(p.match(/^M([\d.]+)/)?.[1])-(id==='cn'?21.8:x))<.01); if(id==='cn')ok(toronto().includes('V-58.1'), 'CN Tower height'); else { const ys=[...path.matchAll(/(?:V|[ ,])(-[\d.]+)/g)].map(m=>-Number(m[1])); const height=id==='rogers'? (4.6+13.4)/2:Math.max(...ys); ok(Math.abs(height-T.facts[id]*T.k)<=.15,id+': height differs from metres x scale'); } });
+// Sample every skyline stroke, including the dome and reflected shoreline quadratics.
+function skylineSamples(path) {
+  const tok=path.match(/[a-zA-Z]|[-+]?(?:\d*\.)?\d+(?:e[-+]?\d+)?/g), points=[];let i=0,cmd='',p=[0,0],home=p,last=null;
+  const num=()=>Number(tok[i++]), point=(rel)=>{const q=[num(),num()];return rel?q.map((v,k)=>v+p[k]):q;};
+  while(i<tok.length){if(/[a-zA-Z]/.test(tok[i]))cmd=tok[i++];const rel=cmd===cmd.toLowerCase(),C=cmd.toUpperCase();if(C==='Z'){p=home.slice();points.push(p);cmd='';continue;}const start=p.slice();
+    if(C==='M'||C==='L'){p=point(rel);if(C==='M'){home=p.slice();cmd=rel?'l':'L';}points.push(p);last=null;}
+    else if(C==='H'){p=[num()+(rel?p[0]:0),p[1]];points.push(p);last=null;}
+    else if(C==='V'){p=[p[0],num()+(rel?p[1]:0)];points.push(p);last=null;}
+    else if(C==='Q'||C==='T'||C==='C'){const a=C==='T'?(last?start.map((v,k)=>2*v-last[k]):start):point(rel),b=C==='C'?point(rel):null,end=point(rel);for(let n=1;n<=20;n++){const t=n/20;points.push(start.map((v,k)=>C==='C'?(1-t)**3*v+3*(1-t)**2*t*a[k]+3*(1-t)*t*t*b[k]+t**3*end[k]:(1-t)**2*v+2*(1-t)*t*a[k]+t*t*end[k]));}p=end;last=b||a;}
+    else throw Error('unknown Toronto path command '+cmd);
+  }return points;
+}
+for(const m of toronto().matchAll(/d="([^"]+)"/g))skylineSamples(m[1]).forEach(p=>ok(insidePoly(p.map((v,k)=>v+T.at[k]),COAST_B),'Toronto stroke outside south coast'));
+for(let x=T.box[0]+6;x<=T.at[0]+T.width+4;x+=1)ok(insidePoly([x,T.at[1]],COAST_B),'Toronto shoreline outside south coast');
+for(const [w,h,bar] of [[1440,900,120],[390,844,96]]) {
+  tripResize(w,h,bar); const rows=mapLabelRows().filter(r=>!VIEW.phone||!r.stopSub).concat([{kind:'small',unit:LABELS.small.unit,text:COPY.kicker,x:45,y:95,ls:1.8}],Object.values(COPY.legend).map((text,i)=>({kind:'legend',unit:LABELS.legend.unit,text,x:LABELS.legendAt[i][0],y:LABELS.legendAt[i][1]})));
+  const boxes=rows.map(row=>{const k=labelScale(row.kind,VIEW.s0), width=(row.text.length*row.unit*LABELS.width+(row.text.length-1)*(row.ls||0))*k,left=row.anchor==='end'?row.x-width:row.anchor==='middle'?row.x-width/2:row.x; if(!VIEW.phone&&row.kind==='name')ok(row.unit*VIEW.s0*k>=10-1e-9,'desktop name below 10 px');const halo=['name','x','sub'].includes(row.kind)?LABELS.halo*k:0;return{...row,b:[left-halo,row.y-row.unit*k*LABELS.ascent-halo,left+width+halo,row.y+row.unit*k*LABELS.descent+halo]};});
+  boxes.forEach((row,i)=>{const b=row.b;ok(b[0]>=22.5&&b[1]>=22.5&&b[2]<=577.5&&b[3]<=877.5,w+': label outside frame: '+row.text);boxes.slice(0,i).forEach(other=>{const q=other.b;ok(!(b[0]<q[2]&&b[2]>q[0]&&b[1]<q[3]&&b[3]>q[1]),w+': label overlap '+row.text+'/'+other.text);});});
+}
+const way=FINDS.find(f=>f.id==='wayfinder'), screenRight=way.x-46, screenLeft=screenRight-FIND_COPY.crafts[3].length*(6.5*.56+1.2), videoRight=way.x+46+FIND_COPY.crafts[1].length*(6.5*.56+1.2);
+ok(screenLeft>=22.5+4,'SCREEN frame clearance');ok(outlineGap([videoRight,way.y+2.5],COAST_B)>=10,'VIDEO coast halo clearance');
+const luminance = hex => {const rgb=hex.slice(1).match(/../g).map(n=>parseInt(n,16)/255).map(n=>n<=.04045?n/12.92:((n+.055)/1.055)**2.4);return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;};
+const contrast = (a,b) => {const x=luminance(a),y=luminance(b);return(Math.max(x,y)+.05)/(Math.min(x,y)+.05);};
+Object.entries(PALETTES).forEach(([id,p])=>{const g=p.panel||p.ground,text=p.panelText||p.text,sub=p.panelText||p.sub;ok(contrast(text,g)>=4.5&&contrast(sub,g)>=4.5,id+': small text contrast');ok(contrast(p.panelButtonText||p.buttonText,p.panelButton||p.button)>=4.5,id+': button contrast');ok(contrast(p.pillText,p.pill)>=4.5,id+': pill contrast');ok(contrast(p.headline,p.ground)>=3,id+': headline contrast');});
+ok(readFileSync(join(ROOT,'map.css'),'utf8').includes('-webkit-tap-highlight-color: transparent'),'tap highlight');
+console.log('ok: C1 tree, stars, ring/coasts/crossing, Toronto heights/order/coast, analytic tier-1 boxes, compass and card contrast');
+
 // no empty copy
 const walk = (v, path) => { if (typeof v === 'string') ok(v.trim().length > 0 || /caption$/.test(path), `empty copy at ${path}`); else if (Array.isArray(v)) v.forEach((x, i) => walk(x, `${path}[${i}]`)); else if (v && typeof v === 'object') Object.entries(v).forEach(([k, x]) => walk(x, `${path}.${k}`)); };
 walk(COPY, 'COPY'); walk(FIND_COPY, 'FIND_COPY'); STOPS.forEach(s => { walk(s.copy, `${s.id}.copy`); ok(!s.copy.piece || s.copy.caption, `${s.id}: piece without caption`); });
@@ -138,4 +180,4 @@ for (const [file, budget] of [['dist/journey-map.html', 320], ['dist/journey-joi
 }
 
 if (errs.length) { console.error('FAIL\n' + errs.map(e => ' - ' + e).join('\n')); process.exit(1); }
-console.log(`ok: 6 stops, ${Object.keys(PALETTES).length} palettes (Lennard band verified), 11 finds, acts total ${TOTAL_P.toFixed(1)} vh, ${mods.length} modules with unique top-level names; STEPS numbers finite/positive; 10 strictly rising beats; X camera continuous at desktop/phone sizes; DEPTH/NOVA/STARS numbers finite; ${DEPTH.clouds.list.length} cloud rows valid; rings.colour in C; FIND_PLAY finite, slots have text, five known hoard kinds, three bounded serpent spots/leaves, nine fixed views; Part B tables, Norns, fog, crown stars, shields, hammer rows and approved runes valid`);
+console.log(`ok: 6 stops, ${Object.keys(PALETTES).length} palettes (Lennard band verified), 11 finds, acts total ${TOTAL_P.toFixed(1)} vh, ${mods.length} modules with unique top-level names; STEPS numbers finite/positive; 10 strictly rising beats; X camera continuous at desktop/phone sizes; DEPTH/NOVA/STARS numbers finite; ${DEPTH.clouds.list.length} cloud rows valid; rings.colour in C; FIND_PLAY finite, slots have text, five known hoard kinds, one bounded world serpent/three leaves, nine fixed views; Part B tables, Norns, fog, crown stars, shields, hammer rows and approved runes valid`);

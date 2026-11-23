@@ -1,5 +1,5 @@
 // Scroll progress, acts, camera, traveller. Everything here is a pure function of progress P (in viewport heights).
-import { ACTS, CAMERA, HOLD, MAP, STOPS, COPY, DEPTH, FIND_PLAY } from './data.mjs';
+import { ACTS, CAMERA, HOLD, MAP, STOPS, COPY, DEPTH, FIND_PLAY, LABELS, WORLD, STEPS } from './data.mjs';
 import { TRAIL, polyLen, COAST_A, COAST_B, onLand, miniMapSvg } from './art.mjs';
 
 export const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -55,11 +55,20 @@ export function tripResize(w, h, tlH) {
   VIEW.s0 = Math.min((w - 2 * m) / MAP.w, (availH - m) / MAP.h);
   VIEW.ox = (w - MAP.w * VIEW.s0) / 2; VIEW.oy = m + (availH - m - MAP.h * VIEW.s0) / 2;
   VIEW.sT = VIEW.s0 * (VIEW.phone ? CAMERA.pushScalePhone : CAMERA.pushScale);
+  if (TRIP_EL.scrim) TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px';
 }
 const camOverview = () => ({ cx: MAP.w / 2, cy: MAP.h / 2, s: VIEW.s0, ax: VIEW.ox + MAP.w / 2 * VIEW.s0, ay: VIEW.oy + MAP.h / 2 * VIEW.s0 });
 const camTrip = (u, zoom) => { const c = smoothCenter(u); return { cx: c[0], cy: c[1], s: VIEW.sT * zoom, ax: CAMERA.anchorX * VIEW.w, ay: CAMERA.anchorY * VIEW.h }; };
 const camMix = (a, b, t) => ({ cx: lerp(a.cx, b.cx, t), cy: lerp(a.cy, b.cy, t), s: Math.exp(lerp(Math.log(a.s), Math.log(b.s), t)), ax: lerp(a.ax, b.ax, t), ay: lerp(a.ay, b.ay, t) });
 const camFinal = c => ({ s: c.s, tx: c.ax - c.cx * c.s, ty: c.ay - c.cy * c.s, ax: c.ax, ay: c.ay });
+
+export const labelScale = (kind, s, phone = VIEW.phone) => { const L = LABELS[kind]; return Math.min(phone ? L.phoneCap : L.cap, Math.max(1, (phone ? L.phone : L.floor) / (L.unit * s))); };
+export function tripXCamera() {
+  if (VIEW.phone) { const b = CAMERA.xBoxPhone, margin = CAMERA.xMargin, h = VIEW.h - STEPS.nav.bar, s = Math.min((VIEW.w - 2 * margin) / (b[2] - b[0]), (h - 2 * margin) / (b[3] - b[1])); return { cx: (b[0] + b[2]) / 2, cy: (b[1] + b[3]) / 2, s, ax: VIEW.w / 2, ay: h / 2 }; }
+  const base = camTrip(X_U, 1), floor = VIEW.h - CAMERA.timeline - STEPS.nav.gap - STEPS.nav.h - CAMERA.xGap;
+  base.ay = CAMERA.xAnchorY * VIEW.h;
+  const fit = (floor - base.ay) / (CAMERA.frameBottom - base.cy); base.s = Math.max(VIEW.sT * CAMERA.xFloor, Math.min(base.s, fit)); return base;
+}
 
 // ---- state for a progress value ----
 export function tripState(P) {
@@ -91,17 +100,18 @@ export function tripState(P) {
     const u0 = STOP_U[seg.i], u1 = seg.kind === 'leg' ? STOP_U[seg.i + 1] : X_U;
     const arc = VIEW.depth ? DEPTH.arc * Math.min(1, seg.len / DEPTH.arcLen) * Math.sin(Math.PI * st.t) ** 2 : 0;
     st.u = lerp(u0, u1, easeIO(st.t)); cam = camTrip(st.u, 1 - arc);
+    if (seg.kind === 'legX') cam = camMix(cam, tripXCamera(), easeIO(smooth(...CAMERA.xEase, st.t)));
   } else { // footer acts: X fixed, anchor slides
-    st.u = X_U; const base = camTrip(X_U, 1);
+    st.u = X_U; const base = tripXCamera(), startAX = base.ax, startAY = base.ay;
     const fx = VIEW.phone ? CAMERA.footerXPhone : CAMERA.footerX;
     const e1 = easeIO(st.rushT), e2 = easeIO(smooth(0, .8, st.settleT));
     base.cx = lerp(base.cx, MAP.x[0], e1); base.cy = lerp(base.cy, MAP.x[1], e1);
-    base.ax = lerp(lerp(CAMERA.anchorX * VIEW.w, VIEW.w / 2, e1), fx[0] * VIEW.w, e2);
-    base.ay = lerp(lerp(CAMERA.anchorY * VIEW.h, VIEW.h / 2, e1), fx[1] * VIEW.h, e2);
+    base.ax = lerp(lerp(startAX, VIEW.w / 2, e1), fx[0] * VIEW.w, e2);
+    base.ay = lerp(lerp(startAY, VIEW.h / 2, e1), fx[1] * VIEW.h, e2);
     cam = base;
   }
   st.inTrip = st.pushT > 0;
-  st.cam = camFinal(cam);
+  st.cam = camFinal(cam); st.tripS = st.cam.s;
   st.trav = st.handoffT < 1 ? null : pointAt(st.u);
   st.date = dateAt(P);
   st.cardOpen = Math.max(...st.cardK);
@@ -113,6 +123,9 @@ export const toScreen = (st, p) => [p[0] * st.cam.s + st.cam.tx, p[1] * st.cam.s
 const TRIP_EL = {};
 export function tripBuild(els) {
   Object.assign(TRIP_EL, els);
+  TRIP_EL.labels = [...els.svg.querySelectorAll('.label-scale')].map(el => ({ el, kind: el.dataset.label, stopSub: el.dataset.stopSub === 'true', k: null }));
+  TRIP_EL.tier2 = els.svg.querySelector('.map-tier2'); TRIP_EL.subs = els.svg.querySelector('.map-subs'); TRIP_EL.subHome = TRIP_EL.subs.parentElement;
+  TRIP_EL.scrim = document.createElement('div'); TRIP_EL.scrim.className = 'stage-scrim'; TRIP_EL.scrim.setAttribute('aria-hidden', 'true'); TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px'; TRIP_EL.scrim.style.background = 'linear-gradient(to bottom, transparent, color-mix(in srgb, var(--ink) ' + WORLD.scrim[2] * 100 + '%, transparent))'; els.svg.parentElement.appendChild(TRIP_EL.scrim);
   TRIP_EL.coasts = [...els.svg.querySelectorAll('.coast')];
   TRIP_EL.coastLen = [polyLen(COAST_A, 1), polyLen(COAST_B, 1)];
   TRIP_EL.ship = els.svg.querySelector('.ls-ship');
@@ -123,6 +136,10 @@ export function tripBuild(els) {
 }
 export function tripApply(st) {
   const E = TRIP_EL, c = st.cam;
+  const labelFade = smooth(...LABELS.fade, c.s / VIEW.s0);
+  if (E.phone !== VIEW.phone) { E.phone = VIEW.phone; (VIEW.phone ? E.tier2 : E.subHome).appendChild(E.subs); }
+  E.labels.forEach(label => { const k = VIEW.phone && label.stopSub ? 1 : labelScale(label.kind, c.s); if (label.k === null || Math.abs(k / label.k - 1) > LABELS.epsilon) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; } });
+  E.tier2.style.opacity = labelFade; E.scrim.style.opacity = labelFade;
   E.cam.setAttribute('transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`);
   const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
   E.sea.style.opacity = smooth(...DEPTH.fade.sea, h) * fade; E.fill.style.opacity = smooth(.25, .75, h) * fade;

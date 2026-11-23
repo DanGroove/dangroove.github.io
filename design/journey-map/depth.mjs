@@ -12,7 +12,7 @@ export const depthPoint = (st, p, a, look = [0, 0]) => {
 export const depthVisibility = (k, layer) => smooth(...layer.show, k) * (1 - smooth(...layer.pass, k));
 export const depthCloudPass = (st, a) => 1 - smooth(...DEPTH.clouds.pass, depthFactor(st, a));
 export const depthDeckAlpha = (st, a) => {
-  const k = depthFactor(st, a), d = DEPTH.deck;
+  const trip = { ...st, cam: { ...st.cam, s: st.tripS ?? st.cam.s } }, k = depthFactor(trip, a), d = DEPTH.deck;
   return d.alpha * (1 + d.boost * smooth(...d.peak, k)) * depthVisibility(k, d);
 };
 export const depthBlastFade = st => 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));

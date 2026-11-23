@@ -188,7 +188,10 @@ export function exploreBuild({ stage, world, journey, rm }) {
   window.addEventListener('keydown', e => {
     if (!EX.active || e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === 'Escape' || e.key === '0') { e.preventDefault(); exploreEnd(); return; }
-    if (!['+', '=', '-'].includes(e.key) || e.target?.closest?.('.sheet.on, input, textarea, select')) return;
+    if (e.target?.closest?.('.sheet.on, input, textarea, select')) return;
+    const arrows = { ArrowLeft: [1, 0], ArrowRight: [-1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
+    if (arrows[e.key]) { e.preventDefault(); exploreTakeover(); const direction = arrows[e.key], distance = EXPLORE.keyPan * (e.shiftKey ? EXPLORE.keyShift : 1); EX.target = exploreBound({ ...EX.target, tx: EX.target.tx + direction[0] * distance, ty: EX.target.ty + direction[1] * distance }); return; }
+    if (!['+', '=', '-'].includes(e.key)) return;
     e.preventDefault(); exploreTakeover(); EX.target = exploreBound(exploreZoom(EX.cam, [VIEW.w / 2, VIEW.h / 2], EX.target.s * (e.key === '-' ? 1 / EXPLORE.key : EXPLORE.key) / EX.cam.s, EX.fit, EX.top));
   });
   window.addEventListener('blur', () => { exploreClearPointers(); EX.velocity = [0, 0]; });
