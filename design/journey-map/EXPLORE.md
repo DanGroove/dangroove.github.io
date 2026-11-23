@@ -8,6 +8,7 @@ Read this whole file before writing anything. Read `steps.mjs`, `main.mjs`, `tri
 - "repeat clicking on the super nova shouldnt delete older things that happened because of the click. there should be a hidden cap though so it doesnt destroy their framerate if they spam click too much"
 - "The stars that gather into the supernova all come from above it so it looks weird"
 - "I should be able to X out of a card as well"
+- After my reply that described this plan (in it, a scroll or a swipe nudged the Next button): "no scroll or swipe", and "after the supernova and the end card there should be a CTA to back to the map to explore freely"
 
 Other notes of his (the board game, Yggdrasil, the serpent, the chests, the ravens, the stop marks, Toronto) are later parts. Do not touch them here.
 
@@ -17,6 +18,7 @@ The sandbox on this machine is off, so these matter.
 
 - Change files only inside `design/journey-map/`, and only these:
   - `data.mjs`, `main.mjs`, `trip.mjs`, `steps.mjs`, `cards.mjs`, `footer.mjs`, `depth.mjs`, `stars.mjs`, `timeline.mjs`, `join.mjs`, `finds.mjs`, `map.css`, `join.css`, `tools/check.mjs`, `tools/steps-test.mjs`, `tools/depth-test.mjs`
+  - in `tools/finds-test.mjs`, only the three recorded digests that guard `trip.mjs`, `depth.mjs` and the `STARS`/`DEPTH`/`NOVA` tables: this build changes those on purpose, so once your changes are done, record their new digests there (the failing assertion prints them) and list the three new numbers in your report. Change nothing else in that file.
   - new: `explore.mjs`, `footname.mjs`, `tools/explore-test.mjs`, `EXPLORE-BUILD.md`
   - written by the pack tools: `joined.html`, `dist/journey-map.html`, `dist/journey-joined.html`
 - Never change anything in `hero-copy/`, `reference/` or `assets/`, any other `.md` file, `art.mjs`, `pace.mjs`, `index.html`, or any find module other than `finds.mjs` (`findkit.mjs`, `findboard.mjs`, `findcreatures.mjs`, `findhoards.mjs`, `findwater.mjs`, `findhorn.mjs`, `findall.mjs`, `findsheets.mjs`, `tafl.mjs` belong to later parts). Change `tools/pack.mjs` or `tools/pack-joined.mjs` only if packing fails without it, and say why in your report.
@@ -33,7 +35,7 @@ The sandbox on this machine is off, so these matter.
 ## 3. The journey moves only by Back and Next
 
 - Steps is the only mode outside reduced motion. Remove the `?mode=` address parameter, the saved `jm-mode` in `sessionStorage`, and the review switch's Steps and Scroll buttons (the switch keeps its label and the Depth button). Reduced motion keeps today's stacked, scrolling page exactly as it is: keep the code it needs and nothing else of the old Scroll mode. Remove what only the old Scroll mode used.
-- The wheel and a finger swipe no longer move the journey. During the journey they do one thing: a gesture (the wheel's existing one-gesture rule, `STEPS.wheel`, or a swipe past `STEPS.swipe.min`) gives the Next button one short nudge, so the visitor sees where to press. On the joined page's top beat, where the bar is hidden, the nudge goes to the hero's "Start the journey" button (`.jm-start`). The nudge: the button grows to `STEPS.nudge.scale` and back with a soft Paper ring that spreads and fades, over `STEPS.nudge.time` seconds, at most once per gesture. Use the individual `scale` property so it never fights the button's own `transform`. No nudge while a move or cut plays, while a find has the camera, or at the end beat (section 4 takes those gestures there).
+- The wheel and a finger swipe do nothing to the journey, anywhere on it, the end included (Dan: "no scroll or swipe"). Remove the wheel and swipe stepping (`stepsWheel`, the swipe handlers, `STEPS.wheel`, `STEPS.swipe`). The page still prevents the browser's own scroll, as now. Only exploring (section 4) gives the wheel and a drag a job.
 - A card face that can scroll inside (`.face`) still scrolls with the wheel and a finger, as now. Wheel and touch inside an open find sheet do nothing to the page, as now.
 - Keys stay as they are: one press, one step (`stepsKey`). The timeline stays as it is (a press on a stop's block jumps, its arrow keys jump, dragging the playhead scrubs).
 - No line of copy may tell the visitor to scroll, except the explore hint in section 4.6. (The stand-in hero's `cue` shows only in reduced motion, where the page does scroll: leave it.)
@@ -50,8 +52,9 @@ Exploring is possible only at the `end` beat: `JOURNEY.P` equals the end beat's 
 
 ### 4.2 Starting and ending
 
-- Starting: at the end beat, the first wheel gesture, drag on empty space past `EXPLORE.slop` px, two-finger pinch, `+`, `=` or `-` key, or a press on a new button "Explore the map" (`COPY.explore.button`) starts exploring, and that same gesture already zooms or moves the camera.
-- The new button sits in the end bar (`.go.go-end`, today Back and "Back to the top") between the two, styled like "Back to the top". It hides while exploring.
+- Starting: only a call to action does it (Dan: "after the supernova and the end card there should be a CTA to back to the map to explore freely"). At the end beat today the Next pill hides. Instead, once the supernova and the footer have settled, the Next pill shows again in the end bar (`.go.go-end`, between Back and "Back to the top"), looking exactly like Next, with the label "Explore the map" (`COPY.explore.button`) and the bar's own reveal. A press on it starts exploring. Before that press the wheel, a swipe, a drag and the zoom keys do nothing at the end.
+- On that press, the map comes back (4.3) and the camera eases from the end view out to `fit` (4.4: the whole map with the footer under it) over `EXPLORE.in` seconds, with the trip's own ease. From there the visitor zooms and drags. A wheel turn or a drag during that ease takes over from it at once, from where the camera is.
+- The pill hides while exploring.
 - While exploring, the Back button shows the text "Back to the end" (`COPY.explore.back`) the way it shows "Back to the trail" while a find has the camera, and its label says the same. Back, Escape and the `0` key end exploring: the camera eases back to the end view and `k` eases to 0 over `EXPLORE.out` seconds. A second Back then steps back to the X as now.
 - Anything that leaves the end beat (Back to the X, "Back to the top", a timeline jump, a stop mark) ends exploring at once; the move or the cut's cover hides the change.
 
@@ -85,7 +88,7 @@ The supernova and its parts size themselves in screen px today (`u(px) = px / s`
 
 ### 4.6 The hint
 
-When the end beat settles and the visitor has not explored yet on this page load, a hint line shows `COPY.explore.hint` ("Scroll to zoom out. Drag to look around.") or, on a phone, `COPY.explore.hintPhone` ("Pinch to zoom out. Drag to look around."). It looks like the find hint (`.find-hint`: same type, colour, place and fade) but is its own element, made by `explore.mjs`. It goes as soon as exploring starts and does not come back on this page load. Screen readers get `COPY.explore.say` once, through the existing status line, when exploring starts.
+The first time exploring starts on a page load, a hint line shows `COPY.explore.hint` ("Scroll to zoom. Drag to look around.") or, on a phone, `COPY.explore.hintPhone` ("Pinch to zoom. Drag to look around."). It looks like the find hint (`.find-hint`: same type, colour, place and fade) but is its own element, made by `explore.mjs`. It goes after the first zoom or drag, or after `EXPLORE.hintTime` seconds, and does not come back on this page load. Screen readers get `COPY.explore.say` through the existing status line each time exploring starts.
 
 ## 5. The footer name behaves like the hero's
 
@@ -138,21 +141,20 @@ Everything else: the journey's motion, beats and pace, the cards apart from the 
 Add (starting values; tune nothing else):
 
 ```
-STEPS.nudge: { scale: 1.06, time: 0.6, ring: 10 }
 EXPLORE: { in: 1.6, out: 0.9, most: 3, margin: 24, marginPhone: 12, wheel: 0.0016, wheelMax: 120, pinchWheel: 0.01,
-  ease: 0.12, slop: 6, friction: 5, velocityWindow: 0.08, key: 1.25 }
+  ease: 0.12, slop: 6, friction: 5, velocityWindow: 0.08, key: 1.25, hintTime: 8 }
 FOOT_NAME: the hero's NAME numbers and the entrance's name curve, as they are in the hero
 NOVA.flare.cap: 8, NOVA.flare.coreMax: 1.2, NOVA.flare.kickMax: 0.3
 NOVA.gather: { ring: 0.32, swirl: 0.35, sky: 0.5 }
 CARD_CLOSE: { time: 0.45 }
-COPY.explore: { button: 'Explore the map', back: 'Back to the end', hint: 'Scroll to zoom out. Drag to look around.',
-  hintPhone: 'Pinch to zoom out. Drag to look around.', say: 'Exploring the map. Back returns to the end.' }
+COPY.explore: { button: 'Explore the map', back: 'Back to the end', hint: 'Scroll to zoom. Drag to look around.',
+  hintPhone: 'Pinch to zoom. Drag to look around.', say: 'Exploring the map. Back returns to the end.' }
 COPY.cardClose: 'Close the {name} card'
 ```
 
 ## 11. Checks before you finish
 
-- `node tools/check.mjs`, `node tools/steps-test.mjs`, `node tools/depth-test.mjs`, `node tools/finds-test.mjs`, `node tools/tafl-test.mjs` and the new `node tools/explore-test.mjs` all pass.
+- `node tools/check.mjs`, `node tools/steps-test.mjs`, `node tools/depth-test.mjs`, `node tools/finds-test.mjs` (with its three digests recorded anew, section 2), `node tools/tafl-test.mjs` and the new `node tools/explore-test.mjs` all pass.
 - `tools/explore-test.mjs` (Node, the pure parts of `explore.mjs`): zoom never goes below `fit` or above the top; the centre stays inside the bounds; a zoom about a point keeps that world point fixed; a glide slows and stops and never crosses the bounds; the layer transform and its inverse round-trip a point.
 - Pack both pages: `node tools/pack.mjs` and `node tools/pack-joined.mjs`.
 
