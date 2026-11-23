@@ -176,7 +176,7 @@ export function findHoards(svg) {
       attr(h.chest, 'transform', 'translate(0 ' + h.y + ') rotate(' + rock + ' ' + h.pivot + ' 0)');
       if (h.stage === 'opening' || h.stage === 'bouncing') {
         if (h.stage === 'opening') {
-          const e = t - h.openTs; h.lidAngle = e < H.lidTime ? H.lidPeak * out3(e / H.lidTime) : lerp(H.lidPeak, H.lidRest, ease((e - H.lidTime) / H.lidSettle));
+          const e = t - h.openTs; h.lidAngle = e < H.lidTime ? H.lidPeak * ((1 - Math.cos(Math.PI * clamp01(e / H.lidTime))) / 2) : lerp(H.lidPeak, H.lidRest, (1 - Math.cos(Math.PI * clamp01((e - H.lidTime) / H.lidSettle))) / 2);
           if (FD.rm || e >= H.lidTime + H.lidSettle) { h.lidAngle = H.lidRest; stage('open'); if (h.pending) { h.pending = false; queueMicrotask(show); } }
         } else { const q = clamp01((t - h.bounceTs) / H.lidBounce); h.lidAngle = H.lidRest + (H.lidPeak - H.lidRest) * Math.sin(Math.PI * q) ** 2; if (q === 1) stage('open'); }
         paintLid();

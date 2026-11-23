@@ -2,7 +2,7 @@
 import { BEATS, paceT, paceP, paceMove, paceAt } from '../pace.mjs';
 import { JOURNEY, stepsBuild, stepsFrame } from '../steps.mjs';
 import { tripResize, tripState, toScreen, SEQ } from '../trip.mjs';
-import { cardsBuild, cardsOverride, cardsClose, cardsList } from '../cards.mjs';
+import { cardsBuild, cardsOverride, cardsClose, cardsList, cardsFrame } from '../cards.mjs';
 import { CARD_CLOSE, CAMERA, MAP, STEPS } from '../data.mjs';
 import { exploreBuild, exploreResize, exploreApply, exploreActive, exploreEnd } from '../explore.mjs';
 
@@ -49,7 +49,7 @@ class StepNode {
   contains(n) { return n === this || this.children.some(c => c.contains(n)); }
   addEventListener(t, f) { (this.listeners[t] ??= []).push(f); }
   fire(t, props = {}) { const e = { target: this, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...props }; (this.listeners[t] || []).forEach(f => f(e)); return e; }
-  focus() { document.activeElement = this; }
+  focus(options) { document.activeElement = this; this.focusOptions = options; }
   getBoundingClientRect() { throw new Error('unexpected layout read'); }
 }
 const stepWindow = new StepNode(), stepStage = new StepNode(), stepRoot = new StepNode(), stepBody = new StepNode();
@@ -79,13 +79,16 @@ console.log('ok: address cannot select Scroll; review only Depth; no swipe liste
 
 const cardContainer = new StepNode(); let navigations = 0; cardsBuild(cardContainer, () => navigations++);
 stepAssert(cardContainer.querySelectorAll('.c-close').length === 6, 'every motion card needs X');
-const stopP = BEATS[2].P; let cardState = tripState(stopP); cardsOverride(cardState, 0, false); stepAssert(cardsClose(), 'card did not close');
+const stopP = BEATS[2].P; JOURNEY.set(stopP); cardsList().forEach(c => c.H = 420); let cardState = tripState(stopP); cardsOverride(cardState, 0, false); cardsFrame(cardState); stepAssert(cardsClose(), 'card did not close');
 cardState = tripState(stopP); cardsOverride(cardState, CARD_CLOSE.time / 2, false); stepAssert(cardState.cardK[0] > 0 && cardState.cardK[0] < 1 && cardState.P === stopP, 'card halfway fold');
 cardState = tripState(stopP); cardsOverride(cardState, CARD_CLOSE.time / 2, false); stepAssert(cardState.cardK[0] === 0 && cardState.P === stopP, 'card fold changed P or failed');
-cardsList()[0].btn.fire('click'); cardState = tripState(stopP); cardsOverride(cardState, CARD_CLOSE.time, false); stepAssert(cardState.cardK[0] === 1 && navigations === 0, 'closed stop mark must reopen locally');
+cardsFrame(cardState); cardsList()[0].btn.focus(); cardsList()[0].btn.fire('click'); cardState = tripState(stopP); cardsOverride(cardState, CARD_CLOSE.time, false); cardsFrame(cardState); stepAssert(cardState.cardK[0] === 1 && navigations === 0, 'closed stop mark must reopen locally');
+const cardX = cardsList()[0].el.querySelector('.c-close'); stepAssert(document.activeElement === cardX && cardX.focusOptions.preventScroll === true, 'reopened card must focus its X without scrolling');
+JOURNEY.next(); stepAssert(JOURNEY.moving, 'mid-move X fixture must be moving'); cardX.focus(); cardX.fire('click'); stepAssert(document.activeElement !== cardsList()[0].btn, 'mid-move X focused departed stop mark'); stepAssert(cardsClose(0) === false, 'X must be ignored mid-move');
+JOURNEY.set(stopP);
 cardsClose(); cardsOverride(tripState(BEATS[3].P), 0, false); cardState = tripState(stopP); cardsOverride(cardState, 0, false); stepAssert(cardState.cardK[0] === 1, 'leaving stop must forget closed state');
 const reducedCards = new StepNode(); cardsBuild(reducedCards, () => {}, true); stepAssert(reducedCards.querySelectorAll('.c-close').length === 0, 'reduced-motion cards must have no close button');
-console.log('ok: six card X controls; reversible local fold, fixed P, mark reopens, departure forgets override, reduced-motion list has no X');
+console.log('ok: six card X controls; local reopen focuses X without scrolling; mid-move X cannot focus departed mark; departure forgets override; reduced-motion list has no X');
 
 for(const [w,h,tl] of [[1440,900,120],[390,844,96]]){
   tripResize(w,h,tl);const x=tripState(BEATS.find(b=>b.id==='x').P);

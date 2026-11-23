@@ -7,8 +7,8 @@ import { FD, FIND_BY, attr, ease, press, opened, found, attend, findSheet, close
 
 export function hammerBestRead(fallback = 0) { try { const value = Number(localStorage.getItem(HAMMER.ui.bestKey)); return Number.isFinite(value) && value >= 0 ? Math.max(fallback, value) : fallback; } catch { return fallback; } }
 export function hammerBestWrite(score, fallback = 0) { const best = Math.max(score, hammerBestRead(fallback)); try { localStorage.setItem(HAMMER.ui.bestKey, String(best)); } catch {} return best; }
-const hammerText = (key, values = {}) => findFormat(FIND_COPY.hammer[key], { ...values, s: values.n === 1 ? '' : 's' });
-const hammerRuneNumber = (r, n) => r === 1 || r === 11 ? n * HAMMER.throw.ride * 100 : r === 3 ? HAMMER.hearts + n : r === 4 ? n * HAMMER.rune.hail : r === 5 ? n + 1 : r === 6 ? n * HAMMER.rune.ice * 100 : n;
+export const hammerText = (key, values = {}) => findFormat(FIND_COPY.hammer[key], { ...values, s: (key === 'stats' ? values.foes : key === 'hearts' ? values.max : values.n) === 1 ? '' : 's' });
+export const hammerRuneNumber = (r, n) => Math.round(r === 1 || r === 11 ? n * HAMMER.throw.ride * 100 : r === 3 ? HAMMER.hearts + n : r === 4 ? n * HAMMER.rune.hail : r === 5 ? n + 1 : r === 6 ? n * HAMMER.rune.ice * 100 : n);
 const hammerRuneArt = (r, small = false) => { const U = HAMMER.ui, h = small ? U.mini : U.rune, w = small ? U.miniW : U.runeW, g = runeGlyph(HAMMER.runes[r].key, h); return `<svg viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${g.d}"/></svg>`; };
 
 export function findHammer(svg) {
@@ -82,7 +82,18 @@ export function findHammer(svg) {
     c.save(); if (s && !FD.rm && s.shake > 0) c.translate(Math.sin(s.time * HAMMER.map.trembleRate) * HAMMER.fx.shake * s.shake / HAMMER.fx.life, 0);
     for (let i = 0; i < o.paths.bridge.length; i++) paintPath(o.paths.bridge[i], 0, 0, i % 2 ? C.note : C.dim);
     if (s) {
-      for (let i = 0; i < s.cells.length; i++) { const p = s.cells[i]; if (p.live) paintPath(o.paths.shield, p.x, p.y, C.dim); }
+      // Clip the shield wall to the original live cell tiles: a lost cell takes its wood and rim with it.
+      const W = HAMMER.shield, A = HAMMER.paths.wall;
+      for (let wall = 0; wall < W.walls; wall++) {
+        const first = wall * W.rows * W.double * W.columns; let tiles = '';
+        for (let i = first; i < first + W.rows * W.double * W.columns; i++) { const p = s.cells[i]; if (p.live) tiles += `M${p.x - W.cell / 2} ${p.y - W.cell / 2}h${W.cell}v${W.cell}h${-W.cell}Z`; }
+        c.save(); c.clip(new Path2D(tiles));
+        for (let row = 0; row < W.double; row++) for (const dx of A.centres) {
+          const x = W.x + wall * W.gap + dx, y = W.y - W.cell - row * W.rows * W.cell;
+          c.save(); c.translate(x, y); c.fillStyle = C.ink; c.fill(o.paths.wallRim); c.strokeStyle = C.note; c.stroke(o.paths.wallRim); c.strokeStyle = C.dim; c.stroke(o.paths.wallPlanks); c.strokeStyle = C.paper; c.stroke(o.paths.wallBoss); c.restore();
+        }
+        c.restore();
+      }
       for (let i = 0; i < s.foes.length; i++) {
         const p = s.foes[i]; if (!p.live) continue; c.globalAlpha = !FD.rm && p.flash ? HAMMER.fx.flashAlpha : 1; paintSprite(p.kind, p.x, p.y); c.globalAlpha = 1;
         if (p.kind === 'rime' && p.hp < p.max) paintPath(o.paths.crack, p.x, p.y, C.note);
@@ -125,7 +136,8 @@ export function findHammer(svg) {
     const q = selector => FD.sheet.querySelector(selector);
     o.canvas = q('.hm-canvas'); o.card = q('.hm-card'); o.status = q('.hm-status'); o.wave = q('.hm-wave'); o.hearts = q('.hm-hearts'); o.silver = q('.hm-silver'); o.autoButton = q('.hm-auto'); o.pauseButton = q('.hm-pause'); o.cardKey = null;
     o.paths = { bridge: HAMMER.paths.bridge.map(d => new Path2D(d)), shot: HAMMER.paths.shot.map(d => new Path2D(d)), fragments: HAMMER.paths.fragments.map(row => new Path2D(row[2])) };
-    for (const key of ['shield', 'spark', 'crack', 'stoneHeart']) o.paths[key] = new Path2D(HAMMER.paths[key]);
+    for (const key of ['spark', 'crack', 'stoneHeart']) o.paths[key] = new Path2D(HAMMER.paths[key]);
+    for (const [key, path] of Object.entries(HAMMER.paths.wall.paths)) o.paths[key] = new Path2D(path);
     measure(); refresh(); draw();
     q('.hm-close').addEventListener('click', () => closeSheet()); o.autoButton.addEventListener('click', toggle); o.pauseButton.addEventListener('click', () => o.game?.paused ? resume() : pause());
     const point = e => { const box = o.canvas.getBoundingClientRect(); o.input.target = (e.clientX - box.left) * HAMMER.field.w / box.width; };

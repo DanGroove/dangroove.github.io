@@ -29,7 +29,7 @@ export function findRavens(svg) {
       const edge = ((b.side < 0 ? 0 : VIEW.w) - cam.tx) / cam.s;
       b.range = Math.max(R.reach, (b.side * (edge - mapX) + G.offFrame) / R.scale + G.birdMargin);
       b.startTs = FD.now + (kind === 'hear' ? b.i * G.loopGap : 0);
-      findBits('feather', mapX, f.y + b.flightBase[1] * R.scale, R.feathers, FIND_PLAY.bits.feathers);
+      b.shed = false;
     });
   };
   const request = () => {
@@ -79,6 +79,12 @@ export function findRavens(svg) {
         const liftTime = hearing ? G.loopTakeoff : G.crouch;
         if (age < liftTime) { mode = 'crouch'; q = ravenPose('sit', 'unfold', ease(age / liftTime)); }
         else if (age < duration) {
+          if (!b.shed) {
+            b.shed = true;
+            // The tail is behind the outward-facing bird; shed only when its wings actually lift.
+            const tail = G.featherAt;
+            findBits('feather', f.x + (b.flightBase[0] - b.side * tail[0]) * R.scale, f.y + (b.flightBase[1] + tail[1]) * R.scale, R.feathers, FIND_PLAY.bits.feathers);
+          }
           let velocity = [b.side, 0], landing = 0;
           if (hearing) {
             mode = 'loop'; const u = clamp01((age - G.loopTakeoff) / G.loopTime), a = b.side * Math.PI * 2 * u, [cx, cy] = G.loopCentre, vx = -b.side * cx, vy = -cy;

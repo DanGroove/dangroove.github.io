@@ -4,7 +4,8 @@ import { gzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { STOPS, PALETTES, FINDS, FIND_COPY, COPY, ACTS, CRAFTS, MAP, STEPS, DEPTH, NOVA, STARS, C, FIND_PLAY, EXPLORE, FOOT_NAME, CARD_CLOSE, HAMMER, YGG, MARK, LABELS, WORLD, RAVEN_RIG } from '../data.mjs';
-import { RUNES, bigMap, GROVE, YGG_CROWN, YGG_ROOTS, yggClear, insidePoly, outlineGap, JORM, TRAIL, COAST_A, COAST_B, mapLabelRows, toronto, runeWord } from '../art.mjs';
+import { RUNES, bigMap, GROVE, YGG_CROWN, YGG_ROOTS, yggClear, insidePoly, outlineGap, JORM, TRAIL, COAST_A, COAST_B, mapLabelRows, mapLabelBox, toronto, runeWord } from '../art.mjs';
+import { hammerText, hammerRuneNumber } from '../findhammer.mjs';
 import { SEQ, TOTAL_P, tripState, tripResize, VIEW, labelScale } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
 
@@ -112,11 +113,15 @@ for (const [w, h] of [[1440, 900], [390, 664]]) {
 
 // Round 7 C1 acceptance gates. Text boxes use conservative analytic metrics, not browser measurements.
 const c1map = bigMap();
+const crownMasses = [...c1map.detail.matchAll(/class="l yg-mass" d="([^"]+)"/g)].map(m => skylineSamples(m[1]).map(p=>p.map((v,k)=>v+MAP.ygg[k])));
+ok(crownMasses.length>=3&&crownMasses.length<=5,'ash crown needs 3-5 outlined masses');
 GROVE.forEach((tree, i) => ok(yggClear(tree, YGG.clearance + YGG.groveReach), 'grove ' + i + ': crown/trunk/root clearance'));
 const labelBoxPoints = []; for (let x = YGG.labelBox[0]; x <= YGG.labelBox[2]; x++) for (let y = YGG.labelBox[1]; y <= YGG.labelBox[3]; y++) labelBoxPoints.push([x,y]);
 labelBoxPoints.forEach(p => { ok(!insidePoly(p, YGG_CROWN) && outlineGap(p, YGG_CROWN) >= YGG.labelGap, 'Yggdrasil label crown clearance'); ok(YGG_ROOTS.every(P => outlineGap(p, P, false) >= YGG.labelGap), 'Yggdrasil label root clearance'); ok(Math.abs(p[0] - MAP.ygg[0]) >= YGG.labelGap + YGG.roots[0][1], 'Yggdrasil label trunk/Ratatoskr clearance'); const h = FIND_COPY.hoards.find(h => h.id === 'hoard-hmc2'); ok(Math.hypot(p[0] - h.x, p[1] - h.y) >= YGG.labelGap + FIND_PLAY.hoard.scale * 27, 'Yggdrasil label scratch clearance'); });
 const allStars = FIND_PLAY.well.stars.flatMap((row, batch) => row.map(p => ({ batch, p: p.map((v,i) => v + MAP.ygg[i]) })));
 allStars.forEach((star, i) => { ok(insidePoly(star.p,YGG_CROWN) && outlineGap(star.p,YGG_CROWN) >= YGG.starInset, 'well star crown inset'); ok(Math.hypot(...star.p.map((v,k) => v - MAP.ygg[k] - YGG.eagleAt[k])) >= YGG.eagleClear, 'well star eagle clearance'); allStars.slice(0,i).forEach(other => ok(Math.hypot(...star.p.map((v,k) => v - other.p[k])) >= (star.batch === other.batch ? YGG.starSame : YGG.starOther), 'well star spacing')); });
+allStars.forEach(star=>ok(crownMasses.some(P=>insidePoly(star.p,P)),'well star inside actual ash foliage: '+star.p));
+crownMasses.forEach((P,i)=>crownMasses.slice(0,i).forEach((Q,j)=>ok(P.every(p=>!insidePoly(p,Q)&&outlineGap(p,Q)>=.3)&&Q.every(p=>!insidePoly(p,P)&&outlineGap(p,P)>=.3),'foliage masses need an open gap '+i+'/'+j)));
 JORM.S.forEach(p => { ok(p[0] >= 22.5 && p[0] <= 577.5 && p[1] >= 22.5 && p[1] <= 877.5, 'ring sample outside inner frame'); [COAST_A, COAST_B].forEach(coast => ok(outlineGap(p,coast) >= MAP.jorm.w / 2 + 6, 'ring coast clearance')); });
 const cross2 = (a,b,c) => (b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
 let crossings = 0; TRAIL.slice(1).forEach((b,i) => JORM.S.slice(1).forEach((d,j) => { const a=TRAIL[i],c=JORM.S[j]; if(cross2(a,b,c)*cross2(a,b,d)<0 && cross2(c,d,a)*cross2(c,d,b)<0)crossings++; })); ok(crossings === 1, 'trail must cross ring exactly once');
@@ -140,9 +145,24 @@ function skylineSamples(path) {
 for(const m of toronto().matchAll(/d="([^"]+)"/g))skylineSamples(m[1]).forEach(p=>ok(insidePoly(p.map((v,k)=>v+T.at[k]),COAST_B),'Toronto stroke outside south coast'));
 for(let x=T.box[0]+6;x<=T.at[0]+T.width+4;x+=1)ok(insidePoly([x,T.at[1]],COAST_B),'Toronto shoreline outside south coast');
 for(const [w,h,bar] of [[1440,900,120],[390,844,96]]) {
-  tripResize(w,h,bar); const rows=mapLabelRows().filter(r=>!VIEW.phone||!r.stopSub).concat([{kind:'small',unit:LABELS.small.unit,text:COPY.kicker,x:45,y:95,ls:1.8}],Object.values(COPY.legend).map((text,i)=>({kind:'legend',unit:LABELS.legend.unit,text,x:LABELS.legendAt[i][0],y:LABELS.legendAt[i][1]})));
-  const boxes=rows.map(row=>{const k=labelScale(row.kind,VIEW.s0), width=(row.text.length*row.unit*LABELS.width+(row.text.length-1)*(row.ls||0))*k,left=row.anchor==='end'?row.x-width:row.anchor==='middle'?row.x-width/2:row.x; if(!VIEW.phone&&row.kind==='name')ok(row.unit*VIEW.s0*k>=10-1e-9,'desktop name below 10 px');const halo=['name','x','sub'].includes(row.kind)?LABELS.halo*k:0;return{...row,b:[left-halo,row.y-row.unit*k*LABELS.ascent-halo,left+width+halo,row.y+row.unit*k*LABELS.descent+halo]};});
+  tripResize(w,h,bar); const rows=mapLabelRows().filter(r=>!r.stopSub).concat([{kind:'small',unit:LABELS.small.unit,text:COPY.kicker,x:LABELS.kicker[0],y:LABELS.kicker[1],ls:1.8}],Object.values(COPY.legend).map((text,i)=>({kind:'legend',unit:LABELS.legend.unit,text,x:LABELS.legendAt[i][0],y:LABELS.legendAt[i][1]})));
+  const boxes=rows.map(row=>{const k=labelScale(row.kind,VIEW.s0),floor=['name','x'].includes(row.kind)?VIEW.phone?9:10:9;ok(row.unit*VIEW.s0*k>=floor-1e-9,w+': '+row.kind+' below '+floor+' px');return{...row,b:mapLabelBox(row,VIEW.s0,VIEW.phone)};});
   boxes.forEach((row,i)=>{const b=row.b;ok(b[0]>=22.5&&b[1]>=22.5&&b[2]<=577.5&&b[3]<=877.5,w+': label outside frame: '+row.text);boxes.slice(0,i).forEach(other=>{const q=other.b;ok(!(b[0]<q[2]&&b[2]>q[0]&&b[1]<q[3]&&b[3]>q[1]),w+': label overlap '+row.text+'/'+other.text);});});
+  const rectGap=(a,b)=>Math.hypot(Math.max(a[0]-b[2],b[0]-a[2],0),Math.max(a[1]-b[3],b[1]-a[3],0));
+  const stroke=.55/VIEW.s0, crown=crownMasses.flat(), crownBox=[Math.min(...crown.map(p=>p[0]))-stroke,Math.min(...crown.map(p=>p[1]))-stroke,Math.max(...crown.map(p=>p[0]))+stroke,Math.max(...crown.map(p=>p[1]))+stroke];
+  const glyphs=GROVE.map(([x,y,s,pine],i)=>({name:(pine?'caret':'tent')+' '+i,b:[x-s-stroke,y-2.7*s-stroke,x+s+stroke,y+stroke]})).concat([{name:'crown',b:crownBox}]);
+  boxes.forEach(row=>{boxes.filter(other=>other!==row).forEach(other=>ok(rectGap(row.b,other.b)>=2,w+': labels need 2 units: '+row.text+'/'+other.text));glyphs.forEach(g=>ok(rectGap(row.b,g.b)>=2,w+': '+row.text+'/'+g.name+' gap '+rectGap(row.b,g.b).toFixed(2)+' '+JSON.stringify(g.b)));});
+  const sub=mapLabelRows().find(r=>r.text==='on contract, 2021 to 2022');ok(rectGap(mapLabelBox(sub,VIEW.sT,VIEW.phone),crownBox)>=2,'HMC-again sub-line clears crown at trip scale');
+  const xRows=mapLabelRows().filter(r=>r.kind==='x'||r.text===COPY.xSub);ok(rectGap(...xRows.map(r=>mapLabelBox(r,VIEW.sT,VIEW.phone)))>=2,'two-line X label clears its faded sub-line at trip scale');
+  // Walk actual text markup, inheriting the secondary visibility and geometric scales.
+  for(const source of [c1map.detail,c1map.finds]){const stack=[{scale:1,secondary:false}];for(const tag of source.matchAll(/<\/?([\w-]+)([^>]*?)\/?\s*>/g)){
+    if(tag[0].startsWith('</')){if(stack.length>1)stack.pop();continue;}
+    const a=Object.fromEntries([...tag[2].matchAll(/([\w-]+)="([^"]*)"/g)].map(m=>[m[1],m[2]])),parent=stack.at(-1),kind=a['data-label'];let scale=parent.scale;
+    for(const m of (a.transform||'').matchAll(/scale\(([-\d.]+)/g))scale*=Number(m[1]);if(kind)scale*=labelScale(kind,VIEW.s0);
+    const secondary=parent.secondary||a.opacity==='0'||(a.class||'').split(' ').includes('map-tier2');
+    if(tag[1]==='text'&&!secondary)ok(Number(a['font-size'])*scale*VIEW.s0>=6-1e-9,w+': visible text below 6 px '+tag[0]);
+    if(!tag[0].endsWith('/>'))stack.push({scale,secondary});
+  }}
 }
 const way=FINDS.find(f=>f.id==='wayfinder'), screenRight=way.x-46, screenLeft=screenRight-FIND_COPY.crafts[3].length*(6.5*.56+1.2), videoRight=way.x+46+FIND_COPY.crafts[1].length*(6.5*.56+1.2);
 ok(screenLeft>=22.5+4,'SCREEN frame clearance');ok(outlineGap([videoRight,way.y+2.5],COAST_B)>=10,'VIDEO coast halo clearance');
@@ -174,7 +194,16 @@ ok(/\['ArrowLeft', 'ArrowRight', 'Home', 'End'\]/.test(sourceC2('timeline.mjs'))
 ok(/P = stepsFrame\(ts\);\s*if \(JOIN.leave\) JOIN.leave\(P\);/.test(sourceC2('main.mjs')),'hero leave hook directly after stepsFrame');ok(/JOIN.leave = place;/.test(sourceC2('join.mjs'))&&!/JOIN.frame =[^]*?\{\s*place\(P\)/.test(sourceC2('join.mjs')),'join frame no longer writes leave');
 ok(/\.jm-sheet-open \.find-hint\s*\{\s*opacity: 0;/.test(sourceC2('map.css'))&&sourceC2('findkit.mjs').includes("classList.add('jm-sheet-open')")&&sourceC2('findkit.mjs').includes("classList.remove('jm-sheet-open')"),'sheet hides find hint and close clears class');
 for(const row of FIND_COPY.hammer.runes)ok(!/\{n\} (?:more )?(?:foes|hearts|neighbours|ending blows|hail shards|times)\b/.test(row[1]),'hammer numeral needs plural mark: '+row[1]);
-ok(FIND_COPY.hammer.heartLost==='A heart lost. {n} heart{s} left.','heart loss singular/plural copy');ok(sourceC2('findhammer.mjs').includes("s: count === 1 ? '' : 's'")&&sourceC2('findhammer.mjs').includes("s: values.n === 1 ? '' : 's'"),'hammer plural marks formatted');
+ok(FIND_COPY.hammer.heartLost==='A heart lost. {n} heart{s} left.','heart loss singular/plural copy');
+const checkHammerLine = line => { ok(!/\d\.\d{3,}|undefined|\{\w+\}/.test(line),'unformatted hammer number: '+line); ok(!/\b1 (?:more )?(?:foes|hearts|neighbours|ending blows|hail shards|times)\b/.test(line),'singular hammer count: '+line); ok(!/\b2 (?:more )?(?:foe|heart|neighbour|ending blow|hail shard|time)\b/.test(line),'plural hammer count: '+line); };
+for(let r=0;r<HAMMER.runes.length;r++)for(let level=1;level<=HAMMER.runes[r].max;level++){const n=hammerRuneNumber(r,level);ok(Number.isInteger(n),'rune count must be whole');checkHammerLine(FIND_COPY.hammer.runes[r][1].replace('{n}',n).replace('{s}',n===1?'':'s'));}
+// Test every numeric field independently, so a second count cannot accidentally control the noun.
+for(const [key,line] of Object.entries(FIND_COPY.hammer))if(typeof line==='string'&&/\{(?:n|max|silver|foes|key)\}/.test(line)){
+  const keys=[...new Set([...line.matchAll(/\{(n|max|silver|foes|key)\}/g)].map(m=>m[1]))];
+  for(let mask=0;mask<2**keys.length;mask++){const values={name:'Rune',line:'Effect'};keys.forEach((k,i)=>values[k]=1+((mask>>i)&1));checkHammerLine(hammerText(key,values));}
+}
+for(const row of FIND_COPY.hammer.runes)for(const n of [1,2])checkHammerLine(row[1].replace('{n}',n).replace('{s}',n===1?'':'s'));
+console.log('ok: D2 whole-number runes at every level; all numeric hammer copy at independent 1/2 counts');
 console.log('C2 analytic rest clearances coast '+ravenCoast.toFixed(2)+', mark '+ravenMark.toFixed(2)+', regions '+ravenRegion.toFixed(2)+' map units; hit padding, hoards group, timeline keys, early hero leave, sheet hint and hammer plurals');
 
 // no empty copy

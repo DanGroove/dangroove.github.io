@@ -5,6 +5,16 @@ import { HAMMER } from '../data.mjs';
 import { hammerStart, hammerStep, hammerWave, hammerPick, hammerRandom, hammerDamage, hammerHurt, hammerSlow, hammerPower, hammerFlightSpeed, hammerGloveSpeed } from '../hammer.mjs';
 
 const H = HAMMER, input = { target: NaN, move: 0, throw: false };
+// Every endpoint/control point of these M/L/H/V/Q silhouettes is inside the unchanged hit box, including stroke.
+for(const kind of [...H.kinds,'hrungnir','clay']) {
+  const path=H.paths.sprites[kind][2],tok=path.match(/[a-zA-Z]|[-+]?(?:\d*\.)?\d+/g);let i=0,cmd='',p=[0,0];const points=[];
+  while(i<tok.length){if(/[a-zA-Z]/.test(tok[i]))cmd=tok[i++];if(cmd==='Z')continue;
+    if(cmd==='H')p=[Number(tok[i++]),p[1]];else if(cmd==='V')p=[p[0],Number(tok[i++])];else{const q=[Number(tok[i++]),Number(tok[i++])];if(cmd==='Q'){points.push(q);p=[Number(tok[i++]),Number(tok[i++])];}else p=q;}points.push(p);if(cmd==='M')cmd='L';
+  }
+  const rx=kind==='hrungnir'?H.foe.bossRX:kind==='clay'?H.foe.clayRX:H.foe.rx,ry=kind==='hrungnir'?H.foe.bossRY:kind==='clay'?H.foe.clayRY:H.foe.ry;
+  points.forEach(p=>assert.ok(Math.abs(p[0])+H.field.line/2<=rx&&Math.abs(p[1])+H.field.line/2<=ry,kind+' art outside hit box '+p));
+}
+console.log('ok: original Norse foe silhouettes and their strokes fit unchanged hit boxes');
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-7, `${a} != ${b}`);
 const step = (s, seconds = H.step, control = input) => { for (let t = 0; t < seconds - H.step / 2; t += H.step) hammerStep(s, control, H.step); };
 function fixture() {

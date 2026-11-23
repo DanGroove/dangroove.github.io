@@ -1,5 +1,5 @@
 // The X, its supernova and the footer that settles over the glow.
-import { C, COPY, MAP, NOVA, NOVA_CANVAS, DEPTH, FOOT_NAME, EXPLORE } from './data.mjs';
+import { C, COPY, MAP, NOVA, NOVA_CANVAS, DEPTH, FOOT_NAME, EXPLORE, CAMERA, PHONE_LAYOUT } from './data.mjs';
 import { rnd, n1, mapDefs } from './art.mjs';
 import { VIEW, smooth, lerp, easeIO, clamp01 } from './trip.mjs';
 import { JOURNEY } from './steps.mjs';
@@ -48,7 +48,33 @@ export function footerResize() {
   const s = FT.name, weight = s.style.fontWeight; s.style.fontWeight = FOOT_NAME.weight[1]; s.style.fontSize = FOOT_NAME.measureSize + 'px';
   const avail = FT.name.parentElement.clientWidth, w = s.getBoundingClientRect().width;
   s.style.fontSize = (FOOT_NAME.measureSize * avail / w).toFixed(2) + 'px'; footnameMeasure({ c: 1, dx: 0, dy: 0 }); s.style.fontWeight = weight;
+  footerPhoneMeasure();
   return FT.rule.getBoundingClientRect();
+}
+// The same boxes drive resize layout and the Node gate. They describe the settled footer.
+export function footerPhoneLayout({ w, h, goBottom, headlineH, talkW, talkH, nameTop }) {
+  const L = PHONE_LAYOUT, top = Math.max(h * L.ctaShare, goBottom + L.gap), headline = [L.edge, top, w - L.edge, top + headlineH];
+  const talk = [L.edge, headline[3] + L.headlineGap, L.edge + talkW, headline[3] + L.headlineGap + talkH];
+  const novaY = Math.max(CAMERA.footerXPhone[1] * h, talk[3] + L.gap + NOVA.flare.hit), x = CAMERA.footerXPhone[0] * w;
+  const target = [x - NOVA.flare.hit, novaY - NOVA.flare.hit, x + NOVA.flare.hit, novaY + NOVA.flare.hit];
+  return { top, headline, talk, novaY, target, spacer: target[3] + L.gap - talk[3], nameTop: Math.max(nameTop, target[3] + L.gap), fits: target[3] + L.gap <= nameTop };
+}
+function footerPhoneMeasure() {
+  FT.inner.style.paddingTop = '';
+  const spacer = FT.el.querySelector('.ft-sp'); spacer.style.minHeight = '';
+  if (!VIEW.phone || FT.rm) return;
+  const go = document.getElementById('go'), root = document.documentElement;
+  if (!go) return;
+  // Measure the end bar even when it is hidden or currently showing another journey beat.
+  const hidden = go.hidden, end = go.classList.contains('go-end'), exploring = root.classList.contains('jm-explore'), focused = root.classList.contains('jm-focus');
+  const next = go.querySelector('.go-t'), nextText = next.textContent;
+  const children = [...go.querySelectorAll('button')].map(el => [el, el.hidden]);
+  go.hidden = false; go.classList.add('go-end'); root.classList.remove('jm-explore'); root.classList.remove('jm-focus'); next.textContent = COPY.explore.button; children.forEach(([el]) => el.hidden = false);
+  const goBottom = go.getBoundingClientRect().bottom;
+  go.hidden = hidden; go.classList.toggle('go-end', end); root.classList.toggle('jm-explore', exploring); root.classList.toggle('jm-focus', focused); next.textContent = nextText; children.forEach(([el, value]) => el.hidden = value);
+  const headline = FT.el.querySelector('.ft-q').getBoundingClientRect(), talk = FT.el.querySelector('.ft-talk').getBoundingClientRect(), name = FT.name.parentElement.getBoundingClientRect();
+  const layout = footerPhoneLayout({ w: VIEW.w, h: VIEW.h, goBottom, headlineH: headline.height, talkW: talk.width, talkH: talk.height, nameTop: name.top });
+  FT.inner.style.paddingTop = layout.top + 'px'; spacer.style.minHeight = layout.spacer + 'px'; VIEW.footerY = layout.novaY;
 }
 const footerStyle = (el, key, value) => { const text = String(value); if (el && el.style[key] !== text) el.style[key] = text; };
 export function footerFrame(st) {

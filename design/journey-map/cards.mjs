@@ -2,6 +2,7 @@
 import { STOPS, PALETTES, COPY, CRAFTS, MAP, STEPS, DEPTH, CARD_CLOSE, MARK, WORLD } from './data.mjs';
 import { shieldSvg } from './art.mjs';
 import { VIEW, toScreen, smooth, easeIO, lerp } from './trip.mjs';
+import { JOURNEY } from './steps.mjs';
 
 const CD = { list: [], W: 640, H: 420, craft: null, onGo: null, rm: false, closed: null, last: null };
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -33,7 +34,7 @@ export function cardsBuild(container, onGo, rm = false) {
 <div class="c-foot"><ul class="c-crafts">${CRAFTS.map(c => `<li class="${s.crafts.includes(c) ? 'lit' : ''}"><i></i>${c}</li>`).join('')}</ul>
 <button class="c-btn" type="button">${COPY.caseStudy}${arrowSvg}</button></div></div></div></div>${rm ? '' : `<button class="c-close" type="button" aria-label="${esc(COPY.cardClose.replace('{name}', s.name))}"><i aria-hidden="true"></i></button>`}`;
     a.querySelector('.st-btn').addEventListener('click', () => {
-      if (CD.closed?.i === i && CD.last?.P === CD.closed.P) { CD.closed = { ...CD.closed, from: CD.closed.k, to: 1, elapsed: 0 }; return; }
+      if (CD.closed?.i === i && CD.last?.P === CD.closed.P && !JOURNEY.moving) { CD.closed = { ...CD.closed, from: CD.closed.k, to: 1, elapsed: 0 }; CD.list[i].reopenFocus = true; return; }
       CD.onGo(i);
     });
     a.querySelector('.c-close')?.addEventListener('click', () => cardsClose(i));
@@ -62,7 +63,7 @@ export const cardsLitBy = craft => STOPS.map(s => s.crafts.includes(craft));
 
 export function cardsClose(index = CD.last?.i) {
   const st = CD.last;
-  if (CD.rm || !st || st.kind !== 'hold' || st.cardK[index] <= 0 || (CD.closed?.to === 0)) return false;
+  if (CD.rm || JOURNEY.moving || !st || st.kind !== 'hold' || st.cardK[index] <= 0 || (CD.closed?.to === 0)) return false;
   CD.closed = { i: index, P: st.P, k: st.cardK[index], from: st.cardK[index], to: 0, elapsed: 0 };
   if (CD.list[index].el.contains(document.activeElement)) CD.list[index].btn.focus({ preventScroll: true });
   return true;
@@ -114,6 +115,8 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     c.glow.style.opacity = lit ? 1 : 0;
     const state = e > .96 ? 'open' : e < .02 ? 'rest' : 'moving';
     if (state !== c.state) { c.state = state; c.el.dataset.state = state; c.face.inert = state !== 'open'; c.btn.tabIndex = state === 'rest' ? 0 : -1; }
+    if (c.reopenFocus && (JOURNEY.moving || st.kind !== 'hold' || st.i !== i)) c.reopenFocus = false;
+    if (c.reopenFocus && state === 'open') { c.reopenFocus = false; c.el.querySelector('.c-close').focus({ preventScroll: true }); }
   });
 }
 export const cardsList = () => CD.list;

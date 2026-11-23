@@ -47,10 +47,11 @@ export const dateAt = P => { if (P <= PIECES[0][0]) return PIECES[0][2]; for (co
 export const progressForDate = d => { for (const q of PIECES) { const lo = Math.min(q[2], q[3]), hi = Math.max(q[2], q[3]); if (d >= lo && d <= hi && q[3] !== q[2]) return lerp(q[0], q[1], (d - q[2]) / (q[3] - q[2])); } return d <= PIECES[0][2] ? PIECES[0][0] : PIECES[PIECES.length - 1][1]; };
 
 // ---- view ----
-export const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1, depth: 1 };
+export const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1, depth: 1, footerY: null };
 export function tripResize(w, h, tlH) {
   const m = w <= CAMERA.phoneMax ? 16 : 28;
   VIEW.w = w; VIEW.h = h; VIEW.phone = w <= CAMERA.phoneMax; VIEW.unit = h / 100;
+  VIEW.footerY = null;
   const availH = h - m - (tlH + 10);
   VIEW.s0 = Math.min((w - 2 * m) / MAP.w, (availH - m) / MAP.h);
   VIEW.ox = (w - MAP.w * VIEW.s0) / 2; VIEW.oy = m + (availH - m - MAP.h * VIEW.s0) / 2;
@@ -62,7 +63,7 @@ const camTrip = (u, zoom) => { const c = smoothCenter(u); return { cx: c[0], cy:
 const camMix = (a, b, t) => ({ cx: lerp(a.cx, b.cx, t), cy: lerp(a.cy, b.cy, t), s: Math.exp(lerp(Math.log(a.s), Math.log(b.s), t)), ax: lerp(a.ax, b.ax, t), ay: lerp(a.ay, b.ay, t) });
 const camFinal = c => ({ s: c.s, tx: c.ax - c.cx * c.s, ty: c.ay - c.cy * c.s, ax: c.ax, ay: c.ay });
 
-export const labelScale = (kind, s, phone = VIEW.phone) => { const L = LABELS[kind]; return Math.min(phone ? L.phoneCap : L.cap, Math.max(1, (phone ? L.phone : L.floor) / (L.unit * s))); };
+export const labelScale = (kind, s, phone = VIEW.phone) => { const L = LABELS[kind]; return Math.max(1, (phone ? L.phone : L.floor) / (L.unit * s)); };
 export function tripXCamera() {
   if (VIEW.phone) { const b = CAMERA.xBoxPhone, margin = CAMERA.xMargin, h = VIEW.h - STEPS.nav.bar, s = Math.min((VIEW.w - 2 * margin) / (b[2] - b[0]), (h - 2 * margin) / (b[3] - b[1])); return { cx: (b[0] + b[2]) / 2, cy: (b[1] + b[3]) / 2, s, ax: VIEW.w / 2, ay: h / 2 }; }
   const base = camTrip(X_U, 1), floor = VIEW.h - CAMERA.timeline - STEPS.nav.gap - STEPS.nav.h - CAMERA.xGap;
@@ -107,7 +108,7 @@ export function tripState(P) {
     const e1 = easeIO(st.rushT), e2 = easeIO(smooth(0, .8, st.settleT));
     base.cx = lerp(base.cx, MAP.x[0], e1); base.cy = lerp(base.cy, MAP.x[1], e1);
     base.ax = lerp(lerp(startAX, VIEW.w / 2, e1), fx[0] * VIEW.w, e2);
-    base.ay = lerp(lerp(startAY, VIEW.h / 2, e1), fx[1] * VIEW.h, e2);
+    base.ay = lerp(lerp(startAY, VIEW.h / 2, e1), VIEW.phone && VIEW.footerY !== null ? VIEW.footerY : fx[1] * VIEW.h, e2);
     cam = base;
   }
   st.inTrip = st.pushT > 0;
@@ -124,7 +125,9 @@ const TRIP_EL = {};
 export function tripBuild(els) {
   Object.assign(TRIP_EL, els);
   TRIP_EL.labels = [...els.svg.querySelectorAll('.label-scale')].map(el => ({ el, kind: el.dataset.label, stopSub: el.dataset.stopSub === 'true', k: null }));
-  TRIP_EL.tier2 = els.svg.querySelector('.map-tier2'); TRIP_EL.subs = els.svg.querySelector('.map-subs'); TRIP_EL.subHome = TRIP_EL.subs.parentElement;
+  TRIP_EL.tier1 = els.svg.querySelector('.map-tier1'); TRIP_EL.tier2 = els.svg.querySelector('.map-tier2'); TRIP_EL.subs = els.svg.querySelector('.map-subs');
+  TRIP_EL.secondary = [...els.svg.querySelectorAll('.map-tier2')]; if (!TRIP_EL.secondary.length) TRIP_EL.secondary = [TRIP_EL.tier2];
+  TRIP_EL.focusFade = null;
   TRIP_EL.scrim = document.createElement('div'); TRIP_EL.scrim.className = 'stage-scrim'; TRIP_EL.scrim.setAttribute('aria-hidden', 'true'); TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px'; TRIP_EL.scrim.style.background = 'linear-gradient(to bottom, transparent, color-mix(in srgb, var(--ink) ' + WORLD.scrim[2] * 100 + '%, transparent))'; els.svg.parentElement.appendChild(TRIP_EL.scrim);
   TRIP_EL.coasts = [...els.svg.querySelectorAll('.coast')];
   TRIP_EL.coastLen = [polyLen(COAST_A, 1), polyLen(COAST_B, 1)];
@@ -144,9 +147,13 @@ function tripWrite(el, key, value, attribute = false) {
 export function tripApply(st) {
   const E = TRIP_EL, c = st.cam;
   const labelFade = smooth(...LABELS.fade, c.s / VIEW.s0);
-  if (E.phone !== VIEW.phone) { E.phone = VIEW.phone; (VIEW.phone ? E.tier2 : E.subHome).appendChild(E.subs); }
-  E.labels.forEach(label => { const k = VIEW.phone && label.stopSub ? 1 : labelScale(label.kind, c.s); if (label.k === null || Math.abs(k / label.k - 1) > LABELS.epsilon) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; } });
-  tripWrite(E.tier2, 'opacity', labelFade); tripWrite(E.scrim, 'opacity', labelFade);
+  E.labels.forEach(label => { const k = labelScale(label.kind, c.s); if (label.k === null || Math.abs(k / label.k - 1) > LABELS.epsilon) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; } });
+  const focusFade = 1 - smooth(0, .4, st.focusK || 0);
+  if (E.focusFade === null || Math.abs(focusFade - E.focusFade) > .01 || (focusFade === 0 || focusFade === 1) && focusFade !== E.focusFade) {
+    E.focusFade = focusFade;
+    for (const group of [E.tier1, E.subs]) if (group) { tripWrite(group, 'opacity', focusFade); tripWrite(group, 'visibility', focusFade === 0 ? 'hidden' : 'visible'); }
+  }
+  E.secondary.forEach(group => { tripWrite(group, 'opacity', labelFade); tripWrite(group, 'visibility', labelFade === 0 ? 'hidden' : 'visible'); }); tripWrite(E.scrim, 'opacity', labelFade);
   tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true);
   const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
   tripWrite(E.sea, 'opacity', smooth(...DEPTH.fade.sea, h)); tripWrite(E.fill, 'opacity', smooth(.25, .75, h));

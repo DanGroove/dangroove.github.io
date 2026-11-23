@@ -93,7 +93,7 @@ const runeSvg = (word, h, x, y, a, cls = 'rn') => `<path class="${cls}" d="${run
 export const svgText = (x, y, s, o = {}) => `<text x="${x}" y="${y}" font-size="${o.s || 8}" fill="${o.c || C.dim}" font-weight="${o.w || 500}" text-anchor="${o.a || 'start'}"${o.i ? ' font-style="italic"' : ''}${o.ls ? ` letter-spacing="${o.ls}"` : ''}${o.h ? ' class="h"' : ''}${o.t ? ` transform="${o.t}"` : ''}${o.op ? ` opacity="${o.op}"` : ''}${o.cls ? ` class="${o.cls}"` : ''}>${s}</text>`;
 const grp = (x, y, k, s, rot) => `<g transform="translate(${x} ${y})${rot ? ` rotate(${rot})` : ''} scale(${k})">${s}</g>`;
 export const starPath = (x, y, s) => `M${n1(x)} ${n1(y - s)}Q${n1(x)} ${n1(y)} ${n1(x + s)} ${n1(y)}Q${n1(x)} ${n1(y)} ${n1(x)} ${n1(y + s)}Q${n1(x)} ${n1(y)} ${n1(x - s)} ${n1(y)}Q${n1(x)} ${n1(y)} ${n1(x)} ${n1(y - s)}Z`;
-const marker = (x, y, n, id) => `<g class="mk"${id ? ` id="mk-${id}"` : ''}><circle cx="${x}" cy="${y}" r="6.2" fill="${C.ink}" stroke="${C.red}" stroke-width="1.2"/><text x="${x}" y="${y + 2.6}" font-size="7.5" font-weight="800" fill="${C.red}" text-anchor="middle">${n}</text></g>`;
+const marker = (x, y, n, id) => `<g class="mk"${id ? ` id="mk-${id}"` : ''}><circle cx="${x}" cy="${y}" r="6.2" fill="${C.ink}" stroke="${C.red}" stroke-width="1.2"/><g transform="translate(${x} ${y})"><g class="label-scale" data-label="marker"><text y="2.6" font-size="7.5" font-weight="800" fill="${C.red}" text-anchor="middle">${n}</text></g></g></g>`;
 
 // ---- terrain ----
 const peak = (x, y, s) => `<path class="g" d="M${n1(x - s)} ${y}L${x} ${n1(y - s * 1.5)}L${n1(x + s)} ${y}"/><path class="t" d="M${x} ${n1(y - s * 1.5)}l${n1(s * .28)} ${n1(s * .55)}l${n1(-s * .2)} ${n1(s * .3)}M${n1(x + s * .34)} ${n1(y - s * .62)}l${n1(-s * .1)} ${n1(s * .42)}M${n1(x + s * .6)} ${n1(y - s * .32)}l${n1(-s * .08)} ${n1(s * .24)}"/>`;
@@ -112,10 +112,9 @@ const shore = (P, seed) => { const r = rnd(seed), n = P.length; let s = '', ar2 
 // ---- Norse landmarks ----
 export function yggdrasil(x, y) {
   const Y = YGG, r = rnd(Y.crownSeed);
-  const crown = scallop(Y.crown, i => { const p = Y.crown[i], q = Y.crown[(i + 1) % Y.crown.length]; return Math.hypot(q[0] - p[0], q[1] - p[1]) * (Y.crownBump[0] + r() * Y.crownBump[1]); });
-  const overlaps = Y.layers.map((P, k) => { const rr = rnd(Y.layerSeed + k); return '<path class="l" stroke-opacity="' + Y.layerAlpha + '" d="' + scallop(P, i => -Math.hypot(P[i + 1][0] - P[i][0], P[i + 1][1] - P[i][1]) * (Y.layerBump[0] + rr() * Y.layerBump[1]), false) + '"/>'; }).join('');
+  const crown = Y.masses.map(P => '<path class="l yg-mass" d="' + scallop(P, i => { const p = P[i], q = P[(i + 1) % P.length]; return Math.hypot(q[0] - p[0], q[1] - p[1]) * (Y.massBump[0] + r() * Y.massBump[1]); }) + '"/>').join('');
   const actor = (cls, p, body) => '<g class="' + cls + '" transform="translate(' + p.join(' ') + ')">' + body + '</g>';
-  return '<g class="ygg" transform="translate(' + x + ' ' + y + ')">' + Y.roots.map(row => '<path class="g" d="' + tube(...row) + '"/>').join('') + Y.rootlets + Y.trunk + '<path class="g" d="' + crown + '"/>' + overlaps + Y.leaves + actor('yg-eagle', Y.eagleAt, Y.eagle) + actor('yg-rat', Y.ratAt, Y.rat) + actor('yg-nid', Y.nidAt, Y.nid) + '</g>';
+  return '<g class="ygg" transform="translate(' + x + ' ' + y + ')">' + Y.roots.map(row => '<path class="g" d="' + tube(...row) + '"/>').join('') + Y.rootlets + Y.trunk + '<path class="l" d="' + Y.branches + '"/>' + crown + '<path class="t" d="' + Y.ashHatch + '"/>' + actor('yg-eagle', Y.eagleAt, Y.eagle) + actor('yg-rat', Y.ratAt, Y.rat) + actor('yg-nid', Y.nidAt, Y.nid) + '</g>';
 }
 // interlace knot, about 22 units: a rounded square and a diamond woven over and under by quadrant
 export const knot = (cx, cy) => {
@@ -135,7 +134,7 @@ export function shieldSvg() {
 
 // ---- finds (each wrapped in a group the finds module wires up) ----
 const findWrap = (id, label, inner, x, y) => `<g class="find" id="f-${id}" role="button" tabindex="0" aria-label="${label}" data-x="${x}" data-y="${y}">${inner}</g>`;
-const findDrawing = kind => FIND_PLAY.drawings[kind].replace(/\{\{([\w.]+)\}\}/g, (match, path) => path === 'hoard.glintPath' ? starPath(...FIND_PLAY.hoard.glintAt, FIND_PLAY.hoard.glintSize) : path.split('.').reduce((value, key) => value[key], FIND_PLAY));
+const findDrawing = kind => FIND_PLAY.drawings[kind].replace(/\{\{([\w.]+)\}\}/g, (match, path) => path === 'hoard.glintPath' ? starPath(...FIND_PLAY.hoard.glintAt, FIND_PLAY.hoard.glintSize) : path.split('.').reduce((value, key) => value[key], FIND_PLAY)).replace(/<text\b[^]*?<\/text>/g, text => '<g class="map-tier2">' + text + '</g>');
 const wayfinder = () => findDrawing('wayfinder');
 export function hoardInside(lean) {
   const [w, d, crown] = FIND_PLAY.hoard.inside;
@@ -197,15 +196,14 @@ export function bigMap() {
   const r = rnd(11); let s = '', top = '', top2 = '';  const LB = []; GROVE.length = 0;
   const lab = (x, y, t, o = {}) => { const sz = o.s || 8, w = t.length * (sz * .56 + (o.ls || 0)), x1 = o.a == 'end' ? x - w : o.a == 'middle' ? x - w / 2 : x; LB.push([x1 - 3, y - sz - 2, x1 + w + 3, y + 3]); return svgText(x, y, t, { ...o, h: 1 }); };
   const W = MAP.waypoints;
-  const tier = row => '<g class="label-anchor" transform="translate(' + row.x + ' ' + row.y + ')"><g class="label-scale" data-label="' + row.kind + '" data-unit="' + row.unit + '" data-stop-sub="' + !!row.stopSub + '">' + lab(0, 0, row.text, { s: row.unit, w: row.name ? 700 : 500, c: row.red ? C.red : row.name ? C.paper : C.note, a: row.anchor }) + '</g></g>';
+  const tier = row => { const text = row.lines ? row.lines.map((line,i)=>'<tspan x="0" y="' + i * row.unit * LABELS.line + '">' + line + (i < row.lines.length-1 ? ' ' : '') + '</tspan>').join('') : row.text; return '<g class="label-anchor" transform="translate(' + row.x + ' ' + row.y + ')"><g class="label-scale" data-label="' + row.kind + '" data-unit="' + row.unit + '" data-stop-sub="' + !!row.stopSub + '">' + lab(0, 0, text, { s: row.unit, w: row.name ? 700 : 500, c: row.red ? C.red : row.name ? C.paper : C.note, a: row.anchor, ls: row.ls }) + '</g></g>'; };
   const labelRows = mapLabelRows(); labelRows.forEach(row => { const width = row.text.length * row.unit * LABELS.width, left = row.anchor === 'end' ? row.x - width : row.anchor === 'middle' ? row.x - width / 2 : row.x; LB.push([left - 3, row.y - row.unit - 2, left + width + 3, row.y + 3]); }); top += labelRows.filter(row => !row.stopSub).map(tier).join('');
-  top += '<g class="map-subs">' + labelRows.filter(row => row.stopSub).map(tier).join('') + '</g>';
+  top2 += '<g class="map-subs">' + labelRows.filter(row => row.stopSub).map(tier).join('') + '</g>';
   COPY.regions.forEach(g => { top2 += lab(g.x, g.y, g.t, { s: 5.8, ls: 1.6, c: C.dim, a: 'middle', i: g.i }); if (g.rune) { const rw = runeWord(g.rune, 3.2, g.x, g.y + 2.6, 'middle'); LB.push([g.x - rw.w / 2 - 2, g.y + 2, g.x + rw.w / 2 + 2, g.y + 7]); top2 += '<path class="rn rn-dim" d="' + rw.d + '"/>'; } });
   COPY.notes.forEach(nt => top2 += lab(nt.x, nt.y, nt.t, { s: nt.s, i: 1, c: nt.dim ? C.dim : C.note, a: nt.a }));
   top2 += svgText(40, 380, COPY.sea, { s: 5.8, ls: 2.4, a: 'middle', t: 'rotate(-90 40 380)' });
   const [gx, gy] = MAP.ygg, [wx, wy] = MAP.well;
   top2 += lab(...YGG.label, COPY.ygg, { s: 5.4, ls: 1.4, c: C.dim }) + lab(wx, wy + 1, COPY.well, { s: 4.8, ls: .8, c: C.note, a: 'middle' }) + lab(wx, wy + 8, COPY.wellSub, { s: 4.4, i: 1, c: C.dim, a: 'middle' });
-  top += '<g class="map-tier2">' + top2 + '</g>';
 
   // sea
   let rh = ''; for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8 + .2; rh += `M92 716L${n1(92 + Math.cos(a) * 1200)} ${n1(716 + Math.sin(a) * 1200)}`; }
@@ -238,18 +236,19 @@ export function bigMap() {
   s += grp(134, 208, .62, hall()) + grp(96, 181, .6, boat());
   s += grp(458, 271, .55, dock()) + grp(473, 321, .55, dock()) + grp(487, 297, .5, boat()) + grp(470, 304, .42, boat());
   s += grp(124, 372, .6, campus()) + grp(...MAP.toronto.at, 1, toronto()) + `<path class="l" d="M404 662v-11"/>`;
-  s += top;
+  s += '<g class="map-tier2">' + top2 + '</g>';
   FINDS.filter(f => f.n).forEach(f => s += marker(f.mark[0], f.mark[1], f.n, f.id));
 
   // title, legend, frame, knots
-  s += svgText(44, 78, COPY.title, { s: 30, w: 800, c: C.paper, ls: -.6 });
+  top += svgText(44, 78, COPY.title, { s: 30, w: 800, c: C.paper, ls: -.6 });
   const K = LABELS.kicker, P = LABELS.plate, rule = LABELS.rule;
-  s += '<g transform="translate(' + K.join(' ') + ')"><g class="label-scale" data-label="small" data-unit="' + LABELS.small.unit + '"><rect x="' + P[0] + '" y="' + P[1] + '" width="' + P[2] + '" height="' + P[3] + '" fill="' + C.ink + '"/>' + svgText(0, 0, COPY.kicker, { s: LABELS.small.unit, ls: 1.8 }) + '<path class="t" d="M' + rule[0] + ' ' + rule[1] + 'h' + rule[2] + '"/></g></g>';
+  top += '<g transform="translate(' + K.join(' ') + ')"><g class="label-scale" data-label="small" data-unit="' + LABELS.small.unit + '"><rect x="' + P[0] + '" y="' + P[1] + '" width="' + P[2] + '" height="' + P[3] + '" fill="' + C.ink + '"/>' + svgText(0, 0, COPY.kicker, { s: LABELS.small.unit, ls: 1.8 }) + '<path class="t" d="M' + rule[0] + ' ' + rule[1] + 'h' + rule[2] + '"/></g></g>';
   s += `<rect x="23" y="822" width="554" height="55" fill="${C.ink}"/><line x1="23" y1="822.5" x2="577" y2="822.5" stroke="${C.paper}" stroke-opacity=".3"/>`;
   const M = MARK.legend, [sx, sy, sr, sw, sb, sa] = M;
   s += '<g transform="translate(' + sx + ' ' + sy + ')"><circle class="o" r="' + sr + '"/><path d="M0 0V-' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 ' + sr + ' 0ZM0 0V' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 -' + sr + ' 0Z" fill="' + C.note + '" opacity="' + sa + '"/><circle class="l" r="' + sr + '" stroke-width="' + sw + '"/><circle class="pf" r="' + sb + '"/></g>';
   s += '<path d="M64 853l8 8m0 -8l-8 8" stroke="' + C.red + '" stroke-width="2" stroke-linecap="round"/>' + marker(140, 838, 1) + '<path d="M133 857h14" stroke="' + C.paper + '" stroke-width="2.3" stroke-linecap="round" stroke-dasharray=".1 4.5"/>';
-  s += Object.values(COPY.legend).map((text, i) => { const p = LABELS.legendAt[i]; return '<g transform="translate(' + p.join(' ') + ')"><g class="label-scale" data-label="legend" data-unit="' + LABELS.legend.unit + '">' + svgText(0, 0, text, { s: LABELS.legend.unit, c: C.note }) + '</g></g>'; }).join('');
+  top += Object.values(COPY.legend).map((text, i) => { const p = LABELS.legendAt[i]; return '<g transform="translate(' + p.join(' ') + ')"><g class="label-scale" data-label="legend" data-unit="' + LABELS.legend.unit + '">' + svgText(0, 0, text, { s: LABELS.legend.unit, c: C.note }) + '</g></g>'; }).join('');
+  s += '<g class="map-tier1">' + top + '</g>';
 
   s += `<rect x="14.5" y="14.5" width="571" height="871" fill="none" stroke="${C.paper}" stroke-opacity=".35"/><rect x="18" y="18" width="564" height="864" fill="none" stroke="${C.paper}" stroke-opacity=".28" stroke-width="5" stroke-dasharray="1 15"/><rect x="22.5" y="22.5" width="555" height="855" fill="none" stroke="${C.paper}" stroke-opacity=".2"/>`;
   s += knot(36, 36) + knot(564, 36) + knot(36, 864) + knot(564, 864);
@@ -322,6 +321,13 @@ export function jormungandr() {
 }
 
 export function mapLabelRows() {
-  const rows = []; STOPS.forEach(st => { const L = st.label; rows.push({ kind: 'name', unit: LABELS.name.unit, text: L.t, x: L.x, y: L.y + LABELS.nameDY, anchor: L.a, name: true }); rows.push({ kind: 'sub', unit: LABELS.sub.unit, text: L.sub, x: L.x + (st.id === 'hmc1' ? LABELS.hmcSubDX : 0), y: L.y + LABELS.subOffset + LABELS.subDY, anchor: L.a, stopSub: true }); });
-  rows.push({ kind: 'x', unit: LABELS.x.unit, text: COPY.xLabel, x: MAP.x[0] + LABELS.xAt[0], y: MAP.x[1] + LABELS.xAt[1] + LABELS.nameDY, anchor: 'start', name: true, red: true }, { kind: 'sub', unit: LABELS.sub.unit, text: COPY.xSub, x: MAP.x[0] + LABELS.xSubAt[0], y: MAP.x[1] + LABELS.xSubAt[1] + LABELS.xSubDY, anchor: 'start' }); return rows;
+  const rows = []; STOPS.forEach(st => { const L = st.label; rows.push({ kind: 'name', unit: LABELS.name.unit, text: L.t, x: L.x, y: L.y + LABELS.nameDY, anchor: L.a, name: true, ls: L.tracking }); rows.push({ kind: 'sub', unit: LABELS.sub.unit, text: L.sub, x: L.x + (st.id === 'hmc1' ? LABELS.hmcSubDX : st.id === 'hmc2' ? LABELS.hmcAgainSubDX : 0), y: L.y + LABELS.subOffset + LABELS.subDY, anchor: L.a, stopSub: true, ls: st.id === 'hmc2' ? LABELS.hmcAgainTracking : 0 }); });
+  rows.push({ kind: 'x', unit: LABELS.x.unit, text: COPY.xLabel, lines: COPY.xLabel.split(LABELS.xBreak).map((s,i)=>i ? LABELS.xBreak.trimStart()+s : s), x: MAP.x[0] + LABELS.xAt[0], y: MAP.x[1] + LABELS.xAt[1] + LABELS.nameDY, anchor: 'start', name: true, red: true }, { kind: 'sub', unit: LABELS.sub.unit, text: COPY.xSub, x: MAP.x[0] + LABELS.xSubAt[0], y: MAP.x[1] + LABELS.xSubAt[1] + LABELS.xSubDY, anchor: 'start', stopSub: true }); return rows;
+}
+
+export function mapLabelBox(row, s, phone) {
+  const L = LABELS[row.kind], k = Math.max(1, (phone ? L.phone : L.floor) / (row.unit * s));
+  const length = Math.max(...(row.lines || [row.text]).map(s=>s.length)), width = (length * row.unit * LABELS.width + (length - 1) * (row.ls || 0)) * k;
+  const left = row.anchor === 'end' ? row.x - width : row.anchor === 'middle' ? row.x - width / 2 : row.x, halo = ['name','x','sub'].includes(row.kind) ? LABELS.halo * k : 0;
+  return [left - halo, row.y - row.unit * k * LABELS.ascent - halo, left + width + halo, row.y + row.unit * k * (LABELS.descent + ((row.lines?.length || 1) - 1) * LABELS.line) + halo];
 }

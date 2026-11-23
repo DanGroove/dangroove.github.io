@@ -31,13 +31,13 @@ export const STOPS = [
     label: { t: 'Laurier', sub: '2016 to 2017, game design', x: 158, y: 236, a: 'middle' },
     copy: { draft: true, headline: 'Where it started.', para: 'I went to Laurier for game design. Systems, rules and play came first, before I ever chose graphic design.', took: 'Think about how someone moves through it.', piece: null, caption: '' } },
   { id: 'hmc1', palette: 'hmc', name: 'HMC Connections', short: 'HMC Connections', dates: 'Summers 2018 and 2020', spans: [['2018-04', '2018-08'], ['2020-06', '2020-08']], track: 'work', role: 'Graphic designer, video editor, web designer', crafts: ['Print', 'Video', 'Screen'], w: 7, rune: 'h',
-    label: { t: 'HMC Connections', sub: 'summers 2018 and 2020', x: 466, y: 250, a: 'start' },
+    label: { t: 'HMC Connections', sub: 'summers 2018 and 2020', x: 460, y: 250, a: 'start', tracking: -0.55 },
     copy: { draft: true, headline: 'First job, three hats.', para: 'Two summers as the student who did design, video and web at once. I designed the SafetyDrivesUs logo and built its website, plus flyers and infographics.', took: 'One person can carry a job across print, video and web.', piece: null, caption: '' } },
   { id: 'mohawk', palette: 'mohawk', name: 'Mohawk College', short: 'Mohawk', dates: '2019 to 2021', spans: [['2019-01', '2021-04']], track: 'school', role: 'Advanced Diploma, Graphic Design', crafts: ['Print', 'Screen'], w: 17, rune: 'm',
     label: { t: 'Mohawk', sub: '2019 to 2021', x: 124, y: 387, a: 'middle' },
     copy: { draft: true, headline: 'Where the craft got formal.', para: 'Type, layout and critique, every week, until the reasons behind a good page became habit.', took: 'Type first.', piece: null, caption: '' } },
   { id: 'hmc2', palette: 'hmc', name: 'HMC Connections', short: 'HMC, again', dates: '2021 to 2022', spans: [['2021-06', '2022-03']], track: 'work', role: 'Graphic designer, on contract', crafts: ['Print', 'Screen'], w: 26, rune: 'h',
-    label: { t: 'HMC, again', sub: 'on contract, 2021 to 2022', x: 458, y: 322, a: 'end' },
+    label: { t: 'HMC, again', sub: 'on contract, 2021 to 2022', x: 464, y: 322, a: 'end' },
     copy: { draft: true, headline: 'Back as the designer.', para: 'I came back on contract, redesigned hmcconnections.com, designed the 2020/2021 annual report and built the HMC anti-racism movement website.', took: 'Long documents are where a system proves itself.', piece: PIECE_IMAGE, caption: 'Annual report, 2020 to 2021' } },
   { id: 'interkom', palette: 'interkom', name: 'Interkom', short: 'Interkom', dates: 'Autumn 2022', spans: [['2022-09', '2022-12']], track: 'work', role: 'Junior graphic designer, on contract', crafts: ['Print', 'Screen'], w: 29, rune: 'i',
     label: { t: 'Interkom', sub: 'autumn 2022', x: 498, y: 468, a: 'end' },
@@ -181,19 +181,19 @@ export const HAMMER = {
     heart: 'M0 3C-6 -3 -6 -7 -2 -7Q0 -7 0 -5Q0 -7 2 -7C6 -7 6 -3 0 3Z', heartBox: '-6 -8 12 12',
     crack: 'M-3 -6L1 -2L-2 1L3 6', stoneHeart: 'M0 -9L-9 7L10 6ZM0 -5L-3 2L5 3',
     shot: ['M-1 -3L1 3M-2 -2L1 -3M-1 3L2 2', 'M-2 -4L2 -4L0 5Z', 'M0 4Q-4 0 0 -4Q4 0 0 4Z'],
-    shield: 'M-3 0A3 3 0 1 0 3 0A3 3 0 1 0 -3 0M-2 -2L2 2M-2 2L2 -2',
+    wall: { centres: [-11, 0, 11], paths: { wallRim: 'M-7.5 0A7.5 7.5 0 1 0 7.5 0A7.5 7.5 0 1 0 -7.5 0Z', wallBoss: 'M-1.5 0A1.5 1.5 0 1 0 1.5 0A1.5 1.5 0 1 0 -1.5 0Z', wallPlanks: 'M-4 -6V6M0 -7.5V-1.5M0 1.5V7.5M4 -6V6' } },
     spark: 'M-2 0H2M0 -2V2',
     sprites: {
       glove: [24, 20, 'M-10 7L-8 1L-7 -5L-3 -7L0 -5L3 -7L6 -5L8 -1L7 2L10 7ZM-8 2H8M-4 -5V0M0 -5V0M4 -5V0M-7 5H-5M0 5H2M6 5H7'],
       hammer: [20, 20, 'M-1 1V8Q-3 11 0 11Q3 11 1 8V1M-8 -7L-5 -5H5L8 -7L9 -6V1L8 2L5 0H-5L-8 2L-9 1V-6ZM-5 -4L0 -1L5 -4M-5 -1L0 -4L5 -1'],
-      draugr: [24, 20, 'M-8 6L-6 -1L-4 -2L-4 -6L0 -7L4 -5L4 -2L7 0L9 6M-5 2H5M-3 -4H-1M2 -4H3M-2 -1H2M-3 3L-4 7M3 3L4 7M-8 0L-10 -3'],
-      rime: [24, 20, 'M-9 7L-7 -2L-3 -4L-4 -7L1 -8L5 -5L4 -2L8 0L10 7ZM-3 -3L0 -1L3 -3M-5 2L-1 3M2 3L6 2M-5 5V7M5 5V7'],
-      fire: [24, 20, 'M-8 7L-7 0L-3 -2Q-7 -7 -2 -8L0 -4L3 -8Q8 -4 4 -1L8 1L9 7ZM-3 1L0 3L3 1M-4 5L-5 8M4 5L5 8'],
-      wolf: [26, 20, 'M-10 1L-7 -5L-4 -2L1 -3L4 -7L6 -3L10 -1L8 2L5 2L3 5H-4L-7 7M-3 4L-2 8M3 4L5 8M7 -1H8M-9 0L-12 -3'],
-      chief: [26, 22, 'M-11 8L-9 -1L-5 -3L-5 -8L0 -10L5 -8L5 -3L9 -1L11 8ZM-4 -3L0 -1L4 -3M-4 1H4M-5 4V8M5 4V8M0 -8V-4M-2 -7L2 -5'],
+      draugr: [24, 20, 'M-4 -2L-5 -5L-3 -7L0 -6L1 -3L-1 -2M-4 -2Q-7 -1 -6 2L-5 6L-3 4L-2 7L0 4L2 6L1 0L-1 -2M-4 0L-2 2L1 1L5 2M4 2L7 -5L8 -4L7 -2L8 -1L6 3M-3 -5H-2M-3 0V3M-4 6L-5 7M0 5L1 7'],
+      rime: [24, 20, 'M-3 -4L-3 -7H2L3 -4M-3 -4L-7 -3L-8 1L-5 2L-4 5L-4 7H-1L0 4L1 7H4L4 2L6 1M-3 -3L-2 1L-1 -1L0 2L1 -1L2 0L3 -3M-2 -5H-1M1 -5H2M5 4L6 -4M5 -4L5 -7L8 -7L9 -5L8 -3L6 -3'],
+      fire: [24, 20, 'M-2 -4Q-5 -5 -3 -7L-1 -6L0 -7L1 -4L3 -7Q5 -3 2 -2M-2 -2L-4 0L-3 3L-2 2L-2 7H0L1 3L2 7H4L3 0L2 -2ZM-2 -4V-2H2V-4M-3 0L-6 2M3 0L5 1M5 2L8 -5L9 -4L7 3M-1 -3H0M0 0L1 2'],
+      wolf: [26, 20, 'M-9 1L-6 -2L-1 -3L3 -2L4 -5L6 -3L8 -3L9 -1L7 1L4 1L2 3L-3 3L-6 2L-8 4L-9 3M-7 0L-9 -3M-3 2L-1 5L1 5M2 2L5 4L7 4M6 -2H7'],
+      chief: [26, 22, 'M-3 -3V-5L0 -7L3 -5V-3M-3 -5L-7 -7L-6 -4L-3 -3M3 -5L7 -7L6 -4L3 -3M-3 -2L-7 0L-6 3L-3 2L-3 7H-1L0 3L1 7H4L3 2L6 1L5 -1L3 -2M-5 1L-1 0L4 -1M-2 2L2 0L5 -1M-7 2L7 -3M6 -4L8 -6L9 -4L8 -2L6 -2ZM-1 -4H1M-2 -1H2'],
       valkyrie: [36, 22, 'M-15 5L-9 1L-4 2L0 -1L5 0L8 -3L13 -2L16 1L12 4H6L4 8M-8 4L-9 8M-3 4L-1 8M1 -1V-8L4 -10L6 -7L4 -4L7 -1M2 -7L-6 -9L-2 -5L-8 -6L-2 -2M7 -7L13 -10'],
-      hrungnir: [128, 62, 'M-60 27L-54 7L-28 -3L-23 -22L-7 -28L17 -26L27 -17L24 -3L53 8L60 27ZM-23 -13L-9 -8L-1 -10M8 -10L21 -14M-8 -3L9 -2M-17 9L-8 13L-13 21M23 4L15 9L20 17M-35 7L-31 20M40 11L35 24'],
-      clay: [52, 64, 'M-22 28L-18 1L-10 -6L-11 -20L-2 -27L9 -22L11 -8L19 0L23 28ZM-7 -15L-3 -14M4 -14L7 -15M-5 -8L4 -7M-12 6L-6 9L-9 17M13 4L7 12M-6 23L-8 30M7 22L10 30'],
+      hrungnir: [128, 62, 'M-18 -7L-20 -15L-8 -20L13 -18L19 -12L17 -7M-20 -15L-35 -22L-32 -13L-20 -9M17 -14L32 -22L29 -12L18 -8M-18 -7L-37 -2L-43 8L-28 11L-19 6L-18 21H-5L0 10L5 21H21L18 5L35 7L41 0L27 -5L17 -7M-29 4L-10 6L16 0M29 1L13 7L-7 3M-44 11L43 -6M39 -10L47 -17L54 -11L50 -1L42 0ZM-12 -12H-6M6 -12H12M-8 -6L0 -3L9 -6M-10 10L0 18L11 10'],
+      clay: [52, 64, 'M-9 -8L-10 -20L-2 -25L8 -20L9 -9L17 -4L19 9L11 12L10 25H3L0 15L-3 25H-11L-12 9L-19 7L-17 -3ZM-7 -16L-3 -15M3 -15L7 -16M-5 -9L3 -7M-11 -3L-5 1L-8 8M10 -1L4 5L8 10M-2 11L2 8'],
     },
     fragments: [[-32, -8, 'M-25 -9L-7 -14L5 0L-12 13Z'], [0, -14, 'M-18 -13L12 -12L23 2L0 17L-13 4Z'], [32, 1, 'M-8 -11L17 3L10 20L-17 6Z']],
   },
@@ -238,7 +238,7 @@ export const FIND_COPY = {
     pause: 'Paused', pauseButton: 'Pause', resume: 'Resume', newRun: 'New run', close: 'Close', auto: 'Keep throwing',
     lost: 'The bridge fell at wave {n}.', lostHearts: 'Your hearts gave out at wave {n}.', won: 'Hrungnir falls. The bridge holds.',
     heartLost: 'A heart lost. {n} heart{s} left.', gift: 'A Valkyrie leaves a heart and silver.',
-    stats: '{silver} silver. {foes} foes felled.', best: 'Best run: {silver} silver.', silver: '{n} silver', hearts: '{n} of {max} hearts', runes: 'Runes taken',
+    stats: '{silver} silver. {foes} foe{s} felled.', best: 'Best run: {silver} silver.', silver: '{n} silver', hearts: '{n} of {max} heart{s}', runes: 'Runes taken',
     boss: 'Hrungnir', clay: 'Mökkurkálfi rises.', heart: "Hrungnir's stone heart is bare.",
     foes: { draugr: 'Draugr', rime: 'Rime giant', fire: 'Son of Múspell', wolf: 'Wolf', chief: 'Giant chief' },
     fates: [
@@ -442,7 +442,7 @@ export const RAVEN_RIG = (() => {
     crouch: 0.12, unfold: 0.18, outPower: 1.6, backPower: 2, controls: [[10, -26], [55, -32]], endY: -29,
     turn: 0.12, hysteresis: 0.1, perchTurn: 0.16, settle: 0.2, land: 0.35, level: 0.3,
     dip: 0.15, dipAngle: 25, itemFade: 0.2, offFrame: 12, birdMargin: 18,
-    loopRadius: 20, loopCentre: [20, 0], loopTakeoff: 0.2, loopTime: 1.1, loopGap: 0.55,
+    loopRadius: 20, loopCentre: [20, 0], loopTakeoff: 0.2, loopTime: 1.1, loopGap: 0.55, featherAt: [6, -4],
     returnBeat: 0.35, returnFlaps: 0.7, beat: ['up', 'mid', 'down', 'mid', 'up'],
     preenMove: [-1.5, 1.5], breathe: [0.012, 2.8],
   };
@@ -451,11 +451,11 @@ export const FIND_PLAY = {
   fresh: 3, seed: 171,
   focus: { fill: 0.72, least: 0.85, most: 3, at: [0.5, 0.46], in: 0.7, out: 0.5, swap: 0.6, chest: [0, -16, 30], ship: [0, -10, 34], wide: [300, 450, 330, 0] },
   bits: { pool: 96, starSize: 2.2, puffAlpha: 0.22,
-    kinds: { dot: ['M-.8 0a.8 .8 0 1 0 1.6 0a.8 .8 0 1 0 -1.6 0Z', 'pf'], clod: ['M-1.4 .6L-.6 -1.1L1.2 -.7L1.5 .8L-.2 1.3Z', 'g'], drop: ['M0 -1.6Q1.1 .2 0 1.1Q-1.1 .2 0 -1.6Z', 'pf'], spark: ['M0 0V-2.4', 'l'], feather: ['M0 -3Q1.5 0 0 3Q-1.5 0 0 -3Z', 'g'], puff: ['M-3.2 0a3.2 3.2 0 1 0 6.4 0a3.2 3.2 0 1 0 -6.4 0Z', 'pf'], wisp: ['M-6 0a6 3 0 1 0 12 0a6 3 0 1 0 -12 0Z', 'mist-wisp'], ring: ['M-3 0a3 1 0 1 0 6 0a3 1 0 1 0 -6 0Z', 't'] },
+    kinds: { dot: ['M-.8 0a.8 .8 0 1 0 1.6 0a.8 .8 0 1 0 -1.6 0Z', 'pf'], clod: ['M-1.4 .6L-.6 -1.1L1.2 -.7L1.5 .8L-.2 1.3Z', 'g'], drop: ['M0 -1.6Q1.1 .2 0 1.1Q-1.1 .2 0 -1.6Z', 'pf'], spark: ['M0 0V-2.4', 'l'], feather: ['M0 -1.2V1.2M0 -1Q.6 -.6 0 .6M0 -.8Q-.45 -.3 0 .5', 't'], puff: ['M-3.2 0a3.2 3.2 0 1 0 6.4 0a3.2 3.2 0 1 0 -6.4 0Z', 'pf'], wisp: ['M-6 0a6 3 0 1 0 12 0a6 3 0 1 0 -12 0Z', 'mist-wisp'], ring: ['M-3 0a3 1 0 1 0 6 0a3 1 0 1 0 -6 0Z', 't'] },
     base: { speed: [0, 0], dir: [-90, -90], g: 0, drag: 0, life: [0.6, 0.6], size: [1, 1], spin: 0, alpha: 1 },
     clods: { speed: [18, 34], dir: [-150, -30], g: 90, life: [0.6, 0.6], spin: 80 },
     puffs: { speed: [3, 7], dir: [-160, -20], life: [0.6, 0.6], size: [0.4, 1.5], alpha: 0.22 },
-    feathers: { speed: [2, 6], dir: [20, 160], g: 12, drag: 2, life: [1.4, 1.4], spin: 25 },
+    feathers: { speed: [2, 4], dir: [65, 115], g: 10, drag: 1, life: [0.65, 0.75], spin: 25, size: [0.65, 0.45] },
     stars: { speed: [6, 12], dir: [-120, -60], life: [1.1, 1.1], size: [1, 0.2], spin: 20 },
     drops: { speed: [8, 18], dir: [-140, -40], g: 60, life: [0.5, 0.7] },
     wake: { speed: [0, 0], life: [0.6, 0.6], size: [1, 3.5], alpha: 0.7 },
@@ -469,7 +469,7 @@ export const FIND_PLAY = {
   },
   hoard: { hole: [16, 28, 38], lift: [0.18, 0.24, 1], rise: [0.28, 0.28, 0.5], backEase: 0.8, over: 1.2, repeat: 0.3, rattle: 0.36, openHold: 0.3, near: 26, glint: [5, 8],
     scale: 0.3, travel: 64, holeRatio: 0.28, pile: [0.5, 0.75, 1], scratchWidth: 1.6, glintAt: [0, -4], glintSize: 5, glintTime: 0.5, glintTurn: 45, clods: 7, rattleAngle: 4, rattleCycles: 3,
-    lidTime: 0.4, lidSettle: 0.12, lidBounce: 0.25, lidPeak: 118, lidRest: 110, rim: -34, depth: 24, half: 30, lean: [90, 20, 2.4], mouthAngle: 60,
+    lidTime: 0.5, lidSettle: 0.18, lidBounce: 0.3, lidPeak: 118, lidRest: 110, rim: -34, depth: 24, half: 30, lean: [90, 20, 2.4], mouthAngle: 60,
     glowR: 46, starCount: 8, starY: -44, starSizes: [6, 4], glowTime: 0.3, glowPeak: 1, glowRest: 0.6, glowKept: 0.35, stars: 6, burstTravel: [48, 34], burstLift: 14, anchor: 18, width: 260, top: 3, icon: 64, iconBox: [-32, -32, 64, 64], rad: 35, scratchHop: 2,
     hit: [0, -24, 40], clip: [-240, -200, 480, 200], pileAt: [48, 2], pilePath: 'M-7 0q6 -10 13 0z',
     clodLife: 0.6, clodSpeed: [18, 34], clodUp: [28, 44], clodSpin: 80, clodFloor: 2,
@@ -538,6 +538,14 @@ export const FIND_PLAY = {
 
 // Round 7 C1: ported reference paths and independent layout/motion tuning.
 export const YGG = {
+  masses: [
+    [[-60,-35],[-64,-45],[-58,-57],[-47,-64],[-36,-69],[-28,-69],[-23,-65],[-22,-58],[-22,-51],[-23,-40],[-34,-31],[-49,-28]],
+    [[-24,-69],[-18,-76],[-6,-79],[8,-79],[21,-74],[28,-67],[29,-59],[36,-51],[33,-44],[20,-43],[7,-48],[-3,-49],[-13,-49],[-19,-55],[-20.2,-64.8]],
+    [[32,-70],[40,-73],[53,-69],[65,-59],[68.5,-48],[68.5,-37],[62,-29],[49,-28],[38,-32],[37,-40],[42,-52],[36,-57],[31,-63]],
+  ],
+  massBump: [.08, .04],
+  branches: 'M-23 -43Q-34 -43 -43 -49M-22 -46Q-32 -51 -36 -57M-2 -51Q-8 -58 -9 -68M2 -51Q9 -59 17 -67M24 -45Q39 -43 52 -49M24 -46Q34 -55 43 -61M-10 -37Q-22 -36 -33 -39M10 -36Q22 -34 36 -38',
+  ashHatch: 'M-53 -43l8 -9m-6 1l-4 -1m6 -1l-1 -4M-42 -39l9 -10m-7 7l-4 -1m7 -2l-1 -4M-49 -57l7 -3m-4 2l-2 -3M-13 -61l7 -10m-5 7l-4 -1m7 -3l-1 -4M-3 -56l8 -10m-6 7l-3 -1m6 -3l-1 -4M13 -54l10 -7m-7 5l-3 -2m6 -1v-4M6 -72l6 -3M43 -59l8 -6m-6 5l-3 -2m6 -1l1 -3M48 -40l8 -9m-6 6l-3 -1m6 -1v-4M59 -37l6 -8m-4 5l-3 -1M54 -53l8 -3',
   "crown": [
     [
       -50,
@@ -973,5 +981,6 @@ export const YGG = {
   }
 };
 export const MARK = { k: 10, min: 14, max: 36, stand: 3, box: 400, centre: 200, radius: 176, rim: 20, boss: 54, bossLine: 16, highlight: [186,186,12,.55], shadow: [200,392,120,10,.35], planks: [-120,-72,-24,24,72,120], plankLine: 7, plankAlpha: .28, paintAlpha: .35, studs: 8, stud: 9, studLine: 5, quarters: 'M200 200L200 24A176 176 0 0 1 376 200ZM200 200L200 376A176 176 0 0 1 24 200Z', legend: [68,836,4.6,.9,1.2,.45] };
-export const LABELS = { name: { unit: 9.5, floor: 10, cap: 1.6, phone: 7.5, phoneCap: 1.4 }, x: { unit: 8.5, floor: 10, cap: 1.6, phone: 7.5, phoneCap: 1.4 }, sub: { unit: 6.3, floor: 7.6, cap: 1.6, phone: 7, phoneCap: 1.8 }, small: { unit: 6.5, floor: 8, cap: 1.6, phone: 7, phoneCap: 1.8 }, legend: { unit: 6.5, floor: 8, cap: 1.6, phone: 7, phoneCap: 1.8 }, fade: [1.3,1.5], epsilon: .005, width: .56, ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 3.5, hmcSubDX: -4.4, subOffset: 9.5, xAt: [16,8], xSubAt: [16,17.5], kicker: [45,95], plate: [-3,-9,204,13], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]] };
+export const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -4.4, hmcAgainSubDX: 0, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [16,8], xSubAt: [16,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]] };
 export const WORLD = { scrim: [150,190,.85], card: { w:640, edge:32, cap:420, phoneShare:.82, phoneBottom:6, slack:2, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
+export const PHONE_LAYOUT = { gap: 16, edge: 16, ctaShare: .14, headlineGap: 20, exploreGap: 8, exploreBottom: 8, exploreBack: 152, exploreTop: 172 };

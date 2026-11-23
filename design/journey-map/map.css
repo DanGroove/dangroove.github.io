@@ -200,6 +200,8 @@ button { font-family: inherit; }
   .ft-in { padding: 14vh 16px 22px; }
   .ft-q { font-size: 24px; }
   .ft-tag { font-size: 13px; }
+  .ft-tag { margin: 12px 0 14px; }
+  .ft-talk { height: 46px; line-height: 20px; padding-top: 0; padding-bottom: 0; }
   .ft-links { flex-direction: column; align-items: flex-start; }
   .ft-big .ft-link { font-size: 17px; }
   .iris { width: 344px; height: 344px; left: -172px; top: -172px; }
@@ -286,7 +288,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .mk.found circle { fill: var(--red); }
 .mk.found text { fill: var(--ink); }
 .mk { transition: opacity .3s; }
-.find-hint { position: absolute; z-index: 5; left: 50%; bottom: 124px; transform: translateX(-50%); margin: 0; max-width: calc(100% - 32px); text-align: center; white-space: nowrap; font-size: 12px; line-height: 1.4; letter-spacing: .02em; color: var(--dim); opacity: 0; transition: opacity .3s; pointer-events: none; }
+.find-hint { position: absolute; z-index: 5; left: 50%; bottom: 124px; transform: translateX(-50%); margin: 0; max-width: calc(100% - 32px); padding: 6px 12px; border-radius: 8px; background: var(--ink); text-align: center; white-space: nowrap; font-size: 12px; line-height: 1.4; letter-spacing: .02em; color: var(--dim); opacity: 0; transition: opacity .3s; pointer-events: none; }
 .jm-focus .find-hint { opacity: 1; }
 .jm-sheet-open .find-hint { opacity: 0; }
 .explore-hint.on { opacity: 1; }
@@ -384,3 +386,11 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .go-top { background: var(--ink); border: 1px solid var(--mid); border-radius: var(--go-h); padding: var(--go-top-pad) var(--go-top-pad-x); }
 .jm-explore #ft-world .ft-talk, .jm-explore #ft-world .ft-link, .jm-explore .ft-name > span { pointer-events: none; }
 @media (max-width: 640px) { .c-foot { flex-direction: column; align-items: stretch; } .c-foot .c-crafts { width: 100%; } .c-foot .c-btn { width: 100%; } }
+
+/* The explore row occupies the reserved bottom band, below the fitted map. */
+@media (max-width: 640px) {
+  .jm-explore .go.go-end { top: auto; bottom: var(--phone-exploreBottom); left: var(--phone-edge); right: var(--phone-edge); height: var(--go-h); flex-wrap: nowrap; gap: var(--phone-exploreGap); }
+  .jm-explore .go.go-end .go-back { width: var(--phone-exploreBack); height: var(--go-h); padding: 0 12px; border: 1px solid var(--mid); border-radius: var(--go-h); display: flex; justify-content: center; gap: 8px; font-size: 12px; white-space: nowrap; }
+  .jm-explore .go.go-end .go-back span { white-space: nowrap; }
+  .jm-explore .go.go-end .go-top { width: min(var(--phone-exploreTop), calc(100vw - var(--phone-edge) * 2 - var(--phone-exploreBack) - var(--phone-exploreGap))); height: var(--go-h); padding: 0 8px; font-size: 10px; letter-spacing: .12em; white-space: nowrap; }
+}

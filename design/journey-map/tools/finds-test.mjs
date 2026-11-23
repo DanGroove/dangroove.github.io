@@ -3,7 +3,7 @@ import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { bigMap, rubbingRunes, pieceIcon } from '../art.mjs';
 import { STARS, DEPTH, NOVA, FINDS, FIND_PLAY, FIND_COPY, STOPS, HAMMER, RAVEN_RIG, FOOT_NAME } from '../data.mjs';
-import { tripFocus, tripState, tripResize, toScreen, VIEW, SEQ, WATER, pointAt } from '../trip.mjs';
+import { tripFocus, tripState, tripResize, tripBuild, tripApply, toScreen, VIEW, SEQ, WATER, pointAt } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
 import { wayAllStops } from '../findhoards.mjs';
 import { mapDefs } from '../art.mjs';
@@ -29,10 +29,10 @@ console.log('ok: C1 ring sea baseline; original fill/coast lengths and hashes un
 // The review tunes these three tables in a browser and records their digest here afterwards; a build never changes them.
 assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 1195292270);
 console.log('ok: STARS, DEPTH and NOVA values unchanged');
-// A build never changes these two files. The review records their digests here after each tuning pass (a failure
-// prints the new number); line endings are evened out first, so the numbers are the same on Windows and in the cloud.
+// D2 authorizes trip's label fades and measured phone footer anchor. Depth remains protected.
+// Line endings are evened out so the numbers are the same on Windows and in the cloud.
 const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.meta.url), 'utf8').replace(/\r\n/g, '\n'));
-assert.equal(sourceDigest('trip.mjs'), 1420657627, 'trip.mjs changed');
+assert.equal(sourceDigest('trip.mjs'), 3574899642, 'trip.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 3982895838, 'depth.mjs changed');
 console.log('ok: C1 camera/labels/tripS and deck source digests recorded');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
@@ -75,11 +75,11 @@ console.log('ok: all-four mask derived from STOPS is Lennard alone; nineteen run
 
 // A small recording DOM, not a browser: exercise state transitions and reject NaN writes/layout reads in frame callbacks.
 class TestHammerContext {
-  constructor() { this.commands = 0; }
+  constructor() { this.commands = 0; this.clipPaths = []; }
   record(...args) { this.commands++; for (const a of args) if (typeof a === 'number') assert.ok(Number.isFinite(a), 'nonfinite canvas command'); }
   setTransform(...args) { this.record(...args); } scale(...args) { this.record(...args); } translate(...args) { this.record(...args); }
   rotate(...args) { this.record(...args); } fillRect(...args) { this.record(...args); } drawImage(...args) { this.record(...args); }
-  stroke(...args) { this.record(...args); } save() {} restore() {}
+  stroke(...args) { this.record(...args); } clip(...args) { this.record(...args); this.clipPaths.push(args[0].path); } fill(...args) { this.record(...args); } save() {} restore() {}
 }
 class TestNode {
   constructor(tag = 'div') { this.tagName = tag; this.attrs = {}; this.children = []; this.listeners = {}; this.nodeType = 1; this.style = { setProperty(k, v) { this[k] = v; } }; this.dataset = {}; this.hidden = false; this.classList = { add: (...xs) => xs.forEach(x => this.toggleClass(x, true)), remove: (...xs) => xs.forEach(x => this.toggleClass(x, false)), toggle: (x, force) => this.toggleClass(x, force), contains: x => this.className.split(/\s+/).includes(x) }; }
@@ -155,7 +155,7 @@ Object.assign(testDocument, { documentElement: htmlNode, body: bodyNode, activeE
 const testWindow = new TestNode('window');
 Object.assign(testWindow, { location: { search: '' }, innerWidth: 1440, innerHeight: 900, scrollY: 0, scrollTo() {}, matchMedia: () => ({ matches: true, addEventListener() {} }) });
 let storageReads = 0, storageWrites = 0;
-Object.assign(globalThis, { window: testWindow, document: testDocument, history: { scrollRestoration: 'auto' }, sessionStorage: { getItem() { return null; }, setItem() {} }, localStorage: { getItem() { storageReads++; throw Error('storage blocked'); }, setItem() { storageWrites++; throw Error('storage blocked'); } }, Path2D: class { constructor(path) { assert.ok(typeof path === 'string' && path.length); this.path = path; } }, matchMedia: testWindow.matchMedia, innerWidth: 1440, innerHeight: 900, Event: TestEvent, KeyboardEvent: TestEvent });
+Object.assign(globalThis, { window: testWindow, document: testDocument, history: { scrollRestoration: 'auto' }, sessionStorage: { getItem() { return null; }, setItem() {} }, localStorage: { getItem() { storageReads++; throw Error('storage blocked'); }, setItem() { storageWrites++; throw Error('storage blocked'); } }, Path2D: class { constructor(path) { assert.ok(typeof path === 'string'); this.path = path; } }, matchMedia: testWindow.matchMedia, innerWidth: 1440, innerHeight: 900, Event: TestEvent, KeyboardEvent: TestEvent });
 async function testPlays() {
 const testStage = new TestNode('div'), testSvg = new TestNode('svg'), testBase = new TestNode('g'), testPop = new TestNode('div'), testSheet = new TestNode('div'), testTl = new TestNode('div');
 bodyNode.appendChild(testStage); testStage.append(testSvg, testPop, testSheet, testTl); testBase.id = 'b-all';
@@ -164,6 +164,11 @@ stepsBuild({ stage: testStage, rm: false, resize() {}, joinedTop: () => false })
 tlBuild(testTl, { jump() {}, scrub() {} }, false);
 findsBuild(testSvg, testPop, testSheet, testSvg.querySelector('#b-all'), false);
 tripResize(1440, 900, 120); JOURNEY.set(mapP);
+const dummy=()=>new TestNode();tripBuild({svg:testSvg,cam:dummy(),sea:dummy(),fill:dummy(),detail:dummy(),finds:dummy(),coastG:dummy(),done:dummy(),mini:dummy(),caption:dummy(),cue:dummy()});
+for(const k of [0,1,0]){const st=tripState(mapP);tripFocus(st,FINDS[0].view,k);tripApply(st);for(const selector of ['.map-tier1','.map-subs']){const el=testSvg.querySelector(selector);assert.equal(Number(el.style.opacity),1-k);assert.equal(el.style.visibility,k?'hidden':'visible');}}
+console.log('ok: D2 tier-1 and sub-line groups fade to exact zero at find focus and return to one');
+let fadeWrites=0;for(const selector of ['.map-tier1','.map-subs']){const el=testSvg.querySelector(selector);el.style=new Proxy(el.style,{set(o,k,v){if(k==='opacity'||k==='visibility')fadeWrites++;o[k]=v;return true;}});}
+for(const k of [.0001,.4,1,.3999,0,0]){const st=tripState(mapP);st.focusK=k;tripApply(st);}assert.equal(fadeWrites,8,'focus fade ignores sub-.01 changes, writes no still frame and snaps both endpoints');
 let testClock = 1, testObserve = null;
 async function tick(seconds) {
   const frames = Math.ceil(seconds / 0.016);
@@ -231,6 +236,8 @@ for (const k of ['ArrowLeft', 'ArrowRight', 'a', 'd', ' ', 'ArrowUp', 'w', 'p', 
 }
 assert.equal(hammerFind.auto, true); assert.equal(testSheet.querySelector('.hm-auto').getAttribute('aria-pressed'), 'true');
 await tick(0.2); assert.ok(game.throwId > 0); assert.ok(field.context.commands > 0);
+const shieldCell=game.cells.find(c=>c.live),cellTile=`M${shieldCell.x-HAMMER.shield.cell/2} ${shieldCell.y-HAMMER.shield.cell/2}h${HAMMER.shield.cell}v${HAMMER.shield.cell}h${-HAMMER.shield.cell}Z`;
+assert.ok(field.context.clipPaths.slice(-3).some(p=>p.includes(cellTile)));shieldCell.live=false;await tick(.016);assert.ok(field.context.clipPaths.slice(-3).every(p=>!p.includes(cellTile)),'destroyed cell removes its piece of the round shield wall');shieldCell.live=true;
 const sprites = hammerFind.sprites; closeSheet(); assert.equal(game.paused, true); const heldTime = game.time; await tick(0.2); assert.equal(game.time, heldTime);
 key('hammer'); assert.equal(hammerFind.game, game); assert.equal(hammerFind.sprites, sprites); assert.ok(testSheet.querySelector('.hm-resume'));
 const resumeHammer = () => testSheet.querySelector('.hm-resume').dispatchEvent(new TestEvent('click'));
@@ -320,8 +327,19 @@ for(const [w,h] of [[1440,900],[390,844]]) {
   for(const b of rv.birds)for(const sel of ['.rv-body > path','.rv-far > path','.rv-near > path','.rv-head > path']){const fills=b.g.querySelectorAll(sel).filter(n=>!n.matches('.l')&&!n.matches('.t'));assert.ok(fills.length&&fills.every(n=>n.matches('.g')||n.matches('.o')),'opaque raven part '+sel);}
   await tick(.1);stepsFocus('ravens',ravenFind.view);pressFind('ravens');pressFind('ravens');
   assert.equal(rv.queued,true);await tick(.2);assert.equal(rv.stage,'rest');assert.equal(findReady('ravens'),false);
-  const snapshots=[];
-  testObserve=st=>snapshots.push({t:testClock,stage:rv.stage,cam:{...st.cam},birds:rv.birds.map(b=>({mode:b.mode,xy:b.xy.slice(),mirror:b.mirror,rotate:b.rotate,pose:structuredClone(b.pose),landTs:b.landTs,text:transformText(b),fade:partFade(b),points:birdPoints(b),local:birdPoints(b,true).map(p=>[p[0]-b.xy[0],p[1]-b.xy[1]])}))});
+  const snapshots=[],featherTracks=new Map(),wingBox=boxOf(pathPoints(rig.WING)),wingScale=FIND_PLAY.raven.scale*FIND_PLAY.raven.birdScale;
+  testObserve=st=>{
+    snapshots.push({t:testClock,stage:rv.stage,cam:{...st.cam},birds:rv.birds.map(b=>({mode:b.mode,xy:b.xy.slice(),mirror:b.mirror,rotate:b.rotate,pose:structuredClone(b.pose),landTs:b.landTs,text:transformText(b),fade:partFade(b),points:birdPoints(b),local:birdPoints(b,true).map(p=>[p[0]-b.xy[0],p[1]-b.xy[1]])}))});
+    for(const bit of FD.bits.filter(b=>b.live&&b.kind==='feather')){
+      const points=pathPoints(bit.el.getAttribute('d')).map(p=>point(matrix(bit.el.getAttribute('transform')),p)),box=boxOf(points),owner=bit.x<ravenFind.x?0:1,other=boxOf(birdPoints(rv.birds[1-owner])).map((v,i)=>v*FIND_PLAY.raven.scale+(i%2?ravenFind.y:ravenFind.x));
+      const track=featherTracks.get(bit.serial)||[];if(track.length)assert.ok(bit.y>track.at(-1).y,'quill drifts down every frame');
+      else assert.ok((bit.x-ravenFind.x-rv.birds[owner].xy[0]*FIND_PLAY.raven.scale)*rv.birds[owner].side<0,'quill starts behind the bird');
+      // Compare each dimension with the same rig wing opened at its uniform map scale.
+      assert.ok(box[2]-box[0]<=(wingBox[2]-wingBox[0])*wingScale/3&&box[3]-box[1]<=(wingBox[3]-wingBox[1])*wingScale/3,'quill is at most a third of an open wing box');
+      assert.ok(!overlap(box,other),'quill never overlaps the other bird');assert.ok(bit.life<=.8&&bit.age<.8);
+      track.push({y:bit.y,t:testClock,age:bit.age});featherTracks.set(bit.serial,track);
+    }
+  };
   await tick(4.3);assert.equal(rv.tally,1);assert.equal(rv.thoughts,1);assert.equal(rv.stage,'rest');assert.equal(FD.popOwner,rv);
   const bRest=transformText(rv.birds[1]), land0=rv.birds[0].landTs;
   assert.ok(snapshots.filter(s=>['flight','landing'].includes(s.stage)).every(s=>s.birds[1].text===bRest));assert.equal(rv.birds[1].landTs,-Infinity);
@@ -335,6 +353,8 @@ for(const [w,h] of [[1440,900],[390,844]]) {
   const thoughtBefore=rv.thoughts,tallyBefore=rv.tally;pressFind('ravens');await tick(.5);FD.overlayEpoch++;await tick(3);
   assert.equal(rv.thoughts,thoughtBefore);assert.equal(rv.tally,tallyBefore);assert.equal(FD.popOwner,null);
   rv.hear();await tick(.3);assert.equal(rv.birds[1].mode,'sit');await tick(2.2);assert.equal(rv.stage,'rest');
+  assert.ok(featherTracks.size>=8,'both takeoffs and staggered hear loops shed quills');assert.ok(FD.bits.every(b=>b.kind!=='feather'||!b.live),'all takeoff quills are gone by .8 s');
+  for(const track of featherTracks.values())assert.ok(track.at(-1).t-track[0].t<=.8);
   testObserve=null;
   // The near pointer is on the trunk side. Only outward bough travel is allowed, at <= 1 unit/tick.
   const shyBird=rv.birds[0], shyPath=[];
@@ -374,11 +394,11 @@ for(const [w,h] of [[1440,900],[390,844]]) {
   // Fresh chest: five rapid presses during focus cannot skip to opening.
   const chest=hd.items[0];stepsFocus(chest.id,findView(chest.id));
   for(let i=0;i<5;i++){pressFind(chest.id);await tick(.06);assert.ok(chest.digs<=1);assert.equal(chest.open,false);}
-  const chestFrames=[];testObserve=()=>chestFrames.push({t:testClock,digs:chest.digs,stage:chest.stage,y:chest.y,lift:chest.lift,angle:chest.lidAngle,rock:chest.rock||0,pivot:chest.pivot||0,rx:Number(chest.hole.getAttribute('rx')),rattleTs:chest.rattleTs});
+  const chestFrames=[];testObserve=()=>chestFrames.push({t:testClock,openTs:chest.openTs,digs:chest.digs,stage:chest.stage,y:chest.y,lift:chest.lift,angle:chest.lidAngle,rock:chest.rock||0,pivot:chest.pivot||0,rx:Number(chest.hole.getAttribute('rx')),rattleTs:chest.rattleTs});
   await tick(1);assert.ok(chest.digs<=2);assert.equal(chest.open,false);assert.equal(chest.digs,1);assert.equal(chest.hintLine,FIND_COPY.hoardHints[1]);
   assert.ok(chest.y-45>Number(chest.hole.getAttribute('ry')),'first lid remains buried');
   pressFind(chest.id);await tick(.4);assert.equal(chest.hintLine,FIND_COPY.hoardHints[2]);
-  pressFind(chest.id);await tick(1);assert.equal(chest.stage,'out');assert.equal(chest.hintLine,FIND_COPY.hoardHints[3]);pressFind(chest.id);await tick(.6);assert.equal(chest.stage,'open');assert.equal(chest.hintLine,FIND_COPY.hoardHints[4]);
+  pressFind(chest.id);await tick(1);assert.equal(chest.stage,'out');assert.equal(chest.hintLine,FIND_COPY.hoardHints[3]);pressFind(chest.id);await tick(.75);assert.equal(chest.stage,'open');assert.equal(chest.hintLine,FIND_COPY.hoardHints[4]);
   const popup=FD.popInner;assert.equal(FD.popOwner,chest);await tick(.3);assert.equal(FD.popBody.style.opacity,1);
   assert.equal((testPop.recordedHTML.match(/Piece to come/g)||[]).length,1);
   for(let i=0;i<4;i++){pressFind(chest.id);await tick(.32);assert.equal(FD.popInner,popup);assert.equal(FD.popBody.style.opacity,1);}
@@ -394,6 +414,7 @@ for(const [w,h] of [[1440,900],[390,844]]) {
     if(p&&s.stage==='rising'&&p.stage==='rising'&&s.digs===p.digs){const target=FIND_PLAY.hoard.travel*(1-FIND_PLAY.hoard.lift[s.digs-1]);assert.ok(s.y<=p.y+1e-8||s.y<=target,'rise reverses only after target');assert.ok(s.y>=target-1.2);}
   }
   close(chest.lidAngle,110,'lid at rest');
+  const opening=chestFrames.filter(s=>s.stage==='opening'),first=opening[0],peak=opening.reduce((a,b)=>a.angle>b.angle?a:b);assert.ok(first.angle<2,'lid starts gently');assert.ok(Math.abs(peak.t-peak.openTs-.5)<=.016,'lid peaks at .5 s');assert.ok(peak.angle-FIND_PLAY.hoard.lidRest<=8);assert.ok(FIND_PLAY.hoard.lidTime===.5);
   const clipIds=surface.querySelectorAll('clipPath').map(n=>n.id);assert.equal(new Set(clipIds).size,5);
   assert.equal(surface.querySelector('#f-hoards').getAttribute('tabindex'),null);assert.equal(surface.querySelector('#f-hoards').getAttribute('role'),'group');assert.equal(surface.querySelector('#f-hoards').listeners.keydown,undefined);
   const under=hd.items[1];stepsFocus(under.id,findView(under.id));await tick(.7);assert.equal(under.hintLine,FIND_COPY.hoardHints[0]);
@@ -402,6 +423,7 @@ for(const [w,h] of [[1440,900],[390,844]]) {
 }
 FD.list.ravens=savedRavens;FD.list.hoards=savedHoards;tripResize(1440,900,120);globalThis.innerWidth=1440;globalThis.innerHeight=900;
 console.log('ok: C2 ravens (tree drawn first, opaque birds, one drawing each, flights out of frame and back, facing, landing, reel and its kept items, epoch, shy hop, hear loop; outlines at least '+ravenGate.gap.toFixed(2)+' units apart, largest pose step '+ravenGate.step.toFixed(2)+') and chests (staged dig, rattle, back lid, craft light, hints, kept popup): '+tracks.join('; '));
+console.log('ok: D2 falling quills fit one third of an open wing, stay behind takeoff/clear the other bird and expire by .8 s; 16 ms lid steps <=25 degrees, gentle start, .5 s peak, <=8 degree overshoot');
 
 // Fresh nodes for a reduced-motion visit; no browser or pixel rendering is involved.
 const rmSvg = new TestNode('svg'), rmPop = new TestNode('div'), rmSheet = new TestNode('div'), rmTl = new TestNode('div');

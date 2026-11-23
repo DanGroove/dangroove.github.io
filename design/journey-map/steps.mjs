@@ -1,5 +1,5 @@
 // The single progress owner: button/key Steps, with scroll only for the reduced-motion page.
-import { STEPS, COPY, STOPS, DEPTH, NOVA, FIND_PLAY, EXPLORE, WORLD } from './data.mjs';
+import { STEPS, COPY, STOPS, DEPTH, NOVA, FIND_PLAY, EXPLORE, WORLD, PHONE_LAYOUT } from './data.mjs';
 import { VIEW, TOTAL_P, tripState, easeIO, lerp } from './trip.mjs';
 import { BEATS, paceMove, paceAt, paceP } from './pace.mjs';
 import { arrowSvg } from './cards.mjs';
@@ -143,11 +143,16 @@ function stepsSet(P) {
   stepsCancel(); SC.P = stepsClamp(P); if (SC.restoreP !== null) SC.restoreP = SC.P; stepsArrive();
 }
 export function stepsResize() {
+  if (VIEW.phone) { const boxes = stepsExploreBoxes(VIEW.w, VIEW.h); SC.root.style.setProperty('--phone-exploreTop', (boxes.top[2] - boxes.top[0]) + 'px'); }
   if (SC.restoreP !== null) {
     SC.P = SC.restoreP; SC.restoreP = null;
     window.scrollTo({ top: 0, behavior: 'instant' });
   } else if (SC.rm) stepsReadScroll();
   stepsButtons();
+}
+export function stepsExploreBoxes(w, h) {
+  const L = PHONE_LAYOUT, y = h - L.exploreBottom - STEPS.nav.h;
+  return { back: [L.edge, y, L.edge + L.exploreBack, y + STEPS.nav.h], top: [L.edge + L.exploreBack + L.exploreGap, y, Math.min(w - L.edge, L.edge + L.exploreBack + L.exploreGap + L.exploreTop), y + STEPS.nav.h] };
 }
 export function stepsFrame(ts) {
   SC.ready = true;
@@ -224,6 +229,7 @@ export function stepsBuild({ stage, rm, joinedTop }) {
   const vars = { 'go-h': STEPS.nav.h + 'px', 'go-gap': STEPS.nav.gap + 'px', 'go-bar': STEPS.nav.bar + 'px', 'go-reveal': STEPS.reveal + 's', 'go-top-pad': WORLD.card.topPad + 'px', 'go-top-pad-x': WORLD.card.topPadX + 'px' };
   Object.entries(vars).forEach(([k, v]) => SC.root.style.setProperty('--' + k, v));
   Object.entries(EXPLORE.bar).forEach(([k, v]) => SC.root.style.setProperty('--explore-' + k, v + 'px'));
+  Object.entries(PHONE_LAYOUT).forEach(([k, v]) => SC.root.style.setProperty('--phone-' + k, v + 'px'));
   stepsClasses(); stepsArrive();
   if (SC.mode === 'steps') window.scrollTo({ top: 0, behavior: 'instant' });
   window.addEventListener('wheel', stepsBlockWheel, { passive: false }); window.addEventListener('keydown', stepsKey);

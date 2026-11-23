@@ -208,6 +208,8 @@ button { font-family: inherit; }
   .ft-in { padding: 14vh 16px 22px; }
   .ft-q { font-size: 24px; }
   .ft-tag { font-size: 13px; }
+  .ft-tag { margin: 12px 0 14px; }
+  .ft-talk { height: 46px; line-height: 20px; padding-top: 0; padding-bottom: 0; }
   .ft-links { flex-direction: column; align-items: flex-start; }
   .ft-big .ft-link { font-size: 17px; }
   .iris { width: 344px; height: 344px; left: -172px; top: -172px; }
@@ -294,7 +296,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .mk.found circle { fill: var(--red); }
 .mk.found text { fill: var(--ink); }
 .mk { transition: opacity .3s; }
-.find-hint { position: absolute; z-index: 5; left: 50%; bottom: 124px; transform: translateX(-50%); margin: 0; max-width: calc(100% - 32px); text-align: center; white-space: nowrap; font-size: 12px; line-height: 1.4; letter-spacing: .02em; color: var(--dim); opacity: 0; transition: opacity .3s; pointer-events: none; }
+.find-hint { position: absolute; z-index: 5; left: 50%; bottom: 124px; transform: translateX(-50%); margin: 0; max-width: calc(100% - 32px); padding: 6px 12px; border-radius: 8px; background: var(--ink); text-align: center; white-space: nowrap; font-size: 12px; line-height: 1.4; letter-spacing: .02em; color: var(--dim); opacity: 0; transition: opacity .3s; pointer-events: none; }
 .jm-focus .find-hint { opacity: 1; }
 .jm-sheet-open .find-hint { opacity: 0; }
 .explore-hint.on { opacity: 1; }
@@ -392,6 +394,14 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .go-top { background: var(--ink); border: 1px solid var(--mid); border-radius: var(--go-h); padding: var(--go-top-pad) var(--go-top-pad-x); }
 .jm-explore #ft-world .ft-talk, .jm-explore #ft-world .ft-link, .jm-explore .ft-name > span { pointer-events: none; }
 @media (max-width: 640px) { .c-foot { flex-direction: column; align-items: stretch; } .c-foot .c-crafts { width: 100%; } .c-foot .c-btn { width: 100%; } }
+
+/* The explore row occupies the reserved bottom band, below the fitted map. */
+@media (max-width: 640px) {
+  .jm-explore .go.go-end { top: auto; bottom: var(--phone-exploreBottom); left: var(--phone-edge); right: var(--phone-edge); height: var(--go-h); flex-wrap: nowrap; gap: var(--phone-exploreGap); }
+  .jm-explore .go.go-end .go-back { width: var(--phone-exploreBack); height: var(--go-h); padding: 0 12px; border: 1px solid var(--mid); border-radius: var(--go-h); display: flex; justify-content: center; gap: 8px; font-size: 12px; white-space: nowrap; }
+  .jm-explore .go.go-end .go-back span { white-space: nowrap; }
+  .jm-explore .go.go-end .go-top { width: min(var(--phone-exploreTop), calc(100vw - var(--phone-edge) * 2 - var(--phone-exploreBack) - var(--phone-exploreGap))); height: var(--go-h); padding: 0 8px; font-size: 10px; letter-spacing: .12em; white-space: nowrap; }
+}
 
 </style>
 <style>
@@ -1022,13 +1032,13 @@ const STOPS = [
     label: { t: 'Laurier', sub: '2016 to 2017, game design', x: 158, y: 236, a: 'middle' },
     copy: { draft: true, headline: 'Where it started.', para: 'I went to Laurier for game design. Systems, rules and play came first, before I ever chose graphic design.', took: 'Think about how someone moves through it.', piece: null, caption: '' } },
   { id: 'hmc1', palette: 'hmc', name: 'HMC Connections', short: 'HMC Connections', dates: 'Summers 2018 and 2020', spans: [['2018-04', '2018-08'], ['2020-06', '2020-08']], track: 'work', role: 'Graphic designer, video editor, web designer', crafts: ['Print', 'Video', 'Screen'], w: 7, rune: 'h',
-    label: { t: 'HMC Connections', sub: 'summers 2018 and 2020', x: 466, y: 250, a: 'start' },
+    label: { t: 'HMC Connections', sub: 'summers 2018 and 2020', x: 460, y: 250, a: 'start', tracking: -0.55 },
     copy: { draft: true, headline: 'First job, three hats.', para: 'Two summers as the student who did design, video and web at once. I designed the SafetyDrivesUs logo and built its website, plus flyers and infographics.', took: 'One person can carry a job across print, video and web.', piece: null, caption: '' } },
   { id: 'mohawk', palette: 'mohawk', name: 'Mohawk College', short: 'Mohawk', dates: '2019 to 2021', spans: [['2019-01', '2021-04']], track: 'school', role: 'Advanced Diploma, Graphic Design', crafts: ['Print', 'Screen'], w: 17, rune: 'm',
     label: { t: 'Mohawk', sub: '2019 to 2021', x: 124, y: 387, a: 'middle' },
     copy: { draft: true, headline: 'Where the craft got formal.', para: 'Type, layout and critique, every week, until the reasons behind a good page became habit.', took: 'Type first.', piece: null, caption: '' } },
   { id: 'hmc2', palette: 'hmc', name: 'HMC Connections', short: 'HMC, again', dates: '2021 to 2022', spans: [['2021-06', '2022-03']], track: 'work', role: 'Graphic designer, on contract', crafts: ['Print', 'Screen'], w: 26, rune: 'h',
-    label: { t: 'HMC, again', sub: 'on contract, 2021 to 2022', x: 458, y: 322, a: 'end' },
+    label: { t: 'HMC, again', sub: 'on contract, 2021 to 2022', x: 464, y: 322, a: 'end' },
     copy: { draft: true, headline: 'Back as the designer.', para: 'I came back on contract, redesigned hmcconnections.com, designed the 2020/2021 annual report and built the HMC anti-racism movement website.', took: 'Long documents are where a system proves itself.', piece: PIECE_IMAGE, caption: 'Annual report, 2020 to 2021' } },
   { id: 'interkom', palette: 'interkom', name: 'Interkom', short: 'Interkom', dates: 'Autumn 2022', spans: [['2022-09', '2022-12']], track: 'work', role: 'Junior graphic designer, on contract', crafts: ['Print', 'Screen'], w: 29, rune: 'i',
     label: { t: 'Interkom', sub: 'autumn 2022', x: 498, y: 468, a: 'end' },
@@ -1172,19 +1182,19 @@ const HAMMER = {
     heart: 'M0 3C-6 -3 -6 -7 -2 -7Q0 -7 0 -5Q0 -7 2 -7C6 -7 6 -3 0 3Z', heartBox: '-6 -8 12 12',
     crack: 'M-3 -6L1 -2L-2 1L3 6', stoneHeart: 'M0 -9L-9 7L10 6ZM0 -5L-3 2L5 3',
     shot: ['M-1 -3L1 3M-2 -2L1 -3M-1 3L2 2', 'M-2 -4L2 -4L0 5Z', 'M0 4Q-4 0 0 -4Q4 0 0 4Z'],
-    shield: 'M-3 0A3 3 0 1 0 3 0A3 3 0 1 0 -3 0M-2 -2L2 2M-2 2L2 -2',
+    wall: { centres: [-11, 0, 11], paths: { wallRim: 'M-7.5 0A7.5 7.5 0 1 0 7.5 0A7.5 7.5 0 1 0 -7.5 0Z', wallBoss: 'M-1.5 0A1.5 1.5 0 1 0 1.5 0A1.5 1.5 0 1 0 -1.5 0Z', wallPlanks: 'M-4 -6V6M0 -7.5V-1.5M0 1.5V7.5M4 -6V6' } },
     spark: 'M-2 0H2M0 -2V2',
     sprites: {
       glove: [24, 20, 'M-10 7L-8 1L-7 -5L-3 -7L0 -5L3 -7L6 -5L8 -1L7 2L10 7ZM-8 2H8M-4 -5V0M0 -5V0M4 -5V0M-7 5H-5M0 5H2M6 5H7'],
       hammer: [20, 20, 'M-1 1V8Q-3 11 0 11Q3 11 1 8V1M-8 -7L-5 -5H5L8 -7L9 -6V1L8 2L5 0H-5L-8 2L-9 1V-6ZM-5 -4L0 -1L5 -4M-5 -1L0 -4L5 -1'],
-      draugr: [24, 20, 'M-8 6L-6 -1L-4 -2L-4 -6L0 -7L4 -5L4 -2L7 0L9 6M-5 2H5M-3 -4H-1M2 -4H3M-2 -1H2M-3 3L-4 7M3 3L4 7M-8 0L-10 -3'],
-      rime: [24, 20, 'M-9 7L-7 -2L-3 -4L-4 -7L1 -8L5 -5L4 -2L8 0L10 7ZM-3 -3L0 -1L3 -3M-5 2L-1 3M2 3L6 2M-5 5V7M5 5V7'],
-      fire: [24, 20, 'M-8 7L-7 0L-3 -2Q-7 -7 -2 -8L0 -4L3 -8Q8 -4 4 -1L8 1L9 7ZM-3 1L0 3L3 1M-4 5L-5 8M4 5L5 8'],
-      wolf: [26, 20, 'M-10 1L-7 -5L-4 -2L1 -3L4 -7L6 -3L10 -1L8 2L5 2L3 5H-4L-7 7M-3 4L-2 8M3 4L5 8M7 -1H8M-9 0L-12 -3'],
-      chief: [26, 22, 'M-11 8L-9 -1L-5 -3L-5 -8L0 -10L5 -8L5 -3L9 -1L11 8ZM-4 -3L0 -1L4 -3M-4 1H4M-5 4V8M5 4V8M0 -8V-4M-2 -7L2 -5'],
+      draugr: [24, 20, 'M-4 -2L-5 -5L-3 -7L0 -6L1 -3L-1 -2M-4 -2Q-7 -1 -6 2L-5 6L-3 4L-2 7L0 4L2 6L1 0L-1 -2M-4 0L-2 2L1 1L5 2M4 2L7 -5L8 -4L7 -2L8 -1L6 3M-3 -5H-2M-3 0V3M-4 6L-5 7M0 5L1 7'],
+      rime: [24, 20, 'M-3 -4L-3 -7H2L3 -4M-3 -4L-7 -3L-8 1L-5 2L-4 5L-4 7H-1L0 4L1 7H4L4 2L6 1M-3 -3L-2 1L-1 -1L0 2L1 -1L2 0L3 -3M-2 -5H-1M1 -5H2M5 4L6 -4M5 -4L5 -7L8 -7L9 -5L8 -3L6 -3'],
+      fire: [24, 20, 'M-2 -4Q-5 -5 -3 -7L-1 -6L0 -7L1 -4L3 -7Q5 -3 2 -2M-2 -2L-4 0L-3 3L-2 2L-2 7H0L1 3L2 7H4L3 0L2 -2ZM-2 -4V-2H2V-4M-3 0L-6 2M3 0L5 1M5 2L8 -5L9 -4L7 3M-1 -3H0M0 0L1 2'],
+      wolf: [26, 20, 'M-9 1L-6 -2L-1 -3L3 -2L4 -5L6 -3L8 -3L9 -1L7 1L4 1L2 3L-3 3L-6 2L-8 4L-9 3M-7 0L-9 -3M-3 2L-1 5L1 5M2 2L5 4L7 4M6 -2H7'],
+      chief: [26, 22, 'M-3 -3V-5L0 -7L3 -5V-3M-3 -5L-7 -7L-6 -4L-3 -3M3 -5L7 -7L6 -4L3 -3M-3 -2L-7 0L-6 3L-3 2L-3 7H-1L0 3L1 7H4L3 2L6 1L5 -1L3 -2M-5 1L-1 0L4 -1M-2 2L2 0L5 -1M-7 2L7 -3M6 -4L8 -6L9 -4L8 -2L6 -2ZM-1 -4H1M-2 -1H2'],
       valkyrie: [36, 22, 'M-15 5L-9 1L-4 2L0 -1L5 0L8 -3L13 -2L16 1L12 4H6L4 8M-8 4L-9 8M-3 4L-1 8M1 -1V-8L4 -10L6 -7L4 -4L7 -1M2 -7L-6 -9L-2 -5L-8 -6L-2 -2M7 -7L13 -10'],
-      hrungnir: [128, 62, 'M-60 27L-54 7L-28 -3L-23 -22L-7 -28L17 -26L27 -17L24 -3L53 8L60 27ZM-23 -13L-9 -8L-1 -10M8 -10L21 -14M-8 -3L9 -2M-17 9L-8 13L-13 21M23 4L15 9L20 17M-35 7L-31 20M40 11L35 24'],
-      clay: [52, 64, 'M-22 28L-18 1L-10 -6L-11 -20L-2 -27L9 -22L11 -8L19 0L23 28ZM-7 -15L-3 -14M4 -14L7 -15M-5 -8L4 -7M-12 6L-6 9L-9 17M13 4L7 12M-6 23L-8 30M7 22L10 30'],
+      hrungnir: [128, 62, 'M-18 -7L-20 -15L-8 -20L13 -18L19 -12L17 -7M-20 -15L-35 -22L-32 -13L-20 -9M17 -14L32 -22L29 -12L18 -8M-18 -7L-37 -2L-43 8L-28 11L-19 6L-18 21H-5L0 10L5 21H21L18 5L35 7L41 0L27 -5L17 -7M-29 4L-10 6L16 0M29 1L13 7L-7 3M-44 11L43 -6M39 -10L47 -17L54 -11L50 -1L42 0ZM-12 -12H-6M6 -12H12M-8 -6L0 -3L9 -6M-10 10L0 18L11 10'],
+      clay: [52, 64, 'M-9 -8L-10 -20L-2 -25L8 -20L9 -9L17 -4L19 9L11 12L10 25H3L0 15L-3 25H-11L-12 9L-19 7L-17 -3ZM-7 -16L-3 -15M3 -15L7 -16M-5 -9L3 -7M-11 -3L-5 1L-8 8M10 -1L4 5L8 10M-2 11L2 8'],
     },
     fragments: [[-32, -8, 'M-25 -9L-7 -14L5 0L-12 13Z'], [0, -14, 'M-18 -13L12 -12L23 2L0 17L-13 4Z'], [32, 1, 'M-8 -11L17 3L10 20L-17 6Z']],
   },
@@ -1229,7 +1239,7 @@ const FIND_COPY = {
     pause: 'Paused', pauseButton: 'Pause', resume: 'Resume', newRun: 'New run', close: 'Close', auto: 'Keep throwing',
     lost: 'The bridge fell at wave {n}.', lostHearts: 'Your hearts gave out at wave {n}.', won: 'Hrungnir falls. The bridge holds.',
     heartLost: 'A heart lost. {n} heart{s} left.', gift: 'A Valkyrie leaves a heart and silver.',
-    stats: '{silver} silver. {foes} foes felled.', best: 'Best run: {silver} silver.', silver: '{n} silver', hearts: '{n} of {max} hearts', runes: 'Runes taken',
+    stats: '{silver} silver. {foes} foe{s} felled.', best: 'Best run: {silver} silver.', silver: '{n} silver', hearts: '{n} of {max} heart{s}', runes: 'Runes taken',
     boss: 'Hrungnir', clay: 'Mökkurkálfi rises.', heart: "Hrungnir's stone heart is bare.",
     foes: { draugr: 'Draugr', rime: 'Rime giant', fire: 'Son of Múspell', wolf: 'Wolf', chief: 'Giant chief' },
     fates: [
@@ -1433,7 +1443,7 @@ const RAVEN_RIG = (() => {
     crouch: 0.12, unfold: 0.18, outPower: 1.6, backPower: 2, controls: [[10, -26], [55, -32]], endY: -29,
     turn: 0.12, hysteresis: 0.1, perchTurn: 0.16, settle: 0.2, land: 0.35, level: 0.3,
     dip: 0.15, dipAngle: 25, itemFade: 0.2, offFrame: 12, birdMargin: 18,
-    loopRadius: 20, loopCentre: [20, 0], loopTakeoff: 0.2, loopTime: 1.1, loopGap: 0.55,
+    loopRadius: 20, loopCentre: [20, 0], loopTakeoff: 0.2, loopTime: 1.1, loopGap: 0.55, featherAt: [6, -4],
     returnBeat: 0.35, returnFlaps: 0.7, beat: ['up', 'mid', 'down', 'mid', 'up'],
     preenMove: [-1.5, 1.5], breathe: [0.012, 2.8],
   };
@@ -1442,11 +1452,11 @@ const FIND_PLAY = {
   fresh: 3, seed: 171,
   focus: { fill: 0.72, least: 0.85, most: 3, at: [0.5, 0.46], in: 0.7, out: 0.5, swap: 0.6, chest: [0, -16, 30], ship: [0, -10, 34], wide: [300, 450, 330, 0] },
   bits: { pool: 96, starSize: 2.2, puffAlpha: 0.22,
-    kinds: { dot: ['M-.8 0a.8 .8 0 1 0 1.6 0a.8 .8 0 1 0 -1.6 0Z', 'pf'], clod: ['M-1.4 .6L-.6 -1.1L1.2 -.7L1.5 .8L-.2 1.3Z', 'g'], drop: ['M0 -1.6Q1.1 .2 0 1.1Q-1.1 .2 0 -1.6Z', 'pf'], spark: ['M0 0V-2.4', 'l'], feather: ['M0 -3Q1.5 0 0 3Q-1.5 0 0 -3Z', 'g'], puff: ['M-3.2 0a3.2 3.2 0 1 0 6.4 0a3.2 3.2 0 1 0 -6.4 0Z', 'pf'], wisp: ['M-6 0a6 3 0 1 0 12 0a6 3 0 1 0 -12 0Z', 'mist-wisp'], ring: ['M-3 0a3 1 0 1 0 6 0a3 1 0 1 0 -6 0Z', 't'] },
+    kinds: { dot: ['M-.8 0a.8 .8 0 1 0 1.6 0a.8 .8 0 1 0 -1.6 0Z', 'pf'], clod: ['M-1.4 .6L-.6 -1.1L1.2 -.7L1.5 .8L-.2 1.3Z', 'g'], drop: ['M0 -1.6Q1.1 .2 0 1.1Q-1.1 .2 0 -1.6Z', 'pf'], spark: ['M0 0V-2.4', 'l'], feather: ['M0 -1.2V1.2M0 -1Q.6 -.6 0 .6M0 -.8Q-.45 -.3 0 .5', 't'], puff: ['M-3.2 0a3.2 3.2 0 1 0 6.4 0a3.2 3.2 0 1 0 -6.4 0Z', 'pf'], wisp: ['M-6 0a6 3 0 1 0 12 0a6 3 0 1 0 -12 0Z', 'mist-wisp'], ring: ['M-3 0a3 1 0 1 0 6 0a3 1 0 1 0 -6 0Z', 't'] },
     base: { speed: [0, 0], dir: [-90, -90], g: 0, drag: 0, life: [0.6, 0.6], size: [1, 1], spin: 0, alpha: 1 },
     clods: { speed: [18, 34], dir: [-150, -30], g: 90, life: [0.6, 0.6], spin: 80 },
     puffs: { speed: [3, 7], dir: [-160, -20], life: [0.6, 0.6], size: [0.4, 1.5], alpha: 0.22 },
-    feathers: { speed: [2, 6], dir: [20, 160], g: 12, drag: 2, life: [1.4, 1.4], spin: 25 },
+    feathers: { speed: [2, 4], dir: [65, 115], g: 10, drag: 1, life: [0.65, 0.75], spin: 25, size: [0.65, 0.45] },
     stars: { speed: [6, 12], dir: [-120, -60], life: [1.1, 1.1], size: [1, 0.2], spin: 20 },
     drops: { speed: [8, 18], dir: [-140, -40], g: 60, life: [0.5, 0.7] },
     wake: { speed: [0, 0], life: [0.6, 0.6], size: [1, 3.5], alpha: 0.7 },
@@ -1460,7 +1470,7 @@ const FIND_PLAY = {
   },
   hoard: { hole: [16, 28, 38], lift: [0.18, 0.24, 1], rise: [0.28, 0.28, 0.5], backEase: 0.8, over: 1.2, repeat: 0.3, rattle: 0.36, openHold: 0.3, near: 26, glint: [5, 8],
     scale: 0.3, travel: 64, holeRatio: 0.28, pile: [0.5, 0.75, 1], scratchWidth: 1.6, glintAt: [0, -4], glintSize: 5, glintTime: 0.5, glintTurn: 45, clods: 7, rattleAngle: 4, rattleCycles: 3,
-    lidTime: 0.4, lidSettle: 0.12, lidBounce: 0.25, lidPeak: 118, lidRest: 110, rim: -34, depth: 24, half: 30, lean: [90, 20, 2.4], mouthAngle: 60,
+    lidTime: 0.5, lidSettle: 0.18, lidBounce: 0.3, lidPeak: 118, lidRest: 110, rim: -34, depth: 24, half: 30, lean: [90, 20, 2.4], mouthAngle: 60,
     glowR: 46, starCount: 8, starY: -44, starSizes: [6, 4], glowTime: 0.3, glowPeak: 1, glowRest: 0.6, glowKept: 0.35, stars: 6, burstTravel: [48, 34], burstLift: 14, anchor: 18, width: 260, top: 3, icon: 64, iconBox: [-32, -32, 64, 64], rad: 35, scratchHop: 2,
     hit: [0, -24, 40], clip: [-240, -200, 480, 200], pileAt: [48, 2], pilePath: 'M-7 0q6 -10 13 0z',
     clodLife: 0.6, clodSpeed: [18, 34], clodUp: [28, 44], clodSpin: 80, clodFloor: 2,
@@ -1529,6 +1539,14 @@ const FIND_PLAY = {
 
 // Round 7 C1: ported reference paths and independent layout/motion tuning.
 const YGG = {
+  masses: [
+    [[-60,-35],[-64,-45],[-58,-57],[-47,-64],[-36,-69],[-28,-69],[-23,-65],[-22,-58],[-22,-51],[-23,-40],[-34,-31],[-49,-28]],
+    [[-24,-69],[-18,-76],[-6,-79],[8,-79],[21,-74],[28,-67],[29,-59],[36,-51],[33,-44],[20,-43],[7,-48],[-3,-49],[-13,-49],[-19,-55],[-20.2,-64.8]],
+    [[32,-70],[40,-73],[53,-69],[65,-59],[68.5,-48],[68.5,-37],[62,-29],[49,-28],[38,-32],[37,-40],[42,-52],[36,-57],[31,-63]],
+  ],
+  massBump: [.08, .04],
+  branches: 'M-23 -43Q-34 -43 -43 -49M-22 -46Q-32 -51 -36 -57M-2 -51Q-8 -58 -9 -68M2 -51Q9 -59 17 -67M24 -45Q39 -43 52 -49M24 -46Q34 -55 43 -61M-10 -37Q-22 -36 -33 -39M10 -36Q22 -34 36 -38',
+  ashHatch: 'M-53 -43l8 -9m-6 1l-4 -1m6 -1l-1 -4M-42 -39l9 -10m-7 7l-4 -1m7 -2l-1 -4M-49 -57l7 -3m-4 2l-2 -3M-13 -61l7 -10m-5 7l-4 -1m7 -3l-1 -4M-3 -56l8 -10m-6 7l-3 -1m6 -3l-1 -4M13 -54l10 -7m-7 5l-3 -2m6 -1v-4M6 -72l6 -3M43 -59l8 -6m-6 5l-3 -2m6 -1l1 -3M48 -40l8 -9m-6 6l-3 -1m6 -1v-4M59 -37l6 -8m-4 5l-3 -1M54 -53l8 -3',
   "crown": [
     [
       -50,
@@ -1964,8 +1982,9 @@ const YGG = {
   }
 };
 const MARK = { k: 10, min: 14, max: 36, stand: 3, box: 400, centre: 200, radius: 176, rim: 20, boss: 54, bossLine: 16, highlight: [186,186,12,.55], shadow: [200,392,120,10,.35], planks: [-120,-72,-24,24,72,120], plankLine: 7, plankAlpha: .28, paintAlpha: .35, studs: 8, stud: 9, studLine: 5, quarters: 'M200 200L200 24A176 176 0 0 1 376 200ZM200 200L200 376A176 176 0 0 1 24 200Z', legend: [68,836,4.6,.9,1.2,.45] };
-const LABELS = { name: { unit: 9.5, floor: 10, cap: 1.6, phone: 7.5, phoneCap: 1.4 }, x: { unit: 8.5, floor: 10, cap: 1.6, phone: 7.5, phoneCap: 1.4 }, sub: { unit: 6.3, floor: 7.6, cap: 1.6, phone: 7, phoneCap: 1.8 }, small: { unit: 6.5, floor: 8, cap: 1.6, phone: 7, phoneCap: 1.8 }, legend: { unit: 6.5, floor: 8, cap: 1.6, phone: 7, phoneCap: 1.8 }, fade: [1.3,1.5], epsilon: .005, width: .56, ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 3.5, hmcSubDX: -4.4, subOffset: 9.5, xAt: [16,8], xSubAt: [16,17.5], kicker: [45,95], plate: [-3,-9,204,13], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]] };
+const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -4.4, hmcAgainSubDX: 0, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [16,8], xSubAt: [16,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]] };
 const WORLD = { scrim: [150,190,.85], card: { w:640, edge:32, cap:420, phoneShare:.82, phoneBottom:6, slack:2, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
+const PHONE_LAYOUT = { gap: 16, edge: 16, ctaShare: .14, headlineGap: 20, exploreGap: 8, exploreBottom: 8, exploreBack: 152, exploreTop: 172 };
 
 // ---- art.mjs ----
 // Every drawing as a function that returns an SVG string. Geometry and glyphs ported from reference/round2.cjs.
@@ -2062,7 +2081,7 @@ const runeSvg = (word, h, x, y, a, cls = 'rn') => `<path class="${cls}" d="${run
 const svgText = (x, y, s, o = {}) => `<text x="${x}" y="${y}" font-size="${o.s || 8}" fill="${o.c || C.dim}" font-weight="${o.w || 500}" text-anchor="${o.a || 'start'}"${o.i ? ' font-style="italic"' : ''}${o.ls ? ` letter-spacing="${o.ls}"` : ''}${o.h ? ' class="h"' : ''}${o.t ? ` transform="${o.t}"` : ''}${o.op ? ` opacity="${o.op}"` : ''}${o.cls ? ` class="${o.cls}"` : ''}>${s}</text>`;
 const grp = (x, y, k, s, rot) => `<g transform="translate(${x} ${y})${rot ? ` rotate(${rot})` : ''} scale(${k})">${s}</g>`;
 const starPath = (x, y, s) => `M${n1(x)} ${n1(y - s)}Q${n1(x)} ${n1(y)} ${n1(x + s)} ${n1(y)}Q${n1(x)} ${n1(y)} ${n1(x)} ${n1(y + s)}Q${n1(x)} ${n1(y)} ${n1(x - s)} ${n1(y)}Q${n1(x)} ${n1(y)} ${n1(x)} ${n1(y - s)}Z`;
-const marker = (x, y, n, id) => `<g class="mk"${id ? ` id="mk-${id}"` : ''}><circle cx="${x}" cy="${y}" r="6.2" fill="${C.ink}" stroke="${C.red}" stroke-width="1.2"/><text x="${x}" y="${y + 2.6}" font-size="7.5" font-weight="800" fill="${C.red}" text-anchor="middle">${n}</text></g>`;
+const marker = (x, y, n, id) => `<g class="mk"${id ? ` id="mk-${id}"` : ''}><circle cx="${x}" cy="${y}" r="6.2" fill="${C.ink}" stroke="${C.red}" stroke-width="1.2"/><g transform="translate(${x} ${y})"><g class="label-scale" data-label="marker"><text y="2.6" font-size="7.5" font-weight="800" fill="${C.red}" text-anchor="middle">${n}</text></g></g></g>`;
 
 // ---- terrain ----
 const peak = (x, y, s) => `<path class="g" d="M${n1(x - s)} ${y}L${x} ${n1(y - s * 1.5)}L${n1(x + s)} ${y}"/><path class="t" d="M${x} ${n1(y - s * 1.5)}l${n1(s * .28)} ${n1(s * .55)}l${n1(-s * .2)} ${n1(s * .3)}M${n1(x + s * .34)} ${n1(y - s * .62)}l${n1(-s * .1)} ${n1(s * .42)}M${n1(x + s * .6)} ${n1(y - s * .32)}l${n1(-s * .08)} ${n1(s * .24)}"/>`;
@@ -2081,10 +2100,9 @@ const shore = (P, seed) => { const r = rnd(seed), n = P.length; let s = '', ar2 
 // ---- Norse landmarks ----
 function yggdrasil(x, y) {
   const Y = YGG, r = rnd(Y.crownSeed);
-  const crown = scallop(Y.crown, i => { const p = Y.crown[i], q = Y.crown[(i + 1) % Y.crown.length]; return Math.hypot(q[0] - p[0], q[1] - p[1]) * (Y.crownBump[0] + r() * Y.crownBump[1]); });
-  const overlaps = Y.layers.map((P, k) => { const rr = rnd(Y.layerSeed + k); return '<path class="l" stroke-opacity="' + Y.layerAlpha + '" d="' + scallop(P, i => -Math.hypot(P[i + 1][0] - P[i][0], P[i + 1][1] - P[i][1]) * (Y.layerBump[0] + rr() * Y.layerBump[1]), false) + '"/>'; }).join('');
+  const crown = Y.masses.map(P => '<path class="l yg-mass" d="' + scallop(P, i => { const p = P[i], q = P[(i + 1) % P.length]; return Math.hypot(q[0] - p[0], q[1] - p[1]) * (Y.massBump[0] + r() * Y.massBump[1]); }) + '"/>').join('');
   const actor = (cls, p, body) => '<g class="' + cls + '" transform="translate(' + p.join(' ') + ')">' + body + '</g>';
-  return '<g class="ygg" transform="translate(' + x + ' ' + y + ')">' + Y.roots.map(row => '<path class="g" d="' + tube(...row) + '"/>').join('') + Y.rootlets + Y.trunk + '<path class="g" d="' + crown + '"/>' + overlaps + Y.leaves + actor('yg-eagle', Y.eagleAt, Y.eagle) + actor('yg-rat', Y.ratAt, Y.rat) + actor('yg-nid', Y.nidAt, Y.nid) + '</g>';
+  return '<g class="ygg" transform="translate(' + x + ' ' + y + ')">' + Y.roots.map(row => '<path class="g" d="' + tube(...row) + '"/>').join('') + Y.rootlets + Y.trunk + '<path class="l" d="' + Y.branches + '"/>' + crown + '<path class="t" d="' + Y.ashHatch + '"/>' + actor('yg-eagle', Y.eagleAt, Y.eagle) + actor('yg-rat', Y.ratAt, Y.rat) + actor('yg-nid', Y.nidAt, Y.nid) + '</g>';
 }
 // interlace knot, about 22 units: a rounded square and a diamond woven over and under by quadrant
 const knot = (cx, cy) => {
@@ -2104,7 +2122,7 @@ function shieldSvg() {
 
 // ---- finds (each wrapped in a group the finds module wires up) ----
 const findWrap = (id, label, inner, x, y) => `<g class="find" id="f-${id}" role="button" tabindex="0" aria-label="${label}" data-x="${x}" data-y="${y}">${inner}</g>`;
-const findDrawing = kind => FIND_PLAY.drawings[kind].replace(/\{\{([\w.]+)\}\}/g, (match, path) => path === 'hoard.glintPath' ? starPath(...FIND_PLAY.hoard.glintAt, FIND_PLAY.hoard.glintSize) : path.split('.').reduce((value, key) => value[key], FIND_PLAY));
+const findDrawing = kind => FIND_PLAY.drawings[kind].replace(/\{\{([\w.]+)\}\}/g, (match, path) => path === 'hoard.glintPath' ? starPath(...FIND_PLAY.hoard.glintAt, FIND_PLAY.hoard.glintSize) : path.split('.').reduce((value, key) => value[key], FIND_PLAY)).replace(/<text\b[^]*?<\/text>/g, text => '<g class="map-tier2">' + text + '</g>');
 const wayfinder = () => findDrawing('wayfinder');
 function hoardInside(lean) {
   const [w, d, crown] = FIND_PLAY.hoard.inside;
@@ -2166,15 +2184,14 @@ function bigMap() {
   const r = rnd(11); let s = '', top = '', top2 = '';  const LB = []; GROVE.length = 0;
   const lab = (x, y, t, o = {}) => { const sz = o.s || 8, w = t.length * (sz * .56 + (o.ls || 0)), x1 = o.a == 'end' ? x - w : o.a == 'middle' ? x - w / 2 : x; LB.push([x1 - 3, y - sz - 2, x1 + w + 3, y + 3]); return svgText(x, y, t, { ...o, h: 1 }); };
   const W = MAP.waypoints;
-  const tier = row => '<g class="label-anchor" transform="translate(' + row.x + ' ' + row.y + ')"><g class="label-scale" data-label="' + row.kind + '" data-unit="' + row.unit + '" data-stop-sub="' + !!row.stopSub + '">' + lab(0, 0, row.text, { s: row.unit, w: row.name ? 700 : 500, c: row.red ? C.red : row.name ? C.paper : C.note, a: row.anchor }) + '</g></g>';
+  const tier = row => { const text = row.lines ? row.lines.map((line,i)=>'<tspan x="0" y="' + i * row.unit * LABELS.line + '">' + line + (i < row.lines.length-1 ? ' ' : '') + '</tspan>').join('') : row.text; return '<g class="label-anchor" transform="translate(' + row.x + ' ' + row.y + ')"><g class="label-scale" data-label="' + row.kind + '" data-unit="' + row.unit + '" data-stop-sub="' + !!row.stopSub + '">' + lab(0, 0, text, { s: row.unit, w: row.name ? 700 : 500, c: row.red ? C.red : row.name ? C.paper : C.note, a: row.anchor, ls: row.ls }) + '</g></g>'; };
   const labelRows = mapLabelRows(); labelRows.forEach(row => { const width = row.text.length * row.unit * LABELS.width, left = row.anchor === 'end' ? row.x - width : row.anchor === 'middle' ? row.x - width / 2 : row.x; LB.push([left - 3, row.y - row.unit - 2, left + width + 3, row.y + 3]); }); top += labelRows.filter(row => !row.stopSub).map(tier).join('');
-  top += '<g class="map-subs">' + labelRows.filter(row => row.stopSub).map(tier).join('') + '</g>';
+  top2 += '<g class="map-subs">' + labelRows.filter(row => row.stopSub).map(tier).join('') + '</g>';
   COPY.regions.forEach(g => { top2 += lab(g.x, g.y, g.t, { s: 5.8, ls: 1.6, c: C.dim, a: 'middle', i: g.i }); if (g.rune) { const rw = runeWord(g.rune, 3.2, g.x, g.y + 2.6, 'middle'); LB.push([g.x - rw.w / 2 - 2, g.y + 2, g.x + rw.w / 2 + 2, g.y + 7]); top2 += '<path class="rn rn-dim" d="' + rw.d + '"/>'; } });
   COPY.notes.forEach(nt => top2 += lab(nt.x, nt.y, nt.t, { s: nt.s, i: 1, c: nt.dim ? C.dim : C.note, a: nt.a }));
   top2 += svgText(40, 380, COPY.sea, { s: 5.8, ls: 2.4, a: 'middle', t: 'rotate(-90 40 380)' });
   const [gx, gy] = MAP.ygg, [wx, wy] = MAP.well;
   top2 += lab(...YGG.label, COPY.ygg, { s: 5.4, ls: 1.4, c: C.dim }) + lab(wx, wy + 1, COPY.well, { s: 4.8, ls: .8, c: C.note, a: 'middle' }) + lab(wx, wy + 8, COPY.wellSub, { s: 4.4, i: 1, c: C.dim, a: 'middle' });
-  top += '<g class="map-tier2">' + top2 + '</g>';
 
   // sea
   let rh = ''; for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8 + .2; rh += `M92 716L${n1(92 + Math.cos(a) * 1200)} ${n1(716 + Math.sin(a) * 1200)}`; }
@@ -2207,18 +2224,19 @@ function bigMap() {
   s += grp(134, 208, .62, hall()) + grp(96, 181, .6, boat());
   s += grp(458, 271, .55, dock()) + grp(473, 321, .55, dock()) + grp(487, 297, .5, boat()) + grp(470, 304, .42, boat());
   s += grp(124, 372, .6, campus()) + grp(...MAP.toronto.at, 1, toronto()) + `<path class="l" d="M404 662v-11"/>`;
-  s += top;
+  s += '<g class="map-tier2">' + top2 + '</g>';
   FINDS.filter(f => f.n).forEach(f => s += marker(f.mark[0], f.mark[1], f.n, f.id));
 
   // title, legend, frame, knots
-  s += svgText(44, 78, COPY.title, { s: 30, w: 800, c: C.paper, ls: -.6 });
+  top += svgText(44, 78, COPY.title, { s: 30, w: 800, c: C.paper, ls: -.6 });
   const K = LABELS.kicker, P = LABELS.plate, rule = LABELS.rule;
-  s += '<g transform="translate(' + K.join(' ') + ')"><g class="label-scale" data-label="small" data-unit="' + LABELS.small.unit + '"><rect x="' + P[0] + '" y="' + P[1] + '" width="' + P[2] + '" height="' + P[3] + '" fill="' + C.ink + '"/>' + svgText(0, 0, COPY.kicker, { s: LABELS.small.unit, ls: 1.8 }) + '<path class="t" d="M' + rule[0] + ' ' + rule[1] + 'h' + rule[2] + '"/></g></g>';
+  top += '<g transform="translate(' + K.join(' ') + ')"><g class="label-scale" data-label="small" data-unit="' + LABELS.small.unit + '"><rect x="' + P[0] + '" y="' + P[1] + '" width="' + P[2] + '" height="' + P[3] + '" fill="' + C.ink + '"/>' + svgText(0, 0, COPY.kicker, { s: LABELS.small.unit, ls: 1.8 }) + '<path class="t" d="M' + rule[0] + ' ' + rule[1] + 'h' + rule[2] + '"/></g></g>';
   s += `<rect x="23" y="822" width="554" height="55" fill="${C.ink}"/><line x1="23" y1="822.5" x2="577" y2="822.5" stroke="${C.paper}" stroke-opacity=".3"/>`;
   const M = MARK.legend, [sx, sy, sr, sw, sb, sa] = M;
   s += '<g transform="translate(' + sx + ' ' + sy + ')"><circle class="o" r="' + sr + '"/><path d="M0 0V-' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 ' + sr + ' 0ZM0 0V' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 -' + sr + ' 0Z" fill="' + C.note + '" opacity="' + sa + '"/><circle class="l" r="' + sr + '" stroke-width="' + sw + '"/><circle class="pf" r="' + sb + '"/></g>';
   s += '<path d="M64 853l8 8m0 -8l-8 8" stroke="' + C.red + '" stroke-width="2" stroke-linecap="round"/>' + marker(140, 838, 1) + '<path d="M133 857h14" stroke="' + C.paper + '" stroke-width="2.3" stroke-linecap="round" stroke-dasharray=".1 4.5"/>';
-  s += Object.values(COPY.legend).map((text, i) => { const p = LABELS.legendAt[i]; return '<g transform="translate(' + p.join(' ') + ')"><g class="label-scale" data-label="legend" data-unit="' + LABELS.legend.unit + '">' + svgText(0, 0, text, { s: LABELS.legend.unit, c: C.note }) + '</g></g>'; }).join('');
+  top += Object.values(COPY.legend).map((text, i) => { const p = LABELS.legendAt[i]; return '<g transform="translate(' + p.join(' ') + ')"><g class="label-scale" data-label="legend" data-unit="' + LABELS.legend.unit + '">' + svgText(0, 0, text, { s: LABELS.legend.unit, c: C.note }) + '</g></g>'; }).join('');
+  s += '<g class="map-tier1">' + top + '</g>';
 
   s += `<rect x="14.5" y="14.5" width="571" height="871" fill="none" stroke="${C.paper}" stroke-opacity=".35"/><rect x="18" y="18" width="564" height="864" fill="none" stroke="${C.paper}" stroke-opacity=".28" stroke-width="5" stroke-dasharray="1 15"/><rect x="22.5" y="22.5" width="555" height="855" fill="none" stroke="${C.paper}" stroke-opacity=".2"/>`;
   s += knot(36, 36) + knot(564, 36) + knot(36, 864) + knot(564, 864);
@@ -2291,8 +2309,15 @@ function jormungandr() {
 }
 
 function mapLabelRows() {
-  const rows = []; STOPS.forEach(st => { const L = st.label; rows.push({ kind: 'name', unit: LABELS.name.unit, text: L.t, x: L.x, y: L.y + LABELS.nameDY, anchor: L.a, name: true }); rows.push({ kind: 'sub', unit: LABELS.sub.unit, text: L.sub, x: L.x + (st.id === 'hmc1' ? LABELS.hmcSubDX : 0), y: L.y + LABELS.subOffset + LABELS.subDY, anchor: L.a, stopSub: true }); });
-  rows.push({ kind: 'x', unit: LABELS.x.unit, text: COPY.xLabel, x: MAP.x[0] + LABELS.xAt[0], y: MAP.x[1] + LABELS.xAt[1] + LABELS.nameDY, anchor: 'start', name: true, red: true }, { kind: 'sub', unit: LABELS.sub.unit, text: COPY.xSub, x: MAP.x[0] + LABELS.xSubAt[0], y: MAP.x[1] + LABELS.xSubAt[1] + LABELS.xSubDY, anchor: 'start' }); return rows;
+  const rows = []; STOPS.forEach(st => { const L = st.label; rows.push({ kind: 'name', unit: LABELS.name.unit, text: L.t, x: L.x, y: L.y + LABELS.nameDY, anchor: L.a, name: true, ls: L.tracking }); rows.push({ kind: 'sub', unit: LABELS.sub.unit, text: L.sub, x: L.x + (st.id === 'hmc1' ? LABELS.hmcSubDX : st.id === 'hmc2' ? LABELS.hmcAgainSubDX : 0), y: L.y + LABELS.subOffset + LABELS.subDY, anchor: L.a, stopSub: true, ls: st.id === 'hmc2' ? LABELS.hmcAgainTracking : 0 }); });
+  rows.push({ kind: 'x', unit: LABELS.x.unit, text: COPY.xLabel, lines: COPY.xLabel.split(LABELS.xBreak).map((s,i)=>i ? LABELS.xBreak.trimStart()+s : s), x: MAP.x[0] + LABELS.xAt[0], y: MAP.x[1] + LABELS.xAt[1] + LABELS.nameDY, anchor: 'start', name: true, red: true }, { kind: 'sub', unit: LABELS.sub.unit, text: COPY.xSub, x: MAP.x[0] + LABELS.xSubAt[0], y: MAP.x[1] + LABELS.xSubAt[1] + LABELS.xSubDY, anchor: 'start', stopSub: true }); return rows;
+}
+
+function mapLabelBox(row, s, phone) {
+  const L = LABELS[row.kind], k = Math.max(1, (phone ? L.phone : L.floor) / (row.unit * s));
+  const length = Math.max(...(row.lines || [row.text]).map(s=>s.length)), width = (length * row.unit * LABELS.width + (length - 1) * (row.ls || 0)) * k;
+  const left = row.anchor === 'end' ? row.x - width : row.anchor === 'middle' ? row.x - width / 2 : row.x, halo = ['name','x','sub'].includes(row.kind) ? LABELS.halo * k : 0;
+  return [left - halo, row.y - row.unit * k * LABELS.ascent - halo, left + width + halo, row.y + row.unit * k * (LABELS.descent + ((row.lines?.length || 1) - 1) * LABELS.line) + halo];
 }
 
 // ---- trip.mjs ----
@@ -2344,10 +2369,11 @@ const dateAt = P => { if (P <= PIECES[0][0]) return PIECES[0][2]; for (const q o
 const progressForDate = d => { for (const q of PIECES) { const lo = Math.min(q[2], q[3]), hi = Math.max(q[2], q[3]); if (d >= lo && d <= hi && q[3] !== q[2]) return lerp(q[0], q[1], (d - q[2]) / (q[3] - q[2])); } return d <= PIECES[0][2] ? PIECES[0][0] : PIECES[PIECES.length - 1][1]; };
 
 // ---- view ----
-const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1, depth: 1 };
+const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1, depth: 1, footerY: null };
 function tripResize(w, h, tlH) {
   const m = w <= CAMERA.phoneMax ? 16 : 28;
   VIEW.w = w; VIEW.h = h; VIEW.phone = w <= CAMERA.phoneMax; VIEW.unit = h / 100;
+  VIEW.footerY = null;
   const availH = h - m - (tlH + 10);
   VIEW.s0 = Math.min((w - 2 * m) / MAP.w, (availH - m) / MAP.h);
   VIEW.ox = (w - MAP.w * VIEW.s0) / 2; VIEW.oy = m + (availH - m - MAP.h * VIEW.s0) / 2;
@@ -2359,7 +2385,7 @@ const camTrip = (u, zoom) => { const c = smoothCenter(u); return { cx: c[0], cy:
 const camMix = (a, b, t) => ({ cx: lerp(a.cx, b.cx, t), cy: lerp(a.cy, b.cy, t), s: Math.exp(lerp(Math.log(a.s), Math.log(b.s), t)), ax: lerp(a.ax, b.ax, t), ay: lerp(a.ay, b.ay, t) });
 const camFinal = c => ({ s: c.s, tx: c.ax - c.cx * c.s, ty: c.ay - c.cy * c.s, ax: c.ax, ay: c.ay });
 
-const labelScale = (kind, s, phone = VIEW.phone) => { const L = LABELS[kind]; return Math.min(phone ? L.phoneCap : L.cap, Math.max(1, (phone ? L.phone : L.floor) / (L.unit * s))); };
+const labelScale = (kind, s, phone = VIEW.phone) => { const L = LABELS[kind]; return Math.max(1, (phone ? L.phone : L.floor) / (L.unit * s)); };
 function tripXCamera() {
   if (VIEW.phone) { const b = CAMERA.xBoxPhone, margin = CAMERA.xMargin, h = VIEW.h - STEPS.nav.bar, s = Math.min((VIEW.w - 2 * margin) / (b[2] - b[0]), (h - 2 * margin) / (b[3] - b[1])); return { cx: (b[0] + b[2]) / 2, cy: (b[1] + b[3]) / 2, s, ax: VIEW.w / 2, ay: h / 2 }; }
   const base = camTrip(X_U, 1), floor = VIEW.h - CAMERA.timeline - STEPS.nav.gap - STEPS.nav.h - CAMERA.xGap;
@@ -2404,7 +2430,7 @@ function tripState(P) {
     const e1 = easeIO(st.rushT), e2 = easeIO(smooth(0, .8, st.settleT));
     base.cx = lerp(base.cx, MAP.x[0], e1); base.cy = lerp(base.cy, MAP.x[1], e1);
     base.ax = lerp(lerp(startAX, VIEW.w / 2, e1), fx[0] * VIEW.w, e2);
-    base.ay = lerp(lerp(startAY, VIEW.h / 2, e1), fx[1] * VIEW.h, e2);
+    base.ay = lerp(lerp(startAY, VIEW.h / 2, e1), VIEW.phone && VIEW.footerY !== null ? VIEW.footerY : fx[1] * VIEW.h, e2);
     cam = base;
   }
   st.inTrip = st.pushT > 0;
@@ -2421,7 +2447,9 @@ const TRIP_EL = {};
 function tripBuild(els) {
   Object.assign(TRIP_EL, els);
   TRIP_EL.labels = [...els.svg.querySelectorAll('.label-scale')].map(el => ({ el, kind: el.dataset.label, stopSub: el.dataset.stopSub === 'true', k: null }));
-  TRIP_EL.tier2 = els.svg.querySelector('.map-tier2'); TRIP_EL.subs = els.svg.querySelector('.map-subs'); TRIP_EL.subHome = TRIP_EL.subs.parentElement;
+  TRIP_EL.tier1 = els.svg.querySelector('.map-tier1'); TRIP_EL.tier2 = els.svg.querySelector('.map-tier2'); TRIP_EL.subs = els.svg.querySelector('.map-subs');
+  TRIP_EL.secondary = [...els.svg.querySelectorAll('.map-tier2')]; if (!TRIP_EL.secondary.length) TRIP_EL.secondary = [TRIP_EL.tier2];
+  TRIP_EL.focusFade = null;
   TRIP_EL.scrim = document.createElement('div'); TRIP_EL.scrim.className = 'stage-scrim'; TRIP_EL.scrim.setAttribute('aria-hidden', 'true'); TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px'; TRIP_EL.scrim.style.background = 'linear-gradient(to bottom, transparent, color-mix(in srgb, var(--ink) ' + WORLD.scrim[2] * 100 + '%, transparent))'; els.svg.parentElement.appendChild(TRIP_EL.scrim);
   TRIP_EL.coasts = [...els.svg.querySelectorAll('.coast')];
   TRIP_EL.coastLen = [polyLen(COAST_A, 1), polyLen(COAST_B, 1)];
@@ -2441,9 +2469,13 @@ function tripWrite(el, key, value, attribute = false) {
 function tripApply(st) {
   const E = TRIP_EL, c = st.cam;
   const labelFade = smooth(...LABELS.fade, c.s / VIEW.s0);
-  if (E.phone !== VIEW.phone) { E.phone = VIEW.phone; (VIEW.phone ? E.tier2 : E.subHome).appendChild(E.subs); }
-  E.labels.forEach(label => { const k = VIEW.phone && label.stopSub ? 1 : labelScale(label.kind, c.s); if (label.k === null || Math.abs(k / label.k - 1) > LABELS.epsilon) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; } });
-  tripWrite(E.tier2, 'opacity', labelFade); tripWrite(E.scrim, 'opacity', labelFade);
+  E.labels.forEach(label => { const k = labelScale(label.kind, c.s); if (label.k === null || Math.abs(k / label.k - 1) > LABELS.epsilon) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; } });
+  const focusFade = 1 - smooth(0, .4, st.focusK || 0);
+  if (E.focusFade === null || Math.abs(focusFade - E.focusFade) > .01 || (focusFade === 0 || focusFade === 1) && focusFade !== E.focusFade) {
+    E.focusFade = focusFade;
+    for (const group of [E.tier1, E.subs]) if (group) { tripWrite(group, 'opacity', focusFade); tripWrite(group, 'visibility', focusFade === 0 ? 'hidden' : 'visible'); }
+  }
+  E.secondary.forEach(group => { tripWrite(group, 'opacity', labelFade); tripWrite(group, 'visibility', labelFade === 0 ? 'hidden' : 'visible'); }); tripWrite(E.scrim, 'opacity', labelFade);
   tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true);
   const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
   tripWrite(E.sea, 'opacity', smooth(...DEPTH.fade.sea, h)); tripWrite(E.fill, 'opacity', smooth(.25, .75, h));
@@ -3016,216 +3048,6 @@ function starsFrame(time, st, pointer, opt = {}) {
 // one still frame for reduced motion
 function starsStill(st) { starsFrame(0, st, [.5, .5], { still: true }); }
 
-// ---- cards.mjs ----
-// Stop marks that grow into cards. Each card is one article: the standing stone at rest, the card when open.
-
-
-
-const CD = { list: [], W: 640, H: 420, craft: null, onGo: null, rm: false, closed: null, last: null };
-const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-const arrowSvg = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
-
-function cardsBuild(container, onGo, rm = false) {
-  CD.onGo = onGo; CD.rm = rm;
-  const root = document.documentElement;
-  Object.entries({ hit: CARD_CLOSE.hit, inset: CARD_CLOSE.inset, icon: CARD_CLOSE.icon, stroke: CARD_CLOSE.stroke }).forEach(([k, v]) => root.style.setProperty('--card-close-' + k, v + 'px'));
-  const Q = WORLD.card; Object.entries({ 'card-panel-radius': Q.panelRadius, 'card-panel-pad': Q.panelPad, 'card-crafts': Q.crafts, 'card-title': Q.title, 'card-title-gap': Q.titleGap, 'card-foot-gap': Q.footGap, 'card-foot-margin': Q.footMargin }).forEach(([k, v]) => root.style.setProperty('--' + k, v + 'px')); root.style.setProperty('--card-title-weight', Q.titleWeight);
-  STOPS.forEach((s, i) => {
-    const p = PALETTES[s.palette], cp = s.copy, a = document.createElement('article');
-    a.className = `stop lay-${p.layout}${p.panel ? ' has-panel' : ''}`; a.id = `stop-${s.id}`; a.setAttribute('aria-labelledby', `h-${s.id}`);
-    const vars = { '--g': p.ground, '--tx': p.text, '--sub': p.sub, '--btn': p.button, '--btx': p.buttonText, '--pill': p.pill, '--ptx': p.pillText, '--band': p.band, '--hd': p.headline, '--mk': p.mark, '--hair': p.hairline };
-    if (p.panel) Object.assign(vars, { '--panel': p.panel, '--panel-text': p.panelText, '--panel-hair': p.panelHair, '--panel-btn': p.panelButton, '--panel-btx': p.panelButtonText });
-    if (p.arrow) vars['--arrow'] = p.arrow;
-    if (p.smallWeight !== undefined) vars['--sw'] = p.smallWeight;
-    if (p.chip) vars['--chip'] = p.chip;
-    if (p.chipText) vars['--chtx'] = p.chipText;
-    Object.entries(vars).forEach(([k, v]) => a.style.setProperty(k, v));
-    const piece = cp.piece ? `<img src="${cp.piece}" alt="${esc(cp.caption)}">` : `<div class="c-empty">${COPY.pieceToCome}</div>`;
-    const steps = cp.steps ? `<ol class="c-steps">${cp.steps.map(t => `<li>${esc(t)}</li>`).join('')}</ol>` : '';
-    a.innerHTML = `<button class="st-btn" type="button" aria-label="${esc(COPY.stoneGo.replace('{name}', s.name).replace('{dates}', s.dates))}">${shieldSvg()}</button>
-<div class="c-sh" aria-hidden="true"></div><div class="face"><div class="c-in">
-<header class="c-top"><img class="c-logo" src="${p.logo}" alt="${esc(s.name)}"><span class="c-pill">${esc(s.dates)}</span></header>
-<h2 class="c-h" id="h-${s.id}">${esc(cp.headline)}</h2><div class="c-panel"><div class="c-body"><div class="c-main"><p class="c-role">${esc(s.role)}</p><p class="c-para">${esc(cp.para)}</p>${steps}
-<p class="c-kick">${COPY.took}</p><p class="c-took">${esc(cp.took)}</p></div>
-<div class="c-side"><figure class="c-piece">${piece}${cp.caption ? `<figcaption>${esc(cp.caption)}</figcaption>` : ''}</figure></div></div>
-<div class="c-foot"><ul class="c-crafts">${CRAFTS.map(c => `<li class="${s.crafts.includes(c) ? 'lit' : ''}"><i></i>${c}</li>`).join('')}</ul>
-<button class="c-btn" type="button">${COPY.caseStudy}${arrowSvg}</button></div></div></div></div>${rm ? '' : `<button class="c-close" type="button" aria-label="${esc(COPY.cardClose.replace('{name}', s.name))}"><i aria-hidden="true"></i></button>`}`;
-    a.querySelector('.st-btn').addEventListener('click', () => {
-      if (CD.closed?.i === i && CD.last?.P === CD.closed.P) { CD.closed = { ...CD.closed, from: CD.closed.k, to: 1, elapsed: 0 }; return; }
-      CD.onGo(i);
-    });
-    a.querySelector('.c-close')?.addEventListener('click', () => cardsClose(i));
-    container.appendChild(a);
-    CD.list.push({ el: a, face: a.querySelector('.face'), shadow: a.querySelector('.c-sh'), inn: a.querySelector('.c-in'), btn: a.querySelector('.st-btn'), fill: a.querySelector('.st-fill'), glow: a.querySelector('.st-glow'), stop: s, state: '', tilt: [0, 0, 0, 0] });
-  });
-  if (!rm) document.fonts?.ready.then(() => cardsResize(CD.steps));
-}
-function cardsResize(steps = false) {
-  CD.steps = steps;
-  document.documentElement.style.setProperty('--card-close-radius', (VIEW.phone ? CARD_CLOSE.radiusPhone : CARD_CLOSE.radius) + 'px');
-  const Q = WORLD.card; CD.W = VIEW.phone ? VIEW.w : Math.min(Q.w, VIEW.w - Q.edge);
-  const cap = VIEW.phone ? Math.round(VIEW.h * Q.phoneShare) - (steps ? STEPS.nav.bar : 0) : steps ? Math.max(1, Math.min(Q.cap, VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h - Q.gap * 2)) : Q.cap;
-  CD.list.forEach(c => { c.el.style.width = CD.W + 'px'; c.el.style.height = 'auto'; c.inn.style.minHeight = '0'; c.H = Math.min(cap, c.inn.scrollHeight + Q.slack); c.el.style.height = c.H + 'px'; cardsDepthConfig(c); });
-
-}
-function cardsDepthConfig(c) {
-  const cfg = DEPTH.card, lift = !!VIEW.depth && !VIEW.phone;
-  c.depthConfig = lift ? `${cfg.perspective}/${cfg.blur}/${cfg.spread}/${cfg.radius}` : '';
-  c.el.style.perspective = lift ? cfg.perspective + 'px' : '';
-  c.shadow.style.boxShadow = `0 0 ${cfg.blur}px ${cfg.spread}px var(--shade)`; c.shadow.style.borderRadius = cfg.radius + 'px';
-  c.depthPending = false;
-}
-const cardsSetCraft = mask => { CD.craft = mask; };
-const cardsLitBy = craft => STOPS.map(s => s.crafts.includes(craft));
-
-function cardsClose(index = CD.last?.i) {
-  const st = CD.last;
-  if (CD.rm || !st || st.kind !== 'hold' || st.cardK[index] <= 0 || (CD.closed?.to === 0)) return false;
-  CD.closed = { i: index, P: st.P, k: st.cardK[index], from: st.cardK[index], to: 0, elapsed: 0 };
-  if (CD.list[index].el.contains(document.activeElement)) CD.list[index].btn.focus({ preventScroll: true });
-  return true;
-}
-function cardsOverride(st, dt, moving) {
-  const closed = CD.closed; let changed = false;
-  if (closed) {
-    if (st.kind !== 'hold' || st.i !== closed.i || (closed.leaving && !moving && st.P === closed.P)) { CD.closed = null; changed = true; }
-    else {
-      if (moving || st.P !== closed.P) closed.leaving = true;
-      const before = closed.k;
-      closed.elapsed = Math.min(CARD_CLOSE.time, closed.elapsed + dt); closed.k = lerp(closed.from, closed.to, easeIO(closed.elapsed / CARD_CLOSE.time));
-      st.cardK[closed.i] *= closed.k; st.cardOpen = Math.max(...st.cardK); changed = before !== closed.k;
-      if (closed.to === 1 && closed.elapsed === CARD_CLOSE.time) CD.closed = null;
-    }
-  }
-  CD.last = st; return changed;
-}
-
-function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
-  const W = CD.W, op = smooth(.5, 1, st.handoffT) * (1 - smooth(0, .4, st.blastT) * (1 - (st.exploreK || 0)));
-  const stonePx = Math.max(MARK.min, Math.min(MARK.max, MARK.k * st.cam.s));
-  const stepTop = VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h;
-  CD.list.forEach((c, i) => {
-    const H = c.H, oc = VIEW.phone ? [VIEW.w / 2, VIEW.h - H / 2 - WORLD.card.phoneBottom - (CD.steps ? STEPS.nav.bar : 0)] : [VIEW.w / 2, CD.steps ? Math.max(WORLD.card.gap + H / 2, Math.min(VIEW.h / 2 - WORLD.card.gap, stepTop - WORLD.card.gap - H / 2)) : VIEW.h / 2 - WORLD.card.gap];
-    const e = st.cardK[i], p = toScreen(st, MAP.waypoints[c.stop.w]);
-    const k0 = stonePx / (H * .95), k = Math.pow(k0, 1 - e);
-    const cx = p[0] + (oc[0] - p[0]) * e, ry = p[1] - stonePx * .5 - MARK.stand, cy = ry + (oc[1] - ry) * e;
-    c.el.style.transform = `translate(${(cx - W * k / 2).toFixed(2)}px,${(cy - H * k / 2).toFixed(2)}px) scale(${k.toFixed(5)})`;
-    const lit = CD.craft ? CD.craft[i] : false;
-    c.el.style.opacity = op * (CD.craft && !lit ? .55 : 1);
-    c.btn.style.opacity = 1 - smooth(0, .3, e);
-    c.face.style.opacity = smooth(.01, .1, e);
-    const cfg = DEPTH.card, lift = !!VIEW.depth && !VIEW.phone;
-    // Apply live style configuration after this frame callback; animation only writes transform/opacity.
-    const config = lift ? `${cfg.perspective}/${cfg.blur}/${cfg.spread}/${cfg.radius}` : '';
-    if (config !== c.depthConfig && !c.depthPending) { c.depthPending = true; queueMicrotask(() => cardsDepthConfig(c)); }
-    const lx = DEPTH.look ? look[0] / DEPTH.look : 0, ly = DEPTH.look ? look[1] / DEPTH.look : 0;
-    const inside = pointer[0] * VIEW.w >= cx - W * k / 2 && pointer[0] * VIEW.w <= cx + W * k / 2 && pointer[1] * VIEW.h >= cy - H * k / 2 && pointer[1] * VIEW.h <= cy + H * k / 2;
-    const plate = inside ? 0 : e;
-    const target = [cfg.tilt * (1 - smooth(...cfg.open, e)) - ly * cfg.ptrTilt[1] * plate, lx * cfg.ptrTilt[0] * plate, -lx * cfg.shift * plate, -ly * cfg.shift * plate];
-    c.tilt.forEach((v, j) => { c.tilt[j] = lift ? v + (target[j] - v) * cfg.ease : 0; if (Math.abs(c.tilt[j]) < cfg.flat) c.tilt[j] = 0; });
-    const [rx, ryTilt, sx, sy] = c.tilt;
-    c.face.style.transform = lift ? `${sx || sy ? `translate(${sx}px,${sy}px) ` : ''}${rx ? `rotateX(${rx}deg) ` : ''}${ryTilt ? `rotateY(${ryTilt}deg)` : ''}`.trim() : '';
-    c.shadow.style.opacity = lift ? cfg.shadow * e : 0;
-    c.shadow.style.transform = `translate(${-sx / cfg.shadowShare}px,${cfg.drop * e - sy / cfg.shadowShare}px)`;
-    c.inn.style.opacity = smooth(.4, .62, k);
-    c.fill.style.opacity = st.visited[i] || lit ? 1 : 0;
-    c.glow.style.opacity = lit ? 1 : 0;
-    const state = e > .96 ? 'open' : e < .02 ? 'rest' : 'moving';
-    if (state !== c.state) { c.state = state; c.el.dataset.state = state; c.face.inert = state !== 'open'; c.btn.tabIndex = state === 'rest' ? 0 : -1; }
-  });
-}
-const cardsList = () => CD.list;
-
-// ---- timeline.mjs ----
-// The timeline bar: a quiet instrument pinned to the bottom; in the footer it becomes the rule under the name.
-
-
-const TL = { el: null, track: null, head: null, rows: null, fades: [], blocks: [], tip: null, count: null, trackW: 1, viewW: 1, sx: 1, dx: 0, dy: 0, ox: 0, oy: 0, val: '', drag: null, off: 0, rm: false };
-const Y0 = 2016;
-const xOf = d => (d - Y0) / (DATE_NOW - Y0);
-const fmt = (s, o) => s.replace(/\{(\w+)\}/g, (m, k) => o[k]);
-
-function tlBuild(el, hooks, rm) {
-  TL.el = el; TL.hooks = hooks; TL.rm = rm;
-  let ticks = ''; for (let y = Y0; y <= Math.floor(DATE_NOW); y++) ticks += `<i class="tl-tick" style="left:${(xOf(y) * 100).toFixed(3)}%"><b>'${String(y % 100).padStart(2, '0')}</b></i>`;
-  let blocks = { school: '', work: '' };
-  STOPS.forEach((s, i) => s.spans.forEach(sp => { const a = xOf(yearOf(sp[0])), b = xOf(yearOf(sp[1], 1)); blocks[s.track] += `<span class="tl-blk" data-i="${i}" style="left:${(a * 100).toFixed(3)}%;width:${((b - a) * 100).toFixed(3)}%;--mk:${PALETTES[s.palette].mark}"><em></em></span>`; }));
-  el.innerHTML = `<div class="tl-bg tl-f"></div><div class="tl-view"><div class="tl-track"><div class="tl-ticks tl-f">${ticks}</div><div class="tl-rows tl-f"><div class="tl-row">${blocks.school}</div><div class="tl-row">${blocks.work}</div></div><div class="tl-head"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0 -7Q0 0 7 0Q0 0 0 7Q0 0 -7 0Q0 0 0 -7Z"/></svg></div></div></div><div class="tl-base"></div><span class="tl-count tl-f" aria-live="polite"></span><div class="tl-tip" aria-hidden="true"></div>`;
-  el.setAttribute('role', 'slider'); el.tabIndex = 0; el.setAttribute('aria-label', COPY.timeline);
-  el.setAttribute('aria-valuemin', Y0); el.setAttribute('aria-valuemax', Math.floor(DATE_NOW));
-  TL.track = el.querySelector('.tl-track'); TL.head = el.querySelector('.tl-head'); TL.rows = el.querySelector('.tl-rows');
-  TL.fades = [...el.querySelectorAll('.tl-f')]; TL.tip = el.querySelector('.tl-tip'); TL.count = el.querySelector('.tl-count');
-  TL.blocks = [...el.querySelectorAll('.tl-blk')].map(b => ({ el: b, em: b.firstChild, i: +b.dataset.i }));
-  TL.view = el.querySelector('.tl-view'); TL.base = el.querySelector('.tl-base');
-  TL.blocks.forEach(b => {
-    b.el.addEventListener('pointerenter', () => tipFor(b.i, b.el));
-    b.el.addEventListener('pointerleave', () => TL.tip.classList.remove('on'));
-  });
-  el.addEventListener('focus', () => { const i = currentStop(TL.lastP || 0); if (i >= 0) tipFor(i, null); });
-  el.addEventListener('blur', () => TL.tip.classList.remove('on'));
-  el.addEventListener('keydown', e => {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return; e.preventDefault();
-    if (e.key === 'Home' || e.key === 'End') { TL.hooks.jump(e.key === 'Home' ? 0 : STOPS.length - 1); return; }
-    const P = TL.lastP || 0, cur = currentStop(P);
-    let i = e.key === 'ArrowRight' ? cur + 1 : (P > progressForStop(Math.max(cur, 0)) + 1 ? cur : cur - 1);
-    i = Math.max(0, Math.min(STOPS.length - 1, i)); TL.hooks.jump(i);
-  });
-  el.addEventListener('pointerdown', e => {
-    TL.drag = { x: e.clientX, moved: false, P: TL.lastP || 0, blk: e.target.closest('.tl-blk') };
-    el.setPointerCapture(e.pointerId);
-  });
-  el.addEventListener('pointermove', e => {
-    const d = TL.drag; if (!d || TL.rm) return;
-    if (!d.moved && Math.abs(e.clientX - d.x) < 4) return; d.moved = true;
-    if (!d.started) { d.started = true; TL.dateStart = TL.lastDate; }
-    const r = TL.viewRect; let date;
-    if (VIEW.phone) date = TL.dateStart - (e.clientX - d.x) / TL.trackW * (DATE_NOW - Y0);
-    else date = Y0 + (e.clientX - r.left) / TL.trackW * (DATE_NOW - Y0);
-    TL.hooks.scrub(progressForDate(Math.max(Y0, Math.min(DATE_NOW, date))));
-  });
-  const end = () => { const d = TL.drag; TL.drag = null; if (d && !d.moved && d.blk) TL.hooks.jump(+d.blk.dataset.i); };
-  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', () => { TL.drag = null; });
-}
-function tipFor(i, blk) {
-  const s = STOPS[i]; TL.tip.textContent = fmt(COPY.timelineValue, { name: s.name, dates: s.dates });
-  const r = blk ? blk.getBoundingClientRect() : null, er = TL.el.getBoundingClientRect();
-  TL.tip.style.transform = `translateX(${Math.max(8, Math.min(er.width - 220, (r ? r.left - er.left : TL.headX + TL.viewRect.left - er.left) - 10)).toFixed(0)}px)`;
-  TL.tip.classList.add('on');
-}
-const currentStop = P => { let c = -1; STOPS.forEach((s, i) => { if (P >= holdStart(i)) c = i; }); return c; };
-const tlSetCount = (n, t) => { TL.count.textContent = fmt(n === t ? COPY.countAll : COPY.count, { n, t }); };
-const tlSetCraft = mask => TL.blocks.forEach(b => { b.el.classList.toggle('craft-lit', !!mask?.[b.i]); b.el.style.opacity = mask && !mask[b.i] ? FIND_PLAY.way.timelineDim : 1; });
-
-function tlResize(ruleRect) {
-  const el = TL.el; el.style.transform = 'none';
-  TL.viewRect = TL.view.getBoundingClientRect(); TL.viewW = TL.viewRect.width;
-  TL.trackW = VIEW.phone ? TL.viewW * 2.4 : TL.viewW; TL.track.style.width = TL.trackW + 'px';
-  if (ruleRect) {
-    const b = TL.base.getBoundingClientRect(), er = el.getBoundingClientRect();
-    TL.ox = b.left - er.left; TL.oy = b.top - er.top; el.style.transformOrigin = `${TL.ox}px ${TL.oy}px`;
-    TL.sx = ruleRect.width / b.width; TL.dx = ruleRect.left - b.left; TL.dy = ruleRect.top - b.top;
-  }
-}
-function tlFrame(st) {
-  TL.lastP = st.P; TL.lastDate = st.date;
-  if (TL.rm) return;
-  const show = easeIO(smooth(0, .4, st.overviewT));
-  const m = easeIO(smooth(.3, .85, st.settleT)), fade = (1 - st.cardOpen * .9) * (1 - smooth(0, .6, st.rushT));
-  const sx = lerp(1, TL.sx, m);
-  TL.el.style.transform = `translate(${(TL.dx * m).toFixed(2)}px,${(TL.dy * m + (1 - show) * 80).toFixed(2)}px) scaleX(${sx.toFixed(4)})`;
-  TL.el.style.opacity = show;
-  TL.fades.forEach(f => f.style.opacity = fade);
-  TL.rows.style.transform = `scaleY(${(1 - st.cardOpen * .85).toFixed(3)})`;
-  const hx = xOf(st.date) * TL.trackW; TL.headX = hx;
-  TL.off = VIEW.phone ? Math.max(TL.viewW - TL.trackW, Math.min(0, TL.viewW / 2 - hx)) : 0;
-  TL.track.style.transform = `translateX(${TL.off.toFixed(2)}px)`;
-  TL.headX = hx + TL.off;
-  TL.head.style.transform = `translateX(${hx.toFixed(2)}px) scaleX(${(1 / sx).toFixed(4)})`;
-  TL.blocks.forEach(b => b.em.style.opacity = st.visited[b.i] ? 1 : 0);
-  const i = currentStop(st.P), v = i < 0 ? COPY.timelineStart : fmt(COPY.timelineValue, { name: STOPS[i].name, dates: STOPS[i].dates });
-  if (v !== TL.val) { TL.val = v; TL.el.setAttribute('aria-valuetext', v); TL.el.setAttribute('aria-valuenow', Math.floor(st.date)); }
-}
-
 // ---- pace.mjs ----
 // Pure progress/time conversion. Parts and beats follow the existing act sequence.
 
@@ -3635,11 +3457,16 @@ function stepsSet(P) {
   stepsCancel(); SC.P = stepsClamp(P); if (SC.restoreP !== null) SC.restoreP = SC.P; stepsArrive();
 }
 function stepsResize() {
+  if (VIEW.phone) { const boxes = stepsExploreBoxes(VIEW.w, VIEW.h); SC.root.style.setProperty('--phone-exploreTop', (boxes.top[2] - boxes.top[0]) + 'px'); }
   if (SC.restoreP !== null) {
     SC.P = SC.restoreP; SC.restoreP = null;
     window.scrollTo({ top: 0, behavior: 'instant' });
   } else if (SC.rm) stepsReadScroll();
   stepsButtons();
+}
+function stepsExploreBoxes(w, h) {
+  const L = PHONE_LAYOUT, y = h - L.exploreBottom - STEPS.nav.h;
+  return { back: [L.edge, y, L.edge + L.exploreBack, y + STEPS.nav.h], top: [L.edge + L.exploreBack + L.exploreGap, y, Math.min(w - L.edge, L.edge + L.exploreBack + L.exploreGap + L.exploreTop), y + STEPS.nav.h] };
 }
 function stepsFrame(ts) {
   SC.ready = true;
@@ -3716,9 +3543,223 @@ function stepsBuild({ stage, rm, joinedTop }) {
   const vars = { 'go-h': STEPS.nav.h + 'px', 'go-gap': STEPS.nav.gap + 'px', 'go-bar': STEPS.nav.bar + 'px', 'go-reveal': STEPS.reveal + 's', 'go-top-pad': WORLD.card.topPad + 'px', 'go-top-pad-x': WORLD.card.topPadX + 'px' };
   Object.entries(vars).forEach(([k, v]) => SC.root.style.setProperty('--' + k, v));
   Object.entries(EXPLORE.bar).forEach(([k, v]) => SC.root.style.setProperty('--explore-' + k, v + 'px'));
+  Object.entries(PHONE_LAYOUT).forEach(([k, v]) => SC.root.style.setProperty('--phone-' + k, v + 'px'));
   stepsClasses(); stepsArrive();
   if (SC.mode === 'steps') window.scrollTo({ top: 0, behavior: 'instant' });
   window.addEventListener('wheel', stepsBlockWheel, { passive: false }); window.addEventListener('keydown', stepsKey);
+}
+
+// ---- cards.mjs ----
+// Stop marks that grow into cards. Each card is one article: the standing stone at rest, the card when open.
+
+
+
+
+const CD = { list: [], W: 640, H: 420, craft: null, onGo: null, rm: false, closed: null, last: null };
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+const arrowSvg = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
+
+function cardsBuild(container, onGo, rm = false) {
+  CD.onGo = onGo; CD.rm = rm;
+  const root = document.documentElement;
+  Object.entries({ hit: CARD_CLOSE.hit, inset: CARD_CLOSE.inset, icon: CARD_CLOSE.icon, stroke: CARD_CLOSE.stroke }).forEach(([k, v]) => root.style.setProperty('--card-close-' + k, v + 'px'));
+  const Q = WORLD.card; Object.entries({ 'card-panel-radius': Q.panelRadius, 'card-panel-pad': Q.panelPad, 'card-crafts': Q.crafts, 'card-title': Q.title, 'card-title-gap': Q.titleGap, 'card-foot-gap': Q.footGap, 'card-foot-margin': Q.footMargin }).forEach(([k, v]) => root.style.setProperty('--' + k, v + 'px')); root.style.setProperty('--card-title-weight', Q.titleWeight);
+  STOPS.forEach((s, i) => {
+    const p = PALETTES[s.palette], cp = s.copy, a = document.createElement('article');
+    a.className = `stop lay-${p.layout}${p.panel ? ' has-panel' : ''}`; a.id = `stop-${s.id}`; a.setAttribute('aria-labelledby', `h-${s.id}`);
+    const vars = { '--g': p.ground, '--tx': p.text, '--sub': p.sub, '--btn': p.button, '--btx': p.buttonText, '--pill': p.pill, '--ptx': p.pillText, '--band': p.band, '--hd': p.headline, '--mk': p.mark, '--hair': p.hairline };
+    if (p.panel) Object.assign(vars, { '--panel': p.panel, '--panel-text': p.panelText, '--panel-hair': p.panelHair, '--panel-btn': p.panelButton, '--panel-btx': p.panelButtonText });
+    if (p.arrow) vars['--arrow'] = p.arrow;
+    if (p.smallWeight !== undefined) vars['--sw'] = p.smallWeight;
+    if (p.chip) vars['--chip'] = p.chip;
+    if (p.chipText) vars['--chtx'] = p.chipText;
+    Object.entries(vars).forEach(([k, v]) => a.style.setProperty(k, v));
+    const piece = cp.piece ? `<img src="${cp.piece}" alt="${esc(cp.caption)}">` : `<div class="c-empty">${COPY.pieceToCome}</div>`;
+    const steps = cp.steps ? `<ol class="c-steps">${cp.steps.map(t => `<li>${esc(t)}</li>`).join('')}</ol>` : '';
+    a.innerHTML = `<button class="st-btn" type="button" aria-label="${esc(COPY.stoneGo.replace('{name}', s.name).replace('{dates}', s.dates))}">${shieldSvg()}</button>
+<div class="c-sh" aria-hidden="true"></div><div class="face"><div class="c-in">
+<header class="c-top"><img class="c-logo" src="${p.logo}" alt="${esc(s.name)}"><span class="c-pill">${esc(s.dates)}</span></header>
+<h2 class="c-h" id="h-${s.id}">${esc(cp.headline)}</h2><div class="c-panel"><div class="c-body"><div class="c-main"><p class="c-role">${esc(s.role)}</p><p class="c-para">${esc(cp.para)}</p>${steps}
+<p class="c-kick">${COPY.took}</p><p class="c-took">${esc(cp.took)}</p></div>
+<div class="c-side"><figure class="c-piece">${piece}${cp.caption ? `<figcaption>${esc(cp.caption)}</figcaption>` : ''}</figure></div></div>
+<div class="c-foot"><ul class="c-crafts">${CRAFTS.map(c => `<li class="${s.crafts.includes(c) ? 'lit' : ''}"><i></i>${c}</li>`).join('')}</ul>
+<button class="c-btn" type="button">${COPY.caseStudy}${arrowSvg}</button></div></div></div></div>${rm ? '' : `<button class="c-close" type="button" aria-label="${esc(COPY.cardClose.replace('{name}', s.name))}"><i aria-hidden="true"></i></button>`}`;
+    a.querySelector('.st-btn').addEventListener('click', () => {
+      if (CD.closed?.i === i && CD.last?.P === CD.closed.P && !JOURNEY.moving) { CD.closed = { ...CD.closed, from: CD.closed.k, to: 1, elapsed: 0 }; CD.list[i].reopenFocus = true; return; }
+      CD.onGo(i);
+    });
+    a.querySelector('.c-close')?.addEventListener('click', () => cardsClose(i));
+    container.appendChild(a);
+    CD.list.push({ el: a, face: a.querySelector('.face'), shadow: a.querySelector('.c-sh'), inn: a.querySelector('.c-in'), btn: a.querySelector('.st-btn'), fill: a.querySelector('.st-fill'), glow: a.querySelector('.st-glow'), stop: s, state: '', tilt: [0, 0, 0, 0] });
+  });
+  if (!rm) document.fonts?.ready.then(() => cardsResize(CD.steps));
+}
+function cardsResize(steps = false) {
+  CD.steps = steps;
+  document.documentElement.style.setProperty('--card-close-radius', (VIEW.phone ? CARD_CLOSE.radiusPhone : CARD_CLOSE.radius) + 'px');
+  const Q = WORLD.card; CD.W = VIEW.phone ? VIEW.w : Math.min(Q.w, VIEW.w - Q.edge);
+  const cap = VIEW.phone ? Math.round(VIEW.h * Q.phoneShare) - (steps ? STEPS.nav.bar : 0) : steps ? Math.max(1, Math.min(Q.cap, VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h - Q.gap * 2)) : Q.cap;
+  CD.list.forEach(c => { c.el.style.width = CD.W + 'px'; c.el.style.height = 'auto'; c.inn.style.minHeight = '0'; c.H = Math.min(cap, c.inn.scrollHeight + Q.slack); c.el.style.height = c.H + 'px'; cardsDepthConfig(c); });
+
+}
+function cardsDepthConfig(c) {
+  const cfg = DEPTH.card, lift = !!VIEW.depth && !VIEW.phone;
+  c.depthConfig = lift ? `${cfg.perspective}/${cfg.blur}/${cfg.spread}/${cfg.radius}` : '';
+  c.el.style.perspective = lift ? cfg.perspective + 'px' : '';
+  c.shadow.style.boxShadow = `0 0 ${cfg.blur}px ${cfg.spread}px var(--shade)`; c.shadow.style.borderRadius = cfg.radius + 'px';
+  c.depthPending = false;
+}
+const cardsSetCraft = mask => { CD.craft = mask; };
+const cardsLitBy = craft => STOPS.map(s => s.crafts.includes(craft));
+
+function cardsClose(index = CD.last?.i) {
+  const st = CD.last;
+  if (CD.rm || JOURNEY.moving || !st || st.kind !== 'hold' || st.cardK[index] <= 0 || (CD.closed?.to === 0)) return false;
+  CD.closed = { i: index, P: st.P, k: st.cardK[index], from: st.cardK[index], to: 0, elapsed: 0 };
+  if (CD.list[index].el.contains(document.activeElement)) CD.list[index].btn.focus({ preventScroll: true });
+  return true;
+}
+function cardsOverride(st, dt, moving) {
+  const closed = CD.closed; let changed = false;
+  if (closed) {
+    if (st.kind !== 'hold' || st.i !== closed.i || (closed.leaving && !moving && st.P === closed.P)) { CD.closed = null; changed = true; }
+    else {
+      if (moving || st.P !== closed.P) closed.leaving = true;
+      const before = closed.k;
+      closed.elapsed = Math.min(CARD_CLOSE.time, closed.elapsed + dt); closed.k = lerp(closed.from, closed.to, easeIO(closed.elapsed / CARD_CLOSE.time));
+      st.cardK[closed.i] *= closed.k; st.cardOpen = Math.max(...st.cardK); changed = before !== closed.k;
+      if (closed.to === 1 && closed.elapsed === CARD_CLOSE.time) CD.closed = null;
+    }
+  }
+  CD.last = st; return changed;
+}
+
+function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
+  const W = CD.W, op = smooth(.5, 1, st.handoffT) * (1 - smooth(0, .4, st.blastT) * (1 - (st.exploreK || 0)));
+  const stonePx = Math.max(MARK.min, Math.min(MARK.max, MARK.k * st.cam.s));
+  const stepTop = VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h;
+  CD.list.forEach((c, i) => {
+    const H = c.H, oc = VIEW.phone ? [VIEW.w / 2, VIEW.h - H / 2 - WORLD.card.phoneBottom - (CD.steps ? STEPS.nav.bar : 0)] : [VIEW.w / 2, CD.steps ? Math.max(WORLD.card.gap + H / 2, Math.min(VIEW.h / 2 - WORLD.card.gap, stepTop - WORLD.card.gap - H / 2)) : VIEW.h / 2 - WORLD.card.gap];
+    const e = st.cardK[i], p = toScreen(st, MAP.waypoints[c.stop.w]);
+    const k0 = stonePx / (H * .95), k = Math.pow(k0, 1 - e);
+    const cx = p[0] + (oc[0] - p[0]) * e, ry = p[1] - stonePx * .5 - MARK.stand, cy = ry + (oc[1] - ry) * e;
+    c.el.style.transform = `translate(${(cx - W * k / 2).toFixed(2)}px,${(cy - H * k / 2).toFixed(2)}px) scale(${k.toFixed(5)})`;
+    const lit = CD.craft ? CD.craft[i] : false;
+    c.el.style.opacity = op * (CD.craft && !lit ? .55 : 1);
+    c.btn.style.opacity = 1 - smooth(0, .3, e);
+    c.face.style.opacity = smooth(.01, .1, e);
+    const cfg = DEPTH.card, lift = !!VIEW.depth && !VIEW.phone;
+    // Apply live style configuration after this frame callback; animation only writes transform/opacity.
+    const config = lift ? `${cfg.perspective}/${cfg.blur}/${cfg.spread}/${cfg.radius}` : '';
+    if (config !== c.depthConfig && !c.depthPending) { c.depthPending = true; queueMicrotask(() => cardsDepthConfig(c)); }
+    const lx = DEPTH.look ? look[0] / DEPTH.look : 0, ly = DEPTH.look ? look[1] / DEPTH.look : 0;
+    const inside = pointer[0] * VIEW.w >= cx - W * k / 2 && pointer[0] * VIEW.w <= cx + W * k / 2 && pointer[1] * VIEW.h >= cy - H * k / 2 && pointer[1] * VIEW.h <= cy + H * k / 2;
+    const plate = inside ? 0 : e;
+    const target = [cfg.tilt * (1 - smooth(...cfg.open, e)) - ly * cfg.ptrTilt[1] * plate, lx * cfg.ptrTilt[0] * plate, -lx * cfg.shift * plate, -ly * cfg.shift * plate];
+    c.tilt.forEach((v, j) => { c.tilt[j] = lift ? v + (target[j] - v) * cfg.ease : 0; if (Math.abs(c.tilt[j]) < cfg.flat) c.tilt[j] = 0; });
+    const [rx, ryTilt, sx, sy] = c.tilt;
+    c.face.style.transform = lift ? `${sx || sy ? `translate(${sx}px,${sy}px) ` : ''}${rx ? `rotateX(${rx}deg) ` : ''}${ryTilt ? `rotateY(${ryTilt}deg)` : ''}`.trim() : '';
+    c.shadow.style.opacity = lift ? cfg.shadow * e : 0;
+    c.shadow.style.transform = `translate(${-sx / cfg.shadowShare}px,${cfg.drop * e - sy / cfg.shadowShare}px)`;
+    c.inn.style.opacity = smooth(.4, .62, k);
+    c.fill.style.opacity = st.visited[i] || lit ? 1 : 0;
+    c.glow.style.opacity = lit ? 1 : 0;
+    const state = e > .96 ? 'open' : e < .02 ? 'rest' : 'moving';
+    if (state !== c.state) { c.state = state; c.el.dataset.state = state; c.face.inert = state !== 'open'; c.btn.tabIndex = state === 'rest' ? 0 : -1; }
+    if (c.reopenFocus && (JOURNEY.moving || st.kind !== 'hold' || st.i !== i)) c.reopenFocus = false;
+    if (c.reopenFocus && state === 'open') { c.reopenFocus = false; c.el.querySelector('.c-close').focus({ preventScroll: true }); }
+  });
+}
+const cardsList = () => CD.list;
+
+// ---- timeline.mjs ----
+// The timeline bar: a quiet instrument pinned to the bottom; in the footer it becomes the rule under the name.
+
+
+const TL = { el: null, track: null, head: null, rows: null, fades: [], blocks: [], tip: null, count: null, trackW: 1, viewW: 1, sx: 1, dx: 0, dy: 0, ox: 0, oy: 0, val: '', drag: null, off: 0, rm: false };
+const Y0 = 2016;
+const xOf = d => (d - Y0) / (DATE_NOW - Y0);
+const fmt = (s, o) => s.replace(/\{(\w+)\}/g, (m, k) => o[k]);
+
+function tlBuild(el, hooks, rm) {
+  TL.el = el; TL.hooks = hooks; TL.rm = rm;
+  let ticks = ''; for (let y = Y0; y <= Math.floor(DATE_NOW); y++) ticks += `<i class="tl-tick" style="left:${(xOf(y) * 100).toFixed(3)}%"><b>'${String(y % 100).padStart(2, '0')}</b></i>`;
+  let blocks = { school: '', work: '' };
+  STOPS.forEach((s, i) => s.spans.forEach(sp => { const a = xOf(yearOf(sp[0])), b = xOf(yearOf(sp[1], 1)); blocks[s.track] += `<span class="tl-blk" data-i="${i}" style="left:${(a * 100).toFixed(3)}%;width:${((b - a) * 100).toFixed(3)}%;--mk:${PALETTES[s.palette].mark}"><em></em></span>`; }));
+  el.innerHTML = `<div class="tl-bg tl-f"></div><div class="tl-view"><div class="tl-track"><div class="tl-ticks tl-f">${ticks}</div><div class="tl-rows tl-f"><div class="tl-row">${blocks.school}</div><div class="tl-row">${blocks.work}</div></div><div class="tl-head"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0 -7Q0 0 7 0Q0 0 0 7Q0 0 -7 0Q0 0 0 -7Z"/></svg></div></div></div><div class="tl-base"></div><span class="tl-count tl-f" aria-live="polite"></span><div class="tl-tip" aria-hidden="true"></div>`;
+  el.setAttribute('role', 'slider'); el.tabIndex = 0; el.setAttribute('aria-label', COPY.timeline);
+  el.setAttribute('aria-valuemin', Y0); el.setAttribute('aria-valuemax', Math.floor(DATE_NOW));
+  TL.track = el.querySelector('.tl-track'); TL.head = el.querySelector('.tl-head'); TL.rows = el.querySelector('.tl-rows');
+  TL.fades = [...el.querySelectorAll('.tl-f')]; TL.tip = el.querySelector('.tl-tip'); TL.count = el.querySelector('.tl-count');
+  TL.blocks = [...el.querySelectorAll('.tl-blk')].map(b => ({ el: b, em: b.firstChild, i: +b.dataset.i }));
+  TL.view = el.querySelector('.tl-view'); TL.base = el.querySelector('.tl-base');
+  TL.blocks.forEach(b => {
+    b.el.addEventListener('pointerenter', () => tipFor(b.i, b.el));
+    b.el.addEventListener('pointerleave', () => TL.tip.classList.remove('on'));
+  });
+  el.addEventListener('focus', () => { const i = currentStop(TL.lastP || 0); if (i >= 0) tipFor(i, null); });
+  el.addEventListener('blur', () => TL.tip.classList.remove('on'));
+  el.addEventListener('keydown', e => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return; e.preventDefault();
+    if (e.key === 'Home' || e.key === 'End') { TL.hooks.jump(e.key === 'Home' ? 0 : STOPS.length - 1); return; }
+    const P = TL.lastP || 0, cur = currentStop(P);
+    let i = e.key === 'ArrowRight' ? cur + 1 : (P > progressForStop(Math.max(cur, 0)) + 1 ? cur : cur - 1);
+    i = Math.max(0, Math.min(STOPS.length - 1, i)); TL.hooks.jump(i);
+  });
+  el.addEventListener('pointerdown', e => {
+    TL.drag = { x: e.clientX, moved: false, P: TL.lastP || 0, blk: e.target.closest('.tl-blk') };
+    el.setPointerCapture(e.pointerId);
+  });
+  el.addEventListener('pointermove', e => {
+    const d = TL.drag; if (!d || TL.rm) return;
+    if (!d.moved && Math.abs(e.clientX - d.x) < 4) return; d.moved = true;
+    if (!d.started) { d.started = true; TL.dateStart = TL.lastDate; }
+    const r = TL.viewRect; let date;
+    if (VIEW.phone) date = TL.dateStart - (e.clientX - d.x) / TL.trackW * (DATE_NOW - Y0);
+    else date = Y0 + (e.clientX - r.left) / TL.trackW * (DATE_NOW - Y0);
+    TL.hooks.scrub(progressForDate(Math.max(Y0, Math.min(DATE_NOW, date))));
+  });
+  const end = () => { const d = TL.drag; TL.drag = null; if (d && !d.moved && d.blk) TL.hooks.jump(+d.blk.dataset.i); };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', () => { TL.drag = null; });
+}
+function tipFor(i, blk) {
+  const s = STOPS[i]; TL.tip.textContent = fmt(COPY.timelineValue, { name: s.name, dates: s.dates });
+  const r = blk ? blk.getBoundingClientRect() : null, er = TL.el.getBoundingClientRect();
+  TL.tip.style.transform = `translateX(${Math.max(8, Math.min(er.width - 220, (r ? r.left - er.left : TL.headX + TL.viewRect.left - er.left) - 10)).toFixed(0)}px)`;
+  TL.tip.classList.add('on');
+}
+const currentStop = P => { let c = -1; STOPS.forEach((s, i) => { if (P >= holdStart(i)) c = i; }); return c; };
+const tlSetCount = (n, t) => { TL.count.textContent = fmt(n === t ? COPY.countAll : COPY.count, { n, t }); };
+const tlSetCraft = mask => TL.blocks.forEach(b => { b.el.classList.toggle('craft-lit', !!mask?.[b.i]); b.el.style.opacity = mask && !mask[b.i] ? FIND_PLAY.way.timelineDim : 1; });
+
+function tlResize(ruleRect) {
+  const el = TL.el; el.style.transform = 'none';
+  TL.viewRect = TL.view.getBoundingClientRect(); TL.viewW = TL.viewRect.width;
+  TL.trackW = VIEW.phone ? TL.viewW * 2.4 : TL.viewW; TL.track.style.width = TL.trackW + 'px';
+  if (ruleRect) {
+    const b = TL.base.getBoundingClientRect(), er = el.getBoundingClientRect();
+    TL.ox = b.left - er.left; TL.oy = b.top - er.top; el.style.transformOrigin = `${TL.ox}px ${TL.oy}px`;
+    TL.sx = ruleRect.width / b.width; TL.dx = ruleRect.left - b.left; TL.dy = ruleRect.top - b.top;
+  }
+}
+function tlFrame(st) {
+  TL.lastP = st.P; TL.lastDate = st.date;
+  if (TL.rm) return;
+  const show = easeIO(smooth(0, .4, st.overviewT));
+  const m = easeIO(smooth(.3, .85, st.settleT)), fade = (1 - st.cardOpen * .9) * (1 - smooth(0, .6, st.rushT));
+  const sx = lerp(1, TL.sx, m);
+  TL.el.style.transform = `translate(${(TL.dx * m).toFixed(2)}px,${(TL.dy * m + (1 - show) * 80).toFixed(2)}px) scaleX(${sx.toFixed(4)})`;
+  TL.el.style.opacity = show;
+  TL.fades.forEach(f => f.style.opacity = fade);
+  TL.rows.style.transform = `scaleY(${(1 - st.cardOpen * .85).toFixed(3)})`;
+  const hx = xOf(st.date) * TL.trackW; TL.headX = hx;
+  TL.off = VIEW.phone ? Math.max(TL.viewW - TL.trackW, Math.min(0, TL.viewW / 2 - hx)) : 0;
+  TL.track.style.transform = `translateX(${TL.off.toFixed(2)}px)`;
+  TL.headX = hx + TL.off;
+  TL.head.style.transform = `translateX(${hx.toFixed(2)}px) scaleX(${(1 / sx).toFixed(4)})`;
+  TL.blocks.forEach(b => b.em.style.opacity = st.visited[b.i] ? 1 : 0);
+  const i = currentStop(st.P), v = i < 0 ? COPY.timelineStart : fmt(COPY.timelineValue, { name: STOPS[i].name, dates: STOPS[i].dates });
+  if (v !== TL.val) { TL.val = v; TL.el.setAttribute('aria-valuetext', v); TL.el.setAttribute('aria-valuenow', Math.floor(st.date)); }
 }
 
 // ---- footname.mjs ----
@@ -3864,7 +3905,33 @@ function footerResize() {
   const s = FT.name, weight = s.style.fontWeight; s.style.fontWeight = FOOT_NAME.weight[1]; s.style.fontSize = FOOT_NAME.measureSize + 'px';
   const avail = FT.name.parentElement.clientWidth, w = s.getBoundingClientRect().width;
   s.style.fontSize = (FOOT_NAME.measureSize * avail / w).toFixed(2) + 'px'; footnameMeasure({ c: 1, dx: 0, dy: 0 }); s.style.fontWeight = weight;
+  footerPhoneMeasure();
   return FT.rule.getBoundingClientRect();
+}
+// The same boxes drive resize layout and the Node gate. They describe the settled footer.
+function footerPhoneLayout({ w, h, goBottom, headlineH, talkW, talkH, nameTop }) {
+  const L = PHONE_LAYOUT, top = Math.max(h * L.ctaShare, goBottom + L.gap), headline = [L.edge, top, w - L.edge, top + headlineH];
+  const talk = [L.edge, headline[3] + L.headlineGap, L.edge + talkW, headline[3] + L.headlineGap + talkH];
+  const novaY = Math.max(CAMERA.footerXPhone[1] * h, talk[3] + L.gap + NOVA.flare.hit), x = CAMERA.footerXPhone[0] * w;
+  const target = [x - NOVA.flare.hit, novaY - NOVA.flare.hit, x + NOVA.flare.hit, novaY + NOVA.flare.hit];
+  return { top, headline, talk, novaY, target, spacer: target[3] + L.gap - talk[3], nameTop: Math.max(nameTop, target[3] + L.gap), fits: target[3] + L.gap <= nameTop };
+}
+function footerPhoneMeasure() {
+  FT.inner.style.paddingTop = '';
+  const spacer = FT.el.querySelector('.ft-sp'); spacer.style.minHeight = '';
+  if (!VIEW.phone || FT.rm) return;
+  const go = document.getElementById('go'), root = document.documentElement;
+  if (!go) return;
+  // Measure the end bar even when it is hidden or currently showing another journey beat.
+  const hidden = go.hidden, end = go.classList.contains('go-end'), exploring = root.classList.contains('jm-explore'), focused = root.classList.contains('jm-focus');
+  const next = go.querySelector('.go-t'), nextText = next.textContent;
+  const children = [...go.querySelectorAll('button')].map(el => [el, el.hidden]);
+  go.hidden = false; go.classList.add('go-end'); root.classList.remove('jm-explore'); root.classList.remove('jm-focus'); next.textContent = COPY.explore.button; children.forEach(([el]) => el.hidden = false);
+  const goBottom = go.getBoundingClientRect().bottom;
+  go.hidden = hidden; go.classList.toggle('go-end', end); root.classList.toggle('jm-explore', exploring); root.classList.toggle('jm-focus', focused); next.textContent = nextText; children.forEach(([el, value]) => el.hidden = value);
+  const headline = FT.el.querySelector('.ft-q').getBoundingClientRect(), talk = FT.el.querySelector('.ft-talk').getBoundingClientRect(), name = FT.name.parentElement.getBoundingClientRect();
+  const layout = footerPhoneLayout({ w: VIEW.w, h: VIEW.h, goBottom, headlineH: headline.height, talkW: talk.width, talkH: talk.height, nameTop: name.top });
+  FT.inner.style.paddingTop = layout.top + 'px'; spacer.style.minHeight = layout.spacer + 'px'; VIEW.footerY = layout.novaY;
 }
 const footerStyle = (el, key, value) => { const text = String(value); if (el && el.style[key] !== text) el.style[key] = text; };
 function footerFrame(st) {
@@ -4405,7 +4472,7 @@ function findHoards(svg) {
       attr(h.chest, 'transform', 'translate(0 ' + h.y + ') rotate(' + rock + ' ' + h.pivot + ' 0)');
       if (h.stage === 'opening' || h.stage === 'bouncing') {
         if (h.stage === 'opening') {
-          const e = t - h.openTs; h.lidAngle = e < H.lidTime ? H.lidPeak * out3(e / H.lidTime) : lerp(H.lidPeak, H.lidRest, ease((e - H.lidTime) / H.lidSettle));
+          const e = t - h.openTs; h.lidAngle = e < H.lidTime ? H.lidPeak * ((1 - Math.cos(Math.PI * clamp01(e / H.lidTime))) / 2) : lerp(H.lidPeak, H.lidRest, (1 - Math.cos(Math.PI * clamp01((e - H.lidTime) / H.lidSettle))) / 2);
           if (FD.rm || e >= H.lidTime + H.lidSettle) { h.lidAngle = H.lidRest; stage('open'); if (h.pending) { h.pending = false; queueMicrotask(show); } }
         } else { const q = clamp01((t - h.bounceTs) / H.lidBounce); h.lidAngle = H.lidRest + (H.lidPeak - H.lidRest) * Math.sin(Math.PI * q) ** 2; if (q === 1) stage('open'); }
         paintLid();
@@ -4453,7 +4520,7 @@ function findRavens(svg) {
       const edge = ((b.side < 0 ? 0 : VIEW.w) - cam.tx) / cam.s;
       b.range = Math.max(R.reach, (b.side * (edge - mapX) + G.offFrame) / R.scale + G.birdMargin);
       b.startTs = FD.now + (kind === 'hear' ? b.i * G.loopGap : 0);
-      findBits('feather', mapX, f.y + b.flightBase[1] * R.scale, R.feathers, FIND_PLAY.bits.feathers);
+      b.shed = false;
     });
   };
   const request = () => {
@@ -4503,6 +4570,12 @@ function findRavens(svg) {
         const liftTime = hearing ? G.loopTakeoff : G.crouch;
         if (age < liftTime) { mode = 'crouch'; q = ravenPose('sit', 'unfold', ease(age / liftTime)); }
         else if (age < duration) {
+          if (!b.shed) {
+            b.shed = true;
+            // The tail is behind the outward-facing bird; shed only when its wings actually lift.
+            const tail = G.featherAt;
+            findBits('feather', f.x + (b.flightBase[0] - b.side * tail[0]) * R.scale, f.y + (b.flightBase[1] + tail[1]) * R.scale, R.feathers, FIND_PLAY.bits.feathers);
+          }
           let velocity = [b.side, 0], landing = 0;
           if (hearing) {
             mode = 'loop'; const u = clamp01((age - G.loopTakeoff) / G.loopTime), a = b.side * Math.PI * 2 * u, [cx, cy] = G.loopCentre, vx = -b.side * cx, vy = -cy;
@@ -5118,8 +5191,8 @@ function hammerStep(s, input, dt) {
 
 function hammerBestRead(fallback = 0) { try { const value = Number(localStorage.getItem(HAMMER.ui.bestKey)); return Number.isFinite(value) && value >= 0 ? Math.max(fallback, value) : fallback; } catch { return fallback; } }
 function hammerBestWrite(score, fallback = 0) { const best = Math.max(score, hammerBestRead(fallback)); try { localStorage.setItem(HAMMER.ui.bestKey, String(best)); } catch {} return best; }
-const hammerText = (key, values = {}) => findFormat(FIND_COPY.hammer[key], { ...values, s: values.n === 1 ? '' : 's' });
-const hammerRuneNumber = (r, n) => r === 1 || r === 11 ? n * HAMMER.throw.ride * 100 : r === 3 ? HAMMER.hearts + n : r === 4 ? n * HAMMER.rune.hail : r === 5 ? n + 1 : r === 6 ? n * HAMMER.rune.ice * 100 : n;
+const hammerText = (key, values = {}) => findFormat(FIND_COPY.hammer[key], { ...values, s: (key === 'stats' ? values.foes : key === 'hearts' ? values.max : values.n) === 1 ? '' : 's' });
+const hammerRuneNumber = (r, n) => Math.round(r === 1 || r === 11 ? n * HAMMER.throw.ride * 100 : r === 3 ? HAMMER.hearts + n : r === 4 ? n * HAMMER.rune.hail : r === 5 ? n + 1 : r === 6 ? n * HAMMER.rune.ice * 100 : n);
 const hammerRuneArt = (r, small = false) => { const U = HAMMER.ui, h = small ? U.mini : U.rune, w = small ? U.miniW : U.runeW, g = runeGlyph(HAMMER.runes[r].key, h); return `<svg viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${g.d}"/></svg>`; };
 
 function findHammer(svg) {
@@ -5193,7 +5266,18 @@ function findHammer(svg) {
     c.save(); if (s && !FD.rm && s.shake > 0) c.translate(Math.sin(s.time * HAMMER.map.trembleRate) * HAMMER.fx.shake * s.shake / HAMMER.fx.life, 0);
     for (let i = 0; i < o.paths.bridge.length; i++) paintPath(o.paths.bridge[i], 0, 0, i % 2 ? C.note : C.dim);
     if (s) {
-      for (let i = 0; i < s.cells.length; i++) { const p = s.cells[i]; if (p.live) paintPath(o.paths.shield, p.x, p.y, C.dim); }
+      // Clip the shield wall to the original live cell tiles: a lost cell takes its wood and rim with it.
+      const W = HAMMER.shield, A = HAMMER.paths.wall;
+      for (let wall = 0; wall < W.walls; wall++) {
+        const first = wall * W.rows * W.double * W.columns; let tiles = '';
+        for (let i = first; i < first + W.rows * W.double * W.columns; i++) { const p = s.cells[i]; if (p.live) tiles += `M${p.x - W.cell / 2} ${p.y - W.cell / 2}h${W.cell}v${W.cell}h${-W.cell}Z`; }
+        c.save(); c.clip(new Path2D(tiles));
+        for (let row = 0; row < W.double; row++) for (const dx of A.centres) {
+          const x = W.x + wall * W.gap + dx, y = W.y - W.cell - row * W.rows * W.cell;
+          c.save(); c.translate(x, y); c.fillStyle = C.ink; c.fill(o.paths.wallRim); c.strokeStyle = C.note; c.stroke(o.paths.wallRim); c.strokeStyle = C.dim; c.stroke(o.paths.wallPlanks); c.strokeStyle = C.paper; c.stroke(o.paths.wallBoss); c.restore();
+        }
+        c.restore();
+      }
       for (let i = 0; i < s.foes.length; i++) {
         const p = s.foes[i]; if (!p.live) continue; c.globalAlpha = !FD.rm && p.flash ? HAMMER.fx.flashAlpha : 1; paintSprite(p.kind, p.x, p.y); c.globalAlpha = 1;
         if (p.kind === 'rime' && p.hp < p.max) paintPath(o.paths.crack, p.x, p.y, C.note);
@@ -5236,7 +5320,8 @@ function findHammer(svg) {
     const q = selector => FD.sheet.querySelector(selector);
     o.canvas = q('.hm-canvas'); o.card = q('.hm-card'); o.status = q('.hm-status'); o.wave = q('.hm-wave'); o.hearts = q('.hm-hearts'); o.silver = q('.hm-silver'); o.autoButton = q('.hm-auto'); o.pauseButton = q('.hm-pause'); o.cardKey = null;
     o.paths = { bridge: HAMMER.paths.bridge.map(d => new Path2D(d)), shot: HAMMER.paths.shot.map(d => new Path2D(d)), fragments: HAMMER.paths.fragments.map(row => new Path2D(row[2])) };
-    for (const key of ['shield', 'spark', 'crack', 'stoneHeart']) o.paths[key] = new Path2D(HAMMER.paths[key]);
+    for (const key of ['spark', 'crack', 'stoneHeart']) o.paths[key] = new Path2D(HAMMER.paths[key]);
+    for (const [key, path] of Object.entries(HAMMER.paths.wall.paths)) o.paths[key] = new Path2D(path);
     measure(); refresh(); draw();
     q('.hm-close').addEventListener('click', () => closeSheet()); o.autoButton.addEventListener('click', toggle); o.pauseButton.addEventListener('click', () => o.game?.paused ? resume() : pause());
     const point = e => { const box = o.canvas.getBoundingClientRect(); o.input.target = (e.clientX - box.left) * HAMMER.field.w / box.width; };
