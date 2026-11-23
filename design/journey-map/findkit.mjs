@@ -3,7 +3,7 @@ import { C, FINDS, FIND_COPY, FIND_PLAY, FIND_TIMING, COPY } from './data.mjs';
 import { VIEW, toScreen, clamp01, lerp, easeIO, WATER, pointAt } from './trip.mjs';
 import { findRnd, starPath } from './art.mjs';
 import { tlSetCount } from './timeline.mjs';
-import { JOURNEY, stepsFocus, stepsRelease } from './steps.mjs';
+import { JOURNEY, stepsFocus, stepsRelease, stepsFocusNow } from './steps.mjs';
 
 export const FD = { st: null, now: 0, dt: 0, pointer: [-Infinity, -Infinity], pointerT: -Infinity, found: new Set(), last: null, list: {}, popOwner: null, sheetOwner: null, bits: [], serial: 0, flights: [], flight: null, landed: 0, hover: false, focusId: null, overlayEpoch: 0 };
 export const D = s => FD.rm ? Number.EPSILON : s;
@@ -14,6 +14,11 @@ export const attr = (el, k, v) => el.setAttribute(k, v);
 export const toMap = p => [(p[0] - FD.st.cam.tx) / FD.st.cam.s, (p[1] - FD.st.cam.ty) / FD.st.cam.s];
 export const FIND_BY = Object.fromEntries(FINDS.map(f => [f.id, f]));
 export const findRandom = findRnd;
+export const findReady = id => {
+  if (FD.rm || FD.st?.exploring) return true;
+  const f = stepsFocusNow();
+  return JOURNEY.mode === 'steps' && JOURNEY.focus === id && f?.id === id && f.k === 1 && f.swapped;
+};
 export const findRange = pair => lerp(pair[0], pair[1], findRandom());
 export const findFormat = (s, values) => s.replace(/\{(\w+)\}/g, (m, k) => values[k]);
 export const findAngleDelta = (a, b) => ((b - a + FIND_PLAY.kit.deg) % FIND_PLAY.kit.turn + FIND_PLAY.kit.turn) % FIND_PLAY.kit.turn - FIND_PLAY.kit.deg;
@@ -60,7 +65,7 @@ export const press = (el, fn) => {
   el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e); } });
 };
 export function showPop(owner, anchor, html, cls = '', side = 'auto') {
-  if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return;
+  if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return false;
   closePop(); FD.popOwner = owner; FD.popAnchor = anchor; FD.popSide = side; FD.popP = FD.st.P; FD.popTs = FD.now;
   FD.pop.className = 'pop on ' + cls;
   FD.pop.innerHTML = `<div class="pop-in"><div class="pop-body">${html}</div><i class="pop-tail" aria-hidden="true"></i></div>`;
@@ -70,6 +75,7 @@ export function showPop(owner, anchor, html, cls = '', side = 'auto') {
   FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go, .tl, .jm-focus .find-hint')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
   placePop();
   FD.popInner.style.transformOrigin = `${FD.popOrigin[0]}px ${FD.popOrigin[1]}px`;
+  return true;
 }
 export function closePop() {
   const o = FD.popOwner; if (!o) return;
@@ -93,6 +99,7 @@ export function findSheet(owner, cls, html, anchor) {
   closeSheet(true); closePop();
   FD.sheetOwner = owner; FD.sheetP = FD.st.P; FD.sheetFrom = toScreen(FD.st, anchor); FD.sheetTs = FD.now;
   FD.sheet.className = 'sheet on ' + cls; FD.sheet.innerHTML = html;
+  document.documentElement.classList.add('jm-sheet-open');
   FD.sheet.setAttribute('aria-label', FIND_BY[owner.id].label); FD.sheet.tabIndex = -1;
   const target = FD.sheet.querySelector('button:not([hidden])') || FD.sheet; target.focus({ preventScroll: true });
   return true;
@@ -101,6 +108,7 @@ export function closeSheet(force = false) {
   const o = FD.sheetOwner; if (!o) return;
   if (!force && o.beginClose && o.beginClose()) return;
   FD.sheetOwner = null; FD.sheet.className = 'sheet'; FD.sheet.innerHTML = '';
+  document.documentElement.classList.remove('jm-sheet-open');
   if (o.onSheetClose) o.onSheetClose(); o.el?.focus({ preventScroll: true });
 }
 export function findBits(kind, x, y, n, options = {}) {
@@ -155,7 +163,7 @@ export function findKitFrame() {
   if (FD.sheetOwner && Math.abs(FD.st.P - FD.sheetP) > FIND_TIMING.closeScroll) closeSheet();
 }
 // The hint line keeps its words while it fades out, so it changes only when a find takes the camera.
-export function findHint(id) { if (FD.hint && id) FD.hint.textContent = FIND_COPY.hints[id.startsWith('hoard') ? 'hoards' : id] || ''; }
+export function findHint(id) { if (FD.hint && id) FD.hint.textContent = FD.list.hoards?.items.find(h => h.id === id)?.hintLine || FIND_COPY.hints[id.startsWith('hoard') ? 'hoards' : id] || ''; }
 export function findCapture(e) {
   if (FD.rm || JOURNEY.mode !== 'steps' || !FD.st) return;
   if (e.type === 'keydown' && !['Enter', ' '].includes(e.key)) return;

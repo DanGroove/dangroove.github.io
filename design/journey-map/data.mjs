@@ -127,7 +127,7 @@ export const COPY = {
 export const FINDS = [
   { id: 'wayfinder', n: 1, x: 102, y: 716, view: [250, 660, 150], viewPhone: [118, 716, 75, 0], mark: [148, 672], label: 'The wayfinder. Pick a craft to light up the stops that used it. Arrow keys turn it, Enter on the centre clears it.' },
   { id: 'hoards', n: 2, x: 366, y: 354, mark: [382, 346], label: 'Hoards. Five buried chests, each near a stop.' },
-  { id: 'ravens', n: 3, x: 456, y: 192, view: [456, 164, 44], mark: [478, 176], label: 'Huginn and Muninn, two ravens on a standing stone. Press to send the next raven for a thought or memory.' },
+  { id: 'ravens', n: 3, x: 442, y: 200, view: [444, 180, 42], mark: [464, 192], label: 'Huginn and Muninn, two ravens in a bare tree. Press to send the next raven for a thought or memory.' },
   { id: 'serpent', n: 4, x: 500, y: 101, view: [478, 96, 50], mark: [550, 74], label: 'J?rmungandr, the world serpent. Poke it three times to feed it a deadline.' },
   { id: 'beacon', n: 5, x: 536, y: 514, view: [468, 498, 92], mark: [558, 478], label: 'The beacon. Drag or arrows aim; Enter finds the next unread note.' },
   { id: 'runestone', n: 6, x: 250, y: 516, view: [250, 500, 40], mark: [270, 492], label: 'The rune stone. Press, rub, read, then flip the sheet.' },
@@ -204,6 +204,7 @@ export const FIND_COPY = {
   crafts: ['PRINT', 'VIDEO', 'MOTION', 'SCREEN'],
   wayfinderRunes: 'print video motion screen',
   wayTally: '{craft}: {n} of {t} stops', wayAll: 'All four: {names}', hoardTally: 'Hoard {n} of {t}',
+  hoardHints: ['Dig three times, then open it.', 'Dig twice more.', 'Dig once more.', 'Open it.', 'Press it to see the piece again.'],
   huginn: 'Huginn, thought', muninn: 'Muninn, memory', ravenFrom: 'Brought back from {name}',
   reelToCome: { t: 'Reel to come', todo: 1 }, reelLabel: 'Memory reel, piece to come', rubDo: 'Rub it for me',
   serpentLeaves: [['FRI', '5 PM'], ['TODAY', 'EOD'], ['NOW', 'ASAP']], serpentFed: 'Deadline met',
@@ -236,7 +237,7 @@ export const FIND_COPY = {
     runeTaken: '{name}, level {n}, taken.', runeLevel: '{key}. {name}, level {n}. {line}',
     pause: 'Paused', pauseButton: 'Pause', resume: 'Resume', newRun: 'New run', close: 'Close', auto: 'Keep throwing',
     lost: 'The bridge fell at wave {n}.', lostHearts: 'Your hearts gave out at wave {n}.', won: 'Hrungnir falls. The bridge holds.',
-    heartLost: 'A heart lost. {n} remain.', gift: 'A Valkyrie leaves a heart and silver.',
+    heartLost: 'A heart lost. {n} heart{s} left.', gift: 'A Valkyrie leaves a heart and silver.',
     stats: '{silver} silver. {foes} foes felled.', best: 'Best run: {silver} silver.', silver: '{n} silver', hearts: '{n} of {max} hearts', runes: 'Runes taken',
     boss: 'Hrungnir', clay: 'Mökkurkálfi rises.', heart: "Hrungnir's stone heart is bare.",
     foes: { draugr: 'Draugr', rime: 'Rime giant', fire: 'Son of Múspell', wolf: 'Wolf', chief: 'Giant chief' },
@@ -246,12 +247,12 @@ export const FIND_COPY = {
       ['Shield-maidens', 'The shield wall stands doubled.'], ["Hel's tide", 'A fallen draugr rises once.'],
     ],
     runes: [
-      ['Thurisaz, thorn', 'Pass through {n} more foes on the way up.'], ['Raidho, ride', 'Fly {n}% faster, out and back.'],
-      ['Kenaz, torch', 'Burn for 1 damage after 0.8 s; spread to {n} neighbours.'], ['Gebo, gift', 'Gain one heart now; hold {n} hearts at most.'],
-      ['Hagalaz, hail', 'Throw {n} hail shards sideways when the hammer turns.'], ['Naudiz, need', 'With one heart, hit {n} times as hard.'],
-      ['Isa, ice', 'Foes and their shots move {n}% slower.'], ['Jera, harvest', 'Heal {n} hearts when a wave is held.'],
-      ['Eihwaz, yew', 'Hit {n} harder on the way back.'], ['Laguz, water', 'Bend toward the nearest foe at strength {n}.'],
-      ['Dagaz, day', 'Survive {n} ending blows per run; clear the falling shots.'], ['Ehwaz, horse', 'Move the glove {n}% faster.'],
+      ['Thurisaz, thorn', 'Pass through {n} more foe{s} on the way up.'], ['Raidho, ride', 'Fly {n}% faster, out and back.'],
+      ['Kenaz, torch', 'Burn for 1 damage after 0.8 s; spread to {n} neighbour{s}.'], ['Gebo, gift', 'Gain one heart now; hold {n} heart{s} at most.'],
+      ['Hagalaz, hail', 'Throw {n} hail shard{s} sideways when the hammer turns.'], ['Naudiz, need', 'With one heart, hit {n} time{s} as hard.'],
+      ['Isa, ice', 'Foes and their shots move {n}% slower.'], ['Jera, harvest', 'Heal {n} heart{s} when a wave is held.'],
+      ['Eihwaz, yew', 'Deal {n} more damage on the way back.'], ['Laguz, water', 'Bend toward the nearest foe at strength {n}.'],
+      ['Dagaz, day', 'Survive {n} ending blow{s} per run; clear the falling shots.'], ['Ehwaz, horse', 'Move the glove {n}% faster.'],
     ],
   },
   horn: ['Skál.', { t: 'A line from someone I worked with goes here.', todo: 1 }],
@@ -371,6 +372,79 @@ export const NOVA = {
 export const FIND_TIMING = { burst: 0.7, dig: 0.6, ravenLoop: 1.1, reel: 5, iris: 0.5, serpentSink: 0.9, serpentSurface: 1.0, beamSweep: 0.35, beamCone: 22, noteDelay: 0.4, carving: 1.0, unroll: 0.8, slide: 0.35, ripple: 0.9, closeScroll: 8 };
 
 // Part A live tuning. Geometry, copy, dimensions and clocks are read by the find kit.
+// Round 7 C2: reference rig geometry, with no runtime dependency on the reference.
+export const RAVEN_RIG = (() => {
+  const n1 = n => +(+n).toFixed(2);
+  const P = a => a.map(([c, ...v]) => c + v.map(n1).join(' ')).join('');
+// rounded bumps along a polyline (outward = left of travel), for feather edges
+  const bumps = (pts, b) => { let d = ''; for (let i = 0; i < pts.length - 1; i++) { const a = pts[i], c = pts[i + 1], mx = (a[0] + c[0]) / 2, my = (a[1] + c[1]) / 2, dx = c[0] - a[0], dy = c[1] - a[1], L = Math.hypot(dx, dy) || 1; d += `Q${n1(mx + dy / L * b * L)} ${n1(my - dx / L * b * L)} ${n1(c[0])} ${n1(c[1])}`; } return d; };
+// body and tail, one outline
+  const BODY = P([['M', 6.4, -12.4], ['C', 7.4, -10.4, 6.9, -7.3, 4.5, -5.3], ['C', 2.7, -3.9, -0.8, -3.4, -4.0, -4.0],
+  ['L', -8.8, -0.6], ['L', -13.4, 2.1], ['L', -12.9, -0.4], ['L', -12.4, -1.8], ['L', -7.6, -6.6],
+  ['C', -6.2, -9.0, -3.2, -12.0, 0.6, -13.8], ['C', 2.4, -14.7, 4.2, -15.0, 5.6, -14.6], ['Z']]);
+  const TAILLINES = P([['M', -8.6, -3.4], ['L', -12.6, 0.6], ['M', -9.0, -5.0], ['L', -12.5, -1.0]]);
+// head, relative to the neck point N: a fill that reaches into the body, and an open outline (no seam at the neck)
+  const N = [4.4, -14.2];
+  const HEADLINE = [['M', -2.2, -0.6], ['C', -2.2, -2.0, -1.4, -3.2, 0.2, -3.7], ['C', 1.4, -4.0, 2.6, -3.8, 3.6, -3.2],
+  ['C', 5.8, -3.1, 8.4, -2.3, 10.2, -0.7], ['C', 10.3, -0.4, 10.1, -0.1, 9.8, -0.1], ['C', 8.0, -0.1, 6.0, 0.1, 4.0, 0.3],
+  ['L', 3.5, 0.2], ['L', 3.7, 1.1], ['L', 2.8, 0.8], ['L', 3.0, 1.9], ['L', 2.0, 1.5], ['L', 2.1, 2.6], ['L', 1.3, 2.1], ['L', 1.4, 3.0]];
+  const HEADFILL = P([...HEADLINE, ['L', -1.0, 3.4], ['L', -3.0, 1.6], ['Z']]);
+  const HEADOUT = P(HEADLINE);
+  const BILL = P([['M', 3.4, -1.2], ['C', 5.2, -1.4, 7.2, -1.1, 8.8, -0.6], ['M', 3.6, -3.1], ['C', 4.3, -2.6, 4.9, -2.1, 5.3, -1.6]]);
+  const EYE = [1.5, -2.2, 0.4];
+// the wing, drawn open with its length straight up from the shoulder (origin), the hand's fingers at the top, the fan to the back (-x)
+  const TIPS = [[-1.0, -20.0], [-3.3, -21.2], [-5.8, -20.8], [-8.0, -19.2], [-9.7, -16.6]];
+  const HC = [-4.6, -10.0]; // the hand's centre, for the notches between fingers
+  const fingers = () => {
+  let d = ''; const dir = t => { const dx = t[0] - HC[0], dy = t[1] - HC[1], L = Math.hypot(dx, dy); return [dx / L, dy / L]; };
+  TIPS.forEach((t, i) => {
+    const [ux, uy] = dir(t), px = -uy, py = ux, w = 0.85, r = 1.1;
+    const a = [t[0] - ux * r + px * w, t[1] - uy * r + py * w], b = [t[0] - ux * r - px * w, t[1] - uy * r - py * w];
+    d += `L${n1(a[0])} ${n1(a[1])}Q${n1(t[0] + ux * 0.5)} ${n1(t[1] + uy * 0.5)} ${n1(b[0])} ${n1(b[1])}`;
+    if (i < TIPS.length - 1) { const nx = (t[0] + TIPS[i + 1][0]) / 2, ny = (t[1] + TIPS[i + 1][1]) / 2, k = 0.42; d += `L${n1(nx + (HC[0] - nx) * k)} ${n1(ny + (HC[1] - ny) * k)}`; }
+  });
+  return d;
+};
+  const TRAIL = [[-10.0, -13.8], [-9.8, -10.6], [-9.0, -7.6], [-7.8, -4.8], [-5.8, -2.2], [-3.0, 0.0], [0.8, 0.6]];
+  const WING = `M0.8 0.6C1.2 -3.6 1.0 -7.6 -0.2 -11.4` + fingers() + `L-10.0 -13.8` + bumps(TRAIL, 0.16) + 'Z';
+  const WINGLINES = P([['M', -0.6, -11.2], ['C', -3.4, -10.0, -6.6, -10.2, -9.6, -11.6], ['M', -0.4, -6.2], ['C', -2.8, -5.4, -5.6, -5.4, -8.8, -6.6]]);
+  const S = [0.4, -11.8]; // shoulder
+  const LEGS = P([['M', -0.9, -3.8], ['L', -0.7, 0], ['M', 1.3, -3.9], ['L', 1.6, 0], ['M', -2.2, 0.1], ['L', 0.4, 0.1], ['M', 0.4, 0.1], ['L', 2.8, 0.2]]);
+  const HIP = [0.2, -4.0], PIV = [-2.0, -8.0]; // the body group turns about PIV
+  const POSES = {
+  sit: { sq: [1, 1], body: 0, head: 0, wing: [-121, 0.3, 0.66], far: [-121, 0.26, 0.6], legs: 1 },
+  unfold: { sq: [1.03, 0.94], body: 12, head: -6, wing: [-72, 0.66, 0.84], far: [-70, 0.58, 0.78], legs: 0.7 },
+  up: { sq: [1.08, 0.84], body: 26, head: -18, wing: [-34, 1, 1], far: [-26, 0.86, 0.9], legs: 0 },
+  mid: { sq: [1.08, 0.84], body: 28, head: -20, wing: [-92, 1, 0.55], far: [-88, 0.86, 0.5], legs: 0 },
+  down: { sq: [1.08, 0.84], body: 28, head: -20, wing: [-150, 1, 0.82], far: [-148, 0.86, 0.75], legs: 0 },
+  glide: { sq: [1.1, 0.82], body: 28, head: -22, wing: [-62, 1, 0.62], far: [-56, 0.86, 0.56], legs: 0 },
+  flare: { sq: [1.02, 0.96], body: 4, head: -2, wing: [-22, 1, 1], far: [-14, 0.86, 0.92], legs: 0.8 },
+};
+  const spl = (Pt, seg = 8) => { const n = Pt.length, out = []; const g = i => Pt[Math.max(0, Math.min(n - 1, i))]; for (let i = 0; i < n - 1; i++) { const p0 = g(i - 1), p1 = g(i), p2 = g(i + 1), p3 = g(i + 2); for (let j = 0; j < seg; j++) { const t = j / seg, t2 = t * t, t3 = t2 * t; out.push([0, 1].map(k => .5 * (2 * p1[k] + (p2[k] - p0[k]) * t + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t2 + (3 * p1[k] - p0[k] - 3 * p2[k] + p3[k]) * t3))); } } out.push(Pt[n - 1]); return out; };
+  const tube = (Pt, w0, w1) => { const S = spl(Pt), n = S.length, L = [], R = []; for (let i = 0; i < n; i++) { const a = S[Math.max(0, i - 1)], c = S[Math.min(n - 1, i + 1)], dx = c[0] - a[0], dy = c[1] - a[1], l = Math.hypot(dx, dy) || 1, t = i / (n - 1), w = (w0 + (w1 - w0) * t) / 2; L.push([S[i][0] - dy / l * w, S[i][1] + dx / l * w]); R.push([S[i][0] + dy / l * w, S[i][1] - dx / l * w]); } return 'M' + [...L, ...R.reverse()].map(p => n1(p[0]) + ' ' + n1(p[1])).join('L') + 'Z'; };
+  const TK = 1.45; // the tree is drawn at 1/1.45 and scaled up
+  const PERCHES = [[-11 * TK, -18.2 * TK], [11 * TK, -28.4 * TK]]; // Huginn (faces left), Muninn (faces right)
+  const TREE = [
+  tube([[0, 0.6], [0.4, -5], [0.6, -10], [0.8, -13.4]], 4.6, 2.8),
+  tube([[0.4, -11.6], [-3, -15.2], [-7, -17.4], [-11, -18.2], [-15.6, -18.6]], 2.6, 0.5),
+  tube([[0.8, -13], [2.6, -18], [5, -23.4], [8, -27], [11, -28.4], [15.4, -29.2]], 2.4, 0.5),
+  tube([[-6.4, -17.1], [-7.4, -20.4], [-7.0, -23.6]], 1.0, 0.3),
+  tube([[4.6, -22.6], [3.4, -27.4], [3.8, -31.2]], 1.0, 0.3),
+  tube([[0.3, -7.6], [-2.6, -9.0], [-4.4, -9.2]], 1.2, 0.4),
+];
+  const TREELINES = 'M-1.6 0.6Q-3.6 1.2 -5.4 1.8M1.8 0.6Q3.8 1.2 5.6 1.6M-0.4 -2V-9M1.2 -3.2V-8.4M-15 2H15';
+  return { BODY, TAILLINES, N, HEADFILL, HEADOUT, BILL, EYE, WING, WINGLINES, S, LEGS, HIP, PIV, POSES, TK, PERCHES, TREE, TREELINES,
+    farOffset: [1.2, -0.8], treeLine: 2.2, itemAt: [10.2, -0.7],
+    hit: [-31.4, -61, 63.8, 67], restBox: [-28.4, -58, 29.4, 3],
+    gift: [4, -1], hopSlope: [-0.087, -0.174], shyTime: 0.25, hopHeight: 1.5,
+    crouch: 0.12, unfold: 0.18, outPower: 1.6, backPower: 2, controls: [[10, -26], [55, -32]], endY: -29,
+    turn: 0.12, hysteresis: 0.1, perchTurn: 0.16, settle: 0.2, land: 0.35, level: 0.3,
+    dip: 0.15, dipAngle: 25, itemFade: 0.2, offFrame: 12, birdMargin: 18,
+    loopRadius: 24, loopCentre: [20.8, -12], loopTakeoff: 0.2, loopTime: 1.1, loopGap: 0.55,
+    returnBeat: 0.35, returnFlaps: 0.7, beat: ['up', 'mid', 'down', 'mid', 'up'],
+    preenMove: [-1.5, 1.5], breathe: [0.012, 2.8], areaTolerance: 0.15,
+  };
+})();
 export const FIND_PLAY = {
   fresh: 3, seed: 171,
   focus: { fill: 0.72, least: 0.85, most: 3, at: [0.5, 0.46], in: 0.7, out: 0.5, swap: 0.6, chest: [0, -16, 30], ship: [0, -10, 34], wide: [300, 450, 330, 0] },
@@ -391,14 +465,21 @@ export const FIND_PLAY = {
   way: { stiff: 90, damp: 9, near: 70, line: 0.45, gap: 0.1, short: 9, ping: 0.5, runes: 0.6, spin: 0.8, timelineDim: 0.35, lineWidth: 1, wide: [300, 480, 250, 0],
     drift: [0.8, 4, 0.31, 2], dim: 0.55, armWidth: 2.2, pulse: [1.12, 0.25], dash: [2, 4], alpha: 0.6, solidAlpha: 0.9, pingR: [6, 14], pingAlpha: 0.7, tally: [22, 5.2, 1, 10.5, 9], ring: [4, 9, 1.6], allSpeed: 40, hub: 6,
   },
-  hoard: { hole: [12, 20, 27], rise: 0.28, over: 1.6, repeat: 0.3, rattle: 0.36, openHold: 0.3, near: 26, glint: [5, 8],
-    scale: 0.3, travel: 60, holeRatio: 0.28, pile: [0.5, 0.75, 1], scratchWidth: 1.6, glintAt: [0, -4], glintSize: 5, glintTime: 0.5, glintTurn: 45, clods: 7, puffs: 2, rattleAngle: 4, rattleCycles: 3, lidPivot: [30, -34], lidAngle: -32, lidLift: -6, lidTime: 0.25, lidOver: 1.7, glowTime: 0.3, glowPeak: 1, glowRest: 0.6, glowKept: 0.35, stars: 6, burstTravel: [48, 34], burstLift: 14, anchor: 18, width: 260, top: 3, icon: 64, iconBox: [-32, -32, 64, 64], rad: 35, scratchHop: 2, hopClods: 2,
-    pilePath: 'M14 2q6 -10 13 0z',
+  hoard: { hole: [16, 28, 38], lift: [0.18, 0.24, 1], rise: [0.28, 0.28, 0.5], backEase: 0.8, over: 1.2, repeat: 0.3, rattle: 0.36, openHold: 0.3, near: 26, glint: [5, 8],
+    scale: 0.3, travel: 64, holeRatio: 0.28, pile: [0.5, 0.75, 1], scratchWidth: 1.6, glintAt: [0, -4], glintSize: 5, glintTime: 0.5, glintTurn: 45, clods: 7, rattleAngle: 4, rattleCycles: 3,
+    lidTime: 0.4, lidSettle: 0.12, lidBounce: 0.25, lidPeak: 118, lidRest: 110, rim: -34, depth: 24, half: 30, lean: [90, 20, 2.4], mouthAngle: 60,
+    glowR: 46, starCount: 8, starY: -44, starSizes: [6, 4], glowTime: 0.3, glowPeak: 1, glowRest: 0.6, glowKept: 0.35, stars: 6, burstTravel: [48, 34], burstLift: 14, anchor: 18, width: 260, top: 3, icon: 64, iconBox: [-32, -32, 64, 64], rad: 35, scratchHop: 2,
+    hit: [0, -24, 40], clip: [-240, -200, 480, 200], pileAt: [48, 2], pilePath: 'M-7 0q6 -10 13 0z',
+    clodLife: 0.6, clodSpeed: [18, 34], clodUp: [28, 44], clodSpin: 80, clodFloor: 2,
+    scratchPath: 'M-12 -6l14 8M2 -6l-14 8M-24 2l-3 -6M-20 2l1 -7M14 2l3 -6M20 2l-1 -6',
+    body: '<rect class="g" x="-30" y="-34" width="60" height="34" rx="2"/><path class="t" d="M-18 -34V0M18 -34V0M-30 -22H30"/><rect class="pf" x="-4.5" y="-27" width="9" height="10" rx="1.5"/>',
+    dome: '<path class="g" d="M-30 -34Q0 -56 30 -34Z"/><path class="t" d="M-18 -42V-34M18 -42V-34"/>',
+    mouth: 'M-29 0L-27 -4.5H27L29 0Z', mouthLine: 'M-22 -2.2H22', mouthAlpha: 0.7, mouthWidth: 1.2,
+    insideLines: ['M-18 0V-26', 'M18 0V-26', 'M-29 -6H29'], inside: [30, 24, 6], planks: [18, 0.6, 2, 29, -6], rimPath: 'M-1 0A1 1 0 0 0 1 0',
   },
-  raven: { near: 30, shy: 3, preen: [6, 10], out: 0.9, away: 0.5, back: 0.9, reach: 150, rise: 1.4, flap: 5, land: 0.15, loop: 1.2,
-    headAt: [5, -9], wingNearX: 2, scale: 0.72, birdScale: 0.85, perches: [[-5.5, -34], [6, -33.5]], popupAt: 52, attend: 120, bend: 26, fade: 0.65, tilt: 25, squash: 0.85, preenAngle: 70, preenTime: 0.5, ruffle: [1.1, 0.3], headLimit: 35, headEase: 6, idle: [0.7, 0.43], feathers: 2, hearReach: 40, wingNear: [1, -0.5], wingFar: [0.9, -0.45], wingY: -3.5, strip: [4, 1.6], frame: [4, 3], beak: [15, -2], tallyAlpha: 0.9,
-    tally: ['M13 -8V-1', 'M15.5 -8V-1', 'M18 -8V-1', 'M20.5 -8V-1', 'M11.5 -2.5L22 -6.5', 'M24.5 -8V-1'],
-    fly: ['M-2 -3Q-4 -17 5 -22L4.5 -17L8.5 -17.5L6 -13L9.5 -12.5Q5 -6 2 -3.5Z', 'M-11 -1L-19 -4.5L-20 -.5L-18.5 3L-11 1.5Z', 'M-12 0Q-6 -5.5 3 -5.5Q8 -5.5 10.5 -3.5L15 -2L10.5 -.8Q6 3 -3 2.2Q-9 2 -12 0Z', 'M0 -3.5Q1 -18 12 -23L10.5 -17.8L15 -18L11.5 -13.5L15 -12.5L11 -9.5Q7 -4.5 4.5 -2.5Z'], eye: [8.6, -3.4, 0.5],
+  raven: { near: 30, shy: 4, preen: [6, 10], out: 1.1, away: 0.4, back: 1, reach: 177, flap: 4,
+    scale: 0.62, birdScale: 0.85, popupAt: 61, attend: 120, squash: 0.85, preenAngle: 20, preenTime: 0.5, ruffle: [1.1, 0.3], headLimit: 35, headEase: 6, idle: [0.7, 0.43], feathers: 2, tilt: 30, strip: [4, 1.6], frame: [4, 3], tallyAlpha: 0.9,
+    tally: ['M6 -6V0', 'M8.5 -6V0', 'M11 -6V0', 'M13.5 -6V0', 'M6 -1L14 -5', 'M20 -6V0'],
     reel: { ringSvg: '<svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16"/><circle class="ring-p" cx="20" cy="20" r="16" pathLength="100" stroke-dasharray="100 100"/></svg>', timeJoin: ' / ', iris: 440, width: 360, ratio: [16, 11], motion: [1.3, 0.4, 2, 60, 1.1, 0.3, 22, 40], ring: 100, tc: '00:0{n} / {end}', labelTop: 12, slotBottom: 36 },
   },
   serpent: {"near":34,"tongue":[0.25,0.7],"scale":1,"bounds":[-50,-30,12,12],"head":[-18,-4],"attend":140,"headLimit":10,"headEase":5,"bob":[2.5,0.5,3.4],"steps":[0.14,0.2,0.08,0.35,0.3],"jaw":20,"hungryJaw":6,"jawPivot":[-14,1.6],"lunge":24,"over":3,"overEase":1.94335,"tailOut":[3,1],"tailTwitch":[1.5,0.3],"flutter":[6,3],"mouth":[-32,1.5],"corner":[-24,-0.6],"pad":[-41,-20],"leafSize":[11,13],"leafOffset":0.6,"swallow":10,"swell":[2.4,2.1,1.8],"close":[0.1,0.25,0.08],"restAngle":-3,"breathe":[1,4.8],"wake":0.2,"padTime":0.6,"padSink":4,"hear":[8,0.8,4],"popup":[-65,-34],"drops":2,"tonguePath":"M-37 -1l-6 0m0 0l-3 -2m3 2l-3 2","shutPath":"M-22.6 -4.6Q-18 -1.8 -12 -4.2","snout":[-37,-1],"tailPath":"M-40.8 3.5L-39.3 3.3L-37 3.1L-35 2.8L-33.3 2.6L-31.9 2.5L-32.1 0.5L-33.5 0.7L-35.2 0.8L-37.2 1L-39.5 1.2L-41.1 1.4Z","padBoard":"M-6 -7H6V7H-6Z","leafPath":"M-5.5 -6.5H5.5V6.5H-5.5Z","padWave":"M-48 -10q3 -2 6 0t6 0t6 0","binding":[-5.5,-6.5,11,1.6],"rings":[-3,3,-5.7,0.45],"dayY":-0.5,"timeY":4,"daySize":3,"timeSize":3.6,"weight":700,"hit":[-50,-30,62,42]},
@@ -412,8 +493,6 @@ export const FIND_PLAY = {
   },
   drawings: {
     wayfinder: `<circle class="hit" r="58"/><circle class="o" r="42"/><circle class="t" r="34.4"/><g class="wf-runes"><path class="rn" transform="rotate(8) translate(-0.7 -40.5)" d="M0 0L0 4.6M0 0L1.4 1.2M1.4 1.2L0.8 1.7M0 4.6L1.4 3.5M1.4 3.5L0.8 2.9"/><path class="rn" transform="rotate(24.4) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(40.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(57.1) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(73.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(89.8) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3"/><path class="rn" transform="rotate(106.2) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(122.5) translate(-0.7 -40.5)" d="M0 0L0 4.6L1.4 0L1.4 4.6L0 0"/><path class="rn" transform="rotate(138.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(155.3) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(171.6) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.7M1.4 4.6L1.4 0L0 1.7"/><path class="rn" transform="rotate(188) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(204.4) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(220.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(237.1) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(253.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(269.8) translate(-0.7 -40.5)" d="M1.4 0L0 1.7L1.4 2.9L0 4.6"/><path class="rn" transform="rotate(286.2) translate(-0.6 -40.5)" d="M1.3 0L0 1.2L1.3 2.3"/><path class="rn" transform="rotate(302.5) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(318.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(335.3) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(351.6) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/></g><g class="wf-arm" data-i="0" transform="rotate(0)"><path class="l" d="M0 0V-31.08M0 -31.08l-4 -4M0 -31.08l4 -4M0 -31.08v-5"/></g><g class="wf-arm" data-i="1" transform="rotate(90)"><path class="l" d="M0 0V-31.08M0 -34.08m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/></g><g class="wf-arm" data-i="2" transform="rotate(180)"><path class="l" d="M0 0V-31.08M-4 -27.08L0 -33.08L4 -27.08"/></g><g class="wf-arm" data-i="3" transform="rotate(270)"><path class="l" d="M0 0V-31.08M-5 -31.08H5M-3 -35.08H3"/></g><g transform="rotate(45)"><path class="l" d="M0 0V-17.64M0 -17.64l-3 -3"/></g><g transform="rotate(135)"><path class="l" d="M0 0V-17.64M0 -17.64l3 -3"/></g><g transform="rotate(225)"><path class="l" d="M0 0V-17.64M-3 -17.64H3"/></g><g transform="rotate(315)"><path class="l" d="M0 0V-17.64M0 -17.64m-1.5 -2a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0"/></g><text x="0" y="-48" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[0]}</text><text x="46" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="start" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[1]}</text><text x="0" y="54" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[2]}</text><text x="-46" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="end" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[3]}</text><g class="wf-needle"><path class="pf" d="M0 -26L3 0L-3 0Z"/><path class="o" d="M0 26L3 0L-3 0Z"/></g><circle class="o wf-hub" r="3.4"/><circle class="t wf-all" r="{{way.ring.0}}" opacity="0"/><text x="0" y="64" font-size="{{way.tally.1}}" fill="${C.note}" font-weight="500" text-anchor="middle" letter-spacing="{{way.tally.2}}" class="wf-tally"></text>`,
-    hoard: `<rect class="hit" x="-40" y="-60" width="80" height="72"/><path class="l hd-scratch" d="M-12 -6l14 8M2 -6l-14 8M-24 2l-3 -6M-20 2l1 -7M14 2l3 -6M20 2l-1 -6"/><ellipse class="o hd-hole" rx="0" ry="0"/><path class="g hd-pile" d="{{hoard.pilePath}}" opacity="0"/><path class="pf hd-glint" d="{{hoard.glintPath}}" opacity="0"/><circle class="hd-glow" cx="0" cy="-20" r="46" fill="url(#litGlow)" opacity="0"/><g clip-path="url(#hclip)"><g class="hd-chest" transform="translate(0 60)"><rect class="g" x="-30" y="-34" width="60" height="34" rx="2"/><path class="t" d="M-18 -34V0M18 -34V0M-30 -22H30"/><rect class="pf" x="-4.5" y="-27" width="9" height="10" rx="1.5"/><g class="hd-lid"><path class="g" d="M-30 -34Q0 -56 30 -34Z"/><path class="t" d="M-18 -42V-34M18 -42V-34"/></g></g></g><g class="hd-stars"><path class="pf hd-star" d="M0 -50Q0 -44 6 -44Q0 -44 0 -38Q0 -44 -6 -44Q0 -44 0 -50Z" opacity="0"/><path class="pf hd-star" d="M0 -48Q0 -44 4 -44Q0 -44 0 -40Q0 -44 -4 -44Q0 -44 0 -48Z" opacity="0"/><path class="pf hd-star" d="M0 -50Q0 -44 6 -44Q0 -44 0 -38Q0 -44 -6 -44Q0 -44 0 -50Z" opacity="0"/><path class="pf hd-star" d="M0 -48Q0 -44 4 -44Q0 -44 0 -40Q0 -44 -4 -44Q0 -44 0 -48Z" opacity="0"/><path class="pf hd-star" d="M0 -50Q0 -44 6 -44Q0 -44 0 -38Q0 -44 -6 -44Q0 -44 0 -50Z" opacity="0"/><path class="pf hd-star" d="M0 -48Q0 -44 4 -44Q0 -44 0 -40Q0 -44 -4 -44Q0 -44 0 -48Z" opacity="0"/><path class="pf hd-star" d="M0 -50Q0 -44 6 -44Q0 -44 0 -38Q0 -44 -6 -44Q0 -44 0 -50Z" opacity="0"/><path class="pf hd-star" d="M0 -48Q0 -44 4 -44Q0 -44 0 -40Q0 -44 -4 -44Q0 -44 0 -48Z" opacity="0"/></g>`,
-    ravens: `<rect class="hit" x="-20" y="-56" width="40" height="60"/><path class="g" d="M-9 0L-10 -24Q-7 -34 0 -35Q8 -34 10 -22L9 0Z"/><path class="rn" d="M-2.5 -26L-2.5 -20M-0.6 -26L-0.6 -20M-2.5 -23.8L-0.6 -22.3M1.3 -20L1.3 -26L3.2 -23.8M3.2 -20L3.2 -26L1.3 -23.8"/><path class="t" d="M-16 0H16"/><g class="rv-a"><g class="rv-sit"><g class="rv-body"><path class="g" d="M-11 1L-6 -2Q-3 -8 4 -8Q8 -7 7 -3Q3 1 -4 0Z"/><path class="t" d="M-4 -4Q0 -7 4 -5M0 0v2.5M2.5 0v2.5"/></g><g class="rv-head" transform="translate(5 -9)"><circle class="g" r="2.6"/><path class="pf" d="M2 -1L6 .3L2 1.3Z"/><circle class="pf" cx=".8" cy="-.6" r=".5"/></g></g><g class="rv-fly" opacity="0"><g class="rv-far"><path class="g" d="{{raven.fly.0}}"/></g><path class="g" d="{{raven.fly.1}}"/><path class="g" d="{{raven.fly.2}}"/><circle class="pf" cx="{{raven.eye.0}}" cy="{{raven.eye.1}}" r="{{raven.eye.2}}"/><g class="rv-near"><path class="g" d="{{raven.fly.3}}"/></g></g><g class="rv-item"></g></g><g class="rv-b"><g class="rv-sit"><g class="rv-body"><path class="g" d="M-11 1L-6 -2Q-3 -8 4 -8Q8 -7 7 -3Q3 1 -4 0Z"/><path class="t" d="M-4 -4Q0 -7 4 -5M0 0v2.5M2.5 0v2.5"/></g><g class="rv-head" transform="translate(5 -9)"><circle class="g" r="2.6"/><path class="pf" d="M2 -1L6 .3L2 1.3Z"/><circle class="pf" cx=".8" cy="-.6" r=".5"/></g></g><g class="rv-fly" opacity="0"><g class="rv-far"><path class="g" d="{{raven.fly.0}}"/></g><path class="g" d="{{raven.fly.1}}"/><path class="g" d="{{raven.fly.2}}"/><circle class="pf" cx="{{raven.eye.0}}" cy="{{raven.eye.1}}" r="{{raven.eye.2}}"/><g class="rv-near"><path class="g" d="{{raven.fly.3}}"/></g></g><g class="rv-item"></g></g><g class="rv-tally"><path class="t" d="M13 -8V-1" opacity="0"/><path class="t" d="M15.5 -8V-1" opacity="0"/><path class="t" d="M18 -8V-1" opacity="0"/><path class="t" d="M20.5 -8V-1" opacity="0"/><path class="t" d="M11.5 -2.5L22 -6.5" opacity="0"/><path class="t" d="M24.5 -8V-1" opacity="0"/></g>`,
     serpent: `<g class="jg-tail"><path class="o" d="{{serpent.tailPath}}"/></g><g class="jg-head"><g class="jg-skull"><path fill="${C.ink}" stroke="none" d="M0 -3.2C-3 -6.4 -7 -8.8 -12 -9.4C-16 -9.8 -20 -9.6 -23 -8.4C-26 -7.2 -29 -6.4 -32 -6.6C-34 -6.8 -35.6 -8 -36.6 -7.6C-37.8 -7 -37.6 -5 -36.2 -3.8C-35 -2.8 -33.4 -2.4 -32 -2.4L-24 -.6L4 1.6L4 -3.2Z"/><path class="l" d="M0 -3.2C-3 -6.4 -7 -8.8 -12 -9.4C-16 -9.8 -20 -9.6 -23 -8.4C-26 -7.2 -29 -6.4 -32 -6.6C-34 -6.8 -35.6 -8 -36.6 -7.6C-37.8 -7 -37.6 -5 -36.2 -3.8C-35 -2.8 -33.4 -2.4 -32 -2.4L-24 -.6"/><path class="l" d="M-7 -8.4C-4 -12.6 1 -15.4 7 -15C11 -14.6 13 -11.8 11.6 -9.4C10.4 -7.6 7.8 -7.8 7.4 -9.6C7.2 -10.8 8.6 -11.4 9.4 -10.6"/><g class="jg-eye"><path class="l" d="M-22.6 -4.6C-21 -6.4 -17.6 -6.6 -15.6 -5.2C-14.6 -4.6 -13.4 -4.2 -12 -4.2C-13.6 -3 -15.4 -2.6 -17.2 -2.8C-19.4 -3 -21.4 -3.6 -22.6 -4.6Z"/><circle class="pf" cx="-18.6" cy="-4.4" r="1"/></g><path class="l jg-shut" d="{{serpent.shutPath}}" opacity="0"/><path class="l" d="M-24 -.6C-20 1.6 -15 2.2 -11 1C-8.6 .2 -8 -2.2 -9.8 -2.8C-11.2 -3.2 -12 -1.8 -11 -1.2M-33.6 -6.6C-33 -5.6 -32.2 -5.2 -31.4 -5.4"/><path class="pf" d="M-30.6 -2.2L-29.6 .2L-28.8 -1.9ZM-27 -1.4L-26.2 .4L-25.4 -1.1Z"/><path class="t" d="M-6 -6.6C-4 -4.2 -2.6 -1.6 -2 1.2M-10 -8.6C-8 -6 -6.8 -3 -6.4 0"/></g><g class="jg-jaw"><path fill="${C.ink}" stroke="none" d="M-24 -.6L-33.6 1.8C-35 2.2 -35.6 3.4 -35 4.4C-33.6 6.4 -29.6 7.4 -25 7.6C-20 7.8 -14 8 -9 7C-5 6.2 -2 5 0 3.2L4 3.2L4 -.6Z"/><path class="l" d="M-24 -.6L-33.6 1.8C-35 2.2 -35.6 3.4 -35 4.4C-33.6 6.4 -29.6 7.4 -25 7.6C-20 7.8 -14 8 -9 7C-5 6.2 -2 5 0 3.2"/><path class="pf" d="M-31.6 1.6L-30.8 -.6L-29.9 1.3Z"/></g><path class="l jg-tongue" d="{{serpent.tonguePath}}" opacity="0"/></g><g class="jg-pad"><path class="g" d="{{serpent.padBoard}}"/><g class="jg-leaf" data-i="2"><path class="o" d="{{serpent.leafPath}}"/><rect class="pf" x="{{serpent.binding.0}}" y="{{serpent.binding.1}}" width="{{serpent.binding.2}}" height="{{serpent.binding.3}}"/><circle class="o" cx="{{serpent.rings.0}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><circle class="o" cx="{{serpent.rings.1}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><text text-anchor="middle" y="{{serpent.dayY}}" font-size="{{serpent.daySize}}" font-weight="{{serpent.weight}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[2][0]}</text><text text-anchor="middle" y="{{serpent.timeY}}" font-size="{{serpent.timeSize}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[2][1]}</text></g><g class="jg-leaf" data-i="1"><path class="o" d="{{serpent.leafPath}}"/><rect class="pf" x="{{serpent.binding.0}}" y="{{serpent.binding.1}}" width="{{serpent.binding.2}}" height="{{serpent.binding.3}}"/><circle class="o" cx="{{serpent.rings.0}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><circle class="o" cx="{{serpent.rings.1}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><text text-anchor="middle" y="{{serpent.dayY}}" font-size="{{serpent.daySize}}" font-weight="{{serpent.weight}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[1][0]}</text><text text-anchor="middle" y="{{serpent.timeY}}" font-size="{{serpent.timeSize}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[1][1]}</text></g><g class="jg-leaf" data-i="0"><path class="o" d="{{serpent.leafPath}}"/><rect class="pf" x="{{serpent.binding.0}}" y="{{serpent.binding.1}}" width="{{serpent.binding.2}}" height="{{serpent.binding.3}}"/><circle class="o" cx="{{serpent.rings.0}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><circle class="o" cx="{{serpent.rings.1}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><text text-anchor="middle" y="{{serpent.dayY}}" font-size="{{serpent.daySize}}" font-weight="{{serpent.weight}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[0][0]}</text><text text-anchor="middle" y="{{serpent.timeY}}" font-size="{{serpent.timeSize}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[0][1]}</text></g></g><path class="t" d="{{serpent.padWave}}"/><rect class="hit" x="{{serpent.hit.0}}" y="{{serpent.hit.1}}" width="{{serpent.hit.2}}" height="{{serpent.hit.3}}"/>`,
     beacon: `<circle class="bc-glow" cx="{{beacon.flameFoot.0}}" cy="{{beacon.flameFoot.1}}" r="{{beacon.glowR}}" fill="url(#glow)" opacity="0"/><g class="bc-beam" transform="translate(0 -50) rotate(0)"><path d="M0 0L-230 -44.7L-230 44.7Z" fill="url(#beam)"/></g><rect class="hit" x="-26" y="-66" width="52" height="70"/><path class="g" d="M-20 0q4 -9 11 -4q8 -7 15 0q7 -5 14 4z"/><path class="g" d="M-9 -3L-7 -40H7L9 -3Z"/><path class="t" d="M-8.4 -12H8.4M-8 -21H8M-7.6 -30H7.6M-2 -3V-12M3 -12V-21M-3 -21V-30M2 -30V-40"/><rect class="o" x="-1.8" y="-10" width="3.6" height="7"/><path class="l" d="M-10 -40H10"/><path class="l" d="M-4 -40L-6 -46M4 -40L6 -46"/><path class="o" d="M-7 -47L-5 -42H5L7 -47Z"/><path class="pf bc-flame" d="M-3 -47Q-4 -53 0 -58Q1 -53 3 -51Q4 -49 3 -47Z"/>`,
     runestone: `<rect class="hit" x="-20" y="-66" width="40" height="70"/><path class="g" d="M-14 0L-16 -40Q-12 -60 0 -62Q13 -60 15 -38L13 0Z"/><path d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3" fill="none" stroke="${C.paper}" stroke-width="4" stroke-linecap="round"/><path d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3" fill="none" stroke="${C.land}" stroke-width="2.2" stroke-linecap="round"/><path class="l rs-trace" d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3"/><circle class="pf" cx="5" cy="-3" r="1"/><g transform="translate(2.2 -9) rotate(-90)"><path class="rn" d="M0 0L0 3.4M0 1.4L1.1 0.4M0 2.3L1.1 1.4M2.2 0L2.2 3.4M3.2 3.4L3.2 0L4.3 0.8L3.2 1.7L4.3 3.4M6.5 0L5.4 1.3L6.5 2.1L5.4 3.4M8.1 0L8.1 3.4M7.5 0.8L8.1 0L8.6 0.8M13.1 0L12.1 1.3L13.1 2.1L12.1 3.4M15.2 0L14.2 0.8L15.2 1.7M16.2 3.4L16.2 0L16.8 0.8L17.3 0L17.3 3.4M18.9 0L18.9 3.4M18.4 0.8L18.9 0L19.5 0.8M21.5 0L20.5 0.8L21.5 1.7M22.6 0L22.6 3.4M23.6 0L23.6 3.4M22.6 1.3L23.6 2.1M27.1 0L27.1 3.4M27.1 1.4L28.2 0.4M27.1 2.3L28.2 1.4M29.2 0L29.2 3.4M30.9 0L30.9 3.4M30.3 1.3L31.4 2.1M32.5 0L32.5 3.4M32.5 0L33.5 0.8M32.5 1.1L33.5 2M34.6 3.4L34.6 0L35.7 0.8M40.1 0L39.2 0.8L40.1 1.7M41.2 3.4L41.2 0L42.3 1.1L42.3 3.4M43.9 0L43.9 3.4M43.3 0.8L43.9 0L44.4 0.8"/></g><path class="t" d="M-20 0H20"/>`,

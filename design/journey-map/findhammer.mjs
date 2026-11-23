@@ -7,7 +7,7 @@ import { FD, FIND_BY, attr, ease, press, opened, found, attend, findSheet, close
 
 export function hammerBestRead(fallback = 0) { try { const value = Number(localStorage.getItem(HAMMER.ui.bestKey)); return Number.isFinite(value) && value >= 0 ? Math.max(fallback, value) : fallback; } catch { return fallback; } }
 export function hammerBestWrite(score, fallback = 0) { const best = Math.max(score, hammerBestRead(fallback)); try { localStorage.setItem(HAMMER.ui.bestKey, String(best)); } catch {} return best; }
-const hammerText = (key, values = {}) => findFormat(FIND_COPY.hammer[key], values);
+const hammerText = (key, values = {}) => findFormat(FIND_COPY.hammer[key], { ...values, s: values.n === 1 ? '' : 's' });
 const hammerRuneNumber = (r, n) => r === 1 || r === 11 ? n * HAMMER.throw.ride * 100 : r === 3 ? HAMMER.hearts + n : r === 4 ? n * HAMMER.rune.hail : r === 5 ? n + 1 : r === 6 ? n * HAMMER.rune.ice * 100 : n;
 const hammerRuneArt = (r, small = false) => { const U = HAMMER.ui, h = small ? U.mini : U.rune, w = small ? U.miniW : U.runeW, g = runeGlyph(HAMMER.runes[r].key, h); return `<svg viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${g.d}"/></svg>`; };
 
@@ -22,7 +22,7 @@ export function findHammer(svg) {
   const resume = () => { if (!o.game) return; o.game.paused = false; clearInput(); refresh(); if (o.game.phase === 'play') focusField(); };
   const toggle = () => { o.auto = !o.auto; if (o.autoButton) attr(o.autoButton, 'aria-pressed', o.auto); };
   const choose = i => { if (o.game && !o.game.paused && hammerPick(o.game, i)) { refresh(); focusField(); } };
-  const runeCards = () => o.game.choices.map((r, i) => { const n = o.game.levels[r] + 1, row = FIND_COPY.hammer.runes[r], line = findFormat(row[1], { n: hammerRuneNumber(r, n) }); return `<button type="button" class="hm-rune" data-rune="${i}" aria-label="${hammerText('runeLevel', { key: i + 1, name: row[0], n, line })}">${hammerRuneArt(r)}<span><strong>${i + 1}. ${row[0]}</strong><span>${line}</span></span></button>`; }).join('');
+  const runeCards = () => o.game.choices.map((r, i) => { const n = o.game.levels[r] + 1, count = hammerRuneNumber(r, n), row = FIND_COPY.hammer.runes[r], line = findFormat(row[1], { n: count, s: count === 1 ? '' : 's' }); return `<button type="button" class="hm-rune" data-rune="${i}" aria-label="${hammerText('runeLevel', { key: i + 1, name: row[0], n, line })}">${hammerRuneArt(r)}<span><strong>${i + 1}. ${row[0]}</strong><span>${line}</span></span></button>`; }).join('');
   function refresh() {
     if (FD.sheetOwner !== o || !o.canvas) return;
     const s = o.game, H = FIND_COPY.hammer; let html = '';

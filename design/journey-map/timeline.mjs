@@ -26,7 +26,8 @@ export function tlBuild(el, hooks, rm) {
   el.addEventListener('focus', () => { const i = currentStop(TL.lastP || 0); if (i >= 0) tipFor(i, null); });
   el.addEventListener('blur', () => TL.tip.classList.remove('on'));
   el.addEventListener('keydown', e => {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return; e.preventDefault();
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return; e.preventDefault();
+    if (e.key === 'Home' || e.key === 'End') { TL.hooks.jump(e.key === 'Home' ? 0 : STOPS.length - 1); return; }
     const P = TL.lastP || 0, cur = currentStop(P);
     let i = e.key === 'ArrowRight' ? cur + 1 : (P > progressForStop(Math.max(cur, 0)) + 1 ? cur : cur - 1);
     i = Math.max(0, Math.min(STOPS.length - 1, i)); TL.hooks.jump(i);

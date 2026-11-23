@@ -1,5 +1,5 @@
 // Every drawing as a function that returns an SVG string. Geometry and glyphs ported from reference/round2.cjs.
-import { C, MAP, COPY, STOPS, FINDS, FIND_COPY, FIND_PLAY, HAMMER, YGG, MARK, LABELS } from './data.mjs';
+import { C, MAP, COPY, STOPS, FINDS, FIND_COPY, FIND_PLAY, HAMMER, YGG, MARK, LABELS, RAVEN_RIG } from './data.mjs';
 
 export const rnd = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 export const n1 = n => +(+n).toFixed(1);
@@ -137,8 +137,30 @@ export function shieldSvg() {
 const findWrap = (id, label, inner, x, y) => `<g class="find" id="f-${id}" role="button" tabindex="0" aria-label="${label}" data-x="${x}" data-y="${y}">${inner}</g>`;
 const findDrawing = kind => FIND_PLAY.drawings[kind].replace(/\{\{([\w.]+)\}\}/g, (match, path) => path === 'hoard.glintPath' ? starPath(...FIND_PLAY.hoard.glintAt, FIND_PLAY.hoard.glintSize) : path.split('.').reduce((value, key) => value[key], FIND_PLAY));
 const wayfinder = () => findDrawing('wayfinder');
-const hoard = () => findDrawing('hoard');
-const ravens = () => findDrawing('ravens');
+export function hoardInside(lean) {
+  const [w, d, crown] = FIND_PLAY.hoard.inside;
+  return `M${-w} 0L${-w + lean} ${-d}Q0 ${-d - crown} ${w - lean} ${-d}L${w} 0Z`;
+}
+const hoard = id => {
+  const H = FIND_PLAY.hoard, [x, y, r] = H.hit, [cx, cy, cw, ch] = H.clip;
+  return `<circle class="hit" cx="${x}" cy="${y}" r="${r}"/><path class="l hd-scratch" d="${H.scratchPath}"/><ellipse class="o hd-hole" rx="0" ry="0"/><defs><clipPath id="clip-${id}" clipPathUnits="userSpaceOnUse"><rect x="${cx}" y="${cy}" width="${cw}" height="${ch}"/><ellipse class="hd-clip-hole" rx="0" ry="0"/></clipPath></defs><g class="hd-clods" pointer-events="none"></g><g transform="translate(${H.pileAt.join(' ')})"><path class="g hd-pile" d="${H.pilePath}" opacity="0"/></g><path class="pf hd-glint" d="${starPath(...H.glintAt, H.glintSize)}" opacity="0"/><g clip-path="url(#clip-${id})"><circle class="hd-glow" cy="${H.rim}" r="${H.glowR}" fill="url(#litGlow)" opacity="0"/><g class="hd-chest" transform="translate(0 ${H.travel})">${H.body}<g class="hd-inside" transform="translate(0 ${H.rim}) scale(1 0)"><path class="g hd-face" fill-rule="nonzero" d="${hoardInside(0)}"/>${H.insideLines.map((d, i) => '<path class="t hd-plank-' + i + '" d="' + d + '"/>').join('')}</g><g class="hd-mouth" transform="translate(0 ${H.rim}) scale(1 0)"><path class="o" d="${H.mouth}"/><path d="${H.mouthLine}" fill="none" stroke="${C.warm}" stroke-opacity="${H.mouthAlpha}" stroke-width="${H.mouthWidth}" vector-effect="non-scaling-stroke"/></g><g class="hd-lid">${H.dome}</g></g></g><path class="t hd-rim" d="${H.rimPath}" transform="scale(0 0)"/><g class="hd-stars">${Array.from({ length: H.starCount }, (_, i) => `<path class="pf hd-star" d="${starPath(0, H.starY, H.starSizes[i % H.starSizes.length])}" opacity="0"/>`).join('')}</g>`;
+};
+export const ravenPose = (a, b, t) => {
+  const A = typeof a === 'string' ? RAVEN_RIG.POSES[a] : a, B = typeof b === 'string' ? RAVEN_RIG.POSES[b] : b;
+  return Object.fromEntries(Object.keys(A).map(k => [k, Array.isArray(A[k]) ? A[k].map((v, i) => v + (B[k][i] - v) * t) : A[k] + (B[k] - A[k]) * t]));
+};
+export const ravenPoseTransforms = q => {
+  const R = RAVEN_RIG, tr = a => `rotate(${a[0]}) scale(${a[1]} ${a[2]})`, pivot = R.PIV;
+  return { body: `rotate(${q.body} ${pivot.join(' ')}) translate(${pivot.join(' ')}) scale(${q.sq.join(' ')}) translate(${pivot.map(v => -v).join(' ')})`, near: tr(q.wing), far: tr(q.far), legs: `translate(${R.HIP.join(' ')}) scale(1 ${q.legs}) translate(${R.HIP.map(v => -v).join(' ')})`, head: `translate(${R.N.join(' ')}) rotate(${q.head})` };
+};
+const ravenBird = i => {
+  const R = RAVEN_RIG, T = ravenPoseTransforms(R.POSES.sit), side = i ? 1 : -1, k = FIND_PLAY.raven.birdScale, p = R.PERCHES[i];
+  return `<g class="rv-${i ? 'b' : 'a'}" transform="translate(${p.join(' ')}) rotate(0) scale(${side * k} ${k})"><g class="rv-body" transform="${T.body}"><g transform="translate(${R.S.map((v, j) => v + R.farOffset[j]).join(' ')})"><g class="rv-far" transform="${T.far}"><path class="o" d="${R.WING}"/></g></g><g class="rv-legs" transform="${T.legs}"><path class="l" d="${R.LEGS}"/></g><path class="g" d="${R.BODY}"/><path class="t" d="${R.TAILLINES}"/><g class="rv-head" transform="${T.head}"><path class="g" style="stroke:none" d="${R.HEADFILL}"/><path class="l" d="${R.HEADOUT}"/><path class="t" d="${R.BILL}"/><circle class="pf" cx="${R.EYE[0]}" cy="${R.EYE[1]}" r="${R.EYE[2]}"/><g class="rv-item" opacity="0"></g></g><g transform="translate(${R.S.join(' ')})"><g class="rv-near" transform="${T.near}"><path class="g" d="${R.WING}"/><path class="t" d="${R.WINGLINES}"/></g></g></g></g>`;
+};
+const ravens = () => {
+  const R = RAVEN_RIG, [x, y, w, h] = R.hit;
+  return `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="rv-tree" transform="scale(${R.TK})">` + R.TREE.map(d => `<path class="g" style="stroke-width:${R.treeLine}" d="${d}"/>`).join('') + R.TREE.map(d => `<path class="g" style="stroke:none" d="${d}"/>`).join('') + `<path class="t" d="${R.TREELINES}"/></g><g class="rv-gifts" pointer-events="none"></g>${ravenBird(0)}${ravenBird(1)}<g class="rv-tally">${FIND_PLAY.raven.tally.map(d => `<path class="t" d="${d}" opacity="0"/>`).join('')}</g>`;
+};
 const serpent = () => findDrawing('serpent');
 const beacon = () => findDrawing('beacon');
 const runestone = () => findDrawing('runestone');
@@ -164,7 +186,7 @@ export const mapDefs = () => `<defs>
 <filter id="blur" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6"/></filter>
 <clipPath id="cA"><path d="${pathD(COAST_A, 1)}"/></clipPath><clipPath id="cB"><path d="${pathD(COAST_B, 1)}"/></clipPath><clipPath id="neat"><rect x="22" y="22" width="556" height="856"/></clipPath>
 <clipPath id="kq"><rect x="0" y="-14" width="14" height="14"/><rect x="-14" y="0" width="14" height="14"/></clipPath>
-<clipPath id="hclip"><rect x="-44" y="-140" width="88" height="140"/></clipPath>
+
 <mask id="mistMask" maskUnits="userSpaceOnUse" x="80" y="390" width="160" height="100"><rect x="80" y="390" width="160" height="100" fill="${C.white}"/><g id="mistWipes"></g></mask>
 </defs>`;
 
@@ -237,7 +259,7 @@ export function bigMap() {
   let fd = '';
   const at = (id, k, inner) => { const f = F[id]; return findWrap(id, f.label, grp(f.x, f.y, k, inner), f.x, f.y); };
   fd += `<g id="wf-lines" pointer-events="none"></g>` + at('wayfinder', 1, wayfinder());
-  fd += `<g id="f-hoards" role="button" tabindex="0" aria-label="${F.hoards.label}" data-x="${F.hoards.x}" data-y="${F.hoards.y}">` + FIND_COPY.hoards.map(h => `<g class="find hoard" id="f-${h.id}" role="button" tabindex="0" aria-label="${h.label}" data-x="${h.x}" data-y="${h.y}">${grp(h.x, h.y, FIND_PLAY.hoard.scale, hoard())}</g>`).join('') + `</g>`;
+  fd += `<g id="f-hoards" role="group" aria-label="${F.hoards.label}" data-x="${F.hoards.x}" data-y="${F.hoards.y}">` + FIND_COPY.hoards.map(h => `<g class="find hoard" id="f-${h.id}" role="button" tabindex="0" aria-label="${h.label}" data-x="${h.x}" data-y="${h.y}">${grp(h.x, h.y, FIND_PLAY.hoard.scale, hoard(h.id))}</g>`).join('') + `</g>`;
   fd += at('ravens', FIND_PLAY.raven.scale, ravens()) + at('serpent', FIND_PLAY.serpent.scale, serpent()) + at('beacon', FIND_PLAY.beacon.scale, beacon()) + at('runestone', FIND_PLAY.rune.scale, runestone());
   fd += at('hammer', HAMMER.map.scale, hammerMapArt()) + findWrap('mist', F.mist.label, mist(), F.mist.x, F.mist.y) + at('horn', FIND_PLAY.horn.scale, horn()) + at('well', 1, well());
   fd += `<g id="bc-notes">` + FIND_COPY.beaconNotes.map(n => { const B = FIND_PLAY.beacon; return `<g class="bc-note" opacity="0" transform="translate(${n.x} ${n.y})"><g class="bc-note-in">${runeSvg(n.rune, B.runeSize, 0, B.runeY, 'middle', 'rn rn-note')}<g class="bc-en" opacity="0">${n.t.todo ? svgText(0, B.todoY, COPY.todo, { s: B.todoFont, c: C.dim, a: 'middle' }) : ''}${svgText(0, B.lineY, typeof n.t === 'object' ? n.t.t : n.t, { s: B.noteFont, c: C.paper, a: 'middle', i: 1 })}</g></g></g>`; }).join('') + `</g>`;

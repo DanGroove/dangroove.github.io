@@ -14,7 +14,7 @@ import { exploreBuild, exploreResize, exploreApply, exploreActive } from './expl
 const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Set by join.mjs on the joined page only (the real hero in the stage): frame(st, moved, P) returns false to leave the star
 // canvas alone, options for starsFrame, or nothing for the map's own rule; resize(w, h) follows the map's resize.
-export const JOIN = { frame: null, resize: null, heroStart: false };
+export const JOIN = { leave: null, frame: null, resize: null, heroStart: false };
 const ROOT = document.documentElement;
 Object.entries(C).forEach(([k, v]) => ROOT.style.setProperty('--' + k, v));
 if (RM) ROOT.classList.add('rm');
@@ -87,6 +87,7 @@ function frame(ts) {
   const time = ts / 1000;
   const dt = mainTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - mainTs) / 1000)); mainTs = ts;
   P = stepsFrame(ts);
+  if (JOIN.leave) JOIN.leave(P);
   if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], { ...jr, still: true }); raf = requestAnimationFrame(frame); return; }
   const st = tripState(P); const f = stepsFocusNow(); if (f) tripFocus(st, f.view, f.k);
   const explored = exploreApply(st, dt), folded = cardsOverride(st, dt, JOURNEY.moving);

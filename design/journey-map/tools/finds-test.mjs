@@ -2,7 +2,7 @@
 import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { bigMap, rubbingRunes, pieceIcon } from '../art.mjs';
-import { STARS, DEPTH, NOVA, FINDS, FIND_PLAY, FIND_COPY, STOPS, HAMMER } from '../data.mjs';
+import { STARS, DEPTH, NOVA, FINDS, FIND_PLAY, FIND_COPY, STOPS, HAMMER, RAVEN_RIG, FOOT_NAME } from '../data.mjs';
 import { tripFocus, tripState, tripResize, toScreen, VIEW, SEQ, WATER, pointAt } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
 import { wayAllStops } from '../findhoards.mjs';
@@ -10,8 +10,11 @@ import { mapDefs } from '../art.mjs';
 import { tlBuild } from '../timeline.mjs';
 import { JOURNEY, stepsBuild, stepsFrame, stepsFocus, stepsFocusNow, stepsRelease } from '../steps.mjs';
 import { findsBuild, findsFrame } from '../finds.mjs';
-import { FD, closeSheet, closePop } from '../findkit.mjs';
+import { FD, closeSheet, closePop, findReady, findView } from '../findkit.mjs';
+import { findRavens } from '../findcreatures.mjs';
+import { findHoards } from '../findhoards.mjs';
 import { hammerBestRead, hammerBestWrite } from '../findhammer.mjs';
+import { footnameBuild, footnameMeasure, footnameReveal, footnameFrame } from '../footname.mjs';
 
 
 
@@ -58,7 +61,7 @@ for (const [w, h] of [[1440, 900], [390, 664]]) {
 for (const f of FINDS) {
   const tag = chart.finds.match(new RegExp(`<g\\b[^>]*id="f-${f.id}"[^>]*>`))?.[0];
   assert.ok(tag, `${f.id}: group missing`);
-  for (const required of ['role="button"', 'tabindex="0"', 'aria-label="', 'data-x="', 'data-y="']) assert.ok(tag.includes(required), `${f.id}: ${required}`);
+  for (const required of [...(f.id === 'hoards' ? ['role="group"'] : ['role="button"', 'tabindex="0"']), 'aria-label="', 'data-x="', 'data-y="']) assert.ok(tag.includes(required), `${f.id}: ${required}`);
 }
 assert.equal((chart.detail.match(/id="mk-[^"]+"/g) || []).length, 6);
 assert.equal((chart.detail.match(/class="mk"/g) || []).length, 7);
@@ -161,13 +164,13 @@ stepsBuild({ stage: testStage, rm: false, resize() {}, joinedTop: () => false })
 tlBuild(testTl, { jump() {}, scrub() {} }, false);
 findsBuild(testSvg, testPop, testSheet, testSvg.querySelector('#b-all'), false);
 tripResize(1440, 900, 120); JOURNEY.set(mapP);
-let testClock = 1;
+let testClock = 1, testObserve = null;
 async function tick(seconds) {
-  const frames = Math.ceil(seconds / FIND_PLAY.kit.dt);
+  const frames = Math.ceil(seconds / 0.016);
   for (let i = 0; i < frames; i++) {
     testClock += seconds / frames; const P = stepsFrame(testClock * 1000), st = tripState(P), focus = stepsFocusNow();
     if (focus) tripFocus(st, focus.view, focus.k);
-    testInFrame = true; try { findsFrame(testClock, st); } finally { testInFrame = false; }
+    testInFrame = true; try { findsFrame(testClock, st); testObserve?.(st); } finally { testInFrame = false; }
     await Promise.resolve();
   }
 }
@@ -179,10 +182,10 @@ key('wayfinder', 'ArrowRight'); key('wayfinder', 'ArrowRight'); key('wayfinder',
 assert.equal(window.__jm.finds.state('wayfinder').unlocked, true);
 key('wayfinder'); key('wayfinder'); await tick(0.6);
 assert.equal(window.__jm.finds.state('wayfinder').stage, 'all-four');
-for (let i = 0; i < 4; i++) { key('hoard-laurier'); await tick(0.4); }
+for (let i = 0; i < 4; i++) { key('hoard-laurier'); await tick(1.1); }
 assert.equal(window.__jm.finds.state('hoard-laurier').digs, 3); assert.equal(window.__jm.finds.state('hoard-laurier').open, true);
-key('ravens'); await tick(2.7); assert.equal(window.__jm.finds.state('ravens').tally, 1);
-key('ravens'); await tick(2.7); assert.equal(window.__jm.finds.state('ravens').stage, 'reel'); await tick(5.9); assert.equal(window.__jm.finds.state('ravens').stage, 'rest');
+key('ravens'); await tick(4.1); assert.equal(window.__jm.finds.state('ravens').tally, 1);
+key('ravens'); await tick(4.1); assert.equal(window.__jm.finds.state('ravens').stage, 'reel'); await tick(5.9); assert.equal(window.__jm.finds.state('ravens').stage, 'rest');
 const serpentState = () => window.__jm.finds.state('serpent');
 const serpentLeaf = i => testSvg.querySelector('.jg-leaf[data-i="'+i+'"]');
 assert.equal(serpentState().stage,'ready'); assert.equal(serpentState().pokes,0);
@@ -210,7 +213,7 @@ const copyState = window.__jm.finds.state('runestone'); copyState.rubbed[0] = fa
 const beforeBack = JOURNEY.P; JOURNEY.back(); assert.equal(JOURNEY.P, beforeBack); assert.equal(JOURNEY.focus, null); await tick(0.7); assert.equal(stepsFocusNow(), null);
 assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), true); await tick(0.8); assert.equal(JOURNEY.P, beforeBack); stepsRelease(); await tick(0.6);
 assert.equal(window.__jm.finds.found().length, 6);
-JOURNEY.set(mapP); await tick(0.1); key('ravens'); JOURNEY.back(); await tick(2.7); assert.equal(FD.popOwner, null); assert.equal(window.__jm.finds.state('ravens').tally, 2);
+JOURNEY.set(mapP); await tick(0.1); key('ravens'); await tick(0.9); JOURNEY.back(); await tick(3.5); assert.equal(FD.popOwner, null); assert.equal(window.__jm.finds.state('ravens').tally, 1);
 JOURNEY.set(0); assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), false); JOURNEY.set(mapP);
 JOURNEY.go('lennard'); assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), false); await tick(0.7); JOURNEY.set(mapP);
 console.log('ok: recording DOM runs six Part A plays, kept state, all-four unlock, reel, chase, four notes, rubbing, copied review state and Back focus rules; no NaN attributes or frame layout reads');
@@ -268,6 +271,136 @@ JOURNEY.set(mapP); await tick(0.2); key('horn'); key('horn'); await tick(0.7); a
 key('horn'); closePop(); testSvg.querySelector('#f-horn').dispatchEvent(new TestEvent('pointerdown', { pointerId: 1 })); await tick(0.6); assert.equal(window.__jm.finds.state('horn').stage, 'sounding'); testSvg.querySelector('#f-horn').dispatchEvent(new TestEvent('pointerup')); JOURNEY.back(); await tick(5);
 console.log('ok: traveller wipes without finding; three mist thirds; all eleven hear timed horn; hold sounds, wide view and release; three Norns/stars/below tail; ship pennant/lamp; all-eleven landing/count/frame; overlays do not take pointers');
 
+// C2 uses the actual SVG path points and transforms, with a fake clock and no layout engine.
+const rig = RAVEN_RIG, ravenFind = FINDS.find(f => f.id === 'ravens'), savedRavens = FD.list.ravens, savedHoards = FD.list.hoards;
+const mul = (a,b) => [a[0]*b[0]+a[2]*b[1],a[1]*b[0]+a[3]*b[1],a[0]*b[2]+a[2]*b[3],a[1]*b[2]+a[3]*b[3],a[0]*b[4]+a[2]*b[5]+a[4],a[1]*b[4]+a[3]*b[5]+a[5]];
+const identity = [1,0,0,1,0,0], tx = (x,y=0)=>[1,0,0,1,x,y], point = (a,p)=>[a[0]*p[0]+a[2]*p[1]+a[4],a[1]*p[0]+a[3]*p[1]+a[5]];
+const matrix = text => {
+  let m=identity;
+  for(const a of (text||'').matchAll(/(translate|rotate|scale|matrix)\(([^)]+)\)/g)) {
+    const n=a[2].trim().split(/[ ,]+/).map(Number);let q;
+    if(a[1]==='translate')q=tx(...n);
+    if(a[1]==='scale')q=[n[0],0,0,n[1]??n[0],0,0];
+    if(a[1]==='matrix')q=n;
+    if(a[1]==='rotate'){const r=n[0]*Math.PI/180,c=Math.cos(r),s=Math.sin(r);q=[c,s,-s,c,0,0];if(n.length===3)q=mul(mul(tx(n[1],n[2]),q),tx(-n[1],-n[2]));}
+    m=mul(m,q);
+  }return m;
+};
+const pathCache = new Map();
+function pathPoints(path) {
+  if(pathCache.has(path))return pathCache.get(path);
+  const tok=path.match(/[a-zA-Z]|[-+]?(?:\d*\.)?\d+(?:e[-+]?\d+)?/g),points=[];let i=0,cmd='',p=[0,0],home=p;
+  const num=()=>Number(tok[i++]),pair=rel=>{const q=[num(),num()];return rel?q.map((v,k)=>v+p[k]):q;};
+  while(i<tok.length){if(/[a-zA-Z]/.test(tok[i]))cmd=tok[i++];const rel=cmd===cmd.toLowerCase(),c=cmd.toUpperCase(),start=p.slice();
+    if(c==='Z'){p=home.slice();points.push(p);cmd='';continue;}
+    if(c==='M'||c==='L'){p=pair(rel);if(c==='M'){home=p.slice();cmd=rel?'l':'L';}points.push(p);}
+    else if(c==='H'){p=[num()+(rel?p[0]:0),p[1]];points.push(p);}
+    else if(c==='V'){p=[p[0],num()+(rel?p[1]:0)];points.push(p);}
+    else if(c==='Q'||c==='C'){const a=pair(rel),b=c==='C'?pair(rel):null,end=pair(rel);for(let j=1;j<=24;j++){const t=j/24;points.push(start.map((v,k)=>c==='C'?(1-t)**3*v+3*(1-t)**2*t*a[k]+3*(1-t)*t*t*b[k]+t**3*end[k]:(1-t)**2*v+2*(1-t)*t*a[k]+t*t*end[k]));}p=end;}
+    else throw Error('unexpected rig path command '+cmd);
+  }pathCache.set(path,points);return points;
+}
+const birdPoints = (b, unturned=false) => b.g.querySelectorAll('path').flatMap(node=>{
+  if(node.closest('.rv-item'))return [];
+  let m=identity;
+  for(let n=node;n&&n!==b.g.parentElement;n=n.parentElement){const a=n===b.g&&unturned?tx(...b.xy):matrix(n.getAttribute('transform'));m=mul(a,m);}
+  return pathPoints(node.getAttribute('d')).map(p=>point(m,p));
+});
+const boxOf = p => [Math.min(...p.map(p=>p[0])),Math.min(...p.map(p=>p[1])),Math.max(...p.map(p=>p[0])),Math.max(...p.map(p=>p[1]))];
+const overlap = (a,b)=>a[0]<b[2]&&a[2]>b[0]&&a[1]<b[3]&&a[3]>b[1];
+const area = b=>(b[2]-b[0])*(b[3]-b[1]);
+const treePoints = rig.TREE.flatMap(d=>pathPoints(d).map(p=>p.map(v=>v*rig.TK)));
+const transformText = b=>b.g.getAttribute('transform');
+const tracks = [], c2Limits = new Set();
+for(const [w,h] of [[1440,900],[390,844]]) {
+  closePop();closeSheet(true);JOURNEY.set(mapP);tripResize(w,h,w>640?120:96);globalThis.innerWidth=w;globalThis.innerHeight=h;
+  const surface=new TestNode('svg');surface.innerHTML='<g id="finds">'+chart.finds+'</g>';
+  const rv=FD.list.ravens=findRavens(surface), hd=FD.list.hoards=findHoards(surface);
+  const pressFind=id=>surface.querySelector('#f-'+id).dispatchEvent(new TestEvent('keydown',{key:'Enter'}));
+  await tick(.1);stepsFocus('ravens',ravenFind.view);pressFind('ravens');pressFind('ravens');
+  assert.equal(rv.queued,true);await tick(.2);assert.equal(rv.stage,'rest');assert.equal(findReady('ravens'),false);
+  const snapshots=[];
+  testObserve=st=>snapshots.push({t:testClock,stage:rv.stage,cam:{...st.cam},birds:rv.birds.map(b=>({mode:b.mode,xy:b.xy.slice(),mirror:b.mirror,rotate:b.rotate,pose:structuredClone(b.pose),landTs:b.landTs,text:transformText(b),points:birdPoints(b),normal:boxOf(birdPoints(b,true))}))});
+  await tick(4.3);assert.equal(rv.tally,1);assert.equal(rv.thoughts,1);assert.equal(rv.stage,'rest');assert.equal(FD.popOwner,rv);
+  const bRest=transformText(rv.birds[1]), land0=rv.birds[0].landTs;
+  assert.ok(snapshots.filter(s=>['flight','landing'].includes(s.stage)).every(s=>s.birds[1].text===bRest));assert.equal(rv.birds[1].landTs,-Infinity);
+  pressFind('ravens');assert.equal(FD.popOwner,null);await tick(3.6);assert.equal(rv.stage,'reel');assert.equal(rv.birds[0].landTs,land0);
+  const aRest=transformText(rv.birds[0]), aHead=rv.birds[0].head.getAttribute('transform');await tick(1);
+  assert.equal(transformText(rv.birds[0]),aRest);assert.notEqual(rv.birds[0].head.getAttribute('transform'),aHead,'resting head remains live during reel');
+  assert.ok(document.documentElement.classList.contains('jm-sheet-open'));await tick(5);
+  assert.ok(snapshots.filter(s=>s.stage==='reel').every(s=>s.birds[0].text===aRest),'other bird stays perched for the whole reel');
+  assert.equal(rv.stage,'rest');assert.ok(!document.documentElement.classList.contains('jm-sheet-open'));await tick(.3);
+  const thoughtBefore=rv.thoughts,tallyBefore=rv.tally;pressFind('ravens');await tick(.5);FD.overlayEpoch++;await tick(3);
+  assert.equal(rv.thoughts,thoughtBefore);assert.equal(rv.tally,tallyBefore);assert.equal(FD.popOwner,null);
+  rv.hear();await tick(.3);assert.equal(rv.birds[1].mode,'sit');await tick(2.2);assert.equal(rv.stage,'rest');
+  testObserve=null;
+  // The near pointer is on the trunk side. Only outward bough travel is allowed, at <= 1 unit/tick.
+  const shyBird=rv.birds[0], shyPath=[];
+  FD.pointer=[(ravenFind.x+rig.PERCHES[0][0]*FIND_PLAY.raven.scale+2)*FD.st.cam.s+FD.st.cam.tx,(ravenFind.y+rig.PERCHES[0][1]*FIND_PLAY.raven.scale)*FD.st.cam.s+FD.st.cam.ty];FD.pointerT=testClock;
+  testObserve=()=>shyPath.push(shyBird.xy.slice());await tick(.3);
+  assert.equal(shyBird.shy,FIND_PLAY.raven.shy);assert.ok(shyPath.every((p,i)=>!i||p[0]<=shyPath[i-1][0]+1e-8));
+  FD.pointer=[-Infinity,-Infinity];await tick(.3);testObserve=null;assert.equal(shyBird.shy,0);
+  shyPath.forEach((p,i)=>{if(i)assert.ok(Math.hypot(...p.map((v,k)=>v-shyPath[i-1][k]))<=1);assert.ok(p[0]<=rig.PERCHES[0][0]+1e-8);});
+  for(let i=0;i<snapshots.length;i++)for(let j=0;j<2;j++){
+    const s=snapshots[i],b=s.birds[j],prev=snapshots[i-1]?.birds[j];
+    if(b.mode==='sit')assert.equal(b.rotate,0,'sit is level in the same frame');
+    if(prev)assert.ok(Math.abs(b.mirror-prev.mirror)<=2*1.5*.016/rig.turn+1e-6,'continuous facing '+JSON.stringify({j,mode:b.mode,prev:prev.mode,t:s.t,dt:s.t-snapshots[i-1].t,a:prev.mirror,b:b.mirror}));
+    if(prev&&snapshots[i+1]?.birds[j].mode===b.mode&&snapshots[i+1].birds[j].xy[1]<prev.xy[1]-.01&&['out','back','loop'].includes(b.mode)&&Math.abs(b.mirror)>.99)assert.ok(b.rotate*b.mirror<=1e-7,'climbing beak points up '+JSON.stringify({j,mode:b.mode,rotate:b.rotate,mirror:b.mirror,dy:b.xy[1]-prev.xy[1]}));
+    const ownBox=boxOf(b.points),otherBox=boxOf(s.birds[1-j].points);if(overlap(ownBox,otherBox))c2Limits.add('reference hear-loop bird boxes overlap');
+    const mapBox=ownBox.map((v,k)=>v*FIND_PLAY.raven.scale+(k%2?ravenFind.y:ravenFind.x)),serpent=FINDS.find(f=>f.id==='serpent'),hit=FIND_PLAY.serpent.hit;
+    assert.ok(!overlap(mapBox,[serpent.x+hit[0],serpent.y+hit[1],serpent.x+hit[0]+hit[2],serpent.y+hit[1]+hit[3]]),'raven clears serpent hit box');
+    const screen=mapBox.map((v,k)=>v*s.cam.s+(k%2?s.cam.ty:s.cam.tx));assert.ok(screen[3]<(h-(w>640?56+14+44:52)),'raven clears stepper band');
+    if(b.mode==='loop')assert.ok(mapBox[1]>=serpent.y+hit[1]+hit[3]+5,'hear loop 5 units below serpent');
+    if(['out','back','loop'].includes(b.mode)&&Math.hypot(...b.xy.map((v,k)=>v-rig.PERCHES[j][k]))>3){
+      if(treePoints.some(p=>p[0]>ownBox[0]&&p[0]<ownBox[2]&&p[1]>ownBox[1]&&p[1]<ownBox[3]&&Math.hypot(...p.map((v,k)=>v-rig.PERCHES[j][k]))>3))c2Limits.add('reference flight box overlaps bough beyond the 3-unit perch exception');
+    }
+    if(prev&&prev.mode===b.mode&&Math.abs(prev.mirror)>.99&&Math.abs(b.mirror)>.99){const ratio=area(b.normal)/area(prev.normal);if(ratio>1.15||ratio<1/1.15)c2Limits.add('reference pose box changes by more than 15 percent in 16 ms');}
+    if(prev){const ratio=area(ownBox)/area(boxOf(prev.points));if(ratio>1.15||ratio<1/1.15)c2Limits.add('edge-on turns cannot retain a screen box area within 15 percent');}
+  }
+  // Count sign changes per contiguous leg, excluding zero at the edge-on instant.
+  for(let j=0;j<2;j++) {let mode='',sign=0,changes=0;for(const s of snapshots){const b=s.birds[j];if(b.mode!==mode){mode=b.mode;sign=0;changes=0;}const next=Math.sign(b.mirror);if(sign&&next&&next!==sign)changes++;if(next)sign=next;assert.ok(changes<=(mode==='loop'?2:1),'facing reversals in '+mode);}}
+  for(let j=0;j<2;j++) {
+    let active=false,outside=0;const flights=[];
+    for(const s of snapshots){const b=s.birds[j];if(b.mode==='crouch'&&!active){active=true;outside=0;}if(!active)continue;
+      const bmap=boxOf(b.points).map((v,k)=>(v*FIND_PLAY.raven.scale+(k%2?ravenFind.y:ravenFind.x))*s.cam.s+(k%2?s.cam.ty:s.cam.tx)),visible=bmap[2]>=0&&bmap[0]<=w&&bmap[3]>=0&&bmap[1]<=h;
+      if(b.mode==='crouch'||b.mode==='settle')assert.ok(visible,'takeoff and landing in view');if(!visible)outside+=.016;
+      if(b.mode==='setdown'){flights.push(outside);active=false;}
+    }flights.forEach(time=>assert.ok(time<=1.2,'out of view for '+time));
+  }
+  tracks.push(w+'x'+h+': '+snapshots.length+' raven ticks');
+  // Fresh chest: five rapid presses during focus cannot skip to opening.
+  const chest=hd.items[0];stepsFocus(chest.id,findView(chest.id));
+  for(let i=0;i<5;i++){pressFind(chest.id);await tick(.06);assert.ok(chest.digs<=1);assert.equal(chest.open,false);}
+  const chestFrames=[];testObserve=()=>chestFrames.push({t:testClock,digs:chest.digs,stage:chest.stage,y:chest.y,lift:chest.lift,angle:chest.lidAngle,rock:chest.rock||0,pivot:chest.pivot||0,rx:Number(chest.hole.getAttribute('rx')),rattleTs:chest.rattleTs});
+  await tick(1);assert.ok(chest.digs<=2);assert.equal(chest.open,false);assert.equal(chest.digs,1);assert.equal(chest.hintLine,FIND_COPY.hoardHints[1]);
+  assert.ok(chest.y-45>Number(chest.hole.getAttribute('ry')),'first lid remains buried');
+  pressFind(chest.id);await tick(.4);assert.equal(chest.hintLine,FIND_COPY.hoardHints[2]);
+  pressFind(chest.id);await tick(1);assert.equal(chest.stage,'out');assert.equal(chest.hintLine,FIND_COPY.hoardHints[3]);pressFind(chest.id);await tick(.6);assert.equal(chest.stage,'open');assert.equal(chest.hintLine,FIND_COPY.hoardHints[4]);
+  const popup=FD.popInner;assert.equal(FD.popOwner,chest);await tick(.3);assert.equal(FD.popBody.style.opacity,1);
+  assert.equal((testPop.recordedHTML.match(/Piece to come/g)||[]).length,1);
+  for(let i=0;i<4;i++){pressFind(chest.id);await tick(.32);assert.equal(FD.popInner,popup);assert.equal(FD.popBody.style.opacity,1);}
+  for(let i=0;i<4;i++){pressFind(chest.id);await tick(.06);assert.equal(FD.popInner,popup);assert.equal(FD.popBody.style.opacity,1);}await tick(.6);
+  testObserve=null;
+  for(let i=0;i<chestFrames.length;i++){
+    const s=chestFrames[i],p=chestFrames[i-1];
+    if(s.digs<3||['rising','rattling','out'].includes(s.stage))assert.equal(s.angle,0);
+    if(s.angle>0)assert.ok(s.t>=s.rattleTs+FIND_PLAY.hoard.rattle);
+    if(p)assert.ok(Math.abs(s.angle-p.angle)<=25);assert.ok(s.angle<=118+1e-8);
+    if(s.digs===3&&s.stage==='rising')assert.ok(s.rx>=FIND_PLAY.hoard.half+6);
+    if(s.rock){const a=s.rock*Math.PI/180;for(const x of [-30,30])assert.ok(s.y+(x-s.pivot)*Math.sin(a)<=1e-8,'bottom corner above ground');}
+    if(p&&s.stage==='rising'&&p.stage==='rising'&&s.digs===p.digs){const target=FIND_PLAY.hoard.travel*(1-FIND_PLAY.hoard.lift[s.digs-1]);assert.ok(s.y<=p.y+1e-8||s.y<=target,'rise reverses only after target');assert.ok(s.y>=target-1.2);}
+  }
+  close(chest.lidAngle,110,'lid at rest');
+  const clipIds=surface.querySelectorAll('clipPath').map(n=>n.id);assert.equal(new Set(clipIds).size,5);
+  assert.equal(surface.querySelector('#f-hoards').getAttribute('tabindex'),null);assert.equal(surface.querySelector('#f-hoards').getAttribute('role'),'group');assert.equal(surface.querySelector('#f-hoards').listeners.keydown,undefined);
+  const under=hd.items[1];stepsFocus(under.id,findView(under.id));await tick(.7);assert.equal(under.hintLine,FIND_COPY.hoardHints[0]);
+  for(const item of hd.items)item.setCraftLit(true);await tick(.1);hd.items.filter(item=>item.digs<3).forEach(item=>{assert.equal(item.glowAlpha,0);assert.equal(Number(item.glow.getAttribute('opacity')),0);assert.equal(item.scratch.style.strokeWidth,FIND_PLAY.hoard.scratchWidth);});
+  closePop();stepsRelease();await tick(.6);
+}
+FD.list.ravens=savedRavens;FD.list.hoards=savedHoards;tripResize(1440,900,120);globalThis.innerWidth=1440;globalThis.innerHeight=900;
+for(const limit of c2Limits)console.log('UNMET C2 geometric gate: '+limit);
+console.log('ok: C2 functional assertions, flight visibility/facing/landing/reel/epoch/hop, staged dig/rattle/back lid, craft light, hints and persistent popup; geometric failures listed above: '+tracks.join('; '));
+
 // Fresh nodes for a reduced-motion visit; no browser or pixel rendering is involved.
 const rmSvg = new TestNode('svg'), rmPop = new TestNode('div'), rmSheet = new TestNode('div'), rmTl = new TestNode('div');
 testStage.append(rmSvg, rmPop, rmSheet, rmTl); rmSvg.innerHTML = mapDefs() + '<g id="b-all">' + chart.detail + '</g><g id="finds">' + chart.finds + '</g>';
@@ -298,5 +431,28 @@ for (let i = 0; i < 3; i++) { rmKey('well'); await rmTick(); rmKey('longship'); 
 assert.equal(window.__jm.finds.state('mist').lifted, true); assert.equal(window.__jm.finds.state('well').watered, 3); assert.equal(window.__jm.finds.state('longship').pennant, true); assert.equal(window.__jm.finds.state('horn').heard.length, 11);
 assert.equal(FD.landed, 11); assert.equal(FD.all.done, true); assert.equal(rmTl.querySelector('.tl-count').textContent, 'All 11 found'); assert.ok(FD.bits.every(b => !b.live)); assert.equal(FD.flight, null);
 console.log('ok: reduced-motion hammer plays/pauses without map sparks/tremble/hop; mist, horn, Norns, stars, pennant and all-eleven feedback land immediately with no bits, flights or camera change');
+// Count the name's actual layout reads over a complete reveal, idle, knock and explore visit.
+const nameLine = new TestNode('span'); nameLine.appendChild({ data: 'Danial Endrawes' });
+let nameReads = 0, nameReason = 'resize'; const nameCounts = {};
+const nameRead = () => { assert.ok(['resize', 'fonts', 'settle-end', 'explore'].includes(nameReason), 'footer name layout read from ' + nameReason); nameReads++; nameCounts[nameReason] = (nameCounts[nameReason] || 0) + 1; return { left: 0, top: 0, right: 400, bottom: 40, width: 400, height: 40 }; };
+nameLine.getBoundingClientRect = nameRead;
+testWindow.getComputedStyle = () => { nameRead(); return { fontSize: '30px' }; };
+testDocument.createRange = () => ({ setStart() {}, setEnd() {}, getBoundingClientRect: nameRead });
+footnameBuild(nameLine, false); footnameMeasure();
+nameReason = 'fonts'; footnameMeasure();
+for (let i = 0; i <= 100; i++) {
+  nameReason = i === 100 ? 'settle-end' : 'frame';
+  testInFrame = true; try { footnameReveal({ settleT: i / 100 }); footnameFrame(i * .016, .016, [0, 0]); } finally { testInFrame = false; }
+  await Promise.resolve();
+}
+nameReason = 'knock'; nameLine.dispatchEvent(new TestEvent('pointerdown', { pointerType: 'mouse', clientX: 100 }));
+for (let i = 0; i < 500; i++) { nameReason = 'idle'; footnameFrame(i * .016, .016, [0, 0]); await Promise.resolve(); }
+for (let i = 0; i < 2; i++) { nameReason = 'explore'; testWindow.dispatchEvent(new TestEvent('jm-explore')); await Promise.resolve(); }
+assert.equal(nameReads, ('Danial Endrawes'.length + 2) * 5);
+console.log('ok: footer name layout reads ' + nameReads + ' total, only resize/fonts/settle-end/two explore boundaries; none in idle frames or knock: ' + JSON.stringify(nameCounts));
+const keyTimeline = new TestNode(), keyJumps = []; tlBuild(keyTimeline, { jump: i=>keyJumps.push(i), scrub() {} }, false);
+for(const key of ['Home','End']){const e=new TestEvent('keydown',{key});keyTimeline.dispatchEvent(e);assert.equal(e.defaultPrevented,true);}assert.deepEqual(keyJumps,[0,STOPS.length-1]);
+console.log('ok: actual timeline Home and End handlers select first and last stops');
+if(c2Limits.size){console.error('FAIL: C2 raven geometry gates unmet ('+c2Limits.size+')');process.exitCode=1;}
 }
 testPlays().catch(error => { console.error(error); process.exitCode = 1; });

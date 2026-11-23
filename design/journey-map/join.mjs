@@ -53,8 +53,8 @@ function place(P = stepsProgress()) {
 }
 const setOp = v => { const s = String(v); if (s !== JN.op) { JN.op = s; JN.cv.style.opacity = s; } };
 
+JOIN.leave = place;
 JOIN.frame = (st, moved, P) => {
-  place(P);
   const a = smooth(LEAVE_END - JOIN_OVERLAP, LEAVE_END, P);
   if (!JN.rm) {
     // the X is drawn from the start of the fall in the map as built; here it fades in with the sea, so the switch shows no pop

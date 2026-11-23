@@ -1,11 +1,11 @@
 // Part A: the instrument and the five persistent, hand-dug chests.
 import { C, COPY, CRAFTS, STOPS, MAP, FIND_COPY, FIND_PLAY, PALETTES } from './data.mjs';
 import { clamp01, lerp, toScreen, VIEW } from './trip.mjs';
-import { pieceIcon } from './art.mjs';
+import { pieceIcon, hoardInside } from './art.mjs';
 import { cardsSetCraft, arrowSvg } from './cards.mjs';
 import { tlSetCraft } from './timeline.mjs';
 import { JOURNEY, stepsFocus } from './steps.mjs';
-import { FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, attend, findBits, findSvg, findFormat, findRange, findLife, findAngleDelta } from './findkit.mjs';
+import { FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, attend, findBits, findSvg, findFormat, findRange, findLife, findAngleDelta, findReady, findHint } from './findkit.mjs';
 
 export const wayAllStops = () => STOPS.map(s => CRAFTS.every(c => s.crafts.includes(c)));
 export function findWay(svg) {
@@ -22,7 +22,7 @@ export function findWay(svg) {
     o.mask = mask; cardsSetCraft(mask); tlSetCraft(mask);
     FD.base.style.opacity = mask ? FIND_PLAY.way.dim : 1;
     svg.querySelectorAll('#finds > .find, #bc-notes').forEach(g => { if (g !== el) g.style.opacity = mask ? FIND_PLAY.way.dim : 1; });
-    FD.list.hoards?.items.forEach(h => { const i = STOPS.findIndex(s => s.id === h.d.stop); h.craftLit = !!mask?.[i]; h.el.style.opacity = mask && !mask[i] ? FIND_PLAY.way.dim : 1; });
+    FD.list.hoards?.items.forEach(h => { const i = STOPS.findIndex(s => s.id === h.d.stop); h.setCraftLit(!!mask?.[i]); h.el.style.opacity = mask && !mask[i] ? FIND_PLAY.way.dim : 1; });
   };
   const startLines = () => { o.lineTs = FD.now; o.linePhase = 'grow'; o.lines.forEach((l, i) => { l.lit = !!o.mask?.[i]; l.arrived = false; attr(l.line, 'stroke-dasharray', o.craft === CRAFTS.length ? 'none' : FIND_PLAY.way.dash.join(' ')); }); };
   const set = i => {
@@ -86,59 +86,109 @@ export function findWay(svg) {
   return o;
 }
 export function findHoards(svg) {
-  const o = { id: 'hoards', el: svg.querySelector('#f-hoards'), items: [], kept: false, stage: 'buried' };
+  const H = FIND_PLAY.hoard, o = { id: 'hoards', el: svg.querySelector('#f-hoards'), items: [], kept: false, stage: 'buried' };
   FIND_COPY.hoards.forEach(d => {
-    const el = svg.querySelector('#f-' + d.id), h = { id: d.id, d, el, digs: 0, open: false, kept: false, stage: 'buried', lift: 0, liftFrom: 0, ts: -Infinity, glintAt: FD.now + findRange(FIND_PLAY.hoard.glint), glintTs: -Infinity, hold: false, lastDig: -Infinity, chest: el.querySelector('.hd-chest'), lid: el.querySelector('.hd-lid'), scratch: el.querySelector('.hd-scratch'), hole: el.querySelector('.hd-hole'), pile: el.querySelector('.hd-pile'), glow: el.querySelector('.hd-glow'), glint: el.querySelector('.hd-glint'), stars: [...el.querySelectorAll('.hd-star')] };
-    const show = () => {
-      const H = FIND_PLAY.hoard, stop = STOPS.find(s => s.id === d.stop), n = o.items.filter(item => item.open).length;
-      showPop(h, [d.x, d.y - H.anchor], `<p class="pop-k">${fEsc(stop.name)}<br>${fEsc(findFormat(FIND_COPY.hoardTally, { n, t: o.items.length }))}</p>${d.image ? `<img src="${d.image}" alt="${fEsc(d.title)}">` : `<div class="piece-empty"><svg viewBox="${H.iconBox.join(' ')}" aria-hidden="true">${pieceIcon(d.kind)}</svg><span>${fEsc(COPY.pieceToCome)}</span></div>`}<p class="pop-t">${fEsc(d.title)}</p><button class="pop-link" type="button">${fEsc(COPY.caseStudy)}${arrowSvg}</button>`, 'piece');
-      FD.pop.style.setProperty('--piece-mark', PALETTES[stop.palette].mark);
+    const el = svg.querySelector('#f-' + d.id), h = { id: d.id, d, el, digs: 0, open: false, kept: false, stage: 'buried', lift: 0, liftFrom: 0, y: H.travel, lidAngle: 0, ts: -Infinity, glintAt: FD.now + findRange(H.glint), glintTs: -Infinity, hold: false, queued: false, clods: [], lastDig: -Infinity };
+    for (const [key, cls] of Object.entries({ chest: 'chest', lid: 'lid', inside: 'inside', face: 'face', mouth: 'mouth', scratch: 'scratch', hole: 'hole', clipHole: 'clip-hole', pile: 'pile', glow: 'glow', glint: 'glint', rim: 'rim' })) h[key] = el.querySelector('.hd-' + cls);
+    h.stars = [...el.querySelectorAll('.hd-star')];
+    h.planks = [el.querySelector('.hd-plank-0'), el.querySelector('.hd-plank-1')];
+    const group = el.querySelector('.hd-clods');
+    for (let i = 0; i < H.clods * H.hole.length; i++) { const bit = findSvg('path', { class: 'g', d: FIND_PLAY.bits.kinds.clod[0], opacity: 0 }); group.appendChild(bit); h.clods.push({ el: bit, live: false }); }
+    const hint = () => { h.hintLine = FIND_COPY.hoardHints[h.open ? H.hole.length + 1 : h.digs]; if (JOURNEY.focus === h.id) findHint(h.id); };
+    const stage = value => { h.stage = value; hint(); };
+    hint();
+    h.setCraftLit = on => {
+      if (h.craftLit === on) return; h.craftLit = on;
+      h.scratch.style.strokeWidth = on || h.awake ? H.scratchWidth : '';
+      if (on && h.digs < H.hole.length) findBits('ring', d.x, d.y, 1, FIND_PLAY.bits.wake);
     };
+    const show = () => {
+      if (FD.popOwner === h) return true;
+      const stop = STOPS.find(s => s.id === d.stop), n = o.items.filter(item => item.open).length;
+      const title = !d.image && d.title === COPY.pieceToCome ? '' : '<p class="pop-t">' + fEsc(d.title) + '</p>';
+      const shown = showPop(h, [d.x, d.y - H.anchor], '<p class="pop-k">' + fEsc(stop.name) + '<br>' + fEsc(findFormat(FIND_COPY.hoardTally, { n, t: o.items.length })) + '</p>' + (d.image ? '<img src="' + d.image + '" alt="' + fEsc(d.title) + '">' : '<div class="piece-empty"><svg viewBox="' + H.iconBox.join(' ') + '" aria-hidden="true">' + pieceIcon(d.kind) + '</svg><span>' + fEsc(COPY.pieceToCome) + '</span></div>') + title + '<button class="pop-link" type="button">' + fEsc(COPY.caseStudy) + arrowSvg + '</button>', 'piece');
+      if (shown) FD.pop.style.setProperty('--piece-mark', PALETTES[stop.palette].mark);
+      return shown;
+    };
+    const ready = () => findReady(h.id) && ['buried', 'out', 'open'].includes(h.stage);
     const act = () => {
-      const H = FIND_PLAY.hoard; opened(h);
       if (h.digs < H.hole.length) {
-        h.liftFrom = h.lift; h.digs++; h.ts = FD.now; h.lastDig = FD.now; h.stage = 'rising';
-        attr(h.hole, 'rx', H.hole[h.digs - 1]); attr(h.hole, 'ry', H.hole[h.digs - 1] * H.holeRatio);
-        attr(h.pile, 'opacity', 1); attr(h.pile, 'transform', `scale(${H.pile[h.digs - 1]})`); attr(h.scratch, 'opacity', 0);
-        findBits('clod', d.x, d.y, H.clods, FIND_PLAY.bits.clods); findBits('puff', d.x, d.y, H.puffs, FIND_PLAY.bits.puffs);
+        h.liftFrom = h.lift; h.digs++; h.ts = h.lastDig = FD.now; stage('rising');
+        const rx = H.hole[h.digs - 1], ry = rx * H.holeRatio;
+        for (const hole of [h.hole, h.clipHole]) { attr(hole, 'rx', rx); attr(hole, 'ry', ry); }
+        attr(h.rim, 'transform', 'scale(' + rx + ' ' + ry + ')');
+        attr(h.pile, 'opacity', 1); attr(h.pile, 'transform', 'scale(' + H.pile[h.digs - 1] + ')'); attr(h.scratch, 'opacity', 0);
+        if (!FD.rm) for (let i = 0; i < H.clods; i++) {
+          const b = h.clods[(h.digs - 1) * H.clods + i], side = i % 2 ? 1 : -1, up = findRange(H.clodUp);
+          Object.assign(b, { live: true, ts: FD.now, x: side * rx, vx: side * findRange(H.clodSpeed), vy: -up, gravity: 2 * (H.clodFloor + up * H.clodLife) / H.clodLife ** 2, side });
+        }
+        if (FD.rm) { h.lift = H.lift[h.digs - 1]; h.y = H.travel * (1 - h.lift); attr(h.chest, 'transform', 'translate(0 ' + h.y + ')'); stage(h.digs === H.hole.length ? 'out' : 'buried'); }
       } else if (!h.open) {
-        h.open = h.kept = o.kept = true; h.stage = 'opening'; h.openTs = FD.now;
+        h.open = h.kept = o.kept = true; h.openTs = FD.now; stage('opening');
         found('hoards', d.id); findBits('star', d.x, d.y - H.anchor, H.stars, FIND_PLAY.bits.stars);
         h.pending = true;
-      } else { h.bounceTs = FD.now; show(); }
+        if (FD.rm) { h.lidAngle = H.lidRest; paintLid(); h.pending = false; stage('open'); show(); }
+      } else {
+        h.bounceTs = FD.now; stage(FD.rm ? 'open' : 'bouncing'); show();
+      }
     };
-    el.addEventListener('pointerdown', e => { h.hold = true; h.nextHold = FD.now + FIND_PLAY.hoard.repeat; el.setPointerCapture(e.pointerId); act(); el._dragged = true; });
+    const request = () => {
+      if (h.queued) return;
+      opened(h);
+      if (!ready()) { h.queued = true; return; }
+      act();
+    };
+    const paintLid = () => {
+      const a = h.lidAngle * Math.PI / FIND_PLAY.kit.deg, sn = Math.max(0, Math.sin(a)), c = Math.max(0, Math.cos(a)), lean = Math.max(0, h.lidAngle - H.lean[0]) / H.lean[1] * H.lean[2];
+      attr(h.inside, 'transform', 'translate(0 ' + H.rim + ') scale(1 ' + sn + ')');
+      attr(h.face, 'd', hoardInside(lean));
+      h.planks.forEach((p, i) => attr(p, 'transform', 'matrix(1 0 ' + ((i ? 1 : -1) * lean * H.planks[1] / (H.depth + H.planks[2])) + ' 1 0 0)'));
+      attr(h.mouth, 'transform', 'translate(0 ' + H.rim + ') scale(1 ' + clamp01(h.lidAngle / H.mouthAngle) + ')');
+      attr(h.lid, 'transform', 'translate(0 ' + (H.rim - H.depth * sn) + ') scale(1 ' + c + ') translate(0 ' + -H.rim + ')');
+    };
+    el.addEventListener('pointerdown', e => { e.stopPropagation(); h.hold = true; h.nextHold = FD.now + H.repeat; el.setPointerCapture(e.pointerId); request(); el._dragged = true; });
     el.addEventListener('pointerup', () => h.hold = false); el.addEventListener('pointercancel', () => h.hold = false);
-    press(el, e => { e.stopPropagation(); act(); });
+    press(el, e => { e.stopPropagation(); request(); });
     h.undo = () => { if (FD.popOwner === h) closePop(); };
     h.hear = () => { if (!h.open) h.glintTs = h.hearTs = FD.now; };
     h.tick = (t, dt) => {
-      const H = FIND_PLAY.hoard;
       findLife(h, d.x, d.y, H.rad, H.near);
-      if (!h.onScreen && !h.hold && !['rising', 'opening'].includes(h.stage)) return;
-      if (h.hold && t >= h.nextHold) { if (h.digs < H.hole.length || t - h.lastDig >= Math.max(H.openHold, H.rise)) { act(); h.nextHold = t + (h.digs < H.hole.length ? H.repeat : H.openHold); if (h.open) h.hold = false; } }
-      if (h.awake !== h.wasAwake) { const awake = h.awake; queueMicrotask(() => { h.scratch.style.strokeWidth = awake ? H.scratchWidth : ''; }); if (awake && !h.digs) findBits('clod', d.x, d.y, H.hopClods, FIND_PLAY.bits.hop); }
+      if (!h.onScreen && !h.hold && !h.queued && !['rising', 'rattling', 'opening', 'bouncing'].includes(h.stage)) return;
+      if (h.hold && t >= h.nextHold) { queueMicrotask(request); h.nextHold = t + (h.digs < H.hole.length ? H.repeat : H.openHold); if (h.open) h.hold = false; }
+      if (h.awake !== h.wasAwake) { const awake = h.awake; queueMicrotask(() => { h.scratch.style.strokeWidth = awake || h.craftLit ? H.scratchWidth : ''; }); }
       h.wasAwake = h.awake;
       if (!FD.rm && t >= h.glintAt && !h.digs) { h.glintTs = t; h.glintAt = t + findRange(H.glint); }
-      const glint = FD.rm ? 1 : clamp01((t - h.glintTs) / H.glintTime); attr(h.glint, 'opacity', Math.sin(Math.PI * glint)); attr(h.glint, 'transform', `translate(0 ${-H.scratchHop * Math.sin(Math.PI * glint)}) rotate(${H.glintTurn * glint}) scale(${Math.sin(Math.PI * glint)})`);
-      const heard = FD.rm ? 1 : clamp01((t - (h.hearTs ?? -Infinity)) / H.glintTime); attr(h.scratch, 'transform', `translate(0 ${-H.scratchHop * Math.sin(Math.PI * heard)})`);
-      const q = FD.rm ? 1 : clamp01((t - h.ts) / H.rise), target = h.digs / H.hole.length;
-      h.lift = lerp(h.liftFrom, target, ease(q));
-      const overshoot = q === 1 || FD.rm ? 0 : Math.sin(Math.PI * q) * H.over;
-      attr(h.chest, 'transform', `translate(0 ${H.travel * (1 - h.lift) - overshoot}) rotate(${h.digs === H.hole.length && !h.open && !FD.rm ? H.rattleAngle * Math.sin(Math.PI * 2 * H.rattleCycles * clamp01((t - h.ts - H.rise) / H.rattle)) : 0})`);
-      if (q === 1 && h.stage === 'rising') h.stage = h.digs === H.hole.length ? 'out' : 'buried';
-      const lp = !h.open ? 0 : FD.rm ? 1 : clamp01((t - h.openTs) / H.lidTime), back = 1 + (H.lidOver + 1) * (lp - 1) ** 3 + H.lidOver * (lp - 1) ** 2;
-      const bounce = !FD.rm && h.bounceTs !== undefined ? Math.sin(Math.PI * clamp01((t - h.bounceTs) / H.lidTime)) : 0;
-      attr(h.lid, 'transform', `rotate(${H.lidAngle * back * (h.open ? 1 : 0) + H.rattleAngle * bounce} ${H.lidPivot[0]} ${H.lidPivot[1]}) translate(0 ${H.lidLift * back * (h.open ? 1 : 0)})`);
+      const glint = FD.rm ? 1 : clamp01((t - h.glintTs) / H.glintTime);
+      attr(h.glint, 'opacity', Math.sin(Math.PI * glint)); attr(h.glint, 'transform', 'translate(0 ' + -H.scratchHop * Math.sin(Math.PI * glint) + ') rotate(' + H.glintTurn * glint + ') scale(' + Math.sin(Math.PI * glint) + ')');
+      const heard = FD.rm ? 1 : clamp01((t - (h.hearTs ?? -Infinity)) / H.glintTime); attr(h.scratch, 'transform', 'translate(0 ' + -H.scratchHop * Math.sin(Math.PI * heard) + ')');
+      h.clods.forEach(b => {
+        if (!b.live) return; const age = Math.min(H.clodLife, t - b.ts), q = age / H.clodLife;
+        attr(b.el, 'transform', 'translate(' + (b.x + b.vx * age) + ' ' + (b.vy * age + b.gravity * age * age / 2) + ') rotate(' + H.clodSpin * age * b.side + ')'); attr(b.el, 'opacity', 1 - q ** 2); if (q === 1) b.live = false;
+      });
+      let rock = 0;
+      if (h.stage === 'rising') {
+        const q = clamp01((t - h.ts) / H.rise[h.digs - 1]), z = q - 1, back = 1 + (H.backEase + 1) * z ** 3 + H.backEase * z ** 2;
+        h.lift = lerp(h.liftFrom, H.lift[h.digs - 1], FD.rm ? 1 : back);
+        if (q === 1) { h.lift = H.lift[h.digs - 1]; h.rattleTs = t; stage(h.digs === H.hole.length ? 'rattling' : 'buried'); }
+      }
+      if (h.stage === 'rattling') { const q = FD.rm ? 1 : clamp01((t - h.rattleTs) / H.rattle); rock = H.rattleAngle * Math.sin(Math.PI * 2 * H.rattleCycles * q); if (q === 1) { rock = 0; stage('out'); } }
+      h.y = H.travel * (1 - h.lift); h.rock = rock; h.pivot = Math.sign(rock) * H.half;
+      attr(h.chest, 'transform', 'translate(0 ' + h.y + ') rotate(' + rock + ' ' + h.pivot + ' 0)');
+      if (h.stage === 'opening' || h.stage === 'bouncing') {
+        if (h.stage === 'opening') {
+          const e = t - h.openTs; h.lidAngle = e < H.lidTime ? H.lidPeak * out3(e / H.lidTime) : lerp(H.lidPeak, H.lidRest, ease((e - H.lidTime) / H.lidSettle));
+          if (FD.rm || e >= H.lidTime + H.lidSettle) { h.lidAngle = H.lidRest; stage('open'); if (h.pending) { h.pending = false; queueMicrotask(show); } }
+        } else { const q = clamp01((t - h.bounceTs) / H.lidBounce); h.lidAngle = H.lidRest + (H.lidPeak - H.lidRest) * Math.sin(Math.PI * q) ** 2; if (q === 1) stage('open'); }
+        paintLid();
+      }
       const age = t - (h.openTs ?? -Infinity), glow = h.open ? age < H.glowTime ? H.glowPeak * clamp01(age / H.glowTime) : FD.popOwner === h ? H.glowRest : H.glowKept : 0;
-      attr(h.glow, 'opacity', Math.max(glow, h.craftLit ? 1 : 0));
+      h.glowAlpha = h.digs < H.hole.length || h.stage === 'rising' ? 0 : Math.max(glow, h.craftLit ? 1 : 0); attr(h.glow, 'opacity', h.glowAlpha);
       const burst = FD.rm ? 1 : clamp01(age / D(H.glowTime + H.lidTime));
-      h.stars.forEach((s, i) => { const a = i * Math.PI * 2 / h.stars.length - Math.PI / 2, distance = H.burstTravel[i % 2] * out3(burst); attr(s, 'transform', `translate(${Math.cos(a) * distance} ${Math.sin(a) * distance - H.burstLift * burst})`); attr(s, 'opacity', FD.rm || !h.open ? 0 : 1 - burst); });
-      if (h.pending && lp === 1) { h.pending = false; h.stage = 'open'; queueMicrotask(show); }
+      h.stars.forEach((s, i) => { const a = i * Math.PI * 2 / h.stars.length - Math.PI / 2, distance = H.burstTravel[i % 2] * out3(burst); attr(s, 'transform', 'translate(' + Math.cos(a) * distance + ' ' + (Math.sin(a) * distance - H.burstLift * burst) + ')'); attr(s, 'opacity', FD.rm || !h.open ? 0 : 1 - burst); });
+      if (h.queued && ready()) { h.queued = false; stage('waiting'); queueMicrotask(act); }
     };
     o.items.push(h);
   });
-  press(o.el, e => { if (e.target === o.el) o.items[0].el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); });
   o.tick = (t, dt) => { o.items.forEach(h => h.tick(t, dt)); o.stage = o.items.some(h => h.open) ? 'opened' : 'buried'; };
   o.hear = () => o.items.forEach(h => h.hear()); return o;
 }

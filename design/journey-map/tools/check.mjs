@@ -3,8 +3,8 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { STOPS, PALETTES, FINDS, FIND_COPY, COPY, ACTS, CRAFTS, MAP, STEPS, DEPTH, NOVA, STARS, C, FIND_PLAY, EXPLORE, FOOT_NAME, CARD_CLOSE, HAMMER, YGG, MARK, LABELS, WORLD } from '../data.mjs';
-import { RUNES, bigMap, GROVE, YGG_CROWN, YGG_ROOTS, yggClear, insidePoly, outlineGap, JORM, TRAIL, COAST_A, COAST_B, mapLabelRows, toronto } from '../art.mjs';
+import { STOPS, PALETTES, FINDS, FIND_COPY, COPY, ACTS, CRAFTS, MAP, STEPS, DEPTH, NOVA, STARS, C, FIND_PLAY, EXPLORE, FOOT_NAME, CARD_CLOSE, HAMMER, YGG, MARK, LABELS, WORLD, RAVEN_RIG } from '../data.mjs';
+import { RUNES, bigMap, GROVE, YGG_CROWN, YGG_ROOTS, yggClear, insidePoly, outlineGap, JORM, TRAIL, COAST_A, COAST_B, mapLabelRows, toronto, runeWord } from '../art.mjs';
 import { SEQ, TOTAL_P, tripState, tripResize, VIEW, labelScale } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
 
@@ -151,6 +151,28 @@ const contrast = (a,b) => {const x=luminance(a),y=luminance(b);return(Math.max(x
 Object.entries(PALETTES).forEach(([id,p])=>{const g=p.panel||p.ground,text=p.panelText||p.text,sub=p.panelText||p.sub;ok(contrast(text,g)>=4.5&&contrast(sub,g)>=4.5,id+': small text contrast');ok(contrast(p.panelButtonText||p.buttonText,p.panelButton||p.button)>=4.5,id+': button contrast');ok(contrast(p.pillText,p.pill)>=4.5,id+': pill contrast');ok(contrast(p.headline,p.ground)>=3,id+': headline contrast');});
 ok(readFileSync(join(ROOT,'map.css'),'utf8').includes('-webkit-tap-highlight-color: transparent'),'tap highlight');
 console.log('ok: C1 tree, stars, ring/coasts/crossing, Toronto heights/order/coast, analytic tier-1 boxes, compass and card contrast');
+
+// C2 clearances use the ported rest drawing, including its wing transforms, rather than a hand-entered box.
+const RG = RAVEN_RIG, RF = FINDS.find(f => f.id === 'ravens'), RP = FIND_PLAY.raven;
+const rotateRig = (p, a) => { const r=a*Math.PI/180;return[p[0]*Math.cos(r)-p[1]*Math.sin(r),p[0]*Math.sin(r)+p[1]*Math.cos(r)]; };
+const restRig = [RG.BODY,RG.TAILLINES,RG.LEGS].flatMap(skylineSamples).concat([RG.HEADFILL,RG.HEADOUT,RG.BILL].flatMap(skylineSamples).map(p=>p.map((v,i)=>v+RG.N[i])));
+for(const [key,offset] of [['wing',[0,0]],['far',RG.farOffset]]) {const [a,sx,sy]=RG.POSES.sit[key];restRig.push(...skylineSamples(RG.WING).map(p=>rotateRig([p[0]*sx,p[1]*sy],a).map((v,i)=>v+RG.S[i]+offset[i])));}
+const restLocal=RG.TREE.flatMap(skylineSamples).concat(skylineSamples(RG.TREELINES)).map(p=>p.map(v=>v*RG.TK)).concat(RG.PERCHES.flatMap((p,j)=>restRig.map(v=>[p[0]+(j?1:-1)*v[0]*RP.birdScale,p[1]+v[1]*RP.birdScale])),RP.tally.flatMap(skylineSamples));
+const restMap=restLocal.map(p=>[RF.x+p[0]*RP.scale,RF.y+p[1]*RP.scale]);
+let ravenCoast=Infinity,ravenMark=Infinity,ravenRegion=Infinity;
+const regionBoxes=COPY.regions.flatMap(row=>{const width=row.t.length*(5.8*.56+1.6),boxes=[[row.x-width/2-1.5,row.y-5.8*.8-1.5,row.x+width/2+1.5,row.y+5.8*.2+1.5]];if(row.rune){const rw=runeWord(row.rune,3.2);boxes.push([row.x-rw.w/2-.45,row.y+2.6-.45,row.x+rw.w/2+.45,row.y+5.8+.45]);}return boxes;});
+restMap.forEach(p=>{ravenCoast=Math.min(ravenCoast,...[COAST_A,COAST_B].map(c=>outlineGap(p,c)-6));ravenMark=Math.min(ravenMark,Math.hypot(p[0]-RF.mark[0],p[1]-RF.mark[1])-6.2);regionBoxes.forEach(b=>ravenRegion=Math.min(ravenRegion,Math.hypot(Math.max(b[0]-p[0],0,p[0]-b[2]),Math.max(b[1]-p[1],0,p[1]-b[3]))));});
+ok(ravenCoast>=4,'raven rest drawing coast band clearance: '+ravenCoast);ok(ravenMark>=4,'raven drawing/mark 4-unit clearance (also mark 3-unit minimum): '+ravenMark);ok(ravenRegion>=4,'raven rest drawing region label clearance: '+ravenRegion);
+const rb=[Math.min(...restLocal.map(p=>p[0])),Math.min(...restLocal.map(p=>p[1])),Math.max(...restLocal.map(p=>p[0])),Math.max(...restLocal.map(p=>p[1]))];
+ok(rb[0]-RG.hit[0]>=3&&rb[1]-RG.hit[1]>=3&&RG.hit[0]+RG.hit[2]-rb[2]>=3&&RG.hit[1]+RG.hit[3]-rb[3]>=3,'raven hit area 3-unit padding');
+const hoardTag=c1map.finds.match(/<g id="f-hoards"[^>]*>/)?.[0];ok(hoardTag?.includes('role="group"')&&hoardTag.includes('aria-label="')&&!hoardTag.includes('tabindex'),'hoards labelled group without tabindex');
+const sourceC2=name=>readFileSync(join(ROOT,name),'utf8');
+ok(/\['ArrowLeft', 'ArrowRight', 'Home', 'End'\]/.test(sourceC2('timeline.mjs'))&&/TL\.hooks\.jump\(e\.key === 'Home' \? 0 : STOPS\.length - 1\)/.test(sourceC2('timeline.mjs')),'timeline Home/End stop navigation');
+ok(/P = stepsFrame\(ts\);\s*if \(JOIN.leave\) JOIN.leave\(P\);/.test(sourceC2('main.mjs')),'hero leave hook directly after stepsFrame');ok(/JOIN.leave = place;/.test(sourceC2('join.mjs'))&&!/JOIN.frame =[^]*?\{\s*place\(P\)/.test(sourceC2('join.mjs')),'join frame no longer writes leave');
+ok(/\.jm-sheet-open \.find-hint\s*\{\s*opacity: 0;/.test(sourceC2('map.css'))&&sourceC2('findkit.mjs').includes("classList.add('jm-sheet-open')")&&sourceC2('findkit.mjs').includes("classList.remove('jm-sheet-open')"),'sheet hides find hint and close clears class');
+for(const row of FIND_COPY.hammer.runes)ok(!/\{n\} (?:more )?(?:foes|hearts|neighbours|ending blows|hail shards|times)\b/.test(row[1]),'hammer numeral needs plural mark: '+row[1]);
+ok(FIND_COPY.hammer.heartLost==='A heart lost. {n} heart{s} left.','heart loss singular/plural copy');ok(sourceC2('findhammer.mjs').includes("s: count === 1 ? '' : 's'")&&sourceC2('findhammer.mjs').includes("s: values.n === 1 ? '' : 's'"),'hammer plural marks formatted');
+console.log('C2 analytic rest clearances coast '+ravenCoast.toFixed(2)+', mark '+ravenMark.toFixed(2)+', regions '+ravenRegion.toFixed(2)+' map units; hit padding, hoards group, timeline keys, early hero leave, sheet hint and hammer plurals');
 
 // no empty copy
 const walk = (v, path) => { if (typeof v === 'string') ok(v.trim().length > 0 || /caption$/.test(path), `empty copy at ${path}`); else if (Array.isArray(v)) v.forEach((x, i) => walk(x, `${path}[${i}]`)); else if (v && typeof v === 'object') Object.entries(v).forEach(([k, x]) => walk(x, `${path}.${k}`)); };

@@ -55,7 +55,7 @@ export function footnameBuild(line, rm) {
   document.addEventListener('pointerleave', away); window.addEventListener('blur', away);
   line.addEventListener('pointerdown', e => {
     if (!FN.live || e.pointerType !== 'mouse') return;
-    footnameMeasure(); const x = exploreLayerInverse([e.clientX, e.clientY], exploreTransform())[0], now = performance.now();
+    const x = exploreLayerInverse([e.clientX, e.clientY], exploreTransform())[0], now = performance.now();
     FN.letters.forEach(letter => letter.kick = now + Math.abs(x - letter.cx) / FN.em * FOOT_NAME.wave);
   });
   window.addEventListener('jm-explore', footnameQueueMeasure);
@@ -63,6 +63,9 @@ export function footnameBuild(line, rm) {
 }
 export function footnameReveal(st) {
   if (FN.rm || !FN.line) return;
+  const settled = st.settleT >= 1;
+  if (settled && !FN.settled) footnameQueueMeasure();
+  FN.settled = settled;
   const b = NOVA.base, q = clamp01((st.settleT - b.textIn[0] - b.textGap) / (b.textIn[1] - b.textIn[0]));
   const reveal = footBezier(FOOT_NAME.wipe, q), weight = FOOT_NAME.weight[0] + (FOOT_NAME.weight[1] - FOOT_NAME.weight[0]) * footBezier(FOOT_NAME.enter, q);
   const ink = FN.ink, y = ink ? ink.bottom + FOOT_NAME.clipBottom - (ink.bottom - ink.top + FOOT_NAME.clipSlack) * reveal : 0;
@@ -71,8 +74,7 @@ export function footnameReveal(st) {
   const live = q >= 1;
   if (FN.live !== live) {
     FN.live = live; FN.line.classList.toggle('is-live', live);
-    if (live) footnameQueueMeasure();
-    else { FN.open = 0; FN.letters.forEach(l => { l.y = l.vy = l.kick = 0; l.els.forEach(el => el.style.transform = ''); }); FN.red.style.clipPath = ''; }
+    if (!live) { FN.open = 0; FN.letters.forEach(l => { l.y = l.vy = l.kick = 0; l.els.forEach(el => el.style.transform = ''); }); FN.red.style.clipPath = ''; }
   }
 }
 export function footnameFrame(time, dt, shift) {

@@ -31,7 +31,7 @@ export const stepsJumping = () => !!SC.cut;
 export function stepsFocusNow() {
   const f = SC.focus; if (!f) return null;
   const q = easeIO(f.swap), view = Array.from({ length: Math.max(f.from.length, f.to.length) }, (_, i) => { const a = f.from[i] ?? FIND_PLAY.focus.least, b = f.to[i] ?? FIND_PLAY.focus.least; return i === 2 ? a * (b / a) ** q : lerp(a, b, q); });
-  return { id: f.id, view, k: easeIO(f.k) };
+  return { id: f.id, view, k: easeIO(f.k), swapped: f.swap === 1 };
 }
 export function stepsFocus(id, view) {
   const st = tripState(SC.P);
