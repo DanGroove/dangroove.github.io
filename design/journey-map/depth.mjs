@@ -26,7 +26,7 @@ export const NOVA_LIVE = { time: 0, flareAt: null, serial: 0 };
 export const novaFlare = () => NOVA_LIVE.flareAt === null ? 1 : clamp01((NOVA_LIVE.time - NOVA_LIVE.flareAt) / NOVA.flare.time);
 
 const DP = { deep: null, air: null, sky: null, dc: null, ac: null, dpr: 1, rm: false, fine: false,
-  look: [0, 0], clouds: [], birds: [], mist: [], deck: [], waves: [], waveKey: '', sprite: null, spriteKey: '',
+  look: [0, 0], clouds: [], birds: [], mist: [], deck: [], dust: [], waves: [], waveKey: '', sprite: null, spriteKey: '',
   lastDraw: -Infinity, wind: 0, light: null, config: '', tuning: '', pending: false, force: true, mistVisible: false, cloudVisible: false, pointer: [0.5, 0.5] };
 const depthCentres = [COAST_A, COAST_B].map(coast => coast.reduce((a, p) => [a[0] + p[0] / coast.length, a[1] + p[1] / coast.length], [0, 0]));
 const depthRange = (range, u) => lerp(range[0], range[1], u);
@@ -124,7 +124,19 @@ function depthDeep(st, look) {
   const b = depthFrameBox(st); c.beginPath(); c.rect(0, 0, w, h); c.rect(b[0], b[1], b[2] - b[0], b[3] - b[1]); c.clip('evenodd');
   c.globalAlpha = O.rays; c.beginPath(); const origin = toScreen(st, O.origin);
   for (let i = 0; i < O.n; i++) { const angle = i * Math.PI * 2 / O.n + O.angle, end = toScreen(st, [O.origin[0] + Math.cos(angle) * O.reach, O.origin[1] + Math.sin(angle) * O.reach]); c.moveTo(...origin); c.lineTo(...end); }
-  c.stroke(); c.restore(); c.globalAlpha = 1;
+  c.stroke();
+  const U = DEPTH.dust, show = U.on * smooth(...U.show, depthLift(st));
+  if (show > 0) {
+    depthSamples(DP.dust, Math.max(0, Math.floor(VIEW.phone ? U.nPhone : U.n)), DEPTH.seed + 2); c.fillStyle = C.paper;
+    const vx = st.cam.ax + look[0], vy = st.cam.ay + look[1];
+    for (const u of DP.dust) {
+      const k = depthFactor(st, depthRange(U.a, u[2])), g = toScreen(st, [u[0] * U.tile[0], u[1] * U.tile[1]]);
+      const dx = U.tile[0] * st.cam.s * k, dy = U.tile[1] * st.cam.s * k, r = depthRange(U.r, u[3]);
+      c.globalAlpha = depthRange(U.alpha, u[4]) * show;
+      for (let x = ((vx + (g[0] - vx) * k) % dx + dx) % dx; x < w; x += dx) for (let y = ((vy + (g[1] - vy) * k) % dy + dy) % dy; y < h; y += dy) c.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+  }
+  c.restore(); c.globalAlpha = 1;
 }
 const depthHole = (distance, radius, core) => radius > 0 ? 1 - clamp01((distance - core * radius) / (radius * (1 - core))) : 0;
 export function lightAt(x, y) {

@@ -1062,15 +1062,18 @@ const DEPTH = {
   fade: { sea: [0.2, 0.7], blast: [0, 0.45] },
   frame: { inner: [22, 22, 578, 878], outer: [14.5, 14.5, 585.5, 885.5] },
   rings: { on: 1, scale: [1.05, 1.10, 1.16], a: [-0.12, -0.24, -0.36], alpha: [0.55, 0.36, 0.2], colour: 'mid', width: 1, dash: [2, 5] },
-  outer: { on: 1, cell: [86, 64], fill: 0.55, alpha: [0.3, 0.12], fade: 420, rays: 0.05,
+  outer: { on: 1, cell: [66, 48], fill: 0.8, alpha: [0.5, 0.2], fade: 420, rays: 0.1,
     area: [-1000, -200, 1600, 1100], jitter: 0.8, width: 0.7, wave: [2.5, -3, 5], waveCount: 3, origin: [92, 716], n: 16, angle: 0.2, reach: 1600 },
   light: { on: 1, dark: 0.45, darkPhone: 0.25, r: 0.55, core: 0.35, ptrR: 0.3, ptrCore: 0.3, amb: 0.35, card: 0.6, visit: 0.35, rush: [0, 0.5] },
   field: { area: [-100, -50, 700, 950], wrapFade: 60, sprite: 128, spriteMid: 0.4, spriteAlpha: 0.5 },
   mist: { on: 1, n: 120, nPhone: 60, a: [0.5, 1.8], r: [14, 36], stretch: [2.2, 3.4], turn: 0.2, alpha: [0.06, 0.14], near: [0.12, 0.42], thin: 0.35, show: [1.1, 1.3], pass: [2.4, 3.4], wind: 2.2 },
   deck: { on: 1, n: 60, nPhone: 34, a: [6.5, 11], r: [50, 120], stretch: [1.6, 2.6], alpha: 0.07, boost: 6, show: [1.6, 1.9], peak: [1.8, 2.3], pass: [2.3, 3.0] },
-  clouds: { on: 1, show: [0.3, 0.8], pass: [2.0, 2.9], sway: [14, 26], period: [50, 90],
+  clouds: { on: 1, show: [0.3, 0.8], pass: [2.0, 2.9], sway: [14, 26], period: [50, 90], low: 2,
     list: [[-150, 150, 1.5, 3, 1, 7.0], [-250, 520, 1.1, 1, -1, 6.4], [-90, 800, 0.9, 2, 1, 7.6], [760, 110, 1.2, 1, 1, 6.8], [860, 430, 1.6, 3, -1, 7.4],
-      [720, 760, 1.0, 2, -1, 6.2], [30, 330, 0.8, 2, 1, 8.2], [575, 690, 0.8, 2, -1, 8.0], [300, -30, 1.3, 3, 1, 7.2], [330, 935, 1.2, 1, -1, 6.6]] },
+      [720, 760, 1.0, 2, -1, 6.2], [30, 330, 0.8, 2, 1, 8.2], [575, 690, 0.8, 2, -1, 8.0], [300, -30, 1.3, 3, 1, 7.2], [330, 935, 1.2, 1, -1, 6.6],
+      [-62, 150, 0.42, 2, 1, 0.5], [-96, 300, 0.5, 1, -1, 0.7], [-58, 452, 0.38, 2, -1, 0.4], [-104, 610, 0.5, 3, 1, 0.6], [-64, 770, 0.4, 1, 1, 0.5],
+      [662, 120, 0.44, 1, -1, 0.6], [700, 270, 0.4, 2, 1, 0.4], [668, 420, 0.5, 3, -1, 0.7], [706, 570, 0.4, 2, -1, 0.5], [666, 730, 0.46, 1, 1, 0.6]] },
+  dust: { on: 1, n: 240, nPhone: 120, tile: [800, 600], a: [-0.85, -0.2], r: [0.5, 1.1], alpha: [0.25, 0.75], show: [0.12, 0.4] },
   ravens: { on: 1, a: 2.2, size: 0.65, legs: [2, 4], from: 0.12, to: 0.88, side: 90, gap: 26, flap: 0.9, fold: 0.62, ramp: 0.1 },
   card: { tilt: 14, ptrTilt: [2.2, 1.6], shift: 8, shadow: 0.5, drop: 18, ease: 0.12,
     perspective: 1100, open: [0.1, 0.9], flat: 0.01, shadowShare: 3, blur: 28, spread: 10, radius: 14 },
@@ -1083,18 +1086,18 @@ const DEPTH = {
       ['M-40 10Q-52 10 -50 0Q-50 -10 -37 -9Q-34 -24 -17 -21Q-8 -33 8 -25Q22 -30 29 -16Q44 -16 42 -2Q46 10 36 10Z', 'M-24 -6Q-16 -14 -6 -8M8 -12Q16 -18 24 -11', 'M-62 18H-22M-10 23H30M40 17H64'],
       ['M-70 12Q-82 12 -80 3Q-79 -7 -66 -6Q-64 -19 -48 -17Q-40 -31 -23 -25Q-12 -38 5 -30Q18 -42 34 -31Q48 -35 54 -21Q68 -22 69 -9Q82 -8 80 3Q82 12 72 12Z', 'M-52 -3Q-44 -12 -33 -6M-12 -14Q-3 -23 9 -15M30 -16Q39 -23 48 -15M-22 4Q-13 -3 -3 3M20 2Q28 -4 37 2', 'M-98 20H-52M-40 27H42M56 20H100'],
     ],
-    raven: { wing: 'M1.6 -3Q8 -8.4 15 -6.6L20 -4.4L16.8 -3.6L19.2 -1.8L15.8 -1.7L17.4 .2L13.6 -.4Q8 1.8 1.6 2.4Z', tail: 'M-1.8 6L-2.7 11.2L0 13.4L2.7 11.2L1.8 6Z', body: 'M0 -10Q2.7 -7 2.2 -1Q2.4 5 0 8Q-2.4 5 -2.2 -1Q-2.7 -7 0 -10Z', beak: 'M-.8 -9.4L0 -13.2L.8 -9.4Z' },
+    raven: { wing: 'M1.6 -3.4Q9.9 -10 19 -7.4L25.5 -4.6L21.4 -3.8L24.5 -1.8L20.1 -1.7L22.1 .4L17.2 -.2Q9.9 2.2 1.6 2.6Z', tail: 'M-1.7 6L-3.3 11.6L-1.1 10.7L0 13.2L1.1 10.7L3.3 11.6L1.7 6Z', body: 'M0 -10Q2.7 -7 2.2 -1Q2.4 5 0 8Q-2.4 5 -2.2 -1Q-2.7 -7 0 -10Z', beak: 'M-.8 -9.4L0 -13.2L.8 -9.4Z' },
   },
 };
 
 const NOVA = {
-  pulse: [3.4, 0.05, 1.3, 0.025], spike: [2.2, 0.08], glow: [5.2, 0.025],
-  rays: { n: 14, len: [3, 7], alpha: [0.1, 0.2], turn: 0.035, start: 1.1, width: 0.7, breathe: 0.3, period: [2, 5] },
-  lobes: { n: 6, nPhone: 4, r: [120, 260], orbit: [40, 170], speed: [0.02, 0.06], alpha: [0.16, 0.34], breathe: 0.08 },
-  waves: { n: 3, every: 3.6, reach: 0.7, alpha: 0.22, width: 0.7 },
-  shells: [1.2, -0.8], shellDash: [2, 10],
-  orbit: 0.012, embers: { n: 24, nPhone: 12, life: [4, 7], reach: [0.12, 0.34], alpha: 0.8, r: [0.6, 1.5], slow: 3, burst: 2, fade: [0.15, 1] },
-  flare: { time: 1.6, core: 0.5, kick: 0.12, hit: 70, alpha: 0.9, reach: 0.85 },
+  pulse: [2.6, 0.12, 0.9, 0.06], spike: [1.7, 0.2, 3.14], glow: [4.2, 0.07],
+  rays: { n: 22, len: [4, 12], alpha: [0.3, 0.7], turn: 0.12, start: 1.1, width: 1, breathe: 0.7, period: [1.2, 3.2], peak: 0.16 },
+  lobes: { n: 6, nPhone: 4, r: [120, 260], orbit: [40, 170], speed: [0.12, 0.3], alpha: [0.22, 0.42], breathe: 0.2 },
+  waves: { n: 4, every: 2.2, reach: 0.7, alpha: 0.42, width: 1 },
+  shells: [6, -4], shellDash: [2, 10],
+  orbit: 0.06, embers: { n: 40, nPhone: 20, life: [2.5, 5], reach: [0.16, 0.45], alpha: 1, r: [1, 2.4], slow: 3, burst: 2, fade: [0.15, 1] },
+  flare: { time: 1.6, core: 0.5, kick: 0.12, hit: 70, alpha: 0.9, reach: 0.85, auto: [7, 12] },
   motionIn: [0, 1], orbitIn: [0.5, 1], seed: 149,
   base: { spikeLength: 12.7, angles: [45, -45], rushLen: 2.4, peakLen: 10, endLen: 5, spikePeak: 0.3, spikeEnd: 58,
     thin: [1, 0.55, 0.8, 0.5], heat: [0.05, 0.7], redOut: [0.2, 0.9],
@@ -1552,7 +1555,7 @@ const NOVA_LIVE = { time: 0, flareAt: null, serial: 0 };
 const novaFlare = () => NOVA_LIVE.flareAt === null ? 1 : clamp01((NOVA_LIVE.time - NOVA_LIVE.flareAt) / NOVA.flare.time);
 
 const DP = { deep: null, air: null, sky: null, dc: null, ac: null, dpr: 1, rm: false, fine: false,
-  look: [0, 0], clouds: [], birds: [], mist: [], deck: [], waves: [], waveKey: '', sprite: null, spriteKey: '',
+  look: [0, 0], clouds: [], birds: [], mist: [], deck: [], dust: [], waves: [], waveKey: '', sprite: null, spriteKey: '',
   lastDraw: -Infinity, wind: 0, light: null, config: '', tuning: '', pending: false, force: true, mistVisible: false, cloudVisible: false, pointer: [0.5, 0.5] };
 const depthCentres = [COAST_A, COAST_B].map(coast => coast.reduce((a, p) => [a[0] + p[0] / coast.length, a[1] + p[1] / coast.length], [0, 0]));
 const depthRange = (range, u) => lerp(range[0], range[1], u);
@@ -1650,7 +1653,19 @@ function depthDeep(st, look) {
   const b = depthFrameBox(st); c.beginPath(); c.rect(0, 0, w, h); c.rect(b[0], b[1], b[2] - b[0], b[3] - b[1]); c.clip('evenodd');
   c.globalAlpha = O.rays; c.beginPath(); const origin = toScreen(st, O.origin);
   for (let i = 0; i < O.n; i++) { const angle = i * Math.PI * 2 / O.n + O.angle, end = toScreen(st, [O.origin[0] + Math.cos(angle) * O.reach, O.origin[1] + Math.sin(angle) * O.reach]); c.moveTo(...origin); c.lineTo(...end); }
-  c.stroke(); c.restore(); c.globalAlpha = 1;
+  c.stroke();
+  const U = DEPTH.dust, show = U.on * smooth(...U.show, depthLift(st));
+  if (show > 0) {
+    depthSamples(DP.dust, Math.max(0, Math.floor(VIEW.phone ? U.nPhone : U.n)), DEPTH.seed + 2); c.fillStyle = C.paper;
+    const vx = st.cam.ax + look[0], vy = st.cam.ay + look[1];
+    for (const u of DP.dust) {
+      const k = depthFactor(st, depthRange(U.a, u[2])), g = toScreen(st, [u[0] * U.tile[0], u[1] * U.tile[1]]);
+      const dx = U.tile[0] * st.cam.s * k, dy = U.tile[1] * st.cam.s * k, r = depthRange(U.r, u[3]);
+      c.globalAlpha = depthRange(U.alpha, u[4]) * show;
+      for (let x = ((vx + (g[0] - vx) * k) % dx + dx) % dx; x < w; x += dx) for (let y = ((vy + (g[1] - vy) * k) % dy + dy) % dy; y < h; y += dy) c.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+  }
+  c.restore(); c.globalAlpha = 1;
 }
 const depthHole = (distance, radius, core) => radius > 0 ? 1 - clamp01((distance - core * radius) / (radius * (1 - core))) : 0;
 function lightAt(x, y) {
@@ -2470,7 +2485,7 @@ function stepsBuild({ stage, rm, resize, joinedTop }) {
 
 
 
-const FT = { g: {}, items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], config: '', pending: false };
+const FT = { g: {}, items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], config: '', pending: false, nextFlare: null, lastFlare: null };
 const upRight = '<svg class="ne" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 8.5L8.5 1.5M3 1.5H8.5V7"/></svg>';
 const arrowR = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
 
@@ -2480,13 +2495,13 @@ function footerBuildX(g, rm = false) {
   FT.rm = rm;
   const r = rnd(43); let streaks = '';
   for (let i = 0; i < 60; i++) { const a = r() * 6.283, d1 = .3 + r() * .5, d2 = d1 + .2 + r() * .6, c = Math.cos(a), sn = Math.sin(a); streaks += `<path d="M${n1(c * d1 * 10)} ${n1(sn * d1 * 10)}L${n1(c * d2 * 10)} ${n1(sn * d2 * 10)}" stroke="${r() < .3 ? C.red : C.paper}" stroke-opacity="${n1(.3 + r() * .6)}" stroke-width="${n1(.6 + r())}" vector-effect="non-scaling-stroke" stroke-linecap="round"/>`; }
-  g.innerHTML = `<circle class="fx-rg" r="1" fill="url(#rglow)" opacity="0"/><circle class="fx-og" r="1" fill="url(#oglow)" opacity="0"/>`
+  g.innerHTML = `<defs><linearGradient id="fxray" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${C.paper}" stop-opacity="0"/><stop offset="${NOVA.rays.peak}" stop-color="${C.paper}" stop-opacity="1"/><stop offset="1" stop-color="${C.paper}" stop-opacity="0"/></linearGradient></defs><circle class="fx-rg" r="1" fill="url(#rglow)" opacity="0"/><circle class="fx-og" r="1" fill="url(#oglow)" opacity="0"/>`
     + `<g class="fx-rays" opacity="0"></g><g class="fx-lobes" opacity="0"></g><g class="fx-waves" opacity="0"></g><circle class="fx-flare" r="1" fill="none" stroke="${C.paper}" vector-effect="non-scaling-stroke" opacity="0"/>`
     + `<g class="fx-streaks" opacity="0">${streaks}</g>`
     + `<circle class="fx-ringr" r="1" fill="none" stroke="${C.red}" stroke-width="8" vector-effect="non-scaling-stroke" opacity="0"/><circle class="fx-ring" r="1" fill="none" stroke="${C.paper}" stroke-width="2" vector-effect="non-scaling-stroke" opacity="0"/>`
     + `<circle class="fx-r1" r="1" fill="none" stroke="${C.paper}" stroke-width=".8" vector-effect="non-scaling-stroke" opacity="0"/><circle class="fx-r2" r="1" fill="none" stroke="${C.paper}" stroke-width=".6" vector-effect="non-scaling-stroke" opacity="0"/>`
     + `<circle class="fx-core" r="1" fill="url(#glow)" opacity="0"/>` + xStroke(45) + xStroke(-45)
-    + (rm ? '' : `<circle class="fx-hit hit" r="1" role="button" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true"/>`);
+    + (rm ? '' : `<circle class="fx-hit hit" r="1" role="button" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true" style="outline:none"/>`);
   ['fx-rg', 'fx-og', 'fx-rays', 'fx-lobes', 'fx-waves', 'fx-flare', 'fx-streaks', 'fx-ringr', 'fx-ring', 'fx-r1', 'fx-r2', 'fx-core'].forEach(k => FT.g[k] = g.querySelector('.' + k));
   FT.g.s = [...g.querySelectorAll('.fx-s')]; FT.g.red = [...g.querySelectorAll('.fx-red')]; FT.g.white = [...g.querySelectorAll('.fx-white')];
   FT.hit = g.querySelector('.fx-hit');
@@ -2549,7 +2564,7 @@ function footerConfigure() {
       el.setAttribute('opacity', 0);
       if (type === 'circle') el.setAttribute('r', 1); else el.setAttribute('d', 'M0 0H1');
       el.setAttribute('fill', cls === 'fx-lobe' ? `url(#${i % 2 ? 'oglow' : 'rglow'})` : 'none');
-      if (cls !== 'fx-lobe') el.setAttribute('stroke', C.paper);
+      if (cls !== 'fx-lobe') el.setAttribute('stroke', cls === 'fx-ray' ? 'url(#fxray)' : C.paper);
       parent.appendChild(el); list.push({ el, u: Array.from({ length: 7 }, () => r()) });
     }
   };
@@ -2564,6 +2579,10 @@ function footerMotion(time, dt, st, look, moved) {
   if (FT.rm) return;
   NOVA_LIVE.time += dt;
   if (st.blastT > 0) FT.clock += dt; else { FT.clock = 0; NOVA_LIVE.flareAt = null; }
+  if (st.settleT >= 1 && NOVA.flare.auto[1] > 0) {
+    if (FT.nextFlare === null || NOVA_LIVE.flareAt !== FT.lastFlare) { FT.lastFlare = NOVA_LIVE.flareAt; FT.nextFlare = NOVA_LIVE.time + lerp(...NOVA.flare.auto, rnd(NOVA.seed + NOVA_LIVE.serial)()); }
+    else if (NOVA_LIVE.time >= FT.nextFlare) { NOVA_LIVE.flareAt = NOVA_LIVE.time; NOVA_LIVE.serial++; }
+  } else FT.nextFlare = null;
   if (footerConfigKey() !== FT.config && !FT.pending) { FT.pending = true; queueMicrotask(() => { footerConfigure(); FT.pending = false; }); }
   if (!moved && st.blastT <= 0) return;
   const s = st.cam.s, rT = st.rushT, bT = st.blastT, sT = st.settleT, G = FT.g, u = px => px / s, B = NOVA.base;
@@ -2578,7 +2597,7 @@ function footerMotion(time, dt, st, look, moved) {
   if (sT > 0) len = lerp(B.endLen, u(B.spikeEnd) / B.spikeLength, easeIO(sT));
   if (bT > 0) thin = lerp(B.thin[1], B.thin[2], out(clamp01(bT / B.spikePeak)));
   if (sT > 0) thin = lerp(B.thin[2], B.thin[3], sT);
-  G.s.forEach((g, i) => T(g, `rotate(${B.angles[i]}) scale(${len * (1 + strength * NOVA.spike[1] * wave(NOVA.spike[0])) * pulse} ${thin})`));
+  G.s.forEach((g, i) => T(g, `rotate(${B.angles[i]}) scale(${len * (1 + strength * NOVA.spike[1] * Math.sin(Math.PI * 2 * clock / NOVA.spike[0] + i * NOVA.spike[2])) * pulse} ${thin})`));
   const heat = smooth(...B.heat, rT);
   G.white.forEach(w => w.setAttribute('opacity', heat.toFixed(3)));
   G.red.forEach(w => w.setAttribute('opacity', (1 - smooth(...B.redOut, rT)).toFixed(3)));

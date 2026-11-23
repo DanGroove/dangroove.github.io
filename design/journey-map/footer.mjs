@@ -5,7 +5,7 @@ import { VIEW, smooth, lerp, easeIO, clamp01 } from './trip.mjs';
 import { JOURNEY } from './steps.mjs';
 import { novaRingRadius, novaFlare, NOVA_LIVE } from './depth.mjs';
 
-const FT = { g: {}, items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], config: '', pending: false };
+const FT = { g: {}, items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], config: '', pending: false, nextFlare: null, lastFlare: null };
 const upRight = '<svg class="ne" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 8.5L8.5 1.5M3 1.5H8.5V7"/></svg>';
 const arrowR = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
 
@@ -15,13 +15,13 @@ export function footerBuildX(g, rm = false) {
   FT.rm = rm;
   const r = rnd(43); let streaks = '';
   for (let i = 0; i < 60; i++) { const a = r() * 6.283, d1 = .3 + r() * .5, d2 = d1 + .2 + r() * .6, c = Math.cos(a), sn = Math.sin(a); streaks += `<path d="M${n1(c * d1 * 10)} ${n1(sn * d1 * 10)}L${n1(c * d2 * 10)} ${n1(sn * d2 * 10)}" stroke="${r() < .3 ? C.red : C.paper}" stroke-opacity="${n1(.3 + r() * .6)}" stroke-width="${n1(.6 + r())}" vector-effect="non-scaling-stroke" stroke-linecap="round"/>`; }
-  g.innerHTML = `<circle class="fx-rg" r="1" fill="url(#rglow)" opacity="0"/><circle class="fx-og" r="1" fill="url(#oglow)" opacity="0"/>`
+  g.innerHTML = `<defs><linearGradient id="fxray" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${C.paper}" stop-opacity="0"/><stop offset="${NOVA.rays.peak}" stop-color="${C.paper}" stop-opacity="1"/><stop offset="1" stop-color="${C.paper}" stop-opacity="0"/></linearGradient></defs><circle class="fx-rg" r="1" fill="url(#rglow)" opacity="0"/><circle class="fx-og" r="1" fill="url(#oglow)" opacity="0"/>`
     + `<g class="fx-rays" opacity="0"></g><g class="fx-lobes" opacity="0"></g><g class="fx-waves" opacity="0"></g><circle class="fx-flare" r="1" fill="none" stroke="${C.paper}" vector-effect="non-scaling-stroke" opacity="0"/>`
     + `<g class="fx-streaks" opacity="0">${streaks}</g>`
     + `<circle class="fx-ringr" r="1" fill="none" stroke="${C.red}" stroke-width="8" vector-effect="non-scaling-stroke" opacity="0"/><circle class="fx-ring" r="1" fill="none" stroke="${C.paper}" stroke-width="2" vector-effect="non-scaling-stroke" opacity="0"/>`
     + `<circle class="fx-r1" r="1" fill="none" stroke="${C.paper}" stroke-width=".8" vector-effect="non-scaling-stroke" opacity="0"/><circle class="fx-r2" r="1" fill="none" stroke="${C.paper}" stroke-width=".6" vector-effect="non-scaling-stroke" opacity="0"/>`
     + `<circle class="fx-core" r="1" fill="url(#glow)" opacity="0"/>` + xStroke(45) + xStroke(-45)
-    + (rm ? '' : `<circle class="fx-hit hit" r="1" role="button" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true"/>`);
+    + (rm ? '' : `<circle class="fx-hit hit" r="1" role="button" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true" style="outline:none"/>`);
   ['fx-rg', 'fx-og', 'fx-rays', 'fx-lobes', 'fx-waves', 'fx-flare', 'fx-streaks', 'fx-ringr', 'fx-ring', 'fx-r1', 'fx-r2', 'fx-core'].forEach(k => FT.g[k] = g.querySelector('.' + k));
   FT.g.s = [...g.querySelectorAll('.fx-s')]; FT.g.red = [...g.querySelectorAll('.fx-red')]; FT.g.white = [...g.querySelectorAll('.fx-white')];
   FT.hit = g.querySelector('.fx-hit');
@@ -84,7 +84,7 @@ function footerConfigure() {
       el.setAttribute('opacity', 0);
       if (type === 'circle') el.setAttribute('r', 1); else el.setAttribute('d', 'M0 0H1');
       el.setAttribute('fill', cls === 'fx-lobe' ? `url(#${i % 2 ? 'oglow' : 'rglow'})` : 'none');
-      if (cls !== 'fx-lobe') el.setAttribute('stroke', C.paper);
+      if (cls !== 'fx-lobe') el.setAttribute('stroke', cls === 'fx-ray' ? 'url(#fxray)' : C.paper);
       parent.appendChild(el); list.push({ el, u: Array.from({ length: 7 }, () => r()) });
     }
   };
@@ -99,6 +99,10 @@ export function footerMotion(time, dt, st, look, moved) {
   if (FT.rm) return;
   NOVA_LIVE.time += dt;
   if (st.blastT > 0) FT.clock += dt; else { FT.clock = 0; NOVA_LIVE.flareAt = null; }
+  if (st.settleT >= 1 && NOVA.flare.auto[1] > 0) {
+    if (FT.nextFlare === null || NOVA_LIVE.flareAt !== FT.lastFlare) { FT.lastFlare = NOVA_LIVE.flareAt; FT.nextFlare = NOVA_LIVE.time + lerp(...NOVA.flare.auto, rnd(NOVA.seed + NOVA_LIVE.serial)()); }
+    else if (NOVA_LIVE.time >= FT.nextFlare) { NOVA_LIVE.flareAt = NOVA_LIVE.time; NOVA_LIVE.serial++; }
+  } else FT.nextFlare = null;
   if (footerConfigKey() !== FT.config && !FT.pending) { FT.pending = true; queueMicrotask(() => { footerConfigure(); FT.pending = false; }); }
   if (!moved && st.blastT <= 0) return;
   const s = st.cam.s, rT = st.rushT, bT = st.blastT, sT = st.settleT, G = FT.g, u = px => px / s, B = NOVA.base;
@@ -113,7 +117,7 @@ export function footerMotion(time, dt, st, look, moved) {
   if (sT > 0) len = lerp(B.endLen, u(B.spikeEnd) / B.spikeLength, easeIO(sT));
   if (bT > 0) thin = lerp(B.thin[1], B.thin[2], out(clamp01(bT / B.spikePeak)));
   if (sT > 0) thin = lerp(B.thin[2], B.thin[3], sT);
-  G.s.forEach((g, i) => T(g, `rotate(${B.angles[i]}) scale(${len * (1 + strength * NOVA.spike[1] * wave(NOVA.spike[0])) * pulse} ${thin})`));
+  G.s.forEach((g, i) => T(g, `rotate(${B.angles[i]}) scale(${len * (1 + strength * NOVA.spike[1] * Math.sin(Math.PI * 2 * clock / NOVA.spike[0] + i * NOVA.spike[2])) * pulse} ${thin})`));
   const heat = smooth(...B.heat, rT);
   G.white.forEach(w => w.setAttribute('opacity', heat.toFixed(3)));
   G.red.forEach(w => w.setAttribute('opacity', (1 - smooth(...B.redOut, rT)).toFixed(3)));

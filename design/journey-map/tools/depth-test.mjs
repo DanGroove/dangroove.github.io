@@ -6,16 +6,24 @@ import { starsBuild, starsResize, starsJoin, starsTick, starsFrame } from '../st
 
 const depthAssert = (condition, message) => { if (!condition) throw new Error(message); };
 const depthNear = (a, b) => ['s', 'tx', 'ty'].every(k => Math.abs(a[k] - b[k]) <= 1e-6);
+// Clouds come at two heights. High rows are passed on the way down and never seen during the trip.
+// Low rows (last number under clouds.low) stay beside the chart for the whole trip, so they must lie outside its frame.
+const depthHigh = DEPTH.clouds.list.filter(c => c[5] >= DEPTH.clouds.low), depthLow = DEPTH.clouds.list.filter(c => c[5] < DEPTH.clouds.low);
+depthLow.forEach((c, i) => {
+  const half = c[2] * Math.max(...DEPTH.drawings.clouds[c[3] - 1].join(' ').match(/-?[\d.]+/g).map(n => Math.abs(+n))), f = DEPTH.frame.outer, reach = half + DEPTH.clouds.sway[1];
+  depthAssert(c[5] > 0 && (c[0] + reach < f[0] || c[0] - reach > f[2] || c[1] + half < f[1] || c[1] - half > f[3]), `low cloud ${i} can reach over the chart`);
+});
 const depthHeights = Array.from({ length: 101 }, (_, i) => DEPTH.deck.a[0] + (DEPTH.deck.a[1] - DEPTH.deck.a[0]) * i / 100);
 for (const [w, h, bar] of [[1440, 900, 120], [390, 844, 96]]) {
   tripResize(w, h, bar); VIEW.depth = 1;
   const whole = tripState(SEQ.find(s => s.kind === 'overview').a), push = SEQ.find(s => s.kind === 'pushIn');
   DEPTH.clouds.list.forEach((c, i) => depthAssert(depthCloudPass(whole, c[5]) === 1, `${w}: whole-map cloud ${i} already passing`));
+  depthLow.forEach((c, i) => depthAssert(depthCloudPass(tripState(SEQ.find(s => s.kind === 'hold').a + 60), c[5]) === 1, `${w}: low cloud ${i} fades at a stop`));
   depthHeights.forEach(a => depthAssert(depthDeckAlpha(whole, a) === 0, `${w}: whole-map deck ${a} visible`));
   const checkPassed = P => {
     const st = tripState(P);
     depthAssert(depthFactor(st, DEPTH.deck.a[0]) >= DEPTH.deck.pass[1] && depthFactor(st, DEPTH.deck.a[1]) >= DEPTH.deck.pass[1], `${w}: deck interval not entirely past pass window at P=${P}`);
-    DEPTH.clouds.list.forEach((c, i) => depthAssert(depthCloudPass(st, c[5]) === 0, `${w}: cloud ${i} remains at P=${P}`));
+    depthHigh.forEach((c, i) => depthAssert(depthCloudPass(st, c[5]) === 0, `${w}: cloud ${i} remains at P=${P}`));
     depthHeights.forEach(a => depthAssert(depthVisibility(depthFactor(st, a), DEPTH.deck) === 0, `${w}: deck ${a} remains at P=${P}`));
   };
   checkPassed(push.a + push.len);
@@ -23,7 +31,7 @@ for (const [w, h, bar] of [[1440, 900, 120], [390, 844, 96]]) {
     checkPassed(seg.a); checkPassed(seg.a + seg.len);
     for (let P = Math.ceil(seg.a); P < seg.a + seg.len; P++) checkPassed(P);
   }
-  console.log(`ok ${w}x${h}: whole-map clouds intact/deck hidden; all cloud/deck heights passed at dive end and every whole hold/leg/legX P`);
+  console.log(`ok ${w}x${h}: whole-map clouds intact/deck hidden; all high cloud/deck heights passed at dive end and every whole hold/leg/legX P; ${depthLow.length} low clouds stay, outside the frame`);
   const legs = SEQ.filter(s => ['leg', 'legX'].includes(s.kind));
   for (const seg of legs) {
     const mid = tripState(seg.a + seg.len / 2);
