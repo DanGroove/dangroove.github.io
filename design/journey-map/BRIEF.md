@@ -78,9 +78,9 @@ The map is 600 by 900 units. Coasts are `A` and `Bz`, the trail is the spline `T
 | laurier | `laurier.png` (on white) | white top band holds the logo, field below | `#330172` | `#FFFFFF` | `#CFC3E0` | `#EAA41E` / `#330172` | `#EAA41E` / `#330172` |
 | mohawk | `mohawk.png` (on black) | logo on the ground | `#030303` | `#F4F4F4` | `#A3A3A3` | `#FB9632` / `#030303` | `#991030` / `#FFFFFF` |
 | interkom | `interkom.png` (on cream) | logo on the ground | `#F7F3E2` | `#242021` | `#5E5A56` | `#E85155` / `#F7F3E2` | `#242021` / `#F7F3E2` |
-| lennard | `lennard.png` (on white) | logo on the ground | `#FFFFFF` | `#706259` | `#706259` | `#706259` / `#FFFFFF` | `#F1EFEF` / `#706259` |
+| lennard | `lennard.png` (on white) | white top band holds the logo, field below | `#FF4C00` | `#FFFFFF` | `#FFFFFF` | `#FFFFFF` / `#706259` | `#706259` / `#FFFFFF` |
 
-Lennard's card follows Lennard's own design system (Dan agreed to this on 22 Nov): a white ground, Warm Gray 11 (`#706259`) for all text, and one orange idea in PMS 1655 (`#FF4C00`), which is the headline, set at 22 px or larger. Nothing else on that card is orange except the logo. Its hairlines are Warm Gray 1 (`#D8D1CA`). Never use `#0F151E`, `#1A1A1A` or black on it.
+Lennard's card (changed 22 Nov, late; `STEPS.md` section 12 has the exact row): Dan saw the all-white card and said "i think we go back to the old lennard layout, the white by itself is too simple. still the correct colors though". So it is the band layout again, a white band with the logo over a field of Lennard's orange with white type. The colours are still the ones from Lennard's own design system: the orange is PMS 1655 (`#FF4C00`) and the only dark is Warm Gray 11 (`#706259`), which fills the date pill and letters the button. Never use `#0F151E`, `#1A1A1A` or black on it. Its `headline` is white.
 
 Each palette therefore carries two more values. `headline`: the headline's colour, which is the text colour on the other five cards. `mark`: the colour used wherever a place's colour sits on the Ink ground (the lit stop mark, its timeline block, the mini-map), because several grounds are too dark or too light to show there: `#0D7247` for HMC, `#EAA41E` for Laurier, `#FB9632` for Mohawk, `#E85155` for Interkom, `#FF4C00` for Lennard.
 
