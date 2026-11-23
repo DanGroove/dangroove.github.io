@@ -27,7 +27,7 @@ export const novaFlare = () => NOVA_LIVE.flareAt === null ? 1 : clamp01((NOVA_LI
 
 const DP = { deep: null, air: null, sky: null, dc: null, ac: null, dpr: 1, rm: false, fine: false,
   look: [0, 0], clouds: [], birds: [], mist: [], deck: [], dust: [], waves: [], waveKey: '', sprite: null, spriteKey: '',
-  lastDraw: -Infinity, wind: 0, light: null, config: '', tuning: '', pending: false, force: true, mistVisible: false, cloudVisible: false, pointer: [0.5, 0.5] };
+  lastDraw: -Infinity, wind: 0, light: null, beam: null, config: '', tuning: '', pending: false, force: true, mistVisible: false, cloudVisible: false, pointer: [0.5, 0.5] };
 const depthCentres = [COAST_A, COAST_B].map(coast => coast.reduce((a, p) => [a[0] + p[0] / coast.length, a[1] + p[1] / coast.length], [0, 0]));
 const depthRange = (range, u) => lerp(range[0], range[1], u);
 const depthSamples = (list, n, seed) => { if (list.length >= n && list.seed === seed) return; const r = rnd(seed); list.length = 0; list.seed = seed; for (let i = 0; i < n; i++) list.push(Array.from({ length: 8 }, () => r())); };
@@ -92,6 +92,13 @@ export function depthLook(dt, pointer) {
 }
 export function depthInvalidate() { DP.force = true; }
 
+// An additive hook: insert the beacon cut at the veil's existing compositing boundary.
+// The beacon's beam: a third hole in the veil. b is null or { x, y, angle, half, reach, soft, steps } (map units, degrees).
+export function depthBeam(b) {
+  if (JSON.stringify(DP.beam) !== JSON.stringify(b)) DP.force = true;
+  DP.beam = b;
+}
+
 function depthDeep(st, look) {
   const c = DP.dc, w = VIEW.w, h = VIEW.h, R = DEPTH.rings, O = DEPTH.outer;
   c.setTransform(DP.dpr, 0, 0, DP.dpr, 0, 0); c.clearRect(0, 0, w, h);
@@ -139,18 +146,25 @@ function depthDeep(st, look) {
   c.restore(); c.globalAlpha = 1;
 }
 const depthHole = (distance, radius, core) => radius > 0 ? 1 - clamp01((distance - core * radius) / (radius * (1 - core))) : 0;
+// How much of the beam's light reaches a screen point: full at the tower, nothing at its reach, soft at each side.
+const depthBeamAt = (m, x, y) => {
+  if (!m || m.radius <= 0) return 0;
+  const dx = x - m.p[0], dy = y - m.p[1], off = Math.abs((((Math.atan2(dy, dx) * 180 / Math.PI - m.angle) % 360) + 540) % 360 - 180);
+  return (1 - clamp01(Math.hypot(dx, dy) / m.radius)) * clamp01((m.half - off) / m.soft);
+};
 export function lightAt(x, y) {
   const l = DP.light; if (!l) return 1;
   const a = depthHole(Math.hypot(x - l.trav[0], y - l.trav[1]), l.r, DEPTH.light.core);
   const b = l.pointer ? depthHole(Math.hypot(x - l.pointer[0], y - l.pointer[1]), l.pr, DEPTH.light.ptrCore) : 0;
-  return 1 - l.v * (1 - DEPTH.light.amb) * (1 - Math.max(a, b));
+  return 1 - l.v * (1 - DEPTH.light.amb) * (1 - Math.max(a, b, depthBeamAt(l.beam, x, y)));
 }
 function depthAir(st, look, pointer, fine) {
   const c = DP.ac, w = VIEW.w, h = VIEW.h, small = Math.min(w, h), L = DEPTH.light, M = DEPTH.mist, D = DEPTH.deck;
   c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w, h);
   const trav = toScreen(st, st.trav || MAP.waypoints[0]), pt = fine ? [pointer[0] * w, pointer[1] * h] : null;
   const v = L.on ? smooth(0, 1, st.pushT) * (1 - L.card * st.cardOpen) * (1 - smooth(...L.rush, st.rushT)) * (st.visiting ? L.visit : 1) : 0;
-  DP.light = { trav, pointer: pt, r: L.r * small, pr: L.ptrR * small, v };
+  const B = DP.beam, beam = B && v > 0 ? { p: toScreen(st, [B.x, B.y]), radius: B.reach * st.cam.s, angle: B.angle, half: B.half, soft: B.soft } : null;
+  DP.light = { trav, pointer: pt, r: L.r * small, pr: L.ptrR * small, v, beam };
   if (v > 0) {
     c.globalAlpha = v * (VIEW.phone ? L.darkPhone : L.dark); c.fillStyle = C.ink; c.fillRect(0, 0, w, h); c.globalAlpha = 1;
     c.globalCompositeOperation = 'destination-out';
@@ -158,6 +172,15 @@ function depthAir(st, look, pointer, fine) {
       if (!p || radius <= 0) continue;
       const g = c.createRadialGradient(...p, radius * core, ...p, radius); g.addColorStop(0, C.paper); g.addColorStop(1, depthAlphaColour(C.paper, 0));
       c.fillStyle = g; c.beginPath(); c.arc(...p, radius, 0, Math.PI * 2); c.fill();
+    }
+    if (beam && beam.radius > 0) {
+      const g = c.createRadialGradient(...beam.p, 0, ...beam.p, beam.radius); g.addColorStop(0, C.paper); g.addColorStop(1, depthAlphaColour(C.paper, 0)); c.fillStyle = g;
+      for (let i = 0; i < B.steps; i++) {
+        const from = B.angle - B.half + 2 * B.half * i / B.steps, to = from + 2 * B.half / B.steps;
+        c.globalAlpha = clamp01((B.half - Math.abs((from + to) / 2 - B.angle)) / B.soft);
+        c.beginPath(); c.moveTo(...beam.p); c.arc(...beam.p, beam.radius, from * Math.PI / 180, to * Math.PI / 180); c.closePath(); c.fill();
+      }
+      c.globalAlpha = 1;
     }
     c.globalCompositeOperation = 'source-over';
   }

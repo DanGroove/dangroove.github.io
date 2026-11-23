@@ -1,13 +1,13 @@
 // Wires the journey map together: builds the stage, listens to scroll and resize, runs the one frame loop.
 import { C, COPY, MAP, CAMERA, PALETTES, STOPS, STEPS, DEPTH, NOVA } from './data.mjs';
 import { bigMap, mapDefs, stoneDefs, pathD, TRAIL } from './art.mjs';
-import { tripBuild, tripResize, tripState, tripApply, tripMiniVisited, TOTAL_P, VIEW, SEQ } from './trip.mjs';
+import { tripBuild, tripResize, tripState, tripFocus, tripApply, tripMiniVisited, TOTAL_P, VIEW, SEQ } from './trip.mjs';
 import { starsBuild, starsResize, starsFrame, starsStill, starsTick, starsSkyVisible } from './stars.mjs';
 import { cardsBuild, cardsResize, cardsFrame, cardsList } from './cards.mjs';
 import { tlBuild, tlResize, tlFrame } from './timeline.mjs';
 import { footerBuild, footerBuildX, footerResize, footerFrame, footerMotion } from './footer.mjs';
 import { findsBuild, findsFrame, findsPointer } from './finds.mjs';
-import { JOURNEY, stepsBuild, stepsFrame, stepsResize, stepsProgress, stepsPause } from './steps.mjs';
+import { JOURNEY, stepsBuild, stepsFrame, stepsResize, stepsProgress, stepsPause, stepsFocusNow } from './steps.mjs';
 import { depthBuild, depthResize, depthFrame, depthLook, depthInvalidate } from './depth.mjs';
 
 const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -44,9 +44,9 @@ depthBuild($('deep'), $('air'), $('sky'), RM);
 cardsBuild(RM ? $('rmcards') : $('cards'), goStop);
 tlBuild(TLEL, { jump: goStop, scrub: p => JOURNEY.set(p) }, RM);
 footerBuild($('ft')); footerBuildX($('fxg'), RM);
-findsBuild(SVG, $('pop'), $('sheet'), $('b-all'), RM);
 if (RM) $('rmcards').appendChild(TLEL);
 stepsBuild({ stage: $('stage'), rm: RM, resize, joinedTop: () => JOIN.heroStart });
+findsBuild(SVG, $('pop'), $('sheet'), $('b-all'), RM);
 
 function resize() {
   const w = window.innerWidth, h = window.innerHeight, phone = w <= CAMERA.phoneMax;
@@ -74,14 +74,16 @@ window.addEventListener('jm-depth', () => { dirty = true; depthInvalidate(); if 
 const PTR = [.5, .5];
 window.addEventListener('pointermove', e => { PTR[0] = e.clientX / VIEW.w; PTR[1] = e.clientY / VIEW.h; findsPointer(e.clientX, e.clientY); }, { passive: true });
 
-let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '';
+let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainFocus = '';
 function frame(ts) {
   const time = ts / 1000;
   const dt = mainTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - mainTs) / 1000)); mainTs = ts;
   P = stepsFrame(ts);
   if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], { ...jr, still: true }); raf = requestAnimationFrame(frame); return; }
-  const st = tripState(P); st.visiting = JOURNEY.visiting;
-  const tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || P !== lastP || tuning !== mainTuning;
+  const st = tripState(P); const f = stepsFocusNow(); if (f) tripFocus(st, f.view, f.k);
+  st.visiting = JOURNEY.visiting;
+  const focusKey = JSON.stringify(f), tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || P !== lastP || tuning !== mainTuning || focusKey !== mainFocus;
+  mainFocus = focusKey;
   const aim = depthLook(dt, PTR);
   if (moved) { tripApply(st); tlFrame(st); footerFrame(st); if (!JOIN.frame) CANVAS.style.opacity = st.dim; lastP = P; mainTuning = tuning; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
   const jo = JOIN.frame ? JOIN.frame(st, moved, P) : undefined;

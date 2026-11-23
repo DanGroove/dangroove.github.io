@@ -1,5 +1,5 @@
 // Every drawing as a function that returns an SVG string. Geometry and glyphs ported from reference/round2.cjs.
-import { C, MAP, COPY, STOPS, FINDS, FIND_COPY } from './data.mjs';
+import { C, MAP, COPY, STOPS, FINDS, FIND_COPY, FIND_PLAY } from './data.mjs';
 
 export const rnd = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 export const n1 = n => +(+n).toFixed(1);
@@ -74,7 +74,7 @@ const runeSvg = (word, h, x, y, a, cls = 'rn') => `<path class="${cls}" d="${run
 export const svgText = (x, y, s, o = {}) => `<text x="${x}" y="${y}" font-size="${o.s || 8}" fill="${o.c || C.dim}" font-weight="${o.w || 500}" text-anchor="${o.a || 'start'}"${o.i ? ' font-style="italic"' : ''}${o.ls ? ` letter-spacing="${o.ls}"` : ''}${o.h ? ' class="h"' : ''}${o.t ? ` transform="${o.t}"` : ''}${o.op ? ` opacity="${o.op}"` : ''}${o.cls ? ` class="${o.cls}"` : ''}>${s}</text>`;
 const grp = (x, y, k, s, rot) => `<g transform="translate(${x} ${y})${rot ? ` rotate(${rot})` : ''} scale(${k})">${s}</g>`;
 export const starPath = (x, y, s) => `M${n1(x)} ${n1(y - s)}Q${n1(x)} ${n1(y)} ${n1(x + s)} ${n1(y)}Q${n1(x)} ${n1(y)} ${n1(x)} ${n1(y + s)}Q${n1(x)} ${n1(y)} ${n1(x - s)} ${n1(y)}Q${n1(x)} ${n1(y)} ${n1(x)} ${n1(y - s)}Z`;
-const marker = (x, y, n) => `<circle cx="${x}" cy="${y}" r="6.2" fill="${C.ink}" stroke="${C.red}" stroke-width="1.2"/><text x="${x}" y="${y + 2.6}" font-size="7.5" font-weight="800" fill="${C.red}" text-anchor="middle">${n}</text>`;
+const marker = (x, y, n, id) => `<g class="mk"${id ? ` id="mk-${id}"` : ''}><circle cx="${x}" cy="${y}" r="6.2" fill="${C.ink}" stroke="${C.red}" stroke-width="1.2"/><text x="${x}" y="${y + 2.6}" font-size="7.5" font-weight="800" fill="${C.red}" text-anchor="middle">${n}</text></g>`;
 const tube = (d, w, k, cls = '') => `<path${cls} d="${d}" fill="none" stroke="${C.paper}" stroke-width="${w}" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${C.land}" stroke-width="${n1(w - 2.2 / k)}" stroke-linecap="round"/>`;
 
 // ---- terrain ----
@@ -108,48 +108,13 @@ export const stoneSvg = rune => `<svg class="stone" viewBox="0 0 260 400" aria-h
 
 // ---- finds (each wrapped in a group the finds module wires up) ----
 const findWrap = (id, label, inner, x, y) => `<g class="find" id="f-${id}" role="button" tabindex="0" aria-label="${label}" data-x="${x}" data-y="${y}">${inner}</g>`;
-const wayfinder = (r) => {
-  let s = `<circle class="hit" r="${r + 16}"/><circle class="o" r="${r}"/><circle class="t" r="${n1(r * .82)}"/>`;
-  const keys = runeKeys(FIND_COPY.wayfinderRunes).filter(k => k !== ' '), R = r * .91, h = r * .11;
-  keys.forEach((k, i) => { const a = (i / keys.length) * 360 + 8, g = runeGlyph(k, h); s += `<path class="rn" transform="rotate(${n1(a)}) translate(${n1(-g.w / 2)} ${n1(-R - h / 2)})" d="${g.d}"/>`; });
-  const L = r * .74, Sh = r * .42;
-  const term = [ // long arms: P (up), V (right), M (down), S (left), each a different terminal, drawn pointing up
-    `M0 ${-L}l-4 -4M0 ${-L}l4 -4M0 ${-L}v-5`,
-    `M0 ${-L - 3}m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0`,
-    `M-4 ${-L + 4}L0 ${-L - 2}L4 ${-L + 4}`,
-    `M-5 ${-L}H5M-3 ${-L - 4}H3`,
-  ];
-  const sterm = [`M0 ${-Sh}l-3 -3`, `M0 ${-Sh}l3 -3`, `M-3 ${-Sh}H3`, `M0 ${-Sh}m-1.5 -2a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0`];
-  for (let i = 0; i < 4; i++) s += `<g class="wf-arm" data-i="${i}" transform="rotate(${i * 90})"><path class="l" d="M0 0V${-L}${term[i]}"/></g>`;
-  for (let i = 0; i < 4; i++) s += `<g transform="rotate(${i * 90 + 45})"><path class="l" d="M0 0V${-Sh}${sterm[i]}"/></g>`;
-  [[0, -(r + 6), 'middle'], [r + 7, 2.5, 'start'], [0, r + 12, 'middle'], [-(r + 7), 2.5, 'end']].forEach(([x, y, a], i) => s += svgText(x, y, FIND_COPY.crafts[i], { s: 6.5, w: 700, c: C.paper, a, ls: 1.2, cls: 'wf-word h' }));
-  s += `<g class="wf-needle"><path class="pf" d="M0 ${n1(-r * .62)}L3 0L-3 0Z"/><path class="o" d="M0 ${n1(r * .62)}L3 0L-3 0Z"/></g><circle class="o wf-hub" r="${n1(r * .08)}"/>`;
-  return s;
-};
-const chestBody = () => `<rect class="g" x="-30" y="-34" width="60" height="34" rx="2"/><path class="t" d="M-18 -34V0M18 -34V0M-30 -22H30"/><rect class="pf" x="-4.5" y="-27" width="9" height="10" rx="1.5"/>`;
-const chestLid = () => `<g class="hd-lid"><path class="g" d="M-30 -34Q0 -56 30 -34Z"/><path class="t" d="M-18 -42V-34M18 -42V-34"/></g>`;
-const hoard = () => {
-  let st = ''; for (let i = 0; i < 8; i++) st += `<path class="pf hd-star" d="${starPath(0, -44, i % 2 ? 4 : 6)}" opacity="0"/>`;
-  return `<rect class="hit" x="-40" y="-60" width="80" height="72"/><path class="l hd-scratch" d="M-12 -6l14 8M2 -6l-14 8M-24 2l-3 -6M-20 2l1 -7M14 2l3 -6M20 2l-1 -6"/><circle class="hd-glow" cx="0" cy="-20" r="46" fill="url(#litGlow)" opacity="0"/><g clip-path="url(#hclip)"><g class="hd-chest" transform="translate(0 60)">${chestBody()}${chestLid()}</g></g><g class="hd-stars">${st}</g>`;
-};
-const raven = cls => `<g class="${cls}"><g class="rv-body"><path class="g" d="M-11 1L-6 -2Q-3 -8 4 -8Q8 -7 7 -3Q3 1 -4 0Z"/><path class="t" d="M-4 -4Q0 -7 4 -5M0 0v2.5M2.5 0v2.5"/></g><g class="rv-head" transform="translate(5 -9)"><circle class="g" r="2.6"/><path class="pf" d="M2 -1L6 .3L2 1.3Z"/><circle class="pf" cx=".8" cy="-.6" r=".5"/></g></g>`;
-const ravens = () => `<rect class="hit" x="-20" y="-56" width="40" height="60"/><path class="g" d="M-9 0L-10 -24Q-7 -34 0 -35Q8 -34 10 -22L9 0Z"/>${runeSvg('hm', 6, -2.5, -26, 'start')}<path class="t" d="M-16 0H16"/><g transform="translate(-5 -34)">${raven('rv-a')}</g><g transform="translate(6 -33) scale(-1 1)">${raven('rv-b')}</g>`;
-const serpent = k => {
-  let s = `<rect class="hit" x="-112" y="-60" width="230" height="78"/>`;
-  s += `<g class="sp-tail sp-loop">${tube('M58 4C60 -20 86 -24 84 -6C82 8 64 6 66 -8', 7, k)}${tube('M66 -8C68 -20 84 -26 96 -18', 7, k)}<path class="g" d="M95 -19l10 -6l-2 12z"/></g>`;
-  [[34, 11], [4, 14], [-28, 16]].forEach(([cx, R]) => { let a = tube(`M${cx - R} 4A${R} ${R} 0 0 1 ${cx + R} 4`, 9, k); for (let i = 1; i < 6; i++) { const t = Math.PI * i / 6; a += `<path class="t" d="M${n1(cx - Math.cos(t) * (R - 3))} ${n1(4 - Math.sin(t) * (R - 3))}L${n1(cx - Math.cos(t) * (R + 3))} ${n1(4 - Math.sin(t) * (R + 3))}"/>`; } a += `<path class="g" d="M${cx - 4} ${-R}l4 -8l4 8z"/>`; s += `<g class="sp-loop">${a}</g>`; });
-  s += `<g class="sp-loop sp-neck">${tube('M-58 6C-58 -22 -62 -34 -76 -40', 10, k)}<g class="sp-head"><path class="g" d="M-70 -47Q-86 -55 -101 -40Q-88 -29 -70 -34Z"/><circle class="pf" cx="-84" cy="-43" r="1.5"/><path class="t" d="M-100 -40l6 -1M-73 -48l4 -8l3 8"/>`
-    + `<g class="sp-leaf" opacity="0" transform="translate(-104 -40) rotate(8)"><rect x="-9" y="0" width="18" height="21" fill="${C.paper}"/><rect x="-9" y="0" width="18" height="6" fill="${C.note}"/><text x="0" y="4.8" font-size="4.2" font-weight="800" text-anchor="middle" fill="${C.ink}">${FIND_COPY.serpentLeaf[0]}</text><text x="0" y="15.5" font-size="6.4" font-weight="800" text-anchor="middle" fill="${C.ink}">${FIND_COPY.serpentLeaf[1]}</text></g></g></g>`;
-  s += `<rect x="-114" y="4" width="232" height="40" fill="${C.ink}"/>`;
-  s += `<g class="sp-rip">${[0, 1, 2].map(i => `<ellipse class="t" cx="${-40 + i * 40}" cy="6" rx="18" ry="3" opacity="0"/>`).join('')}</g>`;
-  [-98, -72, -44, -12, 20, 50, 76, 100].forEach((x, i) => s += `<path class="t" d="M${x} ${7 + (i % 2) * 3}q4 -3 8 0t8 0"/>`);
-  return s;
-};
-const beacon = () => `<g class="bc-beam" transform="translate(0 -50) rotate(0)"><path d="M0 0L-230 -44.7L-230 44.7Z" fill="url(#beam)"/></g><rect class="hit" x="-26" y="-66" width="52" height="70"/><path class="g" d="M-20 0q4 -9 11 -4q8 -7 15 0q7 -5 14 4z"/><path class="g" d="M-9 -3L-7 -40H7L9 -3Z"/><path class="t" d="M-8.4 -12H8.4M-8 -21H8M-7.6 -30H7.6M-2 -3V-12M3 -12V-21M-3 -21V-30M2 -30V-40"/><rect class="o" x="-1.8" y="-10" width="3.6" height="7"/><path class="l" d="M-10 -40H10"/><path class="l" d="M-4 -40L-6 -46M4 -40L6 -46"/><path class="o" d="M-7 -47L-5 -42H5L7 -47Z"/><path class="pf bc-flame" d="M-3 -47Q-4 -53 0 -58Q1 -53 3 -51Q4 -49 3 -47Z"/>`;
-const runestone = () => {
-  const band = 'M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3';
-  return `<rect class="hit" x="-20" y="-66" width="40" height="70"/><path class="g" d="M-14 0L-16 -40Q-12 -60 0 -62Q13 -60 15 -38L13 0Z"/><path d="${band}" fill="none" stroke="${C.paper}" stroke-width="4" stroke-linecap="round"/><path d="${band}" fill="none" stroke="${C.land}" stroke-width="2.2" stroke-linecap="round"/><path class="l rs-trace" d="${band}"/><circle class="pf" cx="5" cy="-3" r="1"/><g transform="translate(2.2 -9) rotate(-90)">${runeSvg(FIND_COPY.runestoneRunes, 3.4, 0, 0, 'start', 'rn')}</g><path class="t" d="M-20 0H20"/>`;
-};
+const findDrawing = kind => FIND_PLAY.drawings[kind].replace(/\{\{([\w.]+)\}\}/g, (match, path) => path === 'hoard.glintPath' ? starPath(...FIND_PLAY.hoard.glintAt, FIND_PLAY.hoard.glintSize) : path.split('.').reduce((value, key) => value[key], FIND_PLAY));
+const wayfinder = () => findDrawing('wayfinder');
+const hoard = () => findDrawing('hoard');
+const ravens = () => findDrawing('ravens');
+const serpent = () => findDrawing('serpent');
+const beacon = () => findDrawing('beacon');
+const runestone = () => findDrawing('runestone');
 const tafl = () => {
   let s = `<rect class="hit" x="-4" y="-4" width="29" height="29"/><rect class="o" x="0" y="0" width="21" height="21"/>`;
   for (let i = 1; i < 7; i++) s += `<path class="t" d="M${i * 3} 0V21M0 ${i * 3}H21"/>`;
@@ -230,7 +195,7 @@ export function bigMap() {
   s += grp(458, 271, .55, dock()) + grp(473, 321, .55, dock()) + grp(487, 297, .5, boat()) + grp(470, 304, .42, boat());
   s += grp(124, 372, .6, campus()) + grp(404, 752, .62, city()) + `<path class="l" d="M404 662v-11"/>`;
   s += top;
-  FINDS.filter(f => f.n).forEach(f => s += marker(f.mark[0], f.mark[1], f.n));
+  FINDS.filter(f => f.n).forEach(f => s += marker(f.mark[0], f.mark[1], f.n, f.id));
 
   // title, legend, frame, knots
   s += svgText(44, 78, COPY.title, { s: 30, w: 800, c: C.paper, ls: -.6 }) + `<rect x="42" y="86" width="204" height="13" fill="${C.ink}"/>` + svgText(45, 95, COPY.kicker, { s: 6.5, ls: 1.8 }) + `<path class="t" d="M45 103h196"/>`;
@@ -244,11 +209,11 @@ export function bigMap() {
   const F = Object.fromEntries(FINDS.map(f => [f.id, f]));
   let fd = '';
   const at = (id, k, inner) => { const f = F[id]; return findWrap(id, f.label, grp(f.x, f.y, k, inner), f.x, f.y); };
-  fd += at('wayfinder', 1, wayfinder(42));
-  fd += `<g id="f-hoards">` + FIND_COPY.hoards.map(h => `<g class="find hoard" id="f-${h.id}" role="button" tabindex="0" aria-label="${h.label}" data-x="${h.x}" data-y="${h.y}">${grp(h.x, h.y, .3, hoard())}</g>`).join('') + `</g>`;
-  fd += at('ravens', .72, ravens()) + at('serpent', .52, serpent(.52)) + at('beacon', .6, beacon()) + at('runestone', .55, runestone());
+  fd += `<g id="wf-lines" pointer-events="none"></g>` + at('wayfinder', 1, wayfinder());
+  fd += `<g id="f-hoards" role="button" tabindex="0" aria-label="${F.hoards.label}" data-x="${F.hoards.x}" data-y="${F.hoards.y}">` + FIND_COPY.hoards.map(h => `<g class="find hoard" id="f-${h.id}" role="button" tabindex="0" aria-label="${h.label}" data-x="${h.x}" data-y="${h.y}">${grp(h.x, h.y, FIND_PLAY.hoard.scale, hoard())}</g>`).join('') + `</g>`;
+  fd += at('ravens', FIND_PLAY.raven.scale, ravens()) + at('serpent', FIND_PLAY.serpent.scale, `<g class="sp-swim">${serpent(FIND_PLAY.serpent.scale)}</g>`) + at('beacon', FIND_PLAY.beacon.scale, beacon()) + at('runestone', FIND_PLAY.rune.scale, runestone());
   fd += at('tafl', .7, tafl()) + findWrap('mist', F.mist.label, mist(), F.mist.x, F.mist.y) + at('horn', .7, horn()) + at('well', 1, well());
-  fd += `<g id="bc-notes">` + FIND_COPY.beaconNotes.map((n, i) => `<g class="bc-note" opacity="0" transform="translate(${n.x} ${n.y})">${runeSvg(n.rune, 4.2, 0, -4, 'middle', 'rn rn-note')}<text class="bc-en" x="0" y="7" font-size="4.6" font-style="italic" fill="${C.paper}" text-anchor="middle" opacity="0">${n.t}</text></g>`).join('') + `</g>`;
+  fd += `<g id="bc-notes">` + FIND_COPY.beaconNotes.map(n => { const B = FIND_PLAY.beacon; return `<g class="bc-note" opacity="0" transform="translate(${n.x} ${n.y})"><g class="bc-note-in">${runeSvg(n.rune, B.runeSize, 0, B.runeY, 'middle', 'rn rn-note')}<g class="bc-en" opacity="0">${n.t.todo ? svgText(0, B.todoY, COPY.todo, { s: B.todoFont, c: C.dim, a: 'middle' }) : ''}${svgText(0, B.lineY, typeof n.t === 'object' ? n.t.t : n.t, { s: B.noteFont, c: C.paper, a: 'middle', i: 1 })}</g></g></g>`; }).join('') + `</g>`;
   fd += findWrap('longship', F.longship.label, `<g class="ls-ship" transform="translate(${F.longship.x} ${F.longship.y}) scale(.55)">${longship()}</g>`, F.longship.x, F.longship.y);
 
   return { sea, fill, coast, detail: s, finds: fd };
@@ -260,3 +225,22 @@ export const miniMapSvg = () => `<path d="${pathD(COAST_A, 1)}" class="mm-coast"
 // New sky drawings only. Their exact geometry is supplied from the live data table.
 export const depthCloudDrawing = paths => `<path class="o" d="${paths[0]}"/><path class="t" d="${paths[1]}"/><path class="t" d="${paths[2]}"/>`;
 export const depthRavenDrawing = paths => `<g class="sky-wing sky-right"><path class="o" d="${paths.wing}"/></g><g class="sky-wing sky-left"><path class="o" d="${paths.wing}"/></g><path class="o" d="${paths.tail}"/><path class="o" d="${paths.body}"/><path class="pf" d="${paths.beak}"/>`;
+
+// New find drawing helpers; their geometry is supplied by the live data tables.
+export const findRnd = rnd(FIND_PLAY.seed);
+export const pieceIcon = kind => FIND_PLAY.icons[kind] || '';
+export function rubbingRunes() {
+  const R = FIND_PLAY.rune, letters = [];
+  FIND_COPY.runestoneRunes.split(' ').forEach((word, row) => {
+    const keys = runeKeys(word), width = keys.reduce((sum, key) => sum + runeGlyph(key, R.runeHeight).w, 0) + Math.max(0, keys.length - 1) * R.runeHeight * R.runeGap;
+    let x = R.cx - width / 2;
+    keys.forEach((key, i) => { const glyph = runeGlyph(key, R.runeHeight, x, R.tops[row]); letters.push({ d: glyph.d, x: x + glyph.w / 2, y: R.tops[row] + R.runeHeight, letter: word[i].toUpperCase() }); x += glyph.w + R.runeHeight * R.runeGap; });
+  });
+  return letters;
+}
+export function rubbingSvg() {
+  const R = FIND_PLAY.rune, random = findRnd, paths = rubbingRunes();
+  let hatch = '';
+  R.hatch.forEach(([a, b, step, lean, width, alpha]) => { for (let x = a; x <= b; x += step) { const dx = (random() * 2 - 1) * R.jitter; hatch += `<path d="M${x + dx} 0L${x - lean + dx} ${R.height}" fill="none" stroke="${C.ink}" stroke-width="${width}" opacity="${alpha}"/>`; } });
+  return `<svg class="rubbing" viewBox="0 0 ${R.width} ${R.height}" aria-hidden="true"><defs><radialGradient id="rub-soft"><stop offset="${R.maskCore}" stop-color="${C.white}"/><stop offset="1" stop-color="${C.white}" stop-opacity="0"/></radialGradient><clipPath id="rub-stone"><path d="${R.outline}"/></clipPath><mask id="rub-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="${R.width}" height="${R.height}"><rect width="${R.width}" height="${R.height}" fill="${C.black}"/><g class="rub-circles"></g><rect class="rub-fill" width="${R.width}" height="${R.height}" fill="${C.white}" opacity="0"/></mask></defs><rect width="${R.width}" height="${R.height}" fill="${C.paper}"/><path d="${R.outline}" fill="none" stroke="${C.ink}" opacity="${R.guide}"/><g clip-path="url(#rub-stone)" mask="url(#rub-mask)"><path d="${R.outline}" fill="${C.ink}" opacity="${R.charcoal}"/>${hatch}<path d="${R.outline}" fill="none" stroke="${C.ink}" stroke-width="${R.outlineWidth}" opacity="${R.outlineAlpha}"/><path d="${R.outer}${R.inner}${R.feet}${paths.map(p => p.d).join('')}" fill="none" stroke="${C.paper}" stroke-width="${R.carvingWidth}" stroke-linecap="round"/><circle cx="${R.dot[0]}" cy="${R.dot[1]}" r="${R.dot[2]}" fill="${C.paper}"/></g>${paths.map(p => `<text class="rub-letter" x="${p.x}" y="${p.y + R.letterDown}" text-anchor="middle" font-size="${R.letterSize}" font-weight="${R.letterWeight}" fill="${C.paper}" opacity="0">${p.letter}</text>`).join('')}</svg>`;
+}

@@ -1,11 +1,11 @@
 // The single progress owner for both clock-driven Steps and the original Scroll mode.
-import { STEPS, COPY, STOPS, DEPTH, NOVA } from './data.mjs';
-import { VIEW, TOTAL_P } from './trip.mjs';
+import { STEPS, COPY, STOPS, DEPTH, NOVA, FIND_PLAY } from './data.mjs';
+import { VIEW, TOTAL_P, tripState, easeIO, lerp } from './trip.mjs';
 import { BEATS, paceMove, paceAt, paceP } from './pace.mjs';
 import { arrowSvg } from './cards.mjs';
 
 const SC = {
-  mode: 'steps', P: 0, rm: false, move: null, cut: null, lastTs: null, fill: 0, returnP: null,
+  mode: 'steps', P: 0, rm: false, move: null, cut: null, lastTs: null, fill: 0, focus: null,
   root: null, go: null, cover: null, say: null, review: null, resize: null, joinedTop: null,
   restoreP: null, restoration: 'auto', announced: null, shown: false, ready: false, wheel: null, touch: null,
 };
@@ -24,12 +24,31 @@ const stepsScrollTo = (p, smooth) => {
 
 export const JOURNEY = {
   get mode() { return SC.mode; }, get P() { return SC.P; }, get moving() { return !!(SC.move || SC.cut); },
-  get visiting() { return SC.returnP !== null; }, depth: DEPTH, nova: NOVA, setDepth: stepsSetDepth,
+  get visiting() { return !!SC.focus?.held; }, get focus() { return SC.focus?.held ? SC.focus.id : null; }, depth: DEPTH, nova: NOVA, setDepth: stepsSetDepth,
   beats: BEATS, go: stepsGo, next: stepsNext, back: stepsBack, set: stepsSet, setMode: stepsSetMode,
 };
 export const stepsProgress = () => SC.P;
 export const stepsPause = () => { SC.lastTs = null; };
 export const stepsJumping = () => !!SC.cut;
+
+export function stepsFocusNow() {
+  const f = SC.focus; if (!f) return null;
+  const q = easeIO(f.swap), view = Array.from({ length: Math.max(f.from.length, f.to.length) }, (_, i) => { const a = f.from[i] ?? FIND_PLAY.focus.least, b = f.to[i] ?? FIND_PLAY.focus.least; return i === 2 ? a * (b / a) ** q : lerp(a, b, q); });
+  return { id: f.id, view, k: easeIO(f.k) };
+}
+export function stepsFocus(id, view) {
+  const st = tripState(SC.P);
+  if (SC.rm || SC.mode !== 'steps' || SC.cut || st.handoffT !== 1 || st.rushT !== 0) return false;
+  const now = stepsFocusNow(), old = SC.focus;
+  stepsCancel();
+  SC.focus = { id, from: now ? now.view : view.slice(), to: view.slice(), swap: now ? 0 : 1, k: old ? old.k : 0, held: true };
+  SC.root.classList.add('jm-focus'); stepsArrive(); return true;
+}
+export function stepsRelease() {
+  if (!SC.focus || !SC.focus.held) return false;
+  SC.focus.held = false; SC.root.classList.remove('jm-focus');
+  window.dispatchEvent(new Event('jm-find-release')); stepsButtons(); return true;
+}
 
 function stepsClasses() {
   if (SC.rm) return;
@@ -49,10 +68,11 @@ function stepsButtons() {
   SC.go.classList.toggle('go-end', end);
   const back = SC.go.querySelector('.go-back'), next = SC.go.querySelector('.go-next'), home = SC.go.querySelector('.go-top');
   const focus = document.activeElement;
-  back.hidden = top && SC.returnP === null; next.hidden = end; home.hidden = !end;
+  back.hidden = top && !JOURNEY.visiting; next.hidden = end; home.hidden = !end;
   if (!SC.go.hidden && ((next.hidden && focus === next) || (home.hidden && focus === home))) back.focus({ preventScroll: true });
   if (!SC.go.hidden && back.hidden && focus === back) next.focus({ preventScroll: true });
-  back.setAttribute('aria-label', SC.returnP !== null ? COPY.steps.returnTo : stepsFormat(COPY.steps.back, { name: stepsName(stepsBackBeat()) }));
+  back.setAttribute('aria-label', JOURNEY.visiting ? COPY.steps.returnTo : stepsFormat(COPY.steps.back, { name: stepsName(stepsBackBeat()) }));
+  back.querySelector('span').textContent = JOURNEY.visiting ? COPY.steps.returnTo : '';
   if (!SC.go.hidden && !SC.shown) { SC.shown = true; SC.go.classList.add('go-reveal'); }
   SC.root.classList.toggle('jm-moving', JOURNEY.moving);
   SC.go.querySelector('.go-fill').style.transform = `scaleX(${SC.move ? SC.fill : 0})`;
@@ -99,32 +119,28 @@ function stepsNavigate(target, opts = {}) {
 function stepsGo(id, opts = {}) {
   if (SC.cut) return;
   const beat = BEATS.find(b => b.id === id); if (!beat) return;
-  SC.returnP = null; stepsNavigate(beat.P, opts);
+  stepsRelease(); stepsNavigate(beat.P, opts);
 }
 function stepsNext() {
   if (SC.cut) return;
-  SC.returnP = null; const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true });
+  stepsRelease(); const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true });
   stepsButtons();
 }
 function stepsBack() {
   if (SC.cut) return;
-  if (SC.returnP !== null && SC.mode === 'steps') { const p = SC.returnP; SC.returnP = null; stepsJump(p); return; }
-  SC.returnP = null; const beat = stepsBackBeat(); if (beat) stepsNavigate(beat.P, { move: true });
+  if (stepsRelease()) return;
+  const beat = stepsBackBeat(); if (beat) stepsNavigate(beat.P, { move: true });
 }
 function stepsSet(P) {
   if (SC.cut) return;
-  SC.returnP = null;
+  stepsRelease();
   if (SC.mode === 'scroll') { stepsScrollTo(Math.max(0, Math.min(TOTAL_P, P)), false); return; }
   stepsCancel(); SC.P = stepsClamp(P); if (SC.restoreP !== null) SC.restoreP = SC.P; stepsArrive();
-}
-export function stepsFind(P, after) {
-  if (SC.cut || SC.mode !== 'steps') return;
-  SC.returnP = SC.P; stepsJump(P, after);
 }
 function stepsSetMode(mode) {
   if (SC.rm || SC.cut || !['steps', 'scroll'].includes(mode) || mode === SC.mode) return;
   const p = SC.mode === 'scroll' ? stepsReadScroll() : SC.P;
-  stepsCancel(); SC.returnP = null; SC.mode = mode; SC.P = mode === 'steps' ? stepsClamp(p) : p; SC.restoreP = SC.P;
+  stepsCancel(); stepsRelease(); SC.focus = null; SC.mode = mode; SC.P = mode === 'steps' ? stepsClamp(p) : p; SC.restoreP = SC.P;
   SC.wheel = null; SC.touch = null; stepsClasses();
   if (mode === 'steps') window.scrollTo({ top: 0, behavior: 'instant' });
   try { sessionStorage.setItem('jm-mode', mode); } catch {}
@@ -148,6 +164,12 @@ export function stepsFrame(ts) {
   const dt = SC.lastTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - SC.lastTs) / 1000)); SC.lastTs = ts;
   if (SC.mode === 'scroll') { stepsReadScroll(); if (!SC.rm) stepsArrive(); return SC.P; }
   const move = SC.move, cut = SC.cut;
+  if (SC.focus) {
+    const f = SC.focus, cfg = FIND_PLAY.focus;
+    f.swap = Math.min(1, f.swap + dt / cfg.swap);
+    f.k = f.held ? Math.min(1, f.k + dt / cfg.in) : Math.max(0, f.k - dt / cfg.out);
+    if (!f.held && f.k === 0) SC.focus = null;
+  }
   if (move) {
     move.elapsed = Math.min(move.D, move.elapsed + dt);
     const q = move.D ? move.elapsed / move.D : 1;
@@ -171,6 +193,7 @@ function stepsWheel(e) {
   if (SC.mode !== 'steps' || SC.rm || e.ctrlKey) return;
   const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1), direction = Math.sign(dy);
   const target = stepsTarget(e);
+  if (target && target.closest('.sheet.on')) { e.preventDefault(); return; }
   if (stepsCanScroll(target && target.closest('.face'), direction)) return;
   e.preventDefault(); if (!direction) return;
   if (!SC.wheel || e.timeStamp - SC.wheel.time >= STEPS.wheel.quiet || SC.wheel.direction !== direction) SC.wheel = { time: e.timeStamp, direction, sum: 0, used: false };
@@ -227,7 +250,7 @@ export function stepsBuild({ stage, rm, resize, joinedTop }) {
   SC.restoreP = SC.P;
   const s = COPY.steps;
   SC.go = document.createElement('div'); SC.go.className = 'go'; SC.go.id = 'go'; SC.go.hidden = true; SC.go.setAttribute('role', 'group'); SC.go.setAttribute('aria-label', s.group);
-  SC.go.innerHTML = `<button class="go-back" type="button" aria-label="${s.back.replace('{name}', s.names.top)}">${arrowSvg}</button><button class="go-next" type="button"><i class="go-fill" aria-hidden="true"></i><span class="go-t">${s.start}</span>${arrowSvg}</button><button class="go-top" type="button">${s.top}</button>`;
+  SC.go.innerHTML = `<button class="go-back" type="button" aria-label="${s.back.replace('{name}', s.names.top)}">${arrowSvg}<span></span></button><button class="go-next" type="button"><i class="go-fill" aria-hidden="true"></i><span class="go-t">${s.start}</span>${arrowSvg}</button><button class="go-top" type="button">${s.top}</button>`;
   SC.say = document.createElement('p'); SC.say.className = 'sr'; SC.say.id = 'go-say'; SC.say.setAttribute('role', 'status');
   SC.cover = document.createElement('div'); SC.cover.className = 'jm-cut'; SC.cover.hidden = true; SC.cover.setAttribute('aria-hidden', 'true');
   stage.prepend(SC.go, SC.say, SC.cover);

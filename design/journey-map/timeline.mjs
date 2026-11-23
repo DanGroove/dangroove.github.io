@@ -1,5 +1,5 @@
 // The timeline bar: a quiet instrument pinned to the bottom; in the footer it becomes the rule under the name.
-import { STOPS, PALETTES, COPY, FINDS } from './data.mjs';
+import { STOPS, PALETTES, COPY, FINDS, FIND_PLAY } from './data.mjs';
 import { yearOf, DATE_NOW, progressForStop, progressForDate, holdStart, VIEW, smooth, lerp, easeIO } from './trip.mjs';
 
 const TL = { el: null, track: null, head: null, rows: null, fades: [], blocks: [], tip: null, count: null, trackW: 1, viewW: 1, sx: 1, dx: 0, dy: 0, ox: 0, oy: 0, val: '', drag: null, off: 0, rm: false };
@@ -55,6 +55,7 @@ function tipFor(i, blk) {
 }
 const currentStop = P => { let c = -1; STOPS.forEach((s, i) => { if (P >= holdStart(i)) c = i; }); return c; };
 export const tlSetCount = (n, t) => { TL.count.textContent = fmt(COPY.count, { n, t }); };
+export const tlSetCraft = mask => TL.blocks.forEach(b => { b.el.classList.toggle('craft-lit', !!mask?.[b.i]); b.el.style.opacity = mask && !mask[b.i] ? FIND_PLAY.way.timelineDim : 1; });
 
 export function tlResize(ruleRect) {
   const el = TL.el; el.style.transform = 'none';

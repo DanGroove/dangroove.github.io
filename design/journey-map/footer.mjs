@@ -21,7 +21,9 @@ export function footerBuildX(g, rm = false) {
     + `<circle class="fx-ringr" r="1" fill="none" stroke="${C.red}" stroke-width="8" vector-effect="non-scaling-stroke" opacity="0"/><circle class="fx-ring" r="1" fill="none" stroke="${C.paper}" stroke-width="2" vector-effect="non-scaling-stroke" opacity="0"/>`
     + `<circle class="fx-r1" r="1" fill="none" stroke="${C.paper}" stroke-width=".8" vector-effect="non-scaling-stroke" opacity="0"/><circle class="fx-r2" r="1" fill="none" stroke="${C.paper}" stroke-width=".6" vector-effect="non-scaling-stroke" opacity="0"/>`
     + `<circle class="fx-core" r="1" fill="url(#glow)" opacity="0"/>` + xStroke(45) + xStroke(-45)
-    + (rm ? '' : `<circle class="fx-hit hit" r="1" role="button" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true" style="outline:none"/>`);
+    + (rm ? '' : `<circle class="fx-hit hit" r="1" role="button" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true" pointer-events="all" style="outline:none"/>`);
+  // Only the hit circle takes the pointer: the glows, lobes and rings lie over the whole map and are often invisible.
+  g.setAttribute('pointer-events', 'none');
   ['fx-rg', 'fx-og', 'fx-rays', 'fx-lobes', 'fx-waves', 'fx-flare', 'fx-streaks', 'fx-ringr', 'fx-ring', 'fx-r1', 'fx-r2', 'fx-core'].forEach(k => FT.g[k] = g.querySelector('.' + k));
   FT.g.s = [...g.querySelectorAll('.fx-s')]; FT.g.red = [...g.querySelectorAll('.fx-red')]; FT.g.white = [...g.querySelectorAll('.fx-white')];
   FT.hit = g.querySelector('.fx-hit');
