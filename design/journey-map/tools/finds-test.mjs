@@ -32,7 +32,7 @@ console.log('ok: STARS, DEPTH and NOVA values unchanged');
 // A build never changes these two files. The review records their digests here after each tuning pass (a failure
 // prints the new number); line endings are evened out first, so the numbers are the same on Windows and in the cloud.
 const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.meta.url), 'utf8').replace(/\r\n/g, '\n'));
-assert.equal(sourceDigest('trip.mjs'), 180365617, 'trip.mjs changed');
+assert.equal(sourceDigest('trip.mjs'), 1420657627, 'trip.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 3982895838, 'depth.mjs changed');
 console.log('ok: C1 camera/labels/tripS and deck source digests recorded');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
