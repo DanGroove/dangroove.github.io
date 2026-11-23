@@ -65,7 +65,10 @@ export function showPop(owner, anchor, html, cls = '', side = 'auto') {
   FD.pop.className = 'pop on ' + cls;
   FD.pop.innerHTML = `<div class="pop-in"><div class="pop-body">${html}</div><i class="pop-tail" aria-hidden="true"></i></div>`;
   FD.popInner = FD.pop.firstElementChild; FD.popTail = FD.pop.querySelector('.pop-tail');
-  const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height]; placePop();
+  const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height];
+  // A popup stays above the step buttons and the timeline: their tops are read once here, when it opens, never in the frame loop.
+  FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go, .tl')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
+  placePop();
   FD.popInner.style.transformOrigin = `${FD.popOrigin[0]}px ${FD.popOrigin[1]}px`;
 }
 export function closePop() {
@@ -77,7 +80,7 @@ export function placePop() {
   const K = FIND_PLAY.kit.popup, anchor = typeof FD.popAnchor === 'function' ? FD.popAnchor() : FD.popAnchor, p = toScreen(FD.st, anchor), [w, h] = FD.popSize;
   const below = FD.popSide === 'below' || FD.popSide !== 'above' && p[1] - h - K.tail[1] < K.edge;
   const x = Math.max(K.edge, Math.min(VIEW.w - w - K.edge, p[0] - w / 2));
-  const y = Math.max(K.edge, Math.min(VIEW.h - h - K.edge, below ? p[1] + K.tail[1] : p[1] - h - K.tail[1]));
+  const y = Math.max(K.edge, Math.min((FD.popFloor ?? VIEW.h) - h - K.edge, below ? p[1] + K.tail[1] : p[1] - h - K.tail[1]));
   FD.popOrigin = [Math.max(0, Math.min(w, p[0] - x)), below ? 0 : h];
   FD.pop.style.transform = `translate(${x}px,${y}px)`;
   const q = FD.rm ? 1 : clamp01((FD.now - FD.popTs) / K.time), back = 1 + (K.over - 1) / (1 - K.scale);
@@ -108,7 +111,7 @@ export function findBits(kind, x, y, n, options = {}) {
     const [path, cls] = kind === 'star' ? [starPath(0, 0, B.starSize), 'pf'] : B.kinds[kind];
     const angle = findRange(v.dir) * Math.PI / FIND_PLAY.kit.deg, speed = findRange(v.speed);
     Object.assign(bit, { live: true, serial: FD.serial++, x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, age: 0, life: findRange(v.life), spin: v.spin, g: v.g, drag: v.drag, size: v.size, alpha: kind === 'puff' ? Math.min(B.puffAlpha, v.alpha) : v.alpha, kind });
-    attr(bit.el, 'd', path); attr(bit.el, 'class', cls); bit.el.style.display = ''; if (['star', 'drop', 'puff'].includes(kind)) bit.el.style.stroke = 'none'; else bit.el.style.stroke = '';
+    attr(bit.el, 'd', path); attr(bit.el, 'class', cls); bit.el.style.display = ''; if (['star', 'drop', 'puff', 'wisp'].includes(kind)) bit.el.style.stroke = 'none'; else bit.el.style.stroke = '';
     attr(bit.el, 'transform', `translate(${x} ${y}) scale(${v.size[0]})`); attr(bit.el, 'opacity', bit.alpha);
   }
 }
@@ -129,7 +132,7 @@ export function findKitStyle() {
   const P = FIND_PLAY, root = document.documentElement;
   const vars = { 'find-pop-edge': P.kit.popup.edge + 'px', 'find-pop-w': P.kit.popup.width + 'px', 'find-pop-r': P.kit.popup.radius + 'px', 'find-pop-pad': P.kit.popup.pad.map(n => n + 'px').join(' '), 'find-pop-font': P.kit.popup.font + 'px', 'find-pop-line': P.kit.popup.line, 'find-kicker': P.kit.popup.kicker + 'px', 'find-gap': P.kit.popup.gap + 'px', 'find-tail-w': P.kit.popup.tail[0] + 'px', 'find-tail-h': P.kit.popup.tail[1] + 'px', 'find-slot-weight': P.kit.slot.weight, 'find-star-z': P.kit.starZ, 'find-slot-font': P.kit.slot.font + 'px', 'find-slot-rule': P.kit.slot.border + 'px', 'find-slot-pad': P.kit.slot.pad + 'px', 'find-star': P.star.size + 'px', 'find-piece': P.hoard.width + 'px', 'find-piece-top': P.hoard.top + 'px', 'find-icon': P.hoard.icon + 'px', 'find-arm': P.way.armWidth + 'px', 'find-rune-flip': P.rune.flipTime + 's', 'find-rune-w': P.rune.width + 'px', 'find-rune-h': P.rune.height + 'px', 'find-rune-perspective': P.rune.perspective + 'px', 'find-ctl-top': P.rune.controlTop + 'px', 'find-reel-w': P.raven.reel.width + 'px', 'find-iris': P.raven.reel.iris + 'px', 'find-reel-label': P.raven.reel.labelTop + 'px', 'find-reel-slot': P.raven.reel.slotBottom + 'px' };
   Object.entries(vars).forEach(([k, v]) => root.style.setProperty('--' + k, v));
-  const T = P.tafl, boardVars = { w: T.width, h: T.board + T.tray * 2 + T.statusH + T.ruleH + T.slotH + T.buttonsH + T.gap * 4 + T.pad * 2 + T.border * 2, board: T.board, surface: T.board + T.tray * 2, pad: T.pad, border: T.border, radius: T.radius, gap: T.gap, status: T.statusH, rule: T.ruleH, slot: T.slotH, buttons: T.buttonsH, font: T.font, line: T.line, small: T.small, 'small-line': T.smallLine };
+  const T = P.tafl, boardVars = { w: T.width, h: T.board + T.tray * 2 + T.statusH + T.slotH + T.buttonsH + T.gap * 3 + T.pad * 2 + T.border * 2, board: T.board, surface: T.board + T.tray * 2, pad: T.pad, border: T.border, radius: T.radius, gap: T.gap, status: T.statusH, slot: T.slotH, buttons: T.buttonsH, font: T.font, line: T.line, small: T.small, 'small-line': T.smallLine };
   Object.entries(boardVars).forEach(([k, v]) => root.style.setProperty('--tf-' + k, v + 'px'));
 }
 export function findKitFrame() {

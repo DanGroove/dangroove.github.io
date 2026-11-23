@@ -312,12 +312,14 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .rm .rubbing-sheet .pz-in { transition: none; }
 
 /* Part B: board dialog and non-interactive find decorations. */
-.tafl-sheet .tf-panel { position: absolute; left: calc(var(--tf-w) / -2); top: calc(var(--tf-h) / -2); width: var(--tf-w); height: var(--tf-h); padding: var(--tf-pad); border: var(--tf-border) solid var(--line); border-radius: var(--tf-radius); background: var(--ink); color: var(--paper); pointer-events: auto; display: grid; grid-template-rows: var(--tf-surface) var(--tf-status) var(--tf-rule) var(--tf-slot) var(--tf-buttons); gap: var(--tf-gap); font-size: var(--tf-font); line-height: var(--tf-line); }
+.tafl-sheet .tf-panel { position: absolute; left: calc(var(--tf-w) / -2); top: calc(var(--tf-h) / -2); width: var(--tf-w); height: var(--tf-h); padding: var(--tf-pad); border: var(--tf-border) solid var(--line); border-radius: var(--tf-radius); background: var(--ink); color: var(--paper); pointer-events: auto; display: grid; grid-template-rows: var(--tf-surface) var(--tf-status) var(--tf-slot) var(--tf-buttons); gap: var(--tf-gap); font-size: var(--tf-font); line-height: var(--tf-line); }
 .tf-panel p { margin: 0; }
 .tf-surface { display: block; width: var(--tf-board); height: var(--tf-surface); overflow: visible; touch-action: none; }
 .tf-board .tf-piece { pointer-events: none; }
 .tf-cell { cursor: pointer; outline: none; }
 .tf-cell:focus-visible rect { stroke: var(--paper); stroke-width: var(--tf-border); }
+.tf-cursor { opacity: 0; }
+.tf-input:has(.tf-cell:focus-visible) .tf-cursor { opacity: 1; }
 .tf-rule { color: var(--dim); font-size: var(--tf-small); line-height: var(--tf-small-line); }
 .tf-slot-space { min-height: 0; }
 .tf-slot .find-slot { margin: 0; }
@@ -325,6 +327,8 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .tf-buttons { display: flex; gap: var(--tf-gap); }
 .tf-buttons button { flex: 1; min-width: 0; padding: 0 var(--tf-gap); border: var(--tf-border) solid var(--mid); border-radius: var(--tf-gap); color: var(--paper); background: var(--ink); font: inherit; cursor: pointer; }
 #f-mist, #f-horn { touch-action: none; }
+.mist-wisp { fill: url(#find-mist-soft); }
+#hn-rings .hn-ring { fill: none; stroke: var(--paper); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
 #hn-rings, #wl-crown, .wl-rip, .wl-pebble, .mist-drift, .mist-glint, .ls-lamp { pointer-events: none; }
 
 </style>
@@ -1054,7 +1058,7 @@ const FINDS = [
   { id: 'tafl', n: 0, x: 112, y: 222, view: [112, 218, 34], label: 'A hnefatafl board. Play the king to a corner.' },
   { id: 'mist', n: 0, x: 156, y: 438, view: [154, 436, 62], label: 'The mist of 2020. Press or wipe to clear it.' },
   { id: 'horn', n: 0, x: 46, y: 476, view: [46, 470, 30], label: 'A horn on the shore. Press to raise it, press again to sound it.' },
-  { id: 'well', n: 0, x: 302, y: 392, view: [300, 352, 66], label: "Urd's Well. Drop a pebble in. The Norns answer." },
+  { id: 'well', n: 0, x: 302, y: 392, view: [300, 367, 66], label: "Urd's Well. Drop a pebble in. The Norns answer." },
   { id: 'longship', n: 0, x: 452, y: 622, label: 'The longship. Pull three times to fly its pennant.' },
 ];
 
@@ -1085,7 +1089,7 @@ const FIND_COPY = {
   poster: { head: 'WANTED', who: 'ONE DESIGNER', line1: 'who sees a job through, from', line2: 'first sketch to final cut', reward: 'REWARD: THE WORK', stamp: 'PRINT', back: ['Stock: to come', 'The brief: to come'], foot: { t: 'Stock: to come. The brief: to come.', todo: 1 } },
   tafl: { t: 'A fact from the game design year goes here.', todo: 1 },
   taflYou: 'Your move. Get the king to a corner.', taflThem: 'The attackers move.', taflWin: 'The king is away.',
-  taflLose: 'The king is taken.', taflDraw: 'No way through. A draw.', taflNew: 'New game',
+  taflLose: 'The king is taken.', taflStuck: 'Nothing of yours can move. The king is caught.', taflDraw: 'No way through. A draw.', taflNew: 'New game',
   taflRule: 'Pieces slide in straight lines. Trap one between two of yours to take it. The king is taken only when shut in on all four sides.',
   taflBoard: 'Brandubh. You play the king and defenders.', taflColumns: 'abcdefg',
   taflKinds: { a: 'attacker', d: 'defender', k: 'king', empty: 'empty' },
@@ -1191,7 +1195,7 @@ const FIND_PLAY = {
   fresh: 3, seed: 171,
   focus: { fill: 0.72, least: 0.85, most: 3, at: [0.5, 0.46], in: 0.7, out: 0.5, swap: 0.6, chest: [0, -16, 30], ship: [0, -10, 34], wide: [300, 450, 330, 0] },
   bits: { pool: 96, starSize: 2.2, puffAlpha: 0.22,
-    kinds: { dot: ['M-.8 0a.8 .8 0 1 0 1.6 0a.8 .8 0 1 0 -1.6 0Z', 'pf'], clod: ['M-1.4 .6L-.6 -1.1L1.2 -.7L1.5 .8L-.2 1.3Z', 'g'], drop: ['M0 -1.6Q1.1 .2 0 1.1Q-1.1 .2 0 -1.6Z', 'pf'], spark: ['M0 0V-2.4', 'l'], feather: ['M0 -3Q1.5 0 0 3Q-1.5 0 0 -3Z', 'g'], puff: ['M-3.2 0a3.2 3.2 0 1 0 6.4 0a3.2 3.2 0 1 0 -6.4 0Z', 'pf'], ring: ['M-3 0a3 1 0 1 0 6 0a3 1 0 1 0 -6 0Z', 't'] },
+    kinds: { dot: ['M-.8 0a.8 .8 0 1 0 1.6 0a.8 .8 0 1 0 -1.6 0Z', 'pf'], clod: ['M-1.4 .6L-.6 -1.1L1.2 -.7L1.5 .8L-.2 1.3Z', 'g'], drop: ['M0 -1.6Q1.1 .2 0 1.1Q-1.1 .2 0 -1.6Z', 'pf'], spark: ['M0 0V-2.4', 'l'], feather: ['M0 -3Q1.5 0 0 3Q-1.5 0 0 -3Z', 'g'], puff: ['M-3.2 0a3.2 3.2 0 1 0 6.4 0a3.2 3.2 0 1 0 -6.4 0Z', 'pf'], wisp: ['M-6 0a6 3 0 1 0 12 0a6 3 0 1 0 -12 0Z', 'mist-wisp'], ring: ['M-3 0a3 1 0 1 0 6 0a3 1 0 1 0 -6 0Z', 't'] },
     base: { speed: [0, 0], dir: [-90, -90], g: 0, drag: 0, life: [0.6, 0.6], size: [1, 1], spin: 0, alpha: 1 },
     clods: { speed: [18, 34], dir: [-150, -30], g: 90, life: [0.6, 0.6], spin: 80 },
     puffs: { speed: [3, 7], dir: [-160, -20], life: [0.6, 0.6], size: [0.4, 1.5], alpha: 0.22 },
@@ -1246,7 +1250,7 @@ const FIND_PLAY = {
   },
   tafl: { near: 20, scale: 0.7, mapCell: 3, mapHit: [-4, -4, 29, 29], kingPulse: [1.3, 1.7, 1], mapKing: 1.3,
     cell: 40, board: 280, width: 312, border: 1, pad: 15, radius: 10, gap: 6, tray: 22,
-    statusH: 54, ruleH: 49, slotH: 70, buttonsH: 36, font: 13, line: 18, small: 11, smallLine: 15,
+    statusH: 54, slotH: 70, buttonsH: 36, win: [0.22, 0.9, 2], font: 13, line: 18, small: 11, smallLine: 15,
     gridAlpha: 0.28, outline: 1.1, pieceLine: 1.6, pieceR: 13, kingR: 15.5, kingStar: 9, cross: 18,
     diamond: 9, dotR: 4, dotAlpha: 0.55, selectR: 18, selectDash: [3, 3], cursorInset: 3, cursorLine: 2,
     slide: [0.05, 0.12, 0.3], reply: 0.45, grow: 0.35, close: 0.25, capturedScale: 0.5, trayInset: 17,
@@ -1255,15 +1259,15 @@ const FIND_PLAY = {
       score: { king: 1000, corner: 900, edge: 120, defender: 30, attacker: 25, mobility: 2, adjacent: 1 } },
   },
   mist: { near: 62, rad: 70, box: [102, 410, 104, 50], alpha: 0.62, grid: [8, 4], cellR: 10, done: 0.75, thirds: 3,
-    wipe: 9, press: 16, finger: 14, step: 0.4, traveller: 7, travellerEdge: 10, lift: 1.2, hear: [6, 0.8],
+    wipe: 9, press: 16, finger: 14, soft: [1.7, 0.4], step: 0.4, traveller: 7, travellerEdge: 10, lift: 1.2, hear: [6, 0.8],
     ellipses: [[150, 428, 26, 11], [180, 444, 24, 10], [134, 446, 18, 8], [117, 426, 19, 12], [158, 450, 25, 10], [192, 429, 22, 12]],
     cairns: [[138, 418], [166, 452], [200, 440]], cairnScale: 0.8, glintAt: [0, -10.4], glintSize: 5, glintTime: 0.5, glintGap: 0.15, glintTurn: 45,
     cairn: '<path class="g" d="M-6.5 0L-5.6 -2.8L5.2 -3.2L6.8 0Z"/><path class="g" d="M-4.8 -3L-4.2 -5.6L4.6 -5.9L4 -3.1Z"/><path class="g" d="M-3.4 -5.7L-3 -8L2.6 -8.3L3.4 -5.9Z"/><path class="g" d="M-1.6 -8.1L-1 -10.2L1.6 -10.4L1.4 -8.2Z"/>',
-    puffs: 8, puff: { speed: [3, 7], life: [0.8, 0.8], size: [0.5, 1.8], alpha: 0.22 }, east: [0, 0],
+    puffs: 8, puff: { speed: [6, 12], life: [0.8, 0.8], size: [0.6, 1.3], alpha: 0.3 }, east: [0, 0], wisps: [3, 35],
   },
   horn: { near: 24, scale: 0.7, rad: 40, soundRad: 700, tip: 6, raise: 0.35, lift: [3, -7], turn: -30, pivot: [-8, -4], anchor: [0, -42],
-    hold: 0.45, swell: [1.12, 6, 0.9], bell: [7, -14], rings: 4, gap: 0.18, radius: 4, speed: 150, life: 1.8, alpha: 0.7, power: 1.5,
-    glint: [5, 0.6, 90], hit: [-18, -30, 34, 38],
+    hold: 0.45, swell: [1.12, 6, 0.9], bell: [7, -14], rings: 4, gap: 0.18, radius: 4, speed: 300, life: 2.2, alpha: 0.8, power: 0.7,
+    glint: [11, 0.6, 90], hit: [-18, -30, 34, 38],
     paths: ['M-12 -4C-14 -16 -2 -24 10 -22L10 -16C0 -17 -6 -12 -5 -4Z', 'M5 -21.5L5.5 -16.5M0 -20L1.5 -15.5M-5 -16L-2.5 -12.5', 'M10 -22L10 -16', 'M-16 3q4 -3 8 0t8 0t8 0'],
   },
   well: { near: 38, rad: 116, hit: [38, 22], water: [300, 390], root: [300, 381], drip: [4, 7], dripTime: 0.35,
@@ -1281,7 +1285,7 @@ const FIND_PLAY = {
     paths: { hull: 'M-26 -6Q-20 5 -10 5H12Q22 5 26 -6Z', ends: 'M-26 -6Q-33 -13 -29 -20Q-25 -25 -22 -20Q-21 -16 -24.5 -16.5M26 -6Q31 -11 28 -15Q26 -17 25 -15', mast: 'M0 -6V-38', sail: 'M-12 -35H12V-15H-12Z', stripes: 'M-6 -35V-15M0 -35V-15M6 -35V-15', water: 'M-36 8q4 -3 8 0t8 0M16 9q4 -3 8 0t8 0',
       oars: 'M-18 -5L-25 8M-11 -5L-18 8M-4 -5L-11 8M3 -5L-4 8M10 -5L3 8M17 -5L10 8', pennant: 'M0 -39.5L24 -38L18 -36.5L24 -35L0 -33.5Z' },
   },
-  all: { frame: [18, 18, 564, 864], length: 100, width: 2, dash: [6, 94], time: 2.6, fade: 0.4, knotTime: 0.8, markerTime: 0.4, markerScale: 1.25, frameAlpha: 0.5,
+  all: { frame: [18, 18, 564, 864], length: 100, width: 2, dash: [6, 94], time: 2.6, fade: 0.4, wait: 0.6, knotTime: 0.8, markerTime: 0.4, markerScale: 1.25, frameAlpha: 0.5,
     knots: [[36, 36], [564, 36], [36, 864], [564, 864]], corners: [0, 564, 2286, 1428] },
 };
 
@@ -1413,7 +1417,7 @@ const tafl = () => {
   return s + '</g>';
 };
 const horn = () => { const H = FIND_PLAY.horn, [x, y, w, h] = H.hit; return `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="hn-horn"><path class="g" d="${H.paths[0]}"/><path class="t" d="${H.paths[1]}"/><path class="l" d="${H.paths[2]}"/></g><path class="t" d="${H.paths[3]}"/>`; };
-const mist = () => { const M = FIND_PLAY.mist, [x, y, w, h] = M.box; return `<defs><radialGradient id="find-mist-soft"><stop stop-color="${C.paper}"/><stop offset="1" stop-color="${C.paper}" stop-opacity="0"/></radialGradient></defs>` + M.cairns.map(p => `<g transform="translate(${p[0]} ${p[1]}) scale(${M.cairnScale})">${M.cairn}<path class="pf mist-glint" pointer-events="none" d="${starPath(...M.glintAt, M.glintSize)}" opacity="0"/></g>`).join('') + `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="mist-drift" pointer-events="none"><g mask="url(#mistMask)"><g class="mist-cloud" opacity="${M.alpha}">${M.ellipses.map(p => `<ellipse cx="${p[0]}" cy="${p[1]}" rx="${p[2]}" ry="${p[3]}" fill="url(#find-mist-soft)"/>`).join('')}</g></g></g>`; };
+const mist = () => { const M = FIND_PLAY.mist, [x, y, w, h] = M.box; return `<defs><radialGradient id="find-mist-soft"><stop stop-color="${C.paper}"/><stop offset="1" stop-color="${C.paper}" stop-opacity="0"/></radialGradient><radialGradient id="find-mist-wipe"><stop offset="${M.soft[1]}" stop-color="${C.black}"/><stop offset="1" stop-color="${C.black}" stop-opacity="0"/></radialGradient></defs>` + M.cairns.map(p => `<g transform="translate(${p[0]} ${p[1]}) scale(${M.cairnScale})">${M.cairn}<path class="pf mist-glint" pointer-events="none" d="${starPath(...M.glintAt, M.glintSize)}" opacity="0"/></g>`).join('') + `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="mist-drift" pointer-events="none"><g mask="url(#mistMask)"><g class="mist-cloud" opacity="${M.alpha}">${M.ellipses.map(p => `<ellipse cx="${p[0]}" cy="${p[1]}" rx="${p[2]}" ry="${p[3]}" fill="url(#find-mist-soft)"/>`).join('')}</g></g></g>`; };
 const well = () => { const W = FIND_PLAY.well; return `<ellipse class="hit" rx="${W.hit[0]}" ry="${W.hit[1]}"/><g class="wl-rip" pointer-events="none">${Array.from({ length: W.rings }, () => `<ellipse class="t" rx="${W.ringR[0]}" ry="${W.ringR[1]}" opacity="0"/>`).join('')}</g><circle class="pf wl-pebble" r="${W.pebbleR}" opacity="0" pointer-events="none"/>`; };
 const longship = () => {
   const S = FIND_PLAY.ship, P = S.paths, [x, y, w, h] = S.hit;
@@ -2933,7 +2937,10 @@ function showPop(owner, anchor, html, cls = '', side = 'auto') {
   FD.pop.className = 'pop on ' + cls;
   FD.pop.innerHTML = `<div class="pop-in"><div class="pop-body">${html}</div><i class="pop-tail" aria-hidden="true"></i></div>`;
   FD.popInner = FD.pop.firstElementChild; FD.popTail = FD.pop.querySelector('.pop-tail');
-  const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height]; placePop();
+  const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height];
+  // A popup stays above the step buttons and the timeline: their tops are read once here, when it opens, never in the frame loop.
+  FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go, .tl')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
+  placePop();
   FD.popInner.style.transformOrigin = `${FD.popOrigin[0]}px ${FD.popOrigin[1]}px`;
 }
 function closePop() {
@@ -2945,7 +2952,7 @@ function placePop() {
   const K = FIND_PLAY.kit.popup, anchor = typeof FD.popAnchor === 'function' ? FD.popAnchor() : FD.popAnchor, p = toScreen(FD.st, anchor), [w, h] = FD.popSize;
   const below = FD.popSide === 'below' || FD.popSide !== 'above' && p[1] - h - K.tail[1] < K.edge;
   const x = Math.max(K.edge, Math.min(VIEW.w - w - K.edge, p[0] - w / 2));
-  const y = Math.max(K.edge, Math.min(VIEW.h - h - K.edge, below ? p[1] + K.tail[1] : p[1] - h - K.tail[1]));
+  const y = Math.max(K.edge, Math.min((FD.popFloor ?? VIEW.h) - h - K.edge, below ? p[1] + K.tail[1] : p[1] - h - K.tail[1]));
   FD.popOrigin = [Math.max(0, Math.min(w, p[0] - x)), below ? 0 : h];
   FD.pop.style.transform = `translate(${x}px,${y}px)`;
   const q = FD.rm ? 1 : clamp01((FD.now - FD.popTs) / K.time), back = 1 + (K.over - 1) / (1 - K.scale);
@@ -2976,7 +2983,7 @@ function findBits(kind, x, y, n, options = {}) {
     const [path, cls] = kind === 'star' ? [starPath(0, 0, B.starSize), 'pf'] : B.kinds[kind];
     const angle = findRange(v.dir) * Math.PI / FIND_PLAY.kit.deg, speed = findRange(v.speed);
     Object.assign(bit, { live: true, serial: FD.serial++, x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, age: 0, life: findRange(v.life), spin: v.spin, g: v.g, drag: v.drag, size: v.size, alpha: kind === 'puff' ? Math.min(B.puffAlpha, v.alpha) : v.alpha, kind });
-    attr(bit.el, 'd', path); attr(bit.el, 'class', cls); bit.el.style.display = ''; if (['star', 'drop', 'puff'].includes(kind)) bit.el.style.stroke = 'none'; else bit.el.style.stroke = '';
+    attr(bit.el, 'd', path); attr(bit.el, 'class', cls); bit.el.style.display = ''; if (['star', 'drop', 'puff', 'wisp'].includes(kind)) bit.el.style.stroke = 'none'; else bit.el.style.stroke = '';
     attr(bit.el, 'transform', `translate(${x} ${y}) scale(${v.size[0]})`); attr(bit.el, 'opacity', bit.alpha);
   }
 }
@@ -2997,7 +3004,7 @@ function findKitStyle() {
   const P = FIND_PLAY, root = document.documentElement;
   const vars = { 'find-pop-edge': P.kit.popup.edge + 'px', 'find-pop-w': P.kit.popup.width + 'px', 'find-pop-r': P.kit.popup.radius + 'px', 'find-pop-pad': P.kit.popup.pad.map(n => n + 'px').join(' '), 'find-pop-font': P.kit.popup.font + 'px', 'find-pop-line': P.kit.popup.line, 'find-kicker': P.kit.popup.kicker + 'px', 'find-gap': P.kit.popup.gap + 'px', 'find-tail-w': P.kit.popup.tail[0] + 'px', 'find-tail-h': P.kit.popup.tail[1] + 'px', 'find-slot-weight': P.kit.slot.weight, 'find-star-z': P.kit.starZ, 'find-slot-font': P.kit.slot.font + 'px', 'find-slot-rule': P.kit.slot.border + 'px', 'find-slot-pad': P.kit.slot.pad + 'px', 'find-star': P.star.size + 'px', 'find-piece': P.hoard.width + 'px', 'find-piece-top': P.hoard.top + 'px', 'find-icon': P.hoard.icon + 'px', 'find-arm': P.way.armWidth + 'px', 'find-rune-flip': P.rune.flipTime + 's', 'find-rune-w': P.rune.width + 'px', 'find-rune-h': P.rune.height + 'px', 'find-rune-perspective': P.rune.perspective + 'px', 'find-ctl-top': P.rune.controlTop + 'px', 'find-reel-w': P.raven.reel.width + 'px', 'find-iris': P.raven.reel.iris + 'px', 'find-reel-label': P.raven.reel.labelTop + 'px', 'find-reel-slot': P.raven.reel.slotBottom + 'px' };
   Object.entries(vars).forEach(([k, v]) => root.style.setProperty('--' + k, v));
-  const T = P.tafl, boardVars = { w: T.width, h: T.board + T.tray * 2 + T.statusH + T.ruleH + T.slotH + T.buttonsH + T.gap * 4 + T.pad * 2 + T.border * 2, board: T.board, surface: T.board + T.tray * 2, pad: T.pad, border: T.border, radius: T.radius, gap: T.gap, status: T.statusH, rule: T.ruleH, slot: T.slotH, buttons: T.buttonsH, font: T.font, line: T.line, small: T.small, 'small-line': T.smallLine };
+  const T = P.tafl, boardVars = { w: T.width, h: T.board + T.tray * 2 + T.statusH + T.slotH + T.buttonsH + T.gap * 3 + T.pad * 2 + T.border * 2, board: T.board, surface: T.board + T.tray * 2, pad: T.pad, border: T.border, radius: T.radius, gap: T.gap, status: T.statusH, slot: T.slotH, buttons: T.buttonsH, font: T.font, line: T.line, small: T.small, 'small-line': T.smallLine };
   Object.entries(boardVars).forEach(([k, v]) => root.style.setProperty('--tf-' + k, v + 'px'));
 }
 function findKitFrame() {
@@ -3561,21 +3568,21 @@ function taflReply(state, random) {
 
 
 
-const taflPanelHeight = () => { const T = FIND_PLAY.tafl; return T.board + T.tray * 2 + T.statusH + T.ruleH + T.slotH + T.buttonsH + T.gap * 4 + T.pad * 2 + T.border * 2; };
+const taflPanelHeight = () => { const T = FIND_PLAY.tafl; return T.board + T.tray * 2 + T.statusH + T.slotH + T.buttonsH + T.gap * 3 + T.pad * 2 + T.border * 2; };
 const taflCellName = sq => FIND_COPY.taflColumns[sq % FIND_PLAY.tafl.rules.size] + (Math.floor(sq / FIND_PLAY.tafl.rules.size) + 1);
 const taflPoint = sq => { const T = FIND_PLAY.tafl; return [(sq % T.rules.size + 0.5) * T.cell, (Math.floor(sq / T.rules.size) + 0.5) * T.cell, 1]; };
 
 function findBoard(svg) {
   const f = FIND_BY.tafl, el = svg.querySelector('#f-tafl'), board = el.querySelector('.tf-board'), home = board.parentElement;
   const T = FIND_PLAY.tafl, R = T.rules, starts = [R.king, ...R.defenders, ...R.attackers];
-  const o = { id: f.id, el, game: taflStart(), stage: 'rest', kept: false, selected: null, cursor: R.king, busy: false, replyAt: null, hearTs: -Infinity, moveText: '', pieces: [] };
+  const o = { id: f.id, el, game: taflStart(), stage: 'rest', kept: false, selected: null, cursor: R.king, busy: false, replyAt: null, hearTs: -Infinity, endTs: -Infinity, moveText: '', pieces: [] };
   o.pieces = [...board.querySelectorAll('.tf-piece')].map((g, i) => ({ g, kind: i === 0 ? 'k' : i <= R.defenders.length ? 'd' : 'a', sq: starts[i], start: starts[i], point: taflPoint(starts[i]), from: taflPoint(starts[i]), to: taflPoint(starts[i]), ts: -Infinity, duration: T.slide[1] }));
-  const statusText = () => o.game.winner === 'king' ? FIND_COPY.taflWin : o.game.winner === 'attackers' ? FIND_COPY.taflLose : o.game.winner === 'draw' ? FIND_COPY.taflDraw : o.game.turn === 'attackers' || o.busy ? FIND_COPY.taflThem : FIND_COPY.taflYou;
+  const statusText = () => o.game.winner === 'king' ? FIND_COPY.taflWin : o.game.winner === 'attackers' ? (o.game.board.includes('k') ? FIND_COPY.taflStuck : FIND_COPY.taflLose) : o.game.winner === 'draw' ? FIND_COPY.taflDraw : o.game.turn === 'attackers' || o.busy ? FIND_COPY.taflThem : FIND_COPY.taflYou;
   const refresh = () => {
     if (FD.sheetOwner !== o) return;
     const Q = FIND_PLAY.tafl, moves = o.selected === null ? [] : taflMoves(o.game, o.selected);
     o.status.textContent = findFormat(FIND_COPY.taflStatus, { move: o.moveText, turn: statusText() }).trim();
-    o.slot.hidden = !o.game.winner;
+    o.slot.hidden = !o.game.winner; o.rule.hidden = !!o.game.winner; // one row: the rules while a game is on, the slot when it is over
     const line = FIND_COPY.tafl; o.slot.innerHTML = typeof line === 'object' && line.todo ? `<div class="find-slot"><span class="pop-k">${fEsc(COPY.todo)}</span><p>${fEsc(line)}</p></div>` : `<p>${fEsc(line)}</p>`;
     o.cells.forEach((cell, i) => { cell.tabIndex = i === o.cursor ? 0 : -1; attr(cell, 'aria-label', findFormat(FIND_COPY.taflCell, { cell: taflCellName(i), piece: FIND_COPY.taflKinds[o.game.board[i] || 'empty'] })); attr(cell, 'aria-selected', i === o.selected); attr(o.dots[i], 'opacity', moves.includes(i) && !o.busy ? Q.dotAlpha : 0); });
     attr(o.selection, 'opacity', o.selected === null ? 0 : 1);
@@ -3586,6 +3593,7 @@ function findBoard(svg) {
   const finish = () => {
     o.busy = false;
     o.stage = FD.sheetOwner === o ? 'sheet' : 'rest';
+    if (o.game.winner && o.game.last) o.endTs = FD.now;
     if (!o.game.winner && o.game.turn === 'attackers') { o.replyAt = FD.now + FIND_PLAY.tafl.reply; o.stage = 'reply'; }
     refresh();
   };
@@ -3615,9 +3623,9 @@ function findBoard(svg) {
   const sheet = () => {
     opened(o);
     const Q = FIND_PLAY.tafl;
-    if (!findSheet(o, 'tafl-sheet', `<div class="tf-panel"><svg class="tf-surface" viewBox="0 ${-Q.tray} ${Q.board} ${Q.board + Q.tray * 2}" role="grid" aria-label="${fEsc(FIND_COPY.taflBoard)}"></svg><p class="tf-status" role="status" aria-live="polite" aria-atomic="true"></p><p class="tf-rule">${fEsc(FIND_COPY.taflRule)}</p><div class="tf-slot-space"><div class="tf-slot" hidden></div></div><div class="tf-buttons"><button class="tf-new" type="button">${fEsc(FIND_COPY.taflNew)}</button><button class="tf-close" type="button">${fEsc(COPY.close)}</button></div></div>`, [f.x, f.y])) return;
+    if (!findSheet(o, 'tafl-sheet', `<div class="tf-panel"><svg class="tf-surface" viewBox="0 ${-Q.tray} ${Q.board} ${Q.board + Q.tray * 2}" role="grid" aria-label="${fEsc(FIND_COPY.taflBoard)}"></svg><p class="tf-status" role="status" aria-live="polite" aria-atomic="true"></p><div class="tf-slot-space"><p class="tf-rule">${fEsc(FIND_COPY.taflRule)}</p><div class="tf-slot" hidden></div></div><div class="tf-buttons"><button class="tf-new" type="button">${fEsc(FIND_COPY.taflNew)}</button><button class="tf-close" type="button">${fEsc(COPY.close)}</button></div></div>`, [f.x, f.y])) return;
     FD.sheet.querySelector('.tf-surface').appendChild(board); attr(board, 'transform', 'scale(1)');
-    o.status = FD.sheet.querySelector('.tf-status'); o.slot = FD.sheet.querySelector('.tf-slot'); o.cells = []; o.dots = [];
+    o.status = FD.sheet.querySelector('.tf-status'); o.rule = FD.sheet.querySelector('.tf-rule'); o.slot = FD.sheet.querySelector('.tf-slot'); o.cells = []; o.dots = [];
     o.input = findSvg('g', { class: 'tf-input', role: 'rowgroup' }); board.appendChild(o.input);
     const rows = Array.from({ length: R.size }, () => findSvg('g', { role: 'row' })); rows.forEach(row => o.input.appendChild(row));
     for (let sq = 0; sq < R.size ** 2; sq++) {
@@ -3625,7 +3633,7 @@ function findBoard(svg) {
       g.append(hit, dot); rows[Math.floor(sq / R.size)].appendChild(g); o.cells.push(g); o.dots.push(dot);
     }
     o.selection = findSvg('circle', { r: Q.selectR, fill: 'none', stroke: C.paper, 'stroke-width': Q.outline, 'stroke-dasharray': Q.selectDash.join(' '), 'pointer-events': 'none', opacity: 0 });
-    o.cursorRing = findSvg('rect', { x: Q.cursorInset, y: Q.cursorInset, width: Q.cell - Q.cursorInset * 2, height: Q.cell - Q.cursorInset * 2, fill: 'none', stroke: C.paper, 'stroke-width': Q.cursorLine, 'pointer-events': 'none' }); o.input.append(o.selection, o.cursorRing);
+    o.cursorRing = findSvg('rect', { class: 'tf-cursor', x: Q.cursorInset, y: Q.cursorInset, width: Q.cell - Q.cursorInset * 2, height: Q.cell - Q.cursorInset * 2, fill: 'none', stroke: C.paper, 'stroke-width': Q.cursorLine, 'pointer-events': 'none' }); o.input.append(o.selection, o.cursorRing);
     o.input.addEventListener('click', e => { const cell = e.target.closest('.tf-cell'); if (cell) { choose(+cell.dataset.square); o.cells[o.cursor].focus({ preventScroll: true }); } });
     o.input.addEventListener('keydown', e => {
       const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
@@ -3648,6 +3656,7 @@ function findBoard(svg) {
       const q = FD.rm ? 1 : ease((t - p.ts) / p.duration); p.point = p.from.map((v, j) => lerp(v, p.to[j], q));
       const hop = FD.rm || FD.sheetOwner === o ? 0 : Q.hop / (Q.scale * Q.mapCell / Q.cell) * Math.sin(Math.PI * clamp01((t - o.hearTs - i * Q.hopGap) / Q.hopTime));
       let scale = p.point[2];
+      if (p.kind === 'k' && FD.sheetOwner === o && o.game.winner === 'king' && !FD.rm) scale *= 1 + Q.win[0] * Math.abs(Math.sin(Math.PI * Q.win[2] * clamp01((t - o.endTs) / Q.win[1]))); // the king who got away swells twice
       if (p.kind === 'k' && FD.sheetOwner !== o) scale *= (o.awake && !FD.rm ? lerp(Q.kingPulse[0], Q.kingPulse[1], (1 - Math.cos(Math.PI * 2 * t / Q.kingPulse[2])) / 2) : Q.mapKing) / (Q.kingR * Q.mapCell / Q.cell);
       attr(p.g, 'transform', `translate(${p.point[0]} ${p.point[1] - hop}) scale(${scale})`);
     });
@@ -3676,17 +3685,17 @@ function findMist(svg) {
   const lift = () => {
     if (o.lifted) return;
     const Q = FIND_PLAY.mist; o.lifted = o.kept = true; o.liftTs = FD.now; o.stage = FD.rm ? 'lifted' : 'lifting';
-    for (let i = 0; i < Q.puffs; i++) findBits('puff', Q.box[0] + (i + 0.5) * Q.box[2] / Q.puffs, Q.box[1] + Q.box[3] / 2, 1, { ...Q.puff, dir: Q.east });
+    for (let i = 0; i < Q.puffs; i++) findBits('wisp', Q.box[0] + (i + 0.5) * Q.box[2] / Q.puffs, Q.box[1] + Q.box[3] / 2, 1, { ...Q.puff, dir: Q.east });
     if (FD.rm) attr(cloud, 'opacity', 0);
   };
   const wipe = (p, r, manual, previous = null) => {
     if (manual) found(o.id);
     if (o.lifted) return;
     const Q = FIND_PLAY.mist;
-    wipes.appendChild(findSvg('circle', { cx: p[0], cy: p[1], r, fill: C.black }));
+    wipes.appendChild(findSvg('circle', { cx: p[0], cy: p[1], r: r * Q.soft[0], fill: 'url(#find-mist-wipe)' }));
     centres().forEach((c, i) => { if (Math.hypot(c[0] - p[0], c[1] - p[1]) <= Q.cellR) o.cleared[i] = true; });
     const dir = previous ? Math.atan2(p[1] - previous[1], p[0] - previous[0]) * FIND_PLAY.kit.deg / Math.PI : Q.east[0];
-    findBits('puff', ...p, 1, { ...Q.puff, dir: [dir, dir] });
+    o.wipes = (o.wipes || 0) + 1; if (o.wipes % Q.wisps[0] === 0) findBits('wisp', ...p, 1, { ...Q.puff, dir: [dir - Q.wisps[1], dir + Q.wisps[1]] });
     if (o.cleared.filter(Boolean).length / o.cleared.length >= Q.done) lift();
   };
   const pointer = (e, r) => {
@@ -3804,7 +3813,7 @@ function findHorn(svg) {
   const f = FIND_BY.horn, el = svg.querySelector('#f-horn'), horn = el.querySelector('.hn-horn');
   const o = { id: f.id, el, stage: 'rest', kept: false, up: 0, v: 0, hold: false, sounded: 0, ts: -Infinity, heard: [], hearTs: -Infinity, glints: [] };
   const ringsGroup = findSvg('g', { id: 'hn-rings', 'pointer-events': 'none' }); svg.querySelector('#finds').appendChild(ringsGroup);
-  const rings = Array.from({ length: FIND_PLAY.horn.rings }, () => { const c = findSvg('circle', { class: 't', r: 1, opacity: 0 }); ringsGroup.appendChild(c); return c; });
+  const rings = Array.from({ length: FIND_PLAY.horn.rings }, () => { const c = findSvg('circle', { class: 'hn-ring', r: 1, opacity: 0 }); ringsGroup.appendChild(c); return c; });
   const glints = FINDS.map(d => { const g = findSvg('g'), star = findSvg('path', { class: 'pf', d: starPath(0, 0, FIND_PLAY.horn.glint[0]), opacity: 0 }); star.style.stroke = 'none'; g.appendChild(star); ringsGroup.appendChild(g); return { id: d.id, g, star, ts: -Infinity }; });
   const deliver = id => {
     const object = FD.list[id]; object?.hear?.();
@@ -3814,7 +3823,7 @@ function findHorn(svg) {
   const sound = () => {
     if (o.stage === 'sounding' || o.stage === 'echo') return;
     const H = FIND_PLAY.horn; opened(o); o.stage = 'sounding'; o.ts = FD.now; o.sounded++; o.hold = false; o.heard = []; o.glints = []; o.up = 1;
-    o.wide = stepsFocus(o.id, FIND_PLAY.focus.wide);
+    o.wide = stepsFocus(o.id, FIND_PLAY.focus.wide); if (FD.popOwner === o) closePop();
     if (FD.rm) { FINDS.forEach(d => deliver(d.id)); o.up = o.v = 0; o.stage = 'rest'; if (FD.popOwner === o) closePop(); }
   };
   const raise = () => {
@@ -3838,7 +3847,7 @@ function findHorn(svg) {
     const swell = !FD.rm && o.stage === 'sounding' && age < H.swell[2] ? (H.swell[0] - 1) * (1 - Math.cos(Math.PI * 2 * H.swell[1] * age)) / 2 : 0;
     const hear = FD.rm ? 0 : H.tip * Math.sin(Math.PI * clamp01((t - o.hearTs) / H.raise));
     attr(horn, 'transform', `translate(${H.lift[0] * q} ${H.lift[1] * q}) rotate(${H.turn * q + tip * (1 - q) + hear} ${H.pivot[0]} ${H.pivot[1]}) scale(${1 + swell})`);
-    rings.forEach((r, i) => { const a = age - i * H.gap, radius = H.radius + H.speed * Math.max(0, a); attr(r, 'transform', `translate(${f.x + H.bell[0]} ${f.y + H.bell[1]}) scale(${radius})`); attr(r, 'opacity', !FD.rm && a >= 0 && a < H.life && o.stage === 'sounding' ? H.alpha * (1 - a / H.life) ** H.power : 0); });
+    rings.forEach((r, i) => { const a = age - i * H.gap, radius = H.radius + H.speed * Math.max(0, Math.min(H.life, a)); attr(r, 'transform', `translate(${f.x + H.bell[0]} ${f.y + H.bell[1]}) scale(${radius})`); attr(r, 'opacity', !FD.rm && a >= 0 && a < H.life && o.stage === 'sounding' ? H.alpha * (1 - a / H.life) ** H.power : 0); });
     if (['sounding', 'echo'].includes(o.stage)) {
       FINDS.forEach(d => { if (o.heard.includes(d.id)) return; const p = findPlace(d.id); if (age >= Math.hypot(p[0] - f.x - H.bell[0], p[1] - f.y - H.bell[1]) / H.speed) { o.heard.push(d.id); queueMicrotask(() => { o.heard = o.heard.filter(id => id !== d.id); deliver(d.id); }); } });
       if (o.stage === 'sounding' && age >= H.life + (H.rings - 1) * H.gap) {
@@ -3858,26 +3867,30 @@ function findHorn(svg) {
 
 
 
+
 function findAll(svg) {
   const A = FIND_PLAY.all, frame = svg.querySelector('rect[x="18"][y="18"]'), knots = [...svg.querySelectorAll('.chart-knot')], markers = FINDS.filter(f => f.n).map(f => ({ el: svg.querySelector('#mk-' + f.id), at: f.mark }));
   const comet = findSvg('rect', { class: 'l', x: A.frame[0], y: A.frame[1], width: A.frame[2], height: A.frame[3], pathLength: A.length, 'stroke-dasharray': A.dash.join(' '), 'stroke-dashoffset': A.length, 'pointer-events': 'none', opacity: 0 }); comet.style.strokeWidth = A.width; svg.querySelector('#finds').appendChild(comet);
-  const o = { done: false, ts: null };
+  const o = { done: false, ts: null, wide: null };
   o.start = () => {
     if (o.done) return; o.done = true; o.ts = FD.now;
     const Q = FIND_PLAY.all;
+    // A find that has the camera hands it to the whole chart while the comet goes round, then takes it back.
+    if (!FD.rm && JOURNEY.focus) { o.wide = JOURNEY.focus; stepsFocus(o.wide, FIND_PLAY.focus.wide); o.ts += Q.wait; }
     if (FD.rm) attr(frame, 'stroke-opacity', Q.frameAlpha);
     else {
-      comet.animate([{ strokeDashoffset: Q.length }, { strokeDashoffset: 0 }], { duration: Q.time * 1000, fill: 'forwards' });
-      frame.animate([{ strokeOpacity: frame.getAttribute('stroke-opacity') }, { strokeOpacity: Q.frameAlpha }], { delay: Q.time * 1000, duration: Q.fade * 1000, fill: 'forwards' });
+      const wait = (o.ts - FD.now) * 1000;
+      comet.animate([{ strokeDashoffset: Q.length }, { strokeDashoffset: 0 }], { delay: wait, duration: Q.time * 1000, fill: 'forwards' });
+      frame.animate([{ strokeOpacity: frame.getAttribute('stroke-opacity') }, { strokeOpacity: Q.frameAlpha }], { delay: wait + Q.time * 1000, duration: Q.fade * 1000, fill: 'forwards' });
     }
   };
   o.tick = t => {
     if (o.ts === null || FD.rm) return;
     const Q = FIND_PLAY.all, age = t - o.ts, perimeter = 2 * (Q.frame[2] + Q.frame[3]);
-    attr(comet, 'opacity', age <= Q.time ? 1 : 1 - clamp01((age - Q.time) / Q.fade));
+    attr(comet, 'opacity', age < 0 ? 0 : age <= Q.time ? 1 : 1 - clamp01((age - Q.time) / Q.fade));
     knots.forEach((knot, i) => { const q = clamp01((age - Q.time * Q.corners[i] / perimeter) / Q.knotTime), at = Q.knots[i]; attr(knot, 'transform', `translate(${at[0]} ${at[1]}) rotate(${FIND_PLAY.kit.turn * ease(q)})`); });
     const pulse = Math.sin(Math.PI * clamp01(age / Q.markerTime)); markers.forEach(m => { const p = m.at; attr(m.el, 'transform', `translate(${p[0]} ${p[1]}) scale(${1 + (Q.markerScale - 1) * pulse}) translate(${-p[0]} ${-p[1]})`); });
-    if (age >= Q.time + Math.max(Q.fade, Q.knotTime)) o.ts = null;
+    if (age >= Q.time + Math.max(Q.fade, Q.knotTime)) { o.ts = null; if (o.wide && JOURNEY.focus === o.wide) queueMicrotask(() => stepsFocus(o.wide, findView(o.wide))); }
   };
   return o;
 }

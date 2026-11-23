@@ -12,17 +12,17 @@ export function findMist(svg) {
   const lift = () => {
     if (o.lifted) return;
     const Q = FIND_PLAY.mist; o.lifted = o.kept = true; o.liftTs = FD.now; o.stage = FD.rm ? 'lifted' : 'lifting';
-    for (let i = 0; i < Q.puffs; i++) findBits('puff', Q.box[0] + (i + 0.5) * Q.box[2] / Q.puffs, Q.box[1] + Q.box[3] / 2, 1, { ...Q.puff, dir: Q.east });
+    for (let i = 0; i < Q.puffs; i++) findBits('wisp', Q.box[0] + (i + 0.5) * Q.box[2] / Q.puffs, Q.box[1] + Q.box[3] / 2, 1, { ...Q.puff, dir: Q.east });
     if (FD.rm) attr(cloud, 'opacity', 0);
   };
   const wipe = (p, r, manual, previous = null) => {
     if (manual) found(o.id);
     if (o.lifted) return;
     const Q = FIND_PLAY.mist;
-    wipes.appendChild(findSvg('circle', { cx: p[0], cy: p[1], r, fill: C.black }));
+    wipes.appendChild(findSvg('circle', { cx: p[0], cy: p[1], r: r * Q.soft[0], fill: 'url(#find-mist-wipe)' }));
     centres().forEach((c, i) => { if (Math.hypot(c[0] - p[0], c[1] - p[1]) <= Q.cellR) o.cleared[i] = true; });
     const dir = previous ? Math.atan2(p[1] - previous[1], p[0] - previous[0]) * FIND_PLAY.kit.deg / Math.PI : Q.east[0];
-    findBits('puff', ...p, 1, { ...Q.puff, dir: [dir, dir] });
+    o.wipes = (o.wipes || 0) + 1; if (o.wipes % Q.wisps[0] === 0) findBits('wisp', ...p, 1, { ...Q.puff, dir: [dir - Q.wisps[1], dir + Q.wisps[1]] });
     if (o.cleared.filter(Boolean).length / o.cleared.length >= Q.done) lift();
   };
   const pointer = (e, r) => {

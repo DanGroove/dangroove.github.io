@@ -4,21 +4,21 @@ import { VIEW, clamp01, lerp } from './trip.mjs';
 import { taflStart, taflMoves, taflPlay, taflReply } from './tafl.mjs';
 import { FD, FIND_BY, ease, attr, fEsc, found, opened, press, findSheet, closeSheet, findSvg, findFormat, findRandom } from './findkit.mjs';
 
-export const taflPanelHeight = () => { const T = FIND_PLAY.tafl; return T.board + T.tray * 2 + T.statusH + T.ruleH + T.slotH + T.buttonsH + T.gap * 4 + T.pad * 2 + T.border * 2; };
+export const taflPanelHeight = () => { const T = FIND_PLAY.tafl; return T.board + T.tray * 2 + T.statusH + T.slotH + T.buttonsH + T.gap * 3 + T.pad * 2 + T.border * 2; };
 const taflCellName = sq => FIND_COPY.taflColumns[sq % FIND_PLAY.tafl.rules.size] + (Math.floor(sq / FIND_PLAY.tafl.rules.size) + 1);
 const taflPoint = sq => { const T = FIND_PLAY.tafl; return [(sq % T.rules.size + 0.5) * T.cell, (Math.floor(sq / T.rules.size) + 0.5) * T.cell, 1]; };
 
 export function findBoard(svg) {
   const f = FIND_BY.tafl, el = svg.querySelector('#f-tafl'), board = el.querySelector('.tf-board'), home = board.parentElement;
   const T = FIND_PLAY.tafl, R = T.rules, starts = [R.king, ...R.defenders, ...R.attackers];
-  const o = { id: f.id, el, game: taflStart(), stage: 'rest', kept: false, selected: null, cursor: R.king, busy: false, replyAt: null, hearTs: -Infinity, moveText: '', pieces: [] };
+  const o = { id: f.id, el, game: taflStart(), stage: 'rest', kept: false, selected: null, cursor: R.king, busy: false, replyAt: null, hearTs: -Infinity, endTs: -Infinity, moveText: '', pieces: [] };
   o.pieces = [...board.querySelectorAll('.tf-piece')].map((g, i) => ({ g, kind: i === 0 ? 'k' : i <= R.defenders.length ? 'd' : 'a', sq: starts[i], start: starts[i], point: taflPoint(starts[i]), from: taflPoint(starts[i]), to: taflPoint(starts[i]), ts: -Infinity, duration: T.slide[1] }));
-  const statusText = () => o.game.winner === 'king' ? FIND_COPY.taflWin : o.game.winner === 'attackers' ? FIND_COPY.taflLose : o.game.winner === 'draw' ? FIND_COPY.taflDraw : o.game.turn === 'attackers' || o.busy ? FIND_COPY.taflThem : FIND_COPY.taflYou;
+  const statusText = () => o.game.winner === 'king' ? FIND_COPY.taflWin : o.game.winner === 'attackers' ? (o.game.board.includes('k') ? FIND_COPY.taflStuck : FIND_COPY.taflLose) : o.game.winner === 'draw' ? FIND_COPY.taflDraw : o.game.turn === 'attackers' || o.busy ? FIND_COPY.taflThem : FIND_COPY.taflYou;
   const refresh = () => {
     if (FD.sheetOwner !== o) return;
     const Q = FIND_PLAY.tafl, moves = o.selected === null ? [] : taflMoves(o.game, o.selected);
     o.status.textContent = findFormat(FIND_COPY.taflStatus, { move: o.moveText, turn: statusText() }).trim();
-    o.slot.hidden = !o.game.winner;
+    o.slot.hidden = !o.game.winner; o.rule.hidden = !!o.game.winner; // one row: the rules while a game is on, the slot when it is over
     const line = FIND_COPY.tafl; o.slot.innerHTML = typeof line === 'object' && line.todo ? `<div class="find-slot"><span class="pop-k">${fEsc(COPY.todo)}</span><p>${fEsc(line)}</p></div>` : `<p>${fEsc(line)}</p>`;
     o.cells.forEach((cell, i) => { cell.tabIndex = i === o.cursor ? 0 : -1; attr(cell, 'aria-label', findFormat(FIND_COPY.taflCell, { cell: taflCellName(i), piece: FIND_COPY.taflKinds[o.game.board[i] || 'empty'] })); attr(cell, 'aria-selected', i === o.selected); attr(o.dots[i], 'opacity', moves.includes(i) && !o.busy ? Q.dotAlpha : 0); });
     attr(o.selection, 'opacity', o.selected === null ? 0 : 1);
@@ -29,6 +29,7 @@ export function findBoard(svg) {
   const finish = () => {
     o.busy = false;
     o.stage = FD.sheetOwner === o ? 'sheet' : 'rest';
+    if (o.game.winner && o.game.last) o.endTs = FD.now;
     if (!o.game.winner && o.game.turn === 'attackers') { o.replyAt = FD.now + FIND_PLAY.tafl.reply; o.stage = 'reply'; }
     refresh();
   };
@@ -58,9 +59,9 @@ export function findBoard(svg) {
   const sheet = () => {
     opened(o);
     const Q = FIND_PLAY.tafl;
-    if (!findSheet(o, 'tafl-sheet', `<div class="tf-panel"><svg class="tf-surface" viewBox="0 ${-Q.tray} ${Q.board} ${Q.board + Q.tray * 2}" role="grid" aria-label="${fEsc(FIND_COPY.taflBoard)}"></svg><p class="tf-status" role="status" aria-live="polite" aria-atomic="true"></p><p class="tf-rule">${fEsc(FIND_COPY.taflRule)}</p><div class="tf-slot-space"><div class="tf-slot" hidden></div></div><div class="tf-buttons"><button class="tf-new" type="button">${fEsc(FIND_COPY.taflNew)}</button><button class="tf-close" type="button">${fEsc(COPY.close)}</button></div></div>`, [f.x, f.y])) return;
+    if (!findSheet(o, 'tafl-sheet', `<div class="tf-panel"><svg class="tf-surface" viewBox="0 ${-Q.tray} ${Q.board} ${Q.board + Q.tray * 2}" role="grid" aria-label="${fEsc(FIND_COPY.taflBoard)}"></svg><p class="tf-status" role="status" aria-live="polite" aria-atomic="true"></p><div class="tf-slot-space"><p class="tf-rule">${fEsc(FIND_COPY.taflRule)}</p><div class="tf-slot" hidden></div></div><div class="tf-buttons"><button class="tf-new" type="button">${fEsc(FIND_COPY.taflNew)}</button><button class="tf-close" type="button">${fEsc(COPY.close)}</button></div></div>`, [f.x, f.y])) return;
     FD.sheet.querySelector('.tf-surface').appendChild(board); attr(board, 'transform', 'scale(1)');
-    o.status = FD.sheet.querySelector('.tf-status'); o.slot = FD.sheet.querySelector('.tf-slot'); o.cells = []; o.dots = [];
+    o.status = FD.sheet.querySelector('.tf-status'); o.rule = FD.sheet.querySelector('.tf-rule'); o.slot = FD.sheet.querySelector('.tf-slot'); o.cells = []; o.dots = [];
     o.input = findSvg('g', { class: 'tf-input', role: 'rowgroup' }); board.appendChild(o.input);
     const rows = Array.from({ length: R.size }, () => findSvg('g', { role: 'row' })); rows.forEach(row => o.input.appendChild(row));
     for (let sq = 0; sq < R.size ** 2; sq++) {
@@ -68,7 +69,7 @@ export function findBoard(svg) {
       g.append(hit, dot); rows[Math.floor(sq / R.size)].appendChild(g); o.cells.push(g); o.dots.push(dot);
     }
     o.selection = findSvg('circle', { r: Q.selectR, fill: 'none', stroke: C.paper, 'stroke-width': Q.outline, 'stroke-dasharray': Q.selectDash.join(' '), 'pointer-events': 'none', opacity: 0 });
-    o.cursorRing = findSvg('rect', { x: Q.cursorInset, y: Q.cursorInset, width: Q.cell - Q.cursorInset * 2, height: Q.cell - Q.cursorInset * 2, fill: 'none', stroke: C.paper, 'stroke-width': Q.cursorLine, 'pointer-events': 'none' }); o.input.append(o.selection, o.cursorRing);
+    o.cursorRing = findSvg('rect', { class: 'tf-cursor', x: Q.cursorInset, y: Q.cursorInset, width: Q.cell - Q.cursorInset * 2, height: Q.cell - Q.cursorInset * 2, fill: 'none', stroke: C.paper, 'stroke-width': Q.cursorLine, 'pointer-events': 'none' }); o.input.append(o.selection, o.cursorRing);
     o.input.addEventListener('click', e => { const cell = e.target.closest('.tf-cell'); if (cell) { choose(+cell.dataset.square); o.cells[o.cursor].focus({ preventScroll: true }); } });
     o.input.addEventListener('keydown', e => {
       const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
@@ -91,6 +92,7 @@ export function findBoard(svg) {
       const q = FD.rm ? 1 : ease((t - p.ts) / p.duration); p.point = p.from.map((v, j) => lerp(v, p.to[j], q));
       const hop = FD.rm || FD.sheetOwner === o ? 0 : Q.hop / (Q.scale * Q.mapCell / Q.cell) * Math.sin(Math.PI * clamp01((t - o.hearTs - i * Q.hopGap) / Q.hopTime));
       let scale = p.point[2];
+      if (p.kind === 'k' && FD.sheetOwner === o && o.game.winner === 'king' && !FD.rm) scale *= 1 + Q.win[0] * Math.abs(Math.sin(Math.PI * Q.win[2] * clamp01((t - o.endTs) / Q.win[1]))); // the king who got away swells twice
       if (p.kind === 'k' && FD.sheetOwner !== o) scale *= (o.awake && !FD.rm ? lerp(Q.kingPulse[0], Q.kingPulse[1], (1 - Math.cos(Math.PI * 2 * t / Q.kingPulse[2])) / 2) : Q.mapKing) / (Q.kingR * Q.mapCell / Q.cell);
       attr(p.g, 'transform', `translate(${p.point[0]} ${p.point[1] - hop}) scale(${scale})`);
     });

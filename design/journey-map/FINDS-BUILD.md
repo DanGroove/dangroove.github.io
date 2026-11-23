@@ -187,3 +187,17 @@ New Part B author slots, all with placeholder text and todo: 1:
 - FIND_COPY.longship: the personal line for the 2023 crossing, below the log kicker and ship play.
 
 The well invents no author story: names/dates are read directly from STOPS and the fallback draft copy is in FIND_COPY. Part A's author slots and missing pieces listed above remain for Dan. Removing todo from a slot makes its text ordinary copy.
+
+# Browser review of Part B
+
+23 November 2026, after the merge. Played in Chromium at 1440x900 and on a 390 px phone with taps and a finger, in Steps and Scroll mode and with reduced motion. No page errors in any run.
+
+What changed:
+
+- **Board game rules.** Checked against an independent reading of section 10.1 over about 25,000 moves: every move list, capture and result agreed. But with the king taken like any other piece, a casual king's side lost nearly every game within five moves. The king is now taken only when shut in on all four sides (`rules.kingSides: 4`), each side by an attacker, a corner or the empty centre, and never against the edge (`rules.kingEdge: false`). Simulated: a thoughtful player wins 90% in a median of 8 moves, a casual one 45%, random moves 22%. The rule line says so.
+- **Board sheet.** The rules and the end slot share one row (the rules while a game is on, the slot when it is over), so the sheet is 534 px tall. The keyboard cursor square shows only while a cell has keyboard focus. A king whose side cannot move gets its own line (`FIND_COPY.taflStuck`). The king who reaches a corner swells twice.
+- **Mist.** Wipes punched hard-edged black holes and the puffs read as a row of grey coins. Wipes now fade at the edge (a radial mask gradient, `mist.soft`), and every third wipe throws one soft wisp fanned either side of the stroke.
+- **Horn.** The rings died at 274 units, so the far finds answered after the rings had gone and the camera had gone back. The rings now cross the whole map while they can still be seen (`speed: 300, life: 2.2, power: 0.7`), drawn a little stronger, and each find answers as a ring passes it inside the wide view. The greeting popup closes when it sounds, leaving the wide view clear. Glints on missed finds are larger (`glint[0]: 11`). The ring radius no longer goes to infinity before the first sound (a console error).
+- **Well.** Its answer sat behind the step buttons. Any popup now stays above the step buttons and the timeline (their tops are read when the popup opens, not per frame), and the well's view sits a little lower so its answer clears them with the crown still in view.
+- **The finish.** The comet ran round the frame while the camera was zoomed in on the eleventh find, so it was never seen. When a find has the camera, the finish now asks for the whole chart, starts the comet once the camera is there (`all.wait`), and hands the camera back to the find after.
+- **Longship.** Played as specified (pull, popup clear of the mast, pennant on three pulls, shields following the trip, lamp once the beacon is lit); nothing changed.

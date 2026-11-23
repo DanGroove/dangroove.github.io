@@ -9,7 +9,7 @@ export function findHorn(svg) {
   const f = FIND_BY.horn, el = svg.querySelector('#f-horn'), horn = el.querySelector('.hn-horn');
   const o = { id: f.id, el, stage: 'rest', kept: false, up: 0, v: 0, hold: false, sounded: 0, ts: -Infinity, heard: [], hearTs: -Infinity, glints: [] };
   const ringsGroup = findSvg('g', { id: 'hn-rings', 'pointer-events': 'none' }); svg.querySelector('#finds').appendChild(ringsGroup);
-  const rings = Array.from({ length: FIND_PLAY.horn.rings }, () => { const c = findSvg('circle', { class: 't', r: 1, opacity: 0 }); ringsGroup.appendChild(c); return c; });
+  const rings = Array.from({ length: FIND_PLAY.horn.rings }, () => { const c = findSvg('circle', { class: 'hn-ring', r: 1, opacity: 0 }); ringsGroup.appendChild(c); return c; });
   const glints = FINDS.map(d => { const g = findSvg('g'), star = findSvg('path', { class: 'pf', d: starPath(0, 0, FIND_PLAY.horn.glint[0]), opacity: 0 }); star.style.stroke = 'none'; g.appendChild(star); ringsGroup.appendChild(g); return { id: d.id, g, star, ts: -Infinity }; });
   const deliver = id => {
     const object = FD.list[id]; object?.hear?.();
@@ -19,7 +19,7 @@ export function findHorn(svg) {
   const sound = () => {
     if (o.stage === 'sounding' || o.stage === 'echo') return;
     const H = FIND_PLAY.horn; opened(o); o.stage = 'sounding'; o.ts = FD.now; o.sounded++; o.hold = false; o.heard = []; o.glints = []; o.up = 1;
-    o.wide = stepsFocus(o.id, FIND_PLAY.focus.wide);
+    o.wide = stepsFocus(o.id, FIND_PLAY.focus.wide); if (FD.popOwner === o) closePop();
     if (FD.rm) { FINDS.forEach(d => deliver(d.id)); o.up = o.v = 0; o.stage = 'rest'; if (FD.popOwner === o) closePop(); }
   };
   const raise = () => {
@@ -43,7 +43,7 @@ export function findHorn(svg) {
     const swell = !FD.rm && o.stage === 'sounding' && age < H.swell[2] ? (H.swell[0] - 1) * (1 - Math.cos(Math.PI * 2 * H.swell[1] * age)) / 2 : 0;
     const hear = FD.rm ? 0 : H.tip * Math.sin(Math.PI * clamp01((t - o.hearTs) / H.raise));
     attr(horn, 'transform', `translate(${H.lift[0] * q} ${H.lift[1] * q}) rotate(${H.turn * q + tip * (1 - q) + hear} ${H.pivot[0]} ${H.pivot[1]}) scale(${1 + swell})`);
-    rings.forEach((r, i) => { const a = age - i * H.gap, radius = H.radius + H.speed * Math.max(0, a); attr(r, 'transform', `translate(${f.x + H.bell[0]} ${f.y + H.bell[1]}) scale(${radius})`); attr(r, 'opacity', !FD.rm && a >= 0 && a < H.life && o.stage === 'sounding' ? H.alpha * (1 - a / H.life) ** H.power : 0); });
+    rings.forEach((r, i) => { const a = age - i * H.gap, radius = H.radius + H.speed * Math.max(0, Math.min(H.life, a)); attr(r, 'transform', `translate(${f.x + H.bell[0]} ${f.y + H.bell[1]}) scale(${radius})`); attr(r, 'opacity', !FD.rm && a >= 0 && a < H.life && o.stage === 'sounding' ? H.alpha * (1 - a / H.life) ** H.power : 0); });
     if (['sounding', 'echo'].includes(o.stage)) {
       FINDS.forEach(d => { if (o.heard.includes(d.id)) return; const p = findPlace(d.id); if (age >= Math.hypot(p[0] - f.x - H.bell[0], p[1] - f.y - H.bell[1]) / H.speed) { o.heard.push(d.id); queueMicrotask(() => { o.heard = o.heard.filter(id => id !== d.id); deliver(d.id); }); } });
       if (o.stage === 'sounding' && age >= H.life + (H.rings - 1) * H.gap) {
