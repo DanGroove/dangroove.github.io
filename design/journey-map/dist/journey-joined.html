@@ -254,8 +254,12 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
   .jm-steps .tl { bottom: var(--go-bar); }
   .go { left: 0; right: 0; bottom: 0; transform: none; height: var(--go-bar); background: var(--ink); gap: 0; }
   .go-back { width: var(--go-bar); height: var(--go-bar); border: 0; border-radius: 0; }
-  .go-next { flex: 1; min-width: 0; height: var(--go-bar); border-radius: 0; }
-  .go.go-end { left: 16px; top: 14px; right: auto; width: auto; height: var(--go-h); gap: 12px; background: none; }
+  .go .go-next { flex: 1; min-width: 0; height: var(--go-bar); border-radius: 0; }
+  /* 40 px down while the review switch sits at the top centre */
+  .go.go-end { left: 16px; top: 40px; right: auto; width: auto; height: var(--go-h); gap: 12px; background: none; }
+  .go.go-end .go-next { flex: none; }
+  /* a card on its way up, or open, covers the timeline it sits over */
+  .stop[data-state="open"], .stop[data-state="moving"] { z-index: 4; }
   .go-end .go-back { width: var(--go-h); height: var(--go-h); border: 1px solid var(--mid); border-radius: 50%; }
 }
 
