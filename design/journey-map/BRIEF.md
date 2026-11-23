@@ -78,9 +78,13 @@ The map is 600 by 900 units. Coasts are `A` and `Bz`, the trail is the spline `T
 | laurier | `laurier.png` (on white) | white top band holds the logo, field below | `#330172` | `#FFFFFF` | `#CFC3E0` | `#EAA41E` / `#330172` | `#EAA41E` / `#330172` |
 | mohawk | `mohawk.png` (on black) | logo on the ground | `#030303` | `#F4F4F4` | `#A3A3A3` | `#FB9632` / `#030303` | `#991030` / `#FFFFFF` |
 | interkom | `interkom.png` (on cream) | logo on the ground | `#F7F3E2` | `#242021` | `#5E5A56` | `#E85155` / `#F7F3E2` | `#242021` / `#F7F3E2` |
-| lennard | `lennard.png` (on white) | white top band holds the logo, field below | `#FF4C00` | `#FFFFFF` | `#FFFFFF` | `#FFFFFF` / `#706259` | `#706259` / `#FFFFFF` |
+| lennard | `lennard.png` (on white) | logo on the ground | `#FFFFFF` | `#706259` | `#706259` | `#706259` / `#FFFFFF` | `#F1EFEF` / `#706259` |
 
-Lennard's values come from Lennard's own design system: the orange is PMS 1655, `#FF4C00`, and the only dark is Warm Gray 11, `#706259`, which is also its text colour. Never use `#0F151E`, `#1A1A1A` or black on that card. HMC's navy and green were sampled from Dan's annual report and will be checked against HMC's brand guide. Every palette value must be changeable in this one table.
+Lennard's card follows Lennard's own design system (Dan agreed to this on 22 Nov): a white ground, Warm Gray 11 (`#706259`) for all text, and one orange idea in PMS 1655 (`#FF4C00`), which is the headline, set at 22 px or larger. Nothing else on that card is orange except the logo. Its hairlines are Warm Gray 1 (`#D8D1CA`). Never use `#0F151E`, `#1A1A1A` or black on it.
+
+Each palette therefore carries two more values. `headline`: the headline's colour, which is the text colour on the other five cards. `mark`: the colour used wherever a place's colour sits on the Ink ground (the lit stop mark, its timeline block, the mini-map), because several grounds are too dark or too light to show there: `#0D7247` for HMC, `#EAA41E` for Laurier, `#FB9632` for Mohawk, `#E85155` for Interkom, `#FF4C00` for Lennard.
+
+HMC's navy and green were sampled from Dan's annual report and will be checked against HMC's brand guide. Every palette value must be changeable in this one table.
 
 ### Card copy (drafts in Dan's voice; he will rewrite them; keep them in data with `draft: true`)
 
@@ -106,7 +110,7 @@ One tall scrolling page. A sticky stage fills the viewport and everything inside
 3. **Overview.** The whole map sits inside the viewport (contain, with margin) so the shape of the journey reads at once. Title "The saga so far", small caps line "A MAP OF HOW I GOT HERE, 2016 TO NOW". The timeline bar slides up. Quiet cue: "Scroll to set out".
 4. **Push in.** The camera scales to about 3.2 times the overview scale (2.6 on phones), centred near the first stop. A mini-map appears in a corner: coasts, trail, stops, the traveller, and a frame showing the current view. Tapping a stop on it jumps there.
 5. **The trip.** The traveller follows the trail. Behind it the trail is a solid Paper line (an SVG path revealed by dash offset), ahead of it only the star dots. The camera keeps the traveller near 45 percent across and 55 percent down, and is smoothed by averaging the path over a small window of progress, never by a time-based spring. During the water crossing the traveller rides the longship (section 9, find 11).
-6. **A stop.** The camera pushes in a further 1.35 times and the map dims to 35 percent. The stop's mark grows into the card: the card is the same element as the mark, scaled up from the mark's position, and its content fades in once it is past 40 percent of its size. Scrolling on folds it back into the mark, which then stays filled in that place's ground colour.
+6. **A stop.** The camera pushes in a further 1.35 times and the map dims to 35 percent. The stop's mark grows into the card: the card is the same element as the mark, scaled up from the mark's position, and its content fades in once it is past 40 percent of its size. Scrolling on folds it back into the mark, which then stays filled in that place's `mark` colour.
 7. **The X and the footer.** Section 11.
 
 ## 7. Cards
@@ -162,7 +166,7 @@ Small finds:
 Pinned to the bottom from the overview to the footer. About 56 px tall on desktop and 44 on phones. A quiet instrument, never the focus.
 
 - A ruler from 2016 to now with a tick and a two-digit label per year. Two tracks: school above, work below (the 2020 HMC summer overlaps Mohawk, and two tracks show that honestly).
-- One block per timeline span, Mid until its stop has been visited, then that place's ground colour (Interkom's block uses its coral, so it shows on Ink).
+- One block per timeline span, Mid until its stop has been visited, then that place's `mark` colour.
 - A Red playhead locked to the traveller. Map progress to dates piecewise: a stop's hold covers its spans, a leg covers the gap between them.
 - Drag the playhead to scrub (it scrolls the page). Click a block to jump to that stop. Left and right arrow keys step between stops. Hover or focus shows the name and dates. Expose it as a slider with a spoken value such as "Mohawk College, 2019 to 2021".
 - While a card is open it thins to a hairline. In the footer the same element moves and becomes the rule under the name.
