@@ -769,9 +769,11 @@ const NOVA_CANVAS = { dpr: 2, glowSprite: 512 };
 const NOVA = {
   build: { kindle: 0.2, draw: 0.76, hold: 0.93, throbs: [0.26, 0.45, 0.60, 0.72], rise: 0.12, fall: 0.32, pull: 1.8,
     push: 0.08, pushPhone: 0.06, recoil: 0.4, veil: 0.65, veilPhone: 0.45, veilOut: 0.25, hole: [0.6, 0.18], holeBreath: 0.04,
-    kindleGlow: 36, kindleAlpha: 0.025, kindleHeat: 0.015, glow: [104, 22], swell: [0.15, 0.22, 0.29, 0.35], glowAlpha: [0.18, 0.44, 0.56], throbAlpha: [0.08, 0.11, 0.14, 0.18],
+    kindleGlow: 36, kindleAlpha: 0, kindleHeat: 0, glow: [104, 22], swell: [0.15, 0.22, 0.29, 0.35], glowAlpha: [0.18, 0.44, 0.56], throbAlpha: [0.08, 0.11, 0.14, 0.18],
     spikeGrow: 1.12, compressed: 0.6, thickness: 1.12, heat: [0.15, 0.9, 1], core: [4, 13, 9],
     gatherTop: 0.7, gatherStagger: 0.035, jitter: [0.5, 2], jitterHz: 24 },
+  // The X's hand-over from the map to the canvas, in seconds of the rush: the canvas X fading in under the exact sprite, then the sprite fading out; the sprite's reach in map units; the largest scale drift and screen slip (CSS px) it is shown at.
+  handover: { fadeIn: 0.12, fadeOut: 0.12, reach: 20, drift: 0.02, slip: 0.5 },
   pulse: [2.6, 0.12, 0.9, 0.06], spike: [1.7, 0.2, 3.14], glow: [4.2, 0.07],
   rays: { n: 22, len: [4, 12], alpha: [0.3, 0.7], turn: 0.12, start: 1.1, width: 1, breathe: 0.7, period: [1.2, 3.2], peak: 0.16 },
   lobes: { n: 6, nPhone: 4, r: [120, 260], orbit: [40, 170], speed: [0.12, 0.3], alpha: [0.22, 0.42], breathe: 0.2 },
@@ -2327,7 +2329,7 @@ function depthFrame(st, time, dt, pointer, aim, moved) {
 
 
 
-const SK = { cv: null, ctx: null, dpr: 1, list: [], trav: null, src: null, n: -1, standN: 0, seaN: 0, keepP: .3, bins: new Map(), tails: new Map(), pt: [0, 0], drift: 0, orbit: 0, burn: 0, skyPointer: [0.5, 0.5], skyCount: 0, tuning: '', assignment: '', skyVisible: false };
+const SK = { cv: null, ctx: null, dpr: 1, list: [], trav: null, src: null, n: -1, standN: 0, seaN: 0, keepP: .3, bins: new Map(), tails: new Map(), pt: [0, 0], drift: 0, orbit: 0, burn: 0, skyPointer: [0.5, 0.5], skyCount: 0, tuning: '', assignment: '', skyVisible: false, rushAnchor: null };
 const HERO_MOST = 2000;
 
 function starsBuild(canvas) {
@@ -2479,6 +2481,10 @@ function starsFrame(time, st, pointer, opt = {}) {
   const heroPos = (s, sky = false) => { const pt = sky && h > 0 ? SK.skyPointer : pointer; return [(((s.hx + SK.drift * STARS.drift * s.z) % 1) + 1) % 1 * W + (pt[0] - .5) * STARS.parallax * s.z, s.hy * H + (pt[1] - .5) * STARS.parallax * s.z]; };
   const look = opt.look || [0, 0], box = depthFrameBox(st), centre = toScreen(st, [MAP.w / 2, MAP.h / 2]), c0 = [VIEW.ox + MAP.w / 2 * VIEW.s0, VIEW.oy + MAP.h / 2 * VIEW.s0];
   const late = src ? .02 : .05; // joined: the first stars move within the first 3 % of the fall
+  // In the rush the twinkle follows rushT (Back and a scrub repeat it), anchored on the clock at the rush's first frame so it carries on without a jump.
+  const rushing = st.rushT > 0 && st.blastT === 0;
+  if (!rushing) SK.rushAnchor = null; else if (SK.rushAnchor === null) SK.rushAnchor = time - st.rushT * STEPS.pace.rush;
+  const twinkleTime = rushing ? SK.rushAnchor + st.rushT * STEPS.pace.rush : time;
   for (const s of SK.list) {
     let x, y, rad, al, col, tail = null;
     if (s.kind === 'sky') {
@@ -2494,7 +2500,7 @@ function starsFrame(time, st, pointer, opt = {}) {
       if (h > 0) {
         const outside = Math.hypot(Math.max(box[0] - x, 0, x - box[2]), Math.max(box[1] - y, 0, y - box[3]));
         al *= 1 - smooth(...STARS.skyCover, h) * (1 - smooth(0, STARS.skyEdge, outside)) * (1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0))) * (s.gather ? 1 - smooth(0, 1, st.rushT) : 1);
-        if (!opt.still) al *= 1 - STARS.twinkle * follow * (.5 + .5 * Math.sin((st.rushT > 0 && st.blastT === 0 ? st.rushT * 3 : time) * lerp(...STARS.skyF, s.f) + s.phase));
+        if (!opt.still) al *= 1 - STARS.twinkle * follow * (.5 + .5 * Math.sin(twinkleTime * lerp(...STARS.skyF, s.f) + s.phase));
       }
       if (s.gather && st.rushT > 0 && !opt.still) {
         const home = [x, y], gt = gatherT(s), q = st.blastT > 0 ? 1 - easeIO(st.blastT) : gt;
@@ -2526,11 +2532,14 @@ function starsFrame(time, st, pointer, opt = {}) {
         if (s.kind === 'coast') al *= 1 - smooth(s.hu, s.hu + .06, h); // the coast line passes it and it dissolves into the line
       }
       else { x = m[0]; y = m[1]; rad = endR; al = endA; }
-      if (st.legXT > 0 && st.rushT === 0) { const dx = Xs[0] - x, dy = Xs[1] - y, d = Math.hypot(dx, dy), R = 260; if (d < R) { const k = .12 * st.legXT * (1 - d / R); x += dx * k; y += dy * k; tail = [dx / d * 6 * st.legXT, dy / d * 6 * st.legXT]; } }
+      let pullTail = null;
+      if (st.legXT > 0 && st.blastT === 0) { const dx = Xs[0] - x, dy = Xs[1] - y, d = Math.hypot(dx, dy), R = 260; if (d < R) { const k = .12 * st.legXT * (1 - d / R); x += dx * k; y += dy * k; pullTail = [dx / d * 6 * st.legXT, dy / d * 6 * st.legXT]; } }
+      if (st.rushT === 0 && pullTail) tail = pullTail;
       if (st.rushT > 0 && st.blastT === 0) {
-        const tt = gatherT(s), e = tt;
-        const at = novaGatherPoint(m, Xs, s.ang, gatherRadius, e), prior = novaGatherPoint(m, Xs, s.ang, gatherRadius, Math.max(0, e - NOVA.gather.tail));
-        tail = [(at[0] - prior[0]) * NOVA.gather.tailGain / NOVA.gather.tail, (at[1] - prior[1]) * NOVA.gather.tailGain / NOVA.gather.tail]; x = at[0]; y = at[1]; al = s.kind === 'coast' ? .6 * smooth(0, NOVA.gather.join, tt) : Math.max(al, .6);
+        const tt = gatherT(s), e = tt, home = [x, y], join = smooth(0, NOVA.gather.join, tt);
+        const at = novaGatherPoint(home, Xs, s.ang, gatherRadius, e), prior = novaGatherPoint(home, Xs, s.ang, gatherRadius, Math.max(0, e - NOVA.gather.tail));
+        tail = [(at[0] - prior[0]) * NOVA.gather.tailGain / NOVA.gather.tail, (at[1] - prior[1]) * NOVA.gather.tailGain / NOVA.gather.tail]; x = at[0]; y = at[1]; al = s.kind === 'coast' ? .6 * join : lerp(al, Math.max(al, .6), join);
+        if (pullTail) tail = [tail[0] + pullTail[0] * (1 - join), tail[1] + pullTail[1] * (1 - join)];
         al *= 1 - smooth(.94, 1, tt);
       }
       if (st.blastT > 0) {
@@ -3760,7 +3769,7 @@ function footnameFrame(time, dt, shift) {
 
 
 
-const FT = { items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], streaks: [], config: '', nextFlare: null, lastFlare: null, canvas: null, ctx: null, dpr: 1, drawing: false, sprites: {}, rough: null, roughPending: null };
+const FT = { items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], streaks: [], config: '', nextFlare: null, lastFlare: null, canvas: null, ctx: null, dpr: 1, drawing: false, sprites: {}, rough: null, roughPending: null, exact: null, exactPending: null, exactFailed: '', native: null, size: [0, 0] };
 const upRight = '<svg class="ne" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 8.5L8.5 1.5M3 1.5H8.5V7"/></svg>';
 const arrowR = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
 
@@ -3768,7 +3777,7 @@ const xStroke = rot => `<g class="fx-s" transform="rotate(${rot})"><path class="
 
 function footerBuildX(g, rm = false, canvas = null, hit = null) {
   FT.rm = rm; FT.x = g; FT.canvas = canvas; FT.ctx = !rm && canvas ? canvas.getContext('2d') : null; FT.hit = rm ? null : hit;
-  FT.drawing = false; FT.hitState = ''; FT.config = ''; FT.rays = []; FT.lobes = []; FT.waves = []; FT.streaks = [];
+  FT.drawing = false; FT.xHidden = false; FT.hitState = ''; FT.config = ''; FT.rays = []; FT.lobes = []; FT.waves = []; FT.streaks = [];
   g.innerHTML = xStroke(45) + xStroke(-45);
   g.setAttribute('pointer-events', 'none');
   const r = rnd(43);
@@ -3884,8 +3893,40 @@ function footerRough(scale) {
   const filter = mapDefs().match(/<filter id="rough"[^]*?<\/filter>/)[0];
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${cv.width}" height="${cv.height}" viewBox="-20 -8 40 16"><defs>${filter}</defs><path d="M-12.7 0H12.7" stroke="${C.red}" stroke-width="3.6" stroke-linecap="round" fill="none" filter="url(#rough)"/></svg>`);
 }
+// The hand-over sprite (critique round 4, V4-1): the map's own X, both strokes and the rough filter, rendered once at rest
+// at the X beat's camera scale on the screen's own pixel grid. It sits in a canvas of its own just above the nova canvas,
+// because that one is capped at NOVA_CANVAS.dpr and cannot match the SVG on denser screens. The first rush frame shows it
+// 1:1 in place of the map's X; the stretchable canvas X fades in under it, then it fades out. It is freed once the X is gone.
+const rushStart = () => SEQ.find(s => s.kind === 'rush').a;
+function footerExactFree() {
+  FT.exact = FT.exactPending = null; FT.exactFailed = '';
+  if (FT.native) { footerStyle(FT.native, 'visibility', 'hidden'); if (FT.native.width) FT.native.width = FT.native.height = 0; }
+}
+function footerExact(st) {
+  if (FT.rm || !FT.canvas || typeof Image === 'undefined' || st.rushT !== 0 || Math.abs(st.P - rushStart()) > 1e-6) return;
+  const dpr = window.devicePixelRatio || 1, k = st.cam.s * dpr, x = MAP.x[0] * st.cam.s + st.cam.tx, y = MAP.x[1] * st.cam.s + st.cam.ty;
+  const cx = x * dpr, cy = y * dpr, W = Math.round(FT.size[0] * dpr), Ht = Math.round(FT.size[1] * dpr);
+  const key = [k, cx, cy, W, Ht].map(v => (+v).toFixed(4)).join('/');
+  if (FT.exact?.key === key || FT.exactPending?.key === key || FT.exactFailed === key) return;
+  const R = Math.ceil(NOVA.handover.reach * k) + 2, x0 = Math.floor(cx) - R, y0 = Math.floor(cy) - R, size = 2 * R + 1;
+  const pending = { key, s: st.cam.s, x, y }, img = new Image(); FT.exactPending = pending;
+  img.onload = () => {
+    if (FT.exactPending !== pending) return;
+    if (!FT.native) {
+      const cv = FT.native = document.createElement('canvas'); cv.setAttribute('aria-hidden', 'true');
+      cv.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none'; footerStyle(cv, 'visibility', 'hidden');
+      FT.canvas.after?.(cv);
+    }
+    FT.native.width = W; FT.native.height = Ht; FT.native.getContext('2d').drawImage(img, x0, y0);
+    FT.exact = pending; FT.exactPending = null;
+  };
+  img.onerror = () => { if (FT.exactPending === pending) { FT.exactPending = null; FT.exactFailed = key; } };
+  const filter = mapDefs().match(/<filter id="rough"[^]*?<\/filter>/)[0];
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><defs>${filter}</defs><g transform="translate(${cx - x0} ${cy - y0}) scale(${k})">${xStroke(45)}${xStroke(-45)}</g></svg>`);
+}
 function footerNovaResize(w, h) {
   if (!FT.canvas) return;
+  FT.size = [w, h]; footerExactFree();
   FT.dpr = Math.min(NOVA_CANVAS.dpr, window.devicePixelRatio || 1);
   FT.canvas.width = Math.round(w * FT.dpr); FT.canvas.height = Math.round(h * FT.dpr);
   FT.roughFailed = 0;
@@ -3927,7 +3968,16 @@ function footerMotion(time, dt, st, look, moved) {
   } else FT.nextFlare = null;
   footerConfigure();
   const showing = st.rushT > 0 || st.blastT > 0 || st.settleT > 0 || st.exploreK > 0;
-  if (showing !== FT.drawing) { FT.drawing = showing; footerStyle(FT.x, 'visibility', showing ? 'hidden' : 'visible'); }
+  // The map's X hides on the first canvas frame (one write either way); with the exact sprite ready, that same frame shows the same X.
+  const H = NOVA.handover, ht = st.blastT > 0 || st.settleT > 0 || st.exploreK > 0 ? Infinity : st.rushT * STEPS.pace.rush;
+  if ((FT.exact || FT.exactPending) && (ht === Infinity || (!showing && Math.abs(st.P - rushStart()) > 1e-6))) footerExactFree();
+  const ex = FT.exact, E = ex && Math.abs(ex.s - st.cam.s) <= ex.s * H.drift && Math.hypot(MAP.x[0] * st.cam.s + st.cam.tx - ex.x, MAP.x[1] * st.cam.s + st.cam.ty - ex.y) <= H.slip ? ex : null;
+  const exactOn = showing && E && ht < H.fadeIn + H.fadeOut ? 1 - clamp01((ht - H.fadeIn) / H.fadeOut) : 0;
+  const canvasIn = E && ht < H.fadeIn ? clamp01(ht / H.fadeIn) : 1;
+  FT.drawing = showing;
+  if (showing !== FT.xHidden) { FT.xHidden = showing; footerStyle(FT.x, 'visibility', showing ? 'hidden' : 'visible'); }
+  if (FT.native) { footerStyle(FT.native, 'opacity', exactOn); footerStyle(FT.native, 'visibility', exactOn > 0 ? 'visible' : 'hidden'); }
+  if (!showing) footerExact(st);
   footerStyle(FT.canvas, 'opacity', st.dim);
   const ctx = FT.ctx;
   if (!showing) {
@@ -4006,9 +4056,12 @@ function footerMotion(time, dt, st, look, moved) {
   footerRing(ctx, u(ringR) * z, C.red, 8, ringO * B.ringAlpha[1]); footerRing(ctx, u(ringR) * z, C.paper, 2, ringO * B.ringAlpha[0]);
   [0, 1].forEach(i => footerRing(ctx, u((VIEW.phone ? B.shellPhone : B.shellR)[i]) * z, C.paper, i ? .6 : .8, B.shellAlpha[i] * ro, clock * NOVA.shells[i], NOVA.shellDash));
   footerGlow(ctx, 'core', 0, 0, u(core * pulse) * calm * z, u(core * pulse) * calm * z, build.coreAlpha * calmAlpha);
+  // The hand-over: the exact sprite stands in for the map's X at full strength from the first rush frame (never over it, so no
+  // edge is drawn twice); the stretchable canvas X fades in under the sprite (canvasIn), then the sprite fades out (exactOn).
+  // Without a ready sprite, the canvas X takes over at once.
   B.angles.forEach((angle, i) => {
     const stretch = len * (1 + strength * NOVA.spike[1] * Math.sin(Math.PI * 2 * clock / NOVA.spike[0] + i * NOVA.spike[2])) * pulse;
-    const red = bT > 0 ? 0 : 1, white = heat;
+    const red = (bT > 0 ? 0 : 1) * canvasIn, white = heat;
     if (red > 0) footerRough(Math.max(z * stretch, z * thin));
     ctx.save(); ctx.rotate(angle * Math.PI / 180); ctx.scale(stretch * z, thin * z);
     if (red > 0) {

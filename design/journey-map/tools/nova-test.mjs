@@ -21,7 +21,7 @@ class NovaNode {
   set tabIndex(v) { this.writes++; this.tab = v; }
   get tabIndex() { return this.tab; }
 }
-const contexts = [], images = [];
+const contexts = [], images = [], canvases = [];
 function novaContext() {
   const calls = [], state = [], ctx = { calls, globalAlpha: 1, lineWidth: 1, strokeStyle: '', fillStyle: '' };
   for (const name of ['setTransform','clearRect','drawImage','fillRect','translate','rotate','scale','setLineDash','beginPath','moveTo','lineTo','quadraticCurveTo','closePath','arc','stroke','fill']) ctx[name] = (...args) => calls.push({ name, args, alpha: ctx.globalAlpha, width: ctx.lineWidth, colour: ctx.strokeStyle });
@@ -30,7 +30,7 @@ function novaContext() {
   for (const name of ['createLinearGradient','createRadialGradient']) ctx[name] = (...args) => { const gradient = { stops:[], addColorStop(at, colour) { this.stops.push([at,colour]); } }; calls.push({ name,args,gradient }); return gradient; };
   contexts.push(ctx); return ctx;
 }
-function novaCanvas() { const cv = new NovaNode(), ctx = novaContext(); cv.getContext = () => ctx; cv.ctx = ctx; return cv; }
+function novaCanvas() { const cv = new NovaNode(), ctx = novaContext(); cv.getContext = () => ctx; cv.ctx = ctx; canvases.push(cv); return cv; }
 globalThis.window = { devicePixelRatio: 3, addEventListener() {} };
 globalThis.document = { createElement: tag => tag === 'canvas' ? novaCanvas() : new NovaNode() };
 globalThis.Image = class { constructor() { images.push(this); } set src(v) { this.source = v; } };
@@ -135,11 +135,51 @@ for(const dpr of [1,3]){
   assert.ok(Math.abs(redScale[0]-segment('rush',.00000001).cam.s)<1e-8&&Math.abs(redScale[1]-segment('rush',.00000001).cam.s)<1e-8,'handoff keeps SVG length/3.6 width');
   assert.ok(canvas.ctx.calls.some(c=>c.name==='drawImage'&&c.args[1]===-20&&c.args[2]===-8),'handoff uses rough sprite in original user space');
 }
+// V4-1 (critique round 4): the hand-over sprite is the map's own X, both rough strokes, at the exact camera scale on the screen's
+// own pixel grid (not the nova canvas's capped DPR), in a canvas of its own. It is made once at rest at the X, shown 1:1 in place
+// of the SVG X from the first rush frame while the canvas X fades in under it, then fades out, and is freed once the X is gone.
+{
+  const H=NOVA.handover, filter=mapDefs().match(/<filter id="rough"[^]*?<\/filter>/)[0];
+  for(const dpr of [1,3]){
+    window.devicePixelRatio=dpr;footerNovaResize(1440,900);
+    const restX=segment('rush',0),made=images.length;run(restX);assert.equal(images.length,made+1,'exact sprite is made at rest at the X');
+    run(restX);assert.equal(images.length,made+1,'the same rest makes it once');
+    const img=images.at(-1),text=decodeURIComponent(img.source.split(',').slice(1).join(','));
+    const k=restX.cam.s*dpr,cx=(MAP.x[0]*restX.cam.s+restX.cam.tx)*dpr,cy=(MAP.x[1]*restX.cam.s+restX.cam.ty)*dpr;
+    const R=Math.ceil(H.reach*k)+2,size=2*R+1,x0=Math.floor(cx)-R,y0=Math.floor(cy)-R;
+    assert.ok(text.includes(`width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"`),'sprite raster is 1:1 with device pixels at DPR '+dpr);
+    assert.ok(text.includes(`translate(${cx-x0} ${cy-y0}) scale(${k})`),'sprite keeps the X beat scale times the screen DPR '+dpr);
+    assert.equal((text.match(/class="fx-red"/g)||[]).length,2);assert.ok(text.includes(filter),'sprite uses the map rough filter');
+    img.onload();
+    const native=canvases.find(c=>/pointer-events:none/.test(c.style.cssText||''));
+    assert.ok(native,'hand-over canvas exists');assert.equal(native.width,1440*dpr);assert.equal(native.height,900*dpr);
+    assert.deepEqual(native.ctx.calls.filter(c=>c.name==='drawImage').at(-1).args,[img,x0,y0],'sprite drawn at whole device pixels');
+    assert.equal(native.style.visibility,'hidden');assert.equal(x.style.visibility,'visible');
+    canvas.ctx.calls.length=0;run(segment('rush',1e-6),.016);
+    assert.equal(x.style.visibility,'hidden');assert.equal(native.style.visibility,'visible');assert.equal(native.style.opacity,'1');
+    const red=canvas.ctx.calls.filter(c=>c.name==='drawImage'&&c.args[1]===-20);assert.ok(red.length&&red.every(c=>c.alpha<.001),'canvas X starts faint under the sprite');
+    run(segment('rush',(H.fadeIn+H.fadeOut/2)/STEPS.pace.rush));assert.ok(Math.abs(+native.style.opacity-.5)<1e-9,'sprite fades out after the canvas X is in');
+    run(segment('rush',(H.fadeIn+H.fadeOut)/STEPS.pace.rush+1e-6));assert.equal(native.style.visibility,'hidden');assert.equal(native.style.opacity,'0');
+    run(restX);assert.equal(x.style.visibility,'visible');assert.equal(native.style.visibility,'hidden');assert.equal(native.width,1440*dpr,'kept for a Back into the rest');
+    run(segment('blast',.2));assert.equal(native.width,0,'freed once the X is gone');
+  }
+  window.devicePixelRatio=3;footerNovaResize(1440,900);
+}
+console.log('ok: V4-1 hand-over sprite at DPR 1/3: map X strokes and rough filter at exact scale, 1:1 device pixels in its own canvas, shown in place of the SVG X on the first rush frame, canvas X fades in under it, then it fades out; kept for Back, freed at the blast');
 const starCanvas=novaCanvas();starsBuild(starCanvas);starsResize(1440,900);
 const starSnapshot=(t,time)=>{starCanvas.ctx.calls.length=0;const st=segment('rush',t);starsTick(.1,st);starsFrame(time,st,[.5,.5]);return JSON.stringify(starCanvas.ctx.calls.map(c=>[c.name,c.args,/^(fill|fillRect|stroke)$/.test(c.name)?c.alpha:null]));};
 const starForward=[.01,.26,.45,.60,.72,.83,.93,.97].map(t=>[t,starSnapshot(t,3)]);
 for(const [t,frame] of starForward.slice().reverse())assert.ok(starSnapshot(t,200)===frame,'stars ignore elapsed clock during rush at '+t);
 starSnapshot(.93,1);const heldState=segment('rush',.93),heldX=[MAP.x[0]*heldState.cam.s+heldState.cam.tx,MAP.x[1]*heldState.cam.s+heldState.cam.ty];assert.ok(!starCanvas.ctx.calls.some(c=>(c.name==='fillRect'||c.name==='arc')&&Math.hypot(c.args[0]-heldX[0],c.args[1]-heldX[1])<3),'gathered stars vanish before held breath');
+// V4-1: the stars carry straight on through the first rush frame (no twinkle phase switch, no release of the pull toward the X, no alpha jump).
+{
+  const dots=(st,time)=>{starCanvas.ctx.calls.length=0;starsTick(.016,st);starsFrame(time,st,[.5,.5]);return starCanvas.ctx.calls.filter(c=>(c.name==='fillRect'||c.name==='arc')&&c.alpha>.004).map(c=>[c.args[0],c.args[1],c.alpha]);};
+  starSnapshot(0,1);const rest=dots(segment('rush',0),40),first=dots(segment('rush',1e-6),40.016);
+  let far=0,fade=0;
+  for(const [x0,y0,a0] of rest){let best=null;for(const d of first){const gap=Math.hypot(d[0]-x0,d[1]-y0);if(!best||gap<best[0])best=[gap,Math.abs(d[2]-a0)];}far=Math.max(far,best[0]);fade=Math.max(fade,best[1]);}
+  assert.ok(Math.abs(first.length-rest.length)<=rest.length*.02,'visible stars either side of the rush start: '+rest.length+' then '+first.length);
+  assert.ok(far<.5&&fade<.02,'first rush frame moves a star '+far.toFixed(3)+' px and changes its alpha '+fade.toFixed(4));
+}
 // The actual writer already has zero identical-frame map writes; reject new SVG effects too.
 assert.ok(!/createElementNS|findSvg\(/.test(readFileSync(new URL('../footer.mjs',import.meta.url),'utf8')));
 console.log('ok: D3 3 s reversible canvas/star score; four increasing throbs >=340 ms apart (light only); stars and spikes speed up without lurches; 16 ms alpha deltas <=.08; gather complete at .93; compressed blast, anchored push/recoil and rough 3.6-width handoff at DPR 1/3');

@@ -1,11 +1,11 @@
 // The star canvas: hero field, the hand-off into trail dots, sea sparkle, the rush and the blast.
 // On the joined page (join.mjs) the list is built from the real hero's stars instead of the stand-in field.
-import { STARS, C, MAP, NOVA, DEPTH } from './data.mjs';
+import { STARS, C, MAP, NOVA, DEPTH, STEPS } from './data.mjs';
 import { rnd, onLand, COAST_A, COAST_B, polyLen } from './art.mjs';
 import { TRAIL_DOTS, VIEW, toScreen, smooth, lerp, clamp01, easeIO, novaBuildGather } from './trip.mjs';
 import { depthFrameBox, depthFrameCovers, novaRingRadius, novaFlare, novaShare, NOVA_LIVE } from './depth.mjs';
 
-const SK = { cv: null, ctx: null, dpr: 1, list: [], trav: null, src: null, n: -1, standN: 0, seaN: 0, keepP: .3, bins: new Map(), tails: new Map(), pt: [0, 0], drift: 0, orbit: 0, burn: 0, skyPointer: [0.5, 0.5], skyCount: 0, tuning: '', assignment: '', skyVisible: false };
+const SK = { cv: null, ctx: null, dpr: 1, list: [], trav: null, src: null, n: -1, standN: 0, seaN: 0, keepP: .3, bins: new Map(), tails: new Map(), pt: [0, 0], drift: 0, orbit: 0, burn: 0, skyPointer: [0.5, 0.5], skyCount: 0, tuning: '', assignment: '', skyVisible: false, rushAnchor: null };
 const HERO_MOST = 2000;
 
 export function starsBuild(canvas) {
@@ -157,6 +157,10 @@ export function starsFrame(time, st, pointer, opt = {}) {
   const heroPos = (s, sky = false) => { const pt = sky && h > 0 ? SK.skyPointer : pointer; return [(((s.hx + SK.drift * STARS.drift * s.z) % 1) + 1) % 1 * W + (pt[0] - .5) * STARS.parallax * s.z, s.hy * H + (pt[1] - .5) * STARS.parallax * s.z]; };
   const look = opt.look || [0, 0], box = depthFrameBox(st), centre = toScreen(st, [MAP.w / 2, MAP.h / 2]), c0 = [VIEW.ox + MAP.w / 2 * VIEW.s0, VIEW.oy + MAP.h / 2 * VIEW.s0];
   const late = src ? .02 : .05; // joined: the first stars move within the first 3 % of the fall
+  // In the rush the twinkle follows rushT (Back and a scrub repeat it), anchored on the clock at the rush's first frame so it carries on without a jump.
+  const rushing = st.rushT > 0 && st.blastT === 0;
+  if (!rushing) SK.rushAnchor = null; else if (SK.rushAnchor === null) SK.rushAnchor = time - st.rushT * STEPS.pace.rush;
+  const twinkleTime = rushing ? SK.rushAnchor + st.rushT * STEPS.pace.rush : time;
   for (const s of SK.list) {
     let x, y, rad, al, col, tail = null;
     if (s.kind === 'sky') {
@@ -172,7 +176,7 @@ export function starsFrame(time, st, pointer, opt = {}) {
       if (h > 0) {
         const outside = Math.hypot(Math.max(box[0] - x, 0, x - box[2]), Math.max(box[1] - y, 0, y - box[3]));
         al *= 1 - smooth(...STARS.skyCover, h) * (1 - smooth(0, STARS.skyEdge, outside)) * (1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0))) * (s.gather ? 1 - smooth(0, 1, st.rushT) : 1);
-        if (!opt.still) al *= 1 - STARS.twinkle * follow * (.5 + .5 * Math.sin((st.rushT > 0 && st.blastT === 0 ? st.rushT * 3 : time) * lerp(...STARS.skyF, s.f) + s.phase));
+        if (!opt.still) al *= 1 - STARS.twinkle * follow * (.5 + .5 * Math.sin(twinkleTime * lerp(...STARS.skyF, s.f) + s.phase));
       }
       if (s.gather && st.rushT > 0 && !opt.still) {
         const home = [x, y], gt = gatherT(s), q = st.blastT > 0 ? 1 - easeIO(st.blastT) : gt;
@@ -204,11 +208,14 @@ export function starsFrame(time, st, pointer, opt = {}) {
         if (s.kind === 'coast') al *= 1 - smooth(s.hu, s.hu + .06, h); // the coast line passes it and it dissolves into the line
       }
       else { x = m[0]; y = m[1]; rad = endR; al = endA; }
-      if (st.legXT > 0 && st.rushT === 0) { const dx = Xs[0] - x, dy = Xs[1] - y, d = Math.hypot(dx, dy), R = 260; if (d < R) { const k = .12 * st.legXT * (1 - d / R); x += dx * k; y += dy * k; tail = [dx / d * 6 * st.legXT, dy / d * 6 * st.legXT]; } }
+      let pullTail = null;
+      if (st.legXT > 0 && st.blastT === 0) { const dx = Xs[0] - x, dy = Xs[1] - y, d = Math.hypot(dx, dy), R = 260; if (d < R) { const k = .12 * st.legXT * (1 - d / R); x += dx * k; y += dy * k; pullTail = [dx / d * 6 * st.legXT, dy / d * 6 * st.legXT]; } }
+      if (st.rushT === 0 && pullTail) tail = pullTail;
       if (st.rushT > 0 && st.blastT === 0) {
-        const tt = gatherT(s), e = tt;
-        const at = novaGatherPoint(m, Xs, s.ang, gatherRadius, e), prior = novaGatherPoint(m, Xs, s.ang, gatherRadius, Math.max(0, e - NOVA.gather.tail));
-        tail = [(at[0] - prior[0]) * NOVA.gather.tailGain / NOVA.gather.tail, (at[1] - prior[1]) * NOVA.gather.tailGain / NOVA.gather.tail]; x = at[0]; y = at[1]; al = s.kind === 'coast' ? .6 * smooth(0, NOVA.gather.join, tt) : Math.max(al, .6);
+        const tt = gatherT(s), e = tt, home = [x, y], join = smooth(0, NOVA.gather.join, tt);
+        const at = novaGatherPoint(home, Xs, s.ang, gatherRadius, e), prior = novaGatherPoint(home, Xs, s.ang, gatherRadius, Math.max(0, e - NOVA.gather.tail));
+        tail = [(at[0] - prior[0]) * NOVA.gather.tailGain / NOVA.gather.tail, (at[1] - prior[1]) * NOVA.gather.tailGain / NOVA.gather.tail]; x = at[0]; y = at[1]; al = s.kind === 'coast' ? .6 * join : lerp(al, Math.max(al, .6), join);
+        if (pullTail) tail = [tail[0] + pullTail[0] * (1 - join), tail[1] + pullTail[1] * (1 - join)];
         al *= 1 - smooth(.94, 1, tt);
       }
       if (st.blastT > 0) {

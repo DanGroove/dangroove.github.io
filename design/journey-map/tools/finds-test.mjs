@@ -27,7 +27,7 @@ const original = { sea: [100054, 3547300242], fill: [12855, 3665486802], coast: 
 for (const [key, [length, hash]] of Object.entries(original)) { assert.equal(chart[key].length, length); assert.equal(digest(chart[key]), hash); }
 console.log('ok: C1 ring sea baseline; original fill/coast lengths and hashes unchanged');
 // D3 adds NOVA.build; the full data digest is re-recorded for that authorized table (and again for the continuous pull, 2026-11-23).
-assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 3046865837);
+assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 3315630505);
 console.log('ok: STARS/DEPTH preserved; NOVA.build data digest recorded');
 // D4 authorizes the pure rest-to-rest glide in trip. Depth remains protected.
 // Line endings are evened out so the numbers are the same on Windows and in the cloud.

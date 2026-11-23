@@ -1,12 +1,12 @@
 // The X, its supernova and the footer that settles over the glow.
 import { C, COPY, MAP, NOVA, NOVA_CANVAS, DEPTH, FOOT_NAME, EXPLORE, CAMERA, PHONE_LAYOUT, STEPS } from './data.mjs';
 import { rnd, n1, mapDefs } from './art.mjs';
-import { VIEW, smooth, lerp, easeIO, clamp01, novaBuild } from './trip.mjs';
+import { VIEW, SEQ, smooth, lerp, easeIO, clamp01, novaBuild } from './trip.mjs';
 import { JOURNEY } from './steps.mjs';
 import { novaRingRadius, novaFlare, novaPress, novaPrune, novaShare, NOVA_LIVE } from './depth.mjs';
 import { footnameBuild, footnameMeasure, footnameReveal, footnameFrame } from './footname.mjs';
 
-const FT = { items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], streaks: [], config: '', nextFlare: null, lastFlare: null, canvas: null, ctx: null, dpr: 1, drawing: false, sprites: {}, rough: null, roughPending: null };
+const FT = { items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], streaks: [], config: '', nextFlare: null, lastFlare: null, canvas: null, ctx: null, dpr: 1, drawing: false, sprites: {}, rough: null, roughPending: null, exact: null, exactPending: null, exactFailed: '', native: null, size: [0, 0] };
 const upRight = '<svg class="ne" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 8.5L8.5 1.5M3 1.5H8.5V7"/></svg>';
 const arrowR = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
 
@@ -14,7 +14,7 @@ const xStroke = rot => `<g class="fx-s" transform="rotate(${rot})"><path class="
 
 export function footerBuildX(g, rm = false, canvas = null, hit = null) {
   FT.rm = rm; FT.x = g; FT.canvas = canvas; FT.ctx = !rm && canvas ? canvas.getContext('2d') : null; FT.hit = rm ? null : hit;
-  FT.drawing = false; FT.hitState = ''; FT.config = ''; FT.rays = []; FT.lobes = []; FT.waves = []; FT.streaks = [];
+  FT.drawing = false; FT.xHidden = false; FT.hitState = ''; FT.config = ''; FT.rays = []; FT.lobes = []; FT.waves = []; FT.streaks = [];
   g.innerHTML = xStroke(45) + xStroke(-45);
   g.setAttribute('pointer-events', 'none');
   const r = rnd(43);
@@ -130,8 +130,40 @@ function footerRough(scale) {
   const filter = mapDefs().match(/<filter id="rough"[^]*?<\/filter>/)[0];
   img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${cv.width}" height="${cv.height}" viewBox="-20 -8 40 16"><defs>${filter}</defs><path d="M-12.7 0H12.7" stroke="${C.red}" stroke-width="3.6" stroke-linecap="round" fill="none" filter="url(#rough)"/></svg>`);
 }
+// The hand-over sprite (critique round 4, V4-1): the map's own X, both strokes and the rough filter, rendered once at rest
+// at the X beat's camera scale on the screen's own pixel grid. It sits in a canvas of its own just above the nova canvas,
+// because that one is capped at NOVA_CANVAS.dpr and cannot match the SVG on denser screens. The first rush frame shows it
+// 1:1 in place of the map's X; the stretchable canvas X fades in under it, then it fades out. It is freed once the X is gone.
+const rushStart = () => SEQ.find(s => s.kind === 'rush').a;
+function footerExactFree() {
+  FT.exact = FT.exactPending = null; FT.exactFailed = '';
+  if (FT.native) { footerStyle(FT.native, 'visibility', 'hidden'); if (FT.native.width) FT.native.width = FT.native.height = 0; }
+}
+function footerExact(st) {
+  if (FT.rm || !FT.canvas || typeof Image === 'undefined' || st.rushT !== 0 || Math.abs(st.P - rushStart()) > 1e-6) return;
+  const dpr = window.devicePixelRatio || 1, k = st.cam.s * dpr, x = MAP.x[0] * st.cam.s + st.cam.tx, y = MAP.x[1] * st.cam.s + st.cam.ty;
+  const cx = x * dpr, cy = y * dpr, W = Math.round(FT.size[0] * dpr), Ht = Math.round(FT.size[1] * dpr);
+  const key = [k, cx, cy, W, Ht].map(v => (+v).toFixed(4)).join('/');
+  if (FT.exact?.key === key || FT.exactPending?.key === key || FT.exactFailed === key) return;
+  const R = Math.ceil(NOVA.handover.reach * k) + 2, x0 = Math.floor(cx) - R, y0 = Math.floor(cy) - R, size = 2 * R + 1;
+  const pending = { key, s: st.cam.s, x, y }, img = new Image(); FT.exactPending = pending;
+  img.onload = () => {
+    if (FT.exactPending !== pending) return;
+    if (!FT.native) {
+      const cv = FT.native = document.createElement('canvas'); cv.setAttribute('aria-hidden', 'true');
+      cv.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none'; footerStyle(cv, 'visibility', 'hidden');
+      FT.canvas.after?.(cv);
+    }
+    FT.native.width = W; FT.native.height = Ht; FT.native.getContext('2d').drawImage(img, x0, y0);
+    FT.exact = pending; FT.exactPending = null;
+  };
+  img.onerror = () => { if (FT.exactPending === pending) { FT.exactPending = null; FT.exactFailed = key; } };
+  const filter = mapDefs().match(/<filter id="rough"[^]*?<\/filter>/)[0];
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><defs>${filter}</defs><g transform="translate(${cx - x0} ${cy - y0}) scale(${k})">${xStroke(45)}${xStroke(-45)}</g></svg>`);
+}
 export function footerNovaResize(w, h) {
   if (!FT.canvas) return;
+  FT.size = [w, h]; footerExactFree();
   FT.dpr = Math.min(NOVA_CANVAS.dpr, window.devicePixelRatio || 1);
   FT.canvas.width = Math.round(w * FT.dpr); FT.canvas.height = Math.round(h * FT.dpr);
   FT.roughFailed = 0;
@@ -173,7 +205,16 @@ export function footerMotion(time, dt, st, look, moved) {
   } else FT.nextFlare = null;
   footerConfigure();
   const showing = st.rushT > 0 || st.blastT > 0 || st.settleT > 0 || st.exploreK > 0;
-  if (showing !== FT.drawing) { FT.drawing = showing; footerStyle(FT.x, 'visibility', showing ? 'hidden' : 'visible'); }
+  // The map's X hides on the first canvas frame (one write either way); with the exact sprite ready, that same frame shows the same X.
+  const H = NOVA.handover, ht = st.blastT > 0 || st.settleT > 0 || st.exploreK > 0 ? Infinity : st.rushT * STEPS.pace.rush;
+  if ((FT.exact || FT.exactPending) && (ht === Infinity || (!showing && Math.abs(st.P - rushStart()) > 1e-6))) footerExactFree();
+  const ex = FT.exact, E = ex && Math.abs(ex.s - st.cam.s) <= ex.s * H.drift && Math.hypot(MAP.x[0] * st.cam.s + st.cam.tx - ex.x, MAP.x[1] * st.cam.s + st.cam.ty - ex.y) <= H.slip ? ex : null;
+  const exactOn = showing && E && ht < H.fadeIn + H.fadeOut ? 1 - clamp01((ht - H.fadeIn) / H.fadeOut) : 0;
+  const canvasIn = E && ht < H.fadeIn ? clamp01(ht / H.fadeIn) : 1;
+  FT.drawing = showing;
+  if (showing !== FT.xHidden) { FT.xHidden = showing; footerStyle(FT.x, 'visibility', showing ? 'hidden' : 'visible'); }
+  if (FT.native) { footerStyle(FT.native, 'opacity', exactOn); footerStyle(FT.native, 'visibility', exactOn > 0 ? 'visible' : 'hidden'); }
+  if (!showing) footerExact(st);
   footerStyle(FT.canvas, 'opacity', st.dim);
   const ctx = FT.ctx;
   if (!showing) {
@@ -252,9 +293,12 @@ export function footerMotion(time, dt, st, look, moved) {
   footerRing(ctx, u(ringR) * z, C.red, 8, ringO * B.ringAlpha[1]); footerRing(ctx, u(ringR) * z, C.paper, 2, ringO * B.ringAlpha[0]);
   [0, 1].forEach(i => footerRing(ctx, u((VIEW.phone ? B.shellPhone : B.shellR)[i]) * z, C.paper, i ? .6 : .8, B.shellAlpha[i] * ro, clock * NOVA.shells[i], NOVA.shellDash));
   footerGlow(ctx, 'core', 0, 0, u(core * pulse) * calm * z, u(core * pulse) * calm * z, build.coreAlpha * calmAlpha);
+  // The hand-over: the exact sprite stands in for the map's X at full strength from the first rush frame (never over it, so no
+  // edge is drawn twice); the stretchable canvas X fades in under the sprite (canvasIn), then the sprite fades out (exactOn).
+  // Without a ready sprite, the canvas X takes over at once.
   B.angles.forEach((angle, i) => {
     const stretch = len * (1 + strength * NOVA.spike[1] * Math.sin(Math.PI * 2 * clock / NOVA.spike[0] + i * NOVA.spike[2])) * pulse;
-    const red = bT > 0 ? 0 : 1, white = heat;
+    const red = (bT > 0 ? 0 : 1) * canvasIn, white = heat;
     if (red > 0) footerRough(Math.max(z * stretch, z * thin));
     ctx.save(); ctx.rotate(angle * Math.PI / 180); ctx.scale(stretch * z, thin * z);
     if (red > 0) {
