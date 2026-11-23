@@ -96,48 +96,48 @@ button { font-family: inherit; }
 .mm-stop.on i { background: var(--mk); border-color: var(--mk); }
 
 /* find popups */
-.pop { position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none; display: none; }
+.pop { position: absolute; left: var(--find-box-1-left); top: var(--find-box-2-top); z-index: var(--find-box-3-z-index); pointer-events: none; display: none; }
 .pop.on { display: block; }
-.pop-in { position: absolute; transform: translate(-50%, calc(-100% - 8px)); width: max-content; max-width: 240px; background: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 13px; line-height: 1.4; color: var(--paper); pointer-events: auto; }
-.pop p { margin: 0; }
-.pop-k { font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin-bottom: 4px !important; }
-.pop-t { font-weight: 600; }
-.pop-big { font-size: 18px; font-weight: 800; }
-.pop-late { margin-top: 4px !important; animation: popLate .4s 1.1s both; }
-@keyframes popLate { from { opacity: 0; transform: translateY(4px); } }
-.pop.card img { display: block; width: 210px; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 4px; margin: 4px 0 8px; }
-.pop-link { margin-top: 8px; padding: 0; border: 0; background: none; color: var(--paper); font-weight: 700; font-size: 12.5px; display: inline-flex; gap: 6px; align-items: center; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.sheet { position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none; display: none; transform-origin: 0 0; }
+.pop-in { position: absolute; transform: var(--find-box-4-transform); width: max-content; max-width: var(--find-box-5-max-width); background: var(--ink); border: var(--find-box-6-border); border-radius: var(--find-box-7-border-radius); padding: var(--find-box-8-padding); font-size: var(--find-box-9-font-size); line-height: var(--find-box-10-line-height); color: var(--paper); pointer-events: auto; }
+.pop p { margin: var(--find-box-11-margin); }
+.pop-k { font-size: var(--find-box-12-font-size); letter-spacing: var(--find-box-13-letter-spacing); text-transform: uppercase; color: var(--dim); margin-bottom: var(--find-box-14-margin-bottom); }
+.pop-t { font-weight: var(--find-box-15-font-weight); }
+.pop-big { font-size: var(--find-box-16-font-size); font-weight: var(--find-box-17-font-weight); }
+.pop-late { margin-top: var(--find-box-18-margin-top); animation: var(--find-box-19-animation); }
+@keyframes popLate { from { opacity: var(--find-box-20-opacity); transform: var(--find-box-21-transform); } }
+.pop.card img { display: block; width: var(--find-box-22-width); aspect-ratio: var(--find-box-23-aspect-ratio); object-fit: cover; border-radius: var(--find-box-24-border-radius); margin: var(--find-box-25-margin); }
+.pop-link { margin-top: var(--find-box-26-margin-top); padding: var(--find-box-27-padding); border: var(--find-box-28-border); background: none; color: var(--paper); font-weight: var(--find-box-29-font-weight); font-size: var(--find-box-30-font-size); display: inline-flex; gap: var(--find-box-31-gap); align-items: center; text-decoration: underline; text-underline-offset: var(--find-box-32-text-underline-offset); cursor: pointer; }
+.sheet { position: absolute; left: var(--find-box-33-left); top: var(--find-box-34-top); z-index: var(--find-box-35-z-index); pointer-events: none; display: none; transform-origin: var(--find-box-36-transform-origin); }
 .sheet.on { display: block; }
-.iris { position: absolute; width: 414px; height: 414px; left: -207px; top: -207px; border-radius: 50%; overflow: hidden; pointer-events: auto; }
-.iris-in { width: 100%; height: 100%; display: grid; place-items: center; }
-.player { position: relative; width: 360px; aspect-ratio: 16 / 9; background: var(--screenBg); border: 1px solid var(--paper); border-radius: 6px; overflow: hidden; }
-.sh { position: absolute; left: 50%; top: 50%; }
-.sh1 { width: 46px; height: 46px; margin: -23px; border-radius: 50%; background: var(--note); }
-.sh2 { width: 40px; height: 40px; margin: -20px; background: var(--paper); }
-.sh3 { width: 40px; height: 36px; margin: -22px -20px; background: var(--mid); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.ring { position: absolute; right: 10px; bottom: 10px; width: 30px; height: 30px; transform: rotate(-90deg); }
-.ring circle { fill: none; stroke: var(--mid); stroke-width: 3; }
+.iris { position: absolute; width: var(--find-box-37-width); height: var(--find-box-38-height); left: var(--find-box-39-left); top: var(--find-box-40-top); border-radius: var(--find-box-41-border-radius); overflow: hidden; pointer-events: auto; }
+.iris-in { width: var(--find-box-42-width); height: var(--find-box-43-height); display: grid; place-items: center; }
+.player { position: relative; width: var(--find-box-44-width); aspect-ratio: var(--find-box-45-aspect-ratio); background: var(--screenBg); border: var(--find-box-46-border); border-radius: var(--find-box-47-border-radius); overflow: hidden; }
+.sh { position: absolute; left: var(--find-box-48-left); top: var(--find-box-49-top); }
+.sh1 { width: var(--find-box-50-width); height: var(--find-box-51-height); margin: var(--find-box-52-margin); border-radius: var(--find-box-53-border-radius); background: var(--note); }
+.sh2 { width: var(--find-box-54-width); height: var(--find-box-55-height); margin: var(--find-box-56-margin); background: var(--paper); }
+.sh3 { width: var(--find-box-57-width); height: var(--find-box-58-height); margin: var(--find-box-59-margin); background: var(--mid); clip-path: var(--find-box-60-clip-path); }
+.ring { position: absolute; right: var(--find-box-61-right); bottom: var(--find-box-62-bottom); width: var(--find-box-63-width); height: var(--find-box-64-height); transform: var(--find-box-65-transform); }
+.ring circle { fill: none; stroke: var(--mid); stroke-width: var(--find-box-66-stroke-width); }
 .ring .ring-p { stroke: var(--paper); }
-.tc { position: absolute; left: 12px; bottom: 12px; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.pz { position: absolute; width: 300px; height: 400px; left: -150px; top: -200px; transform-origin: 50% 0; perspective: 1400px; pointer-events: auto; }
-.pz-in { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .6s; }
-.pz-in.flip { transform: rotateY(180deg); }
-.pz-front, .pz-back { position: absolute; inset: 0; backface-visibility: hidden; background: var(--paper); color: var(--ink); text-align: center; padding: 22px 26px; box-shadow: 6px 8px 0 color-mix(in srgb, var(--black) 40%, transparent); }
-.pz-back { transform: rotateY(180deg); display: flex; flex-direction: column; justify-content: center; gap: 12px; font-size: 16px; font-weight: 600; }
-.pz-back p, .pz-front p { margin: 0; }
-.pz-h { display: block; font-size: 46px; font-weight: 800; letter-spacing: .02em; line-height: 1; }
-.pz-pic { position: relative; height: 128px; margin: 12px 0; background: var(--posterShade); overflow: hidden; }
-.pz-pic i { position: absolute; left: 50%; top: 22px; width: 40px; height: 40px; margin-left: -20px; border-radius: 50%; background: var(--ink); }
-.pz-pic s { position: absolute; left: 50%; bottom: -36px; width: 104px; height: 84px; margin-left: -52px; border-radius: 50% 50% 0 0; background: var(--ink); }
-.pz-who { display: block; font-size: 22px; font-weight: 800; margin-bottom: 4px; }
-.pz-front p { font-size: 12.5px; line-height: 1.35; }
-.pz-rw { display: block; margin-top: 16px; color: var(--posterRed); font-size: 16px; font-weight: 800; }
-.pz-stamp { position: absolute; right: 18px; bottom: 50px; width: 46px; height: 46px; border: 1.5px solid var(--posterRed); border-radius: 50%; display: grid; place-items: center; font-size: 8.5px; font-weight: 800; letter-spacing: .08em; color: var(--posterRed); transform: rotate(-14deg); }
-.pz-pin { position: absolute; left: 12px; top: 12px; width: 5px; height: 5px; border-radius: 50%; background: var(--posterRed); } .pz-pin.r { left: auto; right: 12px; }
-.pz-fold { position: absolute; right: 0; bottom: 0; width: 30px; height: 30px; background: var(--posterCorner); clip-path: polygon(100% 0, 100% 100%, 0 100%); }
-.pz-ctl { position: absolute; top: 214px; left: -150px; width: 300px; display: flex; justify-content: center; gap: 8px; pointer-events: auto; }
-.pz-ctl button { background: var(--ink); color: var(--paper); border: 1px solid var(--note); border-radius: 999px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.tc { position: absolute; left: var(--find-box-67-left); bottom: var(--find-box-68-bottom); font-size: var(--find-box-69-font-size); font-weight: var(--find-box-70-font-weight); font-variant-numeric: tabular-nums; }
+.pz { position: absolute; width: var(--find-box-71-width); height: var(--find-box-72-height); left: var(--find-box-73-left); top: var(--find-box-74-top); transform-origin: var(--find-box-75-transform-origin); perspective: var(--find-box-76-perspective); pointer-events: auto; }
+.pz-in { position: relative; width: var(--find-box-77-width); height: var(--find-box-78-height); transform-style: var(--find-box-79-transform-style); transition: var(--find-box-80-transition); }
+.pz-in.flip { transform: var(--find-box-81-transform); }
+.pz-front, .pz-back { position: absolute; inset: var(--find-box-82-inset); backface-visibility: hidden; background: var(--paper); color: var(--ink); text-align: center; padding: var(--find-box-83-padding); box-shadow: var(--find-box-84-box-shadow); }
+.pz-back { transform: var(--find-box-85-transform); display: flex; flex-direction: column; justify-content: center; gap: var(--find-box-86-gap); font-size: var(--find-box-87-font-size); font-weight: var(--find-box-88-font-weight); }
+.pz-back p, .pz-front p { margin: var(--find-box-89-margin); }
+.pz-h { display: block; font-size: var(--find-box-90-font-size); font-weight: var(--find-box-91-font-weight); letter-spacing: var(--find-box-92-letter-spacing); line-height: var(--find-box-93-line-height); }
+.pz-pic { position: relative; height: var(--find-box-94-height); margin: var(--find-box-95-margin); background: var(--posterShade); overflow: hidden; }
+.pz-pic i { position: absolute; left: var(--find-box-96-left); top: var(--find-box-97-top); width: var(--find-box-98-width); height: var(--find-box-99-height); margin-left: var(--find-box-100-margin-left); border-radius: var(--find-box-101-border-radius); background: var(--ink); }
+.pz-pic s { position: absolute; left: var(--find-box-102-left); bottom: var(--find-box-103-bottom); width: var(--find-box-104-width); height: var(--find-box-105-height); margin-left: var(--find-box-106-margin-left); border-radius: var(--find-box-107-border-radius); background: var(--ink); }
+.pz-who { display: block; font-size: var(--find-box-108-font-size); font-weight: var(--find-box-109-font-weight); margin-bottom: var(--find-box-110-margin-bottom); }
+.pz-front p { font-size: var(--find-box-111-font-size); line-height: var(--find-box-112-line-height); }
+.pz-rw { display: block; margin-top: var(--find-box-113-margin-top); color: var(--posterRed); font-size: var(--find-box-114-font-size); font-weight: var(--find-box-115-font-weight); }
+.pz-stamp { position: absolute; right: var(--find-box-116-right); bottom: var(--find-box-117-bottom); width: var(--find-box-118-width); height: var(--find-box-119-height); border: var(--find-box-120-border); border-radius: var(--find-box-121-border-radius); display: grid; place-items: center; font-size: var(--find-box-122-font-size); font-weight: var(--find-box-123-font-weight); letter-spacing: var(--find-box-124-letter-spacing); color: var(--posterRed); transform: var(--find-box-125-transform); }
+.pz-pin { position: absolute; left: var(--find-box-126-left); top: var(--find-box-127-top); width: var(--find-box-128-width); height: var(--find-box-129-height); border-radius: var(--find-box-130-border-radius); background: var(--posterRed); } .pz-pin.r { left: auto; right: var(--find-box-131-right); }
+.pz-fold { position: absolute; right: var(--find-box-132-right); bottom: var(--find-box-133-bottom); width: var(--find-box-134-width); height: var(--find-box-135-height); background: var(--posterCorner); clip-path: var(--find-box-136-clip-path); }
+.pz-ctl { position: absolute; top: var(--find-box-137-top); left: var(--find-box-138-left); width: var(--find-box-139-width); display: flex; justify-content: center; gap: var(--find-box-140-gap); pointer-events: auto; }
+.pz-ctl button { background: var(--ink); color: var(--paper); border: var(--find-box-141-border); border-radius: var(--find-box-142-border-radius); padding: var(--find-box-143-padding); font-size: var(--find-box-144-font-size); font-weight: var(--find-box-145-font-weight); cursor: pointer; }
 
 /* footer */
 .ft { position: absolute; inset: 0; z-index: 4; visibility: hidden; }
@@ -268,6 +268,44 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
   .go-end .go-back { width: var(--go-h); height: var(--go-h); border: 1px solid var(--mid); border-radius: 50%; }
 }
 
+/* Part A kit: sizes are set from FIND_PLAY, including the popup's animated inner. */
+.mk.found circle { fill: var(--red); }
+.mk.found text { fill: var(--ink); }
+.wf-arm.on .l { stroke-width: var(--find-arm); }
+.tl-blk.craft-lit { outline: var(--find-slot-rule) solid var(--paper); }
+.pop-in { position: relative; transform: none; max-width: min(var(--find-pop-w), calc(100vw - var(--find-pop-edge) * 2)); width: max-content; border-radius: var(--find-pop-r); padding: var(--find-pop-pad); font-size: var(--find-pop-font); line-height: var(--find-pop-line); transform-origin: center bottom; }
+.pop-body { max-height: calc(100vh - var(--find-pop-edge) * 2 - var(--find-tail-h) * 4); overflow: auto; }
+.pop-k { font-size: var(--find-kicker); margin-bottom: var(--find-gap) !important; }
+.pop-tail { position: absolute; left: 0; top: 0; width: var(--find-tail-w); height: var(--find-tail-h); background: var(--ink); clip-path: polygon(0 0, 100% 0, 50% 100%); transform-origin: center center; }
+.find-slot { margin-top: var(--find-slot-pad); padding: var(--find-slot-pad); border: var(--find-slot-rule) dashed var(--mid); font-size: var(--find-slot-font); color: var(--dim); font-weight: var(--find-slot-weight); }
+.find-slot .pop-k { display: block; }
+.find-star { position: absolute; left: 0; top: 0; width: var(--find-star); height: var(--find-star); margin: calc(var(--find-star) / -2); opacity: 0; pointer-events: none; z-index: var(--find-star-z); }
+.find-star svg { display: block; width: 100%; height: 100%; fill: var(--paper); }
+.pop.piece .pop-in { width: min(var(--find-piece), calc(100vw - var(--find-tail-w) * 2)); max-width: none; border-top: var(--find-piece-top) solid var(--piece-mark); }
+.piece img { display: block; max-width: 100%; height: auto; }
+.piece-empty { border: var(--find-slot-rule) solid var(--mid); display: grid; justify-items: center; padding: var(--find-slot-pad); gap: var(--find-gap); margin-bottom: var(--find-slot-pad); color: var(--dim); }
+.piece-empty svg { width: var(--find-icon); height: var(--find-icon); }
+.piece-empty .l, .piece-empty .t { fill: none; stroke: var(--paper); stroke-width: var(--find-slot-rule); }
+.piece-empty .pf { fill: var(--paper); }
+.find.hoard, .rubbing { touch-action: none; }
+.rune-kept .rn { stroke-opacity: 1; }
+.rubbing-sheet .pz { width: var(--find-rune-w); height: var(--find-rune-h); left: calc(var(--find-rune-w) / -2); top: calc(var(--find-rune-h) / -2); perspective: var(--find-rune-perspective); transform-origin: center center; }
+.rubbing-sheet .pz-in { transition-duration: var(--find-rune-flip); }
+.rubbing-front { padding: 0; }
+.rubbing { display: block; width: 100%; height: 100%; cursor: crosshair; }
+.rubbing-sheet .poster-back { display: block; text-align: center; }
+.poster-slot { position: absolute; bottom: 0; left: 0; width: 100%; padding: var(--find-slot-pad); }
+.poster-slot .find-slot { margin: 0; }
+.rubbing-sheet .pz-ctl { top: var(--find-ctl-top); left: calc(var(--find-rune-w) / -2); width: var(--find-rune-w); }
+.pz-ctl [hidden] { display: none; }
+.reel .iris { width: var(--find-iris); height: var(--find-iris); left: calc(var(--find-iris) / -2); top: calc(var(--find-iris) / -2); }
+.reel .player { width: var(--find-reel-w); }
+.reel-k { position: absolute; top: var(--find-reel-label); left: var(--find-reel-label); z-index: 1; }
+.reel-slot { position: absolute; bottom: var(--find-reel-slot); left: var(--find-reel-label); right: var(--find-reel-label); }
+.jm-focus .go-back { width: auto; padding: 0 var(--go-gap); display: flex; align-items: center; gap: var(--go-gap); border-radius: var(--go-h); border: var(--find-slot-rule) solid var(--mid); }
+.go-back span:empty { display: none; }
+.rm .rubbing-sheet .pz-in { transition: none; }
+
 </style>
 </head>
 <body>
@@ -333,6 +371,7 @@ const MAP = {
   x: [256, 768],
   well: [302, 392],
   ygg: [300, 374],
+  get findBeam() { return FIND_PLAY.beacon; },
 };
 
 // Copy outside the cards
@@ -346,6 +385,8 @@ const COPY = {
   caseStudy: 'See the case study',
   pieceToCome: 'Piece to come',
   count: '{n} of {t} found',
+  todo: 'Yours to write', countAll: 'All {t} found',
+  get findFocus() { return FIND_PLAY.focus; },
   regions: [
     { t: 'LAURIERVIK', x: 150, y: 170, rune: 'lauriervik' },
     { t: 'THE IRONWOOD', x: 318, y: 198, rune: 'the ironwood' },
@@ -377,7 +418,7 @@ const COPY = {
   nova: 'The supernova. Press it.',
   steps: {
     group: 'Move through the journey', start: 'Start the journey', setOut: 'Set out', next: 'Next: {name}',
-    toX: 'Next: the X', dig: 'Dig here', top: 'Back to the top', back: 'Back: {name}', returnTo: 'Back to where you were',
+    toX: 'Next: the X', dig: 'Dig here', top: 'Back to the top', back: 'Back: {name}', returnTo: 'Back to the trail',
     names: { top: 'the top', map: 'the whole map', x: 'the X', end: 'the end' },
     say: { top: 'The top of the page', map: 'The whole map', stop: 'Stop {n} of {t}: {name}, {dates}', x: 'The X', end: 'The end of the trail: contact and links' },
     review: { label: 'Preview only', steps: 'Steps', scroll: 'Scroll', depth: 'Depth' },
@@ -395,40 +436,44 @@ const COPY = {
 
 // Finds. n is the number on the Red marker (main finds only). x, y are map units.
 const FINDS = [
-  { id: 'wayfinder', n: 1, x: 92, y: 716, mark: [148, 672], label: 'The wayfinder. Pick a craft to light up the stops that used it. Arrow keys turn it, Enter on the centre clears it.' },
+  { id: 'wayfinder', n: 1, x: 92, y: 716, view: [240, 660, 150], mark: [148, 672], label: 'The wayfinder. Pick a craft to light up the stops that used it. Arrow keys turn it, Enter on the centre clears it.' },
   { id: 'hoards', n: 2, x: 366, y: 354, mark: [382, 346], label: 'Hoards. Five buried chests, each near a stop.' },
-  { id: 'ravens', n: 3, x: 456, y: 192, mark: [478, 176], label: 'Huginn and Muninn, two ravens on a standing stone. Press to play the reel.' },
-  { id: 'serpent', n: 4, x: 486, y: 98, mark: [550, 74], label: 'The serpent. Poke it.' },
-  { id: 'beacon', n: 5, x: 536, y: 514, mark: [558, 478], label: 'The beacon. Arrow keys aim the beam to read the notes.' },
-  { id: 'runestone', n: 6, x: 250, y: 516, mark: [270, 492], label: 'The rune stone. Press to take a rubbing.' },
-  { id: 'tafl', n: 0, x: 112, y: 222, label: 'A hnefatafl board. Press to move a piece.' },
-  { id: 'mist', n: 0, x: 156, y: 438, label: 'The mist of 2020. Press or wipe to clear it.' },
-  { id: 'horn', n: 0, x: 46, y: 476, label: 'A horn on the shore. Press to raise it.' },
-  { id: 'well', n: 0, x: 302, y: 392, label: "Urd's Well. Press to undo the last thing you opened." },
+  { id: 'ravens', n: 3, x: 456, y: 192, view: [456, 164, 44], mark: [478, 176], label: 'Huginn and Muninn, two ravens on a standing stone. Press to send the next raven for a thought or memory.' },
+  { id: 'serpent', n: 4, x: 486, y: 98, view: [430, 78, 118], mark: [550, 74], label: 'The serpent. Poke three times to feed it a deadline.' },
+  { id: 'beacon', n: 5, x: 536, y: 514, view: [468, 498, 92], mark: [558, 478], label: 'The beacon. Drag or arrows aim; Enter finds the next unread note.' },
+  { id: 'runestone', n: 6, x: 250, y: 516, view: [250, 500, 40], mark: [270, 492], label: 'The rune stone. Press, rub, read, then flip the sheet.' },
+  { id: 'tafl', n: 0, x: 112, y: 222, view: [112, 218, 34], label: 'A hnefatafl board. Press to move a piece.' },
+  { id: 'mist', n: 0, x: 156, y: 438, view: [154, 436, 62], label: 'The mist of 2020. Press or wipe to clear it.' },
+  { id: 'horn', n: 0, x: 46, y: 476, view: [46, 470, 30], label: 'A horn on the shore. Press to raise it.' },
+  { id: 'well', n: 0, x: 302, y: 392, view: [300, 352, 66], label: "Urd's Well. Press to undo the last thing you opened." },
   { id: 'longship', n: 0, x: 452, y: 622, label: 'The longship. Press for its line.' },
 ];
 
 const FIND_COPY = {
   crafts: ['PRINT', 'VIDEO', 'MOTION', 'SCREEN'],
   wayfinderRunes: 'print video motion screen',
+  wayTally: '{craft}: {n} of {t} stops', wayAll: 'All four: {names}', hoardTally: 'Hoard {n} of {t}',
+  huginn: 'Huginn, thought', muninn: 'Muninn, memory', ravenFrom: 'Brought back from {name}',
+  reelToCome: { t: 'Reel to come', todo: 1 }, reelLabel: 'Memory reel, piece to come', rubDo: 'Rub it for me',
+  serpentLeaves: [['FRI', '5 PM'], ['TODAY', 'EOD'], ['NOW', 'ASAP']], serpentFed: 'Deadline met',
   hoards: [
-    { id: 'hoard-laurier', stop: 'laurier', x: 208, y: 266, title: 'Piece to come', image: null, label: 'A scratch in the ground near Laurier. Dig it up.' },
-    { id: 'hoard-hmc1', stop: 'hmc1', x: 404, y: 304, title: 'SafetyDrivesUs logo and website', image: null, label: 'A scratch in the ground near HMC Connections. Dig it up.' },
-    { id: 'hoard-hmc2', stop: 'hmc2', x: 366, y: 354, title: '2020/2021 annual report', image: PIECE_IMAGE, label: 'A scratch in the ground near HMC, again. Dig it up.' },
-    { id: 'hoard-interkom', stop: 'interkom', x: 452, y: 558, title: 'Melanoma Canada booklet', image: null, label: 'A scratch in the ground near Interkom. Dig it up.' },
-    { id: 'hoard-lennard', stop: 'lennard', x: 228, y: 728, title: '1 King Street W flyer', image: null, label: 'A scratch in the ground near Lennard. Dig it up.' },
+    { id: 'hoard-laurier', kind: 'bundle', stop: 'laurier', x: 208, y: 266, title: 'Piece to come', image: null, label: 'A scratch in the ground near Laurier. Dig three times, then open it.' },
+    { id: 'hoard-hmc1', kind: 'screen', stop: 'hmc1', x: 404, y: 304, title: 'SafetyDrivesUs logo and website', image: null, label: 'A scratch in the ground near HMC Connections. Dig three times, then open it.' },
+    { id: 'hoard-hmc2', kind: 'book', stop: 'hmc2', x: 366, y: 354, title: '2020/2021 annual report', image: PIECE_IMAGE, label: 'A scratch in the ground near HMC, again. Dig three times, then open it.' },
+    { id: 'hoard-interkom', kind: 'book', stop: 'interkom', x: 452, y: 558, title: 'Melanoma Canada booklet', image: null, label: 'A scratch in the ground near Interkom. Dig three times, then open it.' },
+    { id: 'hoard-lennard', kind: 'sheet', stop: 'lennard', x: 228, y: 728, title: '1 King Street W flyer', image: null, label: 'A scratch in the ground near Lennard. Dig three times, then open it.' },
   ],
   ravenTime: ['00:00', '00:05'],
-  serpentLines: ['A deadline story goes here.', 'A deadline story goes here.', 'A deadline story goes here.'],
+  serpentLines: [{ t: 'A deadline story goes here.', todo: 1 }, { t: 'A deadline story goes here.', todo: 1 }, { t: 'A deadline story goes here.', todo: 1 }],
   serpentLeaf: ['FRI', '5 PM'],
   beaconNotes: [
-    { x: 420, y: 476, rune: 'note one', t: 'A note in invisible ink goes here.' },
-    { x: 424, y: 520, rune: 'note two', t: 'A note in invisible ink goes here.' },
-    { x: 446, y: 562, rune: 'note three', t: 'A note in invisible ink goes here.' },
-    { x: 446, y: 434, rune: 'note four', t: 'A note in invisible ink goes here.' },
+    { x: 420, y: 476, rune: 'note one', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
+    { x: 424, y: 520, rune: 'note two', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
+    { x: 446, y: 562, rune: 'note three', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
+    { x: 446, y: 434, rune: 'note four', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
   ],
   runestoneRunes: 'first sketch final cut',
-  poster: { head: 'WANTED', who: 'ONE DESIGNER', line1: 'who sees a job through, from', line2: 'first sketch to final cut', reward: 'REWARD: THE WORK', stamp: 'PRINT', back: ['Stock: to come', 'The brief: to come'] },
+  poster: { head: 'WANTED', who: 'ONE DESIGNER', line1: 'who sees a job through, from', line2: 'first sketch to final cut', reward: 'REWARD: THE WORK', stamp: 'PRINT', back: ['Stock: to come', 'The brief: to come'], foot: { t: 'Stock: to come. The brief: to come.', todo: 1 } },
   tafl: 'A fact from the game design year goes here.',
   horn: ['Skál.', 'A line from someone I worked with goes here.'],
   longship: '2023: Dan to write this line.',
@@ -520,6 +565,213 @@ const NOVA = {
 
 const FIND_TIMING = { burst: 0.7, dig: 0.6, ravenLoop: 1.1, reel: 5, iris: 0.5, serpentSink: 0.9, serpentSurface: 1.0, beamSweep: 0.35, beamCone: 22, noteDelay: 0.4, carving: 1.0, unroll: 0.8, slide: 0.35, ripple: 0.9, closeScroll: 8 };
 
+// Part A live tuning. Geometry, copy, dimensions and clocks are read by the find kit.
+const FIND_PLAY = {
+  css: {
+    'find-box-1-left': '0',
+    'find-box-2-top': '0',
+    'find-box-3-z-index': '5',
+    'find-box-4-transform': 'translate(-50%, calc(-100% - 8px))',
+    'find-box-5-max-width': '240px',
+    'find-box-6-border': '1px solid var(--line)',
+    'find-box-7-border-radius': '10px',
+    'find-box-8-padding': '10px 14px',
+    'find-box-9-font-size': '13px',
+    'find-box-10-line-height': '1.4',
+    'find-box-11-margin': '0',
+    'find-box-12-font-size': '9.5px',
+    'find-box-13-letter-spacing': '.14em',
+    'find-box-14-margin-bottom': '4px !important',
+    'find-box-15-font-weight': '600',
+    'find-box-16-font-size': '18px',
+    'find-box-17-font-weight': '800',
+    'find-box-18-margin-top': '4px !important',
+    'find-box-19-animation': 'popLate .4s 1.1s both',
+    'find-box-20-opacity': '0',
+    'find-box-21-transform': 'translateY(4px)',
+    'find-box-22-width': '210px',
+    'find-box-23-aspect-ratio': '3 / 2',
+    'find-box-24-border-radius': '4px',
+    'find-box-25-margin': '4px 0 8px',
+    'find-box-26-margin-top': '8px',
+    'find-box-27-padding': '0',
+    'find-box-28-border': '0',
+    'find-box-29-font-weight': '700',
+    'find-box-30-font-size': '12.5px',
+    'find-box-31-gap': '6px',
+    'find-box-32-text-underline-offset': '3px',
+    'find-box-33-left': '0',
+    'find-box-34-top': '0',
+    'find-box-35-z-index': '6',
+    'find-box-36-transform-origin': '0 0',
+    'find-box-37-width': '414px',
+    'find-box-38-height': '414px',
+    'find-box-39-left': '-207px',
+    'find-box-40-top': '-207px',
+    'find-box-41-border-radius': '50%',
+    'find-box-42-width': '100%',
+    'find-box-43-height': '100%',
+    'find-box-44-width': '360px',
+    'find-box-45-aspect-ratio': '16 / 9',
+    'find-box-46-border': '1px solid var(--paper)',
+    'find-box-47-border-radius': '6px',
+    'find-box-48-left': '50%',
+    'find-box-49-top': '50%',
+    'find-box-50-width': '46px',
+    'find-box-51-height': '46px',
+    'find-box-52-margin': '-23px',
+    'find-box-53-border-radius': '50%',
+    'find-box-54-width': '40px',
+    'find-box-55-height': '40px',
+    'find-box-56-margin': '-20px',
+    'find-box-57-width': '40px',
+    'find-box-58-height': '36px',
+    'find-box-59-margin': '-22px -20px',
+    'find-box-60-clip-path': 'polygon(50% 0, 100% 100%, 0 100%)',
+    'find-box-61-right': '10px',
+    'find-box-62-bottom': '10px',
+    'find-box-63-width': '30px',
+    'find-box-64-height': '30px',
+    'find-box-65-transform': 'rotate(-90deg)',
+    'find-box-66-stroke-width': '3',
+    'find-box-67-left': '12px',
+    'find-box-68-bottom': '12px',
+    'find-box-69-font-size': '12px',
+    'find-box-70-font-weight': '600',
+    'find-box-71-width': '300px',
+    'find-box-72-height': '400px',
+    'find-box-73-left': '-150px',
+    'find-box-74-top': '-200px',
+    'find-box-75-transform-origin': '50% 0',
+    'find-box-76-perspective': '1400px',
+    'find-box-77-width': '100%',
+    'find-box-78-height': '100%',
+    'find-box-79-transform-style': 'preserve-3d',
+    'find-box-80-transition': 'transform .6s',
+    'find-box-81-transform': 'rotateY(180deg)',
+    'find-box-82-inset': '0',
+    'find-box-83-padding': '22px 26px',
+    'find-box-84-box-shadow': '6px 8px 0 color-mix(in srgb, var(--black) 40%, transparent)',
+    'find-box-85-transform': 'rotateY(180deg)',
+    'find-box-86-gap': '12px',
+    'find-box-87-font-size': '16px',
+    'find-box-88-font-weight': '600',
+    'find-box-89-margin': '0',
+    'find-box-90-font-size': '46px',
+    'find-box-91-font-weight': '800',
+    'find-box-92-letter-spacing': '.02em',
+    'find-box-93-line-height': '1',
+    'find-box-94-height': '128px',
+    'find-box-95-margin': '12px 0',
+    'find-box-96-left': '50%',
+    'find-box-97-top': '22px',
+    'find-box-98-width': '40px',
+    'find-box-99-height': '40px',
+    'find-box-100-margin-left': '-20px',
+    'find-box-101-border-radius': '50%',
+    'find-box-102-left': '50%',
+    'find-box-103-bottom': '-36px',
+    'find-box-104-width': '104px',
+    'find-box-105-height': '84px',
+    'find-box-106-margin-left': '-52px',
+    'find-box-107-border-radius': '50% 50% 0 0',
+    'find-box-108-font-size': '22px',
+    'find-box-109-font-weight': '800',
+    'find-box-110-margin-bottom': '4px',
+    'find-box-111-font-size': '12.5px',
+    'find-box-112-line-height': '1.35',
+    'find-box-113-margin-top': '16px',
+    'find-box-114-font-size': '16px',
+    'find-box-115-font-weight': '800',
+    'find-box-116-right': '18px',
+    'find-box-117-bottom': '50px',
+    'find-box-118-width': '46px',
+    'find-box-119-height': '46px',
+    'find-box-120-border': '1.5px solid var(--posterRed)',
+    'find-box-121-border-radius': '50%',
+    'find-box-122-font-size': '8.5px',
+    'find-box-123-font-weight': '800',
+    'find-box-124-letter-spacing': '.08em',
+    'find-box-125-transform': 'rotate(-14deg)',
+    'find-box-126-left': '12px',
+    'find-box-127-top': '12px',
+    'find-box-128-width': '5px',
+    'find-box-129-height': '5px',
+    'find-box-130-border-radius': '50%',
+    'find-box-131-right': '12px',
+    'find-box-132-right': '0',
+    'find-box-133-bottom': '0',
+    'find-box-134-width': '30px',
+    'find-box-135-height': '30px',
+    'find-box-136-clip-path': 'polygon(100% 0, 100% 100%, 0 100%)',
+    'find-box-137-top': '214px',
+    'find-box-138-left': '-150px',
+    'find-box-139-width': '300px',
+    'find-box-140-gap': '8px',
+    'find-box-141-border': '1px solid var(--note)',
+    'find-box-142-border-radius': '999px',
+    'find-box-143-padding': '6px 14px',
+    'find-box-144-font-size': '12px',
+    'find-box-145-font-weight': '600',
+  },
+  fresh: 3, seed: 171,
+  focus: { fill: 0.72, least: 0.85, most: 3, at: [0.5, 0.46], in: 0.7, out: 0.5, swap: 0.6, chest: [0, -16, 30], ship: [0, -10, 34], wide: [300, 450, 330, 0] },
+  bits: { pool: 96, starSize: 2.2, puffAlpha: 0.22,
+    kinds: { dot: ['M-.8 0a.8 .8 0 1 0 1.6 0a.8 .8 0 1 0 -1.6 0Z', 'pf'], clod: ['M-1.4 .6L-.6 -1.1L1.2 -.7L1.5 .8L-.2 1.3Z', 'g'], drop: ['M0 -1.6Q1.1 .2 0 1.1Q-1.1 .2 0 -1.6Z', 'pf'], spark: ['M0 0V-2.4', 'l'], feather: ['M0 -3Q1.5 0 0 3Q-1.5 0 0 -3Z', 'g'], puff: ['M-3.2 0a3.2 3.2 0 1 0 6.4 0a3.2 3.2 0 1 0 -6.4 0Z', 'pf'], ring: ['M-3 0a3 1 0 1 0 6 0a3 1 0 1 0 -6 0Z', 't'] },
+    base: { speed: [0, 0], dir: [-90, -90], g: 0, drag: 0, life: [0.6, 0.6], size: [1, 1], spin: 0, alpha: 1 },
+    clods: { speed: [18, 34], dir: [-150, -30], g: 90, life: [0.6, 0.6], spin: 80 },
+    puffs: { speed: [3, 7], dir: [-160, -20], life: [0.6, 0.6], size: [0.4, 1.5], alpha: 0.22 },
+    feathers: { speed: [2, 6], dir: [20, 160], g: 12, drag: 2, life: [1.4, 1.4], spin: 25 },
+    stars: { speed: [6, 12], dir: [-120, -60], life: [1.1, 1.1], size: [1, 0.2], spin: 20 },
+    drops: { speed: [8, 18], dir: [-140, -40], g: 60, life: [0.5, 0.7] },
+    wake: { speed: [0, 0], life: [0.6, 0.6], size: [1, 3.5], alpha: 0.7 },
+    sparks: { speed: [10, 10], dir: [-100, -80], life: [1.2, 1.2], size: [1, 0.2] },
+    hop: { speed: [8, 8], dir: [-100, -80], g: 40, life: [0.4, 0.4] },
+  },
+  star: { time: 0.75, arc: 46, bump: 0.3, size: 14, peak: 1.3 },
+  kit: { margin: 40, rad: 70, shipY: 5, starZ: 7, dt: 0.05, popup: { scale: 0.6, over: 1.08, time: 0.22, edge: 8, tail: [10, 6], width: 240, radius: 10, pad: [10, 14], font: 13, line: 1.4, kicker: 9.5, gap: 4 }, slot: { font: 11, weight: 500, border: 1, pad: 6 }, target: 17, sheet: { from: 0.06, edge: 24, grow: 0.35, offset: 20 }, deg: 180, turn: 360 },
+  way: { stiff: 90, damp: 9, near: 70, line: 0.45, gap: 0.1, short: 9, ping: 0.5, runes: 0.6, spin: 0.8, timelineDim: 0.35, lineWidth: 1,
+    drift: [0.8, 4, 0.31, 2], dim: 0.55, armWidth: 2.2, pulse: [1.12, 0.25], dash: [2, 4], alpha: 0.6, solidAlpha: 0.9, pingR: [6, 14], pingAlpha: 0.7, tally: [22, 5.2, 1], ring: [4, 9, 1.6], allSpeed: 40, hub: 6,
+  },
+  hoard: { hole: [12, 20, 27], rise: 0.28, over: 1.6, repeat: 0.3, rattle: 0.36, openHold: 0.3, near: 26, glint: [5, 8],
+    scale: 0.3, travel: 60, holeRatio: 0.28, pile: [0.5, 0.75, 1], scratchWidth: 1.6, glintAt: [0, -4], glintSize: 5, glintTime: 0.5, glintTurn: 45, clods: 7, puffs: 2, rattleAngle: 4, rattleCycles: 3, lidPivot: [30, -34], lidAngle: -32, lidLift: -6, lidTime: 0.25, lidOver: 1.7, glowTime: 0.3, glowPeak: 1, glowRest: 0.6, glowKept: 0.35, stars: 6, burstTravel: [48, 34], burstLift: 14, anchor: 18, width: 260, top: 3, icon: 64, iconBox: [-32, -32, 64, 64], rad: 35, scratchHop: 2, hopClods: 2,
+    pilePath: 'M14 2q6 -10 13 0z',
+  },
+  raven: { near: 30, shy: 3, preen: [6, 10], out: 0.9, away: 0.5, back: 0.9, reach: 150, rise: 1.4, flap: 5, land: 0.15, loop: 1.2,
+    headAt: [5, -9], wingNearX: 2, scale: 0.72, birdScale: 0.85, perches: [[-5.5, -34], [6, -33.5]], attend: 120, bend: 26, fade: 0.65, tilt: 25, squash: 0.85, preenAngle: 70, preenTime: 0.5, ruffle: [1.1, 0.3], headLimit: 35, headEase: 6, idle: [0.7, 0.43], feathers: 2, hearReach: 40, wingNear: [1, -0.5], wingFar: [0.9, -0.45], wingY: -3.5, strip: [4, 1.6], frame: [4, 3], beak: [15, -2], tallyAlpha: 0.9,
+    tally: ['M13 -8V-1', 'M15.5 -8V-1', 'M18 -8V-1', 'M20.5 -8V-1', 'M11.5 -2.5L22 -6.5', 'M24.5 -8V-1'],
+    fly: ['M-2 -3Q-4 -17 5 -22L4.5 -17L8.5 -17.5L6 -13L9.5 -12.5Q5 -6 2 -3.5Z', 'M-11 -1L-19 -4.5L-20 -.5L-18.5 3L-11 1.5Z', 'M-12 0Q-6 -5.5 3 -5.5Q8 -5.5 10.5 -3.5L15 -2L10.5 -.8Q6 3 -3 2.2Q-9 2 -12 0Z', 'M0 -3.5Q1 -18 12 -23L10.5 -17.8L15 -18L11.5 -13.5L15 -12.5L11 -9.5Q7 -4.5 4.5 -2.5Z'], eye: [8.6, -3.4, 0.5],
+    reel: { ringSvg: '<svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16"/><circle class="ring-p" cx="20" cy="20" r="16" pathLength="100" stroke-dasharray="100 100"/></svg>', timeJoin: ' / ', iris: 414, width: 360, ratio: [16, 9], motion: [1.3, 0.4, 2, 60, 1.1, 0.3, 22, 40], ring: 100, tc: '00:0{n} / {end}', labelTop: 12, slotBottom: 36 },
+  },
+  serpent: { spots: [[486, 98], [372, 84], [470, 56]], bob: [1.6, 3.2], near: 34, tongue: [0.25, 0.7], flinch: 0.12,
+    swim: [0.9, 0.65, 0.45], speed: [1, 0.8, 0.6], bulge: 14, gulp: [0.14, 0.26, 1.18], settle: 6, breathe: [0.8, 4.8], wake: 0.2,
+    scale: 0.52, bounds: [-114, -60, 118, 44], head: [-86, -42], pivot: [-72, -40], attend: 140, headLimit: 25, headEase: 5, rear: 18, sink: 34, sinkStep: 0.12, sinkTime: 0.35, surfStep: 0.08, surfTime: 0.5, wakeGap: 0.06, drops: 4, flutter: [6, 3], eatWait: 0.5, eatTime: 0.3, leaf: [-104, -40, 8], restAngle: 10, hear: [25, 0.5, 1], popup: [-60, -70],
+    tonguePath: 'M-101 -40l-8 1.5M-109 -38.5l-3.5 -2.5M-109 -38.5l-3 3', shutPath: 'M-86.2 -43q2.2 1.8 4.4 0', snout: [-101, -40],
+  },
+  beacon: { rad: 200, read: 1.2, flame: [1, 1.3, 1.6, 1.9, 2.3], leap: [3, 0.3], embers: 1.5, turn: 30, reach: 1.4, idle: 0.7, snap: 0.4,
+    scale: 0.6, origin: [0, -50], flameFoot: [0, -47], glowR: 16, glowAlpha: 0.15, flicker: [0.08, 11, 0.05, 17.3, 0.12, 13.1], baseAngle: 176, sweep: 36, baseReach: 230, manual: 6, arrow: 6, soft: 4, wedgeSteps: 32, rest: 0.55, sparkN: 6, burstN: 14, noteScale: 1.12, flash: 0.3, hear: [0.6, 0.3, 1.3, 0.3], englishEase: 5, noteEase: 6, noteFont: 4.6, todoFont: 3.4, runeY: -4, lineY: 7, todoY: 1, runeSize: 4.2,
+  },
+  rune: { carving: 0.6, grow: 0.4, r: 34, step: 12, grid: [5, 7], done: 0.8, auto: [1.2, 1.6, 7], fill: 0.25,
+    letter: [0.05, 0.18], stamp: [0.45, 0.12, 2.4], shake: [3, 0.16], tilt: 5, close: 0.3,
+    width: 300, height: 400, outline: 'M40 392L28 150Q36 34 150 12Q264 34 272 156L260 392Z', outer: 'M60 380L50 152Q57 56 150 34Q243 56 250 158L240 380', inner: 'M74 380L64 154Q70 70 150 50Q230 70 236 160L226 380', feet: 'M60 380H74M226 380H240', dot: [67, 372, 2.2],
+    hatch: [[-200, 520, 7, 231, 2.6, 0.42], [-100, 420, 11, 107, 1.6, 0.3]], jitter: 2, charcoal: 0.34, guide: 0.1, outlineAlpha: 0.45, outlineWidth: 1.5, carvingWidth: 4.4, maskCore: 0.6, runeHeight: 30, runeGap: 0.32, tops: [92, 158, 224, 290], cx: 150, cells: [40, 30, 260, 390], cellR: 30, letterSize: 13, letterWeight: 800, letterDown: 15, letterRise: 4, near: 24, dash: [6, 200], dashTime: 1.5, scale: 0.55, anchor: -20, stampAngle: -14, flipTime: 0.6, perspective: 1400, controlTop: 214,
+  },
+  drawings: {
+    wayfinder: `<circle class="hit" r="58"/><circle class="o" r="42"/><circle class="t" r="34.4"/><g class="wf-runes"><path class="rn" transform="rotate(8) translate(-0.7 -40.5)" d="M0 0L0 4.6M0 0L1.4 1.2M1.4 1.2L0.8 1.7M0 4.6L1.4 3.5M1.4 3.5L0.8 2.9"/><path class="rn" transform="rotate(24.4) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(40.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(57.1) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(73.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(89.8) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3"/><path class="rn" transform="rotate(106.2) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(122.5) translate(-0.7 -40.5)" d="M0 0L0 4.6L1.4 0L1.4 4.6L0 0"/><path class="rn" transform="rotate(138.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(155.3) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(171.6) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.7M1.4 4.6L1.4 0L0 1.7"/><path class="rn" transform="rotate(188) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(204.4) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(220.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(237.1) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(253.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(269.8) translate(-0.7 -40.5)" d="M1.4 0L0 1.7L1.4 2.9L0 4.6"/><path class="rn" transform="rotate(286.2) translate(-0.6 -40.5)" d="M1.3 0L0 1.2L1.3 2.3"/><path class="rn" transform="rotate(302.5) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(318.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(335.3) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(351.6) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/></g><g class="wf-arm" data-i="0" transform="rotate(0)"><path class="l" d="M0 0V-31.08M0 -31.08l-4 -4M0 -31.08l4 -4M0 -31.08v-5"/></g><g class="wf-arm" data-i="1" transform="rotate(90)"><path class="l" d="M0 0V-31.08M0 -34.08m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/></g><g class="wf-arm" data-i="2" transform="rotate(180)"><path class="l" d="M0 0V-31.08M-4 -27.08L0 -33.08L4 -27.08"/></g><g class="wf-arm" data-i="3" transform="rotate(270)"><path class="l" d="M0 0V-31.08M-5 -31.08H5M-3 -35.08H3"/></g><g transform="rotate(45)"><path class="l" d="M0 0V-17.64M0 -17.64l-3 -3"/></g><g transform="rotate(135)"><path class="l" d="M0 0V-17.64M0 -17.64l3 -3"/></g><g transform="rotate(225)"><path class="l" d="M0 0V-17.64M-3 -17.64H3"/></g><g transform="rotate(315)"><path class="l" d="M0 0V-17.64M0 -17.64m-1.5 -2a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0"/></g><text x="0" y="-48" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[0]}</text><text x="49" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="start" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[1]}</text><text x="0" y="54" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[2]}</text><text x="-49" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="end" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[3]}</text><g class="wf-needle"><path class="pf" d="M0 -26L3 0L-3 0Z"/><path class="o" d="M0 26L3 0L-3 0Z"/></g><circle class="o wf-hub" r="3.4"/><circle class="t wf-all" r="{{way.ring.0}}" opacity="0"/><text x="0" y="64" font-size="{{way.tally.1}}" fill="${C.note}" font-weight="500" text-anchor="middle" letter-spacing="{{way.tally.2}}" class="wf-tally"></text>`,
+    hoard: `<rect class="hit" x="-40" y="-60" width="80" height="72"/><path class="l hd-scratch" d="M-12 -6l14 8M2 -6l-14 8M-24 2l-3 -6M-20 2l1 -7M14 2l3 -6M20 2l-1 -6"/><ellipse class="o hd-hole" rx="0" ry="0"/><path class="g hd-pile" d="{{hoard.pilePath}}" opacity="0"/><path class="pf hd-glint" d="{{hoard.glintPath}}" opacity="0"/><circle class="hd-glow" cx="0" cy="-20" r="46" fill="url(#litGlow)" opacity="0"/><g clip-path="url(#hclip)"><g class="hd-chest" transform="translate(0 60)"><rect class="g" x="-30" y="-34" width="60" height="34" rx="2"/><path class="t" d="M-18 -34V0M18 -34V0M-30 -22H30"/><rect class="pf" x="-4.5" y="-27" width="9" height="10" rx="1.5"/><g class="hd-lid"><path class="g" d="M-30 -34Q0 -56 30 -34Z"/><path class="t" d="M-18 -42V-34M18 -42V-34"/></g></g></g><g class="hd-stars"><path class="pf hd-star" d="M0 -50Q0 -44 6 -44Q0 -44 0 -38Q0 -44 -6 -44Q0 -44 0 -50Z" opacity="0"/><path class="pf hd-star" d="M0 -48Q0 -44 4 -44Q0 -44 0 -40Q0 -44 -4 -44Q0 -44 0 -48Z" opacity="0"/><path class="pf hd-star" d="M0 -50Q0 -44 6 -44Q0 -44 0 -38Q0 -44 -6 -44Q0 -44 0 -50Z" opacity="0"/><path class="pf hd-star" d="M0 -48Q0 -44 4 -44Q0 -44 0 -40Q0 -44 -4 -44Q0 -44 0 -48Z" opacity="0"/><path class="pf hd-star" d="M0 -50Q0 -44 6 -44Q0 -44 0 -38Q0 -44 -6 -44Q0 -44 0 -50Z" opacity="0"/><path class="pf hd-star" d="M0 -48Q0 -44 4 -44Q0 -44 0 -40Q0 -44 -4 -44Q0 -44 0 -48Z" opacity="0"/><path class="pf hd-star" d="M0 -50Q0 -44 6 -44Q0 -44 0 -38Q0 -44 -6 -44Q0 -44 0 -50Z" opacity="0"/><path class="pf hd-star" d="M0 -48Q0 -44 4 -44Q0 -44 0 -40Q0 -44 -4 -44Q0 -44 0 -48Z" opacity="0"/></g>`,
+    ravens: `<rect class="hit" x="-20" y="-56" width="40" height="60"/><path class="g" d="M-9 0L-10 -24Q-7 -34 0 -35Q8 -34 10 -22L9 0Z"/><path class="rn" d="M-2.5 -26L-2.5 -20M-0.6 -26L-0.6 -20M-2.5 -23.8L-0.6 -22.3M1.3 -20L1.3 -26L3.2 -23.8M3.2 -20L3.2 -26L1.3 -23.8"/><path class="t" d="M-16 0H16"/><g class="rv-a"><g class="rv-sit"><g class="rv-body"><path class="g" d="M-11 1L-6 -2Q-3 -8 4 -8Q8 -7 7 -3Q3 1 -4 0Z"/><path class="t" d="M-4 -4Q0 -7 4 -5M0 0v2.5M2.5 0v2.5"/></g><g class="rv-head" transform="translate(5 -9)"><circle class="g" r="2.6"/><path class="pf" d="M2 -1L6 .3L2 1.3Z"/><circle class="pf" cx=".8" cy="-.6" r=".5"/></g></g><g class="rv-fly" opacity="0"><g class="rv-far"><path class="g" d="{{raven.fly.0}}"/></g><path class="g" d="{{raven.fly.1}}"/><path class="g" d="{{raven.fly.2}}"/><circle class="pf" cx="{{raven.eye.0}}" cy="{{raven.eye.1}}" r="{{raven.eye.2}}"/><g class="rv-near"><path class="g" d="{{raven.fly.3}}"/></g></g><g class="rv-item"></g></g><g class="rv-b"><g class="rv-sit"><g class="rv-body"><path class="g" d="M-11 1L-6 -2Q-3 -8 4 -8Q8 -7 7 -3Q3 1 -4 0Z"/><path class="t" d="M-4 -4Q0 -7 4 -5M0 0v2.5M2.5 0v2.5"/></g><g class="rv-head" transform="translate(5 -9)"><circle class="g" r="2.6"/><path class="pf" d="M2 -1L6 .3L2 1.3Z"/><circle class="pf" cx=".8" cy="-.6" r=".5"/></g></g><g class="rv-fly" opacity="0"><g class="rv-far"><path class="g" d="{{raven.fly.0}}"/></g><path class="g" d="{{raven.fly.1}}"/><path class="g" d="{{raven.fly.2}}"/><circle class="pf" cx="{{raven.eye.0}}" cy="{{raven.eye.1}}" r="{{raven.eye.2}}"/><g class="rv-near"><path class="g" d="{{raven.fly.3}}"/></g></g><g class="rv-item"></g></g><g class="rv-tally"><path class="t" d="M13 -8V-1" opacity="0"/><path class="t" d="M15.5 -8V-1" opacity="0"/><path class="t" d="M18 -8V-1" opacity="0"/><path class="t" d="M20.5 -8V-1" opacity="0"/><path class="t" d="M11.5 -2.5L22 -6.5" opacity="0"/><path class="t" d="M24.5 -8V-1" opacity="0"/></g>`,
+    serpent: `<rect class="hit" x="-112" y="-60" width="230" height="78"/><g class="sp-tail sp-loop"><path d="M58 4C60 -20 86 -24 84 -6C82 8 64 6 66 -8" fill="none" stroke="${C.paper}" stroke-width="7" stroke-linecap="round"/><path d="M58 4C60 -20 86 -24 84 -6C82 8 64 6 66 -8" fill="none" stroke="${C.land}" stroke-width="2.8" stroke-linecap="round"/><path d="M66 -8C68 -20 84 -26 96 -18" fill="none" stroke="${C.paper}" stroke-width="7" stroke-linecap="round"/><path d="M66 -8C68 -20 84 -26 96 -18" fill="none" stroke="${C.land}" stroke-width="2.8" stroke-linecap="round"/><path class="g" d="M95 -19l10 -6l-2 12z"/></g><g class="sp-loop"><path d="M23 4A11 11 0 0 1 45 4" fill="none" stroke="${C.paper}" stroke-width="9" stroke-linecap="round"/><path d="M23 4A11 11 0 0 1 45 4" fill="none" stroke="${C.land}" stroke-width="4.8" stroke-linecap="round"/><path class="t" d="M27.1 0L21.9 -3"/><path class="t" d="M30 -2.9L27 -8.1"/><path class="t" d="M34 -4L34 -10"/><path class="t" d="M38 -2.9L41 -8.1"/><path class="t" d="M40.9 0L46.1 -3"/><path class="g" d="M30 -11l4 -8l4 8z"/></g><g class="sp-loop"><path d="M-10 4A14 14 0 0 1 18 4" fill="none" stroke="${C.paper}" stroke-width="9" stroke-linecap="round"/><path d="M-10 4A14 14 0 0 1 18 4" fill="none" stroke="${C.land}" stroke-width="4.8" stroke-linecap="round"/><path class="t" d="M-5.5 -1.5L-10.7 -4.5"/><path class="t" d="M-1.5 -5.5L-4.5 -10.7"/><path class="t" d="M4 -7L4 -13"/><path class="t" d="M9.5 -5.5L12.5 -10.7"/><path class="t" d="M13.5 -1.5L18.7 -4.5"/><path class="g" d="M0 -14l4 -8l4 8z"/></g><g class="sp-loop"><path d="M-44 4A16 16 0 0 1 -12 4" fill="none" stroke="${C.paper}" stroke-width="9" stroke-linecap="round"/><path d="M-44 4A16 16 0 0 1 -12 4" fill="none" stroke="${C.land}" stroke-width="4.8" stroke-linecap="round"/><path class="t" d="M-39.3 -2.5L-44.5 -5.5"/><path class="t" d="M-34.5 -7.3L-37.5 -12.5"/><path class="t" d="M-28 -9L-28 -15"/><path class="t" d="M-21.5 -7.3L-18.5 -12.5"/><path class="t" d="M-16.7 -2.5L-11.5 -5.5"/><path class="g" d="M-32 -16l4 -8l4 8z"/></g><g class="sp-loop sp-neck"><path d="M-58 6C-58 -22 -62 -34 -76 -40" fill="none" stroke="${C.paper}" stroke-width="10" stroke-linecap="round"/><path d="M-58 6C-58 -22 -62 -34 -76 -40" fill="none" stroke="${C.land}" stroke-width="5.8" stroke-linecap="round"/><g class="sp-head"><path class="l sp-tongue" d="{{serpent.tonguePath}}" opacity="0"/><path class="l sp-shut" d="{{serpent.shutPath}}" opacity="0"/><path class="g" d="M-70 -47Q-86 -55 -101 -40Q-88 -29 -70 -34Z"/><circle class="pf sp-eye" cx="-84" cy="-43" r="1.5"/><path class="t" d="M-100 -40l6 -1M-73 -48l4 -8l3 8"/><g class="sp-leaf" opacity="0" transform="translate(-104 -40) rotate(8)"><rect x="-9" y="0" width="18" height="21" fill="${C.paper}"/><rect x="-9" y="0" width="18" height="6" fill="${C.note}"/><text class="sp-day" x="0" y="4.8" font-size="4.2" font-weight="800" text-anchor="middle" fill="${C.ink}">${FIND_COPY.serpentLeaves[0][0]}</text><text class="sp-date" x="0" y="15.5" font-size="6.4" font-weight="800" text-anchor="middle" fill="${C.ink}">${FIND_COPY.serpentLeaves[0][1]}</text></g></g></g><rect x="-114" y="4" width="232" height="40" fill="${C.ink}"/><g class="sp-rip"><ellipse class="t" cx="-40" cy="6" rx="18" ry="3" opacity="0"/><ellipse class="t" cx="0" cy="6" rx="18" ry="3" opacity="0"/><ellipse class="t" cx="40" cy="6" rx="18" ry="3" opacity="0"/></g><path class="t" d="M-98 7q4 -3 8 0t8 0"/><path class="t" d="M-72 10q4 -3 8 0t8 0"/><path class="t" d="M-44 7q4 -3 8 0t8 0"/><path class="t" d="M-12 10q4 -3 8 0t8 0"/><path class="t" d="M20 7q4 -3 8 0t8 0"/><path class="t" d="M50 10q4 -3 8 0t8 0"/><path class="t" d="M76 7q4 -3 8 0t8 0"/><path class="t" d="M100 10q4 -3 8 0t8 0"/>`,
+    beacon: `<circle class="bc-glow" cx="{{beacon.flameFoot.0}}" cy="{{beacon.flameFoot.1}}" r="{{beacon.glowR}}" fill="url(#glow)" opacity="0"/><g class="bc-beam" transform="translate(0 -50) rotate(0)"><path d="M0 0L-230 -44.7L-230 44.7Z" fill="url(#beam)"/></g><rect class="hit" x="-26" y="-66" width="52" height="70"/><path class="g" d="M-20 0q4 -9 11 -4q8 -7 15 0q7 -5 14 4z"/><path class="g" d="M-9 -3L-7 -40H7L9 -3Z"/><path class="t" d="M-8.4 -12H8.4M-8 -21H8M-7.6 -30H7.6M-2 -3V-12M3 -12V-21M-3 -21V-30M2 -30V-40"/><rect class="o" x="-1.8" y="-10" width="3.6" height="7"/><path class="l" d="M-10 -40H10"/><path class="l" d="M-4 -40L-6 -46M4 -40L6 -46"/><path class="o" d="M-7 -47L-5 -42H5L7 -47Z"/><path class="pf bc-flame" d="M-3 -47Q-4 -53 0 -58Q1 -53 3 -51Q4 -49 3 -47Z"/>`,
+    runestone: `<rect class="hit" x="-20" y="-66" width="40" height="70"/><path class="g" d="M-14 0L-16 -40Q-12 -60 0 -62Q13 -60 15 -38L13 0Z"/><path d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3" fill="none" stroke="${C.paper}" stroke-width="4" stroke-linecap="round"/><path d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3" fill="none" stroke="${C.land}" stroke-width="2.2" stroke-linecap="round"/><path class="l rs-trace" d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3"/><circle class="pf" cx="5" cy="-3" r="1"/><g transform="translate(2.2 -9) rotate(-90)"><path class="rn" d="M0 0L0 3.4M0 1.4L1.1 0.4M0 2.3L1.1 1.4M2.2 0L2.2 3.4M3.2 3.4L3.2 0L4.3 0.8L3.2 1.7L4.3 3.4M6.5 0L5.4 1.3L6.5 2.1L5.4 3.4M8.1 0L8.1 3.4M7.5 0.8L8.1 0L8.6 0.8M13.1 0L12.1 1.3L13.1 2.1L12.1 3.4M15.2 0L14.2 0.8L15.2 1.7M16.2 3.4L16.2 0L16.8 0.8L17.3 0L17.3 3.4M18.9 0L18.9 3.4M18.4 0.8L18.9 0L19.5 0.8M21.5 0L20.5 0.8L21.5 1.7M22.6 0L22.6 3.4M23.6 0L23.6 3.4M22.6 1.3L23.6 2.1M27.1 0L27.1 3.4M27.1 1.4L28.2 0.4M27.1 2.3L28.2 1.4M29.2 0L29.2 3.4M30.9 0L30.9 3.4M30.3 1.3L31.4 2.1M32.5 0L32.5 3.4M32.5 0L33.5 0.8M32.5 1.1L33.5 2M34.6 3.4L34.6 0L35.7 0.8M40.1 0L39.2 0.8L40.1 1.7M41.2 3.4L41.2 0L42.3 1.1L42.3 3.4M43.9 0L43.9 3.4M43.3 0.8L43.9 0L44.4 0.8"/></g><path class="t" d="M-20 0H20"/>`,
+  },
+  icons: {
+    sheet: '<rect class="l" x="-14" y="-20" width="28" height="40"/><rect class="t" x="-10" y="-16" width="20" height="12"/><path class="t" d="M-10 2H10M-10 7H10M-10 12H4"/>',
+    book: '<path class="l" d="M0 -16Q-10 -20 -22 -17V15Q-10 12 0 16Q10 12 22 15V-17Q10 -20 0 -16Z"/><path class="t" d="M0 -16V16M-17 -10Q-9 -12 -4 -10M-17 -4Q-9 -6 -4 -4M-17 2Q-9 0 -4 2M4 -10Q9 -12 17 -10M4 -4Q9 -6 17 -4"/>',
+    screen: '<rect class="l" x="-22" y="-16" width="44" height="32" rx="2"/><path class="t" d="M-22 -9H22"/><circle class="pf" cx="-18" cy="-12.5" r="1"/><circle class="pf" cx="-14.5" cy="-12.5" r="1"/><path class="t" d="M-16 -3H2M-16 3H10M-16 9H-2"/><rect class="t" x="8" y="-4" width="10" height="10"/>',
+    bundle: '<rect class="l" x="-16" y="-12" width="32" height="26"/><path class="t" d="M0 -12V14M-16 1H16"/><path class="l" d="M0 -12q-6 -8 -9 -3q-1 4 9 3q10 1 9 -3q-3 -5 -9 3"/>',
+  },
+};
+
 // ---- art.mjs ----
 // Every drawing as a function that returns an SVG string. Geometry and glyphs ported from reference/round2.cjs.
 
@@ -596,7 +848,7 @@ const runeSvg = (word, h, x, y, a, cls = 'rn') => `<path class="${cls}" d="${run
 const svgText = (x, y, s, o = {}) => `<text x="${x}" y="${y}" font-size="${o.s || 8}" fill="${o.c || C.dim}" font-weight="${o.w || 500}" text-anchor="${o.a || 'start'}"${o.i ? ' font-style="italic"' : ''}${o.ls ? ` letter-spacing="${o.ls}"` : ''}${o.h ? ' class="h"' : ''}${o.t ? ` transform="${o.t}"` : ''}${o.op ? ` opacity="${o.op}"` : ''}${o.cls ? ` class="${o.cls}"` : ''}>${s}</text>`;
 const grp = (x, y, k, s, rot) => `<g transform="translate(${x} ${y})${rot ? ` rotate(${rot})` : ''} scale(${k})">${s}</g>`;
 const starPath = (x, y, s) => `M${n1(x)} ${n1(y - s)}Q${n1(x)} ${n1(y)} ${n1(x + s)} ${n1(y)}Q${n1(x)} ${n1(y)} ${n1(x)} ${n1(y + s)}Q${n1(x)} ${n1(y)} ${n1(x - s)} ${n1(y)}Q${n1(x)} ${n1(y)} ${n1(x)} ${n1(y - s)}Z`;
-const marker = (x, y, n) => `<circle cx="${x}" cy="${y}" r="6.2" fill="${C.ink}" stroke="${C.red}" stroke-width="1.2"/><text x="${x}" y="${y + 2.6}" font-size="7.5" font-weight="800" fill="${C.red}" text-anchor="middle">${n}</text>`;
+const marker = (x, y, n, id) => `<g class="mk"${id ? ` id="mk-${id}"` : ''}><circle cx="${x}" cy="${y}" r="6.2" fill="${C.ink}" stroke="${C.red}" stroke-width="1.2"/><text x="${x}" y="${y + 2.6}" font-size="7.5" font-weight="800" fill="${C.red}" text-anchor="middle">${n}</text></g>`;
 const tube = (d, w, k, cls = '') => `<path${cls} d="${d}" fill="none" stroke="${C.paper}" stroke-width="${w}" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${C.land}" stroke-width="${n1(w - 2.2 / k)}" stroke-linecap="round"/>`;
 
 // ---- terrain ----
@@ -630,48 +882,13 @@ const stoneSvg = rune => `<svg class="stone" viewBox="0 0 260 400" aria-hidden="
 
 // ---- finds (each wrapped in a group the finds module wires up) ----
 const findWrap = (id, label, inner, x, y) => `<g class="find" id="f-${id}" role="button" tabindex="0" aria-label="${label}" data-x="${x}" data-y="${y}">${inner}</g>`;
-const wayfinder = (r) => {
-  let s = `<circle class="hit" r="${r + 16}"/><circle class="o" r="${r}"/><circle class="t" r="${n1(r * .82)}"/>`;
-  const keys = runeKeys(FIND_COPY.wayfinderRunes).filter(k => k !== ' '), R = r * .91, h = r * .11;
-  keys.forEach((k, i) => { const a = (i / keys.length) * 360 + 8, g = runeGlyph(k, h); s += `<path class="rn" transform="rotate(${n1(a)}) translate(${n1(-g.w / 2)} ${n1(-R - h / 2)})" d="${g.d}"/>`; });
-  const L = r * .74, Sh = r * .42;
-  const term = [ // long arms: P (up), V (right), M (down), S (left), each a different terminal, drawn pointing up
-    `M0 ${-L}l-4 -4M0 ${-L}l4 -4M0 ${-L}v-5`,
-    `M0 ${-L - 3}m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0`,
-    `M-4 ${-L + 4}L0 ${-L - 2}L4 ${-L + 4}`,
-    `M-5 ${-L}H5M-3 ${-L - 4}H3`,
-  ];
-  const sterm = [`M0 ${-Sh}l-3 -3`, `M0 ${-Sh}l3 -3`, `M-3 ${-Sh}H3`, `M0 ${-Sh}m-1.5 -2a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0`];
-  for (let i = 0; i < 4; i++) s += `<g class="wf-arm" data-i="${i}" transform="rotate(${i * 90})"><path class="l" d="M0 0V${-L}${term[i]}"/></g>`;
-  for (let i = 0; i < 4; i++) s += `<g transform="rotate(${i * 90 + 45})"><path class="l" d="M0 0V${-Sh}${sterm[i]}"/></g>`;
-  [[0, -(r + 6), 'middle'], [r + 7, 2.5, 'start'], [0, r + 12, 'middle'], [-(r + 7), 2.5, 'end']].forEach(([x, y, a], i) => s += svgText(x, y, FIND_COPY.crafts[i], { s: 6.5, w: 700, c: C.paper, a, ls: 1.2, cls: 'wf-word h' }));
-  s += `<g class="wf-needle"><path class="pf" d="M0 ${n1(-r * .62)}L3 0L-3 0Z"/><path class="o" d="M0 ${n1(r * .62)}L3 0L-3 0Z"/></g><circle class="o wf-hub" r="${n1(r * .08)}"/>`;
-  return s;
-};
-const chestBody = () => `<rect class="g" x="-30" y="-34" width="60" height="34" rx="2"/><path class="t" d="M-18 -34V0M18 -34V0M-30 -22H30"/><rect class="pf" x="-4.5" y="-27" width="9" height="10" rx="1.5"/>`;
-const chestLid = () => `<g class="hd-lid"><path class="g" d="M-30 -34Q0 -56 30 -34Z"/><path class="t" d="M-18 -42V-34M18 -42V-34"/></g>`;
-const hoard = () => {
-  let st = ''; for (let i = 0; i < 8; i++) st += `<path class="pf hd-star" d="${starPath(0, -44, i % 2 ? 4 : 6)}" opacity="0"/>`;
-  return `<rect class="hit" x="-40" y="-60" width="80" height="72"/><path class="l hd-scratch" d="M-12 -6l14 8M2 -6l-14 8M-24 2l-3 -6M-20 2l1 -7M14 2l3 -6M20 2l-1 -6"/><circle class="hd-glow" cx="0" cy="-20" r="46" fill="url(#litGlow)" opacity="0"/><g clip-path="url(#hclip)"><g class="hd-chest" transform="translate(0 60)">${chestBody()}${chestLid()}</g></g><g class="hd-stars">${st}</g>`;
-};
-const raven = cls => `<g class="${cls}"><g class="rv-body"><path class="g" d="M-11 1L-6 -2Q-3 -8 4 -8Q8 -7 7 -3Q3 1 -4 0Z"/><path class="t" d="M-4 -4Q0 -7 4 -5M0 0v2.5M2.5 0v2.5"/></g><g class="rv-head" transform="translate(5 -9)"><circle class="g" r="2.6"/><path class="pf" d="M2 -1L6 .3L2 1.3Z"/><circle class="pf" cx=".8" cy="-.6" r=".5"/></g></g>`;
-const ravens = () => `<rect class="hit" x="-20" y="-56" width="40" height="60"/><path class="g" d="M-9 0L-10 -24Q-7 -34 0 -35Q8 -34 10 -22L9 0Z"/>${runeSvg('hm', 6, -2.5, -26, 'start')}<path class="t" d="M-16 0H16"/><g transform="translate(-5 -34)">${raven('rv-a')}</g><g transform="translate(6 -33) scale(-1 1)">${raven('rv-b')}</g>`;
-const serpent = k => {
-  let s = `<rect class="hit" x="-112" y="-60" width="230" height="78"/>`;
-  s += `<g class="sp-tail sp-loop">${tube('M58 4C60 -20 86 -24 84 -6C82 8 64 6 66 -8', 7, k)}${tube('M66 -8C68 -20 84 -26 96 -18', 7, k)}<path class="g" d="M95 -19l10 -6l-2 12z"/></g>`;
-  [[34, 11], [4, 14], [-28, 16]].forEach(([cx, R]) => { let a = tube(`M${cx - R} 4A${R} ${R} 0 0 1 ${cx + R} 4`, 9, k); for (let i = 1; i < 6; i++) { const t = Math.PI * i / 6; a += `<path class="t" d="M${n1(cx - Math.cos(t) * (R - 3))} ${n1(4 - Math.sin(t) * (R - 3))}L${n1(cx - Math.cos(t) * (R + 3))} ${n1(4 - Math.sin(t) * (R + 3))}"/>`; } a += `<path class="g" d="M${cx - 4} ${-R}l4 -8l4 8z"/>`; s += `<g class="sp-loop">${a}</g>`; });
-  s += `<g class="sp-loop sp-neck">${tube('M-58 6C-58 -22 -62 -34 -76 -40', 10, k)}<g class="sp-head"><path class="g" d="M-70 -47Q-86 -55 -101 -40Q-88 -29 -70 -34Z"/><circle class="pf" cx="-84" cy="-43" r="1.5"/><path class="t" d="M-100 -40l6 -1M-73 -48l4 -8l3 8"/>`
-    + `<g class="sp-leaf" opacity="0" transform="translate(-104 -40) rotate(8)"><rect x="-9" y="0" width="18" height="21" fill="${C.paper}"/><rect x="-9" y="0" width="18" height="6" fill="${C.note}"/><text x="0" y="4.8" font-size="4.2" font-weight="800" text-anchor="middle" fill="${C.ink}">${FIND_COPY.serpentLeaf[0]}</text><text x="0" y="15.5" font-size="6.4" font-weight="800" text-anchor="middle" fill="${C.ink}">${FIND_COPY.serpentLeaf[1]}</text></g></g></g>`;
-  s += `<rect x="-114" y="4" width="232" height="40" fill="${C.ink}"/>`;
-  s += `<g class="sp-rip">${[0, 1, 2].map(i => `<ellipse class="t" cx="${-40 + i * 40}" cy="6" rx="18" ry="3" opacity="0"/>`).join('')}</g>`;
-  [-98, -72, -44, -12, 20, 50, 76, 100].forEach((x, i) => s += `<path class="t" d="M${x} ${7 + (i % 2) * 3}q4 -3 8 0t8 0"/>`);
-  return s;
-};
-const beacon = () => `<g class="bc-beam" transform="translate(0 -50) rotate(0)"><path d="M0 0L-230 -44.7L-230 44.7Z" fill="url(#beam)"/></g><rect class="hit" x="-26" y="-66" width="52" height="70"/><path class="g" d="M-20 0q4 -9 11 -4q8 -7 15 0q7 -5 14 4z"/><path class="g" d="M-9 -3L-7 -40H7L9 -3Z"/><path class="t" d="M-8.4 -12H8.4M-8 -21H8M-7.6 -30H7.6M-2 -3V-12M3 -12V-21M-3 -21V-30M2 -30V-40"/><rect class="o" x="-1.8" y="-10" width="3.6" height="7"/><path class="l" d="M-10 -40H10"/><path class="l" d="M-4 -40L-6 -46M4 -40L6 -46"/><path class="o" d="M-7 -47L-5 -42H5L7 -47Z"/><path class="pf bc-flame" d="M-3 -47Q-4 -53 0 -58Q1 -53 3 -51Q4 -49 3 -47Z"/>`;
-const runestone = () => {
-  const band = 'M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3';
-  return `<rect class="hit" x="-20" y="-66" width="40" height="70"/><path class="g" d="M-14 0L-16 -40Q-12 -60 0 -62Q13 -60 15 -38L13 0Z"/><path d="${band}" fill="none" stroke="${C.paper}" stroke-width="4" stroke-linecap="round"/><path d="${band}" fill="none" stroke="${C.land}" stroke-width="2.2" stroke-linecap="round"/><path class="l rs-trace" d="${band}"/><circle class="pf" cx="5" cy="-3" r="1"/><g transform="translate(2.2 -9) rotate(-90)">${runeSvg(FIND_COPY.runestoneRunes, 3.4, 0, 0, 'start', 'rn')}</g><path class="t" d="M-20 0H20"/>`;
-};
+const findDrawing = kind => FIND_PLAY.drawings[kind].replace(/\{\{([\w.]+)\}\}/g, (match, path) => path === 'hoard.glintPath' ? starPath(...FIND_PLAY.hoard.glintAt, FIND_PLAY.hoard.glintSize) : path.split('.').reduce((value, key) => value[key], FIND_PLAY));
+const wayfinder = () => findDrawing('wayfinder');
+const hoard = () => findDrawing('hoard');
+const ravens = () => findDrawing('ravens');
+const serpent = () => findDrawing('serpent');
+const beacon = () => findDrawing('beacon');
+const runestone = () => findDrawing('runestone');
 const tafl = () => {
   let s = `<rect class="hit" x="-4" y="-4" width="29" height="29"/><rect class="o" x="0" y="0" width="21" height="21"/>`;
   for (let i = 1; i < 7; i++) s += `<path class="t" d="M${i * 3} 0V21M0 ${i * 3}H21"/>`;
@@ -752,7 +969,7 @@ function bigMap() {
   s += grp(458, 271, .55, dock()) + grp(473, 321, .55, dock()) + grp(487, 297, .5, boat()) + grp(470, 304, .42, boat());
   s += grp(124, 372, .6, campus()) + grp(404, 752, .62, city()) + `<path class="l" d="M404 662v-11"/>`;
   s += top;
-  FINDS.filter(f => f.n).forEach(f => s += marker(f.mark[0], f.mark[1], f.n));
+  FINDS.filter(f => f.n).forEach(f => s += marker(f.mark[0], f.mark[1], f.n, f.id));
 
   // title, legend, frame, knots
   s += svgText(44, 78, COPY.title, { s: 30, w: 800, c: C.paper, ls: -.6 }) + `<rect x="42" y="86" width="204" height="13" fill="${C.ink}"/>` + svgText(45, 95, COPY.kicker, { s: 6.5, ls: 1.8 }) + `<path class="t" d="M45 103h196"/>`;
@@ -766,11 +983,11 @@ function bigMap() {
   const F = Object.fromEntries(FINDS.map(f => [f.id, f]));
   let fd = '';
   const at = (id, k, inner) => { const f = F[id]; return findWrap(id, f.label, grp(f.x, f.y, k, inner), f.x, f.y); };
-  fd += at('wayfinder', 1, wayfinder(42));
-  fd += `<g id="f-hoards">` + FIND_COPY.hoards.map(h => `<g class="find hoard" id="f-${h.id}" role="button" tabindex="0" aria-label="${h.label}" data-x="${h.x}" data-y="${h.y}">${grp(h.x, h.y, .3, hoard())}</g>`).join('') + `</g>`;
-  fd += at('ravens', .72, ravens()) + at('serpent', .52, serpent(.52)) + at('beacon', .6, beacon()) + at('runestone', .55, runestone());
+  fd += `<g id="wf-lines" pointer-events="none"></g>` + at('wayfinder', 1, wayfinder());
+  fd += `<g id="f-hoards" role="button" tabindex="0" aria-label="${F.hoards.label}" data-x="${F.hoards.x}" data-y="${F.hoards.y}">` + FIND_COPY.hoards.map(h => `<g class="find hoard" id="f-${h.id}" role="button" tabindex="0" aria-label="${h.label}" data-x="${h.x}" data-y="${h.y}">${grp(h.x, h.y, FIND_PLAY.hoard.scale, hoard())}</g>`).join('') + `</g>`;
+  fd += at('ravens', FIND_PLAY.raven.scale, ravens()) + at('serpent', FIND_PLAY.serpent.scale, `<g class="sp-swim">${serpent(FIND_PLAY.serpent.scale)}</g>`) + at('beacon', FIND_PLAY.beacon.scale, beacon()) + at('runestone', FIND_PLAY.rune.scale, runestone());
   fd += at('tafl', .7, tafl()) + findWrap('mist', F.mist.label, mist(), F.mist.x, F.mist.y) + at('horn', .7, horn()) + at('well', 1, well());
-  fd += `<g id="bc-notes">` + FIND_COPY.beaconNotes.map((n, i) => `<g class="bc-note" opacity="0" transform="translate(${n.x} ${n.y})">${runeSvg(n.rune, 4.2, 0, -4, 'middle', 'rn rn-note')}<text class="bc-en" x="0" y="7" font-size="4.6" font-style="italic" fill="${C.paper}" text-anchor="middle" opacity="0">${n.t}</text></g>`).join('') + `</g>`;
+  fd += `<g id="bc-notes">` + FIND_COPY.beaconNotes.map(n => { const B = FIND_PLAY.beacon; return `<g class="bc-note" opacity="0" transform="translate(${n.x} ${n.y})"><g class="bc-note-in">${runeSvg(n.rune, B.runeSize, 0, B.runeY, 'middle', 'rn rn-note')}<g class="bc-en" opacity="0">${n.t.todo ? svgText(0, B.todoY, COPY.todo, { s: B.todoFont, c: C.dim, a: 'middle' }) : ''}${svgText(0, B.lineY, typeof n.t === 'object' ? n.t.t : n.t, { s: B.noteFont, c: C.paper, a: 'middle', i: 1 })}</g></g></g>`; }).join('') + `</g>`;
   fd += findWrap('longship', F.longship.label, `<g class="ls-ship" transform="translate(${F.longship.x} ${F.longship.y}) scale(.55)">${longship()}</g>`, F.longship.x, F.longship.y);
 
   return { sea, fill, coast, detail: s, finds: fd };
@@ -782,6 +999,25 @@ const miniMapSvg = () => `<path d="${pathD(COAST_A, 1)}" class="mm-coast"/><path
 // New sky drawings only. Their exact geometry is supplied from the live data table.
 const depthCloudDrawing = paths => `<path class="o" d="${paths[0]}"/><path class="t" d="${paths[1]}"/><path class="t" d="${paths[2]}"/>`;
 const depthRavenDrawing = paths => `<g class="sky-wing sky-right"><path class="o" d="${paths.wing}"/></g><g class="sky-wing sky-left"><path class="o" d="${paths.wing}"/></g><path class="o" d="${paths.tail}"/><path class="o" d="${paths.body}"/><path class="pf" d="${paths.beak}"/>`;
+
+// New find drawing helpers; their geometry is supplied by the live data tables.
+const findRnd = rnd(FIND_PLAY.seed);
+const pieceIcon = kind => FIND_PLAY.icons[kind] || '';
+function rubbingRunes() {
+  const R = FIND_PLAY.rune, letters = [];
+  FIND_COPY.runestoneRunes.split(' ').forEach((word, row) => {
+    const keys = runeKeys(word), width = keys.reduce((sum, key) => sum + runeGlyph(key, R.runeHeight).w, 0) + Math.max(0, keys.length - 1) * R.runeHeight * R.runeGap;
+    let x = R.cx - width / 2;
+    keys.forEach((key, i) => { const glyph = runeGlyph(key, R.runeHeight, x, R.tops[row]); letters.push({ d: glyph.d, x: x + glyph.w / 2, y: R.tops[row] + R.runeHeight, letter: word[i].toUpperCase() }); x += glyph.w + R.runeHeight * R.runeGap; });
+  });
+  return letters;
+}
+function rubbingSvg() {
+  const R = FIND_PLAY.rune, random = findRnd, paths = rubbingRunes();
+  let hatch = '';
+  R.hatch.forEach(([a, b, step, lean, width, alpha]) => { for (let x = a; x <= b; x += step) { const dx = (random() * 2 - 1) * R.jitter; hatch += `<path d="M${x + dx} 0L${x - lean + dx} ${R.height}" fill="none" stroke="${C.ink}" stroke-width="${width}" opacity="${alpha}"/>`; } });
+  return `<svg class="rubbing" viewBox="0 0 ${R.width} ${R.height}" aria-hidden="true"><defs><radialGradient id="rub-soft"><stop offset="${R.maskCore}" stop-color="${C.white}"/><stop offset="1" stop-color="${C.white}" stop-opacity="0"/></radialGradient><clipPath id="rub-stone"><path d="${R.outline}"/></clipPath><mask id="rub-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="${R.width}" height="${R.height}"><rect width="${R.width}" height="${R.height}" fill="${C.black}"/><g class="rub-circles"></g><rect class="rub-fill" width="${R.width}" height="${R.height}" fill="${C.white}" opacity="0"/></mask></defs><rect width="${R.width}" height="${R.height}" fill="${C.paper}"/><path d="${R.outline}" fill="none" stroke="${C.ink}" opacity="${R.guide}"/><g clip-path="url(#rub-stone)" mask="url(#rub-mask)"><path d="${R.outline}" fill="${C.ink}" opacity="${R.charcoal}"/>${hatch}<path d="${R.outline}" fill="none" stroke="${C.ink}" stroke-width="${R.outlineWidth}" opacity="${R.outlineAlpha}"/><path d="${R.outer}${R.inner}${R.feet}${paths.map(p => p.d).join('')}" fill="none" stroke="${C.paper}" stroke-width="${R.carvingWidth}" stroke-linecap="round"/><circle cx="${R.dot[0]}" cy="${R.dot[1]}" r="${R.dot[2]}" fill="${C.paper}"/></g>${paths.map(p => `<text class="rub-letter" x="${p.x}" y="${p.y + R.letterDown}" text-anchor="middle" font-size="${R.letterSize}" font-weight="${R.letterWeight}" fill="${C.paper}" opacity="0">${p.letter}</text>`).join('')}</svg>`;
+}
 
 // ---- trip.mjs ----
 // Scroll progress, acts, camera, traveller. Everything here is a pure function of progress P (in viewport heights).
@@ -934,6 +1170,17 @@ function tripApply(st) {
 const n2 = v => v.toFixed(2);
 function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }
 
+// Rewrites only the frame's camera and card strength; progress and traveller stay on the trail.
+function tripFocus(st, view, k) {
+  if (k === 0) return;
+  const F = COPY.findFocus, [x, y, r, least = F.least] = view;
+  const target = Math.max(Math.max(VIEW.s0, least * VIEW.sT), Math.min(F.most * VIEW.sT, F.fill * Math.min(VIEW.w, VIEW.h) / (2 * r)));
+  const before = toScreen(st, [x, y]), at = [F.at[0] * VIEW.w, F.at[1] * VIEW.h];
+  const s = st.cam.s * (target / st.cam.s) ** k;
+  st.cam = { s, tx: lerp(before[0], at[0], k) - x * s, ty: lerp(before[1], at[1], k) - y * s, ax: lerp(st.cam.ax, at[0], k), ay: lerp(st.cam.ay, at[1], k) };
+  st.cardK = st.cardK.map(v => v * (1 - k)); st.cardOpen *= 1 - k; st.dim = lerp(st.dim, 1, k);
+}
+
 // ---- depth.mjs ----
 // The one layer model, plus its three render surfaces. Importing this module needs no DOM.
 
@@ -1027,6 +1274,43 @@ function depthLook(dt, pointer) {
   return { look: DP.look, changed, fine: enabled, pointerChanged };
 }
 function depthInvalidate() { DP.force = true; }
+
+// An additive hook: insert the beacon cut at the veil's existing compositing boundary.
+function depthBeam(b) {
+  if (!DP.beamHook) {
+    DP.beamHook = true;
+    const air = depthAir, light = lightAt;
+    let state = null;
+    const strength = (x, y) => {
+      const beam = DP.beam; if (!beam || !state) return 0;
+      const p = toScreen(state, [beam.x, beam.y]), dx = x - p[0], dy = y - p[1], radius = beam.reach * state.cam.s;
+      const diff = Math.abs(((Math.atan2(dy, dx) * 180 / Math.PI - beam.angle + 540) % 360) - 180);
+      return (1 - clamp01(Math.hypot(dx, dy) / radius)) * clamp01((beam.half - diff) / (beam.soft ?? MAP.findBeam.soft));
+    };
+    lightAt = (x, y) => { const base = light(x, y); return DP.light ? Math.max(base, 1 - DP.light.v * (1 - DEPTH.light.amb) * (1 - strength(x, y))) : base; };
+    depthAir = (st, ...args) => {
+      state = st;
+      const context = DP.ac;
+      const cut = () => {
+        const beam = DP.beam; if (!beam || !DP.light?.v) return;
+        const p = toScreen(st, [beam.x, beam.y]), radius = beam.reach * st.cam.s;
+        context.save(); context.globalCompositeOperation = 'destination-out';
+        const fade = context.createRadialGradient(...p, 0, ...p, radius); fade.addColorStop(0, C.paper); fade.addColorStop(1, depthAlphaColour(C.paper, 0)); context.fillStyle = fade;
+        const steps = beam.steps ?? MAP.findBeam.wedgeSteps;
+        for (let i = 0; i < steps; i++) {
+          const a = beam.angle - beam.half + 2 * beam.half * i / steps, z = a + 2 * beam.half / steps;
+          context.globalAlpha = clamp01((beam.half - Math.abs((a + z) / 2 - beam.angle)) / (beam.soft ?? MAP.findBeam.soft));
+          context.beginPath(); context.moveTo(...p); context.arc(...p, radius, a * Math.PI / 180, z * Math.PI / 180); context.closePath(); context.fill();
+        }
+        context.restore();
+      };
+      DP.ac = new Proxy(context, { get(target, key) { const value = Reflect.get(target, key, target); return typeof value === 'function' ? value.bind(target) : value; }, set(target, key, value) { if (key === 'globalCompositeOperation' && value === 'source-over' && target.globalCompositeOperation === 'destination-out') cut(); Reflect.set(target, key, value, target); return true; } });
+      try { air(st, ...args); } finally { DP.ac = context; }
+    };
+  }
+  if (JSON.stringify(DP.beam) !== JSON.stringify(b)) DP.force = true;
+  DP.beam = b;
+}
 
 function depthDeep(st, look) {
   const c = DP.dc, w = VIEW.w, h = VIEW.h, R = DEPTH.rings, O = DEPTH.outer;
@@ -1446,7 +1730,7 @@ function cardsDepthConfig(c) {
   c.shadow.style.boxShadow = `0 0 ${cfg.blur}px ${cfg.spread}px var(--shade)`; c.shadow.style.borderRadius = cfg.radius + 'px';
   c.depthPending = false;
 }
-const cardsSetCraft = craft => { CD.craft = craft; };
+const cardsSetCraft = mask => { CD.craft = mask; };
 const cardsLitBy = craft => STOPS.map(s => s.crafts.includes(craft));
 
 function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
@@ -1460,7 +1744,7 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const k0 = stonePx / (H * .95), k = Math.pow(k0, 1 - e);
     const cx = p[0] + (oc[0] - p[0]) * e, ry = p[1] - stonePx * .5 - 5, cy = ry + (oc[1] - ry) * e;
     c.el.style.transform = `translate(${(cx - W * k / 2).toFixed(2)}px,${(cy - H * k / 2).toFixed(2)}px) scale(${k.toFixed(5)})`;
-    const lit = CD.craft ? c.stop.crafts.includes(CD.craft) : false;
+    const lit = CD.craft ? CD.craft[i] : false;
     c.el.style.opacity = op * (CD.craft && !lit ? .55 : 1);
     c.btn.style.opacity = 1 - smooth(0, .3, e);
     c.face.style.opacity = smooth(.01, .1, e);
@@ -1543,6 +1827,7 @@ function tipFor(i, blk) {
 }
 const currentStop = P => { let c = -1; STOPS.forEach((s, i) => { if (P >= holdStart(i)) c = i; }); return c; };
 const tlSetCount = (n, t) => { TL.count.textContent = fmt(COPY.count, { n, t }); };
+const tlSetCraft = mask => TL.blocks.forEach(b => { b.el.classList.toggle('craft-lit', !!mask?.[b.i]); b.el.style.opacity = mask && !mask[b.i] ? FIND_PLAY.way.timelineDim : 1; });
 
 function tlResize(ruleRect) {
   const el = TL.el; el.style.transform = 'none';
@@ -1633,7 +1918,7 @@ function paceAt(move, t) {
 
 
 const SC = {
-  mode: 'steps', P: 0, rm: false, move: null, cut: null, lastTs: null, fill: 0, returnP: null,
+  mode: 'steps', P: 0, rm: false, move: null, cut: null, lastTs: null, fill: 0, focus: null,
   root: null, go: null, cover: null, say: null, review: null, resize: null, joinedTop: null,
   restoreP: null, restoration: 'auto', announced: null, shown: false, ready: false, wheel: null, touch: null,
 };
@@ -1652,12 +1937,31 @@ const stepsScrollTo = (p, smooth) => {
 
 const JOURNEY = {
   get mode() { return SC.mode; }, get P() { return SC.P; }, get moving() { return !!(SC.move || SC.cut); },
-  get visiting() { return SC.returnP !== null; }, depth: DEPTH, nova: NOVA, setDepth: stepsSetDepth,
+  get visiting() { return !!SC.focus?.held; }, get focus() { return SC.focus?.held ? SC.focus.id : null; }, depth: DEPTH, nova: NOVA, setDepth: stepsSetDepth,
   beats: BEATS, go: stepsGo, next: stepsNext, back: stepsBack, set: stepsSet, setMode: stepsSetMode,
 };
 const stepsProgress = () => SC.P;
 const stepsPause = () => { SC.lastTs = null; };
 const stepsJumping = () => !!SC.cut;
+
+function stepsFocusNow() {
+  const f = SC.focus; if (!f) return null;
+  const q = easeIO(f.swap), view = Array.from({ length: Math.max(f.from.length, f.to.length) }, (_, i) => { const a = f.from[i] ?? FIND_PLAY.focus.least, b = f.to[i] ?? FIND_PLAY.focus.least; return i === 2 ? a * (b / a) ** q : lerp(a, b, q); });
+  return { id: f.id, view, k: easeIO(f.k) };
+}
+function stepsFocus(id, view) {
+  const st = tripState(SC.P);
+  if (SC.rm || SC.mode !== 'steps' || SC.cut || st.handoffT !== 1 || st.rushT !== 0) return false;
+  const now = stepsFocusNow(), old = SC.focus;
+  stepsCancel();
+  SC.focus = { id, from: now ? now.view : view.slice(), to: view.slice(), swap: now ? 0 : 1, k: old ? old.k : 0, held: true };
+  SC.root.classList.add('jm-focus'); stepsArrive(); return true;
+}
+function stepsRelease() {
+  if (!SC.focus || !SC.focus.held) return false;
+  SC.focus.held = false; SC.root.classList.remove('jm-focus');
+  window.dispatchEvent(new Event('jm-find-release')); stepsButtons(); return true;
+}
 
 function stepsClasses() {
   if (SC.rm) return;
@@ -1677,10 +1981,11 @@ function stepsButtons() {
   SC.go.classList.toggle('go-end', end);
   const back = SC.go.querySelector('.go-back'), next = SC.go.querySelector('.go-next'), home = SC.go.querySelector('.go-top');
   const focus = document.activeElement;
-  back.hidden = top && SC.returnP === null; next.hidden = end; home.hidden = !end;
+  back.hidden = top && !JOURNEY.visiting; next.hidden = end; home.hidden = !end;
   if (!SC.go.hidden && ((next.hidden && focus === next) || (home.hidden && focus === home))) back.focus({ preventScroll: true });
   if (!SC.go.hidden && back.hidden && focus === back) next.focus({ preventScroll: true });
-  back.setAttribute('aria-label', SC.returnP !== null ? COPY.steps.returnTo : stepsFormat(COPY.steps.back, { name: stepsName(stepsBackBeat()) }));
+  back.setAttribute('aria-label', JOURNEY.visiting ? COPY.steps.returnTo : stepsFormat(COPY.steps.back, { name: stepsName(stepsBackBeat()) }));
+  back.querySelector('span').textContent = JOURNEY.visiting ? COPY.steps.returnTo : '';
   if (!SC.go.hidden && !SC.shown) { SC.shown = true; SC.go.classList.add('go-reveal'); }
   SC.root.classList.toggle('jm-moving', JOURNEY.moving);
   SC.go.querySelector('.go-fill').style.transform = `scaleX(${SC.move ? SC.fill : 0})`;
@@ -1727,32 +2032,28 @@ function stepsNavigate(target, opts = {}) {
 function stepsGo(id, opts = {}) {
   if (SC.cut) return;
   const beat = BEATS.find(b => b.id === id); if (!beat) return;
-  SC.returnP = null; stepsNavigate(beat.P, opts);
+  stepsRelease(); stepsNavigate(beat.P, opts);
 }
 function stepsNext() {
   if (SC.cut) return;
-  SC.returnP = null; const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true });
+  stepsRelease(); const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true });
   stepsButtons();
 }
 function stepsBack() {
   if (SC.cut) return;
-  if (SC.returnP !== null && SC.mode === 'steps') { const p = SC.returnP; SC.returnP = null; stepsJump(p); return; }
-  SC.returnP = null; const beat = stepsBackBeat(); if (beat) stepsNavigate(beat.P, { move: true });
+  if (stepsRelease()) return;
+  const beat = stepsBackBeat(); if (beat) stepsNavigate(beat.P, { move: true });
 }
 function stepsSet(P) {
   if (SC.cut) return;
-  SC.returnP = null;
+  stepsRelease();
   if (SC.mode === 'scroll') { stepsScrollTo(Math.max(0, Math.min(TOTAL_P, P)), false); return; }
   stepsCancel(); SC.P = stepsClamp(P); if (SC.restoreP !== null) SC.restoreP = SC.P; stepsArrive();
-}
-function stepsFind(P, after) {
-  if (SC.cut || SC.mode !== 'steps') return;
-  SC.returnP = SC.P; stepsJump(P, after);
 }
 function stepsSetMode(mode) {
   if (SC.rm || SC.cut || !['steps', 'scroll'].includes(mode) || mode === SC.mode) return;
   const p = SC.mode === 'scroll' ? stepsReadScroll() : SC.P;
-  stepsCancel(); SC.returnP = null; SC.mode = mode; SC.P = mode === 'steps' ? stepsClamp(p) : p; SC.restoreP = SC.P;
+  stepsCancel(); stepsRelease(); SC.focus = null; SC.mode = mode; SC.P = mode === 'steps' ? stepsClamp(p) : p; SC.restoreP = SC.P;
   SC.wheel = null; SC.touch = null; stepsClasses();
   if (mode === 'steps') window.scrollTo({ top: 0, behavior: 'instant' });
   try { sessionStorage.setItem('jm-mode', mode); } catch {}
@@ -1776,6 +2077,12 @@ function stepsFrame(ts) {
   const dt = SC.lastTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - SC.lastTs) / 1000)); SC.lastTs = ts;
   if (SC.mode === 'scroll') { stepsReadScroll(); if (!SC.rm) stepsArrive(); return SC.P; }
   const move = SC.move, cut = SC.cut;
+  if (SC.focus) {
+    const f = SC.focus, cfg = FIND_PLAY.focus;
+    f.swap = Math.min(1, f.swap + dt / cfg.swap);
+    f.k = f.held ? Math.min(1, f.k + dt / cfg.in) : Math.max(0, f.k - dt / cfg.out);
+    if (!f.held && f.k === 0) SC.focus = null;
+  }
   if (move) {
     move.elapsed = Math.min(move.D, move.elapsed + dt);
     const q = move.D ? move.elapsed / move.D : 1;
@@ -1799,6 +2106,7 @@ function stepsWheel(e) {
   if (SC.mode !== 'steps' || SC.rm || e.ctrlKey) return;
   const dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1), direction = Math.sign(dy);
   const target = stepsTarget(e);
+  if (target && target.closest('.sheet.on')) { e.preventDefault(); return; }
   if (stepsCanScroll(target && target.closest('.face'), direction)) return;
   e.preventDefault(); if (!direction) return;
   if (!SC.wheel || e.timeStamp - SC.wheel.time >= STEPS.wheel.quiet || SC.wheel.direction !== direction) SC.wheel = { time: e.timeStamp, direction, sum: 0, used: false };
@@ -1855,7 +2163,7 @@ function stepsBuild({ stage, rm, resize, joinedTop }) {
   SC.restoreP = SC.P;
   const s = COPY.steps;
   SC.go = document.createElement('div'); SC.go.className = 'go'; SC.go.id = 'go'; SC.go.hidden = true; SC.go.setAttribute('role', 'group'); SC.go.setAttribute('aria-label', s.group);
-  SC.go.innerHTML = `<button class="go-back" type="button" aria-label="${s.back.replace('{name}', s.names.top)}">${arrowSvg}</button><button class="go-next" type="button"><i class="go-fill" aria-hidden="true"></i><span class="go-t">${s.start}</span>${arrowSvg}</button><button class="go-top" type="button">${s.top}</button>`;
+  SC.go.innerHTML = `<button class="go-back" type="button" aria-label="${s.back.replace('{name}', s.names.top)}">${arrowSvg}<span></span></button><button class="go-next" type="button"><i class="go-fill" aria-hidden="true"></i><span class="go-t">${s.start}</span>${arrowSvg}</button><button class="go-top" type="button">${s.top}</button>`;
   SC.say = document.createElement('p'); SC.say.className = 'sr'; SC.say.id = 'go-say'; SC.say.setAttribute('role', 'status');
   SC.cover = document.createElement('div'); SC.cover.className = 'jm-cut'; SC.cover.hidden = true; SC.cover.setAttribute('aria-hidden', 'true');
   stage.prepend(SC.go, SC.say, SC.cover);
@@ -2036,227 +2344,606 @@ function footerMotion(time, dt, st, look, moved) {
   FT.inner.style.translate = `${-look[0] * DEPTH.foot.text}px ${-look[1] * DEPTH.foot.text}px`;
 }
 
-// ---- finds.mjs ----
-// Eleven things to play with. Each runs on its own clock; the trip never waits for them.
+// ---- findkit.mjs ----
+// Shared life, particles, overlays and first-found feedback. No progress mutation.
 
 
 
 
 
-const FD = { st: null, now: 0, pointer: [-1e4, -1e4], found: new Set(), last: null, list: {}, pop: null, popAnchor: null, popP: 0, popOwner: null, sheet: null, sheetP: 0, sheetOwner: null, rm: false, base: null };
-const D = s => FD.rm ? 1e-4 : s;
+const FD = { st: null, now: 0, dt: 0, pointer: [-Infinity, -Infinity], pointerT: -Infinity, found: new Set(), last: null, list: {}, popOwner: null, sheetOwner: null, bits: [], serial: 0, flights: [], flight: null, landed: 0, hover: false, focusId: null, overlayEpoch: 0 };
+const D = s => FD.rm ? Number.EPSILON : s;
 const ease = t => easeIO(clamp01(t));
-const out3 = t => 1 - Math.pow(1 - clamp01(t), 3);
-const fEsc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const out3 = t => 1 - (1 - clamp01(t)) ** 3;
+const fEsc = s => String(typeof s === 'object' ? s.t : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const attr = (el, k, v) => el.setAttribute(k, v);
 const toMap = p => [(p[0] - FD.st.cam.tx) / FD.st.cam.s, (p[1] - FD.st.cam.ty) / FD.st.cam.s];
 const FIND_BY = Object.fromEntries(FINDS.map(f => [f.id, f]));
-const arrowHtml = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
-
-function found(id) { if (FD.found.has(id)) return; FD.found.add(id); tlSetCount(FD.found.size, FINDS.length); }
-function opened(f) { if (f.id !== 'well') FD.last = f; }
-
-// ---- shared popups ----
-function showPop(owner, anchor, html, cls = '') {
-  FD.pop.className = 'pop on ' + cls; FD.pop.innerHTML = `<div class="pop-in">${html}</div>`;
-  FD.popAnchor = anchor; FD.popOwner = owner; FD.popP = FD.st.P; placePop();
+const findRandom = findRnd;
+const findRange = pair => lerp(pair[0], pair[1], findRandom());
+const findFormat = (s, values) => s.replace(/\{(\w+)\}/g, (m, k) => values[k]);
+const findAngleDelta = (a, b) => ((b - a + FIND_PLAY.kit.deg) % FIND_PLAY.kit.turn + FIND_PLAY.kit.turn) % FIND_PLAY.kit.turn - FIND_PLAY.kit.deg;
+const findSvg = (tag, attributes = {}) => { const el = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.entries(attributes).forEach(([k, v]) => attr(el, k, v)); return el; };
+const findSlot = line => typeof line === 'object' && line.todo ? `<div class="find-slot"><span class="pop-k">${fEsc(COPY.todo)}</span><p>${fEsc(line)}</p></div>` : `<p class="pop-t">${fEsc(line)}</p>`;
+const findPlace = id => {
+  const h = FIND_COPY.hoards.find(d => d.id === id); if (h) return [h.x, h.y];
+  if (id === 'longship' && FD.st) { const p = pointAt(Math.max(WATER[0], Math.min(WATER[1], FD.st.u))); return [p[0], p[1] + FIND_PLAY.kit.shipY]; }
+  const f = FD.list[id], d = FIND_BY[id]; return f?.place ? f.place() : d ? [d.x, d.y] : null;
+};
+const findView = id => {
+  const p = findPlace(id), delta = id.startsWith('hoard') ? FIND_PLAY.focus.chest : id === 'longship' ? FIND_PLAY.focus.ship : null;
+  return delta ? [p[0] + delta[0], p[1] + delta[1], delta[2]] : FIND_BY[id].view;
+};
+function attend(find, reach) {
+  if (!FD.st) return null;
+  if (FD.hover && FD.now - FD.pointerT <= FIND_PLAY.fresh) { const p = toMap(FD.pointer); if (Math.hypot(p[0] - find.x, p[1] - find.y) <= reach) return p; }
+  const p = FD.st.trav; return p && Math.hypot(p[0] - find.x, p[1] - find.y) <= 2 * reach ? p : null;
 }
-function closePop() { if (!FD.popOwner) return; const o = FD.popOwner; FD.popOwner = null; FD.pop.className = 'pop'; FD.pop.innerHTML = ''; if (o.onPopClose) o.onPopClose(); }
-function placePop() { if (!FD.popOwner) return; const p = toScreen(FD.st, FD.popAnchor); FD.pop.style.transform = `translate(${p[0].toFixed(1)}px,${p[1].toFixed(1)}px)`; }
-function closeSheet() { if (!FD.sheetOwner) return; const o = FD.sheetOwner; FD.sheetOwner = null; FD.sheet.className = 'sheet'; FD.sheet.innerHTML = ''; if (o.onSheetClose) o.onSheetClose(); }
-function findsCloseAll() { closePop(); closeSheet(); Object.values(FD.list).forEach(f => f.onEscape && f.onEscape()); }
-
-const press = (el, fn) => { el.addEventListener('click', e => { if (el._dragged) { el._dragged = false; return; } fn(e); }); el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e); } }); };
-
-// ---- 1. the wayfinder ----
-function find_wayfinder(svg) {
-  const f = FIND_BY.wayfinder, el = svg.querySelector('#f-wayfinder'), needle = el.querySelector('.wf-needle'), words = [...el.querySelectorAll('.wf-word')];
-  const o = { id: 'wayfinder', craft: -1, ang: 0, drag: false };
-  const set = i => {
-    o.craft = i; words.forEach((w, j) => w.classList.toggle('on', j === i));
-    const craft = i >= 0 ? CRAFTS[i] : null; cardsSetCraft(craft);
-    const dim = craft ? .55 : 1; FD.base.style.opacity = dim;
-    svg.querySelectorAll('#finds > .find, #finds > #f-hoards, #bc-notes').forEach(g => { if (g !== el && g.id !== 'f-hoards') g.style.opacity = dim; });
-    FD.list.hoards.items.forEach(h => { const lit = craft && STOPS.find(s => s.id === h.d.stop).crafts.includes(craft); h.glow.setAttribute('opacity', lit ? 1 : 0); h.el.style.opacity = craft && !lit ? .55 : 1; });
-    if (i >= 0) { found('wayfinder'); opened(o); }
-  };
-  const pick = (e, release) => {
-    const m = toMap([e.clientX, e.clientY]), dx = m[0] - f.x, dy = m[1] - f.y, d = Math.hypot(dx, dy);
-    if (d < 6 && release) { set(-1); return; }
-    const a = Math.atan2(dx, -dy) * 180 / Math.PI; o.ang = a;
-    set(((Math.round(((a % 360) + 360) % 360 / 90)) % 4));
-  };
-  el.addEventListener('pointerdown', e => { o.drag = true; o.moved = false; el.setPointerCapture(e.pointerId); });
-  el.addEventListener('pointermove', e => { if (!o.drag) return; o.moved = true; pick(e, false); });
-  el.addEventListener('pointerup', e => { if (o.drag) pick(e, !o.moved); o.drag = false; });
-  el.addEventListener('pointercancel', () => { o.drag = false; });
-  el.addEventListener('click', e => { if (e === FD.replayEvent) pick(e, true); });
-  el.addEventListener('keydown', e => {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); set((o.craft + 1) % 4); }
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); set((o.craft + 3) % 4); }
-    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); set(-1); }
+function findLife(o, x, y, rad, reach = rad) {
+  o.x = x; o.y = y; o.rad = rad;
+  const p = toScreen(FD.st, [x, y]), edge = rad * FD.st.cam.s + FIND_PLAY.kit.margin;
+  o.onScreen = p[0] >= -edge && p[0] <= VIEW.w + edge && p[1] >= -edge && p[1] <= VIEW.h + edge;
+  const pointer = FD.hover && FD.now - FD.pointerT <= FIND_PLAY.fresh ? toMap(FD.pointer) : null;
+  o.awake = JOURNEY.focus === o.id || document.activeElement === o.el || !!(pointer && Math.hypot(pointer[0] - x, pointer[1] - y) <= reach);
+  o.kept ??= false;
+}
+function found(id, atId = id) {
+  if (FD.found.has(id)) return;
+  FD.found.add(id); FD.svg.querySelector('#mk-' + id)?.classList.add('found');
+  if (FD.rm) { FD.landed = FD.found.size; tlSetCount(FD.landed, FINDS.length); return; }
+  FD.flights.push({ id: atId, number: FD.found.size }); findStartFlight();
+}
+function findStartFlight() {
+  if (FD.flight || !FD.flights.length) return;
+  const next = FD.flights.shift(), box = FD.count.getBoundingClientRect();
+  FD.flight = { ...next, from: toScreen(FD.st, findPlace(next.id)), to: [box.left + box.width / 2, box.top + box.height / 2], ts: FD.now };
+}
+function opened(o) { o.overlayEpoch = FD.overlayEpoch; if (o.id !== 'well') FD.last = o; }
+const press = (el, fn) => {
+  el.addEventListener('click', e => { if (el._dragged) { el._dragged = false; return; } fn(e); });
+  el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e); } });
+};
+function showPop(owner, anchor, html, cls = '') {
+  if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return;
+  closePop(); FD.popOwner = owner; FD.popAnchor = anchor; FD.popP = FD.st.P; FD.popTs = FD.now;
+  FD.pop.className = 'pop on ' + cls;
+  FD.pop.innerHTML = `<div class="pop-in"><div class="pop-body">${html}</div><i class="pop-tail" aria-hidden="true"></i></div>`;
+  FD.popInner = FD.pop.firstElementChild; FD.popTail = FD.pop.querySelector('.pop-tail');
+  const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height]; placePop();
+  FD.popInner.style.transformOrigin = `${FD.popOrigin[0]}px ${FD.popOrigin[1]}px`;
+}
+function closePop() {
+  const o = FD.popOwner; if (!o) return;
+  FD.popOwner = null; FD.pop.className = 'pop'; FD.pop.innerHTML = ''; if (o.onPopClose) o.onPopClose();
+}
+function placePop() {
+  if (!FD.popOwner) return;
+  const K = FIND_PLAY.kit.popup, anchor = typeof FD.popAnchor === 'function' ? FD.popAnchor() : FD.popAnchor, p = toScreen(FD.st, anchor), [w, h] = FD.popSize;
+  const below = p[1] - h - K.tail[1] < K.edge;
+  const x = Math.max(K.edge, Math.min(VIEW.w - w - K.edge, p[0] - w / 2));
+  const y = Math.max(K.edge, Math.min(VIEW.h - h - K.edge, below ? p[1] + K.tail[1] : p[1] - h - K.tail[1]));
+  FD.popOrigin = [Math.max(0, Math.min(w, p[0] - x)), below ? 0 : h];
+  FD.pop.style.transform = `translate(${x}px,${y}px)`;
+  const q = FD.rm ? 1 : clamp01((FD.now - FD.popTs) / K.time), back = 1 + (K.over - 1) / (1 - K.scale);
+  const v = 1 + (back + 1) * (q - 1) ** 3 + back * (q - 1) ** 2;
+  FD.popInner.style.transform = `scale(${lerp(K.scale, 1, q === 1 ? 1 : v)})`; FD.popInner.style.opacity = q;
+  FD.popTail.style.transform = `translate(${Math.max(0, Math.min(w - K.tail[0], p[0] - x - K.tail[0] / 2))}px,${below ? -K.tail[1] : h}px) rotate(${below ? FIND_PLAY.kit.deg : 0}deg)`;
+}
+function findSheet(owner, cls, html, anchor) {
+  if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return false;
+  closeSheet(true); closePop();
+  FD.sheetOwner = owner; FD.sheetP = FD.st.P; FD.sheetFrom = toScreen(FD.st, anchor); FD.sheetTs = FD.now;
+  FD.sheet.className = 'sheet on ' + cls; FD.sheet.innerHTML = html;
+  FD.sheet.setAttribute('aria-label', FIND_BY[owner.id].label); FD.sheet.tabIndex = -1;
+  const target = FD.sheet.querySelector('button:not([hidden])') || FD.sheet; target.focus({ preventScroll: true });
+  return true;
+}
+function closeSheet(force = false) {
+  const o = FD.sheetOwner; if (!o) return;
+  if (!force && o.beginClose && o.beginClose()) return;
+  FD.sheetOwner = null; FD.sheet.className = 'sheet'; FD.sheet.innerHTML = '';
+  if (o.onSheetClose) o.onSheetClose(); o.el?.focus({ preventScroll: true });
+}
+function findBits(kind, x, y, n, options = {}) {
+  if (FD.rm) return;
+  const B = FIND_PLAY.bits, v = { ...B.base, ...options };
+  for (let i = 0; i < n; i++) {
+    const bit = FD.bits.find(b => !b.live) || FD.bits.reduce((a, b) => a.serial < b.serial ? a : b);
+    const [path, cls] = kind === 'star' ? [starPath(0, 0, B.starSize), 'pf'] : B.kinds[kind];
+    const angle = findRange(v.dir) * Math.PI / FIND_PLAY.kit.deg, speed = findRange(v.speed);
+    Object.assign(bit, { live: true, serial: FD.serial++, x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, age: 0, life: findRange(v.life), spin: v.spin, g: v.g, drag: v.drag, size: v.size, alpha: kind === 'puff' ? Math.min(B.puffAlpha, v.alpha) : v.alpha, kind });
+    attr(bit.el, 'd', path); attr(bit.el, 'class', cls); bit.el.style.display = ''; if (['star', 'drop', 'puff'].includes(kind)) bit.el.style.stroke = 'none'; else bit.el.style.stroke = '';
+    attr(bit.el, 'transform', `translate(${x} ${y}) scale(${v.size[0]})`); attr(bit.el, 'opacity', bit.alpha);
+  }
+}
+function findKitBuild(svg, pop, sheet, base, rm) {
+  Object.assign(FD, { svg, pop, sheet, base, rm, hover: matchMedia('(hover: hover)').matches, count: document.querySelector('.tl-count') });
+  const pool = findSvg('g', { id: 'f-bits', 'pointer-events': 'none' }); svg.querySelector('#finds').appendChild(pool);
+  for (let i = 0; i < FIND_PLAY.bits.pool; i++) { const el = findSvg('path'); el.style.display = 'none'; pool.appendChild(el); FD.bits.push({ el, live: false, serial: -1 }); }
+  FD.star = document.createElement('div'); FD.star.className = 'find-star'; FD.star.setAttribute('aria-hidden', 'true');
+  FD.star.innerHTML = `<svg viewBox="-1 -1 2 2"><path d="${starPath(0, 0, 1)}"/></svg>`; pop.parentElement.appendChild(FD.star);
+  findKitStyle();
+  sheet.addEventListener('keydown', e => { if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) { e.preventDefault(); e.stopPropagation(); } });
+  sheet.addEventListener('wheel', e => { e.preventDefault(); e.stopPropagation(); }, { passive: false });
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (FD.popOwner || FD.sheetOwner) { e.preventDefault(); closePop(); closeSheet(); } else stepsRelease(); });
+  matchMedia('(hover: hover)').addEventListener('change', e => FD.hover = e.matches);
+  tlSetCount(0, FINDS.length);
+}
+function findKitStyle() {
+  const P = FIND_PLAY, root = document.documentElement;
+  const vars = { 'find-pop-edge': P.kit.popup.edge + 'px', 'find-pop-w': P.kit.popup.width + 'px', 'find-pop-r': P.kit.popup.radius + 'px', 'find-pop-pad': P.kit.popup.pad.map(n => n + 'px').join(' '), 'find-pop-font': P.kit.popup.font + 'px', 'find-pop-line': P.kit.popup.line, 'find-kicker': P.kit.popup.kicker + 'px', 'find-gap': P.kit.popup.gap + 'px', 'find-tail-w': P.kit.popup.tail[0] + 'px', 'find-tail-h': P.kit.popup.tail[1] + 'px', 'find-slot-weight': P.kit.slot.weight, 'find-star-z': P.kit.starZ, 'find-slot-font': P.kit.slot.font + 'px', 'find-slot-rule': P.kit.slot.border + 'px', 'find-slot-pad': P.kit.slot.pad + 'px', 'find-star': P.star.size + 'px', 'find-piece': P.hoard.width + 'px', 'find-piece-top': P.hoard.top + 'px', 'find-icon': P.hoard.icon + 'px', 'find-arm': P.way.armWidth + 'px', 'find-rune-flip': P.rune.flipTime + 's', 'find-rune-w': P.rune.width + 'px', 'find-rune-h': P.rune.height + 'px', 'find-rune-perspective': P.rune.perspective + 'px', 'find-ctl-top': P.rune.controlTop + 'px', 'find-reel-w': P.raven.reel.width + 'px', 'find-iris': P.raven.reel.iris + 'px', 'find-reel-label': P.raven.reel.labelTop + 'px', 'find-reel-slot': P.raven.reel.slotBottom + 'px' };
+  Object.entries(vars).forEach(([k, v]) => root.style.setProperty('--' + k, v));
+  Object.entries(P.css).forEach(([k, v]) => root.style.setProperty('--' + k, v));
+}
+function findKitFrame() {
+  const dt = FD.dt;
+  FD.bits.forEach(b => {
+    if (!b.live) return; b.age += dt;
+    if (b.age >= b.life) { b.live = false; attr(b.el, 'opacity', 0); queueMicrotask(() => { if (!b.live) b.el.style.display = 'none'; }); return; }
+    b.vy += b.g * dt; b.vx *= Math.max(0, 1 - b.drag * dt); b.vy *= Math.max(0, 1 - b.drag * dt); b.x += b.vx * dt; b.y += b.vy * dt;
+    const q = b.age / b.life;
+    attr(b.el, 'transform', `translate(${b.x} ${b.y}) rotate(${b.spin * b.age}) scale(${lerp(b.size[0], b.size[1], q)})`); attr(b.el, 'opacity', b.alpha * (1 - q ** 2));
   });
-  o.undo = () => set(-1);
-  o.onEscape = () => { if (o.craft >= 0) set(-1); };
-  o.tick = (t, dt) => {
-    let target = o.craft >= 0 ? o.craft * 90 : (FD.rm ? 0 : Math.sin(t * .8) * 4 + Math.sin(t * .31) * 2);
-    if (o.drag && o.moved) target = o.ang;
-    let diff = ((target - o.cur + 540) % 360) - 180; if (isNaN(diff)) { o.cur = target; diff = 0; }
-    o.cur += FD.rm ? diff : diff * Math.min(1, dt * 8);
-    attr(needle, 'transform', `rotate(${o.cur.toFixed(2)})`);
+  const f = FD.flight;
+  if (f) {
+    const q = clamp01((FD.now - f.ts) / FIND_PLAY.star.time), k = ease(q);
+    FD.star.style.opacity = 1; FD.star.style.transform = `translate(${lerp(f.from[0], f.to[0], k)}px,${lerp(f.from[1], f.to[1], k) - FIND_PLAY.star.arc * Math.sin(Math.PI * q)}px)`;
+    if (q === 1) { FD.landed = f.number; FD.bump = FD.now; FD.flight = null; FD.star.style.opacity = 0; queueMicrotask(() => { tlSetCount(FD.landed, FINDS.length); findStartFlight(); }); }
+  }
+  if (FD.bump !== undefined) { const q = clamp01((FD.now - FD.bump) / FIND_PLAY.star.bump); FD.count.style.transform = `scale(${lerp(FIND_PLAY.star.peak, 1, ease(q))})`; if (q === 1) FD.bump = undefined; }
+  placePop();
+  if (FD.popOwner && Math.abs(FD.st.P - FD.popP) > FIND_TIMING.closeScroll) closePop();
+  if (FD.sheetOwner && Math.abs(FD.st.P - FD.sheetP) > FIND_TIMING.closeScroll) closeSheet();
+}
+function findCapture(e) {
+  if (FD.rm || JOURNEY.mode !== 'steps' || !FD.st) return;
+  if (e.type === 'keydown' && !['Enter', ' '].includes(e.key)) return;
+  const el = e.target.closest?.('.find'); if (!el) return;
+  if (e.type === 'click' && el._focusBlocked) { el._focusBlocked = false; e.preventDefault(); e.stopImmediatePropagation(); return; }
+  const id = el.id.slice(2), key = id === 'hoards' ? FIND_COPY.hoards[0].id : id;
+  if (JOURNEY.focus === key) return;
+  if (!stepsFocus(key, findView(key))) { if (e.type === 'pointerdown') el._focusBlocked = true; e.preventDefault(); e.stopImmediatePropagation(); }
+  else { FD.overlayEpoch++; closePop(); closeSheet(true); if (e.type === 'pointerdown') el._focusBlocked = false; }
+}
+
+// ---- findhoards.mjs ----
+// Part A: the instrument and the five persistent, hand-dug chests.
+
+
+
+
+
+
+const wayAllStops = () => STOPS.map(s => CRAFTS.every(c => s.crafts.includes(c)));
+function findWay(svg) {
+  const f = FIND_BY.wayfinder, el = svg.querySelector('#f-wayfinder'), needle = el.querySelector('.wf-needle'), words = [...el.querySelectorAll('.wf-word')], arms = [...el.querySelectorAll('.wf-arm')], runes = el.querySelector('.wf-runes'), tally = el.querySelector('.wf-tally'), ring = el.querySelector('.wf-all');
+  const o = { id: f.id, el, craft: -1, angle: 0, speed: 0, runesAngle: 0, drag: false, picked: [], mask: null, kept: false, stage: 'rest', lines: [], lineTs: 0, hearTs: -Infinity };
+  const group = svg.querySelector('#wf-lines');
+  STOPS.forEach(s => {
+    const target = MAP.waypoints[s.w], dx = target[0] - f.x, dy = target[1] - f.y, distance = Math.hypot(dx, dy), length = Math.max(0, distance - FIND_PLAY.way.short);
+    const g = findSvg('g', { transform: `translate(${f.x} ${f.y}) rotate(${Math.atan2(dy, dx) * FIND_PLAY.kit.deg / Math.PI})` }), line = findSvg('path', { d: `M0 0H${length}`, fill: 'none', stroke: C.paper, 'stroke-width': FIND_PLAY.way.lineWidth, 'stroke-dasharray': FIND_PLAY.way.dash.join(' '), 'vector-effect': 'non-scaling-stroke', transform: 'scale(0 1)' });
+    const ping = findSvg('circle', { class: 't', r: FIND_PLAY.way.pingR[0], opacity: 0 });
+    const pg = findSvg('g', { transform: `translate(${target[0]} ${target[1]})` }); pg.appendChild(ping); g.appendChild(line); group.append(g, pg); o.lines.push({ line, ping, v: 0, lit: false, arrived: false });
+  });
+  const applyMask = mask => {
+    o.mask = mask; cardsSetCraft(mask); tlSetCraft(mask);
+    FD.base.style.opacity = mask ? FIND_PLAY.way.dim : 1;
+    svg.querySelectorAll('#finds > .find, #bc-notes').forEach(g => { if (g !== el) g.style.opacity = mask ? FIND_PLAY.way.dim : 1; });
+    FD.list.hoards?.items.forEach(h => { const i = STOPS.findIndex(s => s.id === h.d.stop); h.craftLit = !!mask?.[i]; h.el.style.opacity = mask && !mask[i] ? FIND_PLAY.way.dim : 1; });
   };
-  o.cur = 0;
+  const startLines = () => { o.lineTs = FD.now; o.linePhase = 'grow'; o.lines.forEach((l, i) => { l.lit = !!o.mask?.[i]; l.arrived = false; attr(l.line, 'stroke-dasharray', o.craft === CRAFTS.length ? 'none' : FIND_PLAY.way.dash.join(' ')); }); };
+  const set = i => {
+    if (i === CRAFTS.length && (!o.unlocked || !wayAllStops().some(Boolean))) i = -1;
+    if (o.craft === i) return;
+    o.craft = i; o.pickTs = FD.now;
+    words.forEach((w, j) => w.classList.toggle('on', j === i || i === CRAFTS.length));
+    arms.forEach((a, j) => a.classList.toggle('on', j === i || i === CRAFTS.length));
+    const mask = i < 0 ? null : i === CRAFTS.length ? wayAllStops() : STOPS.map(s => s.crafts.includes(CRAFTS[i]));
+    if (i >= 0) { o.kept = true; if (i < CRAFTS.length && !o.picked.includes(i)) o.picked.push(i); o.unlocked = o.picked.length === CRAFTS.length && wayAllStops().some(Boolean); found(o.id); opened(o); }
+    applyMask(mask);
+    tally.textContent = i < 0 ? '' : i === CRAFTS.length ? findFormat(FIND_COPY.wayAll, { names: STOPS.filter((s, j) => mask[j]).map(s => s.short + ', ' + s.dates).join('; ') }) : findFormat(FIND_COPY.wayTally, { craft: FIND_COPY.crafts[i], n: mask.filter(Boolean).length, t: STOPS.length });
+    o.retract = o.lines.map(l => l.v); o.lineTs = FD.now; o.linePhase = 'retract'; if (FD.rm || o.retract.every(v => v === 0)) { startLines(); if (FD.rm) o.lines.forEach(l => l.v = l.lit ? 1 : 0); }
+  };
+  const pick = e => {
+    const p = toMap([e.clientX, e.clientY]), dx = p[0] - f.x, dy = p[1] - f.y;
+    if (Math.hypot(dx, dy) < FIND_PLAY.way.hub) { set(o.craft >= 0 ? -1 : o.unlocked ? CRAFTS.length : -1); return; }
+    const angle = Math.atan2(dx, -dy) * FIND_PLAY.kit.deg / Math.PI; o.angle = angle; o.speed = 0;
+    set(Math.round((angle % FIND_PLAY.kit.turn + FIND_PLAY.kit.turn) % FIND_PLAY.kit.turn / (FIND_PLAY.kit.turn / CRAFTS.length)) % CRAFTS.length);
+  };
+  el.addEventListener('pointerdown', e => { o.drag = true; el.setPointerCapture(e.pointerId); pick(e); el._dragged = true; });
+  el.addEventListener('pointermove', e => { if (o.drag) pick(e); });
+  el.addEventListener('pointerup', () => o.drag = false); el.addEventListener('pointercancel', () => o.drag = false);
+  el.addEventListener('click', e => { if (el._dragged) el._dragged = false; else pick(e); });
+  el.addEventListener('keydown', e => {
+    const count = CRAFTS.length + (o.unlocked ? 1 : 0);
+    if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(e.key)) { e.preventDefault(); const forward = ['ArrowRight', 'ArrowDown'].includes(e.key); set((o.craft + (forward ? 1 : count - 1) + count) % count); }
+    else if (['Enter', ' '].includes(e.key)) { e.preventDefault(); set(o.craft >= 0 ? -1 : o.unlocked ? CRAFTS.length : -1); }
+  });
+  o.undo = () => set(-1); o.onEscape = () => { if (o.craft >= 0) set(-1); };
+  o.hear = () => { o.hearTs = FD.now; o.hearAngle = o.angle; };
+  o.tick = (t, dt) => {
+    const W = FIND_PLAY.way, p = attend(o, W.near);
+    let target = o.craft >= 0 && o.craft < CRAFTS.length ? o.craft * FIND_PLAY.kit.turn / CRAFTS.length : o.craft === CRAFTS.length ? o.angle + W.allSpeed * dt : p && o.awake ? Math.atan2(p[0] - f.x, f.y - p[1]) * FIND_PLAY.kit.deg / Math.PI : FD.rm ? 0 : Math.sin(t * W.drift[0]) * W.drift[1] + Math.sin(t * W.drift[2]) * W.drift[3];
+    const hearing = t - o.hearTs < W.spin;
+    if (hearing && !FD.rm) { o.angle = o.hearAngle + FIND_PLAY.kit.turn * ease((t - o.hearTs) / W.spin); o.speed = 0; }
+    else if (o.craft === CRAFTS.length && !FD.rm) { o.angle += W.allSpeed * dt; o.speed = W.allSpeed; }
+    else if (!o.drag) { const diff = findAngleDelta(o.angle, target); if (FD.rm) o.angle = target; else { o.speed += (W.stiff * diff - W.damp * o.speed) * dt; o.angle += o.speed * dt; } }
+    attr(needle, 'transform', `rotate(${o.angle})`);
+    const pulse = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - (o.pickTs ?? -Infinity)) / W.pulse[1]));
+    arms.forEach((arm, i) => attr(arm, 'transform', `rotate(${i * FIND_PLAY.kit.turn / CRAFTS.length}) scale(${1 + (W.pulse[0] - 1) * pulse * (o.craft === i || o.craft === CRAFTS.length ? 1 : 0)})`));
+    if (o.kept && !FD.rm) { o.runesAngle += W.runes * dt; attr(runes, 'transform', `rotate(${o.runesAngle})`); }
+    attr(ring, 'opacity', o.unlocked ? 1 : 0);
+    if (o.unlocked && !FD.rm) attr(ring, 'transform', `scale(${lerp(W.ring[0], W.ring[1], (1 - Math.cos(t * Math.PI * 2 / W.ring[2])) / 2) / W.ring[0]})`);
+    if (o.linePhase === 'retract') { const q = FD.rm ? 1 : clamp01((t - o.lineTs) / W.line); o.lines.forEach((l, i) => l.v = o.retract[i] * (1 - ease(q))); if (q === 1) queueMicrotask(startLines); }
+    let order = 0;
+    o.lines.forEach(l => {
+      if (o.linePhase === 'grow') {
+        if (l.lit) { const age = t - o.lineTs - order++ * W.gap; l.v = FD.rm ? 1 : ease(age / W.line); if (l.v === 1 && !l.arrived) { l.arrived = true; l.pingTs = t; } } else l.v = 0;
+      }
+      attr(l.line, 'transform', `scale(${l.v} 1)`); attr(l.line, 'opacity', o.craft === CRAFTS.length ? W.solidAlpha : W.alpha);
+      const q = clamp01((t - (l.pingTs ?? -Infinity)) / W.ping); attr(l.ping, 'opacity', FD.rm ? 0 : W.pingAlpha * (1 - q)); attr(l.ping, 'transform', `scale(${lerp(W.pingR[0], W.pingR[1], q) / W.pingR[0]})`);
+    });
+    o.stage = o.craft === CRAFTS.length ? 'all-four' : o.craft >= 0 ? 'craft' : 'rest';
+  };
   return o;
 }
-
-// ---- 2. hoards ----
-function find_hoards(svg) {
-  const o = { id: 'hoards', items: [] };
+function findHoards(svg) {
+  const o = { id: 'hoards', el: svg.querySelector('#f-hoards'), items: [], kept: false, stage: 'buried' };
   FIND_COPY.hoards.forEach(d => {
-    const el = svg.querySelector('#f-' + d.id), h = { d, el, chest: el.querySelector('.hd-chest'), lid: el.querySelector('.hd-lid'), glow: el.querySelector('.hd-glow'), stars: [...el.querySelectorAll('.hd-star')], v: 0, target: 0, ts: -1 };
-    const item = { id: 'hoards', onPopClose: null, undo: () => { h.target = 0; if (FD.popOwner === item) closePop(); } };
-    press(el, () => {
-      found('hoards'); opened(item); h.target = 1; if (h.ts < 0 || h.v < .01) h.ts = FD.now;
-      const show = () => showPop(item, [d.x, d.y - 18], `<p class="pop-k">${fEsc(STOPS.find(s => s.id === d.stop).name)}</p>${d.image ? `<img src="${d.image}" alt="">` : ''}<p class="pop-t">${fEsc(d.title)}</p><button class="pop-link" type="button">${COPY.caseStudy}${arrowHtml}</button>`, 'card');
-      h.pending = show;
-    });
-    h.tick = t => {
-      const step = (FD.rm ? 1 : (1 / FIND_TIMING.dig) * FD.dt);
-      h.v = h.target > h.v ? Math.min(1, h.v + step) : Math.max(0, h.v - step);
-      attr(h.chest, 'transform', `translate(0 ${(60 * (1 - ease(h.v))).toFixed(2)})`);
-      const lp = h.target === 1 ? clamp01((t - h.ts - D(FIND_TIMING.dig)) / D(.25)) : (h.v >= 1 ? 1 : 0) * h.v;
-      attr(h.lid, 'transform', `rotate(${(-32 * out3(lp)).toFixed(2)} 30 -34) translate(0 ${(-6 * out3(lp)).toFixed(2)})`);
-      const b = h.target === 1 ? clamp01((t - h.ts - D(FIND_TIMING.dig) - D(.1)) / D(FIND_TIMING.burst)) : 1;
-      h.stars.forEach((s, i) => { const a = i * Math.PI / 4 - Math.PI / 2, dd = (i % 2 ? 34 : 48) * out3(b); attr(s, 'transform', `translate(${(Math.cos(a) * dd).toFixed(1)} ${(Math.sin(a) * dd - 14 * b).toFixed(1)})`); attr(s, 'opacity', FD.rm ? 0 : (b > 0 && b < 1 ? (1 - b) : 0).toFixed(2)); });
-      if (h.pending && h.v >= 1 && lp >= 1) { h.pending(); h.pending = null; }
+    const el = svg.querySelector('#f-' + d.id), h = { id: d.id, d, el, digs: 0, open: false, kept: false, stage: 'buried', lift: 0, liftFrom: 0, ts: -Infinity, glintAt: FD.now + findRange(FIND_PLAY.hoard.glint), glintTs: -Infinity, hold: false, lastDig: -Infinity, chest: el.querySelector('.hd-chest'), lid: el.querySelector('.hd-lid'), scratch: el.querySelector('.hd-scratch'), hole: el.querySelector('.hd-hole'), pile: el.querySelector('.hd-pile'), glow: el.querySelector('.hd-glow'), glint: el.querySelector('.hd-glint'), stars: [...el.querySelectorAll('.hd-star')] };
+    const show = () => {
+      const H = FIND_PLAY.hoard, stop = STOPS.find(s => s.id === d.stop), n = o.items.filter(item => item.open).length;
+      showPop(h, [d.x, d.y - H.anchor], `<p class="pop-k">${fEsc(stop.name)}<br>${fEsc(findFormat(FIND_COPY.hoardTally, { n, t: o.items.length }))}</p>${d.image ? `<img src="${d.image}" alt="${fEsc(d.title)}">` : `<div class="piece-empty"><svg viewBox="${H.iconBox.join(' ')}" aria-hidden="true">${pieceIcon(d.kind)}</svg><span>${fEsc(COPY.pieceToCome)}</span></div>`}<p class="pop-t">${fEsc(d.title)}</p><button class="pop-link" type="button">${fEsc(COPY.caseStudy)}${arrowSvg}</button>`, 'piece');
+      FD.pop.style.setProperty('--piece-mark', PALETTES[stop.palette].mark);
+    };
+    const act = () => {
+      const H = FIND_PLAY.hoard; opened(h);
+      if (h.digs < H.hole.length) {
+        h.liftFrom = h.lift; h.digs++; h.ts = FD.now; h.lastDig = FD.now; h.stage = 'rising';
+        attr(h.hole, 'rx', H.hole[h.digs - 1]); attr(h.hole, 'ry', H.hole[h.digs - 1] * H.holeRatio);
+        attr(h.pile, 'opacity', 1); attr(h.pile, 'transform', `scale(${H.pile[h.digs - 1]})`); attr(h.scratch, 'opacity', 0);
+        findBits('clod', d.x, d.y, H.clods, FIND_PLAY.bits.clods); findBits('puff', d.x, d.y, H.puffs, FIND_PLAY.bits.puffs);
+      } else if (!h.open) {
+        h.open = h.kept = o.kept = true; h.stage = 'opening'; h.openTs = FD.now;
+        found('hoards', d.id); findBits('star', d.x, d.y - H.anchor, H.stars, FIND_PLAY.bits.stars);
+        h.pending = true;
+      } else { h.bounceTs = FD.now; show(); }
+    };
+    el.addEventListener('pointerdown', e => { h.hold = true; h.nextHold = FD.now + FIND_PLAY.hoard.repeat; el.setPointerCapture(e.pointerId); act(); el._dragged = true; });
+    el.addEventListener('pointerup', () => h.hold = false); el.addEventListener('pointercancel', () => h.hold = false);
+    press(el, e => { e.stopPropagation(); act(); });
+    h.undo = () => { if (FD.popOwner === h) closePop(); };
+    h.hear = () => { if (!h.open) h.glintTs = h.hearTs = FD.now; };
+    h.tick = (t, dt) => {
+      const H = FIND_PLAY.hoard;
+      findLife(h, d.x, d.y, H.rad, H.near);
+      if (!h.onScreen && !h.hold && !['rising', 'opening'].includes(h.stage)) return;
+      if (h.hold && t >= h.nextHold) { if (h.digs < H.hole.length || t - h.lastDig >= Math.max(H.openHold, H.rise)) { act(); h.nextHold = t + (h.digs < H.hole.length ? H.repeat : H.openHold); if (h.open) h.hold = false; } }
+      if (h.awake !== h.wasAwake) { const awake = h.awake; queueMicrotask(() => { h.scratch.style.strokeWidth = awake ? H.scratchWidth : ''; }); if (awake && !h.digs) findBits('clod', d.x, d.y, H.hopClods, FIND_PLAY.bits.hop); }
+      h.wasAwake = h.awake;
+      if (!FD.rm && t >= h.glintAt && !h.digs) { h.glintTs = t; h.glintAt = t + findRange(H.glint); }
+      const glint = FD.rm ? 1 : clamp01((t - h.glintTs) / H.glintTime); attr(h.glint, 'opacity', Math.sin(Math.PI * glint)); attr(h.glint, 'transform', `translate(0 ${-H.scratchHop * Math.sin(Math.PI * glint)}) rotate(${H.glintTurn * glint}) scale(${Math.sin(Math.PI * glint)})`);
+      const heard = FD.rm ? 1 : clamp01((t - (h.hearTs ?? -Infinity)) / H.glintTime); attr(h.scratch, 'transform', `translate(0 ${-H.scratchHop * Math.sin(Math.PI * heard)})`);
+      const q = FD.rm ? 1 : clamp01((t - h.ts) / H.rise), target = h.digs / H.hole.length;
+      h.lift = lerp(h.liftFrom, target, ease(q));
+      const overshoot = q === 1 || FD.rm ? 0 : Math.sin(Math.PI * q) * H.over;
+      attr(h.chest, 'transform', `translate(0 ${H.travel * (1 - h.lift) - overshoot}) rotate(${h.digs === H.hole.length && !h.open && !FD.rm ? H.rattleAngle * Math.sin(Math.PI * 2 * H.rattleCycles * clamp01((t - h.ts - H.rise) / H.rattle)) : 0})`);
+      if (q === 1 && h.stage === 'rising') h.stage = h.digs === H.hole.length ? 'out' : 'buried';
+      const lp = !h.open ? 0 : FD.rm ? 1 : clamp01((t - h.openTs) / H.lidTime), back = 1 + (H.lidOver + 1) * (lp - 1) ** 3 + H.lidOver * (lp - 1) ** 2;
+      const bounce = !FD.rm && h.bounceTs !== undefined ? Math.sin(Math.PI * clamp01((t - h.bounceTs) / H.lidTime)) : 0;
+      attr(h.lid, 'transform', `rotate(${H.lidAngle * back * (h.open ? 1 : 0) + H.rattleAngle * bounce} ${H.lidPivot[0]} ${H.lidPivot[1]}) translate(0 ${H.lidLift * back * (h.open ? 1 : 0)})`);
+      const age = t - (h.openTs ?? -Infinity), glow = h.open ? age < H.glowTime ? H.glowPeak * clamp01(age / H.glowTime) : FD.popOwner === h ? H.glowRest : H.glowKept : 0;
+      attr(h.glow, 'opacity', Math.max(glow, h.craftLit ? 1 : 0));
+      const burst = FD.rm ? 1 : clamp01(age / D(H.glowTime + H.lidTime));
+      h.stars.forEach((s, i) => { const a = i * Math.PI * 2 / h.stars.length - Math.PI / 2, distance = H.burstTravel[i % 2] * out3(burst); attr(s, 'transform', `translate(${Math.cos(a) * distance} ${Math.sin(a) * distance - H.burstLift * burst})`); attr(s, 'opacity', FD.rm || !h.open ? 0 : 1 - burst); });
+      if (h.pending && lp === 1) { h.pending = false; h.stage = 'open'; queueMicrotask(show); }
     };
     o.items.push(h);
   });
-  o.tick = t => o.items.forEach(h => h.tick(t));
-  return o;
+  press(o.el, e => { if (e.target === o.el) o.items[0].el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); });
+  o.tick = (t, dt) => { o.items.forEach(h => h.tick(t, dt)); o.stage = o.items.some(h => h.open) ? 'opened' : 'buried'; };
+  o.hear = () => o.items.forEach(h => h.hear()); return o;
 }
 
-// ---- 3. Huginn and Muninn ----
-function find_ravens(svg) {
-  const f = FIND_BY.ravens, el = svg.querySelector('#f-ravens'), a = el.querySelector('.rv-a'), heads = [...el.querySelectorAll('.rv-head')];
-  const k = .72, perch = [[-5, -34], [6, -33]];
-  const o = { id: 'ravens', ts: -1, phase: 'rest' };
-  const land = [30, 30];
-  const flyPos = p => [land[0] * p + 10 * Math.sin(2 * Math.PI * p), land[1] * p * p - 26 * Math.sin(Math.PI * p)];
-  press(el, () => { if (o.phase !== 'rest') return; found('ravens'); opened(o); o.phase = 'fly'; o.ts = FD.now; });
-  const stop = () => { if (o.phase === 'rest' || o.phase === 'back') return; if (FD.sheetOwner === o) closeSheet(); o.phase = 'back'; o.ts = FD.now; };
-  o.undo = stop; o.onEscape = stop;
-  o.onSheetClose = () => { if (o.phase === 'reel' || o.phase === 'iris') { o.phase = 'back'; o.ts = FD.now; } };
-  const openReel = () => {
-    const lp = [f.x + (perch[0][0] + land[0]) * k, f.y + (perch[0][1] + land[1]) * k];
-    FD.sheetOwner = o; FD.sheetP = FD.st.P; FD.sheetFrom = toScreen(FD.st, lp);
-    FD.sheet.className = 'sheet on reel';
-    FD.sheet.innerHTML = `<div class="iris"><div class="iris-in"><div class="player" role="img" aria-label="Placeholder reel"><i class="sh sh1"></i><i class="sh sh2"></i><i class="sh sh3"></i><svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16"/><circle class="ring-p" cx="20" cy="20" r="16" pathLength="100" stroke-dasharray="100 100" stroke-dashoffset="100"/></svg><span class="tc">${FIND_COPY.ravenTime[0]} / ${FIND_COPY.ravenTime[1]}</span></div></div></div>`;
-    o.sh = [...FD.sheet.querySelectorAll('.sh')]; o.ring = FD.sheet.querySelector('.ring-p'); o.tc = FD.sheet.querySelector('.tc'); o.iris = FD.sheet.querySelector('.iris'); o.irisIn = FD.sheet.querySelector('.iris-in');
-  };
-  o.tick = (t) => {
-    // heads follow the pointer
-    const pm = toMap(FD.pointer);
-    heads.forEach((h, i) => { const hx = f.x + (perch[i][0] + (i ? -5 : 5)) * k, hy = f.y + (perch[i][1] - 9) * k; let ang = Math.atan2(pm[1] - hy, pm[0] - hx) * 180 / Math.PI; if (i) ang = 180 - ang; ang = ((ang + 540) % 360) - 180; ang = Math.max(-35, Math.min(35, ang)); h._a = lerp(h._a || 0, ang, Math.min(1, FD.dt * 6)); attr(h, 'transform', `translate(5 -9) rotate(${h._a.toFixed(1)})`); });
-    const e = t - o.ts;
-    if (o.phase === 'fly') { const p = clamp01(e / D(FIND_TIMING.ravenLoop)), q = flyPos(ease(p)); attr(a, 'transform', `translate(${q[0].toFixed(1)} ${q[1].toFixed(1)})`); if (p >= 1) { o.phase = 'reel'; o.ts = t; openReel(); } }
-    else if (o.phase === 'reel' || o.phase === 'iris') {
-      const grow = out3(e / D(.35)), from = FD.sheetFrom, cx = VIEW.w / 2, cy = VIEW.h / 2 - 20;
-      const ks = lerp(.08, 1, grow);
-      FD.sheet.style.transform = `translate(${lerp(from[0], cx, grow).toFixed(1)}px,${lerp(from[1], cy, grow).toFixed(1)}px) scale(${ks.toFixed(3)})`;
-      const pt = clamp01((e - .35) / FIND_TIMING.reel);
-      o.ring.setAttribute('stroke-dashoffset', (100 * (1 - pt)).toFixed(1));
-      o.tc.textContent = `00:0${Math.min(5, Math.floor(pt * 5))} / ${FIND_COPY.ravenTime[1]}`;
-      if (!FD.rm) o.sh.forEach((s, i) => s.style.transform = `translate(${(Math.sin(e * (1.3 + i * .4) + i * 2) * 60).toFixed(1)}px,${(Math.cos(e * (1.1 + i * .3) + i) * 22).toFixed(1)}px) rotate(${(e * 40 * (i - 1)).toFixed(0)}deg)`);
-      if (pt >= 1 && o.phase === 'reel') { o.phase = 'iris'; o.irisT = t; }
-      if (o.phase === 'iris') { const q = clamp01((t - o.irisT) / D(FIND_TIMING.iris)), kk = Math.max(.001, 1 - ease(q)); o.iris.style.transform = `scale(${kk.toFixed(4)})`; o.irisIn.style.transform = `scale(${(1 / kk).toFixed(4)})`; if (q >= 1) { closeSheet(); o.phase = 'back'; o.ts = t; } }
-    } else if (o.phase === 'back') { const p = clamp01(e / D(.5)), q = flyPos(1 - ease(p)); attr(a, 'transform', `translate(${q[0].toFixed(1)} ${(q[1] - Math.sin(Math.PI * p) * 6).toFixed(1)})`); if (p >= 1) o.phase = 'rest'; }
-  };
-  return o;
-}
+// ---- findcreatures.mjs ----
+// Part A: thought and memory return; deadlines become a three-poke chase.
 
-// ---- 4. the serpent ----
-function find_serpent(svg) {
-  const f = FIND_BY.serpent, el = svg.querySelector('#f-serpent'), loops = [...el.querySelectorAll('.sp-loop')], head = el.querySelector('.sp-head'), leaf = el.querySelector('.sp-leaf'), rips = [...el.querySelectorAll('.sp-rip ellipse')];
-  const k = .52, o = { id: 'serpent', ts: -1, n: 0, phase: 'rest', ha: 0 };
-  press(el, () => { if (o.phase === 'sink') return; found('serpent'); opened(o); o.phase = 'sink'; o.ts = FD.now; attr(leaf, 'opacity', 0); if (FD.popOwner === o) closePop(); });
-  o.onPopClose = () => { attr(leaf, 'opacity', 0); };
-  o.undo = () => { closePop(); attr(leaf, 'opacity', 0); };
-  o.tick = t => {
-    const pm = toMap(FD.pointer), hx = f.x - 86 * k, hy = f.y - 42 * k;
-    let ang = Math.atan2(pm[1] - hy, pm[0] - hx) * 180 / Math.PI; ang = ((ang - 180 + 540) % 360) - 180; ang = Math.max(-25, Math.min(25, ang));
-    o.ha = lerp(o.ha, ang, Math.min(1, FD.dt * 5)); attr(head, 'transform', `rotate(${o.ha.toFixed(1)} -72 -40)`);
-    const e = t - o.ts, n = loops.length;
-    if (o.phase === 'sink') {
-      const sinkEnd = D(FIND_TIMING.serpentSink), surf = sinkEnd + D(FIND_TIMING.serpentSurface) * .5, up = D(.5);
-      loops.forEach((g, j) => { const d = clamp01((e - j * D(.12)) / D(.35)), u = clamp01((e - surf - (n - 1 - j) * D(.08)) / up); attr(g, 'transform', `translate(0 ${(34 * ease(d) * (1 - ease(u))).toFixed(1)})`); });
-      rips.forEach((r, j) => { const q = clamp01((e - .25 - j * .15) / .8); attr(r, 'transform', `translate(${(-40 + j * 40) * 0} 0) scale(${(1 + q * 1.6).toFixed(2)} ${(1 + q * .8).toFixed(2)})`); attr(r, 'opacity', FD.rm ? 0 : (q > 0 && q < 1 ? .8 * (1 - q) : 0).toFixed(2)); });
-      if (e > surf + up + (n - 1) * D(.08)) { o.phase = 'rest'; attr(leaf, 'opacity', 1); showPop(o, [f.x - 60 * k, f.y - 70 * k], `<p class="pop-t">${fEsc(FIND_COPY.serpentLines[o.n % FIND_COPY.serpentLines.length])}</p>`); o.n++; }
-    }
-  };
-  return o;
-}
 
-// ---- 5. the beacon ----
-function find_beacon(svg) {
-  const f = FIND_BY.beacon, el = svg.querySelector('#f-beacon'), beam = el.querySelector('.bc-beam'), notes = [...svg.querySelectorAll('.bc-note')].map((g, i) => ({ g, en: g.querySelector('.bc-en'), d: FIND_COPY.beaconNotes[i], v: 0, lit: 0 }));
-  const O = [f.x, f.y - 50 * .6], R = 230 * .6, half = FIND_TIMING.beamCone / 2;
-  const o = { id: 'beacon', head: 176, manualT: -99, drag: false };
-  const aimAt = e => { const m = toMap([e.clientX, e.clientY]); o.head = Math.atan2(m[1] - O[1], m[0] - O[0]) * 180 / Math.PI; o.manualT = FD.now; found('beacon'); opened(o); };
-  el.addEventListener('pointerdown', e => { o.drag = true; el.setPointerCapture(e.pointerId); aimAt(e); });
-  el.addEventListener('pointermove', e => { if (o.drag) aimAt(e); });
-  el.addEventListener('pointerup', () => { o.drag = false; }); el.addEventListener('pointercancel', () => { o.drag = false; });
-  el.addEventListener('keydown', e => { const d = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -6 : e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 6 : 0; if (!d) return; e.preventDefault(); o.head += d; o.manualT = FD.now; found('beacon'); opened(o); });
-  el.addEventListener('click', e => { if (e === FD.replayEvent) aimAt(e); });
-  el.addEventListener('keydown', e => { if (JOURNEY.mode === 'steps' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); o.manualT = FD.now; found('beacon'); opened(o); } });
-  o.undo = () => { o.manualT = -99; };
+
+function findRavens(svg) {
+  const f = FIND_BY.ravens, el = svg.querySelector('#f-ravens'), birds = [...el.querySelectorAll('.rv-a, .rv-b')].map((g, i) => ({ g, sit: g.querySelector('.rv-sit'), fly: g.querySelector('.rv-fly'), head: g.querySelector('.rv-head'), body: g.querySelector('.rv-body'), near: g.querySelector('.rv-near'), far: g.querySelector('.rv-far'), item: g.querySelector('.rv-item'), i, angle: 0, landTs: -Infinity })), scratches = [...el.querySelectorAll('.rv-tally path')];
+  const o = { id: f.id, el, stage: 'rest', next: 0, thoughts: 0, tally: 0, kept: false, ts: -Infinity, preenAt: FD.now + findRange(FIND_PLAY.raven.preen), preenBird: 0, preenTs: -Infinity, ruffleTs: -Infinity };
+  birds.forEach((b, i) => { const R = FIND_PLAY.raven; b.item.innerHTML = i === 0 ? `<rect class="pf" x="${R.beak[0]}" y="${R.beak[1]}" width="${R.strip[0]}" height="${R.strip[1]}"/>` : `<rect class="o" x="${R.beak[0]}" y="${R.beak[1]}" width="${R.frame[0]}" height="${R.frame[1]}"/>`; attr(b.item, 'opacity', 0); });
+  const start = (kind, index) => {
+    const R = FIND_PLAY.raven; o.stage = kind; o.activeBird = index; o.ts = FD.now;
+    const perch = R.perches[index], A = [f.x + perch[0] * R.scale, f.y + perch[1] * R.scale];
+    const target = index === 0 ? MAP.waypoints[STOPS[o.thoughts % STOPS.length].w] : MAP.x;
+    const dx = target[0] - A[0], dy = target[1] - A[1], length = Math.hypot(dx, dy) || 1;
+    o.unit = [dx / length, dy / length];
+    birds.forEach(b => { if (kind === 'hear' || b.i === index) { attr(b.sit, 'opacity', 0); attr(b.fly, 'opacity', 1); findBits('feather', f.x + R.perches[b.i][0] * R.scale, f.y + R.perches[b.i][1] * R.scale, R.feathers, FIND_PLAY.bits.feathers); } });
+  };
+  press(el, () => { if (o.stage !== 'rest') return; found(o.id); opened(o); start('flight', o.next); o.next = 1 - o.next; });
+  o.hear = () => { if (FD.rm) return; if (o.stage === 'rest') start('hear', 0); else o.hearPending = true; };
+  o.onSheetClose = () => { o.stage = 'rest'; };
+  o.undo = () => { if (FD.sheetOwner === o) closeSheet(true); if (FD.popOwner === o) closePop(); };
+  const reel = () => {
+    const R = FIND_PLAY.raven;
+    const shown = findSheet(o, 'reel', `<div class="iris"><div class="iris-in"><div class="player" role="img" aria-label="${fEsc(FIND_COPY.reelLabel)}"><p class="reel-k pop-k">${fEsc(FIND_COPY.muninn)}</p><i class="sh sh1"></i><i class="sh sh2"></i><i class="sh sh3"></i><div class="reel-slot">${findSlot(FIND_COPY.reelToCome)}</div>${R.reel.ringSvg}<span class="tc">${FIND_COPY.ravenTime.join(R.reel.timeJoin)}</span></div></div></div>`, [f.x, f.y]);
+    if (!shown) { o.stage = 'rest'; return; }
+    o.iris = FD.sheet.querySelector('.iris'); o.irisIn = FD.sheet.querySelector('.iris-in'); o.sh = [...FD.sheet.querySelectorAll('.sh')]; o.tc = FD.sheet.querySelector('.tc');
+    if (!FD.rm) FD.sheet.querySelector('.ring-p').animate([{ strokeDashoffset: R.reel.ring }, { strokeDashoffset: 0 }], { duration: FIND_TIMING.reel * 1000, fill: 'forwards' });
+    o.stage = 'reel'; o.ts = FD.now;
+  };
+  const landed = index => {
+    const R = FIND_PLAY.raven; birds.forEach(b => { attr(b.sit, 'opacity', 1); attr(b.fly, 'opacity', 0); attr(b.item, 'opacity', 0); b.landTs = FD.now; });
+    o.stage = 'rest';
+    if (index === 0) {
+      const stop = STOPS[o.thoughts % STOPS.length]; o.thoughts++; o.tally = Math.min(STOPS.length, o.thoughts); o.kept = true;
+      scratches.forEach((s, i) => attr(s, 'opacity', i < o.tally ? R.tallyAlpha : 0));
+      showPop(o, [f.x, f.y - Math.abs(R.perches[0][1]) * R.scale], `<p class="pop-k">${fEsc(FIND_COPY.huginn)}<br>${fEsc(findFormat(FIND_COPY.ravenFrom, { name: stop.short }))}</p><p class="pop-t">${fEsc(stop.copy.took)}</p><p class="pop-k">${fEsc(stop.dates)}</p>`);
+    } else reel();
+  };
   o.tick = (t, dt) => {
-    const manual = o.drag || t - o.manualT < 6;
-    if (!manual) o.head = FD.rm ? 176 : 176 + 36 * Math.sin(t * FIND_TIMING.beamSweep);
-    attr(beam, 'transform', `translate(0 -50) rotate(${(o.head - 180).toFixed(2)})`);
-    notes.forEach(n => {
-      const dx = n.d.x - O[0], dy = n.d.y - O[1], a = Math.atan2(dy, dx) * 180 / Math.PI, diff = Math.abs(((a - o.head + 540) % 360) - 180);
-      const inL = diff < half + 2 && Math.hypot(dx, dy) < R;
-      n.lit = inL ? n.lit + dt : 0;
-      n.v = FD.rm ? (inL ? 1 : 0) : lerp(n.v, inL ? 1 : 0, Math.min(1, dt * 6));
-      if (n.lit > FIND_TIMING.noteDelay) n.en.dataset.on = '1'; else if (!inL) n.en.dataset.on = '';
-      n.ev = FD.rm ? (n.en.dataset.on ? 1 : 0) : lerp(n.ev || 0, n.en.dataset.on ? 1 : 0, Math.min(1, dt * 5));
-      attr(n.g, 'opacity', n.v.toFixed(3)); attr(n.en, 'opacity', n.ev.toFixed(3));
-    });
-  };
-  return o;
-}
-
-// ---- 6. the rune stone ----
-function find_runestone(svg) {
-  const f = FIND_BY.runestone, el = svg.querySelector('#f-runestone'), trace = el.querySelector('.rs-trace'), P = FIND_COPY.poster;
-  const o = { id: 'runestone', phase: 'rest', ts: -1 };
-  press(el, () => { if (o.phase !== 'rest') return; found('runestone'); opened(o); o.phase = 'trace'; o.ts = FD.now; o.len = trace.getTotalLength() * .55 * FD.st.cam.s; trace.classList.add('red'); trace.style.strokeDasharray = `${o.len} ${o.len}`; });
-  const reset = () => { o.phase = 'rest'; trace.classList.remove('red'); trace.style.strokeDasharray = 'none'; };
-  o.onSheetClose = reset; o.undo = () => { closeSheet(); reset(); }; o.onEscape = () => { if (o.phase === 'trace') reset(); };
-  const openSheet = () => {
-    FD.sheetOwner = o; FD.sheetP = FD.st.P; FD.sheetFrom = toScreen(FD.st, [f.x, f.y - 20]);
-    FD.sheet.className = 'sheet on poster';
-    FD.sheet.innerHTML = `<div class="pz"><div class="pz-in"><div class="pz-front"><span class="pz-pin"></span><span class="pz-pin r"></span><b class="pz-h">${P.head}</b><div class="pz-pic"><i></i><s></s></div><b class="pz-who">${P.who}</b><p>${P.line1}<br>${P.line2}</p><b class="pz-rw">${P.reward}</b><span class="pz-stamp">${P.stamp}</span><span class="pz-fold"></span></div><div class="pz-back"><p>${P.back[0]}</p><p>${P.back[1]}</p></div></div></div><div class="pz-ctl"><button type="button" class="pz-flip">${COPY.flip}</button><button type="button" class="pz-x">${COPY.close}</button></div>`;
-    o.pz = FD.sheet.querySelector('.pz'); o.pin = FD.sheet.querySelector('.pz-in');
-    FD.sheet.querySelector('.pz-flip').addEventListener('click', () => o.pin.classList.toggle('flip'));
-    FD.sheet.querySelector('.pz-x').addEventListener('click', closeSheet);
-    FD.sheet.querySelector('.pz-flip').focus({ preventScroll: true });
-  };
-  o.tick = t => {
-    const e = t - o.ts;
-    if (o.phase === 'trace') { const q = clamp01(e / D(FIND_TIMING.carving)); trace.style.strokeDashoffset = (o.len * (1 - q)).toFixed(1); if (q >= 1) { o.phase = 'sheet'; o.ts = t; openSheet(); } }
-    else if (o.phase === 'sheet') {
-      const q = clamp01(e / D(FIND_TIMING.unroll)), a = ease(q / .5), b = ease((q - .5) / .5), from = FD.sheetFrom;
-      const cx = VIEW.w / 2, cy = VIEW.h / 2 - 14, k0 = .06;
-      FD.sheet.style.transform = `translate(${lerp(from[0], cx, a).toFixed(1)}px,${lerp(from[1], cy, a).toFixed(1)}px) scale(${lerp(k0, 1, a).toFixed(3)})`;
-      o.pz.style.transform = `rotate(${lerp(-10, 2, a).toFixed(1)}deg) scaleY(${lerp(.08, 1, b).toFixed(3)})`;
+    const R = FIND_PLAY.raven, e = t - o.ts, p = attend(o, R.attend);
+    if (o.awake && !o.wasAwake) o.ruffleTs = t; o.wasAwake = o.awake;
+    if (!FD.rm && t >= o.preenAt && o.stage === 'rest') { o.preenTs = t; o.preenBird = 1 - o.preenBird; o.preenAt = t + findRange(R.preen); }
+    if (o.stage === 'reel') {
+      if (FD.sheetOwner !== o) { o.stage = 'rest'; return; }
+      const grow = FD.rm ? 1 : out3(e / FIND_PLAY.kit.sheet.grow), from = FD.sheetFrom;
+      const fit = Math.min(1, (Math.min(FD.st ? innerWidth : R.reel.iris, innerHeight) - FIND_PLAY.kit.sheet.edge) / R.reel.iris);
+      FD.sheet.style.transform = `translate(${lerp(from[0], innerWidth / 2, grow)}px,${lerp(from[1], innerHeight / 2 - FIND_PLAY.kit.sheet.offset, grow)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, fit, grow)})`;
+      const q = clamp01((e - (FD.rm ? 0 : FIND_PLAY.kit.sheet.grow)) / FIND_TIMING.reel), digits = Math.min(FIND_TIMING.reel, Math.floor(q * FIND_TIMING.reel));
+      if (digits !== o.digits) { o.digits = digits; const tc = o.tc; queueMicrotask(() => { if (tc.isConnected) tc.textContent = findFormat(R.reel.tc, { n: digits, end: FIND_COPY.ravenTime[1] }); }); }
+      if (!FD.rm) o.sh.forEach((s, i) => { const M = R.reel.motion; s.style.transform = `translate(${Math.sin(e * (M[0] + i * M[1]) + i * M[2]) * M[3]}px,${Math.cos(e * (M[4] + i * M[5]) + i) * M[6]}px) rotate(${e * M[7] * (i - 1)}deg)`; });
+      const end = FD.rm ? q === 1 ? 1 : 0 : clamp01((e - FIND_PLAY.kit.sheet.grow - FIND_TIMING.reel) / FIND_TIMING.iris), iris = Math.max(Number.EPSILON, 1 - ease(end));
+      o.iris.style.transform = `scale(${iris})`; o.irisIn.style.transform = `scale(${1 / iris})`;
+      if (end === 1) queueMicrotask(() => closeSheet(true));
+      return;
     }
+    const total = R.out + R.away + R.back, hearing = o.stage === 'hear', flying = o.stage === 'flight';
+    birds.forEach(b => {
+      const perch = R.perches[b.i], active = hearing || flying && b.i === o.activeBird;
+      let x = perch[0], y = perch[1], scale = R.birdScale, turn = 0, mirror = b.i === 0 ? -1 : 1, alpha = 1, sy = 1;
+      if (active) {
+        const q = FD.rm ? 1 : clamp01(e / (hearing ? R.loop : total));
+        if (hearing) { const angle = q * Math.PI * 2; x += R.hearReach * Math.sin(angle) / R.scale; y -= R.hearReach * (1 - Math.cos(angle)) / R.scale; turn = Math.atan2(-Math.sin(angle), Math.cos(angle)) * FIND_PLAY.kit.deg / Math.PI; mirror = Math.cos(angle) < 0 ? -1 : 1; if (mirror < 0) turn -= FIND_PLAY.kit.deg; }
+        else {
+          const returning = e >= R.out + R.away;
+          const s = FD.rm ? 0 : e < R.out ? (clamp01(e / R.out)) ** 2 : returning ? (1 - clamp01((e - R.out - R.away) / R.back)) ** 2 : 1;
+          const u = o.unit, normal = [-u[1], u[0]], sign = returning ? -1 : 1;
+          x += (u[0] * R.reach * s + normal[0] * R.bend * Math.sin(Math.PI * s) * sign) / R.scale;
+          y += (u[1] * R.reach * s + normal[1] * R.bend * Math.sin(Math.PI * s) * sign) / R.scale;
+          const tangent = [u[0] * R.reach + normal[0] * R.bend * Math.PI * Math.cos(Math.PI * s) * sign, u[1] * R.reach + normal[1] * R.bend * Math.PI * Math.cos(Math.PI * s) * sign].map(v => returning ? -v : v);
+          mirror = tangent[0] < 0 ? -1 : 1; turn = Math.atan2(tangent[1], tangent[0]) * FIND_PLAY.kit.deg / Math.PI - (mirror < 0 ? FIND_PLAY.kit.deg : 0);
+          scale *= lerp(1, R.rise, clamp01(s * 2)); alpha = 1 - clamp01((s - R.fade) / (1 - R.fade));
+          const land = returning ? clamp01((e - total + R.land) / R.land) : 0; turn -= R.tilt * land; attr(b.item, 'opacity', returning ? 1 : 0);
+        }
+        const beat = !hearing && e >= total - R.land ? 0 : (1 - Math.cos(t * Math.PI * 2 * R.flap)) / 2;
+        attr(b.near, 'transform', `translate(${R.wingNearX} ${R.wingY}) scale(1 ${lerp(R.wingNear[0], R.wingNear[1], beat)}) translate(${-R.wingNearX} ${-R.wingY})`);
+        attr(b.far, 'transform', `translate(0 ${R.wingY}) scale(1 ${lerp(R.wingFar[0], R.wingFar[1], beat)}) translate(0 ${-R.wingY})`);
+      } else {
+        const pointer = FD.hover ? toMap(FD.pointer) : null;
+        if (o.awake && pointer && Math.sign(pointer[0] - f.x) === (b.i === 0 ? -1 : 1)) x += (b.i === 0 ? 1 : -1) * R.shy;
+        let angle = p ? Math.atan2(p[1] - (f.y + perch[1] * R.scale), (p[0] - (f.x + perch[0] * R.scale)) * mirror) * FIND_PLAY.kit.deg / Math.PI : Math.sin(t * R.idle[0] + b.i) * R.headLimit * R.idle[1];
+        angle = Math.max(-R.headLimit, Math.min(R.headLimit, angle));
+        const preen = b.i === o.preenBird && !FD.rm ? Math.sin(Math.PI * clamp01((t - o.preenTs) / R.preenTime)) : 0;
+        b.angle = FD.rm ? 0 : lerp(b.angle, angle + preen * R.preenAngle, Math.min(1, dt * R.headEase)); attr(b.head, 'transform', `translate(${R.headAt[0]} ${R.headAt[1]}) rotate(${b.angle})`);
+        const ruffle = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - o.ruffleTs) / R.ruffle[1])); attr(b.body, 'transform', `scale(${1 + (R.ruffle[0] - 1) * ruffle})`);
+        sy = FD.rm ? 1 : lerp(R.squash, 1, ease((t - b.landTs) / R.land));
+      }
+      attr(b.g, 'transform', `translate(${x} ${y}) rotate(${turn}) scale(${mirror * scale} ${scale * sy})`); attr(b.g, 'opacity', alpha);
+    });
+    if ((flying && (FD.rm || e >= total)) || (hearing && e >= R.loop)) {
+      if (hearing) { o.stage = 'rest'; birds.forEach(b => { attr(b.sit, 'opacity', 1); attr(b.fly, 'opacity', 0); b.landTs = t; }); }
+      else { o.stage = 'landing'; const index = o.activeBird; queueMicrotask(() => landed(index)); }
+    }
+    if (o.stage === 'rest' && o.hearPending) { o.hearPending = false; queueMicrotask(() => start('hear', 0)); }
   };
   return o;
 }
 
-// ---- small finds ----
+function findSerpent(svg) {
+  const f = FIND_BY.serpent, el = svg.querySelector('#f-serpent'), inner = el.querySelector('.sp-swim'), loops = [...el.querySelectorAll('.sp-loop')], head = el.querySelector('.sp-head'), leaf = el.querySelector('.sp-leaf'), eye = el.querySelector('.sp-eye'), shut = el.querySelector('.sp-shut'), tongue = el.querySelector('.sp-tongue');
+  const o = { id: f.id, el, stage: 'up', pokes: 0, round: 0, spot: 0, kept: false, ts: -Infinity, headAngle: 0, current: FIND_PLAY.serpent.spots[0].slice(), hearTs: -Infinity, wakeTs: -Infinity };
+  o.place = () => o.current.slice();
+  const start = () => {
+    if (!['up', 'asleep'].includes(o.stage)) return;
+    if (o.stage === 'asleep') { o.stage = 'waking'; o.ts = FD.now; o.pokes = 0; o.round++; o.kept = false; return; }
+    o.pokes++; o.stage = 'chase'; o.ts = FD.now; o.from = o.current.slice(); o.toSpot = (o.spot + 1) % FIND_PLAY.serpent.spots.length; o.to = FIND_PLAY.serpent.spots[o.toSpot].slice(); o.dropSent = new Set(); o.nextWake = 0;
+    const texts = FIND_COPY.serpentLeaves[o.pokes - 1]; el.querySelector('.sp-day').textContent = texts[0]; el.querySelector('.sp-date').textContent = texts[1];
+    attr(leaf, 'opacity', 0); closePop(); found(o.id); opened(o);
+  };
+  press(el, start); o.undo = () => { if (FD.popOwner === o) closePop(); };
+  o.hear = () => o.hearTs = FD.now;
+  o.tick = (t, dt) => {
+    const S = FIND_PLAY.serpent, e = t - o.ts, asleep = o.stage === 'asleep', here = { x: o.current[0] + S.head[0] * S.scale, y: o.current[1] + S.head[1] * S.scale }, target = attend(here, S.attend);
+    let angle = target ? Math.atan2(target[1] - here.y, target[0] - here.x) * FIND_PLAY.kit.deg / Math.PI - FIND_PLAY.kit.deg : 0;
+    angle = ((angle + FIND_PLAY.kit.turn * 1.5) % FIND_PLAY.kit.turn) - FIND_PLAY.kit.deg; angle = Math.max(-S.headLimit, Math.min(S.headLimit, angle));
+    o.headAngle = FD.rm ? angle : lerp(o.headAngle, angle, Math.min(1, dt * S.headEase));
+    let headTurn = asleep ? S.restAngle : o.headAngle, offsets = loops.map((g, j) => FD.rm ? 0 : S.bob[0] * Math.sin(Math.PI * 2 * (t / S.bob[1] - j / loops.length))), gulpAge = -Infinity;
+    if (o.stage === 'chase') {
+      const speed = S.speed[o.pokes - 1], sinkTotal = ((loops.length - 1) * S.sinkStep + S.sinkTime) * speed, sinkEnd = S.flinch + sinkTotal, swimEnd = sinkEnd + S.swim[o.pokes - 1], end = swimEnd + ((loops.length - 1) * S.surfStep + S.surfTime) * speed;
+      const swim = FD.rm ? 1 : ease((e - sinkEnd) / S.swim[o.pokes - 1]);
+      o.current = [lerp(o.from[0], o.to[0], swim), lerp(o.from[1], o.to[1], swim) - S.bulge * Math.sin(Math.PI * swim)];
+      headTurn += S.rear * Math.sin(Math.PI * clamp01(e / S.flinch));
+      offsets = loops.map((g, j) => {
+        const down = FD.rm ? 1 : ease((e - S.flinch - j * S.sinkStep * speed) / (S.sinkTime * speed)), up = FD.rm ? 1 : ease((e - swimEnd - (loops.length - 1 - j) * S.surfStep * speed) / (S.surfTime * speed));
+        if (down === 1 && !o.dropSent.has(j)) { o.dropSent.add(j); findBits('drop', o.from[0] + (j - loops.length / 2) * S.sink * S.scale, o.from[1], S.drops, FIND_PLAY.bits.drops); }
+        return S.sink * down * (1 - up);
+      });
+      if (e >= sinkEnd && e < swimEnd && t >= o.nextWake) { o.nextWake = t + S.wakeGap; findBits('ring', o.current[0], o.current[1], 1, FIND_PLAY.bits.wake); }
+      attr(leaf, 'opacity', e >= swimEnd || FD.rm ? 1 : 0);
+      if (FD.rm || e >= end) { o.current = o.to.slice(); o.spot = o.toSpot; o.stage = o.pokes === S.spots.length ? 'eating' : 'up'; o.ts = t; }
+    }
+    if (o.stage === 'eating') {
+      const age = t - o.ts, q = FD.rm ? 1 : clamp01((age - S.eatWait) / S.eatTime); gulpAge = age - S.eatWait - S.eatTime;
+      attr(leaf, 'transform', `translate(${lerp(S.leaf[0], S.head[0], q)} ${lerp(S.leaf[1], S.head[1], q)}) scale(${1 - q})`);
+      if (FD.rm || gulpAge >= loops.length * S.gulp[0] + S.gulp[1]) {
+        o.stage = 'asleep'; o.kept = true; o.ts = t; attr(leaf, 'opacity', 0);
+        queueMicrotask(() => showPop(o, () => [o.current[0] + S.popup[0] * S.scale, o.current[1] + S.popup[1] * S.scale], `<p class="pop-k">${fEsc(FIND_COPY.serpentFed)}</p>${findSlot(FIND_COPY.serpentLines[o.round % FIND_COPY.serpentLines.length])}`));
+      }
+    } else attr(leaf, 'transform', `translate(${S.leaf[0]} ${S.leaf[1]}) rotate(${S.leaf[2] + (FD.rm ? 0 : S.flutter[0] * Math.sin(Math.PI * 2 * S.flutter[1] * t))})`);
+    if (o.stage === 'waking' && (FD.rm || e >= S.wake)) o.stage = 'up';
+    const sleeping = o.stage === 'asleep';
+    const heard = t - o.hearTs; if (!FD.rm && heard < S.hear[1]) headTurn += S.hear[0] * Math.sin(Math.PI * heard / S.hear[1]);
+    attr(eye, 'opacity', sleeping && heard >= S.hear[2] ? 0 : 1); attr(shut, 'opacity', sleeping && heard >= S.hear[2] ? 1 : 0);
+    loops.forEach((g, j) => { const order = loops.length - 1 - j, pulse = FD.rm ? 0 : Math.sin(Math.PI * clamp01((gulpAge - order * S.gulp[0]) / S.gulp[1])); const settle = sleeping ? S.settle + (FD.rm ? 0 : S.breathe[0] * Math.sin(Math.PI * 2 * t / S.breathe[1])) : offsets[j]; attr(g, 'transform', `translate(0 ${settle}) scale(${1 + (S.gulp[2] - 1) * pulse})`); });
+    attr(head, 'transform', `rotate(${sleeping ? S.restAngle : headTurn} ${S.pivot[0]} ${S.pivot[1]})`);
+    const near = attend(here, S.near), tongueAge = t % S.tongue[1], flick = !FD.rm && !sleeping && near && tongueAge < S.tongue[0] ? Math.sin(Math.PI * tongueAge / S.tongue[0]) : 0;
+    attr(tongue, 'opacity', flick > 0 ? 1 : 0); attr(tongue, 'transform', `translate(${S.snout[0]} ${S.snout[1]}) scale(${flick} 1) translate(${-S.snout[0]} ${-S.snout[1]})`);
+    attr(inner, 'transform', `translate(${(o.current[0] - f.x) / S.scale} ${(o.current[1] - f.y) / S.scale})`);
+  };
+  return o;
+}
+
+// ---- findsheets.mjs ----
+// Part A: persistent beacon reading and a rub/read/flip sheet.
+
+
+
+
+
+function findBeacon(svg) {
+  const f = FIND_BY.beacon, el = svg.querySelector('#f-beacon'), beam = el.querySelector('.bc-beam'), flame = el.querySelector('.bc-flame'), glow = el.querySelector('.bc-glow');
+  const notes = [...svg.querySelectorAll('.bc-note')].map((g, i) => ({ g, inner: g.querySelector('.bc-note-in'), en: g.querySelector('.bc-en'), d: FIND_COPY.beaconNotes[i], time: 0, read: false, v: 0, ev: 0, flash: -Infinity }));
+  const o = { id: f.id, el, stage: 'idle', head: FIND_PLAY.beacon.baseAngle, manualTs: -Infinity, fire: 0, read: notes.map(() => false), kept: false, drag: false, ember: 0, litTs: -Infinity, hearTs: -Infinity };
+  const origin = () => [f.x + FIND_PLAY.beacon.origin[0] * FIND_PLAY.beacon.scale, f.y + FIND_PLAY.beacon.origin[1] * FIND_PLAY.beacon.scale];
+  const aimAt = e => { const p = toMap([e.clientX, e.clientY]), O = origin(); o.head = Math.atan2(p[1] - O[1], p[0] - O[0]) * FIND_PLAY.kit.deg / Math.PI; o.snap = null; o.manualTs = FD.now; found(o.id); opened(o); };
+  const read = (n, i) => {
+    if (n.read) return; const B = FIND_PLAY.beacon; n.read = true; n.flash = FD.now; o.read[i] = true; o.fire++; o.kept = true;
+    findBits('spark', n.d.x, n.d.y, B.sparkN, FIND_PLAY.bits.sparks);
+    if (o.fire === notes.length) { o.litTs = FD.now; findBits('spark', ...origin(), B.burstN, FIND_PLAY.bits.sparks); }
+  };
+  const snapNext = () => {
+    const i = notes.findIndex(n => !n.read), n = notes[i >= 0 ? i : 0], O = origin(), angle = Math.atan2(n.d.y - O[1], n.d.x - O[0]) * FIND_PLAY.kit.deg / Math.PI;
+    o.snap = { from: o.head, to: o.head + findAngleDelta(o.head, angle), ts: FD.now };
+    o.manualTs = FD.now; found(o.id); opened(o);
+    if (FD.rm && i >= 0) { o.head = angle; read(n, i); o.snap = null; }
+  };
+  el.addEventListener('pointerdown', e => { o.drag = true; el.setPointerCapture(e.pointerId); aimAt(e); el._dragged = true; });
+  el.addEventListener('pointermove', e => { if (o.drag) aimAt(e); });
+  el.addEventListener('pointerup', () => o.drag = false); el.addEventListener('pointercancel', () => o.drag = false);
+  press(el, e => { if (e.type === 'keydown' || !e.detail) snapNext(); else aimAt(e); });
+  el.addEventListener('keydown', e => { if (!['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(e.key)) return; e.preventDefault(); o.head += FIND_PLAY.beacon.arrow * (['ArrowLeft', 'ArrowUp'].includes(e.key) ? -1 : 1); o.snap = null; o.manualTs = FD.now; found(o.id); opened(o); });
+  o.undo = () => { o.manualTs = -Infinity; o.drag = false; }; o.hear = () => o.hearTs = FD.now;
+  o.tick = (t, dt) => {
+    const B = FIND_PLAY.beacon, manual = o.drag || t - o.manualTs < B.manual, lit = o.fire === notes.length;
+    if (o.snap) { const q = FD.rm ? 1 : ease((t - o.snap.ts) / B.snap); o.head = lerp(o.snap.from, o.snap.to, q); if (q === 1) o.snap = null; }
+    else if (!manual && !FD.rm) o.head = lit ? o.head + B.turn * dt : B.baseAngle + B.sweep * Math.sin(t * FIND_TIMING.beamSweep);
+    const reach = B.baseReach * B.scale * (lit && !manual ? B.reach : 1), half = FIND_TIMING.beamCone / 2, O = origin();
+    attr(beam, 'transform', `translate(${B.origin[0]} ${B.origin[1]}) rotate(${o.head - FIND_PLAY.kit.deg}) scale(${lit && !manual ? B.reach : 1})`); attr(beam, 'opacity', manual ? 1 : B.idle);
+    notes.forEach((n, i) => {
+      const dx = n.d.x - O[0], dy = n.d.y - O[1], angle = Math.atan2(dy, dx) * FIND_PLAY.kit.deg / Math.PI, diff = Math.abs(((angle - o.head + FIND_PLAY.kit.turn * 1.5) % FIND_PLAY.kit.turn) - FIND_PLAY.kit.deg), inside = diff < half && Math.hypot(dx, dy) < reach;
+      if (inside && !o.snap) n.time += dt;
+      if (!n.read && n.time >= B.read) read(n, i);
+      n.v = FD.rm ? n.read || inside ? 1 : 0 : lerp(n.v, inside ? 1 : n.read ? B.rest : 0, Math.min(1, dt * B.noteEase));
+      n.ev = FD.rm ? n.read || inside ? 1 : 0 : lerp(n.ev, n.read || inside && n.time >= FIND_TIMING.noteDelay ? 1 : 0, Math.min(1, dt * B.englishEase));
+      attr(n.g, 'opacity', n.v); attr(n.en, 'opacity', n.ev);
+      const flash = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - n.flash) / B.flash)); attr(n.inner, 'transform', `scale(${1 + (B.noteScale - 1) * flash})`);
+    });
+    const F = B.flicker, foot = B.flameFoot, burst = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - o.litTs) / B.leap[1]));
+    const hearAge = t - o.hearTs, hear = FD.rm ? 1 : hearAge < B.hear[1] ? lerp(B.hear[0], 1, clamp01(hearAge / B.hear[1])) : 1 + (B.hear[2] - 1) * Math.sin(Math.PI * clamp01((hearAge - B.hear[1]) / B.hear[3]));
+    const size = lerp(B.flame[o.fire], B.leap[0], burst) * hear, sx = FD.rm ? size : size * (1 + F[0] * Math.sin(F[1] * t) + F[2] * Math.sin(F[3] * t)), sy = FD.rm ? size : size * (1 + F[4] * Math.sin(F[5] * t));
+    attr(flame, 'transform', `translate(${foot[0]} ${foot[1]}) scale(${sx} ${sy}) translate(${-foot[0]} ${-foot[1]})`); attr(glow, 'opacity', B.glowAlpha * o.fire);
+    if (o.onScreen && !FD.rm) { o.ember += o.fire * B.embers * dt; const n = Math.floor(o.ember); o.ember -= n; if (n) findBits('spark', ...O, n, FIND_PLAY.bits.sparks); }
+    o.stage = lit ? 'lit' : manual ? 'aiming' : 'idle';
+    depthBeam(!FD.rm && o.onScreen && VIEW.depth && FD.st.pushT > 0 && FD.st.rushT === 0 ? { x: O[0], y: O[1], angle: o.head, half, reach, soft: B.soft, steps: B.wedgeSteps } : null);
+  };
+  return o;
+}
+const beaconLit = () => FD.list.beacon?.fire === FIND_COPY.beaconNotes.length;
+
+function findRune(svg) {
+  const f = FIND_BY.runestone, el = svg.querySelector('#f-runestone'), trace = el.querySelector('.rs-trace');
+  const o = { id: f.id, el, stage: 'rest', kept: false, read: false, rubbed: [], rubs: 0, ts: -Infinity, dashTs: -Infinity, stamped: false, flipped: false };
+  const dash = red => {
+    const R = FIND_PLAY.rune; trace.classList.toggle('red', red); trace.style.stroke = red ? '' : C.paper; trace.style.opacity = red ? 1 : 0; trace.style.strokeDasharray = red ? 'none' : R.dash.join(' ');
+    trace.getAnimations().forEach(a => a.cancel());
+    if (red) trace.style.strokeDasharray = R.dash[1] + ' ' + R.dash[1];
+    if (!FD.rm) trace.animate(red ? [{ strokeDashoffset: R.dash[1], opacity: 1 }, { strokeDashoffset: 0, opacity: 1 }] : [{ strokeDashoffset: 0, opacity: 0 }, { strokeDashoffset: -R.dash[1] / 2, opacity: 1 }, { strokeDashoffset: -R.dash[1], opacity: 0 }], { duration: (red ? R.carving : R.dashTime) * 1000, fill: red ? 'forwards' : 'none' });
+  };
+  const autoStart = () => { if (o.read) return; o.autoTs = FD.now; o.autoLast = null; };
+  const rub = (x, y) => {
+    if (o.read || o.stage !== 'sheet') return;
+    const R = FIND_PLAY.rune, c = findSvg('circle', { cx: x, cy: y, r: R.r, fill: 'url(#rub-soft)' }); o.circles.appendChild(c); o.rubs++;
+    const [x0, y0, x1, y1] = R.cells;
+    o.cells.forEach((p, i) => { if (Math.hypot(p[0] - x, p[1] - y) <= R.cellR) o.rubbed[i] = true; });
+    if (o.rubbed.filter(Boolean).length / o.cells.length >= R.done) complete();
+  };
+  const complete = () => { if (o.read) return; o.read = o.kept = true; o.readTs = FD.now; o.autoTs = null; o.fill = FD.sheet.querySelector('.rub-fill'); el.classList.add('rune-kept'); };
+  const flip = () => {
+    if (!o.read) return;
+    o.flipped = !o.flipped; o.pin.classList.toggle('flip', o.flipped);
+    if (o.flipped && !o.stamped) { o.stampTs = FD.now; o.stamped = true; }
+  };
+  const sheet = () => {
+    const R = FIND_PLAY.rune, P = FIND_COPY.poster;
+    const shown = findSheet(o, 'poster rubbing-sheet', `<div class="pz"><div class="pz-in"><div class="pz-front rubbing-front">${rubbingSvg()}</div><div class="pz-back poster-back"><span class="pz-pin"></span><span class="pz-pin r"></span><b class="pz-h">${fEsc(P.head)}</b><div class="pz-pic"><i></i><s></s></div><b class="pz-who">${fEsc(P.who)}</b><p>${fEsc(P.line1)}<br>${fEsc(P.line2)}</p><b class="pz-rw">${fEsc(P.reward)}</b><span class="pz-stamp">${fEsc(P.stamp)}</span><div class="poster-slot">${findSlot(P.foot)}</div><span class="pz-fold"></span></div></div></div><div class="pz-ctl"><button type="button" class="rub-do">${fEsc(FIND_COPY.rubDo)}</button><button type="button" class="pz-flip" hidden>${fEsc(COPY.flip)}</button><button type="button" class="pz-x" hidden>${fEsc(COPY.close)}</button></div>`, [f.x, f.y + R.anchor]);
+    if (!shown) { o.stage = 'rest'; return; }
+    o.pz = FD.sheet.querySelector('.pz'); o.pin = FD.sheet.querySelector('.pz-in'); o.rubbing = FD.sheet.querySelector('.rubbing'); o.circles = FD.sheet.querySelector('.rub-circles'); o.fill = FD.sheet.querySelector('.rub-fill'); o.letters = [...FD.sheet.querySelectorAll('.rub-letter')]; o.stamp = FD.sheet.querySelector('.pz-stamp');
+    o.flipped = false; o.controls = false; o.stampTs = o.stamped ? -Infinity : Infinity; o.stage = 'sheet'; o.ts = FD.now; o.autoTs = null; o.lastRub = null; o.tilt = [0, 0];
+    const bounds = R.cells; o.cells = [];
+    for (let j = 0; j < R.grid[1]; j++) for (let i = 0; i < R.grid[0]; i++) o.cells.push([lerp(bounds[0], bounds[2], (i + 0.5) / R.grid[0]), lerp(bounds[1], bounds[3], (j + 0.5) / R.grid[1])]);
+    if (!o.read) o.rubbed = o.cells.map(() => false); else { o.readTs = FD.now - R.fill - o.letters.length * R.letter[0] - R.letter[1]; attr(o.fill, 'opacity', 1); }
+    const local = e => {
+      const box = o.rubbing.getBoundingClientRect(); return [(e.clientX - box.left) / box.width * R.width, (e.clientY - box.top) / box.height * R.height];
+    };
+    const pointerRub = e => {
+      const p = local(e); o.autoTs = null;
+      if (!o.lastRub) rub(...p);
+      else { const dx = p[0] - o.lastRub[0], dy = p[1] - o.lastRub[1], length = Math.hypot(dx, dy); for (let d = R.step; d <= length; d += R.step) rub(o.lastRub[0] + dx * d / length, o.lastRub[1] + dy * d / length); if (length < R.step) return; }
+      o.lastRub = p;
+    };
+    o.rubbing.addEventListener('pointerdown', e => { o.rubDown = true; o.rubbing.setPointerCapture(e.pointerId); o.lastRub = null; pointerRub(e); e.preventDefault(); });
+    o.rubbing.addEventListener('pointermove', e => { if (o.rubDown) pointerRub(e); });
+    o.rubbing.addEventListener('pointerup', () => o.rubDown = false); o.rubbing.addEventListener('pointercancel', () => o.rubDown = false);
+    o.pz.addEventListener('pointermove', e => { if (!FD.hover || FD.rm || o.rubDown) return; const box = o.pz.getBoundingClientRect(); o.tilt = [(0.5 - (e.clientY - box.top) / box.height) * 2 * R.tilt, ((e.clientX - box.left) / box.width - 0.5) * 2 * R.tilt]; });
+    o.pz.addEventListener('pointerleave', () => o.tilt = [0, 0]);
+    FD.sheet.querySelector('.rub-do').addEventListener('click', autoStart); FD.sheet.querySelector('.pz-flip').addEventListener('click', flip); FD.sheet.querySelector('.pz-x').addEventListener('click', () => closeSheet());
+    found(o.id); if (o.keyboard) autoStart(); if (FD.rm) { o.cells.forEach(p => rub(...p)); complete(); }
+  };
+  press(el, e => { if (o.stage !== 'rest') return; opened(o); o.keyboard = e.type === 'keydown'; o.stage = 'trace'; o.ts = FD.now; dash(true); if (FD.rm) sheet(); });
+  o.hear = () => { o.dashTs = FD.now; dash(false); };
+  o.beginClose = () => { if (FD.rm) return false; if (o.stage !== 'closing') { o.stage = 'closing'; o.closeTs = FD.now; } return true; };
+  o.onSheetClose = () => { o.stage = 'rest'; o.rubDown = false; trace.classList.remove('red'); trace.style.opacity = 0; trace.getAnimations().forEach(a => a.cancel()); };
+  o.undo = () => { if (FD.sheetOwner === o) closeSheet(); };
+  o.onEscape = () => { if (o.stage === 'trace') { o.stage = 'rest'; trace.classList.remove('red'); } };
+  o.tick = t => {
+    const R = FIND_PLAY.rune;
+    if (o.stage === 'rest' && o.awake && !FD.rm && t - o.dashTs >= R.dashTime) { o.dashTs = t; queueMicrotask(() => dash(false)); }
+    if (o.stage === 'trace' && t - o.ts >= D(R.carving)) { o.stage = 'opening'; queueMicrotask(sheet); return; }
+    if (!['sheet', 'closing'].includes(o.stage) || FD.sheetOwner !== o) return;
+    const q = FD.rm ? 1 : ease((t - o.ts) / R.grow), closing = o.stage === 'closing', out = closing ? 1 - ease((t - o.closeTs) / R.close) : q;
+    const fit = Math.min(1, (VIEW.w - FIND_PLAY.kit.sheet.edge) / R.width, (VIEW.h - FIND_PLAY.kit.sheet.edge * 2) / (R.height + Math.abs(R.controlTop) - R.height / 2));
+    const from = FD.sheetFrom;
+    FD.sheet.style.transform = `translate(${lerp(from[0], VIEW.w / 2, out)}px,${lerp(from[1], VIEW.h / 2 - FIND_PLAY.kit.sheet.offset, out)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, fit, out)})`;
+    o.pz.style.transform = `rotateX(${o.tilt[0]}deg) rotateY(${o.tilt[1]}deg)`;
+    if (closing) { if (out === 0) queueMicrotask(() => closeSheet(true)); return; }
+    if (!o.read && !o.rubs && o.autoTs === null && t - o.ts >= R.auto[0]) o.autoTs = t;
+    if (!o.read && o.autoTs !== null) {
+      const p = FD.rm ? 1 : clamp01((t - o.autoTs) / R.auto[1]), count = R.auto[2], pass = Math.min(count - 1, Math.floor(p * count)), u = p * count - pass, b = R.cells;
+      const point = [lerp(b[0], b[2], pass % 2 ? 1 - u : u), lerp(b[1], b[3], (pass + u) / count)];
+      if (!o.autoLast || Math.hypot(point[0] - o.autoLast[0], point[1] - o.autoLast[1]) >= R.step) { o.autoLast = point; queueMicrotask(() => rub(...point)); }
+      if (p === 1) { o.autoTs = null; queueMicrotask(() => { o.cells.forEach(p => rub(...p)); }); }
+    }
+    if (o.read) {
+      attr(o.fill, 'opacity', FD.rm ? 1 : ease((t - o.readTs) / R.fill));
+      o.letters.forEach((letter, i) => { const k = FD.rm ? 1 : out3((t - o.readTs - R.fill - i * R.letter[0]) / R.letter[1]); attr(letter, 'opacity', k); attr(letter, 'transform', `translate(0 ${R.letterRise * (1 - k)})`); });
+      if (!o.controls && (FD.rm || t - o.readTs >= R.fill + (o.letters.length - 1) * R.letter[0] + R.letter[1])) { o.controls = true; queueMicrotask(() => { if (FD.sheetOwner !== o) return; FD.sheet.querySelector('.rub-do').hidden = true; FD.sheet.querySelector('.pz-flip').hidden = false; FD.sheet.querySelector('.pz-x').hidden = false; FD.sheet.querySelector('.pz-flip').focus({ preventScroll: true }); }); }
+    }
+    const stamp = FD.rm ? 1 : out3((t - o.stampTs - R.stamp[0]) / R.stamp[1]);
+    o.stamp.style.opacity = stamp; o.stamp.style.transform = `rotate(${R.stampAngle}deg) scale(${lerp(R.stamp[2], 1, stamp)})`;
+    const shakeAge = t - o.stampTs - R.stamp[0] - R.stamp[1], shake = FD.rm || shakeAge < 0 || shakeAge > R.shake[1] ? 0 : R.shake[0] * Math.sin(shakeAge / R.shake[1] * Math.PI * 4) * (1 - shakeAge / R.shake[1]);
+    o.pin.style.transform = `translateX(${shake}px) rotateY(${o.flipped ? FIND_PLAY.kit.deg : 0}deg)`;
+  };
+  return o;
+}
+
+// ---- findlegacy.mjs ----
+// Part B plays retained for its later run; only the shared camera/popup/count kit changes.
+
+
+
 function find_tafl(svg) {
   const f = FIND_BY.tafl, el = svg.querySelector('#f-tafl'), pc = el.querySelector('.tf-piece'), o = { id: 'tafl', pos: 0, v: 0 };
   press(el, () => { found('tafl'); opened(o); o.pos = o.pos ? 0 : 1; showPop(o, [f.x + 7, f.y - 2], `<p class="pop-t">${fEsc(FIND_COPY.tafl)}</p>`); });
@@ -2293,59 +2980,61 @@ function find_longship(svg) {
   return o;
 }
 
-// A keyboard press can reach a find even when the camera or an open card hides it.
-function findNeedsVisit(el) {
-  const st = tripState(JOURNEY.P), p = toScreen(st, [+el.dataset.x, +el.dataset.y]);
-  return st.cam.s < VIEW.sT * .8 || st.cardOpen > .5 || p[0] < VIEW.w * .1 || p[0] > VIEW.w * .9 || p[1] < VIEW.h * .1 || p[1] > VIEW.h * .9;
+
+// ---- finds.mjs ----
+// Eleven finds share the camera/life/overlay kit. Part B plays remain in findlegacy.
+
+
+
+
+
+
+
+
+
+function findsCloseAll() {
+  FD.overlayEpoch++;
+  closePop(); closeSheet(); Object.values(FD.list).forEach(f => f.onEscape?.());
 }
-function findVisitP(el) {
-  const place = [+el.dataset.x, +el.dataset.y]; let best = JOURNEY.P, distance = Infinity;
-  const sample = P => {
-    const p = toScreen(tripState(P), place), d = Math.pow(p[0] - VIEW.w * .5, 2) + Math.pow(p[1] - VIEW.h * .46, 2);
-    if (d < distance) { distance = d; best = P; }
-  };
-  SEQ.filter(s => s.kind === 'leg' || s.kind === 'legX').forEach(s => { for (let p = s.a; p < s.a + s.len; p += 2) sample(p); sample(s.a + s.len); });
-  return best;
-}
-function findCapture(e) {
-  if (FD.rm || JOURNEY.mode !== 'steps' || e === FD.replayEvent) return;
-  if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
-  const el = e.target.closest && e.target.closest('.find'); if (!el) return;
-  if (stepsJumping()) { e.preventDefault(); e.stopImmediatePropagation(); return; }
-  if (!findNeedsVisit(el)) return;
-  e.preventDefault(); e.stopImmediatePropagation();
-  const st = tripState(JOURNEY.P), point = e.type === 'click' ? [(e.clientX - st.cam.tx) / st.cam.s, (e.clientY - st.cam.ty) / st.cam.s] : null;
-  const key = { key: e.key, code: e.code, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey };
-  stepsFind(findVisitP(el), () => {
-    const p = point ? toScreen(tripState(JOURNEY.P), point) : null;
-    const pressEvent = p ? new MouseEvent('click', { bubbles: true, cancelable: true, clientX: p[0], clientY: p[1], detail: e.detail }) : new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...key });
-    FD.replayEvent = pressEvent;
-    try { el.dispatchEvent(pressEvent); } finally { FD.replayEvent = null; }
-  });
+function findPlain(value, seen = new Set()) {
+  if (value === null || ['string', 'number', 'boolean'].includes(typeof value)) return value;
+  if (!value || typeof value !== 'object' || seen.has(value) || value.nodeType) return undefined;
+  seen.add(value);
+  if (value instanceof Set) return [...value];
+  if (Array.isArray(value)) return value.map(v => findPlain(v, seen)).filter(v => v !== undefined);
+  if (Object.getPrototypeOf(value) !== Object.prototype) return undefined;
+  return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, findPlain(v, seen)]).filter(([k, v]) => v !== undefined));
 }
 function findsBuild(svg, pop, sheet, base, rm) {
-  FD.pop = pop; FD.sheet = sheet; FD.base = base; FD.rm = rm;
-  const builders = { wayfinder: find_wayfinder, hoards: find_hoards, ravens: find_ravens, serpent: find_serpent, beacon: find_beacon, runestone: find_runestone, tafl: find_tafl, mist: find_mist, horn: find_horn, well: find_well, longship: find_longship };
-  Object.entries(builders).forEach(([k, b]) => { FD.list[k] = b(svg); });
-  if (!rm) {
-    svg.addEventListener('click', findCapture, true); svg.addEventListener('keydown', findCapture, true);
-    // These two finds use pointerdown/up for aiming; keep that from acting before the captured click's visit.
-    svg.addEventListener('pointerdown', e => {
-      const el = e.target.closest && e.target.closest('.find');
-      if (JOURNEY.mode === 'steps' && el && (stepsJumping() || findNeedsVisit(el))) { e.preventDefault(); e.stopImmediatePropagation(); }
-    }, true);
-  }
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') findsCloseAll(); });
-  tlSetCount(0, FINDS.length);
+  findKitBuild(svg, pop, sheet, base, rm);
+  const builders = { wayfinder: findWay, hoards: findHoards, ravens: findRavens, serpent: findSerpent, beacon: findBeacon, runestone: findRune, tafl: find_tafl, mist: find_mist, horn: find_horn, well: find_well, longship: find_longship };
+  Object.entries(builders).forEach(([id, build]) => { const o = build(svg); o.el ??= svg.querySelector('#f-' + id); o.stage ??= 'rest'; o.kept ??= false; FD.list[id] = o; });
+  svg.addEventListener('click', findCapture, true); svg.addEventListener('keydown', findCapture, true); svg.addEventListener('pointerdown', findCapture, true);
+  window.addEventListener('jm-find-release', findsCloseAll);
+  window.addEventListener('jm-mode', () => { findsCloseAll(); FD.focusId = null; });
+  window.__jm.finds = {
+    found: () => [...FD.found],
+    state: id => { const o = FD.list[id] || FD.list.hoards.items.find(h => h.id === id); return o ? findPlain(o) : null; },
+    hear: () => Object.values(FD.list).forEach(o => o.hear?.()),
+    place: id => { const p = findPlace(id); return FD.st && p ? toScreen(FD.st, p) : null; },
+  };
+  FD.styleKey = JSON.stringify(FIND_PLAY);
 }
-function findsPointer(x, y) { FD.pointer = [x, y]; }
+function findsPointer(x, y) { FD.pointer = [x, y]; FD.pointerT = FD.now; }
 function findsFrame(time, st) {
-  FD.dt = Math.min(.1, FD.now ? time - FD.now : 0); FD.now = time; FD.st = st;
-  Object.values(FD.list).forEach(f => f.tick && f.tick(time, FD.dt));
-  placePop();
-  const far = FIND_TIMING.closeScroll;
-  if (FD.popOwner && Math.abs(st.P - FD.popP) > far) closePop();
-  if (FD.sheetOwner && Math.abs(st.P - FD.sheetP) > far) closeSheet();
+  if (!st) return;
+  FD.dt = Math.max(0, Math.min(FIND_PLAY.kit.dt, FD.now ? time - FD.now : 0)); FD.now = time; FD.st = st;
+  const tuning = JSON.stringify(FIND_PLAY);
+  if (tuning !== FD.styleKey) { FD.styleKey = tuning; queueMicrotask(findKitStyle); }
+  Object.values(FD.list).forEach(o => {
+    const f = FIND_BY[o.id], p = findPlace(o.id), rad = o.id === 'wayfinder' ? FIND_PLAY.focus.wide[2] * 2 : o.id === 'hoards' ? Math.max(...FIND_COPY.hoards.map(h => Math.hypot(h.x - f.x, h.y - f.y) + FIND_PLAY.hoard.rad)) : o.id === 'beacon' ? FIND_PLAY.beacon.rad : o.id === 'ravens' ? FIND_PLAY.raven.reach + f.view[2] : o.id === 'serpent' ? FIND_PLAY.serpent.near + Math.abs(FIND_PLAY.serpent.spots[1][0] - f.x) + f.view[2] : f.view?.[2] || FIND_PLAY.kit.rad;
+    const near = FIND_PLAY[o.id === 'wayfinder' ? 'way' : o.id === 'ravens' ? 'raven' : o.id === 'runestone' ? 'rune' : o.id]?.near || rad;
+    findLife(o, ...p, rad, near);
+    const playing = ['flight', 'hear', 'landing', 'reel', 'chase', 'eating', 'waking', 'trace', 'opening', 'sheet', 'closing'].includes(o.stage) || o.drag || o.id === 'tafl' && Math.abs(o.pos - o.v) > Number.EPSILON || o.id === 'horn' && Math.abs(o.up - o.v) > Number.EPSILON || o.id === 'well' && time - o.ts < FIND_TIMING.ripple;
+    if (o.id === 'hoards' || o.onScreen || playing || FD.sheetOwner === o) o.tick?.(time, FD.rm ? 0 : FD.dt);
+    else if (o.id === 'beacon') depthBeam(null);
+  });
+  findKitFrame(); FD.focusId = JOURNEY.focus;
 }
 
 // ---- main.mjs ----
@@ -2394,9 +3083,9 @@ depthBuild($('deep'), $('air'), $('sky'), RM);
 cardsBuild(RM ? $('rmcards') : $('cards'), goStop);
 tlBuild(TLEL, { jump: goStop, scrub: p => JOURNEY.set(p) }, RM);
 footerBuild($('ft')); footerBuildX($('fxg'), RM);
-findsBuild(SVG, $('pop'), $('sheet'), $('b-all'), RM);
 if (RM) $('rmcards').appendChild(TLEL);
 stepsBuild({ stage: $('stage'), rm: RM, resize, joinedTop: () => JOIN.heroStart });
+findsBuild(SVG, $('pop'), $('sheet'), $('b-all'), RM);
 
 function resize() {
   const w = window.innerWidth, h = window.innerHeight, phone = w <= CAMERA.phoneMax;
@@ -2424,14 +3113,16 @@ window.addEventListener('jm-depth', () => { dirty = true; depthInvalidate(); if 
 const PTR = [.5, .5];
 window.addEventListener('pointermove', e => { PTR[0] = e.clientX / VIEW.w; PTR[1] = e.clientY / VIEW.h; findsPointer(e.clientX, e.clientY); }, { passive: true });
 
-let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '';
+let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainFocus = '';
 function frame(ts) {
   const time = ts / 1000;
   const dt = mainTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - mainTs) / 1000)); mainTs = ts;
   P = stepsFrame(ts);
   if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], { ...jr, still: true }); raf = requestAnimationFrame(frame); return; }
-  const st = tripState(P); st.visiting = JOURNEY.visiting;
-  const tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || P !== lastP || tuning !== mainTuning;
+  const st = tripState(P); const f = stepsFocusNow(); if (f) tripFocus(st, f.view, f.k);
+  st.visiting = JOURNEY.visiting;
+  const focusKey = JSON.stringify(f), tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || P !== lastP || tuning !== mainTuning || focusKey !== mainFocus;
+  mainFocus = focusKey;
   const aim = depthLook(dt, PTR);
   if (moved) { tripApply(st); tlFrame(st); footerFrame(st); if (!JOIN.frame) CANVAS.style.opacity = st.dim; lastP = P; mainTuning = tuning; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
   const jo = JOIN.frame ? JOIN.frame(st, moved, P) : undefined;

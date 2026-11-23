@@ -92,6 +92,43 @@ export function depthLook(dt, pointer) {
 }
 export function depthInvalidate() { DP.force = true; }
 
+// An additive hook: insert the beacon cut at the veil's existing compositing boundary.
+export function depthBeam(b) {
+  if (!DP.beamHook) {
+    DP.beamHook = true;
+    const air = depthAir, light = lightAt;
+    let state = null;
+    const strength = (x, y) => {
+      const beam = DP.beam; if (!beam || !state) return 0;
+      const p = toScreen(state, [beam.x, beam.y]), dx = x - p[0], dy = y - p[1], radius = beam.reach * state.cam.s;
+      const diff = Math.abs(((Math.atan2(dy, dx) * 180 / Math.PI - beam.angle + 540) % 360) - 180);
+      return (1 - clamp01(Math.hypot(dx, dy) / radius)) * clamp01((beam.half - diff) / (beam.soft ?? MAP.findBeam.soft));
+    };
+    lightAt = (x, y) => { const base = light(x, y); return DP.light ? Math.max(base, 1 - DP.light.v * (1 - DEPTH.light.amb) * (1 - strength(x, y))) : base; };
+    depthAir = (st, ...args) => {
+      state = st;
+      const context = DP.ac;
+      const cut = () => {
+        const beam = DP.beam; if (!beam || !DP.light?.v) return;
+        const p = toScreen(st, [beam.x, beam.y]), radius = beam.reach * st.cam.s;
+        context.save(); context.globalCompositeOperation = 'destination-out';
+        const fade = context.createRadialGradient(...p, 0, ...p, radius); fade.addColorStop(0, C.paper); fade.addColorStop(1, depthAlphaColour(C.paper, 0)); context.fillStyle = fade;
+        const steps = beam.steps ?? MAP.findBeam.wedgeSteps;
+        for (let i = 0; i < steps; i++) {
+          const a = beam.angle - beam.half + 2 * beam.half * i / steps, z = a + 2 * beam.half / steps;
+          context.globalAlpha = clamp01((beam.half - Math.abs((a + z) / 2 - beam.angle)) / (beam.soft ?? MAP.findBeam.soft));
+          context.beginPath(); context.moveTo(...p); context.arc(...p, radius, a * Math.PI / 180, z * Math.PI / 180); context.closePath(); context.fill();
+        }
+        context.restore();
+      };
+      DP.ac = new Proxy(context, { get(target, key) { const value = Reflect.get(target, key, target); return typeof value === 'function' ? value.bind(target) : value; }, set(target, key, value) { if (key === 'globalCompositeOperation' && value === 'source-over' && target.globalCompositeOperation === 'destination-out') cut(); Reflect.set(target, key, value, target); return true; } });
+      try { air(st, ...args); } finally { DP.ac = context; }
+    };
+  }
+  if (JSON.stringify(DP.beam) !== JSON.stringify(b)) DP.force = true;
+  DP.beam = b;
+}
+
 function depthDeep(st, look) {
   const c = DP.dc, w = VIEW.w, h = VIEW.h, R = DEPTH.rings, O = DEPTH.outer;
   c.setTransform(DP.dpr, 0, 0, DP.dpr, 0, 0); c.clearRect(0, 0, w, h);

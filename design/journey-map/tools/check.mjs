@@ -2,7 +2,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { STOPS, PALETTES, FINDS, FIND_COPY, COPY, ACTS, CRAFTS, MAP, STEPS, DEPTH, NOVA, STARS, C } from '../data.mjs';
+import { STOPS, PALETTES, FINDS, FIND_COPY, COPY, ACTS, CRAFTS, MAP, STEPS, DEPTH, NOVA, STARS, C, FIND_PLAY } from '../data.mjs';
 import { SEQ, TOTAL_P, tripState, tripResize } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
 
@@ -64,6 +64,15 @@ const checkDepthNumbers = (v, path) => {
   else if (v && typeof v === 'object') Object.entries(v).forEach(([k, x]) => checkDepthNumbers(x, `${path}.${k}`));
 };
 checkDepthNumbers(DEPTH, 'DEPTH'); checkDepthNumbers(NOVA, 'NOVA'); checkDepthNumbers(STARS, 'STARS');
+checkDepthNumbers(FIND_PLAY, 'FIND_PLAY');
+const findSlots = (v, path) => { if (!v || typeof v !== 'object') return; if (v.todo) ok(typeof v.t === 'string' && v.t.trim().length > 0, `${path}: slot needs text`); Object.entries(v).forEach(([k, x]) => findSlots(x, `${path}.${k}`)); };
+findSlots(FIND_COPY, 'FIND_COPY');
+ok(FIND_COPY.hoards.length === 5 && FIND_COPY.hoards.every(h => Object.hasOwn(FIND_PLAY.icons, h.kind)), 'five hoards need known piece kinds');
+ok(FIND_COPY.serpentLeaves.length === 3 && FIND_COPY.serpentLeaves.every(row => row.length === 2 && row.every(t => typeof t === 'string' && t.length)), 'three serpent calendar leaves');
+ok(FIND_PLAY.serpent.spots.length === 3, 'three serpent spots');
+FIND_PLAY.serpent.spots.forEach((p, i) => { const b = FIND_PLAY.serpent.bounds, s = FIND_PLAY.serpent.scale; ok(p.length === 2 && p.every(Number.isFinite) && p[0] + b[0] * s >= 22 && p[1] + b[1] * s >= 22 && p[0] + b[2] * s <= 578 && p[1] + b[3] * s <= 878, `serpent spot ${i}: drawing must stay inside inner frame`); });
+ok(FINDS.filter(f => f.view).length === 9, 'nine finds have fixed camera views');
+FINDS.forEach(f => ok(['hoards', 'longship'].includes(f.id) ? !f.view : f.view?.length === 3 && f.view.every(Number.isFinite) && f.view[2] > 0, `${f.id}: camera view`));
 DEPTH.clouds.list.forEach((row, i) => {
   ok(row.length === 6 && row.every(Number.isFinite), `DEPTH.clouds.list[${i}]: needs six finite numbers`);
   ok([1, 2, 3].includes(row[3]) && [1, -1].includes(row[4]), `DEPTH.clouds.list[${i}]: bad drawing/flip`);
@@ -94,4 +103,4 @@ mods.forEach(f => {
 ok(!/#[0-9A-Fa-f]{3,6}\b(?![\w-]*\))/.test(readFileSync(join(ROOT, 'map.css'), 'utf8').replace(/url\([^)]*\)/g, '')), 'map.css: colour literal');
 
 if (errs.length) { console.error('FAIL\n' + errs.map(e => ' - ' + e).join('\n')); process.exit(1); }
-console.log(`ok: 6 stops, ${Object.keys(PALETTES).length} palettes (Lennard band verified), 11 finds, acts total ${TOTAL_P.toFixed(1)} vh, ${mods.length} modules with unique top-level names; STEPS numbers finite/positive; 10 strictly rising beats; X camera continuous at desktop/phone sizes; DEPTH/NOVA/STARS numbers finite; 10 cloud rows valid; rings.colour in C`);
+console.log(`ok: 6 stops, ${Object.keys(PALETTES).length} palettes (Lennard band verified), 11 finds, acts total ${TOTAL_P.toFixed(1)} vh, ${mods.length} modules with unique top-level names; STEPS numbers finite/positive; 10 strictly rising beats; X camera continuous at desktop/phone sizes; DEPTH/NOVA/STARS numbers finite; 10 cloud rows valid; rings.colour in C; FIND_PLAY finite, slots have text, five known hoard kinds, three bounded serpent spots/leaves, nine fixed views`);

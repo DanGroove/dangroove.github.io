@@ -148,3 +148,14 @@ export function tripApply(st) {
 }
 const n2 = v => v.toFixed(2);
 export function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }
+
+// Rewrites only the frame's camera and card strength; progress and traveller stay on the trail.
+export function tripFocus(st, view, k) {
+  if (k === 0) return;
+  const F = COPY.findFocus, [x, y, r, least = F.least] = view;
+  const target = Math.max(Math.max(VIEW.s0, least * VIEW.sT), Math.min(F.most * VIEW.sT, F.fill * Math.min(VIEW.w, VIEW.h) / (2 * r)));
+  const before = toScreen(st, [x, y]), at = [F.at[0] * VIEW.w, F.at[1] * VIEW.h];
+  const s = st.cam.s * (target / st.cam.s) ** k;
+  st.cam = { s, tx: lerp(before[0], at[0], k) - x * s, ty: lerp(before[1], at[1], k) - y * s, ax: lerp(st.cam.ax, at[0], k), ay: lerp(st.cam.ay, at[1], k) };
+  st.cardK = st.cardK.map(v => v * (1 - k)); st.cardOpen *= 1 - k; st.dim = lerp(st.dim, 1, k);
+}

@@ -50,7 +50,7 @@ function cardsDepthConfig(c) {
   c.shadow.style.boxShadow = `0 0 ${cfg.blur}px ${cfg.spread}px var(--shade)`; c.shadow.style.borderRadius = cfg.radius + 'px';
   c.depthPending = false;
 }
-export const cardsSetCraft = craft => { CD.craft = craft; };
+export const cardsSetCraft = mask => { CD.craft = mask; };
 export const cardsLitBy = craft => STOPS.map(s => s.crafts.includes(craft));
 
 export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
@@ -64,7 +64,7 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const k0 = stonePx / (H * .95), k = Math.pow(k0, 1 - e);
     const cx = p[0] + (oc[0] - p[0]) * e, ry = p[1] - stonePx * .5 - 5, cy = ry + (oc[1] - ry) * e;
     c.el.style.transform = `translate(${(cx - W * k / 2).toFixed(2)}px,${(cy - H * k / 2).toFixed(2)}px) scale(${k.toFixed(5)})`;
-    const lit = CD.craft ? c.stop.crafts.includes(CD.craft) : false;
+    const lit = CD.craft ? CD.craft[i] : false;
     c.el.style.opacity = op * (CD.craft && !lit ? .55 : 1);
     c.btn.style.opacity = 1 - smooth(0, .3, e);
     c.face.style.opacity = smooth(.01, .1, e);
