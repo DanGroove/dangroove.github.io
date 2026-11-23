@@ -149,8 +149,8 @@ function measure() {
   if (intro) entrance.clear();
   layout.measure();
   if (intro) entrance.measure(layout.metrics.nameLines);
+  hero.style.setProperty('--leave', lift + 'px'); // JOIN: and the lift goes back on, before the name's reaction reads its own place (its circle is set in viewport px)
   stars?.measure(layout.metrics.h); nameReact.measure(); craftWipe.measure();
-  hero.style.setProperty('--leave', lift + 'px'); // JOIN: and the lift goes back on
   if (visible && !document.hidden) draw();
 }
 new ResizeObserver(measure).observe(hero);

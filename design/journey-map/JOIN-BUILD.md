@@ -58,7 +58,7 @@ Headless Chromium through Playwright, at device scale 1. The scripts are in the 
 ## Left open
 
 - On a view shorter than 640 px the hero is squeezed to the stage's height, as the brief asks. It is not solved.
-- The name's pointer reaction (`name-react.mjs`) and the craft roll measure their places unlifted. During the leave, the name's red circle is offset by the lift. The copy's rules leave those files alone.
+- The name's pointer reaction and the craft roll were tested under a lift after the build. With the hero lifted 300 px, the name's red circle sits under the pointer; with it lifted 150 px, a craft change lights its row in place. The name's reaction re-measures itself on every scroll, and it does so after the join has set the lift because the join's scroll listener is registered first (the map's script comes before the hero's in both pages). `measure()` now also puts the lift back before the name is measured, so the same holds after a resize.
 - `look()` folds a star's front copy into one disc. That only matters if a hold's stars are still flying home at the switch.
 - `drawn()` reports the hero's last drawn frame. If the hero's tick and the map's frame fall in one animation frame in the other order, the two can be one frame apart in parallax.
 - The batched drawing (squares under 1.5 px, 64 opacity steps) also applies to the stand-in page. It is not visibly different, but it is not the same pixels.
