@@ -1,5 +1,5 @@
 // Scroll progress, acts, camera, traveller. Everything here is a pure function of progress P (in viewport heights).
-import { ACTS, CAMERA, HOLD, MAP, STOPS, COPY } from './data.mjs';
+import { ACTS, CAMERA, HOLD, MAP, STOPS, COPY, DEPTH } from './data.mjs';
 import { TRAIL, polyLen, COAST_A, COAST_B, onLand, miniMapSvg } from './art.mjs';
 
 export const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -47,7 +47,7 @@ export const dateAt = P => { if (P <= PIECES[0][0]) return PIECES[0][2]; for (co
 export const progressForDate = d => { for (const q of PIECES) { const lo = Math.min(q[2], q[3]), hi = Math.max(q[2], q[3]); if (d >= lo && d <= hi && q[3] !== q[2]) return lerp(q[0], q[1], (d - q[2]) / (q[3] - q[2])); } return d <= PIECES[0][2] ? PIECES[0][0] : PIECES[PIECES.length - 1][1]; };
 
 // ---- view ----
-export const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1 };
+export const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1, depth: 1 };
 export function tripResize(w, h, tlH) {
   const m = w <= CAMERA.phoneMax ? 16 : 28;
   VIEW.w = w; VIEW.h = h; VIEW.phone = w <= CAMERA.phoneMax; VIEW.unit = h / 100;
@@ -59,7 +59,7 @@ export function tripResize(w, h, tlH) {
 const camOverview = () => ({ cx: MAP.w / 2, cy: MAP.h / 2, s: VIEW.s0, ax: VIEW.ox + MAP.w / 2 * VIEW.s0, ay: VIEW.oy + MAP.h / 2 * VIEW.s0 });
 const camTrip = (u, zoom) => { const c = smoothCenter(u); return { cx: c[0], cy: c[1], s: VIEW.sT * zoom, ax: CAMERA.anchorX * VIEW.w, ay: CAMERA.anchorY * VIEW.h }; };
 const camMix = (a, b, t) => ({ cx: lerp(a.cx, b.cx, t), cy: lerp(a.cy, b.cy, t), s: Math.exp(lerp(Math.log(a.s), Math.log(b.s), t)), ax: lerp(a.ax, b.ax, t), ay: lerp(a.ay, b.ay, t) });
-const camFinal = c => ({ s: c.s, tx: c.ax - c.cx * c.s, ty: c.ay - c.cy * c.s });
+const camFinal = c => ({ s: c.s, tx: c.ax - c.cx * c.s, ty: c.ay - c.cy * c.s, ax: c.ax, ay: c.ay });
 
 // ---- state for a progress value ----
 export function tripState(P) {
@@ -89,7 +89,8 @@ export function tripState(P) {
     cam = camTrip(st.u, st.zoom);
   } else if (seg.kind === 'leg' || seg.kind === 'legX') {
     const u0 = STOP_U[seg.i], u1 = seg.kind === 'leg' ? STOP_U[seg.i + 1] : X_U;
-    st.u = lerp(u0, u1, easeIO(st.t)); cam = camTrip(st.u, 1);
+    const arc = VIEW.depth ? DEPTH.arc * Math.min(1, seg.len / DEPTH.arcLen) * Math.sin(Math.PI * st.t) ** 2 : 0;
+    st.u = lerp(u0, u1, easeIO(st.t)); cam = camTrip(st.u, 1 - arc);
   } else { // footer acts: X fixed, anchor slides
     st.u = X_U; const base = camTrip(X_U, 1);
     const fx = VIEW.phone ? CAMERA.footerXPhone : CAMERA.footerX;
@@ -123,8 +124,8 @@ export function tripBuild(els) {
 export function tripApply(st) {
   const E = TRIP_EL, c = st.cam;
   E.cam.setAttribute('transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`);
-  const h = st.handoffT, fade = 1 - smooth(0, .45, st.blastT);
-  E.sea.style.opacity = smooth(.2, .7, h) * fade; E.fill.style.opacity = smooth(.25, .75, h) * fade;
+  const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT);
+  E.sea.style.opacity = smooth(...DEPTH.fade.sea, h) * fade; E.fill.style.opacity = smooth(.25, .75, h) * fade;
   E.detail.style.opacity = smooth(.45, .95, h) * fade; E.finds.style.opacity = smooth(.5, 1, h) * fade;
   E.coastG.style.opacity = fade;
   const dr = smooth(.12, .75, h);

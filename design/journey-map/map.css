@@ -11,6 +11,7 @@ button { font-family: inherit; }
 .map, #stars { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
 .map { display: block; }
 #stars { pointer-events: none; }
+#deep, #air, #sky { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .map text { font-family: Outfit, system-ui, sans-serif; }
 .ov { position: absolute; inset: 0; pointer-events: none; }
 
@@ -48,6 +49,7 @@ button { font-family: inherit; }
 .st-rune { fill: none; stroke: var(--paper); stroke-width: 24; stroke-linecap: round; stroke-linejoin: round; }
 .st-glow { opacity: 0; }
 .face { position: absolute; inset: 0; background: var(--g); color: var(--tx); border-radius: 14px; overflow: hidden; opacity: 0; }
+.c-sh { position: absolute; inset: 0; background: var(--shade); opacity: 0; pointer-events: none; }
 .c-in { height: 100%; display: flex; flex-direction: column; padding: 20px 24px 20px; }
 .c-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-bottom: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--hair); }
 .lay-band .c-top { background: var(--band); margin: -20px -24px 16px; padding: 18px 24px; border-bottom: 0; }
@@ -200,6 +202,7 @@ button { font-family: inherit; }
 .rm .rm-cards { padding: 56px 16px 0; display: flex; flex-direction: column; align-items: center; gap: 40px; }
 .rm .stop { position: relative; transform: none; width: min(640px, 100%); height: auto; min-height: 420px; pointer-events: auto; }
 .rm .st-btn { display: none; }
+.rm .c-sh, .rm #air, .rm #sky { display: none; }
 .rm .face { position: relative; opacity: 1; border-radius: 14px; pointer-events: auto; }
 .rm .c-in { opacity: 1; min-height: 420px; }
 .rm .tl { position: sticky; bottom: 0; width: 100%; opacity: 1; background: var(--ink); border-top: 1px solid var(--line); }
@@ -219,6 +222,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-steps .c-in { height: auto; min-height: 100%; }
 .jm-steps .cue { display: none; }
 .jm-steps #stars { z-index: 2; }
+.jm-steps #air, .jm-steps #sky { z-index: 2; }
 .jm-steps .ov { z-index: 3; }
 .jm-cut { position: absolute; inset: 0; z-index: 4; background: var(--ink); opacity: 0; pointer-events: auto; }
 .jm-cut[hidden], .go[hidden], .go button[hidden] { display: none; }
@@ -239,6 +243,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-review { position: fixed; left: 50%; top: 5px; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: var(--ink); color: var(--dim); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
 .jm-review button { background: none; border: 0; padding: 3px 2px; color: var(--dim); font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
 .jm-review button[aria-pressed="true"] { color: var(--paper); }
+.jm-review [data-depth] { border-left: var(--depth-rule) solid var(--dim); margin-left: var(--depth-gap); padding-left: var(--depth-gap); }
 .fx-hit { cursor: pointer; }
 .fx-hit[aria-disabled="true"] { pointer-events: none; }
 .fx-hit:focus-visible { outline: none; stroke: var(--paper); stroke-width: 2; vector-effect: non-scaling-stroke; }

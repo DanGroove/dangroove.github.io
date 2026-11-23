@@ -1,5 +1,5 @@
 // The single progress owner for both clock-driven Steps and the original Scroll mode.
-import { STEPS, COPY, STOPS } from './data.mjs';
+import { STEPS, COPY, STOPS, DEPTH, NOVA } from './data.mjs';
 import { VIEW, TOTAL_P } from './trip.mjs';
 import { BEATS, paceMove, paceAt, paceP } from './pace.mjs';
 import { arrowSvg } from './cards.mjs';
@@ -24,6 +24,7 @@ const stepsScrollTo = (p, smooth) => {
 
 export const JOURNEY = {
   get mode() { return SC.mode; }, get P() { return SC.P; }, get moving() { return !!(SC.move || SC.cut); },
+  get visiting() { return SC.returnP !== null; }, depth: DEPTH, nova: NOVA, setDepth: stepsSetDepth,
   beats: BEATS, go: stepsGo, next: stepsNext, back: stepsBack, set: stepsSet, setMode: stepsSetMode,
 };
 export const stepsProgress = () => SC.P;
@@ -34,7 +35,12 @@ function stepsClasses() {
   if (SC.rm) return;
   SC.root.classList.toggle('jm-steps', SC.mode === 'steps'); SC.root.classList.toggle('jm-scroll', SC.mode === 'scroll');
   try { history.scrollRestoration = SC.mode === 'steps' ? 'manual' : SC.restoration; } catch {}
-  if (SC.review) SC.review.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === SC.mode));
+  if (SC.review) SC.review.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === SC.mode));
+}
+function stepsSetDepth(on) {
+  VIEW.depth = on ? 1 : 0;
+  if (SC.review) SC.review.querySelector('[data-depth]').setAttribute('aria-pressed', String(!!VIEW.depth));
+  window.dispatchEvent(new Event('jm-depth'));
 }
 function stepsButtons() {
   if (!SC.go) return;
@@ -208,6 +214,7 @@ function stepsTouchEnd(e) {
 }
 export function stepsBuild({ stage, rm, resize, joinedTop }) {
   SC.root = document.documentElement; SC.rm = rm; SC.resize = resize; SC.joinedTop = joinedTop;
+  VIEW.depth = new URLSearchParams(window.location.search).get('depth') === '0' ? 0 : 1;
   window.__jm = JOURNEY;
   window.addEventListener('scroll', () => { if (SC.mode === 'scroll') stepsReadScroll(); }, { passive: true });
   if (rm) { SC.mode = 'scroll'; return; }
@@ -227,8 +234,9 @@ export function stepsBuild({ stage, rm, resize, joinedTop }) {
   SC.go.addEventListener('animationend', () => SC.go.classList.remove('go-reveal'));
   SC.go.querySelector('.go-back').addEventListener('click', stepsBack); SC.go.querySelector('.go-next').addEventListener('click', stepsNext); SC.go.querySelector('.go-top').addEventListener('click', () => stepsGo('top'));
   SC.review = document.createElement('div'); SC.review.className = 'jm-review'; SC.review.dataset.review = ''; SC.review.setAttribute('role', 'group'); SC.review.setAttribute('aria-label', s.review.label);
-  SC.review.innerHTML = `<span>${s.review.label}</span><button type="button" data-mode="steps">${s.review.steps}</button><button type="button" data-mode="scroll">${s.review.scroll}</button>`;
-  SC.review.querySelectorAll('button').forEach(b => b.addEventListener('click', () => stepsSetMode(b.dataset.mode))); document.body.appendChild(SC.review);
+  SC.review.innerHTML = `<span>${s.review.label}</span><button type="button" data-mode="steps">${s.review.steps}</button><button type="button" data-mode="scroll">${s.review.scroll}</button><button type="button" data-depth aria-pressed="${!!VIEW.depth}">${s.review.depth}</button>`;
+  SC.review.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => stepsSetMode(b.dataset.mode)));
+  SC.review.querySelector('[data-depth]').addEventListener('click', () => stepsSetDepth(!VIEW.depth)); document.body.appendChild(SC.review);
   const vars = { 'go-h': STEPS.nav.h + 'px', 'go-gap': STEPS.nav.gap + 'px', 'go-bar': STEPS.nav.bar + 'px', 'go-reveal': STEPS.reveal + 's' };
   Object.entries(vars).forEach(([k, v]) => SC.root.style.setProperty('--' + k, v));
   stepsClasses(); stepsArrive();

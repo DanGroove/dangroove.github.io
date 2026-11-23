@@ -1,10 +1,11 @@
 // The star canvas: hero field, the hand-off into trail dots, sea sparkle, the rush and the blast.
 // On the joined page (join.mjs) the list is built from the real hero's stars instead of the stand-in field.
-import { STARS, C, MAP } from './data.mjs';
+import { STARS, C, MAP, NOVA, DEPTH } from './data.mjs';
 import { rnd, onLand, COAST_A, COAST_B, polyLen } from './art.mjs';
 import { TRAIL_DOTS, VIEW, toScreen, smooth, lerp, clamp01, easeIO } from './trip.mjs';
+import { depthFrameBox, depthFrameCovers, novaRingRadius, novaFlare, NOVA_LIVE } from './depth.mjs';
 
-const SK = { cv: null, ctx: null, dpr: 1, list: [], trav: null, src: null, n: -1, standN: 0, seaN: 0, keepP: .3, bins: new Map(), tails: new Map(), pt: [0, 0] };
+const SK = { cv: null, ctx: null, dpr: 1, list: [], trav: null, src: null, n: -1, standN: 0, seaN: 0, keepP: .3, bins: new Map(), tails: new Map(), pt: [0, 0], drift: 0, orbit: 0, burn: 0, skyPointer: [0.5, 0.5], skyCount: 0, tuning: '', assignment: '', skyVisible: false };
 const HERO_MOST = 2000;
 
 export function starsBuild(canvas) {
@@ -17,6 +18,13 @@ export function starsBuild(canvas) {
   order.forEach((idx, k) => { const s = list[idx]; if (k < nDots) { s.kind = 'trail'; s.map = TRAIL_DOTS[k]; s.ord = k / nDots; } else { s.kind = 'sea'; s.map = seaPoint(r); s.ord = r(); } });
   SK.list = list; SK.trav = { hx: .62, hy: .4, z: 1, i: -1 };
   SK.standN = n; SK.seaN = n - nDots;
+  SK.skyCount = 0; starsAddSky();
+}
+function starsAddSky() {
+  while (SK.skyCount < STARS.sky) {
+    const i = SK.skyCount++, r = rnd(STARS.skySeed + i);
+    SK.list.push({ kind: 'sky', si: i, hx: r(), hy: r(), uz: r(), ur: r(), ua: r(), ured: r(), f: r(), phase: r() * Math.PI * 2 });
+  }
 }
 function seaPoint(r) { let p; for (let t = 0; t < 60; t++) { p = [30 + r() * 540, 30 + r() * 780]; if (!onLand(p)) break; } return p; }
 
@@ -36,7 +44,13 @@ function heroList() {
   // the traveller: the red star nearest the middle of the view (any star if the field has no red one)
   let tv = -1, best = Infinity;
   for (const want of [true, false]) { for (let i = 0; i < N; i++) { if (want && !red[i]) continue; const d = Math.hypot(at[i][0] - W / 2, at[i][1] - H / 2); if (d < best) { best = d; tv = i; } } if (tv >= 0) break; }
-  const ids = []; for (let i = 0; i < N; i++) if (i !== tv) ids.push(i);
+  // Choose the far sky before handing out any falling places. Reserve enough real stars for the fall.
+  const f = STARS.skyMargin, frame = DEPTH.frame.outer.map((v, i) => (i % 2 ? VIEW.oy : VIEW.ox) + v * VIEW.s0);
+  const candidates = [];
+  for (let i = 0; i < N; i++) if (i !== tv && Math.hypot(Math.max(frame[0] - at[i][0], 0, at[i][0] - frame[2]), Math.max(frame[1] - at[i][1], 0, at[i][1] - frame[3])) >= f) candidates.push(i);
+  for (let k = candidates.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [candidates[k], candidates[j]] = [candidates[j], candidates[k]]; }
+  const skyIds = candidates.slice(0, Math.max(0, Math.min(candidates.length, Math.floor(N * STARS.skyShare), N - 1 - nDots - nSea - STARS.skyReserve))), skySet = new Set(skyIds);
+  const ids = []; for (let i = 0; i < N; i++) if (i !== tv && !skySet.has(i)) ids.push(i);
   for (let k = ids.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [ids[k], ids[j]] = [ids[j], ids[k]]; }
   // trail dots first by the build's own rule (red stars go to the sea), then the sea sparkle, then the coasts
   const order = ids.filter(i => !red[i]).concat(ids.filter(i => red[i]));
@@ -59,6 +73,7 @@ function heroList() {
   }
   places.sort((a, b) => ANGLE(a.m[0] / MAP.w - .5, a.m[1] / MAP.h - .5) - ANGLE(b.m[0] / MAP.w - .5, b.m[1] / MAP.h - .5));
   rest.forEach((i, j) => { const s = star(i), p = places[j]; s.kind = 'coast'; s.map = p.m; s.hu = p.hu; s.t0 = p.t0; s.t1 = p.t1; s.ord = 0; list.push(s); });
+  skyIds.forEach(i => { const s = star(i); s.kind = 'sky'; s.f = r(); s.phase = r() * Math.PI * 2; list.push(s); });
   SK.list = list; SK.trav = { hx: .62, hy: .4, z: 1, i: tv }; SK.n = src.count;
 }
 // a star of the hero's look as a 2D disc (or square) of the same total light as the hero's point sprite: the sprite's
@@ -68,7 +83,19 @@ const lightR = rad => { const r = rad * SK.dpr, I = r < .5 ? 2 * r * Math.PI * M
 export function starsResize(w, h) {
   SK.dpr = Math.min(STARS.dprCap, window.devicePixelRatio || 1);
   SK.cv.width = Math.round(w * SK.dpr); SK.cv.height = Math.round(h * SK.dpr);
+  if (SK.src) SK.n = -1;
 }
+export function starsTick(dt, st) {
+  const tuning = JSON.stringify([STARS, NOVA, DEPTH.foot.stars]), changed = tuning !== SK.tuning;
+  if (changed) { SK.tuning = tuning; if (!SK.src) starsAddSky(); }
+  const assignment = JSON.stringify([STARS.skyShare, STARS.skyReserve, STARS.skyMargin, DEPTH.frame.outer]);
+  if (assignment !== SK.assignment) { SK.assignment = assignment; if (SK.src) SK.n = -1; }
+  SK.drift += dt * (1 - smooth(0, 1, st.handoffT));
+  if (st.blastT > 0) { SK.orbit += dt * smooth(...NOVA.orbitIn, st.blastT); SK.burn += dt; }
+  else { SK.orbit = 0; SK.burn = 0; }
+  return changed;
+}
+export const starsSkyVisible = st => st.handoffT > 0 && SK.skyVisible && (st.blastT > 0 || !depthFrameCovers(st));
 const fourStar = (ctx, x, y, s) => { ctx.beginPath(); ctx.moveTo(x, y - s); ctx.quadraticCurveTo(x, y, x + s, y); ctx.quadraticCurveTo(x, y, x, y + s); ctx.quadraticCurveTo(x, y, x - s, y); ctx.quadraticCurveTo(x, y, x, y - s); ctx.fill(); };
 
 // ---- batching: stars are grouped by colour and opacity; under 1.5 px across they are squares ----
@@ -94,6 +121,7 @@ function flush(ctx) {
 // sky, the hero's whole field drawn where it is at this opacity; map, the opacity of everything else (reduced motion's cross-fade).
 export function starsFrame(time, st, pointer, opt = {}) {
   const ctx = SK.ctx, W = VIEW.w, H = VIEW.h; if (!ctx) return;
+  SK.skyVisible = false;
   const src = SK.src && SK.src.count > 0 ? SK.src : null;
   if (src && src.count !== SK.n) heroList();
   ctx.setTransform(SK.dpr, 0, 0, SK.dpr, 0, 0); ctx.clearRect(0, 0, W, H);
@@ -105,10 +133,35 @@ export function starsFrame(time, st, pointer, opt = {}) {
   const h = st.handoffT, px = (pointer[0] - .5) * STARS.parallax, py = (pointer[1] - .5) * STARS.parallax;
   const Xs = toScreen(st, MAP.x), diag = Math.hypot(W, H);
   const dotR = Math.min(2.1, .75 + .38 * st.cam.s);
-  const heroPos = s => [(((s.hx + time * STARS.drift * s.z) % 1) + 1) % 1 * W + px * s.z, s.hy * H + py * s.z];
+  if (h <= 0) SK.skyPointer = pointer.slice();
+  const heroPos = (s, sky = false) => { const pt = sky && h > 0 ? SK.skyPointer : pointer; return [(((s.hx + SK.drift * STARS.drift * s.z) % 1) + 1) % 1 * W + (pt[0] - .5) * STARS.parallax * s.z, s.hy * H + (pt[1] - .5) * STARS.parallax * s.z]; };
+  const look = opt.look || [0, 0], box = depthFrameBox(st), centre = toScreen(st, [MAP.w / 2, MAP.h / 2]), c0 = [VIEW.ox + MAP.w / 2 * VIEW.s0, VIEW.oy + MAP.h / 2 * VIEW.s0];
   const late = src ? .02 : .05; // joined: the first stars move within the first 3 % of the fall
   for (const s of SK.list) {
     let x, y, rad, al, col, tail = null;
+    if (s.kind === 'sky') {
+      if (!src && s.si >= STARS.sky) continue;
+      if (!src) { s.z = lerp(...STARS.fieldZ, s.uz); s.r = lerp(...STARS.fieldR, s.ur); s.a = lerp(...STARS.fieldAlpha, s.ua); s.red = s.ured < STARS.red; }
+      if (src) {
+        if (h <= 0 || !s.skyFrozen) { src.drawn(s.i, P); const lk = src.look(s.i); s.sx = P[0]; s.sy = P[1]; s.sr = lightR(lk.size / 2); s.sa = lk.alpha; s.sc = lk.colour; s.skyFrozen = h > 0; }
+        x = s.sx; y = s.sy; rad = s.sr; al = s.sa; col = h < .5 ? s.sc : C.paper;
+      } else { [x, y] = heroPos(s, true); rad = s.r; al = s.a; col = s.red && h < .5 ? C.red : C.paper; }
+      const follow = smooth(...STARS.skyMove, h);
+      x += follow * (look[0] * s.z * STARS.skyLook + (centre[0] - c0[0]) * STARS.skyFollow);
+      y += follow * (look[1] * s.z * STARS.skyLook + (centre[1] - c0[1]) * STARS.skyFollow);
+      if (h > 0) {
+        const outside = Math.hypot(Math.max(box[0] - x, 0, x - box[2]), Math.max(box[1] - y, 0, y - box[3]));
+        al *= 1 - smooth(...STARS.skyCover, h) * (1 - smooth(0, STARS.skyEdge, outside)) * (1 - smooth(...DEPTH.fade.blast, st.blastT));
+        if (!opt.still) al *= 1 - STARS.twinkle * follow * (.5 + .5 * Math.sin(time * lerp(...STARS.skyF, s.f) + s.phase));
+      }
+      if (st.blastT > 0 && !opt.still) {
+        const dx = x - Xs[0], dy = y - Xs[1], d = Math.hypot(dx, dy), bump = Math.exp(-(((d - novaRingRadius(st)) / STARS.skyShock) ** 2)) * (1 - smooth(...NOVA.base.ringFade, st.blastT));
+        if (d) { x += dx / d * STARS.skyPush * bump; y += dy / d * STARS.skyPush * bump; }
+        al *= 1 + bump;
+      }
+      if (x >= -STARS.skyMargin && y >= -STARS.skyMargin && x <= W + STARS.skyMargin && y <= H + STARS.skyMargin) { if (al * K > 0) SK.skyVisible = true; put(x, y, rad, al * K, col); }
+      continue;
+    }
     if (src) {
       if (s.kind === 'coast' && h >= s.hu + .06) continue;
       if (s.i >= 0 && h < 1) { src.drawn(s.i, P); const lk = src.look(s.i); x = P[0]; y = P[1]; rad = lightR(lk.size / 2); al = lk.alpha; col = h < .5 ? lk.colour : C.paper; }
@@ -133,9 +186,10 @@ export function starsFrame(time, st, pointer, opt = {}) {
         tail = [(bx - x) * .08, (by - y) * .08]; x = bx; y = by; al = Math.max(al, .6);
       }
       if (st.blastT > 0) {
-        const b = 1 - Math.pow(1 - clamp01(st.blastT / .7), 3), dist = s.keep ? 60 + s.kr * Math.min(W, H) * .55 : diag * (.8 + s.far);
-        const ca = Math.cos(s.ang), sa = Math.sin(s.ang);
-        x = Xs[0] + ca * dist * b; y = Xs[1] + sa * dist * b * .85;
+        const b = 1 - Math.pow(1 - clamp01(st.blastT / NOVA.base.starBlast), 3), kick = opt.still ? 0 : Math.sin(Math.PI * novaFlare()) * NOVA.flare.kick;
+        const dist = s.keep ? (NOVA.base.starInner + s.kr * Math.min(W, H) * NOVA.base.starReach) * (1 + kick) : diag * (.8 + s.far);
+        const angle = s.ang + (s.keep && !opt.still ? NOVA.orbit * (NOVA.base.starSpeed[0] + NOVA.base.starSpeed[1] * (1 - s.kr)) * SK.orbit : 0), ca = Math.cos(angle), sa = Math.sin(angle);
+        x = Xs[0] + ca * dist * b; y = Xs[1] + sa * dist * b * NOVA.base.starAspect;
         if (b < .98) tail = [-ca * 30 * (1 - b), -sa * 30 * (1 - b)];
         al = s.keep ? lerp(.9, .25 + s.kr * .45, smooth(.5, 1, st.blastT)) : .9; rad = (src ? .6 : s.r) * .9;
         col = s.red && s.keep ? C.red : C.paper;
@@ -145,6 +199,19 @@ export function starsFrame(time, st, pointer, opt = {}) {
     al *= K;
     if (tail) putTail(x, y, tail, al, col);
     put(x, y, rad, al, col);
+  }
+  if (st.blastT > 0 && !opt.still) {
+    const E = NOVA.embers, count = VIEW.phone ? E.nPhone : E.n, big = Math.max(W, H), fade = smooth(...NOVA.motionIn, st.blastT);
+    const spark = (i, age, round, burst) => {
+      const r = rnd(NOVA.seed + i + round * (count + 1)), angle = r() * Math.PI * 2, reach = lerp(...E.reach, r()) * big;
+      const distance = reach * (1 - (1 - age) ** E.slow), rad = lerp(...E.r, r());
+      put(Xs[0] + Math.cos(angle) * distance, Xs[1] + Math.sin(angle) * distance, rad, E.alpha * (1 - smooth(...E.fade, age)) * fade * K * burst, C.warm);
+    };
+    for (let i = 0; i < count; i++) {
+      const life = lerp(...E.life, rnd(NOVA.seed + i)()), age = SK.burn / life + i / count, round = Math.floor(age);
+      spark(i, age - round, round, 1);
+      if (NOVA_LIVE.flareAt !== null && novaFlare() < 1) spark(i, novaFlare(), NOVA_LIVE.serial, E.burst);
+    }
   }
   flush(ctx);
   // the traveller: one red star from the hero to the X (on the joined page, a real red star of the hero's field)
@@ -163,4 +230,4 @@ export function starsFrame(time, st, pointer, opt = {}) {
   ctx.globalAlpha = 1;
 }
 // one still frame for reduced motion
-export function starsStill(st) { starsFrame(0, st, [.5, .5]); }
+export function starsStill(st) { starsFrame(0, st, [.5, .5], { still: true }); }

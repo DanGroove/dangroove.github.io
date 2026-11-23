@@ -1,13 +1,14 @@
 // Wires the journey map together: builds the stage, listens to scroll and resize, runs the one frame loop.
-import { C, COPY, MAP, CAMERA, PALETTES, STOPS, STEPS } from './data.mjs';
+import { C, COPY, MAP, CAMERA, PALETTES, STOPS, STEPS, DEPTH, NOVA } from './data.mjs';
 import { bigMap, mapDefs, stoneDefs, pathD, TRAIL } from './art.mjs';
 import { tripBuild, tripResize, tripState, tripApply, tripMiniVisited, TOTAL_P, VIEW, SEQ } from './trip.mjs';
-import { starsBuild, starsResize, starsFrame, starsStill } from './stars.mjs';
+import { starsBuild, starsResize, starsFrame, starsStill, starsTick, starsSkyVisible } from './stars.mjs';
 import { cardsBuild, cardsResize, cardsFrame, cardsList } from './cards.mjs';
 import { tlBuild, tlResize, tlFrame } from './timeline.mjs';
-import { footerBuild, footerBuildX, footerResize, footerFrame } from './footer.mjs';
+import { footerBuild, footerBuildX, footerResize, footerFrame, footerMotion } from './footer.mjs';
 import { findsBuild, findsFrame, findsPointer } from './finds.mjs';
 import { JOURNEY, stepsBuild, stepsFrame, stepsResize, stepsProgress, stepsPause } from './steps.mjs';
+import { depthBuild, depthResize, depthFrame, depthLook, depthInvalidate } from './depth.mjs';
 
 const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Set by join.mjs on the joined page only (the real hero in the stage): frame(st, moved, P) returns false to leave the star
@@ -21,8 +22,10 @@ document.title = COPY.docTitle;
 const MAIN = document.getElementById('jm');
 const M = bigMap();
 MAIN.innerHTML = `<h1 class="sr">${COPY.title}</h1><section class="trip" id="trip" aria-label="${COPY.srMap}"><div class="stage" id="stage">
+<canvas id="deep" aria-hidden="true"></canvas>
 <svg id="map" class="map" role="group" aria-label="${COPY.srMap}">${mapDefs()}<g id="cam"><g id="b-all"><g id="b-sea">${M.sea}</g><g id="b-fill">${M.fill}</g><g id="b-coast">${M.coast}</g><g id="b-detail">${M.detail}</g></g><path id="trail-done" class="done" d="${pathD(TRAIL)}"/><g id="finds">${M.finds}</g><g id="fxg" transform="translate(${MAP.x[0]} ${MAP.x[1]})"></g></g></svg>
 <canvas id="stars" aria-hidden="true"></canvas>
+<canvas id="air" aria-hidden="true"></canvas><svg id="sky" aria-hidden="true"></svg>
 <div class="ov">${stoneDefs()}<p class="caption">${COPY.heroCaption}</p><p class="cue">${COPY.cue}</p><div class="cards" id="cards"></div><div class="mini" id="mini" role="navigation" aria-label="${COPY.miniMap}"></div><div class="pop" id="pop" role="status"></div><div class="sheet" id="sheet" role="dialog" aria-modal="false"></div><footer class="ft" id="ft"></footer></div>
 </div></section><div class="rm-cards" id="rmcards"></div><div class="tl" id="tl"></div>`;
 
@@ -37,6 +40,7 @@ const goStop = i => { if (RM) { cardsList()[i].el.scrollIntoView({ behavior: 'au
 tripBuild({ svg: SVG, cam: $('cam'), sea: $('b-sea'), fill: $('b-fill'), coastG: $('b-coast'), detail: $('b-detail'), finds: $('finds'), done: $('trail-done'), caption: document.querySelector('.caption'), cue: document.querySelector('.cue'), mini: $('mini') });
 $('mini').querySelectorAll('.mm-stop').forEach(b => { b.style.setProperty('--mk', PALETTES[STOPS[+b.dataset.i].palette].mark); b.addEventListener('click', () => goStop(+b.dataset.i)); });
 starsBuild(CANVAS);
+depthBuild($('deep'), $('air'), $('sky'), RM);
 cardsBuild(RM ? $('rmcards') : $('cards'), goStop);
 tlBuild(TLEL, { jump: goStop, scrub: p => JOURNEY.set(p) }, RM);
 footerBuild($('ft')); footerBuildX($('fxg'), RM);
@@ -51,6 +55,7 @@ function resize() {
   tripResize(w, h, RM ? 0 : (phone ? 44 : 56) + room);
   SVG.setAttribute('width', w); SVG.setAttribute('height', h); SVG.setAttribute('viewBox', `0 0 ${w} ${h}`);
   starsResize(w, h);
+  depthResize(w, h);
   if (!RM) cardsResize(stepMode);
   const rule = footerResize();
   tlResize(RM ? null : rule);
@@ -60,28 +65,37 @@ function resize() {
   if (JOIN.resize) JOIN.resize(w, h);
 }
 const OVERVIEW_P = SEQ.find(s => s.kind === 'overview').a + 1;
-function still() { const st = tripState(OVERVIEW_P); tripApply(st); starsStill(st); FIXED = st; }
+function still() { const st = tripState(OVERVIEW_P); tripApply(st); starsStill(st); depthFrame(st, 0, 0, [.5, .5], { look: [0, 0], changed: false, fine: false }, true); FIXED = st; }
 let FIXED = null;
 
 window.addEventListener('scroll', () => { if (JOURNEY.mode === 'scroll') dirty = true; }, { passive: true });
 window.addEventListener('resize', resize);
+window.addEventListener('jm-depth', () => { dirty = true; depthInvalidate(); if (RM && FIXED) still(); });
 const PTR = [.5, .5];
 window.addEventListener('pointermove', e => { PTR[0] = e.clientX / VIEW.w; PTR[1] = e.clientY / VIEW.h; findsPointer(e.clientX, e.clientY); }, { passive: true });
 
-let raf = 0, lastP = -1, lastVisited = '';
+let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '';
 function frame(ts) {
   const time = ts / 1000;
+  const dt = mainTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - mainTs) / 1000)); mainTs = ts;
   P = stepsFrame(ts);
-  if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], jr); raf = requestAnimationFrame(frame); return; }
-  const st = tripState(P);
-  const moved = dirty || P !== lastP;
-  if (moved) { tripApply(st); tlFrame(st); footerFrame(st); CANVAS.style.opacity = st.dim; lastP = P; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
+  if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], { ...jr, still: true }); raf = requestAnimationFrame(frame); return; }
+  const st = tripState(P); st.visiting = JOURNEY.visiting;
+  const tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || P !== lastP || tuning !== mainTuning;
+  const aim = depthLook(dt, PTR);
+  if (moved) { tripApply(st); tlFrame(st); footerFrame(st); if (!JOIN.frame) CANVAS.style.opacity = st.dim; lastP = P; mainTuning = tuning; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
   const jo = JOIN.frame ? JOIN.frame(st, moved, P) : undefined;
-  if (jo !== false && (moved || st.handoffT < 1 || jo)) starsFrame(time, st, PTR, jo || undefined);
-  cardsFrame(st);
+  depthFrame(st, time, dt, PTR, aim, moved);
+  footerMotion(time, dt, st, aim.look, moved);
+  const starsChanged = starsTick(dt, st);
+  const skyIdle = starsSkyVisible(st) && time - mainSkyDraw >= 1 / DEPTH.idleFps;
+  if (jo !== false && (moved || starsChanged || st.handoffT < 1 || jo || aim.changed || skyIdle || st.blastT > 0)) {
+    starsFrame(time, st, PTR, { ...(jo || {}), look: aim.look }); mainSkyDraw = time;
+  }
+  cardsFrame(st, aim.look, PTR);
   findsFrame(time, st);
   raf = requestAnimationFrame(frame);
 }
-document.addEventListener('visibilitychange', () => { stepsPause(); if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else if (!raf) raf = requestAnimationFrame(frame); });
+document.addEventListener('visibilitychange', () => { stepsPause(); mainTs = null; if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else if (!raf) raf = requestAnimationFrame(frame); });
 const start = () => { resize(); raf = requestAnimationFrame(frame); };
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();

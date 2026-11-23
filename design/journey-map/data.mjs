@@ -98,12 +98,13 @@ export const COPY = {
   timelineStart: 'Before the first stop',
   close: 'Close',
   flip: 'Flip it over',
+  nova: 'The supernova. Press it.',
   steps: {
     group: 'Move through the journey', start: 'Start the journey', setOut: 'Set out', next: 'Next: {name}',
     toX: 'Next: the X', dig: 'Dig here', top: 'Back to the top', back: 'Back: {name}', returnTo: 'Back to where you were',
     names: { top: 'the top', map: 'the whole map', x: 'the X', end: 'the end' },
     say: { top: 'The top of the page', map: 'The whole map', stop: 'Stop {n} of {t}: {name}, {dates}', x: 'The X', end: 'The end of the trail: contact and links' },
-    review: { label: 'Preview only', steps: 'Steps', scroll: 'Scroll' },
+    review: { label: 'Preview only', steps: 'Steps', scroll: 'Scroll', depth: 'Depth' },
   },
   footer: {
     label: 'Footer',
@@ -181,6 +182,64 @@ export const STEPS = {
   frameMax: 0.05, reveal: 0.3,
 };
 
-export const STARS = { count: 420, red: 0.05, dprCap: 2, drift: 0.012, parallax: 14 };
+export const STARS = { count: 420, red: 0.05, dprCap: 2, drift: 0.012, parallax: 14,
+  sky: 300, skyShare: 0.38, skyLook: 0.5, skyFollow: 0.04, twinkle: 0.35, skyPush: 26,
+  skyReserve: 200, skyMargin: 10, skyEdge: 14, skyShock: 90, skyF: [0.5, 1.6], skyMove: [0, 0.3], skyCover: [0.25, 0.75],
+  skySeed: 157, fieldZ: [0.25, 1], fieldR: [0.5, 1.6], fieldAlpha: [0.35, 0.95],
+};
+
+// All new depth geometry, drawing paths and tuning values. Random identities are unit samples;
+// the renderers turn them into these live ranges on each frame.
+export const DEPTH = {
+  base: 0.045, gain: 0.55, look: 26, lookEase: 0.22, idleFps: 12, arc: 0.26, arcLen: 160,
+  minK: 0.05, epsilon: 0.01, seed: 137, dpr: 2,
+  fade: { sea: [0.2, 0.7], blast: [0, 0.45] },
+  frame: { inner: [22, 22, 578, 878], outer: [14.5, 14.5, 585.5, 885.5] },
+  rings: { on: 1, scale: [1.05, 1.10, 1.16], a: [-0.12, -0.24, -0.36], alpha: [0.55, 0.36, 0.2], colour: 'mid', width: 1, dash: [2, 5] },
+  outer: { on: 1, cell: [86, 64], fill: 0.55, alpha: [0.3, 0.12], fade: 420, rays: 0.05,
+    area: [-1000, -200, 1600, 1100], jitter: 0.8, width: 0.7, wave: [2.5, -3, 5], waveCount: 3, origin: [92, 716], n: 16, angle: 0.2, reach: 1600 },
+  light: { on: 1, dark: 0.45, darkPhone: 0.25, r: 0.55, core: 0.35, ptrR: 0.3, ptrCore: 0.3, amb: 0.35, card: 0.6, visit: 0.35, rush: [0, 0.5] },
+  field: { area: [-100, -50, 700, 950], wrapFade: 60, sprite: 128, spriteMid: 0.4, spriteAlpha: 0.5 },
+  mist: { on: 1, n: 120, nPhone: 60, a: [0.5, 1.8], r: [14, 36], stretch: [2.2, 3.4], turn: 0.2, alpha: [0.06, 0.14], near: [0.12, 0.42], thin: 0.35, show: [1.1, 1.3], pass: [2.4, 3.4], wind: 2.2 },
+  deck: { on: 1, n: 60, nPhone: 34, a: [6.5, 11], r: [50, 120], stretch: [1.6, 2.6], alpha: 0.07, boost: 6, show: [1.6, 1.9], peak: [1.8, 2.3], pass: [2.3, 3.0] },
+  clouds: { on: 1, show: [0.3, 0.8], pass: [2.0, 2.9], sway: [14, 26], period: [50, 90],
+    list: [[-150, 150, 1.5, 3, 1, 7.0], [-250, 520, 1.1, 1, -1, 6.4], [-90, 800, 0.9, 2, 1, 7.6], [760, 110, 1.2, 1, 1, 6.8], [860, 430, 1.6, 3, -1, 7.4],
+      [720, 760, 1.0, 2, -1, 6.2], [30, 330, 0.8, 2, 1, 8.2], [575, 690, 0.8, 2, -1, 8.0], [300, -30, 1.3, 3, 1, 7.2], [330, 935, 1.2, 1, -1, 6.6]] },
+  ravens: { on: 1, a: 2.2, size: 0.65, legs: [2, 4], from: 0.12, to: 0.88, side: 90, gap: 26, flap: 0.9, fold: 0.62, ramp: 0.1 },
+  card: { tilt: 14, ptrTilt: [2.2, 1.6], shift: 8, shadow: 0.5, drop: 18, ease: 0.12,
+    perspective: 1100, open: [0.1, 0.9], flat: 0.01, shadowShare: 3, blur: 28, spread: 10, radius: 14 },
+  // Section 6 gives the sky one pointer gain. Both review names tune that same gain.
+  foot: { get stars() { return STARS.skyLook; }, set stars(value) { STARS.skyLook = value; }, lobes: 0.25, text: 0.15 },
+  review: { rule: 1, gap: 6 },
+  drawings: {
+    clouds: [
+      ['M-52 12Q-64 12 -62 2Q-62 -9 -48 -9Q-46 -23 -29 -22Q-21 -35 -4 -30Q8 -41 23 -30Q38 -33 43 -18Q58 -17 56 -3Q62 10 50 12Z', 'M-34 -5Q-26 -14 -15 -8M5 -15Q15 -23 26 -14M-8 3Q0 -3 9 2', 'M-78 20H-36M-24 26H34M48 20H80'],
+      ['M-40 10Q-52 10 -50 0Q-50 -10 -37 -9Q-34 -24 -17 -21Q-8 -33 8 -25Q22 -30 29 -16Q44 -16 42 -2Q46 10 36 10Z', 'M-24 -6Q-16 -14 -6 -8M8 -12Q16 -18 24 -11', 'M-62 18H-22M-10 23H30M40 17H64'],
+      ['M-70 12Q-82 12 -80 3Q-79 -7 -66 -6Q-64 -19 -48 -17Q-40 -31 -23 -25Q-12 -38 5 -30Q18 -42 34 -31Q48 -35 54 -21Q68 -22 69 -9Q82 -8 80 3Q82 12 72 12Z', 'M-52 -3Q-44 -12 -33 -6M-12 -14Q-3 -23 9 -15M30 -16Q39 -23 48 -15M-22 4Q-13 -3 -3 3M20 2Q28 -4 37 2', 'M-98 20H-52M-40 27H42M56 20H100'],
+    ],
+    raven: { wing: 'M1.6 -3Q8 -8.4 15 -6.6L20 -4.4L16.8 -3.6L19.2 -1.8L15.8 -1.7L17.4 .2L13.6 -.4Q8 1.8 1.6 2.4Z', tail: 'M-1.8 6L-2.7 11.2L0 13.4L2.7 11.2L1.8 6Z', body: 'M0 -10Q2.7 -7 2.2 -1Q2.4 5 0 8Q-2.4 5 -2.2 -1Q-2.7 -7 0 -10Z', beak: 'M-.8 -9.4L0 -13.2L.8 -9.4Z' },
+  },
+};
+
+export const NOVA = {
+  pulse: [3.4, 0.05, 1.3, 0.025], spike: [2.2, 0.08], glow: [5.2, 0.025],
+  rays: { n: 14, len: [3, 7], alpha: [0.1, 0.2], turn: 0.035, start: 1.1, width: 0.7, breathe: 0.3, period: [2, 5] },
+  lobes: { n: 6, nPhone: 4, r: [120, 260], orbit: [40, 170], speed: [0.02, 0.06], alpha: [0.16, 0.34], breathe: 0.08 },
+  waves: { n: 3, every: 3.6, reach: 0.7, alpha: 0.22, width: 0.7 },
+  shells: [1.2, -0.8], shellDash: [2, 10],
+  orbit: 0.012, embers: { n: 24, nPhone: 12, life: [4, 7], reach: [0.12, 0.34], alpha: 0.8, r: [0.6, 1.5], slow: 3, burst: 2, fade: [0.15, 1] },
+  flare: { time: 1.6, core: 0.5, kick: 0.12, hit: 70, alpha: 0.9, reach: 0.85 },
+  motionIn: [0, 1], orbitIn: [0.5, 1], seed: 149,
+  base: { spikeLength: 12.7, angles: [45, -45], rushLen: 2.4, peakLen: 10, endLen: 5, spikePeak: 0.3, spikeEnd: 58,
+    thin: [1, 0.55, 0.8, 0.5], heat: [0.05, 0.7], redOut: [0.2, 0.9],
+    redGlow: [220, 1.1, 0.62, 0.58], glowPeak: 0.4, glowAspect: 0.82, rushGlowAlpha: 0.6,
+    orangeGlow: [120, 300], orangeAlpha: 0.9, core: [90, 60, 0.5, 70],
+    ringStart: 30, ringReach: 0.75, ringFade: [0.2, 0.9], ringAlpha: [0.9, 0.35],
+    streak: [20, 0.09], streakIn: [0, 0.06], streakOut: [0.25, 0.7],
+    shellIn: [0.2, 0.8], shellR: [200, 330], shellPhone: [120, 190], shellAlpha: [0.3, 0.14],
+    textIn: [0.4, 0.62], textGap: 0.1, textRise: 24, textShow: 0.3, digHit: 26, hitTolerance: 0.5,
+    starInner: 60, starReach: 0.55, starAspect: 0.85, starBlast: 0.7, starSpeed: [0.3, 0.7],
+  },
+};
 
 export const FIND_TIMING = { burst: 0.7, dig: 0.6, ravenLoop: 1.1, reel: 5, iris: 0.5, serpentSink: 0.9, serpentSurface: 1.0, beamSweep: 0.35, beamCone: 22, noteDelay: 0.4, carving: 1.0, unroll: 0.8, slide: 0.35, ripple: 0.9, closeScroll: 8 };

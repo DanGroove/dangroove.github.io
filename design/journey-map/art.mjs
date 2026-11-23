@@ -256,3 +256,7 @@ export function bigMap() {
 
 // The mini-map drawing (viewBox 0 0 600 900)
 export const miniMapSvg = () => `<path d="${pathD(COAST_A, 1)}" class="mm-coast"/><path d="${pathD(COAST_B, 1)}" class="mm-coast"/><path d="${pathD(TRAIL)}" class="mm-trail"/>`;
+
+// New sky drawings only. Their exact geometry is supplied from the live data table.
+export const depthCloudDrawing = paths => `<path class="o" d="${paths[0]}"/><path class="t" d="${paths[1]}"/><path class="t" d="${paths[2]}"/>`;
+export const depthRavenDrawing = paths => `<g class="sky-wing sky-right"><path class="o" d="${paths.wing}"/></g><g class="sky-wing sky-left"><path class="o" d="${paths.wing}"/></g><path class="o" d="${paths.tail}"/><path class="o" d="${paths.body}"/><path class="pf" d="${paths.beak}"/>`;

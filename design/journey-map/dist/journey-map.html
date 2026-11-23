@@ -19,6 +19,7 @@ button { font-family: inherit; }
 .map, #stars { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
 .map { display: block; }
 #stars { pointer-events: none; }
+#deep, #air, #sky { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .map text { font-family: Outfit, system-ui, sans-serif; }
 .ov { position: absolute; inset: 0; pointer-events: none; }
 
@@ -56,6 +57,7 @@ button { font-family: inherit; }
 .st-rune { fill: none; stroke: var(--paper); stroke-width: 24; stroke-linecap: round; stroke-linejoin: round; }
 .st-glow { opacity: 0; }
 .face { position: absolute; inset: 0; background: var(--g); color: var(--tx); border-radius: 14px; overflow: hidden; opacity: 0; }
+.c-sh { position: absolute; inset: 0; background: var(--shade); opacity: 0; pointer-events: none; }
 .c-in { height: 100%; display: flex; flex-direction: column; padding: 20px 24px 20px; }
 .c-top { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-bottom: 14px; margin-bottom: 16px; border-bottom: 1px solid var(--hair); }
 .lay-band .c-top { background: var(--band); margin: -20px -24px 16px; padding: 18px 24px; border-bottom: 0; }
@@ -208,6 +210,7 @@ button { font-family: inherit; }
 .rm .rm-cards { padding: 56px 16px 0; display: flex; flex-direction: column; align-items: center; gap: 40px; }
 .rm .stop { position: relative; transform: none; width: min(640px, 100%); height: auto; min-height: 420px; pointer-events: auto; }
 .rm .st-btn { display: none; }
+.rm .c-sh, .rm #air, .rm #sky { display: none; }
 .rm .face { position: relative; opacity: 1; border-radius: 14px; pointer-events: auto; }
 .rm .c-in { opacity: 1; min-height: 420px; }
 .rm .tl { position: sticky; bottom: 0; width: 100%; opacity: 1; background: var(--ink); border-top: 1px solid var(--line); }
@@ -227,6 +230,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-steps .c-in { height: auto; min-height: 100%; }
 .jm-steps .cue { display: none; }
 .jm-steps #stars { z-index: 2; }
+.jm-steps #air, .jm-steps #sky { z-index: 2; }
 .jm-steps .ov { z-index: 3; }
 .jm-cut { position: absolute; inset: 0; z-index: 4; background: var(--ink); opacity: 0; pointer-events: auto; }
 .jm-cut[hidden], .go[hidden], .go button[hidden] { display: none; }
@@ -247,6 +251,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-review { position: fixed; left: 50%; top: 5px; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: var(--ink); color: var(--dim); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
 .jm-review button { background: none; border: 0; padding: 3px 2px; color: var(--dim); font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
 .jm-review button[aria-pressed="true"] { color: var(--paper); }
+.jm-review [data-depth] { border-left: var(--depth-rule) solid var(--dim); margin-left: var(--depth-gap); padding-left: var(--depth-gap); }
 .fx-hit { cursor: pointer; }
 .fx-hit[aria-disabled="true"] { pointer-events: none; }
 .fx-hit:focus-visible { outline: none; stroke: var(--paper); stroke-width: 2; vector-effect: non-scaling-stroke; }
@@ -369,12 +374,13 @@ const COPY = {
   timelineStart: 'Before the first stop',
   close: 'Close',
   flip: 'Flip it over',
+  nova: 'The supernova. Press it.',
   steps: {
     group: 'Move through the journey', start: 'Start the journey', setOut: 'Set out', next: 'Next: {name}',
     toX: 'Next: the X', dig: 'Dig here', top: 'Back to the top', back: 'Back: {name}', returnTo: 'Back to where you were',
     names: { top: 'the top', map: 'the whole map', x: 'the X', end: 'the end' },
     say: { top: 'The top of the page', map: 'The whole map', stop: 'Stop {n} of {t}: {name}, {dates}', x: 'The X', end: 'The end of the trail: contact and links' },
-    review: { label: 'Preview only', steps: 'Steps', scroll: 'Scroll' },
+    review: { label: 'Preview only', steps: 'Steps', scroll: 'Scroll', depth: 'Depth' },
   },
   footer: {
     label: 'Footer',
@@ -452,7 +458,65 @@ const STEPS = {
   frameMax: 0.05, reveal: 0.3,
 };
 
-const STARS = { count: 420, red: 0.05, dprCap: 2, drift: 0.012, parallax: 14 };
+const STARS = { count: 420, red: 0.05, dprCap: 2, drift: 0.012, parallax: 14,
+  sky: 300, skyShare: 0.38, skyLook: 0.5, skyFollow: 0.04, twinkle: 0.35, skyPush: 26,
+  skyReserve: 200, skyMargin: 10, skyEdge: 14, skyShock: 90, skyF: [0.5, 1.6], skyMove: [0, 0.3], skyCover: [0.25, 0.75],
+  skySeed: 157, fieldZ: [0.25, 1], fieldR: [0.5, 1.6], fieldAlpha: [0.35, 0.95],
+};
+
+// All new depth geometry, drawing paths and tuning values. Random identities are unit samples;
+// the renderers turn them into these live ranges on each frame.
+const DEPTH = {
+  base: 0.045, gain: 0.55, look: 26, lookEase: 0.22, idleFps: 12, arc: 0.26, arcLen: 160,
+  minK: 0.05, epsilon: 0.01, seed: 137, dpr: 2,
+  fade: { sea: [0.2, 0.7], blast: [0, 0.45] },
+  frame: { inner: [22, 22, 578, 878], outer: [14.5, 14.5, 585.5, 885.5] },
+  rings: { on: 1, scale: [1.05, 1.10, 1.16], a: [-0.12, -0.24, -0.36], alpha: [0.55, 0.36, 0.2], colour: 'mid', width: 1, dash: [2, 5] },
+  outer: { on: 1, cell: [86, 64], fill: 0.55, alpha: [0.3, 0.12], fade: 420, rays: 0.05,
+    area: [-1000, -200, 1600, 1100], jitter: 0.8, width: 0.7, wave: [2.5, -3, 5], waveCount: 3, origin: [92, 716], n: 16, angle: 0.2, reach: 1600 },
+  light: { on: 1, dark: 0.45, darkPhone: 0.25, r: 0.55, core: 0.35, ptrR: 0.3, ptrCore: 0.3, amb: 0.35, card: 0.6, visit: 0.35, rush: [0, 0.5] },
+  field: { area: [-100, -50, 700, 950], wrapFade: 60, sprite: 128, spriteMid: 0.4, spriteAlpha: 0.5 },
+  mist: { on: 1, n: 120, nPhone: 60, a: [0.5, 1.8], r: [14, 36], stretch: [2.2, 3.4], turn: 0.2, alpha: [0.06, 0.14], near: [0.12, 0.42], thin: 0.35, show: [1.1, 1.3], pass: [2.4, 3.4], wind: 2.2 },
+  deck: { on: 1, n: 60, nPhone: 34, a: [6.5, 11], r: [50, 120], stretch: [1.6, 2.6], alpha: 0.07, boost: 6, show: [1.6, 1.9], peak: [1.8, 2.3], pass: [2.3, 3.0] },
+  clouds: { on: 1, show: [0.3, 0.8], pass: [2.0, 2.9], sway: [14, 26], period: [50, 90],
+    list: [[-150, 150, 1.5, 3, 1, 7.0], [-250, 520, 1.1, 1, -1, 6.4], [-90, 800, 0.9, 2, 1, 7.6], [760, 110, 1.2, 1, 1, 6.8], [860, 430, 1.6, 3, -1, 7.4],
+      [720, 760, 1.0, 2, -1, 6.2], [30, 330, 0.8, 2, 1, 8.2], [575, 690, 0.8, 2, -1, 8.0], [300, -30, 1.3, 3, 1, 7.2], [330, 935, 1.2, 1, -1, 6.6]] },
+  ravens: { on: 1, a: 2.2, size: 0.65, legs: [2, 4], from: 0.12, to: 0.88, side: 90, gap: 26, flap: 0.9, fold: 0.62, ramp: 0.1 },
+  card: { tilt: 14, ptrTilt: [2.2, 1.6], shift: 8, shadow: 0.5, drop: 18, ease: 0.12,
+    perspective: 1100, open: [0.1, 0.9], flat: 0.01, shadowShare: 3, blur: 28, spread: 10, radius: 14 },
+  // Section 6 gives the sky one pointer gain. Both review names tune that same gain.
+  foot: { get stars() { return STARS.skyLook; }, set stars(value) { STARS.skyLook = value; }, lobes: 0.25, text: 0.15 },
+  review: { rule: 1, gap: 6 },
+  drawings: {
+    clouds: [
+      ['M-52 12Q-64 12 -62 2Q-62 -9 -48 -9Q-46 -23 -29 -22Q-21 -35 -4 -30Q8 -41 23 -30Q38 -33 43 -18Q58 -17 56 -3Q62 10 50 12Z', 'M-34 -5Q-26 -14 -15 -8M5 -15Q15 -23 26 -14M-8 3Q0 -3 9 2', 'M-78 20H-36M-24 26H34M48 20H80'],
+      ['M-40 10Q-52 10 -50 0Q-50 -10 -37 -9Q-34 -24 -17 -21Q-8 -33 8 -25Q22 -30 29 -16Q44 -16 42 -2Q46 10 36 10Z', 'M-24 -6Q-16 -14 -6 -8M8 -12Q16 -18 24 -11', 'M-62 18H-22M-10 23H30M40 17H64'],
+      ['M-70 12Q-82 12 -80 3Q-79 -7 -66 -6Q-64 -19 -48 -17Q-40 -31 -23 -25Q-12 -38 5 -30Q18 -42 34 -31Q48 -35 54 -21Q68 -22 69 -9Q82 -8 80 3Q82 12 72 12Z', 'M-52 -3Q-44 -12 -33 -6M-12 -14Q-3 -23 9 -15M30 -16Q39 -23 48 -15M-22 4Q-13 -3 -3 3M20 2Q28 -4 37 2', 'M-98 20H-52M-40 27H42M56 20H100'],
+    ],
+    raven: { wing: 'M1.6 -3Q8 -8.4 15 -6.6L20 -4.4L16.8 -3.6L19.2 -1.8L15.8 -1.7L17.4 .2L13.6 -.4Q8 1.8 1.6 2.4Z', tail: 'M-1.8 6L-2.7 11.2L0 13.4L2.7 11.2L1.8 6Z', body: 'M0 -10Q2.7 -7 2.2 -1Q2.4 5 0 8Q-2.4 5 -2.2 -1Q-2.7 -7 0 -10Z', beak: 'M-.8 -9.4L0 -13.2L.8 -9.4Z' },
+  },
+};
+
+const NOVA = {
+  pulse: [3.4, 0.05, 1.3, 0.025], spike: [2.2, 0.08], glow: [5.2, 0.025],
+  rays: { n: 14, len: [3, 7], alpha: [0.1, 0.2], turn: 0.035, start: 1.1, width: 0.7, breathe: 0.3, period: [2, 5] },
+  lobes: { n: 6, nPhone: 4, r: [120, 260], orbit: [40, 170], speed: [0.02, 0.06], alpha: [0.16, 0.34], breathe: 0.08 },
+  waves: { n: 3, every: 3.6, reach: 0.7, alpha: 0.22, width: 0.7 },
+  shells: [1.2, -0.8], shellDash: [2, 10],
+  orbit: 0.012, embers: { n: 24, nPhone: 12, life: [4, 7], reach: [0.12, 0.34], alpha: 0.8, r: [0.6, 1.5], slow: 3, burst: 2, fade: [0.15, 1] },
+  flare: { time: 1.6, core: 0.5, kick: 0.12, hit: 70, alpha: 0.9, reach: 0.85 },
+  motionIn: [0, 1], orbitIn: [0.5, 1], seed: 149,
+  base: { spikeLength: 12.7, angles: [45, -45], rushLen: 2.4, peakLen: 10, endLen: 5, spikePeak: 0.3, spikeEnd: 58,
+    thin: [1, 0.55, 0.8, 0.5], heat: [0.05, 0.7], redOut: [0.2, 0.9],
+    redGlow: [220, 1.1, 0.62, 0.58], glowPeak: 0.4, glowAspect: 0.82, rushGlowAlpha: 0.6,
+    orangeGlow: [120, 300], orangeAlpha: 0.9, core: [90, 60, 0.5, 70],
+    ringStart: 30, ringReach: 0.75, ringFade: [0.2, 0.9], ringAlpha: [0.9, 0.35],
+    streak: [20, 0.09], streakIn: [0, 0.06], streakOut: [0.25, 0.7],
+    shellIn: [0.2, 0.8], shellR: [200, 330], shellPhone: [120, 190], shellAlpha: [0.3, 0.14],
+    textIn: [0.4, 0.62], textGap: 0.1, textRise: 24, textShow: 0.3, digHit: 26, hitTolerance: 0.5,
+    starInner: 60, starReach: 0.55, starAspect: 0.85, starBlast: 0.7, starSpeed: [0.3, 0.7],
+  },
+};
 
 const FIND_TIMING = { burst: 0.7, dig: 0.6, ravenLoop: 1.1, reel: 5, iris: 0.5, serpentSink: 0.9, serpentSurface: 1.0, beamSweep: 0.35, beamCone: 22, noteDelay: 0.4, carving: 1.0, unroll: 0.8, slide: 0.35, ripple: 0.9, closeScroll: 8 };
 
@@ -715,6 +779,10 @@ function bigMap() {
 // The mini-map drawing (viewBox 0 0 600 900)
 const miniMapSvg = () => `<path d="${pathD(COAST_A, 1)}" class="mm-coast"/><path d="${pathD(COAST_B, 1)}" class="mm-coast"/><path d="${pathD(TRAIL)}" class="mm-trail"/>`;
 
+// New sky drawings only. Their exact geometry is supplied from the live data table.
+const depthCloudDrawing = paths => `<path class="o" d="${paths[0]}"/><path class="t" d="${paths[1]}"/><path class="t" d="${paths[2]}"/>`;
+const depthRavenDrawing = paths => `<g class="sky-wing sky-right"><path class="o" d="${paths.wing}"/></g><g class="sky-wing sky-left"><path class="o" d="${paths.wing}"/></g><path class="o" d="${paths.tail}"/><path class="o" d="${paths.body}"/><path class="pf" d="${paths.beak}"/>`;
+
 // ---- trip.mjs ----
 // Scroll progress, acts, camera, traveller. Everything here is a pure function of progress P (in viewport heights).
 
@@ -764,7 +832,7 @@ const dateAt = P => { if (P <= PIECES[0][0]) return PIECES[0][2]; for (const q o
 const progressForDate = d => { for (const q of PIECES) { const lo = Math.min(q[2], q[3]), hi = Math.max(q[2], q[3]); if (d >= lo && d <= hi && q[3] !== q[2]) return lerp(q[0], q[1], (d - q[2]) / (q[3] - q[2])); } return d <= PIECES[0][2] ? PIECES[0][0] : PIECES[PIECES.length - 1][1]; };
 
 // ---- view ----
-const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1 };
+const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1, depth: 1 };
 function tripResize(w, h, tlH) {
   const m = w <= CAMERA.phoneMax ? 16 : 28;
   VIEW.w = w; VIEW.h = h; VIEW.phone = w <= CAMERA.phoneMax; VIEW.unit = h / 100;
@@ -776,7 +844,7 @@ function tripResize(w, h, tlH) {
 const camOverview = () => ({ cx: MAP.w / 2, cy: MAP.h / 2, s: VIEW.s0, ax: VIEW.ox + MAP.w / 2 * VIEW.s0, ay: VIEW.oy + MAP.h / 2 * VIEW.s0 });
 const camTrip = (u, zoom) => { const c = smoothCenter(u); return { cx: c[0], cy: c[1], s: VIEW.sT * zoom, ax: CAMERA.anchorX * VIEW.w, ay: CAMERA.anchorY * VIEW.h }; };
 const camMix = (a, b, t) => ({ cx: lerp(a.cx, b.cx, t), cy: lerp(a.cy, b.cy, t), s: Math.exp(lerp(Math.log(a.s), Math.log(b.s), t)), ax: lerp(a.ax, b.ax, t), ay: lerp(a.ay, b.ay, t) });
-const camFinal = c => ({ s: c.s, tx: c.ax - c.cx * c.s, ty: c.ay - c.cy * c.s });
+const camFinal = c => ({ s: c.s, tx: c.ax - c.cx * c.s, ty: c.ay - c.cy * c.s, ax: c.ax, ay: c.ay });
 
 // ---- state for a progress value ----
 function tripState(P) {
@@ -806,7 +874,8 @@ function tripState(P) {
     cam = camTrip(st.u, st.zoom);
   } else if (seg.kind === 'leg' || seg.kind === 'legX') {
     const u0 = STOP_U[seg.i], u1 = seg.kind === 'leg' ? STOP_U[seg.i + 1] : X_U;
-    st.u = lerp(u0, u1, easeIO(st.t)); cam = camTrip(st.u, 1);
+    const arc = VIEW.depth ? DEPTH.arc * Math.min(1, seg.len / DEPTH.arcLen) * Math.sin(Math.PI * st.t) ** 2 : 0;
+    st.u = lerp(u0, u1, easeIO(st.t)); cam = camTrip(st.u, 1 - arc);
   } else { // footer acts: X fixed, anchor slides
     st.u = X_U; const base = camTrip(X_U, 1);
     const fx = VIEW.phone ? CAMERA.footerXPhone : CAMERA.footerX;
@@ -840,8 +909,8 @@ function tripBuild(els) {
 function tripApply(st) {
   const E = TRIP_EL, c = st.cam;
   E.cam.setAttribute('transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`);
-  const h = st.handoffT, fade = 1 - smooth(0, .45, st.blastT);
-  E.sea.style.opacity = smooth(.2, .7, h) * fade; E.fill.style.opacity = smooth(.25, .75, h) * fade;
+  const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT);
+  E.sea.style.opacity = smooth(...DEPTH.fade.sea, h) * fade; E.fill.style.opacity = smooth(.25, .75, h) * fade;
   E.detail.style.opacity = smooth(.45, .95, h) * fade; E.finds.style.opacity = smooth(.5, 1, h) * fade;
   E.coastG.style.opacity = fade;
   const dr = smooth(.12, .75, h);
@@ -865,13 +934,240 @@ function tripApply(st) {
 const n2 = v => v.toFixed(2);
 function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }
 
+// ---- depth.mjs ----
+// The one layer model, plus its three render surfaces. Importing this module needs no DOM.
+
+
+
+const depthLift = st => Math.max(0, DEPTH.base + DEPTH.gain * (st.cam.s - VIEW.s0) / (VIEW.sT - VIEW.s0));
+const depthFactor = (st, a) => Math.max(DEPTH.minK, 1 + a * depthLift(st));
+const depthPoint = (st, p, a, look = [0, 0]) => {
+  const k = depthFactor(st, a), g = toScreen(st, p), vx = st.cam.ax + look[0], vy = st.cam.ay + look[1];
+  return { x: vx + (g[0] - vx) * k, y: vy + (g[1] - vy) * k, k, s: st.cam.s * k };
+};
+const depthVisibility = (k, layer) => smooth(...layer.show, k) * (1 - smooth(...layer.pass, k));
+const depthCloudPass = (st, a) => 1 - smooth(...DEPTH.clouds.pass, depthFactor(st, a));
+const depthDeckAlpha = (st, a) => {
+  const k = depthFactor(st, a), d = DEPTH.deck;
+  return d.alpha * (1 + d.boost * smooth(...d.peak, k)) * depthVisibility(k, d);
+};
+const depthSeaFade = st => smooth(...DEPTH.fade.sea, st.handoffT) * (1 - smooth(...DEPTH.fade.blast, st.blastT));
+const depthFrameBox = (st, inner = false) => {
+  const f = DEPTH.frame[inner ? 'inner' : 'outer'], a = toScreen(st, f.slice(0, 2)), b = toScreen(st, f.slice(2));
+  return [a[0], a[1], b[0], b[1]];
+};
+const depthFrameCovers = st => { const b = depthFrameBox(st); return b[0] <= 0 && b[1] <= 0 && b[2] >= VIEW.w && b[3] >= VIEW.h; };
+const novaRingRadius = st => lerp(NOVA.base.ringStart, Math.max(VIEW.w, VIEW.h) * NOVA.base.ringReach, 1 - (1 - st.blastT) ** 3);
+const NOVA_LIVE = { time: 0, flareAt: null, serial: 0 };
+const novaFlare = () => NOVA_LIVE.flareAt === null ? 1 : clamp01((NOVA_LIVE.time - NOVA_LIVE.flareAt) / NOVA.flare.time);
+
+const DP = { deep: null, air: null, sky: null, dc: null, ac: null, dpr: 1, rm: false, fine: false,
+  look: [0, 0], clouds: [], birds: [], mist: [], deck: [], waves: [], waveKey: '', sprite: null, spriteKey: '',
+  lastDraw: -Infinity, wind: 0, light: null, config: '', tuning: '', pending: false, force: true, mistVisible: false, cloudVisible: false, pointer: [0.5, 0.5] };
+const depthCentres = [COAST_A, COAST_B].map(coast => coast.reduce((a, p) => [a[0] + p[0] / coast.length, a[1] + p[1] / coast.length], [0, 0]));
+const depthRange = (range, u) => lerp(range[0], range[1], u);
+const depthSamples = (list, n, seed) => { if (list.length >= n && list.seed === seed) return; const r = rnd(seed); list.length = 0; list.seed = seed; for (let i = 0; i < n; i++) list.push(Array.from({ length: 8 }, () => r())); };
+const depthSvgGroup = () => { const el = document.createElementNS('http://www.w3.org/2000/svg', 'g'); el.style.opacity = 0; return el; };
+
+function depthBuild(deep, air, sky, rm) {
+  Object.assign(DP, { deep, air, sky, rm, dc: deep.getContext('2d'), ac: air.getContext('2d') });
+  DP.fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const media = window.matchMedia('(hover: hover) and (pointer: fine)');
+  media.addEventListener('change', e => { DP.fine = e.matches; DP.force = true; });
+  depthConfigure();
+  DP.tuning = JSON.stringify(DEPTH);
+}
+function depthConfigure() {
+  // Runs at build or in a configuration microtask, outside the animation callback.
+  document.documentElement.style.setProperty('--depth-rule', DEPTH.review.rule + 'px'); document.documentElement.style.setProperty('--depth-gap', DEPTH.review.gap + 'px');
+  const key = JSON.stringify([DEPTH.clouds.list.map(c => c[3]), DEPTH.drawings, DEPTH.field.sprite, DEPTH.field.spriteMid, DEPTH.field.spriteAlpha]);
+  if (key !== DP.config) {
+    DP.config = key;
+    while (DP.clouds.length < DEPTH.clouds.list.length) { const el = depthSvgGroup(); DP.sky.insertBefore(el, DP.birds[0]?.el || null); DP.clouds.push({ el }); }
+    DP.clouds.forEach((c, i) => {
+      const row = DEPTH.clouds.list[i]; if (!row) return;
+      const paths = DEPTH.drawings.clouds[row[3] - 1];
+      if (!c.paths) { c.el.innerHTML = depthCloudDrawing(paths); c.paths = [...c.el.querySelectorAll('path')]; }
+      else c.paths.forEach((path, j) => path.setAttribute('d', paths[j]));
+    });
+    if (!DP.birds.length) for (let i = 0; i < 2; i++) { const el = depthSvgGroup(); DP.sky.appendChild(el); DP.birds.push({ el }); }
+    DP.birds.forEach(b => {
+      const paths = DEPTH.drawings.raven;
+      if (!b.wings) { b.el.innerHTML = depthRavenDrawing(paths); b.wings = [...b.el.querySelectorAll('.sky-wing')]; b.paths = [...b.el.querySelectorAll('path')]; }
+      else [paths.wing, paths.wing, paths.tail, paths.body, paths.beak].forEach((d, i) => b.paths[i].setAttribute('d', d));
+    });
+    DP.force = true;
+  }
+  const f = DEPTH.field, spriteKey = JSON.stringify([f.sprite, f.spriteMid, f.spriteAlpha, C.paper]);
+  if (spriteKey !== DP.spriteKey) {
+    DP.spriteKey = spriteKey; DP.sprite = document.createElement('canvas'); DP.sprite.width = DP.sprite.height = f.sprite;
+    const c = DP.sprite.getContext('2d'), r = f.sprite / 2, g = c.createRadialGradient(r, r, 0, r, r, r);
+    g.addColorStop(0, C.paper); g.addColorStop(f.spriteMid, depthAlphaColour(C.paper, f.spriteAlpha)); g.addColorStop(1, depthAlphaColour(C.paper, 0));
+    c.fillStyle = g; c.fillRect(0, 0, f.sprite, f.sprite); DP.force = true;
+  }
+}
+const depthAlphaColour = (colour, alpha) => colour + Math.round(clamp01(alpha) * 255).toString(16).padStart(2, '0');
+function depthResize(w, h) {
+  DP.dpr = Math.min(DEPTH.dpr, window.devicePixelRatio || 1);
+  DP.deep.width = Math.round(w * DP.dpr); DP.deep.height = Math.round(h * DP.dpr);
+  DP.air.width = w; DP.air.height = h;
+  DP.sky.setAttribute('width', w); DP.sky.setAttribute('height', h); DP.sky.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  DP.force = true;
+}
+function depthLook(dt, pointer) {
+  const enabled = VIEW.depth && !DP.rm && !VIEW.phone && DP.fine;
+  const target = enabled ? pointer.map(p => (p - 0.5) * 2 * DEPTH.look) : [0, 0];
+  let changed = false;
+  DP.look.forEach((v, i) => {
+    let next = enabled ? v + (target[i] - v) * (1 - Math.exp(-dt / DEPTH.lookEase)) : 0;
+    if (Math.abs(next - target[i]) < DEPTH.epsilon) next = target[i];
+    changed ||= next !== v; DP.look[i] = next;
+  });
+  const pointerChanged = pointer.some((v, i) => v !== DP.pointer[i]); DP.pointer = pointer.slice();
+  return { look: DP.look, changed, fine: enabled, pointerChanged };
+}
+function depthInvalidate() { DP.force = true; }
+
+function depthDeep(st, look) {
+  const c = DP.dc, w = VIEW.w, h = VIEW.h, R = DEPTH.rings, O = DEPTH.outer;
+  c.setTransform(DP.dpr, 0, 0, DP.dpr, 0, 0); c.clearRect(0, 0, w, h);
+  if (R.on) {
+    const b = depthFrameBox(st, true); c.save(); c.beginPath(); c.rect(b[0], b[1], b[2] - b[0], b[3] - b[1]); c.clip();
+    c.strokeStyle = C[R.colour]; c.lineWidth = R.width;
+    [COAST_A, COAST_B].forEach((coast, i) => R.scale.forEach((scale, j) => {
+      c.globalAlpha = R.alpha[j]; c.setLineDash(j === R.scale.length - 1 ? R.dash : []); c.beginPath();
+      coast.forEach((p, k) => { const ct = depthCentres[i], q = depthPoint(st, [ct[0] + (p[0] - ct[0]) * scale, ct[1] + (p[1] - ct[1]) * scale], R.a[j], look); if (!k) c.moveTo(q.x, q.y); else c.lineTo(q.x, q.y); });
+      c.closePath(); c.stroke();
+    })); c.restore();
+  }
+  if (!O.on) return;
+  const key = JSON.stringify([O.cell, O.area, O.jitter, DEPTH.seed]);
+  if (key !== DP.waveKey) {
+    DP.waveKey = key; DP.waves = []; const r = rnd(DEPTH.seed), a = O.area;
+    for (let y = a[1]; y < a[3]; y += O.cell[1]) for (let x = a[0]; x < a[2]; x += O.cell[0]) DP.waves.push([x + r() * O.cell[0] * O.jitter, y + r() * O.cell[1] * O.jitter, r()]);
+  }
+  c.save(); c.strokeStyle = C.paper; c.lineWidth = O.width; c.setLineDash([]);
+  const f = DEPTH.frame.outer;
+  for (const [x, y, chance] of DP.waves) {
+    if (chance > O.fill || (x >= f[0] && x <= f[2] && y >= f[1] && y <= f[3])) continue;
+    const g = toScreen(st, [x, y]), scale = st.cam.s, width = O.wave[2] * O.waveCount * scale;
+    if (g[0] + width < 0 || g[0] > w || g[1] + Math.abs(O.wave[1]) * scale < 0 || g[1] - Math.abs(O.wave[1]) * scale > h) continue;
+    const distance = Math.hypot(Math.max(f[0] - x, 0, x - f[2]), Math.max(f[1] - y, 0, y - f[3]));
+    c.globalAlpha = lerp(O.alpha[0], O.alpha[1], clamp01(distance / O.fade)); c.beginPath(); c.moveTo(...g);
+    for (let j = 0; j < O.waveCount; j++) c.quadraticCurveTo(g[0] + (O.wave[2] * j + O.wave[0]) * scale, g[1] + (j % 2 ? -O.wave[1] : O.wave[1]) * scale, g[0] + O.wave[2] * (j + 1) * scale, g[1]);
+    c.stroke();
+  }
+  const b = depthFrameBox(st); c.beginPath(); c.rect(0, 0, w, h); c.rect(b[0], b[1], b[2] - b[0], b[3] - b[1]); c.clip('evenodd');
+  c.globalAlpha = O.rays; c.beginPath(); const origin = toScreen(st, O.origin);
+  for (let i = 0; i < O.n; i++) { const angle = i * Math.PI * 2 / O.n + O.angle, end = toScreen(st, [O.origin[0] + Math.cos(angle) * O.reach, O.origin[1] + Math.sin(angle) * O.reach]); c.moveTo(...origin); c.lineTo(...end); }
+  c.stroke(); c.restore(); c.globalAlpha = 1;
+}
+const depthHole = (distance, radius, core) => radius > 0 ? 1 - clamp01((distance - core * radius) / (radius * (1 - core))) : 0;
+function lightAt(x, y) {
+  const l = DP.light; if (!l) return 1;
+  const a = depthHole(Math.hypot(x - l.trav[0], y - l.trav[1]), l.r, DEPTH.light.core);
+  const b = l.pointer ? depthHole(Math.hypot(x - l.pointer[0], y - l.pointer[1]), l.pr, DEPTH.light.ptrCore) : 0;
+  return 1 - l.v * (1 - DEPTH.light.amb) * (1 - Math.max(a, b));
+}
+function depthAir(st, look, pointer, fine) {
+  const c = DP.ac, w = VIEW.w, h = VIEW.h, small = Math.min(w, h), L = DEPTH.light, M = DEPTH.mist, D = DEPTH.deck;
+  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w, h);
+  const trav = toScreen(st, st.trav || MAP.waypoints[0]), pt = fine ? [pointer[0] * w, pointer[1] * h] : null;
+  const v = L.on ? smooth(0, 1, st.pushT) * (1 - L.card * st.cardOpen) * (1 - smooth(...L.rush, st.rushT)) * (st.visiting ? L.visit : 1) : 0;
+  DP.light = { trav, pointer: pt, r: L.r * small, pr: L.ptrR * small, v };
+  if (v > 0) {
+    c.globalAlpha = v * (VIEW.phone ? L.darkPhone : L.dark); c.fillStyle = C.ink; c.fillRect(0, 0, w, h); c.globalAlpha = 1;
+    c.globalCompositeOperation = 'destination-out';
+    for (const [p, radius, core] of [[trav, L.r * small, L.core], [pt, L.ptrR * small, L.ptrCore]]) {
+      if (!p || radius <= 0) continue;
+      const g = c.createRadialGradient(...p, radius * core, ...p, radius); g.addColorStop(0, C.paper); g.addColorStop(1, depthAlphaColour(C.paper, 0));
+      c.fillStyle = g; c.beginPath(); c.arc(...p, radius, 0, Math.PI * 2); c.fill();
+    }
+    c.globalCompositeOperation = 'source-over';
+  }
+  const field = DEPTH.field.area, width = field[2] - field[0]; DP.mistVisible = false;
+  const drawField = (list, layer, deck) => {
+    const n = Math.max(0, Math.floor(VIEW.phone ? layer.nPhone : layer.n)); depthSamples(list, n, DEPTH.seed + (deck ? 1 : 0));
+    if (!layer.on) return;
+    for (let i = 0; i < n; i++) {
+      const u = list[i], a = depthRange(layer.a, u[2]);
+      const start = lerp(field[0], field[2], u[0]), x = deck ? start : field[0] + ((start - field[0] + DP.wind * (0.5 + a)) % width + width) % width;
+      const p = depthPoint(st, [x, lerp(field[1], field[3], u[1])], a, look), radius = depthRange(layer.r, u[3]) * p.s, rx = radius * depthRange(layer.stretch, u[4]);
+      if (p.x + rx < 0 || p.x - rx > w || p.y + rx < 0 || p.y - rx > h) continue;
+      let alpha = deck ? depthDeckAlpha(st, a) : depthRange(layer.alpha, u[6]) * depthVisibility(p.k, layer);
+      if (!deck) {
+        const wrap = DEPTH.field.wrapFade, fade = smooth(0, wrap, x - field[0]) * (1 - smooth(width - wrap, width, x - field[0]));
+        alpha *= fade * lightAt(p.x, p.y) * st.dim * (M.thin + (1 - M.thin) * smooth(...M.near, Math.hypot(p.x - trav[0], p.y - trav[1]) / small));
+      }
+      if (alpha <= 0) continue;
+      if (!deck) DP.mistVisible = true;
+      c.save(); c.globalAlpha = alpha; c.translate(p.x, p.y); c.rotate((u[5] * 2 - 1) * M.turn); c.drawImage(DP.sprite, -rx, -radius, rx * 2, radius * 2); c.restore();
+    }
+  };
+  drawField(DP.mist, M, false); drawField(DP.deck, D, true); c.globalAlpha = 1;
+}
+function depthSky(st, look, time) {
+  const Cld = DEPTH.clouds, Rv = DEPTH.ravens, r = rnd(DEPTH.seed), fade = 1 - smooth(...DEPTH.fade.blast, st.blastT);
+  DP.cloudVisible = false;
+  DP.clouds.forEach((c, i) => {
+    const row = Cld.list[i], sway = depthRange(Cld.sway, r()), period = depthRange(Cld.period, r()), phase = r() * Math.PI * 2;
+    if (!row) { c.el.style.opacity = 0; return; }
+    const [x, y, size, drawing, flip, a] = row, p = depthPoint(st, [x + sway * Math.sin(Math.PI * 2 * time / period + phase), y], a, look);
+    const alpha = Cld.on * smooth(...Cld.show, st.handoffT) * depthCloudPass(st, a) * fade;
+    c.el.style.opacity = alpha;
+    if (alpha > 0) DP.cloudVisible = true;
+    if (alpha > 0) c.el.setAttribute('transform', `translate(${p.x} ${p.y}) scale(${flip * size * p.s} ${size * p.s})`);
+  });
+  const flight = Rv.on && st.kind === 'leg' && Rv.legs.includes(st.i) ? clamp01((st.t - Rv.from) / (Rv.to - Rv.from)) : 0;
+  DP.birds.forEach((bird, i) => {
+    const alpha = smooth(0, Rv.ramp, flight) * (1 - smooth(1 - Rv.ramp, 1, flight)) * depthSeaFade(st);
+    bird.el.style.opacity = alpha; if (!alpha) return;
+    const A = MAP.waypoints[STOPS[st.i].w], B = MAP.waypoints[STOPS[st.i + 1].w], dx = B[0] - A[0], dy = B[1] - A[1], len = Math.hypot(dx, dy), d = [dx / len, dy / len], normal = [-d[1], d[0]];
+    const start = [A[0] + normal[0] * Rv.side, A[1] + normal[1] * Rv.side], end = [B[0] - normal[0] * Rv.side, B[1] - normal[1] * Rv.side];
+    const p = depthPoint(st, [lerp(start[0], end[0], flight) - i * Rv.gap * (d[0] - normal[0]), lerp(start[1], end[1], flight) - i * Rv.gap * (d[1] - normal[1])], Rv.a, look);
+    const angle = Math.atan2(end[1] - start[1], end[0] - start[0]) * 180 / Math.PI + 90, wing = lerp(Rv.fold, 1, 0.5 + 0.5 * Math.sin(st.P * Rv.flap));
+    bird.el.setAttribute('transform', `translate(${p.x} ${p.y}) rotate(${angle}) scale(${Rv.size * p.s})`);
+    bird.wings.forEach((wingEl, j) => wingEl.setAttribute('transform', `scale(${j ? -wing : wing} 1)`));
+  });
+}
+function depthMistEntering(st, look) {
+  const m = DEPTH.mist, area = DEPTH.field.area, width = area[2] - area[0], n = VIEW.phone ? m.nPhone : m.n;
+  return DP.mist.some((u, i) => {
+    if (i >= n) return false;
+    const a = depthRange(m.a, u[2]), x = area[0] + ((u[0] * width + DP.wind * (0.5 + a)) % width + width) % width;
+    const p = depthPoint(st, [x, lerp(area[1], area[3], u[1])], a, look), r = depthRange(m.r, u[3]) * depthRange(m.stretch, u[4]) * p.s;
+    return depthVisibility(p.k, m) > 0 && p.x + r >= 0 && p.x - r <= VIEW.w && p.y + r >= 0 && p.y - r <= VIEW.h;
+  });
+}
+function depthFrame(st, time, dt, pointer, aim, moved) {
+  if (!DP.deep) return;
+  DP.wind += dt * DEPTH.mist.wind;
+  const tuning = JSON.stringify(DEPTH);
+  if (tuning !== DP.tuning) {
+    DP.tuning = tuning; DP.force = true;
+    if (!DP.pending) { DP.pending = true; queueMicrotask(() => { depthConfigure(); DP.pending = false; DP.force = true; }); }
+  }
+  const on = !!VIEW.depth, active = on && !DP.rm, fade = depthSeaFade(st);
+  DP.deep.style.opacity = on ? fade * st.dim : 0;
+  DP.air.style.opacity = active ? fade : 0; DP.sky.style.opacity = active ? st.dim : 0;
+  const force = DP.force; DP.force = false;
+  if (on && fade > 0 && (force || moved || aim.changed)) depthDeep(st, aim.look);
+  if (!active) return;
+  const idle = time - DP.lastDraw >= 1 / DEPTH.idleFps;
+  const mistDrifting = idle && DEPTH.mist.on && DEPTH.mist.wind !== 0 && (DP.mistVisible || depthMistEntering(st, aim.look));
+  if (fade > 0 && (force || moved || aim.changed || aim.pointerChanged || mistDrifting)) depthAir(st, aim.look, pointer, aim.fine);
+  if (force || moved || aim.changed || (idle && DP.cloudVisible)) depthSky(st, aim.look, time);
+  if (idle) DP.lastDraw = time;
+}
+
 // ---- stars.mjs ----
 // The star canvas: hero field, the hand-off into trail dots, sea sparkle, the rush and the blast.
 // On the joined page (join.mjs) the list is built from the real hero's stars instead of the stand-in field.
 
 
 
-const SK = { cv: null, ctx: null, dpr: 1, list: [], trav: null, src: null, n: -1, standN: 0, seaN: 0, keepP: .3, bins: new Map(), tails: new Map(), pt: [0, 0] };
+
+const SK = { cv: null, ctx: null, dpr: 1, list: [], trav: null, src: null, n: -1, standN: 0, seaN: 0, keepP: .3, bins: new Map(), tails: new Map(), pt: [0, 0], drift: 0, orbit: 0, burn: 0, skyPointer: [0.5, 0.5], skyCount: 0, tuning: '', assignment: '', skyVisible: false };
 const HERO_MOST = 2000;
 
 function starsBuild(canvas) {
@@ -884,6 +1180,13 @@ function starsBuild(canvas) {
   order.forEach((idx, k) => { const s = list[idx]; if (k < nDots) { s.kind = 'trail'; s.map = TRAIL_DOTS[k]; s.ord = k / nDots; } else { s.kind = 'sea'; s.map = seaPoint(r); s.ord = r(); } });
   SK.list = list; SK.trav = { hx: .62, hy: .4, z: 1, i: -1 };
   SK.standN = n; SK.seaN = n - nDots;
+  SK.skyCount = 0; starsAddSky();
+}
+function starsAddSky() {
+  while (SK.skyCount < STARS.sky) {
+    const i = SK.skyCount++, r = rnd(STARS.skySeed + i);
+    SK.list.push({ kind: 'sky', si: i, hx: r(), hy: r(), uz: r(), ur: r(), ua: r(), ured: r(), f: r(), phase: r() * Math.PI * 2 });
+  }
 }
 function seaPoint(r) { let p; for (let t = 0; t < 60; t++) { p = [30 + r() * 540, 30 + r() * 780]; if (!onLand(p)) break; } return p; }
 
@@ -903,7 +1206,13 @@ function heroList() {
   // the traveller: the red star nearest the middle of the view (any star if the field has no red one)
   let tv = -1, best = Infinity;
   for (const want of [true, false]) { for (let i = 0; i < N; i++) { if (want && !red[i]) continue; const d = Math.hypot(at[i][0] - W / 2, at[i][1] - H / 2); if (d < best) { best = d; tv = i; } } if (tv >= 0) break; }
-  const ids = []; for (let i = 0; i < N; i++) if (i !== tv) ids.push(i);
+  // Choose the far sky before handing out any falling places. Reserve enough real stars for the fall.
+  const f = STARS.skyMargin, frame = DEPTH.frame.outer.map((v, i) => (i % 2 ? VIEW.oy : VIEW.ox) + v * VIEW.s0);
+  const candidates = [];
+  for (let i = 0; i < N; i++) if (i !== tv && Math.hypot(Math.max(frame[0] - at[i][0], 0, at[i][0] - frame[2]), Math.max(frame[1] - at[i][1], 0, at[i][1] - frame[3])) >= f) candidates.push(i);
+  for (let k = candidates.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [candidates[k], candidates[j]] = [candidates[j], candidates[k]]; }
+  const skyIds = candidates.slice(0, Math.max(0, Math.min(candidates.length, Math.floor(N * STARS.skyShare), N - 1 - nDots - nSea - STARS.skyReserve))), skySet = new Set(skyIds);
+  const ids = []; for (let i = 0; i < N; i++) if (i !== tv && !skySet.has(i)) ids.push(i);
   for (let k = ids.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [ids[k], ids[j]] = [ids[j], ids[k]]; }
   // trail dots first by the build's own rule (red stars go to the sea), then the sea sparkle, then the coasts
   const order = ids.filter(i => !red[i]).concat(ids.filter(i => red[i]));
@@ -926,6 +1235,7 @@ function heroList() {
   }
   places.sort((a, b) => ANGLE(a.m[0] / MAP.w - .5, a.m[1] / MAP.h - .5) - ANGLE(b.m[0] / MAP.w - .5, b.m[1] / MAP.h - .5));
   rest.forEach((i, j) => { const s = star(i), p = places[j]; s.kind = 'coast'; s.map = p.m; s.hu = p.hu; s.t0 = p.t0; s.t1 = p.t1; s.ord = 0; list.push(s); });
+  skyIds.forEach(i => { const s = star(i); s.kind = 'sky'; s.f = r(); s.phase = r() * Math.PI * 2; list.push(s); });
   SK.list = list; SK.trav = { hx: .62, hy: .4, z: 1, i: tv }; SK.n = src.count;
 }
 // a star of the hero's look as a 2D disc (or square) of the same total light as the hero's point sprite: the sprite's
@@ -935,7 +1245,19 @@ const lightR = rad => { const r = rad * SK.dpr, I = r < .5 ? 2 * r * Math.PI * M
 function starsResize(w, h) {
   SK.dpr = Math.min(STARS.dprCap, window.devicePixelRatio || 1);
   SK.cv.width = Math.round(w * SK.dpr); SK.cv.height = Math.round(h * SK.dpr);
+  if (SK.src) SK.n = -1;
 }
+function starsTick(dt, st) {
+  const tuning = JSON.stringify([STARS, NOVA, DEPTH.foot.stars]), changed = tuning !== SK.tuning;
+  if (changed) { SK.tuning = tuning; if (!SK.src) starsAddSky(); }
+  const assignment = JSON.stringify([STARS.skyShare, STARS.skyReserve, STARS.skyMargin, DEPTH.frame.outer]);
+  if (assignment !== SK.assignment) { SK.assignment = assignment; if (SK.src) SK.n = -1; }
+  SK.drift += dt * (1 - smooth(0, 1, st.handoffT));
+  if (st.blastT > 0) { SK.orbit += dt * smooth(...NOVA.orbitIn, st.blastT); SK.burn += dt; }
+  else { SK.orbit = 0; SK.burn = 0; }
+  return changed;
+}
+const starsSkyVisible = st => st.handoffT > 0 && SK.skyVisible && (st.blastT > 0 || !depthFrameCovers(st));
 const fourStar = (ctx, x, y, s) => { ctx.beginPath(); ctx.moveTo(x, y - s); ctx.quadraticCurveTo(x, y, x + s, y); ctx.quadraticCurveTo(x, y, x, y + s); ctx.quadraticCurveTo(x, y, x - s, y); ctx.quadraticCurveTo(x, y, x, y - s); ctx.fill(); };
 
 // ---- batching: stars are grouped by colour and opacity; under 1.5 px across they are squares ----
@@ -961,6 +1283,7 @@ function flush(ctx) {
 // sky, the hero's whole field drawn where it is at this opacity; map, the opacity of everything else (reduced motion's cross-fade).
 function starsFrame(time, st, pointer, opt = {}) {
   const ctx = SK.ctx, W = VIEW.w, H = VIEW.h; if (!ctx) return;
+  SK.skyVisible = false;
   const src = SK.src && SK.src.count > 0 ? SK.src : null;
   if (src && src.count !== SK.n) heroList();
   ctx.setTransform(SK.dpr, 0, 0, SK.dpr, 0, 0); ctx.clearRect(0, 0, W, H);
@@ -972,10 +1295,35 @@ function starsFrame(time, st, pointer, opt = {}) {
   const h = st.handoffT, px = (pointer[0] - .5) * STARS.parallax, py = (pointer[1] - .5) * STARS.parallax;
   const Xs = toScreen(st, MAP.x), diag = Math.hypot(W, H);
   const dotR = Math.min(2.1, .75 + .38 * st.cam.s);
-  const heroPos = s => [(((s.hx + time * STARS.drift * s.z) % 1) + 1) % 1 * W + px * s.z, s.hy * H + py * s.z];
+  if (h <= 0) SK.skyPointer = pointer.slice();
+  const heroPos = (s, sky = false) => { const pt = sky && h > 0 ? SK.skyPointer : pointer; return [(((s.hx + SK.drift * STARS.drift * s.z) % 1) + 1) % 1 * W + (pt[0] - .5) * STARS.parallax * s.z, s.hy * H + (pt[1] - .5) * STARS.parallax * s.z]; };
+  const look = opt.look || [0, 0], box = depthFrameBox(st), centre = toScreen(st, [MAP.w / 2, MAP.h / 2]), c0 = [VIEW.ox + MAP.w / 2 * VIEW.s0, VIEW.oy + MAP.h / 2 * VIEW.s0];
   const late = src ? .02 : .05; // joined: the first stars move within the first 3 % of the fall
   for (const s of SK.list) {
     let x, y, rad, al, col, tail = null;
+    if (s.kind === 'sky') {
+      if (!src && s.si >= STARS.sky) continue;
+      if (!src) { s.z = lerp(...STARS.fieldZ, s.uz); s.r = lerp(...STARS.fieldR, s.ur); s.a = lerp(...STARS.fieldAlpha, s.ua); s.red = s.ured < STARS.red; }
+      if (src) {
+        if (h <= 0 || !s.skyFrozen) { src.drawn(s.i, P); const lk = src.look(s.i); s.sx = P[0]; s.sy = P[1]; s.sr = lightR(lk.size / 2); s.sa = lk.alpha; s.sc = lk.colour; s.skyFrozen = h > 0; }
+        x = s.sx; y = s.sy; rad = s.sr; al = s.sa; col = h < .5 ? s.sc : C.paper;
+      } else { [x, y] = heroPos(s, true); rad = s.r; al = s.a; col = s.red && h < .5 ? C.red : C.paper; }
+      const follow = smooth(...STARS.skyMove, h);
+      x += follow * (look[0] * s.z * STARS.skyLook + (centre[0] - c0[0]) * STARS.skyFollow);
+      y += follow * (look[1] * s.z * STARS.skyLook + (centre[1] - c0[1]) * STARS.skyFollow);
+      if (h > 0) {
+        const outside = Math.hypot(Math.max(box[0] - x, 0, x - box[2]), Math.max(box[1] - y, 0, y - box[3]));
+        al *= 1 - smooth(...STARS.skyCover, h) * (1 - smooth(0, STARS.skyEdge, outside)) * (1 - smooth(...DEPTH.fade.blast, st.blastT));
+        if (!opt.still) al *= 1 - STARS.twinkle * follow * (.5 + .5 * Math.sin(time * lerp(...STARS.skyF, s.f) + s.phase));
+      }
+      if (st.blastT > 0 && !opt.still) {
+        const dx = x - Xs[0], dy = y - Xs[1], d = Math.hypot(dx, dy), bump = Math.exp(-(((d - novaRingRadius(st)) / STARS.skyShock) ** 2)) * (1 - smooth(...NOVA.base.ringFade, st.blastT));
+        if (d) { x += dx / d * STARS.skyPush * bump; y += dy / d * STARS.skyPush * bump; }
+        al *= 1 + bump;
+      }
+      if (x >= -STARS.skyMargin && y >= -STARS.skyMargin && x <= W + STARS.skyMargin && y <= H + STARS.skyMargin) { if (al * K > 0) SK.skyVisible = true; put(x, y, rad, al * K, col); }
+      continue;
+    }
     if (src) {
       if (s.kind === 'coast' && h >= s.hu + .06) continue;
       if (s.i >= 0 && h < 1) { src.drawn(s.i, P); const lk = src.look(s.i); x = P[0]; y = P[1]; rad = lightR(lk.size / 2); al = lk.alpha; col = h < .5 ? lk.colour : C.paper; }
@@ -1000,9 +1348,10 @@ function starsFrame(time, st, pointer, opt = {}) {
         tail = [(bx - x) * .08, (by - y) * .08]; x = bx; y = by; al = Math.max(al, .6);
       }
       if (st.blastT > 0) {
-        const b = 1 - Math.pow(1 - clamp01(st.blastT / .7), 3), dist = s.keep ? 60 + s.kr * Math.min(W, H) * .55 : diag * (.8 + s.far);
-        const ca = Math.cos(s.ang), sa = Math.sin(s.ang);
-        x = Xs[0] + ca * dist * b; y = Xs[1] + sa * dist * b * .85;
+        const b = 1 - Math.pow(1 - clamp01(st.blastT / NOVA.base.starBlast), 3), kick = opt.still ? 0 : Math.sin(Math.PI * novaFlare()) * NOVA.flare.kick;
+        const dist = s.keep ? (NOVA.base.starInner + s.kr * Math.min(W, H) * NOVA.base.starReach) * (1 + kick) : diag * (.8 + s.far);
+        const angle = s.ang + (s.keep && !opt.still ? NOVA.orbit * (NOVA.base.starSpeed[0] + NOVA.base.starSpeed[1] * (1 - s.kr)) * SK.orbit : 0), ca = Math.cos(angle), sa = Math.sin(angle);
+        x = Xs[0] + ca * dist * b; y = Xs[1] + sa * dist * b * NOVA.base.starAspect;
         if (b < .98) tail = [-ca * 30 * (1 - b), -sa * 30 * (1 - b)];
         al = s.keep ? lerp(.9, .25 + s.kr * .45, smooth(.5, 1, st.blastT)) : .9; rad = (src ? .6 : s.r) * .9;
         col = s.red && s.keep ? C.red : C.paper;
@@ -1012,6 +1361,19 @@ function starsFrame(time, st, pointer, opt = {}) {
     al *= K;
     if (tail) putTail(x, y, tail, al, col);
     put(x, y, rad, al, col);
+  }
+  if (st.blastT > 0 && !opt.still) {
+    const E = NOVA.embers, count = VIEW.phone ? E.nPhone : E.n, big = Math.max(W, H), fade = smooth(...NOVA.motionIn, st.blastT);
+    const spark = (i, age, round, burst) => {
+      const r = rnd(NOVA.seed + i + round * (count + 1)), angle = r() * Math.PI * 2, reach = lerp(...E.reach, r()) * big;
+      const distance = reach * (1 - (1 - age) ** E.slow), rad = lerp(...E.r, r());
+      put(Xs[0] + Math.cos(angle) * distance, Xs[1] + Math.sin(angle) * distance, rad, E.alpha * (1 - smooth(...E.fade, age)) * fade * K * burst, C.warm);
+    };
+    for (let i = 0; i < count; i++) {
+      const life = lerp(...E.life, rnd(NOVA.seed + i)()), age = SK.burn / life + i / count, round = Math.floor(age);
+      spark(i, age - round, round, 1);
+      if (NOVA_LIVE.flareAt !== null && novaFlare() < 1) spark(i, novaFlare(), NOVA_LIVE.serial, E.burst);
+    }
   }
   flush(ctx);
   // the traveller: one red star from the hero to the X (on the joined page, a real red star of the hero's field)
@@ -1030,7 +1392,7 @@ function starsFrame(time, st, pointer, opt = {}) {
   ctx.globalAlpha = 1;
 }
 // one still frame for reduced motion
-function starsStill(st) { starsFrame(0, st, [.5, .5]); }
+function starsStill(st) { starsFrame(0, st, [.5, .5], { still: true }); }
 
 // ---- cards.mjs ----
 // Stop marks that grow into cards. Each card is one article: the standing stone at rest, the card when open.
@@ -1054,7 +1416,7 @@ function cardsBuild(container, onGo) {
     const piece = cp.piece ? `<img src="${cp.piece}" alt="${esc(cp.caption)}">` : `<div class="c-empty">${COPY.pieceToCome}</div>`;
     const steps = cp.steps ? `<ol class="c-steps">${cp.steps.map(t => `<li>${esc(t)}</li>`).join('')}</ol>` : '';
     a.innerHTML = `<button class="st-btn" type="button" aria-label="${esc(COPY.stoneGo.replace('{name}', s.name).replace('{dates}', s.dates))}">${stoneSvg(s.rune)}</button>
-<div class="face"><div class="c-in">
+<div class="c-sh" aria-hidden="true"></div><div class="face"><div class="c-in">
 <header class="c-top"><img class="c-logo" src="${p.logo}" alt="${esc(s.name)}"><span class="c-pill">${esc(s.dates)}</span></header>
 <div class="c-body"><div class="c-main"><h2 class="c-h" id="h-${s.id}">${esc(cp.headline)}</h2><p class="c-role">${esc(s.role)}</p><p class="c-para">${esc(cp.para)}</p>${steps}
 <p class="c-kick">${COPY.took}</p><p class="c-took">${esc(cp.took)}</p></div>
@@ -1063,7 +1425,7 @@ function cardsBuild(container, onGo) {
 <button class="c-btn" type="button">${COPY.caseStudy}${arrowSvg}</button></div></div></div></div>`;
     a.querySelector('.st-btn').addEventListener('click', () => CD.onGo(i));
     container.appendChild(a);
-    CD.list.push({ el: a, face: a.querySelector('.face'), inn: a.querySelector('.c-in'), btn: a.querySelector('.st-btn'), fill: a.querySelector('.st-fill'), glow: a.querySelector('.st-glow'), stop: s, state: '' });
+    CD.list.push({ el: a, face: a.querySelector('.face'), shadow: a.querySelector('.c-sh'), inn: a.querySelector('.c-in'), btn: a.querySelector('.st-btn'), fill: a.querySelector('.st-fill'), glow: a.querySelector('.st-glow'), stop: s, state: '', tilt: [0, 0, 0, 0] });
   });
 }
 function cardsResize(steps = false) {
@@ -1075,12 +1437,19 @@ function cardsResize(steps = false) {
   } else {
     CD.W = Math.min(640, VIEW.w - 32); CD.H = steps ? Math.max(1, Math.min(420, VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h - 24)) : 420;
   }
-  CD.list.forEach(c => { c.el.style.width = CD.W + 'px'; c.el.style.height = CD.H + 'px'; });
+  CD.list.forEach(c => { c.el.style.width = CD.W + 'px'; c.el.style.height = CD.H + 'px'; cardsDepthConfig(c); });
+}
+function cardsDepthConfig(c) {
+  const cfg = DEPTH.card, lift = !!VIEW.depth && !VIEW.phone;
+  c.depthConfig = lift ? `${cfg.perspective}/${cfg.blur}/${cfg.spread}/${cfg.radius}` : '';
+  c.el.style.perspective = lift ? cfg.perspective + 'px' : '';
+  c.shadow.style.boxShadow = `0 0 ${cfg.blur}px ${cfg.spread}px var(--shade)`; c.shadow.style.borderRadius = cfg.radius + 'px';
+  c.depthPending = false;
 }
 const cardsSetCraft = craft => { CD.craft = craft; };
 const cardsLitBy = craft => STOPS.map(s => s.crafts.includes(craft));
 
-function cardsFrame(st) {
+function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
   const W = CD.W, H = CD.H, op = smooth(.5, 1, st.handoffT) * (1 - smooth(0, .4, st.blastT));
   const stonePx = Math.max(15, Math.min(44, 12.5 * st.cam.s));
   const stepTop = VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h;
@@ -1095,6 +1464,19 @@ function cardsFrame(st) {
     c.el.style.opacity = op * (CD.craft && !lit ? .55 : 1);
     c.btn.style.opacity = 1 - smooth(0, .3, e);
     c.face.style.opacity = smooth(.01, .1, e);
+    const cfg = DEPTH.card, lift = !!VIEW.depth && !VIEW.phone;
+    // Apply live style configuration after this frame callback; animation only writes transform/opacity.
+    const config = lift ? `${cfg.perspective}/${cfg.blur}/${cfg.spread}/${cfg.radius}` : '';
+    if (config !== c.depthConfig && !c.depthPending) { c.depthPending = true; queueMicrotask(() => cardsDepthConfig(c)); }
+    const lx = DEPTH.look ? look[0] / DEPTH.look : 0, ly = DEPTH.look ? look[1] / DEPTH.look : 0;
+    const inside = pointer[0] * VIEW.w >= cx - W * k / 2 && pointer[0] * VIEW.w <= cx + W * k / 2 && pointer[1] * VIEW.h >= cy - H * k / 2 && pointer[1] * VIEW.h <= cy + H * k / 2;
+    const plate = inside ? 0 : e;
+    const target = [cfg.tilt * (1 - smooth(...cfg.open, e)) - ly * cfg.ptrTilt[1] * plate, lx * cfg.ptrTilt[0] * plate, -lx * cfg.shift * plate, -ly * cfg.shift * plate];
+    c.tilt.forEach((v, j) => { c.tilt[j] = lift ? v + (target[j] - v) * cfg.ease : 0; if (Math.abs(c.tilt[j]) < cfg.flat) c.tilt[j] = 0; });
+    const [rx, ryTilt, sx, sy] = c.tilt;
+    c.face.style.transform = lift ? `${sx || sy ? `translate(${sx}px,${sy}px) ` : ''}${rx ? `rotateX(${rx}deg) ` : ''}${ryTilt ? `rotateY(${ryTilt}deg)` : ''}`.trim() : '';
+    c.shadow.style.opacity = lift ? cfg.shadow * e : 0;
+    c.shadow.style.transform = `translate(${-sx / cfg.shadowShare}px,${cfg.drop * e - sy / cfg.shadowShare}px)`;
     c.inn.style.opacity = smooth(.4, .62, k);
     c.fill.style.opacity = st.visited[i] || lit ? 1 : 0;
     c.glow.style.opacity = lit ? 1 : 0;
@@ -1270,6 +1652,7 @@ const stepsScrollTo = (p, smooth) => {
 
 const JOURNEY = {
   get mode() { return SC.mode; }, get P() { return SC.P; }, get moving() { return !!(SC.move || SC.cut); },
+  get visiting() { return SC.returnP !== null; }, depth: DEPTH, nova: NOVA, setDepth: stepsSetDepth,
   beats: BEATS, go: stepsGo, next: stepsNext, back: stepsBack, set: stepsSet, setMode: stepsSetMode,
 };
 const stepsProgress = () => SC.P;
@@ -1280,7 +1663,12 @@ function stepsClasses() {
   if (SC.rm) return;
   SC.root.classList.toggle('jm-steps', SC.mode === 'steps'); SC.root.classList.toggle('jm-scroll', SC.mode === 'scroll');
   try { history.scrollRestoration = SC.mode === 'steps' ? 'manual' : SC.restoration; } catch {}
-  if (SC.review) SC.review.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === SC.mode));
+  if (SC.review) SC.review.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === SC.mode));
+}
+function stepsSetDepth(on) {
+  VIEW.depth = on ? 1 : 0;
+  if (SC.review) SC.review.querySelector('[data-depth]').setAttribute('aria-pressed', String(!!VIEW.depth));
+  window.dispatchEvent(new Event('jm-depth'));
 }
 function stepsButtons() {
   if (!SC.go) return;
@@ -1454,6 +1842,7 @@ function stepsTouchEnd(e) {
 }
 function stepsBuild({ stage, rm, resize, joinedTop }) {
   SC.root = document.documentElement; SC.rm = rm; SC.resize = resize; SC.joinedTop = joinedTop;
+  VIEW.depth = new URLSearchParams(window.location.search).get('depth') === '0' ? 0 : 1;
   window.__jm = JOURNEY;
   window.addEventListener('scroll', () => { if (SC.mode === 'scroll') stepsReadScroll(); }, { passive: true });
   if (rm) { SC.mode = 'scroll'; return; }
@@ -1473,8 +1862,9 @@ function stepsBuild({ stage, rm, resize, joinedTop }) {
   SC.go.addEventListener('animationend', () => SC.go.classList.remove('go-reveal'));
   SC.go.querySelector('.go-back').addEventListener('click', stepsBack); SC.go.querySelector('.go-next').addEventListener('click', stepsNext); SC.go.querySelector('.go-top').addEventListener('click', () => stepsGo('top'));
   SC.review = document.createElement('div'); SC.review.className = 'jm-review'; SC.review.dataset.review = ''; SC.review.setAttribute('role', 'group'); SC.review.setAttribute('aria-label', s.review.label);
-  SC.review.innerHTML = `<span>${s.review.label}</span><button type="button" data-mode="steps">${s.review.steps}</button><button type="button" data-mode="scroll">${s.review.scroll}</button>`;
-  SC.review.querySelectorAll('button').forEach(b => b.addEventListener('click', () => stepsSetMode(b.dataset.mode))); document.body.appendChild(SC.review);
+  SC.review.innerHTML = `<span>${s.review.label}</span><button type="button" data-mode="steps">${s.review.steps}</button><button type="button" data-mode="scroll">${s.review.scroll}</button><button type="button" data-depth aria-pressed="${!!VIEW.depth}">${s.review.depth}</button>`;
+  SC.review.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => stepsSetMode(b.dataset.mode)));
+  SC.review.querySelector('[data-depth]').addEventListener('click', () => stepsSetDepth(!VIEW.depth)); document.body.appendChild(SC.review);
   const vars = { 'go-h': STEPS.nav.h + 'px', 'go-gap': STEPS.nav.gap + 'px', 'go-bar': STEPS.nav.bar + 'px', 'go-reveal': STEPS.reveal + 's' };
   Object.entries(vars).forEach(([k, v]) => SC.root.style.setProperty('--' + k, v));
   stepsClasses(); stepsArrive();
@@ -1489,34 +1879,39 @@ function stepsBuild({ stage, rm, resize, joinedTop }) {
 
 
 
-const FT = { g: {}, items: [], name: null, el: null, rule: null };
+
+const FT = { g: {}, items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], config: '', pending: false };
 const upRight = '<svg class="ne" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 8.5L8.5 1.5M3 1.5H8.5V7"/></svg>';
 const arrowR = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
 
 const xStroke = rot => `<g class="fx-s" transform="rotate(${rot})"><path class="fx-red" d="M-12.7 0H12.7" stroke="${C.red}" stroke-width="3.6" stroke-linecap="round" fill="none" filter="url(#rough)"/><path class="fx-white" d="M-12.7 0L0 -1.7L12.7 0L0 1.7Z" fill="url(#spike)" opacity="0"/></g>`;
 
 function footerBuildX(g, rm = false) {
+  FT.rm = rm;
   const r = rnd(43); let streaks = '';
   for (let i = 0; i < 60; i++) { const a = r() * 6.283, d1 = .3 + r() * .5, d2 = d1 + .2 + r() * .6, c = Math.cos(a), sn = Math.sin(a); streaks += `<path d="M${n1(c * d1 * 10)} ${n1(sn * d1 * 10)}L${n1(c * d2 * 10)} ${n1(sn * d2 * 10)}" stroke="${r() < .3 ? C.red : C.paper}" stroke-opacity="${n1(.3 + r() * .6)}" stroke-width="${n1(.6 + r())}" vector-effect="non-scaling-stroke" stroke-linecap="round"/>`; }
   g.innerHTML = `<circle class="fx-rg" r="1" fill="url(#rglow)" opacity="0"/><circle class="fx-og" r="1" fill="url(#oglow)" opacity="0"/>`
+    + `<g class="fx-rays" opacity="0"></g><g class="fx-lobes" opacity="0"></g><g class="fx-waves" opacity="0"></g><circle class="fx-flare" r="1" fill="none" stroke="${C.paper}" vector-effect="non-scaling-stroke" opacity="0"/>`
     + `<g class="fx-streaks" opacity="0">${streaks}</g>`
     + `<circle class="fx-ringr" r="1" fill="none" stroke="${C.red}" stroke-width="8" vector-effect="non-scaling-stroke" opacity="0"/><circle class="fx-ring" r="1" fill="none" stroke="${C.paper}" stroke-width="2" vector-effect="non-scaling-stroke" opacity="0"/>`
     + `<circle class="fx-r1" r="1" fill="none" stroke="${C.paper}" stroke-width=".8" vector-effect="non-scaling-stroke" opacity="0"/><circle class="fx-r2" r="1" fill="none" stroke="${C.paper}" stroke-width=".6" vector-effect="non-scaling-stroke" opacity="0"/>`
     + `<circle class="fx-core" r="1" fill="url(#glow)" opacity="0"/>` + xStroke(45) + xStroke(-45)
-    + (rm ? '' : `<circle class="fx-hit hit" r="26" role="button" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true"/>`);
-  ['fx-rg', 'fx-og', 'fx-streaks', 'fx-ringr', 'fx-ring', 'fx-r1', 'fx-r2', 'fx-core'].forEach(k => FT.g[k] = g.querySelector('.' + k));
+    + (rm ? '' : `<circle class="fx-hit hit" r="1" role="button" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true"/>`);
+  ['fx-rg', 'fx-og', 'fx-rays', 'fx-lobes', 'fx-waves', 'fx-flare', 'fx-streaks', 'fx-ringr', 'fx-ring', 'fx-r1', 'fx-r2', 'fx-core'].forEach(k => FT.g[k] = g.querySelector('.' + k));
   FT.g.s = [...g.querySelectorAll('.fx-s')]; FT.g.red = [...g.querySelectorAll('.fx-red')]; FT.g.white = [...g.querySelectorAll('.fx-white')];
   FT.hit = g.querySelector('.fx-hit');
   if (FT.hit) {
     const dig = () => {
       if (FT.hit.getAttribute('aria-disabled') === 'true') return;
+      if (FT.settled) { NOVA_LIVE.flareAt = NOVA_LIVE.time; NOVA_LIVE.serial++; return; }
       if (JOURNEY.mode === 'scroll') JOURNEY.go('end');
-      else if (Math.abs(JOURNEY.P - JOURNEY.beats.find(b => b.id === 'x').P) < .5) JOURNEY.next();
+      else if (Math.abs(JOURNEY.P - JOURNEY.beats.find(b => b.id === 'x').P) < NOVA.base.hitTolerance) JOURNEY.next();
       else JOURNEY.go('x');
     };
     FT.hit.addEventListener('click', dig);
     FT.hit.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); dig(); } });
   }
+  footerConfigure();
 }
 
 function footerBuild(el) {
@@ -1528,9 +1923,10 @@ function footerBuild(el) {
 <p class="ft-tag ft-r">${f.tagline}</p>
 <div class="ft-rule" aria-hidden="true"></div>
 <nav class="ft-links ft-r" aria-label="${f.label}"><span class="ft-big">${f.links.map(l => `<button type="button" class="ft-link">${l}${upRight}</button>`).join('')}</span><span class="ft-small">${f.small.split(' / ').map(l => `<button type="button" class="ft-link">${l}</button>`).join('<i>/</i>')}</span></nav></div>`;
-  FT.items = [...el.querySelectorAll('.ft-r')]; FT.name = el.querySelector('.ft-name span'); FT.rule = el.querySelector('.ft-rule');
+  FT.items = [...el.querySelectorAll('.ft-r')]; FT.name = el.querySelector('.ft-name span'); FT.rule = el.querySelector('.ft-rule'); FT.inner = el.querySelector('.ft-in');
 }
 function footerResize() {
+  footerConfigure();
   const s = FT.name; s.style.fontSize = '100px';
   const avail = FT.name.parentElement.clientWidth, w = s.getBoundingClientRect().width;
   s.style.fontSize = (100 * avail / w).toFixed(2) + 'px';
@@ -1539,45 +1935,105 @@ function footerResize() {
 const T = (el, x) => el.setAttribute('transform', x);
 function footerFrame(st) {
   if (FT.hit) {
-    const available = st.handoffT >= 1 && st.rushT === 0;
-    FT.hit.tabIndex = available ? 0 : -1; FT.hit.setAttribute('aria-disabled', String(!available));
-    FT.hit.style.pointerEvents = available ? 'all' : 'none';
+    FT.settled = st.settleT >= 1;
+    const available = (st.handoffT >= 1 && st.rushT === 0) || FT.settled, state = `${available}/${FT.settled}`;
+    if (state !== FT.hitState) {
+      FT.hitState = state; FT.hit.tabIndex = available ? 0 : -1; FT.hit.setAttribute('aria-disabled', String(!available));
+      FT.hit.setAttribute('aria-label', FT.settled ? COPY.nova : COPY.steps.dig);
+    }
   }
-  const s = st.cam.s, rT = st.rushT, bT = st.blastT, sT = st.settleT, G = FT.g, u = px => px / s;
+  // Progress owns the text's reveal. All X transforms and opacities have one writer, footerMotion.
+  const b = NOVA.base;
+  FT.items.forEach((it, j) => { const o = smooth(b.textIn[0] + j * b.textGap, b.textIn[1] + j * b.textGap, st.settleT); it.style.opacity = o; it.style.transform = `translateY(${((1 - o) * b.textRise).toFixed(1)}px)`; });
+  FT.el.style.visibility = st.settleT > b.textShow ? 'visible' : 'hidden';
+}
+const footerConfigKey = () => JSON.stringify([NOVA.rays.n, VIEW.phone ? NOVA.lobes.nPhone : NOVA.lobes.n, NOVA.waves.n, NOVA.rays.width, NOVA.waves.width, NOVA.shellDash]);
+function footerConfigure() {
+  if (FT.rm) return;
+  const count = VIEW.phone ? NOVA.lobes.nPhone : NOVA.lobes.n, key = footerConfigKey();
+  if (key === FT.config) return; FT.config = key;
+  const add = (list, n, parent, type, cls) => {
+    while (list.length < n) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', type), i = list.length, r = rnd(NOVA.seed + i);
+      el.setAttribute('class', cls); el.setAttribute('vector-effect', 'non-scaling-stroke');
+      el.setAttribute('opacity', 0);
+      if (type === 'circle') el.setAttribute('r', 1); else el.setAttribute('d', 'M0 0H1');
+      el.setAttribute('fill', cls === 'fx-lobe' ? `url(#${i % 2 ? 'oglow' : 'rglow'})` : 'none');
+      if (cls !== 'fx-lobe') el.setAttribute('stroke', C.paper);
+      parent.appendChild(el); list.push({ el, u: Array.from({ length: 7 }, () => r()) });
+    }
+  };
+  add(FT.rays, NOVA.rays.n, FT.g['fx-rays'], 'path', 'fx-ray');
+  add(FT.lobes, count, FT.g['fx-lobes'], 'circle', 'fx-lobe');
+  add(FT.waves, NOVA.waves.n, FT.g['fx-waves'], 'circle', 'fx-wave');
+  FT.rays.forEach(ray => ray.el.setAttribute('stroke-width', NOVA.rays.width));
+  FT.waves.forEach(wave => wave.el.setAttribute('stroke-width', NOVA.waves.width)); FT.g['fx-flare'].setAttribute('stroke-width', NOVA.waves.width);
+  ['fx-r1', 'fx-r2'].forEach(k => FT.g[k].setAttribute('stroke-dasharray', NOVA.shellDash.join(' ')));
+}
+function footerMotion(time, dt, st, look, moved) {
+  if (FT.rm) return;
+  NOVA_LIVE.time += dt;
+  if (st.blastT > 0) FT.clock += dt; else { FT.clock = 0; NOVA_LIVE.flareAt = null; }
+  if (footerConfigKey() !== FT.config && !FT.pending) { FT.pending = true; queueMicrotask(() => { footerConfigure(); FT.pending = false; }); }
+  if (!moved && st.blastT <= 0) return;
+  const s = st.cam.s, rT = st.rushT, bT = st.blastT, sT = st.settleT, G = FT.g, u = px => px / s, B = NOVA.base;
   const big = Math.max(VIEW.w, VIEW.h);
+  const clock = FT.clock, strength = smooth(...NOVA.motionIn, bT), flare = Math.sin(Math.PI * novaFlare()) * strength;
+  const wave = period => Math.sin(Math.PI * 2 * clock / period);
+  const pulse = 1 + strength * (NOVA.pulse[1] * wave(NOVA.pulse[0]) + NOVA.pulse[3] * wave(NOVA.pulse[2])) + NOVA.flare.core * flare;
   // the two strokes: thin, whiten from the centre, stretch into spikes, then cool to a small star
   const out = b => 1 - Math.pow(1 - b, 3);
-  let len = lerp(1, 2.4, easeIO(rT)), thin = lerp(1, .55, rT);
-  if (bT > 0) len = bT < .3 ? lerp(2.4, 10, out(bT / .3)) : lerp(10, 5, easeIO((bT - .3) / .7));
-  if (sT > 0) len = lerp(5, u(58) / 12.7, easeIO(sT));
-  if (bT > 0) thin = lerp(.55, .8, out(clamp01(bT / .3)));
-  if (sT > 0) thin = lerp(.8, .5, sT);
-  G.s.forEach((g, i) => T(g, `rotate(${i ? -45 : 45}) scale(${len.toFixed(3)} ${thin.toFixed(3)})`));
-  const heat = smooth(.05, .7, rT);
+  let len = lerp(1, B.rushLen, easeIO(rT)), thin = lerp(B.thin[0], B.thin[1], rT);
+  if (bT > 0) len = bT < B.spikePeak ? lerp(B.rushLen, B.peakLen, out(bT / B.spikePeak)) : lerp(B.peakLen, B.endLen, easeIO((bT - B.spikePeak) / (1 - B.spikePeak)));
+  if (sT > 0) len = lerp(B.endLen, u(B.spikeEnd) / B.spikeLength, easeIO(sT));
+  if (bT > 0) thin = lerp(B.thin[1], B.thin[2], out(clamp01(bT / B.spikePeak)));
+  if (sT > 0) thin = lerp(B.thin[2], B.thin[3], sT);
+  G.s.forEach((g, i) => T(g, `rotate(${B.angles[i]}) scale(${len * (1 + strength * NOVA.spike[1] * wave(NOVA.spike[0])) * pulse} ${thin})`));
+  const heat = smooth(...B.heat, rT);
   G.white.forEach(w => w.setAttribute('opacity', heat.toFixed(3)));
-  G.red.forEach(w => w.setAttribute('opacity', (1 - smooth(.2, .9, rT)).toFixed(3)));
+  G.red.forEach(w => w.setAttribute('opacity', (1 - smooth(...B.redOut, rT)).toFixed(3)));
   // glow
-  let rg = lerp(0, 220, rT), rgo = .6 * rT;
-  if (bT > 0) { rg = bT < .4 ? lerp(220, big * 1.1, out(bT / .4)) : lerp(big * 1.1, big * .62, easeIO((bT - .4) / .6)); rgo = 1; }
-  if (sT > 0) rg = lerp(big * .62, big * .58, sT);
-  T(G['fx-rg'], `scale(${u(rg).toFixed(2)} ${(u(rg) * .82).toFixed(2)})`); G['fx-rg'].setAttribute('opacity', rgo.toFixed(3));
-  const og = bT > 0 ? lerp(120, 300, out(bT)) : lerp(0, 120, rT);
-  T(G['fx-og'], `scale(${u(og).toFixed(2)})`); G['fx-og'].setAttribute('opacity', (bT > 0 ? .9 : .6 * rT).toFixed(3));
-  const core = bT > 0 ? lerp(90, 60, bT) * (sT > 0 ? lerp(1, .5, sT) : 1) : lerp(0, 70, heat);
-  T(G['fx-core'], `scale(${u(core).toFixed(2)})`); G['fx-core'].setAttribute('opacity', (heat).toFixed(3));
+  let rg = lerp(0, B.redGlow[0], rT), rgo = B.rushGlowAlpha * rT;
+  if (bT > 0) { rg = bT < B.glowPeak ? lerp(B.redGlow[0], big * B.redGlow[1], out(bT / B.glowPeak)) : lerp(big * B.redGlow[1], big * B.redGlow[2], easeIO((bT - B.glowPeak) / (1 - B.glowPeak))); rgo = 1; }
+  if (sT > 0) rg = lerp(big * B.redGlow[2], big * B.redGlow[3], sT);
+  rg *= 1 + strength * NOVA.glow[1] * wave(NOVA.glow[0]);
+  T(G['fx-rg'], `scale(${u(rg)} ${u(rg) * B.glowAspect})`); G['fx-rg'].setAttribute('opacity', rgo);
+  const og = bT > 0 ? lerp(...B.orangeGlow, out(bT)) : lerp(0, B.orangeGlow[0], rT);
+  T(G['fx-og'], `scale(${u(og)})`); G['fx-og'].setAttribute('opacity', bT > 0 ? B.orangeAlpha : B.rushGlowAlpha * rT);
+  const core = bT > 0 ? lerp(B.core[0], B.core[1], bT) * (sT > 0 ? lerp(1, B.core[2], sT) : 1) : lerp(0, B.core[3], heat);
+  T(G['fx-core'], `scale(${u(core * pulse)})`); G['fx-core'].setAttribute('opacity', heat);
   // the blast: ring and streaks
-  const ringR = lerp(30, big * .75, out(bT)), ringO = bT > 0 ? (1 - smooth(.2, .9, bT)) : 0;
-  T(G['fx-ring'], `scale(${u(ringR).toFixed(2)})`); G['fx-ring'].setAttribute('opacity', (ringO * .9).toFixed(3));
-  T(G['fx-ringr'], `scale(${u(ringR).toFixed(2)})`); G['fx-ringr'].setAttribute('opacity', (ringO * .35).toFixed(3));
-  const stS = lerp(20, big * .09, out(bT));
-  T(G['fx-streaks'], `scale(${u(stS).toFixed(3)})`); G['fx-streaks'].setAttribute('opacity', (bT > 0 ? smooth(0, .06, bT) * (1 - smooth(.25, .7, bT)) : 0).toFixed(3));
+  const ringR = novaRingRadius(st), ringO = bT > 0 ? (1 - smooth(...B.ringFade, bT)) : 0;
+  T(G['fx-ring'], `scale(${u(ringR)})`); G['fx-ring'].setAttribute('opacity', ringO * B.ringAlpha[0]);
+  T(G['fx-ringr'], `scale(${u(ringR)})`); G['fx-ringr'].setAttribute('opacity', ringO * B.ringAlpha[1]);
+  const stS = lerp(B.streak[0], big * B.streak[1], out(bT));
+  T(G['fx-streaks'], `scale(${u(stS)})`); G['fx-streaks'].setAttribute('opacity', bT > 0 ? smooth(...B.streakIn, bT) * (1 - smooth(...B.streakOut, bT)) : 0);
   // settled: two faint rings
-  const ro = smooth(.2, .8, sT);
-  T(G['fx-r1'], `scale(${u(VIEW.phone ? 120 : 200).toFixed(2)})`); G['fx-r1'].setAttribute('opacity', (.3 * ro).toFixed(3));
-  T(G['fx-r2'], `scale(${u(VIEW.phone ? 190 : 330).toFixed(2)})`); G['fx-r2'].setAttribute('opacity', (.14 * ro).toFixed(3));
-  // footer text rises in order
-  FT.items.forEach((it, j) => { const o = smooth(.4 + j * .1, .62 + j * .1, sT); it.style.opacity = o; it.style.transform = `translateY(${((1 - o) * 24).toFixed(1)}px)`; });
-  FT.el.style.visibility = sT > .3 ? 'visible' : 'hidden';
+  const ro = smooth(...B.shellIn, sT);
+  ['fx-r1', 'fx-r2'].forEach((key, i) => { T(G[key], `rotate(${clock * NOVA.shells[i]}) scale(${u((VIEW.phone ? B.shellPhone : B.shellR)[i])})`); G[key].setAttribute('opacity', B.shellAlpha[i] * ro); });
+  G['fx-rays'].setAttribute('opacity', strength); T(G['fx-rays'], `rotate(${clock * NOVA.rays.turn * 180 / Math.PI})`);
+  FT.rays.forEach((ray, i) => {
+    if (i >= NOVA.rays.n) { ray.el.setAttribute('opacity', 0); return; }
+    const a = i / NOVA.rays.n * Math.PI * 2, start = core * NOVA.rays.start, len = lerp(...NOVA.rays.len, ray.u[0]) * core;
+    T(ray.el, `translate(${u(Math.cos(a) * start)} ${u(Math.sin(a) * start)}) rotate(${a * 180 / Math.PI}) scale(${u(len - start)} 1)`);
+    ray.el.setAttribute('opacity', i < NOVA.rays.n ? lerp(...NOVA.rays.alpha, ray.u[1]) * (1 - NOVA.rays.breathe * (.5 + .5 * Math.sin(clock * Math.PI * 2 / lerp(...NOVA.rays.period, ray.u[3]) + ray.u[2] * Math.PI * 2))) : 0);
+  });
+  G['fx-lobes'].setAttribute('opacity', strength);
+  FT.lobes.forEach((lobe, i) => {
+    const L = NOVA.lobes, a = lobe.u[0] * Math.PI * 2 + clock * lerp(...L.speed, lobe.u[1]) * (i % 2 ? -1 : 1), orbit = lerp(...L.orbit, lobe.u[2]), r = lerp(...L.r, lobe.u[3]) * (1 + L.breathe * Math.sin(clock * lerp(...L.speed, lobe.u[4]) + lobe.u[5] * Math.PI * 2));
+    T(lobe.el, `translate(${u(Math.cos(a) * orbit + look[0] * DEPTH.foot.lobes)} ${u(Math.sin(a) * orbit + look[1] * DEPTH.foot.lobes)}) scale(${u(r)})`);
+    lobe.el.setAttribute('opacity', i < (VIEW.phone ? L.nPhone : L.n) ? lerp(...L.alpha, lobe.u[6]) : 0);
+  });
+  G['fx-waves'].setAttribute('opacity', strength);
+  FT.waves.forEach((circle, i) => {
+    if (i >= NOVA.waves.n) { circle.el.setAttribute('opacity', 0); return; }
+    const age = clock / NOVA.waves.every - i, q = ((age / NOVA.waves.n) % 1 + 1) % 1;
+    T(circle.el, `scale(${u(lerp(core, big * NOVA.waves.reach, q))})`);
+    circle.el.setAttribute('opacity', i < NOVA.waves.n && age >= 0 ? NOVA.waves.alpha * (1 - q) : 0);
+  });
+  const fq = novaFlare(); T(G['fx-flare'], `scale(${u(lerp(core, big * NOVA.flare.reach, out(fq)))})`); G['fx-flare'].setAttribute('opacity', NOVA_LIVE.flareAt !== null ? NOVA.flare.alpha * (1 - fq) * strength : 0);
+  if (FT.hit) T(FT.hit, `scale(${FT.settled ? u(NOVA.flare.hit) : B.digHit})`);
+  FT.inner.style.translate = `${-look[0] * DEPTH.foot.text}px ${-look[1] * DEPTH.foot.text}px`;
 }
 
 // ---- finds.mjs ----
@@ -1903,6 +2359,7 @@ function findsFrame(time, st) {
 
 
 
+
 const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Set by join.mjs on the joined page only (the real hero in the stage): frame(st, moved, P) returns false to leave the star
 // canvas alone, options for starsFrame, or nothing for the map's own rule; resize(w, h) follows the map's resize.
@@ -1915,8 +2372,10 @@ document.title = COPY.docTitle;
 const MAIN = document.getElementById('jm');
 const M = bigMap();
 MAIN.innerHTML = `<h1 class="sr">${COPY.title}</h1><section class="trip" id="trip" aria-label="${COPY.srMap}"><div class="stage" id="stage">
+<canvas id="deep" aria-hidden="true"></canvas>
 <svg id="map" class="map" role="group" aria-label="${COPY.srMap}">${mapDefs()}<g id="cam"><g id="b-all"><g id="b-sea">${M.sea}</g><g id="b-fill">${M.fill}</g><g id="b-coast">${M.coast}</g><g id="b-detail">${M.detail}</g></g><path id="trail-done" class="done" d="${pathD(TRAIL)}"/><g id="finds">${M.finds}</g><g id="fxg" transform="translate(${MAP.x[0]} ${MAP.x[1]})"></g></g></svg>
 <canvas id="stars" aria-hidden="true"></canvas>
+<canvas id="air" aria-hidden="true"></canvas><svg id="sky" aria-hidden="true"></svg>
 <div class="ov">${stoneDefs()}<p class="caption">${COPY.heroCaption}</p><p class="cue">${COPY.cue}</p><div class="cards" id="cards"></div><div class="mini" id="mini" role="navigation" aria-label="${COPY.miniMap}"></div><div class="pop" id="pop" role="status"></div><div class="sheet" id="sheet" role="dialog" aria-modal="false"></div><footer class="ft" id="ft"></footer></div>
 </div></section><div class="rm-cards" id="rmcards"></div><div class="tl" id="tl"></div>`;
 
@@ -1931,6 +2390,7 @@ const goStop = i => { if (RM) { cardsList()[i].el.scrollIntoView({ behavior: 'au
 tripBuild({ svg: SVG, cam: $('cam'), sea: $('b-sea'), fill: $('b-fill'), coastG: $('b-coast'), detail: $('b-detail'), finds: $('finds'), done: $('trail-done'), caption: document.querySelector('.caption'), cue: document.querySelector('.cue'), mini: $('mini') });
 $('mini').querySelectorAll('.mm-stop').forEach(b => { b.style.setProperty('--mk', PALETTES[STOPS[+b.dataset.i].palette].mark); b.addEventListener('click', () => goStop(+b.dataset.i)); });
 starsBuild(CANVAS);
+depthBuild($('deep'), $('air'), $('sky'), RM);
 cardsBuild(RM ? $('rmcards') : $('cards'), goStop);
 tlBuild(TLEL, { jump: goStop, scrub: p => JOURNEY.set(p) }, RM);
 footerBuild($('ft')); footerBuildX($('fxg'), RM);
@@ -1945,6 +2405,7 @@ function resize() {
   tripResize(w, h, RM ? 0 : (phone ? 44 : 56) + room);
   SVG.setAttribute('width', w); SVG.setAttribute('height', h); SVG.setAttribute('viewBox', `0 0 ${w} ${h}`);
   starsResize(w, h);
+  depthResize(w, h);
   if (!RM) cardsResize(stepMode);
   const rule = footerResize();
   tlResize(RM ? null : rule);
@@ -1954,29 +2415,38 @@ function resize() {
   if (JOIN.resize) JOIN.resize(w, h);
 }
 const OVERVIEW_P = SEQ.find(s => s.kind === 'overview').a + 1;
-function still() { const st = tripState(OVERVIEW_P); tripApply(st); starsStill(st); FIXED = st; }
+function still() { const st = tripState(OVERVIEW_P); tripApply(st); starsStill(st); depthFrame(st, 0, 0, [.5, .5], { look: [0, 0], changed: false, fine: false }, true); FIXED = st; }
 let FIXED = null;
 
 window.addEventListener('scroll', () => { if (JOURNEY.mode === 'scroll') dirty = true; }, { passive: true });
 window.addEventListener('resize', resize);
+window.addEventListener('jm-depth', () => { dirty = true; depthInvalidate(); if (RM && FIXED) still(); });
 const PTR = [.5, .5];
 window.addEventListener('pointermove', e => { PTR[0] = e.clientX / VIEW.w; PTR[1] = e.clientY / VIEW.h; findsPointer(e.clientX, e.clientY); }, { passive: true });
 
-let raf = 0, lastP = -1, lastVisited = '';
+let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '';
 function frame(ts) {
   const time = ts / 1000;
+  const dt = mainTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - mainTs) / 1000)); mainTs = ts;
   P = stepsFrame(ts);
-  if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], jr); raf = requestAnimationFrame(frame); return; }
-  const st = tripState(P);
-  const moved = dirty || P !== lastP;
-  if (moved) { tripApply(st); tlFrame(st); footerFrame(st); CANVAS.style.opacity = st.dim; lastP = P; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
+  if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], { ...jr, still: true }); raf = requestAnimationFrame(frame); return; }
+  const st = tripState(P); st.visiting = JOURNEY.visiting;
+  const tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || P !== lastP || tuning !== mainTuning;
+  const aim = depthLook(dt, PTR);
+  if (moved) { tripApply(st); tlFrame(st); footerFrame(st); if (!JOIN.frame) CANVAS.style.opacity = st.dim; lastP = P; mainTuning = tuning; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
   const jo = JOIN.frame ? JOIN.frame(st, moved, P) : undefined;
-  if (jo !== false && (moved || st.handoffT < 1 || jo)) starsFrame(time, st, PTR, jo || undefined);
-  cardsFrame(st);
+  depthFrame(st, time, dt, PTR, aim, moved);
+  footerMotion(time, dt, st, aim.look, moved);
+  const starsChanged = starsTick(dt, st);
+  const skyIdle = starsSkyVisible(st) && time - mainSkyDraw >= 1 / DEPTH.idleFps;
+  if (jo !== false && (moved || starsChanged || st.handoffT < 1 || jo || aim.changed || skyIdle || st.blastT > 0)) {
+    starsFrame(time, st, PTR, { ...(jo || {}), look: aim.look }); mainSkyDraw = time;
+  }
+  cardsFrame(st, aim.look, PTR);
   findsFrame(time, st);
   raf = requestAnimationFrame(frame);
 }
-document.addEventListener('visibilitychange', () => { stepsPause(); if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else if (!raf) raf = requestAnimationFrame(frame); });
+document.addEventListener('visibilitychange', () => { stepsPause(); mainTs = null; if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else if (!raf) raf = requestAnimationFrame(frame); });
 const start = () => { resize(); raf = requestAnimationFrame(frame); };
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
 

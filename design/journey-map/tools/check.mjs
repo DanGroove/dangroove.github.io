@@ -2,7 +2,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { STOPS, PALETTES, FINDS, FIND_COPY, COPY, ACTS, CRAFTS, MAP, STEPS } from '../data.mjs';
+import { STOPS, PALETTES, FINDS, FIND_COPY, COPY, ACTS, CRAFTS, MAP, STEPS, DEPTH, NOVA, STARS, C } from '../data.mjs';
 import { SEQ, TOTAL_P, tripState, tripResize } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
 
@@ -59,6 +59,16 @@ const checkStepsNumbers = (v, path) => {
   else ok(false, `${path}: expected a number or a table of numbers`);
 };
 checkStepsNumbers(STEPS, 'STEPS');
+const checkDepthNumbers = (v, path) => {
+  if (typeof v === 'number') ok(Number.isFinite(v), `${path}: must be finite`);
+  else if (v && typeof v === 'object') Object.entries(v).forEach(([k, x]) => checkDepthNumbers(x, `${path}.${k}`));
+};
+checkDepthNumbers(DEPTH, 'DEPTH'); checkDepthNumbers(NOVA, 'NOVA'); checkDepthNumbers(STARS, 'STARS');
+DEPTH.clouds.list.forEach((row, i) => {
+  ok(row.length === 6 && row.every(Number.isFinite), `DEPTH.clouds.list[${i}]: needs six finite numbers`);
+  ok([1, 2, 3].includes(row[3]) && [1, -1].includes(row[4]), `DEPTH.clouds.list[${i}]: bad drawing/flip`);
+});
+ok(Object.hasOwn(C, DEPTH.rings.colour), 'DEPTH.rings.colour must name a key of C');
 ok(BEATS.length === 10 && new Set(BEATS.map(b => b.id)).size === 10, 'ten beats with unique ids');
 BEATS.forEach((b, i) => ok(Number.isFinite(b.P) && (!i || b.P > BEATS[i - 1].P), `beat ${b.id}: P must rise strictly`));
 ok(BEATS.map(b => b.id).join() === ['top', 'map', ...STOPS.map(s => s.id), 'x', 'end'].join(), 'beat ids/order differ from the brief');
@@ -84,4 +94,4 @@ mods.forEach(f => {
 ok(!/#[0-9A-Fa-f]{3,6}\b(?![\w-]*\))/.test(readFileSync(join(ROOT, 'map.css'), 'utf8').replace(/url\([^)]*\)/g, '')), 'map.css: colour literal');
 
 if (errs.length) { console.error('FAIL\n' + errs.map(e => ' - ' + e).join('\n')); process.exit(1); }
-console.log(`ok: 6 stops, ${Object.keys(PALETTES).length} palettes (Lennard band verified), 11 finds, acts total ${TOTAL_P.toFixed(1)} vh, ${mods.length} modules with unique top-level names; STEPS numbers finite/positive; 10 strictly rising beats; X camera continuous at desktop/phone sizes`);
+console.log(`ok: 6 stops, ${Object.keys(PALETTES).length} palettes (Lennard band verified), 11 finds, acts total ${TOTAL_P.toFixed(1)} vh, ${mods.length} modules with unique top-level names; STEPS numbers finite/positive; 10 strictly rising beats; X camera continuous at desktop/phone sizes; DEPTH/NOVA/STARS numbers finite; 10 cloud rows valid; rings.colour in C`);
