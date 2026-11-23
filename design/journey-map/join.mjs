@@ -22,14 +22,13 @@ document.documentElement.classList.add('jm-joined');
 JOIN.heroStart = true;
 
 // Run before the hero's own entry script, without changing the copied hero files.
-JN.cue = JN.hero.querySelector('[data-cue]'); JN.cueText = JN.cue ? JN.cue.textContent : '';
+JN.cue = JN.hero.querySelector('[data-cue]');
 function joinStart() {
   if (JN.rm || !JN.cue) return;
-  if (JOURNEY.mode === 'scroll') { JN.cue.textContent = JN.cueText; return; }
   const button = document.createElement('button'); button.type = 'button'; button.className = 'jm-start'; button.textContent = COPY.steps.start;
   button.addEventListener('click', () => JOURNEY.next()); JN.cue.replaceChildren(button);
 }
-joinStart(); window.addEventListener('jm-mode', joinStart);
+joinStart();
 
 const unit = () => window.innerHeight / 100;
 // The hero is present until the end of the leave, away from then on. Present, it takes every pointer and key and the map
@@ -79,7 +78,7 @@ JOIN.resize = (w, h) => {
   if (JN.rm) document.getElementById('trip').style.height = ((ACTS.hero + ACTS.handoff) * h / 100 + h) + 'px';
   JN.dirty = true; place();
 };
-window.addEventListener('scroll', () => { if (JOURNEY.mode === 'scroll') place(); }, { passive: true });
+window.addEventListener('scroll', () => { if (JN.rm) place(); }, { passive: true });
 place();
 
 // the hero's script has a top-level await: wait for its handle

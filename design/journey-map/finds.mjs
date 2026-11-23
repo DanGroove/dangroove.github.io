@@ -32,9 +32,10 @@ export function findsBuild(svg, pop, sheet, base, rm) {
   FD.all = findAll(svg);
   // Builders add non-interactive decorations. The one reusable bit pool remains last.
   const pool = svg.querySelector('#f-bits'); svg.querySelector('#finds').appendChild(pool);
-  svg.addEventListener('click', findCapture, true); svg.addEventListener('keydown', findCapture, true); svg.addEventListener('pointerdown', findCapture, true);
+  const capture = e => { if (FD.st?.exploring) { const el = e.target.closest?.('.find'); if (el) el._focusBlocked = false; return; } findCapture(e); };
+  svg.addEventListener('click', capture, true); svg.addEventListener('keydown', capture, true); svg.addEventListener('pointerdown', capture, true);
   window.addEventListener('jm-find-release', findsCloseAll);
-  window.addEventListener('jm-mode', () => { findsCloseAll(); FD.focusId = null; });
+  window.addEventListener('jm-explore', () => { if (!FD.st?.exploring || !document.documentElement.classList.contains('jm-explore')) findsCloseAll(); });
   window.__jm.finds = {
     found: () => [...FD.found],
     state: id => { const o = FD.list[id] || FD.list.hoards.items.find(h => h.id === id); return o ? findPlain(o) : null; },

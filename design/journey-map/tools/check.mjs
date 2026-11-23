@@ -2,7 +2,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { STOPS, PALETTES, FINDS, FIND_COPY, COPY, ACTS, CRAFTS, MAP, STEPS, DEPTH, NOVA, STARS, C, FIND_PLAY } from '../data.mjs';
+import { STOPS, PALETTES, FINDS, FIND_COPY, COPY, ACTS, CRAFTS, MAP, STEPS, DEPTH, NOVA, STARS, C, FIND_PLAY, EXPLORE, FOOT_NAME, CARD_CLOSE } from '../data.mjs';
 import { SEQ, TOTAL_P, tripState, tripResize } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
 
@@ -65,6 +65,13 @@ const checkDepthNumbers = (v, path) => {
 };
 checkDepthNumbers(DEPTH, 'DEPTH'); checkDepthNumbers(NOVA, 'NOVA'); checkDepthNumbers(STARS, 'STARS');
 checkDepthNumbers(FIND_PLAY, 'FIND_PLAY');
+checkDepthNumbers(EXPLORE, 'EXPLORE'); checkDepthNumbers(FOOT_NAME, 'FOOT_NAME'); checkDepthNumbers(CARD_CLOSE, 'CARD_CLOSE');
+ok(!Object.hasOwn(STEPS, 'wheel') && !Object.hasOwn(STEPS, 'swipe'), 'wheel/swipe stepping tables must be removed');
+ok(NOVA.flare.cap === 8 && NOVA.flare.coreMax === 1.2 && NOVA.flare.kickMax === 0.3, 'flare caps differ from EXPLORE');
+ok(NOVA.gather.ring === 0.32 && NOVA.gather.swirl === 0.35 && NOVA.gather.sky === 0.5, 'gather values differ from EXPLORE');
+ok(FOOT_NAME.red === C.red && FOOT_NAME.wipe.join() === '0.475,0,0.075,1' && FOOT_NAME.enter.join() === '0.23,1,0.32,1', 'footer name must copy the hero curves/red');
+ok(CARD_CLOSE.hit === 44 && CARD_CLOSE.time === 0.45, 'card close size/time');
+ok(COPY.explore.button === 'Explore the map' && COPY.explore.back === 'Back to the end' && COPY.cardClose === 'Close the {name} card', 'explore/card copy');
 const findSlots = (v, path) => { if (!v || typeof v !== 'object') return; if (v.todo) ok(typeof v.t === 'string' && v.t.trim().length > 0, `${path}: slot needs text`); Object.entries(v).forEach(([k, x]) => findSlots(x, `${path}.${k}`)); };
 findSlots(FIND_COPY, 'FIND_COPY');
 ok(FIND_COPY.hoards.length === 5 && FIND_COPY.hoards.every(h => Object.hasOwn(FIND_PLAY.icons, h.kind)), 'five hoards need known piece kinds');

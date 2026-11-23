@@ -124,14 +124,14 @@ export function tripBuild(els) {
 export function tripApply(st) {
   const E = TRIP_EL, c = st.cam;
   E.cam.setAttribute('transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`);
-  const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT);
+  const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
   E.sea.style.opacity = smooth(...DEPTH.fade.sea, h) * fade; E.fill.style.opacity = smooth(.25, .75, h) * fade;
   E.detail.style.opacity = smooth(.45, .95, h) * fade; E.finds.style.opacity = smooth(.5, 1, h) * fade;
   E.coastG.style.opacity = fade;
   const dr = smooth(.12, .75, h);
   E.coasts.forEach((p, i) => { if (dr >= 1) { p.style.strokeDasharray = 'none'; return; } const L = E.coastLen[i] * c.s; p.style.strokeDasharray = `${L.toFixed(1)} ${L.toFixed(1)}`; p.style.strokeDashoffset = (L * (1 - dr)).toFixed(1); });
   // solid trail behind the traveller (dash in screen units because the stroke does not scale)
-  const L = TRAIL_LEN * c.s; E.done.style.strokeDasharray = `${L.toFixed(1)} ${L.toFixed(1)}`; E.done.style.strokeDashoffset = ((TRAIL_LEN - st.u) * c.s).toFixed(1);
+  const L = TRAIL_LEN * c.s; E.done.style.strokeDasharray = `${L.toFixed(1)} ${L.toFixed(1)}`; E.done.style.strokeDashoffset = (st.exploreK ? 0 : (TRAIL_LEN - st.u) * c.s).toFixed(1);
   E.done.style.opacity = st.inTrip ? fade : 0;
   // the longship rides the crossing
   const sp = pointAt(Math.max(WATER[0], Math.min(WATER[1], st.u))); E.ship.setAttribute('transform', `translate(${n2(sp[0])} ${n2(sp[1] + 5)}) scale(.55)`);

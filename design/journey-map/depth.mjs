@@ -15,15 +15,22 @@ export const depthDeckAlpha = (st, a) => {
   const k = depthFactor(st, a), d = DEPTH.deck;
   return d.alpha * (1 + d.boost * smooth(...d.peak, k)) * depthVisibility(k, d);
 };
-export const depthSeaFade = st => smooth(...DEPTH.fade.sea, st.handoffT) * (1 - smooth(...DEPTH.fade.blast, st.blastT));
+export const depthBlastFade = st => 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
+export const depthSeaFade = st => smooth(...DEPTH.fade.sea, st.handoffT) * depthBlastFade(st);
 export const depthFrameBox = (st, inner = false) => {
   const f = DEPTH.frame[inner ? 'inner' : 'outer'], a = toScreen(st, f.slice(0, 2)), b = toScreen(st, f.slice(2));
   return [a[0], a[1], b[0], b[1]];
 };
 export const depthFrameCovers = st => { const b = depthFrameBox(st); return b[0] <= 0 && b[1] <= 0 && b[2] >= VIEW.w && b[3] >= VIEW.h; };
 export const novaRingRadius = st => lerp(NOVA.base.ringStart, Math.max(VIEW.w, VIEW.h) * NOVA.base.ringReach, 1 - (1 - st.blastT) ** 3);
-export const NOVA_LIVE = { time: 0, flareAt: null, serial: 0 };
-export const novaFlare = () => NOVA_LIVE.flareAt === null ? 1 : clamp01((NOVA_LIVE.time - NOVA_LIVE.flareAt) / NOVA.flare.time);
+export const NOVA_LIVE = { time: 0, flares: [], serial: 0 };
+export const novaFlare = flare => clamp01((NOVA_LIVE.time - flare.at) / NOVA.flare.time);
+export function novaPrune() { NOVA_LIVE.flares = NOVA_LIVE.flares.filter(f => f.at + NOVA.flare.time > NOVA_LIVE.time); }
+export function novaPress() {
+  novaPrune(); if (NOVA_LIVE.flares.length >= NOVA.flare.cap) return false;
+  NOVA_LIVE.flares.push({ at: NOVA_LIVE.time, serial: ++NOVA_LIVE.serial }); return true;
+}
+export const novaShare = (share, cap) => Math.min(cap, NOVA_LIVE.flares.reduce((sum, f) => sum + Math.sin(Math.PI * novaFlare(f)) * share, 0));
 
 const DP = { deep: null, air: null, sky: null, dc: null, ac: null, dpr: 1, rm: false, fine: false,
   look: [0, 0], clouds: [], birds: [], mist: [], deck: [], dust: [], waves: [], waveKey: '', sprite: null, spriteKey: '',
@@ -206,7 +213,7 @@ function depthAir(st, look, pointer, fine) {
   drawField(DP.mist, M, false); drawField(DP.deck, D, true); c.globalAlpha = 1;
 }
 function depthSky(st, look, time) {
-  const Cld = DEPTH.clouds, Rv = DEPTH.ravens, r = rnd(DEPTH.seed), fade = 1 - smooth(...DEPTH.fade.blast, st.blastT);
+  const Cld = DEPTH.clouds, Rv = DEPTH.ravens, r = rnd(DEPTH.seed), fade = depthBlastFade(st);
   DP.cloudVisible = false;
   DP.clouds.forEach((c, i) => {
     const row = Cld.list[i], sway = depthRange(Cld.sway, r()), period = depthRange(Cld.period, r()), phase = r() * Math.PI * 2;

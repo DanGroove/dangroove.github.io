@@ -1,5 +1,10 @@
 // Node-only pace checks, including every neighbouring beat in both directions.
 import { BEATS, paceT, paceP, paceMove, paceAt } from '../pace.mjs';
+import { JOURNEY, stepsBuild, stepsFrame } from '../steps.mjs';
+import { tripResize, tripState } from '../trip.mjs';
+import { cardsBuild, cardsOverride, cardsClose, cardsList } from '../cards.mjs';
+import { CARD_CLOSE } from '../data.mjs';
+import { exploreBuild, exploreResize, exploreApply, exploreActive, exploreEnd } from '../explore.mjs';
 
 const stepAssert = (condition, message) => { if (!condition) throw new Error(message); };
 const stepEnd = BEATS[BEATS.length - 1].P;
@@ -27,3 +32,57 @@ for (let i = 1; i < BEATS.length; i++) {
   console.log(`${a.id} -> ${b.id} | ${forward.D.toFixed(3)} | ${back.D.toFixed(3)}`);
 }
 console.log('ok: all 18 moves start/end correctly and never turn back; all 9 forward durations are within 1.5-5 seconds');
+
+// Recording nodes exercise controls, not rendered pixels. Any geometry read here fails.
+class StepNode {
+  constructor(tag = 'div') { this.tagName = tag; this.children = []; this.attrs = {}; this.dataset = {}; this.style = { setProperty(k, v) { this[k] = v; } }; this.listeners = {}; this.className = ''; this.classList = { contains: c => this.className.split(' ').includes(c), add: c => this.classList.toggle(c, true), remove: c => this.classList.toggle(c, false), toggle: (c, on) => { const set = new Set(this.className.split(' ').filter(Boolean)); on = on ?? !set.has(c); if (on) set.add(c); else set.delete(c); this.className = [...set].join(' '); } }; }
+  setAttribute(k, v) { this.attrs[k] = String(v); if (k === 'class') this.className = v; }
+  getAttribute(k) { return this.attrs[k]; }
+  appendChild(n) { this.children.push(n); n.parentElement = this; return n; }
+  append(...ns) { ns.forEach(n => this.appendChild(n)); }
+  prepend(...ns) { this.children.unshift(...ns); }
+  set innerHTML(html) { const stack = [this]; this.children = []; for (const match of html.matchAll(/<\/?([\w-]+)([^>]*?)\/?\s*>/g)) { if (match[0].startsWith('</')) { if (stack.length > 1) stack.pop(); continue; } const n = new StepNode(match[1]); for (const a of match[2].matchAll(/([\w-]+)(?:="([^"]*)")?/g)) n.setAttribute(a[1], a[2] || ''); stack.at(-1).appendChild(n); if (!match[0].endsWith('/>') && match[1] !== 'img') stack.push(n); } }
+  matches(s) { return s.startsWith('.') ? this.classList.contains(s.slice(1)) : s.startsWith('[') ? Object.hasOwn(this.attrs, s.slice(1, -1)) : this.tagName === s; }
+  querySelectorAll(s) { return this.children.flatMap(n => [...(n.matches(s) ? [n] : []), ...n.querySelectorAll(s)]); }
+  querySelector(s) { return this.querySelectorAll(s)[0] || null; }
+  closest(s) { return s.split(',').some(c => this.matches(c.trim())) ? this : this.parentElement?.closest(s) || null; }
+  contains(n) { return n === this || this.children.some(c => c.contains(n)); }
+  addEventListener(t, f) { (this.listeners[t] ??= []).push(f); }
+  fire(t, props = {}) { const e = { target: this, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...props }; (this.listeners[t] || []).forEach(f => f(e)); return e; }
+  focus() { document.activeElement = this; }
+  getBoundingClientRect() { throw new Error('unexpected layout read'); }
+}
+const stepWindow = new StepNode(), stepStage = new StepNode(), stepRoot = new StepNode(), stepBody = new StepNode();
+globalThis.window = Object.assign(stepWindow, { location: { search: '?mode=scroll' }, scrollY: 0, scrollTo() {}, dispatchEvent() {} });
+globalThis.document = { documentElement: stepRoot, body: stepBody, activeElement: null, createElement: tag => new StepNode(tag), getElementById: id => stepStage.children.find(n => n.id === id) };
+globalThis.history = { scrollRestoration: 'auto' };
+tripResize(1440, 900, 120); stepsBuild({ stage: stepStage, rm: false, resize() {}, joinedTop: () => false });
+exploreBuild({ stage: stepStage, world: new StepNode(), journey: JOURNEY, rm: false }); exploreResize();
+stepAssert(JOURNEY.mode === 'steps' && JOURNEY.setMode === undefined, 'removed Scroll mode remains callable or address selects it');
+stepAssert(stepBody.children[0].querySelectorAll('button').length === 1 && stepBody.children[0].querySelector('[data-depth]'), 'review must have only Depth');
+stepAssert(!stepWindow.listeners.touchstart && !stepWindow.listeners.touchmove && !stepWindow.listeners.touchend, 'swipe listeners remain');
+const empty = new StepNode(); let stepClock = 0;
+for (const beat of BEATS) {
+  JOURNEY.set(beat.P); stepsFrame(stepClock += 50);
+  for (let i = 0; i < 12; i++) stepWindow.fire('wheel', { target: empty, deltaY: i % 2 ? -120 : 120 });
+  stepAssert(JOURNEY.P === beat.P && !JOURNEY.moving, 'wheel moved journey');
+}
+JOURNEY.next(); stepAssert(!exploreActive(), 'Next key/API at end must not start explore');
+stepWindow.fire('keydown', { target: empty, key: 'ArrowRight' }); stepAssert(!exploreActive(), 'arrow at end must not start explore');
+const go = stepStage.children.find(n => n.classList.contains('go'));
+go.querySelector('.go-next').fire('click'); stepAssert(exploreActive(), 'end CTA did not start explore');
+const endP = JOURNEY.P; exploreApply(tripState(endP), 1.6); JOURNEY.back(); stepAssert(!exploreActive() && JOURNEY.P === endP, 'first Back must only end exploring');
+exploreApply(tripState(endP), .9); JOURNEY.back(); stepAssert(JOURNEY.moving, 'second Back did not leave end');
+JOURNEY.set(BEATS[1].P); stepWindow.fire('keydown', { target: empty, key: 'ArrowRight' });
+stepAssert(JOURNEY.moving, 'key did not start a move'); const keyStart = JOURNEY.P; stepsFrame(stepClock += 50); stepAssert(JOURNEY.P > keyStart, 'key move did not progress');
+console.log('ok: address cannot select Scroll; review only Depth; no swipe listeners; wheel never steps any beat; only end CTA explores; two Back presses return then step; keyboard still advances');
+
+const cardContainer = new StepNode(); let navigations = 0; cardsBuild(cardContainer, () => navigations++);
+stepAssert(cardContainer.querySelectorAll('.c-close').length === 6, 'every motion card needs X');
+const stopP = BEATS[2].P; let cardState = tripState(stopP); cardsOverride(cardState, 0, false); stepAssert(cardsClose(), 'card did not close');
+cardState = tripState(stopP); cardsOverride(cardState, CARD_CLOSE.time / 2, false); stepAssert(cardState.cardK[0] > 0 && cardState.cardK[0] < 1 && cardState.P === stopP, 'card halfway fold');
+cardState = tripState(stopP); cardsOverride(cardState, CARD_CLOSE.time / 2, false); stepAssert(cardState.cardK[0] === 0 && cardState.P === stopP, 'card fold changed P or failed');
+cardsList()[0].btn.fire('click'); cardState = tripState(stopP); cardsOverride(cardState, CARD_CLOSE.time, false); stepAssert(cardState.cardK[0] === 1 && navigations === 0, 'closed stop mark must reopen locally');
+cardsClose(); cardsOverride(tripState(BEATS[3].P), 0, false); cardState = tripState(stopP); cardsOverride(cardState, 0, false); stepAssert(cardState.cardK[0] === 1, 'leaving stop must forget closed state');
+const reducedCards = new StepNode(); cardsBuild(reducedCards, () => {}, true); stepAssert(reducedCards.querySelectorAll('.c-close').length === 0, 'reduced-motion cards must have no close button');
+console.log('ok: six card X controls; reversible local fold, fixed P, mark reopens, departure forgets override, reduced-motion list has no X');

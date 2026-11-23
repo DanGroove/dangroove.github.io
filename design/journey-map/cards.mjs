@@ -1,14 +1,16 @@
 // Stop marks that grow into cards. Each card is one article: the standing stone at rest, the card when open.
-import { STOPS, PALETTES, COPY, CRAFTS, MAP, STEPS, DEPTH } from './data.mjs';
+import { STOPS, PALETTES, COPY, CRAFTS, MAP, STEPS, DEPTH, CARD_CLOSE } from './data.mjs';
 import { stoneSvg } from './art.mjs';
-import { VIEW, toScreen, smooth } from './trip.mjs';
+import { VIEW, toScreen, smooth, easeIO, lerp } from './trip.mjs';
 
-const CD = { list: [], W: 640, H: 420, craft: null, onGo: null };
+const CD = { list: [], W: 640, H: 420, craft: null, onGo: null, rm: false, closed: null, last: null };
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 export const arrowSvg = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
 
-export function cardsBuild(container, onGo) {
-  CD.onGo = onGo;
+export function cardsBuild(container, onGo, rm = false) {
+  CD.onGo = onGo; CD.rm = rm;
+  const root = document.documentElement;
+  Object.entries({ hit: CARD_CLOSE.hit, inset: CARD_CLOSE.inset, icon: CARD_CLOSE.icon, stroke: CARD_CLOSE.stroke }).forEach(([k, v]) => root.style.setProperty('--card-close-' + k, v + 'px'));
   STOPS.forEach((s, i) => {
     const p = PALETTES[s.palette], cp = s.copy, a = document.createElement('article');
     a.className = `stop lay-${p.layout}`; a.id = `stop-${s.id}`; a.setAttribute('aria-labelledby', `h-${s.id}`);
@@ -26,14 +28,19 @@ export function cardsBuild(container, onGo) {
 <p class="c-kick">${COPY.took}</p><p class="c-took">${esc(cp.took)}</p></div>
 <div class="c-side"><figure class="c-piece">${piece}${cp.caption ? `<figcaption>${esc(cp.caption)}</figcaption>` : ''}</figure>
 <ul class="c-crafts">${CRAFTS.map(c => `<li class="${s.crafts.includes(c) ? 'lit' : ''}"><i></i>${c}</li>`).join('')}</ul>
-<button class="c-btn" type="button">${COPY.caseStudy}${arrowSvg}</button></div></div></div></div>`;
-    a.querySelector('.st-btn').addEventListener('click', () => CD.onGo(i));
+<button class="c-btn" type="button">${COPY.caseStudy}${arrowSvg}</button></div></div></div></div>${rm ? '' : `<button class="c-close" type="button" aria-label="${esc(COPY.cardClose.replace('{name}', s.name))}"><i aria-hidden="true"></i></button>`}`;
+    a.querySelector('.st-btn').addEventListener('click', () => {
+      if (CD.closed?.i === i && CD.last?.P === CD.closed.P) { CD.closed = { ...CD.closed, from: CD.closed.k, to: 1, elapsed: 0 }; return; }
+      CD.onGo(i);
+    });
+    a.querySelector('.c-close')?.addEventListener('click', () => cardsClose(i));
     container.appendChild(a);
     CD.list.push({ el: a, face: a.querySelector('.face'), shadow: a.querySelector('.c-sh'), inn: a.querySelector('.c-in'), btn: a.querySelector('.st-btn'), fill: a.querySelector('.st-fill'), glow: a.querySelector('.st-glow'), stop: s, state: '', tilt: [0, 0, 0, 0] });
   });
 }
 export function cardsResize(steps = false) {
   CD.steps = steps;
+  document.documentElement.style.setProperty('--card-close-radius', (VIEW.phone ? CARD_CLOSE.radiusPhone : CARD_CLOSE.radius) + 'px');
   if (VIEW.phone) {
     CD.W = VIEW.w; let hmax = 0;
     CD.list.forEach(c => { c.el.style.width = CD.W + 'px'; c.el.style.height = 'auto'; hmax = Math.max(hmax, c.inn.scrollHeight); });
@@ -53,8 +60,30 @@ function cardsDepthConfig(c) {
 export const cardsSetCraft = mask => { CD.craft = mask; };
 export const cardsLitBy = craft => STOPS.map(s => s.crafts.includes(craft));
 
+export function cardsClose(index = CD.last?.i) {
+  const st = CD.last;
+  if (CD.rm || !st || st.kind !== 'hold' || st.cardK[index] <= 0 || (CD.closed?.to === 0)) return false;
+  CD.closed = { i: index, P: st.P, k: st.cardK[index], from: st.cardK[index], to: 0, elapsed: 0 };
+  if (CD.list[index].el.contains(document.activeElement)) CD.list[index].btn.focus({ preventScroll: true });
+  return true;
+}
+export function cardsOverride(st, dt, moving) {
+  const closed = CD.closed; let changed = false;
+  if (closed) {
+    if (st.kind !== 'hold' || st.i !== closed.i || (closed.leaving && !moving && st.P === closed.P)) { CD.closed = null; changed = true; }
+    else {
+      if (moving || st.P !== closed.P) closed.leaving = true;
+      const before = closed.k;
+      closed.elapsed = Math.min(CARD_CLOSE.time, closed.elapsed + dt); closed.k = lerp(closed.from, closed.to, easeIO(closed.elapsed / CARD_CLOSE.time));
+      st.cardK[closed.i] *= closed.k; st.cardOpen = Math.max(...st.cardK); changed = before !== closed.k;
+      if (closed.to === 1 && closed.elapsed === CARD_CLOSE.time) CD.closed = null;
+    }
+  }
+  CD.last = st; return changed;
+}
+
 export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
-  const W = CD.W, H = CD.H, op = smooth(.5, 1, st.handoffT) * (1 - smooth(0, .4, st.blastT));
+  const W = CD.W, H = CD.H, op = smooth(.5, 1, st.handoffT) * (1 - smooth(0, .4, st.blastT) * (1 - (st.exploreK || 0)));
   const stonePx = Math.max(15, Math.min(44, 12.5 * st.cam.s));
   const stepTop = VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h;
   const oc = VIEW.phone ? [VIEW.w / 2, VIEW.h - H / 2 - 6 - (CD.steps ? STEPS.nav.bar : 0)]

@@ -105,8 +105,11 @@ export const COPY = {
     toX: 'Next: the X', dig: 'Dig here', top: 'Back to the top', back: 'Back: {name}', returnTo: 'Back to the trail',
     names: { top: 'the top', map: 'the whole map', x: 'the X', end: 'the end' },
     say: { top: 'The top of the page', map: 'The whole map', stop: 'Stop {n} of {t}: {name}, {dates}', x: 'The X', end: 'The end of the trail: contact and links' },
-    review: { label: 'Preview only', steps: 'Steps', scroll: 'Scroll', depth: 'Depth' },
+    review: { label: 'Preview only', depth: 'Depth' },
   },
+  explore: { button: 'Explore the map', back: 'Back to the end', hint: 'Scroll to zoom. Drag to look around.',
+    hintPhone: 'Pinch to zoom. Drag to look around.', say: 'Exploring the map. Back returns to the end.' },
+  cardClose: 'Close the {name} card',
   footer: {
     label: 'Footer',
     cta: 'Got an idea that needs carrying to the final cut?',
@@ -192,14 +195,26 @@ export const CAMERA = {
 
 export const HOLD = { zoomIn: [0, 0.18], zoomOut: [0.86, 1], open: [0.1, 0.32], fold: [0.72, 0.92], visited: 0.3 };
 
-// Clock-driven journey. Pace and animation durations are seconds; wheel.quiet is milliseconds.
+// Clock-driven journey. Pace and animation durations are seconds.
 export const STEPS = {
   pace: { hero: 0.9, handoff: 2.8, overview: 0.8, pushIn: 1.6, holdIn: 1.0, holdOpen: 0.4, holdOut: 0.6,
     legBase: 0.8, legPerVh: 0.006, legMax: 2.4, legX: 1.2, rush: 1.3, blast: 1.6, settle: 1.3 },
   ramp: 0.35, back: 0.6, hurry: 0.3, minMove: 0.3, cut: [0.18, 0.32],
-  wheel: { min: 24, quiet: 180 }, swipe: { min: 48, slope: 1.5 }, nav: { h: 44, gap: 14, bar: 52 },
+  nav: { h: 44, gap: 14, bar: 52 },
   frameMax: 0.05, reveal: 0.3,
 };
+
+export const EXPLORE = { in: 1.6, out: 0.9, most: 3, margin: 24, marginPhone: 12, wheel: 0.0016, wheelMax: 120, pinchWheel: 0.01,
+  ease: 0.12, slop: 6, friction: 5, velocityWindow: 0.08, key: 1.25, hintTime: 8, linePx: 16,
+  bar: { edgePhone: 16, padStart: 14, padEnd: 34, arrowPhone: 12 } };
+export const CARD_CLOSE = { time: 0.45, hit: 44, inset: 0, icon: 12, stroke: 1.6, radius: 14, radiusPhone: 16 };
+// Copied from the hero's NAME table, entrance name renderer and EASE curves.
+export const FOOT_NAME = { radius: 0.95, near: 1.2, hop: 0.16, rise: 0.07, feel: 1.3, wave: 55, open: 9,
+  spring: 240, damp: 12, kick: 26, red: C.red, dy: 1.4, far: -1e5, fallbackEm: 16,
+  weight: [300, 800], wipe: [0.475, 0, 0.075, 1], enter: [0.23, 1, 0.32, 1], name: [[0.08, 0.4], [0.16, 0.48]],
+  clipBottom: 3, clipSlack: 7, clipLeft: -50, clipRight: 150, clipFloor: 200,
+  openEpsilon: 0.003, radiusEpsilon: 0.5, paintEpsilon: 0.001, restEpsilon: 0.0005, speedEpsilon: 0.005,
+  solveIterations: 40, solveEpsilon: 1e-7, measureSize: 100 };
 
 export const STARS = { count: 420, red: 0.05, dprCap: 2, drift: 0.012, parallax: 14,
   sky: 300, skyShare: 0.38, skyLook: 0.5, skyFollow: 0.04, twinkle: 0.35, skyPush: 26,
@@ -250,7 +265,8 @@ export const NOVA = {
   waves: { n: 4, every: 2.2, reach: 0.7, alpha: 0.42, width: 1 },
   shells: [6, -4], shellDash: [2, 10],
   orbit: 0.06, embers: { n: 40, nPhone: 20, life: [2.5, 5], reach: [0.16, 0.45], alpha: 1, r: [1, 2.4], slow: 3, burst: 2, fade: [0.15, 1] },
-  flare: { time: 1.6, core: 0.5, kick: 0.12, hit: 70, alpha: 0.9, reach: 0.85, auto: [7, 12] },
+  flare: { time: 1.6, core: 0.5, kick: 0.12, hit: 70, alpha: 0.9, reach: 0.85, auto: [7, 12], cap: 8, coreMax: 1.2, kickMax: 0.3 },
+  gather: { ring: 0.32, swirl: 0.35, sky: 0.5, join: 0.5, stagger: 0.35, time: 0.6, tail: 0.02, tailGain: 0.08, golden: 0.6180339887498949 },
   motionIn: [0, 1], orbitIn: [0.5, 1], seed: 149,
   base: { spikeLength: 12.7, angles: [45, -45], rushLen: 2.4, peakLen: 10, endLen: 5, spikePeak: 0.3, spikeEnd: 58,
     thin: [1, 0.55, 0.8, 0.5], heat: [0.05, 0.7], redOut: [0.2, 0.9],

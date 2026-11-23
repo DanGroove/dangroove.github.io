@@ -1,11 +1,12 @@
 // The X, its supernova and the footer that settles over the glow.
-import { C, COPY, NOVA, DEPTH } from './data.mjs';
+import { C, COPY, NOVA, DEPTH, FOOT_NAME } from './data.mjs';
 import { rnd, n1 } from './art.mjs';
 import { VIEW, smooth, lerp, easeIO, clamp01 } from './trip.mjs';
 import { JOURNEY } from './steps.mjs';
-import { novaRingRadius, novaFlare, NOVA_LIVE } from './depth.mjs';
+import { novaRingRadius, novaFlare, novaPress, novaPrune, novaShare, NOVA_LIVE } from './depth.mjs';
+import { footnameBuild, footnameMeasure, footnameReveal, footnameFrame } from './footname.mjs';
 
-const FT = { g: {}, items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], config: '', pending: false, nextFlare: null, lastFlare: null };
+const FT = { g: {}, items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], flares: [], config: '', pending: false, nextFlare: null, lastFlare: null };
 const upRight = '<svg class="ne" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 8.5L8.5 1.5M3 1.5H8.5V7"/></svg>';
 const arrowR = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
 
@@ -16,7 +17,7 @@ export function footerBuildX(g, rm = false) {
   const r = rnd(43); let streaks = '';
   for (let i = 0; i < 60; i++) { const a = r() * 6.283, d1 = .3 + r() * .5, d2 = d1 + .2 + r() * .6, c = Math.cos(a), sn = Math.sin(a); streaks += `<path d="M${n1(c * d1 * 10)} ${n1(sn * d1 * 10)}L${n1(c * d2 * 10)} ${n1(sn * d2 * 10)}" stroke="${r() < .3 ? C.red : C.paper}" stroke-opacity="${n1(.3 + r() * .6)}" stroke-width="${n1(.6 + r())}" vector-effect="non-scaling-stroke" stroke-linecap="round"/>`; }
   g.innerHTML = `<defs><linearGradient id="fxray" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${C.paper}" stop-opacity="0"/><stop offset="${NOVA.rays.peak}" stop-color="${C.paper}" stop-opacity="1"/><stop offset="1" stop-color="${C.paper}" stop-opacity="0"/></linearGradient></defs><circle class="fx-rg" r="1" fill="url(#rglow)" opacity="0"/><circle class="fx-og" r="1" fill="url(#oglow)" opacity="0"/>`
-    + `<g class="fx-rays" opacity="0"></g><g class="fx-lobes" opacity="0"></g><g class="fx-waves" opacity="0"></g><circle class="fx-flare" r="1" fill="none" stroke="${C.paper}" vector-effect="non-scaling-stroke" opacity="0"/>`
+    + `<g class="fx-rays" opacity="0"></g><g class="fx-lobes" opacity="0"></g><g class="fx-waves" opacity="0"></g><g class="fx-flares">${Array.from({ length: NOVA.flare.cap }, () => `<circle class="fx-flare" r="1" fill="none" stroke="${C.paper}" vector-effect="non-scaling-stroke" opacity="0"/>`).join('')}</g>`
     + `<g class="fx-streaks" opacity="0">${streaks}</g>`
     + `<circle class="fx-ringr" r="1" fill="none" stroke="${C.red}" stroke-width="8" vector-effect="non-scaling-stroke" opacity="0"/><circle class="fx-ring" r="1" fill="none" stroke="${C.paper}" stroke-width="2" vector-effect="non-scaling-stroke" opacity="0"/>`
     + `<circle class="fx-r1" r="1" fill="none" stroke="${C.paper}" stroke-width=".8" vector-effect="non-scaling-stroke" opacity="0"/><circle class="fx-r2" r="1" fill="none" stroke="${C.paper}" stroke-width=".6" vector-effect="non-scaling-stroke" opacity="0"/>`
@@ -24,15 +25,15 @@ export function footerBuildX(g, rm = false) {
     + (rm ? '' : `<circle class="fx-hit hit" r="1" role="button" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true" pointer-events="all" style="outline:none"/>`);
   // Only the hit circle takes the pointer: the glows, lobes and rings lie over the whole map and are often invisible.
   g.setAttribute('pointer-events', 'none');
-  ['fx-rg', 'fx-og', 'fx-rays', 'fx-lobes', 'fx-waves', 'fx-flare', 'fx-streaks', 'fx-ringr', 'fx-ring', 'fx-r1', 'fx-r2', 'fx-core'].forEach(k => FT.g[k] = g.querySelector('.' + k));
+  ['fx-rg', 'fx-og', 'fx-rays', 'fx-lobes', 'fx-waves', 'fx-streaks', 'fx-ringr', 'fx-ring', 'fx-r1', 'fx-r2', 'fx-core'].forEach(k => FT.g[k] = g.querySelector('.' + k));
+  FT.flares = [...g.querySelectorAll('.fx-flare')];
   FT.g.s = [...g.querySelectorAll('.fx-s')]; FT.g.red = [...g.querySelectorAll('.fx-red')]; FT.g.white = [...g.querySelectorAll('.fx-white')];
   FT.hit = g.querySelector('.fx-hit');
   if (FT.hit) {
     const dig = () => {
       if (FT.hit.getAttribute('aria-disabled') === 'true') return;
-      if (FT.settled) { NOVA_LIVE.flareAt = NOVA_LIVE.time; NOVA_LIVE.serial++; return; }
-      if (JOURNEY.mode === 'scroll') JOURNEY.go('end');
-      else if (Math.abs(JOURNEY.P - JOURNEY.beats.find(b => b.id === 'x').P) < NOVA.base.hitTolerance) JOURNEY.next();
+      if (FT.settled) { novaPress(); return; }
+      if (Math.abs(JOURNEY.P - JOURNEY.beats.find(b => b.id === 'x').P) < NOVA.base.hitTolerance) JOURNEY.next();
       else JOURNEY.go('x');
     };
     FT.hit.addEventListener('click', dig);
@@ -41,8 +42,8 @@ export function footerBuildX(g, rm = false) {
   footerConfigure();
 }
 
-export function footerBuild(el) {
-  const f = COPY.footer; FT.el = el;
+export function footerBuild(el, rm = false) {
+  const f = COPY.footer; FT.el = el; FT.rm = rm;
   el.innerHTML = `<div class="ft-in">
 <div class="ft-cta ft-r"><p class="ft-q">${f.cta}</p><button class="ft-talk" type="button">${f.talk}${arrowR}</button></div>
 <div class="ft-sp"></div>
@@ -51,12 +52,13 @@ export function footerBuild(el) {
 <div class="ft-rule" aria-hidden="true"></div>
 <nav class="ft-links ft-r" aria-label="${f.label}"><span class="ft-big">${f.links.map(l => `<button type="button" class="ft-link">${l}${upRight}</button>`).join('')}</span><span class="ft-small">${f.small.split(' / ').map(l => `<button type="button" class="ft-link">${l}</button>`).join('<i>/</i>')}</span></nav></div>`;
   FT.items = [...el.querySelectorAll('.ft-r')]; FT.name = el.querySelector('.ft-name span'); FT.rule = el.querySelector('.ft-rule'); FT.inner = el.querySelector('.ft-in');
+  footnameBuild(FT.name, FT.rm);
 }
 export function footerResize() {
   footerConfigure();
-  const s = FT.name; s.style.fontSize = '100px';
+  const s = FT.name, weight = s.style.fontWeight; s.style.fontWeight = FOOT_NAME.weight[1]; s.style.fontSize = FOOT_NAME.measureSize + 'px';
   const avail = FT.name.parentElement.clientWidth, w = s.getBoundingClientRect().width;
-  s.style.fontSize = (100 * avail / w).toFixed(2) + 'px';
+  s.style.fontSize = (FOOT_NAME.measureSize * avail / w).toFixed(2) + 'px'; footnameMeasure({ c: 1, dx: 0, dy: 0 }); s.style.fontWeight = weight;
   return FT.rule.getBoundingClientRect();
 }
 const T = (el, x) => el.setAttribute('transform', x);
@@ -71,7 +73,8 @@ export function footerFrame(st) {
   }
   // Progress owns the text's reveal. All X transforms and opacities have one writer, footerMotion.
   const b = NOVA.base;
-  FT.items.forEach((it, j) => { const o = smooth(b.textIn[0] + j * b.textGap, b.textIn[1] + j * b.textGap, st.settleT); it.style.opacity = o; it.style.transform = `translateY(${((1 - o) * b.textRise).toFixed(1)}px)`; });
+  FT.items.forEach((it, j) => { if (it.classList.contains('ft-name')) { it.style.opacity = 1; it.style.transform = ''; return; } const o = smooth(b.textIn[0] + j * b.textGap, b.textIn[1] + j * b.textGap, st.settleT); it.style.opacity = o; it.style.transform = `translateY(${((1 - o) * b.textRise).toFixed(1)}px)`; });
+  footnameReveal(st);
   FT.el.style.visibility = st.settleT > b.textShow ? 'visible' : 'hidden';
 }
 const footerConfigKey = () => JSON.stringify([NOVA.rays.n, VIEW.phone ? NOVA.lobes.nPhone : NOVA.lobes.n, NOVA.waves.n, NOVA.rays.width, NOVA.waves.width, NOVA.shellDash]);
@@ -94,24 +97,26 @@ function footerConfigure() {
   add(FT.lobes, count, FT.g['fx-lobes'], 'circle', 'fx-lobe');
   add(FT.waves, NOVA.waves.n, FT.g['fx-waves'], 'circle', 'fx-wave');
   FT.rays.forEach(ray => ray.el.setAttribute('stroke-width', NOVA.rays.width));
-  FT.waves.forEach(wave => wave.el.setAttribute('stroke-width', NOVA.waves.width)); FT.g['fx-flare'].setAttribute('stroke-width', NOVA.waves.width);
+  FT.waves.forEach(wave => wave.el.setAttribute('stroke-width', NOVA.waves.width)); FT.flares.forEach(circle => circle.setAttribute('stroke-width', NOVA.waves.width));
   ['fx-r1', 'fx-r2'].forEach(k => FT.g[k].setAttribute('stroke-dasharray', NOVA.shellDash.join(' ')));
 }
 export function footerMotion(time, dt, st, look, moved) {
   if (FT.rm) return;
+  footnameFrame(time, dt, [-look[0] * DEPTH.foot.text, -look[1] * DEPTH.foot.text]);
   NOVA_LIVE.time += dt;
-  if (st.blastT > 0) FT.clock += dt; else { FT.clock = 0; NOVA_LIVE.flareAt = null; }
+  novaPrune();
+  if (st.blastT > 0) FT.clock += dt; else { FT.clock = 0; NOVA_LIVE.flares = []; }
   if (st.settleT >= 1 && NOVA.flare.auto[1] > 0) {
-    if (FT.nextFlare === null || NOVA_LIVE.flareAt !== FT.lastFlare) { FT.lastFlare = NOVA_LIVE.flareAt; FT.nextFlare = NOVA_LIVE.time + lerp(...NOVA.flare.auto, rnd(NOVA.seed + NOVA_LIVE.serial)()); }
-    else if (NOVA_LIVE.time >= FT.nextFlare) { NOVA_LIVE.flareAt = NOVA_LIVE.time; NOVA_LIVE.serial++; }
+    if (FT.nextFlare === null || NOVA_LIVE.serial !== FT.lastFlare) { FT.lastFlare = NOVA_LIVE.serial; FT.nextFlare = NOVA_LIVE.time + lerp(...NOVA.flare.auto, rnd(NOVA.seed + NOVA_LIVE.serial)()); }
+    else if (NOVA_LIVE.time >= FT.nextFlare) { novaPress(); FT.nextFlare = null; }
   } else FT.nextFlare = null;
   if (footerConfigKey() !== FT.config && !FT.pending) { FT.pending = true; queueMicrotask(() => { footerConfigure(); FT.pending = false; }); }
   if (!moved && st.blastT <= 0) return;
-  const s = st.cam.s, rT = st.rushT, bT = st.blastT, sT = st.settleT, G = FT.g, u = px => px / s, B = NOVA.base;
+  const s = st.exploreK ? st.sEnd : st.cam.s, rT = st.rushT, bT = st.blastT, sT = st.settleT, G = FT.g, u = px => px / s, B = NOVA.base;
   const big = Math.max(VIEW.w, VIEW.h);
-  const clock = FT.clock, strength = smooth(...NOVA.motionIn, bT), flare = Math.sin(Math.PI * novaFlare()) * strength;
+  const clock = FT.clock, strength = smooth(...NOVA.motionIn, bT), flare = novaShare(NOVA.flare.core, NOVA.flare.coreMax) * strength;
   const wave = period => Math.sin(Math.PI * 2 * clock / period);
-  const pulse = 1 + strength * (NOVA.pulse[1] * wave(NOVA.pulse[0]) + NOVA.pulse[3] * wave(NOVA.pulse[2])) + NOVA.flare.core * flare;
+  const pulse = 1 + strength * (NOVA.pulse[1] * wave(NOVA.pulse[0]) + NOVA.pulse[3] * wave(NOVA.pulse[2])) + flare;
   // the two strokes: thin, whiten from the centre, stretch into spikes, then cool to a small star
   const out = b => 1 - Math.pow(1 - b, 3);
   let len = lerp(1, B.rushLen, easeIO(rT)), thin = lerp(B.thin[0], B.thin[1], rT);
@@ -162,7 +167,7 @@ export function footerMotion(time, dt, st, look, moved) {
     T(circle.el, `scale(${u(lerp(core, big * NOVA.waves.reach, q))})`);
     circle.el.setAttribute('opacity', i < NOVA.waves.n && age >= 0 ? NOVA.waves.alpha * (1 - q) : 0);
   });
-  const fq = novaFlare(); T(G['fx-flare'], `scale(${u(lerp(core, big * NOVA.flare.reach, out(fq)))})`); G['fx-flare'].setAttribute('opacity', NOVA_LIVE.flareAt !== null ? NOVA.flare.alpha * (1 - fq) * strength : 0);
+  FT.flares.forEach((circle, i) => { const live = NOVA_LIVE.flares.find(f => f.serial % FT.flares.length === i); if (!live) { circle.setAttribute('opacity', 0); return; } const fq = novaFlare(live); T(circle, `scale(${u(lerp(core, big * NOVA.flare.reach, out(fq)))})`); circle.setAttribute('opacity', NOVA.flare.alpha * (1 - fq) * strength); });
   if (FT.hit) T(FT.hit, `scale(${FT.settled ? u(NOVA.flare.hit) : B.digHit})`);
   FT.inner.style.translate = `${-look[0] * DEPTH.foot.text}px ${-look[1] * DEPTH.foot.text}px`;
 }

@@ -1,8 +1,8 @@
 // Node-only geometry checks. Importing depth.mjs must not need window or document.
 import { DEPTH, C, NOVA } from '../data.mjs';
 import { VIEW, SEQ, tripResize, tripState } from '../trip.mjs';
-import { depthFactor, depthVisibility, depthCloudPass, depthDeckAlpha, depthPoint, NOVA_LIVE, novaFlare } from '../depth.mjs';
-import { starsBuild, starsResize, starsJoin, starsTick, starsFrame } from '../stars.mjs';
+import { depthFactor, depthVisibility, depthCloudPass, depthDeckAlpha, depthPoint, NOVA_LIVE, novaFlare, novaPress, novaPrune, novaShare, depthSeaFade } from '../depth.mjs';
+import { starsBuild, starsResize, starsJoin, starsTick, starsFrame, novaGatherPoint } from '../stars.mjs';
 
 const depthAssert = (condition, message) => { if (!condition) throw new Error(message); };
 const depthNear = (a, b) => ['s', 'tx', 'ty'].every(k => Math.abs(a[k] - b[k]) <= 1e-6);
@@ -89,13 +89,30 @@ try {
     depthAssert(snap() === still, `${w}: reduced-motion renderer changed with its clocks`);
     console.log(`ok ${w}x${h}: recording canvas preserves all ${n} hero positions at switch; sky freezes; nova continues; still drawing ignores motion clocks`);
   }
-  NOVA_LIVE.time = 10; NOVA_LIVE.flareAt = 10;
-  depthAssert(novaFlare() === 0, 'flare did not start'); NOVA_LIVE.time += NOVA.flare.time / 2;
-  depthAssert(Math.abs(novaFlare() - .5) < 1e-9, 'flare midpoint'); NOVA_LIVE.flareAt = NOVA_LIVE.time;
-  depthAssert(novaFlare() === 0, 'second flare did not restart'); NOVA_LIVE.time += NOVA.flare.time;
-  depthAssert(Math.abs(novaFlare() - 1) < 1e-9, 'flare did not finish');
-  console.log('ok: flare starts, reaches halfway, restarts on a second press and finishes');
+  NOVA_LIVE.time = 10; NOVA_LIVE.flares = []; novaPress(); const first = NOVA_LIVE.flares[0];
+  depthAssert(novaFlare(first) === 0, 'flare did not start'); NOVA_LIVE.time += NOVA.flare.time / 2; novaPress();
+  const second = NOVA_LIVE.flares[1];
+  depthAssert(NOVA_LIVE.flares.length === 2 && NOVA_LIVE.flares[0] === first && Math.abs(novaFlare(first) - .5) < 1e-9 && novaFlare(second) === 0, 'second press changed first flare');
+  NOVA_LIVE.time = first.at + NOVA.flare.time; novaPrune();
+  depthAssert(NOVA_LIVE.flares.length === 1 && NOVA_LIVE.flares[0] === second, 'first flare did not expire independently');
+  while (NOVA_LIVE.flares.length < NOVA.flare.cap) novaPress();
+  const serial = NOVA_LIVE.serial, flares = NOVA_LIVE.flares.slice();
+  depthAssert(!novaPress() && NOVA_LIVE.serial === serial && flares.every((f, i) => f === NOVA_LIVE.flares[i]), 'cap must silently leave all live flares alone');
+  NOVA_LIVE.time += NOVA.flare.time / 2;
+  depthAssert(novaShare(NOVA.flare.core, NOVA.flare.coreMax) <= NOVA.flare.coreMax && novaShare(NOVA.flare.kick, NOVA.flare.kickMax) <= NOVA.flare.kickMax, 'additive flare shares exceed caps');
+  NOVA_LIVE.time += NOVA.flare.time; novaPrune(); depthAssert(NOVA_LIVE.flares.length === 0, 'expired flares retained');
+  console.log('ok: presses stack independently; first expires on time; cap rejects without mutation; additive shares clamp; expired flares leave the list');
+  const centre = [700, 450], from = [100, 40], radius = 200, delta = 1e-6;
+  for (let i = 0; i < 32; i++) {
+    const angle = i * Math.PI / 16, start = novaGatherPoint(from, centre, angle, radius, 0), end = novaGatherPoint(from, centre, angle, radius, 1);
+    depthAssert(Math.hypot(start[0] - from[0], start[1] - from[1]) < 1e-6 && Math.hypot(end[0] - centre[0], end[1] - centre[1]) < 1e-6, 'gather endpoints');
+    const j = NOVA.gather.join, a = novaGatherPoint(from, centre, angle, radius, j - delta), b = novaGatherPoint(from, centre, angle, radius, j), c = novaGatherPoint(from, centre, angle, radius, j + delta);
+    depthAssert(Math.hypot(...b.map((v, k) => (v - a[k]) / delta - (c[k] - v) / delta)) < .1, 'gather has a corner at ring');
+  }
+  const restored = tripState(SEQ.find(s => s.kind === 'rest').a); restored.exploreK = 1;
+  depthAssert(depthSeaFade(restored) === 1, 'explore did not restore depth sea');
+  console.log('ok: gather endpoints and continuous ring tangent for 32 arrival angles; explore restores depth fade');
 } finally {
   if (depthTestWindow === undefined) delete globalThis.window; else globalThis.window = depthTestWindow;
-  NOVA_LIVE.time = 0; NOVA_LIVE.flareAt = null;
+  NOVA_LIVE.time = 0; NOVA_LIVE.flares = [];
 }
