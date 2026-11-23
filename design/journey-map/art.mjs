@@ -101,7 +101,7 @@ export const knot = (cx, cy) => {
   const sq = 'M-7 -7.5Q0 -11 7 -7.5Q11 0 7 7.5Q0 11 -7 7.5Q-11 0 -7 -7.5Z';
   const di = 'M0 -11Q4.5 -4.5 11 0Q4.5 4.5 0 11Q-4.5 4.5 -11 0Q-4.5 -4.5 0 -11Z';
   const band = (d, cp) => `<path d="${d}" fill="none" stroke="${C.ink}" stroke-width="2.6"${cp}/><path class="l" d="${d}"${cp}/>`;
-  return `<g transform="translate(${cx} ${cy})">${band(sq, '')}${band(di, '')}${band(sq, ' clip-path="url(#kq)"')}<circle class="pf" r="1.1"/></g>`;
+  return `<g class="chart-knot" transform="translate(${cx} ${cy})">${band(sq, '')}${band(di, '')}${band(sq, ' clip-path="url(#kq)"')}<circle class="pf" r="1.1"/></g>`;
 };
 // standing stone for the stop marks (HTML), viewBox 0 0 260 400
 export const stoneSvg = rune => `<svg class="stone" viewBox="0 0 260 400" aria-hidden="true"><circle class="st-glow" cx="130" cy="200" r="190" fill="url(#stoneGlow)"/><path class="st-ink" d="M44 392L30 150Q36 34 130 10Q224 34 230 156L218 392Z"/><path class="st-fill" d="M44 392L30 150Q36 34 130 10Q224 34 230 156L218 392Z"/><path class="st-line" d="M44 392L30 150Q36 34 130 10Q224 34 230 156L218 392Z"/><path class="st-rune" d="${runeGlyph(rune, 190, 130 - runeGlyph(rune, 190).w / 2, 110).d}"/></svg>`;
@@ -116,18 +116,22 @@ const serpent = () => findDrawing('serpent');
 const beacon = () => findDrawing('beacon');
 const runestone = () => findDrawing('runestone');
 const tafl = () => {
-  let s = `<rect class="hit" x="-4" y="-4" width="29" height="29"/><rect class="o" x="0" y="0" width="21" height="21"/>`;
-  for (let i = 1; i < 7; i++) s += `<path class="t" d="M${i * 3} 0V21M0 ${i * 3}H21"/>`;
-  s += `<path class="t" d="M9 9h3v3h-3z"/><circle class="pf" cx="10.5" cy="10.5" r="1.3"/>`;
-  [[10.5, 7.5], [10.5, 13.5], [7.5, 10.5], [13.5, 10.5]].forEach(([x, y]) => s += `<circle class="pf" cx="${x}" cy="${y}" r=".9"/>`);
-  [[10.5, 1.5], [1.5, 10.5], [19.5, 10.5], [7.5, 1.5], [13.5, 19.5]].forEach(([x, y]) => s += `<circle class="o" cx="${x}" cy="${y}" r=".9"/>`);
-  return s + `<g class="tf-piece"><circle class="o" cx="10.5" cy="19.5" r=".9"/></g>`;
+  const T = FIND_PLAY.tafl, R = T.rules, [hx, hy, hw, hh] = T.mapHit;
+  let s = `<rect class="hit" x="${hx}" y="${hy}" width="${hw}" height="${hh}"/><g class="tf-board" transform="scale(${T.mapCell / T.cell})"><rect class="o" width="${T.board}" height="${T.board}"/>`;
+  for (let i = 1; i < R.size; i++) s += `<path class="l" style="stroke-width:${T.outline}" opacity="${T.gridAlpha}" d="M${i * T.cell} 0V${T.board}M0 ${i * T.cell}H${T.board}"/>`;
+  R.corners.forEach(sq => { const x = (sq % R.size + 0.5) * T.cell, y = (Math.floor(sq / R.size) + 0.5) * T.cell, r = T.cross / 2; s += `<path class="l" d="M${x - r} ${y}H${x + r}M${x} ${y - r}V${y + r}"/>`; });
+  const mid = T.board / 2; s += `<path class="l" d="M${mid} ${mid - T.diamond}l${T.diamond} ${T.diamond}l${-T.diamond} ${T.diamond}l${-T.diamond} ${-T.diamond}Z"/>`;
+  const pieces = [{ sq: R.king, kind: 'k' }, ...R.defenders.map(sq => ({ sq, kind: 'd' })), ...R.attackers.map(sq => ({ sq, kind: 'a' }))];
+  s += pieces.map((p, i) => `<g class="tf-piece" data-piece="${i}" aria-hidden="true" transform="translate(${(p.sq % R.size + 0.5) * T.cell} ${(Math.floor(p.sq / R.size) + 0.5) * T.cell})"><circle class="${p.kind === 'a' ? 'o' : 'pf'}" style="stroke-width:${T.pieceLine}" r="${p.kind === 'k' ? T.kingR : T.pieceR}"/>${p.kind === 'k' ? `<path fill="${C.ink}" d="${starPath(0, 0, T.kingStar)}"/>` : ''}</g>`).join('');
+  return s + '</g>';
 };
-const horn = () => `<rect class="hit" x="-18" y="-30" width="34" height="38"/><g class="hn-horn"><path class="g" d="M-12 -4C-14 -16 -2 -24 10 -22L10 -16C0 -17 -6 -12 -5 -4Z"/><path class="t" d="M5 -21.5L5.5 -16.5M0 -20L1.5 -15.5M-5 -16L-2.5 -12.5"/><path class="l" d="M10 -22L10 -16"/></g><path class="t" d="M-16 3q4 -3 8 0t8 0t8 0"/>`;
-const mist = () => `<rect class="hit" x="102" y="410" width="104" height="50"/><g mask="url(#mistMask)"><g filter="url(#blur)" opacity=".42"><ellipse cx="150" cy="428" rx="26" ry="11" fill="${C.paper}"/><ellipse cx="180" cy="444" rx="24" ry="10" fill="${C.paper}"/><ellipse cx="134" cy="446" rx="18" ry="8" fill="${C.paper}"/></g></g>`;
-const well = () => `<ellipse class="hit" cx="0" cy="0" rx="38" ry="22"/><g class="wl-rip">${[0, 1, 2].map(i => `<ellipse class="t" cx="0" cy="0" rx="30" ry="15" opacity="0"/>`).join('')}</g>`;
-const longship = () => `<rect class="hit" x="-36" y="-42" width="72" height="52"/><path class="g" d="M-26 -6Q-20 5 -10 5H12Q22 5 26 -6Z"/><path class="l" d="M-26 -6Q-33 -13 -29 -20Q-25 -25 -22 -20Q-21 -16 -24.5 -16.5M26 -6Q31 -11 28 -15Q26 -17 25 -15"/><path class="l" d="M0 -6V-38"/><path class="o" d="M-12 -35H12V-15H-12Z"/><path class="t" d="M-6 -35V-15M0 -35V-15M6 -35V-15"/>`
-  + [-18, -11, -4, 3, 10, 17].map(x => `<circle class="o" cx="${x}" cy="-6" r="2.6"/><circle class="pf" cx="${x}" cy="-6" r=".6"/>`).join('') + `<path class="t" d="M-36 8q4 -3 8 0t8 0M16 9q4 -3 8 0t8 0"/>`;
+const horn = () => { const H = FIND_PLAY.horn, [x, y, w, h] = H.hit; return `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="hn-horn"><path class="g" d="${H.paths[0]}"/><path class="t" d="${H.paths[1]}"/><path class="l" d="${H.paths[2]}"/></g><path class="t" d="${H.paths[3]}"/>`; };
+const mist = () => { const M = FIND_PLAY.mist, [x, y, w, h] = M.box; return `<defs><radialGradient id="find-mist-soft"><stop stop-color="${C.paper}"/><stop offset="1" stop-color="${C.paper}" stop-opacity="0"/></radialGradient></defs>` + M.cairns.map(p => `<g transform="translate(${p[0]} ${p[1]}) scale(${M.cairnScale})">${M.cairn}<path class="pf mist-glint" pointer-events="none" d="${starPath(...M.glintAt, M.glintSize)}" opacity="0"/></g>`).join('') + `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="mist-drift" pointer-events="none"><g mask="url(#mistMask)"><g class="mist-cloud" opacity="${M.alpha}">${M.ellipses.map(p => `<ellipse cx="${p[0]}" cy="${p[1]}" rx="${p[2]}" ry="${p[3]}" fill="url(#find-mist-soft)"/>`).join('')}</g></g></g>`; };
+const well = () => { const W = FIND_PLAY.well; return `<ellipse class="hit" rx="${W.hit[0]}" ry="${W.hit[1]}"/><g class="wl-rip" pointer-events="none">${Array.from({ length: W.rings }, () => `<ellipse class="t" rx="${W.ringR[0]}" ry="${W.ringR[1]}" opacity="0"/>`).join('')}</g><circle class="pf wl-pebble" r="${W.pebbleR}" opacity="0" pointer-events="none"/>`; };
+const longship = () => {
+  const S = FIND_PLAY.ship, P = S.paths, [x, y, w, h] = S.hit;
+  return `<g class="ls-rock"><rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><path class="g" d="${P.hull}"/><path class="l" d="${P.ends}"/><path class="l" d="${P.mast}"/><g class="ls-sail"><path class="o" d="${P.sail}"/><path class="t" d="${P.stripes}"/></g><path class="l ls-oars" opacity="0" d="${P.oars}"/>` + S.shields.map((sx, i) => `<circle class="o ls-shield ls-shield-${i}" cx="${sx}" cy="${S.shieldY}" r="${S.shieldR}"/><circle class="pf" cx="${sx}" cy="${S.shieldY}" r="${S.bossR}"/>`).join('') + `<path class="pf ls-pennant" opacity="0" d="${P.pennant}"/><g class="ls-lamp" opacity="0" pointer-events="none"><circle cx="${S.lamp[0]}" cy="${S.lamp[1]}" r="${S.lamp[3]}" fill="url(#glow)"/><circle class="pf" cx="${S.lamp[0]}" cy="${S.lamp[1]}" r="${S.lamp[2]}"/></g><path class="t" d="${P.water}"/></g>`;
+};
 
 // map defs (gradients, clips, masks) shared by map and stones
 export const mapDefs = () => `<defs>
@@ -212,9 +216,9 @@ export function bigMap() {
   fd += `<g id="wf-lines" pointer-events="none"></g>` + at('wayfinder', 1, wayfinder());
   fd += `<g id="f-hoards" role="button" tabindex="0" aria-label="${F.hoards.label}" data-x="${F.hoards.x}" data-y="${F.hoards.y}">` + FIND_COPY.hoards.map(h => `<g class="find hoard" id="f-${h.id}" role="button" tabindex="0" aria-label="${h.label}" data-x="${h.x}" data-y="${h.y}">${grp(h.x, h.y, FIND_PLAY.hoard.scale, hoard())}</g>`).join('') + `</g>`;
   fd += at('ravens', FIND_PLAY.raven.scale, ravens()) + at('serpent', FIND_PLAY.serpent.scale, `<g class="sp-swim">${serpent(FIND_PLAY.serpent.scale)}</g>`) + at('beacon', FIND_PLAY.beacon.scale, beacon()) + at('runestone', FIND_PLAY.rune.scale, runestone());
-  fd += at('tafl', .7, tafl()) + findWrap('mist', F.mist.label, mist(), F.mist.x, F.mist.y) + at('horn', .7, horn()) + at('well', 1, well());
+  fd += at('tafl', FIND_PLAY.tafl.scale, tafl()) + findWrap('mist', F.mist.label, mist(), F.mist.x, F.mist.y) + at('horn', FIND_PLAY.horn.scale, horn()) + at('well', 1, well());
   fd += `<g id="bc-notes">` + FIND_COPY.beaconNotes.map(n => { const B = FIND_PLAY.beacon; return `<g class="bc-note" opacity="0" transform="translate(${n.x} ${n.y})"><g class="bc-note-in">${runeSvg(n.rune, B.runeSize, 0, B.runeY, 'middle', 'rn rn-note')}<g class="bc-en" opacity="0">${n.t.todo ? svgText(0, B.todoY, COPY.todo, { s: B.todoFont, c: C.dim, a: 'middle' }) : ''}${svgText(0, B.lineY, typeof n.t === 'object' ? n.t.t : n.t, { s: B.noteFont, c: C.paper, a: 'middle', i: 1 })}</g></g></g>`; }).join('') + `</g>`;
-  fd += findWrap('longship', F.longship.label, `<g class="ls-ship" transform="translate(${F.longship.x} ${F.longship.y}) scale(.55)">${longship()}</g>`, F.longship.x, F.longship.y);
+  fd += findWrap('longship', F.longship.label, `<g class="ls-ship" transform="translate(${F.longship.x} ${F.longship.y}) scale(${FIND_PLAY.ship.scale})">${longship()}</g>`, F.longship.x, F.longship.y);
 
   return { sea, fill, coast, detail: s, finds: fd };
 }

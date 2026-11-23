@@ -1,4 +1,4 @@
-// Eleven finds share the camera/life/overlay kit. Part B plays remain in findlegacy.
+// Eleven finds share the camera/life/overlay kit.
 import { FINDS, FIND_COPY, FIND_PLAY, FIND_TIMING } from './data.mjs';
 import { toScreen } from './trip.mjs';
 import { JOURNEY } from './steps.mjs';
@@ -7,7 +7,10 @@ import { FD, FIND_BY, findKitBuild, findKitFrame, findCapture, findPlace, findLi
 import { findWay, findHoards } from './findhoards.mjs';
 import { findRavens, findSerpent } from './findcreatures.mjs';
 import { findBeacon, findRune } from './findsheets.mjs';
-import { find_tafl, find_mist, find_horn, find_well, find_longship } from './findlegacy.mjs';
+import { findBoard } from './findboard.mjs';
+import { findMist, findWell, findShip } from './findwater.mjs';
+import { findHorn } from './findhorn.mjs';
+import { findAll } from './findall.mjs';
 
 export function findsCloseAll() {
   FD.overlayEpoch++;
@@ -24,8 +27,11 @@ function findPlain(value, seen = new Set()) {
 }
 export function findsBuild(svg, pop, sheet, base, rm) {
   findKitBuild(svg, pop, sheet, base, rm);
-  const builders = { wayfinder: findWay, hoards: findHoards, ravens: findRavens, serpent: findSerpent, beacon: findBeacon, runestone: findRune, tafl: find_tafl, mist: find_mist, horn: find_horn, well: find_well, longship: find_longship };
+  const builders = { wayfinder: findWay, hoards: findHoards, ravens: findRavens, serpent: findSerpent, beacon: findBeacon, runestone: findRune, tafl: findBoard, mist: findMist, horn: findHorn, well: findWell, longship: findShip };
   Object.entries(builders).forEach(([id, build]) => { const o = build(svg); o.el ??= svg.querySelector('#f-' + id); o.stage ??= 'rest'; o.kept ??= false; FD.list[id] = o; });
+  FD.all = findAll(svg);
+  // Builders add non-interactive decorations. The one reusable bit pool remains last.
+  const pool = svg.querySelector('#f-bits'); svg.querySelector('#finds').appendChild(pool);
   svg.addEventListener('click', findCapture, true); svg.addEventListener('keydown', findCapture, true); svg.addEventListener('pointerdown', findCapture, true);
   window.addEventListener('jm-find-release', findsCloseAll);
   window.addEventListener('jm-mode', () => { findsCloseAll(); FD.focusId = null; });
@@ -44,12 +50,12 @@ export function findsFrame(time, st) {
   const tuning = JSON.stringify(FIND_PLAY);
   if (tuning !== FD.styleKey) { FD.styleKey = tuning; queueMicrotask(findKitStyle); }
   Object.values(FD.list).forEach(o => {
-    const f = FIND_BY[o.id], p = findPlace(o.id), rad = o.id === 'wayfinder' ? FIND_PLAY.focus.wide[2] * 2 : o.id === 'hoards' ? Math.max(...FIND_COPY.hoards.map(h => Math.hypot(h.x - f.x, h.y - f.y) + FIND_PLAY.hoard.rad)) : o.id === 'beacon' ? FIND_PLAY.beacon.rad : o.id === 'ravens' ? FIND_PLAY.raven.reach + f.view[2] : o.id === 'serpent' ? FIND_PLAY.serpent.near + Math.abs(FIND_PLAY.serpent.spots[1][0] - f.x) + f.view[2] : f.view?.[2] || FIND_PLAY.kit.rad;
-    const near = FIND_PLAY[o.id === 'wayfinder' ? 'way' : o.id === 'ravens' ? 'raven' : o.id === 'runestone' ? 'rune' : o.id]?.near || rad;
-    findLife(o, ...p, rad, near);
-    const playing = ['flight', 'hear', 'landing', 'reel', 'chase', 'eating', 'waking', 'trace', 'opening', 'sheet', 'closing'].includes(o.stage) || o.drag || o.id === 'tafl' && Math.abs(o.pos - o.v) > Number.EPSILON || o.id === 'horn' && Math.abs(o.up - o.v) > Number.EPSILON || o.id === 'well' && time - o.ts < FIND_TIMING.ripple;
+    const f = FIND_BY[o.id], p = findPlace(o.id), rad = o.id === 'wayfinder' ? FIND_PLAY.focus.wide[2] * 2 : o.id === 'hoards' ? Math.max(...FIND_COPY.hoards.map(h => Math.hypot(h.x - f.x, h.y - f.y) + FIND_PLAY.hoard.rad)) : o.id === 'beacon' ? FIND_PLAY.beacon.rad : o.id === 'ravens' ? FIND_PLAY.raven.reach + f.view[2] : o.id === 'serpent' ? FIND_PLAY.serpent.near + Math.abs(FIND_PLAY.serpent.spots[1][0] - f.x) + f.view[2] : FIND_PLAY[o.id === 'longship' ? 'ship' : o.id]?.rad || f.view?.[2] || FIND_PLAY.kit.rad;
+    const near = FIND_PLAY[o.id === 'wayfinder' ? 'way' : o.id === 'ravens' ? 'raven' : o.id === 'runestone' ? 'rune' : o.id === 'longship' ? 'ship' : o.id]?.near || rad;
+    findLife(o, ...p, o.id === 'horn' && ['sounding', 'echo'].includes(o.stage) ? FIND_PLAY.horn.soundRad : rad, near);
+    const playing = ['flight', 'hear', 'landing', 'reel', 'chase', 'eating', 'waking', 'trace', 'opening', 'sheet', 'closing', 'sliding', 'reply', 'pebble', 'sounding', 'echo', 'pull', 'lifting'].includes(o.stage) || o.drag || o.busy || o.playing || o.hearing;
     if (o.id === 'hoards' || o.onScreen || playing || FD.sheetOwner === o) o.tick?.(time, FD.rm ? 0 : FD.dt);
     else if (o.id === 'beacon') depthBeam(null);
   });
-  findKitFrame(); FD.focusId = JOURNEY.focus;
+  findKitFrame(); FD.all.tick(time); FD.focusId = JOURNEY.focus;
 }

@@ -44,9 +44,10 @@ export function findLife(o, x, y, rad, reach = rad) {
 export function found(id, atId = id) {
   if (FD.found.has(id)) return;
   FD.found.add(id); FD.svg.querySelector('#mk-' + id)?.classList.add('found');
-  if (FD.rm) { FD.landed = FD.found.size; tlSetCount(FD.landed, FINDS.length); return; }
+  if (FD.rm) { FD.landed = FD.found.size; findLandCount(); return; }
   FD.flights.push({ id: atId, number: FD.found.size }); findStartFlight();
 }
+function findLandCount() { tlSetCount(FD.landed, FINDS.length); if (FD.landed === FINDS.length) FD.all?.start(); }
 function findStartFlight() {
   if (FD.flight || !FD.flights.length) return;
   const next = FD.flights.shift(), box = FD.count.getBoundingClientRect();
@@ -57,9 +58,9 @@ export const press = (el, fn) => {
   el.addEventListener('click', e => { if (el._dragged) { el._dragged = false; return; } fn(e); });
   el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e); } });
 };
-export function showPop(owner, anchor, html, cls = '') {
+export function showPop(owner, anchor, html, cls = '', side = 'auto') {
   if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return;
-  closePop(); FD.popOwner = owner; FD.popAnchor = anchor; FD.popP = FD.st.P; FD.popTs = FD.now;
+  closePop(); FD.popOwner = owner; FD.popAnchor = anchor; FD.popSide = side; FD.popP = FD.st.P; FD.popTs = FD.now;
   FD.pop.className = 'pop on ' + cls;
   FD.pop.innerHTML = `<div class="pop-in"><div class="pop-body">${html}</div><i class="pop-tail" aria-hidden="true"></i></div>`;
   FD.popInner = FD.pop.firstElementChild; FD.popTail = FD.pop.querySelector('.pop-tail');
@@ -73,7 +74,7 @@ export function closePop() {
 export function placePop() {
   if (!FD.popOwner) return;
   const K = FIND_PLAY.kit.popup, anchor = typeof FD.popAnchor === 'function' ? FD.popAnchor() : FD.popAnchor, p = toScreen(FD.st, anchor), [w, h] = FD.popSize;
-  const below = p[1] - h - K.tail[1] < K.edge;
+  const below = FD.popSide === 'below' || FD.popSide !== 'above' && p[1] - h - K.tail[1] < K.edge;
   const x = Math.max(K.edge, Math.min(VIEW.w - w - K.edge, p[0] - w / 2));
   const y = Math.max(K.edge, Math.min(VIEW.h - h - K.edge, below ? p[1] + K.tail[1] : p[1] - h - K.tail[1]));
   FD.popOrigin = [Math.max(0, Math.min(w, p[0] - x)), below ? 0 : h];
@@ -128,6 +129,8 @@ export function findKitStyle() {
   const vars = { 'find-pop-edge': P.kit.popup.edge + 'px', 'find-pop-w': P.kit.popup.width + 'px', 'find-pop-r': P.kit.popup.radius + 'px', 'find-pop-pad': P.kit.popup.pad.map(n => n + 'px').join(' '), 'find-pop-font': P.kit.popup.font + 'px', 'find-pop-line': P.kit.popup.line, 'find-kicker': P.kit.popup.kicker + 'px', 'find-gap': P.kit.popup.gap + 'px', 'find-tail-w': P.kit.popup.tail[0] + 'px', 'find-tail-h': P.kit.popup.tail[1] + 'px', 'find-slot-weight': P.kit.slot.weight, 'find-star-z': P.kit.starZ, 'find-slot-font': P.kit.slot.font + 'px', 'find-slot-rule': P.kit.slot.border + 'px', 'find-slot-pad': P.kit.slot.pad + 'px', 'find-star': P.star.size + 'px', 'find-piece': P.hoard.width + 'px', 'find-piece-top': P.hoard.top + 'px', 'find-icon': P.hoard.icon + 'px', 'find-arm': P.way.armWidth + 'px', 'find-rune-flip': P.rune.flipTime + 's', 'find-rune-w': P.rune.width + 'px', 'find-rune-h': P.rune.height + 'px', 'find-rune-perspective': P.rune.perspective + 'px', 'find-ctl-top': P.rune.controlTop + 'px', 'find-reel-w': P.raven.reel.width + 'px', 'find-iris': P.raven.reel.iris + 'px', 'find-reel-label': P.raven.reel.labelTop + 'px', 'find-reel-slot': P.raven.reel.slotBottom + 'px' };
   Object.entries(vars).forEach(([k, v]) => root.style.setProperty('--' + k, v));
   Object.entries(P.css).forEach(([k, v]) => root.style.setProperty('--' + k, v));
+  const T = P.tafl, boardVars = { w: T.width, h: T.board + T.tray * 2 + T.statusH + T.ruleH + T.slotH + T.buttonsH + T.gap * 4 + T.pad * 2 + T.border * 2, board: T.board, surface: T.board + T.tray * 2, pad: T.pad, border: T.border, radius: T.radius, gap: T.gap, status: T.statusH, rule: T.ruleH, slot: T.slotH, buttons: T.buttonsH, font: T.font, line: T.line, small: T.small, 'small-line': T.smallLine };
+  Object.entries(boardVars).forEach(([k, v]) => root.style.setProperty('--tf-' + k, v + 'px'));
 }
 export function findKitFrame() {
   const dt = FD.dt;
@@ -142,7 +145,7 @@ export function findKitFrame() {
   if (f) {
     const q = clamp01((FD.now - f.ts) / FIND_PLAY.star.time), k = ease(q);
     FD.star.style.opacity = 1; FD.star.style.transform = `translate(${lerp(f.from[0], f.to[0], k)}px,${lerp(f.from[1], f.to[1], k) - FIND_PLAY.star.arc * Math.sin(Math.PI * q)}px)`;
-    if (q === 1) { FD.landed = f.number; FD.bump = FD.now; FD.flight = null; FD.star.style.opacity = 0; queueMicrotask(() => { tlSetCount(FD.landed, FINDS.length); findStartFlight(); }); }
+    if (q === 1) { FD.landed = f.number; FD.bump = FD.now; FD.flight = null; FD.star.style.opacity = 0; queueMicrotask(() => { findLandCount(); findStartFlight(); }); }
   }
   if (FD.bump !== undefined) { const q = clamp01((FD.now - FD.bump) / FIND_PLAY.star.bump); FD.count.style.transform = `scale(${lerp(FIND_PLAY.star.peak, 1, ease(q))})`; if (q === 1) FD.bump = undefined; }
   placePop();

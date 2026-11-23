@@ -73,6 +73,16 @@ ok(FIND_PLAY.serpent.spots.length === 3, 'three serpent spots');
 FIND_PLAY.serpent.spots.forEach((p, i) => { const b = FIND_PLAY.serpent.bounds, s = FIND_PLAY.serpent.scale; ok(p.length === 2 && p.every(Number.isFinite) && p[0] + b[0] * s >= 22 && p[1] + b[1] * s >= 22 && p[0] + b[2] * s <= 578 && p[1] + b[3] * s <= 878, `serpent spot ${i}: drawing must stay inside inner frame`); });
 ok(FINDS.filter(f => f.view).length === 9, 'nine finds have fixed camera views');
 FINDS.forEach(f => ok(['hoards', 'longship'].includes(f.id) ? !f.view : f.view?.length === 3 && f.view.every(Number.isFinite) && f.view[2] > 0, `${f.id}: camera view`));
+['tafl', 'mist', 'horn', 'well', 'ship', 'all'].forEach(k => ok(FIND_PLAY[k] && typeof FIND_PLAY[k] === 'object', `Part B needs FIND_PLAY.${k}`));
+ok(FIND_COPY.tafl.t && FIND_COPY.horn[1].t && FIND_COPY.longship.t, 'three Part B author lines have text');
+ok(FIND_COPY.norns.length === 3 && FIND_COPY.norns.every(row => row.length === 2 && row.every(t => typeof t === 'string' && t.trim())), 'three named Norns with meanings');
+ok(FIND_PLAY.mist.ellipses.length === 6 && FIND_PLAY.mist.cairns.length === 3 && FIND_PLAY.mist.grid.join() === '8,4', 'six fog ellipses, three cairns and 8x4 coverage grid');
+ok(FIND_PLAY.well.stars.length === 3 && FIND_PLAY.well.stars.every(row => row.length === 5 && row.every(p => p.length === 2 && p.every(Number.isFinite))), 'fifteen crown stars in three batches');
+ok(FIND_PLAY.ship.shields.length === STOPS.length, 'one longship shield per stop');
+const taflConfig = FIND_PLAY.tafl, taflRules = taflConfig.rules;
+ok(taflRules.size === 7 && taflRules.attackers.length === 8 && taflRules.defenders.length === 4 && taflRules.corners.join() === '0,6,42,48' && taflRules.centre === 24, 'brandubh board and start counts');
+ok(new Set([taflRules.king, ...taflRules.attackers, ...taflRules.defenders]).size === 13, 'thirteen separate tafl start squares');
+ok(taflConfig.cell * taflRules.size === taflConfig.board && taflConfig.board + 2 * (taflConfig.pad + taflConfig.border) === taflConfig.width, 'board fits the sheet content width');
 DEPTH.clouds.list.forEach((row, i) => {
   ok(row.length === 6 && row.every(Number.isFinite), `DEPTH.clouds.list[${i}]: needs six finite numbers`);
   ok([1, 2, 3].includes(row[3]) && [1, -1].includes(row[4]), `DEPTH.clouds.list[${i}]: bad drawing/flip`);
@@ -103,4 +113,4 @@ mods.forEach(f => {
 ok(!/#[0-9A-Fa-f]{3,6}\b(?![\w-]*\))/.test(readFileSync(join(ROOT, 'map.css'), 'utf8').replace(/url\([^)]*\)/g, '')), 'map.css: colour literal');
 
 if (errs.length) { console.error('FAIL\n' + errs.map(e => ' - ' + e).join('\n')); process.exit(1); }
-console.log(`ok: 6 stops, ${Object.keys(PALETTES).length} palettes (Lennard band verified), 11 finds, acts total ${TOTAL_P.toFixed(1)} vh, ${mods.length} modules with unique top-level names; STEPS numbers finite/positive; 10 strictly rising beats; X camera continuous at desktop/phone sizes; DEPTH/NOVA/STARS numbers finite; 10 cloud rows valid; rings.colour in C; FIND_PLAY finite, slots have text, five known hoard kinds, three bounded serpent spots/leaves, nine fixed views`);
+console.log(`ok: 6 stops, ${Object.keys(PALETTES).length} palettes (Lennard band verified), 11 finds, acts total ${TOTAL_P.toFixed(1)} vh, ${mods.length} modules with unique top-level names; STEPS numbers finite/positive; 10 strictly rising beats; X camera continuous at desktop/phone sizes; DEPTH/NOVA/STARS numbers finite; 10 cloud rows valid; rings.colour in C; FIND_PLAY finite, slots have text, five known hoard kinds, three bounded serpent spots/leaves, nine fixed views; Part B tables, Norns, fog, crown stars, shields and board dimensions valid`);

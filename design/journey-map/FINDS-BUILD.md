@@ -90,3 +90,100 @@ Author slots implemented in Part A:
 - FIND_COPY.poster.foot: stock and the brief, combined at the poster foot.
 
 Other existing missing deliverables retained: Laurier's piece/title, SafetyDrivesUs imagery, Melanoma Canada imagery and the 1 King Street W imagery/case studies. The annual-report image remains the real existing asset. Part B's existing tafl fact, horn quote and crossing line remain unchanged for that run; the well's new answers will come from STOPS then.
+
+# FINDS build: Part B
+
+23 November 2026. Implemented sections 10 to 15 and their portions of 16 to 19. All required Node checks pass. No browser, server, network, installation, git command, reviewer agent or sub-agent was used.
+
+## Evidence and acceptance criteria
+
+Read FINDS completely before editing, then FINDS-BUILD and the existing kit, Part A modules, art/data/controller/camera/frame code and DEPTH-BUILD. The original detailed chart and the recorded reference constraints remain authoritative: fine Paper lines, the existing map hierarchy and density, unchanged ground, existing standing stones/cards and the six working Part A toys. The supplied browser-review findings are constraints, especially popup clearances, separate sheet rows and pointer-free decorations. Used the installed motion-playbook for continuity of moving objects, staging and reduced-motion feedback. The UI skill router's CLI was not run because this task prohibits installs/network and permits Node only on project files. RTK was attempted but is not installed in this shell; ordinary local commands were used afterwards.
+
+Acceptance criteria: retain all six Part A handlers and their tuning rows; preserve protected source/table digests; keep P and the outer ship transform under their existing owners; use one live board with individually persistent pieces; make every new play work by keyboard and in reduced motion; keep the well's popup below its water and crown; give each board-sheet item its own room; keep all new overlay drawings out of pointer handling; expose copied game/coverage/horn/Norn/pennant state through the existing review handle; land the final count before the one-time frame accent.
+
+The earlier Part A record describes its original build. Its getter aliases and depth/context workarounds were replaced in the intervening browser review. Part B uses that reviewed plain implementation and does not restore those workarounds. This append is the project record expressly authorized inside the allowed file set; nothing was written to an external notes folder.
+
+## What was built
+
+- `tafl.mjs`: pure Brandubh start, legal rook movement, throne/corner restrictions, simultaneous custodial captures, ordinary king capture, corner escape, no-move loss and the 80-move draw. The attacker tries every legal move with the supplied score terms and seeded tie breaking. Inputs are not mutated.
+- `findboard.mjs`: the true thirteen-piece start on the map, awake king pulse, a grown dialog, selected-piece ring, legal-square dots, sliding moves, captured rows, delayed attacker reply, restart, cursor keys, spoken square labels and live move/status announcements. The actual board group and its thirteen pieces move into the sheet and return to the map on close; no board or animated piece is substituted. The game persists across closes. Hear hops the map pieces in order.
+- The board sheet is 312 by 574 px, with a 280 px board and 40 px cells. The rows are 324 px for board plus two 22 px capture trays, 54 for status, 34 for rules, 70 for the end slot and 36 for buttons. Four 6 px gaps, two 15 px pads and two 1 px borders complete the height. At 390 by 664 it has 39 px horizontal and 45 px vertical clearance when centred, with no fit scaling. The slot's reserved row remains separate before the game ends. These are source arithmetic checks, not measured browser typography.
+- `findwater.mjs`, mist: six soft ellipses at 0.62, three supplied cairns, mouse/pen/finger mask wipes, direction-following puffs, traveller wipes that do not find it, 8 by 4 coverage and a three-quarter lift with eastward puffs and staggered top-stone glints. Three keyboard presses clear the thirds. Hear shifts the fog east and back. The lift and cairns remain.
+- `findhorn.mjs`: raise plus existing greeting and author slot; second press or a 0.45 s hold sounds it; the existing camera accepts the wide view and returns to the horn when the four rings end. Rings and missed-find glints have no pointer handling. Every existing kit hear callback is dispatched after distance/speed delay. Pending far replies finish without taking the camera back after the visitor releases it. Horn state records sounded count, heard ids, hold, stage and view request.
+- `findwater.mjs`, well: idle root drops, arcing pebble, splash and outward ripples; sequential Norns, using current visited flags and live STOPS short names/dates; three watering streams and fifteen persistent crown stars. The well no longer undoes another find. Its popup uses the new explicit below-anchor option, with its tail above it. Hear gives one ring. Watering, current Norn, trip stop, answer and star-batch clocks are visible through state.
+- `findwater.mjs`, longship: only `ls-rock` and its children move. The trip-owned `.ls-ship` transform remains untouched. Rocking, sail breathing, stop shields that follow visited flags in both directions, an oar pull/surge/water bits, a clear mast popup, three pulls in four seconds unlocking the pennant, and a beaconLit-driven lamp are implemented. Hear fills the sail and doubles the rocking. Pennant/lamp state remains for the visit.
+- `findall.mjs`: starts only when the eleventh count flight lands, or immediately for reduced motion. Count text uses countAll through tlSetCount. A single Paper dash travels the frame, the existing corner-knot groups turn as it passes, the six numbered markers pulse, and the dashed frame settles to 0.5. There is no extra popup or nova change.
+- Shared extensions: `findkit.mjs` accepts an explicit popup side, publishes the new board CSS variables from data and starts completion at count landing. `finds.mjs` wires the five new builders into the existing lifecycle/review handle and keeps the bit pool last. `timeline.mjs` chooses the all-found count copy. `art.mjs` changes Part B drawings and adds only a class to knot. All Part B CSS is appended at the end of map.css under its Part B comment. New tuning rows are the last rows of FIND_PLAY; existing rows were left intact. `findlegacy.mjs` is now one comment saying it can be removed; nothing imports it.
+
+## Precedence decisions and departures
+
+1. The specific prompt overrides section 13's above-well popup: the well always requests below, at its data anchor. The tree, stars, water and ripples therefore stay above its popup. Horn and ship also use data anchors beyond everything they draw.
+2. Section 2 allows only an id/class addition to knot, despite section 15 asking for an inner group. Added its class and turn its existing group by composing rotation after the original translation. No inner group or knot geometry edit was needed.
+3. Section 12's exact ring formula makes each ring disappear after 1.8 s at a radius of 274 map units; the fourth disappears at 2.34 s. Several finds are farther away. Kept these specified numbers and the specified camera return time, while delivering all remaining hear callbacks at distance/150 afterwards. Thus the farthest responses happen after the visible rings have ended and the camera has started returning. The horn remains busy with those echoes until their glints finish. The browser review can tune the Part B horn row if a longer visible whole-map answer is wanted.
+4. Section 2 forbids new SVG filters, so the rewritten mist uses a radial soft gradient on its six ellipses, rather than retaining the old blur filter. No new filter, texture or drawing gradient was added elsewhere.
+5. Section 2's frame rule takes precedence over per-frame dash writes. The comet dash and final frame stroke opacity are configured once with the browser animation API at count landing. The frame loop updates transforms and opacities. State-boundary board labels, mask additions and overlay contents use the existing kit's event/microtask pattern; there are no frame layout reads. The map board is temporarily inside its sheet rather than leaving a duplicate on the map during play.
+6. In reduced motion, slides/replies, pebble landings, clearing, horn answers, stars, pennant and final count/frame state land immediately. There are no new loops, bits, flights, camera moves or completion rotations. As in the shared kit, a sheet closes immediately; no extra board-close animation was introduced.
+
+No Part A find module, existing FIND_PLAY line or Part A FINDS row was intentionally changed. Main, steps, cards, trip and depth needed no edits. STARS, DEPTH and NOVA values and all protected digests were left unchanged. No aliases, Proxy wrappers or reassigned functions were introduced. Frozen source, reference and asset files were not changed. Neither pack tool needed an edit.
+
+## Section 18 checks
+
+All final commands exited 0.
+
+1. `node --check` on every .mjs recursively: `ok: node --check on all 46 .mjs files under design/journey-map/`.
+2. `node tools/check.mjs`: `ok: 6 stops, 5 palettes (Lennard band verified), 11 finds, acts total 2224.8 vh, 23 modules with unique top-level names; STEPS numbers finite/positive; 10 strictly rising beats; X camera continuous at desktop/phone sizes; DEPTH/NOVA/STARS numbers finite; 10 cloud rows valid; rings.colour in C; FIND_PLAY finite, slots have text, five known hoard kinds, three bounded serpent spots/leaves, nine fixed views; Part B tables, Norns, fog, crown stars, shields and board dimensions valid`.
+3. `node tools/finds-test.mjs`:
+
+   ```text
+   ok: original sea/fill/coast lengths and hashes unchanged
+   ok: STARS, DEPTH and NOVA values unchanged
+   ok: trip.mjs and depth.mjs unchanged since the review
+   ok 1440x900: 36 views/cameras, k=0 deep-equal, k=1 centred/clamped/cards folded, monotone scale, P/traveller unchanged
+   ok 390x664: 36 views/cameras, k=0 deep-equal, k=1 centred/clamped/cards folded, monotone scale, P/traveller unchanged
+   ok: eleven accessible find groups, six marker ids and unnumbered legend id
+   ok: all-four mask derived from STOPS is Lennard alone; nineteen rune middles/letters; all piece icons available
+   ok: recording DOM runs six Part A plays, kept state, all-four unlock, reel, chase, four notes, rubbing, copied review state and Back/Scroll focus rules; no NaN attributes or frame layout reads
+   ok: same board/pieces lift, slide, reply, persist, restart and end; keyboard cursor and end slot; 312x574 sheet fits 390x664 with separate 324/54/34/70/36 px rows
+   ok: captured king and defenders occupy distinct positions in their shared upper tray
+   ok: traveller wipes without finding; three mist thirds; all eleven hear timed horn; hold sounds, wide view and release; three Norns/stars/below tail; ship pennant/lamp; all-eleven landing/count/frame; overlays do not take pointers
+   ok: reduced-motion Part A plays land immediately, memory remains readable for five seconds, no live bits/flights/focus, camera unchanged
+   ok: reduced-motion Part B game/reply, mist, horn, Norns, stars, pennant and all-eleven feedback land immediately with no bits, flights or camera change
+   ```
+
+   The existing protected digests were not edited. Ground baselines remain sea 73566/1305240864, fill 12855/3665486802 and coast 4401/2408021381. The table digest is 3766120675; trip/depth digests are 2847150186 and 2672825336. The recording DOM is a state/attribute harness, not a browser or renderer.
+4. `node tools/tafl-test.mjs`:
+
+   ```text
+   ok: start has eight attackers, four defenders and one king
+   ok: clear rook moves, restricted squares, exact capture, king capture/escape and moving between enemies
+   ok: reply legally stops an immediate corner escape when it can
+   ok: non-capturing escape block, move-limit draw and no-move loss
+   ok: 200 seeded random king-side games finish within 24 moves; 943 legal attacker replies; every generated move checked
+   ```
+
+5. `node tools/depth-test.mjs`: all nine output lines pass. Desktop 1440x900 and phone 390x844 high-cloud/deck passage and ten retained low clouds, all six leg midpoints, camera boundaries, fixed ground, depth-off scale, preserved recorded star positions, sky freezing, continuing nova, still drawing and restartable flare timing pass.
+6. `node tools/steps-test.mjs`: paceT rises, paceP agrees within 1e-6, all 18 moves start/end without reversing, and all nine forward durations are within 1.5 to 5 seconds. Printed forward/back seconds: top-map 4.100/2.460; map-Laurier 3.180/1.908; Laurier-HMC1 3.637/2.182; HMC1-Mohawk 3.858/2.315; Mohawk-HMC2 4.033/2.420; HMC2-Interkom 3.253/1.952; Interkom-Lennard 3.630/2.178; Lennard-X 2.020/1.212; X-end 4.200/2.520.
+7. `node tools/pack.mjs`: 21 runtime modules packed; `dist/journey-map.html 467.2 KB`.
+8. `node tools/pack-joined.mjs`: `joined.html written`; 22 map/join modules packed; `dist/journey-joined.html 1006.6 KB`. Both existing packers' offline/reference checks pass; no packer changes.
+
+## Browser checks still required
+
+- Compare the real new drawings and kept states beside the approved detailed chart/reference at reading scale. Preserve the map's hierarchy, density and strokes, and confirm all six Part A toys still match the current browser-tuned version. No new rendered comparison or independent critique pass is claimed; the requested external browser review owns that gate.
+- At 1440x900 and 390x664, verify actual board-sheet typography and clearances in all turns, captures, win/loss/draw and ordinary-text slot states. Check the tray pieces, selected ring, dots, cell cursor, New game and Close, closing mid-slide/reply and reopening. Source arithmetic passes but real font metrics, zoom/large-text wrapping and perceived motion remain unverified.
+- Play a deliberate two-corner winning strategy, judge the reply's difficulty and confirm captures/announcements with a real screen reader. Random games and blocking fixtures prove rules/termination, not a balanced human game.
+- Test mouse, pen and finger fog wipes, pointer capture/cancel, the traveller's cut, keyboard thirds, lift/glints and the always-present wipe target. Verify no wipe or hold steps the trip.
+- Test horn raise, fast second press, hold, release/cancel, repeated sounds, partial camera transitions and Back/Next/mode/timeline departure during echoes. Assess the specified short rings against the delayed far replies described above. Confirm every missed-find glint stays out of pointer handling.
+- Cycle the well before the first stop, between stops, after the last and while reversing. Check actual bottom-popup clearance/tail, pebble/drop paths, ripple direction and all fifteen stars in the tree. The well must leave every other kept find untouched.
+- Test ship pulls while the camera/trip moves, three pulls just inside/outside four seconds, pennant motion, sail/rock hear response, all shield states backward/forward, and the lamp before/after lighting the beacon. Confirm mast popup clearance at all scales.
+- Find all eleven in different orders: count landing, one comet, corner timing, marker pulse and final frame opacity. Check restart/reopen does not celebrate twice and does not change the nova.
+- Check both offline packs, Steps/Scroll and the reduced-motion stacked page; very short/narrow views, real touch, screen-reader focus return, console/network output, hardware frame time and off-screen idling. No browser, pixel-rendering, offline browser-network or performance claim is made.
+
+## Slots Dan must fill
+
+New Part B author slots, all with placeholder text and todo: 1:
+
+- FIND_COPY.tafl: the fact or line from the game-design year, shown only after a game ends.
+- FIND_COPY.horn[1]: the line from someone Dan worked with, below the existing greeting.
+- FIND_COPY.longship: the personal line for the 2023 crossing, below the log kicker and ship play.
+
+The well invents no author story: names/dates are read directly from STOPS and the fallback draft copy is in FIND_COPY. Part A's author slots and missing pieces listed above remain for Dan. Removing todo from a slot makes its text ordinary copy.

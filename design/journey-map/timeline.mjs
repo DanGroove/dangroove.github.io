@@ -54,7 +54,7 @@ function tipFor(i, blk) {
   TL.tip.classList.add('on');
 }
 const currentStop = P => { let c = -1; STOPS.forEach((s, i) => { if (P >= holdStart(i)) c = i; }); return c; };
-export const tlSetCount = (n, t) => { TL.count.textContent = fmt(COPY.count, { n, t }); };
+export const tlSetCount = (n, t) => { TL.count.textContent = fmt(n === t ? COPY.countAll : COPY.count, { n, t }); };
 export const tlSetCraft = mask => TL.blocks.forEach(b => { b.el.classList.toggle('craft-lit', !!mask?.[b.i]); b.el.style.opacity = mask && !mask[b.i] ? FIND_PLAY.way.timelineDim : 1; });
 
 export function tlResize(ruleRect) {

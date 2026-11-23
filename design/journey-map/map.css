@@ -297,3 +297,19 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-focus .go-back { width: auto; padding: 0 var(--go-gap); display: flex; align-items: center; gap: var(--go-gap); border-radius: var(--go-h); border: var(--find-slot-rule) solid var(--mid); }
 .go-back span:empty { display: none; }
 .rm .rubbing-sheet .pz-in { transition: none; }
+
+/* Part B: board dialog and non-interactive find decorations. */
+.tafl-sheet .tf-panel { position: absolute; left: calc(var(--tf-w) / -2); top: calc(var(--tf-h) / -2); width: var(--tf-w); height: var(--tf-h); padding: var(--tf-pad); border: var(--tf-border) solid var(--line); border-radius: var(--tf-radius); background: var(--ink); color: var(--paper); pointer-events: auto; display: grid; grid-template-rows: var(--tf-surface) var(--tf-status) var(--tf-rule) var(--tf-slot) var(--tf-buttons); gap: var(--tf-gap); font-size: var(--tf-font); line-height: var(--tf-line); }
+.tf-panel p { margin: 0; }
+.tf-surface { display: block; width: var(--tf-board); height: var(--tf-surface); overflow: visible; touch-action: none; }
+.tf-board .tf-piece { pointer-events: none; }
+.tf-cell { cursor: pointer; outline: none; }
+.tf-cell:focus-visible rect { stroke: var(--paper); stroke-width: var(--tf-border); }
+.tf-rule { color: var(--dim); font-size: var(--tf-small); line-height: var(--tf-small-line); }
+.tf-slot-space { min-height: 0; }
+.tf-slot .find-slot { margin: 0; }
+.tf-slot .find-slot p { font-size: var(--tf-small); line-height: var(--tf-small-line); }
+.tf-buttons { display: flex; gap: var(--tf-gap); }
+.tf-buttons button { flex: 1; min-width: 0; padding: 0 var(--tf-gap); border: var(--tf-border) solid var(--mid); border-radius: var(--tf-gap); color: var(--paper); background: var(--ink); font: inherit; cursor: pointer; }
+#f-mist, #f-horn { touch-action: none; }
+#hn-rings, #wl-crown, .wl-rip, .wl-pebble, .mist-drift, .mist-glint, .ls-lamp { pointer-events: none; }
