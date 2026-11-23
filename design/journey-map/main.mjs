@@ -53,7 +53,8 @@ stepsBuild({ stage: $('stage'), rm: RM, resize, joinedTop: () => JOIN.heroStart 
 findsBuild(SVG, $('pop'), $('sheet'), $('b-all'), RM);
 exploreBuild({ stage: $('stage'), world: FTWORLD, journey: JOURNEY, rm: RM });
 document.addEventListener('dragstart', e => e.preventDefault(), true);
-window.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.defaultPrevented && !RM && !JOURNEY.moving && cardsClose()) e.preventDefault(); });
+// Escape folds the open card, but not while a find is still letting go of the camera (a quick second Escape after leaving a find).
+window.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.defaultPrevented && !RM && !JOURNEY.moving && !stepsFocusNow() && cardsClose()) e.preventDefault(); });
 
 function resize() {
   const w = window.innerWidth, h = window.innerHeight, phone = w <= CAMERA.phoneMax;
@@ -84,7 +85,7 @@ window.addEventListener('jm-depth', () => { dirty = true; depthInvalidate(); if 
 const PTR = [.5, .5];
 window.addEventListener('pointermove', e => { PTR[0] = e.clientX / VIEW.w; PTR[1] = e.clientY / VIEW.h; findsPointer(e.clientX, e.clientY); }, { passive: true });
 
-let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainFocus = '';
+let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainFocus = '', mainKeys = '';
 function frame(ts) {
   const time = ts / 1000;
   const dt = mainTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - mainTs) / 1000)); mainTs = ts;
@@ -94,6 +95,10 @@ function frame(ts) {
   const st = tripState(P); const f = stepsFocusNow(); if (f) tripFocus(st, f.view, f.k);
   const explored = exploreApply(st, dt), folded = cardsOverride(st, dt, JOURNEY.moving);
   st.visiting = JOURNEY.visiting;
+  // Nothing the eye cannot see takes the keyboard: the stone marks and the timeline wait for the map's hand-over (the title
+  // screen and the hero show neither), and the timeline also leaves while exploring, when it is part of the hidden footer.
+  const keys = `${st.handoffT >= 1}/${st.handoffT >= 1 && !st.exploring && !(st.exploreK > 0)}`;
+  if (keys !== mainKeys) { mainKeys = keys; $('cards').inert = st.handoffT < 1; TLEL.inert = !(st.handoffT >= 1 && !st.exploring && !(st.exploreK > 0)); }
   const focusKey = JSON.stringify(f), tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || explored || folded || P !== lastP || tuning !== mainTuning || focusKey !== mainFocus;
   mainFocus = focusKey;
   const aim = depthLook(dt, PTR);

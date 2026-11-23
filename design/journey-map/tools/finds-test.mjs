@@ -26,14 +26,17 @@ assert.ok(!/undefined|\{\{/.test(chart.finds), 'all live drawing tokens must res
 const original = { sea: [100054, 3547300242], fill: [12855, 3665486802], coast: [4401, 2408021381] };
 for (const [key, [length, hash]] of Object.entries(original)) { assert.equal(chart[key].length, length); assert.equal(digest(chart[key]), hash); }
 console.log('ok: C1 ring sea baseline; original fill/coast lengths and hashes unchanged');
-// D3 adds NOVA.build; the full data digest is re-recorded for that authorized table (and again for the continuous pull, 2026-11-23).
-assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 3315630505);
+// D3 adds NOVA.build; the full data digest is re-recorded for that authorized table (and again for the continuous pull, 2026-11-23,
+// and for polish round 1: the held breath's white cross and halo, and the softer cloud deck).
+assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 2849262987);
 console.log('ok: STARS/DEPTH preserved; NOVA.build data digest recorded');
 // D4 authorizes the pure rest-to-rest glide in trip. Depth remains protected.
 // Line endings are evened out so the numbers are the same on Windows and in the cloud.
 const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.meta.url), 'utf8').replace(/\r\n/g, '\n'));
-assert.equal(sourceDigest('trip.mjs'), 139660682, 'trip.mjs changed');
-assert.equal(sourceDigest('depth.mjs'), 3982895838, 'depth.mjs changed');
+// Polish round 1 (2026-11-23) re-records both: trip.mjs for the X view on phones and portrait tablets and the map title's fade,
+// depth.mjs for the lantern's darkness the nova canvas holds through the rush.
+assert.equal(sourceDigest('trip.mjs'), 1995553361, 'trip.mjs changed');
+assert.equal(sourceDigest('depth.mjs'), 4010889213, 'depth.mjs changed');
 console.log('ok: C1 camera/labels/tripS and deck source digests recorded');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
 const mapP = BEATS.find(b => b.id === 'map').P, stopP = BEATS.find(b => b.id === STOPS[2].id).P, leg = SEQ.find(q => q.kind === 'leg' && q.i === 2), legP = leg.a + leg.len / 2;

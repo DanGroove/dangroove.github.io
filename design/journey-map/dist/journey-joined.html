@@ -1280,7 +1280,7 @@ const ACTS = {
 const CAMERA = {
   pushScale: 3.2, pushScalePhone: 2.6, holdZoom: 1.35, holdDim: 0.35, craftDim: 0.55,
   anchorX: 0.45, anchorY: 0.55, smooth: 30, phoneMax: 640,
-  xEase: [0.5, 1], xAnchorY: 0.42, xFloor: 0.85, xBoxPhone: [244, 690, 494, 792], xMargin: 16, frameBottom: 885.5, xGap: 12, timeline: 56,
+  xEase: [0.5, 1], xAnchorY: 0.42, xFloor: 0.85, xGroupPhone: [-16, 108], xBand: [0.42, 0.62], xMargin: 16, frameBottom: 885.5, xGap: 12, timeline: 56,
   footerX: [0.68, 0.3], footerXPhone: [0.58, 0.5],
 };
 
@@ -1305,6 +1305,8 @@ const EXPLORE = { in: 1.6, out: 0.9, most: 3, margin: 24, marginPhone: 12, wheel
   keyPan: 90, keyShift: 3, calmAlpha: 0.35, calmScale: 0.6, autoReserve: 2,
   ease: 0.12, slop: 6, friction: 5, velocityWindow: 0.08, key: 1.25, hintTime: 8, linePx: 16,
   bar: { edgePhone: 16, padStart: 14, padEnd: 34, arrowPhone: 12 } };
+// A growing card's scale (1 = open) at which the stone mark hands over to the card's face, and at which its words come in.
+const CARD_GROW = { face: [0.12, 0.3], words: [0.16, 0.42] };
 const CARD_CLOSE = { time: 0.45, hit: 44, inset: 0, icon: 12, stroke: 1.6, radius: 14, radiusPhone: 16 };
 // Copied from the hero's NAME table, entrance name renderer and EASE curves.
 const FOOT_NAME = { radius: 0.95, near: 1.2, hop: 0.16, rise: 0.07, feel: 1.3, wave: 55, open: 9,
@@ -1333,7 +1335,9 @@ const DEPTH = {
   light: { on: 1, dark: 0.45, darkPhone: 0.25, r: 0.55, core: 0.35, ptrR: 0.3, ptrCore: 0.3, amb: 0.35, card: 0.6, visit: 0.35, rush: [0, 0.5] },
   field: { area: [-100, -50, 700, 950], wrapFade: 60, sprite: 128, spriteMid: 0.4, spriteAlpha: 0.5 },
   mist: { on: 1, n: 120, nPhone: 60, a: [0.5, 1.8], r: [14, 36], stretch: [2.2, 3.4], turn: 0.2, alpha: [0.06, 0.14], near: [0.12, 0.42], thin: 0.35, show: [1.1, 1.3], pass: [2.4, 3.4], wind: 2.2 },
-  deck: { on: 1, n: 60, nPhone: 34, a: [6.5, 11], r: [50, 120], stretch: [1.6, 2.6], alpha: 0.07, boost: 6, show: [1.6, 1.9], peak: [1.8, 2.3], pass: [2.3, 3.0] },
+  // The cloud deck the Set out dive passes through: a soft veil of mist, never a wash (polish round 1: its peak had lifted the
+  // screen's mean brightness about four times on desktop; now it stays under about 1.6 times the overview's).
+  deck: { on: 1, n: 60, nPhone: 34, a: [6.5, 11], r: [50, 120], stretch: [1.6, 2.6], alpha: 0.035, boost: 1, show: [1.6, 1.9], peak: [1.8, 2.3], pass: [2.3, 3.0] },
   clouds: { on: 1, show: [0.3, 0.8], pass: [2.0, 2.9], sway: [14, 26], period: [50, 90], low: 2,
     list: [[-150, 150, 1.5, 3, 1, 7.0], [-250, 520, 1.1, 1, -1, 6.4], [-90, 800, 0.9, 2, 1, 7.6], [760, 110, 1.2, 1, 1, 6.8], [860, 430, 1.6, 3, -1, 7.4],
       [720, 760, 1.0, 2, -1, 6.2], [30, 330, 0.8, 2, 1, 8.2], [575, 690, 0.8, 2, -1, 8.0], [300, -30, 1.3, 3, 1, 7.2], [330, 935, 1.2, 1, -1, 6.6],
@@ -1360,9 +1364,12 @@ const NOVA_CANVAS = { dpr: 2, glowSprite: 512 };
 const NOVA = {
   build: { kindle: 0.2, draw: 0.76, hold: 0.93, throbs: [0.26, 0.45, 0.60, 0.72], rise: 0.12, fall: 0.32, pull: 1.8,
     push: 0.08, pushPhone: 0.06, recoil: 0.4, veil: 0.65, veilPhone: 0.45, veilOut: 0.25, hole: [0.6, 0.18], holeBreath: 0.04,
-    kindleGlow: 36, kindleAlpha: 0, kindleHeat: 0, glow: [104, 22], swell: [0.15, 0.22, 0.29, 0.35], glowAlpha: [0.18, 0.44, 0.56], throbAlpha: [0.08, 0.11, 0.14, 0.18],
+    kindleGlow: 36, kindleAlpha: 0, kindleHeat: 0, glow: [104, 44], swell: [0.15, 0.22, 0.29, 0.35], glowAlpha: [0.18, 0.44, 0.72], throbAlpha: [0.08, 0.11, 0.14, 0.18],
     spikeGrow: 1.12, compressed: 0.6, thickness: 1.12, heat: [0.15, 0.9, 1], core: [4, 13, 9],
-    gatherTop: 0.7, gatherStagger: 0.035, jitter: [0.5, 2], jitterHz: 24 },
+    gatherTop: 0.7, gatherStagger: 0.035, jitter: [0.5, 2], jitterHz: 24,
+    // The white along each arm: half its share of the arm at full heat, grown over this heat range (the held breath's white cross),
+    // and gone within this many seconds of the blast, under its first flash.
+    whiteReach: 0.34, whiteFrom: [0.6, 1], whiteOut: 0.06 },
   // The X's hand-over from the map to the canvas, in seconds of the rush: the canvas X fading in under the exact sprite, then the sprite fading out; the sprite's reach in map units; the largest scale drift and screen slip (CSS px) it is shown at.
   handover: { fadeIn: 0.12, fadeOut: 0.12, reach: 20, drift: 0.02, slip: 0.5 },
   pulse: [2.6, 0.12, 0.9, 0.06], spike: [1.7, 0.2, 3.14], glow: [4.2, 0.07],
@@ -2000,7 +2007,8 @@ const YGG = {
 };
 const MARK = { k: 10, min: 14, max: 36, stand: 3, box: 400, centre: 200, radius: 176, rim: 20, boss: 54, bossLine: 16, highlight: [186,186,12,.55], shadow: [200,392,120,10,.35], planks: [-120,-72,-24,24,72,120], plankLine: 7, plankAlpha: .28, paintAlpha: .35, studs: 8, stud: 9, studLine: 5, quarters: 'M200 200L200 24A176 176 0 0 1 376 200ZM200 200L200 376A176 176 0 0 1 24 200Z', legend: [68,836,4.6,.9,1.2,.45] };
 const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -8, hmcSubDY: -27.5, hmcAgainSubDX: 3, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [16,8], xSubAt: [16,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]] };
-const WORLD = { scrim: [150,190,.85], card: { w:640, edge:32, cap:420, phoneShare:.82, phoneBottom:6, slack:2, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
+// titleOut: the push-in share over which the map's title and kicker fade out (back in at the overview and in explore).
+const WORLD = { scrim: [150,190,.85], titleOut: [.3, .8], card: { w:640, edge:32, cap:420, phoneShare:.82, phoneBottom:6, slack:2, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
 const PHONE_LAYOUT = { gap: 16, edge: 16, ctaShare: .14, headlineGap: 20, exploreGap: 8, exploreBottom: 8, exploreBack: 152, exploreTop: 172 };
 
 // ---- art.mjs ----
@@ -2259,9 +2267,11 @@ function bigMap() {
   FINDS.filter(f => f.n).forEach(f => s += marker(f.mark[0], f.mark[1], f.n, f.id));
 
   // title, legend, frame, knots
-  top += svgText(44, 78, COPY.title, { s: 30, w: 800, c: C.paper, ls: -.6 });
+  // The map's title and kicker sit in a group of their own: tripApply fades it out as the journey sets out, so it is never a giant
+  // cut-off line across the top of a stop or a glide, and back in at the overview and in explore.
+  top += '<g class="map-title">' + svgText(44, 78, COPY.title, { s: 30, w: 800, c: C.paper, ls: -.6 });
   const K = LABELS.kicker, P = LABELS.plate, rule = LABELS.rule;
-  top += '<g transform="translate(' + K.join(' ') + ')"><g class="label-scale" data-label="small" data-unit="' + LABELS.small.unit + '"><rect x="' + P[0] + '" y="' + P[1] + '" width="' + P[2] + '" height="' + P[3] + '" fill="' + C.ink + '"/>' + svgText(0, 0, COPY.kicker, { s: LABELS.small.unit, ls: 1.8 }) + '<path class="t" d="M' + rule[0] + ' ' + rule[1] + 'h' + rule[2] + '"/></g></g>';
+  top += '<g transform="translate(' + K.join(' ') + ')"><g class="label-scale" data-label="small" data-unit="' + LABELS.small.unit + '"><rect x="' + P[0] + '" y="' + P[1] + '" width="' + P[2] + '" height="' + P[3] + '" fill="' + C.ink + '"/>' + svgText(0, 0, COPY.kicker, { s: LABELS.small.unit, ls: 1.8 }) + '<path class="t" d="M' + rule[0] + ' ' + rule[1] + 'h' + rule[2] + '"/></g></g></g>';
   s += `<rect x="23" y="822" width="554" height="55" fill="${C.ink}"/><line x1="23" y1="822.5" x2="577" y2="822.5" stroke="${C.paper}" stroke-opacity=".3"/>`;
   const M = MARK.legend, [sx, sy, sr, sw, sb, sa] = M;
   s += '<g transform="translate(' + sx + ' ' + sy + ')"><circle class="o" r="' + sr + '"/><path d="M0 0V-' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 ' + sr + ' 0ZM0 0V' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 -' + sr + ' 0Z" fill="' + C.note + '" opacity="' + sa + '"/><circle class="l" r="' + sr + '" stroke-width="' + sw + '"/><circle class="pf" r="' + sb + '"/></g>';
@@ -2457,11 +2467,21 @@ const camMix = (a, b, t) => ({ cx: lerp(a.cx, b.cx, t), cy: lerp(a.cy, b.cy, t),
 const camFinal = c => ({ s: c.s, tx: c.ax - c.cx * c.s, ty: c.ay - c.cy * c.s, ax: c.ax, ay: c.ay });
 
 const labelScale = (kind, s, phone = VIEW.phone) => { const L = LABELS[kind]; return Math.max(1, (phone ? L.phone : L.floor) / (L.unit * s)); };
+// The X beat's view. Phones: the X and its label, as one group, centred across the screen at the trip's scale; the X then
+// sits as low as lets the map's bottom edge rest on the floor above the timeline (inside the xBand), so the screen below the
+// map is not left empty. Portrait tablets keep the desktop scale and take the same floor rule. Desktop is unchanged.
 function tripXCamera() {
-  if (VIEW.phone) { const b = CAMERA.xBoxPhone, margin = CAMERA.xMargin, h = VIEW.h - STEPS.nav.bar, s = Math.min((VIEW.w - 2 * margin) / (b[2] - b[0]), (h - 2 * margin) / (b[3] - b[1])); return { cx: (b[0] + b[2]) / 2, cy: (b[1] + b[3]) / 2, s, ax: VIEW.w / 2, ay: h / 2 }; }
+  const band = CAMERA.xBand;
+  if (VIEW.phone) {
+    const g = CAMERA.xGroupPhone, h = VIEW.h - STEPS.nav.bar, s = Math.min(VIEW.sT, (VIEW.w - 2 * CAMERA.xMargin) / (g[1] - g[0]));
+    const floor = h - CAMERA.timeline - CAMERA.xGap, ay = Math.max(band[0] * h, Math.min(band[1] * h, floor - (CAMERA.frameBottom - MAP.x[1]) * s));
+    return { cx: MAP.x[0] + (g[0] + g[1]) / 2, cy: MAP.x[1], s, ax: VIEW.w / 2, ay };
+  }
   const base = camTrip(X_U, 1), floor = VIEW.h - CAMERA.timeline - STEPS.nav.gap - STEPS.nav.h - CAMERA.xGap;
   base.ay = CAMERA.xAnchorY * VIEW.h;
-  const fit = (floor - base.ay) / (CAMERA.frameBottom - base.cy); base.s = Math.max(VIEW.sT * CAMERA.xFloor, Math.min(base.s, fit)); return base;
+  const fit = (floor - base.ay) / (CAMERA.frameBottom - base.cy); base.s = Math.max(VIEW.sT * CAMERA.xFloor, Math.min(base.s, fit));
+  if (VIEW.h > VIEW.w) base.ay = Math.max(base.ay, Math.min(band[1] * VIEW.h, floor - (CAMERA.frameBottom - base.cy) * base.s));
+  return base;
 }
 
 // Each resting view owns one stretch of P. The clock is linear in this stretch;
@@ -2588,7 +2608,7 @@ const TRIP_EL = {};
 function tripBuild(els) {
   Object.assign(TRIP_EL, els);
   TRIP_EL.labels = [...els.svg.querySelectorAll('.label-scale')].map(el => ({ el, kind: el.dataset.label, stopSub: el.dataset.stopSub === 'true', k: null }));
-  TRIP_EL.tier1 = els.svg.querySelector('.map-tier1'); TRIP_EL.tier2 = els.svg.querySelector('.map-tier2'); TRIP_EL.subs = els.svg.querySelector('.map-subs');
+  TRIP_EL.title = els.svg.querySelector('.map-title'); TRIP_EL.tier1 = els.svg.querySelector('.map-tier1'); TRIP_EL.tier2 = els.svg.querySelector('.map-tier2'); TRIP_EL.subs = els.svg.querySelector('.map-subs');
   TRIP_EL.secondary = [...els.svg.querySelectorAll('.map-tier2')]; if (!TRIP_EL.secondary.length) TRIP_EL.secondary = [TRIP_EL.tier2];
   TRIP_EL.focusFade = null;
   TRIP_EL.scrim = document.createElement('div'); TRIP_EL.scrim.className = 'stage-scrim'; TRIP_EL.scrim.setAttribute('aria-hidden', 'true'); TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px'; TRIP_EL.scrim.style.background = 'linear-gradient(to bottom, transparent, color-mix(in srgb, var(--ink) ' + WORLD.scrim[2] * 100 + '%, transparent))'; els.svg.parentElement.appendChild(TRIP_EL.scrim);
@@ -2633,6 +2653,7 @@ function tripApply(st) {
   tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
   tripWrite(E.svg, 'willChange', fade > 0 && fade < 1 ? 'opacity' : '');
   tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
+  if (E.title) { const t = 1 - smooth(...WORLD.titleOut, st.pushT) * (1 - (st.exploreK || 0)); tripWrite(E.title, 'opacity', t); tripWrite(E.title, 'visibility', t === 0 ? 'hidden' : 'visible'); }
   tripWrite(E.cue, 'opacity', smooth(.2, .5, st.overviewT) * (1 - smooth(0, .3, st.pushT)));
   // mini-map
   const mo = smooth(.5, 1, st.pushT) * (1 - smooth(0, .4, st.rushT));
@@ -2674,6 +2695,12 @@ const depthDeckAlpha = (st, a) => {
   const trip = { ...st, cam: { ...st.cam, s: st.tripS ?? st.cam.s } }, k = depthFactor(trip, a), d = DEPTH.deck;
   return d.alpha * (1 + d.boost * smooth(...d.peak, k)) * depthVisibility(k, d);
 };
+// The traveller's lantern: how strongly the map is dimmed around the traveller, before the rush lifts it. In the rush the
+// nova canvas takes this darkness over (footer.mjs), so lifting the lantern never brightens the map under the build-up.
+const depthLantern = st => { const L = DEPTH.light; return L.on ? smooth(0, 1, st.pushT) * (1 - L.card * st.cardOpen) * lerp(1, L.visit, st.focusK ?? (st.visiting ? 1 : 0)) : 0; };
+// The share of the lantern's darkness the nova canvas holds: none at rest, all of it once the rush has lifted the lantern,
+// blown away with the veil at the blast.
+const depthLanternHeld = st => smooth(...DEPTH.light.rush, st.rushT) * (1 - smooth(0, NOVA.build.veilOut / STEPS.pace.blast, st.blastT));
 const depthBlastFade = st => 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
 const depthSeaFade = st => smooth(...DEPTH.fade.sea, st.handoffT) * depthBlastFade(st);
 const depthFrameBox = (st, inner = false) => {
@@ -2822,15 +2849,15 @@ function lightAt(x, y) {
   const l = DP.light; if (!l) return 1;
   const a = depthHole(Math.hypot(x - l.trav[0], y - l.trav[1]), l.r, DEPTH.light.core);
   const b = l.pointer ? depthHole(Math.hypot(x - l.pointer[0], y - l.pointer[1]), l.pr, DEPTH.light.ptrCore) : 0;
-  return 1 - l.v * (1 - DEPTH.light.amb) * (1 - Math.max(a, b, depthBeamAt(l.beam, x, y)));
+  return 1 - l.vLight * (1 - DEPTH.light.amb) * (1 - Math.max(a, b, depthBeamAt(l.beam, x, y)));
 }
 function depthAir(st, look, pointer, fine) {
   const c = DP.ac, w = VIEW.w, h = VIEW.h, small = Math.min(w, h), L = DEPTH.light, M = DEPTH.mist, D = DEPTH.deck;
   c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w, h);
   const trav = toScreen(st, st.trav || MAP.waypoints[0]), pt = fine ? [pointer[0] * w, pointer[1] * h] : null;
-  const v = L.on ? smooth(0, 1, st.pushT) * (1 - L.card * st.cardOpen) * (1 - smooth(...L.rush, st.rushT)) * lerp(1, L.visit, st.focusK ?? (st.visiting ? 1 : 0)) : 0;
+  const lantern = depthLantern(st), v = lantern * (1 - smooth(...L.rush, st.rushT)), vLight = v + lantern * depthLanternHeld(st);
   const B = DP.beam, beam = B && v > 0 ? { p: toScreen(st, [B.x, B.y]), radius: B.reach * st.cam.s, angle: B.angle, half: B.half, soft: B.soft } : null;
-  DP.light = { trav, pointer: pt, r: L.r * small, pr: L.ptrR * small, v, beam };
+  DP.light = { trav, pointer: pt, r: L.r * small, pr: L.ptrR * small, v, vLight, beam };
   if (v > 0) {
     c.globalAlpha = v * (VIEW.phone ? L.darkPhone : L.dark); c.fillStyle = C.ink; c.fillRect(0, 0, w, h); c.globalAlpha = 1;
     c.globalCompositeOperation = 'destination-out';
@@ -3424,6 +3451,10 @@ function findLife(o, x, y, rad, reach = rad) {
   const pointer = FD.hover && FD.now - FD.pointerT <= FIND_PLAY.fresh ? toMap(FD.pointer) : null;
   o.awake = JOURNEY.focus === o.id || document.activeElement === o.el || !!(pointer && Math.hypot(pointer[0] - x, pointer[1] - y) <= reach);
   o.kept ??= false;
+  // Only a find you can see is in the tab order: none before the map is handed over (the title screen, the hero), and none
+  // off screen at a stop or in explore. The focused find keeps its place, so focus never drops out from under the keyboard.
+  const seen = p[0] >= 0 && p[0] <= VIEW.w && p[1] >= 0 && p[1] <= VIEW.h, tab = FD.rm || (FD.st.handoffT >= 1 && (seen || document.activeElement === o.el)) ? 0 : -1;
+  if (o.el && o.el.tabIndex !== tab) o.el.tabIndex = tab;
 }
 function found(id, atId = id) {
   if (FD.found.has(id)) return;
@@ -3511,7 +3542,10 @@ function findKitBuild(svg, pop, sheet, base, rm) {
   findKitStyle();
   sheet.addEventListener('keydown', e => { if (FD.sheetOwner?.id === 'hammer') return; if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) { e.preventDefault(); e.stopPropagation(); } });
   sheet.addEventListener('wheel', e => { e.preventDefault(); e.stopPropagation(); }, { passive: false });
-  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (FD.popOwner || FD.sheetOwner) { e.preventDefault(); closePop(); closeSheet(); } else stepsRelease(); });
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (FD.popOwner || FD.sheetOwner) { e.preventDefault(); closePop(); closeSheet(); } else if (stepsRelease()) e.preventDefault(); });
+  // A popup closes on a press anywhere but a find (a find opens its own popup or keeps it) or a control inside the popup.
+  // On a phone in explore a popup can sit over the other chests, and there is no Escape key to close it.
+  document.addEventListener('pointerdown', e => { if (!FD.popOwner) return; const t = e.target?.closest ? e.target : null; if (t && (t.closest('.find') || t.closest('.pop button, .pop a'))) return; closePop(); }, true);
   matchMedia('(hover: hover)').addEventListener('change', e => FD.hover = e.matches);
   tlSetCount(0, FINDS.length);
 }
@@ -3809,7 +3843,8 @@ function stepsFocusNow() {
 }
 function stepsFocus(id, view) {
   const st = tripState(SC.P);
-  if (SC.rm || SC.mode !== 'steps' || SC.cut || st.handoffT !== 1 || st.rushT !== 0) return false;
+  // A find takes the camera only at rest: a press during a move (a glide, the hurry, a jump) is ignored, so the journey never parks between beats.
+  if (SC.rm || SC.mode !== 'steps' || SC.cut || SC.move || st.handoffT !== 1 || st.rushT !== 0) return false;
   const now = stepsFocusNow(), old = SC.focus;
   stepsCancel();
   SC.focus = { id, from: now ? now.view : view.slice(), to: view.slice(), swap: now ? 0 : 1, k: old ? old.k : 0, held: true };
@@ -3854,15 +3889,22 @@ function stepsButtons() {
   SC.root.classList.toggle('jm-moving', JOURNEY.moving);
   SC.go.querySelector('.go-fill').style.transform = `scaleX(${SC.move ? SC.fill : 0})`;
 }
+// The Next button's words for the beat at P. A jump writes them as soon as it lands under its cover, so the button never names
+// the old next stop over the new view.
+function stepsLabel() {
+  const beat = stepsRestBeat(), next = stepsNextBeat(), s = COPY.steps;
+  let label = s.dig;
+  if (beat && beat.P === stepsEnd) label = COPY.explore.button;
+  else if (next) label = next.id === 'map' ? s.start : next.id === STOPS[0].id ? s.setOut : next.id === 'x' ? s.toX : next.id === 'end' ? s.dig : stepsFormat(s.next, { name: stepsName(next) });
+  SC.go.querySelector('.go-t').textContent = label;
+}
 function stepsArrive() {
   if (SC.rm) return;
   const beat = stepsRestBeat(), next = stepsNextBeat(), s = COPY.steps;
   if (beat) tripWarmGlides(beat.P);
   if (beat?.id === 'top') SC.scrollLive = true;
   SC.root.dataset.beat = beat ? beat.id : '';
-  let label = s.dig;
-  if (next) label = next.id === 'map' ? s.start : next.id === STOPS[0].id ? s.setOut : next.id === 'x' ? s.toX : next.id === 'end' ? s.dig : stepsFormat(s.next, { name: stepsName(next) });
-  SC.go.querySelector('.go-t').textContent = label;
+  stepsLabel();
   if (beat && SC.announced !== beat.id) {
     const i = STOPS.findIndex(stop => stop.id === beat.id);
     SC.say.textContent = i < 0 ? s.say[beat.id] : stepsFormat(s.say.stop, { n: i + 1, t: STOPS.length, name: STOPS[i].name, dates: STOPS[i].dates });
@@ -4027,7 +4069,7 @@ function stepsFrame(ts) {
   } else if (cut) {
     cut.elapsed += dt;
     if (cut.elapsed < STEPS.cut[0]) SC.cover.style.opacity = cut.elapsed / STEPS.cut[0];
-    else if (!cut.placed) { cut.placed = true; SC.P = cut.target; SC.cover.style.opacity = 1; }
+    else if (!cut.placed) { cut.placed = true; SC.P = cut.target; SC.cover.style.opacity = 1; stepsLabel(); }
     else SC.cover.style.opacity = Math.max(0, 1 - (cut.elapsed - STEPS.cut[0]) / STEPS.cut[1]);
     if (cut.placed && cut.elapsed >= STEPS.cut[0] + STEPS.cut[1]) {
       SC.cut = null; SC.cover.hidden = true; stepsArrive(); if (cut.after) cut.after();
@@ -4247,8 +4289,10 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     c.el.style.transform = `translate(${(cx - W * k / 2).toFixed(2)}px,${(cy - H * k / 2).toFixed(2)}px) scale(${k.toFixed(5)})`;
     const lit = CD.craft ? CD.craft[i] : false;
     c.el.style.opacity = op * (CD.craft && !lit ? .55 : 1);
-    c.btn.style.opacity = 1 - smooth(0, .3, e);
-    c.face.style.opacity = smooth(.01, .1, e);
+    // Size, not the score, hands the stone mark over to the card: while the card is mark-sized the mark shows, and the face
+    // and its words come in together as it grows, so it never travels as a flat, square-cornered slab over the stop's label.
+    c.btn.style.opacity = 1 - smooth(...CARD_GROW.face, k);
+    c.face.style.opacity = smooth(...CARD_GROW.face, k);
     const cfg = DEPTH.card, lift = !!VIEW.depth && !VIEW.phone;
     // Apply live style configuration after this frame callback; animation only writes transform/opacity.
     const config = lift ? `${cfg.perspective}/${cfg.blur}/${cfg.spread}/${cfg.radius}` : '';
@@ -4262,11 +4306,14 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     c.face.style.transform = lift ? `${sx || sy ? `translate(${sx}px,${sy}px) ` : ''}${rx ? `rotateX(${rx}deg) ` : ''}${ryTilt ? `rotateY(${ryTilt}deg)` : ''}`.trim() : '';
     c.shadow.style.opacity = lift ? cfg.shadow * e : 0;
     c.shadow.style.transform = `translate(${-sx / cfg.shadowShare}px,${cfg.drop * e - sy / cfg.shadowShare}px)`;
-    c.inn.style.opacity = smooth(.4, .62, k);
+    c.inn.style.opacity = smooth(...CARD_GROW.words, k);
     c.fill.style.opacity = st.visited[i] || lit ? 1 : 0;
     c.glow.style.opacity = lit ? 1 : 0;
     const state = e > .96 ? 'open' : e < .02 ? 'rest' : 'moving';
-    if (state !== c.state) { c.state = state; c.el.dataset.state = state; c.face.inert = state !== 'open'; c.btn.tabIndex = state === 'rest' ? 0 : -1; }
+    if (state !== c.state) { c.state = state; c.el.dataset.state = state; c.face.inert = state !== 'open'; }
+    // A stone mark is in the tab order only at rest and on screen (the keyboard never lands on a stop it cannot see).
+    const tab = state === 'rest' && (document.activeElement === c.btn || p[0] >= 0 && p[0] <= VIEW.w && p[1] >= 0 && p[1] <= VIEW.h) ? 0 : -1;
+    if (c.btn.tabIndex !== tab) c.btn.tabIndex = tab;
     if (c.reopenFocus && (JOURNEY.moving || st.kind !== 'hold' || st.i !== i)) c.reopenFocus = false;
     if (c.reopenFocus && state === 'open') { c.reopenFocus = false; c.el.querySelector('.c-close').focus({ preventScroll: true }); }
   });
@@ -4448,9 +4495,13 @@ const footerStyle = (el, key, value) => { const text = String(value); if (el && 
 function footerFrame(st) {
   if (FT.hit) {
     FT.settled = st.settleT >= 1;
-    const available = (st.handoffT >= 1 && st.rushT === 0) || FT.settled, state = `${available}/${FT.settled}`;
+    // A pointer may press the X wherever it shows (it travels there); the keyboard reaches it only where it is the view's own
+    // goal: resting at the X beat, or the settled supernova. Elsewhere it is off screen or far away, so it leaves the tab order.
+    FT.xP ??= JOURNEY.beats.find(b => b.id === 'x').P;
+    const available = (st.handoffT >= 1 && st.rushT === 0) || FT.settled, keyed = available && (FT.settled || (!JOURNEY.moving && Math.abs(JOURNEY.P - FT.xP) < NOVA.base.hitTolerance));
+    const state = `${available}/${FT.settled}/${keyed}`;
     if (state !== FT.hitState) {
-      FT.hitState = state; FT.hit.tabIndex = available ? 0 : -1; FT.hit.setAttribute('aria-disabled', String(!available));
+      FT.hitState = state; FT.hit.tabIndex = keyed ? 0 : -1; FT.hit.setAttribute('aria-disabled', String(!available));
       FT.hit.setAttribute('aria-label', FT.settled ? COPY.nova : COPY.steps.dig);
     }
     const s = st.exploreK ? st.sEnd : st.cam.s, radius = FT.settled ? NOVA.flare.hit * st.cam.s / s : NOVA.base.digHit * st.cam.s;
@@ -4609,6 +4660,16 @@ function footerMotion(time, dt, st, look, moved) {
   if (bT > 0) thin = lerp(held.thin, B.thin[2], blastJoin);
   if (sT > 0) thin = lerp(B.thin[2], B.thin[3], sT);
   const heat = build.heat;
+  // The lantern's darkness, handed over from canvas#air as the rush lifts it there (depth.mjs), so the map keeps dimming under
+  // the build-up instead of first brightening: here it makes up exactly what the lifted lantern no longer draws, with the
+  // lantern's own hole around the traveller, and it is blown away with the veil at the blast.
+  const lantern = depthLantern(st) * (VIEW.phone ? DEPTH.light.darkPhone : DEPTH.light.dark), kept = depthLanternHeld(st);
+  if (lantern > 0 && kept > 0 && st.trav) {
+    const L = DEPTH.light, r = L.r * Math.min(VIEW.w, VIEW.h), left = 1 - smooth(...L.rush, rT), at = [(st.trav[0] - MAP.x[0]) * st.cam.s, (st.trav[1] - MAP.x[1]) * st.cam.s];
+    const gradient = ctx.createRadialGradient(...at, r * L.core, ...at, r);
+    for (let i = 0; i <= 6; i++) { const a = lantern * i / 6; gradient.addColorStop(i / 6, footerColour(C.ink, 1 - (1 - a * (left + kept)) / (1 - a * left))); }
+    ctx.globalAlpha = 1; ctx.fillStyle = gradient; ctx.fillRect(-FT.centre[0] / FT.dpr, -FT.centre[1] / FT.dpr, VIEW.w, VIEW.h);
+  }
   // The veil is below every nova mark and below the separate stars canvas.
   const veil = build.veil * (1 - smooth(0, NOVA.build.veilOut / STEPS.pace.blast, bT));
   if (veil > 0) {
@@ -4676,8 +4737,13 @@ function footerMotion(time, dt, st, look, moved) {
       else footerLine(ctx, [-12.7, 0], [12.7, 0], C.red, 3.6, red);
     }
     if (white > 0) {
-      const gradient = ctx.createLinearGradient(-12.7, 0, 12.7, 0); gradient.addColorStop(0, footerColour(C.red, 0)); gradient.addColorStop(.5, footerHeatColour(heat)); gradient.addColorStop(1, footerColour(C.red, 0));
-      ctx.globalAlpha = white; ctx.fillStyle = gradient; ctx.beginPath(); ctx.moveTo(-12.7, 0); ctx.lineTo(0, -1.7); ctx.lineTo(12.7, 0); ctx.lineTo(0, 1.7); ctx.closePath(); ctx.fill();
+      // The heat whitens the stroke from the crossing out: a point of light at first, and, as the heat nears full in the
+      // draw-in, a white bar along most of the arm with red left only at the tips (the held breath's small white cross).
+      // Only the build-up's X carries the bar: it is gone in the blast's first flash, so the blast and the settled star keep their look.
+      const whiteK = smooth(...NOVA.build.whiteFrom, heat) * (1 - smooth(0, NOVA.build.whiteOut / STEPS.pace.blast, bT)), plateau = NOVA.build.whiteReach * whiteK, gradient = ctx.createLinearGradient(-12.7, 0, 12.7, 0), hot = footerHeatColour(heat);
+      gradient.addColorStop(0, footerColour(C.red, 0)); gradient.addColorStop(.5 - plateau, hot); gradient.addColorStop(.5 + plateau, hot); gradient.addColorStop(1, footerColour(C.red, 0));
+      const taper = 12.7 * (1 - .7 * whiteK);
+      ctx.globalAlpha = white; ctx.fillStyle = gradient; ctx.beginPath(); ctx.moveTo(-12.7, 0); ctx.lineTo(-12.7 + taper, -1.7); ctx.lineTo(12.7 - taper, -1.7); ctx.lineTo(12.7, 0); ctx.lineTo(12.7 - taper, 1.7); ctx.lineTo(-12.7 + taper, 1.7); ctx.closePath(); ctx.fill();
     }
     ctx.restore();
   });
@@ -6117,7 +6183,8 @@ stepsBuild({ stage: $('stage'), rm: RM, resize, joinedTop: () => JOIN.heroStart 
 findsBuild(SVG, $('pop'), $('sheet'), $('b-all'), RM);
 exploreBuild({ stage: $('stage'), world: FTWORLD, journey: JOURNEY, rm: RM });
 document.addEventListener('dragstart', e => e.preventDefault(), true);
-window.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.defaultPrevented && !RM && !JOURNEY.moving && cardsClose()) e.preventDefault(); });
+// Escape folds the open card, but not while a find is still letting go of the camera (a quick second Escape after leaving a find).
+window.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.defaultPrevented && !RM && !JOURNEY.moving && !stepsFocusNow() && cardsClose()) e.preventDefault(); });
 
 function resize() {
   const w = window.innerWidth, h = window.innerHeight, phone = w <= CAMERA.phoneMax;
@@ -6148,7 +6215,7 @@ window.addEventListener('jm-depth', () => { dirty = true; depthInvalidate(); if 
 const PTR = [.5, .5];
 window.addEventListener('pointermove', e => { PTR[0] = e.clientX / VIEW.w; PTR[1] = e.clientY / VIEW.h; findsPointer(e.clientX, e.clientY); }, { passive: true });
 
-let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainFocus = '';
+let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainFocus = '', mainKeys = '';
 function frame(ts) {
   const time = ts / 1000;
   const dt = mainTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - mainTs) / 1000)); mainTs = ts;
@@ -6158,6 +6225,10 @@ function frame(ts) {
   const st = tripState(P); const f = stepsFocusNow(); if (f) tripFocus(st, f.view, f.k);
   const explored = exploreApply(st, dt), folded = cardsOverride(st, dt, JOURNEY.moving);
   st.visiting = JOURNEY.visiting;
+  // Nothing the eye cannot see takes the keyboard: the stone marks and the timeline wait for the map's hand-over (the title
+  // screen and the hero show neither), and the timeline also leaves while exploring, when it is part of the hidden footer.
+  const keys = `${st.handoffT >= 1}/${st.handoffT >= 1 && !st.exploring && !(st.exploreK > 0)}`;
+  if (keys !== mainKeys) { mainKeys = keys; $('cards').inert = st.handoffT < 1; TLEL.inert = !(st.handoffT >= 1 && !st.exploring && !(st.exploreK > 0)); }
   const focusKey = JSON.stringify(f), tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || explored || folded || P !== lastP || tuning !== mainTuning || focusKey !== mainFocus;
   mainFocus = focusKey;
   const aim = depthLook(dt, PTR);

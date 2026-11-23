@@ -82,6 +82,10 @@ export function findLife(o, x, y, rad, reach = rad) {
   const pointer = FD.hover && FD.now - FD.pointerT <= FIND_PLAY.fresh ? toMap(FD.pointer) : null;
   o.awake = JOURNEY.focus === o.id || document.activeElement === o.el || !!(pointer && Math.hypot(pointer[0] - x, pointer[1] - y) <= reach);
   o.kept ??= false;
+  // Only a find you can see is in the tab order: none before the map is handed over (the title screen, the hero), and none
+  // off screen at a stop or in explore. The focused find keeps its place, so focus never drops out from under the keyboard.
+  const seen = p[0] >= 0 && p[0] <= VIEW.w && p[1] >= 0 && p[1] <= VIEW.h, tab = FD.rm || (FD.st.handoffT >= 1 && (seen || document.activeElement === o.el)) ? 0 : -1;
+  if (o.el && o.el.tabIndex !== tab) o.el.tabIndex = tab;
 }
 export function found(id, atId = id) {
   if (FD.found.has(id)) return;
@@ -169,7 +173,10 @@ export function findKitBuild(svg, pop, sheet, base, rm) {
   findKitStyle();
   sheet.addEventListener('keydown', e => { if (FD.sheetOwner?.id === 'hammer') return; if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) { e.preventDefault(); e.stopPropagation(); } });
   sheet.addEventListener('wheel', e => { e.preventDefault(); e.stopPropagation(); }, { passive: false });
-  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (FD.popOwner || FD.sheetOwner) { e.preventDefault(); closePop(); closeSheet(); } else stepsRelease(); });
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (FD.popOwner || FD.sheetOwner) { e.preventDefault(); closePop(); closeSheet(); } else if (stepsRelease()) e.preventDefault(); });
+  // A popup closes on a press anywhere but a find (a find opens its own popup or keeps it) or a control inside the popup.
+  // On a phone in explore a popup can sit over the other chests, and there is no Escape key to close it.
+  document.addEventListener('pointerdown', e => { if (!FD.popOwner) return; const t = e.target?.closest ? e.target : null; if (t && (t.closest('.find') || t.closest('.pop button, .pop a'))) return; closePop(); }, true);
   matchMedia('(hover: hover)').addEventListener('change', e => FD.hover = e.matches);
   tlSetCount(0, FINDS.length);
 }

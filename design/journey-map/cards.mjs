@@ -1,5 +1,5 @@
 // Stop marks that grow into cards. Each card is one article: the standing stone at rest, the card when open.
-import { STOPS, PALETTES, COPY, CRAFTS, MAP, STEPS, DEPTH, CARD_CLOSE, MARK, WORLD } from './data.mjs';
+import { STOPS, PALETTES, COPY, CRAFTS, MAP, STEPS, DEPTH, CARD_CLOSE, CARD_GROW, MARK, WORLD } from './data.mjs';
 import { shieldSvg } from './art.mjs';
 import { VIEW, toScreen, smooth, easeIO, lerp } from './trip.mjs';
 import { JOURNEY } from './steps.mjs';
@@ -100,8 +100,10 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     c.el.style.transform = `translate(${(cx - W * k / 2).toFixed(2)}px,${(cy - H * k / 2).toFixed(2)}px) scale(${k.toFixed(5)})`;
     const lit = CD.craft ? CD.craft[i] : false;
     c.el.style.opacity = op * (CD.craft && !lit ? .55 : 1);
-    c.btn.style.opacity = 1 - smooth(0, .3, e);
-    c.face.style.opacity = smooth(.01, .1, e);
+    // Size, not the score, hands the stone mark over to the card: while the card is mark-sized the mark shows, and the face
+    // and its words come in together as it grows, so it never travels as a flat, square-cornered slab over the stop's label.
+    c.btn.style.opacity = 1 - smooth(...CARD_GROW.face, k);
+    c.face.style.opacity = smooth(...CARD_GROW.face, k);
     const cfg = DEPTH.card, lift = !!VIEW.depth && !VIEW.phone;
     // Apply live style configuration after this frame callback; animation only writes transform/opacity.
     const config = lift ? `${cfg.perspective}/${cfg.blur}/${cfg.spread}/${cfg.radius}` : '';
@@ -115,11 +117,14 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     c.face.style.transform = lift ? `${sx || sy ? `translate(${sx}px,${sy}px) ` : ''}${rx ? `rotateX(${rx}deg) ` : ''}${ryTilt ? `rotateY(${ryTilt}deg)` : ''}`.trim() : '';
     c.shadow.style.opacity = lift ? cfg.shadow * e : 0;
     c.shadow.style.transform = `translate(${-sx / cfg.shadowShare}px,${cfg.drop * e - sy / cfg.shadowShare}px)`;
-    c.inn.style.opacity = smooth(.4, .62, k);
+    c.inn.style.opacity = smooth(...CARD_GROW.words, k);
     c.fill.style.opacity = st.visited[i] || lit ? 1 : 0;
     c.glow.style.opacity = lit ? 1 : 0;
     const state = e > .96 ? 'open' : e < .02 ? 'rest' : 'moving';
-    if (state !== c.state) { c.state = state; c.el.dataset.state = state; c.face.inert = state !== 'open'; c.btn.tabIndex = state === 'rest' ? 0 : -1; }
+    if (state !== c.state) { c.state = state; c.el.dataset.state = state; c.face.inert = state !== 'open'; }
+    // A stone mark is in the tab order only at rest and on screen (the keyboard never lands on a stop it cannot see).
+    const tab = state === 'rest' && (document.activeElement === c.btn || p[0] >= 0 && p[0] <= VIEW.w && p[1] >= 0 && p[1] <= VIEW.h) ? 0 : -1;
+    if (c.btn.tabIndex !== tab) c.btn.tabIndex = tab;
     if (c.reopenFocus && (JOURNEY.moving || st.kind !== 'hold' || st.i !== i)) c.reopenFocus = false;
     if (c.reopenFocus && state === 'open') { c.reopenFocus = false; c.el.querySelector('.c-close').focus({ preventScroll: true }); }
   });

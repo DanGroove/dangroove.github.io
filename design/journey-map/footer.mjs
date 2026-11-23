@@ -3,7 +3,7 @@ import { C, COPY, MAP, NOVA, NOVA_CANVAS, DEPTH, FOOT_NAME, EXPLORE, CAMERA, PHO
 import { rnd, n1, mapDefs } from './art.mjs';
 import { VIEW, SEQ, smooth, lerp, easeIO, clamp01, novaBuild } from './trip.mjs';
 import { JOURNEY } from './steps.mjs';
-import { novaRingRadius, novaFlare, novaPress, novaPrune, novaShare, NOVA_LIVE } from './depth.mjs';
+import { novaRingRadius, novaFlare, novaPress, novaPrune, novaShare, NOVA_LIVE, depthLantern, depthLanternHeld } from './depth.mjs';
 import { footnameBuild, footnameMeasure, footnameReveal, footnameFrame } from './footname.mjs';
 
 const FT = { items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], streaks: [], config: '', nextFlare: null, lastFlare: null, canvas: null, ctx: null, dpr: 1, drawing: false, sprites: {}, rough: null, roughPending: null, exact: null, exactPending: null, exactFailed: '', exactLive: false, native: null, size: [0, 0] };
@@ -80,9 +80,13 @@ const footerStyle = (el, key, value) => { const text = String(value); if (el && 
 export function footerFrame(st) {
   if (FT.hit) {
     FT.settled = st.settleT >= 1;
-    const available = (st.handoffT >= 1 && st.rushT === 0) || FT.settled, state = `${available}/${FT.settled}`;
+    // A pointer may press the X wherever it shows (it travels there); the keyboard reaches it only where it is the view's own
+    // goal: resting at the X beat, or the settled supernova. Elsewhere it is off screen or far away, so it leaves the tab order.
+    FT.xP ??= JOURNEY.beats.find(b => b.id === 'x').P;
+    const available = (st.handoffT >= 1 && st.rushT === 0) || FT.settled, keyed = available && (FT.settled || (!JOURNEY.moving && Math.abs(JOURNEY.P - FT.xP) < NOVA.base.hitTolerance));
+    const state = `${available}/${FT.settled}/${keyed}`;
     if (state !== FT.hitState) {
-      FT.hitState = state; FT.hit.tabIndex = available ? 0 : -1; FT.hit.setAttribute('aria-disabled', String(!available));
+      FT.hitState = state; FT.hit.tabIndex = keyed ? 0 : -1; FT.hit.setAttribute('aria-disabled', String(!available));
       FT.hit.setAttribute('aria-label', FT.settled ? COPY.nova : COPY.steps.dig);
     }
     const s = st.exploreK ? st.sEnd : st.cam.s, radius = FT.settled ? NOVA.flare.hit * st.cam.s / s : NOVA.base.digHit * st.cam.s;
@@ -241,6 +245,16 @@ export function footerMotion(time, dt, st, look, moved) {
   if (bT > 0) thin = lerp(held.thin, B.thin[2], blastJoin);
   if (sT > 0) thin = lerp(B.thin[2], B.thin[3], sT);
   const heat = build.heat;
+  // The lantern's darkness, handed over from canvas#air as the rush lifts it there (depth.mjs), so the map keeps dimming under
+  // the build-up instead of first brightening: here it makes up exactly what the lifted lantern no longer draws, with the
+  // lantern's own hole around the traveller, and it is blown away with the veil at the blast.
+  const lantern = depthLantern(st) * (VIEW.phone ? DEPTH.light.darkPhone : DEPTH.light.dark), kept = depthLanternHeld(st);
+  if (lantern > 0 && kept > 0 && st.trav) {
+    const L = DEPTH.light, r = L.r * Math.min(VIEW.w, VIEW.h), left = 1 - smooth(...L.rush, rT), at = [(st.trav[0] - MAP.x[0]) * st.cam.s, (st.trav[1] - MAP.x[1]) * st.cam.s];
+    const gradient = ctx.createRadialGradient(...at, r * L.core, ...at, r);
+    for (let i = 0; i <= 6; i++) { const a = lantern * i / 6; gradient.addColorStop(i / 6, footerColour(C.ink, 1 - (1 - a * (left + kept)) / (1 - a * left))); }
+    ctx.globalAlpha = 1; ctx.fillStyle = gradient; ctx.fillRect(-FT.centre[0] / FT.dpr, -FT.centre[1] / FT.dpr, VIEW.w, VIEW.h);
+  }
   // The veil is below every nova mark and below the separate stars canvas.
   const veil = build.veil * (1 - smooth(0, NOVA.build.veilOut / STEPS.pace.blast, bT));
   if (veil > 0) {
@@ -308,8 +322,13 @@ export function footerMotion(time, dt, st, look, moved) {
       else footerLine(ctx, [-12.7, 0], [12.7, 0], C.red, 3.6, red);
     }
     if (white > 0) {
-      const gradient = ctx.createLinearGradient(-12.7, 0, 12.7, 0); gradient.addColorStop(0, footerColour(C.red, 0)); gradient.addColorStop(.5, footerHeatColour(heat)); gradient.addColorStop(1, footerColour(C.red, 0));
-      ctx.globalAlpha = white; ctx.fillStyle = gradient; ctx.beginPath(); ctx.moveTo(-12.7, 0); ctx.lineTo(0, -1.7); ctx.lineTo(12.7, 0); ctx.lineTo(0, 1.7); ctx.closePath(); ctx.fill();
+      // The heat whitens the stroke from the crossing out: a point of light at first, and, as the heat nears full in the
+      // draw-in, a white bar along most of the arm with red left only at the tips (the held breath's small white cross).
+      // Only the build-up's X carries the bar: it is gone in the blast's first flash, so the blast and the settled star keep their look.
+      const whiteK = smooth(...NOVA.build.whiteFrom, heat) * (1 - smooth(0, NOVA.build.whiteOut / STEPS.pace.blast, bT)), plateau = NOVA.build.whiteReach * whiteK, gradient = ctx.createLinearGradient(-12.7, 0, 12.7, 0), hot = footerHeatColour(heat);
+      gradient.addColorStop(0, footerColour(C.red, 0)); gradient.addColorStop(.5 - plateau, hot); gradient.addColorStop(.5 + plateau, hot); gradient.addColorStop(1, footerColour(C.red, 0));
+      const taper = 12.7 * (1 - .7 * whiteK);
+      ctx.globalAlpha = white; ctx.fillStyle = gradient; ctx.beginPath(); ctx.moveTo(-12.7, 0); ctx.lineTo(-12.7 + taper, -1.7); ctx.lineTo(12.7 - taper, -1.7); ctx.lineTo(12.7, 0); ctx.lineTo(12.7 - taper, 1.7); ctx.lineTo(-12.7 + taper, 1.7); ctx.closePath(); ctx.fill();
     }
     ctx.restore();
   });

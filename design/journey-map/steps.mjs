@@ -37,7 +37,8 @@ export function stepsFocusNow() {
 }
 export function stepsFocus(id, view) {
   const st = tripState(SC.P);
-  if (SC.rm || SC.mode !== 'steps' || SC.cut || st.handoffT !== 1 || st.rushT !== 0) return false;
+  // A find takes the camera only at rest: a press during a move (a glide, the hurry, a jump) is ignored, so the journey never parks between beats.
+  if (SC.rm || SC.mode !== 'steps' || SC.cut || SC.move || st.handoffT !== 1 || st.rushT !== 0) return false;
   const now = stepsFocusNow(), old = SC.focus;
   stepsCancel();
   SC.focus = { id, from: now ? now.view : view.slice(), to: view.slice(), swap: now ? 0 : 1, k: old ? old.k : 0, held: true };
@@ -82,15 +83,22 @@ function stepsButtons() {
   SC.root.classList.toggle('jm-moving', JOURNEY.moving);
   SC.go.querySelector('.go-fill').style.transform = `scaleX(${SC.move ? SC.fill : 0})`;
 }
+// The Next button's words for the beat at P. A jump writes them as soon as it lands under its cover, so the button never names
+// the old next stop over the new view.
+function stepsLabel() {
+  const beat = stepsRestBeat(), next = stepsNextBeat(), s = COPY.steps;
+  let label = s.dig;
+  if (beat && beat.P === stepsEnd) label = COPY.explore.button;
+  else if (next) label = next.id === 'map' ? s.start : next.id === STOPS[0].id ? s.setOut : next.id === 'x' ? s.toX : next.id === 'end' ? s.dig : stepsFormat(s.next, { name: stepsName(next) });
+  SC.go.querySelector('.go-t').textContent = label;
+}
 function stepsArrive() {
   if (SC.rm) return;
   const beat = stepsRestBeat(), next = stepsNextBeat(), s = COPY.steps;
   if (beat) tripWarmGlides(beat.P);
   if (beat?.id === 'top') SC.scrollLive = true;
   SC.root.dataset.beat = beat ? beat.id : '';
-  let label = s.dig;
-  if (next) label = next.id === 'map' ? s.start : next.id === STOPS[0].id ? s.setOut : next.id === 'x' ? s.toX : next.id === 'end' ? s.dig : stepsFormat(s.next, { name: stepsName(next) });
-  SC.go.querySelector('.go-t').textContent = label;
+  stepsLabel();
   if (beat && SC.announced !== beat.id) {
     const i = STOPS.findIndex(stop => stop.id === beat.id);
     SC.say.textContent = i < 0 ? s.say[beat.id] : stepsFormat(s.say.stop, { n: i + 1, t: STOPS.length, name: STOPS[i].name, dates: STOPS[i].dates });
@@ -255,7 +263,7 @@ export function stepsFrame(ts) {
   } else if (cut) {
     cut.elapsed += dt;
     if (cut.elapsed < STEPS.cut[0]) SC.cover.style.opacity = cut.elapsed / STEPS.cut[0];
-    else if (!cut.placed) { cut.placed = true; SC.P = cut.target; SC.cover.style.opacity = 1; }
+    else if (!cut.placed) { cut.placed = true; SC.P = cut.target; SC.cover.style.opacity = 1; stepsLabel(); }
     else SC.cover.style.opacity = Math.max(0, 1 - (cut.elapsed - STEPS.cut[0]) / STEPS.cut[1]);
     if (cut.placed && cut.elapsed >= STEPS.cut[0] + STEPS.cut[1]) {
       SC.cut = null; SC.cover.hidden = true; stepsArrive(); if (cut.after) cut.after();

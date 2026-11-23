@@ -1,5 +1,5 @@
 // The one layer model, plus its three render surfaces. Importing this module needs no DOM.
-import { C, MAP, DEPTH, NOVA, STOPS } from './data.mjs';
+import { C, MAP, DEPTH, NOVA, STOPS, STEPS } from './data.mjs';
 import { rnd, COAST_A, COAST_B, depthCloudDrawing, depthRavenDrawing } from './art.mjs';
 import { VIEW, toScreen, smooth, lerp, clamp01 } from './trip.mjs';
 
@@ -15,6 +15,12 @@ export const depthDeckAlpha = (st, a) => {
   const trip = { ...st, cam: { ...st.cam, s: st.tripS ?? st.cam.s } }, k = depthFactor(trip, a), d = DEPTH.deck;
   return d.alpha * (1 + d.boost * smooth(...d.peak, k)) * depthVisibility(k, d);
 };
+// The traveller's lantern: how strongly the map is dimmed around the traveller, before the rush lifts it. In the rush the
+// nova canvas takes this darkness over (footer.mjs), so lifting the lantern never brightens the map under the build-up.
+export const depthLantern = st => { const L = DEPTH.light; return L.on ? smooth(0, 1, st.pushT) * (1 - L.card * st.cardOpen) * lerp(1, L.visit, st.focusK ?? (st.visiting ? 1 : 0)) : 0; };
+// The share of the lantern's darkness the nova canvas holds: none at rest, all of it once the rush has lifted the lantern,
+// blown away with the veil at the blast.
+export const depthLanternHeld = st => smooth(...DEPTH.light.rush, st.rushT) * (1 - smooth(0, NOVA.build.veilOut / STEPS.pace.blast, st.blastT));
 export const depthBlastFade = st => 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
 export const depthSeaFade = st => smooth(...DEPTH.fade.sea, st.handoffT) * depthBlastFade(st);
 export const depthFrameBox = (st, inner = false) => {
@@ -163,15 +169,15 @@ export function lightAt(x, y) {
   const l = DP.light; if (!l) return 1;
   const a = depthHole(Math.hypot(x - l.trav[0], y - l.trav[1]), l.r, DEPTH.light.core);
   const b = l.pointer ? depthHole(Math.hypot(x - l.pointer[0], y - l.pointer[1]), l.pr, DEPTH.light.ptrCore) : 0;
-  return 1 - l.v * (1 - DEPTH.light.amb) * (1 - Math.max(a, b, depthBeamAt(l.beam, x, y)));
+  return 1 - l.vLight * (1 - DEPTH.light.amb) * (1 - Math.max(a, b, depthBeamAt(l.beam, x, y)));
 }
 function depthAir(st, look, pointer, fine) {
   const c = DP.ac, w = VIEW.w, h = VIEW.h, small = Math.min(w, h), L = DEPTH.light, M = DEPTH.mist, D = DEPTH.deck;
   c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w, h);
   const trav = toScreen(st, st.trav || MAP.waypoints[0]), pt = fine ? [pointer[0] * w, pointer[1] * h] : null;
-  const v = L.on ? smooth(0, 1, st.pushT) * (1 - L.card * st.cardOpen) * (1 - smooth(...L.rush, st.rushT)) * lerp(1, L.visit, st.focusK ?? (st.visiting ? 1 : 0)) : 0;
+  const lantern = depthLantern(st), v = lantern * (1 - smooth(...L.rush, st.rushT)), vLight = v + lantern * depthLanternHeld(st);
   const B = DP.beam, beam = B && v > 0 ? { p: toScreen(st, [B.x, B.y]), radius: B.reach * st.cam.s, angle: B.angle, half: B.half, soft: B.soft } : null;
-  DP.light = { trav, pointer: pt, r: L.r * small, pr: L.ptrR * small, v, beam };
+  DP.light = { trav, pointer: pt, r: L.r * small, pr: L.ptrR * small, v, vLight, beam };
   if (v > 0) {
     c.globalAlpha = v * (VIEW.phone ? L.darkPhone : L.dark); c.fillStyle = C.ink; c.fillRect(0, 0, w, h); c.globalAlpha = 1;
     c.globalCompositeOperation = 'destination-out';
