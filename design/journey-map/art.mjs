@@ -248,7 +248,7 @@ export function bigMap() {
   s += `<rect x="308" y="463" width="22" height="10" fill="${C.land}"/><path class="l" d="M307 463h24M307 473h24"/>`;
   s += `<path d="M34 108Q56 150 92 176" class="t" stroke-dasharray="2 3"/>`;
   s += grp(134, 208, .62, hall()) + grp(96, 181, .6, boat());
-  s += grp(458, 271, .55, dock()) + grp(473, 321, .55, dock()) + grp(487, 297, .5, boat()) + grp(470, 304, .42, boat());
+  s += grp(458, 271, .55, dock()) + grp(473, 321, .55, dock()) + grp(516, 271, .5, boat()) + grp(533, 259, .42, boat());
   s += grp(124, 372, .6, campus()) + grp(...MAP.toronto.at, 1, toronto()) + `<path class="l" d="M404 662v-11"/>`;
   s += '<g class="map-tier2">' + top2 + '</g>';
   FINDS.filter(f => f.n).forEach(f => s += marker(f.mark[0], f.mark[1], f.n, f.id));
@@ -335,7 +335,7 @@ export function jormungandr() {
 }
 
 export function mapLabelRows() {
-  const rows = []; STOPS.forEach(st => { const L = st.label; rows.push({ kind: 'name', unit: LABELS.name.unit, text: L.t, x: L.x, y: L.y + LABELS.nameDY, anchor: L.a, name: true, ls: L.tracking }); rows.push({ kind: 'sub', unit: LABELS.sub.unit, text: L.sub, x: L.x + (st.id === 'hmc1' ? LABELS.hmcSubDX : st.id === 'hmc2' ? LABELS.hmcAgainSubDX : 0), y: L.y + LABELS.subOffset + LABELS.subDY, anchor: L.a, stopSub: true, ls: st.id === 'hmc2' ? LABELS.hmcAgainTracking : 0 }); });
+  const rows = []; STOPS.forEach(st => { const L = st.label; rows.push({ kind: 'name', unit: LABELS.name.unit, text: L.t, x: L.x, y: L.y + LABELS.nameDY, anchor: L.a, name: true, ls: L.tracking }); rows.push({ kind: 'sub', unit: LABELS.sub.unit, text: L.sub, x: L.x + (st.id === 'hmc1' ? LABELS.hmcSubDX : st.id === 'hmc2' ? LABELS.hmcAgainSubDX : 0), y: L.y + LABELS.subOffset + LABELS.subDY + (st.id === 'hmc1' ? LABELS.hmcSubDY : 0), anchor: L.a, stopSub: true, ls: st.id === 'hmc2' ? LABELS.hmcAgainTracking : 0 }); });
   rows.push({ kind: 'x', unit: LABELS.x.unit, text: COPY.xLabel, lines: COPY.xLabel.split(LABELS.xBreak).map((s,i)=>i ? LABELS.xBreak.trimStart()+s : s), x: MAP.x[0] + LABELS.xAt[0], y: MAP.x[1] + LABELS.xAt[1] + LABELS.nameDY, anchor: 'start', name: true, red: true }, { kind: 'sub', unit: LABELS.sub.unit, text: COPY.xSub, x: MAP.x[0] + LABELS.xSubAt[0], y: MAP.x[1] + LABELS.xSubAt[1] + LABELS.xSubDY, anchor: 'start', stopSub: true }); return rows;
 }
 

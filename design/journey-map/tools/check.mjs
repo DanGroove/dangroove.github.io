@@ -177,6 +177,10 @@ for(const [w,h,bar] of [[1440,900,120],[390,844,96]]) {
   const glyphs=GROVE.map(([x,y,s,pine],i)=>({name:(pine?'caret':'tent')+' '+i,b:[x-s-stroke,y-2.7*s-stroke,x+s+stroke,y+stroke]})).concat([{name:'crown',b:crownBox}]);
   boxes.forEach(row=>{boxes.filter(other=>other!==row).forEach(other=>ok(rectGap(row.b,other.b)>=2,w+': labels need 2 units: '+row.text+'/'+other.text));glyphs.forEach(g=>ok(rectGap(row.b,g.b)>=2,w+': '+row.text+'/'+g.name+' gap '+rectGap(row.b,g.b).toFixed(2)+' '+JSON.stringify(g.b)));});
   const sub=mapLabelRows().find(r=>r.text==='on contract, 2021 to 2022');ok(rectGap(mapLabelBox(sub,VIEW.sT,VIEW.phone),crownBox)>=2,'HMC-again sub-line clears crown at trip scale');
+  // 2026-11-23: HMC Connections sits in the fork of its two trails with its dates above the name, HMC, again in the harbour above its pier.
+  // At the stop zoom both names and date lines clear the coast by 2 units and the trail centreline by 1.5 (a dot is about 1 unit wide).
+  const trailGap=b=>Math.min(...TRAIL.slice(1).map((z,i)=>{const a=TRAIL[i];let d=Infinity;for(let k=0;k<=8;k++)d=Math.min(d,pointBoxGap([a[0]+(z[0]-a[0])*k/8,a[1]+(z[1]-a[1])*k/8],b));return d;}));
+  mapLabelRows().filter(r=>/^HMC|^summers|^on contract/.test(r.text)).forEach(r=>{const b=mapLabelBox(r,VIEW.sT,VIEW.phone);ok(Math.min(...[COAST_A,COAST_B].map(P=>boxCoastGap(b,P)))>=2,w+': '+r.text+' clears the coast at trip scale');ok(trailGap(b)>=1.5,w+': '+r.text+' clears the trail at trip scale');});
   const xRows=mapLabelRows().filter(r=>r.kind==='x'||r.text===COPY.xSub);ok(rectGap(...xRows.map(r=>mapLabelBox(r,VIEW.sT,VIEW.phone)))>=2,'two-line X label clears its faded sub-line at trip scale');
   // Walk actual text markup, inheriting the secondary visibility and geometric scales.
   for(const source of [c1map.detail,c1map.finds]){const stack=[{scale:1,secondary:false}];for(const tag of source.matchAll(/<\/?([\w-]+)([^>]*?)\/?\s*>/g)){

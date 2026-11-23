@@ -31,19 +31,19 @@ export const STOPS = [
     label: { t: 'Laurier', sub: '2016 to 2017, game design', x: 158, y: 236, a: 'middle' },
     copy: { draft: true, headline: 'Where it started.', para: 'I went to Laurier for game design. Systems, rules and play came first, before I ever chose graphic design.', took: 'Think about how someone moves through it.', piece: null, caption: '' } },
   { id: 'hmc1', palette: 'hmc', name: 'HMC Connections', short: 'HMC Connections', dates: 'Summers 2018 and 2020', spans: [['2018-04', '2018-08'], ['2020-06', '2020-08']], track: 'work', role: 'Graphic designer, video editor, web designer', crafts: ['Print', 'Video', 'Screen'], w: 7, rune: 'h',
-    label: { t: 'HMC Connections', sub: 'summers 2018 and 2020', x: 460, y: 250, a: 'start', tracking: -0.55 },
+    label: { t: 'HMC Connections', sub: 'summers 2018 and 2020', x: 431, y: 271, a: 'end', tracking: -0.55 },
     copy: { draft: true, headline: 'First job, three hats.', para: 'Two summers as the student who did design, video and web at once. I designed the SafetyDrivesUs logo and built its website, plus flyers and infographics.', took: 'One person can carry a job across print, video and web.', piece: null, caption: '' } },
   { id: 'mohawk', palette: 'mohawk', name: 'Mohawk College', short: 'Mohawk', dates: '2019 to 2021', spans: [['2019-01', '2021-04']], track: 'school', role: 'Advanced Diploma, Graphic Design', crafts: ['Print', 'Screen'], w: 17, rune: 'm',
-    label: { t: 'Mohawk', sub: '2019 to 2021', x: 124, y: 387, a: 'middle' },
+    label: { t: 'Mohawk', sub: '2019 to 2021', x: 131, y: 392, a: 'middle' },
     copy: { draft: true, headline: 'Where the craft got formal.', para: 'Type, layout and critique, every week, until the reasons behind a good page became habit.', took: 'Type first.', piece: null, caption: '' } },
   { id: 'hmc2', palette: 'hmc', name: 'HMC Connections', short: 'HMC, again', dates: '2021 to 2022', spans: [['2021-06', '2022-03']], track: 'work', role: 'Graphic designer, on contract', crafts: ['Print', 'Screen'], w: 26, rune: 'h',
-    label: { t: 'HMC, again', sub: 'on contract, 2021 to 2022', x: 464, y: 322, a: 'end' },
+    label: { t: 'HMC, again', sub: 'on contract, 2021 to 2022', x: 461, y: 297, a: 'start' },
     copy: { draft: true, headline: 'Back as the designer.', para: 'I came back on contract, redesigned hmcconnections.com, designed the 2020/2021 annual report and built the HMC anti-racism movement website.', took: 'Long documents are where a system proves itself.', piece: PIECE_IMAGE, caption: 'Annual report, 2020 to 2021' } },
   { id: 'interkom', palette: 'interkom', name: 'Interkom', short: 'Interkom', dates: 'Autumn 2022', spans: [['2022-09', '2022-12']], track: 'work', role: 'Junior graphic designer, on contract', crafts: ['Print', 'Screen'], w: 29, rune: 'i',
-    label: { t: 'Interkom', sub: 'autumn 2022', x: 498, y: 468, a: 'end' },
+    label: { t: 'Interkom', sub: 'autumn 2022', x: 494, y: 465, a: 'end' },
     copy: { draft: true, headline: 'Agency pace.', para: "Four months, several clients at once: social graphics for Flato Markham Theatre, Art Windsor-Essex and JNAAG, and a redesign of Melanoma Canada's sixth edition booklet.", took: 'Switch brands without dropping the thread.', piece: null, caption: '' } },
   { id: 'lennard', palette: 'lennard', name: 'Lennard Commercial Realty', short: 'Lennard', dates: '2023 to now', spans: [['2023-10', '2024-03'], ['2024-04', '2025-07'], ['2025-07', 'now']], track: 'work', role: 'Freelance, junior, now graphic designer', crafts: ['Print', 'Video', 'Motion', 'Screen'], w: 35, rune: 'l',
-    label: { t: 'Lennard', sub: '2023 to now', x: 322, y: 706, a: 'end' },
+    label: { t: 'Lennard', sub: '2023 to now', x: 313, y: 706, a: 'end' },
     copy: { draft: true, headline: 'All four crafts, one job.', para: 'I started freelance, came on as a junior and became the graphic designer. I design the marketing for commercial listings, edit and animate LennieTV and the monthly Deal Board, and lay out The Q.', took: 'Carry the idea from first sketch to final cut.', piece: null, caption: '', steps: ['Freelance 2023', 'Junior 2024', 'Graphic designer 2025'] } },
 ];
 
@@ -992,6 +992,6 @@ export const YGG = {
   }
 };
 export const MARK = { k: 10, min: 14, max: 36, stand: 3, box: 400, centre: 200, radius: 176, rim: 20, boss: 54, bossLine: 16, highlight: [186,186,12,.55], shadow: [200,392,120,10,.35], planks: [-120,-72,-24,24,72,120], plankLine: 7, plankAlpha: .28, paintAlpha: .35, studs: 8, stud: 9, studLine: 5, quarters: 'M200 200L200 24A176 176 0 0 1 376 200ZM200 200L200 376A176 176 0 0 1 24 200Z', legend: [68,836,4.6,.9,1.2,.45] };
-export const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -4.4, hmcAgainSubDX: 0, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [16,8], xSubAt: [16,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]] };
+export const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -8, hmcSubDY: -27.5, hmcAgainSubDX: 3, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [16,8], xSubAt: [16,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]] };
 export const WORLD = { scrim: [150,190,.85], card: { w:640, edge:32, cap:420, phoneShare:.82, phoneBottom:6, slack:2, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
 export const PHONE_LAYOUT = { gap: 16, edge: 16, ctaShare: .14, headlineGap: 20, exploreGap: 8, exploreBottom: 8, exploreBack: 152, exploreTop: 172 };

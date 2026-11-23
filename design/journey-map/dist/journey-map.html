@@ -444,19 +444,19 @@ const STOPS = [
     label: { t: 'Laurier', sub: '2016 to 2017, game design', x: 158, y: 236, a: 'middle' },
     copy: { draft: true, headline: 'Where it started.', para: 'I went to Laurier for game design. Systems, rules and play came first, before I ever chose graphic design.', took: 'Think about how someone moves through it.', piece: null, caption: '' } },
   { id: 'hmc1', palette: 'hmc', name: 'HMC Connections', short: 'HMC Connections', dates: 'Summers 2018 and 2020', spans: [['2018-04', '2018-08'], ['2020-06', '2020-08']], track: 'work', role: 'Graphic designer, video editor, web designer', crafts: ['Print', 'Video', 'Screen'], w: 7, rune: 'h',
-    label: { t: 'HMC Connections', sub: 'summers 2018 and 2020', x: 460, y: 250, a: 'start', tracking: -0.55 },
+    label: { t: 'HMC Connections', sub: 'summers 2018 and 2020', x: 431, y: 271, a: 'end', tracking: -0.55 },
     copy: { draft: true, headline: 'First job, three hats.', para: 'Two summers as the student who did design, video and web at once. I designed the SafetyDrivesUs logo and built its website, plus flyers and infographics.', took: 'One person can carry a job across print, video and web.', piece: null, caption: '' } },
   { id: 'mohawk', palette: 'mohawk', name: 'Mohawk College', short: 'Mohawk', dates: '2019 to 2021', spans: [['2019-01', '2021-04']], track: 'school', role: 'Advanced Diploma, Graphic Design', crafts: ['Print', 'Screen'], w: 17, rune: 'm',
-    label: { t: 'Mohawk', sub: '2019 to 2021', x: 124, y: 387, a: 'middle' },
+    label: { t: 'Mohawk', sub: '2019 to 2021', x: 131, y: 392, a: 'middle' },
     copy: { draft: true, headline: 'Where the craft got formal.', para: 'Type, layout and critique, every week, until the reasons behind a good page became habit.', took: 'Type first.', piece: null, caption: '' } },
   { id: 'hmc2', palette: 'hmc', name: 'HMC Connections', short: 'HMC, again', dates: '2021 to 2022', spans: [['2021-06', '2022-03']], track: 'work', role: 'Graphic designer, on contract', crafts: ['Print', 'Screen'], w: 26, rune: 'h',
-    label: { t: 'HMC, again', sub: 'on contract, 2021 to 2022', x: 464, y: 322, a: 'end' },
+    label: { t: 'HMC, again', sub: 'on contract, 2021 to 2022', x: 461, y: 297, a: 'start' },
     copy: { draft: true, headline: 'Back as the designer.', para: 'I came back on contract, redesigned hmcconnections.com, designed the 2020/2021 annual report and built the HMC anti-racism movement website.', took: 'Long documents are where a system proves itself.', piece: PIECE_IMAGE, caption: 'Annual report, 2020 to 2021' } },
   { id: 'interkom', palette: 'interkom', name: 'Interkom', short: 'Interkom', dates: 'Autumn 2022', spans: [['2022-09', '2022-12']], track: 'work', role: 'Junior graphic designer, on contract', crafts: ['Print', 'Screen'], w: 29, rune: 'i',
-    label: { t: 'Interkom', sub: 'autumn 2022', x: 498, y: 468, a: 'end' },
+    label: { t: 'Interkom', sub: 'autumn 2022', x: 494, y: 465, a: 'end' },
     copy: { draft: true, headline: 'Agency pace.', para: "Four months, several clients at once: social graphics for Flato Markham Theatre, Art Windsor-Essex and JNAAG, and a redesign of Melanoma Canada's sixth edition booklet.", took: 'Switch brands without dropping the thread.', piece: null, caption: '' } },
   { id: 'lennard', palette: 'lennard', name: 'Lennard Commercial Realty', short: 'Lennard', dates: '2023 to now', spans: [['2023-10', '2024-03'], ['2024-04', '2025-07'], ['2025-07', 'now']], track: 'work', role: 'Freelance, junior, now graphic designer', crafts: ['Print', 'Video', 'Motion', 'Screen'], w: 35, rune: 'l',
-    label: { t: 'Lennard', sub: '2023 to now', x: 322, y: 706, a: 'end' },
+    label: { t: 'Lennard', sub: '2023 to now', x: 313, y: 706, a: 'end' },
     copy: { draft: true, headline: 'All four crafts, one job.', para: 'I started freelance, came on as a junior and became the graphic designer. I design the marketing for commercial listings, edit and animate LennieTV and the monthly Deal Board, and lay out The Q.', took: 'Carry the idea from first sketch to final cut.', piece: null, caption: '', steps: ['Freelance 2023', 'Junior 2024', 'Graphic designer 2025'] } },
 ];
 
@@ -766,11 +766,11 @@ const DEPTH = {
 
 const NOVA_CANVAS = { dpr: 2, glowSprite: 512 };
 const NOVA = {
-  build: { kindle: 0.2, draw: 0.76, hold: 0.93, throbs: [0.26, 0.45, 0.60, 0.72], rise: 0.08, fall: 0.25,
+  build: { kindle: 0.2, draw: 0.76, hold: 0.93, throbs: [0.26, 0.45, 0.60, 0.72], rise: 0.12, fall: 0.32, pull: 1.8,
     push: 0.08, pushPhone: 0.06, recoil: 0.4, veil: 0.65, veilPhone: 0.45, veilOut: 0.25, hole: [0.6, 0.18], holeBreath: 0.04,
     kindleGlow: 36, kindleAlpha: 0.025, kindleHeat: 0.015, glow: [104, 22], swell: [0.15, 0.22, 0.29, 0.35], glowAlpha: [0.18, 0.44, 0.56], throbAlpha: [0.08, 0.11, 0.14, 0.18],
-    spikeStep: 0.28, spikeKick: 0.08, compressed: 0.6, thickness: 1.12, heat: [0.15, 0.9, 1], core: [4, 13, 9],
-    gatherKindle: 0.04, gatherDrift: 0.18, gatherStep: 0.13, gatherStagger: 0.035, jitter: [0.5, 2], jitterHz: 24 },
+    spikeGrow: 1.12, compressed: 0.6, thickness: 1.12, heat: [0.15, 0.9, 1], core: [4, 13, 9],
+    gatherTop: 0.7, gatherStagger: 0.035, jitter: [0.5, 2], jitterHz: 24 },
   pulse: [2.6, 0.12, 0.9, 0.06], spike: [1.7, 0.2, 3.14], glow: [4.2, 0.07],
   rays: { n: 22, len: [4, 12], alpha: [0.3, 0.7], turn: 0.12, start: 1.1, width: 1, breathe: 0.7, period: [1.2, 3.2], peak: 0.16 },
   lobes: { n: 6, nPhone: 4, r: [120, 260], orbit: [40, 170], speed: [0.12, 0.3], alpha: [0.22, 0.42], breathe: 0.2 },
@@ -1405,7 +1405,7 @@ const YGG = {
   }
 };
 const MARK = { k: 10, min: 14, max: 36, stand: 3, box: 400, centre: 200, radius: 176, rim: 20, boss: 54, bossLine: 16, highlight: [186,186,12,.55], shadow: [200,392,120,10,.35], planks: [-120,-72,-24,24,72,120], plankLine: 7, plankAlpha: .28, paintAlpha: .35, studs: 8, stud: 9, studLine: 5, quarters: 'M200 200L200 24A176 176 0 0 1 376 200ZM200 200L200 376A176 176 0 0 1 24 200Z', legend: [68,836,4.6,.9,1.2,.45] };
-const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -4.4, hmcAgainSubDX: 0, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [16,8], xSubAt: [16,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]] };
+const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -8, hmcSubDY: -27.5, hmcAgainSubDX: 3, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [16,8], xSubAt: [16,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]] };
 const WORLD = { scrim: [150,190,.85], card: { w:640, edge:32, cap:420, phoneShare:.82, phoneBottom:6, slack:2, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
 const PHONE_LAYOUT = { gap: 16, edge: 16, ctaShare: .14, headlineGap: 20, exploreGap: 8, exploreBottom: 8, exploreBack: 152, exploreTop: 172 };
 
@@ -1659,7 +1659,7 @@ function bigMap() {
   s += `<rect x="308" y="463" width="22" height="10" fill="${C.land}"/><path class="l" d="M307 463h24M307 473h24"/>`;
   s += `<path d="M34 108Q56 150 92 176" class="t" stroke-dasharray="2 3"/>`;
   s += grp(134, 208, .62, hall()) + grp(96, 181, .6, boat());
-  s += grp(458, 271, .55, dock()) + grp(473, 321, .55, dock()) + grp(487, 297, .5, boat()) + grp(470, 304, .42, boat());
+  s += grp(458, 271, .55, dock()) + grp(473, 321, .55, dock()) + grp(516, 271, .5, boat()) + grp(533, 259, .42, boat());
   s += grp(124, 372, .6, campus()) + grp(...MAP.toronto.at, 1, toronto()) + `<path class="l" d="M404 662v-11"/>`;
   s += '<g class="map-tier2">' + top2 + '</g>';
   FINDS.filter(f => f.n).forEach(f => s += marker(f.mark[0], f.mark[1], f.n, f.id));
@@ -1746,7 +1746,7 @@ function jormungandr() {
 }
 
 function mapLabelRows() {
-  const rows = []; STOPS.forEach(st => { const L = st.label; rows.push({ kind: 'name', unit: LABELS.name.unit, text: L.t, x: L.x, y: L.y + LABELS.nameDY, anchor: L.a, name: true, ls: L.tracking }); rows.push({ kind: 'sub', unit: LABELS.sub.unit, text: L.sub, x: L.x + (st.id === 'hmc1' ? LABELS.hmcSubDX : st.id === 'hmc2' ? LABELS.hmcAgainSubDX : 0), y: L.y + LABELS.subOffset + LABELS.subDY, anchor: L.a, stopSub: true, ls: st.id === 'hmc2' ? LABELS.hmcAgainTracking : 0 }); });
+  const rows = []; STOPS.forEach(st => { const L = st.label; rows.push({ kind: 'name', unit: LABELS.name.unit, text: L.t, x: L.x, y: L.y + LABELS.nameDY, anchor: L.a, name: true, ls: L.tracking }); rows.push({ kind: 'sub', unit: LABELS.sub.unit, text: L.sub, x: L.x + (st.id === 'hmc1' ? LABELS.hmcSubDX : st.id === 'hmc2' ? LABELS.hmcAgainSubDX : 0), y: L.y + LABELS.subOffset + LABELS.subDY + (st.id === 'hmc1' ? LABELS.hmcSubDY : 0), anchor: L.a, stopSub: true, ls: st.id === 'hmc2' ? LABELS.hmcAgainTracking : 0 }); });
   rows.push({ kind: 'x', unit: LABELS.x.unit, text: COPY.xLabel, lines: COPY.xLabel.split(LABELS.xBreak).map((s,i)=>i ? LABELS.xBreak.trimStart()+s : s), x: MAP.x[0] + LABELS.xAt[0], y: MAP.x[1] + LABELS.xAt[1] + LABELS.nameDY, anchor: 'start', name: true, red: true }, { kind: 'sub', unit: LABELS.sub.unit, text: COPY.xSub, x: MAP.x[0] + LABELS.xSubAt[0], y: MAP.x[1] + LABELS.xSubAt[1] + LABELS.xSubDY, anchor: 'start', stopSub: true }); return rows;
 }
 
@@ -1766,28 +1766,28 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const smooth = (a, b, v) => { const t = clamp01((v - a) / (b - a)); return t * t * (3 - 2 * t); };
 const easeIO = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-// One reversible score for all rush surfaces. Seconds only set the throb envelopes.
+// One reversible score for all rush surfaces. Everything that moves or grows (the gathering stars, the spikes) follows one
+// continuous pull that speeds up until the draw-in; the four heartbeat throbs only swell and relax the light (the glow's
+// radius and alpha, the veil's hole), so nothing lurches in steps. Seconds only set the throb envelopes.
 function novaBuild(rushT, phone = VIEW.phone) {
-  const B = NOVA.build, t = clamp01(rushT), k = Math.sqrt(clamp01(t / B.kindle)), d = smooth(B.draw, B.hold, t);
-  const beat = at => B.throbs.map(centre => {
-    const step = smooth(centre - B.rise / STEPS.pace.rush, centre, at);
-    return { step, pulse: step * (1 - smooth(centre, centre + B.fall / STEPS.pace.rush, at)) };
-  });
-  const beats = beat(Math.min(t, B.draw)), steps = beats.reduce((sum, b) => sum + b.step, 0);
-  const swell = beats.reduce((sum, b, i) => sum + b.pulse * B.swell[i], 0), pulse = beats.reduce((sum, b, i) => sum + b.pulse * B.throbAlpha[i], 0);
-  const glow = (t > 0 ? lerp(B.kindleGlow, B.glow[0], k) : 0) * (1 + swell), len = 1 + B.spikeStep * steps + B.spikeKick * beats.reduce((sum,b) => sum + b.pulse, 0);
-  const heat = (t > 0 ? lerp(B.kindleHeat, B.heat[0], k) : 0) + (B.heat[1] - B.heat[0]) * steps / B.throbs.length;
+  const B = NOVA.build, t = clamp01(rushT), u = clamp01(t / B.kindle), k = 1 - (1 - u) * (1 - u), d = smooth(B.draw, B.hold, t);
+  const pulses = B.throbs.map(centre => smooth(centre - B.rise / STEPS.pace.rush, centre, t) * (1 - smooth(centre, centre + B.fall / STEPS.pace.rush, t)));
+  const swell = pulses.reduce((sum, p, i) => sum + p * B.swell[i], 0), pulse = pulses.reduce((sum, p, i) => sum + p * B.throbAlpha[i], 0);
+  // The pull is not clamped at the draw, so its speed carries into the draw-in; the light stops growing at full.
+  const pull = (t / B.draw) ** B.pull, lit = Math.min(1, pull);
+  const glow = (t > 0 ? lerp(B.kindleGlow, B.glow[0], k) : 0) * (1 + swell), len = 1 + B.spikeGrow * pull;
+  const heat = (t > 0 ? lerp(B.kindleHeat, B.heat[0], k) : 0) + (B.heat[1] - B.heat[0]) * lit;
   // Seeded continuous noise: never integrates dt, and ends before the held breath.
   const noise = axis => { const v = t * STEPS.pace.rush * B.jitterHz, i = Math.floor(v), hash = n => { let h = Math.imul(n + NOVA.seed + axis * 101, 1597334677); h ^= h >>> 16; return (h >>> 0) / 4294967295 * 2 - 1; }; return lerp(hash(i), hash(i+1), smooth(0,1,v-i)); };
   const tremble = t > B.draw && t < B.hold ? lerp(...B.jitter, d) * smooth(B.draw, B.draw + .02, t) * (1 - smooth(B.hold - .02, B.hold, t)) : 0;
   const jitter = [noise(0), noise(1)], jitterLength = Math.max(1, Math.hypot(...jitter));
   return { len: d === 1 ? B.compressed : lerp(len, B.compressed, d), thin: lerp(1, B.thickness, d), heat: lerp(heat, B.heat[2], d),
-    glow: lerp(glow, B.glow[1], d), glowAlpha: lerp((t > 0 ? lerp(B.kindleAlpha, B.glowAlpha[0], k) : 0) + (B.glowAlpha[1] - B.glowAlpha[0]) * steps / 4 + pulse, B.glowAlpha[2], d),
-    core: lerp(B.core[0] * k + (B.core[1] - B.core[0]) * steps / 4, B.core[2], d), coreAlpha: lerp(heat, 1, d),
-    veil: (phone ? B.veilPhone : B.veil) * (0.2 * k + 0.6 * steps / 4 + 0.2 * d),
-    hole: lerp(...B.hole, 0.2 * k + 0.6 * steps / 4 + 0.2 * d) * (1 + B.holeBreath * swell * (1 - d)),
+    glow: lerp(glow, B.glow[1], d), glowAlpha: lerp((t > 0 ? lerp(B.kindleAlpha, B.glowAlpha[0], k) : 0) + (B.glowAlpha[1] - B.glowAlpha[0]) * lit + pulse, B.glowAlpha[2], d),
+    core: lerp(B.core[0] * k + (B.core[1] - B.core[0]) * lit, B.core[2], d), coreAlpha: lerp(heat, 1, d),
+    veil: (phone ? B.veilPhone : B.veil) * (0.2 * k + 0.6 * lit + 0.2 * d),
+    hole: lerp(...B.hole, 0.2 * k + 0.6 * lit + 0.2 * d) * (1 + B.holeBreath * swell * (1 - d)),
     push: (phone ? B.pushPhone : B.push) * smooth(0, B.draw, t), jitter: tremble ? jitter.map(v => v * tremble / jitterLength) : [0, 0],
-    gather: lerp(B.gatherKindle * k + (B.gatherDrift - B.gatherKindle) * Math.min(t, B.draw) / B.draw + B.gatherStep * steps, 1 + B.gatherStagger, d) };
+    gather: lerp(B.gatherTop * pull, 1 + B.gatherStagger, d) };
 }
 
 const novaBuildGather = (rushT, order = 0) => {
