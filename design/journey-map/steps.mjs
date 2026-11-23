@@ -1,6 +1,6 @@
-// The single progress owner: button/key Steps, with scroll only for the reduced-motion page.
+// The single progress owner: top/map scroll, then button/key Steps.
 import { STEPS, COPY, STOPS, DEPTH, NOVA, FIND_PLAY, EXPLORE, WORLD, PHONE_LAYOUT } from './data.mjs';
-import { VIEW, TOTAL_P, tripState, easeIO, lerp } from './trip.mjs';
+import { VIEW, TOTAL_P, tripState, easeIO, lerp, glideMove } from './trip.mjs';
 import { BEATS, paceMove, paceAt, paceP } from './pace.mjs';
 import { arrowSvg } from './cards.mjs';
 import { exploreActive, exploreBusy, exploreStart, exploreEnd, exploreReset, exploreDepart } from './explore.mjs';
@@ -9,8 +9,10 @@ const SC = {
   mode: 'steps', P: 0, rm: false, move: null, cut: null, lastTs: null, fill: 0, focus: null,
   root: null, go: null, cover: null, say: null, review: null, joinedTop: null,
   restoreP: null, announced: null, shown: false, ready: false, endShown: false,
+  scrollLive: true, scroll: null, touch: null, pointerOwned: false, swallow: false,
 };
 const stepsEnd = BEATS[BEATS.length - 1].P;
+const stepsMap = BEATS[1].P;
 const stepsClamp = p => Math.max(0, Math.min(stepsEnd, Number.isFinite(p) ? p : 0));
 const stepsNextBeat = () => BEATS.find(b => b.P > SC.P + .5);
 const stepsBackBeat = () => BEATS.slice().reverse().find(b => b.P < SC.P - .5);
@@ -83,6 +85,7 @@ function stepsButtons() {
 function stepsArrive() {
   if (SC.rm) return;
   const beat = stepsRestBeat(), next = stepsNextBeat(), s = COPY.steps;
+  if (beat?.id === 'top') SC.scrollLive = true;
   SC.root.dataset.beat = beat ? beat.id : '';
   let label = s.dig;
   if (next) label = next.id === 'map' ? s.start : next.id === STOPS[0].id ? s.setOut : next.id === 'x' ? s.toX : next.id === 'end' ? s.dig : stepsFormat(s.next, { name: stepsName(next) });
@@ -102,8 +105,9 @@ function stepsPlay(target) {
   const p = stepsClamp(target);
   if (SC.move && Math.abs(SC.move.P1 - p) < 1e-6) {
     const left = SC.move.D - SC.move.elapsed;
-    SC.move = { ...paceMove(SC.P, p), D: Math.min(left, STEPS.hurry), elapsed: 0, hurry: true, baseFill: SC.fill };
-  } else SC.move = { ...paceMove(SC.P, p), elapsed: 0, baseFill: 0 };
+    const move = glideMove(SC.P, p) || paceMove(SC.P, p);
+    SC.move = { ...move, D: Math.min(left, STEPS.hurry), elapsed: 0, hurry: true, baseFill: SC.fill };
+  } else SC.move = { ...(glideMove(SC.P, p) || paceMove(SC.P, p)), elapsed: 0, baseFill: 0 };
   SC.root.dataset.beat = ''; stepsButtons();
 }
 function stepsJump(target, after) {
@@ -113,6 +117,8 @@ function stepsJump(target, after) {
 }
 function stepsNavigate(target, opts = {}) {
   if (SC.cut) return;
+  SC.scroll = null; SC.touch = null;
+  if (target > stepsMap || opts.start) SC.scrollLive = false;
   if (SC.rm) { window.scrollTo({ top: target * VIEW.unit, behavior: 'instant' }); stepsReadScroll(); return; }
   if (opts.instant) { if (target !== stepsEnd) exploreReset(); stepsCancel(); SC.P = stepsClamp(target); if (SC.restoreP !== null) SC.restoreP = SC.P; stepsArrive(); return; }
   const lo = Math.min(SC.P, target), hi = Math.max(SC.P, target);
@@ -122,11 +128,11 @@ function stepsNavigate(target, opts = {}) {
 function stepsGo(id, opts = {}) {
   if (SC.cut) return;
   const beat = BEATS.find(b => b.id === id); if (!beat) return;
-  stepsRelease(); stepsNavigate(beat.P, opts);
+  stepsRelease(); stepsNavigate(beat.P, { ...opts, start: id === 'map' });
 }
 function stepsNext() {
   if (SC.cut) return;
-  stepsRelease(); const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true });
+  stepsRelease(); const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true, start: true });
   stepsButtons();
 }
 function stepsBack() {
@@ -138,6 +144,7 @@ function stepsBack() {
 function stepsSet(P) {
   if (SC.cut) return;
   stepsRelease();
+  SC.scroll = null; SC.touch = null; if (P > stepsMap) SC.scrollLive = false;
   if (SC.rm) { window.scrollTo({ top: Math.max(0, Math.min(TOTAL_P, P)) * VIEW.unit, behavior: 'instant' }); stepsReadScroll(); return; }
   if (Math.abs(P - stepsEnd) > 1e-6) exploreReset();
   stepsCancel(); SC.P = stepsClamp(P); if (SC.restoreP !== null) SC.restoreP = SC.P; stepsArrive();
@@ -168,7 +175,8 @@ export function stepsFrame(ts) {
   if (move) {
     move.elapsed = Math.min(move.D, move.elapsed + dt);
     const q = move.D ? move.elapsed / move.D : 1;
-    SC.P = move.hurry ? paceP(move.T0 + (move.T1 - move.T0) * (1 - Math.pow(1 - q, 3))) : paceAt(move, move.elapsed);
+    const fraction = move.hurry ? 1 - Math.pow(1 - q, 3) : q;
+    SC.P = move.glide ? lerp(move.P0, move.P1, fraction) : move.hurry ? paceP(move.T0 + (move.T1 - move.T0) * fraction) : paceAt(move, move.elapsed);
     SC.fill = move.baseFill + (1 - move.baseFill) * q;
     if (q >= 1) { SC.P = move.P1; SC.move = null; stepsArrive(); }
   } else if (cut) {
@@ -179,6 +187,11 @@ export function stepsFrame(ts) {
     if (cut.placed && cut.elapsed >= STEPS.cut[0] + STEPS.cut[1]) {
       SC.cut = null; SC.cover.hidden = true; stepsArrive(); if (cut.after) cut.after();
     }
+  } else if (SC.scroll) {
+    const scroll = SC.scroll; scroll.idle += dt;
+    SC.P = lerp(SC.P, scroll.target, 1 - Math.exp(-dt / STEPS.scroll.ease));
+    if (Math.abs(SC.P - scroll.target) < 1e-5) SC.P = scroll.target;
+    if (!SC.touch && scroll.idle >= STEPS.scroll.settle) stepsScrollSettle(false);
   }
   stepsButtons(); return SC.P;
 }
@@ -190,6 +203,52 @@ function stepsBlockWheel(e) {
   if (target?.closest('.sheet.on')) { e.preventDefault(); return; }
   if (stepsCanScroll(target?.closest('.face'), direction)) return;
   e.preventDefault();
+  if (SC.scrollLive && !SC.cut && SC.P <= stepsMap) stepsScrollBy(e.deltaY * (e.deltaMode === 1 ? STEPS.scroll.line : e.deltaMode === 2 ? VIEW.h : 1));
+}
+function stepsScrollBy(pixels) {
+  if (!pixels) return;
+  const target = Math.max(0, Math.min(stepsMap, (SC.scroll?.target ?? SC.P) + pixels / VIEW.unit));
+  if (target === (SC.scroll?.target ?? SC.P)) return;
+  if (!SC.scroll) { stepsCancel(); SC.scroll = { origin: SC.P, target: SC.P, idle: 0, direction: 0 }; }
+  SC.scroll.target = target; SC.scroll.idle = 0; SC.scroll.direction = Math.sign(pixels); SC.announced = null;
+}
+function stepsScrollSettle(flick) {
+  const scroll = SC.scroll; if (!scroll) return;
+  const target = !flick && Math.abs(scroll.target - scroll.origin) < STEPS.scroll.threshold * stepsMap ? scroll.origin : scroll.direction > 0 ? stepsMap : 0;
+  SC.scroll = null;
+  if (Math.abs(target - SC.P) < 1e-6) { SC.P = target; stepsArrive(); } else stepsPlay(target);
+}
+const stepsTouchExcluded = target => target?.closest('.sheet.on, .face, .tl, input, textarea, select, [data-review]');
+function stepsTouchOwned(target) {
+  const hero = target?.closest('[data-hero]'); if (!hero) return false;
+  for (let el = target; el; el = el.parentElement) {
+    if (window.getComputedStyle?.(el).touchAction === 'none') return true;
+    if (el === hero) break;
+  }
+  return false;
+}
+function stepsTouchStart(e) {
+  SC.swallow = false;
+  if (SC.rm || exploreActive() || e.touches.length !== 1 || e.defaultPrevented || SC.pointerOwned || stepsTouchExcluded(stepsTarget(e)) || stepsTouchOwned(stepsTarget(e))) { SC.touch = null; return; }
+  const p = e.touches[0]; SC.touch = { x: p.clientX, y: p.clientY, last: p.clientY, samples: [[e.timeStamp, p.clientY]], dragged: false };
+}
+function stepsTouchMove(e) {
+  const touch = SC.touch; if (!touch) return;
+  if (e.defaultPrevented || e.touches.length !== 1) { SC.touch = null; return; }
+  const p = e.touches[0], dx = p.clientX - touch.x, dy = p.clientY - touch.y;
+  if (!touch.dragged && Math.abs(dy) <= STEPS.scroll.slop) return;
+  if (!touch.dragged && Math.abs(dx) >= Math.abs(dy)) { SC.touch = null; return; }
+  touch.dragged = true; e.preventDefault(); SC.swallow = true;
+  if (SC.scrollLive && !SC.cut && SC.P <= stepsMap) stepsScrollBy(touch.last - p.clientY);
+  touch.last = p.clientY; touch.samples.push([e.timeStamp, p.clientY]);
+  while (touch.samples.length > 2 && e.timeStamp - touch.samples[0][0] > STEPS.scroll.velocityWindow) touch.samples.shift();
+}
+function stepsTouchEnd(e) {
+  const touch = SC.touch; SC.touch = null; SC.pointerOwned = false;
+  if (!touch?.dragged || !SC.scroll) return;
+  const last = touch.samples.at(-1), first = touch.samples[0], elapsed = e.timeStamp - first[0];
+  const velocity = elapsed > 0 ? (first[1] - last[1]) / elapsed : 0;
+  if (e.type !== 'touchcancel' && Math.abs(velocity) > STEPS.scroll.flick) { SC.scroll.direction = Math.sign(velocity); stepsScrollSettle(true); }
 }
 function stepsKey(e) {
   if (SC.mode !== 'steps' || SC.rm || exploreActive() || e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -212,6 +271,7 @@ export function stepsBuild({ stage, rm, joinedTop }) {
   const params = new URLSearchParams(window.location.search); SC.mode = 'steps';
   const beat = BEATS.find(b => b.id === params.get('beat'));
   SC.P = beat ? beat.P : 0;
+  SC.scrollLive = SC.P <= stepsMap; SC.scroll = null; SC.touch = null;
   SC.restoreP = SC.P;
   const s = COPY.steps;
   SC.go = document.createElement('div'); SC.go.className = 'go'; SC.go.id = 'go'; SC.go.hidden = true; SC.go.setAttribute('role', 'group'); SC.go.setAttribute('aria-label', s.group);
@@ -233,4 +293,9 @@ export function stepsBuild({ stage, rm, joinedTop }) {
   stepsClasses(); stepsArrive();
   if (SC.mode === 'steps') window.scrollTo({ top: 0, behavior: 'instant' });
   window.addEventListener('wheel', stepsBlockWheel, { passive: false }); window.addEventListener('keydown', stepsKey);
+  window.addEventListener('pointerdown', e => { SC.swallow = false; if (e.pointerType === 'touch') SC.pointerOwned = e.defaultPrevented || stepsTouchOwned(stepsTarget(e)); });
+  window.addEventListener('touchstart', stepsTouchStart, { passive: true });
+  window.addEventListener('touchmove', stepsTouchMove, { passive: false });
+  window.addEventListener('touchend', stepsTouchEnd); window.addEventListener('touchcancel', stepsTouchEnd);
+  window.addEventListener('click', e => { if (SC.swallow && e.detail !== 0) { SC.swallow = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
 }

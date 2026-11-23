@@ -1,5 +1,5 @@
 // Node-only geometry checks. Importing depth.mjs must not need window or document.
-import { DEPTH, C, NOVA, FINDS, FIND_COPY, FIND_PLAY, EXPLORE } from '../data.mjs';
+import { DEPTH, C, NOVA, FINDS, FIND_COPY, FIND_PLAY, EXPLORE, CAMERA } from '../data.mjs';
 import { VIEW, SEQ, tripResize, tripState, tripFocus } from '../trip.mjs';
 import { depthFactor, depthVisibility, depthCloudPass, depthDeckAlpha, depthPoint, NOVA_LIVE, novaFlare, novaPress, novaPrune, novaShare, depthSeaFade } from '../depth.mjs';
 import { starsBuild, starsResize, starsJoin, starsTick, starsFrame, novaGatherPoint } from '../stars.mjs';
@@ -47,10 +47,10 @@ for (const [w, h, bar] of [[1440, 900, 120], [390, 844, 96]]) {
   console.log(`ok ${w}x${h}: all 6 leg midpoints have mist visibility >0.5; camera boundaries agree within 1e-6; longest leg rises; pointer leaves ground fixed`);
   VIEW.depth = 0;
   for (const seg of legs.filter(seg => seg.kind !== 'legX')) {
-    for (let P = Math.ceil(seg.a); P < seg.a + seg.len; P++) depthAssert(tripState(P).cam.s === VIEW.sT, `${w}: depth-off scale at P=${P}`);
-    depthAssert(tripState(seg.a).cam.s === VIEW.sT && tripState(seg.a + seg.len / 2).cam.s === VIEW.sT, `${w}: depth-off endpoint/midpoint`);
+    for (let P = Math.ceil(seg.a); P < seg.a + seg.len; P++) depthAssert(Math.abs(tripState(P).cam.s - VIEW.sT * CAMERA.holdZoom) < 1e-9, `${w}: depth-off scale at P=${P}`);
+    depthAssert(Math.abs(tripState(seg.a).cam.s - VIEW.sT * CAMERA.holdZoom) < 1e-9 && Math.abs(tripState(seg.a + seg.len / 2).cam.s - VIEW.sT * CAMERA.holdZoom) < 1e-9, `${w}: depth-off endpoint/midpoint`);
   }
-  console.log(`ok ${w}x${h}: depth off gives VIEW.sT on ordinary legs; C1 X fit has its own camera`);
+  console.log(`ok ${w}x${h}: D4 depth off keeps held scale continuously on ordinary glides; C1 X fit has its own camera`);
   VIEW.depth = 1;
   for (const P of [SEQ.find(s=>s.kind==='overview').a,SEQ.find(s=>s.kind==='hold').a+60]) {
     const base=tripState(P), chest=FIND_COPY.hoards[0], F=FIND_PLAY.focus, views=[...FINDS.flatMap(f=>f.view?[f.view,...(f.viewPhone?[f.viewPhone]:[])]:[]),[chest.x+F.chest[0],chest.y+F.chest[1],F.chest[2]],F.wide];

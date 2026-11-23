@@ -78,6 +78,7 @@ export const progressForDate = d => { for (const q of PIECES) { const lo = Math.
 // ---- view ----
 export const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1, depth: 1, footerY: null };
 export function tripResize(w, h, tlH) {
+  glideCache.clear();
   const m = w <= CAMERA.phoneMax ? 16 : 28;
   VIEW.w = w; VIEW.h = h; VIEW.phone = w <= CAMERA.phoneMax; VIEW.unit = h / 100;
   VIEW.footerY = null;
@@ -100,6 +101,67 @@ export function tripXCamera() {
   const fit = (floor - base.ay) / (CAMERA.frameBottom - base.cy); base.s = Math.max(VIEW.sT * CAMERA.xFloor, Math.min(base.s, fit)); return base;
 }
 
+// Each resting view owns one stretch of P. The clock is linear in this stretch;
+// its single cosine-ramped ease drives camera, trail progress and the reversible card score.
+const glideRests = [seqOf('overview').a + ACTS.overview / 2, ...STOPS.map((s, i) => progressForStop(i)), seqOf('rush').a];
+export const GLIDES = glideRests.slice(1).map((b, i) => ({ a: glideRests[i], b, i,
+  u0: i ? STOP_U[i - 1] : 0, u1: i < STOPS.length ? STOP_U[i] : X_U }));
+const glideDistances = GLIDES.map(g => g.i ? g.u1 - g.u0 : STEPS.glide.overviewDistance);
+export const glideSeconds = g => lerp(...STEPS.glide.seconds, ((glideDistances[g.i] - Math.min(...glideDistances)) / (Math.max(...glideDistances) - Math.min(...glideDistances))) ** STEPS.glide.distancePower);
+export const glideMove = (P0, P1) => {
+  const lo = Math.min(P0, P1), hi = Math.max(P0, P1);
+  const g = GLIDES.find(g => lo >= g.a - 1e-7 && hi <= g.b + 1e-7 && hi > lo);
+  return g ? { P0, P1, D: glideSeconds(g) * (hi - lo) / (g.b - g.a), glide: true } : null;
+};
+const glideCache = new Map();
+const glideView = (g, end) => g.i === 0 && !end ? camOverview() : g.i === STOPS.length && end ? tripXCamera() : camTrip(end ? g.u1 : g.u0, CAMERA.holdZoom);
+function glideRaw(g, q) {
+  const A = glideView(g, false), B = glideView(g, true), G = STEPS.glide;
+  let centre;
+  if (!g.i) centre = [lerp(A.cx, B.cx, q), lerp(A.cy, B.cy, q)];
+  else {
+    // A broad Bezier through trail samples removes the polyline's tiny corners.
+    const points = Array.from({ length: G.controls + 1 }, (_, i) => smoothCenter(lerp(g.u0, g.u1, i / G.controls)));
+    const start = points[0].slice(), end = points.at(-1).slice();
+    points.forEach((p, i) => p.forEach((v, k) => { p[k] += lerp([A.cx,A.cy][k] - start[k], [B.cx,B.cy][k] - end[k], i / G.controls); }));
+    for (let n = points.length - 1; n > 0; n--) for (let i = 0; i < n; i++) points[i] = points[i].map((v, k) => lerp(v, points[i + 1][k], q));
+    centre = points[0];
+  }
+  const depth = VIEW.depth && g.i ? Math.log(CAMERA.holdZoom / (1 - G.zoomOut)) * Math.min(1, (g.u1 - g.u0) * ACTS.legPerUnit / G.zoomLength) : 0;
+  return camFinal({ cx: centre[0], cy: centre[1], s: Math.exp(lerp(Math.log(A.s), Math.log(B.s), q) - depth * 4 * q * (1 - q)), ax: lerp(A.ax, B.ax, q), ay: lerp(A.ay, B.ay, q) });
+}
+function glidePath(g, distance) {
+  const key = [g.i, VIEW.w, VIEW.h, VIEW.s0, VIEW.depth].join('/');
+  let table = glideCache.get(key);
+  if (!table) {
+    // Integrate the largest instantaneous screen velocity at the five test points.
+    // Equal distance in this metric has no zoom/travel/zoom speed troughs.
+    const points = [[.5,.5],[.25,.25],[.75,.25],[.25,.75],[.75,.75]].map(p => [p[0] * VIEW.w, p[1] * VIEW.h]);
+    const N = STEPS.glide.samples; table = [0]; let before = glideRaw(g, 0);
+    for (let i = 1; i <= N; i++) {
+      const after = glideRaw(g, i / N), logScale = Math.log(after.s / before.s);
+      const length = Math.max(...points.map(p => Math.hypot(after.tx - before.tx + (p[0] - (before.tx + after.tx) / 2) * logScale, after.ty - before.ty + (p[1] - (before.ty + after.ty) / 2) * logScale)));
+      table.push(table.at(-1) + length); before = after;
+    }
+    glideCache.set(key, table);
+  }
+  const target = distance * table.at(-1); let lo = 0, hi = table.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (table[m] <= target) lo = m; else hi = m; }
+  return (lo + (target - table[lo]) / (table[hi] - table[lo] || 1)) / (table.length - 1);
+}
+function glideState(st, g) {
+  const t = clamp01((st.P - g.a) / (g.b - g.a)), r = STEPS.glide.ramp, width = 1 - 2 * r, swell = STEPS.glide.cruiseSwell, total = 1 - r + swell * width / 2;
+  const onset = x => (x - r / Math.PI * Math.sin(Math.PI * x / r)) / (2 * total), x = t - r;
+  const T = t < r ? onset(t) : t > 1 - r ? 1 - onset(1 - t) : (r / 2 + x + swell * (x / 2 - width / (4 * Math.PI) * Math.sin(2 * Math.PI * x / width))) / total;
+  const q = glidePath(g, T), seconds = glideSeconds(g);
+  st.glide = g.i; st.glideT = t; st.u = lerp(g.u0, g.u1, q);
+  st.cardK.fill(0);
+  if (g.i) st.cardK[g.i - 1] = 1 - smooth(0, STEPS.glide.fold, t * seconds);
+  if (g.i < STOPS.length) st.cardK[g.i] = smooth(seconds - Math.min(STEPS.glide.open, STEPS.glide.openWindow), seconds, t * seconds);
+  st.dim = lerp(1, CAMERA.holdDim, Math.max(...st.cardK));
+  return glideRaw(g, q);
+}
+
 // ---- state for a progress value ----
 export function tripState(P) {
   const st = { P, kind: 'hero', t: 0, i: -1, u: 0, zoom: 1, cardK: STOPS.map(() => 0), visited: STOPS.map((s, i) => P >= holdStart(i) + ACTS.hold * HOLD.visited), dim: 1,
@@ -118,7 +180,11 @@ export function tripState(P) {
   st.restT = seg.kind === 'rest' ? st.t : 0;
   st.legXT = seg.kind === 'legX' ? st.t : passed('legX') ? 1 : 0;
   let cam;
-  if (['hero', 'handoff', 'overview'].includes(seg.kind)) cam = camOverview();
+  const glide = GLIDES.find(g => P >= g.a && P < g.b);
+  if (glide) {
+    const camera = glideState(st, glide);
+    cam = { ...camera, cx: (camera.ax - camera.tx) / camera.s, cy: (camera.ay - camera.ty) / camera.s };
+  } else if (['hero', 'handoff', 'overview'].includes(seg.kind)) cam = camOverview();
   else if (seg.kind === 'pushIn') cam = camMix(camOverview(), camTrip(0, 1), easeIO(st.t));
   else if (seg.kind === 'hold') {
     st.u = STOP_U[seg.i];
@@ -143,7 +209,7 @@ export function tripState(P) {
     base.s *= 1 + push;
     cam = base;
   }
-  st.inTrip = st.pushT > 0;
+  st.inTrip = st.pushT > 0 || !!glide && P > glide.a;
   st.cam = camFinal(cam); st.tripS = st.cam.s;
   st.trav = st.handoffT < 1 ? null : pointAt(st.u);
   st.date = dateAt(P);

@@ -29,10 +29,10 @@ console.log('ok: C1 ring sea baseline; original fill/coast lengths and hashes un
 // D3 adds NOVA.build; the full data digest is re-recorded for that authorized table.
 assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 3076901412);
 console.log('ok: STARS/DEPTH preserved; NOVA.build data digest recorded');
-// D2 authorizes trip's label fades and measured phone footer anchor. Depth remains protected.
+// D4 authorizes the pure rest-to-rest glide in trip. Depth remains protected.
 // Line endings are evened out so the numbers are the same on Windows and in the cloud.
 const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.meta.url), 'utf8').replace(/\r\n/g, '\n'));
-assert.equal(sourceDigest('trip.mjs'), 3050818230, 'trip.mjs changed');
+assert.equal(sourceDigest('trip.mjs'), 16753574, 'trip.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 3982895838, 'depth.mjs changed');
 console.log('ok: C1 camera/labels/tripS and deck source digests recorded');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];

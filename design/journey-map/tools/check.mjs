@@ -57,7 +57,8 @@ ok(ACTS.hero === 100 && ACTS.handoff === 120 && ACTS.overview === 70 && ACTS.pus
 ok(Math.abs(SEQ.reduce((a, s) => a + s.len, 0) - TOTAL_P) < 1e-9 && SEQ.filter(s => s.kind === 'hold').length === 6, 'act sequence does not add up');
 
 const checkStepsNumbers = (v, path) => {
-  if (typeof v === 'number') ok(Number.isFinite(v) && v > 0, `${path}: must be finite and positive`);
+  if (path === 'STEPS.glide.ease') ok(v === 'cosine-ramp', 'D4 one configured glide ease');
+  else if (typeof v === 'number') ok(Number.isFinite(v) && v > 0, `${path}: must be finite and positive`);
   else if (v && typeof v === 'object') Object.entries(v).forEach(([k, x]) => checkStepsNumbers(x, `${path}.${k}`));
   else ok(false, `${path}: expected a number or a table of numbers`);
 };

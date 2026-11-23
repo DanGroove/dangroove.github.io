@@ -1,10 +1,12 @@
 // Node-only pace checks, including every neighbouring beat in both directions.
 import { BEATS, paceT, paceP, paceMove, paceAt } from '../pace.mjs';
 import { JOURNEY, stepsBuild, stepsFrame } from '../steps.mjs';
-import { tripResize, tripState, toScreen, SEQ } from '../trip.mjs';
+import { tripResize, tripState, toScreen, SEQ, glideMove, lerp } from '../trip.mjs';
 import { cardsBuild, cardsOverride, cardsClose, cardsList, cardsFrame } from '../cards.mjs';
 import { CARD_CLOSE, CAMERA, MAP, STEPS } from '../data.mjs';
 import { exploreBuild, exploreResize, exploreApply, exploreActive, exploreEnd } from '../explore.mjs';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 
 const stepAssert = (condition, message) => { if (!condition) throw new Error(message); };
 const stepEnd = BEATS[BEATS.length - 1].P;
@@ -18,20 +20,22 @@ stepAssert(Math.abs(paceP(paceT(stepEnd)) - stepEnd) < 1e-6, 'inverse failed at 
 console.log('ok: paceT strictly rises; paceP round trips every whole P and the rest boundary within 1e-6');
 console.log('move | forward seconds | back seconds');
 for (let i = 1; i < BEATS.length; i++) {
-  const a = BEATS[i - 1], b = BEATS[i], forward = paceMove(a.P, b.P), back = paceMove(b.P, a.P);
+  const a = BEATS[i - 1], b = BEATS[i], forward = glideMove(a.P,b.P) || paceMove(a.P, b.P), back = glideMove(b.P,a.P) || paceMove(b.P, a.P);
+  const at = (move,t) => move.glide ? lerp(move.P0,move.P1,Math.min(1,t/move.D)) : paceAt(move,t);
   for (const move of [forward, back]) {
-    stepAssert(paceAt(move, 0) === move.P0 && Math.abs(move.P0 - (move === forward ? a.P : b.P)) < 1e-6, 'move start');
-    stepAssert(paceAt(move, move.D) === move.P1 && Math.abs(move.P1 - (move === forward ? b.P : a.P)) < 1e-6, 'move end');
+    stepAssert(at(move, 0) === move.P0 && Math.abs(move.P0 - (move === forward ? a.P : b.P)) < 1e-6, 'move start');
+    stepAssert(at(move, move.D) === move.P1 && Math.abs(move.P1 - (move === forward ? b.P : a.P)) < 1e-6, 'move end');
     let prev = move.P0;
     for (let n = 1; n <= 1000; n++) {
-      const p = paceAt(move, move.D * n / 1000);
+      const p = at(move, move.D * n / 1000);
       stepAssert((p - prev) * Math.sign(move.P1 - move.P0) >= -1e-9, `move reversed: ${a.id}/${b.id}`); prev = p;
     }
   }
   stepAssert(forward.D >= 1.5 && forward.D <= (a.id === 'x' ? STEPS.pace.rush + STEPS.pace.blast + STEPS.pace.settle : 5) + 1e-9, `forward duration outside beat timing: ${a.id}/${b.id}`);
+  if(forward.glide)stepAssert(forward.D>=2.6&&forward.D<=4.4&&forward.D===back.D,'D4 glide durations must match both ways');
   console.log(`${a.id} -> ${b.id} | ${forward.D.toFixed(3)} | ${back.D.toFixed(3)}`);
 }
-console.log('ok: all 18 moves start/end correctly and never turn back; ordinary forward durations within 1.5-5 s; X-to-end uses the 3 s rush plus blast/settle');
+console.log('ok: all 18 moves start/end correctly and never turn back; D4 glides use equal 2.6-4.4 s durations both ways; X-to-end keeps the 3 s rush plus blast/settle');
 
 // Recording nodes exercise controls, not rendered pixels. Any geometry read here fails.
 class StepNode {
@@ -48,7 +52,7 @@ class StepNode {
   closest(s) { return s.split(',').some(c => this.matches(c.trim())) ? this : this.parentElement?.closest(s) || null; }
   contains(n) { return n === this || this.children.some(c => c.contains(n)); }
   addEventListener(t, f) { (this.listeners[t] ??= []).push(f); }
-  fire(t, props = {}) { const e = { target: this, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...props }; if (!this.blocked()) (this.listeners[t] || []).forEach(f => f(e)); return e; }
+  fire(t, props = {}) { const e = { type: t, target: this, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, stopImmediatePropagation() { this.stopped = true; }, ...props }; if (!this.blocked()) (this.listeners[t] || []).forEach(f => { if(!e.stopped)f(e); }); return e; }
   blocked() { for(let n=this;n;n=n.parentElement)if(n.inert)return true;return false; }
   focus(options) { if(this.blocked())return;document.activeElement = this; this.focusOptions = options; }
   getBoundingClientRect() { throw new Error('unexpected layout read'); }
@@ -57,13 +61,55 @@ const stepWindow = new StepNode(), stepStage = new StepNode(), stepRoot = new St
 globalThis.window = Object.assign(stepWindow, { location: { search: '?mode=scroll' }, scrollY: 0, scrollTo() {}, dispatchEvent() {} });
 globalThis.document = { documentElement: stepRoot, body: stepBody, activeElement: null, createElement: tag => new StepNode(tag), getElementById: id => stepStage.children.find(n => n.id === id) };
 globalThis.history = { scrollRestoration: 'auto' };
-tripResize(1440, 900, 120); stepsBuild({ stage: stepStage, rm: false, resize() {}, joinedTop: () => false });
+let stepJoined = false;
+tripResize(1440, 900, 120); stepsBuild({ stage: stepStage, rm: false, resize() {}, joinedTop: () => stepJoined });
 exploreBuild({ stage: stepStage, world: new StepNode(), journey: JOURNEY, rm: false }); exploreResize();
 stepAssert(JOURNEY.mode === 'steps' && JOURNEY.setMode === undefined, 'removed Scroll mode remains callable or address selects it');
 stepAssert(stepBody.children[0].querySelectorAll('button').length === 1 && stepBody.children[0].querySelector('[data-depth]'), 'review must have only Depth');
-stepAssert(!stepWindow.listeners.touchstart && !stepWindow.listeners.touchmove && !stepWindow.listeners.touchend, 'swipe listeners remain');
 const empty = new StepNode(); let stepClock = 0;
-for (const beat of BEATS) {
+const tick = ms => { for(let remaining=ms;remaining>0;){const dt=Math.min(16,remaining);stepClock+=dt;stepsFrame(stepClock);remaining-=dt;} };
+const finish = () => { for(let n=0;JOURNEY.moving&&n<600;n++)tick(16);stepAssert(!JOURNEY.moving,'move did not finish'); };
+const wheel = dy => stepWindow.fire('wheel',{target:empty,deltaY:dy,deltaMode:0});
+const mapP = BEATS[1].P, unit = 9;
+// Run the joined page's actual leave function against its recording hero API.
+const joinSource=readFileSync(new URL('../join.mjs',import.meta.url),'utf8');
+stepAssert(/button\.addEventListener\('click', \(\) => JOURNEY\.next\(\)\)/.test(joinSource),'joined Start must use the locking next action');
+let lift=0;const joinNodes=()=>({classList:{toggle(){}},style:{}}),JN={api:{setAway(){},setLeave(px){lift=px;}},hero:joinNodes(),svg:joinNodes(),ov:joinNodes(),hit:joinNodes()};
+const joinPlace=runInNewContext(joinSource.slice(joinSource.indexOf('function place('),joinSource.indexOf('const setOp'))+'\nplace',{JN,LEAVE_END:100,stepsProgress:()=>JOURNEY.P,JOURNEY,unit:()=>unit,window:{dispatchEvent(){}},Event});
+for(const joined of [false,true]) {
+  stepJoined=joined;JOURNEY.set(0);tick(16);
+  wheel(mapP*.1*unit);tick(120);const first=JOURNEY.P;
+  stepAssert(first>0&&first<mapP*.1,'wheel must ease continuously toward target');
+  stepAssert(Math.abs(first/(mapP*.1)-(1-Math.exp(-1)))<.001,'120 ms time constant');
+  stepAssert(tripState(first).heroT===first/100,'title/hero leave follows P');
+  if(joined){joinPlace();stepAssert(Math.abs(lift-first*unit)<1e-6,'real joined leave must follow P');}
+  wheel(-mapP*.05*unit);tick(120);stepAssert(JOURNEY.P<first,'wheel up must reverse continuously');
+  JOURNEY.set(0);wheel(mapP*.1*unit);tick(401);stepAssert(JOURNEY.moving,'small scroll must settle at step pace');finish();stepAssert(JOURNEY.P===0,'10 percent must return to top');
+  wheel(mapP*.3*unit);tick(401);finish();stepAssert(JOURNEY.P===mapP,'30 percent must finish at map');
+  wheel(200);tick(700);stepAssert(JOURNEY.P===mapP&&!JOURNEY.moving,'wheel down at map must do nothing');
+  wheel(-mapP*.3*unit);tick(401);finish();stepAssert(JOURNEY.P===0,'scroll from map must return to top');
+  wheel(-200);tick(700);stepAssert(JOURNEY.P===0,'wheel up at top must do nothing');
+  // Start button/API and Set out both disable scroll immediately, including during travel.
+  for(const start of ['top','map']){
+    JOURNEY.set(0);if(start==='map'){wheel(mapP*.3*unit);tick(401);finish();}
+    JOURNEY.next();tick(100);const moving=JOURNEY.P;wheel(300);tick(0);stepAssert(JOURNEY.P===moving,'wheel changed P after Start/Set out');finish();
+    for(const beat of BEATS.slice(1)){JOURNEY.set(beat.P);wheel(-100);tick(500);stepAssert(JOURNEY.P===beat.P&&!JOURNEY.moving,'locked wheel moved '+beat.id);}
+    JOURNEY.go('top');finish();wheel(100);tick(120);stepAssert(JOURNEY.P>0,'Back to top must restore scroll');
+  }
+  JOURNEY.set(0);JOURNEY.next();finish();JOURNEY.back();finish();wheel(100);tick(120);stepAssert(JOURNEY.P>0,'Back steps to top must restore scroll');
+  const touch=(type,y,time,props={})=>stepWindow.fire(type,{target:empty,timeStamp:time,touches:type==='touchend'?[]:[{clientX:100,clientY:y}],...props});
+  // Fast short swipe bypasses the 12-percent return; slow one returns after 400 ms.
+  JOURNEY.set(0);touch('touchstart',300,0);touch('touchmove',240,40);tick(40);touch('touchend',240,60);finish();stepAssert(JOURNEY.P===mapP,'fast swipe must finish in its direction');
+  JOURNEY.set(0);touch('touchstart',300,0);touch('touchmove',240,400);tick(400);touch('touchend',240,410);tick(401);finish();stepAssert(JOURNEY.P===0,'slow small swipe must settle back');
+  // Respect default-prevented touch/pointer starts and hero-owned touch-action.
+  const hero=new StepNode();hero.setAttribute('data-hero','');const drag=new StepNode();hero.appendChild(drag);stepWindow.getComputedStyle=el=>({touchAction:el===drag?'none':'auto'});
+  for(const props of [{defaultPrevented:true},{target:drag}]){JOURNEY.set(0);touch('touchstart',300,0,props);touch('touchmove',100,40);touch('touchend',100,50);tick(1000);stepAssert(JOURNEY.P===0,'owned hero touch was stolen');}
+  stepWindow.fire('pointerdown',{target:empty,pointerType:'touch',defaultPrevented:true});touch('touchstart',300,0);touch('touchmove',100,40);touch('touchend',100,50);tick(1000);stepAssert(JOURNEY.P===0,'prevented pointer start was stolen');
+  JOURNEY.next();finish();const locked=JOURNEY.P;touch('touchstart',300,0);const swipe=touch('touchmove',100,40);touch('touchend',100,50);tick(600);stepAssert(swipe.defaultPrevented&&JOURNEY.P===locked,'locked swipe moved journey');
+  JOURNEY.set(0);touch('touchstart',300,0);touch('touchend',300,50);stepAssert(!stepWindow.fire('click',{detail:1}).defaultPrevented,'tap on a button/link must survive');
+  console.log('ok: D4 '+(joined?'joined hero':'map title')+' top/map wheel and touch, 120 ms easing, 10/30 percent settle, clamps, Start/Set out lock, Back reset, flicks, owned drags and taps');
+}
+for (const beat of BEATS.slice(1)) {
   JOURNEY.set(beat.P); stepsFrame(stepClock += 50);
   for (let i = 0; i < 12; i++) stepWindow.fire('wheel', { target: empty, deltaY: i % 2 ? -120 : 120 });
   stepAssert(JOURNEY.P === beat.P && !JOURNEY.moving, 'wheel moved journey');
@@ -76,7 +122,7 @@ const endP = JOURNEY.P; exploreApply(tripState(endP), 1.6); JOURNEY.back(); step
 exploreApply(tripState(endP), .9); JOURNEY.back(); stepAssert(JOURNEY.moving, 'second Back did not leave end');
 JOURNEY.set(BEATS[1].P); stepWindow.fire('keydown', { target: empty, key: 'ArrowRight' });
 stepAssert(JOURNEY.moving, 'key did not start a move'); const keyStart = JOURNEY.P; stepsFrame(stepClock += 50); stepAssert(JOURNEY.P > keyStart, 'key move did not progress');
-console.log('ok: address cannot select Scroll; review only Depth; no swipe listeners; wheel never steps any beat; only end CTA explores; two Back presses return then step; keyboard still advances');
+console.log('ok: address cannot select Scroll; review only Depth; locked wheel never steps; only end CTA explores; two Back presses return then step; keyboard still advances');
 
 const cardContainer = new StepNode(); let navigations = 0; cardsBuild(cardContainer, () => navigations++);
 stepAssert(cardContainer.querySelectorAll('.c-close').length === 6, 'every motion card needs X');
@@ -107,4 +153,7 @@ for(const [w,h,tl] of [[1440,900,120],[390,844,96]]){
 const rush=SEQ.find(s=>s.kind==='rush'),rest=SEQ.find(s=>s.kind==='rest');JOURNEY.set(rush.a);stepsFrame(stepClock+=50);stepAssert(!go.hidden,'X beat needs its Dig control');go.querySelector('.go-next').focus();JOURNEY.next();stepAssert(go.hidden,'rush start must hide stepper');
 for(let P=rush.a+.001;P<rest.a;P+=1){JOURNEY.set(P);stepsFrame(stepClock+=50);stepAssert(go.hidden,'stepper shown during rush/blast/settle');}
 JOURNEY.set(rest.a);stepsFrame(stepClock+=50);stepAssert(!go.hidden,'settle end must return stepper');stepAssert(document.activeElement===go.querySelector('.go-next'),'stepper main focus must return');
+const beforeRmTouch=stepWindow.listeners.touchstart.length;tripResize(1440,900,120);stepsBuild({stage:stepStage,rm:true,joinedTop:()=>stepJoined});
+window.scrollY=900;stepsFrame(stepClock+=50);stepAssert(JOURNEY.mode==='scroll'&&JOURNEY.P===100,'reduced motion must read native scroll');
+stepAssert(!wheel(100).defaultPrevented&&stepWindow.listeners.touchstart.length===beforeRmTouch,'reduced motion must leave native input alone');
 console.log('ok: X frame/phone box clear controls; rush through settle hides stepper and restores main focus');
