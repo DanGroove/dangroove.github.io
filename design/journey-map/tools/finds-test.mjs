@@ -203,11 +203,11 @@ key('tafl'); assert.deepEqual(window.__jm.finds.state('tafl').game.board, keptBo
 const cursor = window.__jm.finds.state('tafl').cursor; testSheet.querySelectorAll('.tf-cell')[cursor].dispatchEvent(new TestEvent('keydown', { key: 'ArrowLeft' })); assert.equal(window.__jm.finds.state('tafl').cursor, cursor - 1);
 testSheet.querySelector('.tf-new').dispatchEvent(new TestEvent('click')); await tick(0.4); assert.equal(window.__jm.finds.state('tafl').game.moves, 0);
 FD.list.tafl.game.moves = FIND_PLAY.tafl.rules.limit - 1; cellClick(17); cellClick(16); await tick(0.4); assert.equal(window.__jm.finds.state('tafl').game.winner, 'draw'); assert.equal(testSheet.querySelector('.tf-slot').hidden, false); closeSheet();
-const T = FIND_PLAY.tafl; assert.equal(T.cell * T.rules.size, T.board); assert.equal(T.width - 2 * (T.pad + T.border), T.board); assert.equal(taflPanelHeight(), 574); assert.ok(taflPanelHeight() + FIND_PLAY.kit.sheet.edge * 2 <= 664); assert.ok(T.width + FIND_PLAY.kit.sheet.edge * 2 <= 390);
-console.log('ok: same board/pieces lift, slide, reply, persist, restart and end; keyboard cursor and end slot; 312x574 sheet fits 390x664 with separate 324/54/34/70/36 px rows');
+const T = FIND_PLAY.tafl; assert.equal(T.cell * T.rules.size, T.board); assert.equal(T.width - 2 * (T.pad + T.border), T.board); assert.equal(taflPanelHeight(), 589); assert.ok(taflPanelHeight() + FIND_PLAY.kit.sheet.edge * 2 <= 664); assert.ok(T.width + FIND_PLAY.kit.sheet.edge * 2 <= 390);
+console.log('ok: same board/pieces lift, slide, reply, persist, restart and end; keyboard cursor and end slot; 312x589 sheet fits 390x664 with separate 324/54/49/70/36 px rows');
 // Regression: a captured king shares the defenders' tray, including their occupied slots.
 key('tafl');
-const captureBoard = FD.list.tafl; captureBoard.pieces.forEach(p => p.sq = p.start); captureBoard.pieces[0].sq = 1; captureBoard.pieces[1].sq = -1; captureBoard.pieces[5].sq = 16;
+const captureBoard = FD.list.tafl; captureBoard.pieces.forEach(p => p.sq = p.start); captureBoard.pieces[0].sq = 9; captureBoard.pieces[1].sq = -1; captureBoard.pieces[5].sq = 2; captureBoard.pieces[7].sq = 16; // the king on c2 with attackers on c1, d2 and c3: b4-b2 shuts the fourth side
 const priorDefender = captureBoard.pieces[1]; priorDefender.point = priorDefender.to = [T.trayInset, -T.tray / 2, T.capturedScale]; priorDefender.from = priorDefender.to.slice();
 captureBoard.game = { ...captureBoard.game, board: Array(49).fill(null), turn: 'attackers', winner: null, moves: 10 }; captureBoard.pieces.filter(p => p.sq >= 0).forEach(p => captureBoard.game.board[p.sq] = p.kind);
 captureBoard.busy = false; captureBoard.stage = 'reply'; captureBoard.replyAt = FD.now; await tick(1.2);

@@ -22,16 +22,22 @@ function legal(state) {
 let s = setup({ 24: 'k', 15: 'd', 17: 'a', 18: 'd', 3: 'a' });
 assert.deepEqual(taflPlay(s, 15, 16).taken, [17]); assert.equal(s.board[17], 'a');
 assert.equal(taflPlay(setup({ 7: 'k', 3: 'a' }), 7, 0).winner, 'king');
-assert.equal(taflPlay(setup({ 15: 'a', 17: 'k', 18: 'a' }, 'attackers'), 15, 16).winner, 'attackers');
+// The king is taken only when shut in on all four sides (rules.kingSides is 4): two attackers are not enough, four are,
+// three and the empty centre are, and on the edge he cannot be taken (rules.kingEdge is false).
+assert.equal(R.kingSides, 4); assert.equal(R.kingEdge, false);
+assert.equal(taflPlay(setup({ 7: 'a', 9: 'k', 10: 'a' }, 'attackers'), 7, 8).winner, null);
+assert.equal(taflPlay(setup({ 9: 'k', 2: 'a', 16: 'a', 10: 'a', 7: 'a' }, 'attackers'), 7, 8).winner, 'attackers');
+assert.equal(taflPlay(setup({ 17: 'k', 10: 'a', 18: 'a', 15: 'a' }, 'attackers'), 15, 16).winner, 'attackers');
+assert.equal(taflPlay(setup({ 2: 'k', 1: 'a', 3: 'a', 23: 'a', 40: 'd' }, 'attackers'), 23, 9).winner, null);
 assert.deepEqual(taflPlay(setup({ 15: 'd', 17: 'a', 23: 'a', 24: 'k', 3: 'a' }), 15, 16).taken, []);
 // A defender may pass through the empty throne, but may not stop there.
 assert.ok(taflMoves(setup({ 23: 'd', 1: 'k', 3: 'a' }), 23).includes(25));
 assert.ok(!taflMoves(setup({ 23: 'd', 1: 'k', 3: 'a' }), 23).includes(24));
 assert.deepEqual(taflPlay(setup({ 24: 'k', 23: 'd', 17: 'a', 10: 'd', 3: 'a' }), 23, 16).taken, []);
 console.log('ok: clear rook moves, restricted squares, exact capture, king capture/escape and moving between enemies');
-// The king on b1 threatens a1 and g1. c3-c1 takes it against the a1 corner.
-s = setup({ 1: 'k', 16: 'a', 45: 'a', 24: 'd' }, 'attackers');
-assert.ok(taflMoves({ ...s, turn: 'king' }, 1).includes(0));
+// The king on c7 has one open way to a corner, a7 by b7. b6-b7 shuts it.
+s = setup({ 44: 'k', 46: 'a', 36: 'a', 24: 'd' }, 'attackers');
+assert.ok(taflMoves({ ...s, turn: 'king' }, 44).includes(42));
 const stopped = taflReply(s, random);
 assert.ok(stopped.winner === 'attackers' || !taflMoves(stopped, stopped.board.indexOf('k')).some(k => R.corners.includes(k)), 'reply must stop a stoppable immediate escape');
 assert.ok(legal(s).some(([a, b]) => a === stopped.last.from && b === stopped.last.to));

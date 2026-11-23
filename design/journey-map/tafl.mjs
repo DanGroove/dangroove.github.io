@@ -21,8 +21,12 @@ function taflReach(board, from) {
 function taflCaptures(board, from, to) {
   const R = FIND_PLAY.tafl.rules, side = taflSide(board[from]), taken = [];
   const at = square => square === from ? null : square === to ? board[from] : board[square];
+  // With rules.kingSides at 4 the king is taken only when shut in on every side: by attackers, a corner, the empty centre,
+  // and the board's edge if rules.kingEdge says so. At 2 he is taken like any other piece.
+  const wall = square => square === -1 ? R.kingEdge : at(square) === 'a' || R.corners.includes(square) || square === R.centre && !at(square);
   for (const [dx, dy] of taflDirections) {
     const enemy = taflNeighbour(to, dx, dy); if (enemy === -1 || !at(enemy) || taflSide(at(enemy)) === side) continue;
+    if (at(enemy) === 'k' && R.kingSides === 4) { if (taflDirections.every(([ex, ey]) => wall(taflNeighbour(enemy, ex, ey)))) taken.push(enemy); continue; }
     const beyond = taflNeighbour(enemy, dx, dy); if (beyond === -1) continue;
     if (taflSide(at(beyond)) === side || R.corners.includes(beyond) || beyond === R.centre && !at(beyond)) taken.push(enemy);
   }

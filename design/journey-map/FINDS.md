@@ -344,7 +344,7 @@ The seven by seven game, brandubh, with the rules kept short.
 - Start: the king on 24; four defenders on 17, 23, 25, 31; eight attackers on 3, 10, 21, 22, 26, 27, 38, 45.
 - The visitor plays the king's side and moves first. The page plays the attackers.
 - A piece moves any number of empty squares along its row or column, and never jumps. Only the king may stop on the centre or a corner. Any piece may pass over the empty centre.
-- Taking: when a piece lands, look at each of its four neighbours that holds an enemy. If the square straight beyond that enemy holds one of the mover's own pieces, or is a corner, or is the empty centre, the enemy is taken. The king takes and is taken like any other piece. A piece that moves between two enemies is safe.
+- Taking: when a piece lands, look at each of its four neighbours that holds an enemy. If the square straight beyond that enemy holds one of the mover's own pieces, or is a corner, or is the empty centre, the enemy is taken. The king takes like any other piece, but he is taken only when he is shut in on all four sides, each by an attacker, a corner or the empty centre (`rules.kingSides: 4`); against the edge he cannot be taken (`rules.kingEdge: false`). A piece that moves between two enemies is safe. (Changed in the review. With the king taken like any other piece, a casual player lost nearly every game within five moves.)
 - The king's side wins when the king stands on a corner. The attackers win when the king is taken. A side with no move loses. After 80 moves with no winner it is a draw.
 
 Exports: `taflStart()`, `taflMoves(state, from)`, `taflPlay(state, from, to)` (returns the new state, with the squares taken and the winner if there is one) and `taflReply(state, random)`.
@@ -372,7 +372,7 @@ A press lifts the board into a sheet in the middle of the view (grown from the b
 - the board, 280 px, cells of 40: a Paper outline, grid lines at 0.28, a Paper cross on each corner (two strokes of 18 px), a diamond outline on the centre;
 - pieces: attackers are Ink discs with a 1.6 px Paper line, radius 13; defenders are Paper discs, radius 13; the king is a Paper disc, radius 15.5, with an Ink four-point star (`starPath`, size 9);
 - a status line (`role="status"`): `taflYou` on the visitor's turn, `taflThem` while the page replies, then `taflWin`, `taflLose` or `taflDraw`;
-- one line of rules, `taflRule`, small and Dim;
+- the rules, `taflRule`, small and Dim, in a row of its own (three lines at this width, `ruleH: 49`);
 - when a game ends, the slot `FIND_COPY.tafl`;
 - two buttons: `taflNew` and `COPY.close`.
 
