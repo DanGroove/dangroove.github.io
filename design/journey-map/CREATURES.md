@@ -23,7 +23,7 @@ What the critics found, so you know what not to rebuild:
 The sandbox on this machine is off, so these matter.
 
 - Change files only inside `design/journey-map/`, and only these:
-  - `findcreatures.mjs` (only `findRavens` and what it alone uses), `findhoards.mjs`, `findkit.mjs`, `finds.mjs`, `data.mjs`, `art.mjs`, `map.css`, `steps.mjs` (only so `stepsFocusNow()` also reports whether its swap has finished), `timeline.mjs` (section 6 only), `join.mjs` and `main.mjs` (section 6 only), `footname.mjs` (only if section 6's check finds a read in the frame)
+  - `findcreatures.mjs` (only `findRavens` and what it alone uses), `findhoards.mjs`, `findkit.mjs`, `finds.mjs`, `data.mjs`, `art.mjs`, `map.css`, `findhammer.mjs` (section 6's plural only), `steps.mjs` (only so `stepsFocusNow()` also reports whether its swap has finished), `timeline.mjs` (section 6 only), `join.mjs` and `main.mjs` (section 6 only), `footname.mjs` (only if section 6's check finds a read in the frame)
   - `tools/check.mjs`, `tools/finds-test.mjs`
   - new: `CREATURES-BUILD.md`
   - written by the pack tools: `joined.html`, `dist/journey-map.html`, `dist/journey-joined.html`
@@ -134,6 +134,8 @@ Each bird flies one loop of radius 24 find units on its own side and lands back 
 - **Timeline keys:** Home goes to the first stop and End to the last, on the slider, like its arrows.
 - **The hero's leave first in the frame:** `join.mjs` gives `main.mjs` a hook that sets the hero's leave (`api.setLeave`, and `setAway` as now) and `main.mjs` calls it right after `stepsFrame` and before any other write in the frame; `JOIN.frame` then no longer sets it. Behaviour stays the same; the hero's own reads then hit a clean layout.
 - **The footer name** measures only on resize, fonts ready, the settle's end and the start or end of exploring. Add a check that counts its layout reads over a whole run; change `footname.mjs` only if a read happens anywhere else.
+- **No hint line over a sheet.** On a phone the find's hint line ("Press the hammer to play.") shows on top of an open sheet, because it lives in the step bar's stacking context. While any sheet is open the hint fades out: `findSheet` sets a class on the root and `closeSheet` clears it, and `map.css` hides `.find-hint` under it.
+- **The hammer game's copy agrees in number.** Its rune lines read "1 hearts", "1 more foes", "1 neighbours", "1 ending blows", and "A heart lost. 1 remain." Give that copy a plural mark (for example `{s}`, empty when the number is 1) filled where the line is formatted, so it reads "Heal 1 heart", "Pass through 1 more foe", "spread to 1 neighbour", "Survive 1 ending blow"; Eihwaz's line becomes "Deal {n} more damage on the way back."; and the heart line becomes "A heart lost. {n} heart{s} left." Nothing else in the game changes.
 
 ## 7. Checks before you finish
 
@@ -160,7 +162,7 @@ Run every test in `tools/` and the two pack tools. Re-run only what failed while
   - with the wayfinder on a craft, every chest with fewer than three digs has glow 0;
   - four presses on an open chest keep the same popup element at opacity 1;
   - the hint text matches each stage; no popup shows "Piece to come" twice.
-- `tools/check.mjs`: section 4.1's clearances; `#f-hoards` is a group with a label and no `tabindex`; the timeline handles Home and End; `main.mjs` calls the join's leave hook straight after `stepsFrame`; the gzip budgets still pass.
+- `tools/check.mjs`: section 4.1's clearances; `#f-hoards` is a group with a label and no `tabindex`; the timeline handles Home and End; `main.mjs` calls the join's leave hook straight after `stepsFrame`; `map.css` hides the hint under the open-sheet class; no hammer copy line formats a number before a plural noun without the plural mark; the gzip budgets still pass.
 - Re-record only the digests these changes must move (the `trip.mjs` and `depth.mjs` source digests must not move) and say which and why. `STARS`, `DEPTH` and `NOVA` keep their digest.
 
 ## 8. Report: `CREATURES-BUILD.md`
