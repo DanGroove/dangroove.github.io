@@ -1288,10 +1288,11 @@ const HOLD = { zoomIn: [0, 0.18], zoomOut: [0.86, 1], open: [0.1, 0.32], fold: [
 
 // Clock-driven journey. Pace and animation durations are seconds.
 const STEPS = {
+  // A move pressed while moving (D5): shortest durations in seconds; centre acceleration caps in lengths of the screen's longer side per second squared (D5-1); the duration search's step, sample and limit.
   carry: { min: 0.35, hurryMin: 0.45, acceleration: 1.2, hurryAcceleration: 3, searchStep: 0.05, sample: 0.016, searchMax: 30 },
   scroll: { ease: 0.12, settle: 0.4, threshold: 0.12, flick: 0.5, slop: 6, line: 16, velocityWindow: 80 },
   glide: { seconds: [2.6, 4.2], ease: 'cosine-ramp', ramp: 0.18, cruiseSwell: 0.05, distancePower: 0.5, fold: 0.5, open: 0.5, openWindow: 0.6,
-    zoomOut: 0.26, zoomLength: 160, overviewDistance: 300, controls: 8, samples: 2048 },
+    zoomOut: 0.26, zoomLength: 160, overviewDistance: 300, controls: 8, samples: 2048, warmDelay: 0.1, warmGap: 0.05 },
   pace: { hero: 0.9, handoff: 2.8, overview: 0.8, pushIn: 1.6, holdIn: 1.0, holdOpen: 0.4, holdOut: 0.6,
     legBase: 0.8, legPerVh: 0.006, legMax: 2.4, legX: 1.2, rush: 3.0, blast: 1.6, settle: 1.3 },
   ramp: 0.35, back: 0.6, hurry: 0.3, minMove: 0.3, cut: [0.18, 0.32],
@@ -2440,6 +2441,16 @@ function tripResize(w, h, tlH) {
   VIEW.sT = VIEW.s0 * (VIEW.phone ? CAMERA.pushScalePhone : CAMERA.pushScale);
   if (TRIP_EL.scrim) TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px';
 }
+// Each glide's path table costs about 2,000 camera samples. Once the journey rests on a beat, build the tables of the glides on
+// either side of it, one per task, so the next move's first frame does not build one (polish after critique round 5, M5-1).
+let glideWarmTimer = null;
+function tripWarmGlides(P) {
+  if (typeof setTimeout !== 'function') return;
+  clearTimeout(glideWarmTimer);
+  const queue = GLIDES.filter(g => Math.abs(g.a - P) < 1e-6 || Math.abs(g.b - P) < 1e-6);
+  const step = () => { const g = queue.shift(); if (!g) return; glidePath(g, .5); glideWarmTimer = setTimeout(step, STEPS.glide.warmGap * 1000); glideWarmTimer?.unref?.(); };
+  glideWarmTimer = setTimeout(step, STEPS.glide.warmDelay * 1000); glideWarmTimer?.unref?.();
+}
 const camOverview = () => ({ cx: MAP.w / 2, cy: MAP.h / 2, s: VIEW.s0, ax: VIEW.ox + MAP.w / 2 * VIEW.s0, ay: VIEW.oy + MAP.h / 2 * VIEW.s0 });
 const camTrip = (u, zoom) => { const c = smoothCenter(u); return { cx: c[0], cy: c[1], s: VIEW.sT * zoom, ax: CAMERA.anchorX * VIEW.w, ay: CAMERA.anchorY * VIEW.h }; };
 const camMix = (a, b, t) => ({ cx: lerp(a.cx, b.cx, t), cy: lerp(a.cy, b.cy, t), s: Math.exp(lerp(Math.log(a.s), Math.log(b.s), t)), ax: lerp(a.ax, b.ax, t), ay: lerp(a.ay, b.ay, t) });
@@ -2483,6 +2494,8 @@ function glideRaw(g, q) {
   return camFinal({ cx: centre[0], cy: centre[1], s: Math.exp(lerp(Math.log(A.s), Math.log(B.s), q) - depth * 4 * q * (1 - q)), ax: lerp(A.ax, B.ax, q), ay: lerp(A.ay, B.ay, q) });
 }
 function glidePath(g, distance) {
+  if (distance <= 0) return 0;
+  if (distance >= 1) return 1;
   const key = [g.i, VIEW.w, VIEW.h, VIEW.s0, VIEW.depth].join('/');
   let table = glideCache.get(key);
   if (!table) {
@@ -3844,6 +3857,7 @@ function stepsButtons() {
 function stepsArrive() {
   if (SC.rm) return;
   const beat = stepsRestBeat(), next = stepsNextBeat(), s = COPY.steps;
+  if (beat) tripWarmGlides(beat.P);
   if (beat?.id === 'top') SC.scrollLive = true;
   SC.root.dataset.beat = beat ? beat.id : '';
   let label = s.dig;
@@ -3914,7 +3928,8 @@ function stepsCarryGate(move, old) {
   const velocity = (a, b) => points.map(p => [(b.tx + (p[0] - a.tx) * b.s / a.s - p[0]) / dt, (b.ty + (p[1] - a.ty) * b.s / a.s - p[1]) / dt]);
   let camera = tripState(move.P0).cam;
   let speed = velocity(tripState(stepsMoveAt(old, old.elapsed - dt)).cam, camera);
-  const limit = VIEW.w * (move.hurry ? STEPS.carry.hurryAcceleration : STEPS.carry.acceleration);
+  // Measured against the screen's longer side, so a portrait phone brakes as firmly as a desktop (critique round 5, D5-1).
+  const limit = Math.max(VIEW.w, VIEW.h) * (move.hurry ? STEPS.carry.hurryAcceleration : STEPS.carry.acceleration);
   for (let t = dt; t < move.D + 2 * dt; t += dt) {
     const next = tripState(stepsMoveAt(move, t)).cam, v = velocity(camera, next);
     if (!v.flat().every(Number.isFinite) || Math.hypot(...v[0].map((x, k) => (x - speed[0][k]) / dt)) > limit) return false;
@@ -4359,7 +4374,7 @@ function footnameFrame(time, dt, shift) {
 
 
 
-const FT = { items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], streaks: [], config: '', nextFlare: null, lastFlare: null, canvas: null, ctx: null, dpr: 1, drawing: false, sprites: {}, rough: null, roughPending: null, exact: null, exactPending: null, exactFailed: '', native: null, size: [0, 0] };
+const FT = { items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], streaks: [], config: '', nextFlare: null, lastFlare: null, canvas: null, ctx: null, dpr: 1, drawing: false, sprites: {}, rough: null, roughPending: null, exact: null, exactPending: null, exactFailed: '', exactLive: false, native: null, size: [0, 0] };
 const upRight = '<svg class="ne" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 8.5L8.5 1.5M3 1.5H8.5V7"/></svg>';
 const arrowR = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
 
@@ -4561,7 +4576,9 @@ function footerMotion(time, dt, st, look, moved) {
   // The map's X hides on the first canvas frame (one write either way); with the exact sprite ready, that same frame shows the same X.
   const H = NOVA.handover, ht = st.blastT > 0 || st.settleT > 0 || st.exploreK > 0 ? Infinity : st.rushT * STEPS.pace.rush;
   if ((FT.exact || FT.exactPending) && (ht === Infinity || (!showing && Math.abs(st.P - rushStart()) > 1e-6))) footerExactFree();
-  const ex = FT.exact, E = ex && Math.abs(ex.s - st.cam.s) <= ex.s * H.drift && Math.hypot(MAP.x[0] * st.cam.s + st.cam.tx - ex.x, MAP.x[1] * st.cam.s + st.cam.ty - ex.y) <= H.slip ? ex : null;
+  // The sprite stands in only if it was ready on the first canvas frame; one that decodes mid-hand-over waits for the next rest.
+  if (showing && !FT.drawing) FT.exactLive = !!FT.exact;
+  const ex = FT.exactLive ? FT.exact : null, E = ex && Math.abs(ex.s - st.cam.s) <= ex.s * H.drift && Math.hypot(MAP.x[0] * st.cam.s + st.cam.tx - ex.x, MAP.x[1] * st.cam.s + st.cam.ty - ex.y) <= H.slip ? ex : null;
   const exactOn = showing && E && ht < H.fadeIn + H.fadeOut ? 1 - clamp01((ht - H.fadeIn) / H.fadeOut) : 0;
   const canvasIn = E && ht < H.fadeIn ? clamp01(ht / H.fadeIn) : 1;
   FT.drawing = showing;

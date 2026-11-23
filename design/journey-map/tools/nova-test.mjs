@@ -163,6 +163,14 @@ for(const dpr of [1,3]){
     run(restX);assert.equal(x.style.visibility,'visible');assert.equal(native.style.visibility,'hidden');assert.equal(native.width,1440*dpr,'kept for a Back into the rest');
     run(segment('blast',.2));assert.equal(native.width,0,'freed once the X is gone');
   }
+  // A sprite that decodes only after the rush has started waits for the next rest: no switch, so no edge drawn twice, mid-hand-over.
+  window.devicePixelRatio=1;footerNovaResize(1440,900);
+  const restX=segment('rush',0);run(restX);const late=images.at(-1),native=canvases.find(c=>/pointer-events:none/.test(c.style.cssText||''));
+  canvas.ctx.calls.length=0;run(segment('rush',1e-6),.016);assert.equal(native.style.visibility,'hidden');
+  assert.ok(canvas.ctx.calls.some(c=>c.name==='drawImage'&&c.args[1]===-20&&c.alpha===1),'without a ready sprite the canvas X takes over at once');
+  late.onload();canvas.ctx.calls.length=0;run(segment('rush',.02),.016);assert.equal(native.style.visibility,'hidden','late sprite stays out of a running hand-over');
+  assert.ok(canvas.ctx.calls.some(c=>c.name==='drawImage'&&c.args[1]===-20&&c.alpha===1));
+  run(restX);run(segment('rush',1e-6),.016);assert.equal(native.style.visibility,'visible','late sprite serves the next hand-over');
   window.devicePixelRatio=3;footerNovaResize(1440,900);
 }
 console.log('ok: V4-1 hand-over sprite at DPR 1/3: map X strokes and rough filter at exact scale, 1:1 device pixels in its own canvas, shown in place of the SVG X on the first rush frame, canvas X fades in under it, then it fades out; kept for Back, freed at the blast');

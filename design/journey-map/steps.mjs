@@ -1,6 +1,6 @@
 // The single progress owner: top/map scroll, then button/key Steps.
 import { STEPS, COPY, STOPS, DEPTH, NOVA, FIND_PLAY, EXPLORE, WORLD, PHONE_LAYOUT } from './data.mjs';
-import { VIEW, TOTAL_P, tripState, easeIO, lerp, glideMove, GLIDES, glideSeconds } from './trip.mjs';
+import { VIEW, TOTAL_P, tripState, easeIO, lerp, glideMove, GLIDES, glideSeconds, tripWarmGlides } from './trip.mjs';
 import { BEATS, PACE_PARTS, paceMove, paceAt, paceEase } from './pace.mjs';
 import { arrowSvg } from './cards.mjs';
 import { exploreActive, exploreBusy, exploreStart, exploreEnd, exploreReset, exploreDepart } from './explore.mjs';
@@ -85,6 +85,7 @@ function stepsButtons() {
 function stepsArrive() {
   if (SC.rm) return;
   const beat = stepsRestBeat(), next = stepsNextBeat(), s = COPY.steps;
+  if (beat) tripWarmGlides(beat.P);
   if (beat?.id === 'top') SC.scrollLive = true;
   SC.root.dataset.beat = beat ? beat.id : '';
   let label = s.dig;
@@ -155,7 +156,8 @@ function stepsCarryGate(move, old) {
   const velocity = (a, b) => points.map(p => [(b.tx + (p[0] - a.tx) * b.s / a.s - p[0]) / dt, (b.ty + (p[1] - a.ty) * b.s / a.s - p[1]) / dt]);
   let camera = tripState(move.P0).cam;
   let speed = velocity(tripState(stepsMoveAt(old, old.elapsed - dt)).cam, camera);
-  const limit = VIEW.w * (move.hurry ? STEPS.carry.hurryAcceleration : STEPS.carry.acceleration);
+  // Measured against the screen's longer side, so a portrait phone brakes as firmly as a desktop (critique round 5, D5-1).
+  const limit = Math.max(VIEW.w, VIEW.h) * (move.hurry ? STEPS.carry.hurryAcceleration : STEPS.carry.acceleration);
   for (let t = dt; t < move.D + 2 * dt; t += dt) {
     const next = tripState(stepsMoveAt(move, t)).cam, v = velocity(camera, next);
     if (!v.flat().every(Number.isFinite) || Math.hypot(...v[0].map((x, k) => (x - speed[0][k]) / dt)) > limit) return false;

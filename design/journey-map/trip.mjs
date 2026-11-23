@@ -88,6 +88,16 @@ export function tripResize(w, h, tlH) {
   VIEW.sT = VIEW.s0 * (VIEW.phone ? CAMERA.pushScalePhone : CAMERA.pushScale);
   if (TRIP_EL.scrim) TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px';
 }
+// Each glide's path table costs about 2,000 camera samples. Once the journey rests on a beat, build the tables of the glides on
+// either side of it, one per task, so the next move's first frame does not build one (polish after critique round 5, M5-1).
+let glideWarmTimer = null;
+export function tripWarmGlides(P) {
+  if (typeof setTimeout !== 'function') return;
+  clearTimeout(glideWarmTimer);
+  const queue = GLIDES.filter(g => Math.abs(g.a - P) < 1e-6 || Math.abs(g.b - P) < 1e-6);
+  const step = () => { const g = queue.shift(); if (!g) return; glidePath(g, .5); glideWarmTimer = setTimeout(step, STEPS.glide.warmGap * 1000); glideWarmTimer?.unref?.(); };
+  glideWarmTimer = setTimeout(step, STEPS.glide.warmDelay * 1000); glideWarmTimer?.unref?.();
+}
 const camOverview = () => ({ cx: MAP.w / 2, cy: MAP.h / 2, s: VIEW.s0, ax: VIEW.ox + MAP.w / 2 * VIEW.s0, ay: VIEW.oy + MAP.h / 2 * VIEW.s0 });
 const camTrip = (u, zoom) => { const c = smoothCenter(u); return { cx: c[0], cy: c[1], s: VIEW.sT * zoom, ax: CAMERA.anchorX * VIEW.w, ay: CAMERA.anchorY * VIEW.h }; };
 const camMix = (a, b, t) => ({ cx: lerp(a.cx, b.cx, t), cy: lerp(a.cy, b.cy, t), s: Math.exp(lerp(Math.log(a.s), Math.log(b.s), t)), ax: lerp(a.ax, b.ax, t), ay: lerp(a.ay, b.ay, t) });
@@ -131,6 +141,8 @@ function glideRaw(g, q) {
   return camFinal({ cx: centre[0], cy: centre[1], s: Math.exp(lerp(Math.log(A.s), Math.log(B.s), q) - depth * 4 * q * (1 - q)), ax: lerp(A.ax, B.ax, q), ay: lerp(A.ay, B.ay, q) });
 }
 function glidePath(g, distance) {
+  if (distance <= 0) return 0;
+  if (distance >= 1) return 1;
   const key = [g.i, VIEW.w, VIEW.h, VIEW.s0, VIEW.depth].join('/');
   let table = glideCache.get(key);
   if (!table) {

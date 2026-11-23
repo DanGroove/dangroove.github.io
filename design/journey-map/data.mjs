@@ -285,10 +285,11 @@ export const HOLD = { zoomIn: [0, 0.18], zoomOut: [0.86, 1], open: [0.1, 0.32], 
 
 // Clock-driven journey. Pace and animation durations are seconds.
 export const STEPS = {
+  // A move pressed while moving (D5): shortest durations in seconds; centre acceleration caps in lengths of the screen's longer side per second squared (D5-1); the duration search's step, sample and limit.
   carry: { min: 0.35, hurryMin: 0.45, acceleration: 1.2, hurryAcceleration: 3, searchStep: 0.05, sample: 0.016, searchMax: 30 },
   scroll: { ease: 0.12, settle: 0.4, threshold: 0.12, flick: 0.5, slop: 6, line: 16, velocityWindow: 80 },
   glide: { seconds: [2.6, 4.2], ease: 'cosine-ramp', ramp: 0.18, cruiseSwell: 0.05, distancePower: 0.5, fold: 0.5, open: 0.5, openWindow: 0.6,
-    zoomOut: 0.26, zoomLength: 160, overviewDistance: 300, controls: 8, samples: 2048 },
+    zoomOut: 0.26, zoomLength: 160, overviewDistance: 300, controls: 8, samples: 2048, warmDelay: 0.1, warmGap: 0.05 },
   pace: { hero: 0.9, handoff: 2.8, overview: 0.8, pushIn: 1.6, holdIn: 1.0, holdOpen: 0.4, holdOut: 0.6,
     legBase: 0.8, legPerVh: 0.006, legMax: 2.4, legX: 1.2, rush: 3.0, blast: 1.6, settle: 1.3 },
   ramp: 0.35, back: 0.6, hurry: 0.3, minMove: 0.3, cut: [0.18, 0.32],

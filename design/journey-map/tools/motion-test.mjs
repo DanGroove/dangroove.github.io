@@ -124,7 +124,7 @@ for (const [w,h,bar] of [[1440,900,120],[390,844,96]]) {
       }
       carryGate(arrival!==null,label+' did not arrive');
       carryGate(JOURNEY.P===target,label+' arrival not exact');
-      carryGate(acceleration<=w*(hurry?3:1.2)+1e-6,label+' acceleration '+acceleration.toFixed(2));
+      carryGate(acceleration<=Math.max(w,h)*(hurry?3:1.2)+1e-6,label+' acceleration '+acceleration.toFixed(2));
       if(hurry)carryGate(arrival/1000<D-start/1000,label+' hurry did not arrive sooner');
       for(const event of events){
         if(event===events.at(-1))carryGate((arrival-event.at)/1000>=event.minimum-1e-8,label+' duration below minimum');

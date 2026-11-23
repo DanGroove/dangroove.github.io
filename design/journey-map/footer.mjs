@@ -6,7 +6,7 @@ import { JOURNEY } from './steps.mjs';
 import { novaRingRadius, novaFlare, novaPress, novaPrune, novaShare, NOVA_LIVE } from './depth.mjs';
 import { footnameBuild, footnameMeasure, footnameReveal, footnameFrame } from './footname.mjs';
 
-const FT = { items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], streaks: [], config: '', nextFlare: null, lastFlare: null, canvas: null, ctx: null, dpr: 1, drawing: false, sprites: {}, rough: null, roughPending: null, exact: null, exactPending: null, exactFailed: '', native: null, size: [0, 0] };
+const FT = { items: [], name: null, el: null, rule: null, rm: false, clock: 0, settled: false, hitState: '', rays: [], lobes: [], waves: [], streaks: [], config: '', nextFlare: null, lastFlare: null, canvas: null, ctx: null, dpr: 1, drawing: false, sprites: {}, rough: null, roughPending: null, exact: null, exactPending: null, exactFailed: '', exactLive: false, native: null, size: [0, 0] };
 const upRight = '<svg class="ne" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 8.5L8.5 1.5M3 1.5H8.5V7"/></svg>';
 const arrowR = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
 
@@ -208,7 +208,9 @@ export function footerMotion(time, dt, st, look, moved) {
   // The map's X hides on the first canvas frame (one write either way); with the exact sprite ready, that same frame shows the same X.
   const H = NOVA.handover, ht = st.blastT > 0 || st.settleT > 0 || st.exploreK > 0 ? Infinity : st.rushT * STEPS.pace.rush;
   if ((FT.exact || FT.exactPending) && (ht === Infinity || (!showing && Math.abs(st.P - rushStart()) > 1e-6))) footerExactFree();
-  const ex = FT.exact, E = ex && Math.abs(ex.s - st.cam.s) <= ex.s * H.drift && Math.hypot(MAP.x[0] * st.cam.s + st.cam.tx - ex.x, MAP.x[1] * st.cam.s + st.cam.ty - ex.y) <= H.slip ? ex : null;
+  // The sprite stands in only if it was ready on the first canvas frame; one that decodes mid-hand-over waits for the next rest.
+  if (showing && !FT.drawing) FT.exactLive = !!FT.exact;
+  const ex = FT.exactLive ? FT.exact : null, E = ex && Math.abs(ex.s - st.cam.s) <= ex.s * H.drift && Math.hypot(MAP.x[0] * st.cam.s + st.cam.tx - ex.x, MAP.x[1] * st.cam.s + st.cam.ty - ex.y) <= H.slip ? ex : null;
   const exactOn = showing && E && ht < H.fadeIn + H.fadeOut ? 1 - clamp01((ht - H.fadeIn) / H.fadeOut) : 0;
   const canvasIn = E && ht < H.fadeIn ? clamp01(ht / H.fadeIn) : 1;
   FT.drawing = showing;
