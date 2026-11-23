@@ -3,7 +3,7 @@ import { FIND_PLAY, FIND_COPY, FINDS } from './data.mjs';
 import { clamp01, lerp } from './trip.mjs';
 import { starPath } from './art.mjs';
 import { JOURNEY, stepsFocus } from './steps.mjs';
-import { FD, FIND_BY, ease, attr, fEsc, found, opened, press, showPop, closePop, attend, findSlot, findPlace, findView, findSvg } from './findkit.mjs';
+import { findPointer, FD, FIND_BY, ease, attr, fEsc, found, opened, press, showPop, closePop, attend, findSlot, findPlace, findView, findSvg } from './findkit.mjs';
 
 export function findHorn(svg) {
   const f = FIND_BY.horn, el = svg.querySelector('#f-horn'), horn = el.querySelector('.hn-horn');
@@ -28,7 +28,7 @@ export function findHorn(svg) {
     o.up = 1; o.stage = 'raised'; o.raiseTs = FD.now; opened(o); found(o.id);
     showPop(o, [f.x + FIND_PLAY.horn.anchor[0], f.y + FIND_PLAY.horn.anchor[1]], `<p class="pop-t pop-big">${fEsc(FIND_COPY.horn[0])}</p>${findSlot(FIND_COPY.horn[1])}`);
   };
-  el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); raise(); o.hold = o.stage === 'raised'; o.holdTs = FD.now; el._dragged = true; });
+  findPointer(el, e => { el.setPointerCapture(e.pointerId); raise(); o.hold = o.stage === 'raised'; o.holdTs = FD.now; el._dragged = true; }, { tap: raise, cancel: () => o.hold = false });
   el.addEventListener('pointerup', () => o.hold = false); el.addEventListener('pointercancel', () => o.hold = false);
   press(el, raise);
   o.onPopClose = () => { if (o.stage === 'raised') { o.up = 0; o.stage = 'rest'; o.hold = false; } };

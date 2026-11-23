@@ -1,6 +1,10 @@
+import { bigMap, mapDefs } from '../art.mjs';
+import { findsBuild, findsFrame } from '../finds.mjs';
+import { FD } from '../findkit.mjs';
+import { tlBuild } from '../timeline.mjs';
 // Node geometry and state checks. This is a recording environment, not a visual browser check.
 import { strict as assert } from 'node:assert';
-import { EXPLORE, MAP, FOOT_NAME } from '../data.mjs';
+import { EXPLORE, MAP, FOOT_NAME, FIND_PLAY } from '../data.mjs';
 import { tripResize, tripState, VIEW } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
 import { exploreClamp, exploreZoom, exploreWorld, exploreGlide, exploreLayer, exploreLayerPoint, exploreLayerInverse, exploreBuild, exploreResize, exploreStart, exploreApply, exploreEnd, exploreActive, exploreBusy, exploreReset, exploreDepart } from '../explore.mjs';
@@ -127,3 +131,134 @@ for(const target of [fakeTarget(['.sheet.on']),fakeTarget(['input']),fakeTarget(
 assert.equal(listenerOptions.pointerdown[0],true,'pointerdown precedes find capture');assert.equal(listenerOptions.pointermove[0],true);assert.equal(listenerOptions.pointerup[0],true);
 exploreReset();
 console.log('ok: capture-phase pinch on nova/stop/horn; nova taps; owned single drags; drag-only pointer clicks; key/end/depart/reset/down/500 ms suppression clearing; temporary world promotion');
+
+// D3 uses findsBuild and the real handlers on a recording event tree.
+let exploreInFrame = false;
+class ExploreContext {
+  constructor() { this.commands = 0; this.clipPaths = []; }
+  record(...args) { this.commands++; for (const a of args) if (typeof a === 'number') assert.ok(Number.isFinite(a), 'nonfinite canvas command'); }
+  setTransform(...args) { this.record(...args); } scale(...args) { this.record(...args); } translate(...args) { this.record(...args); }
+  rotate(...args) { this.record(...args); } fillRect(...args) { this.record(...args); } drawImage(...args) { this.record(...args); }
+  stroke(...args) { this.record(...args); } clip(...args) { this.record(...args); this.clipPaths.push(args[0].path); } fill(...args) { this.record(...args); } save() {} restore() {}
+}
+class ExploreNode {
+  constructor(tag = 'div') { this.tagName = tag; this.attrs = {}; this.children = []; this.listeners = {}; this.nodeType = 1; this.style = { setProperty(k, v) { this[k] = v; } }; this.dataset = {}; this.hidden = false; this.classList = { add: (...xs) => xs.forEach(x => this.toggleClass(x, true)), remove: (...xs) => xs.forEach(x => this.toggleClass(x, false)), toggle: (x, force) => this.toggleClass(x, force), contains: x => this.className.split(/\s+/).includes(x) }; }
+  get id() { return this.attrs.id || ''; } set id(v) { this.attrs.id = v; }
+  get className() { return this.attrs.class || ''; } set className(v) { this.attrs.class = v; }
+  get firstElementChild() { return this.children[0]; } get firstChild() { return this.children[0]; }
+  get isConnected() { return true; }
+  toggleClass(x, force) { const set = new Set(this.className.split(/\s+/).filter(Boolean)); const on = force ?? !set.has(x); if (on) set.add(x); else set.delete(x); this.className = [...set].join(' '); return on; }
+  setAttribute(k, v) { assert.ok(!/NaN/.test(String(v)), `NaN attribute ${this.id}/${k}: ${v}`); this.attrs[k] = String(v); if (k.startsWith('data-')) this.dataset[k.slice(5)] = String(v); }
+  getAttribute(k) { return this.attrs[k] ?? null; }
+  appendChild(node) { if (node.parentElement) node.parentElement.children = node.parentElement.children.filter(c => c !== node); this.children.push(node); node.parentElement = this; return node; }
+  append(...nodes) { nodes.forEach(n => this.appendChild(n)); }
+  remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(c => c !== this); this.parentElement = null; }
+  prepend(...nodes) { nodes.reverse().forEach(n => { this.children.unshift(n); n.parentElement = this; }); }
+  set innerHTML(html) {
+    this.recordedHTML = String(html); this.children = []; const stack = [this];
+    for (const token of String(html).matchAll(/<\/?([\w:-]+)([^>]*?)\/?\s*>/g)) {
+      if (token[0].startsWith('</')) { if (stack.length > 1) stack.pop(); continue; }
+      const node = new ExploreNode(token[1]);
+      for (const a of token[2].matchAll(/([\w:-]+)(?:="([^"]*)"|='([^']*)')?/g)) { node.setAttribute(a[1], a[2] ?? a[3] ?? ''); if (a[1] === 'hidden') node.hidden = true; }
+      stack[stack.length - 1].appendChild(node);
+      if (!/\/\s*>$/.test(token[0]) && !['img', 'input', 'br', 'hr', 'meta', 'link'].includes(token[1])) stack.push(node);
+    }
+  }
+  matches(selector) {
+    if (selector.includes(':not([hidden])')) { if (this.hidden) return false; selector = selector.replace(':not([hidden])', ''); }
+    const tag = selector.match(/^[\w-]+/); if (tag && this.tagName !== tag[0]) return false;
+    for (const m of selector.matchAll(/#([\w-]+)/g)) if (this.id !== m[1]) return false;
+    for (const m of selector.matchAll(/\.([\w-]+)/g)) if (!this.classList.contains(m[1])) return false;
+    for (const m of selector.matchAll(/\[([\w-]+)(?:="([^"]*)")?\]/g)) if (!Object.hasOwn(this.attrs, m[1]) || m[2] !== undefined && this.attrs[m[1]] !== m[2]) return false;
+    return true;
+  }
+  querySelectorAll(selector) {
+    const results = [], nodes = []; const collect = node => node.children.forEach(c => { nodes.push(c); collect(c); }); collect(this);
+    for (const node of nodes) {
+      const matched = selector.split(',').some(choice => {
+        const parts = choice.trim().split(/\s+/); let current = node;
+        if (!current.matches(parts.pop())) return false;
+        while (parts.length) {
+          const part = parts.pop(); if (part === '>') { const parent = parts.pop(); current = current.parentElement; if (!current?.matches(parent)) return false; }
+          else { do { current = current.parentElement; } while (current && !current.matches(part)); if (!current) return false; }
+        }
+        return true;
+      });
+      if (matched) results.push(node);
+    }
+    return results;
+  }
+  querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
+  closest(selector) { for (let node = this; node; node = node.parentElement) if (selector.split(',').some(s => node.matches(s.trim()))) return node; return null; }
+  contains(node) { for (let n = node; n; n = n.parentElement) if (n === this) return true; return false; }
+  getContext() { return this.context ??= new ExploreContext(); }
+  addEventListener(type, fn, capture = false) { (this.listeners[type] ??= []).push({ fn, capture: capture === true }); }
+  dispatchEvent(event) {
+    event.target = this; const path = []; for (let p = this; p; p = p.parentElement) path.push(p);
+    for (const node of path.slice().reverse()) for (const l of node.listeners[event.type] || []) { if (l.capture && !event.stopped) l.fn(event); }
+    for (const node of path) { if (event.stopped) break; for (const l of node.listeners[event.type] || []) { if (event.immediate) break; if (!l.capture) l.fn(event); } if (!event.bubbles) break; }
+    return !event.defaultPrevented;
+  }
+  focus() { document.activeElement = this; }
+  setPointerCapture() {}
+  getAnimations() { return []; }
+  animate() { return { cancel() {} }; }
+  getBoundingClientRect() { assert.equal(exploreInFrame, false, 'layout read in frame callback'); return { left: 30, top: 40, width: this.classList.contains('tl-count') ? 90 : 240, height: this.classList.contains('tl-count') ? 20 : 140 }; }
+}
+class ExploreEvent {
+  constructor(type, props = {}) { Object.assign(this, { type, bubbles: true, detail: 0, preventDefault() { this.defaultPrevented = true; }, stopPropagation() { this.stopped = true; }, stopImmediatePropagation() { this.stopped = this.immediate = true; } }, props); }
+}
+
+const originalTimers={setTimeout:globalThis.setTimeout,clearTimeout:globalThis.clearTimeout,Event:globalThis.Event};
+globalThis.Event=ExploreEvent;
+let intentMS=0,intentSerial=0;const intentTimers=new Map();
+globalThis.setTimeout=(fn,delay=0)=>{const id=++intentSerial;intentTimers.set(id,{fn,at:intentMS+delay});return id;};
+globalThis.clearTimeout=id=>intentTimers.delete(id);
+const realChart=bigMap();let realStage,realSvg,realJourney;
+function realFrame(dt=0){const st=tripState(endP);exploreApply(st,dt);findsFrame(1+intentMS/1000,st);return st;}
+async function realWait(ms){const n=Math.max(1,Math.ceil(ms/16));for(let i=0;i<n;i++){intentMS+=ms/n;FD.now=1+intentMS/1000;for(const [id,timer] of intentTimers)if(timer.at<=intentMS){intentTimers.delete(id);timer.fn();}realFrame(ms/n/1000);await Promise.resolve();}}
+function realFresh(){
+  exploreReset();intentTimers.clear();intentMS=0;
+  const html=new ExploreNode('html'),body=new ExploreNode('body'),doc=new ExploreNode('document');html.appendChild(body);doc.appendChild(html);
+  Object.assign(doc,{documentElement:html,body,activeElement:body,createElement:tag=>new ExploreNode(tag),createElementNS:(ns,tag)=>new ExploreNode(tag),getElementById:id=>html.querySelector('#'+id)});
+  const win=new ExploreNode('window');Object.assign(win,{location:{search:''},matchMedia:()=>({matches:false,addEventListener(){}})});
+  Object.assign(globalThis,{document:doc,window:win,matchMedia:win.matchMedia,localStorage:{getItem:()=>null},Path2D:class {constructor(path){this.path=path;}}});window.__jm={};
+  const liveStatus=new ExploreNode();liveStatus.id='go-say';body.appendChild(liveStatus);realStage=new ExploreNode();realSvg=new ExploreNode('svg');const pop=new ExploreNode(),sheet=new ExploreNode(),timeline=new ExploreNode();body.appendChild(realStage);realStage.append(realSvg,pop,sheet,timeline);
+  realStage.setPointerCapture=id=>captures.add(id);realStage.releasePointerCapture=id=>captures.delete(id);realStage.hasPointerCapture=id=>captures.has(id);captures.clear();
+  realSvg.innerHTML=mapDefs()+'<g id="b-all">'+realChart.detail+'</g><g id="finds">'+realChart.finds+'</g>';
+  FD.found=new Set();FD.list={};FD.bits=[];FD.flights=[];FD.flight=null;FD.landed=0;FD.popOwner=FD.sheetOwner=null;
+  tlBuild(timeline,{jump(){},scrub(){}},false);findsBuild(realSvg,pop,sheet,realSvg.querySelector('#b-all'),false);
+  tripResize(390,844,96);realJourney={P:endP,moving:false,beats:BEATS};exploreBuild({stage:realStage,world:new ExploreNode(),journey:realJourney,rm:false});exploreResize();assert.equal(exploreStart(),true);realFrame(EXPLORE.in);
+}
+function realPointer(type,id,x,y,target=realStage){const e=new ExploreEvent(type,{pointerId:id,pointerType:'touch',button:0,clientX:x,clientY:y,timeStamp:intentMS});target.dispatchEvent(e);return e;}
+const realState=id=>window.__jm.finds.state(id);
+try{
+  for(const id of ['horn','hoard-hmc1','beacon'])for(const delay of [0,30,100]){
+    realFresh();const target=realSvg.querySelector('#f-'+id),before=realState(id),foundBefore=window.__jm.finds.found(),scale=realFrame().cam.s;
+    realPointer('pointerdown',1,100,200,target);assert.equal(captures.size,0,'wait does not capture');await realWait(delay);
+    realPointer('pointerdown',2,200,200);realPointer('pointermove',2,300,200);await realWait(180);
+    assert.ok(realFrame().cam.s>=scale*1.2,id+' pinch scales camera');assert.deepEqual(window.__jm.finds.found(),foundBefore,id+' pinch never found');
+    assert.equal(realState(id).stage,before.stage,id+' pinch never changes stage');assert.equal(realState(id).digs,before.digs);assert.equal(realState(id).up,before.up);assert.equal(realState(id).manualTs,before.manualTs);
+    realPointer('pointerup',2,300,200);realPointer('pointerup',1,100,200);target.dispatchEvent(new ExploreEvent('click',{detail:1}));
+    assert.deepEqual(window.__jm.finds.found(),foundBefore);
+    target.dispatchEvent(new ExploreEvent('click',{detail:0}));realFrame();
+    if(id==='horn')assert.equal(realState(id).stage,'raised','keyboard click after pinch reaches horn');
+    else if(id.startsWith('hoard'))assert.equal(realState(id).digs,1,'keyboard click after pinch reaches chest');
+    else assert.ok(FD.list.beacon.snap,'keyboard click after pinch reaches beacon');
+  }
+  for(const id of ['horn','hoard-hmc1','beacon']){
+    realFresh();const target=realSvg.querySelector('#f-'+id);realPointer('pointerdown',1,100,200,target);await realWait(30);realPointer('pointerup',1,101,201,target);target.dispatchEvent(new ExploreEvent('click',{detail:1}));realFrame();
+    if(id==='horn')assert.equal(realState(id).stage,'raised');else if(id.startsWith('hoard'))assert.equal(realState(id).digs,1);else assert.ok(FD.list.beacon.snap,'beacon tap snaps');
+  }
+  realFresh();const chest=realSvg.querySelector('#f-hoard-hmc1');realPointer('pointerdown',1,100,200,chest);await realWait(120);assert.equal(realState('hoard-hmc1').digs,1);await realWait(1000);assert.ok(realState('hoard-hmc1').digs>1,'chest hold repeats');realPointer('pointerup',1,100,200,chest);
+  for(const id of ['beacon','mist','wayfinder']){
+    realFresh();const target=realSvg.querySelector('#f-'+id);realPointer('pointerdown',1,100,200,target);const before=realFrame().cam;realPointer('pointermove',1,150,260,target);realFrame();assert.deepEqual(realFrame().cam,before,id+' owns drag');
+    if(id==='beacon')assert.ok(FD.list.beacon.drag&&FD.list.beacon.dragged&&FD.found.has(id),'beacon still aims');
+    if(id==='wayfinder')assert.equal(FD.list.wayfinder.drag,true);if(id==='mist')assert.equal(FD.list.mist.down,true);realPointer('pointerup',1,150,260,target);
+  }
+  for(const id of ['horn','hoard-hmc1']){
+    realFresh();for(let i=0;i<4;i++){window.dispatchEvent(new ExploreEvent('keydown',{key:'+'}));realFrame(1);}const target=realSvg.querySelector('#f-'+id),before=realFrame().cam,stageBefore=realState(id).stage;
+    realPointer('pointerdown',1,100,200,target);realPointer('pointermove',1,140,220,target);assert.notDeepEqual(realFrame().cam,before,id+' pending press becomes pan');await realWait(180);assert.equal(realState(id).stage,stageBefore);realPointer('pointerup',1,140,220);target.dispatchEvent(new ExploreEvent('click',{detail:1}));
+  }
+  console.log('ok: D3 real findsBuild horn/chest/beacon pinches at 0/30/100 ms preserve found/stage and zoom >=20%; taps act once, chest hold repeats, owned drags aim/wipe/turn and press drags pan');
+}finally{exploreReset();Object.assign(globalThis,originalTimers);}

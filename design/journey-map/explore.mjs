@@ -1,6 +1,7 @@
 // End-only camera. The geometry helpers are pure and can be imported by Node.
 import { EXPLORE, DEPTH, COPY, STEPS } from './data.mjs';
 import { VIEW, tripState, lerp, clamp01, easeIO } from './trip.mjs';
+import { findPointerCancel, findPointerMove } from './findkit.mjs';
 
 export const exploreLayer = (cam, end) => { const c = cam.s / end.s; return { c, dx: cam.tx - end.tx * c, dy: cam.ty - end.ty * c }; };
 export const exploreLayerPoint = (p, layer) => [p[0] * layer.c + layer.dx, p[1] * layer.c + layer.dy];
@@ -43,6 +44,7 @@ const exploreSuppressClear = () => { EX.suppress = false; clearTimeout(EX.suppre
 const exploreWorldStyle = (key, value) => { if (EX.world && EX.world.style[key] !== value) EX.world.style[key] = value; };
 const explorePromote = () => exploreWorldStyle('willChange', EX.motion || EX.velocity.some(Boolean) || EX.gesture || (EX.active && JSON.stringify(EX.cam) !== JSON.stringify(EX.target)) ? 'transform' : '');
 function exploreClearPointers() {
+  findPointerCancel();
   for (const id of EX.pointers.keys()) if (EX.stage.hasPointerCapture?.(id)) EX.stage.releasePointerCapture(id);
   EX.pointers.clear(); EX.owners.clear(); EX.gesture = null; EX.samples = []; EX.stage?.classList.remove('is-dragging');
 }
@@ -153,6 +155,8 @@ function exploreGesture(dragged = false) {
 }
 export function exploreBuild({ stage, world, journey, rm }) {
   Object.assign(EX, { stage, world, journey, rm }); if (rm) return;
+  document.documentElement.style?.setProperty('--explore-row-delay', EXPLORE.rowDelay + 's');
+  document.documentElement.style?.setProperty('--explore-row-fade', EXPLORE.rowFade + 's');
   EX.hint = document.createElement('p'); EX.hint.className = 'find-hint explore-hint'; EX.hint.setAttribute('aria-hidden', 'true'); stage.appendChild(EX.hint);
   window.addEventListener('wheel', e => {
     if (!EX.active || e.defaultPrevented) return;
@@ -167,13 +171,14 @@ export function exploreBuild({ stage, world, journey, rm }) {
     exploreSuppressClear();
     if (!EX.active || exploreExcluded(e.target) || EX.pointers.size >= 2 || (e.pointerType === 'mouse' && e.button !== 0)) return;
     EX.pointers.set(e.pointerId, explorePoint(e)); if (exploreOwned(e.target)) EX.owners.add(e.pointerId);
-    if (EX.pointers.size === 2) { exploreTakeover(); for (const id of EX.pointers.keys()) stage.setPointerCapture(id); EX.suppress = true; stage.classList.add('is-dragging'); e.preventDefault(); e.stopImmediatePropagation(); }
+    if (EX.pointers.size === 2) { findPointerCancel(); exploreTakeover(); for (const id of EX.pointers.keys()) stage.setPointerCapture(id); EX.suppress = true; stage.classList.add('is-dragging'); e.preventDefault(); e.stopImmediatePropagation(); }
     exploreGesture(); exploreSample(e); explorePromote();
   }, true);
   stage.addEventListener('pointermove', e => {
     if (!EX.active || !EX.pointers.has(e.pointerId)) return;
     EX.pointers.set(e.pointerId, explorePoint(e));
     const points = [...EX.pointers.values()], g = EX.gesture;
+    if (findPointerMove(e)) { EX.owners.delete(e.pointerId); g.owned = false; }
     if (g.owned) return;
     const mid = points.length > 1 ? points[0].map((v, i) => (v + points[1][i]) / 2) : points[0];
     if (!g.dragged && Math.hypot(mid[0] - g.from[0], mid[1] - g.from[1]) <= EXPLORE.slop) return;

@@ -1,5 +1,5 @@
 // Shared life, particles, overlays and first-found feedback. No progress mutation.
-import { C, FINDS, FIND_COPY, FIND_PLAY, FIND_TIMING, COPY } from './data.mjs';
+import { C, FINDS, FIND_COPY, FIND_PLAY, FIND_TIMING, COPY, EXPLORE } from './data.mjs';
 import { VIEW, toScreen, clamp01, lerp, easeIO, WATER, pointAt } from './trip.mjs';
 import { findRnd, starPath } from './art.mjs';
 import { tlSetCount } from './timeline.mjs';
@@ -10,7 +10,43 @@ export const D = s => FD.rm ? Number.EPSILON : s;
 export const ease = t => easeIO(clamp01(t));
 export const out3 = t => 1 - (1 - clamp01(t)) ** 3;
 export const fEsc = s => String(typeof s === 'object' ? s.t : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-export const attr = (el, k, v) => el.setAttribute(k, v);
+export const attr = (el, k, v) => { const text = String(v); if (el.getAttribute(k) !== text) el.setAttribute(k, text); };
+
+// Explore touch intent is shared by every pointerdown find. Nothing acts or captures
+// until tap/hold/owned-drag intent is known; a second finger cancels the whole wait.
+const findPointers = new Map();
+export function findPointerCancel() {
+  for (const p of findPointers.values()) { clearTimeout(p.timer); p.cancel?.(); p.el._dragged = false; }
+  findPointers.clear();
+}
+export function findPointerMove(e) {
+  const p = findPointers.get(e.pointerId);
+  if (!p || p.active || Math.hypot(e.clientX - p.e.clientX, e.clientY - p.e.clientY) <= EXPLORE.slop) return false;
+  clearTimeout(p.timer);
+  if (p.drag) { p.active = true; p.start(p.e); }
+  else { findPointers.delete(e.pointerId); p.el._dragged = false; return true; }
+  return false;
+}
+export function findPointer(el, start, { drag = false, tap = null, cancel = null } = {}) {
+  el.addEventListener('pointerdown', e => {
+    if (FD.rm || !FD.st?.exploring || e.pointerType !== 'touch') { start(e); return; }
+    el._dragged = false;
+    const p = { el, start, drag, cancel, e, active: false };
+    p.timer = setTimeout(() => { if (findPointers.get(e.pointerId) !== p) return; p.active = true; start(e); }, EXPLORE.pressWait);
+    findPointers.set(e.pointerId, p);
+  });
+  el.addEventListener('pointermove', findPointerMove);
+  const release = e => {
+    const p = findPointers.get(e.pointerId); if (!p || p.el !== el) return;
+    clearTimeout(p.timer); findPointers.delete(e.pointerId);
+    if (!p.active && e.type === 'pointerup' && Math.hypot(e.clientX - p.e.clientX, e.clientY - p.e.clientY) <= EXPLORE.slop) {
+      tap?.(e);
+      el._dragged = true;
+    }
+    cancel?.();
+  };
+  el.addEventListener('pointerup', release); el.addEventListener('pointercancel', release);
+}
 export const toMap = p => [(p[0] - FD.st.cam.tx) / FD.st.cam.s, (p[1] - FD.st.cam.ty) / FD.st.cam.s];
 export const FIND_BY = Object.fromEntries(FINDS.map(f => [f.id, f]));
 export const findRandom = findRnd;

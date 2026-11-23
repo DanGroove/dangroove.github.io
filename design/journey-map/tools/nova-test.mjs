@@ -1,9 +1,10 @@
 // Node recording fakes only. No pixels, browser, layout, or device performance are checked.
 import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
-import { C, MAP, NOVA, DEPTH, EXPLORE } from '../data.mjs';
+import { C, MAP, NOVA, DEPTH, EXPLORE, STEPS } from '../data.mjs';
 import { mapDefs } from '../art.mjs';
-import { tripBuild, tripResize, tripState, tripApply, SEQ, VIEW, smooth } from '../trip.mjs';
+import { tripBuild, tripResize, tripState, tripApply, SEQ, VIEW, smooth, novaBuild, novaBuildGather } from '../trip.mjs';
+import { starsBuild, starsResize, starsTick, starsFrame, novaGatherPoint } from '../stars.mjs';
 import { footerBuild, footerBuildX, footerNovaResize, footerFrame, footerMotion } from '../footer.mjs';
 
 class NovaNode {
@@ -23,7 +24,7 @@ class NovaNode {
 const contexts = [], images = [];
 function novaContext() {
   const calls = [], state = [], ctx = { calls, globalAlpha: 1, lineWidth: 1, strokeStyle: '', fillStyle: '' };
-  for (const name of ['setTransform','clearRect','drawImage','fillRect','translate','rotate','scale','setLineDash','beginPath','moveTo','lineTo','closePath','arc','stroke','fill']) ctx[name] = (...args) => calls.push({ name, args, alpha: ctx.globalAlpha, width: ctx.lineWidth, colour: ctx.strokeStyle });
+  for (const name of ['setTransform','clearRect','drawImage','fillRect','translate','rotate','scale','setLineDash','beginPath','moveTo','lineTo','quadraticCurveTo','closePath','arc','stroke','fill']) ctx[name] = (...args) => calls.push({ name, args, alpha: ctx.globalAlpha, width: ctx.lineWidth, colour: ctx.strokeStyle });
   ctx.save = () => { state.push({ globalAlpha:ctx.globalAlpha, lineWidth:ctx.lineWidth, strokeStyle:ctx.strokeStyle, fillStyle:ctx.fillStyle }); };
   ctx.restore = () => Object.assign(ctx,state.pop());
   for (const name of ['createLinearGradient','createRadialGradient']) ctx[name] = (...args) => { const gradient = { stops:[], addColorStop(at, colour) { this.stops.push([at,colour]); } }; calls.push({ name,args,gradient }); return gradient; };
@@ -95,6 +96,49 @@ console.log('ok: dpr cap, original rough filter, fallback then sprite, rush/blas
 const imageCount=images.length;tripResize(2400,1600,120);footerNovaResize(2400,1600);assert.ok(images.length>imageCount);
 rough=decodeURIComponent(images.at(-1).source.split(',').slice(1).join(','));
 const rasterWidth=+rough.match(/width="(\d+)"/)[1];assert.ok(rasterWidth>=40*Math.max(VIEW.s0,VIEW.sT*EXPLORE.most)*NOVA.base.rushLen*2);
+// D3: sample the real score, renderer and gathering stars. Recording only, no pixels.
+assert.equal(STEPS.pace.rush,3);
+const scoreFrames=Array.from({length:3001},(_,i)=>novaBuild(i/3000));
+assert.ok(scoreFrames.every(frame=>Math.hypot(...frame.jitter)<=2),'screen jitter magnitude stays within 2 px');
+for(let i=scoreFrames.length-1;i>=0;i--)assert.deepEqual(novaBuild(i/3000),scoreFrames[i],'reverse score must reproduce forward values');
+const maxima=[];
+for(let i=601;i<2280;i++)if(scoreFrames[i].glow>scoreFrames[i-1].glow&&scoreFrames[i].glow>scoreFrames[i+1].glow)maxima.push(i);
+assert.equal(maxima.length,4);maxima.forEach((at,i)=>{assert.ok(Math.abs(at/3000-NOVA.build.throbs[i])<.001);if(i){assert.ok((at-maxima[i-1])/1000>=.34);assert.ok(scoreFrames[at].glow>scoreFrames[maxima[i-1]].glow);}});
+for(const phone of [false,true])for(let ms=0;ms<=2984;ms++){
+  const a=novaBuild(ms/3000,phone),b=novaBuild((ms+16)/3000,phone);
+  for(const key of ['glowAlpha','veil','coreAlpha','heat'])assert.ok(Math.abs(a[key]-b[key])<=.08+1e-9,key+' 16 ms delta at '+ms);
+}
+assert.ok(novaBuild(.93).len<novaBuild(.72).len);assert.equal(novaBuild(1).len,NOVA.build.compressed);assert.deepEqual(novaBuild(.93).jitter,[0,0]);
+for(let order=0;order<=1;order+=.01){const q=novaBuildGather(.93,order);assert.equal(q,1);assert.deepEqual(novaGatherPoint([10,20],[500,400],order*6,150,q),[500,400]);}
+for(const size of [[1440,900,120],[390,844,96]]){
+  tripResize(...size);footerNovaResize(size[0],size[1]);
+  const rush=segment('rush',.76), blast=segment('blast',.4/STEPS.pace.blast);
+  const savedPush=NOVA.build.push,savedPhone=NOVA.build.pushPhone;NOVA.build.push=NOVA.build.pushPhone=0;
+  const base=segment('rush',.76),recoiled=segment('blast',.4/STEPS.pace.blast);NOVA.build.push=savedPush;NOVA.build.pushPhone=savedPhone;
+  assert.ok(Math.abs(rush.cam.s/base.cam.s-1-(VIEW.phone?savedPhone:savedPush))<1e-9);
+  assert.deepEqual(blast.cam,recoiled.cam);
+  assert.ok(Math.hypot(...[0,1].map(i=>MAP.x[i]*rush.cam.s+(i?rush.cam.ty:rush.cam.tx)-MAP.x[i]*base.cam.s-(i?base.cam.ty:base.cam.tx)))<1e-9,'push anchors on X');
+}
+tripResize(1440,900,120);footerNovaResize(1440,900);
+const canvasSnapshot=t=>{canvas.ctx.calls.length=0;run(segment('rush',t),.017);return JSON.stringify(canvas.ctx.calls.map(c=>[c.name,c.args.map(a=>typeof a==='number'?+a.toFixed(8):a?.stops||a?.constructor?.name||a),/^(drawImage|fill|fillRect|stroke)$/.test(c.name)?c.alpha:null]));};
+const recorded=[.001,.16,.26,.45,.60,.72,.82,.92,.96].map(t=>[t,canvasSnapshot(t)]);
+for(const [t,frame] of recorded.slice().reverse())assert.equal(canvasSnapshot(t),frame,'actual canvas repeats and reverses');
+canvas.ctx.calls.length=0;run(segment('blast',.00001));
+const scale=canvas.ctx.calls.find(c=>c.name==='scale');assert.ok(scale.args[0]/segment('blast',.00001).cam.s>=NOVA.build.compressed&&scale.args[0]/segment('blast',.00001).cam.s<.602,'blast starts compressed');
+for(const dpr of [1,3]){
+  window.devicePixelRatio=dpr;footerNovaResize(1440,900);canvas.ctx.calls.length=0;run(segment('rush',.00000001));
+  const redScale=canvas.ctx.calls.find(c=>c.name==='scale').args;
+  assert.ok(Math.abs(redScale[0]-segment('rush',.00000001).cam.s)<1e-8&&Math.abs(redScale[1]-segment('rush',.00000001).cam.s)<1e-8,'handoff keeps SVG length/3.6 width');
+  assert.ok(canvas.ctx.calls.some(c=>c.name==='drawImage'&&c.args[1]===-20&&c.args[2]===-8),'handoff uses rough sprite in original user space');
+}
+const starCanvas=novaCanvas();starsBuild(starCanvas);starsResize(1440,900);
+const starSnapshot=(t,time)=>{starCanvas.ctx.calls.length=0;const st=segment('rush',t);starsTick(.1,st);starsFrame(time,st,[.5,.5]);return JSON.stringify(starCanvas.ctx.calls.map(c=>[c.name,c.args,/^(fill|fillRect|stroke)$/.test(c.name)?c.alpha:null]));};
+const starForward=[.01,.26,.45,.60,.72,.83,.93,.97].map(t=>[t,starSnapshot(t,3)]);
+for(const [t,frame] of starForward.slice().reverse())assert.ok(starSnapshot(t,200)===frame,'stars ignore elapsed clock during rush at '+t);
+starSnapshot(.93,1);const heldState=segment('rush',.93),heldX=[MAP.x[0]*heldState.cam.s+heldState.cam.tx,MAP.x[1]*heldState.cam.s+heldState.cam.ty];assert.ok(!starCanvas.ctx.calls.some(c=>(c.name==='fillRect'||c.name==='arc')&&Math.hypot(c.args[0]-heldX[0],c.args[1]-heldX[1])<3),'gathered stars vanish before held breath');
+// The actual writer already has zero identical-frame map writes; reject new SVG effects too.
+assert.ok(!/createElementNS|findSvg\(/.test(readFileSync(new URL('../footer.mjs',import.meta.url),'utf8')));
+console.log('ok: D3 3 s reversible canvas/star score; four increasing throbs >=340 ms apart; 16 ms alpha deltas <=.08; gather complete at .93; compressed blast, anchored push/recoil and rough 3.6-width handoff at DPR 1/3');
 const rmX=new NovaNode(),rmCanvas=novaCanvas();footerBuildX(rmX,true,rmCanvas,hit);footerNovaResize(390,844);footerMotion(2,.016,segment('rest',0),[0,0],true);
 assert.equal(rmCanvas.ctx.calls.length,0);assert.equal(rmX.style.visibility,undefined);assert.ok(!/fx-hit|fx-white/.test(rmX.innerHTML));
 console.log('ok: rough sprite grows on resize; reduced motion leaves canvas empty and static SVG X unchanged');

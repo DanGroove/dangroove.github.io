@@ -1,7 +1,7 @@
 // Analytic boxes and recording nodes only. No browser or font rasterizer is involved.
 import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
-import { CAMERA, COPY, NOVA, PHONE_LAYOUT, STEPS, LABELS } from '../data.mjs';
+import { CAMERA, COPY, NOVA, PHONE_LAYOUT, STEPS, LABELS, EXPLORE } from '../data.mjs';
 import { footerPhoneLayout, footerBuild, footerBuildX, footerResize, footerFrame } from '../footer.mjs';
 import { stepsExploreBoxes } from '../steps.mjs';
 import { tripResize, tripState, toScreen, VIEW } from '../trip.mjs';
@@ -53,4 +53,16 @@ for(const [w,h] of [[390,844],[360,640],[412,915]]) {
 }
 const taller=footerPhoneLayout({...fixture,goBottom:170});assert.ok(taller.fits);assert.equal(taller.headline[1],186,'CTA follows a taller go bar');
 const css=readFileSync(new URL('../map.css',import.meta.url),'utf8');assert.match(css,/\.jm-explore \.go\.go-end \.go-back\s*\{[^}]*border-radius: var\(--go-h\)[^}]*white-space: nowrap/);assert.match(css,/\.jm-explore \.go\.go-end\s*\{[^}]*top: auto[^}]*flex-wrap: nowrap/);
+assert.match(css,/\.jm-explore \.go\s*\{\s*animation: exploreRow var\(--explore-row-fade\) var\(--explore-row-delay\) linear both;/);
+assert.match(css,/@keyframes exploreRow\s*\{ from \{ opacity: 0; \} to \{ opacity: 1; \} \}/);
+tripResize(360,640,96);exploreResize();assert.equal(exploreStart(),true);
+const entryRow=stepsExploreBoxes(360,640),footerLinks=[16,520,344,640]; // Conservative full link band, deliberately overlapping the row.
+assert.ok(Object.values(entryRow).some(b=>gap(b,footerLinks)===0));
+for(let ms=0;ms<=600;ms++){
+  const state=tripState(endP);exploreApply(state,ms?0.001:0);footerFrame(state);
+  const rowAlpha=Math.max(0,Math.min(1,(ms/1000-EXPLORE.rowDelay)/EXPLORE.rowFade));
+  assert.ok(!(rowAlpha>0&&Number(inner.style.opacity)>.2+1e-9),'row overlaps a still-visible footer link at '+ms+' ms');
+  if(ms<=400)assert.equal(rowAlpha,0);if(ms===600)assert.ok(rowAlpha>1-1e-9);
+}
+exploreReset();console.log('ok: D3 360x640 entry row stays transparent through 400 ms and fades over 200 ms; no overlapping analytic frame above footer opacity .2 in the first 600 ms');
 console.log('ok: resize reads/restores hidden end controls; shared analytic boxes cover taller bars and all three phones; no frame layout reads');

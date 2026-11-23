@@ -28,10 +28,10 @@ for (let i = 1; i < BEATS.length; i++) {
       stepAssert((p - prev) * Math.sign(move.P1 - move.P0) >= -1e-9, `move reversed: ${a.id}/${b.id}`); prev = p;
     }
   }
-  stepAssert(forward.D >= 1.5 && forward.D <= 5, `forward duration outside 1.5-5 seconds: ${a.id}/${b.id}`);
+  stepAssert(forward.D >= 1.5 && forward.D <= (a.id === 'x' ? STEPS.pace.rush + STEPS.pace.blast + STEPS.pace.settle : 5) + 1e-9, `forward duration outside beat timing: ${a.id}/${b.id}`);
   console.log(`${a.id} -> ${b.id} | ${forward.D.toFixed(3)} | ${back.D.toFixed(3)}`);
 }
-console.log('ok: all 18 moves start/end correctly and never turn back; all 9 forward durations are within 1.5-5 seconds');
+console.log('ok: all 18 moves start/end correctly and never turn back; ordinary forward durations within 1.5-5 s; X-to-end uses the 3 s rush plus blast/settle');
 
 // Recording nodes exercise controls, not rendered pixels. Any geometry read here fails.
 class StepNode {
@@ -48,8 +48,9 @@ class StepNode {
   closest(s) { return s.split(',').some(c => this.matches(c.trim())) ? this : this.parentElement?.closest(s) || null; }
   contains(n) { return n === this || this.children.some(c => c.contains(n)); }
   addEventListener(t, f) { (this.listeners[t] ??= []).push(f); }
-  fire(t, props = {}) { const e = { target: this, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...props }; (this.listeners[t] || []).forEach(f => f(e)); return e; }
-  focus(options) { document.activeElement = this; this.focusOptions = options; }
+  fire(t, props = {}) { const e = { target: this, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; }, ...props }; if (!this.blocked()) (this.listeners[t] || []).forEach(f => f(e)); return e; }
+  blocked() { for(let n=this;n;n=n.parentElement)if(n.inert)return true;return false; }
+  focus(options) { if(this.blocked())return;document.activeElement = this; this.focusOptions = options; }
   getBoundingClientRect() { throw new Error('unexpected layout read'); }
 }
 const stepWindow = new StepNode(), stepStage = new StepNode(), stepRoot = new StepNode(), stepBody = new StepNode();
@@ -85,6 +86,14 @@ cardState = tripState(stopP); cardsOverride(cardState, CARD_CLOSE.time / 2, fals
 cardsFrame(cardState); cardsList()[0].btn.focus(); cardsList()[0].btn.fire('click'); cardState = tripState(stopP); cardsOverride(cardState, CARD_CLOSE.time, false); cardsFrame(cardState); stepAssert(cardState.cardK[0] === 1 && navigations === 0, 'closed stop mark must reopen locally');
 const cardX = cardsList()[0].el.querySelector('.c-close'); stepAssert(document.activeElement === cardX && cardX.focusOptions.preventScroll === true, 'reopened card must focus its X without scrolling');
 JOURNEY.next(); stepAssert(JOURNEY.moving, 'mid-move X fixture must be moving'); cardX.focus(); cardX.fire('click'); stepAssert(document.activeElement !== cardsList()[0].btn, 'mid-move X focused departed stop mark'); stepAssert(cardsClose(0) === false, 'X must be ignored mid-move');
+JOURNEY.set(stopP);
+// D3: model the browser's focus-on-pointerdown and loss when a face becomes inert.
+const hmcP=BEATS.find(b=>b.id==='hmc1').P,hmc=cardsList()[1],hmcX=hmc.el.querySelector('.c-close');
+JOURNEY.set(hmcP);let hmcState=tripState(hmcP);cardsOverride(hmcState,0,false);cardsFrame(hmcState);go.querySelector('.go-next').focus();JOURNEY.next();
+for(let n=0;n<4;n++){stepsFrame(stepClock+=50);hmcState=tripState(JOURNEY.P);cardsOverride(hmcState,.05,true);cardsFrame(hmcState);}
+stepAssert(hmcX.inert===true,'moving card X must be inert');hmcX.focus();hmcX.fire('click');
+for(let n=0;JOURNEY.moving&&n<200;n++){stepsFrame(stepClock+=50);hmcState=tripState(JOURNEY.P);cardsOverride(hmcState,.05,JOURNEY.moving);cardsFrame(hmcState);if(hmc.face.inert&&hmc.el.contains(document.activeElement))document.activeElement=stepBody;}
+stepAssert(!JOURNEY.moving&&document.activeElement!==stepBody&&!hmc.el.contains(document.activeElement),'200 ms HMC X press must leave focus outside departed card/body');
 JOURNEY.set(stopP);
 cardsClose(); cardsOverride(tripState(BEATS[3].P), 0, false); cardState = tripState(stopP); cardsOverride(cardState, 0, false); stepAssert(cardState.cardK[0] === 1, 'leaving stop must forget closed state');
 const reducedCards = new StepNode(); cardsBuild(reducedCards, () => {}, true); stepAssert(reducedCards.querySelectorAll('.c-close').length === 0, 'reduced-motion cards must have no close button');

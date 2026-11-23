@@ -241,6 +241,8 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-steps .stage { touch-action: pinch-zoom; }
 .jm-explore .stage { touch-action: none; cursor: grab; }
 .jm-explore .stage.is-dragging { cursor: grabbing; }
+.jm-explore .go { animation: exploreRow var(--explore-row-fade) var(--explore-row-delay) linear both; }
+@keyframes exploreRow { from { opacity: 0; } to { opacity: 1; } }
 .jm-explore .go-back { width: auto; padding: 0 var(--go-gap); display: flex; align-items: center; gap: var(--go-gap); border-radius: var(--go-h); }
 .jm-steps .c-close { position: absolute; top: var(--card-close-inset); right: var(--card-close-inset); width: var(--card-close-hit); height: var(--card-close-hit); display: none; place-items: center; padding: 0; border: 0; border-radius: 0 var(--card-close-radius) 0 0; color: var(--tx); background: var(--g); cursor: pointer; }
 .jm-steps .stop[data-state="open"] > .c-close { display: grid; pointer-events: auto; }
@@ -1182,16 +1184,16 @@ const HAMMER = {
     heart: 'M0 3C-6 -3 -6 -7 -2 -7Q0 -7 0 -5Q0 -7 2 -7C6 -7 6 -3 0 3Z', heartBox: '-6 -8 12 12',
     crack: 'M-3 -6L1 -2L-2 1L3 6', stoneHeart: 'M0 -9L-9 7L10 6ZM0 -5L-3 2L5 3',
     shot: ['M-1 -3L1 3M-2 -2L1 -3M-1 3L2 2', 'M-2 -4L2 -4L0 5Z', 'M0 4Q-4 0 0 -4Q4 0 0 4Z'],
-    wall: { centres: [-11, 0, 11], paths: { wallRim: 'M-7.5 0A7.5 7.5 0 1 0 7.5 0A7.5 7.5 0 1 0 -7.5 0Z', wallBoss: 'M-1.5 0A1.5 1.5 0 1 0 1.5 0A1.5 1.5 0 1 0 -1.5 0Z', wallPlanks: 'M-4 -6V6M0 -7.5V-1.5M0 1.5V7.5M4 -6V6' } },
+    wall: { centres: [-17.5, -8.75, 0, 8.75, 17.5], paths: { wallRim: 'M-7.5 0A7.5 7.5 0 1 0 7.5 0A7.5 7.5 0 1 0 -7.5 0Z', wallBoss: 'M-1.5 0A1.5 1.5 0 1 0 1.5 0A1.5 1.5 0 1 0 -1.5 0Z', wallPlanks: 'M-4 -6V6M0 -7.5V-1.5M0 1.5V7.5M4 -6V6' } },
     spark: 'M-2 0H2M0 -2V2',
     sprites: {
       glove: [24, 20, 'M-10 7L-8 1L-7 -5L-3 -7L0 -5L3 -7L6 -5L8 -1L7 2L10 7ZM-8 2H8M-4 -5V0M0 -5V0M4 -5V0M-7 5H-5M0 5H2M6 5H7'],
       hammer: [20, 20, 'M-1 1V8Q-3 11 0 11Q3 11 1 8V1M-8 -7L-5 -5H5L8 -7L9 -6V1L8 2L5 0H-5L-8 2L-9 1V-6ZM-5 -4L0 -1L5 -4M-5 -1L0 -4L5 -1'],
-      draugr: [24, 20, 'M-4 -2L-5 -5L-3 -7L0 -6L1 -3L-1 -2M-4 -2Q-7 -1 -6 2L-5 6L-3 4L-2 7L0 4L2 6L1 0L-1 -2M-4 0L-2 2L1 1L5 2M4 2L7 -5L8 -4L7 -2L8 -1L6 3M-3 -5H-2M-3 0V3M-4 6L-5 7M0 5L1 7'],
-      rime: [24, 20, 'M-3 -4L-3 -7H2L3 -4M-3 -4L-7 -3L-8 1L-5 2L-4 5L-4 7H-1L0 4L1 7H4L4 2L6 1M-3 -3L-2 1L-1 -1L0 2L1 -1L2 0L3 -3M-2 -5H-1M1 -5H2M5 4L6 -4M5 -4L5 -7L8 -7L9 -5L8 -3L6 -3'],
-      fire: [24, 20, 'M-2 -4Q-5 -5 -3 -7L-1 -6L0 -7L1 -4L3 -7Q5 -3 2 -2M-2 -2L-4 0L-3 3L-2 2L-2 7H0L1 3L2 7H4L3 0L2 -2ZM-2 -4V-2H2V-4M-3 0L-6 2M3 0L5 1M5 2L8 -5L9 -4L7 3M-1 -3H0M0 0L1 2'],
-      wolf: [26, 20, 'M-9 1L-6 -2L-1 -3L3 -2L4 -5L6 -3L8 -3L9 -1L7 1L4 1L2 3L-3 3L-6 2L-8 4L-9 3M-7 0L-9 -3M-3 2L-1 5L1 5M2 2L5 4L7 4M6 -2H7'],
-      chief: [26, 22, 'M-3 -3V-5L0 -7L3 -5V-3M-3 -5L-7 -7L-6 -4L-3 -3M3 -5L7 -7L6 -4L3 -3M-3 -2L-7 0L-6 3L-3 2L-3 7H-1L0 3L1 7H4L3 2L6 1L5 -1L3 -2M-5 1L-1 0L4 -1M-2 2L2 0L5 -1M-7 2L7 -3M6 -4L8 -6L9 -4L8 -2L6 -2ZM-1 -4H1M-2 -1H2'],
+      draugr: [24, 20, 'M-4 1.1 L-5 -1 L-3 -2.4 L0 -1.7 L1 0.4 L-1 1.1 M-4 1.1 Q-7 1.8 -6 3.9 L-5 6.7 L-3 5.3 L-2 7.4 L0 5.3 L2 6.7 L1 2.5 L-1 1.1 M-4 2.5 L-2 3.9 L1 3.2 L5 3.9 M4 3.9 L7 -1 L8 -0.3 L7 1.1 L8 1.8 L6 4.6 M-3 -1 H-2 M-3 2.5 V4.6 M-4 6.7 L-5 7.4 M0 6 L1 7.4'],
+      rime: [24, 20, 'M-3 -4.229 L-3 -7.4 H2 L3 -4.229 M-3 -4.229 L-7 -3.171 L-8 1.057 L-5 2.114 L-4 5.286 L-4 7.4 H-1 L0 4.229 L1 7.4 H4 L4 2.114 L6 1.057 M-3 -3.171 L-2 1.057 L-1 -1.057 L0 2.114 L1 -1.057 L2 0 L3 -3.171 M-2 -5.286 H-1 M1 -5.286 H2 M5 4.229 L6 -4.229 M5 -4.229 L5 -7.4 L8 -7.4 L9 -5.286 L8 -3.171 L6 -3.171'],
+      fire: [24, 20, 'M-2 -4.229 Q-5 -5.286 -3 -7.4 L-1 -6.343 L0 -7.4 L1 -4.229 L3 -7.4 Q5 -3.171 2 -2.114 M-2 -2.114 L-4 0 L-3 3.171 L-2 2.114 L-2 7.4 H0 L1 3.171 L2 7.4 H4 L3 0 L2 -2.114 ZM-2 -4.229 V-2.114 H2 V-4.229 M-3 0 L-6 2.114 M3 0 L5 1.057 M5 2.114 L8 -5.286 L9 -4.229 L7 3.171 M-1 -3.171 H0 M0 0 L1 2.114'],
+      wolf: [26, 20, 'M-9.4 3.48 L-6.267 1.44 L-1.044 0.76 L3.133 1.44 L4.178 -0.6 L6.267 0.76 L8.356 0.76 L9.4 2.12 L7.311 3.48 L4.178 3.48 L2.089 4.84 L-3.133 4.84 L-6.267 4.16 L-8.356 5.52 L-9.4 4.84 M-7.311 2.8 L-9.4 0.76 M-3.133 4.16 L-1.044 6.2 L1.044 6.2 M2.089 4.16 L5.222 5.52 L7.311 5.52 M6.267 1.44 H7.311'],
+      chief: [26, 22, 'M-3 -3.171 V-5.286 L0 -7.4 L3 -5.286 V-3.171 M-3 -5.286 L-7 -7.4 L-6 -4.229 L-3 -3.171 M3 -5.286 L7 -7.4 L6 -4.229 L3 -3.171 M-3 -2.114 L-7 0 L-6 3.171 L-3 2.114 L-3 7.4 H-1 L0 3.171 L1 7.4 H4 L3 2.114 L6 1.057 L5 -1.057 L3 -2.114 M-5 1.057 L-1 0 L4 -1.057 M-2 2.114 L2 0 L5 -1.057 M-7 2.114 L7 -3.171 M6 -4.229 L8 -6.343 L9 -4.229 L8 -2.114 L6 -2.114 ZM-1 -4.229 H1 M-2 -1.057 H2'],
       valkyrie: [36, 22, 'M-15 5L-9 1L-4 2L0 -1L5 0L8 -3L13 -2L16 1L12 4H6L4 8M-8 4L-9 8M-3 4L-1 8M1 -1V-8L4 -10L6 -7L4 -4L7 -1M2 -7L-6 -9L-2 -5L-8 -6L-2 -2M7 -7L13 -10'],
       hrungnir: [128, 62, 'M-18 -7L-20 -15L-8 -20L13 -18L19 -12L17 -7M-20 -15L-35 -22L-32 -13L-20 -9M17 -14L32 -22L29 -12L18 -8M-18 -7L-37 -2L-43 8L-28 11L-19 6L-18 21H-5L0 10L5 21H21L18 5L35 7L41 0L27 -5L17 -7M-29 4L-10 6L16 0M29 1L13 7L-7 3M-44 11L43 -6M39 -10L47 -17L54 -11L50 -1L42 0ZM-12 -12H-6M6 -12H12M-8 -6L0 -3L9 -6M-10 10L0 18L11 10'],
       clay: [52, 64, 'M-9 -8L-10 -20L-2 -25L8 -20L9 -9L17 -4L19 9L11 12L10 25H3L0 15L-3 25H-11L-12 9L-19 7L-17 -3ZM-7 -16L-3 -15M3 -15L7 -16M-5 -9L3 -7M-11 -3L-5 1L-8 8M10 -1L4 5L8 10M-2 11L2 8'],
@@ -1287,14 +1289,14 @@ const HOLD = { zoomIn: [0, 0.18], zoomOut: [0.86, 1], open: [0.1, 0.32], fold: [
 // Clock-driven journey. Pace and animation durations are seconds.
 const STEPS = {
   pace: { hero: 0.9, handoff: 2.8, overview: 0.8, pushIn: 1.6, holdIn: 1.0, holdOpen: 0.4, holdOut: 0.6,
-    legBase: 0.8, legPerVh: 0.006, legMax: 2.4, legX: 1.2, rush: 1.3, blast: 1.6, settle: 1.3 },
+    legBase: 0.8, legPerVh: 0.006, legMax: 2.4, legX: 1.2, rush: 3.0, blast: 1.6, settle: 1.3 },
   ramp: 0.35, back: 0.6, hurry: 0.3, minMove: 0.3, cut: [0.18, 0.32],
   nav: { h: 44, gap: 14, bar: 52 },
   frameMax: 0.05, reveal: 0.3,
 };
 
 const EXPLORE = { in: 1.6, out: 0.9, most: 3, margin: 24, marginPhone: 12, wheel: 0.0016, wheelMax: 120, pinchWheel: 0.01,
-  footerFade: 0.5, clickRelease: 500,
+  footerFade: 0.5, clickRelease: 500, pressWait: 120, rowDelay: 0.4, rowFade: 0.2,
   keyPan: 90, keyShift: 3, calmAlpha: 0.35, calmScale: 0.6, autoReserve: 2,
   ease: 0.12, slop: 6, friction: 5, velocityWindow: 0.08, key: 1.25, hintTime: 8, linePx: 16,
   bar: { edgePhone: 16, padStart: 14, padEnd: 34, arrowPhone: 12 } };
@@ -1351,6 +1353,11 @@ const DEPTH = {
 
 const NOVA_CANVAS = { dpr: 2, glowSprite: 512 };
 const NOVA = {
+  build: { kindle: 0.2, draw: 0.76, hold: 0.93, throbs: [0.26, 0.45, 0.60, 0.72], rise: 0.08, fall: 0.25,
+    push: 0.08, pushPhone: 0.06, recoil: 0.4, veil: 0.65, veilPhone: 0.45, veilOut: 0.25, hole: [0.6, 0.18], holeBreath: 0.04,
+    kindleGlow: 36, kindleAlpha: 0.025, kindleHeat: 0.015, glow: [104, 22], swell: [0.15, 0.22, 0.29, 0.35], glowAlpha: [0.18, 0.44, 0.56], throbAlpha: [0.08, 0.11, 0.14, 0.18],
+    spikeStep: 0.28, spikeKick: 0.08, compressed: 0.6, thickness: 1.12, heat: [0.15, 0.9, 1], core: [4, 13, 9],
+    gatherKindle: 0.04, gatherDrift: 0.18, gatherStep: 0.13, gatherStagger: 0.035, jitter: [0.5, 2], jitterHz: 24 },
   pulse: [2.6, 0.12, 0.9, 0.06], spike: [1.7, 0.2, 3.14], glow: [4.2, 0.07],
   rays: { n: 22, len: [4, 12], alpha: [0.3, 0.7], turn: 0.12, start: 1.1, width: 1, breathe: 0.7, period: [1.2, 3.2], peak: 0.16 },
   lobes: { n: 6, nPhone: 4, r: [120, 260], orbit: [40, 170], speed: [0.12, 0.3], alpha: [0.22, 0.42], breathe: 0.2 },
@@ -1540,11 +1547,14 @@ const FIND_PLAY = {
 // Round 7 C1: ported reference paths and independent layout/motion tuning.
 const YGG = {
   masses: [
-    [[-60,-35],[-64,-45],[-58,-57],[-47,-64],[-36,-69],[-28,-69],[-23,-65],[-22,-58],[-22,-51],[-23,-40],[-34,-31],[-49,-28]],
-    [[-24,-69],[-18,-76],[-6,-79],[8,-79],[21,-74],[28,-67],[29,-59],[36,-51],[33,-44],[20,-43],[7,-48],[-3,-49],[-13,-49],[-19,-55],[-20.2,-64.8]],
-    [[32,-70],[40,-73],[53,-69],[65,-59],[68.5,-48],[68.5,-37],[62,-29],[49,-28],[38,-32],[37,-40],[42,-52],[36,-57],[31,-63]],
+    [[-60,-37],[-63,-42],[-60,-47],[-55,-49],[-51,-46],[-47,-50],[-42,-48],[-38,-50],[-34,-47],[-35,-42],[-32,-39],[-37,-35],[-38,-31],[-45,-32],[-49,-29],[-54,-32],[-59,-32]],
+    [[-53,-55],[-52,-61],[-47,-62],[-45,-67],[-39,-65],[-35,-70],[-29,-68],[-27,-71],[-23,-67],[-23,-62],[-20,-59],[-24,-56],[-25,-52],[-31,-51],[-35,-55],[-40,-53],[-43,-56],[-49,-53]],
+    [[-19,-71],[-19,-75],[-13,-76],[-9,-80],[-4,-78],[1,-81],[7,-78],[11,-79],[15,-75],[16,-74],[15,-69],[17,-66],[14,-64],[14,-60],[8,-61],[5,-57],[-1,-59],[-5,-55],[-11,-53],[-15,-57],[-14,-63],[-18,-66]],
+    [[19,-60],[22,-66],[27,-64],[30,-67],[33,-63],[38,-65],[40,-61],[38,-57],[41,-54],[37,-51],[37,-47],[32,-46],[28,-48],[24,-45],[19,-48],[16,-47],[15,-52],[18,-55]],
+    [[43,-58],[48,-61],[52,-58],[57,-59],[60,-54],[64,-53],[65,-48],[69,-45],[66,-41],[68,-37],[63,-34],[62,-30],[57,-31],[53,-28],[49,-31],[44,-30],[42,-35],[39,-37],[41,-42],[40,-47],[44,-50]],
   ],
-  massBump: [.08, .04],
+  massBump: [.16, .28],
+  massFrom: [[-23,-43],[-22,-46],[-2,-51],[24,-46],[24,-45]],
   branches: 'M-23 -43Q-34 -43 -43 -49M-22 -46Q-32 -51 -36 -57M-2 -51Q-8 -58 -9 -68M2 -51Q9 -59 17 -67M24 -45Q39 -43 52 -49M24 -46Q34 -55 43 -61M-10 -37Q-22 -36 -33 -39M10 -36Q22 -34 36 -38',
   ashHatch: 'M-53 -43l8 -9m-6 1l-4 -1m6 -1l-1 -4M-42 -39l9 -10m-7 7l-4 -1m7 -2l-1 -4M-49 -57l7 -3m-4 2l-2 -3M-13 -61l7 -10m-5 7l-4 -1m7 -3l-1 -4M-3 -56l8 -10m-6 7l-3 -1m6 -3l-1 -4M13 -54l10 -7m-7 5l-3 -2m6 -1v-4M6 -72l6 -3M43 -59l8 -6m-6 5l-3 -2m6 -1l1 -3M48 -40l8 -9m-6 6l-3 -1m6 -1v-4M59 -37l6 -8m-4 5l-3 -1M54 -53l8 -3',
   "crown": [
@@ -2100,9 +2110,23 @@ const shore = (P, seed) => { const r = rnd(seed), n = P.length; let s = '', ar2 
 // ---- Norse landmarks ----
 function yggdrasil(x, y) {
   const Y = YGG, r = rnd(Y.crownSeed);
-  const crown = Y.masses.map(P => '<path class="l yg-mass" d="' + scallop(P, i => { const p = P[i], q = P[(i + 1) % P.length]; return Math.hypot(q[0] - p[0], q[1] - p[1]) * (Y.massBump[0] + r() * Y.massBump[1]); }) + '"/>').join('');
+  const crown = Y.masses.map((P, index) => {
+    const segments = P.map((p, i) => {
+      const q = P[(i + 1) % P.length], dx = q[0] - p[0], dy = q[1] - p[1], bump = Y.massBump[0] + r() * Y.massBump[1];
+      return 'Q' + n1((p[0]+q[0])/2 + dy*bump) + ' ' + n1((p[1]+q[1])/2 - dx*bump) + ' ' + q.join(' ');
+    });
+    const d = 'M' + P[0].join(' ') + segments.join('') + 'Z';
+    // Leave the edge facing its supporting limb open, with opaque foliage behind it.
+    const from = Y.massFrom[index], distance = p => Math.hypot(p[0]-from[0],p[1]-from[1]);
+    const entry = P.reduce((best,p,i) => distance(p) < distance(P[best]) ? i : best, 0);
+    const edge = segments.map((part,i) => i === entry || i === (entry + P.length - 1) % P.length ? '' : 'M' + P[i].join(' ') + part).join('');
+    const centre = P.reduce((v,p) => v.map((n,k) => n+p[k]/P.length),[0,0]);
+    const angle = Math.atan2(centre[1]-from[1],centre[0]-from[0]), along = [Math.cos(angle)*4,Math.sin(angle)*4];
+    const hatch = P.filter((p,i) => i%3===0).map(p => { const a=p.map((v,k) => v+(centre[k]-v)*.55); return 'M'+a.join(' ')+'l'+along.join(' '); }).join('');
+    return '<defs><clipPath id="yg-leaves-'+index+'"><path d="'+d+'"/></clipPath></defs><path class="l yg-mass" d="'+d+'" style="fill:'+C.land+';stroke:none"/><path class="l yg-edge" d="'+edge+'"/><path class="t yg-hatch" d="'+hatch+'" stroke-opacity=".28" clip-path="url(#yg-leaves-'+index+')"/>';
+  }).join('');
   const actor = (cls, p, body) => '<g class="' + cls + '" transform="translate(' + p.join(' ') + ')">' + body + '</g>';
-  return '<g class="ygg" transform="translate(' + x + ' ' + y + ')">' + Y.roots.map(row => '<path class="g" d="' + tube(...row) + '"/>').join('') + Y.rootlets + Y.trunk + '<path class="l" d="' + Y.branches + '"/>' + crown + '<path class="t" d="' + Y.ashHatch + '"/>' + actor('yg-eagle', Y.eagleAt, Y.eagle) + actor('yg-rat', Y.ratAt, Y.rat) + actor('yg-nid', Y.nidAt, Y.nid) + '</g>';
+  return '<g class="ygg" transform="translate(' + x + ' ' + y + ')">' + Y.roots.map(row => '<path class="g" d="' + tube(...row) + '"/>').join('') + Y.rootlets + Y.trunk + '<path class="l yg-limbs" d="' + Y.branches + '"/>' + crown + actor('yg-eagle', Y.eagleAt, Y.eagle) + actor('yg-rat', Y.ratAt, Y.rat) + actor('yg-nid', Y.nidAt, Y.nid) + '</g>';
 }
 // interlace knot, about 22 units: a rounded square and a diamond woven over and under by quadrant
 const knot = (cx, cy) => {
@@ -2329,6 +2353,35 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const smooth = (a, b, v) => { const t = clamp01((v - a) / (b - a)); return t * t * (3 - 2 * t); };
 const easeIO = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
+// One reversible score for all rush surfaces. Seconds only set the throb envelopes.
+function novaBuild(rushT, phone = VIEW.phone) {
+  const B = NOVA.build, t = clamp01(rushT), k = Math.sqrt(clamp01(t / B.kindle)), d = smooth(B.draw, B.hold, t);
+  const beat = at => B.throbs.map(centre => {
+    const step = smooth(centre - B.rise / STEPS.pace.rush, centre, at);
+    return { step, pulse: step * (1 - smooth(centre, centre + B.fall / STEPS.pace.rush, at)) };
+  });
+  const beats = beat(Math.min(t, B.draw)), steps = beats.reduce((sum, b) => sum + b.step, 0);
+  const swell = beats.reduce((sum, b, i) => sum + b.pulse * B.swell[i], 0), pulse = beats.reduce((sum, b, i) => sum + b.pulse * B.throbAlpha[i], 0);
+  const glow = (t > 0 ? lerp(B.kindleGlow, B.glow[0], k) : 0) * (1 + swell), len = 1 + B.spikeStep * steps + B.spikeKick * beats.reduce((sum,b) => sum + b.pulse, 0);
+  const heat = (t > 0 ? lerp(B.kindleHeat, B.heat[0], k) : 0) + (B.heat[1] - B.heat[0]) * steps / B.throbs.length;
+  // Seeded continuous noise: never integrates dt, and ends before the held breath.
+  const noise = axis => { const v = t * STEPS.pace.rush * B.jitterHz, i = Math.floor(v), hash = n => { let h = Math.imul(n + NOVA.seed + axis * 101, 1597334677); h ^= h >>> 16; return (h >>> 0) / 4294967295 * 2 - 1; }; return lerp(hash(i), hash(i+1), smooth(0,1,v-i)); };
+  const tremble = t > B.draw && t < B.hold ? lerp(...B.jitter, d) * smooth(B.draw, B.draw + .02, t) * (1 - smooth(B.hold - .02, B.hold, t)) : 0;
+  const jitter = [noise(0), noise(1)], jitterLength = Math.max(1, Math.hypot(...jitter));
+  return { len: d === 1 ? B.compressed : lerp(len, B.compressed, d), thin: lerp(1, B.thickness, d), heat: lerp(heat, B.heat[2], d),
+    glow: lerp(glow, B.glow[1], d), glowAlpha: lerp((t > 0 ? lerp(B.kindleAlpha, B.glowAlpha[0], k) : 0) + (B.glowAlpha[1] - B.glowAlpha[0]) * steps / 4 + pulse, B.glowAlpha[2], d),
+    core: lerp(B.core[0] * k + (B.core[1] - B.core[0]) * steps / 4, B.core[2], d), coreAlpha: lerp(heat, 1, d),
+    veil: (phone ? B.veilPhone : B.veil) * (0.2 * k + 0.6 * steps / 4 + 0.2 * d),
+    hole: lerp(...B.hole, 0.2 * k + 0.6 * steps / 4 + 0.2 * d) * (1 + B.holeBreath * swell * (1 - d)),
+    push: (phone ? B.pushPhone : B.push) * smooth(0, B.draw, t), jitter: tremble ? jitter.map(v => v * tremble / jitterLength) : [0, 0],
+    gather: lerp(B.gatherKindle * k + (B.gatherDrift - B.gatherKindle) * Math.min(t, B.draw) / B.draw + B.gatherStep * steps, 1 + B.gatherStagger, d) };
+}
+
+const novaBuildGather = (rushT, order = 0) => {
+  const B = NOVA.build, score = novaBuild(rushT);
+  return clamp01((score.gather - order * B.gatherStagger * smooth(0, B.kindle, rushT)) / (1 - order * B.gatherStagger));
+};
+
 // ---- geometry along the trail ----
 const CUM = [0]; for (let i = 1; i < TRAIL.length; i++) CUM.push(CUM[i - 1] + Math.hypot(TRAIL[i][0] - TRAIL[i - 1][0], TRAIL[i][1] - TRAIL[i - 1][1]));
 const TRAIL_LEN = CUM[CUM.length - 1];
@@ -2431,6 +2484,9 @@ function tripState(P) {
     base.cx = lerp(base.cx, MAP.x[0], e1); base.cy = lerp(base.cy, MAP.x[1], e1);
     base.ax = lerp(lerp(startAX, VIEW.w / 2, e1), fx[0] * VIEW.w, e2);
     base.ay = lerp(lerp(startAY, VIEW.h / 2, e1), VIEW.phone && VIEW.footerY !== null ? VIEW.footerY : fx[1] * VIEW.h, e2);
+    const push = novaBuild(st.rushT).push * (1 - clamp01(st.blastT * STEPS.pace.blast / NOVA.build.recoil)) ** 3;
+    base.ax -= (MAP.x[0] - base.cx) * base.s * push; base.ay -= (MAP.x[1] - base.cy) * base.s * push;
+    base.s *= 1 + push;
     cam = base;
   }
   st.inTrip = st.pushT > 0;
@@ -2937,7 +2993,7 @@ function starsFrame(time, st, pointer, opt = {}) {
   if (K <= 0) { flush(ctx); ctx.globalAlpha = 1; return; }
   const h = st.handoffT, px = (pointer[0] - .5) * STARS.parallax, py = (pointer[1] - .5) * STARS.parallax;
   const Xs = toScreen(st, MAP.x), diag = Math.hypot(W, H), worldScale = st.exploreK ? st.cam.s / st.sEnd : 1;
-  const gatherRadius = NOVA.gather.ring * Math.min(W, H), gatherT = s => clamp01((st.rushT - s.ord2 * NOVA.gather.stagger) / NOVA.gather.time);
+  const gatherRadius = NOVA.gather.ring * Math.min(W, H), gatherT = s => novaBuildGather(st.rushT, s.ord2);
   const dotR = Math.min(2.1, .75 + .38 * st.cam.s);
   if (h <= 0) SK.skyPointer = pointer.slice();
   const heroPos = (s, sky = false) => { const pt = sky && h > 0 ? SK.skyPointer : pointer; return [(((s.hx + SK.drift * STARS.drift * s.z) % 1) + 1) % 1 * W + (pt[0] - .5) * STARS.parallax * s.z, s.hy * H + (pt[1] - .5) * STARS.parallax * s.z]; };
@@ -2958,13 +3014,14 @@ function starsFrame(time, st, pointer, opt = {}) {
       if (h > 0) {
         const outside = Math.hypot(Math.max(box[0] - x, 0, x - box[2]), Math.max(box[1] - y, 0, y - box[3]));
         al *= 1 - smooth(...STARS.skyCover, h) * (1 - smooth(0, STARS.skyEdge, outside)) * (1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0))) * (s.gather ? 1 - smooth(0, 1, st.rushT) : 1);
-        if (!opt.still) al *= 1 - STARS.twinkle * follow * (.5 + .5 * Math.sin(time * lerp(...STARS.skyF, s.f) + s.phase));
+        if (!opt.still) al *= 1 - STARS.twinkle * follow * (.5 + .5 * Math.sin((st.rushT > 0 && st.blastT === 0 ? st.rushT * 3 : time) * lerp(...STARS.skyF, s.f) + s.phase));
       }
       if (s.gather && st.rushT > 0 && !opt.still) {
-        const home = [x, y], gt = gatherT(s), q = st.blastT > 0 ? 1 - easeIO(st.blastT) : gt * gt * (3 - 2 * gt);
+        const home = [x, y], gt = gatherT(s), q = st.blastT > 0 ? 1 - easeIO(st.blastT) : gt;
         const at = novaGatherPoint(home, Xs, s.ang, gatherRadius, q), prior = novaGatherPoint(home, Xs, s.ang, gatherRadius, Math.max(0, q - NOVA.gather.tail));
         x = at[0]; y = at[1]; tail = [(at[0] - prior[0]) * NOVA.gather.tailGain / NOVA.gather.tail, (at[1] - prior[1]) * NOVA.gather.tailGain / NOVA.gather.tail];
         if (st.blastT > 0) tail = tail.map(v => -v);
+        else al *= 1 - smooth(.94, 1, gt);
       } else if (st.blastT > 0 && !opt.still) {
         const dx = x - Xs[0], dy = y - Xs[1], d = Math.hypot(dx, dy), bump = Math.exp(-(((d - novaRingRadius(st)) / STARS.skyShock) ** 2)) * (1 - smooth(...NOVA.base.ringFade, st.blastT));
         if (d) { x += dx / d * STARS.skyPush * bump; y += dy / d * STARS.skyPush * bump; }
@@ -2991,9 +3048,10 @@ function starsFrame(time, st, pointer, opt = {}) {
       else { x = m[0]; y = m[1]; rad = endR; al = endA; }
       if (st.legXT > 0 && st.rushT === 0) { const dx = Xs[0] - x, dy = Xs[1] - y, d = Math.hypot(dx, dy), R = 260; if (d < R) { const k = .12 * st.legXT * (1 - d / R); x += dx * k; y += dy * k; tail = [dx / d * 6 * st.legXT, dy / d * 6 * st.legXT]; } }
       if (st.rushT > 0 && st.blastT === 0) {
-        const tt = gatherT(s), e = tt * tt * (3 - 2 * tt);
+        const tt = gatherT(s), e = tt;
         const at = novaGatherPoint(m, Xs, s.ang, gatherRadius, e), prior = novaGatherPoint(m, Xs, s.ang, gatherRadius, Math.max(0, e - NOVA.gather.tail));
         tail = [(at[0] - prior[0]) * NOVA.gather.tailGain / NOVA.gather.tail, (at[1] - prior[1]) * NOVA.gather.tailGain / NOVA.gather.tail]; x = at[0]; y = at[1]; al = s.kind === 'coast' ? .6 * smooth(0, NOVA.gather.join, tt) : Math.max(al, .6);
+        al *= 1 - smooth(.94, 1, tt);
       }
       if (st.blastT > 0) {
         const b = 1 - Math.pow(1 - clamp01(st.blastT / NOVA.base.starBlast), 3), kick = opt.still ? 0 : novaShare(NOVA.flare.kick, NOVA.flare.kickMax);
@@ -3100,8 +3158,312 @@ function paceAt(move, t) {
   return paceP(move.T0 + (move.T1 - move.T0) * paceEase(t / move.D, move.D));
 }
 
+// ---- timeline.mjs ----
+// The timeline bar: a quiet instrument pinned to the bottom; in the footer it becomes the rule under the name.
+
+
+const TL = { el: null, track: null, head: null, rows: null, fades: [], blocks: [], tip: null, count: null, trackW: 1, viewW: 1, sx: 1, dx: 0, dy: 0, ox: 0, oy: 0, val: '', drag: null, off: 0, rm: false };
+const Y0 = 2016;
+const xOf = d => (d - Y0) / (DATE_NOW - Y0);
+const fmt = (s, o) => s.replace(/\{(\w+)\}/g, (m, k) => o[k]);
+
+function tlBuild(el, hooks, rm) {
+  TL.el = el; TL.hooks = hooks; TL.rm = rm;
+  let ticks = ''; for (let y = Y0; y <= Math.floor(DATE_NOW); y++) ticks += `<i class="tl-tick" style="left:${(xOf(y) * 100).toFixed(3)}%"><b>'${String(y % 100).padStart(2, '0')}</b></i>`;
+  let blocks = { school: '', work: '' };
+  STOPS.forEach((s, i) => s.spans.forEach(sp => { const a = xOf(yearOf(sp[0])), b = xOf(yearOf(sp[1], 1)); blocks[s.track] += `<span class="tl-blk" data-i="${i}" style="left:${(a * 100).toFixed(3)}%;width:${((b - a) * 100).toFixed(3)}%;--mk:${PALETTES[s.palette].mark}"><em></em></span>`; }));
+  el.innerHTML = `<div class="tl-bg tl-f"></div><div class="tl-view"><div class="tl-track"><div class="tl-ticks tl-f">${ticks}</div><div class="tl-rows tl-f"><div class="tl-row">${blocks.school}</div><div class="tl-row">${blocks.work}</div></div><div class="tl-head"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0 -7Q0 0 7 0Q0 0 0 7Q0 0 -7 0Q0 0 0 -7Z"/></svg></div></div></div><div class="tl-base"></div><span class="tl-count tl-f" aria-live="polite"></span><div class="tl-tip" aria-hidden="true"></div>`;
+  el.setAttribute('role', 'slider'); el.tabIndex = 0; el.setAttribute('aria-label', COPY.timeline);
+  el.setAttribute('aria-valuemin', Y0); el.setAttribute('aria-valuemax', Math.floor(DATE_NOW));
+  TL.track = el.querySelector('.tl-track'); TL.head = el.querySelector('.tl-head'); TL.rows = el.querySelector('.tl-rows');
+  TL.fades = [...el.querySelectorAll('.tl-f')]; TL.tip = el.querySelector('.tl-tip'); TL.count = el.querySelector('.tl-count');
+  TL.blocks = [...el.querySelectorAll('.tl-blk')].map(b => ({ el: b, em: b.firstChild, i: +b.dataset.i }));
+  TL.view = el.querySelector('.tl-view'); TL.base = el.querySelector('.tl-base');
+  TL.blocks.forEach(b => {
+    b.el.addEventListener('pointerenter', () => tipFor(b.i, b.el));
+    b.el.addEventListener('pointerleave', () => TL.tip.classList.remove('on'));
+  });
+  el.addEventListener('focus', () => { const i = currentStop(TL.lastP || 0); if (i >= 0) tipFor(i, null); });
+  el.addEventListener('blur', () => TL.tip.classList.remove('on'));
+  el.addEventListener('keydown', e => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return; e.preventDefault();
+    if (e.key === 'Home' || e.key === 'End') { TL.hooks.jump(e.key === 'Home' ? 0 : STOPS.length - 1); return; }
+    const P = TL.lastP || 0, cur = currentStop(P);
+    let i = e.key === 'ArrowRight' ? cur + 1 : (P > progressForStop(Math.max(cur, 0)) + 1 ? cur : cur - 1);
+    i = Math.max(0, Math.min(STOPS.length - 1, i)); TL.hooks.jump(i);
+  });
+  el.addEventListener('pointerdown', e => {
+    TL.drag = { x: e.clientX, moved: false, P: TL.lastP || 0, blk: e.target.closest('.tl-blk') };
+    el.setPointerCapture(e.pointerId);
+  });
+  el.addEventListener('pointermove', e => {
+    const d = TL.drag; if (!d || TL.rm) return;
+    if (!d.moved && Math.abs(e.clientX - d.x) < 4) return; d.moved = true;
+    if (!d.started) { d.started = true; TL.dateStart = TL.lastDate; }
+    const r = TL.viewRect; let date;
+    if (VIEW.phone) date = TL.dateStart - (e.clientX - d.x) / TL.trackW * (DATE_NOW - Y0);
+    else date = Y0 + (e.clientX - r.left) / TL.trackW * (DATE_NOW - Y0);
+    TL.hooks.scrub(progressForDate(Math.max(Y0, Math.min(DATE_NOW, date))));
+  });
+  const end = () => { const d = TL.drag; TL.drag = null; if (d && !d.moved && d.blk) TL.hooks.jump(+d.blk.dataset.i); };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', () => { TL.drag = null; });
+}
+function tipFor(i, blk) {
+  const s = STOPS[i]; TL.tip.textContent = fmt(COPY.timelineValue, { name: s.name, dates: s.dates });
+  const r = blk ? blk.getBoundingClientRect() : null, er = TL.el.getBoundingClientRect();
+  TL.tip.style.transform = `translateX(${Math.max(8, Math.min(er.width - 220, (r ? r.left - er.left : TL.headX + TL.viewRect.left - er.left) - 10)).toFixed(0)}px)`;
+  TL.tip.classList.add('on');
+}
+const currentStop = P => { let c = -1; STOPS.forEach((s, i) => { if (P >= holdStart(i)) c = i; }); return c; };
+const tlSetCount = (n, t) => { TL.count.textContent = fmt(n === t ? COPY.countAll : COPY.count, { n, t }); };
+const tlSetCraft = mask => TL.blocks.forEach(b => { b.el.classList.toggle('craft-lit', !!mask?.[b.i]); b.el.style.opacity = mask && !mask[b.i] ? FIND_PLAY.way.timelineDim : 1; });
+
+function tlResize(ruleRect) {
+  const el = TL.el; el.style.transform = 'none';
+  TL.viewRect = TL.view.getBoundingClientRect(); TL.viewW = TL.viewRect.width;
+  TL.trackW = VIEW.phone ? TL.viewW * 2.4 : TL.viewW; TL.track.style.width = TL.trackW + 'px';
+  if (ruleRect) {
+    const b = TL.base.getBoundingClientRect(), er = el.getBoundingClientRect();
+    TL.ox = b.left - er.left; TL.oy = b.top - er.top; el.style.transformOrigin = `${TL.ox}px ${TL.oy}px`;
+    TL.sx = ruleRect.width / b.width; TL.dx = ruleRect.left - b.left; TL.dy = ruleRect.top - b.top;
+  }
+}
+function tlFrame(st) {
+  TL.lastP = st.P; TL.lastDate = st.date;
+  if (TL.rm) return;
+  const show = easeIO(smooth(0, .4, st.overviewT));
+  const m = easeIO(smooth(.3, .85, st.settleT)), fade = (1 - st.cardOpen * .9) * (1 - smooth(0, .6, st.rushT));
+  const sx = lerp(1, TL.sx, m);
+  TL.el.style.transform = `translate(${(TL.dx * m).toFixed(2)}px,${(TL.dy * m + (1 - show) * 80).toFixed(2)}px) scaleX(${sx.toFixed(4)})`;
+  TL.el.style.opacity = show;
+  TL.fades.forEach(f => f.style.opacity = fade);
+  TL.rows.style.transform = `scaleY(${(1 - st.cardOpen * .85).toFixed(3)})`;
+  const hx = xOf(st.date) * TL.trackW; TL.headX = hx;
+  TL.off = VIEW.phone ? Math.max(TL.viewW - TL.trackW, Math.min(0, TL.viewW / 2 - hx)) : 0;
+  TL.track.style.transform = `translateX(${TL.off.toFixed(2)}px)`;
+  TL.headX = hx + TL.off;
+  TL.head.style.transform = `translateX(${hx.toFixed(2)}px) scaleX(${(1 / sx).toFixed(4)})`;
+  TL.blocks.forEach(b => b.em.style.opacity = st.visited[b.i] ? 1 : 0);
+  const i = currentStop(st.P), v = i < 0 ? COPY.timelineStart : fmt(COPY.timelineValue, { name: STOPS[i].name, dates: STOPS[i].dates });
+  if (v !== TL.val) { TL.val = v; TL.el.setAttribute('aria-valuetext', v); TL.el.setAttribute('aria-valuenow', Math.floor(st.date)); }
+}
+
+// ---- findkit.mjs ----
+// Shared life, particles, overlays and first-found feedback. No progress mutation.
+
+
+
+
+
+const FD = { st: null, now: 0, dt: 0, pointer: [-Infinity, -Infinity], pointerT: -Infinity, found: new Set(), last: null, list: {}, popOwner: null, sheetOwner: null, bits: [], serial: 0, flights: [], flight: null, landed: 0, hover: false, focusId: null, overlayEpoch: 0 };
+const D = s => FD.rm ? Number.EPSILON : s;
+const ease = t => easeIO(clamp01(t));
+const out3 = t => 1 - (1 - clamp01(t)) ** 3;
+const fEsc = s => String(typeof s === 'object' ? s.t : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+const attr = (el, k, v) => { const text = String(v); if (el.getAttribute(k) !== text) el.setAttribute(k, text); };
+
+// Explore touch intent is shared by every pointerdown find. Nothing acts or captures
+// until tap/hold/owned-drag intent is known; a second finger cancels the whole wait.
+const findPointers = new Map();
+function findPointerCancel() {
+  for (const p of findPointers.values()) { clearTimeout(p.timer); p.cancel?.(); p.el._dragged = false; }
+  findPointers.clear();
+}
+function findPointerMove(e) {
+  const p = findPointers.get(e.pointerId);
+  if (!p || p.active || Math.hypot(e.clientX - p.e.clientX, e.clientY - p.e.clientY) <= EXPLORE.slop) return false;
+  clearTimeout(p.timer);
+  if (p.drag) { p.active = true; p.start(p.e); }
+  else { findPointers.delete(e.pointerId); p.el._dragged = false; return true; }
+  return false;
+}
+function findPointer(el, start, { drag = false, tap = null, cancel = null } = {}) {
+  el.addEventListener('pointerdown', e => {
+    if (FD.rm || !FD.st?.exploring || e.pointerType !== 'touch') { start(e); return; }
+    el._dragged = false;
+    const p = { el, start, drag, cancel, e, active: false };
+    p.timer = setTimeout(() => { if (findPointers.get(e.pointerId) !== p) return; p.active = true; start(e); }, EXPLORE.pressWait);
+    findPointers.set(e.pointerId, p);
+  });
+  el.addEventListener('pointermove', findPointerMove);
+  const release = e => {
+    const p = findPointers.get(e.pointerId); if (!p || p.el !== el) return;
+    clearTimeout(p.timer); findPointers.delete(e.pointerId);
+    if (!p.active && e.type === 'pointerup' && Math.hypot(e.clientX - p.e.clientX, e.clientY - p.e.clientY) <= EXPLORE.slop) {
+      tap?.(e);
+      el._dragged = true;
+    }
+    cancel?.();
+  };
+  el.addEventListener('pointerup', release); el.addEventListener('pointercancel', release);
+}
+const toMap = p => [(p[0] - FD.st.cam.tx) / FD.st.cam.s, (p[1] - FD.st.cam.ty) / FD.st.cam.s];
+const FIND_BY = Object.fromEntries(FINDS.map(f => [f.id, f]));
+const findRandom = findRnd;
+const findReady = id => {
+  if (FD.rm || FD.st?.exploring) return true;
+  const f = stepsFocusNow();
+  return JOURNEY.mode === 'steps' && JOURNEY.focus === id && f?.id === id && f.k === 1 && f.swapped;
+};
+const findRange = pair => lerp(pair[0], pair[1], findRandom());
+const findFormat = (s, values) => s.replace(/\{(\w+)\}/g, (m, k) => values[k]);
+const findAngleDelta = (a, b) => ((b - a + FIND_PLAY.kit.deg) % FIND_PLAY.kit.turn + FIND_PLAY.kit.turn) % FIND_PLAY.kit.turn - FIND_PLAY.kit.deg;
+const findSvg = (tag, attributes = {}) => { const el = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.entries(attributes).forEach(([k, v]) => attr(el, k, v)); return el; };
+const findSlot = line => typeof line === 'object' && line.todo ? `<div class="find-slot"><span class="pop-k">${fEsc(COPY.todo)}</span><p>${fEsc(line)}</p></div>` : `<p class="pop-t">${fEsc(line)}</p>`;
+const findPlace = id => {
+  const h = FIND_COPY.hoards.find(d => d.id === id); if (h) return [h.x, h.y];
+  if (id === 'longship' && FD.st) { const p = pointAt(Math.max(WATER[0], Math.min(WATER[1], FD.st.u))); return [p[0], p[1] + FIND_PLAY.kit.shipY]; }
+  const f = FD.list[id], d = FIND_BY[id]; return f?.place ? f.place() : d ? [d.x, d.y] : null;
+};
+const findView = id => {
+  const p = findPlace(id), delta = id.startsWith('hoard') ? FIND_PLAY.focus.chest : id === 'longship' ? FIND_PLAY.focus.ship : null;
+  if (delta) return [p[0] + delta[0], p[1] + delta[1], delta[2]];
+  const d = FIND_BY[id]; return VIEW.phone && d.viewPhone ? d.viewPhone : d.view; // a find may give a narrow screen a view of its own
+};
+function attend(find, reach) {
+  if (!FD.st) return null;
+  if (FD.hover && FD.now - FD.pointerT <= FIND_PLAY.fresh) { const p = toMap(FD.pointer); if (Math.hypot(p[0] - find.x, p[1] - find.y) <= reach) return p; }
+  const p = FD.st.trav; return p && Math.hypot(p[0] - find.x, p[1] - find.y) <= 2 * reach ? p : null;
+}
+function findLife(o, x, y, rad, reach = rad) {
+  o.x = x; o.y = y; o.rad = rad;
+  const p = toScreen(FD.st, [x, y]), edge = rad * FD.st.cam.s + FIND_PLAY.kit.margin;
+  o.onScreen = p[0] >= -edge && p[0] <= VIEW.w + edge && p[1] >= -edge && p[1] <= VIEW.h + edge;
+  const pointer = FD.hover && FD.now - FD.pointerT <= FIND_PLAY.fresh ? toMap(FD.pointer) : null;
+  o.awake = JOURNEY.focus === o.id || document.activeElement === o.el || !!(pointer && Math.hypot(pointer[0] - x, pointer[1] - y) <= reach);
+  o.kept ??= false;
+}
+function found(id, atId = id) {
+  if (FD.found.has(id)) return;
+  FD.found.add(id); FD.svg.querySelector('#mk-' + id)?.classList.add('found');
+  if (FD.rm) { FD.landed = FD.found.size; findLandCount(); return; }
+  FD.flights.push({ id: atId, number: FD.found.size }); findStartFlight();
+}
+function findLandCount() { tlSetCount(FD.landed, FINDS.length); if (FD.landed === FINDS.length) FD.all?.start(); }
+function findStartFlight() {
+  if (FD.flight || !FD.flights.length) return;
+  const next = FD.flights.shift(), box = FD.count.getBoundingClientRect();
+  FD.flight = { ...next, from: toScreen(FD.st, findPlace(next.id)), to: [box.left + box.width / 2, box.top + box.height / 2], ts: FD.now };
+}
+function opened(o) { o.overlayEpoch = FD.overlayEpoch; if (o.id !== 'well') FD.last = o; }
+const press = (el, fn) => {
+  el.addEventListener('click', e => { if (el._dragged) { el._dragged = false; return; } fn(e); });
+  el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e); } });
+};
+function showPop(owner, anchor, html, cls = '', side = 'auto') {
+  if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return false;
+  closePop(); FD.popOwner = owner; FD.popAnchor = anchor; FD.popSide = side; FD.popP = FD.st.P; FD.popTs = FD.now;
+  FD.pop.className = 'pop on ' + cls;
+  FD.pop.innerHTML = `<div class="pop-in"><div class="pop-body">${html}</div><i class="pop-tail" aria-hidden="true"></i></div>`;
+  FD.popInner = FD.pop.firstElementChild; FD.popTail = FD.pop.querySelector('.pop-tail'); FD.popBody = FD.pop.querySelector('.pop-body');
+  const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height];
+  // A popup stays above the step buttons and the timeline: their tops are read once here, when it opens, never in the frame loop.
+  FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go, .tl, .jm-focus .find-hint')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
+  placePop();
+  FD.popInner.style.transformOrigin = `${FD.popOrigin[0]}px ${FD.popOrigin[1]}px`;
+  return true;
+}
+function closePop() {
+  const o = FD.popOwner; if (!o) return;
+  FD.popOwner = null; FD.pop.className = 'pop'; FD.pop.innerHTML = ''; if (o.onPopClose) o.onPopClose();
+}
+function placePop() {
+  if (!FD.popOwner) return;
+  const K = FIND_PLAY.kit.popup, anchor = typeof FD.popAnchor === 'function' ? FD.popAnchor() : FD.popAnchor, p = toScreen(FD.st, anchor), [w, h] = FD.popSize;
+  const below = FD.popSide === 'below' || FD.popSide !== 'above' && p[1] - h - K.tail[1] < K.edge;
+  const x = Math.max(K.edge, Math.min(VIEW.w - w - K.edge, p[0] - w / 2));
+  const y = Math.max(K.edge, Math.min((FD.popFloor ?? VIEW.h) - h - K.edge, below ? p[1] + K.tail[1] : p[1] - h - K.tail[1]));
+  FD.popOrigin = [Math.max(0, Math.min(w, p[0] - x)), below ? 0 : h];
+  FD.pop.style.transform = `translate(${x}px,${y}px)`;
+  const q = FD.rm ? 1 : clamp01((FD.now - FD.popTs) / K.time), back = 1 + (K.over - 1) / (1 - K.scale);
+  const v = 1 + (back + 1) * (q - 1) ** 3 + back * (q - 1) ** 2;
+  FD.popInner.style.transform = `scale(${lerp(K.scale, 1, q === 1 ? 1 : v)})`; FD.popBody.style.opacity = q;
+  FD.popTail.style.transform = `translate(${Math.max(0, Math.min(w - K.tail[0], p[0] - x - K.tail[0] / 2))}px,${below ? -K.tail[1] : h}px) rotate(${below ? FIND_PLAY.kit.deg : 0}deg)`;
+}
+function findSheet(owner, cls, html, anchor) {
+  if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return false;
+  closeSheet(true); closePop();
+  FD.sheetOwner = owner; FD.sheetP = FD.st.P; FD.sheetFrom = toScreen(FD.st, anchor); FD.sheetTs = FD.now;
+  FD.sheet.className = 'sheet on ' + cls; FD.sheet.innerHTML = html;
+  document.documentElement.classList.add('jm-sheet-open');
+  FD.sheet.setAttribute('aria-label', FIND_BY[owner.id].label); FD.sheet.tabIndex = -1;
+  const target = FD.sheet.querySelector('button:not([hidden])') || FD.sheet; target.focus({ preventScroll: true });
+  return true;
+}
+function closeSheet(force = false) {
+  const o = FD.sheetOwner; if (!o) return;
+  if (!force && o.beginClose && o.beginClose()) return;
+  FD.sheetOwner = null; FD.sheet.className = 'sheet'; FD.sheet.innerHTML = '';
+  document.documentElement.classList.remove('jm-sheet-open');
+  if (o.onSheetClose) o.onSheetClose(); o.el?.focus({ preventScroll: true });
+}
+function findBits(kind, x, y, n, options = {}) {
+  if (FD.rm) return;
+  const B = FIND_PLAY.bits, v = { ...B.base, ...options };
+  for (let i = 0; i < n; i++) {
+    const bit = FD.bits.find(b => !b.live) || FD.bits.reduce((a, b) => a.serial < b.serial ? a : b);
+    const [path, cls] = kind === 'star' ? [starPath(0, 0, B.starSize), 'pf'] : B.kinds[kind];
+    const angle = findRange(v.dir) * Math.PI / FIND_PLAY.kit.deg, speed = findRange(v.speed);
+    Object.assign(bit, { live: true, serial: FD.serial++, x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, age: 0, life: findRange(v.life), spin: v.spin, g: v.g, drag: v.drag, size: v.size, alpha: kind === 'puff' ? Math.min(B.puffAlpha, v.alpha) : v.alpha, kind });
+    attr(bit.el, 'd', path); attr(bit.el, 'class', cls); bit.el.style.display = ''; if (['star', 'drop', 'puff', 'wisp'].includes(kind)) bit.el.style.stroke = 'none'; else bit.el.style.stroke = '';
+    attr(bit.el, 'transform', `translate(${x} ${y}) scale(${v.size[0]})`); attr(bit.el, 'opacity', bit.alpha);
+  }
+}
+function findKitBuild(svg, pop, sheet, base, rm) {
+  Object.assign(FD, { svg, pop, sheet, base, rm, hover: matchMedia('(hover: hover)').matches, count: document.querySelector('.tl-count') });
+  const pool = findSvg('g', { id: 'f-bits', 'pointer-events': 'none' }); svg.querySelector('#finds').appendChild(pool);
+  FD.hint = document.createElement('p'); FD.hint.className = 'find-hint'; FD.hint.setAttribute('aria-hidden', 'true'); (document.getElementById('go')?.parentElement || document.body).appendChild(FD.hint);
+  for (let i = 0; i < FIND_PLAY.bits.pool; i++) { const el = findSvg('path'); el.style.display = 'none'; pool.appendChild(el); FD.bits.push({ el, live: false, serial: -1 }); }
+  FD.star = document.createElement('div'); FD.star.className = 'find-star'; FD.star.setAttribute('aria-hidden', 'true');
+  FD.star.innerHTML = `<svg viewBox="-1 -1 2 2"><path d="${starPath(0, 0, 1)}"/></svg>`; pop.parentElement.appendChild(FD.star);
+  findKitStyle();
+  sheet.addEventListener('keydown', e => { if (FD.sheetOwner?.id === 'hammer') return; if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) { e.preventDefault(); e.stopPropagation(); } });
+  sheet.addEventListener('wheel', e => { e.preventDefault(); e.stopPropagation(); }, { passive: false });
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (FD.popOwner || FD.sheetOwner) { e.preventDefault(); closePop(); closeSheet(); } else stepsRelease(); });
+  matchMedia('(hover: hover)').addEventListener('change', e => FD.hover = e.matches);
+  tlSetCount(0, FINDS.length);
+}
+function findKitStyle() {
+  const P = FIND_PLAY, root = document.documentElement;
+  const vars = { 'find-pop-edge': P.kit.popup.edge + 'px', 'find-pop-w': P.kit.popup.width + 'px', 'find-pop-r': P.kit.popup.radius + 'px', 'find-pop-pad': P.kit.popup.pad.map(n => n + 'px').join(' '), 'find-pop-font': P.kit.popup.font + 'px', 'find-pop-line': P.kit.popup.line, 'find-kicker': P.kit.popup.kicker + 'px', 'find-gap': P.kit.popup.gap + 'px', 'find-tail-w': P.kit.popup.tail[0] + 'px', 'find-tail-h': P.kit.popup.tail[1] + 'px', 'find-slot-weight': P.kit.slot.weight, 'find-star-z': P.kit.starZ, 'find-slot-font': P.kit.slot.font + 'px', 'find-slot-rule': P.kit.slot.border + 'px', 'find-slot-pad': P.kit.slot.pad + 'px', 'find-star': P.star.size + 'px', 'find-piece': P.hoard.width + 'px', 'find-piece-top': P.hoard.top + 'px', 'find-icon': P.hoard.icon + 'px', 'find-arm': P.way.armWidth + 'px', 'find-rune-flip': P.rune.flipTime + 's', 'find-rune-w': P.rune.width + 'px', 'find-rune-h': P.rune.height + 'px', 'find-rune-perspective': P.rune.perspective + 'px', 'find-ctl-top': P.rune.controlTop + 'px', 'find-reel-w': P.raven.reel.width + 'px', 'find-iris': P.raven.reel.iris + 'px', 'find-reel-label': P.raven.reel.labelTop + 'px', 'find-reel-slot': P.raven.reel.slotBottom + 'px' };
+  Object.entries(vars).forEach(([k, v]) => root.style.setProperty('--' + k, v));
+}
+function findKitFrame() {
+  const dt = FD.dt;
+  FD.bits.forEach(b => {
+    if (!b.live) return; b.age += dt;
+    if (b.age >= b.life) { b.live = false; attr(b.el, 'opacity', 0); queueMicrotask(() => { if (!b.live) b.el.style.display = 'none'; }); return; }
+    b.vy += b.g * dt; b.vx *= Math.max(0, 1 - b.drag * dt); b.vy *= Math.max(0, 1 - b.drag * dt); b.x += b.vx * dt; b.y += b.vy * dt;
+    const q = b.age / b.life;
+    attr(b.el, 'transform', `translate(${b.x} ${b.y}) rotate(${b.spin * b.age}) scale(${lerp(b.size[0], b.size[1], q)})`); attr(b.el, 'opacity', b.alpha * (1 - q ** 2));
+  });
+  const f = FD.flight;
+  if (f) {
+    const q = clamp01((FD.now - f.ts) / FIND_PLAY.star.time), k = ease(q);
+    FD.star.style.opacity = 1; FD.star.style.transform = `translate(${lerp(f.from[0], f.to[0], k)}px,${lerp(f.from[1], f.to[1], k) - FIND_PLAY.star.arc * Math.sin(Math.PI * q)}px)`;
+    if (q === 1) { FD.landed = f.number; FD.bump = FD.now; FD.flight = null; FD.star.style.opacity = 0; queueMicrotask(() => { findLandCount(); findStartFlight(); }); }
+  }
+  if (FD.bump !== undefined) { const q = clamp01((FD.now - FD.bump) / FIND_PLAY.star.bump); FD.count.style.transform = `scale(${lerp(FIND_PLAY.star.peak, 1, ease(q))})`; if (q === 1) FD.bump = undefined; }
+  placePop();
+  if (FD.popOwner && Math.abs(FD.st.P - FD.popP) > FIND_TIMING.closeScroll) closePop();
+  if (FD.sheetOwner && Math.abs(FD.st.P - FD.sheetP) > FIND_TIMING.closeScroll) closeSheet();
+}
+// The hint line keeps its words while it fades out, so it changes only when a find takes the camera.
+function findHint(id) { if (FD.hint && id) FD.hint.textContent = FD.list.hoards?.items.find(h => h.id === id)?.hintLine || FIND_COPY.hints[id.startsWith('hoard') ? 'hoards' : id] || ''; }
+function findCapture(e) {
+  if (FD.rm || JOURNEY.mode !== 'steps' || !FD.st) return;
+  if (e.type === 'keydown' && !['Enter', ' '].includes(e.key)) return;
+  const el = e.target.closest?.('.find'); if (!el) return;
+  if (e.type === 'click' && el._focusBlocked) { el._focusBlocked = false; e.preventDefault(); e.stopImmediatePropagation(); return; }
+  const id = el.id.slice(2), key = id === 'hoards' ? FIND_COPY.hoards[0].id : id;
+  if (JOURNEY.focus === key) return;
+  if (!stepsFocus(key, findView(key))) { if (e.type === 'pointerdown') el._focusBlocked = true; e.preventDefault(); e.stopImmediatePropagation(); }
+  else { FD.overlayEpoch++; closePop(); closeSheet(true); if (e.type === 'pointerdown') el._focusBlocked = false; }
+}
+
 // ---- explore.mjs ----
 // End-only camera. The geometry helpers are pure and can be imported by Node.
+
 
 
 const exploreLayer = (cam, end) => { const c = cam.s / end.s; return { c, dx: cam.tx - end.tx * c, dy: cam.ty - end.ty * c }; };
@@ -3145,6 +3507,7 @@ const exploreSuppressClear = () => { EX.suppress = false; clearTimeout(EX.suppre
 const exploreWorldStyle = (key, value) => { if (EX.world && EX.world.style[key] !== value) EX.world.style[key] = value; };
 const explorePromote = () => exploreWorldStyle('willChange', EX.motion || EX.velocity.some(Boolean) || EX.gesture || (EX.active && JSON.stringify(EX.cam) !== JSON.stringify(EX.target)) ? 'transform' : '');
 function exploreClearPointers() {
+  findPointerCancel();
   for (const id of EX.pointers.keys()) if (EX.stage.hasPointerCapture?.(id)) EX.stage.releasePointerCapture(id);
   EX.pointers.clear(); EX.owners.clear(); EX.gesture = null; EX.samples = []; EX.stage?.classList.remove('is-dragging');
 }
@@ -3255,6 +3618,8 @@ function exploreGesture(dragged = false) {
 }
 function exploreBuild({ stage, world, journey, rm }) {
   Object.assign(EX, { stage, world, journey, rm }); if (rm) return;
+  document.documentElement.style?.setProperty('--explore-row-delay', EXPLORE.rowDelay + 's');
+  document.documentElement.style?.setProperty('--explore-row-fade', EXPLORE.rowFade + 's');
   EX.hint = document.createElement('p'); EX.hint.className = 'find-hint explore-hint'; EX.hint.setAttribute('aria-hidden', 'true'); stage.appendChild(EX.hint);
   window.addEventListener('wheel', e => {
     if (!EX.active || e.defaultPrevented) return;
@@ -3269,13 +3634,14 @@ function exploreBuild({ stage, world, journey, rm }) {
     exploreSuppressClear();
     if (!EX.active || exploreExcluded(e.target) || EX.pointers.size >= 2 || (e.pointerType === 'mouse' && e.button !== 0)) return;
     EX.pointers.set(e.pointerId, explorePoint(e)); if (exploreOwned(e.target)) EX.owners.add(e.pointerId);
-    if (EX.pointers.size === 2) { exploreTakeover(); for (const id of EX.pointers.keys()) stage.setPointerCapture(id); EX.suppress = true; stage.classList.add('is-dragging'); e.preventDefault(); e.stopImmediatePropagation(); }
+    if (EX.pointers.size === 2) { findPointerCancel(); exploreTakeover(); for (const id of EX.pointers.keys()) stage.setPointerCapture(id); EX.suppress = true; stage.classList.add('is-dragging'); e.preventDefault(); e.stopImmediatePropagation(); }
     exploreGesture(); exploreSample(e); explorePromote();
   }, true);
   stage.addEventListener('pointermove', e => {
     if (!EX.active || !EX.pointers.has(e.pointerId)) return;
     EX.pointers.set(e.pointerId, explorePoint(e));
     const points = [...EX.pointers.values()], g = EX.gesture;
+    if (findPointerMove(e)) { EX.owners.delete(e.pointerId); g.owned = false; }
     if (g.owned) return;
     const mid = points.length > 1 ? points[0].map((v, i) => (v + points[1][i]) / 2) : points[0];
     if (!g.dragged && Math.hypot(mid[0] - g.from[0], mid[1] - g.from[1]) <= EXPLORE.slop) return;
@@ -3639,6 +4005,11 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
   const stonePx = Math.max(MARK.min, Math.min(MARK.max, MARK.k * st.cam.s));
   const stepTop = VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h;
   CD.list.forEach((c, i) => {
+    const close = c.el.querySelector('.c-close');
+    if (close) {
+      if (JOURNEY.moving && document.activeElement === close) document.getElementById('go')?.querySelector('.go-next')?.focus({ preventScroll: true });
+      close.inert = JOURNEY.moving;
+    }
     const H = c.H, oc = VIEW.phone ? [VIEW.w / 2, VIEW.h - H / 2 - WORLD.card.phoneBottom - (CD.steps ? STEPS.nav.bar : 0)] : [VIEW.w / 2, CD.steps ? Math.max(WORLD.card.gap + H / 2, Math.min(VIEW.h / 2 - WORLD.card.gap, stepTop - WORLD.card.gap - H / 2)) : VIEW.h / 2 - WORLD.card.gap];
     const e = st.cardK[i], p = toScreen(st, MAP.waypoints[c.stop.w]);
     const k0 = stonePx / (H * .95), k = Math.pow(k0, 1 - e);
@@ -3671,96 +4042,6 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
   });
 }
 const cardsList = () => CD.list;
-
-// ---- timeline.mjs ----
-// The timeline bar: a quiet instrument pinned to the bottom; in the footer it becomes the rule under the name.
-
-
-const TL = { el: null, track: null, head: null, rows: null, fades: [], blocks: [], tip: null, count: null, trackW: 1, viewW: 1, sx: 1, dx: 0, dy: 0, ox: 0, oy: 0, val: '', drag: null, off: 0, rm: false };
-const Y0 = 2016;
-const xOf = d => (d - Y0) / (DATE_NOW - Y0);
-const fmt = (s, o) => s.replace(/\{(\w+)\}/g, (m, k) => o[k]);
-
-function tlBuild(el, hooks, rm) {
-  TL.el = el; TL.hooks = hooks; TL.rm = rm;
-  let ticks = ''; for (let y = Y0; y <= Math.floor(DATE_NOW); y++) ticks += `<i class="tl-tick" style="left:${(xOf(y) * 100).toFixed(3)}%"><b>'${String(y % 100).padStart(2, '0')}</b></i>`;
-  let blocks = { school: '', work: '' };
-  STOPS.forEach((s, i) => s.spans.forEach(sp => { const a = xOf(yearOf(sp[0])), b = xOf(yearOf(sp[1], 1)); blocks[s.track] += `<span class="tl-blk" data-i="${i}" style="left:${(a * 100).toFixed(3)}%;width:${((b - a) * 100).toFixed(3)}%;--mk:${PALETTES[s.palette].mark}"><em></em></span>`; }));
-  el.innerHTML = `<div class="tl-bg tl-f"></div><div class="tl-view"><div class="tl-track"><div class="tl-ticks tl-f">${ticks}</div><div class="tl-rows tl-f"><div class="tl-row">${blocks.school}</div><div class="tl-row">${blocks.work}</div></div><div class="tl-head"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0 -7Q0 0 7 0Q0 0 0 7Q0 0 -7 0Q0 0 0 -7Z"/></svg></div></div></div><div class="tl-base"></div><span class="tl-count tl-f" aria-live="polite"></span><div class="tl-tip" aria-hidden="true"></div>`;
-  el.setAttribute('role', 'slider'); el.tabIndex = 0; el.setAttribute('aria-label', COPY.timeline);
-  el.setAttribute('aria-valuemin', Y0); el.setAttribute('aria-valuemax', Math.floor(DATE_NOW));
-  TL.track = el.querySelector('.tl-track'); TL.head = el.querySelector('.tl-head'); TL.rows = el.querySelector('.tl-rows');
-  TL.fades = [...el.querySelectorAll('.tl-f')]; TL.tip = el.querySelector('.tl-tip'); TL.count = el.querySelector('.tl-count');
-  TL.blocks = [...el.querySelectorAll('.tl-blk')].map(b => ({ el: b, em: b.firstChild, i: +b.dataset.i }));
-  TL.view = el.querySelector('.tl-view'); TL.base = el.querySelector('.tl-base');
-  TL.blocks.forEach(b => {
-    b.el.addEventListener('pointerenter', () => tipFor(b.i, b.el));
-    b.el.addEventListener('pointerleave', () => TL.tip.classList.remove('on'));
-  });
-  el.addEventListener('focus', () => { const i = currentStop(TL.lastP || 0); if (i >= 0) tipFor(i, null); });
-  el.addEventListener('blur', () => TL.tip.classList.remove('on'));
-  el.addEventListener('keydown', e => {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return; e.preventDefault();
-    if (e.key === 'Home' || e.key === 'End') { TL.hooks.jump(e.key === 'Home' ? 0 : STOPS.length - 1); return; }
-    const P = TL.lastP || 0, cur = currentStop(P);
-    let i = e.key === 'ArrowRight' ? cur + 1 : (P > progressForStop(Math.max(cur, 0)) + 1 ? cur : cur - 1);
-    i = Math.max(0, Math.min(STOPS.length - 1, i)); TL.hooks.jump(i);
-  });
-  el.addEventListener('pointerdown', e => {
-    TL.drag = { x: e.clientX, moved: false, P: TL.lastP || 0, blk: e.target.closest('.tl-blk') };
-    el.setPointerCapture(e.pointerId);
-  });
-  el.addEventListener('pointermove', e => {
-    const d = TL.drag; if (!d || TL.rm) return;
-    if (!d.moved && Math.abs(e.clientX - d.x) < 4) return; d.moved = true;
-    if (!d.started) { d.started = true; TL.dateStart = TL.lastDate; }
-    const r = TL.viewRect; let date;
-    if (VIEW.phone) date = TL.dateStart - (e.clientX - d.x) / TL.trackW * (DATE_NOW - Y0);
-    else date = Y0 + (e.clientX - r.left) / TL.trackW * (DATE_NOW - Y0);
-    TL.hooks.scrub(progressForDate(Math.max(Y0, Math.min(DATE_NOW, date))));
-  });
-  const end = () => { const d = TL.drag; TL.drag = null; if (d && !d.moved && d.blk) TL.hooks.jump(+d.blk.dataset.i); };
-  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', () => { TL.drag = null; });
-}
-function tipFor(i, blk) {
-  const s = STOPS[i]; TL.tip.textContent = fmt(COPY.timelineValue, { name: s.name, dates: s.dates });
-  const r = blk ? blk.getBoundingClientRect() : null, er = TL.el.getBoundingClientRect();
-  TL.tip.style.transform = `translateX(${Math.max(8, Math.min(er.width - 220, (r ? r.left - er.left : TL.headX + TL.viewRect.left - er.left) - 10)).toFixed(0)}px)`;
-  TL.tip.classList.add('on');
-}
-const currentStop = P => { let c = -1; STOPS.forEach((s, i) => { if (P >= holdStart(i)) c = i; }); return c; };
-const tlSetCount = (n, t) => { TL.count.textContent = fmt(n === t ? COPY.countAll : COPY.count, { n, t }); };
-const tlSetCraft = mask => TL.blocks.forEach(b => { b.el.classList.toggle('craft-lit', !!mask?.[b.i]); b.el.style.opacity = mask && !mask[b.i] ? FIND_PLAY.way.timelineDim : 1; });
-
-function tlResize(ruleRect) {
-  const el = TL.el; el.style.transform = 'none';
-  TL.viewRect = TL.view.getBoundingClientRect(); TL.viewW = TL.viewRect.width;
-  TL.trackW = VIEW.phone ? TL.viewW * 2.4 : TL.viewW; TL.track.style.width = TL.trackW + 'px';
-  if (ruleRect) {
-    const b = TL.base.getBoundingClientRect(), er = el.getBoundingClientRect();
-    TL.ox = b.left - er.left; TL.oy = b.top - er.top; el.style.transformOrigin = `${TL.ox}px ${TL.oy}px`;
-    TL.sx = ruleRect.width / b.width; TL.dx = ruleRect.left - b.left; TL.dy = ruleRect.top - b.top;
-  }
-}
-function tlFrame(st) {
-  TL.lastP = st.P; TL.lastDate = st.date;
-  if (TL.rm) return;
-  const show = easeIO(smooth(0, .4, st.overviewT));
-  const m = easeIO(smooth(.3, .85, st.settleT)), fade = (1 - st.cardOpen * .9) * (1 - smooth(0, .6, st.rushT));
-  const sx = lerp(1, TL.sx, m);
-  TL.el.style.transform = `translate(${(TL.dx * m).toFixed(2)}px,${(TL.dy * m + (1 - show) * 80).toFixed(2)}px) scaleX(${sx.toFixed(4)})`;
-  TL.el.style.opacity = show;
-  TL.fades.forEach(f => f.style.opacity = fade);
-  TL.rows.style.transform = `scaleY(${(1 - st.cardOpen * .85).toFixed(3)})`;
-  const hx = xOf(st.date) * TL.trackW; TL.headX = hx;
-  TL.off = VIEW.phone ? Math.max(TL.viewW - TL.trackW, Math.min(0, TL.viewW / 2 - hx)) : 0;
-  TL.track.style.transform = `translateX(${TL.off.toFixed(2)}px)`;
-  TL.headX = hx + TL.off;
-  TL.head.style.transform = `translateX(${hx.toFixed(2)}px) scaleX(${(1 / sx).toFixed(4)})`;
-  TL.blocks.forEach(b => b.em.style.opacity = st.visited[b.i] ? 1 : 0);
-  const i = currentStop(st.P), v = i < 0 ? COPY.timelineStart : fmt(COPY.timelineValue, { name: STOPS[i].name, dates: STOPS[i].dates });
-  if (v !== TL.val) { TL.val = v; TL.el.setAttribute('aria-valuetext', v); TL.el.setAttribute('aria-valuenow', Math.floor(st.date)); }
-}
 
 // ---- footname.mjs ----
 // The hero's name model, copied locally. Only measure reads layout; the shared frame paints it.
@@ -3963,6 +4244,7 @@ function footerConfigure() {
   FT.rays = seeds(NOVA.rays.n); FT.lobes = seeds(count); FT.waves = seeds(NOVA.waves.n);
 }
 const footerColour = (colour, alpha) => `rgba(${colour.slice(1).match(/../g).map(n => parseInt(n, 16)).join(',')},${alpha})`;
+const footerHeatColour = heat => { const a = C.warm.slice(1).match(/../g), b = C.white.slice(1).match(/../g); return 'rgb(' + a.map((n,i) => Math.round(lerp(parseInt(n,16),parseInt(b[i],16),smooth(.1,.9,heat)))).join(',') + ')'; };
 function footerGlowSprite(key) {
   if (FT.sprites[key]) return FT.sprites[key];
   const cv = document.createElement('canvas'), size = NOVA_CANVAS.glowSprite; cv.width = cv.height = size;
@@ -4047,21 +4329,30 @@ function footerMotion(time, dt, st, look, moved) {
   const pulse = 1 + strength * (NOVA.pulse[1] * wave(NOVA.pulse[0]) + NOVA.pulse[3] * wave(NOVA.pulse[2])) + flare;
   // the two strokes: thin, whiten from the centre, stretch into spikes, then cool to a small star
   const out = b => 1 - Math.pow(1 - b, 3);
-  let len = lerp(1, B.rushLen, easeIO(rT)), thin = lerp(B.thin[0], B.thin[1], rT);
-  if (bT > 0) len = bT < B.spikePeak ? lerp(B.rushLen, B.peakLen, out(bT / B.spikePeak)) : lerp(B.peakLen, B.endLen, easeIO((bT - B.spikePeak) / (1 - B.spikePeak)));
+  const build = novaBuild(rT), held = novaBuild(1), blastJoin = out(clamp01(bT / B.spikePeak));
+  let len = build.len, thin = build.thin;
+  if (bT > 0) len = bT < B.spikePeak ? lerp(held.len, B.peakLen, out(bT / B.spikePeak)) : lerp(B.peakLen, B.endLen, easeIO((bT - B.spikePeak) / (1 - B.spikePeak)));
   if (sT > 0) len = lerp(B.endLen, u(B.spikeEnd) / B.spikeLength, easeIO(sT));
-  if (bT > 0) thin = lerp(B.thin[1], B.thin[2], out(clamp01(bT / B.spikePeak)));
+  if (bT > 0) thin = lerp(held.thin, B.thin[2], blastJoin);
   if (sT > 0) thin = lerp(B.thin[2], B.thin[3], sT);
-  const heat = smooth(...B.heat, rT);
+  const heat = build.heat;
+  // The veil is below every nova mark and below the separate stars canvas.
+  const veil = build.veil * (1 - smooth(0, NOVA.build.veilOut / STEPS.pace.blast, bT));
+  if (veil > 0) {
+    const radius = build.hole * Math.min(VIEW.w, VIEW.h), gradient = ctx.createRadialGradient(0, 0, radius * .45, 0, 0, radius);
+    gradient.addColorStop(0, footerColour(C.ink, 0)); gradient.addColorStop(1, C.ink);
+    ctx.globalAlpha = veil; ctx.fillStyle = gradient; ctx.fillRect(-FT.centre[0] / FT.dpr, -FT.centre[1] / FT.dpr, VIEW.w, VIEW.h);
+  }
+  if (bT === 0) ctx.translate(...build.jitter);
   // glow
-  let rg = lerp(0, B.redGlow[0], rT), rgo = B.rushGlowAlpha * rT;
+  let rg = build.glow, rgo = build.glowAlpha;
   if (bT > 0) { rg = bT < B.glowPeak ? lerp(B.redGlow[0], big * B.redGlow[1], out(bT / B.glowPeak)) : lerp(big * B.redGlow[1], big * B.redGlow[2], easeIO((bT - B.glowPeak) / (1 - B.glowPeak))); rgo = 1; }
   if (sT > 0) rg = lerp(big * B.redGlow[2], big * B.redGlow[3], sT);
   rg *= 1 + strength * NOVA.glow[1] * wave(NOVA.glow[0]);
   footerGlow(ctx, 'red', 0, 0, u(rg) * calm * z, u(rg) * B.glowAspect * calm * z, rgo * calmAlpha);
-  const og = bT > 0 ? lerp(...B.orangeGlow, out(bT)) : lerp(0, B.orangeGlow[0], rT);
-  footerGlow(ctx, 'orange', 0, 0, u(og) * calm * z, u(og) * calm * z, (bT > 0 ? B.orangeAlpha : B.rushGlowAlpha * rT) * calmAlpha);
-  const core = bT > 0 ? lerp(B.core[0], B.core[1], bT) * (sT > 0 ? lerp(1, B.core[2], sT) : 1) : lerp(0, B.core[3], heat);
+  const og = bT > 0 ? lerp(...B.orangeGlow, out(bT)) : build.glow * .6;
+  footerGlow(ctx, 'orange', 0, 0, u(og) * calm * z, u(og) * calm * z, (bT > 0 ? B.orangeAlpha : heat * .35) * calmAlpha);
+  const core = bT > 0 ? lerp(B.core[0], B.core[1], bT) * (sT > 0 ? lerp(1, B.core[2], sT) : 1) : build.core;
   // the blast: ring and streaks
   const ringR = novaRingRadius(st), ringO = bT > 0 ? (1 - smooth(...B.ringFade, bT)) : 0;
   const stS = lerp(B.streak[0], big * B.streak[1], out(bT));
@@ -4098,10 +4389,10 @@ function footerMotion(time, dt, st, look, moved) {
   footerGroup(ctx, streakO, ctx => FT.streaks.forEach(line => footerLine(ctx, line.from.map(v => v * u(stS) * z), line.to.map(v => v * u(stS) * z), line.colour, line.width, line.alpha)));
   footerRing(ctx, u(ringR) * z, C.red, 8, ringO * B.ringAlpha[1]); footerRing(ctx, u(ringR) * z, C.paper, 2, ringO * B.ringAlpha[0]);
   [0, 1].forEach(i => footerRing(ctx, u((VIEW.phone ? B.shellPhone : B.shellR)[i]) * z, C.paper, i ? .6 : .8, B.shellAlpha[i] * ro, clock * NOVA.shells[i], NOVA.shellDash));
-  footerGlow(ctx, 'core', 0, 0, u(core * pulse) * calm * z, u(core * pulse) * calm * z, heat * calmAlpha);
+  footerGlow(ctx, 'core', 0, 0, u(core * pulse) * calm * z, u(core * pulse) * calm * z, build.coreAlpha * calmAlpha);
   B.angles.forEach((angle, i) => {
     const stretch = len * (1 + strength * NOVA.spike[1] * Math.sin(Math.PI * 2 * clock / NOVA.spike[0] + i * NOVA.spike[2])) * pulse;
-    const red = +(1 - smooth(...B.redOut, rT)).toFixed(3), white = +heat.toFixed(3);
+    const red = bT > 0 ? 0 : 1, white = heat;
     if (red > 0) footerRough(Math.max(z * stretch, z * thin));
     ctx.save(); ctx.rotate(angle * Math.PI / 180); ctx.scale(stretch * z, thin * z);
     if (red > 0) {
@@ -4109,189 +4400,12 @@ function footerMotion(time, dt, st, look, moved) {
       else footerLine(ctx, [-12.7, 0], [12.7, 0], C.red, 3.6, red);
     }
     if (white > 0) {
-      const gradient = ctx.createLinearGradient(-12.7, 0, 12.7, 0); gradient.addColorStop(0, footerColour(C.red, 0)); gradient.addColorStop(.5, C.white); gradient.addColorStop(1, footerColour(C.red, 0));
+      const gradient = ctx.createLinearGradient(-12.7, 0, 12.7, 0); gradient.addColorStop(0, footerColour(C.red, 0)); gradient.addColorStop(.5, footerHeatColour(heat)); gradient.addColorStop(1, footerColour(C.red, 0));
       ctx.globalAlpha = white; ctx.fillStyle = gradient; ctx.beginPath(); ctx.moveTo(-12.7, 0); ctx.lineTo(0, -1.7); ctx.lineTo(12.7, 0); ctx.lineTo(0, 1.7); ctx.closePath(); ctx.fill();
     }
     ctx.restore();
   });
   footerStyle(FT.inner, 'translate', `${-look[0] * DEPTH.foot.text}px ${-look[1] * DEPTH.foot.text}px`);
-}
-
-// ---- findkit.mjs ----
-// Shared life, particles, overlays and first-found feedback. No progress mutation.
-
-
-
-
-
-const FD = { st: null, now: 0, dt: 0, pointer: [-Infinity, -Infinity], pointerT: -Infinity, found: new Set(), last: null, list: {}, popOwner: null, sheetOwner: null, bits: [], serial: 0, flights: [], flight: null, landed: 0, hover: false, focusId: null, overlayEpoch: 0 };
-const D = s => FD.rm ? Number.EPSILON : s;
-const ease = t => easeIO(clamp01(t));
-const out3 = t => 1 - (1 - clamp01(t)) ** 3;
-const fEsc = s => String(typeof s === 'object' ? s.t : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-const attr = (el, k, v) => el.setAttribute(k, v);
-const toMap = p => [(p[0] - FD.st.cam.tx) / FD.st.cam.s, (p[1] - FD.st.cam.ty) / FD.st.cam.s];
-const FIND_BY = Object.fromEntries(FINDS.map(f => [f.id, f]));
-const findRandom = findRnd;
-const findReady = id => {
-  if (FD.rm || FD.st?.exploring) return true;
-  const f = stepsFocusNow();
-  return JOURNEY.mode === 'steps' && JOURNEY.focus === id && f?.id === id && f.k === 1 && f.swapped;
-};
-const findRange = pair => lerp(pair[0], pair[1], findRandom());
-const findFormat = (s, values) => s.replace(/\{(\w+)\}/g, (m, k) => values[k]);
-const findAngleDelta = (a, b) => ((b - a + FIND_PLAY.kit.deg) % FIND_PLAY.kit.turn + FIND_PLAY.kit.turn) % FIND_PLAY.kit.turn - FIND_PLAY.kit.deg;
-const findSvg = (tag, attributes = {}) => { const el = document.createElementNS('http://www.w3.org/2000/svg', tag); Object.entries(attributes).forEach(([k, v]) => attr(el, k, v)); return el; };
-const findSlot = line => typeof line === 'object' && line.todo ? `<div class="find-slot"><span class="pop-k">${fEsc(COPY.todo)}</span><p>${fEsc(line)}</p></div>` : `<p class="pop-t">${fEsc(line)}</p>`;
-const findPlace = id => {
-  const h = FIND_COPY.hoards.find(d => d.id === id); if (h) return [h.x, h.y];
-  if (id === 'longship' && FD.st) { const p = pointAt(Math.max(WATER[0], Math.min(WATER[1], FD.st.u))); return [p[0], p[1] + FIND_PLAY.kit.shipY]; }
-  const f = FD.list[id], d = FIND_BY[id]; return f?.place ? f.place() : d ? [d.x, d.y] : null;
-};
-const findView = id => {
-  const p = findPlace(id), delta = id.startsWith('hoard') ? FIND_PLAY.focus.chest : id === 'longship' ? FIND_PLAY.focus.ship : null;
-  if (delta) return [p[0] + delta[0], p[1] + delta[1], delta[2]];
-  const d = FIND_BY[id]; return VIEW.phone && d.viewPhone ? d.viewPhone : d.view; // a find may give a narrow screen a view of its own
-};
-function attend(find, reach) {
-  if (!FD.st) return null;
-  if (FD.hover && FD.now - FD.pointerT <= FIND_PLAY.fresh) { const p = toMap(FD.pointer); if (Math.hypot(p[0] - find.x, p[1] - find.y) <= reach) return p; }
-  const p = FD.st.trav; return p && Math.hypot(p[0] - find.x, p[1] - find.y) <= 2 * reach ? p : null;
-}
-function findLife(o, x, y, rad, reach = rad) {
-  o.x = x; o.y = y; o.rad = rad;
-  const p = toScreen(FD.st, [x, y]), edge = rad * FD.st.cam.s + FIND_PLAY.kit.margin;
-  o.onScreen = p[0] >= -edge && p[0] <= VIEW.w + edge && p[1] >= -edge && p[1] <= VIEW.h + edge;
-  const pointer = FD.hover && FD.now - FD.pointerT <= FIND_PLAY.fresh ? toMap(FD.pointer) : null;
-  o.awake = JOURNEY.focus === o.id || document.activeElement === o.el || !!(pointer && Math.hypot(pointer[0] - x, pointer[1] - y) <= reach);
-  o.kept ??= false;
-}
-function found(id, atId = id) {
-  if (FD.found.has(id)) return;
-  FD.found.add(id); FD.svg.querySelector('#mk-' + id)?.classList.add('found');
-  if (FD.rm) { FD.landed = FD.found.size; findLandCount(); return; }
-  FD.flights.push({ id: atId, number: FD.found.size }); findStartFlight();
-}
-function findLandCount() { tlSetCount(FD.landed, FINDS.length); if (FD.landed === FINDS.length) FD.all?.start(); }
-function findStartFlight() {
-  if (FD.flight || !FD.flights.length) return;
-  const next = FD.flights.shift(), box = FD.count.getBoundingClientRect();
-  FD.flight = { ...next, from: toScreen(FD.st, findPlace(next.id)), to: [box.left + box.width / 2, box.top + box.height / 2], ts: FD.now };
-}
-function opened(o) { o.overlayEpoch = FD.overlayEpoch; if (o.id !== 'well') FD.last = o; }
-const press = (el, fn) => {
-  el.addEventListener('click', e => { if (el._dragged) { el._dragged = false; return; } fn(e); });
-  el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e); } });
-};
-function showPop(owner, anchor, html, cls = '', side = 'auto') {
-  if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return false;
-  closePop(); FD.popOwner = owner; FD.popAnchor = anchor; FD.popSide = side; FD.popP = FD.st.P; FD.popTs = FD.now;
-  FD.pop.className = 'pop on ' + cls;
-  FD.pop.innerHTML = `<div class="pop-in"><div class="pop-body">${html}</div><i class="pop-tail" aria-hidden="true"></i></div>`;
-  FD.popInner = FD.pop.firstElementChild; FD.popTail = FD.pop.querySelector('.pop-tail'); FD.popBody = FD.pop.querySelector('.pop-body');
-  const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height];
-  // A popup stays above the step buttons and the timeline: their tops are read once here, when it opens, never in the frame loop.
-  FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go, .tl, .jm-focus .find-hint')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
-  placePop();
-  FD.popInner.style.transformOrigin = `${FD.popOrigin[0]}px ${FD.popOrigin[1]}px`;
-  return true;
-}
-function closePop() {
-  const o = FD.popOwner; if (!o) return;
-  FD.popOwner = null; FD.pop.className = 'pop'; FD.pop.innerHTML = ''; if (o.onPopClose) o.onPopClose();
-}
-function placePop() {
-  if (!FD.popOwner) return;
-  const K = FIND_PLAY.kit.popup, anchor = typeof FD.popAnchor === 'function' ? FD.popAnchor() : FD.popAnchor, p = toScreen(FD.st, anchor), [w, h] = FD.popSize;
-  const below = FD.popSide === 'below' || FD.popSide !== 'above' && p[1] - h - K.tail[1] < K.edge;
-  const x = Math.max(K.edge, Math.min(VIEW.w - w - K.edge, p[0] - w / 2));
-  const y = Math.max(K.edge, Math.min((FD.popFloor ?? VIEW.h) - h - K.edge, below ? p[1] + K.tail[1] : p[1] - h - K.tail[1]));
-  FD.popOrigin = [Math.max(0, Math.min(w, p[0] - x)), below ? 0 : h];
-  FD.pop.style.transform = `translate(${x}px,${y}px)`;
-  const q = FD.rm ? 1 : clamp01((FD.now - FD.popTs) / K.time), back = 1 + (K.over - 1) / (1 - K.scale);
-  const v = 1 + (back + 1) * (q - 1) ** 3 + back * (q - 1) ** 2;
-  FD.popInner.style.transform = `scale(${lerp(K.scale, 1, q === 1 ? 1 : v)})`; FD.popBody.style.opacity = q;
-  FD.popTail.style.transform = `translate(${Math.max(0, Math.min(w - K.tail[0], p[0] - x - K.tail[0] / 2))}px,${below ? -K.tail[1] : h}px) rotate(${below ? FIND_PLAY.kit.deg : 0}deg)`;
-}
-function findSheet(owner, cls, html, anchor) {
-  if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return false;
-  closeSheet(true); closePop();
-  FD.sheetOwner = owner; FD.sheetP = FD.st.P; FD.sheetFrom = toScreen(FD.st, anchor); FD.sheetTs = FD.now;
-  FD.sheet.className = 'sheet on ' + cls; FD.sheet.innerHTML = html;
-  document.documentElement.classList.add('jm-sheet-open');
-  FD.sheet.setAttribute('aria-label', FIND_BY[owner.id].label); FD.sheet.tabIndex = -1;
-  const target = FD.sheet.querySelector('button:not([hidden])') || FD.sheet; target.focus({ preventScroll: true });
-  return true;
-}
-function closeSheet(force = false) {
-  const o = FD.sheetOwner; if (!o) return;
-  if (!force && o.beginClose && o.beginClose()) return;
-  FD.sheetOwner = null; FD.sheet.className = 'sheet'; FD.sheet.innerHTML = '';
-  document.documentElement.classList.remove('jm-sheet-open');
-  if (o.onSheetClose) o.onSheetClose(); o.el?.focus({ preventScroll: true });
-}
-function findBits(kind, x, y, n, options = {}) {
-  if (FD.rm) return;
-  const B = FIND_PLAY.bits, v = { ...B.base, ...options };
-  for (let i = 0; i < n; i++) {
-    const bit = FD.bits.find(b => !b.live) || FD.bits.reduce((a, b) => a.serial < b.serial ? a : b);
-    const [path, cls] = kind === 'star' ? [starPath(0, 0, B.starSize), 'pf'] : B.kinds[kind];
-    const angle = findRange(v.dir) * Math.PI / FIND_PLAY.kit.deg, speed = findRange(v.speed);
-    Object.assign(bit, { live: true, serial: FD.serial++, x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, age: 0, life: findRange(v.life), spin: v.spin, g: v.g, drag: v.drag, size: v.size, alpha: kind === 'puff' ? Math.min(B.puffAlpha, v.alpha) : v.alpha, kind });
-    attr(bit.el, 'd', path); attr(bit.el, 'class', cls); bit.el.style.display = ''; if (['star', 'drop', 'puff', 'wisp'].includes(kind)) bit.el.style.stroke = 'none'; else bit.el.style.stroke = '';
-    attr(bit.el, 'transform', `translate(${x} ${y}) scale(${v.size[0]})`); attr(bit.el, 'opacity', bit.alpha);
-  }
-}
-function findKitBuild(svg, pop, sheet, base, rm) {
-  Object.assign(FD, { svg, pop, sheet, base, rm, hover: matchMedia('(hover: hover)').matches, count: document.querySelector('.tl-count') });
-  const pool = findSvg('g', { id: 'f-bits', 'pointer-events': 'none' }); svg.querySelector('#finds').appendChild(pool);
-  FD.hint = document.createElement('p'); FD.hint.className = 'find-hint'; FD.hint.setAttribute('aria-hidden', 'true'); (document.getElementById('go')?.parentElement || document.body).appendChild(FD.hint);
-  for (let i = 0; i < FIND_PLAY.bits.pool; i++) { const el = findSvg('path'); el.style.display = 'none'; pool.appendChild(el); FD.bits.push({ el, live: false, serial: -1 }); }
-  FD.star = document.createElement('div'); FD.star.className = 'find-star'; FD.star.setAttribute('aria-hidden', 'true');
-  FD.star.innerHTML = `<svg viewBox="-1 -1 2 2"><path d="${starPath(0, 0, 1)}"/></svg>`; pop.parentElement.appendChild(FD.star);
-  findKitStyle();
-  sheet.addEventListener('keydown', e => { if (FD.sheetOwner?.id === 'hammer') return; if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) { e.preventDefault(); e.stopPropagation(); } });
-  sheet.addEventListener('wheel', e => { e.preventDefault(); e.stopPropagation(); }, { passive: false });
-  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (FD.popOwner || FD.sheetOwner) { e.preventDefault(); closePop(); closeSheet(); } else stepsRelease(); });
-  matchMedia('(hover: hover)').addEventListener('change', e => FD.hover = e.matches);
-  tlSetCount(0, FINDS.length);
-}
-function findKitStyle() {
-  const P = FIND_PLAY, root = document.documentElement;
-  const vars = { 'find-pop-edge': P.kit.popup.edge + 'px', 'find-pop-w': P.kit.popup.width + 'px', 'find-pop-r': P.kit.popup.radius + 'px', 'find-pop-pad': P.kit.popup.pad.map(n => n + 'px').join(' '), 'find-pop-font': P.kit.popup.font + 'px', 'find-pop-line': P.kit.popup.line, 'find-kicker': P.kit.popup.kicker + 'px', 'find-gap': P.kit.popup.gap + 'px', 'find-tail-w': P.kit.popup.tail[0] + 'px', 'find-tail-h': P.kit.popup.tail[1] + 'px', 'find-slot-weight': P.kit.slot.weight, 'find-star-z': P.kit.starZ, 'find-slot-font': P.kit.slot.font + 'px', 'find-slot-rule': P.kit.slot.border + 'px', 'find-slot-pad': P.kit.slot.pad + 'px', 'find-star': P.star.size + 'px', 'find-piece': P.hoard.width + 'px', 'find-piece-top': P.hoard.top + 'px', 'find-icon': P.hoard.icon + 'px', 'find-arm': P.way.armWidth + 'px', 'find-rune-flip': P.rune.flipTime + 's', 'find-rune-w': P.rune.width + 'px', 'find-rune-h': P.rune.height + 'px', 'find-rune-perspective': P.rune.perspective + 'px', 'find-ctl-top': P.rune.controlTop + 'px', 'find-reel-w': P.raven.reel.width + 'px', 'find-iris': P.raven.reel.iris + 'px', 'find-reel-label': P.raven.reel.labelTop + 'px', 'find-reel-slot': P.raven.reel.slotBottom + 'px' };
-  Object.entries(vars).forEach(([k, v]) => root.style.setProperty('--' + k, v));
-}
-function findKitFrame() {
-  const dt = FD.dt;
-  FD.bits.forEach(b => {
-    if (!b.live) return; b.age += dt;
-    if (b.age >= b.life) { b.live = false; attr(b.el, 'opacity', 0); queueMicrotask(() => { if (!b.live) b.el.style.display = 'none'; }); return; }
-    b.vy += b.g * dt; b.vx *= Math.max(0, 1 - b.drag * dt); b.vy *= Math.max(0, 1 - b.drag * dt); b.x += b.vx * dt; b.y += b.vy * dt;
-    const q = b.age / b.life;
-    attr(b.el, 'transform', `translate(${b.x} ${b.y}) rotate(${b.spin * b.age}) scale(${lerp(b.size[0], b.size[1], q)})`); attr(b.el, 'opacity', b.alpha * (1 - q ** 2));
-  });
-  const f = FD.flight;
-  if (f) {
-    const q = clamp01((FD.now - f.ts) / FIND_PLAY.star.time), k = ease(q);
-    FD.star.style.opacity = 1; FD.star.style.transform = `translate(${lerp(f.from[0], f.to[0], k)}px,${lerp(f.from[1], f.to[1], k) - FIND_PLAY.star.arc * Math.sin(Math.PI * q)}px)`;
-    if (q === 1) { FD.landed = f.number; FD.bump = FD.now; FD.flight = null; FD.star.style.opacity = 0; queueMicrotask(() => { findLandCount(); findStartFlight(); }); }
-  }
-  if (FD.bump !== undefined) { const q = clamp01((FD.now - FD.bump) / FIND_PLAY.star.bump); FD.count.style.transform = `scale(${lerp(FIND_PLAY.star.peak, 1, ease(q))})`; if (q === 1) FD.bump = undefined; }
-  placePop();
-  if (FD.popOwner && Math.abs(FD.st.P - FD.popP) > FIND_TIMING.closeScroll) closePop();
-  if (FD.sheetOwner && Math.abs(FD.st.P - FD.sheetP) > FIND_TIMING.closeScroll) closeSheet();
-}
-// The hint line keeps its words while it fades out, so it changes only when a find takes the camera.
-function findHint(id) { if (FD.hint && id) FD.hint.textContent = FD.list.hoards?.items.find(h => h.id === id)?.hintLine || FIND_COPY.hints[id.startsWith('hoard') ? 'hoards' : id] || ''; }
-function findCapture(e) {
-  if (FD.rm || JOURNEY.mode !== 'steps' || !FD.st) return;
-  if (e.type === 'keydown' && !['Enter', ' '].includes(e.key)) return;
-  const el = e.target.closest?.('.find'); if (!el) return;
-  if (e.type === 'click' && el._focusBlocked) { el._focusBlocked = false; e.preventDefault(); e.stopImmediatePropagation(); return; }
-  const id = el.id.slice(2), key = id === 'hoards' ? FIND_COPY.hoards[0].id : id;
-  if (JOURNEY.focus === key) return;
-  if (!stepsFocus(key, findView(key))) { if (e.type === 'pointerdown') el._focusBlocked = true; e.preventDefault(); e.stopImmediatePropagation(); }
-  else { FD.overlayEpoch++; closePop(); closeSheet(true); if (e.type === 'pointerdown') el._focusBlocked = false; }
 }
 
 // ---- findhoards.mjs ----
@@ -4342,7 +4456,7 @@ function findWay(svg) {
     const angle = Math.atan2(dx, -dy) * FIND_PLAY.kit.deg / Math.PI; o.angle = angle; o.speed = 0;
     set(Math.round((angle % FIND_PLAY.kit.turn + FIND_PLAY.kit.turn) % FIND_PLAY.kit.turn / (FIND_PLAY.kit.turn / CRAFTS.length)) % CRAFTS.length);
   };
-  el.addEventListener('pointerdown', e => { o.drag = true; el.setPointerCapture(e.pointerId); pick(e); el._dragged = true; });
+  findPointer(el, e => { o.drag = true; el.setPointerCapture(e.pointerId); pick(e); el._dragged = true; }, { drag: true, tap: pick, cancel: () => o.drag = false });
   el.addEventListener('pointermove', e => { if (o.drag) pick(e); });
   el.addEventListener('pointerup', () => o.drag = false); el.addEventListener('pointercancel', () => o.drag = false);
   el.addEventListener('click', e => { if (el._dragged) el._dragged = false; else pick(e); });
@@ -4442,7 +4556,7 @@ function findHoards(svg) {
       attr(h.mouth, 'transform', 'translate(0 ' + H.rim + ') scale(1 ' + clamp01(h.lidAngle / H.mouthAngle) + ')');
       attr(h.lid, 'transform', 'translate(0 ' + (H.rim - H.depth * sn) + ') scale(1 ' + c + ') translate(0 ' + -H.rim + ')');
     };
-    el.addEventListener('pointerdown', e => { e.stopPropagation(); h.hold = true; h.nextHold = FD.now + H.repeat; el.setPointerCapture(e.pointerId); request(); el._dragged = true; });
+    findPointer(el, e => { e.stopPropagation(); h.hold = true; h.nextHold = FD.now + H.repeat; el.setPointerCapture(e.pointerId); request(); el._dragged = true; }, { tap: request, cancel: () => h.hold = false });
     el.addEventListener('pointerup', () => h.hold = false); el.addEventListener('pointercancel', () => h.hold = false);
     press(el, e => { e.stopPropagation(); request(); });
     h.undo = () => { if (FD.popOwner === h) closePop(); };
@@ -4770,7 +4884,7 @@ function findBeacon(svg) {
     if (FD.rm && i >= 0) { o.head = angle; read(n, i); o.snap = null; }
   };
   // A drag aims the beam. A plain press or tap (the pointer has not travelled beacon.slop px) turns it to the next unread note, as Enter does.
-  el.addEventListener('pointerdown', e => { o.drag = true; o.downAt = [e.clientX, e.clientY]; o.dragged = false; el.setPointerCapture(e.pointerId); });
+  findPointer(el, e => { o.drag = true; o.downAt = [e.clientX, e.clientY]; o.dragged = false; el.setPointerCapture(e.pointerId); }, { drag: true, tap: () => snapNext(), cancel: () => o.drag = false });
   el.addEventListener('pointermove', e => { if (!o.drag || !o.dragged && Math.hypot(e.clientX - o.downAt[0], e.clientY - o.downAt[1]) < FIND_PLAY.beacon.slop) return; o.dragged = el._dragged = true; aimAt(e); });
   el.addEventListener('pointerup', () => o.drag = false); el.addEventListener('pointercancel', () => o.drag = false);
   press(el, () => snapNext());
@@ -5395,7 +5509,7 @@ function findMist(svg) {
     if (o.lastW && Math.hypot(p[0] - o.lastW[0], p[1] - o.lastW[1]) < r * FIND_PLAY.mist.step) return;
     wipe(p, r, true, o.lastW); o.lastW = p;
   };
-  el.addEventListener('pointerdown', e => { o.down = true; o.lastW = null; el.setPointerCapture(e.pointerId); pointer(e, FIND_PLAY.mist.press); el._dragged = true; });
+  findPointer(el, e => { o.down = true; o.lastW = null; el.setPointerCapture(e.pointerId); pointer(e, FIND_PLAY.mist.press); el._dragged = true; }, { drag: true, tap: e => { o.lastW = null; pointer(e, FIND_PLAY.mist.press); }, cancel: () => o.down = false });
   el.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || o.down) pointer(e, o.down && e.pointerType !== 'mouse' ? FIND_PLAY.mist.finger : FIND_PLAY.mist.wipe); });
   el.addEventListener('pointerup', () => o.down = false); el.addEventListener('pointercancel', () => o.down = false);
   const third = () => { found(o.id); const cells = centres(), n = Math.ceil(cells.length / FIND_PLAY.mist.thirds), remaining = o.cleared.map((v, i) => v ? -1 : i).filter(i => i >= 0); remaining.slice(0, n).forEach(i => wipe(cells[i], FIND_PLAY.mist.finger, true)); };
@@ -5546,7 +5660,7 @@ function findHorn(svg) {
     o.up = 1; o.stage = 'raised'; o.raiseTs = FD.now; opened(o); found(o.id);
     showPop(o, [f.x + FIND_PLAY.horn.anchor[0], f.y + FIND_PLAY.horn.anchor[1]], `<p class="pop-t pop-big">${fEsc(FIND_COPY.horn[0])}</p>${findSlot(FIND_COPY.horn[1])}`);
   };
-  el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); raise(); o.hold = o.stage === 'raised'; o.holdTs = FD.now; el._dragged = true; });
+  findPointer(el, e => { el.setPointerCapture(e.pointerId); raise(); o.hold = o.stage === 'raised'; o.holdTs = FD.now; el._dragged = true; }, { tap: raise, cancel: () => o.hold = false });
   el.addEventListener('pointerup', () => o.hold = false); el.addEventListener('pointercancel', () => o.hold = false);
   press(el, raise);
   o.onPopClose = () => { if (o.stage === 'raised') { o.up = 0; o.stage = 'rest'; o.hold = false; } };

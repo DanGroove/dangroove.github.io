@@ -4,7 +4,7 @@ import { gzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { STOPS, PALETTES, FINDS, FIND_COPY, COPY, ACTS, CRAFTS, MAP, STEPS, DEPTH, NOVA, STARS, C, FIND_PLAY, EXPLORE, FOOT_NAME, CARD_CLOSE, HAMMER, YGG, MARK, LABELS, WORLD, RAVEN_RIG } from '../data.mjs';
-import { RUNES, bigMap, GROVE, YGG_CROWN, YGG_ROOTS, yggClear, insidePoly, outlineGap, JORM, TRAIL, COAST_A, COAST_B, mapLabelRows, mapLabelBox, toronto, runeWord } from '../art.mjs';
+import { RUNES, bigMap, GROVE, YGG_CROWN, YGG_ROOTS, yggClear, insidePoly, outlineGap, segmentGap, JORM, TRAIL, COAST_A, COAST_B, mapLabelRows, mapLabelBox, toronto, runeWord } from '../art.mjs';
 import { hammerText, hammerRuneNumber } from '../findhammer.mjs';
 import { SEQ, TOTAL_P, tripState, tripResize, VIEW, labelScale } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
@@ -114,7 +114,14 @@ for (const [w, h] of [[1440, 900], [390, 664]]) {
 // Round 7 C1 acceptance gates. Text boxes use conservative analytic metrics, not browser measurements.
 const c1map = bigMap();
 const crownMasses = [...c1map.detail.matchAll(/class="l yg-mass" d="([^"]+)"/g)].map(m => skylineSamples(m[1]).map(p=>p.map((v,k)=>v+MAP.ygg[k])));
-ok(crownMasses.length>=3&&crownMasses.length<=5,'ash crown needs 3-5 outlined masses');
+ok(crownMasses.length===5,'D3 ash crown needs exactly five masses');
+const massPoints=crownMasses.flat(),crownWidth=Math.max(...massPoints.map(p=>p[0]))-Math.min(...massPoints.map(p=>p[0])),crownHeight=Math.max(...massPoints.map(p=>p[1]))-Math.min(...massPoints.map(p=>p[1]));
+ok(crownWidth>crownHeight,'D3 crown wider than tall');
+const yggStart=c1map.detail.indexOf('<g class="ygg"'),firstMass=c1map.detail.indexOf('class="l yg-mass"',yggStart),limb=c1map.detail.indexOf('class="l yg-limbs"',yggStart);
+ok(limb>=yggStart&&limb<firstMass,'D3 supporting limbs must be below all opaque foliage');
+ok(!c1map.detail.slice(firstMass,c1map.detail.indexOf('class="yg-eagle"',firstMass)).includes('yg-limbs'),'D3 no covered limb drawn above foliage');
+ok((c1map.detail.match(new RegExp('style="fill:'+C.land+';stroke:none"','g'))||[]).length===5,'D3 invisible ground fill occludes limbs');
+ok((c1map.detail.match(/class="l yg-edge"/g)||[]).length===5&&(c1map.detail.match(/class="t yg-hatch"/g)||[]).length===5,'D3 broken leaf-clump edges and limb-direction hatch');
 GROVE.forEach((tree, i) => ok(yggClear(tree, YGG.clearance + YGG.groveReach), 'grove ' + i + ': crown/trunk/root clearance'));
 const labelBoxPoints = []; for (let x = YGG.labelBox[0]; x <= YGG.labelBox[2]; x++) for (let y = YGG.labelBox[1]; y <= YGG.labelBox[3]; y++) labelBoxPoints.push([x,y]);
 labelBoxPoints.forEach(p => { ok(!insidePoly(p, YGG_CROWN) && outlineGap(p, YGG_CROWN) >= YGG.labelGap, 'Yggdrasil label crown clearance'); ok(YGG_ROOTS.every(P => outlineGap(p, P, false) >= YGG.labelGap), 'Yggdrasil label root clearance'); ok(Math.abs(p[0] - MAP.ygg[0]) >= YGG.labelGap + YGG.roots[0][1], 'Yggdrasil label trunk/Ratatoskr clearance'); const h = FIND_COPY.hoards.find(h => h.id === 'hoard-hmc2'); ok(Math.hypot(p[0] - h.x, p[1] - h.y) >= YGG.labelGap + FIND_PLAY.hoard.scale * 27, 'Yggdrasil label scratch clearance'); });
@@ -124,6 +131,12 @@ allStars.forEach(star=>ok(crownMasses.some(P=>insidePoly(star.p,P)),'well star i
 crownMasses.forEach((P,i)=>crownMasses.slice(0,i).forEach((Q,j)=>ok(P.every(p=>!insidePoly(p,Q)&&outlineGap(p,Q)>=.3)&&Q.every(p=>!insidePoly(p,P)&&outlineGap(p,P)>=.3),'foliage masses need an open gap '+i+'/'+j)));
 JORM.S.forEach(p => { ok(p[0] >= 22.5 && p[0] <= 577.5 && p[1] >= 22.5 && p[1] <= 877.5, 'ring sample outside inner frame'); [COAST_A, COAST_B].forEach(coast => ok(outlineGap(p,coast) >= MAP.jorm.w / 2 + 6, 'ring coast clearance')); });
 const cross2 = (a,b,c) => (b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+const pointBoxGap=(p,b)=>Math.hypot(Math.max(b[0]-p[0],0,p[0]-b[2]),Math.max(b[1]-p[1],0,p[1]-b[3]));
+const boxCoastGap=(b,P)=>{
+  const corners=[[b[0],b[1]],[b[2],b[1]],[b[2],b[3]],[b[0],b[3]]];let distance=Infinity;
+  P.forEach((a,i)=>{const z=P[(i+1)%P.length];if(!pointBoxGap(a,b)||corners.some((c,j)=>{const d=corners[(j+1)%4];return cross2(a,z,c)*cross2(a,z,d)<=0&&cross2(c,d,a)*cross2(c,d,z)<=0;}))distance=0;
+    distance=Math.min(distance,pointBoxGap(a,b),pointBoxGap(z,b),...corners.map(p=>segmentGap(p,a,z)));});return distance;
+};
 let crossings = 0; TRAIL.slice(1).forEach((b,i) => JORM.S.slice(1).forEach((d,j) => { const a=TRAIL[i],c=JORM.S[j]; if(cross2(a,b,c)*cross2(a,b,d)<0 && cross2(c,d,a)*cross2(c,d,b)<0)crossings++; })); ok(crossings === 1, 'trail must cross ring exactly once');
 const T = MAP.toronto, heights = T.buildings.map(([id]) => T.facts[id] * T.k);
 ok(heights[1] === Math.max(...heights) && T.facts.fcp > Math.max(...T.buildings.filter(([id])=>!['cn','fcp'].includes(id)).map(([id])=>T.facts[id])), 'Toronto tallest landmarks');
@@ -147,6 +160,16 @@ for(let x=T.box[0]+6;x<=T.at[0]+T.width+4;x+=1)ok(insidePoly([x,T.at[1]],COAST_B
 for(const [w,h,bar] of [[1440,900,120],[390,844,96]]) {
   tripResize(w,h,bar); const rows=mapLabelRows().filter(r=>!r.stopSub).concat([{kind:'small',unit:LABELS.small.unit,text:COPY.kicker,x:LABELS.kicker[0],y:LABELS.kicker[1],ls:1.8}],Object.values(COPY.legend).map((text,i)=>({kind:'legend',unit:LABELS.legend.unit,text,x:LABELS.legendAt[i][0],y:LABELS.legendAt[i][1]})));
   const boxes=rows.map(row=>{const k=labelScale(row.kind,VIEW.s0),floor=['name','x'].includes(row.kind)?VIEW.phone?9:10:9;ok(row.unit*VIEW.s0*k>=floor-1e-9,w+': '+row.kind+' below '+floor+' px');return{...row,b:mapLabelBox(row,VIEW.s0,VIEW.phone)};});
+  const ringPx=Math.max(MARK.min,Math.min(MARK.max,MARK.k*VIEW.s0)),ringRadius=ringPx*(MARK.radius+MARK.rim/2)/MARK.box/VIEW.s0;
+  const rings=STOPS.map(stop=>{const p=MAP.waypoints[stop.w];return[p[0],p[1]-(ringPx/2+MARK.stand)/VIEW.s0];});
+  for(const row of boxes){
+    const coast=Math.min(...[COAST_A,COAST_B].map(P=>boxCoastGap(row.b,P)))-.6/VIEW.s0;
+    const ring=Math.min(...rings.map(p=>pointBoxGap(p,row.b)-ringRadius));
+    ok(coast>=2,w+': D3 tier-1 coast clearance '+row.text+' '+coast.toFixed(2));ok(ring>=2,w+': D3 tier-1 stop-ring clearance '+row.text+' '+ring.toFixed(2));
+    if(process.argv.includes('--label-options')&&row.kind==='name'&&row.text.startsWith('HMC')){
+      let best={gap:-Infinity};for(let dx=-6;dx<=6;dx+=.25)for(let dy=-6;dy<=6;dy+=.25){if(Math.hypot(dx,dy)>6)continue;const b=row.b.map((v,i)=>v+(i%2?dy:dx)),c=Math.min(...[COAST_A,COAST_B].map(P=>boxCoastGap(b,P)))-.6/VIEW.s0,r=Math.min(...rings.map(p=>pointBoxGap(p,b)-ringRadius)),g=Math.min(c,r);if(g>best.gap)best={gap:g,dx,dy,coast:c,ring:r};}const witness=[COAST_A,COAST_B].flat().find(p=>p[0]>=row.b[0]+6&&p[0]<=row.b[2]-6&&p[1]>=row.b[1]+6&&p[1]<=row.b[3]-6);console.log(w+' bounded label search '+row.text+' '+JSON.stringify({box:row.b,witness,best}));
+    }
+  }
   boxes.forEach((row,i)=>{const b=row.b;ok(b[0]>=22.5&&b[1]>=22.5&&b[2]<=577.5&&b[3]<=877.5,w+': label outside frame: '+row.text);boxes.slice(0,i).forEach(other=>{const q=other.b;ok(!(b[0]<q[2]&&b[2]>q[0]&&b[1]<q[3]&&b[3]>q[1]),w+': label overlap '+row.text+'/'+other.text);});});
   const rectGap=(a,b)=>Math.hypot(Math.max(a[0]-b[2],b[0]-a[2],0),Math.max(a[1]-b[3],b[1]-a[3],0));
   const stroke=.55/VIEW.s0, crown=crownMasses.flat(), crownBox=[Math.min(...crown.map(p=>p[0]))-stroke,Math.min(...crown.map(p=>p[1]))-stroke,Math.max(...crown.map(p=>p[0]))+stroke,Math.max(...crown.map(p=>p[1]))+stroke];

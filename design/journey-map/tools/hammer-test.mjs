@@ -5,6 +5,7 @@ import { HAMMER } from '../data.mjs';
 import { hammerStart, hammerStep, hammerWave, hammerPick, hammerRandom, hammerDamage, hammerHurt, hammerSlow, hammerPower, hammerFlightSpeed, hammerGloveSpeed } from '../hammer.mjs';
 
 const H = HAMMER, input = { target: NaN, move: 0, throw: false };
+const drawnBounds={};
 // Every endpoint/control point of these M/L/H/V/Q silhouettes is inside the unchanged hit box, including stroke.
 for(const kind of [...H.kinds,'hrungnir','clay']) {
   const path=H.paths.sprites[kind][2],tok=path.match(/[a-zA-Z]|[-+]?(?:\d*\.)?\d+/g);let i=0,cmd='',p=[0,0];const points=[];
@@ -13,7 +14,17 @@ for(const kind of [...H.kinds,'hrungnir','clay']) {
   }
   const rx=kind==='hrungnir'?H.foe.bossRX:kind==='clay'?H.foe.clayRX:H.foe.rx,ry=kind==='hrungnir'?H.foe.bossRY:kind==='clay'?H.foe.clayRY:H.foe.ry;
   points.forEach(p=>assert.ok(Math.abs(p[0])+H.field.line/2<=rx&&Math.abs(p[1])+H.field.line/2<=ry,kind+' art outside hit box '+p));
+  drawnBounds[kind]=[Math.min(...points.map(p=>p[0]))-H.field.line/2,Math.min(...points.map(p=>p[1]))-H.field.line/2,Math.max(...points.map(p=>p[0]))+H.field.line/2,Math.max(...points.map(p=>p[1]))+H.field.line/2];
 }
+const drawnHeight=kind=>drawnBounds[kind][3]-drawnBounds[kind][1];
+for(const kind of ['rime','fire','chief'])nearHeight(drawnHeight(kind),H.foe.ry*2);
+nearHeight(drawnHeight('draugr'),11);nearHeight(drawnHeight('wolf'),8);nearHeight(drawnBounds.wolf[2]-drawnBounds.wolf[0],H.foe.rx*2);
+function nearHeight(a,b){assert.ok(Math.abs(a-b)<.002,'drawn dimension '+a+'/'+b);}
+const firstKinds=[...new Set(hammerStart(H.seed.first).foes.filter(f=>f.live).map(f=>drawnHeight(f.kind)))];assert.ok(firstKinds.length>=2,'default wave 1 has distinct drawn heights');
+const centres=H.paths.wall.centres,shieldRadius=7.5,wallHalf=H.shield.columns*H.shield.cell/2;
+assert.ok(centres[0]-shieldRadius<=-wallHalf&&centres.at(-1)+shieldRadius>=wallHalf,'shields span segment cells');
+centres.slice(1).forEach((x,i)=>assert.ok(x-centres[i]<shieldRadius*2,'adjacent rims overlap'));
+console.log('ok: D3 foe heights incl stroke: giants/chief 16, hunched draugr 11, low full-width wolf 8; wave 1 varies; five overlapping shields span each unchanged segment');
 console.log('ok: original Norse foe silhouettes and their strokes fit unchanged hit boxes');
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-7, `${a} != ${b}`);
 const step = (s, seconds = H.step, control = input) => { for (let t = 0; t < seconds - H.step / 2; t += H.step) hammerStep(s, control, H.step); };

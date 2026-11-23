@@ -112,9 +112,23 @@ const shore = (P, seed) => { const r = rnd(seed), n = P.length; let s = '', ar2 
 // ---- Norse landmarks ----
 export function yggdrasil(x, y) {
   const Y = YGG, r = rnd(Y.crownSeed);
-  const crown = Y.masses.map(P => '<path class="l yg-mass" d="' + scallop(P, i => { const p = P[i], q = P[(i + 1) % P.length]; return Math.hypot(q[0] - p[0], q[1] - p[1]) * (Y.massBump[0] + r() * Y.massBump[1]); }) + '"/>').join('');
+  const crown = Y.masses.map((P, index) => {
+    const segments = P.map((p, i) => {
+      const q = P[(i + 1) % P.length], dx = q[0] - p[0], dy = q[1] - p[1], bump = Y.massBump[0] + r() * Y.massBump[1];
+      return 'Q' + n1((p[0]+q[0])/2 + dy*bump) + ' ' + n1((p[1]+q[1])/2 - dx*bump) + ' ' + q.join(' ');
+    });
+    const d = 'M' + P[0].join(' ') + segments.join('') + 'Z';
+    // Leave the edge facing its supporting limb open, with opaque foliage behind it.
+    const from = Y.massFrom[index], distance = p => Math.hypot(p[0]-from[0],p[1]-from[1]);
+    const entry = P.reduce((best,p,i) => distance(p) < distance(P[best]) ? i : best, 0);
+    const edge = segments.map((part,i) => i === entry || i === (entry + P.length - 1) % P.length ? '' : 'M' + P[i].join(' ') + part).join('');
+    const centre = P.reduce((v,p) => v.map((n,k) => n+p[k]/P.length),[0,0]);
+    const angle = Math.atan2(centre[1]-from[1],centre[0]-from[0]), along = [Math.cos(angle)*4,Math.sin(angle)*4];
+    const hatch = P.filter((p,i) => i%3===0).map(p => { const a=p.map((v,k) => v+(centre[k]-v)*.55); return 'M'+a.join(' ')+'l'+along.join(' '); }).join('');
+    return '<defs><clipPath id="yg-leaves-'+index+'"><path d="'+d+'"/></clipPath></defs><path class="l yg-mass" d="'+d+'" style="fill:'+C.land+';stroke:none"/><path class="l yg-edge" d="'+edge+'"/><path class="t yg-hatch" d="'+hatch+'" stroke-opacity=".28" clip-path="url(#yg-leaves-'+index+')"/>';
+  }).join('');
   const actor = (cls, p, body) => '<g class="' + cls + '" transform="translate(' + p.join(' ') + ')">' + body + '</g>';
-  return '<g class="ygg" transform="translate(' + x + ' ' + y + ')">' + Y.roots.map(row => '<path class="g" d="' + tube(...row) + '"/>').join('') + Y.rootlets + Y.trunk + '<path class="l" d="' + Y.branches + '"/>' + crown + '<path class="t" d="' + Y.ashHatch + '"/>' + actor('yg-eagle', Y.eagleAt, Y.eagle) + actor('yg-rat', Y.ratAt, Y.rat) + actor('yg-nid', Y.nidAt, Y.nid) + '</g>';
+  return '<g class="ygg" transform="translate(' + x + ' ' + y + ')">' + Y.roots.map(row => '<path class="g" d="' + tube(...row) + '"/>').join('') + Y.rootlets + Y.trunk + '<path class="l yg-limbs" d="' + Y.branches + '"/>' + crown + actor('yg-eagle', Y.eagleAt, Y.eagle) + actor('yg-rat', Y.ratAt, Y.rat) + actor('yg-nid', Y.nidAt, Y.nid) + '</g>';
 }
 // interlace knot, about 22 units: a rounded square and a diamond woven over and under by quadrant
 export const knot = (cx, cy) => {

@@ -88,6 +88,11 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
   const stonePx = Math.max(MARK.min, Math.min(MARK.max, MARK.k * st.cam.s));
   const stepTop = VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h;
   CD.list.forEach((c, i) => {
+    const close = c.el.querySelector('.c-close');
+    if (close) {
+      if (JOURNEY.moving && document.activeElement === close) document.getElementById('go')?.querySelector('.go-next')?.focus({ preventScroll: true });
+      close.inert = JOURNEY.moving;
+    }
     const H = c.H, oc = VIEW.phone ? [VIEW.w / 2, VIEW.h - H / 2 - WORLD.card.phoneBottom - (CD.steps ? STEPS.nav.bar : 0)] : [VIEW.w / 2, CD.steps ? Math.max(WORLD.card.gap + H / 2, Math.min(VIEW.h / 2 - WORLD.card.gap, stepTop - WORLD.card.gap - H / 2)) : VIEW.h / 2 - WORLD.card.gap];
     const e = st.cardK[i], p = toScreen(st, MAP.waypoints[c.stop.w]);
     const k0 = stonePx / (H * .95), k = Math.pow(k0, 1 - e);

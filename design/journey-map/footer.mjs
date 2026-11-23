@@ -1,7 +1,7 @@
 // The X, its supernova and the footer that settles over the glow.
-import { C, COPY, MAP, NOVA, NOVA_CANVAS, DEPTH, FOOT_NAME, EXPLORE, CAMERA, PHONE_LAYOUT } from './data.mjs';
+import { C, COPY, MAP, NOVA, NOVA_CANVAS, DEPTH, FOOT_NAME, EXPLORE, CAMERA, PHONE_LAYOUT, STEPS } from './data.mjs';
 import { rnd, n1, mapDefs } from './art.mjs';
-import { VIEW, smooth, lerp, easeIO, clamp01 } from './trip.mjs';
+import { VIEW, smooth, lerp, easeIO, clamp01, novaBuild } from './trip.mjs';
 import { JOURNEY } from './steps.mjs';
 import { novaRingRadius, novaFlare, novaPress, novaPrune, novaShare, NOVA_LIVE } from './depth.mjs';
 import { footnameBuild, footnameMeasure, footnameReveal, footnameFrame } from './footname.mjs';
@@ -106,6 +106,7 @@ function footerConfigure() {
   FT.rays = seeds(NOVA.rays.n); FT.lobes = seeds(count); FT.waves = seeds(NOVA.waves.n);
 }
 const footerColour = (colour, alpha) => `rgba(${colour.slice(1).match(/../g).map(n => parseInt(n, 16)).join(',')},${alpha})`;
+const footerHeatColour = heat => { const a = C.warm.slice(1).match(/../g), b = C.white.slice(1).match(/../g); return 'rgb(' + a.map((n,i) => Math.round(lerp(parseInt(n,16),parseInt(b[i],16),smooth(.1,.9,heat)))).join(',') + ')'; };
 function footerGlowSprite(key) {
   if (FT.sprites[key]) return FT.sprites[key];
   const cv = document.createElement('canvas'), size = NOVA_CANVAS.glowSprite; cv.width = cv.height = size;
@@ -190,21 +191,30 @@ export function footerMotion(time, dt, st, look, moved) {
   const pulse = 1 + strength * (NOVA.pulse[1] * wave(NOVA.pulse[0]) + NOVA.pulse[3] * wave(NOVA.pulse[2])) + flare;
   // the two strokes: thin, whiten from the centre, stretch into spikes, then cool to a small star
   const out = b => 1 - Math.pow(1 - b, 3);
-  let len = lerp(1, B.rushLen, easeIO(rT)), thin = lerp(B.thin[0], B.thin[1], rT);
-  if (bT > 0) len = bT < B.spikePeak ? lerp(B.rushLen, B.peakLen, out(bT / B.spikePeak)) : lerp(B.peakLen, B.endLen, easeIO((bT - B.spikePeak) / (1 - B.spikePeak)));
+  const build = novaBuild(rT), held = novaBuild(1), blastJoin = out(clamp01(bT / B.spikePeak));
+  let len = build.len, thin = build.thin;
+  if (bT > 0) len = bT < B.spikePeak ? lerp(held.len, B.peakLen, out(bT / B.spikePeak)) : lerp(B.peakLen, B.endLen, easeIO((bT - B.spikePeak) / (1 - B.spikePeak)));
   if (sT > 0) len = lerp(B.endLen, u(B.spikeEnd) / B.spikeLength, easeIO(sT));
-  if (bT > 0) thin = lerp(B.thin[1], B.thin[2], out(clamp01(bT / B.spikePeak)));
+  if (bT > 0) thin = lerp(held.thin, B.thin[2], blastJoin);
   if (sT > 0) thin = lerp(B.thin[2], B.thin[3], sT);
-  const heat = smooth(...B.heat, rT);
+  const heat = build.heat;
+  // The veil is below every nova mark and below the separate stars canvas.
+  const veil = build.veil * (1 - smooth(0, NOVA.build.veilOut / STEPS.pace.blast, bT));
+  if (veil > 0) {
+    const radius = build.hole * Math.min(VIEW.w, VIEW.h), gradient = ctx.createRadialGradient(0, 0, radius * .45, 0, 0, radius);
+    gradient.addColorStop(0, footerColour(C.ink, 0)); gradient.addColorStop(1, C.ink);
+    ctx.globalAlpha = veil; ctx.fillStyle = gradient; ctx.fillRect(-FT.centre[0] / FT.dpr, -FT.centre[1] / FT.dpr, VIEW.w, VIEW.h);
+  }
+  if (bT === 0) ctx.translate(...build.jitter);
   // glow
-  let rg = lerp(0, B.redGlow[0], rT), rgo = B.rushGlowAlpha * rT;
+  let rg = build.glow, rgo = build.glowAlpha;
   if (bT > 0) { rg = bT < B.glowPeak ? lerp(B.redGlow[0], big * B.redGlow[1], out(bT / B.glowPeak)) : lerp(big * B.redGlow[1], big * B.redGlow[2], easeIO((bT - B.glowPeak) / (1 - B.glowPeak))); rgo = 1; }
   if (sT > 0) rg = lerp(big * B.redGlow[2], big * B.redGlow[3], sT);
   rg *= 1 + strength * NOVA.glow[1] * wave(NOVA.glow[0]);
   footerGlow(ctx, 'red', 0, 0, u(rg) * calm * z, u(rg) * B.glowAspect * calm * z, rgo * calmAlpha);
-  const og = bT > 0 ? lerp(...B.orangeGlow, out(bT)) : lerp(0, B.orangeGlow[0], rT);
-  footerGlow(ctx, 'orange', 0, 0, u(og) * calm * z, u(og) * calm * z, (bT > 0 ? B.orangeAlpha : B.rushGlowAlpha * rT) * calmAlpha);
-  const core = bT > 0 ? lerp(B.core[0], B.core[1], bT) * (sT > 0 ? lerp(1, B.core[2], sT) : 1) : lerp(0, B.core[3], heat);
+  const og = bT > 0 ? lerp(...B.orangeGlow, out(bT)) : build.glow * .6;
+  footerGlow(ctx, 'orange', 0, 0, u(og) * calm * z, u(og) * calm * z, (bT > 0 ? B.orangeAlpha : heat * .35) * calmAlpha);
+  const core = bT > 0 ? lerp(B.core[0], B.core[1], bT) * (sT > 0 ? lerp(1, B.core[2], sT) : 1) : build.core;
   // the blast: ring and streaks
   const ringR = novaRingRadius(st), ringO = bT > 0 ? (1 - smooth(...B.ringFade, bT)) : 0;
   const stS = lerp(B.streak[0], big * B.streak[1], out(bT));
@@ -241,10 +251,10 @@ export function footerMotion(time, dt, st, look, moved) {
   footerGroup(ctx, streakO, ctx => FT.streaks.forEach(line => footerLine(ctx, line.from.map(v => v * u(stS) * z), line.to.map(v => v * u(stS) * z), line.colour, line.width, line.alpha)));
   footerRing(ctx, u(ringR) * z, C.red, 8, ringO * B.ringAlpha[1]); footerRing(ctx, u(ringR) * z, C.paper, 2, ringO * B.ringAlpha[0]);
   [0, 1].forEach(i => footerRing(ctx, u((VIEW.phone ? B.shellPhone : B.shellR)[i]) * z, C.paper, i ? .6 : .8, B.shellAlpha[i] * ro, clock * NOVA.shells[i], NOVA.shellDash));
-  footerGlow(ctx, 'core', 0, 0, u(core * pulse) * calm * z, u(core * pulse) * calm * z, heat * calmAlpha);
+  footerGlow(ctx, 'core', 0, 0, u(core * pulse) * calm * z, u(core * pulse) * calm * z, build.coreAlpha * calmAlpha);
   B.angles.forEach((angle, i) => {
     const stretch = len * (1 + strength * NOVA.spike[1] * Math.sin(Math.PI * 2 * clock / NOVA.spike[0] + i * NOVA.spike[2])) * pulse;
-    const red = +(1 - smooth(...B.redOut, rT)).toFixed(3), white = +heat.toFixed(3);
+    const red = bT > 0 ? 0 : 1, white = heat;
     if (red > 0) footerRough(Math.max(z * stretch, z * thin));
     ctx.save(); ctx.rotate(angle * Math.PI / 180); ctx.scale(stretch * z, thin * z);
     if (red > 0) {
@@ -252,7 +262,7 @@ export function footerMotion(time, dt, st, look, moved) {
       else footerLine(ctx, [-12.7, 0], [12.7, 0], C.red, 3.6, red);
     }
     if (white > 0) {
-      const gradient = ctx.createLinearGradient(-12.7, 0, 12.7, 0); gradient.addColorStop(0, footerColour(C.red, 0)); gradient.addColorStop(.5, C.white); gradient.addColorStop(1, footerColour(C.red, 0));
+      const gradient = ctx.createLinearGradient(-12.7, 0, 12.7, 0); gradient.addColorStop(0, footerColour(C.red, 0)); gradient.addColorStop(.5, footerHeatColour(heat)); gradient.addColorStop(1, footerColour(C.red, 0));
       ctx.globalAlpha = white; ctx.fillStyle = gradient; ctx.beginPath(); ctx.moveTo(-12.7, 0); ctx.lineTo(0, -1.7); ctx.lineTo(12.7, 0); ctx.lineTo(0, 1.7); ctx.closePath(); ctx.fill();
     }
     ctx.restore();

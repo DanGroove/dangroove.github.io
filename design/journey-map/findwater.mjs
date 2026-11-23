@@ -3,7 +3,7 @@ import { C, STOPS, MAP, FIND_COPY, FIND_PLAY, YGG } from './data.mjs';
 import { clamp01, lerp } from './trip.mjs';
 import { starPath, rnd } from './art.mjs';
 import { beaconLit } from './findsheets.mjs';
-import { FD, FIND_BY, ease, out3, attr, fEsc, found, opened, press, showPop, toMap, findBits, findSvg, findRange, findFormat, findSlot, findPlace } from './findkit.mjs';
+import { findPointer, FD, FIND_BY, ease, out3, attr, fEsc, found, opened, press, showPop, toMap, findBits, findSvg, findRange, findFormat, findSlot, findPlace } from './findkit.mjs';
 
 export function findMist(svg) {
   const el = svg.querySelector('#f-mist'), cloud = el.querySelector('.mist-cloud'), drift = el.querySelector('.mist-drift'), wipes = svg.querySelector('#mistWipes'), glints = [...el.querySelectorAll('.mist-glint')];
@@ -32,7 +32,7 @@ export function findMist(svg) {
     if (o.lastW && Math.hypot(p[0] - o.lastW[0], p[1] - o.lastW[1]) < r * FIND_PLAY.mist.step) return;
     wipe(p, r, true, o.lastW); o.lastW = p;
   };
-  el.addEventListener('pointerdown', e => { o.down = true; o.lastW = null; el.setPointerCapture(e.pointerId); pointer(e, FIND_PLAY.mist.press); el._dragged = true; });
+  findPointer(el, e => { o.down = true; o.lastW = null; el.setPointerCapture(e.pointerId); pointer(e, FIND_PLAY.mist.press); el._dragged = true; }, { drag: true, tap: e => { o.lastW = null; pointer(e, FIND_PLAY.mist.press); }, cancel: () => o.down = false });
   el.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || o.down) pointer(e, o.down && e.pointerType !== 'mouse' ? FIND_PLAY.mist.finger : FIND_PLAY.mist.wipe); });
   el.addEventListener('pointerup', () => o.down = false); el.addEventListener('pointercancel', () => o.down = false);
   const third = () => { found(o.id); const cells = centres(), n = Math.ceil(cells.length / FIND_PLAY.mist.thirds), remaining = o.cleared.map((v, i) => v ? -1 : i).filter(i => i >= 0); remaining.slice(0, n).forEach(i => wipe(cells[i], FIND_PLAY.mist.finger, true)); };

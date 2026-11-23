@@ -3,7 +3,7 @@ import { C, COPY, FIND_COPY, FIND_PLAY, FIND_TIMING } from './data.mjs';
 import { VIEW, clamp01, lerp } from './trip.mjs';
 import { rubbingSvg, rubbingRunes } from './art.mjs';
 import { depthBeam } from './depth.mjs';
-import { FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, closeSheet, attend, findBits, findSvg, findSheet, findSlot, findAngleDelta } from './findkit.mjs';
+import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, closeSheet, attend, findBits, findSvg, findSheet, findSlot, findAngleDelta } from './findkit.mjs';
 
 export function findBeacon(svg) {
   const f = FIND_BY.beacon, el = svg.querySelector('#f-beacon'), beam = el.querySelector('.bc-beam'), flame = el.querySelector('.bc-flame'), glow = el.querySelector('.bc-glow');
@@ -23,7 +23,7 @@ export function findBeacon(svg) {
     if (FD.rm && i >= 0) { o.head = angle; read(n, i); o.snap = null; }
   };
   // A drag aims the beam. A plain press or tap (the pointer has not travelled beacon.slop px) turns it to the next unread note, as Enter does.
-  el.addEventListener('pointerdown', e => { o.drag = true; o.downAt = [e.clientX, e.clientY]; o.dragged = false; el.setPointerCapture(e.pointerId); });
+  findPointer(el, e => { o.drag = true; o.downAt = [e.clientX, e.clientY]; o.dragged = false; el.setPointerCapture(e.pointerId); }, { drag: true, tap: () => snapNext(), cancel: () => o.drag = false });
   el.addEventListener('pointermove', e => { if (!o.drag || !o.dragged && Math.hypot(e.clientX - o.downAt[0], e.clientY - o.downAt[1]) < FIND_PLAY.beacon.slop) return; o.dragged = el._dragged = true; aimAt(e); });
   el.addEventListener('pointerup', () => o.drag = false); el.addEventListener('pointercancel', () => o.drag = false);
   press(el, () => snapNext());

@@ -233,6 +233,8 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-steps .stage { touch-action: pinch-zoom; }
 .jm-explore .stage { touch-action: none; cursor: grab; }
 .jm-explore .stage.is-dragging { cursor: grabbing; }
+.jm-explore .go { animation: exploreRow var(--explore-row-fade) var(--explore-row-delay) linear both; }
+@keyframes exploreRow { from { opacity: 0; } to { opacity: 1; } }
 .jm-explore .go-back { width: auto; padding: 0 var(--go-gap); display: flex; align-items: center; gap: var(--go-gap); border-radius: var(--go-h); }
 .jm-steps .c-close { position: absolute; top: var(--card-close-inset); right: var(--card-close-inset); width: var(--card-close-hit); height: var(--card-close-hit); display: none; place-items: center; padding: 0; border: 0; border-radius: 0 var(--card-close-radius) 0 0; color: var(--tx); background: var(--g); cursor: pointer; }
 .jm-steps .stop[data-state="open"] > .c-close { display: grid; pointer-events: auto; }

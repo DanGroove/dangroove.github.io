@@ -5,7 +5,7 @@ import { pieceIcon, hoardInside } from './art.mjs';
 import { cardsSetCraft, arrowSvg } from './cards.mjs';
 import { tlSetCraft } from './timeline.mjs';
 import { JOURNEY, stepsFocus } from './steps.mjs';
-import { FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, attend, findBits, findSvg, findFormat, findRange, findLife, findAngleDelta, findReady, findHint } from './findkit.mjs';
+import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, attend, findBits, findSvg, findFormat, findRange, findLife, findAngleDelta, findReady, findHint } from './findkit.mjs';
 
 export const wayAllStops = () => STOPS.map(s => CRAFTS.every(c => s.crafts.includes(c)));
 export function findWay(svg) {
@@ -46,7 +46,7 @@ export function findWay(svg) {
     const angle = Math.atan2(dx, -dy) * FIND_PLAY.kit.deg / Math.PI; o.angle = angle; o.speed = 0;
     set(Math.round((angle % FIND_PLAY.kit.turn + FIND_PLAY.kit.turn) % FIND_PLAY.kit.turn / (FIND_PLAY.kit.turn / CRAFTS.length)) % CRAFTS.length);
   };
-  el.addEventListener('pointerdown', e => { o.drag = true; el.setPointerCapture(e.pointerId); pick(e); el._dragged = true; });
+  findPointer(el, e => { o.drag = true; el.setPointerCapture(e.pointerId); pick(e); el._dragged = true; }, { drag: true, tap: pick, cancel: () => o.drag = false });
   el.addEventListener('pointermove', e => { if (o.drag) pick(e); });
   el.addEventListener('pointerup', () => o.drag = false); el.addEventListener('pointercancel', () => o.drag = false);
   el.addEventListener('click', e => { if (el._dragged) el._dragged = false; else pick(e); });
@@ -146,7 +146,7 @@ export function findHoards(svg) {
       attr(h.mouth, 'transform', 'translate(0 ' + H.rim + ') scale(1 ' + clamp01(h.lidAngle / H.mouthAngle) + ')');
       attr(h.lid, 'transform', 'translate(0 ' + (H.rim - H.depth * sn) + ') scale(1 ' + c + ') translate(0 ' + -H.rim + ')');
     };
-    el.addEventListener('pointerdown', e => { e.stopPropagation(); h.hold = true; h.nextHold = FD.now + H.repeat; el.setPointerCapture(e.pointerId); request(); el._dragged = true; });
+    findPointer(el, e => { e.stopPropagation(); h.hold = true; h.nextHold = FD.now + H.repeat; el.setPointerCapture(e.pointerId); request(); el._dragged = true; }, { tap: request, cancel: () => h.hold = false });
     el.addEventListener('pointerup', () => h.hold = false); el.addEventListener('pointercancel', () => h.hold = false);
     press(el, e => { e.stopPropagation(); request(); });
     h.undo = () => { if (FD.popOwner === h) closePop(); };
