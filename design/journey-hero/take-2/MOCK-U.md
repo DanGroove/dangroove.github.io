@@ -14,6 +14,8 @@ A probe copy of the page exposes `__hero.stars.field` and is polled once per 16 
 
 Run 13's own check 4 gave 125 of 288 on the fast run and 6 of 300 on the still hold for 9ef30e9; its method differs a little from the probe's, so match the rule, not the exact counts.
 
+The probe's runs are not L13c's check runs: the probe pressed at (900, 450) after a 0.1 s rest there, for both runs (the fast run jumps to its path's start in its first frame). L13c's check presses at the stage's centre, (1004.8, 458) at 1440 x 900, and at the fast path's start, (1320, 450), so its stars are captured later and its fill times are longer (run 15: 1.328 s still and 0.576 s fast after forming). Use L13c's amended limits, not this table's fill times.
+
 ## The diff (stars.mjs, 9ef30e9 to the mock)
 
 ```diff
