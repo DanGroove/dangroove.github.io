@@ -156,7 +156,7 @@ export function placeMark(sample, W, H, height = STARS.mark.height) {
 // L4: progress has real 25/50/25 shares. .85 displayed progress launches the last star;
 // .85 / 1.4 is deliberately stricter than 1 / 1.4, so launches themselves span 1.4 s.
 export const LOADER = {
-  launchEnd: 0.85, gatherSeconds: 1.4, flight: 0.7, hold: 0.35, burst: 0.9,
+  launchEnd: 0.85, gatherSeconds: 1.4, flight: 0.7, hold: 0.35, burst: 1.2,
   shares: { fonts: 0.25, atlas: 0.5, frame: 0.25 },
 };
 export const launchShare = (i, count = STARS.mark.count) => LOADER.launchEnd * i / Math.max(1, count - 1);
@@ -209,7 +209,6 @@ export function loaderAt(time, boot = {}, { review = false, reduced = false, cou
 
 const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
 const mixRGB = (a, b, p) => a.map((v, k) => v + (b[k] - v) * p);
-const soft = p => { p = clamp01(p); return p * p * (3 - 2 * p); };
 // Home attributes are float32, exactly as uploaded by stars.mjs. Sampling and mark size remain float64.
 export function loaderScene(sample, W, H, viewport = { width: W, height: H, left: 0, top: 0 }) {
   const mark = placeMark(sample, W, H), centre = [viewport.width / 2 - viewport.left, viewport.height / 2 - viewport.top];
@@ -230,24 +229,29 @@ export function loaderScene(sample, W, H, viewport = { width: W, height: H, left
   });
   return { W, H, centre, mark, points, homes };
 }
-// A .7 s easing-out quadratic flight; the .9 s burst starts with the hero release's outward impulse,
-// then lands at rest at the actual field home. Extra mark points on a small field merge into its homes.
+// L6: quartic ease-out for both moves; flights keep their quadratic paths. The kick needs
+// power 10: powers 6 and 8 let some stars accelerate again in the final third.
+// It dies sooner than the pull. Normalize its peak at p=1/11 to the old peak, 4/27.
+const BURST_KICK_SCALE = (4 / 27) / (10 ** 10 / 11 ** 11);
+// Extra mark points on a small field still merge into its homes.
 export function loaderDots(scene, state) {
-  const { points, homes, centre } = scene, p = state.burst || 0, blend = soft(p), dots = [];
+  const { points, homes, centre } = scene, p = state.burst || 0, blend = 1 - (1 - p) ** 4, dots = [];
   for (let i = 0; i < points.length; i++) {
     const m = points[i], home = homes[m.home];
     if (state.reduced) { dots.push({ ...m, alpha: 1 }); continue; }
     const flight = clamp01((state.time - state.launches[i]) / LOADER.flight);
     if (!(flight > 0)) continue;
     if (state.burstTime === null) {
-      const t = 1 - (1 - flight) ** 3, u = 1 - t;
+      const t = 1 - (1 - flight) ** 4, u = 1 - t;
       dots.push({ ...m, x: u * u * m.start[0] + 2 * u * t * m.control[0] + t * t * m.x,
         y: u * u * m.start[1] + 2 * u * t * m.control[1] + t * t * m.y, alpha: 1 });
       continue;
     }
     const dx = m.x - centre[0], dy = m.y - centre[1], len = Math.max(1e-6, Math.hypot(dx, dy));
     const impulse = (STARS.hold.blast[0] + STARS.hold.blast[1]) / home.m;
-    const out = Math.min(impulse * LOADER.burst, STARS.hold.max * scene.W) * p * (1 - p) ** 2;
+    // .9 is the old impulse-to-distance factor, not the new duration: the peak must not grow.
+    const kick = Math.min(impulse * 0.9, STARS.hold.max * scene.W) * BURST_KICK_SCALE;
+    const out = kick * p * (1 - p) ** 10;
     dots.push({ x: p === 1 ? home.x : m.x + (home.x - m.x) * blend + dx / len * out,
       y: p === 1 ? home.y : m.y + (home.y - m.y) * blend + dy / len * out,
       size: p === 1 ? home.size : m.size + (home.size - m.size) * blend, colour: p === 1 ? home.colour : mixRGB(m.colour, home.colour, blend),

@@ -2524,3 +2524,92 @@ node .../.scratch/review-out/r19/l5-preservation.mjs            l5-preservation.
 All syntax checks and runners exit **0**. Full checks end **`all clean`**, retaining **6,582 frames / 477,123 pieces / max 188 / 6 atlas pages**, loop **99.491 s** when printed. Every negative control fails at its intended gate: **8 / 4 / 43** in the required/changed runners, including the new L5 regression. The full suite also runs the retained controls from the other rounds.
 
 No L5 code requirement is left out. Browser pixels, actual first-paint/compositor behavior, real worker scheduling and visual approval are **UNRUN**, for the requested external browser review. No screenshot, eye judgement, pixel gate, reviewer agent, network, install, site build, deployment or mutating git command was used. External skills and RTK could not be read under the repository-only boundary; their design/critique workflows were not run. Only the seven permitted source/check/docs files and this run's own `l5-*` r19 notes were written; every correction, fixture and public/src/CNAME file retains its hash.
+
+### L6 follow-up: every star glides to a stop
+
+Built only L6 on the retained L1/L2/L4/L5 implementation from `01e9ad2` (incoming clean HEAD `b5d11c1`, containing the L6 brief). L3 remains withdrawn. Before writing, read AGENTS.md, CORRECTIONS-19, CORRECTIONS-17 G/R2/R3 and Round 6's entrance/hold/exit/check record in the requested order, then both READMEs and the existing Round 18/19 records. Pre-edit criteria and source/hash evidence are `.scratch/review-out/r19/l6-acceptance.md` and `l6-baseline.json`.
+
+#### Curves, constants and the stronger kick decay
+
+Only `loader-stars.mjs` changes runtime behavior. **Both moves now use quartic ease-out**, `E(q) = 1 - (1-q)^4`. The gathering keeps its **.7 s** quadratic Bezier path, control point, star index, launch shares and order; only its old cubic time parameter becomes quartic. The burst grows **.9 → 1.2 s**, with quartic pull replacing smoothstep. Its size, colour, surplus-mark-star fade and other-field-star fade all follow that same quartic pull. No smoothstep remains in the burst. At arrival the existing explicit home position, size and colour remain exact.
+
+The outward term is now **`A * p * (1-p)^10`**, where:
+
+```
+C = min((300 + 1700) / home.mass * 0.9, 0.45 * hero.width)
+A = C * (4/27) / (10^10 / 11^11)
+  = C * 4.226839564607407
+```
+
+The **.9** in `C` preserves the old impulse-to-distance conversion; it is not the new burst's duration. The old `C*p*(1-p)^2` peaks at `p=1/3`, height `C*4/27`. The new term peaks at **`p=1/11`**, also exactly `C*4/27`. Thus the kick's furthest displacement is unchanged for every star: **96 → 96 px** at 1440×900, **51.2 → 51.2 px** at 768×1024 and **26 → 26 px** at 390×844. Peak time moves **.300 → .109090909 s** into the burst. Actual drawn positions, after subtracting their home pull, agree within **1e-9 px**, including an exact-peak probe and all 289 burst frames at 240 Hz.
+
+**Why power 10 rather than the suggested 6:** with quartic pull, normalized power-6 kicks fail the speed bound (worst desktop ratio **.221465205**) and can accelerate late. Power 8 gets below 1/6 but still has a desktop speed increase of **.092962482 px/s** between adjacent final-third samples. Power 10 passes both requirements on both scenes, with no tolerance relaxed. This also keeps the kick dying sooner than the pull: its remaining tail is order `(1-p)^10`, versus the pull's `(1-p)^4`. Quartic flight easing passes as requested; it needs no higher power. The numerical explorations are `l6-curve-probe.json`, `l6-stronger-probe.json` and `l6-kick-probe.json`; a provisional power-7 pull was rejected because it reversed that decay order with a power-6 kick.
+
+#### The stop gate and measured worst ratios
+
+`tools/entrance-checks.mjs` now measures **the actual `loaderDots()` output**, not a second implementation of its velocity. It samples the entire path every **1/240 s**, computes average speed as sampled path length divided by duration, and checks instantaneous speed at every final-third sample, including both boundaries. The polygonal path length slightly underestimates true length, making the average/6 bound conservative. Flight clocks are aligned locally to exercise all 600 distinct paths; the retained timing gate separately checks their real individual launch/arrival clocks. Every burst dot is checked, including stationary field stars and surplus phone mark stars.
+
+| Scene | Burst speed / average, worst | Flight speed / average, worst | Final-third speed samples |
+|---|---:|---:|---:|
+| 1440×900 | **.149408169**, star 307 at .800 s | **.153129224**, star 379 at .466666667 s | 116,400 burst + 34,200 flight |
+| 390×844 | **.149328820**, star 259 at .800 s | **.161308576**, star 440 at .466666667 s | 58,200 burst + 34,200 flight |
+
+All **243,000** samples pass **1/6 = .166666667**, with maximum measured speed rise **0**. The derivative estimate uses symmetric differences at ±.0001 s, and a three-point backward stencil on arrival; **1e-6 px/s** covers subtraction noise only. Largest measured arrival speed is **2.50e-8 px/s**. Analytically arrival speed is exactly zero: the pull derivative has factor `(1-p)^3`, the kick derivative `(1-p)^9`, and a flight's Bezier derivative is multiplied by `4*(1-f)^3/.7`. Sizes, colours and fades are checked against the quartic pull throughout the burst. The retained home gate still checks exact terminal positions, sizes and colours at desktop/tablet/phone, the pre-handover limit and the scrolled phone scene.
+
+These are numerical Node checks of L6's specified final-third rule, not browser or visual approval. The earlier curved/kicked portion is not given a new whole-path speed-monotonicity gate: L6's explicit sampled speed rule concerns the final third. No star path, mark/field geometry, home assignment or colour was substituted to make the gate pass.
+
+#### Landing, entrance and preserved work
+
+L5 still supplies one boundary: all-ready formation **2.10**, hold **.35**, burst start **2.45**, then landing/entrance zero/WebGL handover/pointer **3.35 → 3.65 s**. The entrance remains null throughout the burst. The player still draws the WebGL homes before removing the canvas in that same main-thread frame; the worker and fallback share the new pure timing without any bootstrap edit. `ENTRANCE.starPointer` remains **0**. Every L2 entrance-relative number stays exact, including floor **1.8–2.8**, screen **2.4–3.2**, loop zero **3.2**, end/name activation **3.8**, and the dropped star ring. Absolute all-ready loop zero moves **6.55 → 6.85 s**, and entrance completion/name activation **7.15 → 7.45 s**, solely from the .3 s longer burst.
+
+The **25/50/25** real boot shares, **.85/1.4 per second** progress cap, **1.4 s** launch window, **.7 s** flights, **.35 s** formed hold, readiness waits, formed reduced-motion still and ready cut, `?t=` bypass, `__ready` and `__hero.entrance` contracts remain. `entrance.mjs`, `play.mjs`, `stars.mjs`, page/preview, CSS and every Round 18 scene/art/device file remain byte-identical. All 115 action definitions/routes/clocks and the **99.49089474781469 s** loop are preserved by those unchanged sources.
+
+#### New negative controls and retained gates
+
+The three new controls are one-site in-memory faults; no fixtures are edited:
+
+- **`smoothstep-burst`** replaces quartic pull with `p*p*(3-2*p)` and fails **`L6 burst stop:`** at the first desktop final-third sample, ratio **1.254930875**, exceeding average/6.
+- **`cubic-flight`** restores `1-(1-flight)^3` and fails **`L6 flight stop:`** at .466666667 s (desktop star 0, ratio **.333893467**).
+- **`old-burst-entrance`** sets `entranceStart = burstStart + .9` and fails **`L5 timing:`**, **3.35 != 3.65**.
+
+Every one fails at its named gate. All eight incoming entrance controls remain and fail at their original gates, including the L5 entrance-with-burst regression and L2's old screen. Inventory **8 → 11**. All **4** Round 8 and **43** Round 17 controls also fail at their existing gates. The main suite retains all other rounds' controls.
+
+#### Every earlier check changed, old → new
+
+Only `tools/entrance-checks.mjs` and `tools/round8-checks.mjs` change checks. No earlier geometric/pixel/motion tolerance is relaxed. Main `tools/checks.mjs`, Round 17, fixtures and pixel-gate files are unchanged.
+
+| Earlier expectation | Old → new |
+|---|---|
+| Pure duration / all-ready handover | Burst **.9 → 1.2 s**; end, entrance start, done and pointer boundary **3.35 → 3.65 s**. Burst start **2.45 → 2.45**; hold **.35 → .35**. |
+| Pure pre-landing and entrance-zero probes | **3.35−1e-8 / 3.35 → 3.65−1e-8 / 3.65**; entrance remains **null / 0**. |
+| Pure after-landing probe | Absolute **3.60 → 3.90 s**, entrance value **.25 → .25**. |
+| Home equality, pre-handover continuity and scroll probes | End **3.35 → 3.65** at all three sizes and scrolled phone; continuity probe **3.35−1e-7 → 3.65−1e-7**, same **.001** position/alpha bounds. **4,328 → 4,328** comparisons. |
+| Inline worker and fallback | Pre-landing **3.30 → 3.60**; landing **3.35 → 3.65**. Burst backing still clears at **2.45**; terminal field count **1,200 → 1,200**. |
+| Entrance player default preload | **3.35 → 3.65 s** before entrance-zero observations. All following entrance-relative probes unchanged. |
+| Player through burst | Formation advance **2.10 → 2.10**, hold **.35 → .35**, before-landing advance **.85 → 1.15**, final advance **.05 → .05**. Same null entrance, closed pointer, then entrance zero and draw-before-removal checks. |
+| Delayed-font / blocked-first-draw players | After real readiness, before-landing wait **3.30 → 3.60**, then **.05 → .05** to landing. Their boot progress and first-visible-frame origins stay. |
+| L5 combined group scan | Burst **[0,.9) → [0,1.2)**, actual entrance offset **.9 → 1.2**, combined 60 Hz/exact-boundary samples **362 → 446**; maximum **2 → 2**, no exceptions. Entrance-only **239 / 2 → identical**; reading order unchanged. |
+| Round 8 N1 player preload | **3.35 → 3.65 s**. Name observations **3.75 / 3.85 entrance seconds → identical**, held .8 / reduced paths unchanged. |
+| Control inventory and summary | Entrance **8 → 11**; Round 8 **4 → 4**; Round 17 **43 → 43**. Summary burst **.9 → 1.2**, adds L6 speed evidence and all-ready landing **3.65**. |
+
+The **36,000** timing samples, **5** inline runs, **14** player runs, **48,125** floor samples and **60** label-exit samples are unchanged in count and all retain their earlier assertions, with only the named landing probes moved. The new kick/material/stop gates add coverage; they do not replace earlier checks.
+
+#### Preservation, verification and limits
+
+`l6-preservation.mjs` / `.json` compare all tracked-file hashes with the clean pre-edit snapshot and enforce this run's five-file source/check/docs allowlist. `STARS` and all **600** mark samples are identical; `LOADER` changes only **burst .9 → 1.2**. Desktop/tablet/phone `loaderScene()` objects are exactly equal. Across six boot histories, **2,166** timing samples preserve every earlier field outside the burst/landing state; reduced/review timing is exactly equal at every sample. **6,128** formed, reduced and landed dot records are exactly equal at their appropriate old/new endpoints. Every correction, fixture and public/src/CNAME file retains its hash.
+
+Final checks and evidence under `.scratch/review-out/r19/`:
+
+```
+node --check loader-stars.mjs, tools/entrance-checks.mjs, tools/round8-checks.mjs
+node --check .scratch/review-out/r19/l6-preservation.mjs
+node .../tools/entrance-checks.mjs --controls       l6-entrance-controls-final.txt
+node .../tools/round8-checks.mjs --controls         l6-round8-controls-final.txt
+node .../tools/round17-checks.mjs --controls        l6-round17-controls-final.txt
+node .../tools/checks.mjs                         l6-checks-final.txt
+node .../.scratch/review-out/r19/l6-preservation.mjs  l6-preservation.json
+```
+
+All commands exit **0**; the full suite ends **`all clean`**, retaining **6,582 frames / 477,123 pieces / max 188 / 6 atlas pages / 99.491 s**. All **11 / 4 / 43** negative controls in the required/changed standalone runners fail at their intended gates. `l6-syntax-final.json` records each individual syntax check. Final preservation finds only the five permitted source/check/docs changes; the other **198 tracked files** retain their pre-edit hashes.
+
+No L6 code item is intentionally omitted. Browser pixels, first-paint/compositor behavior, real worker scheduling and visual approval remain **UNRUN**, as requested. No screenshots, eye judgement, pixel gate, reviewer agents, network, installation, site build, deployment or mutating git command were used. External skills and RTK remain unread under the repository-only boundary. Only the five permitted source/check/docs files and this run's own `l6-*` r19 notes were written.
