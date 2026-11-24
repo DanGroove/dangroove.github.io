@@ -11,6 +11,12 @@ export const ease = t => easeIO(clamp01(t));
 export const out3 = t => 1 - (1 - clamp01(t)) ** 3;
 export const fEsc = s => String(typeof s === 'object' ? s.t : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 export const attr = (el, k, v) => { const text = String(v); if (el.getAttribute(k) !== text) el.setAttribute(k, text); };
+const findStyleWrites = new WeakMap();
+export function findStyle(el, key, value) {
+  const text = String(value), cache = findStyleWrites.get(el) || {}, old = cache[key];
+  if (old?.text === text && el.style[key] === old.value) return;
+  el.style[key] = value; cache[key] = { text, value: el.style[key] }; findStyleWrites.set(el, cache);
+}
 
 // Explore touch intent is shared by every pointerdown find. Nothing acts or captures
 // until tap/hold/owned-drag intent is known; a second finger cancels the whole wait.
@@ -127,11 +133,11 @@ export function placePop() {
   const x = Math.max(K.edge, Math.min(VIEW.w - w - K.edge, p[0] - w / 2));
   const y = Math.max(K.edge, Math.min((FD.popFloor ?? VIEW.h) - h - K.edge, below ? p[1] + K.tail[1] : p[1] - h - K.tail[1]));
   FD.popOrigin = [Math.max(0, Math.min(w, p[0] - x)), below ? 0 : h];
-  FD.pop.style.transform = `translate(${x}px,${y}px)`;
+  findStyle(FD.pop, 'transform', `translate(${x}px,${y}px)`);
   const q = FD.rm ? 1 : clamp01((FD.now - FD.popTs) / K.time), back = 1 + (K.over - 1) / (1 - K.scale);
   const v = 1 + (back + 1) * (q - 1) ** 3 + back * (q - 1) ** 2;
-  FD.popInner.style.transform = `scale(${lerp(K.scale, 1, q === 1 ? 1 : v)})`; FD.popBody.style.opacity = q;
-  FD.popTail.style.transform = `translate(${Math.max(0, Math.min(w - K.tail[0], p[0] - x - K.tail[0] / 2))}px,${below ? -K.tail[1] : h}px) rotate(${below ? FIND_PLAY.kit.deg : 0}deg)`;
+  findStyle(FD.popInner, 'transform', `scale(${lerp(K.scale, 1, q === 1 ? 1 : v)})`); findStyle(FD.popBody, 'opacity', q);
+  findStyle(FD.popTail, 'transform', `translate(${Math.max(0, Math.min(w - K.tail[0], p[0] - x - K.tail[0] / 2))}px,${below ? -K.tail[1] : h}px) rotate(${below ? FIND_PLAY.kit.deg : 0}deg)`);
 }
 export function findSheet(owner, cls, html, anchor) {
   if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return false;
@@ -201,7 +207,7 @@ export function findKitFrame() {
   const f = FD.flight;
   if (f) {
     const q = clamp01((FD.now - f.ts) / FIND_PLAY.star.time), k = ease(q);
-    FD.star.style.opacity = 1; FD.star.style.transform = `translate(${lerp(f.from[0], f.to[0], k)}px,${lerp(f.from[1], f.to[1], k) - FIND_PLAY.star.arc * Math.sin(Math.PI * q)}px)`;
+    findStyle(FD.star, 'opacity', 1); findStyle(FD.star, 'transform', `translate(${lerp(f.from[0], f.to[0], k)}px,${lerp(f.from[1], f.to[1], k) - FIND_PLAY.star.arc * Math.sin(Math.PI * q)}px)`);
     if (q === 1) { FD.landed = f.number; FD.bump = FD.now; FD.flight = null; FD.star.style.opacity = 0; queueMicrotask(() => { findLandCount(); findStartFlight(); }); }
   }
   if (FD.bump !== undefined) { const q = clamp01((FD.now - FD.bump) / FIND_PLAY.star.bump); FD.count.style.transform = `scale(${lerp(FIND_PLAY.star.peak, 1, ease(q))})`; if (q === 1) FD.bump = undefined; }

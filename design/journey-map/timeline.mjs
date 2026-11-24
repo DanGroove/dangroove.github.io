@@ -3,6 +3,12 @@ import { STOPS, PALETTES, COPY, FIND_PLAY } from './data.mjs';
 import { yearOf, DATE_NOW, progressForStop, progressForDate, holdStart, VIEW, smooth, lerp, easeIO } from './trip.mjs';
 
 const TL = { el: null, track: null, head: null, rows: null, fades: [], blocks: [], tip: null, count: null, trackW: 1, viewW: 1, sx: 1, dx: 0, dy: 0, ox: 0, oy: 0, val: '', drag: null, off: 0, rm: false };
+const tlWrites = new WeakMap();
+function tlStyle(el, key, value) {
+  const text = String(value), cache = tlWrites.get(el) || {}, old = cache[key];
+  if (old?.text === text && el.style[key] === old.value) return;
+  el.style[key] = value; cache[key] = { text, value: el.style[key] }; tlWrites.set(el, cache);
+}
 const Y0 = 2016;
 const xOf = d => (d - Y0) / (DATE_NOW - Y0);
 const fmt = (s, o) => s.replace(/\{(\w+)\}/g, (m, k) => o[k]);
@@ -75,17 +81,18 @@ export function tlFrame(st) {
   const show = easeIO(smooth(0, .4, st.overviewT));
   const m = easeIO(smooth(.3, .85, st.settleT)), fade = (1 - st.cardOpen * .9) * (1 - smooth(0, .6, st.rushT));
   const sx = lerp(1, TL.sx, m);
-  TL.el.style.transform = `translate(${(TL.dx * m).toFixed(2)}px,${(TL.dy * m + (1 - show) * 80).toFixed(2)}px) scaleX(${sx.toFixed(4)})`;
-  TL.el.style.opacity = show;
-  TL.fades.forEach(f => f.style.opacity = fade);
-  TL.rows.style.transform = `scaleY(${(1 - st.cardOpen * .85).toFixed(3)})`;
+  tlStyle(TL.el, 'transform', `translate(${(TL.dx * m).toFixed(2)}px,${(TL.dy * m + (1 - show) * 80).toFixed(2)}px) scaleX(${sx.toFixed(4)})`);
+  tlStyle(TL.el, 'opacity', show);
+  TL.fades.forEach(f => tlStyle(f, 'opacity', fade));
+  tlStyle(TL.rows, 'transform', `scaleY(${(1 - st.cardOpen * .85).toFixed(3)})`);
   const hx = xOf(st.date) * TL.trackW; TL.headX = hx;
   TL.off = VIEW.phone ? Math.max(TL.viewW - TL.trackW, Math.min(0, TL.viewW / 2 - hx)) : 0;
-  TL.track.style.transform = `translateX(${TL.off.toFixed(2)}px)`;
+  tlStyle(TL.track, 'transform', `translateX(${TL.off.toFixed(2)}px)`);
   TL.headX = hx + TL.off;
-  TL.head.style.transform = `translateX(${hx.toFixed(2)}px) scaleX(${(1 / sx).toFixed(4)})`;
-  TL.blocks.forEach(b => b.em.style.opacity = st.visited[b.i] ? 1 : 0);
+  tlStyle(TL.head, 'transform', `translateX(${hx.toFixed(2)}px) scaleX(${(1 / sx).toFixed(4)})`);
+  TL.blocks.forEach(b => tlStyle(b.em, 'opacity', st.visited[b.i] ? 1 : 0));
   const i = currentStop(st.P), v = i < 0 ? COPY.timelineStart : fmt(COPY.timelineValue, { name: STOPS[i].name, dates: STOPS[i].dates });
   const now = Math.floor(st.date); if (!TL.hooks?.moving?.()) TL.pending = null;
-  if (v !== TL.val || now !== TL.now) { TL.val = v; TL.now = now; TL.el.setAttribute('aria-valuetext', v); TL.el.setAttribute('aria-valuenow', now); }
+  if (v !== TL.val) { TL.val = v; TL.el.setAttribute('aria-valuetext', v); }
+  if (now !== TL.now) { TL.now = now; TL.el.setAttribute('aria-valuenow', now); }
 }

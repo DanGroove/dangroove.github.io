@@ -31,6 +31,9 @@ const events=[{ph:'M',name:'thread_name',pid:9,tid:9,args:{name:'CrRendererMain'
   {ph:'X',name:'FunctionCall',pid:1,tid:1,ts:0,dur:20000},{ph:'X',name:'FireAnimationFrame',pid:1,tid:1,ts:0,dur:20000},
   {ph:'X',name:'Layout',pid:1,tid:1,ts:4000,dur:3000},{ph:'B',name:'Paint',pid:1,tid:1,ts:10000},{ph:'E',pid:1,tid:1,ts:12000},
   {ph:'X',name:'RasterTask',pid:1,tid:2,ts:5000,dur:4000}];
-assert.deepEqual(frameTrace(events,0,20000,2,1),{mainThread:true,script:7.5,styleLayout:1.5,paint:1,raster:2});
+assert.deepEqual(frameTrace(events,0,20000,2,1),{mainThread:true,script:7.5,styleLayout:1.5,paint:1,raster:2,layout:1.5,style:0,paintOnly:1,prePaint:0,layerize:0,commit:0});
+const stages=['Layout','UpdateLayoutTree','Paint','PrePaint','Layerize','Commit'].map((name,i)=>({ph:'X',name,pid:1,tid:1,ts:i*1000,dur:1000}));
+const detailed=frameTrace([events[1],{ph:'X',name:'FunctionCall',pid:1,tid:1,ts:0,dur:7000},...stages],0,7000,1,1);
+assert.deepEqual(detailed,{mainThread:true,script:1,styleLayout:2,paint:2,raster:0,layout:1,style:1,paintOnly:1,prePaint:1,layerize:1,commit:1});
 assert.equal(frameTrace([],0,20,1).mainThread,false);
 console.log('ok: neutral-line classifier, interval percentiles/thresholds, exclusive nested main-thread costs, B/E spans, target renderer and separate raster work');

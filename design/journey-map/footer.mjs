@@ -76,7 +76,16 @@ function footerPhoneMeasure() {
   const layout = footerPhoneLayout({ w: VIEW.w, h: VIEW.h, goBottom, headlineH: headline.height, talkW: talk.width, talkH: talk.height, nameTop: name.top });
   FT.inner.style.paddingTop = layout.top + 'px'; spacer.style.minHeight = layout.spacer + 'px'; VIEW.footerY = layout.novaY;
 }
-const footerStyle = (el, key, value) => { const text = String(value); if (el && el.style[key] !== text) el.style[key] = text; };
+const footerWrites = new WeakMap();
+const footerStyle = (el, key, value) => {
+  if (!el) return;
+  const text = String(value), cache = footerWrites.get(el) || {}, old = cache[key];
+  // CSSOM canonicalizes decimals and transform spacing; compare its last value
+  // as well, so unchanged authored values skip writes and outside edits recover.
+  if (old?.text === text && el.style[key] === old.value) return;
+  if (el.style[key] !== text) el.style[key] = text;
+  cache[key] = { text, value: el.style[key] }; footerWrites.set(el, cache);
+};
 export function footerFrame(st) {
   if (FT.hit) {
     FT.settled = st.settleT >= 1;
@@ -85,8 +94,10 @@ export function footerFrame(st) {
     const available = (st.handoffT >= 1 && st.rushT === 0) || FT.settled, keyed = available && (FT.settled || (!JOURNEY.moving && Math.abs(JOURNEY.P - FT.xP) < NOVA.base.hitTolerance));
     const state = `${available}/${FT.settled}/${keyed}`;
     if (state !== FT.hitState) {
-      FT.hitState = state; FT.hit.tabIndex = keyed ? 0 : -1; FT.hit.setAttribute('aria-disabled', String(!available));
-      FT.hit.setAttribute('aria-label', FT.settled ? COPY.nova : COPY.steps.dig);
+      FT.hitState = state; const tab = keyed ? 0 : -1, disabled = String(!available), label = FT.settled ? COPY.nova : COPY.steps.dig;
+      if (FT.hit.tabIndex !== tab) FT.hit.tabIndex = tab;
+      if (FT.hit.getAttribute('aria-disabled') !== disabled) FT.hit.setAttribute('aria-disabled', disabled);
+      if (FT.hit.getAttribute('aria-label') !== label) FT.hit.setAttribute('aria-label', label);
     }
     const s = st.exploreK ? st.sEnd : st.cam.s, radius = FT.settled ? NOVA.flare.hit * st.cam.s / s : NOVA.base.digHit * st.cam.s;
     footerStyle(FT.hit, 'width', (radius * 2).toFixed(2) + 'px'); footerStyle(FT.hit, 'height', (radius * 2).toFixed(2) + 'px');
@@ -94,11 +105,11 @@ export function footerFrame(st) {
   }
   // Progress owns the text's reveal. All X transforms and opacities have one writer, footerMotion.
   const b = NOVA.base;
-  FT.items.forEach((it, j) => { if (it.classList.contains('ft-name')) { it.style.opacity = 1; it.style.transform = ''; return; } const o = smooth(b.textIn[0] + j * b.textGap, b.textIn[1] + j * b.textGap, st.settleT); it.style.opacity = o; it.style.transform = `translateY(${((1 - o) * b.textRise).toFixed(1)}px)`; });
+  FT.items.forEach((it, j) => { if (it.classList.contains('ft-name')) { footerStyle(it, 'opacity', 1); footerStyle(it, 'transform', ''); return; } const o = smooth(b.textIn[0] + j * b.textGap, b.textIn[1] + j * b.textGap, st.settleT); footerStyle(it, 'opacity', o); footerStyle(it, 'transform', `translateY(${((1 - o) * b.textRise).toFixed(1)}px)`); });
   footerStyle(FT.inner, 'opacity', st.exploreFooter ?? 1);
   const exploring = !!st.exploring || (st.exploreK || 0) > 0; if (FT.exploring !== exploring) { FT.exploring = exploring; FT.el.inert = exploring; }
   footnameReveal(st);
-  FT.el.style.visibility = st.settleT > b.textShow ? 'visible' : 'hidden';
+  footerStyle(FT.el, 'visibility', st.settleT > b.textShow ? 'visible' : 'hidden');
 }
 const footerConfigKey = () => JSON.stringify([NOVA.seed, NOVA.rays.n, VIEW.phone ? NOVA.lobes.nPhone : NOVA.lobes.n, NOVA.waves.n]);
 function footerConfigure() {

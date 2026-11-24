@@ -5,6 +5,12 @@ import { VIEW, STOP_U, tripCardPlace, toScreen, smooth, easeIO, lerp } from './t
 import { JOURNEY } from './steps.mjs';
 
 const CD = { list: [], W: 640, craft: null, onGo: null, rm: false, closed: null, last: null, dt: 0 };
+const cardsWrites = new WeakMap();
+function cardsStyle(el, key, value) {
+  const text = String(value), cache = cardsWrites.get(el) || {}, old = cache[key];
+  if (old?.text === text && el.style[key] === old.value) return;
+  el.style[key] = value; cache[key] = { text, value: el.style[key] }; cardsWrites.set(el, cache);
+}
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 export const arrowSvg = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
 
@@ -96,20 +102,21 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const close = c.el.querySelector('.c-close');
     if (close) {
       if (JOURNEY.moving && document.activeElement === close) document.getElementById('go')?.querySelector('.go-next')?.focus({ preventScroll: true });
-      close.inert = JOURNEY.moving || st.cardK[i] < .96;
+      const inert = JOURNEY.moving || st.cardK[i] < .96;
+      if (close.inert !== inert) close.inert = inert;
     }
     const W = c.W || CD.W, H = c.H, oc = c.place || { x: VIEW.w / 2, y: VIEW.h / 2 };
     const e = st.cardK[i], p = toScreen(st, MAP.waypoints[c.stop.w]);
     const k0 = stonePx / Math.max(W, H), k = Math.pow(k0, 1 - e), py = p[1] - stonePx / 2 - MARK.stand;
     const cx = lerp(p[0], oc.x, e), cy = lerp(py, oc.y, e);
-    c.el.style.transform = `translate(${p[0]}px,${py}px)`;
-    c.card.style.transform = `translate(${cx - W * k / 2 - p[0]}px,${cy - H * k / 2 - py}px) scale(${k})`;
-    c.btn.style.transform = `translate(-50%,-50%) scale(${stonePx / MARK.box})`;
+    cardsStyle(c.el, 'transform', `translate(${p[0]}px,${py}px)`);
+    cardsStyle(c.card, 'transform', `translate(${cx - W * k / 2 - p[0]}px,${cy - H * k / 2 - py}px) scale(${k})`);
+    cardsStyle(c.btn, 'transform', `translate(-50%,-50%) scale(${stonePx / MARK.box})`);
     const lit = CD.craft ? CD.craft[i] : false;
-    c.el.style.opacity = op * (CD.craft && !lit ? .55 : 1);
+    cardsStyle(c.el, 'opacity', op * (CD.craft && !lit ? .55 : 1));
     // Size, not the score, hands the mark over to the card: the face and its words come in together as it grows (no flat slab).
-    c.btn.style.opacity = 1;
-    c.face.style.opacity = smooth(...CARD_GROW.face, k);
+    cardsStyle(c.btn, 'opacity', 1);
+    cardsStyle(c.face, 'opacity', smooth(...CARD_GROW.face, k));
     const cfg = DEPTH.card, lift = !!VIEW.depth && !VIEW.phone;
     // Apply live style configuration after this frame callback; animation only writes transform/opacity.
     const config = lift ? `${cfg.perspective}/${cfg.blur}/${cfg.spread}/${cfg.radius}` : '';
@@ -120,15 +127,15 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const target = [cfg.tilt * (1 - smooth(...cfg.open, e)) - ly * cfg.ptrTilt[1] * plate, lx * cfg.ptrTilt[0] * plate, -lx * cfg.shift * plate, -ly * cfg.shift * plate];
     c.tilt.forEach((v, j) => { c.tilt[j] = lift ? v + (target[j] - v) * cfg.ease : 0; if (Math.abs(c.tilt[j]) < cfg.flat) c.tilt[j] = 0; });
     const [rx, ryTilt, sx, sy] = c.tilt;
-    c.face.style.transform = lift ? `${sx || sy ? `translate(${sx}px,${sy}px) ` : ''}${rx ? `rotateX(${rx}deg) ` : ''}${ryTilt ? `rotateY(${ryTilt}deg)` : ''}`.trim() : '';
-    c.shadow.style.opacity = lift ? cfg.shadow * e : 0;
-    c.shadow.style.transform = `translate(${-sx / cfg.shadowShare}px,${cfg.drop * e - sy / cfg.shadowShare}px)`;
-    c.inn.style.opacity = smooth(...CARD_GROW.words, k);
+    cardsStyle(c.face, 'transform', lift ? `${sx || sy ? `translate(${sx}px,${sy}px) ` : ''}${rx ? `rotateX(${rx}deg) ` : ''}${ryTilt ? `rotateY(${ryTilt}deg)` : ''}`.trim() : '');
+    cardsStyle(c.shadow, 'opacity', lift ? cfg.shadow * e : 0);
+    cardsStyle(c.shadow, 'transform', `translate(${-sx / cfg.shadowShare}px,${cfg.drop * e - sy / cfg.shadowShare}px)`);
+    cardsStyle(c.inn, 'opacity', smooth(...CARD_GROW.words, k));
     const paint = st.visited[i] && (e > 0 || st.u >= STOP_U[i]) || lit ? 1 : 0, step = CD.dt / CARD_TAIL.paintTime;
     c.paint = Math.max(0, Math.min(1, c.paint + Math.sign(paint - c.paint) * Math.min(step, Math.abs(paint - c.paint))));
-    c.fill.style.opacity = c.paint; c.boss.style.opacity = c.paint;
-    c.glow.style.opacity = lit ? 1 : 0;
-    if (c.mini) c.mini.style.setProperty('--paint', c.paint);
+    cardsStyle(c.fill, 'opacity', c.paint); cardsStyle(c.boss, 'opacity', c.paint);
+    cardsStyle(c.glow, 'opacity', lit ? 1 : 0);
+    if (c.mini && c.miniPaint !== c.paint) { c.miniPaint = c.paint; c.mini.style.setProperty('--paint', c.paint); }
     if (c.tail) cardsTailFrame(c, { W, H, k, cx: cx - p[0], cy: cy - py, stonePx, rx, ryTilt, sx, sy, lift });
     const state = e > .96 ? 'open' : e < .02 ? 'rest' : 'moving';
     if (state !== c.state) { c.state = state; c.el.dataset.state = state; c.face.inert = state !== 'open'; }
@@ -163,7 +170,7 @@ function cardsTailFrame(c, f) {
   const tip = distance ? mid.map(v => v / distance * rim) : [rim, 0];
   if (distance < rim) { b0 = tip; b1 = tip; }
   const dx = b1[0] - b0[0], dy = b1[1] - b0[1];
-  c.tail.style.transform = `matrix(${tip[0] - b0[0] - dx / 2},${tip[1] - b0[1] - dy / 2},${dx},${dy},${b0[0]},${b0[1]})`;
-  c.tail.style.opacity = c.face.style.opacity;
+  cardsStyle(c.tail, 'transform', `matrix(${tip[0] - b0[0] - dx / 2},${tip[1] - b0[1] - dy / 2},${dx},${dy},${b0[0]},${b0[1]})`);
+  cardsStyle(c.tail, 'opacity', c.face.style.opacity);
 }
 export const cardsList = () => CD.list;

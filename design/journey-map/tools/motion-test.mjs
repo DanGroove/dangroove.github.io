@@ -12,6 +12,7 @@ class MotionNode {
     this.classList = { contains: c => this.className.split(' ').includes(c), add: c => this.classList.toggle(c, true), remove: c => this.classList.toggle(c, false), toggle: (c, on) => { const set = new Set(this.className.split(' ').filter(Boolean)); if (on ?? !set.has(c)) set.add(c); else set.delete(c); this.className = [...set].join(' '); } };
   }
   setAttribute(k, v) { this.attrs[k] = String(v); if (k === 'class') this.className = v; }
+  getAttribute(k) { return this.attrs[k] ?? null; }
   appendChild(n) { this.children.push(n); n.parentElement = this; return n; }
   prepend(...ns) { ns.reverse().forEach(n => { this.children.unshift(n); n.parentElement = this; }); }
   set innerHTML(html) { const stack = [this]; this.children = []; for (const m of html.matchAll(/<\/?([\w-]+)([^>]*?)\/?\s*>/g)) { if (m[0].startsWith('</')) { if (stack.length > 1) stack.pop(); continue; } const n = new MotionNode(m[1]); for (const a of m[2].matchAll(/([\w-]+)(?:="([^"]*)")?/g)) n.setAttribute(a[1], a[2] || ''); stack.at(-1).appendChild(n); if (!m[0].endsWith('/>') && m[1] !== 'img') stack.push(n); } }

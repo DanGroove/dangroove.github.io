@@ -2987,6 +2987,12 @@ function paceAt(move, t) {
 
 
 const TL = { el: null, track: null, head: null, rows: null, fades: [], blocks: [], tip: null, count: null, trackW: 1, viewW: 1, sx: 1, dx: 0, dy: 0, ox: 0, oy: 0, val: '', drag: null, off: 0, rm: false };
+const tlWrites = new WeakMap();
+function tlStyle(el, key, value) {
+  const text = String(value), cache = tlWrites.get(el) || {}, old = cache[key];
+  if (old?.text === text && el.style[key] === old.value) return;
+  el.style[key] = value; cache[key] = { text, value: el.style[key] }; tlWrites.set(el, cache);
+}
 const Y0 = 2016;
 const xOf = d => (d - Y0) / (DATE_NOW - Y0);
 const fmt = (s, o) => s.replace(/\{(\w+)\}/g, (m, k) => o[k]);
@@ -3059,19 +3065,20 @@ function tlFrame(st) {
   const show = easeIO(smooth(0, .4, st.overviewT));
   const m = easeIO(smooth(.3, .85, st.settleT)), fade = (1 - st.cardOpen * .9) * (1 - smooth(0, .6, st.rushT));
   const sx = lerp(1, TL.sx, m);
-  TL.el.style.transform = `translate(${(TL.dx * m).toFixed(2)}px,${(TL.dy * m + (1 - show) * 80).toFixed(2)}px) scaleX(${sx.toFixed(4)})`;
-  TL.el.style.opacity = show;
-  TL.fades.forEach(f => f.style.opacity = fade);
-  TL.rows.style.transform = `scaleY(${(1 - st.cardOpen * .85).toFixed(3)})`;
+  tlStyle(TL.el, 'transform', `translate(${(TL.dx * m).toFixed(2)}px,${(TL.dy * m + (1 - show) * 80).toFixed(2)}px) scaleX(${sx.toFixed(4)})`);
+  tlStyle(TL.el, 'opacity', show);
+  TL.fades.forEach(f => tlStyle(f, 'opacity', fade));
+  tlStyle(TL.rows, 'transform', `scaleY(${(1 - st.cardOpen * .85).toFixed(3)})`);
   const hx = xOf(st.date) * TL.trackW; TL.headX = hx;
   TL.off = VIEW.phone ? Math.max(TL.viewW - TL.trackW, Math.min(0, TL.viewW / 2 - hx)) : 0;
-  TL.track.style.transform = `translateX(${TL.off.toFixed(2)}px)`;
+  tlStyle(TL.track, 'transform', `translateX(${TL.off.toFixed(2)}px)`);
   TL.headX = hx + TL.off;
-  TL.head.style.transform = `translateX(${hx.toFixed(2)}px) scaleX(${(1 / sx).toFixed(4)})`;
-  TL.blocks.forEach(b => b.em.style.opacity = st.visited[b.i] ? 1 : 0);
+  tlStyle(TL.head, 'transform', `translateX(${hx.toFixed(2)}px) scaleX(${(1 / sx).toFixed(4)})`);
+  TL.blocks.forEach(b => tlStyle(b.em, 'opacity', st.visited[b.i] ? 1 : 0));
   const i = currentStop(st.P), v = i < 0 ? COPY.timelineStart : fmt(COPY.timelineValue, { name: STOPS[i].name, dates: STOPS[i].dates });
   const now = Math.floor(st.date); if (!TL.hooks?.moving?.()) TL.pending = null;
-  if (v !== TL.val || now !== TL.now) { TL.val = v; TL.now = now; TL.el.setAttribute('aria-valuetext', v); TL.el.setAttribute('aria-valuenow', now); }
+  if (v !== TL.val) { TL.val = v; TL.el.setAttribute('aria-valuetext', v); }
+  if (now !== TL.now) { TL.now = now; TL.el.setAttribute('aria-valuenow', now); }
 }
 
 // ---- findkit.mjs ----
@@ -3087,6 +3094,12 @@ const ease = t => easeIO(clamp01(t));
 const out3 = t => 1 - (1 - clamp01(t)) ** 3;
 const fEsc = s => String(typeof s === 'object' ? s.t : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const attr = (el, k, v) => { const text = String(v); if (el.getAttribute(k) !== text) el.setAttribute(k, text); };
+const findStyleWrites = new WeakMap();
+function findStyle(el, key, value) {
+  const text = String(value), cache = findStyleWrites.get(el) || {}, old = cache[key];
+  if (old?.text === text && el.style[key] === old.value) return;
+  el.style[key] = value; cache[key] = { text, value: el.style[key] }; findStyleWrites.set(el, cache);
+}
 
 // Explore touch intent is shared by every pointerdown find. Nothing acts or captures
 // until tap/hold/owned-drag intent is known; a second finger cancels the whole wait.
@@ -3203,11 +3216,11 @@ function placePop() {
   const x = Math.max(K.edge, Math.min(VIEW.w - w - K.edge, p[0] - w / 2));
   const y = Math.max(K.edge, Math.min((FD.popFloor ?? VIEW.h) - h - K.edge, below ? p[1] + K.tail[1] : p[1] - h - K.tail[1]));
   FD.popOrigin = [Math.max(0, Math.min(w, p[0] - x)), below ? 0 : h];
-  FD.pop.style.transform = `translate(${x}px,${y}px)`;
+  findStyle(FD.pop, 'transform', `translate(${x}px,${y}px)`);
   const q = FD.rm ? 1 : clamp01((FD.now - FD.popTs) / K.time), back = 1 + (K.over - 1) / (1 - K.scale);
   const v = 1 + (back + 1) * (q - 1) ** 3 + back * (q - 1) ** 2;
-  FD.popInner.style.transform = `scale(${lerp(K.scale, 1, q === 1 ? 1 : v)})`; FD.popBody.style.opacity = q;
-  FD.popTail.style.transform = `translate(${Math.max(0, Math.min(w - K.tail[0], p[0] - x - K.tail[0] / 2))}px,${below ? -K.tail[1] : h}px) rotate(${below ? FIND_PLAY.kit.deg : 0}deg)`;
+  findStyle(FD.popInner, 'transform', `scale(${lerp(K.scale, 1, q === 1 ? 1 : v)})`); findStyle(FD.popBody, 'opacity', q);
+  findStyle(FD.popTail, 'transform', `translate(${Math.max(0, Math.min(w - K.tail[0], p[0] - x - K.tail[0] / 2))}px,${below ? -K.tail[1] : h}px) rotate(${below ? FIND_PLAY.kit.deg : 0}deg)`);
 }
 function findSheet(owner, cls, html, anchor) {
   if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return false;
@@ -3277,7 +3290,7 @@ function findKitFrame() {
   const f = FD.flight;
   if (f) {
     const q = clamp01((FD.now - f.ts) / FIND_PLAY.star.time), k = ease(q);
-    FD.star.style.opacity = 1; FD.star.style.transform = `translate(${lerp(f.from[0], f.to[0], k)}px,${lerp(f.from[1], f.to[1], k) - FIND_PLAY.star.arc * Math.sin(Math.PI * q)}px)`;
+    findStyle(FD.star, 'opacity', 1); findStyle(FD.star, 'transform', `translate(${lerp(f.from[0], f.to[0], k)}px,${lerp(f.from[1], f.to[1], k) - FIND_PLAY.star.arc * Math.sin(Math.PI * q)}px)`);
     if (q === 1) { FD.landed = f.number; FD.bump = FD.now; FD.flight = null; FD.star.style.opacity = 0; queueMicrotask(() => { findLandCount(); findStartFlight(); }); }
   }
   if (FD.bump !== undefined) { const q = clamp01((FD.now - FD.bump) / FIND_PLAY.star.bump); FD.count.style.transform = `scale(${lerp(FIND_PLAY.star.peak, 1, ease(q))})`; if (q === 1) FD.bump = undefined; }
@@ -3594,27 +3607,30 @@ function stepsButtons() {
   // Joined page: the bar waits for the map, so one Start shows at a time; focus follows (the bar at the map, the hero's Start above).
   const hero = SC.joinedTop() && SC.P < stepsMap - 1e-6, wasHidden = SC.go.hidden;
   if (hero && !wasHidden && SC.go.contains(document.activeElement)) SC.heroFocus = true;
-  SC.go.hidden = !SC.ready || SC.mode !== 'steps' || hero || blasting;
+  const hidden = !SC.ready || SC.mode !== 'steps' || hero || blasting;
+  if (SC.go.hidden !== hidden) SC.go.hidden = hidden;
   const lost = !document.activeElement || document.activeElement === document.body || !!document.activeElement.closest?.('[data-hero]');
   if (SC.heroFocus && top && !JOURNEY.moving) { SC.heroFocus = false; const start = document.querySelector?.('.jm-start'); if (start && lost) start.focus({ preventScroll: true }); }
   if (SC.joinedTop() && wasHidden && !SC.go.hidden && !hero && !blasting && lost && !JOURNEY.moving && Math.abs(SC.P - stepsMap) < 1e-6) SC.go.querySelector('.go-next').focus({ preventScroll: true });
   if (!hero) SC.heroFocus = false;
-  SC.go.classList.toggle('go-end', end);
+  if (SC.go.classList.contains('go-end') !== end) SC.go.classList.toggle('go-end', end);
   const back = SC.go.querySelector('.go-back'), next = SC.go.querySelector('.go-next'), home = SC.go.querySelector('.go-top');
   const focus = document.activeElement;
-  back.hidden = top && !JOURNEY.visiting; next.hidden = end && exploreBusy(); home.hidden = !end;
+  for (const [el, hidden] of [[back, top && !JOURNEY.visiting], [next, end && exploreBusy()], [home, !end]]) if (el.hidden !== hidden) el.hidden = hidden;
   if (end && !SC.endShown) { SC.endShown = true; SC.go.classList.add('go-reveal'); }
   if (!end) SC.endShown = false;
   if (!SC.go.hidden && ((next.hidden && focus === next) || (home.hidden && focus === home))) back.focus({ preventScroll: true });
   if (!SC.go.hidden && back.hidden && focus === back) next.focus({ preventScroll: true });
   const returning = exploreActive() ? COPY.explore.back : JOURNEY.visiting ? COPY.steps.returnTo : '';
-  back.setAttribute('aria-label', returning || stepsFormat(COPY.steps.back, { name: stepsName(stepsBackBeat()) }));
-  back.querySelector('span').textContent = returning;
-  if (end) SC.go.querySelector('.go-t').textContent = COPY.explore.button;
+  const label = returning || stepsFormat(COPY.steps.back, { name: stepsName(stepsBackBeat()) });
+  if (back.getAttribute('aria-label') !== label) back.setAttribute('aria-label', label);
+  const words = back.querySelector('span'); if (words.textContent !== returning) words.textContent = returning;
+  if (end) { const words = SC.go.querySelector('.go-t'); if (words.textContent !== COPY.explore.button) words.textContent = COPY.explore.button; }
   if (!SC.go.hidden && SC.returnFocus) { SC.returnFocus = false; next.focus({ preventScroll: true }); }
   if (!SC.go.hidden && !SC.shown) { SC.shown = true; SC.go.classList.add('go-reveal'); }
-  SC.root.classList.toggle('jm-moving', JOURNEY.moving);
-  SC.go.querySelector('.go-fill').style.transform = `scaleX(${SC.move ? SC.fill : 0})`;
+  if (SC.root.classList.contains('jm-moving') !== JOURNEY.moving) SC.root.classList.toggle('jm-moving', JOURNEY.moving);
+  const fill = SC.go.querySelector('.go-fill'), transform = `scaleX(${SC.move ? SC.fill : 0})`;
+  if (fill.style.transform !== transform) fill.style.transform = transform;
 }
 // The Next button's words for the beat at P. A jump writes them as soon as it lands under its cover, so the button never names
 // the old next stop over the new view.
@@ -3923,6 +3939,12 @@ function stepsBuild({ stage, rm, joinedTop }) {
 
 
 const CD = { list: [], W: 640, craft: null, onGo: null, rm: false, closed: null, last: null, dt: 0 };
+const cardsWrites = new WeakMap();
+function cardsStyle(el, key, value) {
+  const text = String(value), cache = cardsWrites.get(el) || {}, old = cache[key];
+  if (old?.text === text && el.style[key] === old.value) return;
+  el.style[key] = value; cache[key] = { text, value: el.style[key] }; cardsWrites.set(el, cache);
+}
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const arrowSvg = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
 
@@ -4014,20 +4036,21 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const close = c.el.querySelector('.c-close');
     if (close) {
       if (JOURNEY.moving && document.activeElement === close) document.getElementById('go')?.querySelector('.go-next')?.focus({ preventScroll: true });
-      close.inert = JOURNEY.moving || st.cardK[i] < .96;
+      const inert = JOURNEY.moving || st.cardK[i] < .96;
+      if (close.inert !== inert) close.inert = inert;
     }
     const W = c.W || CD.W, H = c.H, oc = c.place || { x: VIEW.w / 2, y: VIEW.h / 2 };
     const e = st.cardK[i], p = toScreen(st, MAP.waypoints[c.stop.w]);
     const k0 = stonePx / Math.max(W, H), k = Math.pow(k0, 1 - e), py = p[1] - stonePx / 2 - MARK.stand;
     const cx = lerp(p[0], oc.x, e), cy = lerp(py, oc.y, e);
-    c.el.style.transform = `translate(${p[0]}px,${py}px)`;
-    c.card.style.transform = `translate(${cx - W * k / 2 - p[0]}px,${cy - H * k / 2 - py}px) scale(${k})`;
-    c.btn.style.transform = `translate(-50%,-50%) scale(${stonePx / MARK.box})`;
+    cardsStyle(c.el, 'transform', `translate(${p[0]}px,${py}px)`);
+    cardsStyle(c.card, 'transform', `translate(${cx - W * k / 2 - p[0]}px,${cy - H * k / 2 - py}px) scale(${k})`);
+    cardsStyle(c.btn, 'transform', `translate(-50%,-50%) scale(${stonePx / MARK.box})`);
     const lit = CD.craft ? CD.craft[i] : false;
-    c.el.style.opacity = op * (CD.craft && !lit ? .55 : 1);
+    cardsStyle(c.el, 'opacity', op * (CD.craft && !lit ? .55 : 1));
     // Size, not the score, hands the mark over to the card: the face and its words come in together as it grows (no flat slab).
-    c.btn.style.opacity = 1;
-    c.face.style.opacity = smooth(...CARD_GROW.face, k);
+    cardsStyle(c.btn, 'opacity', 1);
+    cardsStyle(c.face, 'opacity', smooth(...CARD_GROW.face, k));
     const cfg = DEPTH.card, lift = !!VIEW.depth && !VIEW.phone;
     // Apply live style configuration after this frame callback; animation only writes transform/opacity.
     const config = lift ? `${cfg.perspective}/${cfg.blur}/${cfg.spread}/${cfg.radius}` : '';
@@ -4038,15 +4061,15 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const target = [cfg.tilt * (1 - smooth(...cfg.open, e)) - ly * cfg.ptrTilt[1] * plate, lx * cfg.ptrTilt[0] * plate, -lx * cfg.shift * plate, -ly * cfg.shift * plate];
     c.tilt.forEach((v, j) => { c.tilt[j] = lift ? v + (target[j] - v) * cfg.ease : 0; if (Math.abs(c.tilt[j]) < cfg.flat) c.tilt[j] = 0; });
     const [rx, ryTilt, sx, sy] = c.tilt;
-    c.face.style.transform = lift ? `${sx || sy ? `translate(${sx}px,${sy}px) ` : ''}${rx ? `rotateX(${rx}deg) ` : ''}${ryTilt ? `rotateY(${ryTilt}deg)` : ''}`.trim() : '';
-    c.shadow.style.opacity = lift ? cfg.shadow * e : 0;
-    c.shadow.style.transform = `translate(${-sx / cfg.shadowShare}px,${cfg.drop * e - sy / cfg.shadowShare}px)`;
-    c.inn.style.opacity = smooth(...CARD_GROW.words, k);
+    cardsStyle(c.face, 'transform', lift ? `${sx || sy ? `translate(${sx}px,${sy}px) ` : ''}${rx ? `rotateX(${rx}deg) ` : ''}${ryTilt ? `rotateY(${ryTilt}deg)` : ''}`.trim() : '');
+    cardsStyle(c.shadow, 'opacity', lift ? cfg.shadow * e : 0);
+    cardsStyle(c.shadow, 'transform', `translate(${-sx / cfg.shadowShare}px,${cfg.drop * e - sy / cfg.shadowShare}px)`);
+    cardsStyle(c.inn, 'opacity', smooth(...CARD_GROW.words, k));
     const paint = st.visited[i] && (e > 0 || st.u >= STOP_U[i]) || lit ? 1 : 0, step = CD.dt / CARD_TAIL.paintTime;
     c.paint = Math.max(0, Math.min(1, c.paint + Math.sign(paint - c.paint) * Math.min(step, Math.abs(paint - c.paint))));
-    c.fill.style.opacity = c.paint; c.boss.style.opacity = c.paint;
-    c.glow.style.opacity = lit ? 1 : 0;
-    if (c.mini) c.mini.style.setProperty('--paint', c.paint);
+    cardsStyle(c.fill, 'opacity', c.paint); cardsStyle(c.boss, 'opacity', c.paint);
+    cardsStyle(c.glow, 'opacity', lit ? 1 : 0);
+    if (c.mini && c.miniPaint !== c.paint) { c.miniPaint = c.paint; c.mini.style.setProperty('--paint', c.paint); }
     if (c.tail) cardsTailFrame(c, { W, H, k, cx: cx - p[0], cy: cy - py, stonePx, rx, ryTilt, sx, sy, lift });
     const state = e > .96 ? 'open' : e < .02 ? 'rest' : 'moving';
     if (state !== c.state) { c.state = state; c.el.dataset.state = state; c.face.inert = state !== 'open'; }
@@ -4081,8 +4104,8 @@ function cardsTailFrame(c, f) {
   const tip = distance ? mid.map(v => v / distance * rim) : [rim, 0];
   if (distance < rim) { b0 = tip; b1 = tip; }
   const dx = b1[0] - b0[0], dy = b1[1] - b0[1];
-  c.tail.style.transform = `matrix(${tip[0] - b0[0] - dx / 2},${tip[1] - b0[1] - dy / 2},${dx},${dy},${b0[0]},${b0[1]})`;
-  c.tail.style.opacity = c.face.style.opacity;
+  cardsStyle(c.tail, 'transform', `matrix(${tip[0] - b0[0] - dx / 2},${tip[1] - b0[1] - dy / 2},${dx},${dy},${b0[0]},${b0[1]})`);
+  cardsStyle(c.tail, 'opacity', c.face.style.opacity);
 }
 const cardsList = () => CD.list;
 
@@ -4257,7 +4280,16 @@ function footerPhoneMeasure() {
   const layout = footerPhoneLayout({ w: VIEW.w, h: VIEW.h, goBottom, headlineH: headline.height, talkW: talk.width, talkH: talk.height, nameTop: name.top });
   FT.inner.style.paddingTop = layout.top + 'px'; spacer.style.minHeight = layout.spacer + 'px'; VIEW.footerY = layout.novaY;
 }
-const footerStyle = (el, key, value) => { const text = String(value); if (el && el.style[key] !== text) el.style[key] = text; };
+const footerWrites = new WeakMap();
+const footerStyle = (el, key, value) => {
+  if (!el) return;
+  const text = String(value), cache = footerWrites.get(el) || {}, old = cache[key];
+  // CSSOM canonicalizes decimals and transform spacing; compare its last value
+  // as well, so unchanged authored values skip writes and outside edits recover.
+  if (old?.text === text && el.style[key] === old.value) return;
+  if (el.style[key] !== text) el.style[key] = text;
+  cache[key] = { text, value: el.style[key] }; footerWrites.set(el, cache);
+};
 function footerFrame(st) {
   if (FT.hit) {
     FT.settled = st.settleT >= 1;
@@ -4266,8 +4298,10 @@ function footerFrame(st) {
     const available = (st.handoffT >= 1 && st.rushT === 0) || FT.settled, keyed = available && (FT.settled || (!JOURNEY.moving && Math.abs(JOURNEY.P - FT.xP) < NOVA.base.hitTolerance));
     const state = `${available}/${FT.settled}/${keyed}`;
     if (state !== FT.hitState) {
-      FT.hitState = state; FT.hit.tabIndex = keyed ? 0 : -1; FT.hit.setAttribute('aria-disabled', String(!available));
-      FT.hit.setAttribute('aria-label', FT.settled ? COPY.nova : COPY.steps.dig);
+      FT.hitState = state; const tab = keyed ? 0 : -1, disabled = String(!available), label = FT.settled ? COPY.nova : COPY.steps.dig;
+      if (FT.hit.tabIndex !== tab) FT.hit.tabIndex = tab;
+      if (FT.hit.getAttribute('aria-disabled') !== disabled) FT.hit.setAttribute('aria-disabled', disabled);
+      if (FT.hit.getAttribute('aria-label') !== label) FT.hit.setAttribute('aria-label', label);
     }
     const s = st.exploreK ? st.sEnd : st.cam.s, radius = FT.settled ? NOVA.flare.hit * st.cam.s / s : NOVA.base.digHit * st.cam.s;
     footerStyle(FT.hit, 'width', (radius * 2).toFixed(2) + 'px'); footerStyle(FT.hit, 'height', (radius * 2).toFixed(2) + 'px');
@@ -4275,11 +4309,11 @@ function footerFrame(st) {
   }
   // Progress owns the text's reveal. All X transforms and opacities have one writer, footerMotion.
   const b = NOVA.base;
-  FT.items.forEach((it, j) => { if (it.classList.contains('ft-name')) { it.style.opacity = 1; it.style.transform = ''; return; } const o = smooth(b.textIn[0] + j * b.textGap, b.textIn[1] + j * b.textGap, st.settleT); it.style.opacity = o; it.style.transform = `translateY(${((1 - o) * b.textRise).toFixed(1)}px)`; });
+  FT.items.forEach((it, j) => { if (it.classList.contains('ft-name')) { footerStyle(it, 'opacity', 1); footerStyle(it, 'transform', ''); return; } const o = smooth(b.textIn[0] + j * b.textGap, b.textIn[1] + j * b.textGap, st.settleT); footerStyle(it, 'opacity', o); footerStyle(it, 'transform', `translateY(${((1 - o) * b.textRise).toFixed(1)}px)`); });
   footerStyle(FT.inner, 'opacity', st.exploreFooter ?? 1);
   const exploring = !!st.exploring || (st.exploreK || 0) > 0; if (FT.exploring !== exploring) { FT.exploring = exploring; FT.el.inert = exploring; }
   footnameReveal(st);
-  FT.el.style.visibility = st.settleT > b.textShow ? 'visible' : 'hidden';
+  footerStyle(FT.el, 'visibility', st.settleT > b.textShow ? 'visible' : 'hidden');
 }
 const footerConfigKey = () => JSON.stringify([NOVA.seed, NOVA.rays.n, VIEW.phone ? NOVA.lobes.nPhone : NOVA.lobes.n, NOVA.waves.n]);
 function footerConfigure() {
@@ -4875,12 +4909,12 @@ function findRavens(svg) {
       else {
         const e = t - o.ts, grow = FD.rm ? 1 : out3(e / FIND_PLAY.kit.sheet.grow), from = FD.sheetFrom;
         const fit = Math.min(1, (Math.min(VIEW.w, VIEW.h) - FIND_PLAY.kit.sheet.edge) / R.reel.iris);
-        FD.sheet.style.transform = 'translate(' + lerp(from[0], VIEW.w / 2, grow) + 'px,' + lerp(from[1], VIEW.h / 2 - FIND_PLAY.kit.sheet.offset, grow) + 'px) scale(' + lerp(FIND_PLAY.kit.sheet.from, fit, grow) + ')';
+        findStyle(FD.sheet, 'transform', 'translate(' + lerp(from[0], VIEW.w / 2, grow) + 'px,' + lerp(from[1], VIEW.h / 2 - FIND_PLAY.kit.sheet.offset, grow) + 'px) scale(' + lerp(FIND_PLAY.kit.sheet.from, fit, grow) + ')');
         const q = clamp01((e - (FD.rm ? 0 : FIND_PLAY.kit.sheet.grow)) / FIND_TIMING.reel), digits = Math.min(FIND_TIMING.reel, Math.floor(q * FIND_TIMING.reel));
         if (digits !== o.digits) { o.digits = digits; const tc = o.tc; queueMicrotask(() => { if (tc.isConnected) tc.textContent = findFormat(R.reel.tc, { n: digits, end: FIND_COPY.ravenTime[1] }); }); }
-        if (!FD.rm) o.sh.forEach((s, i) => { const M = R.reel.motion; s.style.transform = 'translate(' + Math.sin(e * (M[0] + i * M[1]) + i * M[2]) * M[3] + 'px,' + Math.cos(e * (M[4] + i * M[5]) + i) * M[6] + 'px) rotate(' + e * M[7] * (i - 1) + 'deg)'; });
+        if (!FD.rm) o.sh.forEach((s, i) => { const M = R.reel.motion; findStyle(s, 'transform', 'translate(' + Math.sin(e * (M[0] + i * M[1]) + i * M[2]) * M[3] + 'px,' + Math.cos(e * (M[4] + i * M[5]) + i) * M[6] + 'px) rotate(' + e * M[7] * (i - 1) + 'deg)'); });
         const end = FD.rm ? q === 1 ? 1 : 0 : clamp01((e - FIND_PLAY.kit.sheet.grow - FIND_TIMING.reel) / FIND_TIMING.iris), iris = Math.max(Number.EPSILON, 1 - ease(end));
-        o.iris.style.transform = 'scale(' + iris + ')'; o.irisIn.style.transform = 'scale(' + 1 / iris + ')';
+        findStyle(o.iris, 'transform', 'scale(' + iris + ')'); findStyle(o.irisIn, 'transform', 'scale(' + 1 / iris + ')');
         if (end === 1) queueMicrotask(() => closeSheet(true));
       }
     }
@@ -5089,8 +5123,8 @@ function findRune(svg) {
     const q = FD.rm ? 1 : ease((t - o.ts) / R.grow), closing = o.stage === 'closing', out = closing ? 1 - ease((t - o.closeTs) / R.close) : q;
     const fit = Math.min(1, (VIEW.w - FIND_PLAY.kit.sheet.edge) / R.width, (VIEW.h - FIND_PLAY.kit.sheet.edge * 2) / (R.height + Math.abs(R.controlTop) - R.height / 2));
     const from = FD.sheetFrom;
-    FD.sheet.style.transform = `translate(${lerp(from[0], VIEW.w / 2, out)}px,${lerp(from[1], VIEW.h / 2 - FIND_PLAY.kit.sheet.offset, out)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, fit, out)})`;
-    o.pz.style.transform = `rotateX(${o.tilt[0]}deg) rotateY(${o.tilt[1]}deg)`;
+    findStyle(FD.sheet, 'transform', `translate(${lerp(from[0], VIEW.w / 2, out)}px,${lerp(from[1], VIEW.h / 2 - FIND_PLAY.kit.sheet.offset, out)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, fit, out)})`);
+    findStyle(o.pz, 'transform', `rotateX(${o.tilt[0]}deg) rotateY(${o.tilt[1]}deg)`);
     if (closing) { if (out === 0) queueMicrotask(() => closeSheet(true)); return; }
     if (!o.read && !o.rubs && o.autoTs === null && t - o.ts >= R.auto[0]) o.autoTs = t;
     if (!o.read && o.autoTs !== null) {
@@ -5105,9 +5139,9 @@ function findRune(svg) {
       if (!o.controls && (FD.rm || t - o.readTs >= R.fill + (o.letters.length - 1) * R.letter[0] + R.letter[1])) { o.controls = true; queueMicrotask(() => { if (FD.sheetOwner !== o) return; FD.sheet.querySelector('.rub-do').hidden = true; FD.sheet.querySelector('.pz-flip').hidden = false; FD.sheet.querySelector('.pz-x').hidden = false; FD.sheet.querySelector('.pz-flip').focus({ preventScroll: true }); }); }
     }
     const stamp = FD.rm ? 1 : out3((t - o.stampTs - R.stamp[0]) / R.stamp[1]);
-    o.stamp.style.opacity = stamp; o.stamp.style.transform = `rotate(${R.stampAngle}deg) scale(${lerp(R.stamp[2], 1, stamp)})`;
+    findStyle(o.stamp, 'opacity', stamp); findStyle(o.stamp, 'transform', `rotate(${R.stampAngle}deg) scale(${lerp(R.stamp[2], 1, stamp)})`);
     const shakeAge = t - o.stampTs - R.stamp[0] - R.stamp[1], shake = FD.rm || shakeAge < 0 || shakeAge > R.shake[1] ? 0 : R.shake[0] * Math.sin(shakeAge / R.shake[1] * Math.PI * 4) * (1 - shakeAge / R.shake[1]);
-    o.pin.style.transform = `translateX(${shake}px) rotateY(${o.flipped ? FIND_PLAY.kit.deg : 0}deg)`;
+    findStyle(o.pin, 'transform', `translateX(${shake}px) rotateY(${o.flipped ? FIND_PLAY.kit.deg : 0}deg)`);
   };
   return o;
 }
@@ -5572,7 +5606,7 @@ function findHammer(svg) {
     attr(lift, 'transform', `translate(${tremble} ${-hop})`); attr(spark, 'opacity', !FD.rm && (ringing || t % M.every < M.sparkTime) ? 1 : 0);
     if (FD.sheetOwner !== o) return;
     const q = FD.rm ? 1 : ease((t - o.sheetTs) / FIND_PLAY.kit.sheet.grow), from = FD.sheetFrom;
-    FD.sheet.style.transform = `translate(${lerp(from[0], VIEW.w / 2, q)}px,${lerp(from[1], VIEW.h / 2, q)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, o.fit, q)})`;
+    findStyle(FD.sheet, 'transform', `translate(${lerp(from[0], VIEW.w / 2, q)}px,${lerp(from[1], VIEW.h / 2, q)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, o.fit, q)})`);
     const s = o.game;
     if (s && !s.paused) {
       o.input.move = Number(o.keys.right) - Number(o.keys.left); o.input.throw = o.auto || o.keys.fire || o.held; o.accumulator = Math.min(o.accumulator + FD.dt, HAMMER.step * HAMMER.steps);

@@ -1,11 +1,15 @@
-// Read-only phone audit, Node 22+, no dependencies or output files.
+// Read-only phone/desktop audit, Node 22+, no dependencies.
 // Attach to an EXISTING local headless Edge/Chrome. Creating a browser profile
 // is outside FRAMES.md's write allowlist, so this tool never launches a browser.
 // node tools/frame-cost.mjs --cdp ws://127.0.0.1:PORT/devtools/browser/ID
 // Optional: --page dist/journey-map.html (default: both packed pages).
+// GLIDE: --width 1440 --height 900 --dpr 1 --cpu 1; --scenarios 6,7,8,9;
+// --passes timing|capture; --out restricted to the authorized glide run folder.
+// Four explicit glides use only moving frames, rather than including idle tails.
 // Screenshot decoding and trace reduction run AFTER each measured gesture.
 import { createServer } from 'node:http';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { resolve, join, sep } from 'node:path';
 import { inflateSync } from 'node:zlib';
 
 export function framePNG(buffer) {
@@ -59,8 +63,8 @@ export function frameIntervals(values) {
   return {n:values.length,p50:q(.5),p95:q(.95),max:sorted.at(-1)??null,over33:values.filter(x=>x>33).length,over100:values.filter(x=>x>100).length};
 }
 export function frameTrace(events, start, end, frames, pid) {
-  const renderer=events.find(e=>e.ph==='M'&&e.name==='thread_name'&&e.args?.name==='CrRendererMain'&&(pid===undefined||e.pid===pid)), totals={script:0,styleLayout:0,paint:0,raster:0};
-  const classify=e=> /RasterTask|Rasterize/.test(e.name)?'raster':/^(Layout|UpdateLayoutTree|RecalculateStyles)$/.test(e.name)?'styleLayout':/^(Paint|PrePaint|PaintImage)$/.test(e.name)?'paint':/^(FunctionCall|EvaluateScript|RunMicrotasks|EventDispatch|TimerFire|FireAnimationFrame|V8.Execute)$/.test(e.name)?'script':null;
+  const renderer=events.find(e=>e.ph==='M'&&e.name==='thread_name'&&e.args?.name==='CrRendererMain'&&(pid===undefined||e.pid===pid)), totals={script:0,styleLayout:0,paint:0,raster:0,layout:0,style:0,paintOnly:0,prePaint:0,layerize:0,commit:0};
+  const classify=e=> /RasterTask|Rasterize/.test(e.name)?'raster':/^Layout$/.test(e.name)?'layout':/^(UpdateLayoutTree|RecalculateStyles)$/.test(e.name)?'style':/^PrePaint$/.test(e.name)?'prePaint':/^(Paint|PaintImage)$/.test(e.name)?'paintOnly':/^(Layerize|UpdateLayerTree)$/.test(e.name)?'layerize':/^Commit$/.test(e.name)?'commit':/^(FunctionCall|EvaluateScript|RunMicrotasks|EventDispatch|TimerFire|FireAnimationFrame|V8.Execute)$/.test(e.name)?'script':null;
   const stack=new Map(), spans=[];
   for(const e of events) {
     const key=e.pid+'/'+e.tid;
@@ -75,16 +79,23 @@ export function frameTrace(events, start, end, frames, pid) {
     if(!renderer||e.pid!==renderer.pid||e.tid!==renderer.tid)continue;
     edges.push({t:a,add:category},{t:b,remove:category});
   }
-  edges.sort((a,b)=>a.t-b.t);const active={script:0,styleLayout:0,paint:0};let last=start;
-  for(const e of edges){const category=active.styleLayout?'styleLayout':active.paint?'paint':active.script?'script':null;if(category)totals[category]+=(e.t-last)/1000;if(e.add)active[e.add]++;else active[e.remove]--;last=e.t;}
+  const priority=['layout','style','paintOnly','prePaint','layerize','commit','script'];
+  edges.sort((a,b)=>a.t-b.t);const active=Object.fromEntries(priority.map(k=>[k,0]));let last=start;
+  for(const e of edges){const category=priority.find(k=>active[k]);if(category)totals[category]+=(e.t-last)/1000;if(e.add)active[e.add]++;else active[e.remove]--;last=e.t;}
+  totals.styleLayout=totals.style+totals.layout;totals.paint=totals.paintOnly+totals.prePaint;
   return {mainThread:!!renderer,...Object.fromEntries(Object.entries(totals).map(([k,v])=>[k,frames?v/frames:null]))};
 }
 
 const frameArgs=Object.fromEntries(process.argv.slice(2).flatMap((v,i,a)=>v.startsWith('--')?[[v.slice(2),a[i+1]]]:[]));
 const framePages=frameArgs.page?[frameArgs.page]:['dist/journey-map.html','dist/journey-joined.html'];
-const frameScenarios=['pinch x3 / 300 ms out + 300 ms in / three repeats','fling + glide','wayfinder / one turn in 1.5 s','slow pan with glow','stop glide','rush into blast'];
+const frameScenarios=['pinch x3 / 300 ms out + 300 ms in / three repeats','fling + glide','wayfinder / one turn in 1.5 s','slow pan with glow','stop glide','rush into blast','map -> Laurier','Laurier -> HMC','HMC again -> Interkom','Interkom -> HMC again / Back'];
+const frameWidth=Number(frameArgs.width||412),frameHeight=Number(frameArgs.height||730),frameDpr=Number(frameArgs.dpr||2.625),frameCpu=Number(frameArgs.cpu||4);
+const frameOut=frameArgs.out&&resolve(frameArgs.out),frameAllowed=resolve('C:/Users/Admin/Documents/Portfolio/journey-map-runs/glide');
+if(frameOut&&frameOut!==frameAllowed&&!frameOut.startsWith(frameAllowed+sep))throw Error('--out must be in the authorized glide run folder');
+if(frameOut)mkdirSync(frameOut,{recursive:true});
+const frameResults=[];
 const frameWait=ms=>new Promise(ok=>setTimeout(ok,ms));
-let frameWS,frameSession,frameTarget,frameServer,frameSeq=0,frameCapture=null,frameTraceEvents=null;
+let frameWS,frameSession,frameTarget,frameServer,frameSeq=0,frameCapture=null,frameTraceEvents=null,framePageTag='';
 const framePending=new Map(),frameHandlers=new Map();
 const frameSend=(method,params={},sessionId=frameSession)=>new Promise((ok,fail)=>{
   const id=++frameSeq,timer=setTimeout(()=>{framePending.delete(id);fail(Error(method+' timed out'));},20000);
@@ -105,13 +116,14 @@ async function frameConnect(endpoint) {
     }else frameHandlers.get(m.method)?.(m.params);
   };
   const v=await frameSend('Browser.getVersion',{},null);if(!/HeadlessChrome/.test(v.userAgent)||!/Chrome|Edg/.test(v.product))throw Error('requires existing headless Edge/Chrome');
-  console.log('browser: '+v.product+'; 412x730; DPR 2.625; mobile/touch; CPU x4');
+  console.log('browser: '+v.product+`; ${frameWidth}x${frameHeight}; DPR ${frameDpr}; touch ${frameWidth<=640}; CPU x${frameCpu}`);
+  const gpu=await frameSend('SystemInfo.getInfo',{},null);console.log('GPU: '+JSON.stringify({devices:gpu.gpu.devices,features:gpu.gpu.featureStatus}));
   ({targetId:frameTarget}=await frameSend('Target.createTarget',{url:'about:blank'},null));
   ({sessionId:frameSession}=await frameSend('Target.attachToTarget',{targetId:frameTarget,flatten:true},null));
   await frameSend('Page.enable');await frameSend('Runtime.enable');
-  await frameSend('Emulation.setDeviceMetricsOverride',{width:412,height:730,deviceScaleFactor:2.625,mobile:true});
-  await frameSend('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
-  await frameSend('Emulation.setCPUThrottlingRate',{rate:4});
+  await frameSend('Emulation.setDeviceMetricsOverride',{width:frameWidth,height:frameHeight,deviceScaleFactor:frameDpr,mobile:frameWidth<=640});
+  await frameSend('Emulation.setTouchEmulationEnabled',{enabled:frameWidth<=640,maxTouchPoints:5});
+  await frameSend('Emulation.setCPUThrottlingRate',{rate:frameCpu});
   await frameSend('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
   await frameSend('Fetch.enable',{patterns:[{urlPattern:'*'}]});
   frameHandlers.set('Fetch.requestPaused',p=>{
@@ -128,27 +140,30 @@ async function frameExplore(){
   if(await frameEval('document.documentElement.classList.contains("jm-explore")')){await frameSend('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});await frameSend('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27});await frameWait(1600);}
   await frameEval('window.__jm.go("end",{instant:true})');await frameWait(2200);const p=await frameEval('(()=>{const r=document.querySelector(".go-next").getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()');await frameTap(...p);await frameWait(2600);if(!await frameEval('document.documentElement.classList.contains("jm-explore")'))throw Error('explore did not open');
 }
-async function frameMeasure(name,gesture,capture) {
+async function frameMeasure(name,gesture,capture,glide=false) {
   frameTraceEvents=[];
   await frameSend('Tracing.start',{categories:'devtools.timeline,disabled-by-default-devtools.timeline,disabled-by-default-devtools.timeline.frame,blink.user_timing,toplevel,cc',options:'record-as-much-as-possible'},null);
-  if(capture){frameCapture=[];await frameSend('Page.startScreencast',{format:'png',maxWidth:412,maxHeight:730,everyNthFrame:1});}
-  await frameEval(`(()=>{const o=window.__frameCost={times:[],long:[],live:true};o.observer=new PerformanceObserver(l=>o.long.push(...l.getEntries().map(e=>({start:e.startTime,duration:e.duration}))));o.observer.observe({type:'longtask'});o.start=performance.now();performance.mark('frame-cost-start');const f=t=>{if(o.live){o.times.push(t);requestAnimationFrame(f)}};requestAnimationFrame(f)})()`);
+  if(capture){frameCapture=[];await frameSend('Page.startScreencast',{format:'png',maxWidth:frameWidth,maxHeight:frameHeight,everyNthFrame:1});}
+  await frameEval(`(()=>{const o=window.__frameCost={times:[],moving:[],long:[],live:true};o.observer=new PerformanceObserver(l=>o.long.push(...l.getEntries().map(e=>({start:e.startTime,duration:e.duration}))));o.observer.observe({type:'longtask'});o.start=performance.now();performance.mark('frame-cost-start');const f=t=>{if(o.live){o.times.push(t);if(window.__jm.moving){o.moving.push(t);if(!o.began){o.began=true;performance.mark('frame-glide-start')}}else if(o.began&&!o.ended){o.ended=true;performance.mark('frame-glide-end')}requestAnimationFrame(f)}};requestAnimationFrame(f)})()`);
   await gesture();await frameWait(180);
-  const sample=await frameEval(`(()=>{const o=window.__frameCost;o.end=performance.now();performance.mark('frame-cost-end');o.live=false;o.long.push(...o.observer.takeRecords().map(e=>({start:e.startTime,duration:e.duration})));o.observer.disconnect();return {times:o.times,start:o.start,end:o.end,long:o.long}})()`);
+  const sample=await frameEval(`(()=>{const o=window.__frameCost;o.end=performance.now();performance.mark('frame-cost-end');o.live=false;o.long.push(...o.observer.takeRecords().map(e=>({start:e.startTime,duration:e.duration})));o.observer.disconnect();return {times:o.times,moving:o.moving,start:o.start,end:o.end,long:o.long}})()`);
   if(capture)await frameSend('Page.stopScreencast');const images=frameCapture||[];frameCapture=null;
   const complete=frameOnce('Tracing.tracingComplete');await frameSend('Tracing.end',{},null);await complete;
   const events=frameTraceEvents;frameTraceEvents=null;
-  const begin=events.find(e=>e.name==='frame-cost-start'),end=events.find(e=>e.name==='frame-cost-end');
+  const begin=events.find(e=>e.name===(glide?'frame-glide-start':'frame-cost-start')),end=events.find(e=>e.name===(glide?'frame-glide-end':'frame-cost-end'));
   if(!begin||!end)throw Error('trace did not contain time bounds');
-  const times=sample.times.filter(t=>t>=sample.start&&t<=sample.end),intervals=times.slice(1).map((t,i)=>t-times[i]);
+  const times=glide?sample.moving:sample.times.filter(t=>t>=sample.start&&t<=sample.end),intervals=times.slice(1).map((t,i)=>t-times[i]);
   const cost=frameTrace(events,begin.ts,end.ts,intervals.length,begin.pid),coverage=images.map(i=>({time:i.time,lines:frameLines(framePNG(i.png))}));
   const blanks=coverage.filter((p,i)=>i>0&&i<coverage.length-1&&p.lines<.5*Math.min(coverage[i-1].lines,coverage[i+1].lines));
   const long=sample.long.filter(t=>t.start<sample.end&&t.start+t.duration>sample.start);
   const f=n=>n===null?'N/A':n.toFixed(2),v=frameIntervals(intervals);
-  console.log(`| ${name} ${capture?'capture':'timing'} | ${v.n} | ${f(v.p50)} | ${f(v.p95)} | ${f(v.max)} | ${v.over33} | ${v.over100} | ${cost.mainThread?f(cost.script):'N/A'} | ${cost.mainThread?f(cost.styleLayout):'N/A'} | ${cost.mainThread?f(cost.paint):'N/A'} | ${events.some(e=>/RasterTask|Rasterize/.test(e.name))?f(cost.raster):'N/A'} | ${long.length} / ${f(Math.max(0,...long.map(t=>t.duration)))} | ${capture?blanks.length+' / '+images.length:'N/A'} |`);
+  console.log(`| ${name} ${capture?'capture':'timing'} | ${v.n} | ${f(v.p50)} | ${f(v.p95)} | ${f(v.max)} | ${v.over33} | ${v.over100} | ${['script','styleLayout','layout','style','paintOnly','prePaint','layerize','commit'].map(k=>cost.mainThread?f(cost[k]):'N/A').join(' | ')} | ${events.some(e=>/RasterTask|Rasterize/.test(e.name))?f(cost.raster):'N/A'} | ${long.length} / ${f(Math.max(0,...long.map(t=>t.duration)))} | ${capture?blanks.length+' / '+images.length:'N/A'} |`);
   if(blanks.length)console.log('blank candidates (s): '+blanks.map(b=>b.time.toFixed(3)).join(', '));
+  frameResults.push({name,capture,intervals:v,cost,long,blanks:blanks.map(b=>b.time),captures:images.length});
+  if(frameOut){const slug=framePageTag+'-'+name.replace(/[^a-z0-9]+/gi,'-');writeFileSync(join(frameOut,slug+'-'+(capture?'capture':'timing')+'-trace.json'),JSON.stringify({traceEvents:events}));for(let i=0;i<images.length;i++)writeFileSync(join(frameOut,slug+'-'+String(i).padStart(4,'0')+'.png'),images[i].png);}
 }
 async function frameScenario(index) {
+  if(index>=6){await frameEval('window.__jm.go('+JSON.stringify(['map','laurier','hmc2','interkom'][index-6])+',{instant:true})');await frameWait(2400);return async()=>{await frameEval(index===9?'window.__jm.back()':'window.__jm.next()');for(let n=0;n<160;n++){await frameWait(50);if(!await frameEval('window.__jm.moving'))return;}throw Error('glide did not finish');};}
   if(index<4){await frameExplore();if(index===1||index===3){const at=index===3?await frameEval('(()=>{const r=document.getElementById("nova-hit").getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()'):[206,330];await frameZoom(at,3);await frameWait(1800);}}
   else {await frameEval('window.__jm.go('+JSON.stringify(index===4?'hmc1':'x')+',{instant:true})');await frameWait(2200);}
   if(index===2){const p=await frameEval('window.__jm.finds.place("wayfinder")');await frameZoom(p,3);await frameWait(1600);}
@@ -162,18 +177,21 @@ async function frameRun() {
   frameServer=createServer((req,res)=>{const html=pages.get(req.url);res.writeHead(html?200:404,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'});res.end(html||'');});
   await new Promise(ok=>frameServer.listen(0,'127.0.0.1',ok));await frameConnect(frameArgs.cdp);
   for(const path of pages.keys()) {
+    framePageTag=path.slice(1,-5);
     await frameSend('Page.navigate',{url:'http://127.0.0.1:'+frameServer.address().port+path});
     for(let n=0;n<160;n++){if(await frameEval('!!window.__jm && !!document.querySelector(".go-next")'))break;await frameWait(50);}await frameEval('document.fonts.ready');await frameWait(2500);
     console.log('\n'+path+' (timing pass excludes screenshots; capture pass measures its own overhead)');
-    console.log('| scenario | frames | p50 ms | p95 ms | max ms | >33 | >100 | script ms/f | style+layout ms/f | paint ms/f | raster ms/f | long tasks / max ms | blank candidates / captures |');
-    console.log('| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |');
-    for(let i=0;i<frameScenarios.length;i++)for(const capture of [false,true])await frameMeasure(frameScenarios[i],await frameScenario(i),capture);
+    console.log('| scenario | frames | p50 ms | p95 ms | max ms | >33 | >100 | script | style+layout | layout | style | paint | pre-paint | layerize | commit | raster | long tasks / max ms | blank candidates / captures |');
+    console.log('| --- | '+Array(17).fill('---:').join(' | ')+' |');
+    const indices=frameArgs.scenarios?frameArgs.scenarios.split(',').map(Number):frameScenarios.map((_,i)=>i),passes=frameArgs.passes==='timing'?[false]:frameArgs.passes==='capture'?[true]:[false,true];
+    for(const i of indices)for(const capture of passes)await frameMeasure(frameScenarios[i],await frameScenario(i),capture,i>=6);
+    if(frameOut)writeFileSync(join(frameOut,path.split('/').at(-1)+'-results.json'),JSON.stringify(frameResults.splice(0),null,2));
   }
 }
 if(process.argv[1]&&new URL(import.meta.url).pathname.toLowerCase().endsWith(process.argv[1].replaceAll('\\','/').toLowerCase().split('/').at(-1))) {
   if(!frameArgs.cdp){
     for(const page of framePages){console.log(page+' - 412x730, DPR 2.625, touch, CPU x4');console.log('| scenario | intervals / script / style+layout / paint / raster / long tasks | blank frames |');console.log('| --- | --- | --- |');for(const name of frameScenarios)console.log('| '+name+' | NOT RUN | NOT MEASURED |');}
-    console.log('NOT RUN: no existing local headless CDP endpoint; write allowlist forbids creating a browser profile. Pass --cdp ws://127.0.0.1:PORT/devtools/browser/ID.');process.exitCode=2;
+    console.log('NOT RUN: pass an existing --cdp ws://127.0.0.1:PORT/devtools/browser/ID. This tool does not launch a browser.');process.exitCode=2;
   }else {
     try{await frameRun();}catch(e){console.error('frame-cost: FAIL '+e.message);process.exitCode=1;}
     finally{if(frameTarget)try{await frameSend('Target.closeTarget',{targetId:frameTarget},null);}catch{}frameServer?.close();frameWS?.close();for(const p of framePending.values())clearTimeout(p.timer);}

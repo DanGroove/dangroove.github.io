@@ -3,7 +3,7 @@ import { C, FIND_COPY, FIND_PLAY, HAMMER } from './data.mjs';
 import { VIEW, lerp } from './trip.mjs';
 import { runeGlyph } from './art.mjs';
 import { hammerStart, hammerStep, hammerPick } from './hammer.mjs';
-import { FD, FIND_BY, attr, ease, press, opened, found, attend, findSheet, closeSheet, findFormat, findSlot } from './findkit.mjs';
+import { FD, FIND_BY, attr, ease, press, opened, found, attend, findSheet, closeSheet, findFormat, findSlot, findStyle } from './findkit.mjs';
 
 export function hammerBestRead(fallback = 0) { try { const value = Number(localStorage.getItem(HAMMER.ui.bestKey)); return Number.isFinite(value) && value >= 0 ? Math.max(fallback, value) : fallback; } catch { return fallback; } }
 export function hammerBestWrite(score, fallback = 0) { const best = Math.max(score, hammerBestRead(fallback)); try { localStorage.setItem(HAMMER.ui.bestKey, String(best)); } catch {} return best; }
@@ -165,7 +165,7 @@ export function findHammer(svg) {
     attr(lift, 'transform', `translate(${tremble} ${-hop})`); attr(spark, 'opacity', !FD.rm && (ringing || t % M.every < M.sparkTime) ? 1 : 0);
     if (FD.sheetOwner !== o) return;
     const q = FD.rm ? 1 : ease((t - o.sheetTs) / FIND_PLAY.kit.sheet.grow), from = FD.sheetFrom;
-    FD.sheet.style.transform = `translate(${lerp(from[0], VIEW.w / 2, q)}px,${lerp(from[1], VIEW.h / 2, q)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, o.fit, q)})`;
+    findStyle(FD.sheet, 'transform', `translate(${lerp(from[0], VIEW.w / 2, q)}px,${lerp(from[1], VIEW.h / 2, q)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, o.fit, q)})`);
     const s = o.game;
     if (s && !s.paused) {
       o.input.move = Number(o.keys.right) - Number(o.keys.left); o.input.throw = o.auto || o.keys.fire || o.held; o.accumulator = Math.min(o.accumulator + FD.dt, HAMMER.step * HAMMER.steps);

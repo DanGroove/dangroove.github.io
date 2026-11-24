@@ -3,7 +3,7 @@ import { C, COPY, FIND_COPY, FIND_PLAY, FIND_TIMING } from './data.mjs';
 import { VIEW, clamp01, lerp } from './trip.mjs';
 import { rubbingSvg } from './art.mjs';
 import { depthBeam } from './depth.mjs';
-import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, closeSheet, findBits, findSvg, findSheet, findSlot, findAngleDelta } from './findkit.mjs';
+import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, closeSheet, findBits, findSvg, findSheet, findSlot, findAngleDelta, findStyle } from './findkit.mjs';
 
 export function findBeacon(svg) {
   const f = FIND_BY.beacon, el = svg.querySelector('#f-beacon'), beam = el.querySelector('.bc-beam'), flame = el.querySelector('.bc-flame'), glow = el.querySelector('.bc-glow');
@@ -119,8 +119,8 @@ export function findRune(svg) {
     const q = FD.rm ? 1 : ease((t - o.ts) / R.grow), closing = o.stage === 'closing', out = closing ? 1 - ease((t - o.closeTs) / R.close) : q;
     const fit = Math.min(1, (VIEW.w - FIND_PLAY.kit.sheet.edge) / R.width, (VIEW.h - FIND_PLAY.kit.sheet.edge * 2) / (R.height + Math.abs(R.controlTop) - R.height / 2));
     const from = FD.sheetFrom;
-    FD.sheet.style.transform = `translate(${lerp(from[0], VIEW.w / 2, out)}px,${lerp(from[1], VIEW.h / 2 - FIND_PLAY.kit.sheet.offset, out)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, fit, out)})`;
-    o.pz.style.transform = `rotateX(${o.tilt[0]}deg) rotateY(${o.tilt[1]}deg)`;
+    findStyle(FD.sheet, 'transform', `translate(${lerp(from[0], VIEW.w / 2, out)}px,${lerp(from[1], VIEW.h / 2 - FIND_PLAY.kit.sheet.offset, out)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, fit, out)})`);
+    findStyle(o.pz, 'transform', `rotateX(${o.tilt[0]}deg) rotateY(${o.tilt[1]}deg)`);
     if (closing) { if (out === 0) queueMicrotask(() => closeSheet(true)); return; }
     if (!o.read && !o.rubs && o.autoTs === null && t - o.ts >= R.auto[0]) o.autoTs = t;
     if (!o.read && o.autoTs !== null) {
@@ -135,9 +135,9 @@ export function findRune(svg) {
       if (!o.controls && (FD.rm || t - o.readTs >= R.fill + (o.letters.length - 1) * R.letter[0] + R.letter[1])) { o.controls = true; queueMicrotask(() => { if (FD.sheetOwner !== o) return; FD.sheet.querySelector('.rub-do').hidden = true; FD.sheet.querySelector('.pz-flip').hidden = false; FD.sheet.querySelector('.pz-x').hidden = false; FD.sheet.querySelector('.pz-flip').focus({ preventScroll: true }); }); }
     }
     const stamp = FD.rm ? 1 : out3((t - o.stampTs - R.stamp[0]) / R.stamp[1]);
-    o.stamp.style.opacity = stamp; o.stamp.style.transform = `rotate(${R.stampAngle}deg) scale(${lerp(R.stamp[2], 1, stamp)})`;
+    findStyle(o.stamp, 'opacity', stamp); findStyle(o.stamp, 'transform', `rotate(${R.stampAngle}deg) scale(${lerp(R.stamp[2], 1, stamp)})`);
     const shakeAge = t - o.stampTs - R.stamp[0] - R.stamp[1], shake = FD.rm || shakeAge < 0 || shakeAge > R.shake[1] ? 0 : R.shake[0] * Math.sin(shakeAge / R.shake[1] * Math.PI * 4) * (1 - shakeAge / R.shake[1]);
-    o.pin.style.transform = `translateX(${shake}px) rotateY(${o.flipped ? FIND_PLAY.kit.deg : 0}deg)`;
+    findStyle(o.pin, 'transform', `translateX(${shake}px) rotateY(${o.flipped ? FIND_PLAY.kit.deg : 0}deg)`);
   };
   return o;
 }

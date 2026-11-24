@@ -2,7 +2,7 @@
 import { STOPS, MAP, FIND_COPY, FIND_PLAY, FIND_TIMING, RAVEN_RIG } from './data.mjs';
 import { JORM, jormPoint, ravenPose, ravenPoseTransforms } from './art.mjs';
 import { clamp01, lerp, VIEW } from './trip.mjs';
-import { FD, FIND_BY, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, closeSheet, attend, findBits, findFormat, findRange, findSheet, findSlot, findReady } from './findkit.mjs';
+import { FD, FIND_BY, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, closeSheet, attend, findBits, findFormat, findRange, findSheet, findSlot, findReady, findStyle } from './findkit.mjs';
 
 export function findRavens(svg) {
   const R = FIND_PLAY.raven, G = RAVEN_RIG, f = FIND_BY.ravens, el = svg.querySelector('#f-ravens'), gifts = el.querySelector('.rv-gifts');
@@ -161,12 +161,12 @@ export function findRavens(svg) {
       else {
         const e = t - o.ts, grow = FD.rm ? 1 : out3(e / FIND_PLAY.kit.sheet.grow), from = FD.sheetFrom;
         const fit = Math.min(1, (Math.min(VIEW.w, VIEW.h) - FIND_PLAY.kit.sheet.edge) / R.reel.iris);
-        FD.sheet.style.transform = 'translate(' + lerp(from[0], VIEW.w / 2, grow) + 'px,' + lerp(from[1], VIEW.h / 2 - FIND_PLAY.kit.sheet.offset, grow) + 'px) scale(' + lerp(FIND_PLAY.kit.sheet.from, fit, grow) + ')';
+        findStyle(FD.sheet, 'transform', 'translate(' + lerp(from[0], VIEW.w / 2, grow) + 'px,' + lerp(from[1], VIEW.h / 2 - FIND_PLAY.kit.sheet.offset, grow) + 'px) scale(' + lerp(FIND_PLAY.kit.sheet.from, fit, grow) + ')');
         const q = clamp01((e - (FD.rm ? 0 : FIND_PLAY.kit.sheet.grow)) / FIND_TIMING.reel), digits = Math.min(FIND_TIMING.reel, Math.floor(q * FIND_TIMING.reel));
         if (digits !== o.digits) { o.digits = digits; const tc = o.tc; queueMicrotask(() => { if (tc.isConnected) tc.textContent = findFormat(R.reel.tc, { n: digits, end: FIND_COPY.ravenTime[1] }); }); }
-        if (!FD.rm) o.sh.forEach((s, i) => { const M = R.reel.motion; s.style.transform = 'translate(' + Math.sin(e * (M[0] + i * M[1]) + i * M[2]) * M[3] + 'px,' + Math.cos(e * (M[4] + i * M[5]) + i) * M[6] + 'px) rotate(' + e * M[7] * (i - 1) + 'deg)'; });
+        if (!FD.rm) o.sh.forEach((s, i) => { const M = R.reel.motion; findStyle(s, 'transform', 'translate(' + Math.sin(e * (M[0] + i * M[1]) + i * M[2]) * M[3] + 'px,' + Math.cos(e * (M[4] + i * M[5]) + i) * M[6] + 'px) rotate(' + e * M[7] * (i - 1) + 'deg)'); });
         const end = FD.rm ? q === 1 ? 1 : 0 : clamp01((e - FIND_PLAY.kit.sheet.grow - FIND_TIMING.reel) / FIND_TIMING.iris), iris = Math.max(Number.EPSILON, 1 - ease(end));
-        o.iris.style.transform = 'scale(' + iris + ')'; o.irisIn.style.transform = 'scale(' + 1 / iris + ')';
+        findStyle(o.iris, 'transform', 'scale(' + iris + ')'); findStyle(o.irisIn, 'transform', 'scale(' + 1 / iris + ')');
         if (end === 1) queueMicrotask(() => closeSheet(true));
       }
     }

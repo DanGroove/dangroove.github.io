@@ -67,27 +67,30 @@ function stepsButtons() {
   // Joined page: the bar waits for the map, so one Start shows at a time; focus follows (the bar at the map, the hero's Start above).
   const hero = SC.joinedTop() && SC.P < stepsMap - 1e-6, wasHidden = SC.go.hidden;
   if (hero && !wasHidden && SC.go.contains(document.activeElement)) SC.heroFocus = true;
-  SC.go.hidden = !SC.ready || SC.mode !== 'steps' || hero || blasting;
+  const hidden = !SC.ready || SC.mode !== 'steps' || hero || blasting;
+  if (SC.go.hidden !== hidden) SC.go.hidden = hidden;
   const lost = !document.activeElement || document.activeElement === document.body || !!document.activeElement.closest?.('[data-hero]');
   if (SC.heroFocus && top && !JOURNEY.moving) { SC.heroFocus = false; const start = document.querySelector?.('.jm-start'); if (start && lost) start.focus({ preventScroll: true }); }
   if (SC.joinedTop() && wasHidden && !SC.go.hidden && !hero && !blasting && lost && !JOURNEY.moving && Math.abs(SC.P - stepsMap) < 1e-6) SC.go.querySelector('.go-next').focus({ preventScroll: true });
   if (!hero) SC.heroFocus = false;
-  SC.go.classList.toggle('go-end', end);
+  if (SC.go.classList.contains('go-end') !== end) SC.go.classList.toggle('go-end', end);
   const back = SC.go.querySelector('.go-back'), next = SC.go.querySelector('.go-next'), home = SC.go.querySelector('.go-top');
   const focus = document.activeElement;
-  back.hidden = top && !JOURNEY.visiting; next.hidden = end && exploreBusy(); home.hidden = !end;
+  for (const [el, hidden] of [[back, top && !JOURNEY.visiting], [next, end && exploreBusy()], [home, !end]]) if (el.hidden !== hidden) el.hidden = hidden;
   if (end && !SC.endShown) { SC.endShown = true; SC.go.classList.add('go-reveal'); }
   if (!end) SC.endShown = false;
   if (!SC.go.hidden && ((next.hidden && focus === next) || (home.hidden && focus === home))) back.focus({ preventScroll: true });
   if (!SC.go.hidden && back.hidden && focus === back) next.focus({ preventScroll: true });
   const returning = exploreActive() ? COPY.explore.back : JOURNEY.visiting ? COPY.steps.returnTo : '';
-  back.setAttribute('aria-label', returning || stepsFormat(COPY.steps.back, { name: stepsName(stepsBackBeat()) }));
-  back.querySelector('span').textContent = returning;
-  if (end) SC.go.querySelector('.go-t').textContent = COPY.explore.button;
+  const label = returning || stepsFormat(COPY.steps.back, { name: stepsName(stepsBackBeat()) });
+  if (back.getAttribute('aria-label') !== label) back.setAttribute('aria-label', label);
+  const words = back.querySelector('span'); if (words.textContent !== returning) words.textContent = returning;
+  if (end) { const words = SC.go.querySelector('.go-t'); if (words.textContent !== COPY.explore.button) words.textContent = COPY.explore.button; }
   if (!SC.go.hidden && SC.returnFocus) { SC.returnFocus = false; next.focus({ preventScroll: true }); }
   if (!SC.go.hidden && !SC.shown) { SC.shown = true; SC.go.classList.add('go-reveal'); }
-  SC.root.classList.toggle('jm-moving', JOURNEY.moving);
-  SC.go.querySelector('.go-fill').style.transform = `scaleX(${SC.move ? SC.fill : 0})`;
+  if (SC.root.classList.contains('jm-moving') !== JOURNEY.moving) SC.root.classList.toggle('jm-moving', JOURNEY.moving);
+  const fill = SC.go.querySelector('.go-fill'), transform = `scaleX(${SC.move ? SC.fill : 0})`;
+  if (fill.style.transform !== transform) fill.style.transform = transform;
 }
 // The Next button's words for the beat at P. A jump writes them as soon as it lands under its cover, so the button never names
 // the old next stop over the new view.
