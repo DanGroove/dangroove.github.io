@@ -233,21 +233,12 @@ export function loaderScene(sample, W, H, viewport = { width: W, height: H, left
   const weight = [centre[0] + mark.weight[0], centre[1] + mark.weight[1]];
   const angle = p => Math.atan2(p.y - weight[1], p.x - weight[0]);
   const order = list => list.map((p, i) => i).sort((a, b) => angle(list[a]) - angle(list[b]) || a - b);
-  const markOrder = order(points), homeOrder = order(homes), paired = Math.min(points.length, homes.length), used = new Set();
-  // Select evenly spaced angular ranks from the larger set; the smaller set is used in full.
+  const markOrder = order(points), homeOrder = order(homes), paired = points.length, used = new Set();
+  // L8: every mark star gets a home. Fewer homes share consecutive angular ranks;
+  // more homes keep L7's evenly spaced selection, with the others fading in at home.
   for (let rank = 0; rank < paired; rank++) {
     const i = markOrder[Math.floor(rank * points.length / paired)], home = homeOrder[Math.floor(rank * homes.length / paired)];
     points[i].home = home; used.add(home);
-  }
-  // Surplus phone stars continue along their own rays to just outside the first screen.
-  // They never converge on an already assigned home; their alpha reaches zero at landing.
-  const bounds = [-viewport.left, -viewport.top, viewport.width - viewport.left, viewport.height - viewport.top];
-  for (const p of points) if (p.home === null) {
-    const dx = p.x - weight[0], dy = p.y - weight[1], gap = STARS.mark.size + 2;
-    const tx = dx > 0 ? (bounds[2] + gap - weight[0]) / dx : dx < 0 ? (bounds[0] - gap - weight[0]) / dx : Infinity;
-    const ty = dy > 0 ? (bounds[3] + gap - weight[1]) / dy : dy < 0 ? (bounds[1] - gap - weight[1]) / dy : Infinity;
-    const reach = Math.max(1.10, Math.min(tx, ty));
-    p.exit = [weight[0] + dx * reach, weight[1] + dy * reach];
   }
   return { W, H, centre, weight, mark, points, homes, unpairedHomes: homeOrder.filter(i => !used.has(i)) };
 }
@@ -255,6 +246,7 @@ export function loaderScene(sample, W, H, viewport = { width: W, height: H, left
 // The swell supplies the wind-up; the explosion has no separate kick or change of direction.
 export function loaderDots(scene, state) {
   const { points, homes, weight } = scene, p = state.burst || 0, blend = 1 - (1 - p) ** 3, dots = [];
+  const landed = p === 1 ? new Set() : null;
   for (let i = 0; i < points.length; i++) {
     const m = points[i], home = homes[m.home];
     if (state.reduced) { dots.push({ ...m, alpha: 1 }); continue; }
@@ -272,11 +264,14 @@ export function loaderDots(scene, state) {
       continue;
     }
     const x = weight[0] + (m.x - weight[0]) * 1.10, y = weight[1] + (m.y - weight[1]) * 1.10;
-    const target = home || { x: m.exit[0], y: m.exit[1], size: m.size, colour: m.colour };
+    // Shared stars arrive together. Draw their home once from landing, as WebGL does.
+    if (landed?.has(m.home)) continue;
+    landed?.add(m.home);
+    const target = home;
     dots.push({ x: p === 1 ? target.x : x + (target.x - x) * blend,
       y: p === 1 ? target.y : y + (target.y - y) * blend,
       size: p === 1 ? target.size : m.size + (target.size - m.size) * blend, colour: p === 1 ? target.colour : mixRGB(m.colour, target.colour, blend),
-      flag: p === 1 ? 0 : m.flag, home: m.home, alpha: home ? 1 : 1 - blend });
+      flag: p === 1 ? 0 : m.flag, home: m.home, alpha: 1 });
   }
   if (state.burstTime !== null) for (const i of scene.unpairedHomes) dots.push({ ...homes[i], home: i, flag: 0, alpha: blend });
   return dots;
