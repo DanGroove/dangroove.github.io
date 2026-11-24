@@ -342,6 +342,7 @@ if (!process.argv.includes('--control')) for (const scene of SHOW) for (const a 
 // Exercise the real player with drawing and DOM stand-ins. This is a logic check, never a browser review.
 const node = rect => ({
   events: {}, attributes: {}, textContent: '', classList: { remove() {} },
+  querySelector: () => node(), querySelectorAll: () => [],
   rect, getBoundingClientRect() { return this.rect; },
   addEventListener(name, f) { this.events[name] = f; },
   setAttribute(name, value) { this.attributes[name] = value; },
@@ -358,7 +359,7 @@ const renderer = { setAtlas() {}, draw(pieces, view) { draws.push({ pieces, view
 const observer = class { observe() {} };
 const player = fs.readFileSync(new URL('../play.mjs', import.meta.url), 'utf8').replace(/^import\s+.*?;\s*$/gm, '');
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-await new AsyncFunction('env', `const { sceneEnvelope, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, loaderAt, createLoaderView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+await new AsyncFunction('env', `const { sceneEnvelope, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, liftPieces, settleView, createEntranceView, loaderAt, createLoaderView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
   sceneEnvelope, location: { search: '?t=0' }, document: playerDocument, window: win, matchMedia: () => media,
   createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => atlas, fontsReady: async () => {},
   SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts: () => ({ measure() {}, draw() {}, fit: view => view, layout: [] }), devicePixelRatio: 3,

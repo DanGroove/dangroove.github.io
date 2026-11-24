@@ -7,7 +7,7 @@ import { makeAtlas, fontsReady } from './art.mjs';
 import { SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, buildingLastState } from './stage.mjs';
 import { createCallouts } from './labels.mjs';
 import { createPageLayout } from './page-layout.mjs';
-import { ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, loaderAt, createLoaderView } from './entrance.mjs';
+import { ENTRANCE, entranceAt, screenPlane, floorReach, liftPieces, settleView, createEntranceView, loaderAt, createLoaderView } from './entrance.mjs';
 import { createNameReact } from './name-react.mjs';
 import { createStars, starReach } from './stars.mjs';
 import { createCraftWipe } from './craft-wipe.mjs';
@@ -64,11 +64,13 @@ function draw() {
   const { h, b } = layout.metrics;
   if (!b.width || !b.height || !h.width || !h.height) return;
   const W = h.width, H = h.height, dpr = Math.min(2, devicePixelRatio || 1, Math.sqrt(5.2e6 / (W * H)));
-  const view = layout.view(need, cam, dpr), pieces = frameNow();
-  layout.cover(view, need);
-  lastView = view;
+  const base = layout.view(need, cam, dpr);
+  layout.cover(base, need);
   const floor = { ...POOL, radius: num('pool', 4.8) }, state = (intro || (loading && !reduced.matches)) && entranceAt(intro?.time ?? 0, { ledeLines: entrance.lines });
-  // F3 (round 8): the floor has no hover. The screen and its shadow share one rising clip plane.
+  // Coverage stays at the home fit. Only the world turns; stars remain in screen space.
+  const view = state ? settleView(base, state.camera, num('yaw', 0), num('pitch', 0)) : base;
+  const pieces = state ? liftPieces(frameNow(), state.screen) : frameNow();
+  lastView = view;
   if (state) floor.reveal = floorReach(state.floor, floor.radius);
   const centre = [b.left - h.left + b.width / 2, b.top - h.top + b.height / 2];
   const field = stars?.frame(state ? starReach(state.stars, centre, W, H) : null, centre);
@@ -80,7 +82,7 @@ function draw() {
   crafts.forEach((c, i) => i === scene.craft ? c.setAttribute('aria-current', 'true') : c.removeAttribute('aria-current'));
   craftWipe.follow(scene.craft, { cut: !!intro });
   pause.textContent = stopped || reduced.matches ? 'Play' : 'Pause';
-  const at = [BLOCK.x0, BLOCK.x1].flatMap(x => [BLOCK.z0, BLOCK.z1].flatMap(z => [0, BLOCK.up].map(y => [h.left + view.cx + view.S * dot(cam.r, [x, y, z]), h.top + view.cy - view.S * dot(cam.u, [x, y, z])])));
+  const at = [BLOCK.x0, BLOCK.x1].flatMap(x => [BLOCK.z0, BLOCK.z1].flatMap(z => [0, BLOCK.up].map(y => [h.left + view.cx + view.S * dot(view.cam.r, [x, y, z]), h.top + view.cy - view.S * dot(view.cam.u, [x, y, z])])));
   const lay = [Math.min(...at.map(p => p[0])), Math.min(...at.map(p => p[1])), Math.max(...at.map(p => p[0])), Math.max(...at.map(p => p[1]))].map(Math.round);
   window.__need = { ...need, S: view.S, box: [Math.round(b.width), Math.round(b.height)], lay };
   stars?.after();
@@ -96,7 +98,7 @@ function tick(now) {
     const state = loaderState(now / 1000);
     loader.apply(state);
     if (!reduced.matches && state.entranceTime !== null) {
-      if (!intro) { first = true; startEntrance(state.entranceTime); }
+      if (!intro) { first = true; startEntrance(state.entranceTime, false); }
       else intro.time = state.entranceTime;
       t = Math.max(0, intro.time - ENTRANCE.screen[1]);
     }
@@ -122,9 +124,10 @@ function tick(now) {
   if (intro && intro.time >= ENTRANCE.end) endEntrance();
   draw(); request = requestAnimationFrame(tick);
 }
-function startEntrance(time) {
+function startEntrance(time, remeasure = true) {
   intro = { time };
-  entrance.clear(); entrance.measure(layout.metrics?.nameLines); nameOn();
+  if (remeasure || !entrance.lines) { entrance.clear(); entrance.measure(layout.metrics?.nameLines); }
+  nameOn();
 }
 // Ends the entrance at once, everything shown; the caller then does what it was asked to.
 function endEntrance() {
@@ -154,7 +157,7 @@ function seek(time) {
   if (ready) draw();
 }
 if (renderer.buildings) renderer.buildings.lastState = id => renderer.buildings.readPlan(buildingLastState(id));
-window.__hero = { buildings: renderer.buildings, seek, measure, entrance: hold, get loading() { return loading; }, get entering() { return intro ? intro.time : null; }, get t() { return t; }, get callouts() { return callouts.layout; }, get view() { return lastView; }, get pieces() { return frameNow(); }, get layout() { return layout.metrics; }, crafts: p => craftWipe.hold(p), get craftWipe() { return craftWipe.state; }, get name() { return { live: nameReact.live, open: nameReact.open, lift: nameReact.letters.map(l => l.y) }; }, get stars() { return stars && { holding: stars.holding, radius: stars.radius, fraction: stars.fraction, awake: stars.field?.awake ?? false, count: stars.field?.stars.length ?? 0, offsets: stars.field && Array.from(stars.field.offsets), flags: stars.field && Array.from(stars.field.flags), weights: stars.field && Array.from(stars.field.weights), alpha: stars.field && Array.from(stars.field.alpha), mixes: stars.field && Array.from(stars.field.mixes), mark: stars.mark }; }, LOOP, SHOW };
+window.__hero = { buildings: renderer.buildings, seek, measure, entrance: hold, get loading() { return loading; }, get entering() { return intro ? intro.time : null; }, get t() { return t; }, get callouts() { return callouts.layout; }, get view() { return lastView; }, get pieces() { const pieces = frameNow(); return intro || (loading && !reduced.matches) ? liftPieces(pieces, entranceAt(intro?.time ?? 0).screen) : pieces; }, get layout() { return layout.metrics; }, crafts: p => craftWipe.hold(p), get craftWipe() { return craftWipe.state; }, get name() { return { live: nameReact.live, open: nameReact.open, lift: nameReact.letters.map(l => l.y) }; }, get stars() { return stars && { holding: stars.holding, radius: stars.radius, fraction: stars.fraction, awake: stars.field?.awake ?? false, count: stars.field?.stars.length ?? 0, offsets: stars.field && Array.from(stars.field.offsets), flags: stars.field && Array.from(stars.field.flags), weights: stars.field && Array.from(stars.field.weights), alpha: stars.field && Array.from(stars.field.alpha), mixes: stars.field && Array.from(stars.field.mixes), mark: stars.mark }; }, LOOP, SHOW };
 
 function choose(craft) {
   endEntrance(); first = false;

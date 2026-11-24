@@ -68,6 +68,43 @@
   -webkit-text-fill-color: #f0484f;
   clip-path: circle(0px at 0px 0px);
 }
+/* L12: flow text owns layout/accessibility; generated letters and words own the entrance paint.
+   Masks and pen boxes are measured once. No inline-block flow letters can disturb kerning. */
+.hero-lede {
+  position: relative;
+}
+.name-line.has-entrance,
+.hero-lede.has-entrance {
+  -webkit-text-fill-color: transparent;
+}
+.entrance-name {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-text-fill-color: currentcolor;
+}
+.entrance-letter,
+.entrance-word {
+  position: absolute;
+  white-space: pre;
+}
+.entrance-letter::before,
+.entrance-word::before {
+  content: attr(data-ch);
+}
+.entrance-lede-line {
+  position: absolute;
+  left: -4px;
+  width: calc(100% + 60px);
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  -webkit-text-fill-color: currentcolor;
+}
+.entrance-craft-mask {
+  display: block;
+}
 @media (prefers-reduced-motion: reduce) {
   .hero-name .name-line.is-live {
     -webkit-text-fill-color: currentcolor;

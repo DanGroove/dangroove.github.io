@@ -3116,3 +3116,142 @@ Completed commands (full logs under r19):
 `node --check` on all changed/new runtime and tools modules; `node tools/checks.mjs` **all clean** (**6,582 frames / 477,123 pieces / max 188 / 6 pages / 99.491 s**); `node tools/round17-checks.mjs --controls`; `node tools/entrance-checks.mjs --controls`; `node tools/round8-checks.mjs --controls`; `node tools/round9-checks.mjs --controls`; `node tools/l11-checks.mjs --controls`; pure preservation script; local Edge trace runner and trace-table reducer. All final completed runners exit zero.
 
 No screenshots, eye judgement, pixel gate, reviewer agents, installed skills/RTK outside the repository, dependencies, network beyond localhost, site build, deployment, protected-path mutation or mutating git command was used. The explicit repository-only/read-and-measure rules exclude external skill reads and visual critique; those gates remain **UNRUN**, not fabricated passes. Every Edge instance started for this work was closed; process verification is retained in `l11-edge-closed.txt`. Performance variation and unverified raster antialiasing are the remaining limits.
+
+### L12 letters and a camera settle
+
+Built on **92369320af2dd46e947e27a8210c5959fd3766a8**, with a clean incoming tree. Before writing, read AGENTS, CORRECTIONS-19, CORRECTIONS-17 G/R2/R3 and round 6's entrance/hold/exit/check record in that order, then the project READMEs, retained round 18/19 evidence and MOCK-A.diff. The mock is the approved motion reference, not a patch: no MOCK_SPEED, Replay or Slow motion controls were carried over. Pre-edit acceptance, original sources/hashes and the unchanged preview are in `.scratch/review-out/r19/l12-acceptance.md`, `l12-baseline.json` and `l12-before-preview.html`. L3 remains withdrawn; L7 continues to replace L6's curves and speed rule.
+
+#### Timetable as built
+
+All times below are seconds from the loader's actual last landing, unchanged from L5. Rises use **quint-out** `1-(1-p)^5`, letter weights **cubic-out** `1-(1-p)^3`, screen/camera **quart-out** `1-(1-p)^4`. There is no overshoot or new opacity fade.
+
+| Part | Span and curve |
+| --- | --- |
+| Header D / G | **0–.70 / .08–.78**, quint-out; both G paths share its clock. Each starts **830 SVG units** below its fixed mark-box clip. |
+| Journey / Contact | **.25–.85 / .33–.93**, quint-out; each top starts **6 px below its bar bottom**. Fixed bar clip, 40 px horizontal slack. |
+| Danial | Letter j: **.30 + .055j to 1.15 + .055j**, j=0…5; last lands **1.425**. Quint-out rise, independent cubic-out **300→800** weight. |
+| Endrawes | Letter j: **.50 + .055j to 1.35 + .055j**, j=0…7; last lands **1.735**. Same curves. |
+| Lede | **23 words** in flow reading order. Word i starts **1.15 + .028i + (.12 if in the second part)**, lasts **.70**, quint-out. Greeting: starts 1.150/1.178/1.206; second part starts **1.354**, final word **1.886–2.586**. |
+| Floor | **1.90–2.90**, unchanged EASE.wipe and hard whole-dot/pool circle. No star ring. |
+| Screen | **2.20–3.50**, quart-out, from **4.5 world units below** its authored first frame. Loop zero is **3.50**. |
+| Camera | **1.90–3.90**, one quart-out clock: extra **12° yaw / 5° pitch / .88 home scale** to the exact home view. |
+| Five craft hairlines | **3.10–3.50, 3.20–3.60, 3.30–3.70, 3.40–3.80, 3.50–3.90**, EASE.wipe. |
+| Four craft buttons | **3.172–3.772, 3.272–3.872, 3.372–3.972, 3.472–4.072**, quint-out; .60 s from 18% into each row's .40 s hairline. Each starts one measured row height down. |
+| Scroll / Pause | **3.95–4.50 / 4.03–4.58**, quint-out, top starts 6 px below the footer bottom. Fixed footer clip with 40 px horizontal slack. |
+| End | **4.60**; inline entrance effects/overlays/wrappers cleared, name reaction enabled, loop clock **1.10**. |
+
+The exact two-group overlaps are **.30–.93** mark/nav + name; **1.15–1.735** name + lede; **1.90–2.586** lede + world; **3.10–3.90** world + crafts; **3.95–4.072** crafts + foot. Outside them at most one group moves. Floor/screen/camera are one world group; the loop after 3.50 is not an entrance group. **362** entrance samples (every 1/60 s plus exact boundaries) and **567** samples including the preceding explosion both find a maximum of **2**, with no exceptions.
+
+#### Measurement, masks and handovers
+
+The flow name stays two original text nodes at weight 800. A character Range measures each final pen box with its kerning intact. An aria-hidden absolute overlay draws generated-content letters at those positions, with the measured box height as its own line height. Generated content contributes no text nodes or flow boxes to `page-layout`'s ink walk. Each line has one fixed mask ending **3 px below its measured ink bottom**; its letters start **ink height +16 px** down. Only the overlay letters change weight. At that line's last landing the overlay is removed and the flow paint restored in the **same apply call**. Landed letters inherit 800; no weight is left on a flow line. The existing name reaction stays off through entrance/holds/reduced motion and starts after 4.60 as before.
+
+The lede's unchanged text is walked with word Ranges, grouped by measured line/top and sorted left to right. Each generated-content word uses its exact left/top/width/height and **its own Range box height as line height**, preserving its baseline. Line masks run **2 px above to 2 px below** their measured boxes; words start **line height +6 px** down. At **2.586**, all lede masks/words are removed and flow paint restored together. Flow text remains the accessible text throughout.
+
+All geometry and overlay construction happens at `measure` (boot, resize/fonts, or a new review hold), never in apply. The landing reuses the overlays already prepared behind the opaque loader instead of repeating measurement in the handover frame. Per-frame entrance paint writes transforms, clip paths and moving-letter weights; structural/class changes are limited to the prescribed handovers/cleanup. Resize and backwards review holds first restore flow and rebuild once. No DOM layout read occurs in the modeled 277 apply frames. Every transformed path/link/button and clipped container is cleared when the entrance ends or is cancelled. Holding exactly **4.60** also clears every entrance mask/overlay/wrapper in that same frame; the Node and external browser gates check that endpoint before releasing the hold.
+
+**Craft detail beyond the scratch mock:** a neutral block wrapper gives each button its own fixed text mask exactly **2 px clear of both row hairlines**. The li's separate clip draws its hairlines. This prevents moving glyphs from leaking through a hairline strip, including the final row's bottom strip. The wrapper restores the original button directly to its li at cleanup; its accessible text and normal flow dimensions are retained. This implements L12's 2 px rule rather than adding a new look.
+
+`liftPieces()` moves every piece and explicit shadow position by `-4.5*(1-screenProgress)` and translates each piece/carry clip plane by the same amount. The shared **[0,1,0,0]** floor plane clips colour, outline and the light's depth/shadow caster passes. Before 2.20 all first-frame corners are below it; no caster is retained. At 3.50 the lift returns the **original array itself**, exactly the retained round-6 `frameAt(0,{first:true})` Photoshop first pass. The loop then starts without skipping time. Renderer/shader code remains byte-identical.
+
+`settleView()` pivots about **SCREEN's centre [0.2,2.4,-1.8]**, keeping that point's home screen coordinates fixed while yaw, pitch and scale settle. At 3.90 it returns the **original home view object**, with exact S/cx/cy/camera vectors. `layout.cover` always receives the home view, so the stage target/fit never follows the turning camera. Stars retain screen-space coordinates. `__hero.entrance(t)` retains exact-time holds and its pieces getter now returns the same lifted pieces that were drawn; view/diagnostic projection follows the current camera. Reduced motion, `?t=`, click/seek cancellation and the loader/pointer contract are retained.
+
+#### Checks and negative controls
+
+`tools/l12-checks.mjs` adds **241** curve/clock probes, **2,766** world/plane/pivot checks (240 Hz, desktop/phone, default and changed home camera), and **277** real DOM-view apply samples on deterministic ranges. The range model deliberately contains kerning; it checks original flow text, pen boxes, generated content, exact mask/drop numbers, zero per-frame layout reads, allowed style writes, flow handovers, wrapper restoration and cleanup/rebuild. It also checks the actual player's home-coverage/lift/camera wiring and all three renderer reveal-pass uniform sites. The retained `entrance-checks` adds the complete L12 timetable and still runs all loader/field/handover/player/label checks.
+
+New controls are tested in memory, never by editing source on disk:
+
+| Control | Observed failure at its gate |
+| --- | --- |
+| Mock camera to 4.10 | **L12 groups:** world, crafts, foot at **3.950000 s**. |
+| Inline-block kerning countermodel | **L12 overlay:** measured width **52 != 50.65 px**, beyond the unchanged **.5 px** limit. This is Node model evidence; the real inline-block browser variant below remains unrun here. |
+| Lift without floor clip | **L12 floor clip:** screen visible before 2.20 at **0**. |
+
+All **26 retained entrance controls** also fail at their intended gates: timetable→E1 timetable; labels-cut→E4 labels; click→E1 click; old-screen→L12 groups; fast-gather→L4 timing; wrong-mark→L4 consistency; star-ring→L4 entrance; entrance-with-burst / old-burst-entrance→L5 groups; smoothstep-burst / v35-burst→L7 explosion curve; quartic-flight→L7 flight curve; no-shrink→L7 scale; index-homes→L7 angle order; early-entrance→L5 timing; edge-leftovers→L8 landing; single-duration→L10 duration; dots-without-streaks→L9 streak; simultaneous-field-fade→L9 wave; no-depth-growth / no-flare / no-charge→L9 size; no-painted-streaks→L9 painter; unresolved-landing→L5 scene; l9-depth-only→L10 roundness; handover-pop→L10 pop. The **29** observed failures are in `l12-entrance-controls-final.txt`. All **43 round 17** and **4 round 8** controls likewise fail at their existing gates in their standalone logs. The main suite audits its other earlier controls too.
+
+External-only `checkL12Browser(browser, previewPath, {controls:true})` in `l12-checks.mjs` checks **1440×900 and 390×844**: every landing letter/word box against the page's original one-character/word flow Ranges within **.5 px**, immediate overlay removal, and all final text-column boxes against the same page's `?t=0` state, with no entrance overlay/inline clip/transform/weight left. Its negative variant actually splits the flow into inline blocks and requires a >.5 px discrepancy. It does not capture screenshots. **This browser geometry/control gate is UNRUN here**, as is rendered/pixel/visual review: the user only authorized local browser use for performance tracing, and explicitly reserved review elsewhere. Node geometry and shader wiring do not establish pixel identity or a visual approval. No reviewer agents or pixel gate were started.
+
+#### Every earlier changed expectation
+
+Only `entrance-checks.mjs`, `round8-checks.mjs` and the main `checks.mjs` change earlier checks. Round 17 and all fixtures are byte-identical. Values below are relative entrance seconds unless stated otherwise.
+
+| Earlier check / expectation | Old → new |
+| --- | --- |
+| E1 header mark | scalar wipe **0–.45 → D 0–.70 / G .08–.78**, quint-out array. |
+| E1 nav | boolean cuts **.35/.45 → .25–.85 / .33–.93**, quint-out. |
+| E1 name | line **.40–1.00 / .60–1.20 → 6/8 individual .85 s letters from .30/.50, .055 apart**, last **1.425/1.735**. Weights **300/800 → 300/800**, curve EASE.enter→cubic-out on each letter's clock. |
+| E1 lede | **2/3/4/5/7 line** cases, **1.05–2.00**, step **.15** capped by `staggerSpans` → **23 words**, **1.15–2.586**, step **.028**, extra **.12** on second part, **.70** each. Wrapping is measured independently of the word clock. |
+| E1 five craft lines | first **3.00–3.20**, last **3.40–3.60 → 3.10–3.50 / 3.50–3.90**; line duration **.20→.40**, step **.10→.10**. Row text cuts→new .60 s rises **3.172…4.072**. |
+| E1 floor / hover | **1.80–2.80 / 2.80 → 1.90–2.90 / 2.90**. Hover remains a retained helper expectation; there is no floor-pointer interaction. |
+| E1 screen | **2.40–3.20 → 2.20–3.50**, EASE.wipe→quart-out; rising y cap **.58→4.22** replaced by fixed **y≥0** with **4.5** lift. Plane probes **0/2.4/2.8/3.2 → 0/2.199/2.2/2.8/3.499/3.5**, plus 240 Hz world checks. |
+| Camera | none→**1.90–3.90**, **12°/5°/.88→0°/0°/1**, quart-out. Mock's **4.10** is a failing control, never the built endpoint. |
+| E1 foot / end | cuts **3.60/3.70 → rises 3.95–4.50 / 4.03–4.58**; end **3.80→4.60**. |
+| E1 loop boundary probes | **0/2.4/3.1999/3.2 → 0/2.2/3.4999/3.5**, all still **0**; loop at entrance end **.60→1.10**. |
+| E1 endpoint sampling epsilon | **1e-6→1e-3 s** before each endpoint: quint-out's last microsecond rounds to exactly 1 in double precision. Start-after epsilon **1e-6→1e-6**, bounds/curves unchanged. |
+| E1 floor sample range/count | n=**0…76→0…92** at .05 s; **48,125→58,125** dot positions, same five wholly-on/off probes per position and radius **4.8→4.8**. |
+| E1 player after 2.75 s | next advance **.55→.85** to sample loop **.10→.10** after the screen; next advance **.50→1.00** to entrance end. Loop at that end **.60→1.10**, one second later **1.60→2.10**. Renderer plane clears at **3.20→3.50**. |
+| E2 held loop probe | entrance hold **3.40→3.70**, expected loop **.20→.20**; finite/null/reduced/click contracts unchanged. |
+| N1 round 8 activation probe | **3.75→4.55**, still inactive; unchanged following **.10** advance then active (observes **3.85→4.65**). |
+| Group sampler | **8→6** groups: mark/nav combined, floor/screen/camera one world group. Entrance **239→362**, explosion+entrance **433→567** samples; maxima **2→2**, exceptions **0→0**. |
+| Existing faults | coincident Endrawes starts **.60→.40 → .50→.30**; old-screen mutation's healthy span **2.4–3.2→2.2–3.5**, faulty **.5–1.1→.5–1.1**, gate **L2 groups→L12 groups**. All other fault values unchanged. |
+| Player stand-ins / diagnostics | inject new lift/camera exports; main review-only node gains empty nested selectors. **No numerical assertion changes.** The DOM-view behavior now has its dedicated Node harness rather than depending on that minimal review stand-in. |
+
+The preserved loader tests retain **36,000** timing samples, **4,033** mark/home comparisons, **5** inline worker/fallback/reduced/review modes, **17** player runs and **60** label-exit samples, with their original numbers. No scene action, loop length, screen/device size, original picture or colour expectation changes.
+
+#### Local frame evidence, including the whole entrance
+
+**The final recording does not meet the 20 ms entrance target on desktop: one 64.50 ms interval overlaps a native GPU raster flush. Phone meets it. The inherited full-load L11 target also remains incomplete on desktop.** This is measured evidence from this PC, not a visual approval, a physical-phone result or a guarantee across cold runs.
+
+Installed **Edge 158.0.4370.33**, headless, launched only with isolated `.scratch/review-out/r19/l12-*/edge-profile` directories. Node's built-in WebSocket talks to localhost CDP. SystemInfo reports hardware WebGL/compositing/rasterization enabled, and both page contexts report **ANGLE / NVIDIA GeForce RTX 4090 / Direct3D11 vs_5_0 ps_5_0**, not a software renderer. Both requested and recorded viewport/backing sizes are **1440×900** and **412×730**, **DPR 1**. Phone mobile metrics and touch emulation are on. No other test workload ran during the traces. HTTP(S) page requests were blocked; preview fonts, assets and modules are inline.
+
+`tools/l12-trace.mjs` records navigation, gathering, worker, explosion, landing and the **entire entrance through cleanup**, then 150 ms more. Trace JSON is streamed, with main/worker/native GPU/raster timeline events and 1 ms main CPU samples; the worker's CPU profile covers its first four seconds, with later worker work attributed from timeline callbacks. `tools/l12-trace-checks.mjs` reduces actual main-rAF callback-start intervals and worker FireAnimationFrame intervals. Nested events and parallel GPU work overlap and are not additive. These are callback intervals, not presented-frame or display-photon timings. The entrance interval includes the landing boundary and ends at the observed cleanup. No screenshots, eye review or pixel reads were used.
+
+Formal baseline `l12-before/` uses the byte-preserved incoming preview. Formal final `l12-after-complete/` contains the final runtime, including exact-held-endpoint cleanup. Raw traces, CPU profiles, frame records, hardware metadata, complete interval attribution JSON and `frame-table.md` are retained in each folder.
+
+| Run / viewport | Whole entrance frame intervals | Max / P95 | Intervals >20 ms | Main load max | Loader worker max |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Before / 1440×900 | **893** | **70.80 / 4.30 ms** | **1** | 194.10 ms | 79.54 ms |
+| Before / 412×730 | **912** | **4.70 / 4.30 ms** | **0** | 14.60 ms | 5.08 ms |
+| Final L12 / 1440×900 | **1,074** | **64.50 / 4.50 ms** | **1** | 77.50 ms | 85.33 ms |
+| Final L12 / 412×730 | **1,104** | **6.30 / 4.30 ms** | **0** | 17.70 ms | 5.87 ms |
+
+Every over-20 interval in that formal pair is listed below. Times are milliseconds after navigation; CPU samples are statistical. The desktop baseline's entrance outlier occurs about **3.006 s after landing**. The final desktop entrance outlier is **3.9725 s after landing**, in the crafts/foot overlap. Phone has no entrance or load outlier. The entire camera, crafts, foot and cleanup are included.
+
+| Run / thread / phase | From–to ms | Gap | What fills it |
+| --- | ---: | ---: | --- |
+| Before / main / load | **37.70–231.80** | **194.10 ms** | Module evaluation 177.65; GetProgramiv/command wait 27.54; getString 15.26. CPU: program←createRenderer 81.76, anonymous 30.34, getContext←createRenderer 28.06, make←program 18.89. Parallel GPU raster end 73.51 / flush 73.40, deferred request 171.32. |
+| Before / worker / load | **354.95–434.49** | **79.54 ms** | Worker animate .16, microtasks .41, verifyFlush .08; .98 sampled program time. Parallel GPU raster end/flush 78.20/78.18, deferred request 78.59. |
+| Before / main / load | **359.60–434.80** | **75.20 ms** | Timer/microtasks 3.75/3.74; MinorGC .21. CPU: fill/draw/measureBuildingPaint/atlasSteps 1.08, street/draw 1.05, program 1.03, site/fill .91. Parallel GPU raster end/flush 73.56/73.53, deferred request 74.11. |
+| Before / main / entrance | **8163.10–8233.90** | **70.80 ms** | tick .17, MinorGC .13, PrePaint .04; sampled program .99 and build←frameAt←draw .02. Parallel GPU raster end/flush **69.25/69.23**, deferred request 69.99. |
+| Final / worker / load | **358.84–444.17** | **85.33 ms** | animate .40, microtasks .52, verifyFlush .08; sampled program .62. Parallel GPU raster end/flush **82.43/82.39**, deferred request 84.20. |
+| Final / main / load | **366.70–444.20** | **77.50 ms** | Timer/microtasks 3.26/3.26, tick .04, Commit .02. CPU: atlasSteps 2.78, program .74, fill←bar←site←measureBuildingPaint .25. Parallel GPU raster end/flush **74.57/74.53**, deferred request 76.37. |
+| Final / main / entrance | **9163.40–9227.90** | **64.50 ms** | rAF .30, tick **.29**, Layerize .05, Commit .03, UpdateLayoutTree .03, PrePaint .02. CPU: program .24, draw←draw←tick .16. Parallel GPU raster end/flush **63.88/63.86**, deferred request 63.99. |
+
+No large style/layout, main paint, garbage collection or JS span fills either final desktop gap. The load gap overlaps native raster flushing during gathering; the entrance gap overlaps **RasterDecoderImpl::DoEndRasterCHROMIUM::Flush 63.86 ms**, with only **.29 ms** in tick. The trace does not expose that command's internal split into driver compilation/upload. It would be inaccurate to call it a JS or letter-weight stall, or to claim the new held-endpoint cleanup caused it (that branch is not executed in this normal-play recording). The loader, artwork and renderer remain unchanged under L12. No further change to them or to glyph raster quality was justified by this unlocalized native cost. No delay, altered clock or unrelated rewrite was introduced to move the gap out of scope. Thus the strict desktop entrance target remains **unfulfilled**; Node all-clean is a separate logic result.
+
+The first L12 trial `l12-after/` had **zero entrance intervals >20** (desktop max/P95 **14.30/4.60**, phone **9.30/4.30 ms**). Its two early desktop load intervals are worker **389.72–456.40 / 66.68 ms** (animate .19, microtasks .34, GPU raster flush 64.38) and main **389.90–456.60 / 66.70 ms** (Timer/microtasks 3.68/3.65; atlasSteps sampled 1.86, draw 1.10; GPU raster flush 64.21). Phone has none >20. This trial preceded the final landed-letter-weight cleanup and held-piece diagnostics. The next retained trial `l12-after-final/` also had zero entrance intervals >20 (desktop **1,095** intervals, max/P95 **14.40/4.30 ms**; phone **1,104**, **9.10/4.30 ms**). Its early load gaps were worker **338.55–405.29 / 66.74 ms** (animate .31, native raster flush 64.34) and main **341.40–405.40 / 64.00 ms** (Timer/microtasks 3.27/3.23, atlas-related samples about 2.70; native raster flush 61.49). Those two better entrance recordings do **not** replace the last result above. Repeatable sub-20 desktop entrance and cold loading remain unestablished. The unchanged post-entrance hold/release is not re-recorded in L12; L11's full recordings and Node streak/physics checks remain the evidence for it.
+
+#### Verification, preservation and limits
+
+Completed successfully (logs under `.scratch/review-out/r19/`):
+
+```text
+node --check <all 9 changed/new .mjs modules>       l12-syntax-final.json
+node tools/checks.mjs                             l12-checks-final.txt: all clean
+node tools/round17-checks.mjs --controls           l12-round17-controls-final.txt
+node tools/entrance-checks.mjs --controls          l12-entrance-controls-final.txt
+node tools/round8-checks.mjs --controls            l12-round8-controls-final.txt
+node tools/l12-checks.mjs --controls               l12-pure-controls-final.txt
+node tools/l12-preserve-checks.mjs                 l12-preservation.json
+node tools/l12-trace.mjs before <saved preview>    l12-before/
+node tools/l12-trace.mjs after-complete            l12-after-complete/
+node tools/l12-trace-checks.mjs before
+node tools/l12-trace-checks.mjs after-complete
+```
+
+The full suite retains **6,582 frames / 477,123 pieces / max 188 / 6 atlas pages / 99.490895 s**, and prints **all clean**. All standalone control runners exit zero only after their faults fail at the named gates. The first full-suite attempt exposed a missing nested-selector method in its minimal `?t=` DOM stand-in; that stand-in was updated and the complete suite rerun to the result above. No product fallback or assertion weakening was used.
+
+Final tracked-hash audit: **200 of 208 files byte-identical**; exactly **8 allowed tracked files changed** (entrance, player, CSS, three check runners, BUILD and README). The **four** new tools all have checks/trace names. All corrections, MOCK-A.diff, fixtures, earlier scene construction/artwork, loader shared module, star simulation/streaks, renderer, page packer, layouts, `public/`, `src/` and CNAME retain their original hashes. In particular the loader bridge function is identical after line-ending normalization, and the entire loader/stars runtime is byte-identical. Scope and new-file checks are executable in `l12-preserve-checks.mjs`.
+
+All Edge instances this run started are closed; a normalized-profile-path process check records **0** remaining in `l12-edge-closed.txt`. No external profile was opened. No outside-repository skill/RTK read, non-localhost network, installation/dependency, site build/deploy, mutating git command, protected-file write, screenshot, eye judgement, pixel gate or reviewer agent was used. The explicit run restrictions stop real-browser range/inline-block-control, raster-pixel, font paint identity and independent visual approval here; those gates remain **UNRUN**, with external review required. There is no unreported timetable departure: the camera ends at **3.90**, and only the fixed craft text wrapper refines the scratch mock to enforce L12's stated mask clearance.

@@ -1,22 +1,25 @@
-// Round 6: the one-time entrance. Pure timetable and renderer values first; the DOM view only writes clip-path and weight.
+// One entrance clock, from the loader's landing. Geometry is measured once; playback only paints.
 // Hard-edged except the stars/name. Entrance times are seconds from the loader's burst landing.
-import { EASE } from '../../../public/journey/hero/engine.mjs';
+import { EASE, makeCamera, dot } from '../../../public/journey/hero/engine.mjs';
 import { SCREEN } from './stage.mjs';
 import { LOADER, loaderAt, loaderLanding, loaderScene, sampleMark } from './loader-stars.mjs';
 export { LOADER, loaderAt };
 
 export const ENTRANCE = {
-  end: 3.8,
-  mark: [0, 0.45],                             // DG mark, wipe left to right
-  nav: [0.35, 0.45],                           // Journey, Contact: cuts
-  name: [[0.4, 1.0], [0.6, 1.2]],             // Danial, Endrawes: wipe up from the baseline, weight 300 to 800
-  lede: { start: 1.05, end: 2.0, step: 0.15 }, // one wipe per line, left to right
-  crafts: { start: 3.0, end: 3.6, step: 0.1, lines: 5 },   // four top hairlines and the last row's bottom one
-  floor: [1.8, 2.8],                           // hard circle of dots and pool, centre outward
+  end: 4.6,
+  mark: [[0, 0.7], [0.08, 0.78]],             // D, then both paths of the G
+  nav: [[0.25, 0.85], [0.33, 0.93]],
+  name: { starts: [0.3, 0.5], step: 0.055, len: 0.85 },
+  lede: { start: 1.15, step: 0.028, len: 0.7, gap: 0.12 },
+  crafts: { start: 3.1, end: 3.9, step: 0.1, lines: 5, rise: 0.6 },
+  floor: [1.9, 2.9],
   starPointer: 0,                             // L5: entrance zero is the burst landing
   stars: null,                               // L4: the loader burst replaces the star entrance ring
-  screen: [2.4, 3.2],                          // clip plane rising from the screen's bottom edge to its top
-  foot: [3.6, 3.7],                            // Scroll for the journey, Pause: cuts
+  screen: [2.2, 3.5],
+  lift: 4.5,
+  camera: [1.9, 3.9],
+  turn: { yaw: 12, pitch: 5, scale: 0.88 },
+  foot: [[3.95, 4.5], [4.03, 4.58]],
 };
 
 const linear = (t, a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)));
@@ -59,29 +62,69 @@ export function staggerSpans({ start, end, step }, count) {
   return Array.from({ length: count }, (_, i) => [start + i * gap, start + i * gap + length]);
 }
 
-export function entranceAt(time, { ledeLines = 3 } = {}) {
+export const quintOut = p => 1 - (1 - p) ** 5;
+export const quartOut = p => 1 - (1 - p) ** 4;
+export const cubicOut = p => 1 - (1 - p) ** 3;
+export const nameSpan = (line, letter) => {
+  const a = ENTRANCE.name.starts[line] + letter * ENTRANCE.name.step;
+  return [a, a + ENTRANCE.name.len];
+};
+export const wordSpan = (index, more) => {
+  const a = ENTRANCE.lede.start + index * ENTRANCE.lede.step + (more ? ENTRANCE.lede.gap : 0);
+  return [a, a + ENTRANCE.lede.len];
+};
+export const craftSpan = index => {
+  const [a, b] = staggerSpans(ENTRANCE.crafts, ENTRANCE.crafts.lines)[index];
+  const start = a + 0.18 * (b - a);
+  return [start, start + ENTRANCE.crafts.rise];
+};
+export function riseAt(time, span) {
+  const p = linear(time, ...span);
+  return { progress: p, reveal: quintOut(p), weight: 300 + 500 * cubicOut(p) };
+}
+
+export function entranceAt(time) {
   const E = ENTRANCE;
   return {
     time,
     done: time >= E.end,
-    mark: wipe(time, ...E.mark),
-    nav: E.nav.map(at => time >= at),
-    name: E.name.map(([a, b]) => ({ reveal: wipe(time, a, b), weight: 300 + 500 * EASE.enter(linear(time, a, b)) })),
-    lede: staggerSpans(E.lede, ledeLines).map(span => wipe(time, ...span)),
+    mark: E.mark.map(span => riseAt(time, span).reveal),
+    nav: E.nav.map(span => riseAt(time, span).reveal),
+    name: [6, 8].map((count, line) => Array.from({ length: count }, (_, i) => riseAt(time, nameSpan(line, i)))),
     crafts: staggerSpans(E.crafts, E.crafts.lines).map(span => wipe(time, ...span)),
     floor: wipe(time, ...E.floor),
     stars: E.stars === null ? 1 : wipe(time, ...E.stars),
-    screen: wipe(time, ...E.screen),
-    foot: E.foot.map(at => time >= at),
+    screen: quartOut(linear(time, ...E.screen)),
+    camera: quartOut(linear(time, ...E.camera)),
+    foot: E.foot.map(span => riseAt(time, span).reveal),
     hover: time >= E.floor[1],
     loop: loopAt(time),
   };
 }
 
-// The screen's clip plane keeps world points at or below a rising height. null once the wipe is complete.
-const SCREEN_LOW = SCREEN.b - 0.02, SCREEN_HIGH = SCREEN.b + SCREEN.h + 0.02;
+// A fixed floor plane clips every colour/outline/shadow pass while the pieces rise through it.
 export function screenPlane(p) {
-  return p >= 1 ? null : [0, -1, 0, SCREEN_LOW + (SCREEN_HIGH - SCREEN_LOW) * p];
+  return p >= 1 ? null : [0, 1, 0, 0];
+}
+const shiftPlane = (plane, dy) => plane ? [plane[0], plane[1], plane[2], plane[3] - plane[1] * dy] : plane;
+export function liftPieces(pieces, progress) {
+  if (progress >= 1) return pieces;
+  const dy = -ENTRANCE.lift * (1 - progress);
+  const shifted = p => [p[0], p[1] + dy, p[2]];
+  return pieces.map(pc => ({ ...pc, p: shifted(pc.p),
+    ...(pc.shadowP ? { shadowP: shifted(pc.shadowP) } : {}),
+    ...(pc.clip ? { clip: shiftPlane(pc.clip, dy) } : {}),
+    ...(pc.carryClip ? { carryClip: shiftPlane(pc.carryClip, dy) } : {}),
+  }));
+}
+export function settleView(view, progress, yaw = 0, pitch = 0) {
+  if (progress >= 1) return view;
+  const k = 1 - progress, turn = ENTRANCE.turn;
+  const cam = makeCamera(yaw + turn.yaw * k, pitch + turn.pitch * k);
+  const centre = [SCREEN.l + SCREEN.w / 2, SCREEN.b + SCREEN.h / 2, SCREEN.z];
+  const x = view.cx + view.S * dot(view.cam.r, centre), y = view.cy - view.S * dot(view.cam.u, centre);
+  const S = view.S * (1 - (1 - turn.scale) * k);
+  return { ...view, S, cx: x - S * dot(cam.r, centre), cy: y + S * dot(cam.u, centre), cam };
 }
 // The floor's hard circle, in world units from the pool's centre. null once it has reached the pool's edge.
 export const floorReach = (p, radius) => p >= 1 ? null : p * radius;
@@ -98,63 +141,131 @@ const rect = (x0, y0, x1, y1) => `M${x0.toFixed(2)} ${y0.toFixed(2)}H${x1.toFixe
 const clipPath = parts => parts.length ? `path('${parts.join('')}')` : HIDDEN;
 
 export function createEntranceView(hero) {
-  const q = s => hero.querySelector(s);
-  const mark = q('[data-mark]'), links = [...hero.querySelectorAll('[data-nav] a')], lede = q('[data-lede]');
-  const rows = [...hero.querySelectorAll('[data-crafts] li')], foot = [q('[data-cue]'), q('[data-pause]')];
-  let lines = [], geo = null;
-  const all = () => [mark, ...links, ...lines, lede, ...rows, ...foot];
+  const doc = hero.ownerDocument, q = s => hero.querySelector(s);
+  const mark = q('[data-mark]'), paths = [...mark.querySelectorAll('path')];
+  const nav = q('[data-nav]'), links = [...nav.querySelectorAll('a')], lede = q('[data-lede]');
+  const rows = [...hero.querySelectorAll('[data-crafts] li')], buttons = rows.map(li => li.querySelector('button'));
+  const footer = q('[data-foot]'), foot = [q('[data-cue]'), q('[data-pause]')];
+  let lines = [], geo = null, made = [], craftMasks = [];
+  const layer = className => {
+    const el = doc.createElement('span'); el.className = className;
+    el.setAttribute('aria-hidden', 'true'); made.push(el); return el;
+  };
+  const px = n => n.toFixed(3) + 'px';
+  const up = (el, distance) => { el.style.transform = distance === 0 ? '' : `translateY(${px(distance)})`; };
   function measure(nameInks) {
+    clear();
     lines = [...hero.querySelectorAll('[data-name] .name-line')];
+    const range = doc.createRange();
     const name = lines.map((line, i) => {
       const box = line.getBoundingClientRect(), ink = nameInks?.[i];
-      return ink ? { top: ink.top - box.top, bottom: ink.bottom - box.top } : { top: 0, bottom: box.height };
+      const top = ink ? ink.top - box.top : 0, bottom = ink ? ink.bottom - box.top : box.height;
+      const text = [...line.childNodes].find(n => n.nodeType === 3 && n.data.trim());
+      const overlay = layer('entrance-name'), letters = [];
+      // Range positions retain the flow's kerning. Generated content adds neither text nor flow boxes.
+      if (text) for (let j = 0; j < text.data.length; j++) {
+        range.setStart(text, j); range.setEnd(text, j + 1);
+        const r = range.getBoundingClientRect(), el = layer('entrance-letter');
+        el.dataset.ch = text.data[j];
+        Object.assign(el.style, { left: px(r.left - box.left), top: px(r.top - box.top), width: px(r.width), height: px(r.height), lineHeight: px(r.height) });
+        overlay.append(el); letters.push({ el, span: nameSpan(i, j) });
+      }
+      line.append(overlay);
+      const mask = `polygon(-50% -80%, 150% -80%, 150% ${px(bottom + 3)}, -50% ${px(bottom + 3)})`;
+      line.style.clipPath = mask; line.classList.add('has-entrance');
+      return { line, overlay, letters, drop: bottom - top + 16, mask, landed: false };
     });
-    const l = lede.getBoundingClientRect(), range = hero.ownerDocument.createRange();
-    range.selectNodeContents(lede);
+    const lb = lede.getBoundingClientRect(), walker = doc.createTreeWalker(lede, 4), words = [];
+    while (walker.nextNode()) {
+      const text = walker.currentNode, more = !!text.parentElement.closest('.hero-lede-more');
+      for (const match of text.data.matchAll(/\S+/g)) {
+        range.setStart(text, match.index); range.setEnd(text, match.index + match[0].length);
+        const r = [...range.getClientRects()].find(r => r.width && r.height);
+        if (r) words.push({ text: match[0], left: r.left - lb.left, top: r.top - lb.top, width: r.width, height: r.height, more });
+      }
+    }
     const ledeLines = [];
-    for (const r of range.getClientRects()) {
-      if (!r.width || !r.height) continue;
-      const line = ledeLines.find(n => Math.abs(n.mid - (r.top + r.bottom) / 2) < r.height / 2);
-      if (line) { line.left = Math.min(line.left, r.left); line.right = Math.max(line.right, r.right); line.top = Math.min(line.top, r.top); line.bottom = Math.max(line.bottom, r.bottom); }
-      else ledeLines.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom, mid: (r.top + r.bottom) / 2 });
+    for (const word of words) {
+      let line = ledeLines.find(l => Math.abs(l.top - word.top) < word.height / 2);
+      if (!line) ledeLines.push(line = { top: word.top, height: word.height, words: [] });
+      line.words.push(word);
     }
     ledeLines.sort((a, b) => a.top - b.top);
-    const crafts = rows.map(li => {
-      const box = li.getBoundingClientRect(), n = li.querySelector('.n').getBoundingClientRect(), word = li.querySelector('.n').nextElementSibling.getBoundingClientRect();
-      return { w: box.width, h: box.height, numberRight: n.right - box.left, wordRight: word.right - box.left, split: (n.right + word.left) / 2 - box.left };
+    const ledeWords = [], masks = [];
+    let index = 0;
+    for (const line of ledeLines) {
+      const mask = layer('entrance-lede-line');
+      Object.assign(mask.style, { top: px(line.top - 2), height: px(line.height + 4) });
+      for (const word of line.words.sort((a, b) => a.left - b.left)) {
+        const el = layer('entrance-word'); el.dataset.ch = word.text;
+        Object.assign(el.style, { left: px(word.left + 4), top: px(word.top - line.top + 2), width: px(word.width), height: px(word.height), lineHeight: px(word.height) });
+        mask.append(el); ledeWords.push({ el, span: wordSpan(index++, word.more), drop: line.height + 6 });
+      }
+      lede.append(mask); masks.push(mask);
+    }
+    lede.classList.add('has-entrance');
+    const crafts = rows.map((li, i) => {
+      const box = li.getBoundingClientRect(), button = buttons[i], b = button.getBoundingClientRect();
+      const mask = doc.createElement('span'); mask.className = 'entrance-craft-mask';
+      mask.style.clipPath = `inset(${px(2 - (b.top - box.top))} -40px ${px(b.bottom - box.top - (box.height - 2))})`;
+      button.before(mask); mask.append(button); craftMasks.push({ mask, button });
+      return { w: box.width, h: box.height };
     });
-    geo = { name, lede: ledeLines.map(n => ({ left: n.left - l.left, right: n.right - l.left, top: n.top - l.top, bottom: n.bottom - l.top })), crafts };
+    const nb = nav.getBoundingClientRect(), fb = footer.getBoundingClientRect();
+    geo = { name, ledeWords, masks, ledeLines: ledeLines.length, ledeLanded: false, crafts,
+      navDrop: links.map(a => nb.bottom - a.getBoundingClientRect().top + 6),
+      footDrop: foot.map(el => fb.bottom - el.getBoundingClientRect().top + 6),
+      paths: paths.map(el => ({ el, index: el.getAttribute('fill') === '#C0262E' ? 0 : 1 })),
+      craftSpans: rows.map((_, i) => craftSpan(i)),
+    };
     return geo;
   }
   function apply(s) {
     if (!geo) return;
-    mark.style.clipPath = s.mark >= 1 ? '' : `inset(0 ${(100 * (1 - s.mark)).toFixed(3)}% 0 0)`;
-    links.forEach((a, i) => { a.style.clipPath = s.nav[i] ?? true ? '' : HIDDEN; });
-    lines.forEach((line, i) => {
-      const { reveal, weight } = s.name[i] || s.name.at(-1), g = geo.name[i];
-      // The clip's top edge rises from just under the baseline (the ink's bottom, with room for round overshoots at any weight)
-      // to above the ink's top, so nothing of the line shows before its turn.
-      const y = g.bottom + 3 - (g.bottom - g.top + 7) * reveal;
-      line.style.clipPath = reveal >= 1 ? '' : `polygon(-50% ${y.toFixed(2)}px, 150% ${y.toFixed(2)}px, 150% 200%, -50% 200%)`;
-      line.style.fontWeight = reveal >= 1 && weight >= 800 ? '' : weight.toFixed(1);
-    });
-    lede.style.clipPath = s.lede.every(p => p >= 1) ? '' : clipPath(geo.lede.flatMap((n, i) => {
-      const p = s.lede[i] ?? 1, x0 = n.left - 2;
-      return p > 0 ? [rect(x0, n.top - 1, x0 + (n.right - n.left + 4) * p, n.bottom + 1)] : [];
-    }));
+    if (s.done) { clear(); return; }
+    mark.style.clipPath = s.mark.every(p => p >= 1) ? '' : 'inset(0)';
+    for (const { el, index } of geo.paths) up(el, (1 - s.mark[index]) * 830);
+    nav.style.clipPath = s.nav.every(p => p >= 1) ? '' : 'inset(0 -40px)';
+    links.forEach((el, i) => up(el, (1 - s.nav[i]) * geo.navDrop[i]));
+    for (const g of geo.name) {
+      if (g.landed) continue;
+      let landed = true;
+      for (const { el, span } of g.letters) {
+        const p = riseAt(s.time, span); if (p.progress < 1) landed = false;
+        up(el, (1 - p.reveal) * g.drop); el.style.fontWeight = p.progress >= 1 ? '' : p.weight.toFixed(3);
+      }
+      if (landed) { g.line.style.clipPath = ''; g.line.classList.remove('has-entrance'); g.overlay.remove(); g.landed = true; }
+    }
+    if (!geo.ledeLanded) {
+      let landed = true;
+      for (const w of geo.ledeWords) {
+        const p = riseAt(s.time, w.span); if (p.progress < 1) landed = false;
+        up(w.el, (1 - p.reveal) * w.drop);
+      }
+      if (landed) { lede.classList.remove('has-entrance'); for (const mask of geo.masks) mask.remove(); geo.ledeLanded = true; }
+    }
     rows.forEach((li, i) => {
-      const g = geo.crafts[i], p = s.crafts[i], last = i === rows.length - 1, bottom = last ? s.crafts[rows.length] ?? 1 : 1, tip = g.w * p;
-      if (p >= 1 && bottom >= 1) { li.style.clipPath = ''; return; }
+      const g = geo.crafts[i], p = s.crafts[i], last = i === rows.length - 1, bottom = last ? s.crafts[rows.length] ?? 1 : 1;
+      const rp = riseAt(s.time, geo.craftSpans[i]);
+      up(buttons[i], (1 - rp.reveal) * g.h);
+      if (p >= 1 && bottom >= 1 && rp.progress >= 1) { li.style.clipPath = ''; return; }
       const parts = [];
-      if (p > 0) parts.push(rect(0, -1, tip, 1));
-      // A row's number and word cut in as its line passes them.
-      if (tip >= g.numberRight) parts.push(rect(-40, 1, g.split, g.h - 1));
-      if (tip >= g.wordRight) parts.push(rect(g.split, 1, g.w + 40, g.h - 1));
+      if (p > 0) parts.push(rect(0, -1, g.w * p, 1));
+      parts.push(rect(-40, 2, g.w + 40, g.h - 2));
       if (last && bottom > 0) parts.push(rect(0, g.h - 1, g.w * bottom, g.h + 1));
       li.style.clipPath = clipPath(parts);
     });
-    foot.forEach((node, i) => { node.style.clipPath = s.foot[i] ? '' : HIDDEN; });
+    footer.style.clipPath = s.foot.every(p => p >= 1) ? '' : 'inset(0 -40px)';
+    foot.forEach((el, i) => up(el, (1 - s.foot[i]) * geo.footDrop[i]));
   }
-  function clear() { for (const node of all()) { node.style.clipPath = ''; node.style.fontWeight = ''; } }
-  return { measure, apply, clear, get lines() { return geo ? geo.lede.length : 0; } };
+  function clear() {
+    for (const { mask, button } of craftMasks) mask.replaceWith(button); craftMasks = [];
+    for (const el of made) el.remove(); made = [];
+    for (const line of lines) { line.style.clipPath = ''; line.classList.remove('has-entrance'); }
+    lede.classList.remove('has-entrance');
+    for (const el of [mark, nav, footer, ...rows]) el.style.clipPath = '';
+    for (const el of [...paths, ...links, ...foot, ...buttons]) el.style.transform = '';
+    geo = null;
+  }
+  return { measure, apply, clear, get lines() { return geo ? geo.ledeLines : 0; } };
 }

@@ -91,7 +91,7 @@ export async function checkName(source = read('name-react.mjs'), playerSource = 
   assert.equal(nameLive({ ready: true, entering: null, reduced: false }), true, 'N1 gate: not live after the entrance');
   const p = await runPlayer(playerSource);
   assert.equal(p.live.at(-1), false, 'N1 player: live at the first frame of the entrance');
-  p.run(3.75); assert.equal(p.live.at(-1), false, 'N1 player: live during the entrance');
+  p.run(4.55); assert.equal(p.live.at(-1), false, 'N1 player: live during the entrance');
   p.run(0.1); assert.equal(p.live.at(-1), true, 'N1 player: not live after the entrance');
   p.win.__hero.entrance(0.8); assert.equal(p.live.at(-1), false, 'N1 player: live during a held entrance');
   p.win.__hero.entrance(null); assert.equal(p.live.at(-1), true, 'N1 player: not live after the hold');
@@ -116,7 +116,7 @@ async function runPlayer(playerSource) {
   const player = playerSource.replace(/^import\s+.*?;\s*$/gm, '');
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
   const out = { win, live, media, stage, swallow: false };
-  await new AsyncFunction('env', `const { sceneEnvelope, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, loaderAt, createLoaderView, performance, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+  await new AsyncFunction('env', `const { sceneEnvelope, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, liftPieces, settleView, createEntranceView, loaderAt, createLoaderView, performance, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
     sceneEnvelope, location: { search: '' }, document: { querySelector: () => hero, fonts: { ready: Promise.resolve(), addEventListener() {} }, hidden: false, addEventListener() {} }, window: win, matchMedia: () => media,
     createRenderer: () => ({ setAtlas() {}, draw() {} }), makeCamera: engine.makeCamera, dot: engine.dot, corners: kit.corners, makeAtlas: () => ({}), fontsReady: async () => {},
     SHOW: M.SHOW, LOOP: M.LOOP, SCENES: M.SCENES, BLOCK: M.BLOCK, POOL: M.POOL, sceneAt: M.sceneAt, frameAt: M.frameAt, calloutsAt: M.calloutsAt, createCallouts: () => ({ measure() {}, draw() {}, fit: v => v, layout: [] }),
@@ -124,7 +124,7 @@ async function runPlayer(playerSource) {
     createNameReact: () => ({ measure() {}, setLive(on) { live.push(!!on); return !!on; }, live: false, open: 0, letters: [] }),
     createCraftWipe: () => ({ measure() {}, follow() {}, hold: () => null, state: null }),
     createStars: () => ({ measure() {}, frame: () => null, after() {}, swallowClick: () => out.swallow, field: null }), starReach: E.starReach || (() => null),
-    ENTRANCE: E.ENTRANCE, entranceAt: E.entranceAt, screenPlane: E.screenPlane, floorReach: E.floorReach, loaderAt: E.loaderAt, createLoaderView: E.createLoaderView, performance: { now: () => now },
+    ENTRANCE: E.ENTRANCE, entranceAt: E.entranceAt, screenPlane: E.screenPlane, floorReach: E.floorReach, liftPieces: E.liftPieces, settleView: E.settleView, loaderAt: E.loaderAt, createLoaderView: E.createLoaderView, performance: { now: () => now },
     createEntranceView: () => ({ measure() {}, apply() {}, clear() {}, lines: 3 }),
     devicePixelRatio: 1, requestAnimationFrame: f => { tick = f; return 1; }, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
   });

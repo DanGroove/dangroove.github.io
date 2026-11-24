@@ -15,6 +15,7 @@ import { SHOW, LOOP, SCENES, BLOCK, POOL, SCREEN, sceneAt, frameAt, calloutsAt }
 import { createCraftModel, followCraft } from '../craft-wipe.mjs';
 import { pageMarkup, LOADER_CSS, LOADER_SKIP, LOADER_SCRIPT } from './page.mjs';
 import { previewMarkup } from './preview.mjs';
+import { checkL12, checkL12Groups, checkL12Controls } from './l12-checks.mjs';
 import { checkLoaderLanding, checkLoaderMoves, checkLoaderRoundness, checkLoaderDurations, checkLoaderPop } from './loader-checks.mjs';
 
 const TAKE = new URL('../', import.meta.url);
@@ -23,10 +24,10 @@ const read = name => fs.readFileSync(new URL(name, TAKE), 'utf8').replace(/\r\n/
 const close = (a, b, message, epsilon = 1e-9) => assert.ok(Math.abs(a - b) <= epsilon, `${message}: ${a} != ${b}`);
 
 export const ENTRANCE_CONTROLS = [
-  { id: 'timetable', file: 'entrance.mjs', search: 'name: [[0.4, 1.0], [0.6, 1.2]],', replacement: 'name: [[0.4, 1.0], [0.4, 1.0]],', gate: 'E1 timetable: Endrawes' },
+  { id: 'timetable', file: 'entrance.mjs', search: 'starts: [0.3, 0.5]', replacement: 'starts: [0.3, 0.3]', gate: 'E1 timetable: Endrawes' },
   { id: 'labels-cut', file: 'stage.mjs', search: 'grow: Math.min(growIn, growOut), text: Math.min(textIn, textOut) }];', replacement: 'grow: growIn, text: textIn }];', gate: 'E4 labels:' },
   { id: 'click', file: 'play.mjs', search: 'function choose(craft) {\n  endEntrance(); first = false;\n', replacement: 'function choose(craft) {\n', gate: 'E1 click: craft' },
-  { id: 'old-screen', file: 'entrance.mjs', search: 'screen: [2.4, 3.2],', replacement: 'screen: [0.5, 1.1],', gate: 'L2 groups:' },
+  { id: 'old-screen', file: 'entrance.mjs', search: 'screen: [2.2, 3.5],', replacement: 'screen: [0.5, 1.1],', gate: 'L12 groups:' },
   { id: 'fast-gather', file: 'loader-stars.mjs', search: 'gatherSeconds: 1.4', replacement: 'gatherSeconds: 0.7', gate: 'L4 timing:' },
   { id: 'wrong-mark', file: 'loader-stars.mjs', search: 'const x = centre[0] + p.x,', replacement: 'const x = centre[0] + p.x + 1,', gate: 'L4 consistency:' },
   { id: 'star-ring', file: 'entrance.mjs', search: 'stars: null,', replacement: 'stars: [1.8, 2.8],', gate: 'L4 entrance:' },
@@ -106,45 +107,7 @@ export async function checkLabelExit(stageSource = read('stage.mjs')) {
 
 // Table rows are the groups: both name lines together; the floor ring alone (the star ring is dropped).
 // The loader burst is a separate group. Cuts count at their instant only.
-export function checkEntranceGroups({ ENTRANCE: e, staggerSpans, loaderAt, LOADER }) {
-  assert.equal(e.stars, null, 'L4 entrance: star ring still runs');
-  const groups = [
-    { name: 'mark', spans: [e.mark] }, { name: 'nav', cuts: e.nav },
-    { name: 'name', spans: e.name }, { name: 'lede', spans: staggerSpans(e.lede, 7) },
-    { name: 'floor', spans: [e.floor] }, { name: 'screen', spans: [e.screen] },
-    { name: 'crafts', spans: staggerSpans(e.crafts, e.crafts.lines) }, { name: 'foot', cuts: e.foot },
-  ];
-  const times = new Set(Array.from({ length: Math.ceil(e.end * 60) + 1 }, (_, i) => i / 60));
-  for (const g of groups) for (const at of g.cuts || g.spans.flat()) times.add(at);
-  let maximum = 0;
-  for (const time of [...times].sort((a, b) => a - b)) {
-    const moving = groups.filter(g => g.cuts ? g.cuts.some(t => Math.abs(time - t) < 1e-10) : g.spans.some(([a, b]) => time >= a && time < b));
-    maximum = Math.max(maximum, moving.length);
-    assert.ok(moving.length <= 2, `L2 groups: ${moving.map(g => g.name).join(', ')} at ${time.toFixed(6)} s`);
-  }
-  const bounds = groups.map(g => g.cuts ? [g.cuts[0], g.cuts.at(-1)] : [Math.min(...g.spans.map(s => s[0])), Math.max(...g.spans.map(s => s[1]))]);
-  for (let i = 1; i < groups.length; i++) {
-    assert.ok(bounds[i][0] >= bounds[i - 1][0] && bounds[i][1] >= bounds[i - 1][1], `L2 groups: ${groups[i].name} out of reading order`);
-  }
-  // L5: measure from burst start, shifting every page group by the actual pure entrance boundary.
-  // Include 60 Hz samples and every exact cut/span/loader boundary. No collision exemptions.
-  const loader = loaderAt(0, { fonts: 0, atlas: 0, frame: 0 });
-  const offset = loader.entranceStart - loader.burstStart;
-  const combined = new Set(Array.from({ length: Math.ceil((offset + e.end) * 60) + 1 }, (_, i) => i / 60));
-  for (const time of times) combined.add(offset + time);
-  combined.add(0); combined.add(LOADER.burst); combined.add(offset);
-  let withBurst = 0;
-  for (const time of [...combined].sort((a, b) => a - b)) {
-    // Snap only numerical boundary residue, so an end and a simultaneous cut cannot overlap by an ulp.
-    const active = groups.filter(g => g.cuts ? g.cuts.some(t => Math.abs(time - offset - t) < 1e-10)
-      : g.spans.some(([a, b]) => time >= offset + a - 1e-10 && time < offset + b - 1e-10));
-    const burst = time >= 0 && time < LOADER.burst - 1e-10;
-    const n = active.length + (burst ? 1 : 0);
-    withBurst = Math.max(withBurst, n);
-    assert.ok(n <= 2, `L5 groups: ${[...(burst ? ['burst'] : []), ...active.map(g => g.name)].join(', ')} at ${time.toFixed(6)} s from burst start`);
-  }
-  return { samples: times.size, maximum, combinedSamples: combined.size, withBurst };
-}
+export const checkEntranceGroups = checkL12Groups;
 
 export function checkLoaderTiming({ loaderAt, LOADER }) {
   const all = { fonts: 0, atlas: 0, frame: 0 }, at = t => loaderAt(t, all);
@@ -407,7 +370,7 @@ function checkInlineLoader(E, P, painterSource = read('tools/page.mjs')) {
 
 function checkTimetable(E) {
   const { entranceAt, screenPlane, floorReach, revealDot, revealPool, loopAt, staggerSpans } = E;
-  const at = time => entranceAt(time, { ledeLines: 3 }), before = t => t - 1e-6, after = t => t + 1e-6;
+  const at = time => entranceAt(time, { ledeLines: 3 }), before = t => t - 1e-3, after = t => t + 1e-6;
   // Each part: nothing before its start, something just after, complete at its end and not before.
   const part = (name, get, start, end) => {
     assert.equal(get(at(before(start))), 0, `E1 timetable: ${name} before ${start}`);
@@ -416,56 +379,43 @@ function checkTimetable(E) {
     assert.equal(get(at(end)), 1, `E1 timetable: ${name} at ${end}`);
   };
   const cut = (name, get, time) => { assert.equal(get(at(before(time))), false, `E1 timetable: ${name} before ${time}`); assert.equal(get(at(time)), true, `E1 timetable: ${name} at ${time}`); };
-  assert.equal(at(0).mark, 0, 'E1 timetable: DG mark at 0');
-  assert.ok(at(1e-6).mark > 0 && at(before(0.45)).mark < 1 && at(0.45).mark === 1, 'E1 timetable: DG mark 0 to 0.45');
-  cut('Journey', s => s.nav[0], 0.35); cut('Contact', s => s.nav[1], 0.45);
-  part('Danial', s => s.name[0].reveal, 0.4, 1.0);
-  part('Endrawes', s => s.name[1].reveal, 0.6, 1.2);
-  for (const i of [0, 1]) {
-    const [a, b] = [[0.4, 1.0], [0.6, 1.2]][i];
-    close(at(a).name[i].weight, 300, `E1 timetable: ${i ? 'Endrawes' : 'Danial'} weight starts at 300`);
-    close(at(b).name[i].weight, 800, `E1 timetable: ${i ? 'Endrawes' : 'Danial'} weight ends at 800`);
+  for (const [i, span] of [[0, [0, .7]], [1, [.08, .78]]]) part('mark ' + i, s => s.mark[i], ...span);
+  part('Journey', s => s.nav[0], .25, .85); part('Contact', s => s.nav[1], .33, .93);
+  for (const [line, count] of [[0, 6], [1, 8]]) for (let j = 0; j < count; j++) {
+    const a = [0.3, 0.5][line] + j * .055, b = a + .85, label = line ? 'Endrawes' : 'Danial';
+    part(label + ' letter ' + j, s => s.name[line][j].reveal, a, b);
+    close(at(a).name[line][j].weight, 300, 'E1 timetable: ' + label + ' weight starts at 300');
+    close(at(b).name[line][j].weight, 800, 'E1 timetable: ' + label + ' weight ends at 800');
   }
-  for (const lines of [2, 3, 4, 5, 7]) {
-    const spans = staggerSpans({ start: 1.05, end: 2.0, step: 0.15 }, lines);
-    close(spans[0][0], 1.05, 'E1 timetable: lede starts'); close(spans.at(-1)[1], 2.0, 'E1 timetable: lede ends');
-    for (let i = 1; i < lines; i++) close(spans[i][0] - spans[i - 1][0], Math.min(0.15, 0.95 / (lines + 1)), 'E1 timetable: lede line step');
-    for (const [i, [a, b]] of spans.entries()) {
-      const s = t => entranceAt(t, { ledeLines: lines }).lede[i];
-      assert.ok(s(before(a)) === 0 && s(after(a)) > 0 && s(before(b)) < 1 && s(b) === 1, `E1 timetable: lede line ${i + 1} of ${lines}`);
-    }
+  for (let i = 0; i < 23; i++) {
+    const a = 1.15 + i * .028 + (i >= 3 ? .12 : 0);
+    assert.deepEqual(E.wordSpan(i, i >= 3), [a, a + .7], 'E1 timetable: lede word ' + i);
   }
-  [0, 1, 2, 3, 4].forEach(i => part(`craft line ${i + 1}`, s => s.crafts[i], 3.0 + 0.1 * i, 3.2 + 0.1 * i));
-  part('floor', s => s.floor, 1.8, 2.8);
-  part('screen', s => s.screen, 2.4, 3.2);
-  cut('Scroll for the journey', s => s.foot[0], 3.6); cut('Pause', s => s.foot[1], 3.7);
-  cut('floor hover', s => s.hover, 2.8);
-  assert.ok(!at(before(3.8)).done && at(3.8).done, 'E1 timetable: ends at 3.8');
-  // The loop's clock starts at 0 when the screen's wipe ends.
-  for (const time of [0, 2.4, 3.1999, 3.2]) assert.equal(loopAt(time), 0, 'E1 timetable: loop clock before the screen ends');
-  close(loopAt(3.8), 0.6, 'E1 timetable: loop clock at the end');
-  // The screen's clip plane: below everything on the screen at 0 and 2.4, partway at 2.8, gone at 3.2.
+  [0, 1, 2, 3, 4].forEach(i => part('craft line ' + (i + 1), s => s.crafts[i], 3.1 + .1 * i, 3.5 + .1 * i));
+  for (let i = 0; i < 4; i++) {
+    const a = 3.172 + .1 * i;
+    const actual = E.craftSpan(i); close(actual[0], a, 'E1 timetable: craft rise start'); close(actual[1], a + .6, 'E1 timetable: craft rise end');
+  }
+  part('floor', s => s.floor, 1.9, 2.9);
+  part('screen', s => s.screen, 2.2, 3.5);
+  part('camera', s => s.camera, 1.9, 3.9);
+  part('Scroll for the journey', s => s.foot[0], 3.95, 4.5); part('Pause', s => s.foot[1], 4.03, 4.58);
+  cut('floor hover', s => s.hover, 2.9);
+  assert.ok(!at(before(4.6)).done && at(4.6).done, 'E1 timetable: ends at 4.6');
+  for (const time of [0, 2.2, 3.4999, 3.5]) assert.equal(loopAt(time), 0, 'E1 timetable: loop clock before the screen ends');
+  close(loopAt(4.6), 1.1, 'E1 timetable: loop clock at the end');
   const pieces = frameAt(0, { first: true });
-  const lowest = Math.min(...pieces.flatMap(pc => corners(pc).map(p => p[1]))), highest = Math.max(...pieces.flatMap(pc => corners(pc).map(p => p[1])));
-  const kept = (plane, p) => plane === null || dot(plane, p) + plane[3] >= 0;
-  for (const time of [0, 2.4]) {
-    const plane = screenPlane(at(time).screen);
-    assert.ok(plane && pieces.every(pc => corners(pc).every(p => !kept(plane, p) || p[1] <= SCREEN.b)), `E1 timetable: screen plane at ${time} shows the screen`);
-    assert.ok(plane[3] < lowest, `E1 timetable: screen plane at ${time} not below the screen`);
-  }
-  const mid = screenPlane(at(2.8).screen);
-  assert.ok(mid && mid[1] === -1 && mid[3] > lowest && mid[3] < highest, 'E1 timetable: screen plane at 2.8 is not partway up');
-  assert.equal(screenPlane(at(3.2).screen), null, 'E1 timetable: screen plane remains at 3.2');
-  for (let n = 0, last = -Infinity; n < 80; n++) { const y = screenPlane(at(2.4 + n / 100).screen)[3]; assert.ok(y >= last, 'E1 timetable: screen plane falls'); last = y; }
+  for (const time of [0, 2.199, 2.2, 2.8, 3.499]) assert.deepEqual(screenPlane(at(time).screen), [0, 1, 0, 0], 'E1 timetable: fixed floor clip');
+  assert.equal(screenPlane(at(3.5).screen), null, 'E1 timetable: screen plane remains at 3.5');
   assert.ok(!pieces.some(pc => /Fig$/.test(pc.art || '')), 'E1 timetable: first pass shows Figma on the Photoshop screen');
   // The floor circle: radius 0 until 1.8, growing to the pool's edge at 2.8; each dot wholly on or off by its centre.
   const radius = 4.8, centre = POOL;
   let dots = 0;
-  for (let n = 0, last = -1; n <= 76; n++) {
+  for (let n = 0, last = -1; n <= 92; n++) {
     const time = n / 20;
     const reach = floorReach(at(time).floor, radius);
-    if (time < 1.8) assert.equal(reach, 0, 'E1 timetable: floor circle before 1.8');
-    else if (time >= 2.8) assert.equal(reach, null, 'E1 timetable: floor circle after 2.8');
+    if (time < 1.9) assert.equal(reach, 0, 'E1 timetable: floor circle before 1.9');
+    else if (time >= 2.9) assert.equal(reach, null, 'E1 timetable: floor circle after 2.9');
     else { assert.ok(reach >= last && reach < radius, 'E1 timetable: floor circle radius'); last = reach; }
     for (let ix = -12; ix <= 12; ix++) for (let iz = -12; iz <= 12; iz++) {
       const x = Math.round(centre.x / 0.5) * 0.5 + ix * 0.5, z = Math.round(centre.z / 0.5) * 0.5 + iz * 0.5, on = revealDot(x, z, centre, reach);
@@ -507,13 +457,13 @@ async function runPlayer(playerSource, E, { review = false, reduced = false, wit
   const observer = class { observe() {} };
   const player = playerSource.replace(/^import\s+.*?;\s*$/gm, '');
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-  const execution = new AsyncFunction('env', `const { sceneEnvelope, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, loaderAt, createLoaderView, performance, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+  const execution = new AsyncFunction('env', `const { sceneEnvelope, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, liftPieces, settleView, createEntranceView, loaderAt, createLoaderView, performance, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
     location: { search: review ? '?t=12.5' : '' }, document: { querySelector: () => hero, fonts: { ready: pageFonts, addEventListener() {} }, hidden: false, addEventListener() {} }, window: win, matchMedia: () => media,
     createCraftWipe: () => ({ measure() {}, hold: () => null, follow(craft, o) { wipe.follows.push(!!o?.cut); followCraft(wipe.model, craft, now / 1000, { ...o, reduced: media.matches }); }, state: null }),
     createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => ({}), fontsReady: () => fonts,
     sceneEnvelope, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts: () => ({ measure() {}, draw() {}, fit: v => v, layout: [] }),
     createNameReact: () => ({ measure() {}, setLive(on) { live.push(on); }, live: false, open: 0, letters: [] }), createStars: (_hero, options) => { starOptions = options; return { measure() {}, frame: () => field, after() {}, swallowClick: () => false, field: null }; }, starReach: () => null, createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect, nameLines: [] }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),
-    ENTRANCE: E.ENTRANCE, entranceAt: E.entranceAt, screenPlane: E.screenPlane, floorReach: E.floorReach, loaderAt: E.loaderAt, createLoaderView: h => { const v = E.createLoaderView(h); return { ...v, clear() { events.push({ kind: 'clear', now }); v.clear(); }, apply(s) { loaderStates.push({ ...s, now }); v.apply(s); } }; }, performance: { now: () => now },
+    ENTRANCE: E.ENTRANCE, entranceAt: E.entranceAt, screenPlane: E.screenPlane, floorReach: E.floorReach, liftPieces: E.liftPieces, settleView: E.settleView, loaderAt: E.loaderAt, createLoaderView: h => { const v = E.createLoaderView(h); return { ...v, clear() { events.push({ kind: 'clear', now }); v.clear(); }, apply(s) { loaderStates.push({ ...s, now }); v.apply(s); } }; }, performance: { now: () => now },
     createEntranceView: () => ({ measure() {}, apply(s) { view.applied.push(s); }, clear() { view.clears++; }, lines: 3 }),
     devicePixelRatio: 1, requestAnimationFrame: f => { tick = f; return 1; }, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
   });
@@ -592,7 +542,7 @@ async function checkPlayer(playerSource, E, P) {
   change.media.matches = true; change.media.change(); change.run(0.05);
   assert.ok(!change.win.__hero.loading && change.win.__hero.entering === null && change.view.clears > clears, 'L4 player: media change leaves loader/initial clips');
   near(change.win.__hero.t, starts[2] + SHOW[2].still, 'L4 player: media change finished still');
-  // A whole entrance after the loader: loop held until 3.2; the star pointer opens at entrance zero.
+  // A whole entrance after the loader: loop held until 3.5; the star pointer opens at entrance zero.
   let p = await runPlayer(playerSource, E);
   assert.equal(p.win.__ready, true);
   near(p.win.__hero.entering, 0, 'E1 player: entrance starts at the loader exit');
@@ -600,12 +550,12 @@ async function checkPlayer(playerSource, E, P) {
   assert.equal(p.starOptions.open(), true, 'L5 player: star pointer after landing');
   assert.equal(p.draws.at(-1).look.floor.pointer, undefined, 'F3 player: the floor has a hover point');
   assert.ok(p.draws.at(-1).look.reveal && p.draws.at(-1).look.floor.reveal > 0 && p.draws.at(-1).look.floor.reveal < 4.8, 'E1 player: renderer reveal values');
-  p.run(0.55); near(p.win.__hero.t, 0.1, 'E1 player: loop clock starts at 0 when the screen wipe ends');
+  p.run(0.85); near(p.win.__hero.t, 0.1, 'E1 player: loop clock starts at 0 when the screen wipe ends');
   assert.equal(p.draws.at(-1).look.floor.pointer, undefined, 'F3 player: the floor has a hover point');
-  assert.equal(p.draws.at(-1).look.reveal, null, 'E1 player: screen clip after 3.2');
-  p.run(0.5); assert.equal(p.win.__hero.entering, null, 'E1 player: entrance ends at 3.8'); near(p.win.__hero.t, 0.6, 'E1 player: loop clock at the entrance end');
+  assert.equal(p.draws.at(-1).look.reveal, null, 'E1 player: screen clip after 3.5');
+  p.run(1); assert.equal(p.win.__hero.entering, null, 'E1 player: entrance ends at 4.6'); near(p.win.__hero.t, 1.1, 'E1 player: loop clock at the entrance end');
   assert.ok(p.view.clears > 0 && p.draws.at(-1).look.floor.reveal === undefined, 'E1 player: entrance styles remain');
-  p.run(1); near(p.win.__hero.t, 1.6, 'E1 player: loop keeps playing');
+  p.run(1); near(p.win.__hero.t, 2.1, 'E1 player: loop keeps playing');
   // Round 11 (C1): the entrance sets the craft list (its rule draws with the hairline); the loop's start is no change.
   assert.ok(p.wipe.follows.length > 20 && p.wipe.follows.some(cut => cut) && p.wipe.follows.some(cut => !cut), 'C1 player: the craft list is not followed through and after the entrance');
   assert.ok(p.wipe.model.current === 0 && p.wipe.model.changes === 0, `C1 player: the entrance or the loop's start made a craft change (${p.wipe.model.changes})`);
@@ -626,7 +576,7 @@ async function checkPlayer(playerSource, E, P) {
   p.win.__hero.entrance(0.8); near(p.win.__hero.entering, 0.8, 'E2 hold'); near(p.win.__hero.t, 0, 'E2 hold loop clock');
   p.run(0.5); near(p.win.__hero.entering, 0.8, 'E2 hold moved');
   near(p.view.applied.at(-1).time, 0.8, 'E2 hold not drawn');
-  p.win.__hero.entrance(3.4); near(p.win.__hero.t, 0.2, 'E2 hold loop clock after 3.2');
+  p.win.__hero.entrance(3.7); near(p.win.__hero.t, 0.2, 'E2 hold loop clock after 3.5');
   p.win.__hero.entrance(null); assert.equal(p.win.__hero.entering, null, 'E2 release'); p.run(0.5); assert.ok(p.win.__hero.t > 0.2, 'E2 release does not play');
   // Reduced motion: no entrance at all.
   p = await runPlayer(playerSource, E); p.media.matches = true; p.media.change(); assert.equal(p.win.__hero.entering, null, 'E1 reduced motion keeps the entrance');
@@ -655,10 +605,11 @@ export async function checkEntrance({ loaderSource = read('loader-stars.mjs'), e
   checkLoaderMarkup();
   const inlineRuns = checkInlineLoader(E, P, painterSource);
   const dots = checkTimetable(E);
+  const l12 = await checkL12(E, { entranceSource, playerSource });
   const runs = await checkPlayer(playerSource, E, P);
   const labelSamples = await checkLabelExit(stageSource);
   const roundness = geometry.roundness.map(scene => ({ viewport: `${scene.W}x${scene.H}`, samples: checkLoaderRoundness(P, scene) }));
-  return `L4/L5/L7/L8/L9/L10 computed: ${loaderSamples} timing samples at 1 ms; 1.4 s launches + 1 s flight, .15 hold, .35 shrink, .08 compressed hold, .18 swell, shared launch-speed explosion; entrance/pointer start at actual scene landing (fallback bound 4.96 s); ${geometry.comparisons} mark/home comparisons at desktop/tablet/phone; ${inlineRuns} inline worker/fallback/reduced/review runs. L10 durations: ${JSON.stringify(geometry.blasts)}. L10 roundness: ${JSON.stringify(roundness)}. L10 pop: ${JSON.stringify(geometry.pops)}. L7 actual drawing at 240 Hz: ${JSON.stringify(geometry.moves)}. L8 landing/handover: ${JSON.stringify(geometry.landings)}. L2 timetable: ${groups.samples} samples, maximum ${groups.maximum} groups. L5 combined explosion + entrance: ${groups.combinedSamples} samples, maximum ${groups.withBurst} groups, no exceptions. E4: ${labelSamples} retained label samples. E1/E2: 3.8 s timetable, ${dots} floor dot samples, ${runs} player runs; review and reduced paths retained. Browser/pixels UNRUN.`;
+  return `L4/L5/L7/L8/L9/L10 computed: ${loaderSamples} timing samples at 1 ms; 1.4 s launches + 1 s flight, .15 hold, .35 shrink, .08 compressed hold, .18 swell, shared launch-speed explosion; entrance/pointer start at actual scene landing (fallback bound 4.96 s); ${geometry.comparisons} mark/home comparisons at desktop/tablet/phone; ${inlineRuns} inline worker/fallback/reduced/review runs. L10 durations: ${JSON.stringify(geometry.blasts)}. L10 roundness: ${JSON.stringify(roundness)}. L10 pop: ${JSON.stringify(geometry.pops)}. L7 actual drawing at 240 Hz: ${JSON.stringify(geometry.moves)}. L8 landing/handover: ${JSON.stringify(geometry.landings)}. L12 timetable: ${groups.samples} samples, maximum ${groups.maximum} groups. L5 combined explosion + entrance: ${groups.combinedSamples} samples, maximum ${groups.withBurst} groups, no exceptions. E4: ${labelSamples} retained label samples. L12: ${JSON.stringify(l12)}. E1/E2: 4.6 s timetable, ${dots} floor dot samples, ${runs} player runs; review and reduced paths retained. Browser/pixels UNRUN.`;
 }
 
 // Each edit matches one exact site in memory; the v35 control restores both its duration and curve.
@@ -688,6 +639,7 @@ export async function checkEntranceControls() {
     assert.ok(message && message.startsWith(c.gate), `E1 control ${c.id}: missed (${message})`);
     out.push(`${c.id} caught: ${message}`);
   }
+  out.push(...(await checkL12Controls()).map(c => c.id + ' caught: ' + c.message));
   return out.join('; ');
 }
 
