@@ -47,7 +47,7 @@ export async function checkCarried(source = read('stage.mjs')) {
       }
     }
   }
-  assert.ok(Math.abs(LOOP - 99.49089) < 1e-4, 'G1: LOOP moved ' + LOOP);   // CORRECTIONS-17 F2 timing; 97.89089 in the first build, 97.69089 in round 15.
+  assert.ok(Math.abs(LOOP - 101.49089) < 1e-4, 'G1: LOOP moved ' + LOOP);   // CORRECTIONS-17 F2 timing; 97.89089 in the first build, 97.69089 in round 15.
   return { drags, samples, carriedFrames, per, loop: LOOP };
 }
 
@@ -116,8 +116,8 @@ async function runPlayer(playerSource) {
   const player = playerSource.replace(/^import\s+.*?;\s*$/gm, '');
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
   const out = { win, live, media, stage, swallow: false };
-  await new AsyncFunction('env', `const { sceneEnvelope, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, liftPieces, settleView, createEntranceView, loaderAt, createLoaderView, performance, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
-    sceneEnvelope, location: { search: '' }, document: { querySelector: () => hero, fonts: { ready: Promise.resolve(), addEventListener() {} }, hidden: false, addEventListener() {} }, window: win, matchMedia: () => media,
+  await new AsyncFunction('env', `const { sceneEnvelope, exitBursts, sparkFrame, kickExportBursts, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, liftPieces, settleView, createEntranceView, loaderAt, createLoaderView, performance, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+    sceneEnvelope, exitBursts: () => [], sparkFrame: () => null, kickExportBursts() {}, location: { search: '' }, document: { querySelector: () => hero, fonts: { ready: Promise.resolve(), addEventListener() {} }, hidden: false, addEventListener() {} }, window: win, matchMedia: () => media,
     createRenderer: () => ({ setAtlas() {}, draw() {} }), makeCamera: engine.makeCamera, dot: engine.dot, corners: kit.corners, makeAtlas: () => ({}), fontsReady: async () => {},
     SHOW: M.SHOW, LOOP: M.LOOP, SCENES: M.SCENES, BLOCK: M.BLOCK, POOL: M.POOL, sceneAt: M.sceneAt, frameAt: M.frameAt, calloutsAt: M.calloutsAt, createCallouts: () => ({ measure() {}, draw() {}, fit: v => v, layout: [] }),
     createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect, nameLines: [] }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),

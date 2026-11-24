@@ -3,7 +3,7 @@
 // The field's look (parallax, scroll, the entrance's rings) is computed by the renderer from three uniforms; only the stars'
 // own offsets (stirring, gathering, the blast) live here, in one Float32Array uploaded only while something moves.
 
-import { STARS, hash, starCount, makeStars, markKind, markFlag, FLAG_INK, flattenPath, winding, sampleMark, placeMark, streakGeometry } from './loader-stars.mjs';
+import { STARS, STREAK_WINDOW, hash, starCount, makeStars, markKind, markFlag, FLAG_INK, flattenPath, winding, sampleMark, placeMark, streakGeometry } from './loader-stars.mjs';
 export { STARS, hash, starCount, makeStars, markKind, markFlag, FLAG_INK, flattenPath, winding, sampleMark, placeMark };
 
 // R2: the fade-in's step, landing on exactly 1 (sums of dt / 0.4 in float32 can stop just short of it).
@@ -19,7 +19,7 @@ export const parallaxOffset = (f, d) => [-f[0] * STARS.parallax * depthWeight(d)
 export const pointerFraction = (x, y, W, H) => [Math.min(0.5, Math.max(-0.5, x / W - 0.5)), Math.min(0.5, Math.max(-0.5, y / H - 0.5))];
 // Scroll: s px of the hero scrolled away moves a star of depth d up by s * 0.12 * d more than the page.
 export const scrollOffset = (s, d) => -Math.max(0, s) * STARS.scroll * d;
-// Positions between simulation frames are line segments. Interpolate the recorded path at exactly now - 1/50,
+// Positions between simulation frames are line segments. Interpolate the recorded path over the shared exposure window,
 // rather than multiplying this frame's velocity (which loses curved stirring and the blast's braking).
 export function createTrailHistory(count) {
   const samples = [], spare = [], trails = new Float32Array(count * 4);
@@ -29,7 +29,7 @@ export function createTrailHistory(count) {
     if (samples.length && time === samples.at(-1).time) return trails;
     const copy = spare.pop() || new Float64Array(count * 2); copy.set(positions);
     samples.push({ time, positions: copy });
-    const at = time - 1 / 50;
+    const at = time - STREAK_WINDOW;
     while (samples.length > 2 && samples[1].time <= at) spare.push(samples.shift().positions);
     const a = samples[0], b = samples[1] || a;
     const f = b.time > a.time ? clamp01((at - a.time) / (b.time - a.time)) : 0;
@@ -78,6 +78,9 @@ export function createField(W, H, mark = null) {
   // Round 9: once a star's offset starts to shrink after a kick, it may never grow again nor swing past the side of home it
   // fell from (an impulse with a part toward home could otherwise carry it past home and out again: an overshoot).
   const last = new Float32Array(n).fill(-1), peak = new Float32Array(n * 2), falling = new Uint8Array(n);
+  // Separate from coasting age: stirring must not restart an explosion's clock.
+  const exploding = new Uint8Array(n), explosionAge = new Float64Array(n);
+  function explode(i, vx, vy) { kick(i, vx, vy, true); exploding[i] = 1; explosionAge[i] = 0; }
   // Round 10 (R1): each star drawn in front has a return weight, the front copy's opacity: 1 while captured and from the
   // release until its offset starts to shrink, then its offset over its largest offset since the release; it never grows.
   // far holds that largest offset (-1 while not returning).
@@ -86,7 +89,7 @@ export function createField(W, H, mark = null) {
   // far its front look has gone from its own toward the mark's (0 when given a point, 1 on arrival). alpha = fade x w is what
   // the front pass draws the star at.
   const fade = new Float32Array(n), mixes = new Float32Array(n), alpha = new Float32Array(n);
-  let awake = false, version = 0, par = [0, 0], cluster = null, front = 0, centre = null, formed = false;
+  let awake = false, version = 0, par = [0, 0], displayScroll = 0, cluster = null, front = 0, centre = null, formed = false;
   // Round 16 (R2): the ring of the hold: its members in cyclic order and its phase (radians turned since the press).
   let ring = null, charge = 0;
   // Each captured star's authored offset, in float64; shown positions have only float32 rounding.
@@ -217,6 +220,7 @@ export function createField(W, H, mark = null) {
       if (Math.hypot(px - pointer[0], py - pointer[1]) > R) continue;
       const rho = Math.max(1e-6, Math.hypot(px - hold.anchor[0], py - hold.anchor[1]));
       cluster.set(i, { rho, rv: 0, theta: Math.atan2(py - hold.anchor[1], px - hold.anchor[0]), fresh: true });
+      exploding[i] = 0;
       // R2: the front copy fades in from 0 (a star still out from an earlier release goes on from the opacity it had).
       fade[i] = flags[i] ? fade[i] * weights[i] : 0;
       flags[i] = 1; weights[i] = 1; far[i] = -1; mixes[i] = 0;
@@ -278,8 +282,8 @@ export function createField(W, H, mark = null) {
     for (let i = 0; i < n; i++) {
       const [px, py] = position(i), dx = px - pointer[0], dy = py - pointer[1], r = Math.hypot(dx, dy);
       const c = cluster.get(i), dir = r > 1e-6 ? [dx / r, dy / r] : c ? [Math.cos(c.theta), Math.sin(c.theta)] : [1, 0];
-      if (c) kick(i, dir[0] * blastImpulse(hold.held, stars[i].m), dir[1] * blastImpulse(hold.held, stars[i].m), true);
-      else if (r < STARS.hold.reach * R) { const k = STARS.hold.weak * (1 - r / (STARS.hold.reach * R)) ** 2; kick(i, dir[0] * k * blastImpulse(hold.held, stars[i].m), dir[1] * k * blastImpulse(hold.held, stars[i].m), true); }
+      if (c) explode(i, dir[0] * blastImpulse(hold.held, stars[i].m), dir[1] * blastImpulse(hold.held, stars[i].m));
+      else if (r < STARS.hold.reach * R) { const k = STARS.hold.weak * (1 - r / (STARS.hold.reach * R)) ** 2; explode(i, dir[0] * k * blastImpulse(hold.held, stars[i].m), dir[1] * k * blastImpulse(hold.held, stars[i].m)); }
     }
     const captured = cluster.size;
     // R1: every star in front starts (or, if still out from an earlier release, keeps) its return weight.
@@ -288,11 +292,31 @@ export function createField(W, H, mark = null) {
     return captured;
   }
 
+  // The export ball uses the same capped dynamics, without changing capture or passes.
+  function burstAt(x, y, reach, strength = 0.75 * STARS.hold.blast[0]) {
+    for (let i = 0; i < n; i++) {
+      if (cluster?.has(i)) continue;
+      const [px, py] = position(i), dx = px - x, dy = py + scrollOffset(displayScroll, stars[i].d) - y, r = Math.hypot(dx, dy);
+      if (!(r < reach) || r < 1e-6) continue;
+      const impulse = strength * (1 - r / reach) ** 2 / stars[i].m;
+      explode(i, dx / r * impulse, dy / r * impulse);
+    }
+  }
+  // Use the largest actually drawn copy, including its current mark mix.
+  function gateTrails(trails) {
+    for (let i = 0; i < n; i++) {
+      const own = stars[i].size, width = flags[i] > 1.5 ? own + (Math.max(own, STARS.mark.size) - own) * mixes[i] : own;
+      if (exploding[i] && explosionAge[i] >= 0.05 && Math.hypot(trails[4 * i], trails[4 * i + 1]) <= width) exploding[i] = 0;
+      if (!exploding[i]) trails.fill(0, 4 * i, 4 * i + 4);
+    }
+    return trails;
+  }
   function step(dt) {
     if (!awake || !(dt > 0)) return awake;
     let any = !!cluster;
     front = 0;
     for (let i = 0; i < n; i++) {
+      if (exploding[i]) explosionAge[i] += dt;
       if (flags[i]) front++;
       if (!moving[i] || cluster?.has(i)) { if (cluster?.has(i)) { const [x, y] = shown(i); offsets[2 * i] = x; offsets[2 * i + 1] = y; } continue; }
       const c = Math.exp(-STARS.drag / Math.sqrt(stars[i].m) * dt);
@@ -325,7 +349,7 @@ export function createField(W, H, mark = null) {
       if (Math.hypot(x, y) < STARS.rest.offset && Math.hypot(V[2 * i] * e, V[2 * i + 1] * e) < STARS.rest.speed) {
         // Home: the front copy, faded to its weight (near 0 by now, and kept in weights for the checks), leaves the front pass;
         // the copy behind is the star's own look, as it was all the way home.
-        S[2 * i] = S[2 * i + 1] = V[2 * i] = V[2 * i + 1] = age[i] = 0; x = y = 0; moving[i] = 0; big[i] = 0; last[i] = -1; falling[i] = 0;
+        S[2 * i] = S[2 * i + 1] = V[2 * i] = V[2 * i + 1] = age[i] = 0; x = y = 0; moving[i] = 0; big[i] = 0; last[i] = -1; falling[i] = 0; exploding[i] = 0;
         if (flags[i]) { flags[i] = 0; front--; far[i] = -1; }
       } else any = true;
       offsets[2 * i] = x; offsets[2 * i + 1] = y;
@@ -336,7 +360,7 @@ export function createField(W, H, mark = null) {
     awake = any;
     return awake;
   }
-  function reset() { weights.fill(0); fade.fill(0); mixes.fill(0); alpha.fill(0); far.fill(-1); S.fill(0); V.fill(0); age.fill(0); offsets.fill(0); big.fill(0); moving.fill(0); flags.fill(0); last.fill(-1); falling.fill(0); front = 0; cluster = null; formed = false; ring = null; charge = 0; awake = false; version++; }
+  function reset() { exploding.fill(0); explosionAge.fill(0); weights.fill(0); fade.fill(0); mixes.fill(0); alpha.fill(0); far.fill(-1); S.fill(0); V.fill(0); age.fill(0); offsets.fill(0); big.fill(0); moving.fill(0); flags.fill(0); last.fill(-1); falling.fill(0); front = 0; cluster = null; formed = false; ring = null; charge = 0; awake = false; version++; }
   // What the checks and __hero.stars read about the mark.
   function markState() {
     let assigned = 0, arrived = 0;
@@ -347,10 +371,11 @@ export function createField(W, H, mark = null) {
     return { points: mark ? mark.points.length : 0, height: mark ? mark.height : 0, formed, assigned, arrived, ring: circle, charge, front, centre: centre && centre.slice(), captured: cluster ? cluster.size : 0 };
   }
   return {
-    stars, offsets, flags, weights, fade, mixes, alpha, mark, W, H, base, push, press, gather, blast, step, reset, position, shown, markState,
+    stars, offsets, flags, weights, fade, mixes, alpha, mark, W, H, base, push, press, gather, blast, burstAt, gateTrails, exploding, explosionAge, step, reset, position, shown, markState,
     velocity: i => [V[2 * i] * Math.exp(-age[i]), V[2 * i + 1] * Math.exp(-age[i])],
     get front() { return front; },
     setParallax(f) { par = f; },
+    setScroll(y) { displayScroll = y; },
     get awake() { return awake; }, get version() { return version; }, get cluster() { return cluster; }, get ring() { return ring; },
   };
 }
@@ -403,7 +428,7 @@ export function createStars(hero, { reduced, win = hero.ownerDocument.defaultVie
     }
   }
   const local = e => box ? [e.clientX - box.left, e.clientY - (top - scrollY)] : null;
-  win.addEventListener('scroll', () => { scrollY = win.scrollY || 0; redraw(); }, { passive: true });
+  win.addEventListener('scroll', () => { scrollY = win.scrollY || 0; field?.setScroll(Math.max(0, scrollY - top)); redraw(); }, { passive: true });
   win.addEventListener('pointermove', e => {
     if (!usable(e) || !box || !open()) return;
     pointer = local(e);
@@ -451,13 +476,14 @@ export function createStars(hero, { reduced, win = hero.ownerDocument.defaultVie
     if (live && hold) field.gather(hold, pointer || hold.anchor, dt);
     field.step(dt);
     const scroll = still ? 0 : Math.max(0, scrollY - top);
+    field.setScroll(scroll);
     field.stars.forEach((s, i) => {
-      const p = parallaxOffset(f, s.d);
-      positions[2 * i] = attrs[5 * i] + p[0] + field.offsets[2 * i];
-      positions[2 * i + 1] = attrs[5 * i + 1] + p[1] + field.offsets[2 * i + 1] + scrollOffset(scroll, s.d);
+      // Own motion only. The renderer still adds parallax and scroll to the head.
+      positions[2 * i] = attrs[5 * i] + field.offsets[2 * i];
+      positions[2 * i + 1] = attrs[5 * i + 1] + field.offsets[2 * i + 1];
     });
     if (still || !live) history.reset();
-    const trails = history.record(now, positions); trailVersion++;
+    const trails = field.gateTrails(history.record(now, positions)); trailVersion++;
     return {
       count: field.stars.length, attrs, attrsVersion, offsets: field.offsets, flags: field.flags, weights: field.weights, alpha: field.alpha, mixes: field.mixes, front: field.front, markSize: STARS.mark.size, version: field.version,
       trails, trailVersion,

@@ -208,7 +208,7 @@ layout(location = 2) in vec2 aOff;
 layout(location = 3) in float aFlag;   // round 9 (L1): 0 behind, 1 in front, 2 in front as G (paper), 3 in front as D (red)
 layout(location = 4) in float aWeight; // round 10: the front copy's opacity, its fade-in (R2) x its return weight (R1)
 layout(location = 5) in float aMix;    // round 10 (R2): the mark weight, own look (0) to the mark's (1)
-layout(location = 6) in vec4 aTrail;  // .02 s displacement, shared taper's unit normal
+layout(location = 6) in vec4 aTrail;  // shared-window displacement, shared taper's unit normal
 uniform vec2 uSize;                    // the hero, css px
 uniform float uDpr, uScroll;
 uniform float uPass, uMarkSize;        // 0 the pass behind the scene, 1 the pass in front; a mark star's least size, css px
@@ -285,6 +285,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   const piece = program(gl, VERT, FRAG), flat = program(gl, VERT, FRAG_FLAT), depth = program(gl, VERT, FRAG_NONE), floor = program(gl, VERT_FLOOR, FRAG_FLOOR);
   const starProgram = program(gl, VERT_STARS, FRAG_STARS);
   // Round 8 (B1): the star field's buffers. Its look is uploaded when the field is made; offsets only when they change.
+  function starBatch() {
   const starVao = gl.createVertexArray(), starLook = gl.createBuffer(), starOff = gl.createBuffer(), starFlag = gl.createBuffer(), starWeight = gl.createBuffer(), starMix = gl.createBuffer(), starTrail = gl.createBuffer();
   gl.bindVertexArray(starVao);
   gl.bindBuffer(gl.ARRAY_BUFFER, starLook);
@@ -301,7 +302,10 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   gl.bindBuffer(gl.ARRAY_BUFFER, starTrail);
   gl.enableVertexAttribArray(6); gl.vertexAttribPointer(6, 4, gl.FLOAT, false, 0, 0);
   gl.bindVertexArray(null);
-  let starLookVersion = -1, starOffVersion = -1, starCountNow = 0;
+  return { starVao, starLook, starOff, starFlag, starWeight, starMix, starTrail, starLookVersion: -1, starOffVersion: -1, starCountNow: 0 };
+  }
+  const fieldBatch = starBatch();
+  let sparkBatch = null;
 
   // Rounded pieces keep the dense mesh; sharp boxes need only the face and bevel angles.
   function mesh(oct) {
@@ -476,7 +480,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   const drawAll = (prog, pieces, grow, tone, skip) => {
     for (const pc of pieces) {
       // Once the body's top is under the floor, omit its whole object in every pass, including expanded outlines.
-      if (pc.hide || pc.sinkTop < 0 || (skip && pc[skip])) continue;
+      if (pc.hide || (skip && pc[skip])) continue;
       const mesh = Math.max(pc.e[0], pc.e[1]) > 0.06 ? roundMesh : sharpMesh;
       if (mesh !== boundMesh) { gl.bindVertexArray(mesh.vao); boundMesh = mesh; }
       setPiece(prog.u, pc, typeof grow === 'function' ? grow(pc) : grow);
@@ -495,7 +499,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   //         reveal: [a, b, c, d] one more clip plane for every piece (the entrance) }
   function draw(pieces, view, look = {}) {
     if(buildings.spineAttribution) {
-      pieces=pieces.filter(pc=>pc.where==='floor'&&pc.sink&&pc.device===undefined&&pc.p[2]>buildings.spineAttribution.z);
+      pieces=pieces.filter(pc=>pc.where==='floor'&&!pc.morph&&pc.device===undefined&&pc.p[2]>buildings.spineAttribution.z);
       look={...look,bg:'#000000',line:'#0000ff',floor:{...look.floor,pool:'#000000',dot:'#000000'}};
     }
     const { W, H, dpr = 1, S, cx, cy, cam } = view;
@@ -545,8 +549,9 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     // again by a second pass after the scene, only while any is out. Round 10 (R1): this first pass draws every star in its own
     // look (stars that are out included), and the second draws the out stars' front copies at their opacities (R2's fade-in
     // x R1's return weight), in their own look mixed toward the mark's by the mark weight (R2).
-    const starPass = pass => {
-      const st = look.stars;
+    const starPass = (pass, st = look.stars, batch = fieldBatch, sparks = false) => {
+      const { starVao, starLook, starOff, starFlag, starWeight, starMix, starTrail } = batch;
+      let { starLookVersion, starOffVersion, starCountNow } = batch;
       gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.bindVertexArray(starVao); boundMesh = null;
       if (st.attrsVersion !== starLookVersion || st.count !== starCountNow) {
@@ -571,7 +576,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       gl.uniform2fv(starProgram.u.uPar, st.par || [0, 0]);
       gl.uniform3f(starProgram.u.uRings, st.centre?.[0] ?? 0, st.centre?.[1] ?? 0, st.reveal === null || st.reveal === undefined ? 1e9 : st.reveal);
       gl.uniform3fv(starProgram.u.uInk, ink); gl.uniform3fv(starProgram.u.uPaper, hex('#F7F6F3')); gl.uniform3fv(starProgram.u.uRedInk, hex('#F0484F'));
-      gl.uniform2f(starProgram.u.uMix, 0.12, 0.55);
+      gl.uniform2f(starProgram.u.uMix, sparks ? 1 : 0.12, sparks ? 1 : 0.55);
       if (st.trails) {
         gl.disable(gl.CULL_FACE);
         gl.bindBuffer(gl.ARRAY_BUFFER, starTrail); gl.bufferSubData(gl.ARRAY_BUFFER, 0, st.trails);
@@ -585,6 +590,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       gl.uniform1i(starProgram.u.uStreak, 0);
       gl.drawArrays(gl.POINTS, 0, st.count);
       gl.bindVertexArray(null); gl.disable(gl.BLEND); gl.enable(gl.DEPTH_TEST);
+      Object.assign(batch, { starLookVersion, starOffVersion, starCountNow });
     };
     if (look.stars && look.stars.count) starPass(0);
 
@@ -634,6 +640,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     }
     // Round 9 (L1): the captured stars, in front of the scene's pieces from capture until home (round 10: at their weights).
     if (look.stars && look.stars.count && look.stars.front > 0) starPass(1);
+    if (look.sparks?.count) starPass(1, look.sparks, sparkBatch ||= starBatch(), true);
     gl.bindVertexArray(null);
   }
   function warm(pieces, view, stars, floor) {

@@ -3255,3 +3255,145 @@ The full suite retains **6,582 frames / 477,123 pieces / max 188 / 6 atlas pages
 Final tracked-hash audit: **200 of 208 files byte-identical**; exactly **8 allowed tracked files changed** (entrance, player, CSS, three check runners, BUILD and README). The **four** new tools all have checks/trace names. All corrections, MOCK-A.diff, fixtures, earlier scene construction/artwork, loader shared module, star simulation/streaks, renderer, page packer, layouts, `public/`, `src/` and CNAME retain their original hashes. In particular the loader bridge function is identical after line-ending normalization, and the entire loader/stars runtime is byte-identical. Scope and new-file checks are executable in `l12-preserve-checks.mjs`.
 
 All Edge instances this run started are closed; a normalized-profile-path process check records **0** remaining in `l12-edge-closed.txt`. No external profile was opened. No outside-repository skill/RTK read, non-localhost network, installation/dependency, site build/deploy, mutating git command, protected-file write, screenshot, eye judgement, pixel gate or reviewer agent was used. The explicit run restrictions stop real-browser range/inline-block-control, raster-pixel, font paint identity and independent visual approval here; those gates remain **UNRUN**, with external review required. There is no unreported timetable departure: the camera ends at **3.90**, and only the fixed craft text wrapper refines the scratch mock to enforce L12's stated mask clearance.
+
+
+## Round 19, L13
+
+Built L13 parts 1-4 on the supplied L12 files. The final Node suite prints **all clean**; every retained control and every new L13 control is caught at its named gate. Final full-suite log: [all-clean-reverified.txt](.scratch/l13/all-clean-reverified.txt). No publication or site build was run.
+
+### Reference and acceptance record
+
+Read CORRECTIONS-19's L13, L11 and L12, MOCK-X.diff, README and BUILD's L11/L12 records before implementation. The mock was studied for its numbers and appearance, without applying it. Used the installed motion-playbook locally. Acceptance was: explosion-only tapers; one 0.04 s window with unchanged nominal widths; continuous loader taper coverage against Canvas; the exact exit timetable; a reversible shared red/asset step; complete per-object blocks; no sinking or below-floor geometry; projected front-pass sparks; retained loader, entrance, artwork, layout, colours, dynamics, labels and reduced-motion behavior. The explicit prohibition on reviewer agents takes precedence over the standing agent-review workflow.
+
+### Runtime changes and numbers
+
+- Field stars now have an exploding flag and a separate elapsed explosion clock. Hold release and an export kick set it. Capture and arrival home clear it. At least 0.05 s after a kick, the first taper no longer exceeding the largest actually drawn copy's width clears it permanently for that explosion. Stirring changes neither flag nor explosion clock. Its existing impulse, mass, drag, caps and front-copy return stay unchanged.
+- History records home + own offset. Parallax and scrolling still position heads, with zero trail upload for a non-exploding star. The export kick measures stars at their displayed parallax and scroll positions.
+- STREAK_WINDOW in loader-stars.mjs is the single constant: 1/50 = 0.02 s -> 2/50 = 0.04 s. Loader burst, field history and export sparks import/read it. Gathering flights now have no tail or streak. Individually landed loader stars have an exact zero trail. All loader launch, wind-up, explosion and handover clocks stay unchanged.
+- Loader WebGL requests antialias: false -> true. Multisampling alone failed the pixel gate, so the final painter also computes the original triangle's edge coverage in the fragment shader. Its alpha transition spans 1.2 device pixels, centred on the original edge; the geometric width and head diameter stay unchanged. A two-triangle raster quad has a 2-device-pixel padding solely to invoke coverage. The shader receives the original head, tail and width. The dot-head shader stays unchanged for the field handover. Canvas fallback geometry is retained. There is no width multiplier or speed-driven growth rule.
+- assetWipe is the sole red/asset transition function, used forward at arrival and backward at exit. It retains the world-x wipe, EASE.wipe, with opposite planes on asset and red. Every visible object's separated bounding box supplies its own red volume, including glass, hardware and each reading half. Arrival split endpoints use those same complete bounds. Boundary amounts within 1e-12 of 0/1 snap to their exact endpoint to avoid a floating-point red sliver in an exact held frame.
+- The exit starts at the previous off[0]: wipe 0.45 s, formats 0.10 s apart, finished at 0.65; merge with EASE.wipe 0.65-1.15; squash to 0.78 radius 1.15-1.33; swell to 1.15 with EASE.exit 1.33-1.45; no ball/export geometry in the 1.45 frame; scene end 1.50. BALL.sink retains its table name but changes 1.0 -> 1.5 s. The old sink's translations, floor clips and sinkTop renderer cull are removed. Figma's fixed clockLength changes 18.545162584479227 -> 19.045162584479227. The loop is 99.49089474781469 -> 101.49089474781469 s.
+- Sparks: 0 -> 140, with exactly 98 red and 42 paper. The mock's upper-hemisphere directions, low-biased distribution, 5-16 units/s, tau 0.13-0.24 s braking, 1.5-3 px heads and 0.7-1.25 s lives are retained; size goes to zero over the last 45%. They use a separate buffer batch in the existing star program's front pass, after the scene, with full brand colours. There is no sparks canvas. Pure loop-time sampling carries them into the next opening; forward playback kicks nearby field stars once per crossed burst, at reach 2.6 * stage scale and 0.75 * hold base impulse with squared falloff. The first entrance excludes a previous-cycle burst that has not happened. Reduced motion suppresses sparks and retains held stills.
+
+**Count conflict resolved explicitly:** the brief says four InDesign red pieces and later three red blocks, but its per-object requirements identify five objects: the five-copy stack, left reading half, right reading half, phone and tablet. This build gives all five their own exact red volume, under three format clocks. The other scenes have three red volumes. All five InDesign volumes merge into the single ball. A four-piece implementation would have to omit a required half or combine unlike objects. The exit stack is 0.25 high (five copies), replacing the mock's 0.30 six-copy block. Reading halves are 0.04 and 0.01 high. This is the sole count decision; it is visible in the sheets and checked explicitly.
+
+Arrival red heights, left to right, now include the complete object instead of only its body (world units):
+
+| Scene | Old heights | New heights |
+| --- | --- | --- |
+| id | 0.300000 / 0.050000 / 0.040000 | 0.300000 / 0.064800 / 0.042000 |
+| pr | 0.040000 / 0.050000 / 0.050000 | 0.049200 / 0.064800 / 0.064800 |
+| ae | 0.040000 / 0.050000 / 0.050000 | 0.049200 / 0.064800 / 0.064800 |
+| fig | 0.120000 / 0.040000 / 0.050000 | 0.121000 / 0.050000 / 0.064800 |
+
+| Scene | Length, old -> new seconds | Global start, old -> new seconds |
+| --- | --- | --- |
+| ps | 8.046311 -> 8.046311 | 0.000000 -> 0.000000 |
+| ai | 13.147726 -> 13.147726 | 8.046311 -> 8.046311 |
+| id | 22.588316 -> 23.088316 | 21.194036 -> 21.194036 |
+| pr | 19.381290 -> 19.881290 | 43.782353 -> 44.282353 |
+| ae | 17.782089 -> 18.282089 | 63.163643 -> 64.163643 |
+| fig | 18.545163 -> 19.045163 | 80.945732 -> 82.445732 |
+
+Only one local action row changes: InDesign return, 21.588316352077282-22.588316352077282 -> 21.588316352077282-23.088316352077282. All other action start/end times are unchanged. Labels retract before exit, the laptop closes before exit, and plays hold their last frame.
+
+### Every earlier changed expectation
+
+| Earlier gate/tool | Old expectation -> new expectation |
+| --- | --- |
+| Main loop bounds, tools/checks.mjs | 70-100 -> 70-102 s; the exact new loop is checked separately. Sink floor-clip exemption -> no exemption. New L13 gates/controls are included. |
+| Main/entrance/round8 player stand-ins | No exit helpers -> empty burst list and spark/kick stand-ins. Existing clock, review, pause and reduced checks retain their numbers. |
+| tools/loader-checks.mjs flights | Historical 0.02 s taper -> no tail/no streak, still 240 Hz curve/position/size/colour checks. longestFlight becomes 0. |
+| Loader burst history and landing | 0.02 -> shared 0.04 s prior state; landed tail -> exact head, so it stays a dot in the landing frame. Curves/durations/homes/colours stay exact. |
+| Inline painter at 0.35 s, entrance-checks | Required gathering tapers -> requires zero; the existing burst +0.05 s probe still requires nonzero tapers. The no-painted-streaks control still fails L9 painter in the burst. |
+| L11 history oracle | Prior sample time now-.02 -> now-.04. At .031 s on the irregular sample, expected displacement (33.076923,11.538462) -> (50,20). |
+| L11 loader GPU upload | 3 vertices/taper, 7 floats/vertex, 28-byte stride -> 6 coverage-quad vertices, 11 floats, 44-byte stride. The new gate verifies padding plus unchanged original head/tail/width inputs. Field triangle submission remains 3 vertices in both passes. |
+| Round8 G1 | 99.49089 -> 101.49089 s, unchanged 1e-4 tolerance. |
+| H2/E4 derived retimers | BALL.sink-based tail deltas grow by .5 s for each export; their formulas and retained action/label thresholds are unchanged. |
+| Round15 exported S1/S2 checks | Retired historical sink bodies/control -> delegate to retained round17 arrival/lid and L13 exit gates. N1/N2 and renderer plane checks stay. Retained CLI controls 5 -> 4: obsolete unclipped-sink mutation removed. |
+| Round17 R8/R11 | 1 s downward translation, y=0 clipping, per-body cull/crossing synchrony -> 1.5 s exit; 260 retained wipe/held-play samples plus L13's 1,444 exit samples. All four disappear at 1.45 s, without a floor crossing. |
+| Round17 arrival block thickness | Tallest full-width body face -> complete object's maximum height, including hardware and glass (table above). Opposite planes, footprints and original piece geometry remain checked. |
+| Round17 R12 device presence | Every body through off[1] -> each body until its format's .45 s wipe ends, staggered .10 s; sample range ends off[0]+.65. It uses the actual scene-local clock and the 1e-12 endpoint guard. Physical sizes, rims, materials, island, lens, artwork and aspect tolerances stay. |
+| Round17 C2 renderer probe | sinkTop < 0 body cull -> removed; generic hidden-piece culling is checked. Carry-clip uniform tests remain for the generic renderer planes. |
+| Round17 C7 spine | 1 ms samples through a 1 s sink -> 1 ms through .45 s before reading pieces disappear in the wipe: 451 samples, no spine gap. |
+| C18 pinned Figma times | 94.7/94.9/95.05/95.25/95.5 -> 96.2/96.4/96.55/96.75/97.0; deck pin 94.91 -> 96.41. The prior three tails add 1.5 s. |
+| C18 deck endpoints | Exact shared wipe/exit boundaries with sink clips -> opening starts +1e-9 s and shutting ends -1e-9 s, so this gate examines turns themselves. Both shut endpoints remain enclosed; every detail is submitted with the same opaque depth rules. |
+| C18 outer lid mark lifetime | Sink window off[0]-off[1], floor/carry clips and sinkTop -> exit wipe off[0]-off[0]+.45-1e-8, same x wipe as lid; L13 verifies absence after burst. |
+| C18 AE consistency boundary | play.start -> play.start+1e-9 s, sampling the played side after the changed global start's subtraction. Head/frame assertions and 2.0 s pre-play head remain exact. |
+| F2 painter ordering | Zero-area boxes were compared as overlapping -> ignore footprint width/height <=1e-9, the existing overlap epsilon. A zero-size redBall at an action start exposed this. All visible-face .0008 ordering and .0006 clearance limits stay. |
+| Round17 loop assertions | Both 99.49089474781469 checks -> 101.49089474781469. |
+| Round17 negative gates | 43 -> 40. Retire shared sink depth, C6 carried sink-cull/clip, and C2 tallest-piece sink-height mutations. Retained C2 grouped stack/reading and C4 grouped halves now fail L13 per-object bounds, replacing body-cull/finish gates. |
+| Round17 pixel exit/spine | C5 sink crossing and its three synthetic sinkVerdict tests retired -> L13's 108 held exit frames and bounds/floor gates. C7 attribution window 43.300-43.420 -> final .121-.001 s before InDesign off[0], when the reading copy is still intact; its three attribution lines stay. |
+| README action table | InDesign return end 22.588 -> 23.088. The other local action rows stay. |
+
+No L12 letter/word clocks, masks, camera, screen rise, group limits, end at 4.60 s, name behavior, loader launch shares or boot milestones were changed. Reference/fixture artwork and public code are untouched.
+
+### Controlled-clock gates and negative controls
+
+Playwright's installed local clock drives real Edge at 1440 x 900 with a 1440 x 900 hero and 1,200 field stars. Scrolling adds a sibling below main, preserving hero height. The final run has 1567 recorded submitted-field frames. It records zero eligible tapers during stirring, parallax, scroll and a three-second hold. That hold forms the mark (435 assigned, 79 arrived). Since its captures do not yet fill 600 points, an additional eight-second hold exercises all 600 arrived points and 600 outer-ring stars, also with zero tapers. Release has 2182 taper submissions within its first .05 s, 32412 across the recorded release, and zero later revivals after a taper first disappears.
+
+The speed-only countermodel restores trail eligibility and displayed-position history in memory. It fails **L13 stir: no taper** (370) and **L13 hold: no taper** (29061); it also produces 152662 tapers during the full ring hold and 23000 return revivals. The loader's real main-thread fallback runs under the same clock: 199 gathering frames with zero tapers, 106 burst frames, maximum 595 tapers (305 total frames). Worker timing is measured separately in the real-time trace.
+
+The shared-window memory test changes .04 -> .08 s and observes all three consumers change: loader total trail 22060.261286 -> 46878.598255, field displacement 40 -> 80, spark component total 1993.847208 -> 4457.305655. Each is nonzero; no caller has a copied window constant.
+
+New pure controls: old tail -> L13 loop; late burst -> L13 burst; missing reading halves and undersized red block -> L13 wipe full per-object bounds; restored downward motion -> L13 per-object bounds. The final suite also catches all 29 entrance/L12 controls, the L11 dots-only control, four round8 controls, 40 round17 controls, and all other retained controls at their gates. Logs retain actual error text; no fault is written to product files.
+
+### Loader pixel gate
+
+Same Edge GPU, identical loaderDots states at burst elapsed .04, .10, .30, .70 and 1.20 s, WebGL and retained Canvas fallback. Sample every quarter device pixel along every taper centre line, bilinearly between pixel centres. For Canvas alpha > .1, require WebGL >= half that alpha. Alpha differences below are normalized 0-1, 99th percentile over qualifying centre-line samples.
+
+| Size | DPR | Samples | Positive gaps | P99 absolute alpha difference | Raw antialias-false control gaps |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 1440 x 900 | 1 | 268188 | 0 | 0.251391 | 17428 |
+| 1440 x 900 | 2 | 542026 | 0 | 0.195297 | 17426 |
+| 390 x 844 | 1 | 143644 | 0 | 0.263297 | 9100 |
+| 390 x 844 | 2 | 288440 | 0 | 0.203703 | 9756 |
+
+Multisampling alone left 5,574 / 5,615 desktop gaps and 2,359 / 2,666 phone gaps (DPR 1 / 2, nearest-pixel diagnostic); it was insufficient. Shader edge coverage was selected on the strict pixel evidence even though the intermediate multisample trace added no new over-20 interval. This is a stated extension of the brief's performance-triggered fallback wording. The final gate uses the actual line location rather than repeatedly counting the same nearest pixel.
+
+Because coverage is now supplied by the shader, the negative control restores the original raw triangle shader/geometry with antialias:false in memory. It is the original dashed-tail failure, rather than a context-flag-only toggle that leaves the replacement coverage active. All four control cases fail the alpha gate. This control adaptation is deliberate and recorded, with no weakened positive threshold.
+
+### Loader frame table, before and after
+
+Installed Edge executable, isolated profiles under .scratch, real ANGLE/NVIDIA GeForce RTX 4090/Direct3D11 GPU, DPR 1. Phone metrics and touch emulation: 412 x 730. These are this PC's phone-viewport measurements. HTTP(S) page requests are blocked; fonts, modules and pictures are inline. Tracing begins before navigation, including cold boot, main and loader worker. Main table entries are rAF callback-start intervals, worker entries traced FireAnimationFrame starts, through landing and the whole 4.60 s entrance. They are not presentation/display-photon intervals. Each cell is **count / max ms / P95 ms / count >20 ms**.
+
+| Run | Viewport | Main load | Loader worker | Whole entrance |
+| --- | --- | --- | --- | --- |
+| before | 1440x900 | 1149 / 187.000 / 4.300 / 2 | 1143 / 69.657 / 4.219 / 1 | 1083 / 60.200 / 4.400 / 1 |
+| before | 412x730 | 1177 / 22.100 / 4.300 / 1 | 1176 / 5.670 / 4.211 / 0 | 1103 / 9.100 / 4.300 / 0 |
+| final | 1440x900 | 1186 / 14.800 / 4.300 / 0 | 1159 / 9.365 / 4.219 / 0 | 1092 / 14.100 / 4.400 / 0 |
+| final | 412x730 | 1177 / 17.400 / 4.300 / 0 | 1176 / 4.371 / 4.216 / 0 | 1103 / 9.100 / 4.300 / 0 |
+
+Final recording: zero intervals >20 ms in either thread/size. Before the first callback, cold work is still present in the raw trace: desktop first main callback 34.8 -> 282.4 ms after navigation, phone 108.3 -> 115.7 ms. The callback-interval table does not turn that startup latency into a frame interval. The intermediate multisample-only desktop still had native raster-flush stalls (main 65.60 ms, worker 66.695 ms); the final recording does not establish repeatability or prove that multisampling removed native driver stalls. No frame, clock or duration was delayed to move a gap outside the measurement window.
+
+Every before interval >20 ms:
+
+| Viewport / thread / phase | From-to ms | Gap ms | Own spans and sampled functions | Parallel GPU/raster spans |
+| --- | ---: | ---: | --- | --- |
+| 1440x900 / main / load | 34.700-221.700 | 187.000 | v8.evaluateModule 170.15; GLES2Implementation::GetProgramiv 21.69; ImplementationBase::GetBucketContents 21.66; ImplementationBase::WaitForCmd 21.66; CommandBufferHelper::Finish 21.66; CommandBufferProxyImpl::WaitForGetOffset 21.62; GLES2Implementation::GetShaderiv 18.59. CPU: program <- createRenderer <- (root) 63.88; HTMLCanvasElement.getContext <- createRenderer <- (root) 32.67; make <- program <- createRenderer <- (root) 27.92; (program) <- (root) 17.13; createRenderer <- (root) 8.43; handTime <- script <- (root) 6.39 | CrGpuMain RasterDecoderImpl::DoEndRasterCHROMIUM 86.82; CrGpuMain RasterDecoderImpl::DoEndRasterCHROMIUM::Flush 86.72; CrGpuMain GpuChannel::ExecuteDeferredRequest 166.97; CrGpuMain GPUTask 165.45 |
+| 1440x900 / loader worker / load | 312.010-381.667 | 69.657 | RunMicrotasks 0.43; FireAnimationFrame 0.34; FunctionCall:animate 0.33; V8.StackGuard 0.07; V8.HandleInterrupts 0.07; GpuChannelHost::VerifyFlush 0.06; V8.StackGuard 0.02. CPU: (program) <- (root) 0.13 | CrGpuMain RasterDecoderImpl::DoEndRasterCHROMIUM 68.67; CrGpuMain RasterDecoderImpl::DoEndRasterCHROMIUM::Flush 68.65; CrGpuMain GpuChannel::ExecuteDeferredRequest 68.78; CrGpuMain GPUTask 68.76 |
+| 1440x900 / main / load | 320.100-381.800 | 61.700 | TimerFire 3.51; RunMicrotasks 3.49; MinorGC 0.20; V8.GC_SCAVENGER 0.18; V8.GC_SCAVENGER_SCAVENGE 0.17; V8.GC_SCAVENGER_SCAVENGE_PARALLEL_PHASE 0.12; FireAnimationFrame 0.07. CPU: metrics <- text <- tab <- paintGroup 2.03; (anonymous) <- box <- panes <- face <- street 0.59; (program) <- (root) 0.43 | CrGpuMain RasterDecoderImpl::DoEndRasterCHROMIUM 60.58; CrGpuMain RasterDecoderImpl::DoEndRasterCHROMIUM::Flush 60.56; CrGpuMain GpuChannel::ExecuteDeferredRequest 60.77; CrGpuMain GPUTask 60.75 |
+| 1440x900 / main / entrance | 9058.200-9118.400 | 60.200 | FireAnimationFrame 0.31; FunctionCall:tick 0.31; FireAnimationFrame 0.08; Layerize 0.05; FunctionCall:frame 0.03; Commit 0.03; UpdateLayoutTree 0.02. CPU: (program) <- (root) 0.59 | CrGpuMain RasterDecoderImpl::DoEndRasterCHROMIUM 59.33; CrGpuMain RasterDecoderImpl::DoEndRasterCHROMIUM::Flush 59.32; CrGpuMain GpuChannel::ExecuteDeferredRequest 59.56; CrGpuMain GPUTask 59.55 |
+| 412x730 / main / load | 257.800-279.900 | 22.100 | TimerFire 3.44; RunMicrotasks 3.43; FireAnimationFrame 0.04; FunctionCall:tick 0.03; FireAnimationFrame 0.02; Commit 0.02; FunctionCall:frame 0.02. CPU: panes <- face <- street <- draw 1.88; (anonymous) <- panes <- face <- street 1.06; (program) <- (root) 0.40 | CrGpuMain GpuChannel::ExecuteDeferredRequest 1.26; CrGpuMain GPUTask 0.49; CrGpuMain CommandBuffer::Flush 0.41; CrGpuMain CommandBufferStub::OnAsyncFlush 0.41 |
+
+The final pair has no over-20 row. Nested and parallel spans overlap; they must not be added. Full tables, traces, CPU profiles, hardware and frame data: [before](.scratch/review-out/r19/l12-l13-before/frame-table.md), [final](.scratch/review-out/r19/l12-l13-verified/frame-table.md), [intermediate multisample](.scratch/review-out/r19/l12-l13-after-msaa/frame-table.md).
+
+### Held frames and preserved reference
+
+Each sheet has four export-scene rows, at offsets 0, .3, .6, .9, 1.2, 1.4, 1.46, 1.6 and 2.0 s. Full-size individual PNGs are beside the sheets. All 108 frames were rendered and the sheets/key reading-copy and tablet wipe frames were inspected. Red halves are present, glass stays inside its volume, the ball rests on the floor, and sparks carry into the next scene. Pure checks additionally sample 1,444 frames at 240 Hz, check each source piece stays rigid, each red box is its own object's box, exact arriving/returning rest point, squash/swell curves, no exports after 1.45 and no below-floor geometry.
+
+[412 x 730 exit sheet](.scratch/l13/browser/contact-412x730.png)
+
+[390 x 844 exit sheet](.scratch/l13/browser/contact-390x844.png)
+
+[1440 x 900 exit sheet](.scratch/l13/browser/contact-1440x900.png)
+
+Incoming L12 and L13 exit-zero side-by-side: [412 x 730](.scratch/l13/browser/comparison-412x730.png), [390 x 844](.scratch/l13/browser/comparison-390x844.png), [1440 x 900](.scratch/l13/browser/comparison-1440x900.png). Premiere/AE have zero changed pixels at all three sizes. InDesign has 115/127/200 changed pixels and Figma 42/45/87 (same size order); removing only the old sink floor/carry clips from the incoming preview makes every comparison exactly identical, zero changed pixels in all 12 pairs. Thus the boundary differences are attributable to the authorized clip removal, not altered artwork or layout. No reference facts or mock review panel were reused.
+
+### Verification, scope and remaining limits
+
+The final CLI checks 6702 frames / 485287 pieces / max 188 / 6 atlas pages and prints all clean. Earlier totals were 6,582 / 477,123 / max 188 / 6 pages. The two additional loop seconds add 120 regular frame samples. All retained controls and the new L13 controls are observed failures at their gates. Syntax checks pass for all 18 changed/new .mjs files.
+
+Source audit covers all 106 incoming take-2 files: after adding this BUILD record, 90 retain their exact hash, 16 allowed files change, and four allowed modules/tools are added. All CORRECTIONS-*.md, MOCK-*.diff, tools/fixtures, fonts, art, entrance, layout, CSS and preview packer retain their incoming hashes. The changes are the six motion/player/renderer sources (including the new export-sparks module), page inline painter, check tools and the requested BUILD/README. No public/, src/, CNAME, external client folder or PresentationEngine/E: work was performed. No git command, installation, external/page network request, site build, deployment or reviewer agent was run. Local CDP was used only for Edge control and tracing. All started Edge instances are closed; the final profile-path process audit is saved with the other evidence.
+
+The work includes all four L13 runtime parts and executable gates. The documented departures are the internally inconsistent InDesign piece count, using coverage on pixel evidence, adapting the raw antialias-false control to that shader path, adding an eight-second ring probe beyond the required three seconds, and tiny endpoint sampling guards. The later L14 red/asset redesign remains out of scope; today's wipe is isolated in assetWipe for that replacement. No new independent design approval is claimed.

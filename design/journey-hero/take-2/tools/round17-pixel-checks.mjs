@@ -149,16 +149,7 @@ export function attributionCounts(image,mask) {
   for(let i=0;i<mask.length;i++)if(mask[i]) {const p=i*image.channels,[r,g,b]=image.pixels.slice(p,p+3);if(Math.max(r,g,b)<=8)counts.floor++;else {counts[r>=g&&r>=b?'top':g>=b?'side':'outline']++;if(r+g+b<247)counts.mixed++;}}
   return {...counts,pass:counts.floor===0};
 }
-export function sinkVerdict(samples,crossing) {
-  let worstDrop=0;const violations=[];
-  if(!samples.length||samples[0].changed===0)violations.push('empty first footprint');
-  for(let i=0;i<samples.length;i++) {
-    const row=samples[i],previous=samples[i-1];
-    if(row.t<crossing-1e-9&&previous&&previous.changed) {const drop=(previous.changed-row.changed)/previous.changed;worstDrop=Math.max(worstDrop,drop);if(drop>0.05)violations.push({t:row.t,drop});}
-    if(row.t>crossing+1e-9&&row.changed!==0)violations.push({t:row.t,after:row.changed});
-  }
-  return {pass:!violations.length,worstDrop,violations};
-}
+
 
 // Small generated PNGs exercise the production decoder, not another implementation of it. No browser is imported/launched.
 export function checkPixelHelpers() {
@@ -227,9 +218,6 @@ export function checkPixelHelpers() {
   assert.deepEqual(region.p,[0,0,1-1e-9]);assert.deepEqual(region.s,[1,1.5,1e-9]);
   assert.equal(attributionCounts({channels:3,pixels:Uint8Array.of(255,0,0,0,255,0,0,0,255)},Uint8Array.of(1,1,1)).pass,true);
   assert.equal(attributionCounts({channels:3,pixels:Uint8Array.of(0,0,0)},Uint8Array.of(1)).pass,false);
-  assert.equal(sinkVerdict([{t:0,changed:100},{t:.001,changed:95},{t:.002,changed:0}],.002).pass,true);
-  assert.equal(sinkVerdict([{t:0,changed:100},{t:.001,changed:94},{t:.002,changed:0}],.002).pass,false);
-  assert.equal(sinkVerdict([{t:0,changed:100},{t:.003,changed:1}],.002).pass,false);
   return {pngCases:cases,filters:5,channels:[3,4],maskPixels:12,threshold:8,endpointMipThreshold:8,selectionStrokes:4,spineLines:3,optionWindows:true,nonemptyOwnFaces:true,placementScopes:true};
 }
 
@@ -423,18 +411,12 @@ export async function checkRound17Pixels(chromium,previewPath,options={}) {
           if(old['9ba17ea']){const ref=await capture(old['9ba17ea'],t,clip),result=countDifferences(current.image,ref.image,outside);add({gate:'retained outside eight pictures',size,t,...result,pass:result.changed===0});}
           if(old.dcb8094){const ref=await capture(old.dcb8094,t,clip);add({gate:'stills/rest side-effect record',size,t,...countDifferences(current.image,ref.image,insideMask),pass:null});}
         }catch(error){await page.evaluate(()=>{window.__hero.buildings.referenceOnly=false;});add({gate:'stills/rest',size,t,pass:false,error:error.message});}
-        if(W===1474)for(const scene of ['id','pr','ae','fig'])try {
-          const off=playbackSpans(SCRIPTS[scene]).off.map(t=>t+globalStart(scene)),Hmax={id:.25,pr:.05,ae:.05,fig:.12}[scene],target=1/(1+.02/Hmax);let lo=0,hi=1;
-          for(let n=0;n<60;n++){const m=(lo+hi)/2;if(EASE.wipe(m)<target)lo=m;else hi=m;}
-          const crossing=off[0]+(lo+hi)/2,first=crossing-.1,state=await frame(page,first),footprint=polygons(state,p=>p.where==='floor'&&p.sink&&!p.hide&&p.sinkTop>=0,clip,dpr);
-          assert.ok(footprint.length,'no sinking objects');const empty=await capture(page,off[1]-.000001,clip),mask=rasterMask(empty.image.width,empty.image.height,footprint),samples=[];
-          for(let n=0;n<=120;n++){const t=first+n*.001,current=await capture(page,t,clip);samples.push({t,...countDifferences(current.image,empty.image,mask)});}
-          add({gate:'C5 sink',size,scene,crossing,samples,...sinkVerdict(samples,crossing)});
-        }catch(error){add({gate:'C5 sink',size,scene,pass:false,error:error.message});}
+        // L13 retires the floor-crossing pixel gate. Its 108 held exit frames and alpha/streak
+        // controls now run in l13-browser-checks.mjs, with pure per-object bounds/floor gates.
         if(W===1474)try {
           const samples=[],zBoundary=BLOCK_ROW.stack[1]+BLOCK_ROW.stack[3];
           for(let n=0;n<=120;n++) {
-            const t=43.300+n*.001,state=await frame(page,t),reading=state.pieces.filter(p=>p.where==='floor'&&p.sink&&p.device===undefined&&p.p[2]>zBoundary);
+            const t=globalStart('id')+playbackSpans(SCRIPTS.id).off[0]-.121+n*.001,state=await frame(page,t),reading=state.pieces.filter(p=>p.where==='floor'&&p.device===undefined&&p.p[2]>zBoundary);
             assert.ok(reading.length,'C7 attribution: no reading copy');
             const top=pc=>Math.max(...[-1,1].flatMap(x=>[-1,1].flatMap(y=>[-1,1].map(z=>quatRotate(pc.q,[x*pc.s[0],y*pc.s[1],z*pc.s[2]]).map((v,i)=>v+pc.p[i])))).map(p=>p[1]));
             const left=Math.max(...reading.filter(p=>p.p[0]<-.1).map(top)),right=Math.max(...reading.filter(p=>p.p[0]>=-.1).map(top)),z0=Math.min(...reading.map(p=>p.p[2]-p.s[1])),z1=Math.max(...reading.map(p=>p.p[2]+p.s[1]));

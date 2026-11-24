@@ -61,7 +61,7 @@ function canvasPainter(canvas, paths, box, viewport, ratio) {
   const sample = sampleMark(paths);
   // Per-star Canvas gradients created native garbage every frame. Keep the same circular fringe and shared
   // triangles in two batched GPU draws; Canvas remains the retained-frame fallback where WebGL2 is absent.
-  const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: false });
+  const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: true });
   const gpu = gl && typeof gl.createShader === 'function' ? makeGPU() : null;
   const ctx = gpu ? null : canvas.getContext('2d');
   let scene, dpr;
@@ -71,12 +71,14 @@ precision highp float;
 layout(location=0) in vec2 aPosition;
 layout(location=1) in float aSize;
 layout(location=2) in vec4 aColour;
+layout(location=3) in vec4 aEnds;
 uniform vec2 uSize;
 uniform float uDpr;
 out float vR;
 out vec4 vColour;
+flat out vec4 vEnds;
 void main() {
-  vR = aSize * uDpr / 2.0; vColour = aColour;
+  vR = aSize * uDpr / 2.0; vColour = aColour; vEnds = aEnds * uDpr;
   gl_PointSize = ceil(2.0 * vR) + 2.0;
   gl_Position = vec4(2.0 * aPosition.x / uSize.x - 1.0, 1.0 - 2.0 * aPosition.y / uSize.y, 0.0, 1.0);
 }`;
@@ -84,11 +86,27 @@ void main() {
 precision highp float;
 in float vR;
 in vec4 vColour;
+flat in vec4 vEnds;
+uniform vec2 uSize;
+uniform float uDpr;
 uniform bool uStroke;
 out vec4 o;
 void main() {
   float coverage = 1.0;
-  if (!uStroke) {
+  if (uStroke) {
+    // Coverage of the original taper's three edges, in device pixels. The padded raster
+    // quad only invokes this shader; it never supplies the taper's painted width.
+    vec2 p = vec2(gl_FragCoord.x, uSize.y * uDpr - gl_FragCoord.y);
+    vec2 head = vEnds.xy - p, tail = vEnds.zw - p, d = head - tail;
+    vec2 n = vec2(-d.y, d.x) / max(length(d), 0.00001);
+    vec2 triangle[3] = vec2[3](tail, head - n * vR, head + n * vR);
+    float distance = 1e9;
+    for (int edge = 0; edge < 3; edge++) {
+      vec2 a = triangle[edge], line = triangle[(edge + 1) % 3] - a;
+      distance = min(distance, (line.y * a.x - line.x * a.y) / max(length(line), .00001));
+    }
+    coverage = clamp(distance / 1.2 + .5, 0.0, 1.0);
+  } else {
     float dist = length(gl_PointCoord - 0.5) * (ceil(2.0 * vR) + 2.0);
     coverage = clamp(vR + 0.5 - dist, 0.0, 1.0);
   }
@@ -104,24 +122,30 @@ void main() {
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
     const buffer = gl.createBuffer(), vao = gl.createVertexArray(); gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    for (const [index, count, offset] of [[0, 2, 0], [1, 1, 8], [2, 4, 12]]) {
-      gl.enableVertexAttribArray(index); gl.vertexAttribPointer(index, count, gl.FLOAT, false, 28, offset);
+    for (const [index, count, offset] of [[0, 2, 0], [1, 1, 8], [2, 4, 12], [3, 4, 28]]) {
+      gl.enableVertexAttribArray(index); gl.vertexAttribPointer(index, count, gl.FLOAT, false, 44, offset);
     }
     const size = gl.getUniformLocation(program, 'uSize'), ratio = gl.getUniformLocation(program, 'uDpr'), stroke = gl.getUniformLocation(program, 'uStroke');
     let data = new Float32Array(0);
     return dots => {
-      if (data.length < dots.length * 28) data = new Float32Array(dots.length * 28);
+      if (data.length < dots.length * 77) data = new Float32Array(dots.length * 77);
       let at = 0;
       const vertexAt = (x, y, d) => {
         data[at++] = x; data[at++] = y; data[at++] = d.size;
         for (const c of d.colour) data[at++] = c / 255;
         data[at++] = d.alpha * Math.min(1, d.size * dpr);
+        data[at++] = d.x; data[at++] = d.y; data[at++] = d.tail?.[0] ?? d.x; data[at++] = d.tail?.[1] ?? d.y;
       };
       for (const d of dots) if (d.alpha > 0) {
         const shape = streakGeometry(d.x, d.y, d.size, d.tail || [d.x, d.y]);
-        for (let i = 0; i < shape.triangle.length; i += 2) vertexAt(shape.triangle[i], shape.triangle[i + 1], d);
+        if (!shape.triangle.length) continue;
+        const [nx, ny] = shape.normal, dx = d.x - d.tail[0], dy = d.y - d.tail[1], length = Math.hypot(dx, dy);
+        const pad = 2 / dpr, radius = d.size / 2 + pad, ux = dx / length * pad, uy = dy / length * pad;
+        const a = [d.tail[0] - ux + nx * radius, d.tail[1] - uy + ny * radius], b = [d.tail[0] - ux - nx * radius, d.tail[1] - uy - ny * radius];
+        const c = [d.x + ux + nx * radius, d.y + uy + ny * radius], e = [d.x + ux - nx * radius, d.y + uy - ny * radius];
+        for (const p of [a, b, c, c, b, e]) vertexAt(p[0], p[1], d);
       }
-      const triangles = at / 7;
+      const triangles = at / 11;
       for (const d of dots) if (d.alpha > 0) vertexAt(d.x, d.y, d);
       gl.viewport(0, 0, canvas.width, canvas.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
       gl.useProgram(program); gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -129,7 +153,7 @@ void main() {
       gl.uniform2f(size, scene.W, scene.H); gl.uniform1f(ratio, dpr);
       gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.uniform1i(stroke, 1); gl.drawArrays(gl.TRIANGLES, 0, triangles);
-      gl.uniform1i(stroke, 0); gl.drawArrays(gl.POINTS, triangles, at / 7 - triangles);
+      gl.uniform1i(stroke, 0); gl.drawArrays(gl.POINTS, triangles, at / 11 - triangles);
     };
   }
   function resize(next, screen, scale) {

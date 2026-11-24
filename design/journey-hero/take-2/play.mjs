@@ -4,13 +4,14 @@ import { makeCamera, dot } from '../../../public/journey/hero/engine.mjs';
 import { createRenderer } from './sq.mjs';
 import { corners } from './kit.mjs';
 import { makeAtlas, fontsReady } from './art.mjs';
-import { SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, buildingLastState } from './stage.mjs';
+import { SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, buildingLastState, exitBursts } from './stage.mjs';
 import { createCallouts } from './labels.mjs';
 import { createPageLayout } from './page-layout.mjs';
 import { ENTRANCE, entranceAt, screenPlane, floorReach, liftPieces, settleView, createEntranceView, loaderAt, createLoaderView } from './entrance.mjs';
 import { createNameReact } from './name-react.mjs';
 import { createStars, starReach } from './stars.mjs';
 import { createCraftWipe } from './craft-wipe.mjs';
+import { sparkFrame, kickExportBursts } from './export-sparks.mjs';
 
 const query = new URLSearchParams(location.search);
 const num = (key, fallback) => query.has(key) && Number.isFinite(+query.get(key)) ? +query.get(key) : fallback;
@@ -22,7 +23,7 @@ const renderer = createRenderer(canvas), cam = makeCamera(num('yaw', 0), num('pi
 const callouts = createCallouts(hero);
 const layout = createPageLayout(hero, stage, callouts);
 const starts = SHOW.map((_, i) => SHOW.slice(0, i).reduce((sum, scene) => sum + scene.len, 0));
-const stills = [2, 3, 4, 5];
+const stills = [2, 3, 4, 5], bursts = exitBursts();
 
 const need = sceneEnvelope(SCENES, corners, dot, cam);
 const wrap = t => ((t % LOOP) + LOOP) % LOOP;
@@ -74,7 +75,8 @@ function draw() {
   if (state) floor.reveal = floorReach(state.floor, floor.radius);
   const centre = [b.left - h.left + b.width / 2, b.top - h.top + b.height / 2];
   const field = stars?.frame(state ? starReach(state.stars, centre, W, H) : null, centre);
-  renderer.draw(pieces, view, { outline: 0, floor, reveal: state ? screenPlane(state.screen) : null, stars: loading ? null : field });
+  renderer.draw(pieces, view, { outline: 0, floor, reveal: state ? screenPlane(state.screen) : null, stars: loading ? null : field,
+    sparks: loading || intro || reduced.matches ? null : sparkFrame(first ? bursts.filter(b => b.at <= t) : bursts, t, LOOP, view) });
   callouts.draw(calloutsAt(t), pieces, view, t, reduced.matches);
   if (state) entrance.apply(state);
   hero.classList.remove('is-entering');
@@ -118,7 +120,7 @@ function tick(now) {
       intro.time = next >= ENTRANCE.end - 1e-12 ? ENTRANCE.end : next;
       t = Math.max(0, intro.time - ENTRANCE.screen[1]);
     }
-    else { const next = wrap(t + step); if (next < t) first = false; t = next; }
+    else { const next = wrap(t + step); if (next < t) first = false; t = next; kickExportBursts(bursts, t, step, LOOP, lastView, stars?.field); }
   }
   previous = now;
   if (intro && intro.time >= ENTRANCE.end) endEntrance();

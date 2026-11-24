@@ -63,8 +63,8 @@ export async function checkL11(source = read('sq.mjs')) {
   const irregular=createTrailHistory(1);
   irregular.record(0,[0,0]); irregular.record(.013,[20,10]);
   const bent=irregular.record(.031,[50,20]);
-  close(bent[0],50-20*.011/.013,'L11 field streak: irregular stirring x',.00001);
-  close(bent[1],20-10*.011/.013,'L11 field streak: irregular stirring y',.00001);
+  close(bent[0],50,'L11 field streak: irregular stirring x',.00001);
+  close(bent[1],20,'L11 field streak: irregular stirring y',.00001);
   let checked=0, moving=0;
   for(const [W,H] of [[1440,900],[412,730]]) {
     const F=createField(W,H,P.placeMark(sample,W,H)), history=createTrailHistory(F.stars.length), snapshots=[];
@@ -76,14 +76,14 @@ export async function checkL11(source = read('sq.mjs')) {
       F.step(1/240);
       F.stars.forEach((s,i)=>positions.set([Math.fround(s.x)+F.offsets[2*i],Math.fround(s.y)+F.offsets[2*i+1]],2*i));
       snapshots.push({time,positions:positions.slice()});
-      while(snapshots.length>2&&snapshots[1].time<=time-.02) snapshots.shift();
+      while(snapshots.length>2&&snapshots[1].time<=time-P.STREAK_WINDOW) snapshots.shift();
       const trail=history.record(time,positions), a=snapshots[0], b=snapshots[1]||a;
-      const f=b.time>a.time?Math.max(0,Math.min(1,(time-.02-a.time)/(b.time-a.time))):0;
+      const f=b.time>a.time?Math.max(0,Math.min(1,(time-P.STREAK_WINDOW-a.time)/(b.time-a.time))):0;
       for(let i=0;i<F.stars.length;i++) {
         const k=2*i,x=positions[k],y=positions[k+1];
         const tail=[a.positions[k]+(b.positions[k]-a.positions[k])*f,a.positions[k+1]+(b.positions[k+1]-a.positions[k+1])*f];
         const shape=P.streakGeometry(x,y,F.stars[i].size,tail);
-        close(Math.hypot(trail[4*i],trail[4*i+1]),shape.length,'L11 field streak: .02 s displacement',.0001);
+        close(Math.hypot(trail[4*i],trail[4*i+1]),shape.length,'L11 field streak: .04 s displacement',.0001);
         if(shape.triangle.length) {
           const [tx,ty,ax,ay,bx,by]=shape.triangle;
           close(tx,tail[0],'L11 field streak: tail x'); close(ty,tail[1],'L11 field streak: tail y');
@@ -107,15 +107,21 @@ export async function checkL11(source = read('sq.mjs')) {
   paint.paint(state);
   const strokes=calls.find(c=>c.kind==='drawArrays'&&c.args[0]==='TRIANGLES');
   const dots=P.loaderDots(scene,state), triangles=dots.flatMap(d=>P.streakGeometry(d.x,d.y,d.size,d.tail||[d.x,d.y]).triangle.length? [d] : []);
-  assert.equal(strokes.args[2],triangles.length*3,'L11 loader painter: GPU triangle count');
+  assert.equal(strokes.args[2],triangles.length*6,'L11 loader painter: GPU coverage quad count');
   const data=calls.filter(c=>c.kind==='bufferData'&&c.data?.length).at(-1).data;
   let at=0;
-  for(const d of triangles) for(const [i,value] of P.streakGeometry(d.x,d.y,d.size,d.tail).triangle.entries()) {
-    close(data[at+Math.floor(i/2)*7+i%2],value,'L11 loader painter: shared triangle',.0001);
-    if(i===5) at+=21;
+  for(const d of triangles) {
+    const shape=P.streakGeometry(d.x,d.y,d.size,d.tail), [nx,ny]=shape.normal, dx=d.x-d.tail[0],dy=d.y-d.tail[1],length=Math.hypot(dx,dy);
+    const radius=d.size/2+2,ux=dx/length*2,uy=dy/length*2;
+    const a=[d.tail[0]-ux+nx*radius,d.tail[1]-uy+ny*radius],b=[d.tail[0]-ux-nx*radius,d.tail[1]-uy-ny*radius];
+    const c=[d.x+ux+nx*radius,d.y+uy+ny*radius],e=[d.x+ux-nx*radius,d.y+uy-ny*radius];
+    for(const p of [a,b,c,c,b,e]) {
+      [p[0],p[1],d.size,...d.colour.map(n=>n/255),d.alpha*Math.min(1,d.size),d.x,d.y,...d.tail].forEach((v,k)=>close(data[at+k],v,'L13 coverage quad: original head/width/tail',.0001));
+      at+=11;
+    }
   }
   assert.ok(moving>1000,'L11 field streak: nonvacuous hold and blast');
-  return `L11: ${checked} historical field samples, ${moving} tapered moves; exact .02 s history, dots at rest, two actual field passes, shared Canvas/GPU taper; sliced sampler identical.`;
+  return `L11: ${checked} historical field samples, ${moving} tapered moves; exact .04 s history, dots at rest, two actual field passes, shared Canvas/GPU taper; sliced sampler identical.`;
 }
 export async function checkL11Controls() {
   const source=read('sq.mjs'), needle='gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, st.count);';

@@ -28,6 +28,7 @@ import { checkRound12 as checkRound12Scene, checkRound12Controls as checkRound12
 import { checkRows as checkRound13Rows, checkRowsControls as checkRound13RowsControls } from './round13-checks.mjs';
 import { consistency, checkRound17, checkRound17Controls, checkRound17Exports as checkRound15, checkRound17RetainedControls as checkRound15Controls, checkPainterStacks, withSourceLines } from './round17-checks.mjs';
 import * as stageModule from '../stage.mjs';
+import { checkL13, checkL13Controls } from './l13-checks.mjs';
 import { checkL11, checkL11Controls } from './l11-checks.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
@@ -101,7 +102,7 @@ function check(time) {
       if (scene.key === 'ps' || scene.key === 'ai' || at < 0.1) fail(time, `piece ${i}: floor must be empty`);
       // CORRECTIONS-13 E2: the slot at the mat's back edge is gone. CORRECTIONS-15: the only clips on the floor are the ball's at the
       // button's face while it pops, a format's or block's become wipe (one plane in x) and the sink's plane at y = 0.
-      if (pc.clip && !(pc.morph === 'ball' && pc.clip[1] === 1 && !pc.clip[0] && !pc.clip[2]) && !(pc.edge !== undefined && Math.abs(pc.clip[0]) === 1 && !pc.clip[1] && !pc.clip[2]) && !(pc.sink && pc.clip.join() === '0,1,0,0')) fail(time, `piece ${i}: a floor piece is clipped outside the ball's pop, its wipes and the sink`);
+      if (pc.clip && !(pc.morph === 'ball' && pc.clip[1] === 1 && !pc.clip[0] && !pc.clip[2]) && !(pc.edge !== undefined && Math.abs(pc.clip[0]) === 1 && !pc.clip[1] && !pc.clip[2])) fail(time, `piece ${i}: a floor piece is clipped outside the ball's pop, its wipes and the sink`);
       const s = SCRIPTS[scene.key], exp = s?.actions.find(a => a.id === 'export');
       if (exp && at < exp.start) fail(time, `piece ${i}: floor before export`);
       if (pc.device !== undefined && list.clock !== null && list.clock !== undefined && Math.abs(pc.clock - list.clock) > 1e-8) fail(time, `piece ${i}: device and viewer clocks differ`);
@@ -144,7 +145,7 @@ for (let i = 0; i < SHOW.length; i++) {
 }
 // CORRECTIONS-7 K2 lengthens the loop (about 90.8 s expected, 91.5 s with K3's speed floor); the round-2 ceiling of 86 s is raised to 92.
 // CORRECTIONS-15 raises it to 100 for the ball and the sink (about 97.7 s).
-if (Object.keys(SCRIPTS).length === 6) assert.ok(LOOP / PACE >= 70 && LOOP / PACE <= 100, `loop is ${LOOP / PACE}s`);
+if (Object.keys(SCRIPTS).length === 6) assert.ok(LOOP / PACE >= 70 && LOOP / PACE <= 102, `loop is ${LOOP / PACE}s`);
 assert.equal(sceneAt(LOOP).i, 0);
 assert.equal(sceneAt(-0.01).scene.key, 'fig');
 assert.deepEqual(frameAt(-0.01), frameAt(LOOP - 0.01));
@@ -359,8 +360,8 @@ const renderer = { setAtlas() {}, draw(pieces, view) { draws.push({ pieces, view
 const observer = class { observe() {} };
 const player = fs.readFileSync(new URL('../play.mjs', import.meta.url), 'utf8').replace(/^import\s+.*?;\s*$/gm, '');
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-await new AsyncFunction('env', `const { sceneEnvelope, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, liftPieces, settleView, createEntranceView, loaderAt, createLoaderView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
-  sceneEnvelope, location: { search: '?t=0' }, document: playerDocument, window: win, matchMedia: () => media,
+await new AsyncFunction('env', `const { sceneEnvelope, exitBursts, sparkFrame, kickExportBursts, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, liftPieces, settleView, createEntranceView, loaderAt, createLoaderView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+  sceneEnvelope, exitBursts: () => [], sparkFrame: () => null, kickExportBursts() {}, location: { search: '?t=0' }, document: playerDocument, window: win, matchMedia: () => media,
   createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => atlas, fontsReady: async () => {},
   SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts: () => ({ measure() {}, draw() {}, fit: view => view, layout: [] }), devicePixelRatio: 3,
   createNameReact: () => ({ measure() {}, setLive() {}, live: false, open: 0, letters: [] }), createCraftWipe: () => ({ measure() {}, follow(craft, options) { craftFollows.push([craft, !!options?.cut]); }, hold: () => null, state: null }), createStars: () => ({ measure() {}, frame: () => null, after() {}, swallowClick: () => false, field: null }), starReach: () => null, createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),
@@ -552,6 +553,7 @@ try { console.log(await checkRound5SecondAddendum()); } catch (error) { fail(0, 
 try { console.log(await checkEntrance()); console.log('E1/E4 negative controls: ' + await withSourceLines(checkEntranceControls)); } catch (error) { fail(0, error.message); }
 try { console.log(describe(await checkHand())); console.log('K3 negative controls: ' + await checkHandControls()); } catch (error) { fail(0, error.message); }
 try { console.log(await checkRound8()); console.log('Round 8 negative controls: ' + await withSourceLines(checkRound8Controls)); } catch (error) { fail(0, error.message.split('\n')[0]); }
+try { console.log('L13: ' + JSON.stringify(await checkL13())); console.log('L13 controls: ' + await checkL13Controls()); } catch (error) { fail(0, error.message); }
 try { console.log(await checkL11()); console.log('L11 negative control: ' + await checkL11Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound9()); console.log('Round 9 negative controls: ' + await withSourceLines(checkRound9Controls)); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound10()); console.log('Round 10 negative controls: ' + await checkRound10Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }

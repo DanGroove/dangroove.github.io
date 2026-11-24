@@ -1,4 +1,6 @@
 // Shared pure star geometry and L4 timing. Inlined by tools/page.mjs; no DOM, imports, fonts or pictures.
+// One exposure window for loader bursts, field explosions and export sparks.
+export const STREAK_WINDOW = 2 / 50;
 export const STARS = {
   density: 1200 / (1440 * 900), most: 2000,
   size: [0.6, 2.2],             // px across, far to near
@@ -325,8 +327,8 @@ export function loaderDots(scene, state) {
           y: weight[1] + (m.y - weight[1]) * state.scale, size: m.size * state.charge, alpha: 1 });
         continue;
       }
-      const [x, y] = flightPoint(m, flight), tail = flightPoint(m, clamp01((state.time - state.launches[i] - 1 / 50) / LOADER.flight));
-      dots.push({ ...m, x, y, ...trail(x, y, tail), alpha: 1 });
+      const [x, y] = flightPoint(m, flight);
+      dots.push({ ...m, x, y, alpha: 1 });
       continue;
     }
     // L10 gives shared-home stars individual journey times. Merge copies once landed.
@@ -336,7 +338,7 @@ export function loaderDots(scene, state) {
       landed.add(m.home);
     }
     const target = home, { x, y, blend } = burstPoint(m, target, weight, arrived ? m.duration : elapsed);
-    const previous = burstPoint(m, target, weight, Math.max(0, elapsed - 1 / 50));
+    const previous = arrived ? { x, y } : burstPoint(m, target, weight, Math.max(0, elapsed - STREAK_WINDOW));
     const depth = 1 + 1.6 * Math.max(0, target.d - 0.4) * Math.sin(Math.PI * blend);
     const flare = 1 + 0.7 * (1 - clamp01(elapsed / 0.3)) ** 3;
     dots.push({ x, y, ...trail(x, y, [previous.x, previous.y]),

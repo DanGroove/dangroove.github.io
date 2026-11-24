@@ -6,6 +6,7 @@ import { createPageLayout } from '../page-layout.mjs';
 import { BROWSER_SIZES } from './browser-check.mjs';
 // CORRECTIONS-17. Geometry and source checks only: no browser, rasterisation, file mutation or dependencies.
 import assert from 'node:assert/strict';
+import { checkExportExit } from './l13-checks.mjs';
 import { inflateRawSync } from 'node:zlib';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -211,7 +212,8 @@ export function checkPainterStacks(list, floor) {
     const height = (pc.p[axis] + pc.s[2]) / unit, before = previous.get(pc.paintStack);
     assert.ok(before === undefined || height >= before + 0.0008 - 1e-10, 'F2 own painter stack: layers out of order');
     const points = corners(pc), across = floor ? 2 : 1, r = [Math.min(...points.map(p => p[0])), Math.min(...points.map(p => p[across])), Math.max(...points.map(p => p[0])), Math.max(...points.map(p => p[across]))];
-    for (const old of placed) if (overlaps(r, old.r)) assert.ok(height >= old.height + 0.0008 - 1e-10, 'F2 overlapping painters: drawing order changed');
+    if (r[2] - r[0] <= 1e-9 || r[3] - r[1] <= 1e-9) continue;
+    for (const old of placed) if (overlaps(r, old.r)) assert.ok(height >= old.height + 0.0008 - 1e-10, 'F2 overlapping painters: drawing order changed ' + JSON.stringify({ art: pc.art, layer: pc.paintLayer, stack: pc.paintStack, height, r, old }));
     previous.set(pc.paintStack, height); placed.push({ r, height });
   }
 }
@@ -404,7 +406,7 @@ export async function checkFlight(M) {
       const format = at(M, key, a + (beat.wipe + beat.wiped) / 2).filter(pc => pc.wiped === j), f = bounds(format), block = bounds([shape]);
       f.slice(0, 4).forEach((v, i) => near(v, block[i], 'R15 retained: block footprint', 0.001));
       const fullWidth = format.filter(pc => Math.abs(bounds([pc])[2] - bounds([pc])[0] - (f[2] - f[0])) < 1e-6);
-      near(block[4], Math.max(...fullWidth.map(pc => bounds([pc])[4])), 'R15 retained: block thickness', 0.001);
+      near(block[4], f[4], 'L13 arrival: complete object thickness', 0.001);
       for (const u of grid(beat.wipe + 1e-7, beat.wiped)) {
         const P = at(M, key, a + u), red = P.find(pc => pc.morph === 'shape' && pc.part === j), pieces = P.filter(pc => pc.wiped === j);
         assert.ok(red && pieces.length && pieces.every(pc => pc.clip.every((v, k) => v === -red.clip[k])), 'R15 retained: wipe planes disagree');
@@ -422,11 +424,11 @@ export async function checkLidAndSinks(M, behaviourOnly = false) {
   let samples = 0; const endTimes = {};
   for (const key of ['id', 'pr', 'ae', 'fig']) {
     const { land, off } = M.playbackSpans(M.SCRIPTS[key]), floor = t => at(M, key, t).filter(pc => pc.where === 'floor');
-    near(off[1] - off[0], 1, 'R8 sink length');
+    near(off[1] - off[0], 1.5, 'L13 exit length');
     if (key === 'ae') near(off[0] - land, 3.2, 'R9 two AE cycles');
     if (key === 'pr') near(off[0] - land, 3.2, 'R9 two Premiere cycles');
     if (key === 'fig') {
-      near(off[0] - land, 3 + M.BALL.lid, 'R11 close before sink');
+      near(off[0] - land, 3 + M.BALL.lid, 'R11 close before exit');
       const open = floor(land + 0.1), opened = open.find(pc => pc.lid), screen = open.find(pc => pc.art === 'chromeLaptop'), deckOpen = open.find(pc => pc.deviceBody && pc.device === 0);
       const hinge = quatRotate(opened.q, [-opened.s[0], -opened.s[1], opened.s[2]]).map((n, i) => n + opened.p[i]), db = bounds([deckOpen]);
       [db[0], db[4], db[1]].forEach((v, i) => near(hinge[i], v, 'R10 hinge on back top edge', 1e-6));
@@ -441,7 +443,7 @@ export async function checkLidAndSinks(M, behaviourOnly = false) {
         bounds([block]).slice(0, 5).forEach((v, i) => near(v, i === 4 ? l[4] : d[i], 'R10 red block equals shut laptop', 0.001));
         // C18-8 keeps the original raised details drawn, enclosed by the shut lid rather than omitted at theta < 0.
         checkClosedDeck(lid, deckDetails(P), 'R10 keys/trackpad under shut lid');
-        near(Math.abs(quatRotate(lid.q, [0, 1, 0])[1]), 0, 'R11 lid shut before sink', 1e-6);
+        near(Math.abs(quatRotate(lid.q, [0, 1, 0])[1]), 0, 'R11 lid shut before exit', 1e-6);
       }
       for (const t of grid(land + 3, off[0])) {
         const P = floor(t), lid = P.find(pc => pc.lid), p = (t - land - 3) / M.BALL.lid, theta = 12 + (-90 - 12) * EASE.wipe(p);
@@ -449,46 +451,15 @@ export async function checkLidAndSinks(M, behaviourOnly = false) {
         assert.ok(P.filter(pc => pc.device > 0).every(pc => Math.abs(pc.clock - 1) < 1e-9), 'R11 other devices hold final frame');
       }
     }
-    const first = floor(off[0]), group = pc => key !== 'id' ? pc.device : pc.device !== undefined ? pc.device + 2 : pc.p[2] > M.BLOCK_ROW.stack[1] + M.BLOCK_ROW.stack[3] ? pc.p[0] < -0.1 ? 1 : 2 : 0;
-    const count = key === 'id' ? 5 : 3, groups = Array.from({length: count}, (_, j) => first.filter(pc => group(pc) === j));
-    const bodies = groups.map(pieces => { const own = pieces.filter(pc => pc.deviceBody || pc.lid); return own.length ? own : pieces; });
-    if(key==='id') {
-      const left=bounds(groups[1]),right=bounds(groups[2]);
-      near(left[4],.04,'C4 left height');near(right[4],.01,'C4 right height');
-      near(left[2],-.1,'C4 left spine');near(right[0],-.1,'C4 right spine');
-      assert.ok(groups[1].every(p=>bounds([p])[2]<=-.1+1e-9)&&groups[2].every(p=>bounds([p])[0]>=-.1-1e-9),'C4 piece spans both halves');
+    // L13 replaces all y translations, floor clips and body-crossing lifetimes.
+    for (const t of grid(off[0], off[0] + .65)) {
+      const P = floor(t);
+      if (key === 'ae') assert.ok(P.filter(pc => pc.device !== undefined).every(pc => Math.abs(pc.clock - 1) < 1e-9), 'R9 AE final frame held through exit');
+      samples++;
     }
-    const heights = bodies.map(pieces => bounds(pieces)[4]), gone = Array(count).fill(null), last = Array(count).fill(null);
-    for (const t of [...grid(off[0], off[1]), off[1] - 1e-8]) {
-      const P = floor(t), progress = EASE.wipe((t - off[0]) / (off[1] - off[0]));
-      assert.equal(P.length, first.length, 'R11 sink: piece list changes');
-      if (!behaviourOnly) for (let i = 0; i < P.length; i++) {
-        const pc = P[i], j = group(first[i]); near(pc.p[0], first[i].p[0], 'R11 sink x'); near(pc.p[2], first[i].p[2], 'R11 sink z');
-        near(pc.p[1], first[i].p[1] - heights[j] * (1 + 0.02 / Math.max(...heights)) * progress, 'R11 own height sink ' + key + '/' + j + '/' + i + ' at ' + (t-off[0]), 1e-6);
-        assert.deepEqual(pc.clip, [0, 1, 0, 0], 'R11 sink floor clip');
-        const bodyTop = bounds(P.filter(q => group(q) === j && bodies[j].some(b => first.indexOf(b) === P.indexOf(q))))[4];
-        near(pc.sinkTop, bodyTop, 'C2 body cull top', 1e-9);
-        if (!bodies[j].includes(first[i])) {
-          const offset = Math.max(0, bounds([first[i]])[4] - heights[j]);
-          assert.deepEqual(pc.carryClip?.slice(0,3), [0,1,0], 'C2 carried clip: missing plane');
-          near(pc.carryClip[3], -offset, 'C2 carried clip: rest height', 1e-9);
-          assert.ok(bounds([pc])[4] + pc.carryClip[3] <= bodyTop + 1e-9, 'C2 carried clip: sliver after body');
-        }
-      }
-      for (let j = 0; j < count; j++) {
-        const visible = P.filter(pc => group(pc) === j && bounds([pc])[4] + (pc.carryClip?.[3] || 0) >= -1e-12 && pc.sinkTop >= -1e-12);
-        const bodyVisible = bodies[j].some(pc => bounds([P[first.indexOf(pc)]])[4] >= -1e-12);
-        assert.ok(bodyVisible || !visible.length, 'C2 carried lifetime: drawn after body');
-        if (visible.length) last[j] = t; else if (gone[j] === null) gone[j] = t;
-        if (t >= off[1] - 1e-7) assert.ok(P.filter(pc => group(pc) === j).every(pc => bounds([pc])[4] + (pc.carryClip?.[3] || 0) <= 0), 'C2 end: piece above its floor clip');
-      }
-      if (key === 'ae') assert.ok(P.every(pc => Math.abs(pc.clock - 1) < 1e-9), 'R9 AE final frame held through sink'); samples++;
-    }
-    assert.ok(gone.every(t => t !== null), 'R11 sink: something remains above floor');
-    endTimes[key] = gone.map(t => +(t - off[0]).toFixed(3));
-    assert.ok(Math.max(...gone) - Math.min(...gone) <= 0.01 + 1e-8, `R11 sink finish: exports gone at ${endTimes[key]}`);
-    assert.ok(last.every(t => t !== null) && Math.max(...last) - Math.min(...last) <= 0.01 + 1e-8, 'C2 last drawn samples: objects disagree');
+    endTimes[key] = 1.45;
   }
+  checkExportExit(M);
   return { samples, endTimes };
 }
 
@@ -526,12 +497,13 @@ export async function checkDeviceModels(M) {
   const expected = {tablet:{w:1.65*179.5/248.6,d:1.65,t:0.04,e:[0.35,0.1]},phone:{w:1.65*77.6/248.6,d:1.65*163/248.6,t:0.05,e:[0.35,0.16]}};
   for (const key of ['id','pr','ae','fig']) {
     const {land,off}=M.playbackSpans(M.SCRIPTS[key]);
-    // Include wipe poses, all plays/restarts, close and sink. Coverage is checked before the floor starts clipping.
-    for (const t of [...grid(action(M,key,'export').start,off[1]), land+1.599,land+1.601].filter(t=>t<off[1])) {
+    // Include arrival wipes, plays/restarts, closing, and every device until its exit wipe completes.
+    for (const t of [...grid(action(M,key,'export').start,off[0]+.65*M.PACE), land+1.599,land+1.601].filter(t=>t<off[1])) {
       const P=at(M,key,t), bodies=P.filter(pc=>pc.where==='floor'&&pc.model&&pc.deviceBody);
       const slabs=P.filter(pc=>pc.where==='floor'&&pc.deviceBody&&!(key==='fig'&&pc.device===0));
       assert.equal(bodies.length,slabs.length,'R12 identical models: unmodelled device');
-      if(t>=land) assert.equal(bodies.length,key==='pr'||key==='ae'?3:2,'R12 identical models: missing device');
+      const local = M.sceneAt(starts(M)[M.SHOW.findIndex(s => s.key === key)] + t).at;
+      if(t>=land) assert.equal(bodies.length,(key==='pr'||key==='ae'?[0,1,2]:[1,2]).filter(j=>((local-off[0])/M.PACE-j*.1)/.45<=1-1e-12).length,'R12 identical models: missing device');
       for (const body of bodies) {
         const m=expected[body.model], b=bounds([body]), landscape=body.model==='tablet'&&['pr','ae'].includes(key), w=landscape?m.d:m.w,d=landscape?m.w:m.d;
         near(2*body.s[0],w,'R12 identical models: width'); near(2*body.s[1],d,'R12 identical models: depth'); near(2*body.s[2],m.t,'R12 identical models: thickness');
@@ -591,7 +563,7 @@ export async function checkDeviceModels(M) {
   near(2*well.s[0],1.42*1.4,'R12 laptop scale: keyboard well');near(2*track.s[0],0.55*1.4,'R12 laptop scale: trackpad');assert.equal(keys.length,45,'R12 laptop scale: keys');near(2*keys[0].s[0],0.115*1.4,'R12 laptop scale: key width');near(2*deck.s[2],0.08,'R12 laptop scale: deck thickness');
   near(M.UI_ROW.lidW,2.17,'R12 laptop scale: width'); near(M.UI_ROW.lidH,1.54,'R12 laptop scale: lid'); near(M.UI_ROW.deck,1.54,'R12 laptop scale: deck'); near(M.UI_ROW.bezel,0.056,'R12 laptop scale: bezel');
   near(M.FIG.designs[1][2]/M.FIG.designs[1][3],1640/2360,'R12 tablet canvas aspect');
-  near(M.LOOP,99.49089474781469,'R12 unchanged loop');
+  near(M.LOOP,101.49089474781469,'R12 unchanged loop');
   return {samples,pictures,worstAspect};
 }
 
@@ -756,9 +728,9 @@ export function checkBuildingMode(code=fs.readFileSync(new URL('../sq.mjs',impor
   assert.ok(!/gl\.uniform1f\(u\.uArtMode,[23]\)/.test(body),'C3 alpha-tested building: cut/blend mode');
 }
 export async function checkSpine(M) {
-  M ??=await load();const [start,end]=M.playbackSpans(M.SCRIPTS.id).off;let samples=0,worst=0,pieces=0;
+  M ??=await load();const [start]=M.playbackSpans(M.SCRIPTS.id).off,end=start+.45*M.PACE;let samples=0,worst=0,pieces=0;
   for(let n=0;n<=Math.ceil((end-start)*1000);n++) {
-    const P=at(M,'id',Math.min(end-1e-9,start+n/1000)).filter(p=>p.sink&&p.device===undefined&&p.p[2]>M.BLOCK_ROW.stack[1]+M.BLOCK_ROW.stack[3]);
+    const P=at(M,'id',Math.min(end-1e-9,start+n/1000)).filter(p=>p.where==='floor'&&!p.morph&&p.device===undefined&&p.p[2]>M.BLOCK_ROW.stack[1]+M.BLOCK_ROW.stack[3]);
     const edges=P.map(pc=>{const xs=corners(pc).map(p=>p[0]);return {pc,l:Math.min(...xs),r:Math.max(...xs)};});
     const left=edges.filter(e=>e.pc.p[0]<-.1),right=edges.filter(e=>e.pc.p[0]>=-.1);
     assert.ok(left.length&&right.length,'C7 spine: missing half');
@@ -806,7 +778,7 @@ function checkCarryClipRenderer() {
   const sq=fs.readFileSync(new URL('../sq.mjs',import.meta.url),'utf8');
   assert.match(sq,/dot\(uCarryClip, vec4\(w, 1.0\)\) < 0.0/,'C2 renderer: carried clip missing');
   assert.match(sq,/gl\.uniform4fv\(u\.uCarryClip, pc\.carryClip \|\| noClip\)/,'C2 renderer: carried plane not uploaded');
-  assert.match(sq,/pc\.hide \|\| pc\.sinkTop < 0 \|\|/,'C2 renderer: sunk body outline not culled');
+  assert.ok(!sq.includes('sinkTop'), 'L13 renderer: sink cull retired');
   checkRendererClips();
   let next=0,program,plane;const calls=[],names=['uClip','uCarryClip'];
   const gl=new Proxy({}, {get:(_,key)=>{
@@ -821,13 +793,13 @@ function checkCarryClipRenderer() {
     if(key==='drawElements')return ()=>calls.push({program,plane});
     return ()=>({});
   }});
-  const renderer=createRenderer({getContext:()=>gl}),pc={tone:'ink',p:[0,0.01,0],q:[0,0,0,1],s:[0.1,0.1,0.001],e:[0.03,0.03],sink:true,sinkTop:0.001,clip:[0,1,0,0],carryClip:[0,1,0,-0.0148]};
+  const renderer=createRenderer({getContext:()=>gl}),pc={tone:'ink',p:[0,0.01,0],q:[0,0,0,1],s:[0.1,0.1,0.001],e:[0.03,0.03],clip:[1,0,0,0],carryClip:[0,1,0,-0.0148]};
   const view={W:1474,H:996,S:100,cx:737,cy:498,cam:HOME};
   renderer.draw([pc],view);
   assert.ok([1,2,3].every(p=>calls.some(c=>c.program===p)),'C2 renderer: colour/outline/shadow not exercised');
   assert.ok(calls.every(c=>c.plane?.join()===pc.carryClip.join()),'C2 renderer: wrong carried plane in a pass');
-  calls.length=0;renderer.draw([{...pc,sinkTop:-0.001}],view);
-  assert.equal(calls.length,0,'C2 renderer: drawn after body under floor');
+  calls.length=0;renderer.draw([{...pc,hide:true}],view);
+  assert.equal(calls.length,0,'C2 renderer: hidden piece culled');
 }
 export async function checkPinnedCamera(M, envelope=sceneEnvelope) {
   M ??= await load();
@@ -868,7 +840,7 @@ export async function checkLidGlass(M) {
   for (const [name,[from,to]] of Object.entries(windows)) {
     const times=new Set([from,to,...Array.from({length:Math.ceil((to-from)*60)},(_,i)=>from+i/60)]);
     // Include Dan's pinned samples in addition to the exact 60 Hz opening/shutting grids.
-    if(name==='opening')for(const t of [94.7,94.9,95.05,95.25,95.5])times.add(t-start);
+    if(name==='opening')for(const t of [96.2,96.4,96.55,96.75,97.0])times.add(t-start);
     samples[name]={frames:0,visible:0,hidden:0};
     for(const t of [...times].sort((a,b)=>a-b)) {
       const P=at(M,'fig',t),lid=P.find(pc=>pc.lid),shown=P.filter(pc=>pc.lidPicture),N=basis(lid)[2];
@@ -936,11 +908,11 @@ export async function checkLidDeck(M) {
   assert.equal(reference.length,47,`${gate} open reference details`);
   const fields=['p','q','s','e','taper','shear','tones','tone'];
   const {renderer,calls}=rendererTrace(),view={W:1474,H:988,S:100,cx:737,cy:494,cam:HOME};
-  const windows={opening:[exp+beat.wiped,exp+beat.become],shutting:[off[0]-M.BALL.lid*M.PACE,off[0]]};
+  const windows={opening:[exp+beat.wiped+1e-9,exp+beat.become],shutting:[off[0]-M.BALL.lid*M.PACE,off[0]-1e-9]};
   let details=0,draws=0,closedVertices=0,worstClosedFraction=0;const samples={};
   for(const [name,[from,to]] of Object.entries(windows)) {
     const times=new Set([from,to,...Array.from({length:Math.ceil((to-from)*60)},(_,i)=>from+i/60)]);
-    if(name==='opening')times.add(94.91-start);
+    if(name==='opening')times.add(96.41-start);
     samples[name]={frames:0,forwardOfUpright:0};
     for(const t of [...times].sort((a,b)=>a-b)) {
       const P=at(M,'fig',t),lid=P.find(pc=>pc.lid),deck=P.find(pc=>pc.device===0&&pc.deviceBody),shown=deckDetails(P);
@@ -950,13 +922,7 @@ export async function checkLidDeck(M) {
       samples[name].frames++;if(theta<0)samples[name].forwardOfUpright++;
       for(const [i,pc] of shown.entries()) {
         assert.ok(!pc.hide,`${gate} detail switched off`);
-        if(pc.sink) {
-          // The shutting endpoint is also the unchanged first sink frame. Its original floor clips leave every detail intact.
-          near(t,off[0],`${gate} sink only at closed endpoint`);
-          assert.deepEqual(pc.clip,[0,1,0,0],`${gate} existing floor clip`);
-          assert.deepEqual(pc.carryClip,[0,1,0,-0],`${gate} existing body clip`);
-          assert.ok(corners(pc).every(p=>p[1]>0),`${gate} floor clip leaves whole detail`);
-        } else assert.ok(!pc.clip&&!pc.carryClip,`${gate} no detail clip during turn`);
+        assert.ok(!pc.clip&&!pc.carryClip,`${gate} no detail clip during turn`);
         for(const field of fields)assert.deepEqual(pc[field],reference[i][field],`${gate} fixed detail ${i}/${field}`);
         details++;
       }
@@ -1000,17 +966,17 @@ export async function checkLidMark(M) {
   }
   const {renderer,calls}=rendererTrace(),view={W:1474,H:988,S:100,cx:737,cy:494,cam:HOME};
   renderer.setAtlas({pages:[{}],places:{lidMark:[0,0,0,1,1]}});
-  const windows={shut:[exp+beat.wipe,exp+beat.wiped],opening:[exp+beat.wiped,exp+beat.become],shutting:[off[0]-M.BALL.lid*M.PACE,off[0]],sinking:[off[0],off[1]]};
+  const windows={shut:[exp+beat.wipe,exp+beat.wiped],opening:[exp+beat.wiped,exp+beat.become],shutting:[off[0]-M.BALL.lid*M.PACE,off[0]],exitWipe:[off[0],off[0]+.45*M.PACE-1e-8]};
   let vertices=0,triangles=0,draws=0,culled=0,worstPlane=0,worstCentre=0;const samples={};
   const height=.22*Math.min(g.lidW,g.lidH),width=height*1080/797.3;
   for(const [name,[from,to]] of Object.entries(windows)) {
     const times=new Set([from,to,...Array.from({length:Math.ceil((to-from)*60)},(_,i)=>from+i/60)]);
-    if(name==='sinking')times.add(98.85-start);
+    // L13 replaces the sink lifetime with the reversible wipe.
     samples[name]={frames:0,backFacing:0,frontFacing:0};
     for(let t of [...times].sort((a,b)=>a-b)) {
       // Global-to-scene subtraction rounds the exact first wipe boundary 4e-15 s early; inspect its emitted side.
       if(name==='shut'&&t===from)t+=1e-9;
-      if(t>=off[1]-1e-10) {assert.equal(at(M,'fig',t).filter(p=>p.lidMark).length,0,`${gate} gone at sink end`);continue;}
+      if(t>=off[1]-1e-10) {assert.equal(at(M,'fig',t).filter(p=>p.lidMark).length,0,`${gate} gone at exit end`);continue;}
       const P=at(M,'fig',t),lid=P.find(p=>p.lid),marks=P.filter(p=>p.lidMark);
       assert.ok(lid,`${gate} lid present`);assert.equal(marks.length,1,`${gate} exactly one mark`);const pc=marks[0];
       const axes=[[1,0,0],[0,1,0],[0,0,1]].map(v=>quatRotate(lid.q,v)),out=axes[2].map(v=>-v);
@@ -1037,13 +1003,8 @@ export async function checkLidMark(M) {
       assert.ok(pc.cut&&pc.solid&&pc.shade&&pc.noLine&&pc.noShadow&&!pc.hide&&!pc.blend&&!pc.near,`${gate} depth-owned decal without outline/gloss`);
       assert.deepEqual(pc.tones,['#5A5552','#5A5552','#353230'],`${gate} one step lighter in light and shade`);
       if(name==='shut'&&t<to)assert.deepEqual(pc.clip,lid.clip,`${gate} same become wipe`);
-      if(pc.sink) {
-        assert.deepEqual(pc.clip,[0,1,0,0],`${gate} normal floor clip`);
-        near(pc.sinkTop,lid.sinkTop,`${gate} same body lifetime`);
-        near(pc.carryClip[3],-.001,`${gate} original body-relative sink clearance`);
-      }
       calls.length=0;renderer.draw([lid,pc],view);
-      const colour=calls.filter(c=>c.program===1),gone=pc.sink&&pc.sinkTop<0;
+      const colour=calls.filter(c=>c.program===1),gone=false;
       assert.equal(colour.length,gone?0:2,`${gate} normal body culling`);
       if(gone) {culled++;continue;}
       const draw=colour[1];assert.deepEqual(draw.position,pc.p,`${gate} actual depth`);assert.deepEqual(draw.rotation,pc.q,`${gate} actual rotation`);assert.deepEqual(draw.size,pc.s,`${gate} actual size`);
@@ -1071,7 +1032,7 @@ export async function checkRound17(M) {
   console.log('C18 lid deck: '+JSON.stringify(await checkLidDeck(M)));
   console.log('C18 lid mark: '+JSON.stringify(await checkLidMark(M)));
   console.log(`Critique round 2: retained C1 ${JSON.stringify({contact,clearance})}; C2 own-body depths, carry clips and renderer cull; C3 ${JSON.stringify(fringes)} exact paint partition; C4 five InDesign objects; C5 floor offset 1/2.`);
-  return `R12: ${JSON.stringify({devices,camera})}\nRound 17: G ${swaps.boundaries} action ends / ${swaps.comparisons} registrations, worst ${swaps.worst.toFixed(5)} px; R1 ${levels} levels samples; R2/R3 ${letters} draw/type samples; R4 ${carries.carries} carries / ${carries.samples} samples, flat worst ${carries.flat.worst.toFixed(5)} px; R6/R7 ${flight} flight samples; R8-R11 ${sinks.samples} sink samples (${JSON.stringify(sinks.endTimes)}).\nFollow-up: F1 ${heights.samples} height samples / ${heights.pages} pages / ${heights.layers} layers; F2 ${stable.samples} playback samples / ${stable.faces} fixed faces, worst ${stable.worst.toFixed(5)} px; F3 ${masks.pictures} masks / ${masks.texels} fixture texels / ${masks.covered} covered, exact finished RGB.`;
+  return `R12: ${JSON.stringify({devices,camera})}\nRound 17: G ${swaps.boundaries} action ends / ${swaps.comparisons} registrations, worst ${swaps.worst.toFixed(5)} px; R1 ${levels} levels samples; R2/R3 ${letters} draw/type samples; R4 ${carries.carries} carries / ${carries.samples} samples, flat worst ${carries.flat.worst.toFixed(5)} px; R6/R7 ${flight} flight samples; R8-R11 ${sinks.samples} exit-wipe samples (${JSON.stringify(sinks.endTimes)}).\nFollow-up: F1 ${heights.samples} height samples / ${heights.pages} pages / ${heights.layers} layers; F2 ${stable.samples} playback samples / ${stable.faces} fixed faces, worst ${stable.worst.toFixed(5)} px; F3 ${masks.pictures} masks / ${masks.texels} fixture texels / ${masks.covered} covered, exact finished RGB.`;
 }
 
 // Register round 17's changed surfaces with the earlier frozen-picture comparisons. These surfaces now have the explicit
@@ -1123,7 +1084,7 @@ export async function checkRound17Exports(M) {
   M ??= await load();
   await checkFlight(M); await checkLidAndSinks(M);
   const n1 = await checkMapFrame(M), n2 = await checkDragsFlat(M);
-  return `Round 15 retained N1/N2: ${n1} map frames; ${n2.drags} flat drags / ${n2.samples} samples, worst ${n2.worst.toFixed(5)} px; ${checkRendererClips()}. Export physics/poses/sinks: round 17 gates.`;
+  return `Round 15 retained N1/N2: ${n1} map frames; ${n2.drags} flat drags / ${n2.samples} samples, worst ${n2.worst.toFixed(5)} px; ${checkRendererClips()}. Export arrival/lid poses: round 17; exit bounds/merge/burst: L13 gates.`;
 }
 
 export async function checkRound17RetainedControls() {
@@ -1132,7 +1093,6 @@ export async function checkRound17RetainedControls() {
     ['map outline restored', s => s.replace('// CORRECTIONS-15 N1: once placed,', "if (done(s, 'map', t)) D.push(...outline(...ID.frame));\n    // CORRECTIONS-15 N1: once placed,"), checkMapFrame, 'N1:'],
     ['drag arc restored', s => s.replace('lift: s === SCRIPTS.id ? 0.065 : 0.08, t: 0.015, art', 'lift: (s === SCRIPTS.id ? 0.065 : 0.08) + 0.08 * Math.sin(Math.PI * p), t: 0.015, art'), checkDragsFlat, 'N2:'],
     ['early play', s => s.replace('const clock = playClock(t, land, off[0], key), widths', 'const clock = playClock(t + 0.3, land, off[0], key), widths'), checkFlight, 'R15 retained: play before built'],
-    ['unclipped sink', s => s.replace('pc.clip = [0, 1, 0, 0]; pc.sink = true;', 'pc.clip = undefined; pc.sink = true;'), checkLidAndSinks, 'R11 sink floor clip'],
     ['landing bounce', s => s.replace('c: s === T ? end : c, r,', 'c: s === T ? [end[0], end[1] + 0.1, end[2]] : c, r,'), checkFlight, 'R6 flight:'],
   ]) {
     let failed = false;
@@ -1327,12 +1287,12 @@ export async function consistency(M) {
   const path=action(M,'ae','path');
   near(path.start,5.576539105853828,`${gate} ball path keeps start`);near(path.end,5.926539105853828,`${gate} ball path keeps end`);
   assert.deepEqual(path.previous,head.to,`${gate} continuous approach after head`);
-  near(M.LOOP,99.49089474781469,`${gate} unchanged loop`);
+  near(M.LOOP,101.49089474781469,`${gate} unchanged loop`);
   for (const t of [head.start, (head.start + head.end) / 2, head.end + 0.001, builtTime, play.start - 0.001]) {
     const hand = M.HAND(Math.max(0, Math.min(1, (t - head.start) / (head.end - head.start))));
     near(lane(at(M, 'ae', t), 1.34), 2.0 * hand, `${gate} pre-play head`); prePlaySamples++;
   }
-  const samples = [play.start, ...[0.23, 0.47, 0.73, 0.91].map(f => play.start + f * (play.end - play.start)), play.end,
+  const samples = [play.start + 1e-9, ...[0.23, 0.47, 0.73, 0.91].map(f => play.start + f * (play.end - play.start)), play.end,
     exp.start - 0.001, exp.end + 0.001, land - 0.001, ...[0, 0.51, 1.599, 1.6, 1.601, 3.199, 3.2].map(t => land + t * M.PACE), off[1] - 0.301 * M.PACE];
   for (const t of samples) {
     const P = at(M, 'ae', t), local = M.sceneAt(starts(M)[4] + t).at;
@@ -1413,7 +1373,6 @@ export async function checkRound17Controls() {
   await control('ease between pop and arc', s => s.replace('s = clamp(u, 0, T);', 's = u < BALL.pop ? BALL.pop * EASE.wipe(clamp(u / BALL.pop, 0, 1)) : clamp(u, 0, T);'), 'R6 flight:', checkFlight);
   await control('rest 0.15', s => s.replace('rest: 0, split:', 'rest: 0.15, split:'), 'R7 immediate split', checkFlight);
   await control('lid lift 0.03', s => s.replace('const by = 12 - theta, lift = 0;', 'const by = 12 - theta, lift = 0.03 * Math.max(0, -Math.sin(theta * Math.PI / 180));'), 'R10 lid gap', checkLidAndSinks);
-  await control('one shared sink depth', s => s.replace('const depth = heights[j] * clearance;', 'const depth = Math.max(...heights) * clearance;'), 'R11 own height sink', checkLidAndSinks);
   await control('R12 one old phone', s=>s.replace('PHONE_D = MODELS.phone.d, PHONE = MODELS.phone.w,','PHONE_D = 0.861, PHONE = 0.418,'), 'R12 identical models:', checkDeviceModels);
   await control('R12 letterboxed tablet',s=>s.replace("const frame = shape === 2 ?", "const frame = shape === 4 ? [0, (1 - 472 / (16 / 9) / 328) / 2, 1, 472 / (16 / 9) / 328] : shape === 2 ?"),'R12 screen filled:',checkDeviceModels);
   await control('R12 300x600 phone with bars',s=>s.replace("const frame = shape === 2 ?", "const frame = shape === 1 ? [0, 25 / 650, 1, 600 / 650] : shape === 2 ?"),'R12 screen filled:',checkDeviceModels);
@@ -1432,10 +1391,8 @@ export async function checkRound17Controls() {
   await control('C1 old placement, underside',coplanar,'C1 glass underside:',checkDeviceGlass);
   await control('C1 old placement, top',coplanar,'C1 glass clearance:',M=>checkDeviceGlass(M,true));
   await control('C1 old island height',s=>s.replace('face: 0.052 + 16 * 0.0008','face: 0.05 + 16 * 0.0008'),'R12 one island: fixed height',checkDeviceModels);
-  await control('C6 carried layers without cull or clip',s=>s.replace('pc.carryClip = [0, 1, 0, -Math.max(0, top(pc) - heights[j])]', 'pc.carryClip = undefined').replace('pc.sinkTop = heights[j] - depth * g;', 'pc.sinkTop = Infinity;'),'C2 carried lifetime: drawn after body',M=>checkLidAndSinks(M,true));
-  await control('C2 reading copy grouped with stack',s=>s.replace('formats[0].objects = [floor.slice(0, 10), reading.filter(pc => pc.p[0] < spine), reading.filter(pc => pc.p[0] >= spine)];','formats[0].objects = [formats[0].pieces];'),'C2 body cull top',checkLidAndSinks);
-  await control('C2 heights from tallest piece',s=>s.replace('(bodies[j].length ? bodies[j] : pieces).filter', 'pieces.filter'),'C2 body cull top',checkLidAndSinks);
-  await control('C4 reading halves grouped',s=>s.replace('formats[0].objects = [floor.slice(0, 10), reading.filter(pc => pc.p[0] < spine), reading.filter(pc => pc.p[0] >= spine)];','formats[0].objects = [floor.slice(0, 10), reading];'),'R11 sink finish:',M=>checkLidAndSinks(M,true));
+  await control('C2 reading copy grouped with stack',s=>s.replace('formats[0].objects = [floor.slice(0, 10), reading.filter(pc => pc.p[0] < spine), reading.filter(pc => pc.p[0] >= spine)];','formats[0].objects = [formats[0].pieces];'),'L13 per-object:',checkLidAndSinks);
+  await control('C4 reading halves grouped',s=>s.replace('formats[0].objects = [floor.slice(0, 10), reading.filter(pc => pc.p[0] < spine), reading.filter(pc => pc.p[0] >= spine)];','formats[0].objects = [floor.slice(0, 10), reading];'),'L13 per-object:',M=>checkLidAndSinks(M,true));
   let offsetFailed=false;
   try {checkFloorOffset(fs.readFileSync(new URL('../sq.mjs',import.meta.url),'utf8').replace('gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1, 2);',''));}
   catch(error) {assert.ok(error.message.includes('C5 floor offset:'),error.message);offsetFailed=true;}

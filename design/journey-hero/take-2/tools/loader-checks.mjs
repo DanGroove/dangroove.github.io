@@ -181,7 +181,7 @@ export function checkLoaderMoves(P, scene) {
       close(d.x, u * u * m.start[0] + 2 * u * t * m.control[0] + t * t * m.x, `L7 flight curve: x ${where}/${i}/${n}`);
       close(d.y, u * u * m.start[1] + 2 * u * t * m.control[1] + t * t * m.y, `L7 flight curve: y ${where}/${i}/${n}`);
       assert.equal(d.size, m.size, 'L7 flight curve: size'); assert.deepEqual(d.colour, m.colour, 'L7 flight curve: colour');
-      longestFlight = Math.max(longestFlight, checkTrail(d, previous?.[i] || { x: m.start[0], y: m.start[1] }, 'L9 streak: flight'));
+      assert.ok(!d.tail && !d.streak, 'L13 loader gather: dots only');
       flightSamples++;
     }
   }
@@ -228,7 +228,7 @@ export function checkLoaderMoves(P, scene) {
   for (const elapsed of [...samples].sort((a, b) => a - b)) {
     const actual = draw(base.burstStart + elapsed), dots = expand(scene, actual);
     const drawnStars = new Set(actual.map(d => d.star));
-    const trailing = blastAt(Math.max(0, elapsed - 0.02));
+    const trailing = blastAt(Math.max(0, elapsed - P.STREAK_WINDOW));
     const landedHomes = new Set();
     let expectedCount = unused.length;
     for (const m of points) if (base.burstStart + elapsed < base.burstStart + m.duration) expectedCount++; else landedHomes.add(m.home);
@@ -245,7 +245,7 @@ export function checkLoaderMoves(P, scene) {
       depthGrowth = Math.max(depthGrowth, depth);
       d.colour.forEach((v, k) => close(v, m.colour[k] + (target.colour[k] - m.colour[k]) * g, 'L7 explosion curve: colour'));
       assert.equal(d.alpha, 1, 'L8 explosion: mark star fades');
-      if (drawnStars.has(i)) longestBlast = Math.max(longestBlast, checkTrail(d, trailing[i], 'L9 streak: blast'));
+      if (drawnStars.has(i)) longestBlast = Math.max(longestBlast, checkTrail(d, elapsed >= m.duration ? d : trailing[i], 'L9 streak: blast'));
       if (elapsed >= m.duration) {
         close(d.size, target.size, 'L9 size: exact individual landing');
         assert.ok(!(d.streak > d.size), 'L9 streak: landed star is not a dot');
