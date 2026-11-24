@@ -146,6 +146,8 @@ function frame(ts) {
   st.visiting = JOURNEY.visiting;
   const novaAway = !(st.exploreK > 0) && ((st.kind === 'rush' && JOURNEY.moving) || st.rushT > 0 || st.blastT > 0);
   if (ROOT.classList.contains('jm-nova-away') !== novaAway) ROOT.classList.toggle('jm-nova-away', novaAway);
+  const novaFlashed = st.blastT > 0;
+  if (ROOT.classList.contains('jm-nova-flashed') !== novaFlashed) ROOT.classList.toggle('jm-nova-flashed', novaFlashed);
   // Nothing unseen takes the keyboard: the stone marks and the timeline wait for the map's hand-over; the timeline leaves in explore.
   st.focusId = f?.id; if (ROOT.dataset.find !== (f?.id || '')) ROOT.dataset.find = f?.id || '';
   const mapKeys = st.handoffT >= 1 && (st.blastT === 0 || st.exploreK > 0);
@@ -165,7 +167,7 @@ function frame(ts) {
   if (jo !== false && (moved || starsChanged || st.handoffT < 1 || jo || aim.changed || skyIdle || st.blastT > 0)) {
     starsFrame(time, st, PTR, { ...(jo || {}), look: aim.look }); mainSkyDraw = time;
   }
-  if (st.rushT > 0 && !RM) { const hit = $('nova-hit'); hit.tabIndex = 0; hit.setAttribute('aria-disabled', 'false'); hit.setAttribute('aria-label', COMB.novaSay); }
+  if (st.rushT > 0 && !RM) { const hit = $('nova-hit'), tab = st.blastT > 0 ? -1 : 0; if (hit.tabIndex !== tab) hit.tabIndex = tab; if (hit.getAttribute('aria-disabled') !== 'false') hit.setAttribute('aria-disabled', 'false'); if (hit.getAttribute('aria-label') !== COMB.novaSay) hit.setAttribute('aria-label', COMB.novaSay); }
   cardsFrame(st, aim.look, PTR);
   findsFrame(time, st);
   raf = requestAnimationFrame(frame);

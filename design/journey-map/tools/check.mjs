@@ -88,7 +88,7 @@ FINDS.forEach(f => ok(['hoards', 'longship'].includes(f.id) ? !f.view : f.view?.
 ['mist', 'horn', 'well', 'ship', 'all'].forEach(k => ok(FIND_PLAY[k] && typeof FIND_PLAY[k] === 'object', `Part B needs FIND_PLAY.${k}`));
 ok(FIND_COPY.hammerFact.t && FIND_COPY.horn[1].t && FIND_COPY.longship.t, 'three Part B author lines have text');
 ok(FIND_COPY.norns.length === 3 && FIND_COPY.norns.every(row => row.length === 2 && row.every(t => typeof t === 'string' && t.trim())), 'three named Norns with meanings');
-ok(FIND_PLAY.mist.ellipses.length === 6 && FIND_PLAY.mist.cairns.length === 3 && FIND_PLAY.mist.grid.join() === '8,4', 'six fog ellipses, three cairns and 8x4 coverage grid');
+ok(FIND_PLAY.mist.strokes.length === 5 && FIND_PLAY.mist.fill.endsWith('Z') && FIND_PLAY.mist.cairns.length === 3 && FIND_PLAY.mist.grid.join() === '8,4', 'B2: five ink mist layers, closed faint fill, three cairns and unchanged 8x4 wipe coverage grid');
 ok(FIND_PLAY.well.stars.length === 3 && FIND_PLAY.well.stars.every(row => row.length === 5 && row.every(p => p.length === 2 && p.every(Number.isFinite))), 'fifteen crown stars in three batches');
 ok(FIND_PLAY.ship.shields.length === STOPS.length, 'one longship shield per stop');
 checkDepthNumbers(HAMMER, 'HAMMER');
@@ -115,22 +115,20 @@ for (const [w, h] of [[1440, 900], [390, 664]]) {
 
 // Round 7 C1 acceptance gates. Text boxes use conservative analytic metrics, not browser measurements.
 const c1map = bigMap();
-const crownMasses = [...c1map.detail.matchAll(/class="l yg-mass" d="([^"]+)"/g)].map(m => skylineSamples(m[1]).map(p=>p.map((v,k)=>v+MAP.ygg[k])));
-ok(crownMasses.length===5,'D3 ash crown needs exactly five masses');
+const crownMasses = [skylineSamples(YGG.canopy).map(p=>p.map((v,k)=>v+MAP.ygg[k]))];
+ok((c1map.detail.match(/class="g yg-canopy"/g)||[]).length===1,'B1 one closed connected ash canopy');
 const massPoints=crownMasses.flat(),crownWidth=Math.max(...massPoints.map(p=>p[0]))-Math.min(...massPoints.map(p=>p[0])),crownHeight=Math.max(...massPoints.map(p=>p[1]))-Math.min(...massPoints.map(p=>p[1]));
-ok(crownWidth>crownHeight,'D3 crown wider than tall');
-const yggStart=c1map.detail.indexOf('<g class="ygg"'),firstMass=c1map.detail.indexOf('class="l yg-mass"',yggStart),limb=c1map.detail.indexOf('class="l yg-limbs"',yggStart);
-ok(limb>=yggStart&&limb<firstMass,'D3 supporting limbs must be below all opaque foliage');
-ok(!c1map.detail.slice(firstMass,c1map.detail.indexOf('class="yg-eagle"',firstMass)).includes('yg-limbs'),'D3 no covered limb drawn above foliage');
-ok((c1map.detail.match(new RegExp('style="fill:'+C.land+';stroke:none"','g'))||[]).length===5,'D3 invisible ground fill occludes limbs');
-ok((c1map.detail.match(/class="l yg-edge"/g)||[]).length===5&&(c1map.detail.match(/class="t yg-hatch"/g)||[]).length===5,'D3 broken leaf-clump edges and limb-direction hatch');
+ok(crownWidth>crownHeight,'B1 broad ash crown');
+const yggStart=c1map.detail.indexOf('<g class="ygg"'),firstMass=c1map.detail.indexOf('class="g yg-canopy"',yggStart);
+ok(c1map.detail.indexOf(YGG.trunk,yggStart)<firstMass,'B1 clean forks are occluded by the foliage');
+ok(YGG.windows.endsWith('Z')&&YGG.canopy.endsWith('Z'),'B1 closed silhouette and branch windows');
+ok((c1map.detail.match(/class="l yg-edge"/g)||[]).length===1&&(c1map.detail.match(/class="t yg-hatch"/g)||[]).length===1,'B1 one family of nested bough edges and one-way hatch');
 GROVE.forEach((tree, i) => ok(yggClear(tree, YGG.clearance + YGG.groveReach), 'grove ' + i + ': crown/trunk/root clearance'));
 const labelBoxPoints = []; for (let x = YGG.labelBox[0]; x <= YGG.labelBox[2]; x++) for (let y = YGG.labelBox[1]; y <= YGG.labelBox[3]; y++) labelBoxPoints.push([x,y]);
 labelBoxPoints.forEach(p => { ok(!insidePoly(p, YGG_CROWN) && outlineGap(p, YGG_CROWN) >= YGG.labelGap, 'Yggdrasil label crown clearance'); ok(YGG_ROOTS.every(P => outlineGap(p, P, false) >= YGG.labelGap), 'Yggdrasil label root clearance'); ok(Math.abs(p[0] - MAP.ygg[0]) >= YGG.labelGap + YGG.roots[0][1], 'Yggdrasil label trunk/Ratatoskr clearance'); const h = FIND_COPY.hoards.find(h => h.id === 'hoard-hmc2'); ok(Math.hypot(p[0] - h.x, p[1] - h.y) >= YGG.labelGap + FIND_PLAY.hoard.scale * 27, 'Yggdrasil label scratch clearance'); });
 const allStars = FIND_PLAY.well.stars.flatMap((row, batch) => row.map(p => ({ batch, p: p.map((v,i) => v + MAP.ygg[i]) })));
 allStars.forEach((star, i) => { ok(insidePoly(star.p,YGG_CROWN) && outlineGap(star.p,YGG_CROWN) >= YGG.starInset, 'well star crown inset'); ok(Math.hypot(...star.p.map((v,k) => v - MAP.ygg[k] - YGG.eagleAt[k])) >= YGG.eagleClear, 'well star eagle clearance'); allStars.slice(0,i).forEach(other => ok(Math.hypot(...star.p.map((v,k) => v - other.p[k])) >= (star.batch === other.batch ? YGG.starSame : YGG.starOther), 'well star spacing')); });
 allStars.forEach(star=>ok(crownMasses.some(P=>insidePoly(star.p,P)),'well star inside actual ash foliage: '+star.p));
-crownMasses.forEach((P,i)=>crownMasses.slice(0,i).forEach((Q,j)=>ok(P.every(p=>!insidePoly(p,Q)&&outlineGap(p,Q)>=.3)&&Q.every(p=>!insidePoly(p,P)&&outlineGap(p,P)>=.3),'foliage masses need an open gap '+i+'/'+j)));
 JORM.S.forEach(p => { ok(p[0] >= 22.5 && p[0] <= 577.5 && p[1] >= 22.5 && p[1] <= 877.5, 'ring sample outside inner frame'); [COAST_A, COAST_B].forEach(coast => ok(outlineGap(p,coast) >= MAP.jorm.w / 2 + 6, 'ring coast clearance')); });
 const cross2 = (a,b,c) => (b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
 const pointBoxGap=(p,b)=>Math.hypot(Math.max(b[0]-p[0],0,p[0]-b[2]),Math.max(b[1]-p[1],0,p[1]-b[3]));

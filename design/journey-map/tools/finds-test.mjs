@@ -22,10 +22,10 @@ const digest = s => { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c
 const close = (a, b, label, tolerance = 0.000001) => assert.ok(Math.abs(a - b) <= tolerance, `${label}: ${a} != ${b}`);
 const chart = bigMap();
 assert.ok(!/undefined|\{\{/.test(chart.finds), 'all live drawing tokens must resolve');
-// Recorded before any art edits in this run.
-const original = { sea: [100054, 3547300242], fill: [12999, 2682309966], coast: [4401, 2408021381] };
+// COMB-B records the surfaced serpent drawing; fill and coasts retain their earlier baselines.
+const original = { sea: [94403, 2191267303], fill: [12999, 2682309966], coast: [4401, 2408021381] };
 for (const [key, [length, hash]] of Object.entries(original)) { assert.equal(chart[key].length, length); assert.equal(digest(chart[key]), hash); }
-console.log('ok: C1 ring sea baseline; coast unchanged; fill digest records only non-scaling coast tick metadata');
+console.log('ok: B3 surfaced-hump sea digest recorded; coast and fill unchanged');
 // D3 adds NOVA.build; the full data digest is re-recorded for that authorized table (and again for the continuous pull, 2026-11-23,
 // and for polish round 1: the held breath's white cross and halo, the softer cloud deck, the traveller's size at the overview
 // and the gather ring's spread).
@@ -39,9 +39,9 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // depth.mjs for the lantern's darkness the nova canvas holds through the rush; its second batch re-records trip.mjs for the
 // labels that give way, the coasts' draw-on, the X's fade-in with the sea and the mini-map's targets.
 // FRAMES: compositor camera writer and label recovery only; geometry/score remain pinned by the motion tests.
-assert.equal(sourceDigest('trip.mjs'), 1367940136, 'trip.mjs changed');
-// ORIGIN records the palette/tail/phone glide tables as well; protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 4140766664, 'data.mjs changed');
+assert.equal(sourceDigest('trip.mjs'), 1484047937, 'trip.mjs changed');
+// COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
+assert.equal(sourceDigest('data.mjs'), 3372183678, 'data.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 4010889213, 'depth.mjs changed');
 console.log('ok: C1 camera/labels/tripS and deck source digests recorded');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
@@ -84,11 +84,11 @@ console.log('ok: all-four mask derived from STOPS is Lennard alone; nineteen run
 
 // A small recording DOM, not a browser: exercise state transitions and reject NaN writes/layout reads in frame callbacks.
 class TestHammerContext {
-  constructor() { this.commands = 0; this.clipPaths = []; }
+  constructor() { this.commands = 0; this.clipPaths = []; this.strokePaths = []; }
   record(...args) { this.commands++; for (const a of args) if (typeof a === 'number') assert.ok(Number.isFinite(a), 'nonfinite canvas command'); }
   setTransform(...args) { this.record(...args); } scale(...args) { this.record(...args); } translate(...args) { this.record(...args); }
   rotate(...args) { this.record(...args); } fillRect(...args) { this.record(...args); } drawImage(...args) { this.record(...args); }
-  stroke(...args) { this.record(...args); } clip(...args) { this.record(...args); this.clipPaths.push(args[0].path); } fill(...args) { this.record(...args); } save() {} restore() {}
+  stroke(...args) { this.record(...args); this.strokePaths.push(args[0]?.path || ''); } clip(...args) { this.record(...args); this.clipPaths.push(args[0].path); } fill(...args) { this.record(...args); } save() {} restore() {}
 }
 const testObservers = new Set();
 // Node recording implementation of the attribute MutationObserver protocol.
@@ -253,8 +253,8 @@ for (const k of ['ArrowLeft', 'ArrowRight', 'a', 'd', ' ', 'ArrowUp', 'w', 'p', 
 }
 assert.equal(hammerFind.auto, true); assert.equal(testSheet.querySelector('.hm-auto').getAttribute('aria-pressed'), 'true');
 await tick(0.2); assert.ok(game.throwId > 0); assert.ok(field.context.commands > 0);
-const shieldCell=game.cells.find(c=>c.live),cellTile=`M${shieldCell.x-HAMMER.shield.cell/2} ${shieldCell.y-HAMMER.shield.cell/2}h${HAMMER.shield.cell}v${HAMMER.shield.cell}h${-HAMMER.shield.cell}Z`;
-assert.ok(field.context.clipPaths.slice(-3).some(p=>p.includes(cellTile)));shieldCell.live=false;await tick(.016);assert.ok(field.context.clipPaths.slice(-3).every(p=>!p.includes(cellTile)),'destroyed cell removes its piece of the round shield wall');shieldCell.live=true;
+const shieldCell=game.cells.find(c=>c.live),cellGlyph=hammerFind.wallCells[game.cells.indexOf(shieldCell)];
+assert.ok(field.context.strokePaths.some(p=>p.includes(cellGlyph)));field.context.strokePaths.length=0;shieldCell.live=false;await tick(.016);assert.ok(field.context.strokePaths.every(p=>!p.includes(cellGlyph)),'B7: destroyed cell removes its complete rim and boss');shieldCell.live=true;
 const sprites = hammerFind.sprites; closeSheet(); assert.equal(FD.sheetClosing, true); const heldTime = game.time; await tick(0.25); assert.equal(game.paused, true); assert.equal(game.time, heldTime);
 key('hammer'); assert.equal(hammerFind.game, game); assert.equal(hammerFind.sprites, sprites); assert.ok(testSheet.querySelector('.hm-resume'));
 const resumeHammer = () => testSheet.querySelector('.hm-resume').dispatchEvent(new TestEvent('click'));

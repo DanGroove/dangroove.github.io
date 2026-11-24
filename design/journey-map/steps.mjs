@@ -92,7 +92,8 @@ function stepsButtons() {
   if (back.getAttribute('aria-label') !== label) back.setAttribute('aria-label', label);
   const words = back.querySelector('span'); if (words.textContent !== returning) words.textContent = returning;
   if (end) { const words = SC.go.querySelector('.go-t'); if (words.textContent !== COPY.explore.button) words.textContent = COPY.explore.button; }
-  if (!SC.go.hidden && SC.returnFocus) { SC.returnFocus = false; next.focus({ preventScroll: true }); }
+  if (!SC.go.hidden && SC.returnFocus) { SC.returnFocus = false; if (focus === document.getElementById('nova-hit')) next.focus({ preventScroll: true }); }
+  if (end && !SC.go.hidden && focus === document.getElementById('nova-hit')) next.focus({ preventScroll: true });
   if (!SC.go.hidden && !SC.shown) { SC.shown = true; SC.go.classList.add('go-reveal'); }
   if (SC.root.classList.contains('jm-moving') !== JOURNEY.moving) SC.root.classList.toggle('jm-moving', JOURNEY.moving);
   const fill = SC.go.querySelector('.go-fill'), transform = `scaleX(${SC.move ? SC.fill : 0})`;

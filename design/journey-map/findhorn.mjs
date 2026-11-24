@@ -19,6 +19,7 @@ export function findHorn(svg) {
   const sound = () => {
     if (o.stage === 'sounding' || o.stage === 'echo') return;
     const H = FIND_PLAY.horn; opened(o); o.stage = 'sounding'; o.ts = FD.now; o.sounded++; o.hold = false; o.heard = []; o.glints = []; o.up = 1;
+    o.kept = true; attr(el.querySelector('.hn-kept'), 'opacity', 1);
     o.wide = stepsFocus(o.id, FIND_PLAY.focus.wide); if (FD.popOwner === o) closePop();
     if (FD.rm) { FINDS.forEach(d => deliver(d.id)); o.up = o.v = 0; o.stage = 'rest'; if (FD.popOwner === o) closePop(); }
   };

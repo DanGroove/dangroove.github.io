@@ -106,24 +106,12 @@ const shore = (P, seed) => { const r = rnd(seed), n = P.length; let s = '', ar2 
 
 // ---- Norse landmarks ----
 export function yggdrasil(x, y) {
-  const Y = YGG, r = rnd(Y.crownSeed);
-  const crown = Y.masses.map((P, index) => {
-    const segments = P.map((p, i) => {
-      const q = P[(i + 1) % P.length], dx = q[0] - p[0], dy = q[1] - p[1], bump = Y.massBump[0] + r() * Y.massBump[1];
-      return 'Q' + n1((p[0]+q[0])/2 + dy*bump) + ' ' + n1((p[1]+q[1])/2 - dx*bump) + ' ' + q.join(' ');
-    });
-    const d = 'M' + P[0].join(' ') + segments.join('') + 'Z';
-    // Leave the edge facing its supporting limb open, with opaque foliage behind it.
-    const from = Y.massFrom[index], distance = p => Math.hypot(p[0]-from[0],p[1]-from[1]);
-    const entry = P.reduce((best,p,i) => distance(p) < distance(P[best]) ? i : best, 0);
-    const edge = segments.map((part,i) => i === entry || i === (entry + P.length - 1) % P.length ? '' : 'M' + P[i].join(' ') + part).join('');
-    const centre = P.reduce((v,p) => v.map((n,k) => n+p[k]/P.length),[0,0]);
-    const angle = Math.atan2(centre[1]-from[1],centre[0]-from[0]), along = [Math.cos(angle)*4,Math.sin(angle)*4];
-    const hatch = P.filter((p,i) => i%3===0).map(p => { const a=p.map((v,k) => v+(centre[k]-v)*.55); return 'M'+a.join(' ')+'l'+along.join(' '); }).join('');
-    return '<defs><clipPath id="yg-leaves-'+index+'"><path d="'+d+'"/></clipPath></defs><path class="l yg-mass" d="'+d+'" style="fill:'+C.land+';stroke:none"/><path class="l yg-edge" d="'+edge+'"/><path class="t yg-hatch" d="'+hatch+'" stroke-opacity=".28" clip-path="url(#yg-leaves-'+index+')"/>';
-  }).join('');
+  const Y = YGG;
+  // One silhouette with overlapping boughs indicated only by open, nested edges.
+  // Windows are real holes in the foliage; the fork behind them never crosses an edge.
+  const crown = '<path class="g yg-canopy" fill-rule="evenodd" d="' + Y.canopy + Y.windows + '"/><path class="l yg-edge" d="' + Y.boughs + '"/><path class="t yg-hatch" d="' + Y.hatch + '"/>';
   const actor = (cls, p, body) => '<g class="' + cls + '" transform="translate(' + p.join(' ') + ')">' + body + '</g>';
-  return '<g class="ygg" transform="translate(' + x + ' ' + y + ')">' + Y.roots.map(row => '<path class="g" d="' + tube(...row) + '"/>').join('') + Y.rootlets + Y.trunk + '<path class="l yg-limbs" d="' + Y.branches + '"/>' + crown + actor('yg-eagle', Y.eagleAt, Y.eagle) + actor('yg-rat', Y.ratAt, Y.rat) + actor('yg-nid', Y.nidAt, Y.nid) + '</g>';
+  return '<g class="ygg" transform="translate(' + x + ' ' + y + ')">' + Y.trunk + crown + actor('yg-eagle', Y.eagleAt, Y.eagle) + actor('yg-rat', Y.ratAt, Y.rat) + actor('yg-nid', Y.nidAt, Y.nid) + '</g>';
 }
 // interlace knot, about 22 units: a rounded square and a diamond woven over and under by quadrant
 export const knot = (cx, cy) => {
@@ -173,9 +161,9 @@ const ravens = () => {
 const serpent = () => findDrawing('serpent');
 const beacon = () => findDrawing('beacon');
 const runestone = () => findDrawing('runestone');
-const hammerMapArt = () => { const M = HAMMER.map, h = M.hit; return `<rect class="hit" x="${h[0]}" y="${h[1]}" width="${h[2]}" height="${h[3]}"/><path class="g" d="${M.stone}"/><g class="hm-lift"><path class="l" d="${M.hammer}"/><path class="l hm-spark" d="${M.spark}" opacity="0" pointer-events="none"/></g>`; };
-const horn = () => { const H = FIND_PLAY.horn, [x, y, w, h] = H.hit; return `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="hn-horn"><path class="g" d="${H.paths[0]}"/><path class="t" d="${H.paths[1]}"/><path class="l" d="${H.paths[2]}"/></g><path class="t" d="${H.paths[3]}"/>`; };
-const mist = () => { const M = FIND_PLAY.mist, [x, y, w, h] = M.box; return `<defs><radialGradient id="find-mist-soft"><stop stop-color="${C.paper}"/><stop offset="1" stop-color="${C.paper}" stop-opacity="0"/></radialGradient><radialGradient id="find-mist-wipe"><stop offset="${M.soft[1]}" stop-color="${C.black}"/><stop offset="1" stop-color="${C.black}" stop-opacity="0"/></radialGradient></defs>` + M.cairns.map(p => `<g transform="translate(${p[0]} ${p[1]}) scale(${M.cairnScale})">${M.cairn}<path class="pf mist-glint" pointer-events="none" d="${starPath(...M.glintAt, M.glintSize)}" opacity="0"/></g>`).join('') + `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="mist-drift" pointer-events="none"><g mask="url(#mistMask)"><g class="mist-cloud" opacity="${M.alpha}">${M.ellipses.map(p => `<ellipse cx="${p[0]}" cy="${p[1]}" rx="${p[2]}" ry="${p[3]}" fill="url(#find-mist-soft)"/>`).join('')}</g></g></g>`; };
+const hammerMapArt = () => { const M = HAMMER.map, h = M.hit; return `<rect class="hit" x="${h[0]}" y="${h[1]}" width="${h[2]}" height="${h[3]}"/><path class="g" d="${M.stone}"/><path class="t hm-kept" d="${M.kept}" opacity="0"/><g class="hm-lift"><path class="g" d="${M.hammer}"/><path class="l hm-spark" d="${M.spark}" opacity="0" pointer-events="none"/></g>`; };
+const horn = () => { const H = FIND_PLAY.horn, [x, y, w, h] = H.hit; return `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="hn-horn"><path class="g" d="${H.paths[0]}"/><path class="t" d="${H.paths[1]}"/><path class="o" d="${H.paths[2]}"/><path class="t hn-kept" d="${H.kept}" opacity="0"/></g><path class="t" d="${H.paths[3]}"/>`; };
+const mist = () => { const M = FIND_PLAY.mist, [x, y, w, h] = M.box; return `<defs><radialGradient id="find-mist-wipe"><stop offset="${M.soft[1]}" stop-color="${C.black}"/><stop offset="1" stop-color="${C.black}" stop-opacity="0"/></radialGradient></defs>` + M.cairns.map(p => `<g transform="translate(${p[0]} ${p[1]}) scale(${M.cairnScale})">${M.cairn}<path class="pf mist-glint" pointer-events="none" d="${starPath(...M.glintAt, M.glintSize)}" opacity="0"/></g>`).join('') + `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="mist-drift" pointer-events="none"><g mask="url(#mistMask)"><g class="mist-cloud" opacity="${M.alpha}"><path d="${M.fill}" fill="${C.paper}" fill-opacity=".07"/>${M.strokes.map(d => `<path class="l" d="${d}"/>`).join('')}</g></g></g>`; };
 const well = () => { const W = FIND_PLAY.well; return `<ellipse class="hit" rx="${W.hit[0]}" ry="${W.hit[1]}"/><g class="wl-rip" pointer-events="none">${Array.from({ length: W.rings }, () => `<ellipse class="t" rx="${W.ringR[0]}" ry="${W.ringR[1]}" opacity="0"/>`).join('')}</g><circle class="pf wl-pebble" r="${W.pebbleR}" opacity="0" pointer-events="none"/>`; };
 const longship = () => {
   const S = FIND_PLAY.ship, P = S.paths, [x, y, w, h] = S.hit;
@@ -240,6 +228,8 @@ export function bigMap() {
   const KEEP = [[300, 392, 46], [370, 330, 26], [372, 368, 16], [404, 300, 16], [250, 506, 22], [208, 262, 14], [452, 556, 14], [456, 184, 26], [256, 768, 16], [228, 724, 14], [134, 200, 26], [470, 520, 70], ...FIND_COPY.beaconNotes.map(n => [n.x, n.y, 16])], tr = [];
   const grove = (cx, cy, rx, ry, n) => { for (let i = 0, k = 0; i < 500 && k < n; i++) { const a = r() * 6.283, d = Math.sqrt(r()), x = cx + Math.cos(a) * d * rx, y = cy + Math.sin(a) * d * ry; if (![[x, y], [x - 8, y], [x + 8, y], [x, y - 15], [x, y + 6]].every(onLand)) continue; if (near(x, y - 5, TRAIL, 11) || near(x, y - 5, SP, 9)) continue; if (LB.some(b => x > b[0] - 5 && x < b[2] + 5 && y > b[1] - 2 && y < b[3] + 13)) continue; if (!yggClear([x, y], YGG.clearance + YGG.groveReach) || inWorldBox([x, y], MAP.toronto.box, YGG.groveReach)) continue; if (KEEP.some(c => Math.hypot(c[0] - x, c[1] - y) < c[2])) continue; if (tr.some(t => Math.hypot(t[0] - x, t[1] - y) < 9)) continue; tr.push([x, y, 3 + r() * 1.6, r() < .45]); k++; } };
   grove(318, 186, 90, 38, 36); grove(392, 372, 36, 46, 10); grove(424, 536, 56, 28, 9); grove(352, 782, 46, 13, 6); grove(190, 498, 36, 16, 5);
+  // Move only the three audited pines, preserving the seeded inventory and density.
+  for (const [i, dx, dy] of MAP.treeNudges) { tr[i][0] += dx; tr[i][1] += dy; }
   GROVE.push(...tr); tr.sort((a, b) => a[1] - b[1]).forEach(t => s += t[3] ? pine(n1(t[0]), n1(t[1]), n1(t[2])) : tree(n1(t[0]), n1(t[1]), n1(t[2])));
   s += yggdrasil(gx, gy);
 
@@ -331,7 +321,15 @@ export function jormEdges(a, b, taper = 0) {
 export function jormungandr() {
   const J = MAP.jorm, end = 1 - J.tail / JORM.L, all = jormEdges(0, end);
   let s = '<g class="jg-ring"><path d="' + pathD([...all.left, ...all.right.slice().reverse()], true) + '" fill="' + C.ink + '" opacity="' + J.subAlpha + '"/><path d="' + pathD(all.left) + pathD(all.right) + '" fill="none" stroke="' + C.paper + '" stroke-opacity="' + J.edgeAlpha + '" stroke-width="' + J.edgeWidth + '" stroke-dasharray="' + J.dash + '" vector-effect="non-scaling-stroke"/>';
-  J.surf.forEach(([a, b]) => { const e = jormEdges(a, Math.min(b, end), a === 0 ? 0 : J.surfaceTaper); s += '<path class="o" d="' + pathD([...e.left, ...e.right.slice().reverse()], true) + '"/>'; let sc = ''; for (let i = J.scaleStep; i < e.mid.length - J.scaleStep; i += J.scaleStep) { const p = e.left[i], q = e.right[i], m = e.mid[i], n = e.mid[i + 1], dx = n[0] - m[0], dy = n[1] - m[1], L = Math.hypot(dx, dy) || 1, f = J.chevron; sc += 'M' + n1(p[0] + dx / L * f[0]) + ' ' + n1(p[1] + dy / L * f[0]) + 'L' + n1(m[0] - dx / L * f[1]) + ' ' + n1(m[1] - dy / L * f[1]) + 'L' + n1(q[0] + dx / L * f[0]) + ' ' + n1(q[1] + dy / L * f[0]); } s += '<path class="t" d="' + sc + '"/>'; [e.mid[0], e.mid.at(-1)].forEach(m => s += '<path class="t" stroke-opacity="' + J.waterAlpha + '" d="M' + n1(m[0] + J.waterAt[0]) + ' ' + n1(m[1] + J.waterAt[1]) + J.water + '"/>'); });
+  J.surf.forEach(([a, b]) => {
+    const A = jormPoint(a * JORM.L), B = jormPoint(Math.min(b, end) * JORM.L), dx=B.x-A.x, dy=B.y-A.y, length=Math.hypot(dx,dy), nx=-dy/length, ny=dx/length;
+    const point=(t,h)=>[n1(A.x+dx*t+nx*h),n1(A.y+dy*t+ny*h)].join(' '), rise=Math.min(18,length*.25);
+    // Taper to the water at both feet; a bowed belly makes a body rather than a band.
+    s += '<g class="jg-hump"><path class="o" d="M'+point(0,0)+'C'+point(.14,-rise)+' '+point(.8,-rise)+' '+point(1,0)+'C'+point(.74,-rise+J.w)+' '+point(.24,-rise+J.w)+' '+point(0,0)+'Z"/>';
+    for (const t of [.3,.5,.7]) s += '<path class="t" d="M'+point(t,-rise*.72)+'q2 1 3 3"/>';
+    for (const t of [0,1]) s += '<path class="t" d="M'+point(t-.05,1)+'l'+n1(dx*.035)+' '+n1(dy*.035)+'m'+n1(dx*.04)+' '+n1(dy*.04)+'l'+n1(dx*.04)+' '+n1(dy*.04)+'"/>';
+    s += '</g>';
+  });
   return s + Array.from({ length: FIND_PLAY.serpent.swell.length + 1 }, () => '<g class="jg-swell" opacity="0"><path class="o jg-gulp" d="' + J.swellPath + '"/><path class="o jg-hear" d="' + J.hornPath + '" opacity="0"/></g>').join('') + '</g>';
 }
 

@@ -86,17 +86,12 @@ export function findHammer(svg) {
     c.save(); if (s && !FD.rm && s.shake > 0) c.translate(Math.sin(s.time * HAMMER.map.trembleRate) * HAMMER.fx.shake * s.shake / HAMMER.fx.life, 0);
     for (let i = 0; i < o.paths.bridge.length; i++) paintPath(o.paths.bridge[i], 0, 0, i % 2 ? C.note : C.dim);
     if (s) {
-      // Clip the shield wall to the original live cell tiles: a lost cell takes its wood and rim with it.
-      const W = HAMMER.shield, A = HAMMER.paths.wall;
+      // Each original live tile owns one complete rim and boss. No shield crosses a tile edge.
+      const W = HAMMER.shield;
       for (let wall = 0; wall < W.walls; wall++) {
-        const first = wall * W.rows * W.double * W.columns; let tiles = '';
-        for (let i = first; i < first + W.rows * W.double * W.columns; i++) { const p = s.cells[i]; if (p.live) tiles += `M${p.x - W.cell / 2} ${p.y - W.cell / 2}h${W.cell}v${W.cell}h${-W.cell}Z`; }
-        c.save(); c.clip(new Path2D(tiles));
-        for (let row = 0; row < W.double; row++) for (const dx of A.centres) {
-          const x = W.x + wall * W.gap + dx, y = W.y - W.cell - row * W.rows * W.cell;
-          c.save(); c.translate(x, y); c.fillStyle = C.ink; c.fill(o.paths.wallRim); c.strokeStyle = C.note; c.stroke(o.paths.wallRim); c.strokeStyle = C.dim; c.stroke(o.paths.wallPlanks); c.strokeStyle = C.paper; c.stroke(o.paths.wallBoss); c.restore();
-        }
-        c.restore();
+        const first = wall * W.rows * W.double * W.columns; let shields = '';
+        for (let i = first; i < first + W.rows * W.double * W.columns; i++) if (s.cells[i].live) shields += o.wallCells[i];
+        c.strokeStyle = C.note; c.stroke(new Path2D(shields));
       }
       for (let i = 0; i < s.foes.length; i++) {
         const p = s.foes[i]; if (!p.live) continue; c.globalAlpha = !FD.rm && p.flash ? HAMMER.fx.flashAlpha : 1; paintSprite(p.kind, p.x, p.y); c.globalAlpha = 1;
@@ -142,6 +137,13 @@ export function findHammer(svg) {
     o.paths = { bridge: HAMMER.paths.bridge.map(d => new Path2D(d)), shot: HAMMER.paths.shot.map(d => new Path2D(d)), fragments: HAMMER.paths.fragments.map(row => new Path2D(row[2])) };
     for (const key of ['spark', 'crack', 'stoneHeart']) o.paths[key] = new Path2D(HAMMER.paths[key]);
     for (const [key, path] of Object.entries(HAMMER.paths.wall.paths)) o.paths[key] = new Path2D(path);
+    // Precompute the cell glyphs once per opening, not in the animation clock.
+    const W = HAMMER.shield, r = (W.cell - HAMMER.field.line) / 2 - .25;
+    o.wallCells = Array.from({ length: HAMMER.pools.cells }, (_, i) => {
+      const wall = Math.floor(i / (W.rows * W.double * W.columns)), row = Math.floor(i / W.columns) % (W.rows * W.double), col = i % W.columns;
+      const x = W.x + wall * W.gap + (col - (W.columns - 1) / 2) * W.cell + row % 2 * W.stagger, y = W.y - row * W.cell;
+      return `M${x-r} ${y}a${r} ${r} 0 1 0 ${2*r} 0a${r} ${r} 0 1 0 ${-2*r} 0ZM${x-.35} ${y}a.35 .35 0 1 0 .7 0a.35 .35 0 1 0 -.7 0Z`;
+    });
     measure(); refresh(); draw();
     q('.hm-close').addEventListener('click', () => closeSheet()); o.autoButton.addEventListener('click', toggle); o.pauseButton.addEventListener('click', () => o.game?.paused ? resume() : pause());
     const point = e => { const box = o.canvas.getBoundingClientRect(); o.input.target = (e.clientX - box.left) * HAMMER.field.w / box.width; };
@@ -149,7 +151,7 @@ export function findHammer(svg) {
     o.canvas.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || o.pointer === e.pointerId) point(e); });
     const release = e => { if (o.pointer === e.pointerId) { o.pointer = null; o.held = false; } };
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) o.canvas.addEventListener(type, release);
-    found(o.id); o.stage = 'sheet'; o.sheetTs = FD.now; o.accumulator = 0;
+    found(o.id); attr(el.querySelector('.hm-kept'), 'opacity', 1); o.stage = 'sheet'; o.sheetTs = FD.now; o.accumulator = 0;
   };
   press(el, () => findWhenReady(o, sheet));
   o.onSheetClose = () => { if (o.game && o.game.phase !== 'end') o.game.paused = true; clearInput(); o.canvas = o.ctx = null; o.stage = 'rest'; };

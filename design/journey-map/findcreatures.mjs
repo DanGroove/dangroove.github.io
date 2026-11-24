@@ -10,7 +10,7 @@ export function findRavens(svg) {
   const scratches = [...el.querySelectorAll('.rv-tally path')];
   const o = { id: f.id, el, birds, stage: 'rest', next: 0, thoughts: 0, tally: 0, kept: false, ts: -Infinity, queued: false, preenAt: FD.now + findRange(R.preen), preenBird: 0, preenTs: -Infinity, ruffleTs: -Infinity };
   const rigEase = value => { const q = clamp01(value); return q * q * (3 - 2 * q); };
-  birds.forEach(b => { const size = b.i ? R.frame : R.strip; b.item.innerHTML = '<rect class="' + (b.i ? 'o' : 'pf') + '" width="' + size[0] + '" height="' + size[1] + '"/>'; attr(b.item, 'transform', 'translate(' + G.itemAt.join(' ') + ')'); });
+  birds.forEach(b => { b.item.innerHTML = b.i ? R.frameArt : R.thoughtArt; attr(b.item, 'transform', 'translate(' + G.itemAt.join(' ') + ')'); });
   const baseAt = b => [G.PERCHES[b.i][0] + b.side * b.shy, G.PERCHES[b.i][1] + b.shy * G.hopSlope[b.i]];
   const setFacing = (b, sign, t, force = false) => {
     if (b.want !== sign) { b.want = sign; b.faceTs = t; }
