@@ -85,6 +85,7 @@ ok(FIND_PLAY.serpent.scale === 1 && !FIND_PLAY.serpent.spots, 'world serpent has
 const serpentFind = FINDS.find(f => f.id === 'serpent'), sb = FIND_PLAY.serpent.bounds; ok(serpentFind.x + sb[0] >= 22.5 && serpentFind.x + sb[2] <= 577.5 && serpentFind.y + sb[1] >= 22.5 && serpentFind.y + sb[3] <= 877.5, 'serpent head/pad inside inner frame');
 ok(FINDS.filter(f => f.view).length === 9, 'nine finds have fixed camera views');
 FINDS.forEach(f => ok(['hoards', 'longship'].includes(f.id) ? !f.view : f.view?.length === 3 && f.view.every(Number.isFinite) && f.view[2] > 0, `${f.id}: camera view`));
+ok(FINDS.filter(f=>f.viewCap!==undefined).length===1&&FINDS.find(f=>f.id==='horn').viewCap===12,'D4 only the horn owns an extra view cap');
 ['mist', 'horn', 'well', 'ship', 'all'].forEach(k => ok(FIND_PLAY[k] && typeof FIND_PLAY[k] === 'object', `Part B needs FIND_PLAY.${k}`));
 ok(FIND_COPY.hammerFact.t && FIND_COPY.horn[1].t && FIND_COPY.longship.t, 'three Part B author lines have text');
 ok(FIND_COPY.norns.length === 3 && FIND_COPY.norns.every(row => row.length === 2 && row.every(t => typeof t === 'string' && t.trim())), 'three named Norns with meanings');
@@ -92,7 +93,7 @@ ok(FIND_PLAY.mist.strokes.length === 5 && FIND_PLAY.mist.fill.endsWith('Z') && F
 ok(FIND_PLAY.well.stars.length === 3 && FIND_PLAY.well.stars.every(row => row.length === 5 && row.every(p => p.length === 2 && p.every(Number.isFinite))), 'fifteen crown stars in three batches');
 ok(FIND_PLAY.ship.shields.length === STOPS.length, 'one longship shield per stop');
 checkDepthNumbers(HAMMER, 'HAMMER');
-ok(FINDS.some(f => f.id === 'hammer' && f.n === 0 && f.x === 112 && f.y === 222 && f.view.join() === '112,218,34'), 'hammer replaces board at its original place/view');
+ok(FINDS.some(f => f.id === 'hammer' && f.n === 0 && f.x === 110 && f.y === 288 && f.view.join() === '116,290,34'), 'D5 hammer place/view follows its stone below Laurier dates');
 ok(!FINDS.some(f => f.id === 'tafl') && !FIND_PLAY.tafl && !Object.keys(FIND_COPY).some(k => k.startsWith('tafl')), 'retired board data removed');
 ok(HAMMER.runes.map(r => r.key).join() === 'th,r,k,g,h,n,i,j,ei,l,d,e', 'game needs exactly the twelve approved runes');
 HAMMER.runes.forEach(r => { ok(RUNES.some(row => row[1] === r.key), `unknown game rune ${r.key}`); ok(!['z', 's', 't', 'o'].includes(r.key), `excluded game rune ${r.key}`); });
@@ -121,7 +122,7 @@ const massPoints=crownMasses.flat(),crownWidth=Math.max(...massPoints.map(p=>p[0
 ok(crownWidth>crownHeight,'B1 broad ash crown');
 const yggStart=c1map.detail.indexOf('<g class="ygg"'),firstMass=c1map.detail.indexOf('class="g yg-canopy"',yggStart);
 ok(c1map.detail.indexOf(YGG.trunk,yggStart)<firstMass,'B1 clean forks are occluded by the foliage');
-ok(YGG.windows.endsWith('Z')&&YGG.canopy.endsWith('Z'),'B1 closed silhouette and branch windows');
+ok((!YGG.windows||YGG.windows.endsWith('Z'))&&YGG.canopy.endsWith('Z'),'D6 closed silhouette; optional true canopy windows');
 ok((c1map.detail.match(/class="l yg-edge"/g)||[]).length===1&&(c1map.detail.match(/class="t yg-hatch"/g)||[]).length===1,'B1 one family of nested bough edges and one-way hatch');
 GROVE.forEach((tree, i) => ok(yggClear(tree, YGG.clearance + YGG.groveReach), 'grove ' + i + ': crown/trunk/root clearance'));
 const labelBoxPoints = []; for (let x = YGG.labelBox[0]; x <= YGG.labelBox[2]; x++) for (let y = YGG.labelBox[1]; y <= YGG.labelBox[3]; y++) labelBoxPoints.push([x,y]);

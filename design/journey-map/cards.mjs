@@ -74,7 +74,7 @@ function cardsDepthConfig(c) {
   const cfg = DEPTH.card, lift = !!VIEW.depth && !VIEW.phone;
   c.depthConfig = lift ? `${cfg.perspective}/${cfg.blur}/${cfg.spread}/${cfg.radius}` : '';
   c.card.style.perspective = lift ? cfg.perspective + 'px' : '';
-  c.shadow.style.boxShadow = `0 0 ${cfg.blur}px ${cfg.spread}px var(--shade)`; c.shadow.style.borderRadius = cfg.radius + 'px';
+  c.shadow.style.boxShadow = `0 0 ${cfg.blur}px ${cfg.spread}px var(--shade)`; c.shadow.style.borderRadius = VIEW.phone ? cfg.radius + 'px ' + cfg.radius + 'px 0 0' : cfg.radius + 'px';
   c.depthPending = false;
 }
 export const cardsSetCraft = mask => { CD.craft = mask; CD.list.forEach(c => c.el.style.transition = 'opacity .3s'); };

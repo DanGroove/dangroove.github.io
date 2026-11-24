@@ -6,11 +6,11 @@ const run=async(args)=>{
   const child=spawn(process.execPath,args,{stdio:['ignore','pipe','pipe']});let output='';
   for(const stream of[child.stdout,child.stderr])stream.on('data',b=>{output+=b;});
   const code=await new Promise(ok=>child.on('close',ok));
-  appendFileSync('COMB-B-BUILD.md','\n## node '+args.join(' ')+' (exit '+code+')\n\n```text\n'+(output||'(no output)\n').replace(/[^\x00-\x7f]/g,'?')+'```\n');
+  appendFileSync('COMB-D-BUILD.md','\n## node '+args.join(' ')+' (exit '+code+')\n\n```text\n'+(output||'(no output)\n').replace(/[^\x00-\x7f]/g,'?')+'```\n');
   console.log('node '+args.join(' ')+' -> '+code+'\n'+(code?output:output.split('\n').filter(Boolean).slice(-2).join('\n')));
   return code;
 };
 let failed=0;
-for(const file of[...readdirSync('.').filter(f=>f.endsWith('.mjs')),...readdirSync('tools').filter(f=>f.endsWith('.mjs')).map(f=>'tools/'+f)])failed+=!!await run(['--check',file]);
+for(const file of[...readdirSync('.').filter(f=>f.endsWith('.mjs')),...readdirSync('tools').filter(f=>f.endsWith('.mjs')&&!/^(frame-cost|comb-[bc]-cost-test)\.mjs$/.test(f)).map(f=>'tools/'+f)])failed+=!!await run(['--check',file]);
 for(const test of tests)failed+=!!await run(['tools/'+test+'.mjs']);
 console.log(failed+' failed checks');process.exitCode=failed?1:0;

@@ -302,7 +302,7 @@ export function tripBuild(els) {
     const on = document.documentElement.classList.contains('jm-explore');
     if (TRIP_EL.exploreOn === on) return;
     TRIP_EL.exploreOn = on;
-    if (on && !TRIP_EL.exploreReady) tripMeasureExploreLabels();
+    // Ink placement is warmed before this input task.
     for (const r of TRIP_EL.rows) if (r.exploreMarkup) r.el.querySelector('text').innerHTML = TRIP_EL.exploreOn ? r.exploreMarkup : r.normalMarkup;
   });
 }
@@ -319,10 +319,7 @@ export function tripMeasureLabels() {
     r.box = text.getBBox ? text.getBBox() : null;
     if (r.box && typeof DOMPoint !== 'undefined') {
       r.normalMarkup = text.innerHTML;
-      const lines = !row.stopSub && ['hmc1','hmc2'].includes(row.stop) ? row.text.split(' ') : !row.stopSub && row.stop === 'x' ? row.lines : null;
-      r.exploreMarkup = lines ? lines.map((line,i)=>`<tspan x="0" y="${i*row.unit*1.15}">${line}${i<lines.length-1?' ':''}</tspan>`).join('') : null;
-      if (r.exploreMarkup) { text.innerHTML = r.exploreMarkup; r.exploreBox = text.getBBox(); text.innerHTML = E.exploreOn ? r.exploreMarkup : r.normalMarkup; }
-      else r.exploreBox = r.box;
+      r.exploreMarkup = null; r.exploreBox = r.box;
     }
     r.overview = r.base.slice();
     if (row.stopSub) r.overview[1] += Math.max(0, 16 / VIEW.s0 - 18);
@@ -366,70 +363,93 @@ export function tripMeasureLabels() {
     if (t.el.getBBox && typeof DOMPoint !== 'undefined') { const b = t.el.getBBox(), m = t.el.transform.baseVal.consolidate()?.matrix, corners = [[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]].map(([x,y]) => m ? new DOMPoint(x,y).matrixTransform(m) : {x,y}); t.b = [Math.min(...corners.map(p=>p.x))-2, Math.min(...corners.map(p=>p.y))-2, Math.max(...corners.map(p=>p.x))+2, Math.max(...corners.map(p=>p.y))+2]; }
   });
   E.exploreReady = false;
-  if (E.exploreOn) tripMeasureExploreLabels();
+  tripMeasureExploreLabels();
 }
-// Explore placement is measured once at a font/resize boundary. A label that is
-// clear at the widest view stays clear as its screen-size floor shrinks in map units.
+// Short idle tasks warm real ink, not empty drawing boxes, before Explore.
+// Placement is fixed in map space; the existing frame writer is unchanged.
 function tripMeasureExploreLabels() {
-  const E = TRIP_EL;
-  if (!E.rows?.every(r => r.box) || typeof DOMPoint === 'undefined') return;
-  const end = tripState(TOTAL_P).cam, f = DEPTH.frame.outer;
-  const bounds = [Math.min(f[0],-end.tx/end.s),Math.min(f[1],-end.ty/end.s),Math.max(f[2],(VIEW.w-end.tx)/end.s),Math.max(f[3],(VIEW.h-end.ty)/end.s)];
-  const margin = VIEW.phone ? EXPLORE.marginPhone : EXPLORE.margin;
-  const fit = Math.min((VIEW.w-2*margin)/(bounds[2]-bounds[0]),(VIEW.h-(VIEW.phone?STEPS.nav.bar:STEPS.nav.h+STEPS.nav.gap)-2*margin)/(bounds[3]-bounds[1]));
-  const top = Math.max(fit, Math.max(EXPLORE.most,CAMERA.holdZoom)*VIEW.sT), drawings = [], inv = E.cam.getCTM().inverse();
-  [...E.detail.querySelectorAll('path,circle,ellipse,rect,line,polygon,polyline'),...E.sea.querySelectorAll('.jg-hump')].forEach(el => {
-    if (el.closest('.label-anchor,.map-tier1,.map-tier2,.lg,.legend-symbol,defs')) return;
-    const b = el.getBBox(); if (b.width > 500 && b.height > 800) return; // chart frame, not a drawing's occupied box
-    const m = inv.multiply(el.getCTM());
-    const P = [[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]].map(([x,y])=>new DOMPoint(x,y).matrixTransform(m));
-    drawings.push([Math.min(...P.map(p=>p.x)),Math.min(...P.map(p=>p.y)),Math.max(...P.map(p=>p.x)),Math.max(...P.map(p=>p.y))]);
-  });
-  // Resting find silhouettes, rather than their larger invisible hit rectangles.
-  drawings.push([60,674,144,758],[423,165,459,204],[450,71,512,113],[500,432,528,474],[239,482,261,518],[108,221,132,240],[102,410,206,460],[34,458,57,479],[266,372,338,412],[432,594,473,630]);
-  FIND_COPY.hoards.forEach(h=>drawings.push([h.x-8,h.y-4,h.x+8,h.y+2]));
-  const lines = P => P.slice(1).map((b,i)=>[P[i],b]);
-  const trail = lines(TRAIL), coast = [...lines([...COAST_A,COAST_A[0]]),...lines([...COAST_B,COAST_B[0]])];
-  const placed = [], boxAt=(r,at,s)=>{const k=labelScale(r.row.kind,s),b=r.exploreBox||r.box;return[at[0]+b.x*k,at[1]+b.y*k,at[0]+(b.x+b.width)*k,at[1]+(b.y+b.height)*k];};
-  const overlap=(a,b,pad)=>a[0]<b[2]+pad&&a[2]>b[0]-pad&&a[1]<b[3]+pad&&a[3]>b[1]-pad;
-  const crosses=(box,segments,pad)=>{
-    const q=[box[0]-pad,box[1]-pad,box[2]+pad,box[3]+pad];
-    return segments.some(([a,b])=>{
-    if(Math.max(a[0],b[0])<q[0]||Math.min(a[0],b[0])>q[2]||Math.max(a[1],b[1])<q[1]||Math.min(a[1],b[1])>q[3])return false;
-    let lo=0,hi=1;for(let j=0;j<2;j++){const d=b[j]-a[j];if(!d){if(a[j]<q[j]||a[j]>q[j+2])return false;}else{const u=(q[j]-a[j])/d,v=(q[j+2]-a[j])/d;lo=Math.max(lo,Math.min(u,v));hi=Math.min(hi,Math.max(u,v));if(lo>hi)return false;}}return true;
-    });
-  };
-  const marked = FINDS.filter(f=>f.mark);
-  const clear=(box,s)=>{
-    const pad=4.8/s;
-    if(box[0]<18||box[2]>608||box[1]<135||box[3]>818)return false;
-    if(drawings.some(b=>overlap(box,b,pad))||placed.some(p=>overlap(box,boxAt(p.r,p.at,s),pad)))return false;
-    if(s>=LABELS.fade[0]*VIEW.s0 && [[80,662,124,670],[148,711,176,722],[80,763,124,774],[26,711,56,722]].some(b=>overlap(box,b,pad)))return false;
-    if(marked.some(f=>overlap(box,[f.mark[0],f.mark[1],f.mark[0],f.mark[1]],(4+COMB.markerPx/2)/s)))return false;
-    if(STOPS.some(st=>{const p=MAP.waypoints[st.w],size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*s)),radius=size*(MARK.radius+MARK.rim/2)/MARK.box/s,y=p[1]-(size/2+MARK.stand)/s;return overlap(box,[p[0]-radius,y-radius,p[0]+radius,y+radius],4.8/s);}))return false;
-    return !crosses(box,trail,5.5/s)&&!crosses(box,coast,10.5/s);
-  };
-  for(const r of E.rows.filter(r=>!r.row.stopSub)){
-    const preferred = r.row.stop === 'x' ? [VIEW.w<=390?20:150,790] : VIEW.w <= 360 && r.row.stop === 'lennard' ? [574,720] : r.base;
-    const candidates=[preferred];
-    for(let y=Math.max(140,r.base[1]-160);y<=Math.min(806,r.base[1]+160);y+=6)for(let x=28;x<=606;x+=6)candidates.push([x,y]);
-    candidates.sort((a,b)=>(a[0]-preferred[0])**2+4*(a[1]-preferred[1])**2-((b[0]-preferred[0])**2+4*(b[1]-preferred[1])**2));
-    const words = LABELS.fade[0]*VIEW.s0+.001;
-    r.explore=candidates.find(at=>clear(boxAt(r,at,fit),fit)&&clear(boxAt(r,at,words),words))||r.base;
-    placed.push({r,at:r.explore});
-  }
-  for(const r of E.rows.filter(r=>r.row.stopSub)){
-    const name=E.rows.find(n=>n.row.stop===r.row.stop&&!n.row.stopSub),dy=Math.max(16,(name.exploreBox.height+8)*labelScale(name.row.kind,fit));
-    r.explore=[name.explore[0],name.explore[1]+dy];r.exploreFrom=Infinity;
-    for(let s=fit;s<=top*1.001;s=Math.min(top,s*1.12)){
-      const candidates=[]; for(const d of [dy,-dy,16,-16,14,-14,12,-12,24,-24,32,-32,40,-40]) for(const dx of [0,-12,12,-24,24,-36,36,-48,48,-60,60]) candidates.push([name.explore[0]+dx,name.explore[1]+d]);
-      const words = LABELS.fade[0]*VIEW.s0+.001;
-      const at=candidates.find(p=>clear(boxAt(r,p,s),s)&&(s>=words||clear(boxAt(r,p,words),words)));
-      if(at){r.explore=at;r.exploreFrom=s===fit?fit/1.08:s;placed.push({r,at});break;}if(s===top)break;
+  const E=TRIP_EL;
+  if(!E.rows?.every(r=>r.box)||typeof DOMPoint==='undefined')return;
+  const epoch=E.exploreEpoch=(E.exploreEpoch||0)+1;
+  const later=fn=>setTimeout(()=>{if(epoch===E.exploreEpoch)fn();},0);
+  const end=tripState(TOTAL_P).cam,f=DEPTH.frame.outer,m=VIEW.phone?EXPLORE.marginPhone:EXPLORE.margin;
+  const bounds=[Math.min(f[0],-end.tx/end.s),Math.min(f[1],-end.ty/end.s),Math.max(f[2],(VIEW.w-end.tx)/end.s),Math.max(f[3],(VIEW.h-end.ty)/end.s)];
+  const fit=Math.min((VIEW.w-2*m)/(bounds[2]-bounds[0]),(VIEW.h-(VIEW.phone?STEPS.nav.bar:STEPS.nav.h+STEPS.nav.gap)-2*m)/(bounds[3]-bounds[1]));
+  const top=Math.max(fit,Math.max(EXPLORE.most,CAMERA.holdZoom)*VIEW.sT),grid=new Map(),cell=12;
+  const add=(x,y,half=0,fixed=false,offset=null)=>{if(x<10||x>590||y<120||y>820)return;const key=Math.floor(x/cell)+','+Math.floor(y/cell);if(!grid.has(key))grid.set(key,[]);grid.get(key).push([x,y,half,fixed,offset]);};
+  const elements=[...E.svg.querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-sea path,#b-sea circle,#finds path,#finds circle,#finds ellipse,#finds rect')];let i=0;
+  const sample=()=>{
+    const start=performance.now();
+    while(i<elements.length&&performance.now()-start<6){
+      const el=elements[i++];
+      if(el.closest('.label-anchor,.map-tier1,.map-tier2,.lg,.legend-symbol,.mk,defs,.bc-beam,.bc-glow,.hd-chest,.hd-stars,.hd-glow,.jg-swell,.wl-rip,.rv-gifts')||el.matches('.hit,.touch-hit,.find-focus-ring')||el.getAttribute('opacity')==='0')continue;
+      // Ignore hidden parts, while still warming the chart behind its global
+      // hand-off fade. Those layer fades are not the drawing's occupied ink.
+      let hidden=false;
+      for(let parent=el;parent&&parent!==E.detail&&parent!==E.finds&&parent!==E.sea;parent=parent.parentElement){const style=getComputedStyle(parent);if(Number(style.opacity)<.02||style.display==='none'||parent.style.visibility==='hidden'||parent.getAttribute('visibility')==='hidden'){hidden=true;break;}}
+      if(hidden)continue;
+      const b=el.getBBox();if(b.width>500&&b.height>800)continue;
+      const style=getComputedStyle(el);if(style.stroke==='none'&&style.fill==='none')continue;
+      const matrix=E.cam.getCTM().inverse().multiply(el.getCTM()),L=el.getTotalLength?.();if(!L||L>6000)continue;
+      const scale=Math.hypot(matrix.a,matrix.b),fixed=style.vectorEffect==='non-scaling-stroke',half=(parseFloat(style.strokeWidth)*(fixed?1:scale)/2)||.5;
+      for(let u=0;u<=L;u+=el.classList.contains('sea-stipple')?.004:Math.min(1,.75/Math.max(.1,scale))){const p=el.getPointAtLength(u);add(matrix.a*p.x+matrix.c*p.y+matrix.e,matrix.b*p.x+matrix.d*p.y+matrix.f,half,fixed);}
     }
-  }
-  for(const r of E.rows){r.el.dataset.exploreAt=r.explore.join(' ');r.el.dataset.exploreFrom=String(r.exploreFrom||fit);}
-  E.exploreReady = true;
+    if(i<elements.length){later(sample);return;}
+    for(const P of [COAST_A,COAST_B,TRAIL])for(let j=1;j<P.length;j++){
+      const a=P[j-1],b=P[j],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy),n=[-dy/L,dx/L];
+      if(P!==TRAIL&&onLand([(a[0]+b[0])/2+n[0],(a[1]+b[1])/2+n[1]])){n[0]*=-1;n[1]*=-1;}
+      for(let u=0;u<=L;u+=.6){const x=lerp(a[0],b[0],u/L),y=lerp(a[1],b[1],u/L);add(x,y,P===TRAIL?1.4:.6,true);if(P!==TRAIL)add(x,y,3*VIEW.s0,true,n.map(v=>v*3*VIEW.s0));}
+    }
+    later(place);
+  };
+  const gap=(a,b)=>Math.hypot(Math.max(a[0]-b[2],b[0]-a[2],0),Math.max(a[1]-b[3],b[1]-a[3],0)),placed=[];
+  const box=(r,local,s)=>{const k=labelScale(r.row.kind,s);return[local[0]*k+r.explore[0],local[1]*k+r.explore[1],local[2]*k+r.explore[0],local[3]*k+r.explore[1]];};
+  const clear=(q,s)=>{
+    if(q[0]<24||q[2]>576||q[1]<130||q[3]>816){return false;}
+    const pad=2.4/s,reach=pad+4;
+    for(let x=Math.floor((q[0]-reach)/cell);x<=Math.floor((q[2]+reach)/cell);x++)for(let y=Math.floor((q[1]-reach)/cell);y<=Math.floor((q[3]+reach)/cell);y++)for(const p of grid.get(x+','+y)||[])if(gap(q,[p[0]+(p[4]?.[0]||0)/s,p[1]+(p[4]?.[1]||0)/s,p[0]+(p[4]?.[0]||0)/s,p[1]+(p[4]?.[1]||0)/s])<pad+(p[3]?p[2]/s:p[2])){return false;}
+    if(placed.some(p=>(!p.r.row.stopSub||s>=p.r.exploreFrom)&&gap(q,box(p.r,p.at,s))<pad)){return false;}
+    if(FINDS.some(f=>f.mark&&gap(q,[...f.mark,...f.mark])<(COMB.markerPx/2+2.4)/s))return false;
+    return !STOPS.some(st=>{const p=MAP.waypoints[st.w],size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*s)),rad=size*(MARK.radius+MARK.rim/2)/MARK.box/s,cy=p[1]-(size/2+MARK.stand)/s;return gap(q,[p[0],cy,p[0],cy])<rad+pad;});
+  };
+  const scales=Array.from({length:25},(_,i)=>fit*(top/fit)**(i/24)),rows=E.rows.filter(r=>!r.row.stopSub).concat(E.rows.filter(r=>r.row.stopSub));let rowIndex=0;
+  const place=()=>{
+    const r=rows[rowIndex++];if(!r){E.exploreReady=true;return;}
+    const sub=r.row.stopSub,name=sub?E.rows.find(n=>n.row.stop===r.row.stop&&!n.row.stopSub):null;
+    const p=r.stop>=0?MAP.waypoints[STOPS[r.stop].w]:MAP.x,b=r.box,k=labelScale(r.row.kind,fit),px=1/(fit*k),candidates=[];r.explore=p.slice();
+    if(sub){
+      const n=name.exploreLocal,nk=labelScale(name.row.kind,fit),nx=n[0]*nk/k,ny=n[3]*nk/k,w=b.width;
+      for(let dy=4*px;dy<=20*px;dy+=2*px)for(const x of[nx,n[2]*nk/k-w,(nx+n[2]*nk/k-w)/2])for(const shift of [0,-2,2,-4,4,-6,6,-8,8])candidates.push([x+shift*px,ny+dy,x+shift*px+w,ny+dy+b.height]);
+    }else{
+      const size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*fit)),cy=-(r.row.stop==='x'?0:(size/2+MARK.stand))*px,rad=(r.row.stop==='x'?8:size*(MARK.radius+MARK.rim/2)/MARK.box)*px,preference=COMB.exploreSides[r.row.stop]||'right';
+      for(let y=cy-rad-b.height-16*px;y<=cy+rad+16*px;y+=.5*px)for(let x=-rad-b.width-16*px;x<=rad+16*px;x+=.5*px){
+        const q=[x,y,x+b.width,y+b.height],distance=gap(q,[0,cy,0,cy])-rad;
+        if(distance<3*px||distance>b.height+4*px)continue;
+        const side=preference==='left'?q[2]<=0:preference==='below'?q[1]>=cy:q[0]>=0;
+        candidates.push(Object.assign(q,{score:(distance>b.height?100000:0)+(side?0:10000)+Math.abs(distance-7*px)*8+Math.abs(y+b.height/2-cy)}));
+      }
+      candidates.sort((a,b)=>a.score-b.score);
+    }
+    const inside=q=>q[0]>=24&&q[1]>=130&&q[2]<=576&&q[3]<=816;
+    const near=(q,s)=>{
+      if(r.row.stop==='x')return true;
+      const size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*s)),rad=size*(MARK.radius+MARK.rim/2)/MARK.box/s,cy=p[1]-(size/2+MARK.stand)/s;
+      return gap(q,[p[0],cy,p[0],cy])-rad<=b.height*labelScale(r.row.kind,s);
+    };
+    const bounded=sub?candidates:candidates.filter(q=>inside(box(r,q,fit))&&scales.every(s=>near(box(r,q,s),s)));
+    if(!sub&&bounded.length){candidates.length=0;candidates.push(...bounded);}
+    let at,from=fit;
+    if(sub){for(const s of scales){at=candidates.find(p=>scales.filter(t=>t>=s).every(t=>clear(box(r,p,t),t)));if(at){from=s;break;}}}
+    else at=candidates.find(p=>scales.every(s=>clear(box(r,p,s),s)));
+    const allClear=!!at;
+    at ||= candidates.find(p=>clear(box(r,p,fit),fit))||candidates.find(p=>inside(box(r,p,fit)))||candidates[0]||[b.x,b.y,b.x+b.width,b.y+b.height];
+    r.exploreLocal=at;r.exploreBox={x:at[0],y:at[1],width:b.width,height:b.height};r.exploreFrom=sub?(allClear?from:Infinity):0;
+    r.exploreMarkup='<tspan x="'+(at[0]-b.x)+'" y="'+(at[1]-b.y)+'">'+r.row.text.replaceAll('&','&amp;').replaceAll('<','&lt;')+'</tspan>';
+    r.el.dataset.exploreClear=String(allClear);r.el.dataset.exploreAt=r.explore.join(' ');r.el.dataset.exploreFrom=String(r.exploreFrom||fit);
+    if(E.exploreOn)r.el.querySelector('text').innerHTML=r.exploreMarkup;
+    if(!sub||Number.isFinite(r.exploreFrom))placed.push({r,at});later(place);
+  };
+  later(sample);
 }
 const tripWrites = new WeakMap();
 function tripWrite(el, key, value, attribute = false) {
@@ -452,15 +472,19 @@ function tripLabels(st) {
     if (bar && x1 > bar[0] && x0 < bar[2]) under = Math.max(under, clamp01((y1 - bar[1]) / tall));
     return (1 - smooth(0, L.underFade, under)) * (1 - smooth(0, L.sideFade, Math.max(-x0, x1 - VIEW.w) / Math.max(1, x1 - x0))); };
   const put = (r, o) => { const v = o > .995 ? '' : o.toFixed(3); if (v !== r.o) { r.o = v; r.el.style.opacity = v; } };
+  E.subFading=false;
   E.rows.forEach(r => {
     let o = 1;
     if (r.stop >= 0) { let other = 0; st.cardK.forEach((k, i) => { if (i !== r.stop && k > other) other = k; }); o = (1 - st.cardK[r.stop]) * (1 - dim * other); }
     else o = 1 - dim * open;
-    const blend = 1 - smooth(1.05, 1.7, c.s / VIEW.s0), at = free && r.explore ? r.explore : r.base ? r.base.map((v,i) => lerp(v, r.overview[i], blend)) : [r.row.x,r.row.y];
+    const blend=1-smooth(1.05,1.7,c.s/VIEW.s0),at=free&&r.explore?r.explore:r.base?r.base.map((v,i)=>lerp(v,r.overview[i],blend)):[r.row.x,r.row.y];
     tripWrite(r.el, 'transform', `translate(${at[0]} ${at[1]})`, true);
-    const row = { ...r.row, x: at[0], y: at[1] }, k = labelScale(row.kind, c.s), b = free ? r.exploreBox || r.box : r.box, box = b ? [at[0] + (b.x - LABELS.halo) * k, at[1] + (b.y - LABELS.halo) * k, at[0] + (b.x + b.width + LABELS.halo) * k, at[1] + (b.y + b.height + LABELS.halo) * k] : mapLabelBox(row, c.s, phone);
+    const row = { ...r.row, x: at[0], y: at[1] }, k = labelScale(row.kind,c.s), b = free ? r.exploreBox || r.box : r.box, box = b ? [at[0] + (b.x - LABELS.halo) * k, at[1] + (b.y - LABELS.halo) * k, at[0] + (b.x + b.width + LABELS.halo) * k, at[1] + (b.y + b.height + LABELS.halo) * k] : mapLabelBox(row, c.s, phone);
     o *= 1 - tripCardCover(st, box);
-    if (free && r.row.stopSub && r.exploreFrom) o *= c.s >= r.exploreFrom ? 1 : 0;
+    if (free && r.row.stopSub && r.exploreFrom) {
+      const target=c.s>=r.exploreFrom?1:0,dt=st.exploreDt||0;r.subOpacity ??= 0;
+      r.subOpacity+=Math.sign(target-r.subOpacity)*Math.min(Math.abs(target-r.subOpacity),dt/.2);o*=r.subOpacity;E.subFading ||= r.subOpacity!==target;
+    }
     if (!free && o > 0) o *= gone(box);
     put(r, o);
   });
@@ -499,7 +523,7 @@ export function tripApply(st) {
   if (E.rows) tripLabels(st);
   const labelFade = smooth(...LABELS.fade, labelS / VIEW.s0);
   E.labels.forEach(label => {
-    const ideal = labelScale(label.kind, paint.s);
+    const ideal = labelScale(label.kind,paint.s);
     // Follow the old epsilon rule in memory even while the visible label is held.
     // The final text size therefore equals the old writer's at the same camera.
     label.target ??= label.k;
@@ -507,7 +531,7 @@ export function tripApply(st) {
     const from = label.k ?? label.target;
     const remaining = Math.abs(from / label.target - 1);
     const eased = free && !st.exploreScripted && r.settleLeft && remaining > .0001 ? from * (label.target / from) ** Math.min(settle, .09 / Math.max(.09, Math.abs(Math.log(label.target / from)))) : label.target;
-    const trueSize = labelScale(label.kind, c.s);
+    const trueSize = labelScale(label.kind,c.s);
     const k = free ? Math.max(trueSize * FRAME_PERF.scaleMin, Math.min(trueSize * FRAME_PERF.scaleMax, eased)) : eased;
     if (label.k !== k) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; }
   });
@@ -547,7 +571,7 @@ export function tripApply(st) {
     tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
     const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
-  return free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target));
+  return free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading);
 }
 const n2 = v => v.toFixed(2);
 export function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }
@@ -557,7 +581,8 @@ export function tripFocus(st, view, k) {
   if (k === 0) return;
   delete st.coverRects;
   const F = FIND_PLAY.focus, [x, y, r, least = F.least] = view;
-  const target = Math.max(Math.max(VIEW.s0, least * VIEW.sT), Math.min(F.most * VIEW.sT, F.fill * Math.min(VIEW.w, VIEW.h) / (2 * r)));
+  const horn=FINDS.find(f=>f.id==='horn'), cap=view.slice(0,3).every((v,i)=>v===horn.view[i])?horn.viewCap:F.most;
+  const target = Math.max(Math.max(VIEW.s0, least * VIEW.sT), Math.min(cap * VIEW.sT, F.fill * Math.min(VIEW.w, VIEW.h) / (2 * r)));
   const before = toScreen(st, [x, y]), at = [F.at[0] * VIEW.w, F.at[1] * VIEW.h];
   const s = st.cam.s * (target / st.cam.s) ** k;
   st.cam = { s, tx: lerp(before[0], at[0], k) - x * s, ty: lerp(before[1], at[1], k) - y * s, ax: lerp(st.cam.ax, at[0], k), ay: lerp(st.cam.ay, at[1], k) };

@@ -23,15 +23,18 @@ const close = (a, b, label, tolerance = 0.000001) => assert.ok(Math.abs(a - b) <
 const chart = bigMap();
 assert.ok(!/undefined|\{\{/.test(chart.finds), 'all live drawing tokens must resolve');
 // COMB-B records the surfaced serpent drawing; fill and coasts retain their earlier baselines.
-const original = { sea: [94403, 2191267303], fill: [12999, 2682309966], coast: [4401, 2408021381] };
+const original = { sea: [72527, 1476824667], fill: [12999, 2682309966], coast: [4401, 2408021381] };
 for (const [key, [length, hash]] of Object.entries(original)) { assert.equal(chart[key].length, length); assert.equal(digest(chart[key]), hash); }
-console.log('ok: B3 surfaced-hump sea digest recorded; coast and fill unchanged');
+console.log('ok: COMB-D body/stipple sea digest recorded; coast and fill unchanged');
 // D3 adds NOVA.build; the full data digest is re-recorded for that authorized table (and again for the continuous pull, 2026-11-23,
 // and for polish round 1: the held breath's white cross and halo, the softer cloud deck, the traveller's size at the overview
 // and the gather ring's spread).
 // WHIRL2 adds only STARS.supply; DEPTH and NOVA remain unchanged.
-assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 1102335767);
-console.log('ok: DEPTH/NOVA preserved; STARS.supply data digest recorded');
+assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 4022828084);
+// D10: restore only the moved cloud to verify all other sky data.
+const beforeD = structuredClone(DEPTH); beforeD.clouds.list[9][0] = 330;
+assert.equal(digest(JSON.stringify([STARS,beforeD,NOVA])),1102335767);
+console.log('ok: D10 cloud pin recorded; restoring that cloud verifies original STARS/DEPTH/NOVA');
 // D4 authorizes the pure rest-to-rest glide in trip. Depth remains protected.
 // Line endings are evened out so the numbers are the same on Windows and in the cloud.
 const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.meta.url), 'utf8').replace(/\r\n/g, '\n'));
@@ -39,11 +42,11 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // depth.mjs for the lantern's darkness the nova canvas holds through the rush; its second batch re-records trip.mjs for the
 // labels that give way, the coasts' draw-on, the X's fade-in with the sea and the mini-map's targets.
 // FRAMES: compositor camera writer and label recovery only; geometry/score remain pinned by the motion tests.
-assert.equal(sourceDigest('trip.mjs'), 1484047937, 'trip.mjs changed');
+assert.equal(sourceDigest('trip.mjs'), 4193169908, 'trip.mjs changed');
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 3372183678, 'data.mjs changed');
+assert.equal(sourceDigest('data.mjs'), 1137947755, 'data.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 4010889213, 'depth.mjs changed');
-console.log('ok: C1 camera/labels/tripS and deck source digests recorded');
+console.log('ok: COMB-D camera/labels/tripS digests recorded; depth source remains pinned');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
 const mapP = BEATS.find(b => b.id === 'map').P, stopP = BEATS.find(b => b.id === STOPS[2].id).P, leg = SEQ.find(q => q.kind === 'leg' && q.i === 2), legP = leg.a + leg.len / 2;
 for (const [w, h] of [[1440, 900], [390, 664]]) {
@@ -54,7 +57,7 @@ for (const [w, h] of [[1440, 900], [390, 664]]) {
     const views = [...FINDS.filter(f => f.view).map(f => f.view), [chest.x + F.chest[0], chest.y + F.chest[1], F.chest[2]], [ship[0] + F.ship[0], ship[1] + 5 + F.ship[1], F.ship[2]], F.wide];
     for (const view of views) {
       const zero = structuredClone(base); tripFocus(zero, view, 0); assert.deepEqual(zero, base);
-      const least = view[3] ?? F.least, scale = Math.max(Math.max(VIEW.s0, least * VIEW.sT), Math.min(F.most * VIEW.sT, F.fill * Math.min(w, h) / (2 * view[2])));
+      const least = view[3] ?? F.least, scale = Math.max(Math.max(VIEW.s0, least * VIEW.sT), Math.min((view.slice(0,3).every((v,i)=>v===FINDS.find(f=>f.id==='horn').view[i])?FINDS.find(f=>f.id==='horn').viewCap:F.most) * VIEW.sT, F.fill * Math.min(w, h) / (2 * view[2])));
       let previous = base.cam.s;
       for (const k of levels) {
         const st = structuredClone(base); tripFocus(st, view, k);

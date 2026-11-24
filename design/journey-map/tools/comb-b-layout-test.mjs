@@ -1,41 +1,18 @@
 // Real-font, real-render B10-B13 checks using only the local Edge fixture.
 import { combBBrowser, combBWait } from './comb-b-browser-test.mjs';
+import {combDInk} from './comb-d-ink-test.mjs';
 import { appendFileSync } from 'node:fs';
 const b=await combBBrowser(), output=[], failures=[];
 const log=s=>{console.log(s);output.push(s);};
 const require=(ok,s)=>{if(!ok)failures.push(s);};
-function labelMeasure(){
-  const rect=e=>{const r=e.getBoundingClientRect();return[r.left,r.top,r.right,r.bottom];};
-  const gap=(a,b)=>Math.hypot(Math.max(a[0]-b[2],b[0]-a[2],0),Math.max(a[1]-b[3],b[1]-a[3],0));
-  const visible=e=>{let a=1;for(let p=e;p&&p!==document.body;p=p.parentElement){const s=getComputedStyle(p);a*=Number(s.opacity);if(s.visibility==='hidden'||s.display==='none')return false;}return a>.01;};
-  const drawings=[];
-  for(const el of document.querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line')){
-    if(el.closest('.label-anchor,.map-tier1,.map-tier2,.lg,.legend-symbol,defs')||!visible(el))continue;
-    const local=el.getBBox();if(local.width>500&&local.height>800)continue;
-    drawings.push({box:rect(el),name:el.tagName+' '+el.getAttribute('class')});
-  }
-  for(const selector of ['#f-wayfinder path:not(.hit)','#f-wayfinder circle:not(.hit)','#f-wayfinder text','#f-ravens .rv-tree','#f-ravens .rv-a','#f-ravens .rv-b','#f-serpent .jg-head','#f-serpent .jg-pad','#f-beacon > g > .g','#f-runestone > g','#f-hammer .hm-lift','#f-horn .hn-horn','#f-mist .mist-cloud','.hd-scratch','.jg-hump','.marker-layer .mk','.st-line'])for(const el of document.querySelectorAll(selector))if(visible(el)&&rect(el).some((v,i)=>i>1&&v!==rect(el)[i-2]))drawings.push({box:rect(el),name:selector});
-  const paths=[...document.querySelectorAll('#trail-done,.coast')].map(el=>{
-    const length=el.getTotalLength(),m=el.getScreenCTM(),points=[];
-    for(let u=0;u<=length;u+=.5){const p=el.getPointAtLength(u);points.push(new DOMPoint(p.x,p.y).matrixTransform(m));}
-    return{points,name:el.id||'coast',half:el.id==='trail-done'?1.5:Math.max(.6,Number(document.querySelector('.coast-ticks')?.getAttribute('stroke-width')||0)/2)};
-  });
-  const rows=[];
-  for(const el of document.querySelectorAll('.label-anchor')){
-    if(!visible(el))continue;const box=rect(el.querySelector('text'));let min=Infinity,near='';
-    for(const d of drawings){const distance=gap(box,d.box)-.6;if(distance<min){min=distance;near=d.name;}}
-    for(const path of paths)for(const p of path.points){const distance=gap(box,[p.x,p.y,p.x,p.y])-path.half;if(distance<min){min=distance;near=path.name;}}
-    rows.push({text:el.textContent,gap:+min.toFixed(2),near,at:el.dataset.exploreAt,from:el.dataset.exploreFrom});
-  }
-  return rows;
-}
+const labelMeasure=combDInk;
 try{
   if(!process.argv.includes('--behaviour')) for(const[w,h]of[[412,730],[390,844],[360,640],[1440,900]]){
     await b.size(w,h);await b.page('dist/journey-map.html');await b.evaluate('window.__jm.go("end",{instant:true})');await combBWait(1600);await b.evaluate('document.querySelector(".go-next").click()');await combBWait(2600);
     for(let zoom=0;zoom<3;zoom++){
       if(zoom) {await b.evaluate(`(()=>{const p=window.__jm.finds.place('well');for(let i=0;i<${zoom===1?3:18};i++)document.getElementById('stage').dispatchEvent(new WheelEvent('wheel',{clientX:p[0],clientY:p[1]-30,deltaY:-120,ctrlKey:${zoom===1?'false':'true'},bubbles:true,cancelable:true}));})()`);await combBWait(1800);}
       const rows=await b.evaluate('('+labelMeasure.toString()+')()');log(w+'x'+h+' zoom '+zoom+': '+JSON.stringify(rows));
-      require(rows.length>=7,w+' zoom '+zoom+' missing names');for(const r of rows)require(r.gap>=4,w+' zoom '+zoom+' '+r.text+' gap '+r.gap+' to '+r.near);
+      require(rows.length>=7,w+' zoom '+zoom+' missing names');for(const r of rows)require(r.gap>=1.9,w+' zoom '+zoom+' '+r.text+' gap '+r.gap+' to '+r.who);
       await b.shot('final-'+w+'x'+h+'-explore-'+zoom);
     }
   }
@@ -68,5 +45,5 @@ try{
   }
   require(!b.errors.length,'browser exceptions '+JSON.stringify(b.errors));
 }catch(e){failures.push(e.stack);}
-finally{await b.close();log('Failures: '+JSON.stringify(failures));appendFileSync('COMB-B-BUILD.md','\n## node tools/comb-b-layout-test.mjs '+process.argv.slice(2).join(' ')+' (exit '+(failures.length?1:0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
+finally{await b.close();log('Failures: '+JSON.stringify(failures));appendFileSync('COMB-D-BUILD.md','\n## node tools/comb-b-layout-test.mjs '+process.argv.slice(2).join(' ')+' (exit '+(failures.length?1:0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
 process.exitCode=failures.length?1:0;

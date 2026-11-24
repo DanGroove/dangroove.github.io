@@ -102,7 +102,24 @@ const campus = () => `<rect class="g" x="-22" y="-14" width="28" height="14"/><r
 const dock = () => `<rect class="g" x="0" y="-3" width="44" height="5"/><path class="l" d="M6 2v6M18 2v6M30 2v6M42 2v6M10 -3V-17M24 -3V-17M38 -3V-17"/><path class="pf" d="M10 -17l8 2.5l-8 2.5zM24 -17l8 2.5l-8 2.5zM38 -17l8 2.5l-8 2.5z"/>`;
 const boat = () => `<path class="g" d="M-9 -1q9 8 18 0z"/><path class="l" d="M0 -1V-18"/><path class="o" d="M1.5 -17L10 -4H1.5Z"/>`;
 export const toronto = () => MAP.toronto.drawing;
-const shore = (P, seed) => { const r = rnd(seed), n = P.length; let s = '', ar2 = 0; for (let i = 0; i < n; i++) { const a = P[i], b = P[(i + 1) % n]; ar2 += a[0] * b[1] - b[0] * a[1]; } const sg = ar2 > 0 ? 1 : -1; for (let i = 0; i < n; i++) { const a = P[i], b = P[(i + 1) % n], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1; for (let j = 0; j < 3; j++) { const d = 4 + Math.pow(r(), 1.7) * 30, t = r(), x = a[0] + dx * t + sg * dy / L * d, y = a[1] + dy * t - sg * dx / L * d; if (onLand([x, y]) || y > 818) continue; s += `<circle cx="${n1(x)}" cy="${n1(y)}" r="${n1(.35 + r() * .55)}" fill="${C.paper}" opacity="${n1(Math.max(.12, .8 - d / 45))}"/>`; } } return s; };
+const shore = (P, seed) => {
+  const r=rnd(seed),n=P.length,batches=[];let ar2=0;
+  for(let i=0;i<n;i++){const a=P[i],b=P[(i+1)%n];ar2+=a[0]*b[1]-b[0]*a[1];}
+  const sg=ar2>0?1:-1;
+  for(let i=0;i<n;i++){
+    const a=P[i],b=P[(i+1)%n],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy)||1;
+    for(let j=0;j<3;j++){
+      const d=4+Math.pow(r(),1.7)*30,t=r(),x=a[0]+dx*t+sg*dy/L*d,y=a[1]+dy*t-sg*dx/L*d;
+      if(onLand([x,y])||y>818)continue;
+      const px=n1(x),py=n1(y),width=n1(.45+r()*.65),alpha=n1(Math.max(.12,.8-d/45));
+      // Equal paints can share a path. Keep same-paint dots far apart so their
+      // antialias coverage and opacity never merge at any reachable map scale.
+      let batch=batches.find(b=>b.width===width&&b.alpha===alpha&&b.points.every(p=>Math.hypot(p[0]-px,p[1]-py)>32));
+      if(!batch){batch={width,alpha,points:[]};batches.push(batch);}batch.points.push([px,py]);
+    }
+  }
+  return batches.map(b=>'<path class="sea-stipple" d="'+b.points.map(p=>'M'+p[0]+' '+p[1]+'h.01').join('')+'" fill="none" stroke="'+C.paper+'" stroke-width="'+b.width+'" stroke-linecap="round" vector-effect="non-scaling-stroke" opacity="'+b.alpha+'"/>').join('');
+};
 
 // ---- Norse landmarks ----
 export function yggdrasil(x, y) {
@@ -205,7 +222,7 @@ export function bigMap() {
   const seaW = COPY.sea.length * (5.8 * .56 + 2.4);
   top2 += t2([33, 380 - seaW / 2, 42, 380 + seaW / 2], svgText(40, 380, COPY.sea, { s: 5.8, ls: 2.4, a: 'middle', t: 'rotate(-90 40 380)' }));
   const [gx, gy] = MAP.ygg, [wx, wy] = MAP.well;
-  top2 += lab2(...YGG.label, COPY.ygg, { s: 5.4, ls: 1.4, c: C.dim }) + lab2(wx, wy + 1, COPY.well, { s: 4.8, ls: .8, c: C.note, a: 'middle' }) + lab2(wx, wy + 8, COPY.wellSub, { s: 4.4, i: 1, c: C.dim, a: 'middle' });
+  top2 += lab2(...YGG.label, COPY.ygg, { s: 5.4, ls: 1.4, c: C.dim }) + lab2(wx + 58, wy + 32, COPY.well, { s: 4.8, ls: .8, c: C.note, a: 'middle' }) + lab2(wx + 58, wy + 39, COPY.wellSub, { s: 4.4, i: 1, c: C.dim, a: 'middle' });
 
   // sea
   let rh = ''; for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8 + .2; rh += `M92 716L${n1(92 + Math.cos(a) * 1200)} ${n1(716 + Math.sin(a) * 1200)}`; }
@@ -218,7 +235,7 @@ export function bigMap() {
   // water on land, the well, cliff
   const riv = d => `<path d="${d}" fill="none" stroke="${C.paper}" stroke-opacity=".75" stroke-width="2.8" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${C.land}" stroke-width="1.4" stroke-linecap="round"/>`;
   s += riv(pathD(spline([[214, 392], [236, 399], [252, 393], [268, 395]]))) + riv(pathD(spline([[306, 410], [311, 440], [320, 470], [322, 520], [333, 556], [337, 582]])));
-  s += `<path d="${pathD(spline([[266, 392], [280, 377], [306, 372], [330, 380], [338, 396], [322, 410], [296, 412], [274, 406]], 1), 1)}" fill="${C.ink}" stroke="${C.paper}" stroke-width="1" vector-effect="non-scaling-stroke"/><path class="t" d="M276 386q4 -3 8 0t8 0M314 404q4 -3 8 0t8 0"/>`;
+  s += `<path class="wl-bank" d="${pathD(spline([[266, 392], [280, 377], [306, 372], [330, 380], [338, 396], [322, 410], [296, 412], [274, 406]], 1), 1)}" fill="${C.ink}" stroke="${C.paper}" stroke-width="1" vector-effect="non-scaling-stroke"/><path class="t" d="M276 386q4 -3 8 0t8 0M314 404q4 -3 8 0t8 0"/>`;
   s += `<path d="M196 296Q216 330 207 366Q203 384 214 404" fill="none" stroke="${C.paper}" stroke-opacity=".45" stroke-width="7" stroke-dasharray=".8 2.6"/><path class="l" d="M208 374v13M212 372v17M216 374v13"/><path class="t" d="M203 393q9 5 18 0"/>`;
   [[96, 306, 13], [126, 292, 17], [160, 300, 14], [186, 314, 11], [84, 340, 11], [112, 334, 15], [146, 336, 12], [92, 374, 10]].sort((a, b) => a[1] - b[1]).forEach(p => s += peak(p[0], p[1], p[2]));
   [[140, 516, 11], [206, 522, 9], [128, 568, 10], [222, 574, 8], [408, 478, 9], [404, 548, 9], [230, 700, 8]].forEach(p => s += hill(p[0], p[1], p[2]));
@@ -321,14 +338,19 @@ export function jormEdges(a, b, taper = 0) {
 export function jormungandr() {
   const J = MAP.jorm, end = 1 - J.tail / JORM.L, all = jormEdges(0, end);
   let s = '<g class="jg-ring"><path d="' + pathD([...all.left, ...all.right.slice().reverse()], true) + '" fill="' + C.ink + '" opacity="' + J.subAlpha + '"/><path d="' + pathD(all.left) + pathD(all.right) + '" fill="none" stroke="' + C.paper + '" stroke-opacity="' + J.edgeAlpha + '" stroke-width="' + J.edgeWidth + '" stroke-dasharray="' + J.dash + '" vector-effect="non-scaling-stroke"/>';
-  J.surf.forEach(([a, b]) => {
-    const A = jormPoint(a * JORM.L), B = jormPoint(Math.min(b, end) * JORM.L), dx=B.x-A.x, dy=B.y-A.y, length=Math.hypot(dx,dy), nx=-dy/length, ny=dx/length;
-    const point=(t,h)=>[n1(A.x+dx*t+nx*h),n1(A.y+dy*t+ny*h)].join(' '), rise=Math.min(18,length*.25);
-    // Taper to the water at both feet; a bowed belly makes a body rather than a band.
-    s += '<g class="jg-hump"><path class="o" d="M'+point(0,0)+'C'+point(.14,-rise)+' '+point(.8,-rise)+' '+point(1,0)+'C'+point(.74,-rise+J.w)+' '+point(.24,-rise+J.w)+' '+point(0,0)+'Z"/>';
-    for (const t of [.3,.5,.7]) s += '<path class="t" d="M'+point(t,-rise*.72)+'q2 1 3 3"/>';
-    for (const t of [0,1]) s += '<path class="t" d="M'+point(t-.05,1)+'l'+n1(dx*.035)+' '+n1(dy*.035)+'m'+n1(dx*.04)+' '+n1(dy*.04)+'l'+n1(dx*.04)+' '+n1(dy*.04)+'"/>';
-    s += '</g>';
+  J.surf.forEach(([a, b], index) => {
+    // A short surfaced arch is a constant-width tube, with blunt submerged feet.
+    const centre=(a+b)/2, span=Math.min((b-a)*JORM.L,J.span[index]), A=jormPoint(centre*JORM.L-span/2), B=jormPoint(centre*JORM.L+span/2);
+    const dx=B.x-A.x,dy=B.y-A.y,len=Math.hypot(dx,dy),nx=-dy/len,ny=dx/len;
+    const height=len/2.5, back=[],belly=[],point=(t,h)=>[A.x+dx*t+nx*h,A.y+dy*t+ny*h];
+    for(let i=0;i<=24;i++){
+      const t=i/24,h=-4*height*t*(1-t),dh=-4*height*(1-2*t),tx=dx+nx*dh,ty=dy+ny*dh,L=Math.hypot(tx,ty),p=point(t,h),w=J.w/2;
+      back.push([p[0]-ty/L*w,p[1]+tx/L*w]);belly.push([p[0]+ty/L*w,p[1]-tx/L*w]);
+    }
+    s+='<g class="jg-hump"><path class="o" d="'+pathD([...back,...belly.reverse()],true)+'"/>';
+    for(const t of [.22,.36,.5,.64,.78]){const p=point(t,-4*height*t*(1-t));s+='<path class="t" d="M'+n1(p[0])+' '+n1(p[1])+'l'+n1(nx*2)+' '+n1(ny*2)+'"/>';}
+    for(const t of [0,1]){const p=point(t,0);s+='<path class="t" d="M'+n1(p[0]-6)+' '+n1(p[1]+2)+'h4m4 0h4"/>';}
+    s+='</g>';
   });
   return s + Array.from({ length: FIND_PLAY.serpent.swell.length + 1 }, () => '<g class="jg-swell" opacity="0"><path class="o jg-gulp" d="' + J.swellPath + '"/><path class="o jg-hear" d="' + J.hornPath + '" opacity="0"/></g>').join('') + '</g>';
 }

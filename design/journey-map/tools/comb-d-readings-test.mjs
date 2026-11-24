@@ -1,0 +1,21 @@
+// Verify the resting beam after the four readings, including the kept note labels.
+import {readFileSync,appendFileSync} from 'node:fs';
+import {FINDS,FIND_PLAY} from '../data.mjs';
+import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
+const b=await combBBrowser(),output=[],failures=[],html=readFileSync('dist/journey-map.html','utf8').replace('</script>','\nwindow.__dFocus=stepsFocus;\n</script>'),view=FINDS.find(f=>f.id==='beacon').view;
+function measure(angles){
+ const original=document.querySelector('.bc-beam').getAttribute('transform');
+ const visible=e=>{for(let p=e;p&&p!==document.body;p=p.parentElement){const s=getComputedStyle(p);if(s.visibility==='hidden'||s.display==='none'||Number(s.opacity)<.02)return false;}return true;},beam=document.querySelector('.bc-beam path'),inv=beam.getScreenCTM().inverse(),hits=[],boxes=[];
+ for(const e of document.querySelectorAll('#b-detail text,#bc-notes text,#bc-notes .rn-note,.stop .stone')){
+  if(!visible(e))continue;const r=e.getBoundingClientRect(),note=e.closest('.bc-note'),id=note?[...document.querySelectorAll('.bc-note')].indexOf(note)+1:null,name=(id?'note '+id+' ':'')+(e.textContent||e.getAttribute('class')),points=[];
+  if(note)boxes.push({name,box:[r.x,r.y,r.width,r.height]});
+  for(let x=r.left;x<=r.right;x+=1)points.push([x,r.top],[x,r.bottom]);for(let y=r.top;y<=r.bottom;y+=1)points.push([r.left,y],[r.right,y]);
+  for(const angle of angles){document.querySelector('.bc-beam').setAttribute('transform',original.replace(/rotate\([^)]*\)/,'rotate('+(angle-180)+')'));const inverse=beam.getScreenCTM().inverse();if(points.some(([x,y])=>beam.isPointInFill(new DOMPoint(x,y).matrixTransform(inverse))))hits.push(angle+' '+name);}
+ }document.querySelector('.bc-beam').setAttribute('transform',original);return{hits,boxes};
+}
+function noteOverlap(){
+ const visible=e=>{for(let p=e;p&&p!==document.body;p=p.parentElement){const s=getComputedStyle(p);if(s.visibility==='hidden'||s.display==='none'||Number(s.opacity)<.02)return false;}return true;},notes=[...document.querySelectorAll('#bc-notes text,#bc-notes .rn-note')].filter(visible),names=[...document.querySelectorAll('.label-anchor text')].filter(visible),hits=[];
+ for(const n of notes)for(const e of names){const a=n.getBoundingClientRect(),b=e.getBoundingClientRect();if(a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top)hits.push({note:n.textContent||'runes',label:e.textContent});}return hits;
+}
+try{for(const[w,h]of[[412,730],[1440,900]]){await b.size(w,h);await b.send('Page.navigate',{url:'data:text/html;base64,'+Buffer.from(html).toString('base64')});await combBWait(1800);await b.evaluate('window.__jm.go("map",{instant:true})');await combBWait(1700);await b.evaluate(`window.__dFocus('beacon',${JSON.stringify(view)})`);await combBWait(1000);for(let i=0;i<4;i++){await b.evaluate(`document.getElementById('f-beacon').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}))`);await combBWait(2100);}const read=await b.evaluate('window.__jm.finds.state("beacon").fire');if(read!==4)failures.push(w+' only '+read+' readings');await combBWait(6500);const r=await b.evaluate('('+measure.toString()+')('+JSON.stringify([FIND_PLAY.beacon.baseAngle-FIND_PLAY.beacon.sweep,FIND_PLAY.beacon.baseAngle,FIND_PLAY.beacon.baseAngle+FIND_PLAY.beacon.sweep])+')');const line=w+'x'+h+' kept readings: '+JSON.stringify(r);output.push(line);console.log(line);if(r.hits.length)failures.push(w+' resting beam '+JSON.stringify(r.hits));await b.shot('final-'+w+'x'+h+'-beacon-kept-rest');await b.key('Escape');await b.evaluate('window.__jm.go("map",{instant:true})');await combBWait(1700);const overlap=await b.evaluate('('+noteOverlap.toString()+')()');output.push(w+' normal-map note overlaps '+JSON.stringify(overlap));if(overlap.length)failures.push(w+' note/stop overlap '+JSON.stringify(overlap));}}catch(e){failures.push(e.stack);}finally{await b.close();output.push('Failures: '+JSON.stringify(failures));appendFileSync('COMB-D-BUILD.md','\n## node tools/comb-d-readings-test.mjs (exit '+(failures.length?1:0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
+process.exitCode=failures.length?1:0;

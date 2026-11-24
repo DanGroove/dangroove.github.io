@@ -40,7 +40,7 @@ export function findBeacon(svg) {
   o.tick = (t, dt) => {
     const B = FIND_PLAY.beacon, manual = o.drag || t - o.manualTs < B.manual, lit = o.fire === notes.length;
     if (o.snap) { const q = FD.rm ? 1 : ease((t - o.snap.ts) / B.snap); o.head = lerp(o.snap.from, o.snap.to, q); if (q === 1) o.snap = null; }
-    else if (!manual && !FD.rm) o.head = lit ? o.head + B.turn * dt : B.baseAngle + B.sweep * Math.sin(t * FIND_TIMING.beamSweep);
+    else if (!manual && !FD.rm) o.head = B.baseAngle + B.sweep * Math.sin(t * FIND_TIMING.beamSweep);
     const reach = B.baseReach * B.scale * (lit && !manual ? B.reach : 1), half = FIND_TIMING.beamCone / 2, O = origin();
     attr(beam, 'transform', `translate(${B.origin[0]} ${B.origin[1]}) rotate(${o.head - FIND_PLAY.kit.deg}) scale(${lit && !manual ? B.reach : 1})`); attr(beam, 'opacity', manual ? 1 : B.idle);
     notes.forEach((n, i) => {

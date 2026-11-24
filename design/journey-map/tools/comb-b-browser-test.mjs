@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, existsSync, appendFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-export const combBRoot = resolve('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-b');
+export const combBRoot = resolve('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-d');
 export const combBWait = ms => new Promise(r => setTimeout(r, ms));
 export async function combBBrowser() {
   mkdirSync(combBRoot, { recursive: true });
@@ -45,7 +45,7 @@ export async function combBCapture(phase) {
       await go('end');await b.shot(tag+'-end');await b.evaluate(`document.querySelector('.go-next').click()`);await combBWait(2600);await b.shot(tag+'-explore');
       // Reach maximum explore zoom through its public control, anchored on the tree.
       await b.evaluate(`(()=>{window.__combBChanges=[];window.__combBObserver=new MutationObserver(r=>window.__combBChanges.push(...r.map(x=>({name:x.attributeName,type:x.type,anchor:x.target.classList?.contains('label-anchor')}))));document.querySelectorAll('.label-anchor').forEach(e=>window.__combBObserver.observe(e,{attributes:true,childList:true,subtree:true}));})()`);
-      await b.evaluate(`(()=>{const p=window.__jm.finds.place('well'),q=window.__jm.finds.place('hammer'),s=(p[0]-q[0])/190;for(let i=0;i<18;i++)document.getElementById('stage').dispatchEvent(new WheelEvent('wheel',{clientX:p[0]+2*s,clientY:p[1]-50*s,deltaY:-120,ctrlKey:true,bubbles:true,cancelable:true}));})()`);
+      await b.evaluate(`(()=>{const p=window.__jm.finds.place('well'),q=window.__jm.finds.place('hammer'),s=(p[0]-q[0])/192;for(let i=0;i<18;i++)document.getElementById('stage').dispatchEvent(new WheelEvent('wheel',{clientX:p[0]+2*s,clientY:p[1]-50*s,deltaY:-120,ctrlKey:true,bubbles:true,cancelable:true}));})()`);
       await combBWait(2000);await b.shot(tag+'-deep');
       const changes=await b.evaluate(`(()=>{window.__combBObserver.disconnect();return {anchorTransforms:window.__combBChanges.filter(r=>r.anchor&&r.name==='transform').length,markup:window.__combBChanges.filter(r=>r.type==='childList').length,visibilityChanges:window.__combBChanges.filter(r=>r.anchor&&r.name==='style').length};})()`);
       if(changes.anchorTransforms||changes.markup)throw Error('new per-frame explore placement/markup writes: '+JSON.stringify(changes));console.log(tag+' cached explore label zoom writes: '+JSON.stringify(changes));

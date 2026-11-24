@@ -27,7 +27,7 @@ export function findHorn(svg) {
     if (o.stage === 'sounding' || o.stage === 'echo') return;
     if (o.up) { sound(); return; }
     o.up = 1; o.stage = 'raised'; o.raiseTs = FD.now; opened(o); found(o.id);
-    showPop(o, [f.x, f.y - 12], `<p class="pop-t pop-big">${fEsc(FIND_COPY.horn[0])}</p>${findSlot(FIND_COPY.horn[1])}`);
+    showPop(o, [f.x + 60, f.y + 65], `<p class="pop-t pop-big">${fEsc(FIND_COPY.horn[0])}</p>${findSlot(FIND_COPY.horn[1])}`);
   };
   findPointer(el, e => { el.setPointerCapture(e.pointerId); raise(); o.hold = o.stage === 'raised'; o.holdTs = FD.now; el._dragged = true; }, { tap: raise, cancel: () => o.hold = false });
   el.addEventListener('pointerup', () => o.hold = false); el.addEventListener('pointercancel', () => o.hold = false);
