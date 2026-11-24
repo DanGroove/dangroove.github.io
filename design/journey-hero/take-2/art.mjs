@@ -852,7 +852,12 @@ export function letterMask(letters, finished, w, h) {
 
 // Read both drawings from the completed atlas, so integer crop translations, source transforms and the browser's font
 // rasterisation are identical. The raw companion still executes exactly one source text call; no other paint defines its mask.
-export function maskLetterPictures(pages, spots) {
+export function maskLetterPictures(pages, spots, { steps = false } = {}) {
+  const iterator = maskLetterSteps(pages, spots);
+  if (steps) return iterator;
+  for (const _step of iterator) { /* synchronous atlas/review caller */ }
+}
+function* maskLetterSteps(pages, spots) {
   const byKey = new Map(spots.map(spot => [spot[0], spot])), sources = new Map();
   for (const [key, a, px, py, w, h, page] of spots) {
     if (!a.lettersOnly) continue;
@@ -874,17 +879,34 @@ export function maskLetterPictures(pages, spots) {
     }
     letters.data.set(letterMask(letters.data, pixels, w, h));
     ctx.putImageData(letters, px, py);
+    yield;
   }
 }
 
 // Pack rows into pages no larger than 2048 square. Places include their page number.
-export function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
+export function makeAtlas(options = {}) {
+  const steps = atlasSteps(options);
+  if (!options.yieldFrame) {
+    let next; do { next = steps.next(); } while (!next.done);
+    return next.value;
+  }
+  // Keep the exact same ordered paint/packing/mask operations for review and sliced boot.
+  return (async () => {
+    let slice = performance.now();
+    for (;;) {
+      const next = steps.next();
+      if (next.done) return next.value;
+      if (performance.now() - slice >= 3) { await options.yieldFrame(); slice = performance.now(); }
+    }
+  })();
+}
+function* atlasSteps({ size = 2048, pad = 8, scale = 1 } = {}) {
   if (size > 2048 || size < 1 || scale <= 0 || pad < 0) throw new Error('invalid atlas measures');
   const measure = document.createElement('canvas'); measure.width = 1100; measure.height = 472;
   const context = measure.getContext('2d');
-  for (const source of ['kMap', 'kLoc', 'eblast']) letterPictures(context, source);
+  for (const source of ['kMap', 'kLoc', 'eblast']) { letterPictures(context, source); yield; }
   prepareWireCutouts(context);
-  for (const source of BUILDING_PICTURES) measureBuildingPaint(source, context);
+  for (const source of BUILDING_PICTURES) { measureBuildingPaint(source, context); yield; }
   const sheets = [[]], positions = new Map();
   let x = pad, y = pad, row = 0;
   // Keep every existing atlas page and mip phase. Only the isolated pictures and their new grounds get additional pages.
@@ -907,19 +929,22 @@ export function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
   }
   // Building uses have independent textures. Keep the original packing, including its old prefix/letter slots,
   // byte-for-byte; the added cutout/base pages have no rendered uses any more.
-  const places = {}, pages = sheets.map((spots, page) => {
+  const places = {}, pages = [];
+  for (const [page, spots] of sheets.entries()) {
     const tall = Math.min(size, Math.ceil(Math.max(...spots.map(p => p[3] + p[5] + p[6])) / 4) * 4);
     const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = tall;
-    const ctx = canvas.getContext('2d');
+    // These pages are read for letter masks before upload. CPU backing avoids synchronous GPU readbacks.
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     for (const [key, a, px, py, w, h] of spots) {
       ctx.save(); ctx.translate(px, py); ctx.scale(scale, scale); ctx.beginPath(); ctx.rect(0, 0, a.w, a.h); ctx.clip();
       a.draw(ctx, a.w, a.h);
       ctx.restore();
       places[key] = [page, (px + 0.5) / size, (py + 0.5) / tall, (w - 1) / size, (h - 1) / tall];
+      yield;
     }
-    return canvas;
-  });
-  maskLetterPictures(pages, sheets.flatMap((spots, page) => spots.map(spot => [...spot.slice(0, 6), page])));
+    pages.push(canvas);
+  }
+  yield* maskLetterPictures(pages, sheets.flatMap((spots, page) => spots.map(spot => [...spot.slice(0, 6), page])), { steps: true });
   return { pages, places, scale };
 }
 export const AM_MARKERS = SHOPS.flatMap(([x, step, above, below]) => [...above.map((_, i) => [x + i * step, 358, 30, 30]), ...below.map((_, i) => [x + i * step, 464, 30, 30])]);

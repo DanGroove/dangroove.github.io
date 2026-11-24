@@ -24,13 +24,13 @@ const wipe = (t, a, b) => EASE.wipe(linear(t, a, b));
 
 // The early inline canvas owns its clock and painting; the player owns the same-frame WebGL handover.
 // Stand-alone/review harnesses can still exercise the pure timing without an inline bridge.
-export function createLoaderView(hero) {
+export function createLoaderView(hero, { sample: suppliedSample } = {}) {
   const win = hero.ownerDocument?.defaultView, bridge = win?.__loaderStars;
   let sample = null, scene = null;
   const measureScene = box => {
     if (!bridge) return;
     // Resolve the entrance to the painter's actual last ray, once layout is known.
-    sample ??= sampleMark([...hero.querySelectorAll('[data-mark] path')].map(p => ({ d: p.getAttribute('d'), fill: p.getAttribute('fill') })));
+    sample ??= suppliedSample?.() || sampleMark([...hero.querySelectorAll('[data-mark] path')].map(p => ({ d: p.getAttribute('d'), fill: p.getAttribute('fill') })));
     scene = loaderScene(sample, box.width, box.height, { width: win.innerWidth, height: win.innerHeight, left: box.left, top: box.top });
   };
   // The early painter also remeasures on scroll. Keep its scene's landing clock in sync.

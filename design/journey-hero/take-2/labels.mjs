@@ -147,8 +147,7 @@ export function createCallouts(hero) {
     const h = hero.getBoundingClientRect();
     return [...hero.querySelectorAll('[data-name],[data-lede],[data-crafts],.hero-nav,[data-foot]')].map(n => n.getBoundingClientRect()).filter(r => r.width && r.height).map(r => ({ left: r.left - h.left, right: r.right - h.left, top: r.top - h.top, bottom: r.bottom - h.top }));
   };
-  return {
-    measure() {
+  function* measureWords() {
       obstacles = pageBlocks();
       {
         const word = nodes[2].word;
@@ -159,10 +158,20 @@ export function createCallouts(hero) {
           const time = start + (scene.key === 'id' ? playbackSpans(SCRIPTS.id).land + 0.41 * PACE : scene.still);
           for (const c of calloutsAt(time)) for (const [key, size] of [['small', 9], ['large', 11]]) {
             word.style.fontSize = size + 'px'; word.textContent = c.words; wordWidths[key][c.id] = word.getBoundingClientRect().width;
+            yield;
           }
           start += scene.len;
         }
       }
+  }
+  return {
+    measure({ yieldFrame } = {}) {
+      const steps = measureWords();
+      if (!yieldFrame) { for (const _step of steps) { /* synchronous resize/review caller */ } return; }
+      return (async () => {
+        let slice = performance.now();
+        for (const _step of steps) if (performance.now() - slice >= 3) { await yieldFrame(); slice = performance.now(); }
+      })();
     },
     fit(view, need, boxLeft) {
       return fitCalloutView(view, need, boxLeft, wordWidths, obstacles);

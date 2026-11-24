@@ -26,7 +26,7 @@ export function createPageLayout(hero, stage, callouts) {
     }
     return { left: Math.min(...rects.map(r => r.left)), right: Math.max(...rects.map(r => r.right)), top: Math.min(...rects.map(r => r.top)), bottom: Math.max(...rects.map(r => r.bottom)) };
   }
-  function measure() {
+  function measure({ callouts: measureCallouts = true } = {}) {
     if (target) {
       // CSSOM may shorten our values. Always restore the CSS sizing basis before reading it.
       for (const key of ['left', 'width']) stage.style.removeProperty(key);
@@ -51,7 +51,7 @@ export function createPageLayout(hero, stage, callouts) {
     const text = [name, ledeNode, crafts].map(n => ink(n));
     // The name never rewraps. Box edges keep the other text's line breaks out of scene placement.
     const textRight = Math.max(text[0].right, ledeNode.getBoundingClientRect().right, crafts.getBoundingClientRect().right) - h.left;
-    callouts.measure();
+    if (measureCallouts) callouts.measure();
     cached = { h, b, textRight, gap, rise, text, baseNameTop: nameInk.top - h.top, logoBottom: logo.bottom - h.top, nameLines: lines.map(n => ink(n, '800')), ledeInk: ink(hero.querySelector('[data-lede]')), numberInks: numbers.map(n => ink(n)) };
     return cached;
   }

@@ -32,7 +32,7 @@ let stopped = query.has('t'), visible = true, ready = false, request = 0, previo
 // first keeps Photoshop's own shell on the first pass, until the loop first wraps or is moved.
 let intro = null, held = false, first = false;
 const entrance = createEntranceView(hero);
-const loader = createLoaderView(hero), boot = {};
+const loader = createLoaderView(hero, { sample: () => stars?.sample }), boot = {};
 let loading = !query.has('t');
 let loaderStart = null;
 if (!loading) loader.clear();
@@ -219,9 +219,25 @@ schedule();
 await fontsReady();
 await document.fonts.ready;
 bootDone('fonts');
-renderer.setAtlas(makeAtlas());
+const yieldFrame = () => renderer.warm ? new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0))) : Promise.resolve();
+await stars?.prepare?.(yieldFrame);
+await renderer.setAtlas(await makeAtlas({ yieldFrame }), { yieldFrame });
 bootDone('atlas');
-ready = true; layout.measure(); loader.measure?.(layout.metrics.h); stars?.measure(layout.metrics.h); craftWipe.measure();
+layout.measure({ callouts: false }); await yieldFrame();
+await callouts.measure({ yieldFrame }); await yieldFrame();
+loader.measure?.(layout.metrics.h); await yieldFrame();
+stars?.measure(layout.metrics.h); craftWipe.measure(); await yieldFrame();
 if (loading && !reduced.matches) { first = true; entrance.measure(layout.metrics.nameLines); }
+if (loading && !reduced.matches && renderer.warm) {
+  await yieldFrame();
+  const h = layout.metrics.h, dpr = Math.min(2, devicePixelRatio || 1, Math.sqrt(5.2e6 / (h.width * h.height)));
+  renderer.warm(frameNow(), layout.view(need, cam, dpr), stars?.frame(), { ...POOL, radius: num('pool', 4.8) });
+  // Restore the entrance's first frame under the same opaque loader; do not advance either visible clock.
+  await yieldFrame();
+}
+ready = true;
+// A resize/scroll can arrive between boot slices while the normal observer is held back by !ready.
+const bootBox = hero.getBoundingClientRect();
+if (['left', 'top', 'width', 'height'].some(key => bootBox[key] !== layout.metrics.h[key])) measure();
 nameOn(); document.fonts.ready.then(() => nameReact.measure());
 draw(); window.__ready = true; schedule(); watchName();

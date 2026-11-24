@@ -93,7 +93,18 @@ export function winding(rings, px, py) {
 // The sampler: a fine jittered grid inside the fills (the topmost path that covers a cell owns it; cells closer than
 // STARS.mark.edge units to their path's edge are dropped), then farthest-point order, so any first N cover the whole mark
 // evenly. Returns { points: [{ x, y, kind, path }], box: [x0, y0, x1, y1], area: { G, D } } in the paths' own units.
-export function sampleMark(paths, count = STARS.mark.count) {
+export function sampleMark(paths, count = STARS.mark.count, yieldFrame = null) {
+  const steps = markSamples(paths, count);
+  if (!yieldFrame) { let next; do { next = steps.next(); } while (!next.done); return next.value; }
+  return (async () => {
+    let slice = performance.now();
+    for (;;) {
+      const next = steps.next(); if (next.done) return next.value;
+      if (performance.now() - slice >= 3) { await yieldFrame(); slice = performance.now(); }
+    }
+  })();
+}
+function* markSamples(paths, count) {
   const shapes = paths.map((p, path) => ({ rings: flattenPath(p.d), kind: markKind(p.fill), path }));
   const all = shapes.flatMap(s => s.rings.flat());
   if (!all.length) return { points: [], box: [0, 0, 0, 0], area: { G: 0, D: 0 } };
@@ -120,6 +131,7 @@ export function sampleMark(paths, count = STARS.mark.count) {
         break;
       }
     }
+    yield;
   }
   const m = cx.length, gap = new Float64Array(m).fill(Infinity), points = [];
   if (!m) return { points, box, area };
@@ -136,6 +148,7 @@ export function sampleMark(paths, count = STARS.mark.count) {
       gap[j] = g; if (g > far) { far = g; pick = j; }
     }
     next = pick;
+    yield;
   }
   return { points, box, area };
 }
@@ -152,6 +165,13 @@ export function placeMark(sample, W, H, height = STARS.mark.height) {
   const weight = [0, 1].map(k => points.reduce((sum, p) => sum + (k ? p.y : p.x), 0) / points.length);
   const radius = Math.max(...points.map(p => Math.hypot(p.x - weight[0], p.y - weight[1]))) + STARS.mark.ringGap * h;
   return { points, half: [bw * s / 2, bh * s / 2], height: h, scale: s, reach: Math.max(...points.map(p => Math.hypot(p.x, p.y))), weight, ring: { centre: weight, radius, band: STARS.mark.ringBand * h } };
+}
+// L11: one taper for Canvas and WebGL. Width is the full head diameter; tail is the actual .02 s history.
+export function streakGeometry(x, y, size, tail) {
+  const dx = x - tail[0], dy = y - tail[1], length = Math.hypot(dx, dy);
+  const normal = length ? [-dy / length, dx / length] : [0, 0];
+  const nx = normal[0] * size / 2, ny = normal[1] * size / 2;
+  return { length, normal, triangle: length > size ? [tail[0], tail[1], x + nx, y + ny, x - nx, y - ny] : [] };
 }
 // L4: progress has real 25/50/25 shares. .85 displayed progress launches the last star;
 // .85 / 1.4 is deliberately stricter than 1 / 1.4, so launches themselves span 1.4 s.

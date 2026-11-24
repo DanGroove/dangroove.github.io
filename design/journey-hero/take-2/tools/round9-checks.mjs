@@ -101,9 +101,9 @@ export async function checkSampler(source = read('stars.mjs')) {
   const m = M.placeMark(sample, W, H), s = 180 / 797.3;
   assert.ok(Math.abs(m.height - 180) < 1e-9 && Math.abs(m.half[0] * 2 - 1080 * s) < 1e-6 && Math.abs(m.half[1] * 2 - 180) < 1e-6, 'L1 sampler: the mark is not 180 px tall at its own proportions');
   m.points.forEach((p, k) => assert.ok(Math.hypot(p.x - (sample.points[k].x - 540) * s, p.y - (sample.points[k].y - 398.65) * s) < 1e-6, `L1 sampler: point ${k} is not placed upright`));
-  // Read once per hero size at measure time: the controller samples only in measure().
+  // L11 also prepares once in sliced boot; measure retains the synchronous resize/review fallback.
   const measure = source.slice(source.indexOf('function measure('), source.indexOf('const local ='));
-  assert.ok(source.split('sampleMark(').length === 3 && measure.includes('sampleMark(paths, STARS.mark.count)') && measure.includes('placeMark(sample'), 'L1 sampler: the mark is not prepared at measure time');
+  assert.ok(source.split('sampleMark(').length === 4 && measure.includes('sampleMark(paths, STARS.mark.count)') && measure.includes('placeMark(sample'), 'L1 sampler: the mark is not prepared at measure time');
   return { ms: +ms.toFixed(1), area: { G: Math.round(A.G), D: Math.round(A.D), dShare: +(100 * dArea).toFixed(1) }, gaps, test: test.length / 2, ring: +m.reach.toFixed(1) };
 }
 

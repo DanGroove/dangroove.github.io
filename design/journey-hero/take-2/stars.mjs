@@ -3,7 +3,7 @@
 // The field's look (parallax, scroll, the entrance's rings) is computed by the renderer from three uniforms; only the stars'
 // own offsets (stirring, gathering, the blast) live here, in one Float32Array uploaded only while something moves.
 
-import { STARS, hash, starCount, makeStars, markKind, markFlag, FLAG_INK, flattenPath, winding, sampleMark, placeMark } from './loader-stars.mjs';
+import { STARS, hash, starCount, makeStars, markKind, markFlag, FLAG_INK, flattenPath, winding, sampleMark, placeMark, streakGeometry } from './loader-stars.mjs';
 export { STARS, hash, starCount, makeStars, markKind, markFlag, FLAG_INK, flattenPath, winding, sampleMark, placeMark };
 
 // R2: the fade-in's step, landing on exactly 1 (sums of dt / 0.4 in float32 can stop just short of it).
@@ -19,6 +19,30 @@ export const parallaxOffset = (f, d) => [-f[0] * STARS.parallax * depthWeight(d)
 export const pointerFraction = (x, y, W, H) => [Math.min(0.5, Math.max(-0.5, x / W - 0.5)), Math.min(0.5, Math.max(-0.5, y / H - 0.5))];
 // Scroll: s px of the hero scrolled away moves a star of depth d up by s * 0.12 * d more than the page.
 export const scrollOffset = (s, d) => -Math.max(0, s) * STARS.scroll * d;
+// Positions between simulation frames are line segments. Interpolate the recorded path at exactly now - 1/50,
+// rather than multiplying this frame's velocity (which loses curved stirring and the blast's braking).
+export function createTrailHistory(count) {
+  const samples = [], spare = [], trails = new Float32Array(count * 4);
+  function reset() { for (const s of samples) spare.push(s.positions); samples.length = 0; trails.fill(0); }
+  return { reset, record(time, positions) {
+    if (samples.length && time < samples.at(-1).time) reset();
+    if (samples.length && time === samples.at(-1).time) return trails;
+    const copy = spare.pop() || new Float64Array(count * 2); copy.set(positions);
+    samples.push({ time, positions: copy });
+    const at = time - 1 / 50;
+    while (samples.length > 2 && samples[1].time <= at) spare.push(samples.shift().positions);
+    const a = samples[0], b = samples[1] || a;
+    const f = b.time > a.time ? clamp01((at - a.time) / (b.time - a.time)) : 0;
+    for (let i = 0; i < count; i++) {
+      const k = 2 * i, x = positions[k], y = positions[k + 1];
+      const tail = [a.positions[k] + (b.positions[k] - a.positions[k]) * f,
+        a.positions[k + 1] + (b.positions[k + 1] - a.positions[k + 1]) * f];
+      const shape = streakGeometry(x, y, 1, tail);
+      trails.set([x - tail[0], y - tail[1], ...shape.normal], 4 * i);
+    }
+    return trails;
+  } };
+}
 // The critically damped follow, solved exactly over dt: x is the value, v its velocity, towards target.
 export function follow(x, v, target, dt, tau = STARS.tau) {
   const w = 1 / tau, x0 = x - target, e = Math.exp(-w * dt), c = v + w * x0;
@@ -356,6 +380,7 @@ export function readMark(root) {
 export function createStars(hero, { reduced, win = hero.ownerDocument.defaultView, raf = f => win.requestAnimationFrame(f), draw, running, available, open = () => true, clock = () => win.performance.now() / 1000 } = {}) {
   let field = null, box = null, top = 0, scrollY = 0, pointer = null, previous = null, target = [0, 0], f = [0, 0], fv = [0, 0];
   let hold = null, holdStart = null, swallow = false, last = null, pending = false, attrs = null, attrsVersion = 0, markKey = null, sample = null;
+  let history = null, positions = null, trailVersion = 0;
   const usable = e => !reduced.matches && (e.pointerType === 'mouse' || e.pointerType === 'pen');
   function redraw() {
     if (!available() || running() || pending) return;
@@ -373,6 +398,7 @@ export function createStars(hero, { reduced, win = hero.ownerDocument.defaultVie
       hold = null; holdStart = null;
       field = createField(rect.width, rect.height, sample ? placeMark(sample, rect.width, rect.height) : null); attrsVersion++;
       attrs = new Float32Array(field.stars.length * 5);
+      history = createTrailHistory(field.stars.length); positions = new Float64Array(field.stars.length * 2);
       field.stars.forEach((s, i) => attrs.set([s.x, s.y, s.d, s.size, s.red ? 1 : 0], i * 5));
     }
   }
@@ -424,14 +450,28 @@ export function createStars(hero, { reduced, win = hero.ownerDocument.defaultVie
     previous = live && pointer ? pointer.slice() : null;
     if (live && hold) field.gather(hold, pointer || hold.anchor, dt);
     field.step(dt);
+    const scroll = still ? 0 : Math.max(0, scrollY - top);
+    field.stars.forEach((s, i) => {
+      const p = parallaxOffset(f, s.d);
+      positions[2 * i] = attrs[5 * i] + p[0] + field.offsets[2 * i];
+      positions[2 * i + 1] = attrs[5 * i + 1] + p[1] + field.offsets[2 * i + 1] + scrollOffset(scroll, s.d);
+    });
+    if (still || !live) history.reset();
+    const trails = history.record(now, positions); trailVersion++;
     return {
       count: field.stars.length, attrs, attrsVersion, offsets: field.offsets, flags: field.flags, weights: field.weights, alpha: field.alpha, mixes: field.mixes, front: field.front, markSize: STARS.mark.size, version: field.version,
-      par: [f[0] * STARS.parallax, f[1] * STARS.parallax], scroll: still ? 0 : Math.max(0, scrollY - top), reveal, centre,
+      trails, trailVersion,
+      par: [f[0] * STARS.parallax, f[1] * STARS.parallax], scroll, reveal, centre,
     };
   }
   const settled = () => Math.hypot(f[0] - target[0], f[1] - target[1]) < 1e-4 && Math.hypot(fv[0], fv[1]) < 1e-4;
   const busy = () => !!field && !reduced.matches && (!!hold || field.awake || !settled());
   return {
+    async prepare(yieldFrame) {
+      const paths = readMark(hero);
+      if (paths) { sample = await sampleMark(paths, STARS.mark.count, yieldFrame); markKey = paths.map(p => p.fill + ' ' + p.d).join('|'); }
+    },
+    get sample() { return sample; },
     measure, frame, after() { if (busy()) redraw(); }, busy,
     // The stage's click handler asks once: was that a hold (no craft change)?
     swallowClick() { const s = swallow; swallow = false; return s; },

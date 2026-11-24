@@ -58,15 +58,94 @@ export const writePlayerPage = () => writePage('play');
 
 // Only the inline bootstrap is browser code. The source below is shared verbatim with the worker.
 function canvasPainter(canvas, paths, box, viewport, ratio) {
-  const sample = sampleMark(paths), ctx = canvas.getContext('2d');
+  const sample = sampleMark(paths);
+  // Per-star Canvas gradients created native garbage every frame. Keep the same circular fringe and shared
+  // triangles in two batched GPU draws; Canvas remains the retained-frame fallback where WebGL2 is absent.
+  const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: false });
+  const gpu = gl && typeof gl.createShader === 'function' ? makeGPU() : null;
+  const ctx = gpu ? null : canvas.getContext('2d');
   let scene, dpr;
+  function makeGPU() {
+    const vertex = `#version 300 es
+precision highp float;
+layout(location=0) in vec2 aPosition;
+layout(location=1) in float aSize;
+layout(location=2) in vec4 aColour;
+uniform vec2 uSize;
+uniform float uDpr;
+out float vR;
+out vec4 vColour;
+void main() {
+  vR = aSize * uDpr / 2.0; vColour = aColour;
+  gl_PointSize = ceil(2.0 * vR) + 2.0;
+  gl_Position = vec4(2.0 * aPosition.x / uSize.x - 1.0, 1.0 - 2.0 * aPosition.y / uSize.y, 0.0, 1.0);
+}`;
+    const fragment = `#version 300 es
+precision highp float;
+in float vR;
+in vec4 vColour;
+uniform bool uStroke;
+out vec4 o;
+void main() {
+  float coverage = 1.0;
+  if (!uStroke) {
+    float dist = length(gl_PointCoord - 0.5) * (ceil(2.0 * vR) + 2.0);
+    coverage = clamp(vR + 0.5 - dist, 0.0, 1.0);
+  }
+  float a = vColour.a * coverage;
+  o = vec4(vColour.rgb * a, a);
+}`;
+    const program = gl.createProgram();
+    for (const [type, source] of [[gl.VERTEX_SHADER, vertex], [gl.FRAGMENT_SHADER, fragment]]) {
+      const shader = gl.createShader(type); gl.shaderSource(shader, source); gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader));
+      gl.attachShader(program, shader);
+    }
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+    const buffer = gl.createBuffer(), vao = gl.createVertexArray(); gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    for (const [index, count, offset] of [[0, 2, 0], [1, 1, 8], [2, 4, 12]]) {
+      gl.enableVertexAttribArray(index); gl.vertexAttribPointer(index, count, gl.FLOAT, false, 28, offset);
+    }
+    const size = gl.getUniformLocation(program, 'uSize'), ratio = gl.getUniformLocation(program, 'uDpr'), stroke = gl.getUniformLocation(program, 'uStroke');
+    let data = new Float32Array(0);
+    return dots => {
+      if (data.length < dots.length * 28) data = new Float32Array(dots.length * 28);
+      let at = 0;
+      const vertexAt = (x, y, d) => {
+        data[at++] = x; data[at++] = y; data[at++] = d.size;
+        for (const c of d.colour) data[at++] = c / 255;
+        data[at++] = d.alpha * Math.min(1, d.size * dpr);
+      };
+      for (const d of dots) if (d.alpha > 0) {
+        const shape = streakGeometry(d.x, d.y, d.size, d.tail || [d.x, d.y]);
+        for (let i = 0; i < shape.triangle.length; i += 2) vertexAt(shape.triangle[i], shape.triangle[i + 1], d);
+      }
+      const triangles = at / 7;
+      for (const d of dots) if (d.alpha > 0) vertexAt(d.x, d.y, d);
+      gl.viewport(0, 0, canvas.width, canvas.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.useProgram(program); gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, data.subarray(0, at), gl.DYNAMIC_DRAW);
+      gl.uniform2f(size, scene.W, scene.H); gl.uniform1f(ratio, dpr);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.uniform1i(stroke, 1); gl.drawArrays(gl.TRIANGLES, 0, triangles);
+      gl.uniform1i(stroke, 0); gl.drawArrays(gl.POINTS, triangles, at / 7 - triangles);
+    };
+  }
   function resize(next, screen, scale) {
     dpr = Math.min(2, scale || 1, Math.sqrt(5.2e6 / (next.width * next.height)));
     canvas.width = Math.round(next.width * dpr); canvas.height = Math.round(next.height * dpr);
     scene = loaderScene(sample, next.width, next.height, screen);
   }
   resize(box, viewport, ratio);
+  if (gpu) {
+    // Compile the first real point draw during worker setup, before its animation clock/first canvas commit.
+    // Clear in the same command stream: no warm-up pixel is ever presented.
+    gpu([{ x: 0, y: 0, tail: [20, 0], size: 2, colour: [21, 19, 20], alpha: 1 }]);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  }
   return { resize, paint(state) {
+    if (gpu) { gpu(loaderDots(scene, state)); return; }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, scene.W, scene.H);
     for (const dot of loaderDots(scene, state)) {
       if (!(dot.alpha > 0)) continue;
@@ -75,11 +154,10 @@ function canvasPainter(canvas, paths, box, viewport, ratio) {
       const colour = dot.colour.map(n => n.toFixed(4)).join(',');
       const alpha = dot.alpha * Math.min(1, dot.size * dpr);
       if (dot.streak > dot.size) {
-        const dx = dot.x - dot.tail[0], dy = dot.y - dot.tail[1];
-        const nx = -dy / dot.streak * r, ny = dx / dot.streak * r;
+        const triangle = streakGeometry(dot.x, dot.y, dot.size, dot.tail).triangle;
         ctx.fillStyle = `rgba(${colour},${alpha})`;
-        ctx.beginPath(); ctx.moveTo(dot.tail[0], dot.tail[1]);
-        ctx.lineTo(dot.x + nx, dot.y + ny); ctx.lineTo(dot.x - nx, dot.y - ny);
+        ctx.beginPath(); ctx.moveTo(triangle[0], triangle[1]);
+        ctx.lineTo(triangle[2], triangle[3]); ctx.lineTo(triangle[4], triangle[5]);
         ctx.closePath(); ctx.fill();
       }
       const ink = ctx.createRadialGradient(dot.x, dot.y, 0, dot.x, dot.y, outer);
@@ -177,7 +255,7 @@ function earlyLoader(pure) {
 
 // One import-free copy of the pure module is the inline runtime and the Blob worker's source.
 const LOADER_PURE = fs.readFileSync(path.join(TAKE, 'loader-stars.mjs'), 'utf8').replace(/^export /gm, '');
-export const LOADER_SCRIPT = `(function(){\nfunction loaderCore(){\n${LOADER_PURE}\nreturn { sampleMark, loaderScene, loaderDots, loaderAt };\n}\nconst { sampleMark, loaderScene, loaderDots, loaderAt } = loaderCore();\n${canvasPainter.toString()}\n${loaderWorker.toString()}\n(${earlyLoader.toString()})('const { sampleMark, loaderScene, loaderDots, loaderAt } = (' + loaderCore.toString() + ')();');\n})();`.replace(/<\/script/gi, '<\\/script');
+export const LOADER_SCRIPT = `(function(){\nfunction loaderCore(){\n${LOADER_PURE}\nreturn { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry };\n}\nconst { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry } = loaderCore();\n${canvasPainter.toString()}\n${loaderWorker.toString()}\n(${earlyLoader.toString()})('const { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry } = (' + loaderCore.toString() + ')();');\n})();`.replace(/<\/script/gi, '<\\/script');
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   console.log(writeStillsPage());

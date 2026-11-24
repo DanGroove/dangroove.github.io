@@ -28,6 +28,7 @@ import { checkRound12 as checkRound12Scene, checkRound12Controls as checkRound12
 import { checkRows as checkRound13Rows, checkRowsControls as checkRound13RowsControls } from './round13-checks.mjs';
 import { consistency, checkRound17, checkRound17Controls, checkRound17Exports as checkRound15, checkRound17RetainedControls as checkRound15Controls, checkPainterStacks, withSourceLines } from './round17-checks.mjs';
 import * as stageModule from '../stage.mjs';
+import { checkL11, checkL11Controls } from './l11-checks.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
 const errors = [];
@@ -360,7 +361,7 @@ const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 await new AsyncFunction('env', `const { sceneEnvelope, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, loaderAt, createLoaderView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
   sceneEnvelope, location: { search: '?t=0' }, document: playerDocument, window: win, matchMedia: () => media,
   createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => atlas, fontsReady: async () => {},
-  SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts: () => ({ draw() {}, fit: view => view, layout: [] }), devicePixelRatio: 3,
+  SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts: () => ({ measure() {}, draw() {}, fit: view => view, layout: [] }), devicePixelRatio: 3,
   createNameReact: () => ({ measure() {}, setLive() {}, live: false, open: 0, letters: [] }), createCraftWipe: () => ({ measure() {}, follow(craft, options) { craftFollows.push([craft, !!options?.cut]); }, hold: () => null, state: null }), createStars: () => ({ measure() {}, frame: () => null, after() {}, swallowClick: () => false, field: null }), starReach: () => null, createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),
   ...entranceModule,
   requestAnimationFrame: callback => { scheduledTick = callback; return 1; }, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
@@ -550,6 +551,7 @@ try { console.log(await checkRound5SecondAddendum()); } catch (error) { fail(0, 
 try { console.log(await checkEntrance()); console.log('E1/E4 negative controls: ' + await withSourceLines(checkEntranceControls)); } catch (error) { fail(0, error.message); }
 try { console.log(describe(await checkHand())); console.log('K3 negative controls: ' + await checkHandControls()); } catch (error) { fail(0, error.message); }
 try { console.log(await checkRound8()); console.log('Round 8 negative controls: ' + await withSourceLines(checkRound8Controls)); } catch (error) { fail(0, error.message.split('\n')[0]); }
+try { console.log(await checkL11()); console.log('L11 negative control: ' + await checkL11Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound9()); console.log('Round 9 negative controls: ' + await withSourceLines(checkRound9Controls)); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound10()); console.log('Round 10 negative controls: ' + await checkRound10Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 // Round 12 (S1): its L2 checks (the selection box) are gone with the box; round 14's letter roll (K1) carries round 11's
