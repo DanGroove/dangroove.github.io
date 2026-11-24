@@ -1089,12 +1089,14 @@ body {
 
 .jm-start { font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 
-.jm-start { min-height: 44px; display: inline-flex; align-items: center; gap: 12px; padding: 0 12px; }
-@media (max-width: 640px) {
-  .jm-joined .hero [data-cue] { bottom: max(calc(24px + env(safe-area-inset-bottom)), 24px) !important; top: auto !important; }
+/* Start keeps a 44 px hit area while its words stay on the hero's left edge. */
+.jm-start { min-height: 44px; display: inline-flex; align-items: center; gap: 12px; padding: 0 12px; margin-left: -12px; }
+/* Phones: the foot stays in the hero's column (never over the crafts), 24 px clear of the gesture bar; on short
+   screens the hero's picture gives up the room so the foot stays on screen. */
+@media (max-width: 719px) {
+  .jm-joined .hero .hero-foot { padding-top: 0; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+  .jm-joined .hero .hero-box { min-height: 150px; }
 }
-
-@media (max-width: 640px) { .jm-joined .hero .hero-foot { position: absolute !important; top: auto !important; bottom: calc(24px + env(safe-area-inset-bottom)) !important; } }
 .jm-joined.rm .marker-layer, .jm-joined.rm .tl { opacity: var(--joined-map-alpha, 0) !important; } .jm-joined.rm:not(.jm-rm-map) .tl { visibility: hidden; }
 
 </style>
