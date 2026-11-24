@@ -51,7 +51,7 @@ export function flightGate(row, kind) {
   assert.ok(row.fraction <= .01, `L13c flights: ${kind} ${row.crossings}/${row.count} cross the centre-distance limit`);
   assert.equal(row.farSide, 0, 'L13c near side: every destination angle must be under 90 degrees');
   assert.ok(row.formed !== null && row.filled !== null && row.assigned === row.points, 'L13c fill: every point taken');
-  assert.ok(row.fillTime <= (kind === 'still' ? 1.25 : .5) + 1e-9, `L13c fill: ${kind} ${row.fillTime} s`);
+  assert.ok(row.fillTime <= (kind === 'still' ? 1.45 : .75) + 1e-9, `L13c fill: ${kind} ${row.fillTime} s`);
 }
 function summarize(data) {
   const rows = data.batches.filter(b => !b.first).flatMap(b => b.rows);

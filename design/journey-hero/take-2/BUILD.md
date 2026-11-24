@@ -3576,6 +3576,8 @@ Final hash/syntax audit: 100 of 112 incoming files are byte-identical; 12 permit
 
 ## Round 19, L13c
 
+L13c-1 amends only the fill deadlines in tools/l13c-checks.mjs: still 1.25 s -> 1.45 s; fast 0.5 s -> 0.75 s, both measured after formation. This follows CORRECTIONS-19.md and MOCK-U.md's method note: the required stage-centre and fast-path-start runs differ from the mock probe. The original L13c implementation record below is historical; current verification is recorded in the L13c-1 subsection at the end.
+
 Implemented L13c items 1-3 and its replacement check, including the required negative control. The full node tools/checks.mjs command exits 1 for the two strict fill deadlines: still 1.328 s (limit 1.25 s), fast 0.576 s (limit 0.5 s). It does not print all clean. Both runs have zero crossing and zero far-side assignments. Every retained and new negative control is caught at its intended gate.
 
 ### Reference, acceptance and runtime changes
@@ -3635,3 +3637,20 @@ Only permitted take-2 source/check/docs and ignored .scratch files changed. No C
 [Full report](.scratch/codex-round19o-report.md), [final suite](.scratch/l13c/checks-final-utf8.log), [before](.scratch/l13c/before.json), [after and control](.scratch/l13c/after.json), [deadline proof](.scratch/l13c/preservation-and-deadlines.json), [source preservation](.scratch/l13c/source-preservation.json), [incoming render](.scratch/l13c/before-hold-3s.png), [revision render](.scratch/l13c/after-hold-3s.png).
 
 Final audit: 109 of 115 incoming files are byte-identical. Six permitted existing files changed and tools/l13c-checks.mjs was added. Existing BUILD/README content is preserved; new Markdown is ASCII. Five changed/new JavaScript modules pass node --check. The OS profile-path audit found zero remaining task Edge processes. [File audit](.scratch/l13c/file-audit.json), [Edge audit](.scratch/l13c/edge-audit.json).
+
+### L13c-1 verification
+
+Only the two fill limits changed in tools/l13c-checks.mjs: still 1.25 s -> 1.45 s, fast 0.5 s -> 0.75 s. The existing 1e-9 s comparison tolerance, run paths, clock, observations, flight/near-side/assignment gates and negative control are unchanged. Product code and every other check are byte-identical to the incoming files.
+
+The full node tools/checks.mjs run exits 0 and prints all clean. Every retained negative control fails at its intended gate. L13c's nearest-free-only/no-ring fast control has 125/288 crossings (43.4027778 percent), 110 far-side assignments and a 0.464 s fill delta; it fails specifically at L13c flights: fast.
+
+| Run | Later stars | Crossings | Far side | p50 px | p95 px | Max px | Formed s | Filled s | Fill delta s | Amended limit s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| still | 300 | 0 | 0 | 314.802 | 421.606 | 459.041 | 2.360 | 3.688 | 1.328 | 1.45 |
+| fast | 288 | 0 | 0 | 348.123 | 520.079 | 574.627 | 0.456 | 1.032 | 0.576 | 0.75 |
+
+Both runs assign all 600 points. The existing exhaustive oracle confirms all 588 later assignments, including 22 ring departures, and no eligible pair left waiting. The unchanged page checks use installed local Playwright and Edge with isolated persistent profiles under .scratch, block external page requests and close their contexts in finally. All three browser result sets record zero external page requests and zero page errors; the final OS audit finds zero Edge processes using take-2 scratch profiles.
+
+No requested work was omitted. The original L13c record above is preserved as history; this amendment supersedes its old fill-deadline failures. No product behavior, other check, protected document, fixture, public/src/CNAME file or file outside take-2 was changed. No git, install, network request, reviewer agent, site build or deployment was run; PresentationEngine and E: were not accessed. New Markdown text is ASCII.
+
+[Report](.scratch/codex-round19p-report.md), [full suite](.scratch/round19p/checks-utf8.log), [L13c results](.scratch/round19p/l13c-result.json), [Edge audit](.scratch/round19p/edge-audit.json), [file audit](.scratch/round19p/file-audit.json).
