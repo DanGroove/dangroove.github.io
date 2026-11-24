@@ -323,7 +323,8 @@ export function tripApply(st) {
   tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
   // the X fades in with the sea, so neither page shows it before the map exists
   if (E.x) tripWrite(E.x, 'opacity', h < 1 ? smooth(.2, .7, h).toFixed(3) : '');
-  if (E.title) { const t = 1 - smooth(...WORLD.titleOut, st.pushT) * (1 - (st.exploreK || 0)); tripWrite(E.title, 'opacity', t); tripWrite(E.title, 'visibility', t === 0 ? 'hidden' : 'visible'); }
+  // In explore the title fades as the camera zooms in past the overview, before it can grow huge and run off the screen (Dan's recording, 2026-11-24).
+  if (E.title) { const t = (1 - smooth(...WORLD.titleOut, st.pushT) * (1 - (st.exploreK || 0))) * (1 - (st.exploreK || 0) * smooth(...WORLD.titleZoom, c.s / VIEW.s0)); tripWrite(E.title, 'opacity', t); tripWrite(E.title, 'visibility', t === 0 ? 'hidden' : 'visible'); }
   tripWrite(E.cue, 'opacity', smooth(.2, .5, st.overviewT) * (1 - smooth(0, .3, st.pushT)));
   // mini-map
   const mo = smooth(.5, 1, st.pushT) * (1 - smooth(0, .4, st.rushT));

@@ -37,7 +37,7 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // Polish round 1 (2026-11-23) re-records both: trip.mjs for the X view on phones and portrait tablets and the map title's fade,
 // depth.mjs for the lantern's darkness the nova canvas holds through the rush; its second batch re-records trip.mjs for the
 // labels that give way, the coasts' draw-on, the X's fade-in with the sea and the mini-map's targets.
-assert.equal(sourceDigest('trip.mjs'), 3765033147, 'trip.mjs changed');
+assert.equal(sourceDigest('trip.mjs'), 857917432, 'trip.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 4010889213, 'depth.mjs changed');
 console.log('ok: C1 camera/labels/tripS and deck source digests recorded');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];

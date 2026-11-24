@@ -1017,5 +1017,5 @@ export const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5
   cardDim: [0.35, 0.12], underFade: 0.4, sideFade: 0.1, bar: [190, 6], hint: 44 };
 // titleOut: the push-in share over which the map's title and kicker fade out (back in at the overview and in explore).
 // coastDraw: the share of the fall over which the coasts draw, from its first moments
-export const WORLD = { scrim: [150,190,.85], titleOut: [.3, .8], coastDraw: [.04, .72], card: { w:640, edge:32, cap:420, phoneShare:.82, phoneBottom:6, slack:2, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
+export const WORLD = { scrim: [150,190,.85], titleOut: [.3, .8], titleZoom: [1.15, 1.6], coastDraw: [.04, .72], card: { w:640, edge:32, cap:420, phoneShare:.82, phoneBottom:6, slack:2, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
 export const PHONE_LAYOUT = { gap: 16, edge: 16, ctaShare: .14, headlineGap: 20, exploreGap: 8, exploreBottom: 8, exploreBack: 152, exploreTop: 172 };

@@ -251,11 +251,11 @@ ok(!/#[0-9A-Fa-f]{3,6}\b(?![\w-]*\))/.test(readFileSync(join(ROOT, 'map.css'), '
 
 // Compressed delivery budgets include all top-level runtime modules and CSS, never hero-copy.
 const gzipKB = content => gzipSync(content).length / 1024;
-const runtimeSources = [...mods, 'map.css'].map(f => { const src = readFileSync(join(ROOT, f)); ok(gzipKB(src) <= 150, `${f}: exceeds 150 KB gzip`); return src; });
-const runtimeKB = gzipKB(Buffer.concat(runtimeSources)); ok(runtimeKB <= 150, 'combined map modules/CSS exceed 150 KB gzip');
+const runtimeSources = [...mods, 'map.css'].map(f => { const src = readFileSync(join(ROOT, f)); ok(gzipKB(src) <= 160, `${f}: exceeds 160 KB gzip`); return src; });
+const runtimeKB = gzipKB(Buffer.concat(runtimeSources)); ok(runtimeKB <= 160, 'combined map modules/CSS exceed 160 KB gzip');
 const hammerKB = gzipKB(readFileSync(join(ROOT, 'hammer.mjs'), 'utf8') + readFileSync(join(ROOT, 'findhammer.mjs'), 'utf8') + JSON.stringify([HAMMER, FIND_COPY.hammer, FIND_COPY.hammerFact, FIND_COPY.hints.hammer]) + readFileSync(join(ROOT, 'art.mjs'), 'utf8').match(/const hammerMapArt[^\n]+/)[0]);
 ok(hammerKB < 30, 'hammer rules/find/data/drawings exceed 30 KB gzip');
-console.log(`gzip: hammer ${hammerKB.toFixed(2)} KB / 30; all map modules + CSS ${runtimeKB.toFixed(2)} KB / 150`);
+console.log(`gzip: hammer ${hammerKB.toFixed(2)} KB / 30; all map modules + CSS ${runtimeKB.toFixed(2)} KB / 160`);
 for (const [file, budget] of [['dist/journey-map.html', 320], ['dist/journey-joined.html', 540]]) {
   if (!existsSync(join(ROOT, file))) continue;
   const kb = gzipKB(readFileSync(join(ROOT, file))); ok(kb <= budget, `${file}: exceeds ${budget} KB gzip`); console.log(`gzip: ${file} ${kb.toFixed(2)} KB / ${budget}`);

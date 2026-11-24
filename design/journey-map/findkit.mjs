@@ -137,6 +137,8 @@ export function findSheet(owner, cls, html, anchor) {
   if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return false;
   closeSheet(true); closePop();
   FD.sheetOwner = owner; FD.sheetP = FD.st.P; FD.sheetFrom = toScreen(FD.st, anchor); FD.sheetTs = FD.now;
+  // The first frame grows from the find, never the last sheet's full size (a one-frame flash on Dan's phone, 2026-11-24)
+  if (!FD.rm) FD.sheet.style.transform = `translate(${FD.sheetFrom[0]}px,${FD.sheetFrom[1]}px) scale(${FIND_PLAY.kit.sheet.from})`;
   FD.sheet.className = 'sheet on ' + cls; FD.sheet.innerHTML = html;
   document.documentElement.classList.add('jm-sheet-open');
   FD.sheet.setAttribute('aria-label', FIND_BY[owner.id].label); FD.sheet.tabIndex = -1;
