@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url';
 import { corners } from '../kit.mjs';
 
 const TAKE = new URL('../', import.meta.url);
-const read = name => fs.readFileSync(new URL(name, TAKE), 'utf8');
+// Source mutations match lines, irrespective of this checkout's CRLF/LF convention.
+const read = name => fs.readFileSync(new URL(name, TAKE), 'utf8').replace(/\r\n/g, '\n');
 async function load(name, source = read(name)) {
   const url = new URL(name, TAKE);
   const fixed = source.replace(/from (['"])(\.{1,2}\/[^'"]+)\1/g, (_all, _quote, ref) => `from '${new URL(ref, url).href}'`);
@@ -90,8 +91,8 @@ export async function checkName(source = read('name-react.mjs'), playerSource = 
   assert.equal(nameLive({ ready: true, entering: null, reduced: false }), true, 'N1 gate: not live after the entrance');
   const p = await runPlayer(playerSource);
   assert.equal(p.live.at(-1), false, 'N1 player: live at the first frame of the entrance');
-  p.run(1.3); assert.equal(p.live.at(-1), false, 'N1 player: live during the entrance');
-  p.run(0.2); assert.equal(p.live.at(-1), true, 'N1 player: not live after the entrance');
+  p.run(3.75); assert.equal(p.live.at(-1), false, 'N1 player: live during the entrance');
+  p.run(0.1); assert.equal(p.live.at(-1), true, 'N1 player: not live after the entrance');
   p.win.__hero.entrance(0.8); assert.equal(p.live.at(-1), false, 'N1 player: live during a held entrance');
   p.win.__hero.entrance(null); assert.equal(p.live.at(-1), true, 'N1 player: not live after the hold');
   p.media.matches = true; p.media.change(); assert.equal(p.live.at(-1), false, 'N1 player: live with reduced motion');
@@ -110,12 +111,12 @@ async function runPlayer(playerSource) {
   hero.querySelector = s => s === '[data-stage-box]' ? stage : s === '[data-pause]' ? pause : node();
   hero.querySelectorAll = () => crafts;
   const media = { matches: false, addEventListener(_name, f) { this.change = f; } }, win = {}, live = [];
-  let tick = null;
+  let tick = null, now = 0;
   const observer = class { observe() {} };
   const player = playerSource.replace(/^import\s+.*?;\s*$/gm, '');
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
   const out = { win, live, media, stage, swallow: false };
-  await new AsyncFunction('env', `const { sceneEnvelope, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+  await new AsyncFunction('env', `const { sceneEnvelope, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, loaderAt, createLoaderView, performance, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
     sceneEnvelope, location: { search: '' }, document: { querySelector: () => hero, fonts: { ready: Promise.resolve(), addEventListener() {} }, hidden: false, addEventListener() {} }, window: win, matchMedia: () => media,
     createRenderer: () => ({ setAtlas() {}, draw() {} }), makeCamera: engine.makeCamera, dot: engine.dot, corners: kit.corners, makeAtlas: () => ({}), fontsReady: async () => {},
     SHOW: M.SHOW, LOOP: M.LOOP, SCENES: M.SCENES, BLOCK: M.BLOCK, POOL: M.POOL, sceneAt: M.sceneAt, frameAt: M.frameAt, calloutsAt: M.calloutsAt, createCallouts: () => ({ draw() {}, fit: v => v, layout: [] }),
@@ -123,13 +124,13 @@ async function runPlayer(playerSource) {
     createNameReact: () => ({ measure() {}, setLive(on) { live.push(!!on); return !!on; }, live: false, open: 0, letters: [] }),
     createCraftWipe: () => ({ measure() {}, follow() {}, hold: () => null, state: null }),
     createStars: () => ({ measure() {}, frame: () => null, after() {}, swallowClick: () => out.swallow, field: null }), starReach: E.starReach || (() => null),
-    ENTRANCE: E.ENTRANCE, entranceAt: E.entranceAt, screenPlane: E.screenPlane, floorReach: E.floorReach,
+    ENTRANCE: E.ENTRANCE, entranceAt: E.entranceAt, screenPlane: E.screenPlane, floorReach: E.floorReach, loaderAt: E.loaderAt, createLoaderView: E.createLoaderView, performance: { now: () => now },
     createEntranceView: () => ({ measure() {}, apply() {}, clear() {}, lines: 3 }),
     devicePixelRatio: 1, requestAnimationFrame: f => { tick = f; return 1; }, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
   });
-  let now = 0;
   out.run = seconds => { for (let n = 0; n < Math.round(seconds / 0.05); n++) { now += 50; tick?.(now); } };
   tick?.(now);
+  out.run(1.25);
   return out;
 }
 
@@ -204,13 +205,13 @@ export async function checkStars(source = read('stars.mjs'), entranceSource = re
   report.stir = { moved: moved.length, largest: +largest.toFixed(2), masses: [+pair.offsets[2 * i1].toFixed(2), +pair.offsets[2 * i2].toFixed(2)] };
   // The entrance's rings: the floor's span, each star wholly on or off by its home; the shader uses the same rule.
   assert.deepEqual(E.ENTRANCE.stars, E.ENTRANCE.floor, 'B1 entrance: rings are not the floor dots\' span');
-  assert.equal(E.entranceAt(0.19).stars, 0, 'B1 entrance: stars before 0.20'); assert.equal(E.entranceAt(0.9).stars, 1, 'B1 entrance: stars not all on at 0.90');
+  assert.equal(E.entranceAt(1.79).stars, 0, 'B1 entrance: stars before 1.80'); assert.equal(E.entranceAt(2.8).stars, 1, 'B1 entrance: stars not all on at 2.80');
   const centre = [1060, 455]; let shown = -1;
-  for (let time = 0.2; time <= 0.9 + 1e-9; time += 0.05) {
+  for (let time = 1.8; time <= 2.8 + 1e-9; time += 0.05) {
     const reach = starReach(E.entranceAt(time).stars, centre, 1440, 900), on = F.stars.filter(s => starOn(s.x, s.y, centre, reach)).length;
     assert.ok(on >= shown, 'B1 entrance: rings shrink'); shown = on;
   }
-  assert.equal(shown, F.stars.length, 'B1 entrance: not every star on by 0.90');
+  assert.equal(shown, F.stars.length, 'B1 entrance: not every star on by 2.80');
   assert.equal(F.stars.filter(s => starOn(s.x, s.y, centre, starReach(0, centre, 1440, 900))).length, 0, 'B1 entrance: stars before the rings');
   // Round 9 (L1) adds the pass in front for captured stars: one POINTS draw, called once behind and once more only while a star is out.
   // Round 10 (R1): the pass behind draws every star; the pass in front only stars that are out, at their weights.
@@ -306,7 +307,7 @@ export async function checkHold(source = read('stars.mjs')) {
 }
 
 export const ROUND8_CONTROLS = [
-  { id: 'N1', file: 'play.mjs', search: 'const nameOn = () => nameReact.setLive(ready && !intro && !held && !reduced.matches);', replacement: 'const nameOn = () => nameReact.setLive(ready && !reduced.matches);', gate: 'N1 player: live', run: s => checkName(undefined, s) },
+  { id: 'N1', file: 'play.mjs', search: 'const nameOn = () => nameReact.setLive(ready && !loading && !intro && !held && !reduced.matches);', replacement: 'const nameOn = () => nameReact.setLive(ready && !reduced.matches);', gate: 'N1 player: live', run: s => checkName(undefined, s) },
   { id: 'B1', file: 'stars.mjs', search: 'export const depthWeight = d => 0.12 + 0.88 * d * d;', replacement: 'export const depthWeight = d => 0.12 + 0.88 * d;', gate: 'B1 parallax:', run: s => checkStars(s) },
   { id: 'B2', file: 'stars.mjs', search: 'swallow = holdStart.stage && !click;', replacement: 'swallow = false;', gate: 'B2 click:', run: s => checkHold(s) },
   { id: 'G1', file: 'stage.mjs', search: '    separateFaces(P.filter(pc => !carried.includes(pc)));\n', replacement: '    separateFaces(P);\n', gate: 'G1 carried:', run: s => checkCarried(s) },
@@ -329,7 +330,7 @@ export async function checkRound8() {
   const n1 = await checkName(), b1 = await checkStars(), b2 = await checkHold(), g1 = await checkCarried();
   return `N1 computed: numbers equal title.js's; circle radius (px at em 100) by gap ${n1.circle.map(([g, r]) => g + ' em ' + r).join(', ')}; rest height ${n1.rests.map(([d, h]) => d + ' em ' + h).join(', ')} em; knock delays ${n1.delays.join('/')} ms; off during the entrance, a held entrance and reduced motion.
 F3 computed: no floor hover (round5 H7).
-B1 computed: ${b1.count} stars at 1440 x 900 (${b1.red} % red); parallax at 12 pointer/depth samples; follow 0.3 s critically damped (${b1.follow.at03} of 0.5 at 0.3 s, no overshoot); a still pointer moves nothing; a sweep moved ${b1.stir.moved} stars along it, largest ${b1.stir.largest} px, all home monotonically; two masses ${b1.stir.masses.join(' vs ')} px; reduced motion static, touch scroll-only; entrance rings 0.20-0.90 s.
+B1 computed: ${b1.count} stars at 1440 x 900 (${b1.red} % red); parallax at 12 pointer/depth samples; follow 0.3 s critically damped (${b1.follow.at03} of 0.5 at 0.3 s, no overshoot); a still pointer moves nothing; a sweep moved ${b1.stir.moved} stars along it, largest ${b1.stir.largest} px, all home monotonically; two masses ${b1.stir.masses.join(' vs ')} px; reduced motion static, touch scroll-only; entrance rings 1.80-2.80 s.
 B2 computed: capture 80/132/210/340/340 px at 0/0.5/1.25/2.5/4 s; 0.3 s hold ${b2.runs[0.3].captured} stars, blast largest ${b2.runs[0.3].largest} px; 2.5 s hold ${b2.runs[2.5].captured} stars, largest ${b2.runs[2.5].largest} px; none crosses the pointer, settled on orbit, all home monotonically; stage presses ${b2.clicks.map(c => c.join('/')).join(', ')}.
 G1 computed: ${g1.drags} drags/carries every 0.01 s, ${g1.samples} samples, ${g1.carriedFrames} with a carried stack (${Object.keys(g1.per).length} actions); no non-carried piece moves; cursor in front of its carried picture; LOOP ${g1.loop.toFixed(3)} s.`;
 }

@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ROOT, TAKE, pageMarkup, outputPath } from './page.mjs';
+import { ROOT, TAKE, pageMarkup, outputPath, LOADER_CSS, LOADER_SKIP } from './page.mjs';
 
 // Split a declaration only at its own level, leaving strings, templates and nested expressions intact.
 function splitTop(source, separator) {
@@ -78,6 +78,8 @@ export function previewMarkup() {
   const faces = Object.fromEntries(['gelasio-400.woff2', 'gelasio-700.woff2', 'rokkitt-800.woff2'].map(file => [file, 'data:font/woff2;base64,' + fs.readFileSync(path.join(TAKE, 'fonts', file)).toString('base64')]));
   return `<title>Journey hero take two</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<style>${LOADER_CSS}</style>
+<script>${LOADER_SKIP}</script>
 <style>${css}</style>
 <style>${fs.readFileSync(path.join(TAKE, 'take-2.css'), 'utf8')}</style>
 <style>

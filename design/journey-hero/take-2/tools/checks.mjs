@@ -357,7 +357,7 @@ const renderer = { setAtlas() {}, draw(pieces, view) { draws.push({ pieces, view
 const observer = class { observe() {} };
 const player = fs.readFileSync(new URL('../play.mjs', import.meta.url), 'utf8').replace(/^import\s+.*?;\s*$/gm, '');
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-await new AsyncFunction('env', `const { sceneEnvelope, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
+await new AsyncFunction('env', `const { sceneEnvelope, location, document, window, matchMedia, createRenderer, makeCamera, dot, corners, makeAtlas, fontsReady, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts, createPageLayout, createNameReact, createStars, starReach, createCraftWipe, ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, loaderAt, createLoaderView, devicePixelRatio, requestAnimationFrame, cancelAnimationFrame, IntersectionObserver, ResizeObserver } = env;\n${player}`)({
   sceneEnvelope, location: { search: '?t=0' }, document: playerDocument, window: win, matchMedia: () => media,
   createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => atlas, fontsReady: async () => {},
   SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts: () => ({ draw() {}, fit: view => view, layout: [] }), devicePixelRatio: 3,
@@ -403,8 +403,10 @@ const preview = previewMarkup(), moduleSource = preview.match(/<script type="mod
 new AsyncFunction(moduleSource.replace(/import\.meta\.url/g, '"offline"'));
 assert.ok(preview.startsWith('<title>Journey hero take two</title>'));
 assert.ok(!/<!doctype|<html\b|<head\b|<body\b/i.test(preview));
-assert.ok(!/\b(?:src|href)=/.test(preview.split('<script>')[0]));
-assert.ok(!/url\((?!data:)/.test(preview.split('<script>')[0]));
+// The loader's early review-skip script must not truncate the existing offline-asset gate.
+const previewPage = preview.slice(0, preview.indexOf('<script type="module">')).replace(/<script>[\s\S]*?<\/script>/g, '');
+assert.ok(!/\b(?:src|href)=/.test(previewPage));
+assert.ok(!/url\((?!data:)/.test(previewPage));
 
 // C12: inspect what was actually emitted, at regular samples and both sides of each action boundary.
 // This is geometry/provenance evidence. It does not claim to inspect rendered pixels.

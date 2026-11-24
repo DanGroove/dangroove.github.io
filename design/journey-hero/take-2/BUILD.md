@@ -2268,3 +2268,114 @@ All **115** action definitions/routes/clocks, scene lengths/starts and held stil
 `node --check` passes stage, art, main/round17 checks and both new probes. `run5-pure.mjs` passes the new gate, synthetic failures and retained glass/deck/atlas gates. Required `node design/journey-hero/take-2/tools/checks.mjs` exits **0**, ending **all clean**; required `node design/journey-hero/take-2/tools/round17-checks.mjs --controls` exits **0**, all **43** controls failing at their intended gates. Evidence in `.scratch/review-out/r18/`: `run5-checks-final.txt`, `run5-controls-final.txt`, `run5-preservation.json`, `run5-pure.json`, with their scripts/logs.
 
 **Limits/departures.** No requested C18-9 code item remains open. The append-only logo page and the one-nanosecond boundary-side sample are explained above. Browser pixels, shader compilation and visual approval remain external as requested; the recorder does not rasterize. No browser, screenshot, eye judgement, pixel gate, reviewer agent, network, installation, site build, publish or git mutation was used. RTK/installed skills were left unread under the repository-only read boundary. Only allowed source/check/docs files and this run's notes were written; fixtures and public/src/CNAME remain untouched.
+
+## Round 19
+
+Built L1 and L2 from `CORRECTIONS-19.md` on the retained Round 18 build. Before writing, read repository AGENTS.md, the new brief, CORRECTIONS-17 G/R2/R3, Round 6's entrance/hold/exit/check record, both READMEs and the Round 18 follow-up record. Pre-edit criteria and incoming source/schedule are `.scratch/review-out/r19/acceptance.md` and `baseline.json`. Rule G's registered construction and every Round 18 correction remain constraints; no scene artwork or release mechanism changed.
+
+### L1: markup, boot progress and timing
+
+`tools/page.mjs` places the loader directly inside the player hero with `is-loading` present in the HTML. Its head contains `LOADER_CSS`, so the loader does not need a module, font, atlas or external image. The SVG is copied from the header's actual three paths and viewBox, with all three fills paper **#F7F6F3**. Its mark centre is the first viewport's centre, ink height **44 px** on desktop / **36 px** below the existing **720 px** phone breakpoint. Its width follows **1080:797.3**. A **20 px** gap leads to a same-width **2 px** track, **#2B2829**, filled left to right in **#F0484F** with square ends. The overlay uses the page's **#151314** ink, and all other hero paint is hidden while it is present. An accessible loading label adds no visible text. Mark and track share one clipping group. `tools/preview.mjs` embeds exactly the same markup, CSS and review-skip script in the offline fragment. Still-page markup is unchanged and has no loader.
+
+`play.mjs` records three real completion timestamps on `performance.now()/1000`, then expresses them relative to the first loader animation frame:
+
+| Boot milestone | Share | Cumulative target |
+| --- | ---: | ---: |
+| `fontsReady()` and `document.fonts.ready` complete | 25% | 25% |
+| `makeAtlas()` built and `renderer.setAtlas()` finished | 50% | 75% |
+| The first frame has actually passed through draw, layout, renderer and overlays | 25% | 100% |
+
+The two font waits now finish together before the atlas is built; previously the explicit `document.fonts.ready` await followed the atlas. This makes the font milestone describe all awaited fonts, and keeps atlas measurement after them. No font or atlas art changes. Boot records the frame only after a successful nonempty-layout draw. `window.__ready` still becomes true after the first frame, while the loader can remain visible. `__hero.loading` is an added read-only diagnostic.
+
+The visible clock starts at the loader's first requestAnimationFrame callback; milestones already complete then are assigned time zero. This prevents synchronous bootstrap or shader/first-frame work before paint from spending the display interval unseen. A simulated two-second first draw still leaves an empty fill and the full 1.25-second normal sequence afterwards.
+
+Pure **`loaderAt(time, boot, { review, reduced })`**, in `entrance.mjs`, integrates the piecewise-constant target. The drawn fill advances at **1 / .8 = 1.25 widths/s** while below target and waits when it reaches target. A completion changes only the target; fill is continuous, monotone, bounded by target, with no easing or artificial percentage progress. All completion timestamps are required before exit. Full is reached no earlier than **.8 s**; it then holds **.15 s**. One hard clip's left inset advances **0 to 100%** over **.3 s**, using the unchanged engine **`EASE.wipe`**, removing mark and hairline together left to right. The entrance starts at that wipe's end. If all steps finish at time zero, full/hold/wipe/entrance boundaries are **.8 / .95 / 1.25 s**; actual late steps extend that schedule. For example, all steps at **2 s** give an entrance at **3.25 s**.
+
+Reduced motion shows the paper mark and initially empty track, cuts the fill to **.25 / .75 / 1** at the milestones, then cuts directly to the existing finished InDesign still. It has no minimum-delay hold, wipe or entrance. Changing to reduced motion during loading also clears initial entrance clips before that cut. A page with **`?t=`** skips loader and entrance; a tiny inline head script prevents the overlay from showing before the module also takes that path. `__hero.entrance(t)` still holds/draws the entrance; `null` releases, and seek or a hold after readiness can dismiss the loader. Dismissal clears the initial clips. Resize temporarily clears clips/weights for measurement, then reapplies the current state. The loop and star/name interaction remain stopped during loading.
+
+### L2: exact timetable as built
+
+Seconds below start at the loader's exit. Original clips, cuts, `staggerSpans`, name weights/eases, hard whole-dot/star rings, first-pass shell and screen/shadow world plane are retained.
+
+| Part / expectation | Old | New |
+| --- | --- | --- |
+| Mark wipe | 0-.30 | 0-.45 |
+| Journey / Contact cuts | .24 / .30 | .35 / .45 |
+| Danial wipe/weight | .08-.40 | .40-1.00 |
+| Endrawes wipe/weight | .16-.48 | .60-1.20 |
+| Lede start / end / requested step | .40 / .75 / .06 | 1.05 / 2.00 / .15 |
+| Floor and stars | .20-.90 | 1.80-2.80 |
+| Screen plane | .50-1.10 | 2.40-3.20 |
+| Craft start / end / step | .55 / .95 / .05 | 3.00 / 3.60 / .10 |
+| Foot cuts | 1.10 / 1.20 | 3.60 / 3.70 |
+| Entrance end / name interaction | 1.40 | 3.80 |
+| Loop zero at screen end | 1.10 | 3.20 |
+| Star pointer opens | .90 | 2.80 |
+| Loop clock at entrance end | .30 | .60 |
+
+Each of the five craft wipes remains **.20 s**: starts **.55/.60/.65/.70/.75 -> 3.00/3.10/3.20/3.30/3.40**, ends **.75/.80/.85/.90/.95 -> 3.20/3.30/3.40/3.50/3.60**. The current craft remains lit as its row cuts in. The per-frame entrance endpoint comparison includes **1e-12 s** numerical slack: repeated .05 s additions otherwise land at 3.7999999999999945 and add a spurious frame. This only removes floating-point endpoint error; no authored time changes.
+
+### New gates and controls
+
+`tools/entrance-checks.mjs`, already called by main `checks.mjs`, adds:
+
+- **L1 timing:** **36,000** samples at **1 ms** over six all-ready, partial, absent and delayed boot histories. Checks finite bounded fill/wipe, monotonic fill and maximum speed, continuity at completion instants, minimum duration, exact full hold and wipe boundaries, the engine wipe curve, entrance boundary/clock, reduced hard steps and review skip. The real loader view is exercised with style stand-ins.
+- **L1 markup/player:** page and offline markup contain the exact paper header SVG and identical inline CSS; still-page markup has no loader. Checks the prescribed sizes, gap, track and tones and absence of loader fade/transition/rounding. **14** actual-player runs with DOM/GL/clock stand-ins cover the three real shares, early/delayed/blocked readiness, both font waits, loader hold/exit, review skip/hold, reduced loading/media change, initial-style cleanup on API dismissal, retained craft/stage/Pause clicks and loop/interaction gates. These are logic observations, not rasterisation.
+- **L2 groups:** **239** samples: every **1/60 s** over the entrance plus exact boundaries and cuts. Groups are table rows (the two name lines together; floor and stars together); a wipe counts while its span is active, a cut only at its instant. The maximum is **2**, with group starts/ends in reading order. Seven lede lines exercise the tight-wrap case; exact timetable checks still cover 2/3/4/5/7 lines.
+- New in-memory controls: restoring the screen to **.5-1.1** fails **`L2 groups: name, lede, screen at 1.050000 s`**. Replacing the fill/minimum .8 with .05 makes total exit **.50 s** and fails **`L1 timing: loader ends at 0.5 s`**. No mutant is written into source or fixtures.
+
+All three retained entrance controls still fail at their gates: coincident name lines, label exit removed, craft click leaving the entrance running. All **4** round 8 controls and all **43** round 17 controls fail at their existing gates. The main suite also runs the retained hand, star, craft, export, construction and other in-memory controls.
+
+### Every earlier check changed, old to new
+
+Only `tools/entrance-checks.mjs`, `tools/round8-checks.mjs` and main `tools/checks.mjs` changed. No fixture, pixel-gate file or round 17 checker changed. No prior geometric or pixel tolerance was relaxed.
+
+| Earlier check | Old -> new expectation |
+| --- | --- |
+| Entrance timetable: mark, nav, names, floor, screen, foot, hover and end | All boundaries are listed in the timetable above; name weights **300/800 -> 300/800**, before/after probes **1e-6 -> 1e-6 s**. The existing `hover` field follows the floor endpoint **.9 -> 2.8**; the actual star pointer is also checked there. |
+| E1 lede counts 2/3/4/5/7 | Start **.4 -> 1.05**, end **.75 -> 2.0**; gap **min(.06,.35/(n+1)) -> min(.15,.95/(n+1))**. Every line's four boundary checks remain. |
+| E1 five craft lines | Each start/end changes as explicitly listed above; **.20 -> .20 s** per wipe, step **.05 -> .10**. |
+| E1 loop held samples | **[0,.5,1.0999,1.1] -> [0,2.4,3.1999,3.2]**, expected loop **0 -> 0**. At end **(1.4,.3) -> (3.8,.6)**. |
+| E1 screen plane probes | Hidden at **0/.5 -> 0/2.4**, partial **.8 -> 2.8**, removed **1.1 -> 3.2**; monotonic sweep **.5..<1.1 -> 2.4..<3.2**, step **.01 -> .01 s**, **60 -> 80** samples. New sweep uses integer indices to avoid endpoint accumulation. |
+| E1 floor/dot probes | Window **0-1.4 -> 0-3.8**, step **.05 -> .05 s**, **29 -> 77** instants; hidden/full boundaries **.2/.9 -> 1.8/2.8**; **18,125 -> 48,125** dot samples. Same 625 centres and five whole-dot points per instant, same radius **4.8 -> 4.8** and shader assertions. Integer-indexed times prevent an eased-complete boundary being misclassified by accumulated floating-point error. |
+| E1 main player timing | After the new loader, held-loop observation **.85 -> 2.75**, renderer still partial. Next advance **.35 -> .55**, observing entrance **1.20 -> 3.30** and loop **.10 -> .10**. Final advance **.20 -> .50**, entrance end **1.4 -> 3.8**, loop **.30 -> .60**; one second later loop **1.30 -> 1.60**. Floor-hover absence remains unchanged. |
+| E2 hold after screen end | Held entrance **1.30 -> 3.40**, loop **.20 -> .20**. The **.8** early hold, frozen .5 s observation, null release and post-release advance remain unchanged. |
+| E1 player runner start / inventory | Clock-zero origin **first ready frame -> after 1.25 s all-ready loader**. **6 -> 14** runs, retaining all six old interaction/exit scenarios and adding eight loader/API/media/blocked-boot cases. `__ready` remains true after the first draw. |
+| E1 timetable negative control | Duplicate Endrawes span **.08-.40 -> .40-1.00**, matching Danial; expected early-start failure **before .16 -> before .60**. Gate remains `E1 timetable: Endrawes`. Entrance controls **3 -> 5**; label/click controls unchanged. |
+| Round 8 N1 player observations | Name inactive at **1.30 -> 3.75** entrance seconds; next increment **.20 -> .10**, active at cumulative **1.50 -> 3.85**. Runner first passes the all-ready loader **0 -> 1.25 s**; the held .8 / reduced-motion cases remain. |
+| Round 8 B1 rings | Before-start probe **.19 -> 1.79**, complete **.90 -> 2.80**; sweep **.20-.90 -> 1.80-2.80**, step **.05 -> .05**, **15 -> 21** ring samples. Full count and centre/shader rules unchanged. Report text follows those numbers. |
+| Round 8 N1 control source match | Adds **`!loading`** to the expected production guard alongside unchanged `!intro && !held`; the mutation still removes all three guards and fails `N1 player: live`. Controls **4 -> 4**. |
+| Entrance / round 8 standalone control readers | Normalize CRLF to LF in memory before exact-site replacement. This Windows checkout otherwise gives **0 -> 1** sites for multiline click/G1 controls; exact-one-site requirement **1 -> 1**, mutant content and failure gates unchanged. No production file's line endings were altered for these controls. |
+| All three player stand-ins | Supply new `loaderAt` / `createLoaderView` imports; entrance/round 8 supply deterministic performance clocks. Main's **?t=0** path and all its clock/layout assertions are unchanged. |
+| Main offline asset/link gate | Previously scanned **before first classic script** (the font data); now scans **all markup/CSS before the module, excluding classic-script bodies**. The new early skip script otherwise truncated that scan. Expected external `src/href` and non-data CSS URLs **0 -> 0**, parsing/title/fragment assertions unchanged. |
+| Unchanged full-suite output inventory | **6,582 -> 6,582** frames, **477,123 -> 477,123** pieces, max **188 -> 188**, atlas **6 -> 6** pages; loop **99.49089474781469 -> identical**. Round 17 controls **43 -> 43**. |
+
+Effective lede gaps and each line's duration (all seconds), derived by the unchanged `staggerSpans`:
+
+| Line count | Old gap / duration | New gap / duration |
+| ---: | ---: | ---: |
+| 2 | .06 / .29 | .15 / .80 |
+| 3 | .06 / .23 | .15 / .65 |
+| 4 | .06 / .17 | .15 / .50 |
+| 5 | .058333333333 / .116666666667 | .15 / .35 |
+| 7 | .04375 / .0875 | .11875 / .2375 |
+
+The full old/new per-line spans are recorded in `preservation.json`. No other earlier check required changed numbers or assertions.
+
+### Preservation, verification and limits
+
+`preservation.mjs` compares the incoming source hashes and schedule. **stage, art, kit, sq, labels, stars, craft-wipe, name-react, page-layout, stills, view, take-2.css and round17-checks** remain byte-identical. The existing entrance code from `loopAt` through the end of its DOM view is also byte-identical: only its timetable and the new loader section changed. All **115** action definitions/routes/clocks, every scene length/still and starts **0 / 8.04631059223572 / 21.194036349675287 / 43.78235270175257 / 63.16364314101056 / 80.94573216333546 s** are exactly equal. This preserves all round 18 work, including card/draw consistency, laptop picture depth, steady held stars, deck persistence and lid mark. No new picture, scene place, scale, colour or loop time was introduced.
+
+Commands completed successfully:
+
+```text
+node --check [each of the seven edited .mjs modules]
+node design/journey-hero/take-2/tools/entrance-checks.mjs --controls
+node design/journey-hero/take-2/tools/round8-checks.mjs --controls
+node design/journey-hero/take-2/tools/round17-checks.mjs --controls
+node design/journey-hero/take-2/tools/checks.mjs
+```
+
+Main suite ends **`all clean`**, **6,582 frames / 477,123 pieces / max 188 / 6 atlas pages / 99.491 s**. The standalone control runners exit **0**, with every control failing at its intended gate: **5 / 4 / 43**. Logs are `checks-final.txt`, `entrance-controls-final.txt`, `round8-controls-final.txt`, `round17-controls-final.txt` and `syntax-final.txt` under `.scratch/review-out/r19/`; preservation source/hash/schedule proof is `preservation.mjs` / `preservation.json`. The offline module is generated and syntax-checked in memory by the existing main gate; no site build is involved.
+
+No requested code item remains open and no alternate entrance design was substituted. Shares **25/50/25**, exact mark-centre placement, the existing phone breakpoint, grouped font waits, the first-loader-frame clock origin, and numerical endpoint handling are implementation choices explained above. Browser pixels, actual first-paint compositing, shader execution, font appearance and visual approval are **unrun here**, reserved for the external real-browser review. No screenshot, eye judgement, pixel-gate invocation or reviewer agent was used. Installed skills and RTK were deliberately unread because they are outside the task's repository-only boundary. No network, installation, site build, deploy, git mutation, fixture change or public/src/CNAME write occurred. Only the permitted runtime/page/check/docs files and this run's own notes were written.

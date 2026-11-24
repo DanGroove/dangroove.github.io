@@ -6,6 +6,20 @@ import { fileURLToPath } from 'node:url';
 export const TAKE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const ROOT = path.resolve(TAKE, '../../..');
 
+// Inline so the very first paint needs neither the module graph nor a stylesheet/font request.
+export const LOADER_CSS = `
+.hero-loader { display: none; }
+.hero.is-loading .hero-loader { display: block; position: fixed; inset: 0; z-index: 20; background: #151314; }
+html:not(.skip-loader) .hero.is-loading > :not(.hero-loader) { visibility: hidden !important; }
+.skip-loader .hero.is-loading .hero-loader { display: none; }
+.hero-loader-group { --loader-height: 44px; position: absolute; left: 50%; top: calc(50% - var(--loader-height) / 2); width: calc(var(--loader-height) * 1080 / 797.3); transform: translateX(-50%); }
+.hero-loader-group svg { display: block; width: 100%; height: var(--loader-height); }
+.hero-loader-track { height: 2px; margin-top: 20px; background: #2B2829; }
+.hero-loader-fill { height: 100%; background: #F0484F; transform: scaleX(0); transform-origin: left; }
+@media (max-width: 719px) { .hero-loader-group { --loader-height: 36px; } }
+`;
+export const LOADER_SKIP = `if (new URLSearchParams(location.search).has('t')) document.documentElement.classList.add('skip-loader');`;
+
 export function outputPath(name) {
   const file = path.resolve(name);
   if (!file.startsWith(TAKE + path.sep)) {
@@ -20,6 +34,11 @@ export function outputPath(name) {
 export function pageMarkup(kind = 'play') {
   if (!['play', 'stills'].includes(kind)) throw new Error('unknown page kind');
   let html = fs.readFileSync(path.join(ROOT, 'public/journey/index.html'), 'utf8');
+  if (kind === 'play') {
+    const mark = html.match(/<a[^>]*data-mark[^>]*>\s*(<svg[\s\S]*?<\/svg>)/)[1].replace(/fill="#[\da-f]+"/gi, 'fill="#F7F6F3"');
+    html = html.replace('</head>', `<style>${LOADER_CSS}</style>\n<script>${LOADER_SKIP}</script>\n</head>`);
+    html = html.replace('class="hero is-entering" data-hero>', `class="hero is-entering is-loading" data-hero>\n        <div class="hero-loader" role="status" aria-label="Loading portfolio">\n          <div class="hero-loader-group" data-loader aria-hidden="true">${mark}\n            <div class="hero-loader-track"><div class="hero-loader-fill" data-loader-fill></div></div>\n          </div>\n        </div>`);
+  }
   html = html.replace('<link rel="stylesheet" href="journey.css" />', '<link rel="stylesheet" href="journey.css" />\n    <link rel="stylesheet" href="/design/journey-hero/take-2/take-2.css" />');
   html = html.replace(/\s*<link rel="modulepreload"[^>]*>/g, '').replace(/<noscript>[\s\S]*?<\/noscript>/g, '');
   html = html.replace('<script type="module" src="hero/hero.mjs"></script>', `<script type="module" src="/design/journey-hero/take-2/${kind}.mjs"></script>`);
