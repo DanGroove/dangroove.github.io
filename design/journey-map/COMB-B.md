@@ -2,7 +2,7 @@
 
 Dan, 2026-11-24, 4:02 AM ET: "does this drawing look nice or messy" (ygdrasil), "are these things intuitive?", "nothing should be looked at only in a vacuum, needs to be both".
 
-Read `BRIEF.md` first, then `AUDIT-R2.md` (group C, drawing craft, above all). Ids in brackets point at the audits as in `COMB-A.md`: L-n the Opus look report (`audit-r2/opus-look.md`), aL-n and aB-n astra's look and behaviour reports (`audit-r2/astra-look.md`, `audit-r2/astra-behaviour.md`). Parts 3b (`GLIDE.md`) and 4 (`COMB-A.md`) have run before this one; keep everything they did, and keep part 3b's frame cost.
+Read `BRIEF.md` first, then `AUDIT-R2.md` (group C, drawing craft, above all). Ids in brackets point at the audits as in `COMB-A.md`: L-n the Opus look report (`audit-r2/opus-look.md`), aL-n and aB-n astra's look and behaviour reports (`audit-r2/astra-look.md`, `audit-r2/astra-behaviour.md`). Parts 3b (`GLIDE.md`), 4 (`COMB-A.md`) and 4b (`COMB-C.md`, which moved the beacon clear of Interkom's shield) have run before this one; keep everything they did, and keep the frame cost of part 4b's last table.
 
 ## The map's hand
 
