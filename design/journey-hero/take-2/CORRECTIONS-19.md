@@ -81,6 +81,12 @@ Dan, 24 Nov, 6:12 AM ET, on v35 (4c56935): "maybe the logo shrinks then grows th
 
 L7's checks, replacing L6's: the flight and explosion curves and durations above (sampled every 1/240 s on the desktop and phone scenes the loader checks use); during the shrink and the swell every star sits at the weight centre plus its mark offset times the scale, and its speed is zero at the hold's end and at the shrink's end; every star leaves on its line to its paired home and the speed never rises after the explosion's first frame; on desktop every paired home is used once, on phone every home is used once; the pairing keeps angle order; the landing equals the field's homes; L5's checks with the new times. Negative controls: v35's quartic 1.2 s burst fails the curve check; an explosion with no shrink fails; pairing by `i % homes.length` fails the angle-order check; an entrance that starts before the landing fails L5.
 
+## L8 No box of stars on the phone
+
+Seen in cloud frames of 29848be at 411 x 730: L7's leftover phone stars (295 of 600) all end just outside the screen's edge, so while they fly they make a growing rectangle of dots that reads as a box. Change only what item 3 of L7 does with leftovers: where the field has fewer homes than stars, spread all the stars over the homes in angle order (star rank k goes to home rank `floor(k * homes / stars)`), so every home takes one or two stars. Stars that share a home land on it together, with its size and colour, and from the landing they are one star (the WebGL field draws it once). Nothing flies to the screen's edge and nothing fades out. Desktop and tablet are unchanged.
+
+L8's checks: on the phone scene every home is used, no home takes more than two stars, angle order holds, and every star lands exactly on its home with its size and colour; the handover stays seamless. Negative control: L7's edge-bound leftovers fail the landing check.
+
 ## L3 (withdrawn, not to be built) A more impressive loader: the mark, from first sketch to final
 
 Dan, 24 Nov, 4:47 AM ET, on v32 (8c57810): "can we have a more impressive loading screen?". L3 replaces L1's look. L1's rules stay: the loader shows from the first paint without waiting for any script, font or picture; real boot progress (fonts, atlas, first frame, the shares you chose) drives it; it never jumps or goes back; `?t=` skips it; it lasts no longer than loading needs beyond its own minimum. Only the picture and its steps change.
