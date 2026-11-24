@@ -125,20 +125,40 @@ export function createField(W, H, mark = null) {
   }
 
   // B2: a hold. Stars inside the growing radius are captured and pulled into a slowly turning cluster round the pointer.
-  function press(x, y) { cluster = new Map(); formed = false; centre = null; ring = { order: [], phase: 0 }; charge = 0; return { anchor: [x, y], anchorV: [0, 0], held: 0, next: 0, extra: 0, radius: STARS.hold.base, formedAt: null, charge: 0 }; }
-  // L1: give stars the next free points of the order, matched by angle round the mark's centre (stars nearest the centre first
-  // when points run out); the rest join the ring (round 16, R2). Each starts from rest, offset e from its point.
+  function press(x, y) { cluster = new Map(); formed = false; centre = null; ring = { order: [], phase: 0 }; charge = 0; return { anchor: [x, y], anchorV: [0, 0], held: 0, next: 0, freePoints: new Set(mark ? mark.points.map((_, j) => j) : []), extra: 0, radius: STARS.hold.base, formedAt: null, charge: 0 }; }
+  // L13b: the first batch keeps its radial angle pairing. Later captures use the nearest free point, closest pair first,
+  // so a small late batch is not sent across the mark by the farthest-point sampling order. next is still a count.
   function assign(hold, ids, C) {
     const at = ids.map(i => { const [x, y] = position(i); return { i, x, y, a: Math.atan2(y - C[1], x - C[0]) }; });
-    const k = Math.min(at.length, mark.points.length - hold.next);
-    at.sort((a, b) => Math.hypot(a.x - C[0], a.y - C[1]) - Math.hypot(b.x - C[0], b.y - C[1]));
-    const take = at.slice(0, k).sort((a, b) => a.a - b.a), rest = at.slice(k);
-    const pts = [];
-    for (let j = hold.next; j < hold.next + k; j++) pts.push({ j, a: Math.atan2(mark.points[j].y, mark.points[j].x) });
-    pts.sort((a, b) => a.a - b.a);
-    take.forEach((t, q) => {
-      const c = cluster.get(t.i), p = mark.points[pts[q].j];
-      c.point = pts[q].j; c.kind = p.kind; c.e = [t.x - C[0] - p.x, t.y - C[1] - p.y]; c.ev = [0, 0]; c.arrived = false;
+    const k = Math.min(at.length, hold.freePoints.size);
+    let take, rest;
+    if (hold.next === 0) {
+      at.sort((a, b) => Math.hypot(a.x - C[0], a.y - C[1]) - Math.hypot(b.x - C[0], b.y - C[1]));
+      take = at.slice(0, k).sort((a, b) => a.a - b.a); rest = at.slice(k);
+      const pts = [...hold.freePoints].slice(0, k).sort((a, b) => Math.atan2(mark.points[a].y, mark.points[a].x) - Math.atan2(mark.points[b].y, mark.points[b].x));
+      take.forEach((t, q) => { t.j = pts[q]; });
+    } else {
+      rest = at; take = [];
+      const nearest = t => {
+        t.j = -1; t.distance = Infinity;
+        for (const j of hold.freePoints) {
+          const p = mark.points[j], d = (t.x - C[0] - p.x) ** 2 + (t.y - C[1] - p.y) ** 2;
+          if (d < t.distance) { t.j = j; t.distance = d; }
+        }
+      };
+      rest.forEach(nearest);
+      while (take.length < k) {
+        let best = 0;
+        for (let q = 1; q < rest.length; q++) if (rest[q].distance < rest[best].distance) best = q;
+        const t = rest.splice(best, 1)[0]; take.push(t); hold.freePoints.delete(t.j);
+        // Only candidates whose nearest point was just taken need another search.
+        for (const r of rest) if (r.j === t.j) nearest(r);
+      }
+    }
+    take.forEach(t => {
+      const c = cluster.get(t.i), p = mark.points[t.j];
+      hold.freePoints.delete(t.j);
+      c.point = t.j; c.kind = p.kind; c.e = [t.x - C[0] - p.x, t.y - C[1] - p.y]; c.ev = [0, 0]; c.arrived = false;
       // R2: from here the front look eases from the star's own toward this point's (its colour code says which mark colour).
       c.e0 = Math.hypot(c.e[0], c.e[1]); c.given = true; flags[t.i] = markFlag(c.kind); mixes[t.i] = 0;
     });
@@ -226,7 +246,7 @@ export function createField(W, H, mark = null) {
       flags[i] = 1; weights[i] = 1; far[i] = -1; mixes[i] = 0;
     }
     const scale = cluster.size;
-    // L1: once formed, the cluster stops turning and forms the mark; later captures take the next free points. S1: it forms
+    // L1: once formed, the cluster stops turning and forms the mark; later captures take free points. S1: it forms
     // once the threshold is captured (or, short of it, once the radius has reached the hero's diagonal).
     centre = mark ? markCentre(hold.anchor, mark, W, H) : null;
     if (mark && !formed && (cluster.size >= STARS.mark.threshold || R >= diagonal)) hold.formedAt = hold.held;

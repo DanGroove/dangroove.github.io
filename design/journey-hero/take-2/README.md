@@ -1,5 +1,8 @@
 # Journey hero, second take
 
+Round 19 L13b adds page-wide highlight prevention and nearest-free-point assignment for later captures. Checks 1-3 pass; L13 already passed the held-drag streak gate and its explosion logic stays unchanged. Check 4's still hold passes at 6/300 (2%), but the prescribed fast drag fails at 125/288 (43.40%) under the literal assignment rule. The full Node suite exits 1 and does not print all clean; every negative control is caught. BUILD.md's **Round 19, L13b** and [the report](.scratch/codex-round19m-report.md) record the conflict and all before/after numbers. All started Edge contexts are closed.
+
+
 Round 19 L13 builds explosion-only streaks with one shared 0.04 s window, smooth loader edge coverage, and the export wipe/merge/ball burst. The loop is **101.490895 s**. One reversible assetWipe owns arrival and exit; each object has its complete red box, including both InDesign reading halves. Sparks use the star layer's front pass. **Node checks print all clean and all controls are caught.** Final local GPU Edge traces have zero frame intervals over 20 ms at both measured sizes. BUILD.md's **Round 19, L13** and [the report](.scratch/codex-round19l-report.md) record every changed expectation, the count conflict, shader/control choices, before/after frame tables and 108 held exit frames.
 
 Earlier round records follow; L13 supersedes their streak eligibility, .02 s window, sink and loop-length statements.

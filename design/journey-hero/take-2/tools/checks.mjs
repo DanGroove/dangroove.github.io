@@ -1,5 +1,5 @@
 import { sceneEnvelope } from '../view.mjs';
-// Geometry and clock checks. No browser, filesystem writes or dependencies.
+// Geometry and clock checks, plus L13b's offline page gates in the installed local browser.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { ART, ART_TEXT, BALL, BALL_FROM, BALL_VIA, ROWS, makeAtlas } from '../art.mjs';
@@ -29,6 +29,7 @@ import { checkRows as checkRound13Rows, checkRowsControls as checkRound13RowsCon
 import { consistency, checkRound17, checkRound17Controls, checkRound17Exports as checkRound15, checkRound17RetainedControls as checkRound15Controls, checkPainterStacks, withSourceLines } from './round17-checks.mjs';
 import * as stageModule from '../stage.mjs';
 import { checkL13, checkL13Controls } from './l13-checks.mjs';
+import { checkL13b } from './l13b-checks.mjs';
 import { checkL11, checkL11Controls } from './l11-checks.mjs';
 
 let frames = 0, pieces = 0, largest = 0;
@@ -554,6 +555,7 @@ try { console.log(await checkEntrance()); console.log('E1/E4 negative controls: 
 try { console.log(describe(await checkHand())); console.log('K3 negative controls: ' + await checkHandControls()); } catch (error) { fail(0, error.message); }
 try { console.log(await checkRound8()); console.log('Round 8 negative controls: ' + await withSourceLines(checkRound8Controls)); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log('L13: ' + JSON.stringify(await checkL13())); console.log('L13 controls: ' + await checkL13Controls()); } catch (error) { fail(0, error.message); }
+try { const r = await checkL13b(); console.log('L13b: ' + JSON.stringify({ selection: r.selection.map(s => ({ width: s.W, gestures: s.selection.length, textElements: s.text.length })), interaction: r.interaction.map(s => ({ width: s.W, activations: s.checked.length, focus: s.focus })), motion: r.motion, controls: r.controls })); } catch (error) { fail(0, error.message); }
 try { console.log(await checkL11()); console.log('L11 negative control: ' + await checkL11Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound9()); console.log('Round 9 negative controls: ' + await withSourceLines(checkRound9Controls)); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound10()); console.log('Round 10 negative controls: ' + await checkRound10Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }

@@ -1,4 +1,12 @@
 /* Take two alone owns these offsets; the borrowed first-take stylesheet stays untouched. */
+/* L13b: whole-page interaction policy. */
+* {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+/* End L13b policy. */
 .hero-name .name-line,
 .hero-crafts .n {
   position: relative;

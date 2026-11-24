@@ -3397,3 +3397,53 @@ The final CLI checks 6702 frames / 485287 pieces / max 188 / 6 atlas pages and p
 Source audit covers all 106 incoming take-2 files: after adding this BUILD record, 90 retain their exact hash, 16 allowed files change, and four allowed modules/tools are added. All CORRECTIONS-*.md, MOCK-*.diff, tools/fixtures, fonts, art, entrance, layout, CSS and preview packer retain their incoming hashes. The changes are the six motion/player/renderer sources (including the new export-sparks module), page inline painter, check tools and the requested BUILD/README. No public/, src/, CNAME, external client folder or PresentationEngine/E: work was performed. No git command, installation, external/page network request, site build, deployment or reviewer agent was run. Local CDP was used only for Edge control and tracing. All started Edge instances are closed; the final profile-path process audit is saved with the other evidence.
 
 The work includes all four L13 runtime parts and executable gates. The documented departures are the internally inconsistent InDesign piece count, using coverage on pixel evidence, adapting the raw antialias-false control to that shader path, adding an eight-second ring probe beyond the required three seconds, and tiny endpoint sampling guards. The later L14 red/asset redesign remains out of scope; today's wipe is isolated in assetWipe for that replacement. No new independent design approval is claimed.
+
+
+## Round 19, L13b
+
+Implemented items 1-6 literally. The required full suite exits 1: check 4's fast drag still exceeds 2%. It does not print all clean. Every earlier check and retained negative control passes; every new negative control is caught. [Full report](.scratch/codex-round19m-report.md), [suite log](.scratch/l13b/checks.log), [browser results](.scratch/l13b/after.json).
+
+### Reference, acceptance and changes
+
+Read CORRECTIONS-19.md L13b, L13 part 1 and its check, README.md, and Round 19, L13 above before editing. The incoming L13 page is the visual reference. The installed motion-playbook was read. Acceptance preserves typography, compositions, clocks, star homes/colours/sizes, first-batch pairing, ring behavior and explosion eligibility; it adds whole-page highlight prevention and closest-pair assignment for later captures.
+
+take-2.css applies user-select:none, -webkit-user-select:none, transparent tap highlights and -webkit-touch-callout:none universally. Existing name rules remain valid. tools/page.mjs needs no root change: selection is already empty for all specified gestures.
+
+stars.mjs creates a fresh freePoints Set per hold. The first batch keeps its original pairing. Later batches repeatedly take the globally nearest available star/point pair. Only candidates whose nearest point was consumed need another search. hold.next remains the count assigned; overflow enters the existing ring. L13 already passed check 3, so explosion/capture eligibility and trail/blast code were left unchanged.
+
+tools/l13b-checks.mjs adds all four browser checks and their controls; tools/checks.mjs invokes them. Controls mutate memory, with no fixture edits.
+
+### Every earlier changed expectation
+
+No earlier numerical expectation, tolerance, check body or negative-control mutation changed. tools/checks.mjs adds L13b and updates its header to identify its browser calls. Loop 101.49089474781469 s and exposure 0.04 s remain unchanged.
+
+New gates require empty selection instead of selectable text, transparent instead of native tap tint, preserved activation/focus/accessibility, zero held/dragged tapers, release tapers within 0.05 s, closest free pairing instead of hold.next ordering, and <=2% crossings in each prescribed run. The fast gate stays strict and fails. README's latest status changes from L13's passing checkpoint to this explicit incomplete L13b status.
+
+### Checks and controls
+
+The setup matches L13's local Playwright resolution, Edge executable, GPU flags and persistent contexts. Profiles live under .scratch/l13b; non-file/data/blob page requests are blocked. Attempted external requests and page errors are zero. Every context closes in finally; successful awaited closes are recorded. WMIC is absent, so a separate OS process audit was unavailable.
+
+Check 1 passes at 1440 x 900 and touch-enabled 390 x 844: 19 visible text elements compute user-select:none; Ctrl+A, Meta+A, drag, and double/triple clicks on both targets select nothing. Phone also tests a 650 ms long press. All links/buttons/canvases compute transparent tap highlights. The old CSS control fails after Ctrl+A at both sizes. It uses the incoming L13 CSS, byte-identical to the preserved pre-L13 preview's CSS; no git retrieval was used.
+
+Check 2 passes 19 desktop and 26 phone activations, covering crafts, Play, Pause, Journey and Contact. Buttons use Enter/Space; native links use Enter and keep Space's scrolling behavior. Tests restore real addresses stripped by the offline packer, observe native activation/defaults and then prevent navigation in the test only. Both sizes retain 2 px solid focus-visible outlines and accessible intro/craft text. Disabled craft handlers fail at craft 0 click at both sizes. No real iOS or screen-reader application test is claimed.
+
+Check 3 already passed in L13 and still passes: formed at 3 s, zero hold/figure-eight tapers, 5,616 taper submissions within 0.05 s of release. The 260 x 140 px figure eight lasts 2.5 s in 16 ms steps. Speed-only eligibility fails the drag with 227,532 submissions (also 57,041 during the hold).
+
+Check 4 uses a controlled 1440 x 900 clock and stage centre (1004.7890625, 458). Fast drag starts at the formula's t=0 point (1320, 450), then moves every 16 ms for 9 s, without a pre-hold. Percentile index is floor(p*(n-1)); lengths are CSS px. First-batch stars are excluded.
+
+| Run | Version | Later stars | Crossings | Percent | p50 px | p95 px | Max px |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Still | Before | 300 | 96 | 32.00 | 378.243 | 495.873 | 553.478 |
+| Still | After | 300 | 6 | 2.00 | 314.802 | 426.041 | 476.525 |
+| Fast | Before | 288 | 160 | 55.56 | 417.093 | 554.189 | 637.342 |
+| Fast | After | 288 | 125 | 43.40 | 393.366 | 556.605 | 599.181 |
+
+The old hold.next control reproduces the before measurements and fails both runs. Independent exhaustive pair search confirms all 588 later assignments follow the requested closest-pair rule. For every one of the 125 failed fast assignments, all remaining free points are farther from that star than the centre is. Fixed prior assignments exhaust near-side points. This conflicts with the requested fast-drag ceiling.
+
+No capture deferral, point exchange, reassignment, first-batch change, preliminary hold, altered path/clock or relaxed threshold was added. The literal rule is retained; clarification about broader assignment behavior is pending. This gate remains incomplete.
+
+### Preservation and omissions
+
+First-batch mappings match exactly before/after: 300 still and 312 fast. Both runs assign 600 points, without duplicates. [Preservation proof](.scratch/l13b/preservation.json). Fresh reference/revision renders have zero changed pixels at both sizes and were inspected at reading scale: [desktop reference](.scratch/l13b/reference-1440.png), [desktop revision](.scratch/l13b/revision-1440.png), [phone reference](.scratch/l13b/reference-390.png), [phone revision](.scratch/l13b/revision-390.png).
+
+Syntax checks pass. RTK was unavailable; subsequent reads/writes used Node filesystem APIs and Node ran directly without a shell. The UI skill CLI was omitted under the install/network ban. No reviewer agents were run, as instructed. No git, installation, external network request, site build or deployment was run. All writes stay in the permitted take-2 source/CSS/tools/docs and ignored .scratch. Corrections, mocks, fixtures, public, src and CNAME files were not changed.
