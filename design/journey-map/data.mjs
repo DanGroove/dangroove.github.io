@@ -13,12 +13,12 @@ export const C = {
 // (lit stop mark, timeline block, mini-map). hairline: rules and empty frames on the card.
 export const PALETTES = {
   // logoH: HMC's stacked lockup stands taller than the wordmarks' 44 px (L-9)
-  hmc: { logo: 'assets/logos/hmc.png', logoH: 64, layout: 'ground', ground: '#1E345D', text: '#FFFFFF', sub: '#B8C4DA', button: '#0D7247', buttonText: '#FFFFFF', pill: '#0D7247', pillText: '#FFFFFF', band: '#FFFFFF', headline: '#FFFFFF', mark: '#0D7247', hairline: '#B8C4DA' },
-  laurier: { logo: 'assets/logos/laurier.png', layout: 'band', ground: '#330172', text: '#FFFFFF', sub: '#CFC3E0', button: '#EAA41E', buttonText: '#330172', pill: '#EAA41E', pillText: '#330172', band: '#FFFFFF', headline: '#FFFFFF', mark: '#EAA41E', hairline: '#CFC3E0' },
-  mohawk: { logo: 'assets/logos/mohawk.png', layout: 'ground', ground: '#030303', text: '#F4F4F4', sub: '#A3A3A3', button: '#FB9632', buttonText: '#030303', pill: '#991030', pillText: '#FFFFFF', band: '#FFFFFF', headline: '#F4F4F4', mark: '#FB9632', hairline: '#A3A3A3' },
-  interkom: { logo: 'assets/logos/interkom.png', layout: 'ground', ground: '#F7F3E2', text: '#242021', sub: '#5E5A56', button: '#242021', buttonText: '#F7F3E2', arrow: '#E85155', pill: '#242021', pillText: '#F7F3E2', band: '#FFFFFF', headline: '#242021', mark: '#E85155', hairline: '#5E5A56' },
+  hmc: { shield: ["#0D7247","#FFFFFF","#1E345D"], logo: 'assets/logos/hmc.png', logoH: 64, layout: 'ground', ground: '#1E345D', text: '#FFFFFF', sub: '#B8C4DA', button: '#0D7247', buttonText: '#FFFFFF', pill: '#0D7247', pillText: '#FFFFFF', band: '#FFFFFF', headline: '#FFFFFF', mark: '#0D7247', hairline: '#B8C4DA' },
+  laurier: { shield: ["#EAA41E","#330172","#FFFFFF"], logo: 'assets/logos/laurier.png', layout: 'band', ground: '#330172', text: '#FFFFFF', sub: '#CFC3E0', button: '#EAA41E', buttonText: '#330172', pill: '#EAA41E', pillText: '#330172', band: '#FFFFFF', headline: '#FFFFFF', mark: '#EAA41E', hairline: '#CFC3E0' },
+  mohawk: { shield: ["#FB9632","#991030","#030303"], logo: 'assets/logos/mohawk.png', layout: 'ground', ground: '#030303', text: '#F4F4F4', sub: '#A3A3A3', button: '#FB9632', buttonText: '#030303', pill: '#991030', pillText: '#FFFFFF', band: '#FFFFFF', headline: '#F4F4F4', mark: '#FB9632', hairline: '#A3A3A3' },
+  interkom: { shield: ["#E85155","#F7F3E2","#242021"], logo: 'assets/logos/interkom.png', layout: 'ground', ground: '#F7F3E2', text: '#242021', sub: '#5E5A56', button: '#242021', buttonText: '#F7F3E2', arrow: '#E85155', pill: '#242021', pillText: '#F7F3E2', band: '#FFFFFF', headline: '#242021', mark: '#E85155', hairline: '#5E5A56' },
   // Lennard: white logo band over orange; Warm Gray 11 is its only dark, on the pill, button and chips.
-  lennard: { logo: 'assets/logos/lennard.png', layout: 'band', ground: '#FF4C00', text: '#FFFFFF', sub: '#FFFFFF', button: '#FFFFFF', buttonText: '#706259', pill: '#706259', pillText: '#FFFFFF', band: '#FFFFFF', headline: '#FFFFFF', mark: '#FF4C00', hairline: '#FFFFFF', panel: '#FFFFFF', panelText: '#706259', panelHair: '#706259', panelButton: '#706259', panelButtonText: '#FFFFFF', smallWeight: 500, chip: '#FFFFFF', chipText: '#706259' },
+  lennard: { shield: ["#FF4C00","#D8D1CA","#706259"], logo: 'assets/logos/lennard.png', layout: 'band', ground: '#FF4C00', text: '#FFFFFF', sub: '#FFFFFF', button: '#FFFFFF', buttonText: '#706259', pill: '#706259', pillText: '#FFFFFF', band: '#FFFFFF', headline: '#FFFFFF', mark: '#FF4C00', hairline: '#FFFFFF', panel: '#FFFFFF', panelText: '#706259', panelHair: '#706259', panelButton: '#706259', panelButtonText: '#FFFFFF', smallWeight: 500, chip: '#FFFFFF', chipText: '#706259' },
 };
 
 export const CRAFTS = ['Print', 'Video', 'Motion', 'Screen'];
@@ -292,7 +292,7 @@ export const STEPS = {
   carry: { min: 0.35, hurryMin: 0.45, acceleration: 1.2, hurryAcceleration: 3, searchStep: 0.05, sample: 0.016, searchMax: 30, fillBlend: 0.3 },
   scroll: { ease: 0.12, settle: 0.4, threshold: 0.12, flick: 0.5, slop: 6, line: 16, velocityWindow: 80 },
   glide: { seconds: [2.6, 4.2], ease: 'cosine-ramp', ramp: 0.18, cruiseSwell: 0.05, distancePower: 0.5, fold: 0.5, open: 0.5, openWindow: 0.6,
-    zoomOut: 0.26, zoomLength: 160, overviewDistance: 300, controls: 8, samples: 2048, warmDelay: 0.1, warmGap: 0.05 },
+    secondsPhone: [2.6, 4.4], zoomOut: 0.26, zoomOutPhone: 0.1, zoomLength: 160, overviewDistance: 300, controls: 8, samples: 2048, warmDelay: 0.1, warmGap: 0.05 },
   pace: { hero: 0.9, handoff: 2.8, overview: 0.8, pushIn: 1.6, holdIn: 1.0, holdOpen: 0.4, holdOut: 0.6,
     legBase: 0.8, legPerVh: 0.006, legMax: 2.4, legX: 1.2, rush: 3.0, blast: 1.6, settle: 1.3 },
   ramp: 0.35, back: 0.6, hurry: 0.3, minMove: 0.3, cut: [0.18, 0.32],
@@ -310,6 +310,7 @@ export const EXPLORE = { in: 1.6, out: 0.9, most: 3, margin: 24, marginPhone: 12
 // A growing card's scale (1 = open) at which the stone mark hands over to the card's face, and at which its words come in.
 export const CARD_GROW = { face: [0.12, 0.3], words: [0.16, 0.42] };
 export const CARD_CLOSE = { time: 0.45, hit: 44, inset: 0, icon: 12, stroke: 1.6 };
+export const CARD_TAIL = { base: 28, basePhone: 24, gap: 2, len: 40, lenPhone: 16, reviewGap: 8, paintTime: 0.4 };
 // Copied from the hero's NAME table, entrance name renderer and EASE curves.
 export const FOOT_NAME = { radius: 0.95, near: 1.2, hop: 0.16, rise: 0.07, feel: 1.3, wave: 55, open: 9,
   spring: 240, damp: 12, kick: 26, red: C.red, dy: 1.4, far: -1e5, fallbackEm: 16,
@@ -1017,5 +1018,5 @@ export const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5
   cardDim: [0.35, 0.12], underFade: 0.4, sideFade: 0.1, bar: [190, 6], hint: 44 };
 // titleOut: the push-in share over which the map's title and kicker fade out (back in at the overview and in explore).
 // coastDraw: the share of the fall over which the coasts draw, from its first moments
-export const WORLD = { scrim: [150,190,.85], titleOut: [.3, .8], titleZoom: [1.15, 1.6], coastDraw: [.04, .72], card: { w:640, edge:32, cap:420, phoneShare:.82, phoneBottom:6, slack:2, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
+export const WORLD = { scrim: [150,190,.85], titleOut: [.3, .8], titleZoom: [1.15, 1.6], coastDraw: [.04, .72], card: { w:640, edge:32, phoneBottom:6, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
 export const PHONE_LAYOUT = { gap: 16, edge: 16, ctaShare: .14, headlineGap: 20, exploreGap: 8, exploreBottom: 8, exploreBack: 152, exploreTop: 172 };

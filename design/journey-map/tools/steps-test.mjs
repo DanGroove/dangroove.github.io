@@ -1,9 +1,9 @@
 // Node-only pace checks, including every neighbouring beat in both directions.
 import { BEATS, paceT, paceP, paceMove, paceAt } from '../pace.mjs';
 import { JOURNEY, stepsBuild, stepsFrame } from '../steps.mjs';
-import { tripResize, tripState, toScreen, SEQ, glideMove, lerp } from '../trip.mjs';
+import { tripResize, tripState, tripCardPlace, VIEW, toScreen, SEQ, glideMove, lerp } from '../trip.mjs';
 import { cardsBuild, cardsOverride, cardsClose, cardsList, cardsFrame } from '../cards.mjs';
-import { CARD_CLOSE, CAMERA, MAP, STEPS } from '../data.mjs';
+import { CARD_CLOSE, CAMERA, MAP, MARK, CARD_TAIL, STEPS } from '../data.mjs';
 import { exploreBuild, exploreResize, exploreApply, exploreActive, exploreEnd } from '../explore.mjs';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
@@ -126,11 +126,28 @@ console.log('ok: address cannot select Scroll; review only Depth; locked wheel n
 
 const cardContainer = new StepNode(); let navigations = 0; cardsBuild(cardContainer, () => navigations++);
 stepAssert(cardContainer.querySelectorAll('.c-close').length === 6, 'every motion card needs X');
+for (const c of cardsList()) {
+  const x = c.el.querySelector('.c-close'), top = c.el.querySelector('.c-top');
+  stepAssert(c.face.contains(x) && top.children.at(-1) === x, 'X must be the last control in the face header');
+  stepAssert(c.card.contains(c.face) && !c.card.contains(c.btn) && !c.card.contains(c.tail), 'shield and tail must stay outside the growing/tilting face');
+}
 const stopP = BEATS[2].P; JOURNEY.set(stopP); cardsList().forEach(c => c.H = 420); let cardState = tripState(stopP); cardsOverride(cardState, 0, false); cardsFrame(cardState); stepAssert(cardsClose(), 'card did not close');
 cardState = tripState(stopP); cardsOverride(cardState, CARD_CLOSE.time / 2, false); stepAssert(cardState.cardK[0] > 0 && cardState.cardK[0] < 1 && cardState.P === stopP, 'card halfway fold');
 cardState = tripState(stopP); cardsOverride(cardState, CARD_CLOSE.time / 2, false); stepAssert(cardState.cardK[0] === 0 && cardState.P === stopP, 'card fold changed P or failed');
 cardsFrame(cardState); cardsList()[0].btn.focus(); cardsList()[0].btn.fire('click'); cardState = tripState(stopP); cardsOverride(cardState, CARD_CLOSE.time, false); cardsFrame(cardState); stepAssert(cardState.cardK[0] === 1 && navigations === 0, 'closed stop mark must reopen locally');
 const cardX = cardsList()[0].el.querySelector('.c-close'); stepAssert(document.activeElement === cardX && cardX.focusOptions.preventScroll === true, 'reopened card must focus its X without scrolling');
+for(const[w,h]of [[1440,900],[390,844]]){
+  tripResize(w,h,w<=640?96:120);
+  cardsList().forEach((c,i)=>{c.W=tripCardPlace(c.H).w;c.place=tripCardPlace(c.H);VIEW.cards[i]=c.place;});
+  for(const direction of [1,-1])for(let ms=0;ms<=500;ms+=50){
+    const state=tripState(stopP);state.cardK.fill(0);state.cardK[0]=direction>0?ms/500:1-ms/500;cardsOverride(tripState(stopP),.05,false);cardsFrame(state,[15,-15],[0,0]);
+    const c=cardsList()[0],m=c.tail.style.transform.slice(7,-1).split(',').map(Number),tip=[m[0]+m[2]/2+m[4],m[1]+m[3]/2+m[5]],size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*state.cam.s));
+    stepAssert(Math.abs(Math.hypot(...tip)-size*(MARK.radius+MARK.rim/2)/MARK.box-CARD_TAIL.gap)<1e-7,'tail left rim during open/close/tilt');
+    stepAssert(c.btn.style.opacity===1,'opening must never fade the shield');stepAssert(!c.el.style.transform.includes('scale'),'article must not scale its shield');
+  }
+}
+tripResize(1440,900,120);VIEW.cards=[];
+console.log('ok: ORIGIN 50 ms desktop/phone open and reverse-close recording: tail stays on rim through tilt; shield never scales with the face or fades; X is inside the header');
 JOURNEY.next(); stepAssert(JOURNEY.moving, 'mid-move X fixture must be moving'); cardX.focus(); cardX.fire('click'); stepAssert(document.activeElement !== cardsList()[0].btn, 'mid-move X focused departed stop mark'); stepAssert(cardsClose(0) === false, 'X must be ignored mid-move');
 JOURNEY.set(stopP);
 // D3: model the browser's focus-on-pointerdown and loss when a face becomes inert.

@@ -3,7 +3,7 @@ import { strict as assert } from 'node:assert';
 import { BEATS } from '../pace.mjs';
 import { STEPS, STOPS } from '../data.mjs';
 import { JOURNEY, stepsBuild, stepsFrame } from '../steps.mjs';
-import { GLIDES, glideSeconds, tripResize, tripState } from '../trip.mjs';
+import { GLIDES, glideSeconds, tripResize, tripState, tripCardPlace, VIEW } from '../trip.mjs';
 
 class MotionNode {
   constructor(tag = 'div') {
@@ -36,6 +36,8 @@ const failures = [], gate = (condition, message) => { if (!condition && !failure
 console.log('view | move | measured seconds | centre peak px/s | five-point peak px/s | centre acceleration px/s^2');
 for (const [w,h,bar] of [[1440,900,120],[390,844,96]]) {
   tripResize(w,h,bar);
+  // Content-height fixtures exercise the new pair anchors, not the old 45/55 fallback. These are not browser measurements.
+  VIEW.cards = (w <= 640 ? [355,400,355,410,390,470] : [360,420,370,420,390,440]).map(height => tripCardPlace(height));
   const points = [[.5,.5],[.25,.25],[.75,.25],[.25,.75],[.75,.75]].map(p => [p[0]*w,p[1]*h]);
   for (let i = 0; i < GLIDES.length; i++) for (const direction of [1,-1]) {
     const g = GLIDES[i], a = BEATS[i+1], b = BEATS[i+2], from = direction > 0 ? a : b, to = direction > 0 ? b : a;
@@ -82,6 +84,8 @@ const carryResults = [], carryFailures = [];
 const carryGate = (ok, label) => { if (!ok && !carryFailures.includes(label)) carryFailures.push(label); };
 for (const [w,h,bar] of [[1440,900,120],[390,844,96]]) {
   tripResize(w,h,bar);
+  // Content-height fixtures exercise the new pair anchors, not the old 45/55 fallback. These are not browser measurements.
+  VIEW.cards = (w <= 640 ? [355,400,355,410,390,470] : [360,420,370,420,390,440]).map(height => tripCardPlace(height));
   const points = [[.5,.5],[.25,.25],[.75,.25],[.25,.75],[.75,.75]].map(p => [p[0]*w,p[1]*h]);
   const flow = (a,b) => points.map(p => [(b.tx+(p[0]-a.tx)*b.s/a.s-p[0])/.016,(b.ty+(p[1]-a.ty)*b.s/a.s-p[1])/.016]);
   for (let i=0;i<GLIDES.length;i++) for (const direction of [1,-1]) {
@@ -145,6 +149,8 @@ for(const view of ['1440x900','390x844'])for(const kind of ['Back','hurry','Next
 // the uninterrupted curve in this contradictory case; never add a final jolt.
 for(const [w,h,bar] of [[1440,900,120],[390,844,96]]){
   tripResize(w,h,bar);
+  // Content-height fixtures exercise the new pair anchors, not the old 45/55 fallback. These are not browser measurements.
+  VIEW.cards = (w <= 640 ? [355,400,355,410,390,470] : [360,420,370,420,390,440]).map(height => tripCardPlace(height));
   for(let i=0;i<GLIDES.length;i++){
     const from=BEATS[i+1],D=glideSeconds(GLIDES[i]),start=Math.round(D*.95/.016)*16;
     const begin=()=>{JOURNEY.set(from.P);advance(0);JOURNEY.next();for(let t=0;t<start;t+=16)advance(16);};

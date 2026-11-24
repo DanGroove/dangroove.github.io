@@ -1,10 +1,10 @@
-// Stop marks that grow into cards. Each card is one article: the standing stone at rest, the card when open.
-import { STOPS, PALETTES, COPY, CRAFTS, MAP, STEPS, DEPTH, CARD_CLOSE, CARD_GROW, MARK, WORLD } from './data.mjs';
-import { shieldSvg } from './art.mjs';
-import { VIEW, toScreen, smooth, easeIO, lerp } from './trip.mjs';
+// The fixed map shield, its growing callout and the join are one article throughout.
+import { STOPS, PALETTES, COPY, CRAFTS, MAP, DEPTH, CARD_CLOSE, CARD_GROW, CARD_TAIL, MARK, WORLD } from './data.mjs';
+import { shieldSvg, cardTailSvg } from './art.mjs';
+import { VIEW, STOP_U, tripCardPlace, toScreen, smooth, easeIO, lerp } from './trip.mjs';
 import { JOURNEY } from './steps.mjs';
 
-const CD = { list: [], W: 640, H: 420, craft: null, onGo: null, rm: false, closed: null, last: null };
+const CD = { list: [], W: 640, craft: null, onGo: null, rm: false, closed: null, last: null, dt: 0 };
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 export const arrowSvg = '<svg class="arr" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h11M8 1l4 4l-4 4"/></svg>';
 
@@ -17,6 +17,7 @@ export function cardsBuild(container, onGo, rm = false) {
     const p = PALETTES[s.palette], cp = s.copy, a = document.createElement('article');
     a.className = `stop lay-${p.layout}${p.panel ? ' has-panel' : ''}`; a.id = `stop-${s.id}`; a.setAttribute('aria-labelledby', `h-${s.id}`);
     const vars = { '--g': p.ground, '--tx': p.text, '--sub': p.sub, '--btn': p.button, '--btx': p.buttonText, '--pill': p.pill, '--ptx': p.pillText, '--band': p.band, '--hd': p.headline, '--mk': p.mark, '--hair': p.hairline };
+    p.shield.forEach((v, j) => { vars['--shield-' + 'abc'[j]] = v; });
     if (p.panel) Object.assign(vars, { '--panel': p.panel, '--panel-text': p.panelText, '--panel-hair': p.panelHair, '--panel-btn': p.panelButton, '--panel-btx': p.panelButtonText });
     if (p.arrow) vars['--arrow'] = p.arrow;
     if (p.smallWeight !== undefined) vars['--sw'] = p.smallWeight;
@@ -27,34 +28,39 @@ export function cardsBuild(container, onGo, rm = false) {
     const piece = cp.piece ? `<img src="${cp.piece}" alt="${esc(cp.caption)}">` : `<div class="c-empty">${COPY.pieceToCome}</div>`;
     const steps = cp.steps ? `<ol class="c-steps">${cp.steps.map(t => `<li>${esc(t)}</li>`).join('')}</ol>` : '';
     a.innerHTML = `<button class="st-btn" type="button" aria-label="${esc(COPY.stoneGo.replace('{name}', s.name).replace('{dates}', s.dates))}">${shieldSvg()}</button>
-<div class="c-sh" aria-hidden="true"></div><div class="face"><div class="c-in">
-<header class="c-top"><img class="c-logo" src="${p.logo}" alt="${esc(s.name)}"><span class="c-pill">${esc(s.dates)}</span></header>
+${rm ? '' : cardTailSvg()}<div class="c-card"><div class="c-sh" aria-hidden="true"></div><div class="face"><div class="c-in">
+<header class="c-top"><img class="c-logo" src="${p.logo}" alt="${esc(s.name)}"><span class="c-pill">${esc(s.dates)}</span>${rm ? '' : `<button class="c-close" type="button" aria-label="${esc(COPY.cardClose.replace('{name}', s.name))}"><i aria-hidden="true"></i></button>`}</header>
 <h2 class="c-h" id="h-${s.id}">${esc(cp.headline)}</h2><div class="c-panel"><div class="c-body"><div class="c-main"><p class="c-role">${esc(s.role)}</p><p class="c-para">${esc(cp.para)}</p>${steps}
-<p class="c-kick">${COPY.took}</p><p class="c-took">${esc(cp.took)}</p></div>
+ </div><div class="c-take"><p class="c-kick">${COPY.took}</p><p class="c-took">${esc(cp.took)}</p></div>
 <div class="c-side"><figure class="c-piece">${piece}${cp.caption ? `<figcaption>${esc(cp.caption)}</figcaption>` : ''}</figure></div></div>
 <div class="c-foot"><ul class="c-crafts">${CRAFTS.map(c => `<li class="${s.crafts.includes(c) ? 'lit' : ''}"><i></i>${c}</li>`).join('')}</ul>
-<button class="c-btn" type="button" aria-label="${esc(COPY.caseStudy + ': ' + s.name)}">${COPY.caseStudy}${arrowSvg}</button></div></div></div></div>${rm ? '' : `<button class="c-close" type="button" aria-label="${esc(COPY.cardClose.replace('{name}', s.name))}"><i aria-hidden="true"></i></button>`}`;
+<button class="c-btn" type="button" aria-label="${esc(COPY.caseStudy + ': ' + s.name)}">${COPY.caseStudy}${arrowSvg}</button></div></div></div></div></div>`;
     a.querySelector('.st-btn').addEventListener('click', () => {
       if (CD.closed?.i === i && CD.last?.P === CD.closed.P && !JOURNEY.moving) { CD.closed = { ...CD.closed, from: CD.closed.k, to: 1, elapsed: 0 }; CD.list[i].reopenFocus = true; return; }
       CD.onGo(i);
     });
     a.querySelector('.c-close')?.addEventListener('click', () => cardsClose(i));
     container.appendChild(a);
-    CD.list.push({ el: a, face: a.querySelector('.face'), shadow: a.querySelector('.c-sh'), inn: a.querySelector('.c-in'), btn: a.querySelector('.st-btn'), fill: a.querySelector('.st-fill'), glow: a.querySelector('.st-glow'), stop: s, state: '', tilt: [0, 0, 0, 0] });
+    CD.list.push({ el: a, card: a.querySelector('.c-card'), tail: a.querySelector('.c-tail'), face: a.querySelector('.face'), shadow: a.querySelector('.c-sh'), inn: a.querySelector('.c-in'), btn: a.querySelector('.st-btn'), fill: a.querySelector('.st-fill'), boss: a.querySelector('.st-boss-paint'), glow: a.querySelector('.st-glow'), mini: document.getElementById('mini')?.querySelectorAll('.mm-stop')[i], stop: s, state: '', paint: 0, tilt: [0, 0, 0, 0] });
   });
-  if (!rm) document.fonts?.ready.then(() => cardsResize(CD.steps));
 }
 export function cardsResize(steps = false) {
   CD.steps = steps;
-  const Q = WORLD.card; CD.W = VIEW.phone ? VIEW.w : Math.min(Q.w, VIEW.w - Q.edge);
-  const cap = VIEW.phone ? Math.round(VIEW.h * Q.phoneShare) - (steps ? STEPS.nav.bar : 0) : steps ? Math.max(1, Math.min(Q.cap, VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h - Q.gap * 2)) : Q.cap;
-  CD.list.forEach(c => { c.el.style.width = CD.W + 'px'; c.el.style.height = 'auto'; c.inn.style.minHeight = '0'; c.H = Math.min(cap, c.inn.scrollHeight + Q.slack); c.el.style.height = c.H + 'px'; cardsDepthConfig(c); });
-
+  CD.W = tripCardPlace(0, steps).w;
+  const review = document.querySelector('[data-review]'), reviewFloor = review && !review.hidden && getComputedStyle(review).display !== 'none' ? review.getBoundingClientRect().bottom + CARD_TAIL.reviewGap : WORLD.card.gap;
+  CD.list.forEach((c, i) => {
+    c.W = CD.W; c.el.style.width = c.W + 'px'; c.el.style.height = '0px'; c.card.style.width = c.W + 'px'; c.card.style.height = 'auto'; c.face.style.position = 'relative'; c.inn.style.minHeight = '0';
+    c.el.classList.toggle('c-compact', VIEW.phone || VIEW.h <= 720);
+    c.H = c.inn.scrollHeight;
+    c.place = tripCardPlace(c.H, steps, reviewFloor);
+    VIEW.cards[i] = c.place; c.card.style.height = c.H + 'px'; cardsDepthConfig(c);
+    // Layout is observed only at resize/fonts/image boundaries, never in the frame callback.
+  });
 }
 function cardsDepthConfig(c) {
   const cfg = DEPTH.card, lift = !!VIEW.depth && !VIEW.phone;
   c.depthConfig = lift ? `${cfg.perspective}/${cfg.blur}/${cfg.spread}/${cfg.radius}` : '';
-  c.el.style.perspective = lift ? cfg.perspective + 'px' : '';
+  c.card.style.perspective = lift ? cfg.perspective + 'px' : '';
   c.shadow.style.boxShadow = `0 0 ${cfg.blur}px ${cfg.spread}px var(--shade)`; c.shadow.style.borderRadius = cfg.radius + 'px';
   c.depthPending = false;
 }
@@ -68,6 +74,7 @@ export function cardsClose(index = CD.last?.i) {
   return true;
 }
 export function cardsOverride(st, dt, moving) {
+  CD.dt = dt;
   const closed = CD.closed; let changed = false;
   if (closed) {
     if (st.kind !== 'hold' || st.i !== closed.i || (closed.leaving && !moving && st.P === closed.P)) { CD.closed = null; changed = true; }
@@ -83,24 +90,25 @@ export function cardsOverride(st, dt, moving) {
 }
 
 export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
-  const W = CD.W, op = smooth(.5, 1, st.handoffT) * (1 - smooth(0, .4, st.blastT) * (1 - (st.exploreK || 0)));
+  const op = smooth(.5, 1, st.handoffT) * (1 - smooth(0, .4, st.blastT) * (1 - (st.exploreK || 0)));
   const stonePx = Math.max(MARK.min, Math.min(MARK.max, MARK.k * st.cam.s));
-  const stepTop = VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h;
   CD.list.forEach((c, i) => {
     const close = c.el.querySelector('.c-close');
     if (close) {
       if (JOURNEY.moving && document.activeElement === close) document.getElementById('go')?.querySelector('.go-next')?.focus({ preventScroll: true });
-      close.inert = JOURNEY.moving;
+      close.inert = JOURNEY.moving || st.cardK[i] < .96;
     }
-    const H = c.H, oc = VIEW.phone ? [VIEW.w / 2, VIEW.h - H / 2 - WORLD.card.phoneBottom - (CD.steps ? STEPS.nav.bar : 0)] : [VIEW.w / 2, CD.steps ? Math.max(WORLD.card.gap + H / 2, Math.min(VIEW.h / 2 - WORLD.card.gap, stepTop - WORLD.card.gap - H / 2)) : VIEW.h / 2 - WORLD.card.gap];
+    const W = c.W || CD.W, H = c.H, oc = c.place || { x: VIEW.w / 2, y: VIEW.h / 2 };
     const e = st.cardK[i], p = toScreen(st, MAP.waypoints[c.stop.w]);
-    const k0 = stonePx / (H * .95), k = Math.pow(k0, 1 - e);
-    const cx = p[0] + (oc[0] - p[0]) * e, ry = p[1] - stonePx * .5 - MARK.stand, cy = ry + (oc[1] - ry) * e;
-    c.el.style.transform = `translate(${(cx - W * k / 2).toFixed(2)}px,${(cy - H * k / 2).toFixed(2)}px) scale(${k.toFixed(5)})`;
+    const k0 = stonePx / Math.max(W, H), k = Math.pow(k0, 1 - e), py = p[1] - stonePx / 2 - MARK.stand;
+    const cx = lerp(p[0], oc.x, e), cy = lerp(py, oc.y, e);
+    c.el.style.transform = `translate(${p[0]}px,${py}px)`;
+    c.card.style.transform = `translate(${cx - W * k / 2 - p[0]}px,${cy - H * k / 2 - py}px) scale(${k})`;
+    c.btn.style.transform = `translate(-50%,-50%) scale(${stonePx / MARK.box})`;
     const lit = CD.craft ? CD.craft[i] : false;
     c.el.style.opacity = op * (CD.craft && !lit ? .55 : 1);
     // Size, not the score, hands the mark over to the card: the face and its words come in together as it grows (no flat slab).
-    c.btn.style.opacity = 1 - smooth(...CARD_GROW.face, k);
+    c.btn.style.opacity = 1;
     c.face.style.opacity = smooth(...CARD_GROW.face, k);
     const cfg = DEPTH.card, lift = !!VIEW.depth && !VIEW.phone;
     // Apply live style configuration after this frame callback; animation only writes transform/opacity.
@@ -116,8 +124,12 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     c.shadow.style.opacity = lift ? cfg.shadow * e : 0;
     c.shadow.style.transform = `translate(${-sx / cfg.shadowShare}px,${cfg.drop * e - sy / cfg.shadowShare}px)`;
     c.inn.style.opacity = smooth(...CARD_GROW.words, k);
-    c.fill.style.opacity = st.visited[i] || lit ? 1 : 0;
+    const paint = st.visited[i] && (e > 0 || st.u >= STOP_U[i]) || lit ? 1 : 0, step = CD.dt / CARD_TAIL.paintTime;
+    c.paint = Math.max(0, Math.min(1, c.paint + Math.sign(paint - c.paint) * Math.min(step, Math.abs(paint - c.paint))));
+    c.fill.style.opacity = c.paint; c.boss.style.opacity = c.paint;
     c.glow.style.opacity = lit ? 1 : 0;
+    if (c.mini) c.mini.style.setProperty('--paint', c.paint);
+    if (c.tail) cardsTailFrame(c, { W, H, k, cx: cx - p[0], cy: cy - py, stonePx, rx, ryTilt, sx, sy, lift });
     const state = e > .96 ? 'open' : e < .02 ? 'rest' : 'moving';
     if (state !== c.state) { c.state = state; c.el.dataset.state = state; c.face.inert = state !== 'open'; }
     // A stone mark is in the tab order only at rest and on screen (the keyboard never lands on a stop it cannot see).
@@ -126,5 +138,32 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     if (c.reopenFocus && (JOURNEY.moving || st.kind !== 'hold' || st.i !== i)) c.reopenFocus = false;
     if (c.reopenFocus && state === 'open') { c.reopenFocus = false; c.el.querySelector('.c-close').focus({ preventScroll: true }); }
   });
+}
+
+// Project the actual face edge through its existing tilt, without a DOM layout read.
+function cardsTailFrame(c, f) {
+  const { W, H, k, cx, cy, stonePx, rx, ryTilt, sx, sy, lift } = f, cfg = DEPTH.card;
+  const project = (x, y) => {
+    const a = rx * Math.PI / 180, b = ryTilt * Math.PI / 180, z = -x * Math.sin(b), yy = y * Math.cos(a) - z * Math.sin(a), zz = y * Math.sin(a) + z * Math.cos(a);
+    const perspective = lift ? cfg.perspective / (cfg.perspective - zz) : 1;
+    return [cx + (x * Math.cos(b) + sx) * perspective * k, cy + (yy + sy) * perspective * k];
+  };
+  const base = VIEW.phone ? CARD_TAIL.basePhone : CARD_TAIL.base;
+  const corners = [[-W/2,-H/2],[W/2,-H/2],[W/2,H/2],[-W/2,H/2]].map(p => project(...p)), centre = project(0,0), ray = centre.map(v => -v), cross = (a,b) => a[0]*b[1]-a[1]*b[0];
+  let edge = VIEW.phone ? 0 : 3, along = .5, nearest = Infinity;
+  for(let i=0;i<4;i++) {
+    const a = corners[i], delta = corners[(i+1)%4].map((v,j) => v-a[j]), offset = a.map((v,j) => v-centre[j]), den = cross(ray,delta);
+    if(Math.abs(den)<1e-9) continue;
+    const travel = cross(offset,delta)/den, t = cross(offset,ray)/den;
+    if(travel>=0 && travel<nearest && t>=0 && t<=1) { edge=i;along=t;nearest=travel; }
+  }
+  const a = corners[edge], delta = corners[(edge+1)%4].map((v,j) => v-a[j]), half = base / (2 * (edge%2 ? H : W));
+  let b0 = a.map((v,j) => v + delta[j]*(along-half)), b1 = a.map((v,j) => v + delta[j]*(along+half));
+  const mid = [(b0[0] + b1[0]) / 2, (b0[1] + b1[1]) / 2], distance = Math.hypot(...mid), rim = stonePx * (MARK.radius + MARK.rim / 2) / MARK.box + CARD_TAIL.gap;
+  const tip = distance ? mid.map(v => v / distance * rim) : [rim, 0];
+  if (distance < rim) { b0 = tip; b1 = tip; }
+  const dx = b1[0] - b0[0], dy = b1[1] - b0[1];
+  c.tail.style.transform = `matrix(${tip[0] - b0[0] - dx / 2},${tip[1] - b0[1] - dy / 2},${dx},${dy},${b0[0]},${b0[1]})`;
+  c.tail.style.opacity = c.face.style.opacity;
 }
 export const cardsList = () => CD.list;

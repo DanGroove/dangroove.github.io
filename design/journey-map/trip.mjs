@@ -1,5 +1,5 @@
 // Scroll progress, acts, camera, traveller. Everything here is a pure function of progress P (in viewport heights).
-import { ACTS, CAMERA, HOLD, MAP, STOPS, COPY, DEPTH, FIND_PLAY, LABELS, WORLD, STEPS, NOVA } from './data.mjs';
+import { ACTS, CAMERA, HOLD, MAP, STOPS, COPY, DEPTH, FIND_PLAY, LABELS, WORLD, STEPS, NOVA, MARK, CARD_TAIL } from './data.mjs';
 import { TRAIL, polyLen, COAST_A, COAST_B, onLand, miniMapSvg, mapLabelRows, mapLabelBox } from './art.mjs';
 
 export const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -76,7 +76,16 @@ export const dateAt = P => { if (P <= PIECES[0][0]) return PIECES[0][2]; for (co
 export const progressForDate = d => { for (const q of PIECES) { const lo = Math.min(q[2], q[3]), hi = Math.max(q[2], q[3]); if (d >= lo && d <= hi && q[3] !== q[2]) return lerp(q[0], q[1], (d - q[2]) / (q[3] - q[2])); } return d <= PIECES[0][2] ? PIECES[0][0] : PIECES[PIECES.length - 1][1]; };
 
 // ---- view ----
-export const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1, depth: 1, footerY: null };
+export const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1, depth: 1, footerY: null, cards: [] };
+export function tripCardPlace(height, steps = true, reviewFloor = WORLD.card.gap) {
+  const Q = WORLD.card, stone = Math.max(MARK.min, Math.min(MARK.max, MARK.k * VIEW.sT * CAMERA.holdZoom)), rim = stone * (MARK.radius + MARK.rim / 2) / MARK.box;
+  const width = VIEW.phone ? VIEW.w : Math.min(Q.w, VIEW.w - 2 * Q.edge - stone / 2 - rim - CARD_TAIL.len);
+  const floor = VIEW.phone ? VIEW.h - Q.phoneBottom - (steps ? STEPS.nav.bar : 0) : steps ? VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h - Q.gap : VIEW.h - Q.gap;
+  const left = VIEW.phone ? 0 : (VIEW.w - (stone / 2 + rim + CARD_TAIL.len + width)) / 2;
+  const top = VIEW.phone ? floor - height : Math.max(reviewFloor, Math.min(VIEW.h / 2 - Q.gap - height / 2, floor - height));
+  const sx = VIEW.phone ? VIEW.w / 2 : left + stone / 2, sy = VIEW.phone ? top - CARD_TAIL.lenPhone - rim : top + height / 2;
+  return { w: width, x: VIEW.phone ? VIEW.w / 2 : sx + rim + CARD_TAIL.len + width / 2, y: top + height / 2, sx, sy };
+}
 export function tripResize(w, h, tlH) {
   glideCache.clear();
   const m = w <= CAMERA.phoneMax ? 16 : 28;
@@ -99,6 +108,11 @@ export function tripWarmGlides(P) {
 }
 const camOverview = () => ({ cx: MAP.w / 2, cy: MAP.h / 2, s: VIEW.s0, ax: VIEW.ox + MAP.w / 2 * VIEW.s0, ay: VIEW.oy + MAP.h / 2 * VIEW.s0 });
 const camTrip = (u, zoom) => { const c = smoothCenter(u); return { cx: c[0], cy: c[1], s: VIEW.sT * zoom, ax: CAMERA.anchorX * VIEW.w, ay: CAMERA.anchorY * VIEW.h }; };
+export function tripStopCamera(i, zoom = CAMERA.holdZoom) {
+  const pos = VIEW.cards[i]; if (!pos) return camTrip(STOP_U[i], zoom);
+  const p = MAP.waypoints[STOPS[i].w], size = Math.max(MARK.min, Math.min(MARK.max, MARK.k * VIEW.sT * zoom));
+  return { cx: p[0], cy: p[1], s: VIEW.sT * zoom, ax: pos.sx, ay: pos.sy + size / 2 + MARK.stand };
+}
 const camMix = (a, b, t) => ({ cx: lerp(a.cx, b.cx, t), cy: lerp(a.cy, b.cy, t), s: Math.exp(lerp(Math.log(a.s), Math.log(b.s), t)), ax: lerp(a.ax, b.ax, t), ay: lerp(a.ay, b.ay, t) });
 const camFinal = c => ({ s: c.s, tx: c.ax - c.cx * c.s, ty: c.ay - c.cy * c.s, ax: c.ax, ay: c.ay });
 
@@ -125,14 +139,14 @@ const glideRests = [seqOf('overview').a + ACTS.overview / 2, ...STOPS.map((s, i)
 export const GLIDES = glideRests.slice(1).map((b, i) => ({ a: glideRests[i], b, i,
   u0: i ? STOP_U[i - 1] : 0, u1: i < STOPS.length ? STOP_U[i] : X_U }));
 const glideDistances = GLIDES.map(g => g.i ? g.u1 - g.u0 : STEPS.glide.overviewDistance);
-export const glideSeconds = g => lerp(...STEPS.glide.seconds, ((glideDistances[g.i] - Math.min(...glideDistances)) / (Math.max(...glideDistances) - Math.min(...glideDistances))) ** STEPS.glide.distancePower);
+export const glideSeconds = g => lerp(...(VIEW.phone ? STEPS.glide.secondsPhone : STEPS.glide.seconds), ((glideDistances[g.i] - Math.min(...glideDistances)) / (Math.max(...glideDistances) - Math.min(...glideDistances))) ** STEPS.glide.distancePower);
 export const glideMove = (P0, P1) => {
   const lo = Math.min(P0, P1), hi = Math.max(P0, P1);
   const g = GLIDES.find(g => lo >= g.a - 1e-7 && hi <= g.b + 1e-7 && hi > lo);
   return g ? { P0, P1, D: glideSeconds(g) * (hi - lo) / (g.b - g.a), glide: true } : null;
 };
 const glideCache = new Map();
-const glideView = (g, end) => g.i === 0 && !end ? camOverview() : g.i === STOPS.length && end ? tripXCamera() : camTrip(end ? g.u1 : g.u0, CAMERA.holdZoom);
+const glideView = (g, end) => g.i === 0 && !end ? camOverview() : g.i === STOPS.length && end ? tripXCamera() : tripStopCamera(end ? g.i : g.i - 1);
 function glideRaw(g, q) {
   const A = glideView(g, false), B = glideView(g, true), G = STEPS.glide;
   let centre;
@@ -145,13 +159,13 @@ function glideRaw(g, q) {
     for (let n = points.length - 1; n > 0; n--) for (let i = 0; i < n; i++) points[i] = points[i].map((v, k) => lerp(v, points[i + 1][k], q));
     centre = points[0];
   }
-  const depth = VIEW.depth && g.i ? Math.log(CAMERA.holdZoom / (1 - G.zoomOut)) * Math.min(1, (g.u1 - g.u0) * ACTS.legPerUnit / G.zoomLength) : 0;
+  const depth = VIEW.depth && g.i ? Math.log(CAMERA.holdZoom / (1 - (VIEW.phone ? G.zoomOutPhone : G.zoomOut))) * Math.min(1, (g.u1 - g.u0) * ACTS.legPerUnit / G.zoomLength) : 0;
   return camFinal({ cx: centre[0], cy: centre[1], s: Math.exp(lerp(Math.log(A.s), Math.log(B.s), q) - depth * 4 * q * (1 - q)), ax: lerp(A.ax, B.ax, q), ay: lerp(A.ay, B.ay, q) });
 }
 function glidePath(g, distance) {
   if (distance <= 0) return 0;
   if (distance >= 1) return 1;
-  const key = [g.i, VIEW.w, VIEW.h, VIEW.s0, VIEW.depth].join('/');
+  const key = [g.i, VIEW.w, VIEW.h, VIEW.s0, VIEW.depth, ...VIEW.cards.flatMap(p => [p.sx, p.sy])].join('/');
   let table = glideCache.get(key);
   if (!table) {
     // Integrate the largest instantaneous screen velocity at the five test points.
@@ -211,7 +225,7 @@ export function tripState(P) {
     const z = smooth(HOLD.zoomIn[0], HOLD.zoomIn[1], st.t) * (1 - smooth(HOLD.zoomOut[0], HOLD.zoomOut[1], st.t));
     st.zoom = 1 + (CAMERA.holdZoom - 1) * z; st.dim = lerp(1, CAMERA.holdDim, z);
     st.cardK[seg.i] = smooth(HOLD.open[0], HOLD.open[1], st.t) * (1 - smooth(HOLD.fold[0], HOLD.fold[1], st.t));
-    cam = camTrip(st.u, st.zoom);
+    cam = tripStopCamera(seg.i, st.zoom);
   } else if (seg.kind === 'leg' || seg.kind === 'legX') {
     const u0 = STOP_U[seg.i], u1 = seg.kind === 'leg' ? STOP_U[seg.i + 1] : X_U;
     const arc = VIEW.depth ? DEPTH.arc * Math.min(1, seg.len / DEPTH.arcLen) * Math.sin(Math.PI * st.t) ** 2 : 0;

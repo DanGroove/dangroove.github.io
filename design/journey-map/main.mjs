@@ -42,10 +42,11 @@ let P = 0, dirty = true;
 const goStop = i => { if (RM) { cardsList()[i].el.scrollIntoView({ behavior: 'auto', block: 'start' }); return; } JOURNEY.go(STOPS[i].id, { jump: exploreActive() }); };
 
 tripBuild({ svg: SVG, cam: $('cam'), sea: $('b-sea'), fill: $('b-fill'), coastG: $('b-coast'), detail: $('b-detail'), finds: $('finds'), done: $('trail-done'), x: $('fxg'), caption: document.querySelector('.caption'), cue: document.querySelector('.cue'), mini: $('mini') });
-$('mini').querySelectorAll('.mm-stop').forEach(b => { b.style.setProperty('--mk', PALETTES[STOPS[+b.dataset.i].palette].mark); b.addEventListener('click', () => goStop(+b.dataset.i)); });
+$('mini').querySelectorAll('.mm-stop').forEach(b => { const p = PALETTES[STOPS[+b.dataset.i].palette]; b.style.setProperty('--mk', p.mark); p.shield.forEach((v, j) => b.style.setProperty('--shield-' + 'abc'[j], v)); b.addEventListener('click', () => goStop(+b.dataset.i)); });
 starsBuild(CANVAS);
 depthBuild($('deep'), $('air'), $('sky'), RM);
 cardsBuild(RM ? $('rmcards') : $('cards'), goStop, RM);
+cardsList().forEach(c => c.el.querySelectorAll('img').forEach(img => img.addEventListener('load', () => { if (!RM) { cardsResize(true); dirty = true; } })));
 tlBuild(TLEL, { jump: goStop, scrub: p => JOURNEY.set(p), moving: () => JOURNEY.moving }, RM);
 footerBuild($('ft'), RM); footerBuildX($('fxg'), RM, $('nova'), $('nova-hit'));
 if (RM) $('rmcards').appendChild(TLEL);
@@ -115,5 +116,6 @@ function frame(ts) {
   raf = requestAnimationFrame(frame);
 }
 document.addEventListener('visibilitychange', () => { stepsPause(); mainTs = null; if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else if (!raf) raf = requestAnimationFrame(frame); });
+document.fonts?.addEventListener('loadingdone', resize);
 const start = () => { resize(); raf = requestAnimationFrame(frame); };
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();

@@ -1,10 +1,10 @@
 // Analytic boxes and recording nodes only. No browser or font rasterizer is involved.
 import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
-import { CAMERA, COPY, NOVA, PHONE_LAYOUT, STEPS, LABELS, EXPLORE } from '../data.mjs';
+import { CAMERA, COPY, NOVA, PHONE_LAYOUT, STEPS, LABELS, EXPLORE, STOPS, MARK, MAP, CARD_TAIL, WORLD } from '../data.mjs';
 import { footerPhoneLayout, footerBuild, footerBuildX, footerResize, footerFrame } from '../footer.mjs';
 import { stepsExploreBoxes } from '../steps.mjs';
-import { tripResize, tripState, toScreen, VIEW } from '../trip.mjs';
+import { tripResize, tripState, tripCardPlace, progressForStop, toScreen, VIEW } from '../trip.mjs';
 import { exploreBuild, exploreResize, exploreStart, exploreApply, exploreReset } from '../explore.mjs';
 import { BEATS } from '../pace.mjs';
 
@@ -66,3 +66,21 @@ for(let ms=0;ms<=600;ms++){
 }
 exploreReset();console.log('ok: D3 360x640 entry row stays transparent through 400 ms and fades over 200 ms; no overlapping analytic frame above footer opacity .2 in the first 600 ms');
 console.log('ok: resize reads/restores hidden end controls; shared analytic boxes cover taller bars and all three phones; no frame layout reads');
+
+// ORIGIN: independent content-height fixtures, not font/browser measurements.
+for(const[w,h]of [[1440,900],[1280,720],[1024,600],[820,1180],[390,844],[412,730],[360,640]]){
+  tripResize(w,h,w<=640?96:120);
+  const heights=w<=640?[355,400,355,410,390,470]:h<=720?[320,350,330,360,345,380]:[360,420,370,420,390,440];
+  VIEW.cards=heights.map(height=>tripCardPlace(height,true,40));
+  const stone=Math.max(MARK.min,Math.min(MARK.max,MARK.k*VIEW.sT*CAMERA.holdZoom)),rim=stone*(MARK.radius+MARK.rim/2)/MARK.box;
+  STOPS.forEach((stop,i)=>{
+    const pair=VIEW.cards[i],p=toScreen(tripState(progressForStop(i)),MAP.waypoints[stop.w]);
+    assert.ok(Math.abs(p[0]-pair.sx)<1e-7&&Math.abs(p[1]-stone/2-MARK.stand-pair.sy)<1e-7,'held camera must pin the shield centre exactly');
+    if(w<=640){assert.ok(Math.abs(pair.y-heights[i]/2-pair.sy-rim-CARD_TAIL.lenPhone)<1e-7);assert.ok(pair.sy-stone/2>=40,'phone fixture clears review switch');}
+    else{const left=pair.sx-stone/2,right=pair.x+pair.w/2;assert.ok(Math.abs(left-(w-right))<1e-7,'pair centred across screen');assert.ok(left>=WORLD.card.edge);assert.ok(Math.abs(pair.x-pair.w/2-pair.sx-rim-CARD_TAIL.len)<1e-7);}
+  });
+}
+const old=VIEW.cards.map(p=>({...p}));tripResize(390,844,96);VIEW.cards=STOPS.map(()=>tripCardPlace(390));
+const before=tripState(progressForStop(0)-1).cam;VIEW.cards[0]={...VIEW.cards[0],sx:VIEW.cards[0].sx+20,sy:VIEW.cards[0].sy+30};
+const changed=tripState(progressForStop(0)-1).cam;assert.notDeepEqual(before,changed,'glide cache must include pair anchors');VIEW.cards=old;
+console.log('ok: ORIGIN analytic pair fixtures at seven sizes: exact hold anchors, centred desktop pairs, phone rim gap/review clearance, narrowed cards and anchor-aware glide cache');
