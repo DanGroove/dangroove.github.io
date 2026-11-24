@@ -1,5 +1,5 @@
 import { sceneEnvelope } from '../view.mjs';
-// Geometry and clock checks, plus L13b's offline page gates in the installed local browser.
+// Geometry and clock checks, plus L13b/L13c offline page gates in the installed local browser.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { ART, ART_TEXT, BALL, BALL_FROM, BALL_VIA, ROWS, makeAtlas } from '../art.mjs';
@@ -30,6 +30,7 @@ import { consistency, checkRound17, checkRound17Controls, checkRound17Exports as
 import * as stageModule from '../stage.mjs';
 import { checkL13, checkL13Controls } from './l13-checks.mjs';
 import { checkL13b } from './l13b-checks.mjs';
+import { checkL13c } from './l13c-checks.mjs';
 import { checkL14 } from './l14-checks.mjs';
 import { checkL14Browser } from './l14-browser-checks.mjs';
 import { checkL11, checkL11Controls } from './l11-checks.mjs';
@@ -559,6 +560,7 @@ try { console.log(await checkRound8()); console.log('Round 8 negative controls: 
 try { console.log('L13: ' + JSON.stringify(await checkL13())); console.log('L13 controls: ' + await checkL13Controls()); } catch (error) { fail(0, error.message); }
 try { console.log('L14: ' + JSON.stringify(await checkL14())); console.log('L14 browser: ' + JSON.stringify(await checkL14Browser())); } catch (error) { fail(0, error.message); }
 try { const r = await checkL13b(); console.log('L13b: ' + JSON.stringify({ selection: r.selection.map(s => ({ width: s.W, gestures: s.selection.length, textElements: s.text.length })), interaction: r.interaction.map(s => ({ width: s.W, activations: s.checked.length, focus: s.focus })), motion: r.motion, controls: r.controls })); } catch (error) { fail(0, error.message); }
+try { console.log('L13c: ' + JSON.stringify(await checkL13c())); } catch (error) { fail(0, error.message); }
 try { console.log(await checkL11()); console.log('L11 negative control: ' + await checkL11Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound9()); console.log('Round 9 negative controls: ' + await withSourceLines(checkRound9Controls)); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound10()); console.log('Round 10 negative controls: ' + await checkRound10Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }

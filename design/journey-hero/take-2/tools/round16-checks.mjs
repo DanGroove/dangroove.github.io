@@ -99,8 +99,8 @@ export async function checkCentre(source = read('stars.mjs')) {
 }
 
 // ================================================================ R2: scattered all the way round
-// A hold run to the end: every frame checks the phase, the order, each join's moves and the settled spin; the ring is
-// measured 1.5 s and 2.0 s after the last join (see SETTLE).
+// A hold run to the end: every frame checks the phase, the order, membership changes and the settled spin; the ring is
+// measured 1.5 s and 2.0 s after the last membership change (see SETTLE). joins/lastJoin retain their result field names.
 export const SETTLE = 2.0;
 function ringRun(M, F, mark, pointerAt, limit = 20) {
   const P = pointerAt(0).slice(), hold = F.press(...P), turn = M.STARS.hold.turn;
@@ -118,18 +118,20 @@ function ringRun(M, F, mark, pointerAt, limit = 20) {
       const sum = cs.reduce((t, c, k) => t + mod(cs[(k + 1) % N].psi - c.psi), 0);
       assert.ok(Math.abs(sum - TURN) < 1e-6, `R2 order: the ring's order by psi changed (${(sum / TURN).toFixed(3)} turns round the order) at ${hold.held.toFixed(3)} s`);
     }
-    if (prev && prev.order.length > 1) {
-      const kept = new Set(prev.order), sub = ring.order.filter(i => kept.has(i)), at = sub.indexOf(prev.order[0]);
-      assert.ok(sub.every((_i, k) => sub[(at + k) % sub.length] === prev.order[k]), `R2 order: the members' order changed at ${hold.held.toFixed(3)} s`);
+    const members = new Set(ring.order), retained = prev ? prev.order.filter(i => members.has(i)) : [];
+    if (prev && retained.length > 1) {
+      // L13c permits departures into the mark. The members that remain must keep their cyclic order.
+      const kept = new Set(retained), sub = ring.order.filter(i => kept.has(i)), at = sub.indexOf(retained[0]);
+      assert.ok(sub.every((_i, k) => sub[(at + k) % sub.length] === retained[k]), `R2 order: the members' order changed at ${hold.held.toFixed(3)} s`);
     }
-    if (prev && N !== prev.order.length) {
-      // A join: how far each member's target moved, in slots of the new ring.
-      const m = N - prev.order.length, slot = TURN / N;
+    if (prev && (N !== retained.length || prev.order.length !== retained.length)) {
+      // Count joins and departures separately, including a departure and join in the same frame.
+      const m = N + prev.order.length - 2 * retained.length, slot = N ? TURN / N : TURN;
       let moved = 0;
-      for (const [i, T] of prev.targets) moved = Math.max(moved, Math.abs(wrap(F.cluster.get(i).target - T)) / slot);
+      for (const [i, T] of prev.targets) if (members.has(i)) moved = Math.max(moved, Math.abs(wrap(F.cluster.get(i).target - T)) / slot);
       if (m === 1) worst.single = Math.max(worst.single, moved);
       if (moved / Math.max(1, m / 2) > worst.batch) worst = { ...worst, batch: moved / Math.max(1, m / 2), m, moved };
-      assert.ok(moved <= 1.5 * Math.max(1, m / 2), `R2 join: ${m} stars joined and a member's target moved ${moved.toFixed(2)} slots at ${hold.held.toFixed(3)} s`);
+      assert.ok(moved <= 1.5 * Math.max(1, m / 2), `R2 join: ${m} members joined or departed and a member's target moved ${moved.toFixed(2)} slots at ${hold.held.toFixed(3)} s`);
       joins++; lastJoin = hold.held;
     } else if (prev) {
       // A settled star (on its target, at rest in the turning frame) turns at the ring's rate, within 1 %.
@@ -359,7 +361,7 @@ export async function checkRound16Controls() {
 export async function checkRound16() {
   const c = await checkCentre(), r = await checkRing(), k = await checkClamp(), q = await checkCharge(), g = await checkGather();
   const d = c.dan, f = v => v.toFixed(3);
-  const ring = Object.entries(r).map(([name, v]) => `${name}: ${v.ring} in the ring (${v.joins} joins, the last at ${v.lastJoin} s); ${SETTLE} s after it every star within ${f(v.at.radius)} px of its own radius (1.5 s: ${f(v.early.radius)}), radii ${f(v.at.lo)}-${f(v.at.hi)} in the band ${f(v.at.inner)}-${f(v.at.inner + v.at.band)} (span ${(100 * v.at.span).toFixed(1)} %), within ${v.at.target.toExponential(1)} rad of its target (1.5 s: ${v.early.target.toExponential(1)}), offsets equal the jitter within ${v.at.jitter.toExponential(1)} rad, neighbours ${f(v.at.gaps[0])}-${f(v.at.gaps[1])} slots apart (1.5 s: ${f(v.early.gaps[0])}-${f(v.early.gaps[1])}); phase exact every frame; ${v.spins} settled star-frames turn within ${(100 * v.worstSpin).toFixed(3)} % of turn; order kept every frame (${v.frames}); a single joiner moves a member at most ${v.worst.single.toFixed(2)} slots, a batch at most ${v.worst.batch.toFixed(2)} x max(1, m/2) slots (${v.worst.moved?.toFixed(2)} for ${v.worst.m})`).join('; ');
+  const ring = Object.entries(r).map(([name, v]) => `${name}: ${v.ring} in the ring (${v.joins} membership changes, the last at ${v.lastJoin} s); ${SETTLE} s after it every star within ${f(v.at.radius)} px of its own radius (1.5 s: ${f(v.early.radius)}), radii ${f(v.at.lo)}-${f(v.at.hi)} in the band ${f(v.at.inner)}-${f(v.at.inner + v.at.band)} (span ${(100 * v.at.span).toFixed(1)} %), within ${v.at.target.toExponential(1)} rad of its target (1.5 s: ${v.early.target.toExponential(1)}), offsets equal the jitter within ${v.at.jitter.toExponential(1)} rad, neighbours ${f(v.at.gaps[0])}-${f(v.at.gaps[1])} slots apart (1.5 s: ${f(v.early.gaps[0])}-${f(v.early.gaps[1])}); phase exact every frame; ${v.spins} settled star-frames turn within ${(100 * v.worstSpin).toFixed(3)} % of turn; order kept every frame (${v.frames}); a single join or departure moves a remaining member at most ${v.worst.single.toFixed(2)} slots, a batch at most ${v.worst.batch.toFixed(2)} x max(1, m/2) slots (${v.worst.moved?.toFixed(2)} for ${v.worst.m})`).join('; ');
   return `R1 centre: at 1474 x 996 the weight is (${d.weight.join(', ')}) px from the box centre, the smallest circle round the outline at (${d.enclosing.join(', ')}), ${d.off} px away; band ${d.far} + ${d.gap} = ${d.inner} to ${d.outer} px; clearance to the D's top and bottom corners ${d.clearances[0].join('-')} and ${d.clearances[1].join('-')} px, to the G's right edge ${d.clearances[2].join('-')} px; weight, inner edge, depth and centre exact at ${Object.keys(c).filter(x => x !== 'dan').join(', ')}.
 R2 ring: ${ring}.
 R3 clamp: ${k.length} still holds at the edges and corners of 1474 x 996, 1280 x 800 and 1024 x 640, every mark point and the ring's outer circle 16 px inside in every frame, the centre still when the ring appears; furthest in than the mark-only clamp ${Math.max(...k.map(v => v.inward)).toFixed(1)} px (${k.filter(v => v.size === '1474x996').map(v => `${v.name} ${v.inward}`).join(', ')} at 1474 x 996); fallbacks to the mark-only clamp and the middle.

@@ -126,8 +126,8 @@ export function createField(W, H, mark = null) {
 
   // B2: a hold. Stars inside the growing radius are captured and pulled into a slowly turning cluster round the pointer.
   function press(x, y) { cluster = new Map(); formed = false; centre = null; ring = { order: [], phase: 0 }; charge = 0; return { anchor: [x, y], anchorV: [0, 0], held: 0, next: 0, freePoints: new Set(mark ? mark.points.map((_, j) => j) : []), extra: 0, radius: STARS.hold.base, formedAt: null, charge: 0 }; }
-  // L13b: the first batch keeps its radial angle pairing. Later captures use the nearest free point, closest pair first,
-  // so a small late batch is not sent across the mark by the farthest-point sampling order. next is still a count.
+  // L13c: the first batch keeps its radial pairing. Later stars wait in the ring until a free point is closer than the
+  // mark's centre. Reconsider the ring each frame: its turn and the moving mark bring points to the waiting stars' side.
   function assign(hold, ids, C) {
     const at = ids.map(i => { const [x, y] = position(i); return { i, x, y, a: Math.atan2(y - C[1], x - C[0]) }; });
     const k = Math.min(at.length, hold.freePoints.size);
@@ -139,30 +139,41 @@ export function createField(W, H, mark = null) {
       take.forEach((t, q) => { t.j = pts[q]; });
     } else {
       rest = at; take = [];
+      for (const i of ring.order) {
+        const [x, y] = position(i);
+        rest.push({ i, x, y, ring: true });
+      }
       const nearest = t => {
-        t.j = -1; t.distance = Infinity;
+        t.j = -1; t.distance = Infinity; t.limit = (t.x - C[0]) ** 2 + (t.y - C[1]) ** 2;
         for (const j of hold.freePoints) {
           const p = mark.points[j], d = (t.x - C[0] - p.x) ** 2 + (t.y - C[1] - p.y) ** 2;
-          if (d < t.distance) { t.j = j; t.distance = d; }
+          if (d < t.limit && d < t.distance) { t.j = j; t.distance = d; }
         }
       };
       rest.forEach(nearest);
-      while (take.length < k) {
-        let best = 0;
-        for (let q = 1; q < rest.length; q++) if (rest[q].distance < rest[best].distance) best = q;
+      while (hold.freePoints.size) {
+        let best = -1;
+        for (let q = 0; q < rest.length; q++) if (rest[q].j >= 0 && (best < 0 || rest[q].distance < rest[best].distance)) best = q;
+        if (best < 0) break;
         const t = rest.splice(best, 1)[0]; take.push(t); hold.freePoints.delete(t.j);
         // Only candidates whose nearest point was just taken need another search.
         for (const r of rest) if (r.j === t.j) nearest(r);
       }
+      const leaving = new Set(take.filter(t => t.ring).map(t => t.i));
+      if (leaving.size) {
+        ring.order = ring.order.filter(i => !leaving.has(i));
+        if (ring.order.length) respaceRing();
+      }
+      rest = rest.filter(t => !t.ring);
     }
     take.forEach(t => {
       const c = cluster.get(t.i), p = mark.points[t.j];
       hold.freePoints.delete(t.j);
-      c.point = t.j; c.kind = p.kind; c.e = [t.x - C[0] - p.x, t.y - C[1] - p.y]; c.ev = [0, 0]; c.arrived = false;
+      c.ring = false; c.point = t.j; c.kind = p.kind; c.e = [t.x - C[0] - p.x, t.y - C[1] - p.y]; c.ev = [0, 0]; c.arrived = false;
       // R2: from here the front look eases from the star's own toward this point's (its colour code says which mark colour).
       c.e0 = Math.hypot(c.e[0], c.e[1]); c.given = true; flags[t.i] = markFlag(c.kind); mixes[t.i] = 0;
     });
-    hold.next += k;
+    hold.next += take.length;
     if (rest.length) join(rest.map(t => t.i), C);
   }
   // Round 16 (R2): stars join the ring. Each starts at the angle it was captured at, as its ring angle psi (its angle round
@@ -186,6 +197,11 @@ export function createField(W, H, mark = null) {
     let at = 0;
     for (const f of fresh) { while (at < merged.length && merged[at].a <= f.a) at++; merged.splice(at, 0, f); at++; }
     ring.order = merged.map(m => m.i);
+    respaceRing();
+  }
+  // Joining and departing members share the same circular-mean targets. Keep the current radii and angular velocities;
+  // turnRing follows the new targets with its existing easing instead of moving the remaining stars to their slots.
+  function respaceRing() {
     const N = ring.order.length;
     let sx = 0, sy = 0;
     const slot = (k, c) => TURN * (k + 0.5 + c.jitter) / N;
@@ -258,7 +274,7 @@ export function createField(W, H, mark = null) {
       const fresh = [];
       for (const [i, c] of cluster) if (c.point === undefined && !c.ring) fresh.push(i);
       formed = true;
-      if (fresh.length) assign(hold, fresh, centre);
+      if (fresh.length || (hold.freePoints.size && ring.order.length)) assign(hold, fresh, centre);
     }
     if (mark) turnRing(dt);
     for (const [i, c] of cluster) {
@@ -279,7 +295,7 @@ export function createField(W, H, mark = null) {
         continue;
       }
       if (c.ring) {
-        // Round 16 (R2): every point is taken, so this star is in the ring (moved by turnRing), turning as one by its phase.
+        // The ring includes overflow and stars waiting for an eligible point, turning as one by its phase.
         c.theta = c.psi + ring.phase;
         const s = stars[i], q = parallaxOffset(par, s.d), rx = centre[0] + mark.ring.centre[0], ry = centre[1] + mark.ring.centre[1];
         place(i, rx + c.rho * Math.cos(c.theta) - s.x - q[0], ry + c.rho * Math.sin(c.theta) - s.y - q[1]);

@@ -3572,3 +3572,66 @@ Only allowed source modules, check tools and requested documentation changed; .s
 [Full report](.scratch/codex-round19n-report.md), [full suite](.scratch/l14/checks-final.log), [browser evidence](.scratch/l14/browser/results.json), [pure gates](.scratch/l14/pure-result.json).
 
 Final hash/syntax audit: 100 of 112 incoming files are byte-identical; 12 permitted existing files changed and two check tools were added. stars.mjs and tools/l13b-checks.mjs are byte-identical. All 12 changed/new JavaScript modules pass node --check. The final OS audit records zero Edge processes using the task profiles.
+
+
+## Round 19, L13c
+
+Implemented L13c items 1-3 and its replacement check, including the required negative control. The full node tools/checks.mjs command exits 1 for the two strict fill deadlines: still 1.328 s (limit 1.25 s), fast 0.576 s (limit 0.5 s). It does not print all clean. Both runs have zero crossing and zero far-side assignments. Every retained and new negative control is caught at its intended gate.
+
+### Reference, acceptance and runtime changes
+
+Read CORRECTIONS-19.md L13c, MOCK-U.md, L13b item 6 and check 4, BUILD.md's L13b/L14 records and README.md before editing. Used the installed motion-playbook. MOCK-U supplied rules and numerical context only; its diff was not pasted. Acceptance was recorded before editing in .scratch/l13c/ACCEPTANCE.md. The incoming offline page and source snapshots are retained there.
+
+stars.mjs keeps the first batch's radial pairing. For later stars the nearest-point search admits only distances strictly less than the star's distance to the mark centre; the globally closest eligible pair is consumed first. Every waiting ring member is a candidate whenever points remain free, including frames without fresh captures. Captures with no eligible point join the ring. Assigned ring members are removed and marked non-ring. hold.next increments by take.length. The circular-mean target code was extracted unchanged into respaceRing and shared by joins and departures; radii, angular velocities and the existing easing are retained.
+
+First-batch code and mappings are identical before/after (300 still, 312 fast). Source comparisons confirm unchanged circular-mean targets, turnRing, capture/growth/anchor follow, the controller, release, bursts and trails. All other runtime modules, CSS, artwork and clocks retain their incoming hashes.
+
+### Every earlier changed expectation
+
+| Check | Old expectation -> new expectation |
+| --- | --- |
+| L13b check 4 flight ceiling | At most 2 percent farther than centre distance -> at most 1 percent in each prescribed run. The existing 1e-8 px numerical comparison tolerance stays. |
+| L13b check 4 destinations/fill | No far-side or fill-time assertion -> angle strictly under 90 degrees for every later assignment, all 600 points assigned within 1.25 s still / 0.5 s fast after formation. Both strict fill gates remain active and fail. |
+| Assignment observation/oracle | Newly captured ids only, nearest among their free pairs -> all newly assigned stars, including ring departures, observed before damping; exhaustive closest-eligible-pair oracle over captures and ring members. |
+| L13b check 4 control | Farthest-point hold.next order, no nearest search -> L13b nearest-free-only rule, without ring candidates, must fail the fast flight gate. The superseded control and its gate are replaced together. |
+| Round16 R2 order | Compare the new ring against every prior member -> compare the cyclic order of members that remain after departures. The sum-of-angle-gaps check and its 1e-6 tolerance stay. |
+| Round16 R2 re-spacing | Detect a join only from a net count change; m = new count minus old count; inspect all prior targets -> detect actual joins and departures, including simultaneous equal-count replacement; m = joined plus departed; inspect remaining members' targets. The 1.5 * max(1, m/2) slot limit stays. |
+| Round16 R2 settling/report | Settle 1.5 / 2.0 s after the last net-count join -> after the last membership change. All radius, target, jitter, gap and 1 percent spin limits stay; output labels identify membership changes. Legacy result field names joins/lastJoin remain for compatibility. |
+| tools/checks.mjs | Invoke L13b checks 1-4 -> invoke unchanged L13b checks 1-3 plus the separate L13c check/control. |
+
+No other earlier check expectation, numeric tolerance or control mutation changed. L13b checks 1-3 and every L14 check retain their check bodies and limits. L13b's unused assignment instrumentation and replaced check-4 helpers were removed; its streak observation remains.
+
+### Before and after: both prescribed runs
+
+Both are controlled-clock 1440 x 900, 9 s holds. Still uses the actual stage centre (1004.7890625, 458), exactly as L13b check 4 did. Fast begins at (1320, 450), with no pre-hold, then follows the specified formula once per 16 ms frame; the final 8 ms completes 9 s. Both use ?t=1 review bypass. Flight = c.e0 at assignment, centre distance = length of point plus initial offset, and far side = a nonpositive dot product. Percentiles use floor(p * (n - 1)); lengths are CSS px. Times are from pointer-down; fill delta is filled minus formed.
+
+| Run | Version | Later stars | Crossings | Far side | p50 px | p95 px | Max px | Formed s | Filled s | Fill delta s |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| still | Before | 300 | 6 (2.00%) | 5 | 314.802 | 426.041 | 476.525 | 2.360 | 3.656 | 1.296 |
+| still | After | 300 | 0 (0.00%) | 0 | 314.802 | 421.606 | 459.041 | 2.360 | 3.688 | 1.328 |
+| fast | Before | 288 | 125 (43.40%) | 110 | 393.366 | 556.605 | 599.181 | 0.455 | 0.919 | 0.464 |
+| fast | After | 288 | 0 (0.00%) | 0 | 348.123 | 520.079 | 574.627 | 0.455 | 1.031 | 0.576 |
+
+The exhaustive oracle confirms all 588 later choices and finds no eligible pair left waiting. One still and 21 fast assignments come from the ring; four fast assignment frames have only ring candidates. Every star and point is assigned at most once. All 600 points are ultimately assigned in each run. The nearest-only/no-ring fast control reproduces 125/288 crossings (43.40 percent), 110 far-side endpoints and a 0.464 s fill delta, and fails specifically at L13c flights: fast.
+
+### Why the fill deadlines remain incomplete
+
+On the last sampled still frame before the 1.25 s deadline, held time is 3.616666667 s: only 596 stars have been captured, with 592 points assigned and four stars waiting. There are 600 points. Even the incoming unrestricted rule cannot fill before 1.296 s after formation. Changing assignment cannot provide the missing captured stars without changing the first batch or gather behavior that L13c explicitly preserves. The new rule finishes at 1.328 s.
+
+At the fast deadline, held time 0.960666667 s, 574 points are assigned and 61 stars wait for the remaining 26 points. The independent oracle confirms that no eligible pair was skipped; ring turn and mark motion make the last pairs available at 0.576 s after formation. A separate pure simulation using the unchanged 16 ms controller math reproduces 1.328 / 0.576 s. A diagnostic still hold at MOCK-U's (900, 450) gives 1.248 s; it does not replace the required actual-stage-centre run.
+
+The source rule is fully built. No capture acceleration, ring retiming, reassignment, changed first batch, pre-hold, shortened path, lowered point count, deferred measurement start, loosened threshold or skipped failing gate was used to force all clean. Meeting these two deadlines needs a change to a preserved behavior or an amended gate. That part of the requested completion condition is left unmet under the explicit scope rules.
+
+### Verification, evidence and limits
+
+The first full suite also exposed the obsolete Round16 no-departure assertion at 3.567 s. The corrected survivor-order and re-spacing checks pass their targeted run, including all 11 original controls. The final full suite retains only the two L13c fill failures. L13b selection/interactions pass at desktop and touch phone; held and figure-eight taper submissions remain zero, with 5,616 release submissions within 0.05 s. L14's 888 geometry samples, 875 puff heads, name geometry/weight checks, three contact sheets, controls and six native frame windows all pass. All six frame windows have zero intervals over 20 ms.
+
+The new check uses the same installed local Playwright resolution, Edge executable, GPU/default flags and offline preview setup as the other page checks. Persistent profiles live only under .scratch. Non-file/data/blob page requests are blocked; attempted page requests and page errors are zero. Every context closes in finally. Early probe attempts timed out because the prior page's controlled clock was not resumed before closing; the corrected harness resumes it and activates each page before the next run. No product timing was altered by that correction.
+
+Paired incoming/revision renders at a 3.008 s still hold were inspected at 1440 x 900: typography, composition, detailed app artwork, colours and mark scale are preserved; the intended later-star placement differs. These are visual comparisons, not a claim of pixel identity. No reviewer agents were run, as expressly forbidden. No independent design approval is claimed.
+
+Only permitted take-2 source/check/docs and ignored .scratch files changed. No CORRECTIONS, MOCK, fixture, public, src or CNAME file changed. No git, package install, network request, site build or deployment ran. PresentationEngine and E: were not accessed. Direct Node and PowerShell were used as instructed. New Markdown text is ASCII. The UI skill CLI was omitted under the install/network restriction.
+
+[Full report](.scratch/codex-round19o-report.md), [final suite](.scratch/l13c/checks-final-utf8.log), [before](.scratch/l13c/before.json), [after and control](.scratch/l13c/after.json), [deadline proof](.scratch/l13c/preservation-and-deadlines.json), [source preservation](.scratch/l13c/source-preservation.json), [incoming render](.scratch/l13c/before-hold-3s.png), [revision render](.scratch/l13c/after-hold-3s.png).
+
+Final audit: 109 of 115 incoming files are byte-identical. Six permitted existing files changed and tools/l13c-checks.mjs was added. Existing BUILD/README content is preserved; new Markdown is ASCII. Five changed/new JavaScript modules pass node --check. The OS profile-path audit found zero remaining task Edge processes. [File audit](.scratch/l13c/file-audit.json), [Edge audit](.scratch/l13c/edge-audit.json).

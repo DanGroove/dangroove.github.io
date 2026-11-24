@@ -1,4 +1,4 @@
-// Real offline Edge pages, using the same local Playwright/GPU setup as L13.
+// L13b checks 1-3 (check 4 is replaced by l13c-checks.mjs). Real offline Edge pages, using the same local Playwright/GPU setup as L13.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -24,54 +24,14 @@ function replaceOnce(text, old, replacement) {
   return text.replace(old, replacement);
 }
 function instrument(html) {
-  html = replaceOnce(html, '  function assign(hold, ids, C) {', `  function assign(hold, ids, C) {
-    const observedFirst = hold.next === 0;
-    const observedStarts = new Map(ids.map(i => [i, position(i)]));
-    const observedUsed = new Set([...cluster.values()].map(c => c.point));
-    const observedFree = mark.points.map((p, j) => ({ j, x: C[0] + p.x, y: C[1] + p.y })).filter(p => !observedUsed.has(p.j));`);
-  html = replaceOnce(html, '    hold.next += k;', `    hold.next += k;
-    globalThis.__l13bAssigned?.({ first: observedFirst, centre: C.slice(), free: observedFree,
-    starts: [...observedStarts].map(([i, p]) => ({ i, x: p[0], y: p[1] })),
-    chosen: take.map(t => ({ i: t.i, point: cluster.get(t.i).point })),
-    rows: ids.filter(i => cluster.get(i).point !== undefined).map(i => {
-      const [x, y] = observedStarts.get(i), c = cluster.get(i);
-      return { i, point: c.point, flight: c.e0, distance: Math.hypot(x - C[0], y - C[1]) };
-    }) });`);
   return replaceOnce(html, 'const field = stars?.frame(state ? starReach(state.stars, centre, W, H) : null, centre);',
     'const field = stars?.frame(state ? starReach(state.stars, centre, W, H) : null, centre); globalThis.__l13bObserve?.(field);');
-}
-function flightStats(rows) {
-  const flights = rows.map(r => r.flight).sort((a, b) => a - b);
-  const crossings = rows.filter(r => r.flight > r.distance + 1e-8).length;
-  return { count: rows.length, crossings, fraction: crossings / rows.length,
-    p50: flights[Math.floor(.5 * (flights.length - 1))], p95: flights[Math.floor(.95 * (flights.length - 1))], max: flights.at(-1) };
-}
-function flightGate(row) {
-  assert.ok(row.count > 100, 'L13b check 4: later captures exercised');
-  assert.ok(row.fraction <= .02, `L13b check 4: ${row.crossings}/${row.count} flights cross the centre-distance limit`);
 }
 function streakGate(row) {
   assert.ok(row.formed, 'L13b check 3: mark formed before drag');
   assert.equal(row.holdTapers, 0, 'L13b check 3: held mark must not streak');
   assert.equal(row.dragTapers, 0, 'L13b check 3: dragged mark must not streak');
   assert.ok(row.early > 0, 'L13b check 3: release must streak within 0.05 s');
-}
-// An independent exhaustive search verifies the specified pair order on the real captured batches.
-function nearestPairs(batches) {
-  let checked = 0, forcedCrossings = 0;
-  for (const batch of batches.filter(b => !b.first)) {
-    const stars = new Map(batch.starts.map(s => [s.i, s])), free = new Map(batch.free.map(p => [p.j, p]));
-    for (const actual of batch.chosen) {
-      let minimum = Infinity;
-      for (const s of stars.values()) for (const p of free.values()) minimum = Math.min(minimum, (s.x - p.x) ** 2 + (s.y - p.y) ** 2);
-      const s = stars.get(actual.i), p = free.get(actual.point);
-      const length = Math.hypot(s.x - p.x, s.y - p.y), distance = Math.hypot(s.x - batch.centre[0], s.y - batch.centre[1]);
-      assert.ok(Math.abs(length ** 2 - minimum) < 1e-6, 'L13b check 4: closest pair first');
-      if ([...free.values()].every(p => Math.hypot(s.x - p.x, s.y - p.y) > distance + 1e-8)) forcedCrossings++;
-      stars.delete(actual.i); free.delete(actual.point); checked++;
-    }
-  }
-  return { checked, forcedCrossings };
 }
 function failsAt(run, gate) {
   let message;
@@ -88,24 +48,6 @@ export async function checkL13b({ baseline = false } = {}) {
   // Snapshots are evidence for this run only. Controls are reconstructed in memory on every invocation.
   const css = source('take-2.css');
   const originalCss = css.replace(/\/\* L13b: whole-page interaction policy\. \*\/[\s\S]*?\/\* End L13b policy\. \*\/\n?/, '');
-  const originalAssign = source('stars.mjs').slice(source('stars.mjs').indexOf('  function assign('), source('stars.mjs').indexOf('  // Round 16 (R2): stars join the ring.'));
-  const oldAssign = `  function assign(hold, ids, C) {
-    const at = ids.map(i => { const [x, y] = position(i); return { i, x, y, a: Math.atan2(y - C[1], x - C[0]) }; });
-    const k = Math.min(at.length, mark.points.length - hold.next);
-    at.sort((a, b) => Math.hypot(a.x - C[0], a.y - C[1]) - Math.hypot(b.x - C[0], b.y - C[1]));
-    const take = at.slice(0, k).sort((a, b) => a.a - b.a), rest = at.slice(k);
-    const pts = [];
-    for (let j = hold.next; j < hold.next + k; j++) pts.push({ j, a: Math.atan2(mark.points[j].y, mark.points[j].x) });
-    pts.sort((a, b) => a.a - b.a);
-    take.forEach((t, q) => {
-      const c = cluster.get(t.i), p = mark.points[pts[q].j];
-      c.point = pts[q].j; c.kind = p.kind; c.e = [t.x - C[0] - p.x, t.y - C[1] - p.y]; c.ev = [0, 0]; c.arrived = false;
-      c.e0 = Math.hypot(c.e[0], c.e[1]); c.given = true; flags[t.i] = markFlag(c.kind); mixes[t.i] = 0;
-    });
-    hold.next += k;
-    if (rest.length) join(rest.map(t => t.i), C);
-  }
-`;
   for (const [W, H] of baseline ? [[1440, 900]] : [[1440, 900], [390, 844]]) {
     const context = await playwright.chromium.launchPersistentContext(path.join(out, `edge-${baseline ? 'before' : 'after'}-${W}`), {
       executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true,
@@ -130,8 +72,7 @@ export async function checkL13b({ baseline = false } = {}) {
       await page.clock.install({ time: new Date('2026-11-24T12:00:00Z') });
       await page.clock.pauseAt(new Date('2026-11-24T12:00:01Z'));
       await page.evaluate(() => {
-        window.__l13bRows = []; window.__l13bFlights = []; window.__l13bPhase = 'hold';
-        window.__l13bAssigned = batch => __l13bFlights.push(batch);
+        window.__l13bRows = []; window.__l13bPhase = 'hold';
         window.__l13bObserve = st => {
           if (!st) return;
           let tapers = 0;
@@ -172,23 +113,6 @@ export async function checkL13b({ baseline = false } = {}) {
         const row = { formed, holdTapers: sum('hold'), dragTapers: sum('drag'), early: rows.filter(r => r.phase === 'release' && r.time - release <= 50).reduce((n, r) => n + r.tapers, 0), frames: rows.length, centre };
         await page.clock.resume(); await page.close(); return row;
       }
-      if (kind === 'still') await page.clock.runFor(9000);
-      else {
-        for (let ms = 16; ms <= 9000; ms += 16) {
-          const wt = 2 * Math.PI * 1.2 * ms / 1000;
-          await page.mouse.move(900 + 420 * Math.cos(wt) + 120 * Math.sin(3.1 * wt), 450 + 315 * Math.sin(wt));
-          await page.clock.runFor(16);
-        }
-        await page.clock.runFor(8);
-      }
-      const data = await page.evaluate(() => ({ batches: __l13bFlights, mark: __hero.stars.mark }));
-      const assigned = data.batches.flatMap(b => b.rows.map(r => ({ ...r, first: b.first })));
-      assert.equal(new Set(assigned.map(r => r.point)).size, assigned.length, 'L13b check 4: point assigned twice');
-      assert.equal(assigned.length, data.mark.assigned, 'L13b check 4: assignments observed completely');
-      const row = { ...flightStats(assigned.filter(r => !r.first)), firstBatch: assigned.filter(r => r.first).length, centre, assigned: data.mark.assigned, ring: data.mark.ring.count };
-      if (!baseline && !name.startsWith('old-order-')) row.nearest = nearestPairs(data.batches);
-      fs.writeFileSync(path.join(out, `${baseline ? 'before' : 'after'}-${name}-flights.json`), JSON.stringify(data, null, 2));
-      await page.mouse.up(); await page.clock.resume(); await page.close(); return row;
     }
     try {
       if (!baseline) {
@@ -316,22 +240,10 @@ export async function checkL13b({ baseline = false } = {}) {
       if (W === 1440) {
         results.motion.eight = await motion(html, 'eight', 'eight');
         streakGate(results.motion.eight);
-        for (const kind of ['still', 'fast']) {
-          results.motion[kind] = await motion(html, kind, kind);
-          if (!baseline) {
-            try { flightGate(results.motion[kind]); } catch (e) { results.positiveFailures.push(kind + ': ' + e.message); }
-          }
-        }
         if (!baseline) {
           const speed = replaceOnce(html, 'const trails = field.gateTrails(history.record(now, positions));', 'const trails = history.record(now, positions);');
           const row = await motion(speed, 'eight', 'speed-control');
           results.controls.speed = { ...row, gate: failsAt(() => assert.equal(row.dragTapers, 0, 'L13b check 3: dragged mark must not streak'), 'L13b check 3: dragged mark') };
-          const ordered = replaceOnce(html, originalAssign, oldAssign);
-          results.controls.order = {};
-          for (const kind of ['still', 'fast']) {
-            const row = await motion(ordered, kind, 'old-order-' + kind);
-            results.controls.order[kind] = { ...row, gate: failsAt(() => flightGate(row), 'L13b check 4:') };
-          }
         }
       }
     } finally {

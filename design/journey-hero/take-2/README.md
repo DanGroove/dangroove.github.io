@@ -1,5 +1,9 @@
 # Journey hero, second take
 
+Round 19 L13c builds the eligible-point ring wait for later stars. Both required runs have zero crossings and zero far-side assignments, and the old-rule fast control fails. The strict fill deadlines remain unmet: 1.328 s still (limit 1.25 s), 0.576 s fast (limit 0.5 s). The full suite exits 1 and does not print all clean; all other gates and every negative control pass. BUILD.md, **Round 19, L13c**, and [the report](.scratch/codex-round19o-report.md) record the rule, all before/after numbers and the preserved-behavior conflict.
+
+Earlier checkpoint records follow.
+
 Round 19 L13b adds page-wide highlight prevention and nearest-free-point assignment for later captures. Checks 1-3 pass; L13 already passed the held-drag streak gate and its explosion logic stays unchanged. Check 4's still hold passes at 6/300 (2%), but the prescribed fast drag fails at 125/288 (43.40%) under the literal assignment rule. The full Node suite exits 1 and does not print all clean; every negative control is caught. BUILD.md's **Round 19, L13b** and [the report](.scratch/codex-round19m-report.md) record the conflict and all before/after numbers. All started Edge contexts are closed.
 
 
