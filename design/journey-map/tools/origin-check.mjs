@@ -49,7 +49,10 @@ function originMeasure(id, constants) {
   if (close.getBoundingClientRect().width < 43.5 || close.getBoundingClientRect().height < 43.5) errors.push('close target below 44 px');
   if (rimError > 1.5) errors.push('tail rim error '+rimError.toFixed(3));
   if (Number(getComputedStyle(shield).opacity) < .999) errors.push('shield faded');
-  const topmost = document.elementFromPoint(...centre); if (topmost && !shield.contains(topmost)) errors.push('shield covered by another element');
+  // An open stop's shield takes no pointer events, and hit testing skips such elements, so let it take them for this one probe
+  const was = shield.style.pointerEvents; shield.style.pointerEvents = 'auto';
+  const topmost = document.elementFromPoint(...centre); shield.style.pointerEvents = was;
+  if (topmost && !shield.contains(topmost)) errors.push('shield covered by another element');
   return {id,height:face.clientHeight,rimError,errors};
 }
 
