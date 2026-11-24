@@ -40,7 +40,7 @@ Found in the frame-by-frame review of part 4 (2026-11-24). Do B11 last, once the
 
 ## Checks
 
-- All tests pass: `node tools/check.mjs`, `steps-test`, `nova-test`, `depth-test`, `layout-test`, `explore-test`, `finds-test`, `motion-test`, `hammer-test`, `frame-cost-test`, `frame-performance-test`, `frame-render-test`, `tools/origin-check.mjs`, and `tools/frame-cost.mjs` with no worse p95 than part 3b's last table. Update tests only where this brief changes what they pin, and say which and why; re-record the `finds-test` digests that change.
+- All tests pass: `node tools/check.mjs`, `steps-test`, `nova-test`, `depth-test`, `layout-test`, `explore-test`, `finds-test`, `motion-test`, `hammer-test`, `frame-cost-test`, `frame-performance-test`, `frame-render-test`, `whirl2-test`, `comb-c-tail-test`, `tools/origin-check.mjs`, and `tools/frame-cost.mjs` with no worse p95 than part 4b's last table (`journey-map-runs\glide\comb-c`); the drawings add no per-frame work. Update tests only where this brief changes what they pin, and say which and why; re-record the `finds-test` digests that change.
 - For each drawing, screenshots before and after with the local headless Edge (127.0.0.1 only; its profile and captures in the run folder your prompt names, never in the repository) at device scale 2: the overview at 412 x 730 and 1440 x 900, and its closest zoom (the stop hold or the find's view, explore's deepest zoom for Yggdrasil, the game's field for the shield wall). List them in the report with one line on what each shows.
 - The gzip budgets in `tools/check.mjs` hold.
 
