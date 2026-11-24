@@ -51,10 +51,16 @@ export const EXPORT_SHIFT = -0.3;
 const screenMiddle = SCREEN.l + SCREEN.w / 2, exportMiddle = screenMiddle + EXPORT_SHIFT;
 // CORRECTIONS-15 S1, S2 (they replace round 13's drop and its backwards return): Export pops a red ball out of the button. It arcs
 // to the floor, splits immediately into one red block per format (each the exact footprint and thickness of its format), holds, and a
-// hard wipe turns each block into its format; when the scene's exports leave, they sink straight down through the floor. Each
+// hard wipe turns each block into its format; L13 reverses that step, merges the red pieces and bursts the ball. Each
 // beat's length in seconds at PACE 1, as one table to tune: the pop, the arc, the rest, the split, the hold, each piece's wipe
-// (become), the wipes' stagger left to right, Figma's laptop lid opening after its wipe, and the sink.
-export const BALL = { pop: 0.3, arc: 0.8, rest: 0, split: 0.6, hold: 0.15, become: 0.6, stagger: 0.1, lid: 0.4, sink: 1.0 };
+// (become), the wipes' stagger left to right, Figma's laptop lid opening after its wipe, and the exit tail.
+export const BALL = { pop: 0.3, arc: 0.8, rest: 0, split: 0.6, hold: 0.15, become: 0.6, stagger: 0.1, lid: 0.4, sink: 1.5 };
+// Exit seconds after off[0], at PACE 1. BALL.sink retains its clock-table name only.
+export const EXIT = { wipe: 0.45, stagger: 0.1, merge: 0.5, squash: 0.18, swell: 0.12, after: 0.05, squashTo: 0.78, swellTo: 1.15 };
+export function exitBeats() {
+  const wiped = EXIT.wipe + 2 * EXIT.stagger, merged = wiped + EXIT.merge, squashed = merged + EXIT.squash, burst = squashed + EXIT.swell;
+  return { wiped, merged, squashed, burst, end: burst + EXIT.after };
+}
 // World units: full diameter, starting radius, and the peak's height above the Export button's top side.
 export const BALL_PATH = { size: 0.6, start: 0.1, rise: 0.6 };
 // R12: one physical model in every scene; landscape turns the tablet, never resizes it.
@@ -341,65 +347,123 @@ function poseLid({ pieces, pivot }, theta) {
 }
 // The export of one scene. formats: its three pieces left to right, each { pieces: built in their final landed pose (as round 13
 // left them), shape: their block [x, z, w, d, thickness, e], lid?: Figma's laptop lid, posed shut until its wipe has ended }.
+// Bounds include every visible layer after face separation, including glass and reading leaves.
+export function objectBlock(pieces) {
+  const points = pieces.filter(pc => !pc.hide).flatMap(corners);
+  const lo = [0, 1, 2].map(k => Math.min(...points.map(p => p[k]))), hi = [0, 1, 2].map(k => Math.max(...points.map(p => p[k])));
+  if (Math.abs(lo[1]) < 1e-10) lo[1] = 0;
+  return { p: lo.map((v, k) => (v + hi[k]) / 2), s: [hi[0] - lo[0], hi[2] - lo[2], hi[1] - lo[1]].map(v => v / 2),
+    e: pieces.find(pc => !pc.hide)?.e.slice() || [0, 0] };
+}
+const restPoint = formats => {
+  const blocks = formats.map(f => f.shape);
+  return [(Math.min(...blocks.map(r => r[0])) + Math.max(...blocks.map(r => r[0] + r[2]))) / 2,
+    (Math.min(...blocks.map(r => r[1])) + Math.max(...blocks.map(r => r[1] + r[3]))) / 2];
+};
+export const POP = { at: 0.3, scale: 1.08, gap: 0.02 };
+export function popScale(k) {
+  k = clamp(k, 0, 1);
+  return k < POP.at ? mix(1, POP.scale, EASE.exit(k / POP.at))
+    : mix(POP.scale, 1, EASE.enter((k - POP.at) / (1 - POP.at)));
+}
+// A connected footprint turns as one. Keep each object's block, including both reading halves.
+export function assetUnits(objects) {
+  const units = objects.map((pieces, object) => ({ parts: [{ pieces: pieces.filter(pc => !pc.hide), object }] }))
+    .filter(u => u.parts[0].pieces.length);
+  const block = u => objectBlock(u.parts.flatMap(p => p.pieces));
+  const touches = (a, b) => Math.abs(a.p[0] - b.p[0]) <= a.s[0] + b.s[0] + POP.gap
+    && Math.abs(a.p[2] - b.p[2]) <= a.s[1] + b.s[1] + POP.gap;
+  for (let changed = true; changed;) {
+    changed = false;
+    for (let i = 0; i < units.length && !changed; i++) for (let j = i + 1; j < units.length; j++) {
+      if (!units[i].parts.some(a => units[j].parts.some(b => touches(objectBlock(a.pieces), objectBlock(b.pieces))))) continue;
+      units[i].parts.push(...units[j].parts); units.splice(j, 1); changed = true; break;
+    }
+  }
+  return units.map(u => ({ ...u, block: block(u) }));
+}
+// The single red/asset step, both ways: swell, cut, settle. No partial object or clipping edge.
+export function assetStep(P, objects, k, reverse, part) {
+  if (Math.abs(k - POP.at) < 1e-12) k = POP.at;
+  if (Math.abs(k - POP.at) < 1e-12) k = POP.at;
+  const scale = popScale(k), red = reverse ? k >= POP.at : k < POP.at;
+  assetUnits(objects).forEach((unit, index) => {
+    const b = unit.block, origin = [b.p[0], b.p[1] - b.s[2], b.p[2]];
+    for (const { pieces, object } of unit.parts) {
+      const box = objectBlock(pieces), shown = red ? [redPiece(box.p, box.s, box.e, 'shape', part)] : pieces;
+      for (const pc of shown) {
+        pc.p = pc.p.map((v, i) => origin[i] + (v - origin[i]) * scale); pc.s = pc.s.map(v => v * scale);
+        pc.assetUnit = `${part}:${index}`; pc.assetPart = part; pc.assetObject = object;
+        pc.assetScale = scale; pc.assetOrigin = origin;
+        if (red) pc.object = object;
+        P.push(pc);
+      }
+    }
+  });
+}
 function exportOut(P, s, t, key, formats) {
   const a = action(s, 'export').start, { off } = playbackSpans(s);
   if (t < a || t >= off[1]) return;
-  const u = (t - a) / PACE, all = formats.flatMap(f => f.pieces);
+  const u = (t - a) / PACE, all = formats.flatMap(f => f.pieces), to = restPoint(formats), R = BALL_PATH.size / 2;
   for (const pc of all) pc.where = 'floor';
   if (u >= ballLength(key)) {
-    // Close fully before sinking. The other two devices keep the cycle's last frame.
+    // Close fully before the red wipe. The plays hold their last frame.
     for (const f of formats) if (f.lid) poseLid(f.lid, mix(12, -90, EASE.wipe(linear(t, off[0] - BALL.lid * PACE, off[0]))));
-    if (t >= off[0]) {
-      separateFaces(all.filter(pc => !pc.hide));
-      // S2: everything sinks together, straight down (x and z fixed), cut by the floor's plane in every pass, until nothing is left.
-      const g = EASE.wipe(linear(t, off[0], off[1]));
-      // A format can contain separate objects: the reading copy must not inherit the closed stack's depth.
-      const objects = formats.flatMap(f => f.objects || [f.pieces]);
-      const top = pc => Math.max(...corners(pc).map(c => c[1]));
-      const bodies = objects.map(pieces => pieces.filter(pc => pc.deviceBody || pc.lid));
-      const heights = objects.map((pieces, j) => Math.max(...(bodies[j].length ? bodies[j] : pieces).filter(pc => !pc.hide).map(top)));
-      // A fixed 0.02 on unequal heights hides the thin devices earlier. Scale the clearance too, so all tops cross y=0 together.
-      const clearance = 1 + 0.02 / Math.max(...heights);
-      for (const [j, pieces] of objects.entries()) {
-        const depth = heights[j] * clearance;
-        for (const pc of pieces) {
-          // Keep the floor clip, and clip carried glass layers at their own rest top above the body.
-          // Their last fragment then crosses with the body, rather than leaving chrome or an island behind.
-          if (bodies[j].length && !bodies[j].includes(pc)) pc.carryClip = [0, 1, 0, -Math.max(0, top(pc) - heights[j])];
-          pc.sinkTop = heights[j] - depth * g;
-          pc.p[1] -= depth * g; pc.clip = [0, 1, 0, 0]; pc.sink = true;
-        }
-      }
+    if (t < off[0]) { P.push(...all.filter(pc => !pc.hide)); return; }
+    separateFaces(all.filter(pc => !pc.hide));
+    for (const pc of all) pc.exportSeparated = true;
+    const v = (t - off[0]) / PACE, b = exitBeats();
+    if (v < b.wiped) {
+      formats.forEach((f, j) => assetStep(P, f.objects || [f.pieces], (v - j * EXIT.stagger) / EXIT.wipe, true, j));
+      return;
     }
-    P.push(...all.filter(pc => !pc.hide)); return;
+    if (v < b.merged) {
+      const k = EASE.wipe(linear(v, b.wiped, b.merged));
+      formats.forEach((f, j) => (f.objects || [f.pieces]).forEach((pieces, object) => {
+        const b = objectBlock(pieces), size = b.s.map(n => mix(n, R, k));
+        const pc = redPiece([mix(b.p[0], to[0], k), mix(b.p[1], R, k), mix(b.p[2], to[1], k)], size,
+          b.e.map(n => mix(n, 1, k)), 'merge', j);
+        pc.object = object; P.push(pc);
+      }));
+      return;
+    }
+    if (v < b.burst - 1e-12) {
+      const g = v < b.squashed ? mix(1, EXIT.squashTo, EASE.wipe(linear(v, b.merged, b.squashed)))
+        : mix(EXIT.squashTo, EXIT.swellTo, EASE.exit(linear(v, b.squashed, b.burst)));
+      const radius = R * g;
+      P.push(redPiece([to[0], radius, to[1]], [radius, radius, radius], [1, 1], 'ball'));
+    }
+    return;
   }
-  // The ball comes to rest at the middle of the three blocks' combined footprint.
-  const blocks = formats.map(f => f.shape), to = [(Math.min(...blocks.map(r => r[0])) + Math.max(...blocks.map(r => r[0] + r[2]))) / 2, (Math.min(...blocks.map(r => r[1])) + Math.max(...blocks.map(r => r[1] + r[3]))) / 2];
   if (u < ballBeats(key, 0).rest) {
     const { c, r, clip } = ballAt(u, to), ball = redPiece(c, [r, r, r], [1, 1], 'ball');
     if (clip) ball.clip = clip;
     P.push(ball); return;
   }
-  const R = BALL_PATH.size / 2;
+  // Prepare the whole landed group once. Split endpoints and both wipe directions use
+  // the same complete bounds, so glass layers never appear outside a smaller body block.
+  for (const [j, f] of formats.entries()) if (f.lid) {
+    const b = ballBeats(key, j);
+    poseLid(f.lid, u < b.wiped ? -90 : mix(-90, 12, EASE.wipe(linear(u, b.wiped, b.become))));
+  }
+  separateFaces(all.filter(pc => !pc.hide));
+  for (const pc of all) pc.exportSeparated = true;
+  for (const f of formats) {
+    const b = objectBlock(f.pieces);
+    f.shape = [b.p[0] - b.s[0], b.p[2] - b.s[1], 2 * b.s[0], 2 * b.s[1], 2 * b.s[2], b.e];
+  }
   formats.forEach((f, j) => {
     const b = ballBeats(key, j), [x, z, w, d, h, e] = f.shape;
     if (u < b.split) {
-      // Split: from three exact copies of the resting ball, each moves along the floor to its place while it becomes its block.
       const k = EASE.enter(linear(u, b.rest, b.split)), size = [mix(R, w / 2, k), mix(R, d / 2, k), mix(R, h / 2, k)];
       P.push(redPiece([mix(to[0], x + w / 2, k), size[2], mix(to[1], z + d / 2, k)], size, [mix(1, e[0], k), mix(1, e[1], k)], 'split', j));
       return;
     }
-    const block = () => redPiece([x + w / 2, h / 2, z + d / 2], [w / 2, d / 2, h / 2], e.slice(), 'shape', j);
-    if (u < b.wipe) { P.push(block()); return; }
-    if (f.lid) poseLid(f.lid, u < b.wiped ? -90 : mix(-90, 12, EASE.wipe(linear(u, b.wiped, b.become))));
     if (u < b.wiped) {
-      // Become: one hard wipe left to right in world x. Behind its edge the format, ahead of it the block: one plane, two signs.
-      const edge = mix(x, x + w, EASE.wipe(linear(u, b.wipe, b.wiped))), red = block();
-      red.clip = [1, 0, 0, -edge]; red.edge = edge; P.push(red);
-      for (const pc of f.pieces) if (!pc.hide) { pc.clip = [-1, 0, 0, edge]; pc.edge = edge; pc.wiped = j; P.push(pc); }
+      assetStep(P, [f.pieces], (u - b.wipe) / BALL.become, false, j);
       return;
     }
-    for (const pc of f.pieces) if (!pc.hide) P.push(pc);
+    P.push(...f.pieces.filter(pc => !pc.hide));
   });
 }
 // Video and motion: the ball becomes the tablet on its side and the two phones. Their plays start once every piece is built, in
@@ -830,7 +894,7 @@ export const SCRIPTS = {
     { id: 'link', kind: 'drag', from: FIG.from, to: FIG.to, duration: 0.6 },
     { id: 'panel', kind: 'run', from: [PANEL + 0.2, TOP - 0.46], to: [PANEL + 0.45, 0.32], count: 5, duration: 0.2 },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.7 },
-  ], { hold: EXPORT_HOLD.fig, tail: BALL.sink, beats: FIG_BEATS, clockLength: 18.545162584479227 }),
+  ], { hold: EXPORT_HOLD.fig, tail: BALL.sink, beats: FIG_BEATS, clockLength: 19.045162584479227 }),
   id: script([
     // CORRECTIONS-12 I1: no frames are drawn. The document opens with its blank pages already there (see blankPages).
     { id: 'map', kind: 'drag', from: centre(DOCK.map), to: centre(ID.frame), duration: 0.45, tool: 'arrow' },
@@ -863,7 +927,7 @@ export const SCRIPTS = {
     { id: 'pause3', kind: 'wait', duration: 0.3 },
     { id: 'leaf4', kind: 'wait', duration: 0.6 },
     { id: 'read', kind: 'wait', duration: 0.3 },
-    { id: 'return', kind: 'wait', duration: BALL.sink },   // CORRECTIONS-15 S2: the sink
+    { id: 'return', kind: 'wait', duration: BALL.sink },   // L13: the merge and burst exit
   ], { tail: 0, start: centre(DOCK.loc) }),
   ai: script([
     ...[AI.upper, AI.lower].map((r, i) => ({ id: 'board' + i, kind: 'draw', from: topLeft(r), to: bottomRight(r), duration: 0.3, tool: 'rectangle' })),
@@ -982,8 +1046,8 @@ function dragPicture(P, s, id, t, from, to, art, tone = 'ink') {
   P.push(pc);
 }
 // CORRECTIONS-15: each piece's span runs from the Export click to the end of its "become" (its wipe; the laptop's lid); land is when
-// every piece is built, which starts the plays (two of 1.6 s, or Figma's one 3.0 s cycle) and the labels. off: the sink, BALL.sink
-// long. InDesign's sink is its own wait, 'return'.
+// every piece is built, which starts the plays (two of 1.6 s, or Figma's one 3.0 s cycle) and the labels. off: the exit, BALL.sink
+// long. InDesign's exit is its own wait, 'return'.
 export function playbackSpans(s) {
   const key = Object.keys(SCRIPTS).find(k => SCRIPTS[k] === s), a = action(s, 'export').start;
   const spans = [0, 1, 2].map(j => { const b = ballBeats(key, j); return [a + b.start * PACE, a + b.become * PACE]; }), land = a + ballLength(key) * PACE;
@@ -997,7 +1061,7 @@ function playClock(t, land, stop, key) {
 function exportPlay(s, t) {
   const { land, off } = playbackSpans(s);
   if (s === SCRIPTS.fig) return t >= land && t < off[1] ? Math.min(1, (t - land) / (3 * PACE)) : null;
-  // CORRECTIONS-15 S2: the plays hold their frame while the exports sink (as Figma's cycle always has), so nothing moves but down.
+  // The plays hold their final frame while L13 reverses the wipe and bursts the export ball.
   return t >= land && t < off[1] ? playClock(t, land, off[0], s === SCRIPTS.ae ? 'ae' : 'pr') : null;
 }
 function editedVideo(t) {
@@ -1476,7 +1540,7 @@ function editedInDesign(t, { at: pages } = {}) {
   return P;
 }
 // InDesign: the ball becomes the booklet stack (with the copy that is read lying on top), the LinkedIn post's phone and the
-// e-blast's tablet. The land, pickup, opening and leaf turns follow as before; on the sink the copy lying open goes down with them.
+// e-blast's tablet. The land, pickup, opening and leaf turns follow as before; at exit each reading half has its own red piece.
 // floor: as prints() builds it: stack's five copies 0-9; phone 10-14 (body, picture, three island solids); tablet 15-17
 // (body, picture, camera); then the reading copy from 18 onward (two closed pieces, or pages and the turning leaf).
 function bookletOut(P, s, t, floor) {
@@ -1823,7 +1887,7 @@ function liftDragStack(P) {
 function separateFaces(P) {
   for (const floor of [false, true]) {
     const axis = floor ? 1 : 2, across = floor ? 2 : 1, step = LAYER_STEP * (floor ? 1 : U);
-    const faces = P.filter(pc => (pc.where === 'floor') === floor && !pc.solid && !pc.sink && !pc.blend && !pc.labelSource).flatMap(pc => {   // Sinks were separated before their independent translations.
+    const faces = P.filter(pc => (pc.where === 'floor') === floor && !pc.solid && !pc.exportSeparated && !pc.blend && !pc.labelSource).flatMap(pc => {   // Exports were separated before their shared wipe and per-object morph.
       const [x, y, z, w] = pc.q, normal = floor ? 2 * (y * z - w * x) : 1 - 2 * (x * x + y * y);
       if (normal < 1 - 1e-9) return [];
       const points = corners(pc), xs = points.map(p => p[0]), ys = points.map(p => p[across]);
@@ -1855,7 +1919,7 @@ function separateFaces(P) {
     }
   }
   const baseArts = {kMap:['mapStreet'],kLoc:['locGround'],kCover:['coverPhoto','coverBlob','coverDecor'],kPost:['postPhoto'],eblast:['mailPhoto'],wireWide:['wireWideBase'],wireTablet:['wireTabletBase'],wireTall:['wireTallBase']};
-  for (const pc of P.filter(pc => (pc.blend || pc.labelSource) && pc.registered && !pc.sink)) {
+  for (const pc of P.filter(pc => (pc.blend || pc.labelSource) && pc.registered && !pc.exportSeparated)) {
     const source = pc.cutoutSource || pc.labelSource, eligible = baseArts[source] || [];
     const bases = P.filter(q => eligible.includes(q.art) && q.p[0]-q.s[0] < pc.p[0]+pc.s[0] && q.p[0]+q.s[0] > pc.p[0]-pc.s[0] && q.p[1]-q.s[1] < pc.p[1]+pc.s[1] && q.p[1]+q.s[1] > pc.p[1]-pc.s[1]);
     // Use the emitted base's separated face, not its authored plane: an artboard can already have lifted that base one step.
@@ -1865,6 +1929,33 @@ function separateFaces(P) {
   }
 }
 export function frameAt(t, o = {}) { const { i, at } = sceneAt(t); return build(i, at, o); }
+// Pure event metadata: centres come from the same resting ball as exportOut, without a mutable review cache.
+export function exitBursts() {
+  return SHOW.flatMap((scene, i) => {
+    if (!['id', 'pr', 'ae', 'fig'].includes(scene.key)) return [];
+    const at = starts[i] + playbackSpans(SCRIPTS[scene.key]).off[0] + exitBeats().burst * PACE;
+    const ball = frameAt(at - 1e-6 * PACE).find(pc => pc.morph === 'ball' && pc.where === 'floor');
+    return [{ key: scene.key, at, centre: [ball.p[0], BALL_PATH.size / 2 * EXIT.swellTo, ball.p[2]] }];
+  });
+}
+// Sample the last pre-cut pose, rather than accumulating mutable spots during playback.
+// The snapshot is independent of seeks and of later geometry, such as the opening laptop lid.
+export function popBursts() {
+  return SHOW.flatMap((scene, i) => {
+    if (!['id', 'pr', 'ae', 'fig'].includes(scene.key)) return [];
+    const key = scene.key, s = SCRIPTS[key], a = action(s, 'export').start, { off } = playbackSpans(s);
+    return ['in', 'out'].flatMap(direction => [0, 1, 2].flatMap(part => {
+      const at = starts[i] + (direction === 'in' ? a + (ballBeats(key, part).wipe + POP.at * BALL.become) * PACE
+        : off[0] + (part * EXIT.stagger + POP.at * EXIT.wipe) * PACE);
+      const pieces = frameAt(at - 1e-8 * PACE).filter(pc => pc.assetPart === part), units = new Map();
+      for (const pc of pieces) { if (!units.has(pc.assetUnit)) units.set(pc.assetUnit, []); units.get(pc.assetUnit).push(pc); }
+      return [...units].map(([unit, pieces]) => {
+        const b = objectBlock(pieces);
+        return { key, direction, part, unit, at, centre: [b.p[0], b.p[1] + b.s[2], b.p[2]], hx: b.s[0], hz: b.s[1] };
+      });
+    }));
+  });
+}
 export const SCENES = SHOW.map((scene, i) => (o = {}) => frameAt(starts[i] + scene.still, o));
 export const CRAFT = SHOW.map(scene => scene.craft);
 

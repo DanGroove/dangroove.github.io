@@ -208,9 +208,11 @@ layout(location = 2) in vec2 aOff;
 layout(location = 3) in float aFlag;   // round 9 (L1): 0 behind, 1 in front, 2 in front as G (paper), 3 in front as D (red)
 layout(location = 4) in float aWeight; // round 10: the front copy's opacity, its fade-in (R2) x its return weight (R1)
 layout(location = 5) in float aMix;    // round 10 (R2): the mark weight, own look (0) to the mark's (1)
+layout(location = 6) in vec4 aTrail;  // shared-window displacement, shared taper's unit normal
 uniform vec2 uSize;                    // the hero, css px
 uniform float uDpr, uScroll;
 uniform float uPass, uMarkSize;        // 0 the pass behind the scene, 1 the pass in front; a mark star's least size, css px
+uniform bool uStreak;
 uniform vec2 uPar;                     // followed pointer fraction x 28 px
 uniform vec3 uRings;                   // centre x, y, reach (huge when off, -1 before)
 uniform vec3 uInk, uPaper, uRedInk;
@@ -231,6 +233,11 @@ void main() {
   vR = 0.5 * mix(aLook.y, max(aLook.y, uMarkSize), m) * uDpr;
   vec3 own = mix(uInk, aLook.z > 0.5 ? uRedInk : uPaper, mix(uMix.x, uMix.y, d));
   vCol = mix(own, flag > 2.5 ? uRedInk : uPaper, m);
+  if (uStreak) {
+    float radius = vR / uDpr;
+    on = on && length(aTrail.xy) > 2.0 * radius;
+    p += gl_VertexID == 0 ? -aTrail.xy : aTrail.zw * (gl_VertexID == 1 ? radius : -radius);
+  }
   gl_PointSize = ceil(2.0 * vR) + 2.0;
   gl_Position = on ? vec4(p.x / uSize.x * 2.0 - 1.0, 1.0 - p.y / uSize.y * 2.0, 0.0, 1.0) : vec4(2.0, 2.0, 2.0, 1.0);
 }`;
@@ -238,8 +245,13 @@ const FRAG_STARS = `#version 300 es
 precision highp float;
 in vec3 vCol;
 in float vR, vW;
+uniform bool uStreak;
 out vec4 o;
 void main() {
+  if (uStreak) {
+    float alpha = min(1.0, 2.0 * vR) * vW;
+    o = vec4(vCol * alpha, alpha); return;
+  }
   float dist = length(gl_PointCoord - 0.5) * (ceil(2.0 * vR) + 2.0);
   float a = clamp(vR + 0.5 - dist, 0.0, 1.0) * min(1.0, 2.0 * vR) * vW;
   if (a <= 0.0) discard;
@@ -267,10 +279,14 @@ const norm = a => { const l = Math.hypot(a[0], a[1], a[2]); return [a[0] / l, a[
 export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   const gl = canvas.getContext('webgl2', { antialias: true, alpha: false, preserveDrawingBuffer: true });
   if (!gl) throw new Error('no webgl2');
+  // Query once before any queued drawing. getParameter here used to finish the GPU on every building update.
+  const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
+  const anisotropy = aniso ? Math.min(4, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)) : 1;
   const piece = program(gl, VERT, FRAG), flat = program(gl, VERT, FRAG_FLAT), depth = program(gl, VERT, FRAG_NONE), floor = program(gl, VERT_FLOOR, FRAG_FLOOR);
   const starProgram = program(gl, VERT_STARS, FRAG_STARS);
   // Round 8 (B1): the star field's buffers. Its look is uploaded when the field is made; offsets only when they change.
-  const starVao = gl.createVertexArray(), starLook = gl.createBuffer(), starOff = gl.createBuffer(), starFlag = gl.createBuffer(), starWeight = gl.createBuffer(), starMix = gl.createBuffer();
+  function starBatch() {
+  const starVao = gl.createVertexArray(), starLook = gl.createBuffer(), starOff = gl.createBuffer(), starFlag = gl.createBuffer(), starWeight = gl.createBuffer(), starMix = gl.createBuffer(), starTrail = gl.createBuffer();
   gl.bindVertexArray(starVao);
   gl.bindBuffer(gl.ARRAY_BUFFER, starLook);
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 20, 0);
@@ -283,8 +299,13 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   gl.enableVertexAttribArray(4); gl.vertexAttribPointer(4, 1, gl.FLOAT, false, 0, 0);
   gl.bindBuffer(gl.ARRAY_BUFFER, starMix);
   gl.enableVertexAttribArray(5); gl.vertexAttribPointer(5, 1, gl.FLOAT, false, 0, 0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, starTrail);
+  gl.enableVertexAttribArray(6); gl.vertexAttribPointer(6, 4, gl.FLOAT, false, 0, 0);
   gl.bindVertexArray(null);
-  let starLookVersion = -1, starOffVersion = -1, starCountNow = 0;
+  return { starVao, starLook, starOff, starFlag, starWeight, starMix, starTrail, starLookVersion: -1, starOffVersion: -1, starCountNow: 0 };
+  }
+  const fieldBatch = starBatch();
+  let sparkBatch = null;
 
   // Rounded pieces keep the dense mesh; sharp boxes need only the face and bevel angles.
   function mesh(oct) {
@@ -329,13 +350,12 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   let atlasTextures = [], places = {}, atlasPages = [], boundPage = -1, boundMixPage = -1;
   const buildingTextures = new Map(), buildingReferences = new Map(), buildingTimes = [];
   let atlasScale = 1;
-  function setAtlas(atlas) {
+  function setAtlas(atlas, { yieldFrame } = {}) {
     atlasTextures.forEach(tex => gl.deleteTexture(tex));
     places = atlas.places; atlasPages = atlas.pages; atlasScale = atlas.scale || 1;
     for (const entry of buildingTextures.values()) gl.deleteTexture(entry.texture); buildingTextures.clear();
     for (const entry of buildingReferences.values()) gl.deleteTexture(entry.texture); buildingReferences.clear();
-    const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
-    atlasTextures = atlas.pages.map(canvas => {
+    const upload = canvas => {
       const tex = gl.createTexture();
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
@@ -345,9 +365,15 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, 3);
-      if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(4, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+      if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, anisotropy);
       return tex;
-    });
+    };
+    if (yieldFrame) return (async () => {
+      atlasTextures = [];
+      for (const canvas of atlas.pages) { atlasTextures.push(upload(canvas)); await yieldFrame(); }
+      boundPage = boundMixPage = -1;
+    })();
+    atlasTextures = atlas.pages.map(upload);
     boundPage = boundMixPage = -1;
   }
   function uploadBuilding(entry) {
@@ -360,8 +386,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAX_LEVEL,3);
-    const aniso=gl.getExtension('EXT_texture_filter_anisotropic');
-    if(aniso)gl.texParameterf(gl.TEXTURE_2D,aniso.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(4,gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+    if(aniso)gl.texParameterf(gl.TEXTURE_2D,aniso.TEXTURE_MAX_ANISOTROPY_EXT,anisotropy);
     boundPage=boundMixPage=-1;
   }
   function buildingPicture(building, fresh = false) {
@@ -376,7 +401,8 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     }
     const signature=fresh?'finished':JSON.stringify(plan);
     if(entry.signature!==signature) {
-      const c=entry.image.getContext('2d');
+      // CPU paint avoids cold GPU raster programs and cross-context copies on a live texture update.
+      const c=entry.image.getContext('2d', { willReadFrequently: true });
       c.clearRect(0,0,entry.width,entry.height);c.save();c.translate(entry.x,entry.y);c.scale(entry.scale,entry.scale);
       if(fresh) {c.beginPath();c.rect(0,0,ART[source].w,ART[source].h);c.clip();ART[source].draw(c,ART[source].w,ART[source].h);}
       else paintBuilding(c,source,plan);
@@ -454,7 +480,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   const drawAll = (prog, pieces, grow, tone, skip) => {
     for (const pc of pieces) {
       // Once the body's top is under the floor, omit its whole object in every pass, including expanded outlines.
-      if (pc.hide || pc.sinkTop < 0 || (skip && pc[skip])) continue;
+      if (pc.hide || (skip && pc[skip])) continue;
       const mesh = Math.max(pc.e[0], pc.e[1]) > 0.06 ? roundMesh : sharpMesh;
       if (mesh !== boundMesh) { gl.bindVertexArray(mesh.vao); boundMesh = mesh; }
       setPiece(prog.u, pc, typeof grow === 'function' ? grow(pc) : grow);
@@ -473,7 +499,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   //         reveal: [a, b, c, d] one more clip plane for every piece (the entrance) }
   function draw(pieces, view, look = {}) {
     if(buildings.spineAttribution) {
-      pieces=pieces.filter(pc=>pc.where==='floor'&&pc.sink&&pc.device===undefined&&pc.p[2]>buildings.spineAttribution.z);
+      pieces=pieces.filter(pc=>pc.where==='floor'&&!pc.morph&&pc.device===undefined&&pc.p[2]>buildings.spineAttribution.z);
       look={...look,bg:'#000000',line:'#0000ff',floor:{...look.floor,pool:'#000000',dot:'#000000'}};
     }
     const { W, H, dpr = 1, S, cx, cy, cam } = view;
@@ -523,8 +549,9 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     // again by a second pass after the scene, only while any is out. Round 10 (R1): this first pass draws every star in its own
     // look (stars that are out included), and the second draws the out stars' front copies at their opacities (R2's fade-in
     // x R1's return weight), in their own look mixed toward the mark's by the mark weight (R2).
-    const starPass = pass => {
-      const st = look.stars;
+    const starPass = (pass, st = look.stars, batch = fieldBatch, sparks = false) => {
+      const { starVao, starLook, starOff, starFlag, starWeight, starMix, starTrail } = batch;
+      let { starLookVersion, starOffVersion, starCountNow } = batch;
       gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.bindVertexArray(starVao); boundMesh = null;
       if (st.attrsVersion !== starLookVersion || st.count !== starCountNow) {
@@ -533,6 +560,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
         gl.bindBuffer(gl.ARRAY_BUFFER, starFlag); gl.bufferData(gl.ARRAY_BUFFER, st.count * 4, gl.DYNAMIC_DRAW);
         gl.bindBuffer(gl.ARRAY_BUFFER, starWeight); gl.bufferData(gl.ARRAY_BUFFER, st.count * 4, gl.DYNAMIC_DRAW);
         gl.bindBuffer(gl.ARRAY_BUFFER, starMix); gl.bufferData(gl.ARRAY_BUFFER, st.count * 4, gl.DYNAMIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, starTrail); gl.bufferData(gl.ARRAY_BUFFER, st.count * 16, gl.DYNAMIC_DRAW);
         starLookVersion = st.attrsVersion; starCountNow = st.count; starOffVersion = -1;
       }
       if (st.version !== starOffVersion) {
@@ -548,9 +576,21 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       gl.uniform2fv(starProgram.u.uPar, st.par || [0, 0]);
       gl.uniform3f(starProgram.u.uRings, st.centre?.[0] ?? 0, st.centre?.[1] ?? 0, st.reveal === null || st.reveal === undefined ? 1e9 : st.reveal);
       gl.uniform3fv(starProgram.u.uInk, ink); gl.uniform3fv(starProgram.u.uPaper, hex('#F7F6F3')); gl.uniform3fv(starProgram.u.uRedInk, hex('#F0484F'));
-      gl.uniform2f(starProgram.u.uMix, 0.12, 0.55);
+      gl.uniform2f(starProgram.u.uMix, sparks ? 1 : 0.12, sparks ? 1 : 0.55);
+      if (st.trails) {
+        gl.disable(gl.CULL_FACE);
+        gl.bindBuffer(gl.ARRAY_BUFFER, starTrail); gl.bufferSubData(gl.ARRAY_BUFFER, 0, st.trails);
+        // One triangle per star, with the same attributes/colour/opacity as its circular head.
+        gl.uniform1i(starProgram.u.uStreak, 1);
+        for (let i = 0; i <= 6; i++) gl.vertexAttribDivisor(i, 1);
+        gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, st.count);
+        for (let i = 0; i <= 6; i++) gl.vertexAttribDivisor(i, 0);
+        gl.enable(gl.CULL_FACE);
+      }
+      gl.uniform1i(starProgram.u.uStreak, 0);
       gl.drawArrays(gl.POINTS, 0, st.count);
       gl.bindVertexArray(null); gl.disable(gl.BLEND); gl.enable(gl.DEPTH_TEST);
+      Object.assign(batch, { starLookVersion, starOffVersion, starCountNow });
     };
     if (look.stars && look.stars.count) starPass(0);
 
@@ -600,7 +640,14 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     }
     // Round 9 (L1): the captured stars, in front of the scene's pieces from capture until home (round 10: at their weights).
     if (look.stars && look.stars.count && look.stars.front > 0) starPass(1);
+    if (look.sparks?.count) starPass(1, look.sparks, sparkBatch ||= starBatch(), true);
     gl.bindVertexArray(null);
   }
-  return { gl, draw, setAtlas, buildings };
+  function warm(pieces, view, stars, floor) {
+    const face = pieces.find(pc => pc.art);
+    const keys = atlasPages.map((_, page) => Object.keys(places).find(key => places[key][0] === page));
+    // Exercise every atlas page plus both star paths before any of this canvas can be seen.
+    draw([...pieces, ...keys.filter(Boolean).map(art => ({ ...face, art }))], view, { outline: 0, stars, floor });
+  }
+  return { gl, draw, setAtlas, buildings, warm };
 }

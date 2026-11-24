@@ -917,6 +917,14 @@ body {
 </style>
 <style>
 /* Take two alone owns these offsets; the borrowed first-take stylesheet stays untouched. */
+/* L13b: whole-page interaction policy. */
+* {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+/* End L13b policy. */
 .hero-name .name-line,
 .hero-crafts .n {
   position: relative;
@@ -985,6 +993,43 @@ body {
   color: #f0484f;
   -webkit-text-fill-color: #f0484f;
   clip-path: circle(0px at 0px 0px);
+}
+/* L12: flow text owns layout/accessibility; generated letters and words own the entrance paint.
+   Masks and pen boxes are measured once. No inline-block flow letters can disturb kerning. */
+.hero-lede {
+  position: relative;
+}
+.name-line.has-entrance,
+.hero-lede.has-entrance {
+  -webkit-text-fill-color: transparent;
+}
+.entrance-name {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+  -webkit-text-fill-color: currentcolor;
+}
+.entrance-letter,
+.entrance-word {
+  position: absolute;
+  white-space: pre;
+}
+.entrance-letter::before,
+.entrance-word::before {
+  content: attr(data-ch);
+}
+.entrance-lede-line {
+  position: absolute;
+  left: -4px;
+  width: calc(100% + 60px);
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  -webkit-text-fill-color: currentcolor;
+}
+.entrance-craft-mask {
+  display: block;
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-name .name-line.is-live {
@@ -1109,10 +1154,20 @@ body {
 .jm-joined.rm .marker-layer, .jm-joined.rm .tl { opacity: var(--joined-map-alpha, 0) !important; } .jm-joined.rm:not(.jm-rm-map) .tl { visibility: hidden; }
 
 </style>
+<style>
+.hero-loader { display: none; }
+.hero.is-loading .hero-loader { display: block; position: absolute; inset: 0; z-index: 20; background: #151314; }
+html:not(.skip-loader) .hero.is-loading:not(.is-bursting) > :not(.hero-loader) { visibility: hidden !important; }
+.hero.is-loading.is-bursting .hero-loader { background: transparent; pointer-events: none; }
+.hero-loader canvas { display: block; width: 100%; height: 100%; }
+.skip-loader .hero.is-loading .hero-loader { display: none; }
+</style>
+<script>if (new URLSearchParams(location.search).has('t')) document.documentElement.classList.add('skip-loader');</script>
 </head>
 <body>
 <main id="jm"></main>
-<section class="hero is-entering" data-hero>
+<section class="hero is-entering is-loading" data-hero>
+        <div class="hero-loader" data-loader role="status" aria-label="Loading portfolio"><canvas data-loader-stars aria-hidden="true"></canvas></div>
         <canvas class="hero-art" data-art aria-hidden="true"></canvas>
         <div class="hero-box" data-stage-box aria-hidden="true"></div>
 
@@ -7437,6 +7492,620 @@ place();
 })();
 
 </script>
+<script>(function(){
+function loaderCore(){
+// Shared pure star geometry and L4 timing. Inlined by tools/page.mjs; no DOM, imports, fonts or pictures.
+// One exposure window for loader bursts, field explosions and export sparks.
+const STREAK_WINDOW = 2 / 50;
+const STARS = {
+  density: 1200 / (1440 * 900), most: 2000,
+  size: [0.6, 2.2],             // px across, far to near
+  mix: [0.12, 0.55],            // paper (or red) into ink, far to near
+  red: 0.03,
+  ink: '#151314', paper: '#F7F6F3', redInk: '#F0484F',
+  parallax: 28, tau: 0.3,       // px at a full half-hero offset; follow time constant
+  scroll: 0.12,                 // the nearest stars move this much faster than the page
+  mass: [0.6, 1.6], drag: 2.3,  // drag / sqrt(mass), per second
+  push: { reach: 60, gain: 0.09, cap: 1500, max: 39 },
+  hold: { base: 80, grow: 260, full: 2.5, orbit: [6, 36], turn: Math.PI / 2, pull: 5, follow: 12, blast: [300, 1700], reach: 2, weak: 0.5, max: 0.45 },
+  click: { time: 0.25, move: 6 },
+  rest: { offset: 0.05, speed: 0.5 },
+  // Round 10: the return weight (R1) and the mark weight (R2) change at most this much per second (0.09 a frame at 60); a
+  // captured star's front copy fades in over fadeIn seconds (R2).
+  fade: 5.4, fadeIn: 0.4,
+  // Round 9 (L1): the captured stars form the DG mark, read from the page's own SVG. height: of the hero's height; tau: the
+  // formation's time constant (see BUILD.md, CORRECTIONS-9); arrive: px; size: px across once arrived.
+  // Round 12 (S1): the formation starts once the hold has captured `threshold` stars (round 9 started it at 1.4 s held).
+  // Round 16 (R1): the extra stars make a band round the mark's weight centre: its inner edge ringGap of the mark's height
+  // outside the farthest point, ringBand of the mark's height deep, outward.
+  mark: { threshold: 300, height: 0.2, margin: 16, count: 600, tau: 0.12, arrive: 1, size: 2.6, ringGap: 0.095, ringBand: 0.1, cells: 24000, edge: 2 },
+  // C18-7: keep the charge's diagnostic ramp, but it no longer displaces held stars.
+  charge: { start: 5.6, ramp: 2, amp: 1.5, hz: [10, 16] },
+};
+
+
+const clamp01 = x => Math.min(1, Math.max(0, x));
+// A fixed hash of a star's index and a channel, 0 to 1.
+function hash(i, k = 0) {
+  let h = Math.imul((i | 0) + 0x9e3779b9, 0x85ebca6b) ^ Math.imul((k | 0) + 0x7f4a7c15, 0xc2b2ae35);
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d); h = Math.imul(h ^ (h >>> 12), 0x297a2d39); h ^= h >>> 15;
+  return (h >>> 0) / 4294967296;
+}
+const starCount = (W, H) => Math.min(STARS.most, Math.round(STARS.density * W * H));
+// The field for a hero of W x H: home position, depth, size, mix, red, mass. Homes scale with the box.
+function makeStars(W, H, labels = []) {
+  const n = starCount(W, H), stars = [];
+  for (let i = 0; i < n; i++) {
+    const d = hash(i, 2);
+    stars.push({ x: hash(i, 0) * W, y: hash(i, 1) * H, d, size: STARS.size[0] + (STARS.size[1] - STARS.size[0]) * d, mix: STARS.mix[0] + (STARS.mix[1] - STARS.mix[0]) * d, red: hash(i, 3) < STARS.red, m: STARS.mass[0] + (STARS.mass[1] - STARS.mass[0]) * hash(i, 4) });
+    const star = stars[i], reach = 2 + star.size / 2 + 0.5 * STARS.parallax * (0.12 + 0.88 * d * d);
+    const blocked = () => labels.some(r => star.x >= r.left - reach && star.x <= r.right + reach && star.y >= r.top - reach && star.y <= r.bottom + reach);
+    // Preserve the first draw unless its entire pointer range can reach text. Retry only position channels.
+    for (let k = 0; blocked(); k++) { star.x = hash(i, 40 + 2 * k) * W; star.y = hash(i, 41 + 2 * k) * H; }
+  }
+  return stars;
+}
+function segmentDistance(px, py, a, b) {
+  const vx = b[0] - a[0], vy = b[1] - a[1], len2 = vx * vx + vy * vy;
+  const t = len2 ? clamp01(((px - a[0]) * vx + (py - a[1]) * vy) / len2) : 0;
+  return Math.hypot(px - a[0] - t * vx, py - a[1] - t * vy);
+}
+
+// ---- Round 9 (L1): the DG mark. A pure sampler over the mark's paths ([{ d, fill }], SVG units, y down like the page), then
+// its placement for a hero size. Points from paper paths are G points; points from any other fill (the red path) are D points.
+const markKind = fill => String(fill || '').trim().toUpperCase() === STARS.paper ? 'G' : 'D';
+// A star's colour code for the renderer: 0 behind (own colour), 1 in front (own colour), 2 in front as G, 3 in front as D.
+// Round 10 (R2): 2 and 3 are set when the star is given a point; its front look goes toward that colour by its mark weight.
+const markFlag = kind => kind === 'D' ? 3 : 2;
+const FLAG_INK = [null, null, STARS.paper, STARS.redInk];
+// Flattens an SVG path (M, L, C, Z, absolute or relative) into closed rings of [x, y].
+function flattenPath(d, segments = 24) {
+  const tokens = String(d).match(/[MLCZmlcz]|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/g) || [];
+  const rings = []; let ring = null, cmd = null, k = 0, x = 0, y = 0, sx = 0, sy = 0;
+  const num = () => { const v = +tokens[k++]; if (!Number.isFinite(v)) throw new Error('bad path number'); return v; };
+  const close = () => { if (ring && ring.length > 2) rings.push(ring); ring = null; };
+  while (k < tokens.length) {
+    if (/^[A-Za-z]$/.test(tokens[k])) cmd = tokens[k++];
+    if (!cmd) throw new Error('path data without a command');
+    const rel = cmd !== cmd.toUpperCase(), C = cmd.toUpperCase(), bx = rel ? x : 0, by = rel ? y : 0;
+    if (C === 'Z') { close(); x = sx; y = sy; cmd = null; continue; }
+    if (C === 'M') { close(); x = bx + num(); y = by + num(); sx = x; sy = y; ring = [[x, y]]; cmd = rel ? 'l' : 'L'; }
+    else if (C === 'L') { x = bx + num(); y = by + num(); ring.push([x, y]); }
+    else if (C === 'C') {
+      const x1 = bx + num(), y1 = by + num(), x2 = bx + num(), y2 = by + num(), x3 = bx + num(), y3 = by + num(), x0 = x, y0 = y;
+      for (let j = 1; j <= segments; j++) {
+        const t = j / segments, u = 1 - t;
+        ring.push([u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3, u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3]);
+      }
+      x = x3; y = y3;
+    } else throw new Error('unsupported path command ' + cmd);
+  }
+  close();
+  return rings;
+}
+// Nonzero winding (SVG's default fill rule) of the rings around (px, py).
+function winding(rings, px, py) {
+  let w = 0;
+  for (const r of rings) for (let j = 0; j < r.length; j++) {
+    const a = r[j], b = r[(j + 1) % r.length], side = (b[0] - a[0]) * (py - a[1]) - (px - a[0]) * (b[1] - a[1]);
+    if (a[1] <= py) { if (b[1] > py && side > 0) w++; } else if (b[1] <= py && side < 0) w--;
+  }
+  return w;
+}
+// The sampler: a fine jittered grid inside the fills (the topmost path that covers a cell owns it; cells closer than
+// STARS.mark.edge units to their path's edge are dropped), then farthest-point order, so any first N cover the whole mark
+// evenly. Returns { points: [{ x, y, kind, path }], box: [x0, y0, x1, y1], area: { G, D } } in the paths' own units.
+function sampleMark(paths, count = STARS.mark.count, yieldFrame = null) {
+  const steps = markSamples(paths, count);
+  if (!yieldFrame) { let next; do { next = steps.next(); } while (!next.done); return next.value; }
+  return (async () => {
+    let slice = performance.now();
+    for (;;) {
+      const next = steps.next(); if (next.done) return next.value;
+      if (performance.now() - slice >= 3) { await yieldFrame(); slice = performance.now(); }
+    }
+  })();
+}
+function* markSamples(paths, count) {
+  const shapes = paths.map((p, path) => ({ rings: flattenPath(p.d), kind: markKind(p.fill), path }));
+  const all = shapes.flatMap(s => s.rings.flat());
+  if (!all.length) return { points: [], box: [0, 0, 0, 0], area: { G: 0, D: 0 } };
+  const box = [Math.min(...all.map(p => p[0])), Math.min(...all.map(p => p[1])), Math.max(...all.map(p => p[0])), Math.max(...all.map(p => p[1]))];
+  const step = Math.sqrt((box[2] - box[0]) * (box[3] - box[1]) / STARS.mark.cells), cx = [], cy = [], owner = [];
+  const area = { G: 0, D: 0 }, margin = STARS.mark.edge;
+  // Each row of cells needs only the edges that reach its band (for the winding test and for the edge margin).
+  const edges = shapes.map(sh => sh.rings.flatMap(r => r.map((a, j) => [a, r[(j + 1) % r.length]])));
+  for (let gy = 0, id = 0; box[1] + gy * step < box[3]; gy++) {
+    const lo = box[1] + gy * step - margin, hi = box[1] + (gy + 1) * step + margin;
+    const band = edges.map(list => list.filter(e => Math.max(e[0][1], e[1][1]) >= lo && Math.min(e[0][1], e[1][1]) <= hi));
+    for (let gx = 0; box[0] + gx * step < box[2]; gx++, id++) {
+      const x = box[0] + (gx + 0.15 + 0.7 * hash(id, 7)) * step, y = box[1] + (gy + 0.15 + 0.7 * hash(id, 8)) * step;
+      for (let s = shapes.length - 1; s >= 0; s--) {
+        let w = 0, far = true;
+        for (const [a, b] of band[s]) {
+          const side = (b[0] - a[0]) * (y - a[1]) - (x - a[0]) * (b[1] - a[1]);
+          if (a[1] <= y) { if (b[1] > y && side > 0) w++; } else if (b[1] <= y && side < 0) w--;
+          if (far && segmentDistance(x, y, a, b) < margin) far = false;
+        }
+        if (!w) continue;
+        area[shapes[s].kind] += step * step;
+        if (far) { cx.push(x); cy.push(y); owner.push(s); }
+        break;
+      }
+    }
+    yield;
+  }
+  const m = cx.length, gap = new Float64Array(m).fill(Infinity), points = [];
+  if (!m) return { points, box, area };
+  // Farthest-point order, from the cell nearest the mark's centre.
+  const mx = (box[0] + box[2]) / 2, my = (box[1] + box[3]) / 2;
+  let next = 0;
+  for (let j = 1; j < m; j++) if (Math.hypot(cx[j] - mx, cy[j] - my) < Math.hypot(cx[next] - mx, cy[next] - my)) next = j;
+  for (let k = 0; k < Math.min(count, m); k++) {
+    const px = cx[next], py = cy[next], sh = shapes[owner[next]];
+    points.push({ x: px, y: py, kind: sh.kind, path: sh.path });
+    let far = -1, pick = 0;
+    for (let j = 0; j < m; j++) {
+      const dx = cx[j] - px, dy = cy[j] - py, g = Math.min(gap[j], dx * dx + dy * dy);
+      gap[j] = g; if (g > far) { far = g; pick = j; }
+    }
+    next = pick;
+    yield;
+  }
+  return { points, box, area };
+}
+// The mark for a hero of W x H: about 20 % of its height, the mark's own proportions, never wider than the hero allows.
+// Points are px from the mark's centre (y down, upright, not mirrored); half is its half size; reach its farthest point.
+// Round 16 (R1): weight is the mean of the points (the fill's centroid, the points being even over it), in px from the box
+// centre; the ring's band is centred on it: its inner edge (radius) ringGap of the mark's height outside the farthest point
+// from it, its depth (band) ringBand of the mark's height.
+function placeMark(sample, W, H, height = STARS.mark.height) {
+  const [x0, y0, x1, y1] = sample.box, bw = x1 - x0, bh = y1 - y0, m = STARS.mark.margin;
+  if (!sample.points.length || !(bw > 0) || !(bh > 0)) return null;
+  const h = Math.max(1, Math.min(height * H, (W - 2 * m) * bh / bw, H - 2 * m)), s = h / bh, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const points = sample.points.map(p => ({ x: (p.x - cx) * s, y: (p.y - cy) * s, kind: p.kind }));
+  const weight = [0, 1].map(k => points.reduce((sum, p) => sum + (k ? p.y : p.x), 0) / points.length);
+  const radius = Math.max(...points.map(p => Math.hypot(p.x - weight[0], p.y - weight[1]))) + STARS.mark.ringGap * h;
+  return { points, half: [bw * s / 2, bh * s / 2], height: h, scale: s, reach: Math.max(...points.map(p => Math.hypot(p.x, p.y))), weight, ring: { centre: weight, radius, band: STARS.mark.ringBand * h } };
+}
+// L11: one taper for Canvas and WebGL. Width is the full head diameter; tail is the actual .02 s history.
+function streakGeometry(x, y, size, tail) {
+  const dx = x - tail[0], dy = y - tail[1], length = Math.hypot(dx, dy);
+  const normal = length ? [-dy / length, dx / length] : [0, 0];
+  const nx = normal[0] * size / 2, ny = normal[1] * size / 2;
+  return { length, normal, triangle: length > size ? [tail[0], tail[1], x + nx, y + ny, x - nx, y - ny] : [] };
+}
+// L4: progress has real 25/50/25 shares. .85 displayed progress launches the last star;
+// .85 / 1.4 is deliberately stricter than 1 / 1.4, so launches themselves span 1.4 s.
+const LOADER = {
+  launchEnd: 0.85, gatherSeconds: 1.4, flight: 1.0, hold: 0.15, shrink: 0.35, compressed: 0.08, swell: 0.18, burst: 1.8,
+  shares: { fonts: 0.25, atlas: 0.5, frame: 0.25 },
+};
+const cubicInOut = p => p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2;
+// L10: the home keeps its depth/hash; journey length sets duration, not launch speed.
+const loaderDuration = (home, i, length, longest) => Math.min(1.8, Math.max(0.6,
+  3 * length / (2 * longest * (0.8 + 0.4 * home.d) * (0.94 + 0.12 * hash(i, 21)))));
+const launchShare = (i, count = STARS.mark.count) => LOADER.launchEnd * i / Math.max(1, count - 1);
+// Farthest-point sampling already supplies a spatially even prefix, across both letters.
+// No sort by path, colour or side is introduced for the loader.
+function loaderAt(time, boot = {}, { review = false, reduced = false, count = STARS.mark.count } = {}) {
+  if (review) return { phase: 'skipped', fill: 0, target: 0, done: true, burstTime: null, entranceStart: null, entranceTime: null, pointer: false };
+  const events = Object.entries(LOADER.shares)
+    .filter(([key]) => Number.isFinite(boot[key]) && boot[key] >= 0)
+    .map(([key, share]) => [boot[key], share]).sort((a, b) => a[0] - b[0]);
+  const rate = LOADER.launchEnd / LOADER.gatherSeconds;
+  const progress = t => {
+    let fill = 0, target = 0, cursor = 0;
+    for (const [at, share] of events) {
+      if (at > t) break;
+      fill = Math.min(target, fill + (at - cursor) * rate);
+      target += share; cursor = at;
+    }
+    return { fill: Math.min(target, fill + Math.max(0, t - cursor) * rate), target };
+  };
+  // Invert the continuous piecewise-linear progress, including pauses at a boot plateau.
+  const crossing = share => {
+    let fill = 0, target = 0, cursor = 0;
+    for (const [at, amount] of events) {
+      if (target > 0 && share <= target && share <= fill + (at - cursor) * rate) return cursor + Math.max(0, share - fill) / rate;
+      fill = Math.min(target, fill + (at - cursor) * rate);
+      target += amount; cursor = at;
+    }
+    return target > 0 && share <= target ? cursor + Math.max(0, share - fill) / rate : Infinity;
+  };
+  const { fill, target } = progress(time), ready = events.length === Object.keys(LOADER.shares).length;
+  const launches = Array.from({ length: count }, (_, i) => crossing(launchShare(i, count)));
+  const formedAt = launches.at(-1) + LOADER.flight;
+  const fullAt = ready ? crossing(1) : Infinity;
+  const holdAt = ready ? Math.max(formedAt, fullAt, events.at(-1)[0]) : Infinity;
+  const shrinkStart = holdAt + LOADER.hold, compressedStart = shrinkStart + LOADER.shrink, swellStart = compressedStart + LOADER.compressed;
+  const burstStart = swellStart + LOADER.swell;
+  if (reduced) return { phase: ready && time >= events.at(-1)[0] ? 'cut' : 'loading', fill: target, target,
+    done: ready && time >= events.at(-1)[0], entranceStart: null, entranceTime: null, pointer: false,
+    launches, arrived: count, formedAt: 0, burst: 0, burstTime: null, reduced: true };
+  const shrink = clamp01((time - shrinkStart) / LOADER.shrink), swell = clamp01((time - swellStart) / LOADER.swell);
+  const scale = time >= swellStart ? 0.78 + (1.10 - 0.78) * swell ** 3 : 1 - 0.22 * cubicInOut(shrink);
+  const charge = 1 + 0.3 * cubicInOut(clamp01((time - shrinkStart) / (LOADER.shrink + LOADER.compressed)));
+  return loaderLanding({ phase: time >= swellStart ? 'swell' : time >= compressedStart ? 'compressed' : time >= shrinkStart ? 'shrink' : time >= holdAt ? 'hold' : 'loading',
+    fill, target, launches, formedAt, fullAt, holdAt, shrinkStart, compressedStart, swellStart, scale, charge, burstStart,
+    arrived: launches.filter(at => time >= at + LOADER.flight).length,
+    burstTime: time >= burstStart ? time - burstStart : null,
+    time }, LOADER.burst);
+}
+// The early clock has a conservative bound before layout is known. The painter uses
+// individual durations; the entrance view resolves this same clock to the actual last landing.
+function loaderLanding(state, duration) {
+  if (state.reduced || state.phase === 'skipped') return state;
+  const { time, burstStart } = state, end = burstStart + duration;
+  const entranceStart = end;
+  return { ...state, end, entranceStart, entranceTime: time >= entranceStart ? time - entranceStart : null,
+    done: time >= end, pointer: time >= end, burst: time >= end ? 1 : clamp01((time - burstStart) / duration),
+    phase: time >= end ? 'entrance' : time >= burstStart ? 'burst' : state.phase };
+}
+
+const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+const mixRGB = (a, b, p) => a.map((v, k) => v + (b[k] - v) * p);
+// Home attributes are float32, exactly as uploaded by stars.mjs. Sampling and mark size remain float64.
+function loaderScene(sample, W, H, viewport = { width: W, height: H, left: 0, top: 0 }, labels = []) {
+  const mark = placeMark(sample, W, H), centre = [viewport.width / 2 - viewport.left, viewport.height / 2 - viewport.top];
+  const homes = makeStars(W, H, labels).map(s => {
+    const d = Math.fround(s.d), red = s.red;
+    return { ...s, x: Math.fround(s.x), y: Math.fround(s.y) - Math.max(0, -viewport.top) * STARS.scroll * d, d, size: Math.fround(s.size),
+      colour: mixRGB(rgb(STARS.ink), rgb(red ? STARS.redInk : STARS.paper), STARS.mix[0] + (STARS.mix[1] - STARS.mix[0]) * d) };
+  });
+  const points = mark.points.map((p, i) => {
+    const edge = i % 4, q = hash(i, 19), gap = STARS.mark.size + 2;
+    const start = edge === 0 ? [-gap, q * viewport.height] : edge === 1 ? [viewport.width + gap, q * viewport.height]
+      : edge === 2 ? [q * viewport.width, -gap] : [q * viewport.width, viewport.height + gap];
+    const x = centre[0] + p.x, y = centre[1] + p.y, sx = start[0] - viewport.left, sy = start[1] - viewport.top;
+    const dx = x - sx, dy = y - sy, len = Math.max(1, Math.hypot(dx, dy)), bend = (hash(i, 20) - 0.5) * Math.min(W, H) * 0.16;
+    return { x, y, size: STARS.mark.size, flag: markFlag(p.kind), colour: rgb(FLAG_INK[markFlag(p.kind)]),
+      edge, start: [sx, sy], control: [(sx + x) / 2 - dy / len * bend, (sy + y) / 2 + dx / len * bend],
+      home: null };
+  });
+  const weight = [centre[0] + mark.weight[0], centre[1] + mark.weight[1]];
+  const angle = p => Math.atan2(p.y - weight[1], p.x - weight[0]);
+  const order = list => list.map((p, i) => i).sort((a, b) => angle(list[a]) - angle(list[b]) || a - b);
+  const markOrder = order(points), homeOrder = order(homes), paired = points.length, used = new Set();
+  // L8: every mark star gets a home. Fewer homes share consecutive angular ranks;
+  // more homes keep L7's evenly spaced selection, with the others fading in at home.
+  for (let rank = 0; rank < paired; rank++) {
+    const i = markOrder[Math.floor(rank * points.length / paired)], home = homeOrder[Math.floor(rank * homes.length / paired)];
+    points[i].home = home; used.add(home);
+  }
+  const unpairedHomes = homeOrder.filter(i => !used.has(i));
+  const lengths = points.map(m => Math.hypot(homes[m.home].x - weight[0] - (m.x - weight[0]) * 1.10,
+    homes[m.home].y - weight[1] - (m.y - weight[1]) * 1.10));
+  const longest = Math.max(...lengths);
+  for (const [i, m] of points.entries()) m.duration = loaderDuration(homes[m.home], m.home, lengths[i], longest);
+  const duration = Math.max(...points.map(m => m.duration));
+  // Earliest crossing of each radius by any ray, including a star that later lands.
+  // Solve in eased progress, then invert the cubic: no frame-step or browser clock approximation.
+  const rays = points.map(m => {
+    const x = (m.x - weight[0]) * 1.10, y = (m.y - weight[1]) * 1.10, home = homes[m.home];
+    const dx = home.x - weight[0] - x, dy = home.y - weight[1] - y;
+    return { x, y, dx, dy, a: dx * dx + dy * dy, b: 2 * (x * dx + y * dy), duration: m.duration };
+  });
+  const wave = unpairedHomes.map(i => {
+    const home = homes[i], radius2 = (home.x - weight[0]) ** 2 + (home.y - weight[1]) ** 2;
+    let start = Infinity;
+    for (const ray of rays) {
+      const c = ray.x * ray.x + ray.y * ray.y - radius2;
+      if (c < 0 && (ray.a === 0 || ray.a + ray.b + c <= 0)) continue;
+      const g = c >= 0 ? 0 : clamp01((-ray.b + Math.sqrt(ray.b * ray.b - 4 * ray.a * c)) / (2 * ray.a));
+      start = Math.min(start, ray.duration * (1 - Math.cbrt(1 - g)));
+    }
+    return { home: i, start };
+  });
+  return { W, H, centre, weight, mark, points, homes, unpairedHomes, duration, wave };
+}
+function flightPoint(m, flight) {
+  const t = 1 - (1 - flight) ** 3, u = 1 - t;
+  return [u * u * m.start[0] + 2 * u * t * m.control[0] + t * t * m.x,
+    u * u * m.start[1] + 2 * u * t * m.control[1] + t * t * m.y];
+}
+function burstPoint(m, home, weight, time) {
+  const p = clamp01(time / m.duration), blend = 1 - (1 - p) ** 3;
+  const x = weight[0] + (m.x - weight[0]) * 1.10, y = weight[1] + (m.y - weight[1]) * 1.10;
+  return { x: p === 1 ? home.x : x + (home.x - x) * blend,
+    y: p === 1 ? home.y : y + (home.y - y) * blend, blend };
+}
+const trail = (x, y, tail) => ({ tail, streak: Math.hypot(x - tail[0], y - tail[1]) });
+// L9: preserve L7's lines and L8's homes; depth breaks up the scaled-picture look.
+function loaderDots(scene, state) {
+  const { points, homes, weight } = scene, dots = [];
+  const done = state.burstTime !== null && state.time >= state.burstStart + scene.duration, landed = new Set();
+  const elapsed = done ? Math.max(scene.duration, state.burstTime) : state.burstTime;
+  for (let i = 0; i < points.length; i++) {
+    const m = points[i], home = homes[m.home];
+    if (state.reduced) { dots.push({ ...m, alpha: 1 }); continue; }
+    const flight = clamp01((state.time - state.launches[i]) / LOADER.flight);
+    if (!(flight > 0)) continue;
+    if (state.burstTime === null) {
+      if (state.time >= state.formedAt) {
+        dots.push({ ...m, x: weight[0] + (m.x - weight[0]) * state.scale,
+          y: weight[1] + (m.y - weight[1]) * state.scale, size: m.size * state.charge, alpha: 1 });
+        continue;
+      }
+      const [x, y] = flightPoint(m, flight);
+      dots.push({ ...m, x, y, alpha: 1 });
+      continue;
+    }
+    // L10 gives shared-home stars individual journey times. Merge copies once landed.
+    const arrived = state.time >= state.burstStart + m.duration;
+    if (arrived) {
+      if (landed.has(m.home)) continue;
+      landed.add(m.home);
+    }
+    const target = home, { x, y, blend } = burstPoint(m, target, weight, arrived ? m.duration : elapsed);
+    const previous = arrived ? { x, y } : burstPoint(m, target, weight, Math.max(0, elapsed - STREAK_WINDOW));
+    const depth = 1 + 1.6 * Math.max(0, target.d - 0.4) * Math.sin(Math.PI * blend);
+    const flare = 1 + 0.7 * (1 - clamp01(elapsed / 0.3)) ** 3;
+    dots.push({ x, y, ...trail(x, y, [previous.x, previous.y]),
+      size: blend === 1 ? target.size : (m.size + (target.size - m.size) * blend) * depth * flare,
+      colour: blend === 1 ? target.colour : mixRGB(m.colour, target.colour, blend),
+      flag: blend === 1 ? 0 : m.flag, star: i, home: m.home, alpha: 1 });
+  }
+  if (elapsed !== null) for (const { home: i, start } of scene.wave) {
+    // L10: even homes beyond every ray finish fading before the field takes over.
+    const fade = Number.isFinite(start) ? clamp01((elapsed - start) / 0.2)
+      : clamp01((elapsed - (scene.duration - 0.3)) / 0.3);
+    const alpha = done ? 1 : 1 - (1 - fade) ** 3;
+    dots.push({ ...homes[i], home: i, flag: 0, alpha });
+  }
+  return dots;
+}
+
+return { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry };
+}
+const { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry } = loaderCore();
+function readStarLabels(hero, box) {
+  const doc = hero.ownerDocument;
+  if (!doc?.createRange) return [];
+  const rects = [], range = doc.createRange();
+  for (const el of hero.querySelectorAll('[data-nav] a, [data-cue], [data-pause]')) {
+    const transform = el.style.transform;
+    // The entrance translates these elements. Homes protect their settled line boxes.
+    el.style.transform = '';
+    try {
+      const walker = doc.createTreeWalker(el, 4);
+      while (walker.nextNode()) {
+        const text = walker.currentNode;
+        if (!text.data.trim()) continue;
+        range.selectNodeContents(text);
+        for (const r of range.getClientRects()) if (r.width && r.height) {
+          rects.push({ left: r.left - box.left, top: r.top - box.top, right: r.right - box.left, bottom: r.bottom - box.top });
+        }
+      }
+    } finally { el.style.transform = transform; }
+  }
+  return rects;
+}
+function canvasPainter(canvas, paths, box, viewport, ratio, labels = []) {
+  const sample = sampleMark(paths);
+  // Per-star Canvas gradients created native garbage every frame. Keep the same circular fringe and shared
+  // triangles in two batched GPU draws; Canvas remains the retained-frame fallback where WebGL2 is absent.
+  const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: true });
+  const gpu = gl && typeof gl.createShader === 'function' ? makeGPU() : null;
+  const ctx = gpu ? null : canvas.getContext('2d');
+  let scene, dpr;
+  function makeGPU() {
+    const vertex = `#version 300 es
+precision highp float;
+layout(location=0) in vec2 aPosition;
+layout(location=1) in float aSize;
+layout(location=2) in vec4 aColour;
+layout(location=3) in vec4 aEnds;
+uniform vec2 uSize;
+uniform float uDpr;
+out float vR;
+out vec4 vColour;
+flat out vec4 vEnds;
+void main() {
+  vR = aSize * uDpr / 2.0; vColour = aColour; vEnds = aEnds * uDpr;
+  gl_PointSize = ceil(2.0 * vR) + 2.0;
+  gl_Position = vec4(2.0 * aPosition.x / uSize.x - 1.0, 1.0 - 2.0 * aPosition.y / uSize.y, 0.0, 1.0);
+}`;
+    const fragment = `#version 300 es
+precision highp float;
+in float vR;
+in vec4 vColour;
+flat in vec4 vEnds;
+uniform vec2 uSize;
+uniform float uDpr;
+uniform bool uStroke;
+out vec4 o;
+void main() {
+  float coverage = 1.0;
+  if (uStroke) {
+    // Coverage of the original taper's three edges, in device pixels. The padded raster
+    // quad only invokes this shader; it never supplies the taper's painted width.
+    vec2 p = vec2(gl_FragCoord.x, uSize.y * uDpr - gl_FragCoord.y);
+    vec2 head = vEnds.xy - p, tail = vEnds.zw - p, d = head - tail;
+    vec2 n = vec2(-d.y, d.x) / max(length(d), 0.00001);
+    vec2 triangle[3] = vec2[3](tail, head - n * vR, head + n * vR);
+    float distance = 1e9;
+    for (int edge = 0; edge < 3; edge++) {
+      vec2 a = triangle[edge], line = triangle[(edge + 1) % 3] - a;
+      distance = min(distance, (line.y * a.x - line.x * a.y) / max(length(line), .00001));
+    }
+    coverage = clamp(distance / 1.2 + .5, 0.0, 1.0);
+  } else {
+    float dist = length(gl_PointCoord - 0.5) * (ceil(2.0 * vR) + 2.0);
+    coverage = clamp(vR + 0.5 - dist, 0.0, 1.0);
+  }
+  float a = vColour.a * coverage;
+  o = vec4(vColour.rgb * a, a);
+}`;
+    const program = gl.createProgram();
+    for (const [type, source] of [[gl.VERTEX_SHADER, vertex], [gl.FRAGMENT_SHADER, fragment]]) {
+      const shader = gl.createShader(type); gl.shaderSource(shader, source); gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader));
+      gl.attachShader(program, shader);
+    }
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+    const buffer = gl.createBuffer(), vao = gl.createVertexArray(); gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    for (const [index, count, offset] of [[0, 2, 0], [1, 1, 8], [2, 4, 12], [3, 4, 28]]) {
+      gl.enableVertexAttribArray(index); gl.vertexAttribPointer(index, count, gl.FLOAT, false, 44, offset);
+    }
+    const size = gl.getUniformLocation(program, 'uSize'), ratio = gl.getUniformLocation(program, 'uDpr'), stroke = gl.getUniformLocation(program, 'uStroke');
+    let data = new Float32Array(0);
+    return dots => {
+      if (data.length < dots.length * 77) data = new Float32Array(dots.length * 77);
+      let at = 0;
+      const vertexAt = (x, y, d) => {
+        data[at++] = x; data[at++] = y; data[at++] = d.size;
+        for (const c of d.colour) data[at++] = c / 255;
+        data[at++] = d.alpha * Math.min(1, d.size * dpr);
+        data[at++] = d.x; data[at++] = d.y; data[at++] = d.tail?.[0] ?? d.x; data[at++] = d.tail?.[1] ?? d.y;
+      };
+      for (const d of dots) if (d.alpha > 0) {
+        const shape = streakGeometry(d.x, d.y, d.size, d.tail || [d.x, d.y]);
+        if (!shape.triangle.length) continue;
+        const [nx, ny] = shape.normal, dx = d.x - d.tail[0], dy = d.y - d.tail[1], length = Math.hypot(dx, dy);
+        const pad = 2 / dpr, radius = d.size / 2 + pad, ux = dx / length * pad, uy = dy / length * pad;
+        const a = [d.tail[0] - ux + nx * radius, d.tail[1] - uy + ny * radius], b = [d.tail[0] - ux - nx * radius, d.tail[1] - uy - ny * radius];
+        const c = [d.x + ux + nx * radius, d.y + uy + ny * radius], e = [d.x + ux - nx * radius, d.y + uy - ny * radius];
+        for (const p of [a, b, c, c, b, e]) vertexAt(p[0], p[1], d);
+      }
+      const triangles = at / 11;
+      for (const d of dots) if (d.alpha > 0) vertexAt(d.x, d.y, d);
+      gl.viewport(0, 0, canvas.width, canvas.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.useProgram(program); gl.bindVertexArray(vao); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, data.subarray(0, at), gl.DYNAMIC_DRAW);
+      gl.uniform2f(size, scene.W, scene.H); gl.uniform1f(ratio, dpr);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.uniform1i(stroke, 1); gl.drawArrays(gl.TRIANGLES, 0, triangles);
+      gl.uniform1i(stroke, 0); gl.drawArrays(gl.POINTS, triangles, at / 11 - triangles);
+    };
+  }
+  function resize(next, screen, scale, text = labels) {
+    labels = text;
+    dpr = Math.min(2, scale || 1, Math.sqrt(5.2e6 / (next.width * next.height)));
+    canvas.width = Math.round(next.width * dpr); canvas.height = Math.round(next.height * dpr);
+    scene = loaderScene(sample, next.width, next.height, screen, labels);
+  }
+  resize(box, viewport, ratio);
+  if (gpu) {
+    // Compile the first real point draw during worker setup, before its animation clock/first canvas commit.
+    // Clear in the same command stream: no warm-up pixel is ever presented.
+    gpu([{ x: 0, y: 0, tail: [20, 0], size: 2, colour: [21, 19, 20], alpha: 1 }]);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  }
+  return { resize, paint(state) {
+    if (gpu) { gpu(loaderDots(scene, state)); return; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, scene.W, scene.H);
+    for (const dot of loaderDots(scene, state)) {
+      if (!(dot.alpha > 0)) continue;
+      // The shader's circular one-device-pixel fringe and subpixel diameter attenuation, in CSS coordinates.
+      const r = dot.size / 2, fringe = 0.5 / dpr, outer = r + fringe;
+      const colour = dot.colour.map(n => n.toFixed(4)).join(',');
+      const alpha = dot.alpha * Math.min(1, dot.size * dpr);
+      if (dot.streak > dot.size) {
+        const triangle = streakGeometry(dot.x, dot.y, dot.size, dot.tail).triangle;
+        ctx.fillStyle = `rgba(${colour},${alpha})`;
+        ctx.beginPath(); ctx.moveTo(triangle[0], triangle[1]);
+        ctx.lineTo(triangle[2], triangle[3]); ctx.lineTo(triangle[4], triangle[5]);
+        ctx.closePath(); ctx.fill();
+      }
+      const ink = ctx.createRadialGradient(dot.x, dot.y, 0, dot.x, dot.y, outer);
+      ink.addColorStop(Math.max(0, r - fringe) / outer, `rgba(${colour},${alpha})`);
+      ink.addColorStop(1, `rgba(${colour},0)`);
+      ctx.fillStyle = ink; ctx.fillRect(dot.x - outer, dot.y - outer, 2 * outer, 2 * outer);
+    }
+  } };
+}
+function loaderWorker() {
+  let painter, start = null, origin, boot = {}, reduced = false, request = 0;
+  const now = () => (performance.timeOrigin + performance.now() - origin) / 1000;
+  const animate = () => {
+    const time = now();
+    if (start === null) { start = time; postMessage({ start }); }
+    const progress = Object.fromEntries(Object.entries(boot).map(([k, at]) => [k, Math.max(0, at - start)]));
+    painter.paint(loaderAt(Math.max(0, time - start), progress, { reduced }));
+    request = requestAnimationFrame(animate);
+  };
+  onmessage = ({ data }) => {
+    if (data.init) {
+      origin = data.origin; reduced = data.reduced;
+      painter = canvasPainter(data.canvas, data.paths, data.box, data.viewport, data.ratio, data.labels);
+      // A real worker rAF is required; otherwise the main thread uses the retained-frame fallback.
+      request = requestAnimationFrame(animate);
+    } else if (data.boot) boot[data.boot] = data.at;
+    else if (data.box) painter.resize(data.box, data.viewport, data.ratio, data.labels);
+    else if (data.motion !== undefined) reduced = data.motion;
+    else if (data.stop) { cancelAnimationFrame(request); close(); }
+  };
+}
+(function earlyLoader(pure) {
+  if (new URLSearchParams(location.search).has('t')) return;
+  const hero = document.querySelector('[data-hero]'), overlay = hero.querySelector('[data-loader]');
+  let canvas = overlay.querySelector('canvas'), worker = null, painter = null, start = null, request = 0, cleared = false;
+  const paths = [...hero.querySelectorAll('[data-mark] path')].map(p => ({ d: p.getAttribute('d'), fill: p.getAttribute('fill') }));
+  const media = matchMedia('(prefers-reduced-motion: reduce)'), boot = {};
+  let reduced = media.matches;
+  let box = hero.getBoundingClientRect();
+  let labels = readStarLabels(hero, box);
+  const viewport = () => ({ width: innerWidth, height: innerHeight, left: box.left, top: box.top });
+  const state = now => loaderAt(start === null ? 0 : Math.max(0, now - start),
+    Object.fromEntries(Object.entries(boot).map(([k, at]) => [k, start === null ? 0 : Math.max(0, at - start)])), { reduced });
+  function fallback() {
+    if (cleared || painter) return;
+    worker?.terminate(); worker = null;
+    // A transferred canvas cannot regain a main-thread context. Replace only that canvas on worker failure.
+    const replacement = canvas.cloneNode(); canvas.replaceWith(replacement); canvas = replacement;
+    painter = canvasPainter(canvas, paths, box, viewport(), devicePixelRatio, labels);
+    const animate = now => {
+      if (cleared) return;
+      if (start === null) start = now / 1000;
+      painter.paint(state(now / 1000)); request = requestAnimationFrame(animate);
+    };
+    // Reduced motion is formed synchronously, before the first paint; no worker is needed.
+    painter.paint(loaderAt(0, {}, { reduced }));
+    request = requestAnimationFrame(animate);
+  }
+  const onScroll = () => bridge.measure(hero.getBoundingClientRect());
+  const bridge = {
+    state,
+    boot(key) {
+      // Fonts and final layout are real boot gates. FIFO worker messages update homes before readiness permits a burst.
+      if (key === 'fonts' || key === 'frame') bridge.measure(hero.getBoundingClientRect());
+      const at = performance.now() / 1000; boot[key] = at; worker?.postMessage({ boot: key, at });
+    },
+    apply(s) { hero.classList.toggle('is-bursting', s.entranceTime !== null); },
+    measure(rect) {
+      if (cleared) return;
+      box = rect;
+      labels = readStarLabels(hero, box);
+      const next = { box: { width: box.width, height: box.height }, viewport: viewport(), ratio: devicePixelRatio, labels };
+      if (worker) worker.postMessage(next); else painter?.resize(next.box, next.viewport, next.ratio, labels);
+    },
+    motion(value) { reduced = value; worker?.postMessage({ motion: value }); },
+    clear() {
+      cleared = true; worker?.terminate(); cancelAnimationFrame(request);
+      window.removeEventListener('scroll', onScroll);
+      hero.classList.remove('is-bursting'); overlay.remove();
+    },
+    get mode() { return worker ? 'worker' : 'main'; },
+  };
+  window.__loaderStars = bridge;
+  window.addEventListener('scroll', onScroll, { passive: true });
+  media.addEventListener('change', () => bridge.motion(media.matches));
+  if (!reduced && typeof Worker !== 'undefined' && typeof OffscreenCanvas !== 'undefined' && canvas.transferControlToOffscreen) {
+    try {
+      const code = pure + '\n' + canvasPainter.toString() + '\n(' + loaderWorker.toString() + ')();';
+      const url = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+      worker = new Worker(url); URL.revokeObjectURL(url);
+      worker.onerror = fallback;
+      worker.onmessage = ({ data }) => { if (data.start !== undefined) start = data.start; };
+      const offscreen = canvas.transferControlToOffscreen();
+      worker.postMessage({ init: true, canvas: offscreen, paths, box: { width: box.width, height: box.height }, viewport: viewport(),
+        ratio: devicePixelRatio, labels, reduced, origin: performance.timeOrigin }, [offscreen]);
+    } catch { fallback(); }
+  } else fallback();
+})('const { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry } = (' + loaderCore.toString() + ')();');
+})();</script>
 <script type="module">
 // public/journey/hero/engine.mjs
 const __module0 = (function () {
@@ -8515,7 +9184,12 @@ function letterMask(letters, finished, w, h) {
 
 // Read both drawings from the completed atlas, so integer crop translations, source transforms and the browser's font
 // rasterisation are identical. The raw companion still executes exactly one source text call; no other paint defines its mask.
-function maskLetterPictures(pages, spots) {
+function maskLetterPictures(pages, spots, { steps = false } = {}) {
+  const iterator = maskLetterSteps(pages, spots);
+  if (steps) return iterator;
+  for (const _step of iterator) { /* synchronous atlas/review caller */ }
+}
+function* maskLetterSteps(pages, spots) {
   const byKey = new Map(spots.map(spot => [spot[0], spot])), sources = new Map();
   for (const [key, a, px, py, w, h, page] of spots) {
     if (!a.lettersOnly) continue;
@@ -8537,17 +9211,34 @@ function maskLetterPictures(pages, spots) {
     }
     letters.data.set(letterMask(letters.data, pixels, w, h));
     ctx.putImageData(letters, px, py);
+    yield;
   }
 }
 
 // Pack rows into pages no larger than 2048 square. Places include their page number.
-function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
+function makeAtlas(options = {}) {
+  const steps = atlasSteps(options);
+  if (!options.yieldFrame) {
+    let next; do { next = steps.next(); } while (!next.done);
+    return next.value;
+  }
+  // Keep the exact same ordered paint/packing/mask operations for review and sliced boot.
+  return (async () => {
+    let slice = performance.now();
+    for (;;) {
+      const next = steps.next();
+      if (next.done) return next.value;
+      if (performance.now() - slice >= 3) { await options.yieldFrame(); slice = performance.now(); }
+    }
+  })();
+}
+function* atlasSteps({ size = 2048, pad = 8, scale = 1 } = {}) {
   if (size > 2048 || size < 1 || scale <= 0 || pad < 0) throw new Error('invalid atlas measures');
   const measure = document.createElement('canvas'); measure.width = 1100; measure.height = 472;
   const context = measure.getContext('2d');
-  for (const source of ['kMap', 'kLoc', 'eblast']) letterPictures(context, source);
+  for (const source of ['kMap', 'kLoc', 'eblast']) { letterPictures(context, source); yield; }
   prepareWireCutouts(context);
-  for (const source of BUILDING_PICTURES) measureBuildingPaint(source, context);
+  for (const source of BUILDING_PICTURES) { measureBuildingPaint(source, context); yield; }
   const sheets = [[]], positions = new Map();
   let x = pad, y = pad, row = 0;
   // Keep every existing atlas page and mip phase. Only the isolated pictures and their new grounds get additional pages.
@@ -8570,19 +9261,22 @@ function makeAtlas({ size = 2048, pad = 8, scale = 1 } = {}) {
   }
   // Building uses have independent textures. Keep the original packing, including its old prefix/letter slots,
   // byte-for-byte; the added cutout/base pages have no rendered uses any more.
-  const places = {}, pages = sheets.map((spots, page) => {
+  const places = {}, pages = [];
+  for (const [page, spots] of sheets.entries()) {
     const tall = Math.min(size, Math.ceil(Math.max(...spots.map(p => p[3] + p[5] + p[6])) / 4) * 4);
     const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = tall;
-    const ctx = canvas.getContext('2d');
+    // These pages are read for letter masks before upload. CPU backing avoids synchronous GPU readbacks.
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     for (const [key, a, px, py, w, h] of spots) {
       ctx.save(); ctx.translate(px, py); ctx.scale(scale, scale); ctx.beginPath(); ctx.rect(0, 0, a.w, a.h); ctx.clip();
       a.draw(ctx, a.w, a.h);
       ctx.restore();
       places[key] = [page, (px + 0.5) / size, (py + 0.5) / tall, (w - 1) / size, (h - 1) / tall];
+      yield;
     }
-    return canvas;
-  });
-  maskLetterPictures(pages, sheets.flatMap((spots, page) => spots.map(spot => [...spot.slice(0, 6), page])));
+    pages.push(canvas);
+  }
+  yield* maskLetterPictures(pages, sheets.flatMap((spots, page) => spots.map(spot => [...spot.slice(0, 6), page])), { steps: true });
   return { pages, places, scale };
 }
 const AM_MARKERS = SHOPS.flatMap(([x, step, above, below]) => [...above.map((_, i) => [x + i * step, 358, 30, 30]), ...below.map((_, i) => [x + i * step, 464, 30, 30])]);
@@ -9028,9 +9722,11 @@ layout(location = 2) in vec2 aOff;
 layout(location = 3) in float aFlag;   // round 9 (L1): 0 behind, 1 in front, 2 in front as G (paper), 3 in front as D (red)
 layout(location = 4) in float aWeight; // round 10: the front copy's opacity, its fade-in (R2) x its return weight (R1)
 layout(location = 5) in float aMix;    // round 10 (R2): the mark weight, own look (0) to the mark's (1)
+layout(location = 6) in vec4 aTrail;  // shared-window displacement, shared taper's unit normal
 uniform vec2 uSize;                    // the hero, css px
 uniform float uDpr, uScroll;
 uniform float uPass, uMarkSize;        // 0 the pass behind the scene, 1 the pass in front; a mark star's least size, css px
+uniform bool uStreak;
 uniform vec2 uPar;                     // followed pointer fraction x 28 px
 uniform vec3 uRings;                   // centre x, y, reach (huge when off, -1 before)
 uniform vec3 uInk, uPaper, uRedInk;
@@ -9051,6 +9747,11 @@ void main() {
   vR = 0.5 * mix(aLook.y, max(aLook.y, uMarkSize), m) * uDpr;
   vec3 own = mix(uInk, aLook.z > 0.5 ? uRedInk : uPaper, mix(uMix.x, uMix.y, d));
   vCol = mix(own, flag > 2.5 ? uRedInk : uPaper, m);
+  if (uStreak) {
+    float radius = vR / uDpr;
+    on = on && length(aTrail.xy) > 2.0 * radius;
+    p += gl_VertexID == 0 ? -aTrail.xy : aTrail.zw * (gl_VertexID == 1 ? radius : -radius);
+  }
   gl_PointSize = ceil(2.0 * vR) + 2.0;
   gl_Position = on ? vec4(p.x / uSize.x * 2.0 - 1.0, 1.0 - p.y / uSize.y * 2.0, 0.0, 1.0) : vec4(2.0, 2.0, 2.0, 1.0);
 }`;
@@ -9058,8 +9759,13 @@ const FRAG_STARS = `#version 300 es
 precision highp float;
 in vec3 vCol;
 in float vR, vW;
+uniform bool uStreak;
 out vec4 o;
 void main() {
+  if (uStreak) {
+    float alpha = min(1.0, 2.0 * vR) * vW;
+    o = vec4(vCol * alpha, alpha); return;
+  }
   float dist = length(gl_PointCoord - 0.5) * (ceil(2.0 * vR) + 2.0);
   float a = clamp(vR + 0.5 - dist, 0.0, 1.0) * min(1.0, 2.0 * vR) * vW;
   if (a <= 0.0) discard;
@@ -9087,10 +9793,14 @@ const norm = a => { const l = Math.hypot(a[0], a[1], a[2]); return [a[0] / l, a[
 function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   const gl = canvas.getContext('webgl2', { antialias: true, alpha: false, preserveDrawingBuffer: true });
   if (!gl) throw new Error('no webgl2');
+  // Query once before any queued drawing. getParameter here used to finish the GPU on every building update.
+  const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
+  const anisotropy = aniso ? Math.min(4, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)) : 1;
   const piece = program(gl, VERT, FRAG), flat = program(gl, VERT, FRAG_FLAT), depth = program(gl, VERT, FRAG_NONE), floor = program(gl, VERT_FLOOR, FRAG_FLOOR);
   const starProgram = program(gl, VERT_STARS, FRAG_STARS);
   // Round 8 (B1): the star field's buffers. Its look is uploaded when the field is made; offsets only when they change.
-  const starVao = gl.createVertexArray(), starLook = gl.createBuffer(), starOff = gl.createBuffer(), starFlag = gl.createBuffer(), starWeight = gl.createBuffer(), starMix = gl.createBuffer();
+  function starBatch() {
+  const starVao = gl.createVertexArray(), starLook = gl.createBuffer(), starOff = gl.createBuffer(), starFlag = gl.createBuffer(), starWeight = gl.createBuffer(), starMix = gl.createBuffer(), starTrail = gl.createBuffer();
   gl.bindVertexArray(starVao);
   gl.bindBuffer(gl.ARRAY_BUFFER, starLook);
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 20, 0);
@@ -9103,8 +9813,13 @@ function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   gl.enableVertexAttribArray(4); gl.vertexAttribPointer(4, 1, gl.FLOAT, false, 0, 0);
   gl.bindBuffer(gl.ARRAY_BUFFER, starMix);
   gl.enableVertexAttribArray(5); gl.vertexAttribPointer(5, 1, gl.FLOAT, false, 0, 0);
+  gl.bindBuffer(gl.ARRAY_BUFFER, starTrail);
+  gl.enableVertexAttribArray(6); gl.vertexAttribPointer(6, 4, gl.FLOAT, false, 0, 0);
   gl.bindVertexArray(null);
-  let starLookVersion = -1, starOffVersion = -1, starCountNow = 0;
+  return { starVao, starLook, starOff, starFlag, starWeight, starMix, starTrail, starLookVersion: -1, starOffVersion: -1, starCountNow: 0 };
+  }
+  const fieldBatch = starBatch();
+  let sparkBatch = null;
 
   // Rounded pieces keep the dense mesh; sharp boxes need only the face and bevel angles.
   function mesh(oct) {
@@ -9149,13 +9864,12 @@ function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   let atlasTextures = [], places = {}, atlasPages = [], boundPage = -1, boundMixPage = -1;
   const buildingTextures = new Map(), buildingReferences = new Map(), buildingTimes = [];
   let atlasScale = 1;
-  function setAtlas(atlas) {
+  function setAtlas(atlas, { yieldFrame } = {}) {
     atlasTextures.forEach(tex => gl.deleteTexture(tex));
     places = atlas.places; atlasPages = atlas.pages; atlasScale = atlas.scale || 1;
     for (const entry of buildingTextures.values()) gl.deleteTexture(entry.texture); buildingTextures.clear();
     for (const entry of buildingReferences.values()) gl.deleteTexture(entry.texture); buildingReferences.clear();
-    const aniso = gl.getExtension('EXT_texture_filter_anisotropic');
-    atlasTextures = atlas.pages.map(canvas => {
+    const upload = canvas => {
       const tex = gl.createTexture();
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
@@ -9165,9 +9879,15 @@ function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, 3);
-      if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(4, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+      if (aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, anisotropy);
       return tex;
-    });
+    };
+    if (yieldFrame) return (async () => {
+      atlasTextures = [];
+      for (const canvas of atlas.pages) { atlasTextures.push(upload(canvas)); await yieldFrame(); }
+      boundPage = boundMixPage = -1;
+    })();
+    atlasTextures = atlas.pages.map(upload);
     boundPage = boundMixPage = -1;
   }
   function uploadBuilding(entry) {
@@ -9180,8 +9900,7 @@ function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAX_LEVEL,3);
-    const aniso=gl.getExtension('EXT_texture_filter_anisotropic');
-    if(aniso)gl.texParameterf(gl.TEXTURE_2D,aniso.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(4,gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+    if(aniso)gl.texParameterf(gl.TEXTURE_2D,aniso.TEXTURE_MAX_ANISOTROPY_EXT,anisotropy);
     boundPage=boundMixPage=-1;
   }
   function buildingPicture(building, fresh = false) {
@@ -9196,7 +9915,8 @@ function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     }
     const signature=fresh?'finished':JSON.stringify(plan);
     if(entry.signature!==signature) {
-      const c=entry.image.getContext('2d');
+      // CPU paint avoids cold GPU raster programs and cross-context copies on a live texture update.
+      const c=entry.image.getContext('2d', { willReadFrequently: true });
       c.clearRect(0,0,entry.width,entry.height);c.save();c.translate(entry.x,entry.y);c.scale(entry.scale,entry.scale);
       if(fresh) {c.beginPath();c.rect(0,0,ART[source].w,ART[source].h);c.clip();ART[source].draw(c,ART[source].w,ART[source].h);}
       else paintBuilding(c,source,plan);
@@ -9274,7 +9994,7 @@ function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   const drawAll = (prog, pieces, grow, tone, skip) => {
     for (const pc of pieces) {
       // Once the body's top is under the floor, omit its whole object in every pass, including expanded outlines.
-      if (pc.hide || pc.sinkTop < 0 || (skip && pc[skip])) continue;
+      if (pc.hide || (skip && pc[skip])) continue;
       const mesh = Math.max(pc.e[0], pc.e[1]) > 0.06 ? roundMesh : sharpMesh;
       if (mesh !== boundMesh) { gl.bindVertexArray(mesh.vao); boundMesh = mesh; }
       setPiece(prog.u, pc, typeof grow === 'function' ? grow(pc) : grow);
@@ -9293,7 +10013,7 @@ function createRenderer(canvas, { shadowSize = 2048 } = {}) {
   //         reveal: [a, b, c, d] one more clip plane for every piece (the entrance) }
   function draw(pieces, view, look = {}) {
     if(buildings.spineAttribution) {
-      pieces=pieces.filter(pc=>pc.where==='floor'&&pc.sink&&pc.device===undefined&&pc.p[2]>buildings.spineAttribution.z);
+      pieces=pieces.filter(pc=>pc.where==='floor'&&!pc.morph&&pc.device===undefined&&pc.p[2]>buildings.spineAttribution.z);
       look={...look,bg:'#000000',line:'#0000ff',floor:{...look.floor,pool:'#000000',dot:'#000000'}};
     }
     const { W, H, dpr = 1, S, cx, cy, cam } = view;
@@ -9343,8 +10063,9 @@ function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     // again by a second pass after the scene, only while any is out. Round 10 (R1): this first pass draws every star in its own
     // look (stars that are out included), and the second draws the out stars' front copies at their opacities (R2's fade-in
     // x R1's return weight), in their own look mixed toward the mark's by the mark weight (R2).
-    const starPass = pass => {
-      const st = look.stars;
+    const starPass = (pass, st = look.stars, batch = fieldBatch, sparks = false) => {
+      const { starVao, starLook, starOff, starFlag, starWeight, starMix, starTrail } = batch;
+      let { starLookVersion, starOffVersion, starCountNow } = batch;
       gl.disable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       gl.bindVertexArray(starVao); boundMesh = null;
       if (st.attrsVersion !== starLookVersion || st.count !== starCountNow) {
@@ -9353,6 +10074,7 @@ function createRenderer(canvas, { shadowSize = 2048 } = {}) {
         gl.bindBuffer(gl.ARRAY_BUFFER, starFlag); gl.bufferData(gl.ARRAY_BUFFER, st.count * 4, gl.DYNAMIC_DRAW);
         gl.bindBuffer(gl.ARRAY_BUFFER, starWeight); gl.bufferData(gl.ARRAY_BUFFER, st.count * 4, gl.DYNAMIC_DRAW);
         gl.bindBuffer(gl.ARRAY_BUFFER, starMix); gl.bufferData(gl.ARRAY_BUFFER, st.count * 4, gl.DYNAMIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, starTrail); gl.bufferData(gl.ARRAY_BUFFER, st.count * 16, gl.DYNAMIC_DRAW);
         starLookVersion = st.attrsVersion; starCountNow = st.count; starOffVersion = -1;
       }
       if (st.version !== starOffVersion) {
@@ -9368,9 +10090,21 @@ function createRenderer(canvas, { shadowSize = 2048 } = {}) {
       gl.uniform2fv(starProgram.u.uPar, st.par || [0, 0]);
       gl.uniform3f(starProgram.u.uRings, st.centre?.[0] ?? 0, st.centre?.[1] ?? 0, st.reveal === null || st.reveal === undefined ? 1e9 : st.reveal);
       gl.uniform3fv(starProgram.u.uInk, ink); gl.uniform3fv(starProgram.u.uPaper, hex('#F7F6F3')); gl.uniform3fv(starProgram.u.uRedInk, hex('#F0484F'));
-      gl.uniform2f(starProgram.u.uMix, 0.12, 0.55);
+      gl.uniform2f(starProgram.u.uMix, sparks ? 1 : 0.12, sparks ? 1 : 0.55);
+      if (st.trails) {
+        gl.disable(gl.CULL_FACE);
+        gl.bindBuffer(gl.ARRAY_BUFFER, starTrail); gl.bufferSubData(gl.ARRAY_BUFFER, 0, st.trails);
+        // One triangle per star, with the same attributes/colour/opacity as its circular head.
+        gl.uniform1i(starProgram.u.uStreak, 1);
+        for (let i = 0; i <= 6; i++) gl.vertexAttribDivisor(i, 1);
+        gl.drawArraysInstanced(gl.TRIANGLES, 0, 3, st.count);
+        for (let i = 0; i <= 6; i++) gl.vertexAttribDivisor(i, 0);
+        gl.enable(gl.CULL_FACE);
+      }
+      gl.uniform1i(starProgram.u.uStreak, 0);
       gl.drawArrays(gl.POINTS, 0, st.count);
       gl.bindVertexArray(null); gl.disable(gl.BLEND); gl.enable(gl.DEPTH_TEST);
+      Object.assign(batch, { starLookVersion, starOffVersion, starCountNow });
     };
     if (look.stars && look.stars.count) starPass(0);
 
@@ -9420,9 +10154,16 @@ function createRenderer(canvas, { shadowSize = 2048 } = {}) {
     }
     // Round 9 (L1): the captured stars, in front of the scene's pieces from capture until home (round 10: at their weights).
     if (look.stars && look.stars.count && look.stars.front > 0) starPass(1);
+    if (look.sparks?.count) starPass(1, look.sparks, sparkBatch ||= starBatch(), true);
     gl.bindVertexArray(null);
   }
-  return { gl, draw, setAtlas, buildings };
+  function warm(pieces, view, stars, floor) {
+    const face = pieces.find(pc => pc.art);
+    const keys = atlasPages.map((_, page) => Object.keys(places).find(key => places[key][0] === page));
+    // Exercise every atlas page plus both star paths before any of this canvas can be seen.
+    draw([...pieces, ...keys.filter(Boolean).map(art => ({ ...face, art }))], view, { outline: 0, stars, floor });
+  }
+  return { gl, draw, setAtlas, buildings, warm };
 }
 
 return { createRenderer, TONES, INK };
@@ -9538,10 +10279,16 @@ const EXPORT_SHIFT = -0.3;
 const screenMiddle = SCREEN.l + SCREEN.w / 2, exportMiddle = screenMiddle + EXPORT_SHIFT;
 // CORRECTIONS-15 S1, S2 (they replace round 13's drop and its backwards return): Export pops a red ball out of the button. It arcs
 // to the floor, splits immediately into one red block per format (each the exact footprint and thickness of its format), holds, and a
-// hard wipe turns each block into its format; when the scene's exports leave, they sink straight down through the floor. Each
+// hard wipe turns each block into its format; L13 reverses that step, merges the red pieces and bursts the ball. Each
 // beat's length in seconds at PACE 1, as one table to tune: the pop, the arc, the rest, the split, the hold, each piece's wipe
-// (become), the wipes' stagger left to right, Figma's laptop lid opening after its wipe, and the sink.
-const BALL = { pop: 0.3, arc: 0.8, rest: 0, split: 0.6, hold: 0.15, become: 0.6, stagger: 0.1, lid: 0.4, sink: 1.0 };
+// (become), the wipes' stagger left to right, Figma's laptop lid opening after its wipe, and the exit tail.
+const BALL = { pop: 0.3, arc: 0.8, rest: 0, split: 0.6, hold: 0.15, become: 0.6, stagger: 0.1, lid: 0.4, sink: 1.5 };
+// Exit seconds after off[0], at PACE 1. BALL.sink retains its clock-table name only.
+const EXIT = { wipe: 0.45, stagger: 0.1, merge: 0.5, squash: 0.18, swell: 0.12, after: 0.05, squashTo: 0.78, swellTo: 1.15 };
+function exitBeats() {
+  const wiped = EXIT.wipe + 2 * EXIT.stagger, merged = wiped + EXIT.merge, squashed = merged + EXIT.squash, burst = squashed + EXIT.swell;
+  return { wiped, merged, squashed, burst, end: burst + EXIT.after };
+}
 // World units: full diameter, starting radius, and the peak's height above the Export button's top side.
 const BALL_PATH = { size: 0.6, start: 0.1, rise: 0.6 };
 // R12: one physical model in every scene; landscape turns the tablet, never resizes it.
@@ -9828,65 +10575,123 @@ function poseLid({ pieces, pivot }, theta) {
 }
 // The export of one scene. formats: its three pieces left to right, each { pieces: built in their final landed pose (as round 13
 // left them), shape: their block [x, z, w, d, thickness, e], lid?: Figma's laptop lid, posed shut until its wipe has ended }.
+// Bounds include every visible layer after face separation, including glass and reading leaves.
+function objectBlock(pieces) {
+  const points = pieces.filter(pc => !pc.hide).flatMap(corners);
+  const lo = [0, 1, 2].map(k => Math.min(...points.map(p => p[k]))), hi = [0, 1, 2].map(k => Math.max(...points.map(p => p[k])));
+  if (Math.abs(lo[1]) < 1e-10) lo[1] = 0;
+  return { p: lo.map((v, k) => (v + hi[k]) / 2), s: [hi[0] - lo[0], hi[2] - lo[2], hi[1] - lo[1]].map(v => v / 2),
+    e: pieces.find(pc => !pc.hide)?.e.slice() || [0, 0] };
+}
+const restPoint = formats => {
+  const blocks = formats.map(f => f.shape);
+  return [(Math.min(...blocks.map(r => r[0])) + Math.max(...blocks.map(r => r[0] + r[2]))) / 2,
+    (Math.min(...blocks.map(r => r[1])) + Math.max(...blocks.map(r => r[1] + r[3]))) / 2];
+};
+const POP = { at: 0.3, scale: 1.08, gap: 0.02 };
+function popScale(k) {
+  k = clamp(k, 0, 1);
+  return k < POP.at ? mix(1, POP.scale, EASE.exit(k / POP.at))
+    : mix(POP.scale, 1, EASE.enter((k - POP.at) / (1 - POP.at)));
+}
+// A connected footprint turns as one. Keep each object's block, including both reading halves.
+function assetUnits(objects) {
+  const units = objects.map((pieces, object) => ({ parts: [{ pieces: pieces.filter(pc => !pc.hide), object }] }))
+    .filter(u => u.parts[0].pieces.length);
+  const block = u => objectBlock(u.parts.flatMap(p => p.pieces));
+  const touches = (a, b) => Math.abs(a.p[0] - b.p[0]) <= a.s[0] + b.s[0] + POP.gap
+    && Math.abs(a.p[2] - b.p[2]) <= a.s[1] + b.s[1] + POP.gap;
+  for (let changed = true; changed;) {
+    changed = false;
+    for (let i = 0; i < units.length && !changed; i++) for (let j = i + 1; j < units.length; j++) {
+      if (!units[i].parts.some(a => units[j].parts.some(b => touches(objectBlock(a.pieces), objectBlock(b.pieces))))) continue;
+      units[i].parts.push(...units[j].parts); units.splice(j, 1); changed = true; break;
+    }
+  }
+  return units.map(u => ({ ...u, block: block(u) }));
+}
+// The single red/asset step, both ways: swell, cut, settle. No partial object or clipping edge.
+function assetStep(P, objects, k, reverse, part) {
+  if (Math.abs(k - POP.at) < 1e-12) k = POP.at;
+  if (Math.abs(k - POP.at) < 1e-12) k = POP.at;
+  const scale = popScale(k), red = reverse ? k >= POP.at : k < POP.at;
+  assetUnits(objects).forEach((unit, index) => {
+    const b = unit.block, origin = [b.p[0], b.p[1] - b.s[2], b.p[2]];
+    for (const { pieces, object } of unit.parts) {
+      const box = objectBlock(pieces), shown = red ? [redPiece(box.p, box.s, box.e, 'shape', part)] : pieces;
+      for (const pc of shown) {
+        pc.p = pc.p.map((v, i) => origin[i] + (v - origin[i]) * scale); pc.s = pc.s.map(v => v * scale);
+        pc.assetUnit = `${part}:${index}`; pc.assetPart = part; pc.assetObject = object;
+        pc.assetScale = scale; pc.assetOrigin = origin;
+        if (red) pc.object = object;
+        P.push(pc);
+      }
+    }
+  });
+}
 function exportOut(P, s, t, key, formats) {
   const a = action(s, 'export').start, { off } = playbackSpans(s);
   if (t < a || t >= off[1]) return;
-  const u = (t - a) / PACE, all = formats.flatMap(f => f.pieces);
+  const u = (t - a) / PACE, all = formats.flatMap(f => f.pieces), to = restPoint(formats), R = BALL_PATH.size / 2;
   for (const pc of all) pc.where = 'floor';
   if (u >= ballLength(key)) {
-    // Close fully before sinking. The other two devices keep the cycle's last frame.
+    // Close fully before the red wipe. The plays hold their last frame.
     for (const f of formats) if (f.lid) poseLid(f.lid, mix(12, -90, EASE.wipe(linear(t, off[0] - BALL.lid * PACE, off[0]))));
-    if (t >= off[0]) {
-      separateFaces(all.filter(pc => !pc.hide));
-      // S2: everything sinks together, straight down (x and z fixed), cut by the floor's plane in every pass, until nothing is left.
-      const g = EASE.wipe(linear(t, off[0], off[1]));
-      // A format can contain separate objects: the reading copy must not inherit the closed stack's depth.
-      const objects = formats.flatMap(f => f.objects || [f.pieces]);
-      const top = pc => Math.max(...corners(pc).map(c => c[1]));
-      const bodies = objects.map(pieces => pieces.filter(pc => pc.deviceBody || pc.lid));
-      const heights = objects.map((pieces, j) => Math.max(...(bodies[j].length ? bodies[j] : pieces).filter(pc => !pc.hide).map(top)));
-      // A fixed 0.02 on unequal heights hides the thin devices earlier. Scale the clearance too, so all tops cross y=0 together.
-      const clearance = 1 + 0.02 / Math.max(...heights);
-      for (const [j, pieces] of objects.entries()) {
-        const depth = heights[j] * clearance;
-        for (const pc of pieces) {
-          // Keep the floor clip, and clip carried glass layers at their own rest top above the body.
-          // Their last fragment then crosses with the body, rather than leaving chrome or an island behind.
-          if (bodies[j].length && !bodies[j].includes(pc)) pc.carryClip = [0, 1, 0, -Math.max(0, top(pc) - heights[j])];
-          pc.sinkTop = heights[j] - depth * g;
-          pc.p[1] -= depth * g; pc.clip = [0, 1, 0, 0]; pc.sink = true;
-        }
-      }
+    if (t < off[0]) { P.push(...all.filter(pc => !pc.hide)); return; }
+    separateFaces(all.filter(pc => !pc.hide));
+    for (const pc of all) pc.exportSeparated = true;
+    const v = (t - off[0]) / PACE, b = exitBeats();
+    if (v < b.wiped) {
+      formats.forEach((f, j) => assetStep(P, f.objects || [f.pieces], (v - j * EXIT.stagger) / EXIT.wipe, true, j));
+      return;
     }
-    P.push(...all.filter(pc => !pc.hide)); return;
+    if (v < b.merged) {
+      const k = EASE.wipe(linear(v, b.wiped, b.merged));
+      formats.forEach((f, j) => (f.objects || [f.pieces]).forEach((pieces, object) => {
+        const b = objectBlock(pieces), size = b.s.map(n => mix(n, R, k));
+        const pc = redPiece([mix(b.p[0], to[0], k), mix(b.p[1], R, k), mix(b.p[2], to[1], k)], size,
+          b.e.map(n => mix(n, 1, k)), 'merge', j);
+        pc.object = object; P.push(pc);
+      }));
+      return;
+    }
+    if (v < b.burst - 1e-12) {
+      const g = v < b.squashed ? mix(1, EXIT.squashTo, EASE.wipe(linear(v, b.merged, b.squashed)))
+        : mix(EXIT.squashTo, EXIT.swellTo, EASE.exit(linear(v, b.squashed, b.burst)));
+      const radius = R * g;
+      P.push(redPiece([to[0], radius, to[1]], [radius, radius, radius], [1, 1], 'ball'));
+    }
+    return;
   }
-  // The ball comes to rest at the middle of the three blocks' combined footprint.
-  const blocks = formats.map(f => f.shape), to = [(Math.min(...blocks.map(r => r[0])) + Math.max(...blocks.map(r => r[0] + r[2]))) / 2, (Math.min(...blocks.map(r => r[1])) + Math.max(...blocks.map(r => r[1] + r[3]))) / 2];
   if (u < ballBeats(key, 0).rest) {
     const { c, r, clip } = ballAt(u, to), ball = redPiece(c, [r, r, r], [1, 1], 'ball');
     if (clip) ball.clip = clip;
     P.push(ball); return;
   }
-  const R = BALL_PATH.size / 2;
+  // Prepare the whole landed group once. Split endpoints and both wipe directions use
+  // the same complete bounds, so glass layers never appear outside a smaller body block.
+  for (const [j, f] of formats.entries()) if (f.lid) {
+    const b = ballBeats(key, j);
+    poseLid(f.lid, u < b.wiped ? -90 : mix(-90, 12, EASE.wipe(linear(u, b.wiped, b.become))));
+  }
+  separateFaces(all.filter(pc => !pc.hide));
+  for (const pc of all) pc.exportSeparated = true;
+  for (const f of formats) {
+    const b = objectBlock(f.pieces);
+    f.shape = [b.p[0] - b.s[0], b.p[2] - b.s[1], 2 * b.s[0], 2 * b.s[1], 2 * b.s[2], b.e];
+  }
   formats.forEach((f, j) => {
     const b = ballBeats(key, j), [x, z, w, d, h, e] = f.shape;
     if (u < b.split) {
-      // Split: from three exact copies of the resting ball, each moves along the floor to its place while it becomes its block.
       const k = EASE.enter(linear(u, b.rest, b.split)), size = [mix(R, w / 2, k), mix(R, d / 2, k), mix(R, h / 2, k)];
       P.push(redPiece([mix(to[0], x + w / 2, k), size[2], mix(to[1], z + d / 2, k)], size, [mix(1, e[0], k), mix(1, e[1], k)], 'split', j));
       return;
     }
-    const block = () => redPiece([x + w / 2, h / 2, z + d / 2], [w / 2, d / 2, h / 2], e.slice(), 'shape', j);
-    if (u < b.wipe) { P.push(block()); return; }
-    if (f.lid) poseLid(f.lid, u < b.wiped ? -90 : mix(-90, 12, EASE.wipe(linear(u, b.wiped, b.become))));
     if (u < b.wiped) {
-      // Become: one hard wipe left to right in world x. Behind its edge the format, ahead of it the block: one plane, two signs.
-      const edge = mix(x, x + w, EASE.wipe(linear(u, b.wipe, b.wiped))), red = block();
-      red.clip = [1, 0, 0, -edge]; red.edge = edge; P.push(red);
-      for (const pc of f.pieces) if (!pc.hide) { pc.clip = [-1, 0, 0, edge]; pc.edge = edge; pc.wiped = j; P.push(pc); }
+      assetStep(P, [f.pieces], (u - b.wipe) / BALL.become, false, j);
       return;
     }
-    for (const pc of f.pieces) if (!pc.hide) P.push(pc);
+    P.push(...f.pieces.filter(pc => !pc.hide));
   });
 }
 // Video and motion: the ball becomes the tablet on its side and the two phones. Their plays start once every piece is built, in
@@ -10317,7 +11122,7 @@ const SCRIPTS = {
     { id: 'link', kind: 'drag', from: FIG.from, to: FIG.to, duration: 0.6 },
     { id: 'panel', kind: 'run', from: [PANEL + 0.2, TOP - 0.46], to: [PANEL + 0.45, 0.32], count: 5, duration: 0.2 },
     { id: 'export', kind: 'export', from: EXPORT, duration: 0.7 },
-  ], { hold: EXPORT_HOLD.fig, tail: BALL.sink, beats: FIG_BEATS, clockLength: 18.545162584479227 }),
+  ], { hold: EXPORT_HOLD.fig, tail: BALL.sink, beats: FIG_BEATS, clockLength: 19.045162584479227 }),
   id: script([
     // CORRECTIONS-12 I1: no frames are drawn. The document opens with its blank pages already there (see blankPages).
     { id: 'map', kind: 'drag', from: centre(DOCK.map), to: centre(ID.frame), duration: 0.45, tool: 'arrow' },
@@ -10350,7 +11155,7 @@ const SCRIPTS = {
     { id: 'pause3', kind: 'wait', duration: 0.3 },
     { id: 'leaf4', kind: 'wait', duration: 0.6 },
     { id: 'read', kind: 'wait', duration: 0.3 },
-    { id: 'return', kind: 'wait', duration: BALL.sink },   // CORRECTIONS-15 S2: the sink
+    { id: 'return', kind: 'wait', duration: BALL.sink },   // L13: the merge and burst exit
   ], { tail: 0, start: centre(DOCK.loc) }),
   ai: script([
     ...[AI.upper, AI.lower].map((r, i) => ({ id: 'board' + i, kind: 'draw', from: topLeft(r), to: bottomRight(r), duration: 0.3, tool: 'rectangle' })),
@@ -10469,8 +11274,8 @@ function dragPicture(P, s, id, t, from, to, art, tone = 'ink') {
   P.push(pc);
 }
 // CORRECTIONS-15: each piece's span runs from the Export click to the end of its "become" (its wipe; the laptop's lid); land is when
-// every piece is built, which starts the plays (two of 1.6 s, or Figma's one 3.0 s cycle) and the labels. off: the sink, BALL.sink
-// long. InDesign's sink is its own wait, 'return'.
+// every piece is built, which starts the plays (two of 1.6 s, or Figma's one 3.0 s cycle) and the labels. off: the exit, BALL.sink
+// long. InDesign's exit is its own wait, 'return'.
 function playbackSpans(s) {
   const key = Object.keys(SCRIPTS).find(k => SCRIPTS[k] === s), a = action(s, 'export').start;
   const spans = [0, 1, 2].map(j => { const b = ballBeats(key, j); return [a + b.start * PACE, a + b.become * PACE]; }), land = a + ballLength(key) * PACE;
@@ -10484,7 +11289,7 @@ function playClock(t, land, stop, key) {
 function exportPlay(s, t) {
   const { land, off } = playbackSpans(s);
   if (s === SCRIPTS.fig) return t >= land && t < off[1] ? Math.min(1, (t - land) / (3 * PACE)) : null;
-  // CORRECTIONS-15 S2: the plays hold their frame while the exports sink (as Figma's cycle always has), so nothing moves but down.
+  // The plays hold their final frame while L13 reverses the wipe and bursts the export ball.
   return t >= land && t < off[1] ? playClock(t, land, off[0], s === SCRIPTS.ae ? 'ae' : 'pr') : null;
 }
 function editedVideo(t) {
@@ -10963,7 +11768,7 @@ function editedInDesign(t, { at: pages } = {}) {
   return P;
 }
 // InDesign: the ball becomes the booklet stack (with the copy that is read lying on top), the LinkedIn post's phone and the
-// e-blast's tablet. The land, pickup, opening and leaf turns follow as before; on the sink the copy lying open goes down with them.
+// e-blast's tablet. The land, pickup, opening and leaf turns follow as before; at exit each reading half has its own red piece.
 // floor: as prints() builds it: stack's five copies 0-9; phone 10-14 (body, picture, three island solids); tablet 15-17
 // (body, picture, camera); then the reading copy from 18 onward (two closed pieces, or pages and the turning leaf).
 function bookletOut(P, s, t, floor) {
@@ -11310,7 +12115,7 @@ function liftDragStack(P) {
 function separateFaces(P) {
   for (const floor of [false, true]) {
     const axis = floor ? 1 : 2, across = floor ? 2 : 1, step = LAYER_STEP * (floor ? 1 : U);
-    const faces = P.filter(pc => (pc.where === 'floor') === floor && !pc.solid && !pc.sink && !pc.blend && !pc.labelSource).flatMap(pc => {   // Sinks were separated before their independent translations.
+    const faces = P.filter(pc => (pc.where === 'floor') === floor && !pc.solid && !pc.exportSeparated && !pc.blend && !pc.labelSource).flatMap(pc => {   // Exports were separated before their shared wipe and per-object morph.
       const [x, y, z, w] = pc.q, normal = floor ? 2 * (y * z - w * x) : 1 - 2 * (x * x + y * y);
       if (normal < 1 - 1e-9) return [];
       const points = corners(pc), xs = points.map(p => p[0]), ys = points.map(p => p[across]);
@@ -11342,7 +12147,7 @@ function separateFaces(P) {
     }
   }
   const baseArts = {kMap:['mapStreet'],kLoc:['locGround'],kCover:['coverPhoto','coverBlob','coverDecor'],kPost:['postPhoto'],eblast:['mailPhoto'],wireWide:['wireWideBase'],wireTablet:['wireTabletBase'],wireTall:['wireTallBase']};
-  for (const pc of P.filter(pc => (pc.blend || pc.labelSource) && pc.registered && !pc.sink)) {
+  for (const pc of P.filter(pc => (pc.blend || pc.labelSource) && pc.registered && !pc.exportSeparated)) {
     const source = pc.cutoutSource || pc.labelSource, eligible = baseArts[source] || [];
     const bases = P.filter(q => eligible.includes(q.art) && q.p[0]-q.s[0] < pc.p[0]+pc.s[0] && q.p[0]+q.s[0] > pc.p[0]-pc.s[0] && q.p[1]-q.s[1] < pc.p[1]+pc.s[1] && q.p[1]+q.s[1] > pc.p[1]-pc.s[1]);
     // Use the emitted base's separated face, not its authored plane: an artboard can already have lifted that base one step.
@@ -11352,6 +12157,33 @@ function separateFaces(P) {
   }
 }
 function frameAt(t, o = {}) { const { i, at } = sceneAt(t); return build(i, at, o); }
+// Pure event metadata: centres come from the same resting ball as exportOut, without a mutable review cache.
+function exitBursts() {
+  return SHOW.flatMap((scene, i) => {
+    if (!['id', 'pr', 'ae', 'fig'].includes(scene.key)) return [];
+    const at = starts[i] + playbackSpans(SCRIPTS[scene.key]).off[0] + exitBeats().burst * PACE;
+    const ball = frameAt(at - 1e-6 * PACE).find(pc => pc.morph === 'ball' && pc.where === 'floor');
+    return [{ key: scene.key, at, centre: [ball.p[0], BALL_PATH.size / 2 * EXIT.swellTo, ball.p[2]] }];
+  });
+}
+// Sample the last pre-cut pose, rather than accumulating mutable spots during playback.
+// The snapshot is independent of seeks and of later geometry, such as the opening laptop lid.
+function popBursts() {
+  return SHOW.flatMap((scene, i) => {
+    if (!['id', 'pr', 'ae', 'fig'].includes(scene.key)) return [];
+    const key = scene.key, s = SCRIPTS[key], a = action(s, 'export').start, { off } = playbackSpans(s);
+    return ['in', 'out'].flatMap(direction => [0, 1, 2].flatMap(part => {
+      const at = starts[i] + (direction === 'in' ? a + (ballBeats(key, part).wipe + POP.at * BALL.become) * PACE
+        : off[0] + (part * EXIT.stagger + POP.at * EXIT.wipe) * PACE);
+      const pieces = frameAt(at - 1e-8 * PACE).filter(pc => pc.assetPart === part), units = new Map();
+      for (const pc of pieces) { if (!units.has(pc.assetUnit)) units.set(pc.assetUnit, []); units.get(pc.assetUnit).push(pc); }
+      return [...units].map(([unit, pieces]) => {
+        const b = objectBlock(pieces);
+        return { key, direction, part, unit, at, centre: [b.p[0], b.p[1] + b.s[2], b.p[2]], hx: b.s[0], hz: b.s[1] };
+      });
+    }));
+  });
+}
 const SCENES = SHOW.map((scene, i) => (o = {}) => frameAt(starts[i] + scene.still, o));
 const CRAFT = SHOW.map(scene => scene.craft);
 
@@ -11392,7 +12224,7 @@ function calloutsAt(t) {
   });
 }
 
-return { on, floorAt, ballBeats, ballAt, prototypeState, script, playbackSpans, sceneAt, buildingLastState, carriedStack, frameAt, calloutsAt, PACE, SCREEN, EXPORT_SHIFT, BALL, BALL_PATH, BODY, PHONE_BESIDE, MODELS, MAT, BLOCK, BLOCK_ROW, POOL, LAYERS, HAND, HAND_KINDS, ballLength, EXPORT_BUTTON, BALL_START, UI_ROW, HAND_PAGE, FIG_PHONE, FIG_SCREENS, FIG, ID, SCRIPTS, SHOW, LOOP, BUILDING_USES, SCENES, CRAFT };
+return { on, floorAt, exitBeats, ballBeats, ballAt, objectBlock, popScale, assetUnits, assetStep, prototypeState, script, playbackSpans, sceneAt, buildingLastState, carriedStack, frameAt, exitBursts, popBursts, calloutsAt, PACE, SCREEN, EXPORT_SHIFT, BALL, EXIT, BALL_PATH, BODY, PHONE_BESIDE, MODELS, MAT, BLOCK, BLOCK_ROW, POOL, LAYERS, HAND, HAND_KINDS, ballLength, EXPORT_BUTTON, BALL_START, POP, UI_ROW, HAND_PAGE, FIG_PHONE, FIG_SCREENS, FIG, ID, SCRIPTS, SHOW, LOOP, BUILDING_USES, SCENES, CRAFT };
 })();
 // design/journey-hero/take-2/labels.mjs
 const __module6 = (function () {
@@ -11547,8 +12379,7 @@ function createCallouts(hero) {
     const h = hero.getBoundingClientRect();
     return [...hero.querySelectorAll('[data-name],[data-lede],[data-crafts],.hero-nav,[data-foot]')].map(n => n.getBoundingClientRect()).filter(r => r.width && r.height).map(r => ({ left: r.left - h.left, right: r.right - h.left, top: r.top - h.top, bottom: r.bottom - h.top }));
   };
-  return {
-    measure() {
+  function* measureWords() {
       obstacles = pageBlocks();
       {
         const word = nodes[2].word;
@@ -11559,10 +12390,20 @@ function createCallouts(hero) {
           const time = start + (scene.key === 'id' ? playbackSpans(SCRIPTS.id).land + 0.41 * PACE : scene.still);
           for (const c of calloutsAt(time)) for (const [key, size] of [['small', 9], ['large', 11]]) {
             word.style.fontSize = size + 'px'; word.textContent = c.words; wordWidths[key][c.id] = word.getBoundingClientRect().width;
+            yield;
           }
           start += scene.len;
         }
       }
+  }
+  return {
+    measure({ yieldFrame } = {}) {
+      const steps = measureWords();
+      if (!yieldFrame) { for (const _step of steps) { /* synchronous resize/review caller */ } return; }
+      return (async () => {
+        let slice = performance.now();
+        for (const _step of steps) if (performance.now() - slice >= 3) { await yieldFrame(); slice = performance.now(); }
+      })();
     },
     fit(view, need, boxLeft) {
       return fitCalloutView(view, need, boxLeft, wordWidths, obstacles);
@@ -11623,7 +12464,7 @@ function createPageLayout(hero, stage, callouts) {
     }
     return { left: Math.min(...rects.map(r => r.left)), right: Math.max(...rects.map(r => r.right)), top: Math.min(...rects.map(r => r.top)), bottom: Math.max(...rects.map(r => r.bottom)) };
   }
-  function measure() {
+  function measure({ callouts: measureCallouts = true } = {}) {
     if (target) {
       // CSSOM may shorten our values. Always restore the CSS sizing basis before reading it.
       for (const key of ['left', 'width']) stage.style.removeProperty(key);
@@ -11648,7 +12489,7 @@ function createPageLayout(hero, stage, callouts) {
     const text = [name, ledeNode, crafts].map(n => ink(n));
     // The name never rewraps. Box edges keep the other text's line breaks out of scene placement.
     const textRight = Math.max(text[0].right, ledeNode.getBoundingClientRect().right, crafts.getBoundingClientRect().right) - h.left;
-    callouts.measure();
+    if (measureCallouts) callouts.measure();
     cached = { h, b, textRight, gap, rise, text, baseNameTop: nameInk.top - h.top, logoBottom: logo.bottom - h.top, nameLines: lines.map(n => ink(n, '800')), ledeInk: ink(hero.querySelector('[data-lede]')), numberInks: numbers.map(n => ink(n)) };
     return cached;
   }
@@ -11673,29 +12514,464 @@ function createPageLayout(hero, stage, callouts) {
 
 return { createPageLayout };
 })();
-// design/journey-hero/take-2/entrance.mjs
+// design/journey-hero/take-2/loader-stars.mjs
 const __module8 = (function () {
-const { EASE } = __module0;
+
+// Shared pure star geometry and L4 timing. Inlined by tools/page.mjs; no DOM, imports, fonts or pictures.
+// One exposure window for loader bursts, field explosions and export sparks.
+const STREAK_WINDOW = 2 / 50;
+const STARS = {
+  density: 1200 / (1440 * 900), most: 2000,
+  size: [0.6, 2.2],             // px across, far to near
+  mix: [0.12, 0.55],            // paper (or red) into ink, far to near
+  red: 0.03,
+  ink: '#151314', paper: '#F7F6F3', redInk: '#F0484F',
+  parallax: 28, tau: 0.3,       // px at a full half-hero offset; follow time constant
+  scroll: 0.12,                 // the nearest stars move this much faster than the page
+  mass: [0.6, 1.6], drag: 2.3,  // drag / sqrt(mass), per second
+  push: { reach: 60, gain: 0.09, cap: 1500, max: 39 },
+  hold: { base: 80, grow: 260, full: 2.5, orbit: [6, 36], turn: Math.PI / 2, pull: 5, follow: 12, blast: [300, 1700], reach: 2, weak: 0.5, max: 0.45 },
+  click: { time: 0.25, move: 6 },
+  rest: { offset: 0.05, speed: 0.5 },
+  // Round 10: the return weight (R1) and the mark weight (R2) change at most this much per second (0.09 a frame at 60); a
+  // captured star's front copy fades in over fadeIn seconds (R2).
+  fade: 5.4, fadeIn: 0.4,
+  // Round 9 (L1): the captured stars form the DG mark, read from the page's own SVG. height: of the hero's height; tau: the
+  // formation's time constant (see BUILD.md, CORRECTIONS-9); arrive: px; size: px across once arrived.
+  // Round 12 (S1): the formation starts once the hold has captured `threshold` stars (round 9 started it at 1.4 s held).
+  // Round 16 (R1): the extra stars make a band round the mark's weight centre: its inner edge ringGap of the mark's height
+  // outside the farthest point, ringBand of the mark's height deep, outward.
+  mark: { threshold: 300, height: 0.2, margin: 16, count: 600, tau: 0.12, arrive: 1, size: 2.6, ringGap: 0.095, ringBand: 0.1, cells: 24000, edge: 2 },
+  // C18-7: keep the charge's diagnostic ramp, but it no longer displaces held stars.
+  charge: { start: 5.6, ramp: 2, amp: 1.5, hz: [10, 16] },
+};
+
+
+const clamp01 = x => Math.min(1, Math.max(0, x));
+// A fixed hash of a star's index and a channel, 0 to 1.
+function hash(i, k = 0) {
+  let h = Math.imul((i | 0) + 0x9e3779b9, 0x85ebca6b) ^ Math.imul((k | 0) + 0x7f4a7c15, 0xc2b2ae35);
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d); h = Math.imul(h ^ (h >>> 12), 0x297a2d39); h ^= h >>> 15;
+  return (h >>> 0) / 4294967296;
+}
+const starCount = (W, H) => Math.min(STARS.most, Math.round(STARS.density * W * H));
+// The field for a hero of W x H: home position, depth, size, mix, red, mass. Homes scale with the box.
+function makeStars(W, H, labels = []) {
+  const n = starCount(W, H), stars = [];
+  for (let i = 0; i < n; i++) {
+    const d = hash(i, 2);
+    stars.push({ x: hash(i, 0) * W, y: hash(i, 1) * H, d, size: STARS.size[0] + (STARS.size[1] - STARS.size[0]) * d, mix: STARS.mix[0] + (STARS.mix[1] - STARS.mix[0]) * d, red: hash(i, 3) < STARS.red, m: STARS.mass[0] + (STARS.mass[1] - STARS.mass[0]) * hash(i, 4) });
+    const star = stars[i], reach = 2 + star.size / 2 + 0.5 * STARS.parallax * (0.12 + 0.88 * d * d);
+    const blocked = () => labels.some(r => star.x >= r.left - reach && star.x <= r.right + reach && star.y >= r.top - reach && star.y <= r.bottom + reach);
+    // Preserve the first draw unless its entire pointer range can reach text. Retry only position channels.
+    for (let k = 0; blocked(); k++) { star.x = hash(i, 40 + 2 * k) * W; star.y = hash(i, 41 + 2 * k) * H; }
+  }
+  return stars;
+}
+function segmentDistance(px, py, a, b) {
+  const vx = b[0] - a[0], vy = b[1] - a[1], len2 = vx * vx + vy * vy;
+  const t = len2 ? clamp01(((px - a[0]) * vx + (py - a[1]) * vy) / len2) : 0;
+  return Math.hypot(px - a[0] - t * vx, py - a[1] - t * vy);
+}
+
+// ---- Round 9 (L1): the DG mark. A pure sampler over the mark's paths ([{ d, fill }], SVG units, y down like the page), then
+// its placement for a hero size. Points from paper paths are G points; points from any other fill (the red path) are D points.
+const markKind = fill => String(fill || '').trim().toUpperCase() === STARS.paper ? 'G' : 'D';
+// A star's colour code for the renderer: 0 behind (own colour), 1 in front (own colour), 2 in front as G, 3 in front as D.
+// Round 10 (R2): 2 and 3 are set when the star is given a point; its front look goes toward that colour by its mark weight.
+const markFlag = kind => kind === 'D' ? 3 : 2;
+const FLAG_INK = [null, null, STARS.paper, STARS.redInk];
+// Flattens an SVG path (M, L, C, Z, absolute or relative) into closed rings of [x, y].
+function flattenPath(d, segments = 24) {
+  const tokens = String(d).match(/[MLCZmlcz]|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/g) || [];
+  const rings = []; let ring = null, cmd = null, k = 0, x = 0, y = 0, sx = 0, sy = 0;
+  const num = () => { const v = +tokens[k++]; if (!Number.isFinite(v)) throw new Error('bad path number'); return v; };
+  const close = () => { if (ring && ring.length > 2) rings.push(ring); ring = null; };
+  while (k < tokens.length) {
+    if (/^[A-Za-z]$/.test(tokens[k])) cmd = tokens[k++];
+    if (!cmd) throw new Error('path data without a command');
+    const rel = cmd !== cmd.toUpperCase(), C = cmd.toUpperCase(), bx = rel ? x : 0, by = rel ? y : 0;
+    if (C === 'Z') { close(); x = sx; y = sy; cmd = null; continue; }
+    if (C === 'M') { close(); x = bx + num(); y = by + num(); sx = x; sy = y; ring = [[x, y]]; cmd = rel ? 'l' : 'L'; }
+    else if (C === 'L') { x = bx + num(); y = by + num(); ring.push([x, y]); }
+    else if (C === 'C') {
+      const x1 = bx + num(), y1 = by + num(), x2 = bx + num(), y2 = by + num(), x3 = bx + num(), y3 = by + num(), x0 = x, y0 = y;
+      for (let j = 1; j <= segments; j++) {
+        const t = j / segments, u = 1 - t;
+        ring.push([u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3, u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3]);
+      }
+      x = x3; y = y3;
+    } else throw new Error('unsupported path command ' + cmd);
+  }
+  close();
+  return rings;
+}
+// Nonzero winding (SVG's default fill rule) of the rings around (px, py).
+function winding(rings, px, py) {
+  let w = 0;
+  for (const r of rings) for (let j = 0; j < r.length; j++) {
+    const a = r[j], b = r[(j + 1) % r.length], side = (b[0] - a[0]) * (py - a[1]) - (px - a[0]) * (b[1] - a[1]);
+    if (a[1] <= py) { if (b[1] > py && side > 0) w++; } else if (b[1] <= py && side < 0) w--;
+  }
+  return w;
+}
+// The sampler: a fine jittered grid inside the fills (the topmost path that covers a cell owns it; cells closer than
+// STARS.mark.edge units to their path's edge are dropped), then farthest-point order, so any first N cover the whole mark
+// evenly. Returns { points: [{ x, y, kind, path }], box: [x0, y0, x1, y1], area: { G, D } } in the paths' own units.
+function sampleMark(paths, count = STARS.mark.count, yieldFrame = null) {
+  const steps = markSamples(paths, count);
+  if (!yieldFrame) { let next; do { next = steps.next(); } while (!next.done); return next.value; }
+  return (async () => {
+    let slice = performance.now();
+    for (;;) {
+      const next = steps.next(); if (next.done) return next.value;
+      if (performance.now() - slice >= 3) { await yieldFrame(); slice = performance.now(); }
+    }
+  })();
+}
+function* markSamples(paths, count) {
+  const shapes = paths.map((p, path) => ({ rings: flattenPath(p.d), kind: markKind(p.fill), path }));
+  const all = shapes.flatMap(s => s.rings.flat());
+  if (!all.length) return { points: [], box: [0, 0, 0, 0], area: { G: 0, D: 0 } };
+  const box = [Math.min(...all.map(p => p[0])), Math.min(...all.map(p => p[1])), Math.max(...all.map(p => p[0])), Math.max(...all.map(p => p[1]))];
+  const step = Math.sqrt((box[2] - box[0]) * (box[3] - box[1]) / STARS.mark.cells), cx = [], cy = [], owner = [];
+  const area = { G: 0, D: 0 }, margin = STARS.mark.edge;
+  // Each row of cells needs only the edges that reach its band (for the winding test and for the edge margin).
+  const edges = shapes.map(sh => sh.rings.flatMap(r => r.map((a, j) => [a, r[(j + 1) % r.length]])));
+  for (let gy = 0, id = 0; box[1] + gy * step < box[3]; gy++) {
+    const lo = box[1] + gy * step - margin, hi = box[1] + (gy + 1) * step + margin;
+    const band = edges.map(list => list.filter(e => Math.max(e[0][1], e[1][1]) >= lo && Math.min(e[0][1], e[1][1]) <= hi));
+    for (let gx = 0; box[0] + gx * step < box[2]; gx++, id++) {
+      const x = box[0] + (gx + 0.15 + 0.7 * hash(id, 7)) * step, y = box[1] + (gy + 0.15 + 0.7 * hash(id, 8)) * step;
+      for (let s = shapes.length - 1; s >= 0; s--) {
+        let w = 0, far = true;
+        for (const [a, b] of band[s]) {
+          const side = (b[0] - a[0]) * (y - a[1]) - (x - a[0]) * (b[1] - a[1]);
+          if (a[1] <= y) { if (b[1] > y && side > 0) w++; } else if (b[1] <= y && side < 0) w--;
+          if (far && segmentDistance(x, y, a, b) < margin) far = false;
+        }
+        if (!w) continue;
+        area[shapes[s].kind] += step * step;
+        if (far) { cx.push(x); cy.push(y); owner.push(s); }
+        break;
+      }
+    }
+    yield;
+  }
+  const m = cx.length, gap = new Float64Array(m).fill(Infinity), points = [];
+  if (!m) return { points, box, area };
+  // Farthest-point order, from the cell nearest the mark's centre.
+  const mx = (box[0] + box[2]) / 2, my = (box[1] + box[3]) / 2;
+  let next = 0;
+  for (let j = 1; j < m; j++) if (Math.hypot(cx[j] - mx, cy[j] - my) < Math.hypot(cx[next] - mx, cy[next] - my)) next = j;
+  for (let k = 0; k < Math.min(count, m); k++) {
+    const px = cx[next], py = cy[next], sh = shapes[owner[next]];
+    points.push({ x: px, y: py, kind: sh.kind, path: sh.path });
+    let far = -1, pick = 0;
+    for (let j = 0; j < m; j++) {
+      const dx = cx[j] - px, dy = cy[j] - py, g = Math.min(gap[j], dx * dx + dy * dy);
+      gap[j] = g; if (g > far) { far = g; pick = j; }
+    }
+    next = pick;
+    yield;
+  }
+  return { points, box, area };
+}
+// The mark for a hero of W x H: about 20 % of its height, the mark's own proportions, never wider than the hero allows.
+// Points are px from the mark's centre (y down, upright, not mirrored); half is its half size; reach its farthest point.
+// Round 16 (R1): weight is the mean of the points (the fill's centroid, the points being even over it), in px from the box
+// centre; the ring's band is centred on it: its inner edge (radius) ringGap of the mark's height outside the farthest point
+// from it, its depth (band) ringBand of the mark's height.
+function placeMark(sample, W, H, height = STARS.mark.height) {
+  const [x0, y0, x1, y1] = sample.box, bw = x1 - x0, bh = y1 - y0, m = STARS.mark.margin;
+  if (!sample.points.length || !(bw > 0) || !(bh > 0)) return null;
+  const h = Math.max(1, Math.min(height * H, (W - 2 * m) * bh / bw, H - 2 * m)), s = h / bh, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  const points = sample.points.map(p => ({ x: (p.x - cx) * s, y: (p.y - cy) * s, kind: p.kind }));
+  const weight = [0, 1].map(k => points.reduce((sum, p) => sum + (k ? p.y : p.x), 0) / points.length);
+  const radius = Math.max(...points.map(p => Math.hypot(p.x - weight[0], p.y - weight[1]))) + STARS.mark.ringGap * h;
+  return { points, half: [bw * s / 2, bh * s / 2], height: h, scale: s, reach: Math.max(...points.map(p => Math.hypot(p.x, p.y))), weight, ring: { centre: weight, radius, band: STARS.mark.ringBand * h } };
+}
+// L11: one taper for Canvas and WebGL. Width is the full head diameter; tail is the actual .02 s history.
+function streakGeometry(x, y, size, tail) {
+  const dx = x - tail[0], dy = y - tail[1], length = Math.hypot(dx, dy);
+  const normal = length ? [-dy / length, dx / length] : [0, 0];
+  const nx = normal[0] * size / 2, ny = normal[1] * size / 2;
+  return { length, normal, triangle: length > size ? [tail[0], tail[1], x + nx, y + ny, x - nx, y - ny] : [] };
+}
+// L4: progress has real 25/50/25 shares. .85 displayed progress launches the last star;
+// .85 / 1.4 is deliberately stricter than 1 / 1.4, so launches themselves span 1.4 s.
+const LOADER = {
+  launchEnd: 0.85, gatherSeconds: 1.4, flight: 1.0, hold: 0.15, shrink: 0.35, compressed: 0.08, swell: 0.18, burst: 1.8,
+  shares: { fonts: 0.25, atlas: 0.5, frame: 0.25 },
+};
+const cubicInOut = p => p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2;
+// L10: the home keeps its depth/hash; journey length sets duration, not launch speed.
+const loaderDuration = (home, i, length, longest) => Math.min(1.8, Math.max(0.6,
+  3 * length / (2 * longest * (0.8 + 0.4 * home.d) * (0.94 + 0.12 * hash(i, 21)))));
+const launchShare = (i, count = STARS.mark.count) => LOADER.launchEnd * i / Math.max(1, count - 1);
+// Farthest-point sampling already supplies a spatially even prefix, across both letters.
+// No sort by path, colour or side is introduced for the loader.
+function loaderAt(time, boot = {}, { review = false, reduced = false, count = STARS.mark.count } = {}) {
+  if (review) return { phase: 'skipped', fill: 0, target: 0, done: true, burstTime: null, entranceStart: null, entranceTime: null, pointer: false };
+  const events = Object.entries(LOADER.shares)
+    .filter(([key]) => Number.isFinite(boot[key]) && boot[key] >= 0)
+    .map(([key, share]) => [boot[key], share]).sort((a, b) => a[0] - b[0]);
+  const rate = LOADER.launchEnd / LOADER.gatherSeconds;
+  const progress = t => {
+    let fill = 0, target = 0, cursor = 0;
+    for (const [at, share] of events) {
+      if (at > t) break;
+      fill = Math.min(target, fill + (at - cursor) * rate);
+      target += share; cursor = at;
+    }
+    return { fill: Math.min(target, fill + Math.max(0, t - cursor) * rate), target };
+  };
+  // Invert the continuous piecewise-linear progress, including pauses at a boot plateau.
+  const crossing = share => {
+    let fill = 0, target = 0, cursor = 0;
+    for (const [at, amount] of events) {
+      if (target > 0 && share <= target && share <= fill + (at - cursor) * rate) return cursor + Math.max(0, share - fill) / rate;
+      fill = Math.min(target, fill + (at - cursor) * rate);
+      target += amount; cursor = at;
+    }
+    return target > 0 && share <= target ? cursor + Math.max(0, share - fill) / rate : Infinity;
+  };
+  const { fill, target } = progress(time), ready = events.length === Object.keys(LOADER.shares).length;
+  const launches = Array.from({ length: count }, (_, i) => crossing(launchShare(i, count)));
+  const formedAt = launches.at(-1) + LOADER.flight;
+  const fullAt = ready ? crossing(1) : Infinity;
+  const holdAt = ready ? Math.max(formedAt, fullAt, events.at(-1)[0]) : Infinity;
+  const shrinkStart = holdAt + LOADER.hold, compressedStart = shrinkStart + LOADER.shrink, swellStart = compressedStart + LOADER.compressed;
+  const burstStart = swellStart + LOADER.swell;
+  if (reduced) return { phase: ready && time >= events.at(-1)[0] ? 'cut' : 'loading', fill: target, target,
+    done: ready && time >= events.at(-1)[0], entranceStart: null, entranceTime: null, pointer: false,
+    launches, arrived: count, formedAt: 0, burst: 0, burstTime: null, reduced: true };
+  const shrink = clamp01((time - shrinkStart) / LOADER.shrink), swell = clamp01((time - swellStart) / LOADER.swell);
+  const scale = time >= swellStart ? 0.78 + (1.10 - 0.78) * swell ** 3 : 1 - 0.22 * cubicInOut(shrink);
+  const charge = 1 + 0.3 * cubicInOut(clamp01((time - shrinkStart) / (LOADER.shrink + LOADER.compressed)));
+  return loaderLanding({ phase: time >= swellStart ? 'swell' : time >= compressedStart ? 'compressed' : time >= shrinkStart ? 'shrink' : time >= holdAt ? 'hold' : 'loading',
+    fill, target, launches, formedAt, fullAt, holdAt, shrinkStart, compressedStart, swellStart, scale, charge, burstStart,
+    arrived: launches.filter(at => time >= at + LOADER.flight).length,
+    burstTime: time >= burstStart ? time - burstStart : null,
+    time }, LOADER.burst);
+}
+// The early clock has a conservative bound before layout is known. The painter uses
+// individual durations; the entrance view resolves this same clock to the actual last landing.
+function loaderLanding(state, duration) {
+  if (state.reduced || state.phase === 'skipped') return state;
+  const { time, burstStart } = state, end = burstStart + duration;
+  const entranceStart = end;
+  return { ...state, end, entranceStart, entranceTime: time >= entranceStart ? time - entranceStart : null,
+    done: time >= end, pointer: time >= end, burst: time >= end ? 1 : clamp01((time - burstStart) / duration),
+    phase: time >= end ? 'entrance' : time >= burstStart ? 'burst' : state.phase };
+}
+
+const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+const mixRGB = (a, b, p) => a.map((v, k) => v + (b[k] - v) * p);
+// Home attributes are float32, exactly as uploaded by stars.mjs. Sampling and mark size remain float64.
+function loaderScene(sample, W, H, viewport = { width: W, height: H, left: 0, top: 0 }, labels = []) {
+  const mark = placeMark(sample, W, H), centre = [viewport.width / 2 - viewport.left, viewport.height / 2 - viewport.top];
+  const homes = makeStars(W, H, labels).map(s => {
+    const d = Math.fround(s.d), red = s.red;
+    return { ...s, x: Math.fround(s.x), y: Math.fround(s.y) - Math.max(0, -viewport.top) * STARS.scroll * d, d, size: Math.fround(s.size),
+      colour: mixRGB(rgb(STARS.ink), rgb(red ? STARS.redInk : STARS.paper), STARS.mix[0] + (STARS.mix[1] - STARS.mix[0]) * d) };
+  });
+  const points = mark.points.map((p, i) => {
+    const edge = i % 4, q = hash(i, 19), gap = STARS.mark.size + 2;
+    const start = edge === 0 ? [-gap, q * viewport.height] : edge === 1 ? [viewport.width + gap, q * viewport.height]
+      : edge === 2 ? [q * viewport.width, -gap] : [q * viewport.width, viewport.height + gap];
+    const x = centre[0] + p.x, y = centre[1] + p.y, sx = start[0] - viewport.left, sy = start[1] - viewport.top;
+    const dx = x - sx, dy = y - sy, len = Math.max(1, Math.hypot(dx, dy)), bend = (hash(i, 20) - 0.5) * Math.min(W, H) * 0.16;
+    return { x, y, size: STARS.mark.size, flag: markFlag(p.kind), colour: rgb(FLAG_INK[markFlag(p.kind)]),
+      edge, start: [sx, sy], control: [(sx + x) / 2 - dy / len * bend, (sy + y) / 2 + dx / len * bend],
+      home: null };
+  });
+  const weight = [centre[0] + mark.weight[0], centre[1] + mark.weight[1]];
+  const angle = p => Math.atan2(p.y - weight[1], p.x - weight[0]);
+  const order = list => list.map((p, i) => i).sort((a, b) => angle(list[a]) - angle(list[b]) || a - b);
+  const markOrder = order(points), homeOrder = order(homes), paired = points.length, used = new Set();
+  // L8: every mark star gets a home. Fewer homes share consecutive angular ranks;
+  // more homes keep L7's evenly spaced selection, with the others fading in at home.
+  for (let rank = 0; rank < paired; rank++) {
+    const i = markOrder[Math.floor(rank * points.length / paired)], home = homeOrder[Math.floor(rank * homes.length / paired)];
+    points[i].home = home; used.add(home);
+  }
+  const unpairedHomes = homeOrder.filter(i => !used.has(i));
+  const lengths = points.map(m => Math.hypot(homes[m.home].x - weight[0] - (m.x - weight[0]) * 1.10,
+    homes[m.home].y - weight[1] - (m.y - weight[1]) * 1.10));
+  const longest = Math.max(...lengths);
+  for (const [i, m] of points.entries()) m.duration = loaderDuration(homes[m.home], m.home, lengths[i], longest);
+  const duration = Math.max(...points.map(m => m.duration));
+  // Earliest crossing of each radius by any ray, including a star that later lands.
+  // Solve in eased progress, then invert the cubic: no frame-step or browser clock approximation.
+  const rays = points.map(m => {
+    const x = (m.x - weight[0]) * 1.10, y = (m.y - weight[1]) * 1.10, home = homes[m.home];
+    const dx = home.x - weight[0] - x, dy = home.y - weight[1] - y;
+    return { x, y, dx, dy, a: dx * dx + dy * dy, b: 2 * (x * dx + y * dy), duration: m.duration };
+  });
+  const wave = unpairedHomes.map(i => {
+    const home = homes[i], radius2 = (home.x - weight[0]) ** 2 + (home.y - weight[1]) ** 2;
+    let start = Infinity;
+    for (const ray of rays) {
+      const c = ray.x * ray.x + ray.y * ray.y - radius2;
+      if (c < 0 && (ray.a === 0 || ray.a + ray.b + c <= 0)) continue;
+      const g = c >= 0 ? 0 : clamp01((-ray.b + Math.sqrt(ray.b * ray.b - 4 * ray.a * c)) / (2 * ray.a));
+      start = Math.min(start, ray.duration * (1 - Math.cbrt(1 - g)));
+    }
+    return { home: i, start };
+  });
+  return { W, H, centre, weight, mark, points, homes, unpairedHomes, duration, wave };
+}
+function flightPoint(m, flight) {
+  const t = 1 - (1 - flight) ** 3, u = 1 - t;
+  return [u * u * m.start[0] + 2 * u * t * m.control[0] + t * t * m.x,
+    u * u * m.start[1] + 2 * u * t * m.control[1] + t * t * m.y];
+}
+function burstPoint(m, home, weight, time) {
+  const p = clamp01(time / m.duration), blend = 1 - (1 - p) ** 3;
+  const x = weight[0] + (m.x - weight[0]) * 1.10, y = weight[1] + (m.y - weight[1]) * 1.10;
+  return { x: p === 1 ? home.x : x + (home.x - x) * blend,
+    y: p === 1 ? home.y : y + (home.y - y) * blend, blend };
+}
+const trail = (x, y, tail) => ({ tail, streak: Math.hypot(x - tail[0], y - tail[1]) });
+// L9: preserve L7's lines and L8's homes; depth breaks up the scaled-picture look.
+function loaderDots(scene, state) {
+  const { points, homes, weight } = scene, dots = [];
+  const done = state.burstTime !== null && state.time >= state.burstStart + scene.duration, landed = new Set();
+  const elapsed = done ? Math.max(scene.duration, state.burstTime) : state.burstTime;
+  for (let i = 0; i < points.length; i++) {
+    const m = points[i], home = homes[m.home];
+    if (state.reduced) { dots.push({ ...m, alpha: 1 }); continue; }
+    const flight = clamp01((state.time - state.launches[i]) / LOADER.flight);
+    if (!(flight > 0)) continue;
+    if (state.burstTime === null) {
+      if (state.time >= state.formedAt) {
+        dots.push({ ...m, x: weight[0] + (m.x - weight[0]) * state.scale,
+          y: weight[1] + (m.y - weight[1]) * state.scale, size: m.size * state.charge, alpha: 1 });
+        continue;
+      }
+      const [x, y] = flightPoint(m, flight);
+      dots.push({ ...m, x, y, alpha: 1 });
+      continue;
+    }
+    // L10 gives shared-home stars individual journey times. Merge copies once landed.
+    const arrived = state.time >= state.burstStart + m.duration;
+    if (arrived) {
+      if (landed.has(m.home)) continue;
+      landed.add(m.home);
+    }
+    const target = home, { x, y, blend } = burstPoint(m, target, weight, arrived ? m.duration : elapsed);
+    const previous = arrived ? { x, y } : burstPoint(m, target, weight, Math.max(0, elapsed - STREAK_WINDOW));
+    const depth = 1 + 1.6 * Math.max(0, target.d - 0.4) * Math.sin(Math.PI * blend);
+    const flare = 1 + 0.7 * (1 - clamp01(elapsed / 0.3)) ** 3;
+    dots.push({ x, y, ...trail(x, y, [previous.x, previous.y]),
+      size: blend === 1 ? target.size : (m.size + (target.size - m.size) * blend) * depth * flare,
+      colour: blend === 1 ? target.colour : mixRGB(m.colour, target.colour, blend),
+      flag: blend === 1 ? 0 : m.flag, star: i, home: m.home, alpha: 1 });
+  }
+  if (elapsed !== null) for (const { home: i, start } of scene.wave) {
+    // L10: even homes beyond every ray finish fading before the field takes over.
+    const fade = Number.isFinite(start) ? clamp01((elapsed - start) / 0.2)
+      : clamp01((elapsed - (scene.duration - 0.3)) / 0.3);
+    const alpha = done ? 1 : 1 - (1 - fade) ** 3;
+    dots.push({ ...homes[i], home: i, flag: 0, alpha });
+  }
+  return dots;
+}
+
+return { hash, makeStars, flattenPath, winding, sampleMark, placeMark, streakGeometry, loaderAt, loaderLanding, loaderScene, loaderDots, STREAK_WINDOW, STARS, starCount, markKind, markFlag, FLAG_INK, LOADER, loaderDuration, launchShare };
+})();
+// design/journey-hero/take-2/star-labels.mjs
+const __module9 = (function () {
+
+// Resting text line boxes, in hero CSS pixels. Called only at layout/boot measurement, never while drawing.
+// Shared verbatim with the inline loader; its worker receives these rectangles from the main thread.
+function readStarLabels(hero, box) {
+  const doc = hero.ownerDocument;
+  if (!doc?.createRange) return [];
+  const rects = [], range = doc.createRange();
+  for (const el of hero.querySelectorAll('[data-nav] a, [data-cue], [data-pause]')) {
+    const transform = el.style.transform;
+    // The entrance translates these elements. Homes protect their settled line boxes.
+    el.style.transform = '';
+    try {
+      const walker = doc.createTreeWalker(el, 4);
+      while (walker.nextNode()) {
+        const text = walker.currentNode;
+        if (!text.data.trim()) continue;
+        range.selectNodeContents(text);
+        for (const r of range.getClientRects()) if (r.width && r.height) {
+          rects.push({ left: r.left - box.left, top: r.top - box.top, right: r.right - box.left, bottom: r.bottom - box.top });
+        }
+      }
+    } finally { el.style.transform = transform; }
+  }
+  return rects;
+}
+
+return { readStarLabels };
+})();
+// design/journey-hero/take-2/entrance.mjs
+const __module10 = (function () {
+const { EASE, makeCamera, dot } = __module0;
 const { SCREEN } = __module5;
-// Round 6: the one-time entrance. Pure timetable and renderer values first; the DOM view only writes clip-path and weight.
-// Hard-edged only: wipes and cuts, no opacity. Times are seconds from the first frame that can draw.
+const { LOADER, loaderAt, loaderLanding, loaderScene, sampleMark } = __module8;
+const { readStarLabels } = __module9;
+// One entrance clock, from the loader's landing. Geometry is measured once; playback only paints.
+// Hard-edged except the stars/name. Entrance times are seconds from the loader's burst landing.
+
+
+
 
 
 const ENTRANCE = {
-  end: 1.4,
-  mark: [0, 0.3],                              // DG mark, wipe left to right
-  nav: [0.24, 0.3],                            // Journey, Contact: cuts
-  name: [[0.08, 0.4], [0.16, 0.48]],           // Danial, Endrawes: wipe up from the baseline, weight 300 to 800
-  lede: { start: 0.4, end: 0.75, step: 0.06 }, // one wipe per line, left to right
-  crafts: { start: 0.55, end: 0.95, step: 0.05, lines: 5 },   // four top hairlines and the last row's bottom one
-  floor: [0.2, 0.9],                           // hard circle of dots and pool, centre outward
-  stars: [0.2, 0.9],                           // round 8 (B1): the star field, wholly on or off, in rings from the stage's centre
-  screen: [0.5, 1.1],                          // clip plane rising from the screen's bottom edge to its top
-  foot: [1.1, 1.2],                            // Scroll for the journey, Pause: cuts
+  end: 4.6,
+  mark: [[0, 0.7], [0.08, 0.78]],             // D, then both paths of the G
+  nav: [[0.25, 0.85], [0.33, 0.93]],
+  name: { starts: [0.3, 0.5], step: 0.055, len: 0.85 },
+  lede: { start: 1.15, step: 0.028, len: 0.7, gap: 0.12 },
+  crafts: { start: 3.1, end: 3.9, step: 0.1, lines: 5, rise: 0.6 },
+  floor: [1.9, 2.9],
+  starPointer: 0,                             // L5: entrance zero is the burst landing
+  stars: null,                               // L4: the loader burst replaces the star entrance ring
+  screen: [2.2, 3.5],
+  lift: 4.5,
+  camera: [1.9, 3.9],
+  turn: { yaw: 12, pitch: 5, scale: 0.88 },
+  foot: [[3.95, 4.5], [4.03, 4.58]],
 };
 
 const linear = (t, a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)));
 const wipe = (t, a, b) => EASE.wipe(linear(t, a, b));
+
+// The early inline canvas owns its clock and painting; the player owns the same-frame WebGL handover.
+// Stand-alone/review harnesses can still exercise the pure timing without an inline bridge.
+function createLoaderView(hero, { sample: suppliedSample } = {}) {
+  const win = hero.ownerDocument?.defaultView, bridge = win?.__loaderStars;
+  let sample = null, scene = null;
+  const measureScene = box => {
+    if (!bridge) return;
+    // Resolve the entrance to the painter's actual last ray, once layout is known.
+    sample ??= suppliedSample?.() || sampleMark([...hero.querySelectorAll('[data-mark] path')].map(p => ({ d: p.getAttribute('d'), fill: p.getAttribute('fill') })));
+    scene = loaderScene(sample, box.width, box.height, { width: win.innerWidth, height: win.innerHeight, left: box.left, top: box.top }, readStarLabels(hero, box));
+  };
+  // The early painter also remeasures on scroll. Keep its scene's landing clock in sync.
+  const onScroll = () => measureScene(hero.getBoundingClientRect());
+  if (bridge) win.addEventListener('scroll', onScroll, { passive: true });
+  return {
+    state: bridge ? now => loaderLanding(bridge.state(now), scene?.duration ?? LOADER.burst) : null,
+    boot: key => bridge?.boot(key),
+    measure(box) {
+      bridge?.measure(box);
+      measureScene(box);
+    },
+    motion: reduced => bridge?.motion(reduced),
+    // The inline bridge's legacy entranceTime input only switches the burst's transparent backing.
+    // Keep that switch at burst start while the page's entranceTime waits for the landing.
+    apply(state) { bridge?.apply({ ...state, entranceTime: state.burstTime }); },
+    clear() { if (bridge) win.removeEventListener('scroll', onScroll); bridge?.clear(); hero.classList.remove('is-loading'); },
+  };
+}
 // The loop's clock starts at 0 when the screen's wipe ends.
 const loopAt = time => Math.max(0, time - ENTRANCE.screen[1]);
 
@@ -11705,29 +12981,69 @@ function staggerSpans({ start, end, step }, count) {
   return Array.from({ length: count }, (_, i) => [start + i * gap, start + i * gap + length]);
 }
 
-function entranceAt(time, { ledeLines = 3 } = {}) {
+const quintOut = p => 1 - (1 - p) ** 5;
+const quartOut = p => 1 - (1 - p) ** 4;
+const cubicOut = p => 1 - (1 - p) ** 3;
+const nameSpan = (line, letter) => {
+  const a = ENTRANCE.name.starts[line] + letter * ENTRANCE.name.step;
+  return [a, a + ENTRANCE.name.len];
+};
+const wordSpan = (index, more) => {
+  const a = ENTRANCE.lede.start + index * ENTRANCE.lede.step + (more ? ENTRANCE.lede.gap : 0);
+  return [a, a + ENTRANCE.lede.len];
+};
+const craftSpan = index => {
+  const [a, b] = staggerSpans(ENTRANCE.crafts, ENTRANCE.crafts.lines)[index];
+  const start = a + 0.18 * (b - a);
+  return [start, start + ENTRANCE.crafts.rise];
+};
+function riseAt(time, span) {
+  const p = linear(time, ...span);
+  return { progress: p, reveal: quintOut(p) };
+}
+
+function entranceAt(time) {
   const E = ENTRANCE;
   return {
     time,
     done: time >= E.end,
-    mark: wipe(time, ...E.mark),
-    nav: E.nav.map(at => time >= at),
-    name: E.name.map(([a, b]) => ({ reveal: wipe(time, a, b), weight: 300 + 500 * EASE.enter(linear(time, a, b)) })),
-    lede: staggerSpans(E.lede, ledeLines).map(span => wipe(time, ...span)),
+    mark: E.mark.map(span => riseAt(time, span).reveal),
+    nav: E.nav.map(span => riseAt(time, span).reveal),
+    name: [6, 8].map((count, line) => Array.from({ length: count }, (_, i) => riseAt(time, nameSpan(line, i)))),
     crafts: staggerSpans(E.crafts, E.crafts.lines).map(span => wipe(time, ...span)),
     floor: wipe(time, ...E.floor),
-    stars: wipe(time, ...E.stars),
-    screen: wipe(time, ...E.screen),
-    foot: E.foot.map(at => time >= at),
+    stars: E.stars === null ? 1 : wipe(time, ...E.stars),
+    screen: quartOut(linear(time, ...E.screen)),
+    camera: quartOut(linear(time, ...E.camera)),
+    foot: E.foot.map(span => riseAt(time, span).reveal),
     hover: time >= E.floor[1],
     loop: loopAt(time),
   };
 }
 
-// The screen's clip plane keeps world points at or below a rising height. null once the wipe is complete.
-const SCREEN_LOW = SCREEN.b - 0.02, SCREEN_HIGH = SCREEN.b + SCREEN.h + 0.02;
+// A fixed floor plane clips every colour/outline/shadow pass while the pieces rise through it.
 function screenPlane(p) {
-  return p >= 1 ? null : [0, -1, 0, SCREEN_LOW + (SCREEN_HIGH - SCREEN_LOW) * p];
+  return p >= 1 ? null : [0, 1, 0, 0];
+}
+const shiftPlane = (plane, dy) => plane ? [plane[0], plane[1], plane[2], plane[3] - plane[1] * dy] : plane;
+function liftPieces(pieces, progress) {
+  if (progress >= 1) return pieces;
+  const dy = -ENTRANCE.lift * (1 - progress);
+  const shifted = p => [p[0], p[1] + dy, p[2]];
+  return pieces.map(pc => ({ ...pc, p: shifted(pc.p),
+    ...(pc.shadowP ? { shadowP: shifted(pc.shadowP) } : {}),
+    ...(pc.clip ? { clip: shiftPlane(pc.clip, dy) } : {}),
+    ...(pc.carryClip ? { carryClip: shiftPlane(pc.carryClip, dy) } : {}),
+  }));
+}
+function settleView(view, progress, yaw = 0, pitch = 0) {
+  if (progress >= 1) return view;
+  const k = 1 - progress, turn = ENTRANCE.turn;
+  const cam = makeCamera(yaw + turn.yaw * k, pitch + turn.pitch * k);
+  const centre = [SCREEN.l + SCREEN.w / 2, SCREEN.b + SCREEN.h / 2, SCREEN.z];
+  const x = view.cx + view.S * dot(view.cam.r, centre), y = view.cy - view.S * dot(view.cam.u, centre);
+  const S = view.S * (1 - (1 - turn.scale) * k);
+  return { ...view, S, cx: x - S * dot(cam.r, centre), cy: y + S * dot(cam.u, centre), cam };
 }
 // The floor's hard circle, in world units from the pool's centre. null once it has reached the pool's edge.
 const floorReach = (p, radius) => p >= 1 ? null : p * radius;
@@ -11744,71 +13060,139 @@ const rect = (x0, y0, x1, y1) => `M${x0.toFixed(2)} ${y0.toFixed(2)}H${x1.toFixe
 const clipPath = parts => parts.length ? `path('${parts.join('')}')` : HIDDEN;
 
 function createEntranceView(hero) {
-  const q = s => hero.querySelector(s);
-  const mark = q('[data-mark]'), links = [...hero.querySelectorAll('[data-nav] a')], lede = q('[data-lede]');
-  const rows = [...hero.querySelectorAll('[data-crafts] li')], foot = [q('[data-cue]'), q('[data-pause]')];
-  let lines = [], geo = null;
-  const all = () => [mark, ...links, ...lines, lede, ...rows, ...foot];
+  const doc = hero.ownerDocument, q = s => hero.querySelector(s);
+  const mark = q('[data-mark]'), paths = [...mark.querySelectorAll('path')];
+  const nav = q('[data-nav]'), links = [...nav.querySelectorAll('a')], lede = q('[data-lede]');
+  const rows = [...hero.querySelectorAll('[data-crafts] li')], buttons = rows.map(li => li.querySelector('button'));
+  const footer = q('[data-foot]'), foot = [q('[data-cue]'), q('[data-pause]')];
+  let lines = [], geo = null, made = [], craftMasks = [];
+  const layer = className => {
+    const el = doc.createElement('span'); el.className = className;
+    el.setAttribute('aria-hidden', 'true'); made.push(el); return el;
+  };
+  const px = n => n.toFixed(3) + 'px';
+  const up = (el, distance) => { el.style.transform = distance === 0 ? '' : `translateY(${px(distance)})`; };
   function measure(nameInks) {
+    clear();
     lines = [...hero.querySelectorAll('[data-name] .name-line')];
+    const range = doc.createRange();
     const name = lines.map((line, i) => {
       const box = line.getBoundingClientRect(), ink = nameInks?.[i];
-      return ink ? { top: ink.top - box.top, bottom: ink.bottom - box.top } : { top: 0, bottom: box.height };
+      const top = ink ? ink.top - box.top : 0, bottom = ink ? ink.bottom - box.top : box.height;
+      const text = [...line.childNodes].find(n => n.nodeType === 3 && n.data.trim());
+      const overlay = layer('entrance-name'), letters = [];
+      // Range positions retain the flow's kerning. Generated content adds neither text nor flow boxes.
+      if (text) for (let j = 0; j < text.data.length; j++) {
+        range.setStart(text, j); range.setEnd(text, j + 1);
+        const r = range.getBoundingClientRect(), el = layer('entrance-letter');
+        el.dataset.ch = text.data[j];
+        Object.assign(el.style, { left: px(r.left - box.left), top: px(r.top - box.top), width: px(r.width), height: px(r.height), lineHeight: px(r.height) });
+        overlay.append(el); letters.push({ el, span: nameSpan(i, j) });
+      }
+      line.append(overlay);
+      const mask = `polygon(-50% -80%, 150% -80%, 150% ${px(bottom + 3)}, -50% ${px(bottom + 3)})`;
+      line.style.clipPath = mask; line.classList.add('has-entrance');
+      return { line, overlay, letters, drop: bottom - top + 16, mask, landed: false };
     });
-    const l = lede.getBoundingClientRect(), range = hero.ownerDocument.createRange();
-    range.selectNodeContents(lede);
+    const lb = lede.getBoundingClientRect(), walker = doc.createTreeWalker(lede, 4), words = [];
+    while (walker.nextNode()) {
+      const text = walker.currentNode, more = !!text.parentElement.closest('.hero-lede-more');
+      for (const match of text.data.matchAll(/\S+/g)) {
+        range.setStart(text, match.index); range.setEnd(text, match.index + match[0].length);
+        const r = [...range.getClientRects()].find(r => r.width && r.height);
+        if (r) words.push({ text: match[0], left: r.left - lb.left, top: r.top - lb.top, width: r.width, height: r.height, more });
+      }
+    }
     const ledeLines = [];
-    for (const r of range.getClientRects()) {
-      if (!r.width || !r.height) continue;
-      const line = ledeLines.find(n => Math.abs(n.mid - (r.top + r.bottom) / 2) < r.height / 2);
-      if (line) { line.left = Math.min(line.left, r.left); line.right = Math.max(line.right, r.right); line.top = Math.min(line.top, r.top); line.bottom = Math.max(line.bottom, r.bottom); }
-      else ledeLines.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom, mid: (r.top + r.bottom) / 2 });
+    for (const word of words) {
+      let line = ledeLines.find(l => Math.abs(l.top - word.top) < word.height / 2);
+      if (!line) ledeLines.push(line = { top: word.top, height: word.height, words: [] });
+      line.words.push(word);
     }
     ledeLines.sort((a, b) => a.top - b.top);
-    const crafts = rows.map(li => {
-      const box = li.getBoundingClientRect(), n = li.querySelector('.n').getBoundingClientRect(), word = li.querySelector('.n').nextElementSibling.getBoundingClientRect();
-      return { w: box.width, h: box.height, numberRight: n.right - box.left, wordRight: word.right - box.left, split: (n.right + word.left) / 2 - box.left };
+    const ledeWords = [], masks = [];
+    let index = 0;
+    for (const line of ledeLines) {
+      const mask = layer('entrance-lede-line');
+      Object.assign(mask.style, { top: px(line.top - 2), height: px(line.height + 4) });
+      for (const word of line.words.sort((a, b) => a.left - b.left)) {
+        const el = layer('entrance-word'); el.dataset.ch = word.text;
+        Object.assign(el.style, { left: px(word.left + 4), top: px(word.top - line.top + 2), width: px(word.width), height: px(word.height), lineHeight: px(word.height) });
+        mask.append(el); ledeWords.push({ el, span: wordSpan(index++, word.more), drop: line.height + 6 });
+      }
+      lede.append(mask); masks.push(mask);
+    }
+    lede.classList.add('has-entrance');
+    const crafts = rows.map((li, i) => {
+      const box = li.getBoundingClientRect(), button = buttons[i], b = button.getBoundingClientRect();
+      const mask = doc.createElement('span'); mask.className = 'entrance-craft-mask';
+      mask.style.clipPath = `inset(${px(2 - (b.top - box.top))} -40px ${px(b.bottom - box.top - (box.height - 2))})`;
+      button.before(mask); mask.append(button); craftMasks.push({ mask, button });
+      return { w: box.width, h: box.height };
     });
-    geo = { name, lede: ledeLines.map(n => ({ left: n.left - l.left, right: n.right - l.left, top: n.top - l.top, bottom: n.bottom - l.top })), crafts };
+    const nb = nav.getBoundingClientRect(), fb = footer.getBoundingClientRect();
+    geo = { name, ledeWords, masks, ledeLines: ledeLines.length, ledeLanded: false, crafts,
+      navDrop: links.map(a => nb.bottom - a.getBoundingClientRect().top + 6),
+      footDrop: foot.map(el => fb.bottom - el.getBoundingClientRect().top + 6),
+      paths: paths.map(el => ({ el, index: el.getAttribute('fill') === '#C0262E' ? 0 : 1 })),
+      craftSpans: rows.map((_, i) => craftSpan(i)),
+    };
     return geo;
   }
   function apply(s) {
     if (!geo) return;
-    mark.style.clipPath = s.mark >= 1 ? '' : `inset(0 ${(100 * (1 - s.mark)).toFixed(3)}% 0 0)`;
-    links.forEach((a, i) => { a.style.clipPath = s.nav[i] ?? true ? '' : HIDDEN; });
-    lines.forEach((line, i) => {
-      const { reveal, weight } = s.name[i] || s.name.at(-1), g = geo.name[i];
-      // The clip's top edge rises from just under the baseline (the ink's bottom, with room for round overshoots at any weight)
-      // to above the ink's top, so nothing of the line shows before its turn.
-      const y = g.bottom + 3 - (g.bottom - g.top + 7) * reveal;
-      line.style.clipPath = reveal >= 1 ? '' : `polygon(-50% ${y.toFixed(2)}px, 150% ${y.toFixed(2)}px, 150% 200%, -50% 200%)`;
-      line.style.fontWeight = reveal >= 1 && weight >= 800 ? '' : weight.toFixed(1);
-    });
-    lede.style.clipPath = s.lede.every(p => p >= 1) ? '' : clipPath(geo.lede.flatMap((n, i) => {
-      const p = s.lede[i] ?? 1, x0 = n.left - 2;
-      return p > 0 ? [rect(x0, n.top - 1, x0 + (n.right - n.left + 4) * p, n.bottom + 1)] : [];
-    }));
+    if (s.done) { clear(); return; }
+    mark.style.clipPath = s.mark.every(p => p >= 1) ? '' : 'inset(0)';
+    for (const { el, index } of geo.paths) up(el, (1 - s.mark[index]) * 830);
+    nav.style.clipPath = s.nav.every(p => p >= 1) ? '' : 'inset(0 -40px)';
+    links.forEach((el, i) => up(el, (1 - s.nav[i]) * geo.navDrop[i]));
+    for (const g of geo.name) {
+      if (g.landed) continue;
+      let landed = true;
+      for (const { el, span } of g.letters) {
+        const p = riseAt(s.time, span); if (p.progress < 1) landed = false;
+        up(el, (1 - p.reveal) * g.drop);
+      }
+      if (landed) { g.line.style.clipPath = ''; g.line.classList.remove('has-entrance'); g.overlay.remove(); g.landed = true; }
+    }
+    if (!geo.ledeLanded) {
+      let landed = true;
+      for (const w of geo.ledeWords) {
+        const p = riseAt(s.time, w.span); if (p.progress < 1) landed = false;
+        up(w.el, (1 - p.reveal) * w.drop);
+      }
+      if (landed) { lede.classList.remove('has-entrance'); for (const mask of geo.masks) mask.remove(); geo.ledeLanded = true; }
+    }
     rows.forEach((li, i) => {
-      const g = geo.crafts[i], p = s.crafts[i], last = i === rows.length - 1, bottom = last ? s.crafts[rows.length] ?? 1 : 1, tip = g.w * p;
-      if (p >= 1 && bottom >= 1) { li.style.clipPath = ''; return; }
+      const g = geo.crafts[i], p = s.crafts[i], last = i === rows.length - 1, bottom = last ? s.crafts[rows.length] ?? 1 : 1;
+      const rp = riseAt(s.time, geo.craftSpans[i]);
+      up(buttons[i], (1 - rp.reveal) * g.h);
+      if (p >= 1 && bottom >= 1 && rp.progress >= 1) { li.style.clipPath = ''; return; }
       const parts = [];
-      if (p > 0) parts.push(rect(0, -1, tip, 1));
-      // A row's number and word cut in as its line passes them.
-      if (tip >= g.numberRight) parts.push(rect(-40, 1, g.split, g.h - 1));
-      if (tip >= g.wordRight) parts.push(rect(g.split, 1, g.w + 40, g.h - 1));
+      if (p > 0) parts.push(rect(0, -1, g.w * p, 1));
+      parts.push(rect(-40, 2, g.w + 40, g.h - 2));
       if (last && bottom > 0) parts.push(rect(0, g.h - 1, g.w * bottom, g.h + 1));
       li.style.clipPath = clipPath(parts);
     });
-    foot.forEach((node, i) => { node.style.clipPath = s.foot[i] ? '' : HIDDEN; });
+    footer.style.clipPath = s.foot.every(p => p >= 1) ? '' : 'inset(0 -40px)';
+    foot.forEach((el, i) => up(el, (1 - s.foot[i]) * geo.footDrop[i]));
   }
-  function clear() { for (const node of all()) { node.style.clipPath = ''; node.style.fontWeight = ''; } }
-  return { measure, apply, clear, get lines() { return geo ? geo.lede.length : 0; } };
+  function clear() {
+    for (const { mask, button } of craftMasks) mask.replaceWith(button); craftMasks = [];
+    for (const el of made) el.remove(); made = [];
+    for (const line of lines) { line.style.clipPath = ''; line.classList.remove('has-entrance'); }
+    lede.classList.remove('has-entrance');
+    for (const el of [mark, nav, footer, ...rows]) el.style.clipPath = '';
+    for (const el of [...paths, ...links, ...foot, ...buttons]) el.style.transform = '';
+    geo = null;
+  }
+  return { measure, apply, clear, get lines() { return geo ? geo.ledeLines : 0; } };
 }
 
-return { staggerSpans, entranceAt, screenPlane, revealDot, createEntranceView, ENTRANCE, loopAt, floorReach, revealPool };
+return { createLoaderView, staggerSpans, riseAt, entranceAt, screenPlane, liftPieces, settleView, revealDot, createEntranceView, ENTRANCE, loopAt, quintOut, quartOut, cubicOut, nameSpan, wordSpan, craftSpan, floorReach, revealPool, LOADER, loaderAt };
 })();
 // design/journey-hero/take-2/name-react.mjs
-const __module9 = (function () {
+const __module11 = (function () {
 
 // Round 8, N1: the name reacts the way the live page's headline does (public/holding/title.js), with the same numbers.
 // Pure model first (checked in Node), then the page view. The flow text in each .name-line is never split or moved, so the
@@ -11962,38 +13346,15 @@ function createNameReact(hero, { reduced, win = hero.ownerDocument.defaultView, 
 return { openTarget, restHeight, stepLetter, createNameReact, NAME, stepOpen, circleRadius, knockDelays, nameLive };
 })();
 // design/journey-hero/take-2/stars.mjs
-const __module10 = (function () {
-
+const __module12 = (function () {
+const { STARS, STREAK_WINDOW, hash, starCount, makeStars, markKind, markFlag, FLAG_INK, flattenPath, winding, sampleMark, placeMark, streakGeometry } = __module8;
+const { readStarLabels } = __module9;
 // Round 8 (B1, B2): the star field behind the hero. Pure rules and a small simulation first (checked in Node), then the pointer
 // controller the player uses. All lengths are CSS px in the hero's own box (0, 0 at its top left); times are seconds.
 // The field's look (parallax, scroll, the entrance's rings) is computed by the renderer from three uniforms; only the stars'
 // own offsets (stirring, gathering, the blast) live here, in one Float32Array uploaded only while something moves.
 
-const STARS = {
-  density: 1200 / (1440 * 900), most: 2000,
-  size: [0.6, 2.2],             // px across, far to near
-  mix: [0.12, 0.55],            // paper (or red) into ink, far to near
-  red: 0.03,
-  ink: '#151314', paper: '#F7F6F3', redInk: '#F0484F',
-  parallax: 28, tau: 0.3,       // px at a full half-hero offset; follow time constant
-  scroll: 0.12,                 // the nearest stars move this much faster than the page
-  mass: [0.6, 1.6], drag: 2.3,  // drag / sqrt(mass), per second
-  push: { reach: 60, gain: 0.09, cap: 1500, max: 39 },
-  hold: { base: 80, grow: 260, full: 2.5, orbit: [6, 36], turn: Math.PI / 2, pull: 5, follow: 12, blast: [300, 1700], reach: 2, weak: 0.5, max: 0.45 },
-  click: { time: 0.25, move: 6 },
-  rest: { offset: 0.05, speed: 0.5 },
-  // Round 10: the return weight (R1) and the mark weight (R2) change at most this much per second (0.09 a frame at 60); a
-  // captured star's front copy fades in over fadeIn seconds (R2).
-  fade: 5.4, fadeIn: 0.4,
-  // Round 9 (L1): the captured stars form the DG mark, read from the page's own SVG. height: of the hero's height; tau: the
-  // formation's time constant (see BUILD.md, CORRECTIONS-9); arrive: px; size: px across once arrived.
-  // Round 12 (S1): the formation starts once the hold has captured `threshold` stars (round 9 started it at 1.4 s held).
-  // Round 16 (R1): the extra stars make a band round the mark's weight centre: its inner edge ringGap of the mark's height
-  // outside the farthest point, ringBand of the mark's height deep, outward.
-  mark: { threshold: 300, height: 0.2, margin: 16, count: 600, tau: 0.12, arrive: 1, size: 2.6, ringGap: 0.095, ringBand: 0.1, cells: 24000, edge: 2 },
-  // C18-7: keep the charge's diagnostic ramp, but it no longer displaces held stars.
-  charge: { start: 5.6, ramp: 2, amp: 1.5, hz: [10, 16] },
-};
+
 
 // R2: the fade-in's step, landing on exactly 1 (sums of dt / 0.4 in float32 can stop just short of it).
 const fadeUp = (a, dt) => { const v = a + dt / STARS.fadeIn; return v >= 1 - 1e-5 ? 1 : v; };
@@ -12002,28 +13363,36 @@ const smooth = x => { x = clamp01(x); return x * x * (3 - 2 * x); };
 // Round 16 (R2): an angle brought into -pi to pi.
 const TURN = 2 * Math.PI;
 const wrapAngle = a => a - TURN * Math.round(a / TURN);
-// A fixed hash of a star's index and a channel, 0 to 1.
-function hash(i, k = 0) {
-  let h = Math.imul((i | 0) + 0x9e3779b9, 0x85ebca6b) ^ Math.imul((k | 0) + 0x7f4a7c15, 0xc2b2ae35);
-  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d); h = Math.imul(h ^ (h >>> 12), 0x297a2d39); h ^= h >>> 15;
-  return (h >>> 0) / 4294967296;
-}
-const starCount = (W, H) => Math.min(STARS.most, Math.round(STARS.density * W * H));
-// The field for a hero of W x H: home position, depth, size, mix, red, mass. Homes scale with the box.
-function makeStars(W, H) {
-  const n = starCount(W, H), stars = [];
-  for (let i = 0; i < n; i++) {
-    const d = hash(i, 2);
-    stars.push({ x: hash(i, 0) * W, y: hash(i, 1) * H, d, size: STARS.size[0] + (STARS.size[1] - STARS.size[0]) * d, mix: STARS.mix[0] + (STARS.mix[1] - STARS.mix[0]) * d, red: hash(i, 3) < STARS.red, m: STARS.mass[0] + (STARS.mass[1] - STARS.mass[0]) * hash(i, 4) });
-  }
-  return stars;
-}
 // B1 parallax: a star's offset for the field's (followed) pointer fraction f = [fx, fy], each -0.5 to 0.5.
 const depthWeight = d => 0.12 + 0.88 * d * d;
 const parallaxOffset = (f, d) => [-f[0] * STARS.parallax * depthWeight(d), -f[1] * STARS.parallax * depthWeight(d)];
 const pointerFraction = (x, y, W, H) => [Math.min(0.5, Math.max(-0.5, x / W - 0.5)), Math.min(0.5, Math.max(-0.5, y / H - 0.5))];
 // Scroll: s px of the hero scrolled away moves a star of depth d up by s * 0.12 * d more than the page.
 const scrollOffset = (s, d) => -Math.max(0, s) * STARS.scroll * d;
+// Positions between simulation frames are line segments. Interpolate the recorded path over the shared exposure window,
+// rather than multiplying this frame's velocity (which loses curved stirring and the blast's braking).
+function createTrailHistory(count) {
+  const samples = [], spare = [], trails = new Float32Array(count * 4);
+  function reset() { for (const s of samples) spare.push(s.positions); samples.length = 0; trails.fill(0); }
+  return { reset, record(time, positions) {
+    if (samples.length && time < samples.at(-1).time) reset();
+    if (samples.length && time === samples.at(-1).time) return trails;
+    const copy = spare.pop() || new Float64Array(count * 2); copy.set(positions);
+    samples.push({ time, positions: copy });
+    const at = time - STREAK_WINDOW;
+    while (samples.length > 2 && samples[1].time <= at) spare.push(samples.shift().positions);
+    const a = samples[0], b = samples[1] || a;
+    const f = b.time > a.time ? clamp01((at - a.time) / (b.time - a.time)) : 0;
+    for (let i = 0; i < count; i++) {
+      const k = 2 * i, x = positions[k], y = positions[k + 1];
+      const tail = [a.positions[k] + (b.positions[k] - a.positions[k]) * f,
+        a.positions[k + 1] + (b.positions[k + 1] - a.positions[k + 1]) * f];
+      const shape = streakGeometry(x, y, 1, tail);
+      trails.set([x - tail[0], y - tail[1], ...shape.normal], 4 * i);
+    }
+    return trails;
+  } };
+}
 // The critically damped follow, solved exactly over dt: x is the value, v its velocity, towards target.
 function follow(x, v, target, dt, tau = STARS.tau) {
   const w = 1 / tau, x0 = x - target, e = Math.exp(-w * dt), c = v + w * x0;
@@ -12052,13 +13421,16 @@ function segmentDistance(px, py, a, b) {
 // The simulation. Each star: S (coasting displacement), v (velocity), age; shown offset D = S * exp(-age). An impulse rebases
 // S to D and age to 0; then S moves with v, v decays by drag / sqrt(m), and D goes home on exp(-age). No spring, no overshoot.
 // Round 9: mark (from placeMark) makes a hold that has captured STARS.mark.threshold stars form the DG mark (round 12, S1); flags holds each star's colour code (markFlag).
-function createField(W, H, mark = null) {
-  const stars = makeStars(W, H), n = stars.length;
+function createField(W, H, mark = null, labels = []) {
+  const stars = makeStars(W, H, labels), n = stars.length;
   const offsets = new Float32Array(n * 2), S = new Float32Array(n * 2), V = new Float32Array(n * 2), age = new Float32Array(n);
   const big = new Uint8Array(n), moving = new Uint8Array(n), flags = new Float32Array(n);
   // Round 9: once a star's offset starts to shrink after a kick, it may never grow again nor swing past the side of home it
   // fell from (an impulse with a part toward home could otherwise carry it past home and out again: an overshoot).
   const last = new Float32Array(n).fill(-1), peak = new Float32Array(n * 2), falling = new Uint8Array(n);
+  // Separate from coasting age: stirring must not restart an explosion's clock.
+  const exploding = new Uint8Array(n), explosionAge = new Float64Array(n);
+  function explode(i, vx, vy) { kick(i, vx, vy, true); exploding[i] = 1; explosionAge[i] = 0; }
   // Round 10 (R1): each star drawn in front has a return weight, the front copy's opacity: 1 while captured and from the
   // release until its offset starts to shrink, then its offset over its largest offset since the release; it never grows.
   // far holds that largest offset (-1 while not returning).
@@ -12067,7 +13439,7 @@ function createField(W, H, mark = null) {
   // far its front look has gone from its own toward the mark's (0 when given a point, 1 on arrival). alpha = fade x w is what
   // the front pass draws the star at.
   const fade = new Float32Array(n), mixes = new Float32Array(n), alpha = new Float32Array(n);
-  let awake = false, version = 0, par = [0, 0], cluster = null, front = 0, centre = null, formed = false;
+  let awake = false, version = 0, par = [0, 0], displayScroll = 0, cluster = null, front = 0, centre = null, formed = false;
   // Round 16 (R2): the ring of the hold: its members in cyclic order and its phase (radians turned since the press).
   let ring = null, charge = 0;
   // Each captured star's authored offset, in float64; shown positions have only float32 rounding.
@@ -12103,24 +13475,55 @@ function createField(W, H, mark = null) {
   }
 
   // B2: a hold. Stars inside the growing radius are captured and pulled into a slowly turning cluster round the pointer.
-  function press(x, y) { cluster = new Map(); formed = false; centre = null; ring = { order: [], phase: 0 }; charge = 0; return { anchor: [x, y], anchorV: [0, 0], held: 0, next: 0, extra: 0, radius: STARS.hold.base, formedAt: null, charge: 0 }; }
-  // L1: give stars the next free points of the order, matched by angle round the mark's centre (stars nearest the centre first
-  // when points run out); the rest join the ring (round 16, R2). Each starts from rest, offset e from its point.
+  function press(x, y) { cluster = new Map(); formed = false; centre = null; ring = { order: [], phase: 0 }; charge = 0; return { anchor: [x, y], anchorV: [0, 0], held: 0, next: 0, freePoints: new Set(mark ? mark.points.map((_, j) => j) : []), extra: 0, radius: STARS.hold.base, formedAt: null, charge: 0 }; }
+  // L13c: the first batch keeps its radial pairing. Later stars wait in the ring until a free point is closer than the
+  // mark's centre. Reconsider the ring each frame: its turn and the moving mark bring points to the waiting stars' side.
   function assign(hold, ids, C) {
     const at = ids.map(i => { const [x, y] = position(i); return { i, x, y, a: Math.atan2(y - C[1], x - C[0]) }; });
-    const k = Math.min(at.length, mark.points.length - hold.next);
-    at.sort((a, b) => Math.hypot(a.x - C[0], a.y - C[1]) - Math.hypot(b.x - C[0], b.y - C[1]));
-    const take = at.slice(0, k).sort((a, b) => a.a - b.a), rest = at.slice(k);
-    const pts = [];
-    for (let j = hold.next; j < hold.next + k; j++) pts.push({ j, a: Math.atan2(mark.points[j].y, mark.points[j].x) });
-    pts.sort((a, b) => a.a - b.a);
-    take.forEach((t, q) => {
-      const c = cluster.get(t.i), p = mark.points[pts[q].j];
-      c.point = pts[q].j; c.kind = p.kind; c.e = [t.x - C[0] - p.x, t.y - C[1] - p.y]; c.ev = [0, 0]; c.arrived = false;
+    const k = Math.min(at.length, hold.freePoints.size);
+    let take, rest;
+    if (hold.next === 0) {
+      at.sort((a, b) => Math.hypot(a.x - C[0], a.y - C[1]) - Math.hypot(b.x - C[0], b.y - C[1]));
+      take = at.slice(0, k).sort((a, b) => a.a - b.a); rest = at.slice(k);
+      const pts = [...hold.freePoints].slice(0, k).sort((a, b) => Math.atan2(mark.points[a].y, mark.points[a].x) - Math.atan2(mark.points[b].y, mark.points[b].x));
+      take.forEach((t, q) => { t.j = pts[q]; });
+    } else {
+      rest = at; take = [];
+      for (const i of ring.order) {
+        const [x, y] = position(i);
+        rest.push({ i, x, y, ring: true });
+      }
+      const nearest = t => {
+        t.j = -1; t.distance = Infinity; t.limit = (t.x - C[0]) ** 2 + (t.y - C[1]) ** 2;
+        for (const j of hold.freePoints) {
+          const p = mark.points[j], d = (t.x - C[0] - p.x) ** 2 + (t.y - C[1] - p.y) ** 2;
+          if (d < t.limit && d < t.distance) { t.j = j; t.distance = d; }
+        }
+      };
+      rest.forEach(nearest);
+      while (hold.freePoints.size) {
+        let best = -1;
+        for (let q = 0; q < rest.length; q++) if (rest[q].j >= 0 && (best < 0 || rest[q].distance < rest[best].distance)) best = q;
+        if (best < 0) break;
+        const t = rest.splice(best, 1)[0]; take.push(t); hold.freePoints.delete(t.j);
+        // Only candidates whose nearest point was just taken need another search.
+        for (const r of rest) if (r.j === t.j) nearest(r);
+      }
+      const leaving = new Set(take.filter(t => t.ring).map(t => t.i));
+      if (leaving.size) {
+        ring.order = ring.order.filter(i => !leaving.has(i));
+        if (ring.order.length) respaceRing();
+      }
+      rest = rest.filter(t => !t.ring);
+    }
+    take.forEach(t => {
+      const c = cluster.get(t.i), p = mark.points[t.j];
+      hold.freePoints.delete(t.j);
+      c.ring = false; c.point = t.j; c.kind = p.kind; c.e = [t.x - C[0] - p.x, t.y - C[1] - p.y]; c.ev = [0, 0]; c.arrived = false;
       // R2: from here the front look eases from the star's own toward this point's (its colour code says which mark colour).
       c.e0 = Math.hypot(c.e[0], c.e[1]); c.given = true; flags[t.i] = markFlag(c.kind); mixes[t.i] = 0;
     });
-    hold.next += k;
+    hold.next += take.length;
     if (rest.length) join(rest.map(t => t.i), C);
   }
   // Round 16 (R2): stars join the ring. Each starts at the angle it was captured at, as its ring angle psi (its angle round
@@ -12144,6 +13547,11 @@ function createField(W, H, mark = null) {
     let at = 0;
     for (const f of fresh) { while (at < merged.length && merged[at].a <= f.a) at++; merged.splice(at, 0, f); at++; }
     ring.order = merged.map(m => m.i);
+    respaceRing();
+  }
+  // Joining and departing members share the same circular-mean targets. Keep the current radii and angular velocities;
+  // turnRing follows the new targets with its existing easing instead of moving the remaining stars to their slots.
+  function respaceRing() {
     const N = ring.order.length;
     let sx = 0, sy = 0;
     const slot = (k, c) => TURN * (k + 0.5 + c.jitter) / N;
@@ -12198,12 +13606,13 @@ function createField(W, H, mark = null) {
       if (Math.hypot(px - pointer[0], py - pointer[1]) > R) continue;
       const rho = Math.max(1e-6, Math.hypot(px - hold.anchor[0], py - hold.anchor[1]));
       cluster.set(i, { rho, rv: 0, theta: Math.atan2(py - hold.anchor[1], px - hold.anchor[0]), fresh: true });
+      exploding[i] = 0;
       // R2: the front copy fades in from 0 (a star still out from an earlier release goes on from the opacity it had).
       fade[i] = flags[i] ? fade[i] * weights[i] : 0;
       flags[i] = 1; weights[i] = 1; far[i] = -1; mixes[i] = 0;
     }
     const scale = cluster.size;
-    // L1: once formed, the cluster stops turning and forms the mark; later captures take the next free points. S1: it forms
+    // L1: once formed, the cluster stops turning and forms the mark; later captures take free points. S1: it forms
     // once the threshold is captured (or, short of it, once the radius has reached the hero's diagonal).
     centre = mark ? markCentre(hold.anchor, mark, W, H) : null;
     if (mark && !formed && (cluster.size >= STARS.mark.threshold || R >= diagonal)) hold.formedAt = hold.held;
@@ -12215,7 +13624,7 @@ function createField(W, H, mark = null) {
       const fresh = [];
       for (const [i, c] of cluster) if (c.point === undefined && !c.ring) fresh.push(i);
       formed = true;
-      if (fresh.length) assign(hold, fresh, centre);
+      if (fresh.length || (hold.freePoints.size && ring.order.length)) assign(hold, fresh, centre);
     }
     if (mark) turnRing(dt);
     for (const [i, c] of cluster) {
@@ -12236,7 +13645,7 @@ function createField(W, H, mark = null) {
         continue;
       }
       if (c.ring) {
-        // Round 16 (R2): every point is taken, so this star is in the ring (moved by turnRing), turning as one by its phase.
+        // The ring includes overflow and stars waiting for an eligible point, turning as one by its phase.
         c.theta = c.psi + ring.phase;
         const s = stars[i], q = parallaxOffset(par, s.d), rx = centre[0] + mark.ring.centre[0], ry = centre[1] + mark.ring.centre[1];
         place(i, rx + c.rho * Math.cos(c.theta) - s.x - q[0], ry + c.rho * Math.sin(c.theta) - s.y - q[1]);
@@ -12259,8 +13668,8 @@ function createField(W, H, mark = null) {
     for (let i = 0; i < n; i++) {
       const [px, py] = position(i), dx = px - pointer[0], dy = py - pointer[1], r = Math.hypot(dx, dy);
       const c = cluster.get(i), dir = r > 1e-6 ? [dx / r, dy / r] : c ? [Math.cos(c.theta), Math.sin(c.theta)] : [1, 0];
-      if (c) kick(i, dir[0] * blastImpulse(hold.held, stars[i].m), dir[1] * blastImpulse(hold.held, stars[i].m), true);
-      else if (r < STARS.hold.reach * R) { const k = STARS.hold.weak * (1 - r / (STARS.hold.reach * R)) ** 2; kick(i, dir[0] * k * blastImpulse(hold.held, stars[i].m), dir[1] * k * blastImpulse(hold.held, stars[i].m), true); }
+      if (c) explode(i, dir[0] * blastImpulse(hold.held, stars[i].m), dir[1] * blastImpulse(hold.held, stars[i].m));
+      else if (r < STARS.hold.reach * R) { const k = STARS.hold.weak * (1 - r / (STARS.hold.reach * R)) ** 2; explode(i, dir[0] * k * blastImpulse(hold.held, stars[i].m), dir[1] * k * blastImpulse(hold.held, stars[i].m)); }
     }
     const captured = cluster.size;
     // R1: every star in front starts (or, if still out from an earlier release, keeps) its return weight.
@@ -12269,11 +13678,31 @@ function createField(W, H, mark = null) {
     return captured;
   }
 
+  // The export ball uses the same capped dynamics, without changing capture or passes.
+  function burstAt(x, y, reach, strength = 0.75 * STARS.hold.blast[0]) {
+    for (let i = 0; i < n; i++) {
+      if (cluster?.has(i)) continue;
+      const [px, py] = position(i), dx = px - x, dy = py + scrollOffset(displayScroll, stars[i].d) - y, r = Math.hypot(dx, dy);
+      if (!(r < reach) || r < 1e-6) continue;
+      const impulse = strength * (1 - r / reach) ** 2 / stars[i].m;
+      explode(i, dx / r * impulse, dy / r * impulse);
+    }
+  }
+  // Use the largest actually drawn copy, including its current mark mix.
+  function gateTrails(trails) {
+    for (let i = 0; i < n; i++) {
+      const own = stars[i].size, width = flags[i] > 1.5 ? own + (Math.max(own, STARS.mark.size) - own) * mixes[i] : own;
+      if (exploding[i] && explosionAge[i] >= 0.05 && Math.hypot(trails[4 * i], trails[4 * i + 1]) <= width) exploding[i] = 0;
+      if (!exploding[i]) trails.fill(0, 4 * i, 4 * i + 4);
+    }
+    return trails;
+  }
   function step(dt) {
     if (!awake || !(dt > 0)) return awake;
     let any = !!cluster;
     front = 0;
     for (let i = 0; i < n; i++) {
+      if (exploding[i]) explosionAge[i] += dt;
       if (flags[i]) front++;
       if (!moving[i] || cluster?.has(i)) { if (cluster?.has(i)) { const [x, y] = shown(i); offsets[2 * i] = x; offsets[2 * i + 1] = y; } continue; }
       const c = Math.exp(-STARS.drag / Math.sqrt(stars[i].m) * dt);
@@ -12306,7 +13735,7 @@ function createField(W, H, mark = null) {
       if (Math.hypot(x, y) < STARS.rest.offset && Math.hypot(V[2 * i] * e, V[2 * i + 1] * e) < STARS.rest.speed) {
         // Home: the front copy, faded to its weight (near 0 by now, and kept in weights for the checks), leaves the front pass;
         // the copy behind is the star's own look, as it was all the way home.
-        S[2 * i] = S[2 * i + 1] = V[2 * i] = V[2 * i + 1] = age[i] = 0; x = y = 0; moving[i] = 0; big[i] = 0; last[i] = -1; falling[i] = 0;
+        S[2 * i] = S[2 * i + 1] = V[2 * i] = V[2 * i + 1] = age[i] = 0; x = y = 0; moving[i] = 0; big[i] = 0; last[i] = -1; falling[i] = 0; exploding[i] = 0;
         if (flags[i]) { flags[i] = 0; front--; far[i] = -1; }
       } else any = true;
       offsets[2 * i] = x; offsets[2 * i + 1] = y;
@@ -12317,7 +13746,7 @@ function createField(W, H, mark = null) {
     awake = any;
     return awake;
   }
-  function reset() { weights.fill(0); fade.fill(0); mixes.fill(0); alpha.fill(0); far.fill(-1); S.fill(0); V.fill(0); age.fill(0); offsets.fill(0); big.fill(0); moving.fill(0); flags.fill(0); last.fill(-1); falling.fill(0); front = 0; cluster = null; formed = false; ring = null; charge = 0; awake = false; version++; }
+  function reset() { exploding.fill(0); explosionAge.fill(0); weights.fill(0); fade.fill(0); mixes.fill(0); alpha.fill(0); far.fill(-1); S.fill(0); V.fill(0); age.fill(0); offsets.fill(0); big.fill(0); moving.fill(0); flags.fill(0); last.fill(-1); falling.fill(0); front = 0; cluster = null; formed = false; ring = null; charge = 0; awake = false; version++; }
   // What the checks and __hero.stars read about the mark.
   function markState() {
     let assigned = 0, arrived = 0;
@@ -12328,118 +13757,15 @@ function createField(W, H, mark = null) {
     return { points: mark ? mark.points.length : 0, height: mark ? mark.height : 0, formed, assigned, arrived, ring: circle, charge, front, centre: centre && centre.slice(), captured: cluster ? cluster.size : 0 };
   }
   return {
-    stars, offsets, flags, weights, fade, mixes, alpha, mark, W, H, base, push, press, gather, blast, step, reset, position, shown, markState,
+    stars, offsets, flags, weights, fade, mixes, alpha, mark, W, H, base, push, press, gather, blast, burstAt, gateTrails, exploding, explosionAge, step, reset, position, shown, markState,
     velocity: i => [V[2 * i] * Math.exp(-age[i]), V[2 * i + 1] * Math.exp(-age[i])],
     get front() { return front; },
     setParallax(f) { par = f; },
+    setScroll(y) { displayScroll = y; },
     get awake() { return awake; }, get version() { return version; }, get cluster() { return cluster; }, get ring() { return ring; },
   };
 }
 
-// ---- Round 9 (L1): the DG mark. A pure sampler over the mark's paths ([{ d, fill }], SVG units, y down like the page), then
-// its placement for a hero size. Points from paper paths are G points; points from any other fill (the red path) are D points.
-const markKind = fill => String(fill || '').trim().toUpperCase() === STARS.paper ? 'G' : 'D';
-// A star's colour code for the renderer: 0 behind (own colour), 1 in front (own colour), 2 in front as G, 3 in front as D.
-// Round 10 (R2): 2 and 3 are set when the star is given a point; its front look goes toward that colour by its mark weight.
-const markFlag = kind => kind === 'D' ? 3 : 2;
-const FLAG_INK = [null, null, STARS.paper, STARS.redInk];
-// Flattens an SVG path (M, L, C, Z, absolute or relative) into closed rings of [x, y].
-function flattenPath(d, segments = 24) {
-  const tokens = String(d).match(/[MLCZmlcz]|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/g) || [];
-  const rings = []; let ring = null, cmd = null, k = 0, x = 0, y = 0, sx = 0, sy = 0;
-  const num = () => { const v = +tokens[k++]; if (!Number.isFinite(v)) throw new Error('bad path number'); return v; };
-  const close = () => { if (ring && ring.length > 2) rings.push(ring); ring = null; };
-  while (k < tokens.length) {
-    if (/^[A-Za-z]$/.test(tokens[k])) cmd = tokens[k++];
-    if (!cmd) throw new Error('path data without a command');
-    const rel = cmd !== cmd.toUpperCase(), C = cmd.toUpperCase(), bx = rel ? x : 0, by = rel ? y : 0;
-    if (C === 'Z') { close(); x = sx; y = sy; cmd = null; continue; }
-    if (C === 'M') { close(); x = bx + num(); y = by + num(); sx = x; sy = y; ring = [[x, y]]; cmd = rel ? 'l' : 'L'; }
-    else if (C === 'L') { x = bx + num(); y = by + num(); ring.push([x, y]); }
-    else if (C === 'C') {
-      const x1 = bx + num(), y1 = by + num(), x2 = bx + num(), y2 = by + num(), x3 = bx + num(), y3 = by + num(), x0 = x, y0 = y;
-      for (let j = 1; j <= segments; j++) {
-        const t = j / segments, u = 1 - t;
-        ring.push([u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3, u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3]);
-      }
-      x = x3; y = y3;
-    } else throw new Error('unsupported path command ' + cmd);
-  }
-  close();
-  return rings;
-}
-// Nonzero winding (SVG's default fill rule) of the rings around (px, py).
-function winding(rings, px, py) {
-  let w = 0;
-  for (const r of rings) for (let j = 0; j < r.length; j++) {
-    const a = r[j], b = r[(j + 1) % r.length], side = (b[0] - a[0]) * (py - a[1]) - (px - a[0]) * (b[1] - a[1]);
-    if (a[1] <= py) { if (b[1] > py && side > 0) w++; } else if (b[1] <= py && side < 0) w--;
-  }
-  return w;
-}
-// The sampler: a fine jittered grid inside the fills (the topmost path that covers a cell owns it; cells closer than
-// STARS.mark.edge units to their path's edge are dropped), then farthest-point order, so any first N cover the whole mark
-// evenly. Returns { points: [{ x, y, kind, path }], box: [x0, y0, x1, y1], area: { G, D } } in the paths' own units.
-function sampleMark(paths, count = STARS.mark.count) {
-  const shapes = paths.map((p, path) => ({ rings: flattenPath(p.d), kind: markKind(p.fill), path }));
-  const all = shapes.flatMap(s => s.rings.flat());
-  if (!all.length) return { points: [], box: [0, 0, 0, 0], area: { G: 0, D: 0 } };
-  const box = [Math.min(...all.map(p => p[0])), Math.min(...all.map(p => p[1])), Math.max(...all.map(p => p[0])), Math.max(...all.map(p => p[1]))];
-  const step = Math.sqrt((box[2] - box[0]) * (box[3] - box[1]) / STARS.mark.cells), cx = [], cy = [], owner = [];
-  const area = { G: 0, D: 0 }, margin = STARS.mark.edge;
-  // Each row of cells needs only the edges that reach its band (for the winding test and for the edge margin).
-  const edges = shapes.map(sh => sh.rings.flatMap(r => r.map((a, j) => [a, r[(j + 1) % r.length]])));
-  for (let gy = 0, id = 0; box[1] + gy * step < box[3]; gy++) {
-    const lo = box[1] + gy * step - margin, hi = box[1] + (gy + 1) * step + margin;
-    const band = edges.map(list => list.filter(e => Math.max(e[0][1], e[1][1]) >= lo && Math.min(e[0][1], e[1][1]) <= hi));
-    for (let gx = 0; box[0] + gx * step < box[2]; gx++, id++) {
-      const x = box[0] + (gx + 0.15 + 0.7 * hash(id, 7)) * step, y = box[1] + (gy + 0.15 + 0.7 * hash(id, 8)) * step;
-      for (let s = shapes.length - 1; s >= 0; s--) {
-        let w = 0, far = true;
-        for (const [a, b] of band[s]) {
-          const side = (b[0] - a[0]) * (y - a[1]) - (x - a[0]) * (b[1] - a[1]);
-          if (a[1] <= y) { if (b[1] > y && side > 0) w++; } else if (b[1] <= y && side < 0) w--;
-          if (far && segmentDistance(x, y, a, b) < margin) far = false;
-        }
-        if (!w) continue;
-        area[shapes[s].kind] += step * step;
-        if (far) { cx.push(x); cy.push(y); owner.push(s); }
-        break;
-      }
-    }
-  }
-  const m = cx.length, gap = new Float64Array(m).fill(Infinity), points = [];
-  if (!m) return { points, box, area };
-  // Farthest-point order, from the cell nearest the mark's centre.
-  const mx = (box[0] + box[2]) / 2, my = (box[1] + box[3]) / 2;
-  let next = 0;
-  for (let j = 1; j < m; j++) if (Math.hypot(cx[j] - mx, cy[j] - my) < Math.hypot(cx[next] - mx, cy[next] - my)) next = j;
-  for (let k = 0; k < Math.min(count, m); k++) {
-    const px = cx[next], py = cy[next], sh = shapes[owner[next]];
-    points.push({ x: px, y: py, kind: sh.kind, path: sh.path });
-    let far = -1, pick = 0;
-    for (let j = 0; j < m; j++) {
-      const dx = cx[j] - px, dy = cy[j] - py, g = Math.min(gap[j], dx * dx + dy * dy);
-      gap[j] = g; if (g > far) { far = g; pick = j; }
-    }
-    next = pick;
-  }
-  return { points, box, area };
-}
-// The mark for a hero of W x H: about 20 % of its height, the mark's own proportions, never wider than the hero allows.
-// Points are px from the mark's centre (y down, upright, not mirrored); half is its half size; reach its farthest point.
-// Round 16 (R1): weight is the mean of the points (the fill's centroid, the points being even over it), in px from the box
-// centre; the ring's band is centred on it: its inner edge (radius) ringGap of the mark's height outside the farthest point
-// from it, its depth (band) ringBand of the mark's height.
-function placeMark(sample, W, H, height = STARS.mark.height) {
-  const [x0, y0, x1, y1] = sample.box, bw = x1 - x0, bh = y1 - y0, m = STARS.mark.margin;
-  if (!sample.points.length || !(bw > 0) || !(bh > 0)) return null;
-  const h = Math.max(1, Math.min(height * H, (W - 2 * m) * bh / bw, H - 2 * m)), s = h / bh, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-  const points = sample.points.map(p => ({ x: (p.x - cx) * s, y: (p.y - cy) * s, kind: p.kind }));
-  const weight = [0, 1].map(k => points.reduce((sum, p) => sum + (k ? p.y : p.x), 0) / points.length);
-  const radius = Math.max(...points.map(p => Math.hypot(p.x - weight[0], p.y - weight[1]))) + STARS.mark.ringGap * h;
-  return { points, half: [bw * s / 2, bh * s / 2], height: h, scale: s, reach: Math.max(...points.map(p => Math.hypot(p.x, p.y))), weight, ring: { centre: weight, radius, band: STARS.mark.ringBand * h } };
-}
 // The mark's centre: the hold's anchor, clamped so the whole mark stays inside the hero with a 16 px margin. Round 16 (R3):
 // and so the whole ring does too (its circle out to the band's outer edge, where the farthest ring stars sit); on an axis
 // where the ring cannot fit, the mark-only clamp; where even the mark cannot fit, the middle.
@@ -12467,6 +13793,8 @@ function createStars(hero, { reduced, win = hero.ownerDocument.defaultView, raf 
   let field = null, box = null, top = 0, scrollY = 0, pointer = null, previous = null, target = [0, 0], f = [0, 0], fv = [0, 0];
   let hold = null, holdStart = null, swallow = false, last = null, pending = false, attrs = null, attrsVersion = 0, markKey = null, sample = null;
   let shownPar = [0, 0], shownScroll = 0; // JOIN: the parallax and scroll term of the last frame handed to the renderer
+  let history = null, positions = null, trailVersion = 0;
+  let labelKey = null;
   const usable = e => !reduced.matches && (e.pointerType === 'mouse' || e.pointerType === 'pen');
   function redraw() {
     if (!available() || running() || pending) return;
@@ -12480,17 +13808,20 @@ function createStars(hero, { reduced, win = hero.ownerDocument.defaultView, raf 
     // L1: the mark's paths are read from the page and sampled once; placed once per hero size, never per frame.
     const paths = readMark(hero), key = paths ? paths.map(p => p.fill + ' ' + p.d).join('|') : null, changed = key !== markKey;
     if (changed) { markKey = key; sample = paths ? sampleMark(paths, STARS.mark.count) : null; }
-    if (!field || changed || field.W !== rect.width || field.H !== rect.height) {
+    const labels = readStarLabels(hero, rect), nextLabelKey = JSON.stringify(labels);
+    if (!field || changed || field.W !== rect.width || field.H !== rect.height || labelKey !== nextLabelKey) {
+      labelKey = nextLabelKey;
       hold = null; holdStart = null;
-      field = createField(rect.width, rect.height, sample ? placeMark(sample, rect.width, rect.height) : null); attrsVersion++;
+      field = createField(rect.width, rect.height, sample ? placeMark(sample, rect.width, rect.height) : null, labels); attrsVersion++;
       attrs = new Float32Array(field.stars.length * 5);
+      history = createTrailHistory(field.stars.length); positions = new Float64Array(field.stars.length * 2);
       field.stars.forEach((s, i) => attrs.set([s.x, s.y, s.d, s.size, s.red ? 1 : 0], i * 5));
     }
   }
   const local = e => box ? [e.clientX - box.left, e.clientY - box.top] : null; // JOIN: pinned, the hero no longer scrolls with the window
-  win.addEventListener('scroll', () => { scrollY = win.scrollY || 0; redraw(); }, { passive: true });
+  win.addEventListener('scroll', () => { scrollY = win.scrollY || 0; field?.setScroll(reduced.matches ? 0 : lift()); redraw(); }, { passive: true }); // JOIN: the scroll term is the lift
   win.addEventListener('pointermove', e => {
-    if (!usable(e) || !box) return;
+    if (!usable(e) || !box || !open()) return;
     pointer = local(e);
     target = pointerFraction(pointer[0], pointer[1], box.width, box.height);
     redraw();
@@ -12536,9 +13867,19 @@ function createStars(hero, { reduced, win = hero.ownerDocument.defaultView, raf 
     if (live && hold) field.gather(hold, pointer || hold.anchor, dt);
     field.step(dt);
     // JOIN: the scroll term is the lift, not the window's scroll; both values are kept for drawn().
-    shownPar = [f[0] * STARS.parallax, f[1] * STARS.parallax]; shownScroll = still ? 0 : lift();
+    const scroll = still ? 0 : lift();
+    shownPar = [f[0] * STARS.parallax, f[1] * STARS.parallax]; shownScroll = scroll;
+    field.setScroll(scroll);
+    field.stars.forEach((s, i) => {
+      // Own motion only. The renderer still adds parallax and scroll to the head.
+      positions[2 * i] = attrs[5 * i] + field.offsets[2 * i];
+      positions[2 * i + 1] = attrs[5 * i + 1] + field.offsets[2 * i + 1];
+    });
+    if (still || !live) history.reset();
+    const trails = field.gateTrails(history.record(now, positions)); trailVersion++;
     return {
       count: field.stars.length, attrs, attrsVersion, offsets: field.offsets, flags: field.flags, weights: field.weights, alpha: field.alpha, mixes: field.mixes, front: field.front, markSize: STARS.mark.size, version: field.version,
+      trails, trailVersion,
       par: shownPar, scroll: shownScroll, reveal, centre,
     };
   }
@@ -12564,6 +13905,11 @@ function createStars(hero, { reduced, win = hero.ownerDocument.defaultView, raf 
   }
   return {
     drawn, look, letGo() { release(null); }, // JOIN: drawn, look; letGo releases any hold (for the lift)
+    async prepare(yieldFrame) {
+      const paths = readMark(hero);
+      if (paths) { sample = await sampleMark(paths, STARS.mark.count, yieldFrame); markKey = paths.map(p => p.fill + ' ' + p.d).join('|'); }
+    },
+    get sample() { return sample; },
     measure, frame, after() { if (busy()) redraw(); }, busy,
     // The stage's click handler asks once: was that a hold (no craft change)?
     swallowClick() { const s = swallow; swallow = false; return s; },
@@ -12572,10 +13918,10 @@ function createStars(hero, { reduced, win = hero.ownerDocument.defaultView, raf 
   };
 }
 
-return { hash, makeStars, follow, createField, flattenPath, winding, sampleMark, placeMark, readMark, createStars, STARS, starCount, depthWeight, parallaxOffset, pointerFraction, scrollOffset, starOn, starReach, captureRadius, growthRate, holdRadius, blastImpulse, orbitRadius, pushWeight, markKind, markFlag, FLAG_INK, markCentre, ringRadius, ringJitter, chargeAmp };
+return { createTrailHistory, follow, createField, readMark, createStars, depthWeight, parallaxOffset, pointerFraction, scrollOffset, starOn, starReach, captureRadius, growthRate, holdRadius, blastImpulse, orbitRadius, pushWeight, markCentre, ringRadius, ringJitter, chargeAmp, STARS, hash, starCount, makeStars, markKind, markFlag, FLAG_INK, flattenPath, winding, sampleMark, placeMark };
 })();
 // design/journey-hero/take-2/craft-wipe.mjs
-const __module11 = (function () {
+const __module13 = (function () {
 const { EASE } = __module0;
 // Round 14 (K1): the craft list's current row rolls its letters up into place. It replaces round 12's selection box (L2),
 // which replaced round 11's red rule (C1). Every glyph of a row (the two digits of its number, then each letter of its
@@ -12769,22 +14115,83 @@ function createCraftWipe(hero, { reduced, win = hero.ownerDocument.defaultView, 
 
 return { createCraftModel, followCraft, createCraftWipe, CRAFT_ROLL, CRAFT_TEXT, CRAFT_GLYPHS, rollLength, copyOffsets };
 })();
+// design/journey-hero/take-2/export-sparks.mjs
+const __module14 = (function () {
+const { STREAK_WINDOW, streakGeometry } = __module8;
+// Export bursts share the star renderer, its head/taper geometry and the loader's exposure window.
+
+const seed = (i, k) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+const red = new Set(Array.from({ length: 140 }, (_, i) => i).sort((a, b) => seed(a, 5) - seed(b, 5)).slice(0, 98));
+const SPARKS = Array.from({ length: 140 }, (_, i) => {
+  const a = 2 * Math.PI * (i + 0.6 * seed(i, 1)) / 140, up = 0.08 + 0.85 * seed(i, 7) ** 1.6, flat = Math.sqrt(1 - up * up);
+  return { d: [Math.cos(a) * flat, up, Math.sin(a) * flat], v: 5 + 11 * seed(i, 2) ** 1.4,
+    tau: 0.13 + 0.11 * seed(i, 3), size: 1.5 + 1.5 * seed(i, 4), red: red.has(i), life: 0.7 + 0.55 * seed(i, 6) };
+});
+const PUFF = SPARKS.filter((_, i) => i % 4 === 0).map(s => ({ ...s, v: s.v * 0.3, life: s.life * 0.6 }));
+function sparkOrigin(event, spark) {
+  if (event.hx === undefined) return event.centre;
+  const [dx, , dz] = spark.d, distance = Math.min(event.hx / Math.abs(dx), event.hz / Math.abs(dz));
+  return [event.centre[0] + dx * distance, event.centre[1], event.centre[2] + dz * distance];
+}
+function sparkAt(spark, centre, age) {
+  const distance = spark.v * spark.tau * (1 - Math.exp(-Math.max(0, age) / spark.tau));
+  return centre.map((v, i) => v + spark.d[i] * distance);
+}
+const wrap = (t, loop) => ((t % loop) + loop) % loop;
+const project = (p, view) => [view.cx + view.S * p.reduce((n, v, i) => n + v * view.cam.r[i], 0),
+  view.cy - view.S * p.reduce((n, v, i) => n + v * view.cam.u[i], 0)];
+// Pure in loop time: held frames and seeks show the same sparks; they do not trigger field impulses.
+function sparkFrame(events, time, loop, view) {
+  const attrs = [], trails = [];
+  for (const event of events) {
+    const age = wrap(time - event.at, loop);
+    for (const spark of event.hx === undefined ? SPARKS : PUFF) {
+      if (age > spark.life) continue;
+      const fade = 1 - Math.min(1, Math.max(0, (age - 0.55 * spark.life) / (0.45 * spark.life)));
+      const size = spark.size * fade * fade * (3 - 2 * fade);
+      if (!(size > 0)) continue;
+      const origin = sparkOrigin(event, spark);
+      const [x, y] = project(sparkAt(spark, origin, age), view);
+      const tail = project(sparkAt(spark, origin, age - STREAK_WINDOW), view);
+      const shape = streakGeometry(x, y, size, tail);
+      attrs.push(x, y, 1, size, spark.red ? 1 : 0);
+      trails.push(x - tail[0], y - tail[1], ...shape.normal);
+    }
+  }
+  const count = attrs.length / 5;
+  return { count, attrs: new Float32Array(attrs), offsets: new Float32Array(count * 2), flags: new Float32Array(count).fill(1),
+    alpha: new Float32Array(count).fill(1), mixes: new Float32Array(count), trails: new Float32Array(trails), front: count,
+    attrsVersion: attrs, version: attrs, markSize: 0, par: [0, 0], scroll: 0, reveal: null };
+}
+// Called only by forward playback, once per crossed event, including across the loop boundary.
+function kickExportBursts(events, time, step, loop, view, field) {
+  if (!view || !field || !(step > 0)) return;
+  for (const event of events) if (event.hx === undefined && wrap(time - event.at, loop) < step) {
+    const [x, y] = project(event.centre, view);
+    field.burstAt(x, y, 2.6 * view.S);
+  }
+}
+
+return { sparkOrigin, sparkAt, sparkFrame, kickExportBursts, SPARKS, PUFF };
+})();
 // design/journey-hero/take-2/play.mjs
-const __module12 = await (async function () {
+const __module15 = await (async function () {
 const { sceneEnvelope } = __module1;
 const { makeCamera, dot } = __module0;
 const { createRenderer } = __module3;
 const { corners } = __module4;
 const { makeAtlas, fontsReady } = __module2;
-const { SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, buildingLastState } = __module5;
+const { SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, buildingLastState, exitBursts, popBursts } = __module5;
 const { createCallouts } = __module6;
 const { createPageLayout } = __module7;
-const { ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView } = __module8;
-const { createNameReact } = __module9;
-const { createStars, starReach } = __module10;
-const { createCraftWipe } = __module11;
+const { ENTRANCE, entranceAt, screenPlane, floorReach, liftPieces, settleView, createEntranceView, loaderAt, createLoaderView } = __module10;
+const { createNameReact } = __module11;
+const { createStars, starReach } = __module12;
+const { createCraftWipe } = __module13;
+const { sparkFrame, kickExportBursts } = __module14;
 
 // The second take in the built hero's layout. One clock also supports held review frames.
+
 
 
 
@@ -12806,7 +14213,7 @@ const renderer = createRenderer(canvas), cam = makeCamera(num('yaw', 0), num('pi
 const callouts = createCallouts(hero);
 const layout = createPageLayout(hero, stage, callouts);
 const starts = SHOW.map((_, i) => SHOW.slice(0, i).reduce((sum, scene) => sum + scene.len, 0));
-const stills = [2, 3, 4, 5];
+const stills = [2, 3, 4, 5], bursts = [...exitBursts(), ...popBursts()];
 
 const need = sceneEnvelope(SCENES, corners, dot, cam);
 const wrap = t => ((t % LOOP) + LOOP) % LOOP;
@@ -12818,32 +14225,53 @@ let intro = null, held = false, first = false;
 // JOIN: lift is how far the map's scroll has carried the hero's content up (CSS px); away is set once the map has taken the stars.
 let lift = 0, away = false;
 const entrance = createEntranceView(hero);
+const loader = createLoaderView(hero, { sample: () => stars?.sample }), boot = {};
+let loading = !query.has('t');
+let loaderStart = null;
+if (!loading) loader.clear();
+function loaderState(now) {
+  if (loader.state) return loader.state(now);
+  // Boot may block the main thread before its first paint. Start the visible clock on rAF, so that work cannot
+  // consume the loader's minimum duration unseen. Milestones already complete then belong to time zero.
+  const time = loaderStart === null ? 0 : Math.max(0, now - loaderStart);
+  const progress = Object.fromEntries(Object.entries(boot).map(([key, at]) => [key, loaderStart === null ? 0 : Math.max(0, at - loaderStart)]));
+  return loaderAt(time, progress, { reduced: reduced.matches });
+}
+function bootDone(key) {
+  const now = performance.now() / 1000;
+  boot[key] = now;
+  loader.boot?.(key);
+  if (loading) loader.apply(loaderState(now));
+}
 const frameNow = () => frameAt(t, first && t < 0.5 ? { first: true } : {});
 // Round 8: the name reacts once the entrance has ended (N1); the star field (B1, B2) is drawn first in every frame and takes
-// the pointer once the entrance's rings have reached it (0.90 s). Neither stops with Pause, and neither moves the loop.
+// the pointer once the loader burst lands (entrance zero). Neither stops with Pause, and neither moves the loop.
 const nameReact = createNameReact(hero, { reduced });
 // Round 14 (K1, replacing round 12's selection box): the craft list's letters roll from the old row to the new on its own
 // clock; the entrance sets it, so the current row appears lit as its row cuts in.
 const craftWipe = createCraftWipe(hero, { reduced });
-const nameOn = () => nameReact.setLive(ready && !intro && !held && !reduced.matches);
-const stars = query.get('stars') === '0' ? null : createStars(hero, { reduced, draw, running, /* JOIN: away and lift */ available: () => ready && visible && !document.hidden && !away, lift: () => lift, open: () => !intro || intro.time >= ENTRANCE.stars[1] });
+const nameOn = () => nameReact.setLive(ready && !loading && !intro && !held && !reduced.matches);
+const stars = query.get('stars') === '0' ? null : createStars(hero, { reduced, draw, running, /* JOIN: away and lift */ available: () => ready && !loading && visible && !document.hidden && !away, lift: () => lift, open: () => !loading && (!intro || intro.time >= ENTRANCE.starPointer - 1e-12) });
 
 function draw() {
   if (away) return; // JOIN: nothing draws while away
   const { h, b } = layout.metrics;
   if (!b.width || !b.height || !h.width || !h.height) return;
   const W = h.width, H = h.height, dpr = Math.min(2, devicePixelRatio || 1, Math.sqrt(5.2e6 / (W * H)));
-  const view = layout.view(need, cam, dpr), pieces = frameNow();
-  layout.cover(view, need);
+  const base = layout.view(need, cam, dpr);
+  layout.cover(base, need);
+  const floor = { ...POOL, radius: num('pool', 4.8) }, state = (intro || (loading && !reduced.matches)) && entranceAt(intro?.time ?? 0, { ledeLines: entrance.lines });
+  // Coverage stays at the home fit. Only the world turns; stars remain in screen space.
+  const view = state ? settleView(base, state.camera, num('yaw', 0), num('pitch', 0)) : base;
+  const pieces = state ? liftPieces(frameNow(), state.screen) : frameNow();
   lastView = view;
-  const floor = { ...POOL, radius: num('pool', 4.8) }, state = intro && entranceAt(intro.time, { ledeLines: entrance.lines });
-  // F3 (round 8): the floor has no hover. The screen and its shadow share one rising clip plane.
   if (state) floor.reveal = floorReach(state.floor, floor.radius);
   const centre = [b.left - h.left + b.width / 2, b.top - h.top + b.height / 2];
   const field = stars?.frame(state ? starReach(state.stars, centre, W, H) : null, centre);
   // JOIN: the scene and its labels are drawn from a copy of the view, lifted; the cached view stays as it was.
   const shown = lift ? { ...view, cy: view.cy - lift } : view;
-  renderer.draw(pieces, shown, { outline: 0, floor, reveal: state ? screenPlane(state.screen) : null, stars: field });
+  renderer.draw(pieces, shown, { outline: 0, floor, reveal: state ? screenPlane(state.screen) : null, stars: loading ? null : field,
+    sparks: loading || intro || reduced.matches ? null : sparkFrame(first ? bursts.filter(b => b.at <= t) : bursts, t, LOOP, view) });
   callouts.draw(calloutsAt(t), pieces, shown, t, reduced.matches);
   if (state) entrance.apply(state);
   hero.classList.remove('is-entering');
@@ -12851,38 +14279,64 @@ function draw() {
   crafts.forEach((c, i) => i === scene.craft ? c.setAttribute('aria-current', 'true') : c.removeAttribute('aria-current'));
   craftWipe.follow(scene.craft, { cut: !!intro });
   pause.textContent = stopped || reduced.matches ? 'Play' : 'Pause';
-  const at = [BLOCK.x0, BLOCK.x1].flatMap(x => [BLOCK.z0, BLOCK.z1].flatMap(z => [0, BLOCK.up].map(y => [h.left + view.cx + view.S * dot(cam.r, [x, y, z]), h.top + view.cy - view.S * dot(cam.u, [x, y, z])])));
+  const at = [BLOCK.x0, BLOCK.x1].flatMap(x => [BLOCK.z0, BLOCK.z1].flatMap(z => [0, BLOCK.up].map(y => [h.left + view.cx + view.S * dot(view.cam.r, [x, y, z]), h.top + view.cy - view.S * dot(view.cam.u, [x, y, z])])));
   const lay = [Math.min(...at.map(p => p[0])), Math.min(...at.map(p => p[1])), Math.max(...at.map(p => p[0])), Math.max(...at.map(p => p[1]))].map(Math.round);
   window.__need = { ...need, S: view.S, box: [Math.round(b.width), Math.round(b.height)], lay };
   stars?.after();
+  if (loading && boot.frame === undefined) bootDone('frame');
 }
 
-function running() { return ready && !away /* JOIN */ && !stopped && !held && !reduced.matches && visible && !document.hidden; }
+function running() { return !away /* JOIN */ && visible && !document.hidden && (loading || (ready && !stopped && !held && !reduced.matches)); }
 function tick(now) {
   request = 0;
   if (!running()) { previous = null; return; }
+  if (loading) {
+    if (loaderStart === null) loaderStart = now / 1000;
+    const state = loaderState(now / 1000);
+    loader.apply(state);
+    if (!reduced.matches && state.entranceTime !== null) {
+      if (!intro) { first = true; startEntrance(state.entranceTime, false); }
+      else intro.time = state.entranceTime;
+      t = Math.max(0, intro.time - ENTRANCE.screen[1]);
+    }
+    if (state.done) {
+      loading = false;
+      // Draw the field's homes before removing its canvas copy, in this same main-thread frame.
+      nameOn(); draw(); loader.clear(); previous = now;
+    } else if (intro) draw();
+    if (running()) request = requestAnimationFrame(tick);
+    return;
+  }
   if (previous !== null) {
     const step = Math.min(0.1, (now - previous) / 1000);
-    if (intro) { intro.time = Math.min(ENTRANCE.end, intro.time + step); t = Math.max(0, intro.time - ENTRANCE.screen[1]); }
-    else { const next = wrap(t + step); if (next < t) first = false; t = next; }
+    if (intro) {
+      const next = intro.time + step;
+      // Repeated frame steps can land a few ulps below the endpoint; do not add a frame to the entrance.
+      intro.time = next >= ENTRANCE.end - 1e-12 ? ENTRANCE.end : next;
+      t = Math.max(0, intro.time - ENTRANCE.screen[1]);
+    }
+    else { const next = wrap(t + step); if (next < t) first = false; t = next; kickExportBursts(bursts, t, step, LOOP, lastView, stars?.field); }
   }
   previous = now;
   if (intro && intro.time >= ENTRANCE.end) endEntrance();
   draw(); request = requestAnimationFrame(tick);
 }
-function startEntrance(time) {
+function startEntrance(time, remeasure = true) {
   intro = { time };
-  entrance.clear(); entrance.measure(layout.metrics?.nameLines); nameOn();
+  if (remeasure || !entrance.lines) { entrance.clear(); entrance.measure(layout.metrics?.nameLines); }
+  nameOn();
 }
 // Ends the entrance at once, everything shown; the caller then does what it was asked to.
 function endEntrance() {
-  if (!intro && !held) return;
+  if (!intro && !held && !(loading && ready)) return;
+  if (loading && ready) { loading = false; loader.clear(); }
   intro = null; held = false; entrance.clear(); nameOn();
 }
 function hold(time) {
   if (time === null) { endEntrance(); if (ready) { draw(); schedule(); } return; }
   if (!Number.isFinite(time)) throw new TypeError('time must be finite or null');
   if (!ready || reduced.matches) return;
+  if (loading) { loading = false; loader.clear(); }
   const at = Math.min(ENTRANCE.end, Math.max(0, time));
   held = true; first = true; startEntrance(at);
   t = Math.max(0, at - ENTRANCE.screen[1]);
@@ -12900,7 +14354,7 @@ function seek(time) {
   if (ready) draw();
 }
 if (renderer.buildings) renderer.buildings.lastState = id => renderer.buildings.readPlan(buildingLastState(id));
-window.__hero = { buildings: renderer.buildings, seek, measure, entrance: hold, get entering() { return intro ? intro.time : null; }, get t() { return t; }, get callouts() { return callouts.layout; }, get view() { return lastView; }, get pieces() { return frameNow(); }, get layout() { return layout.metrics; }, crafts: p => craftWipe.hold(p), get craftWipe() { return craftWipe.state; }, get name() { return { live: nameReact.live, open: nameReact.open, lift: nameReact.letters.map(l => l.y) }; }, get stars() { return stars && { holding: stars.holding, radius: stars.radius, fraction: stars.fraction, awake: stars.field?.awake ?? false, count: stars.field?.stars.length ?? 0, offsets: stars.field && Array.from(stars.field.offsets), flags: stars.field && Array.from(stars.field.flags), weights: stars.field && Array.from(stars.field.weights), alpha: stars.field && Array.from(stars.field.alpha), mixes: stars.field && Array.from(stars.field.mixes), mark: stars.mark }; }, LOOP, SHOW };
+window.__hero = { buildings: renderer.buildings, seek, measure, entrance: hold, get loading() { return loading; }, get entering() { return intro ? intro.time : null; }, get t() { return t; }, get callouts() { return callouts.layout; }, get view() { return lastView; }, get pieces() { const pieces = frameNow(); return intro || (loading && !reduced.matches) ? liftPieces(pieces, entranceAt(intro?.time ?? 0).screen) : pieces; }, get layout() { return layout.metrics; }, crafts: p => craftWipe.hold(p), get craftWipe() { return craftWipe.state; }, get name() { return { live: nameReact.live, open: nameReact.open, lift: nameReact.letters.map(l => l.y) }; }, get stars() { return stars && { holding: stars.holding, radius: stars.radius, fraction: stars.fraction, awake: stars.field?.awake ?? false, count: stars.field?.stars.length ?? 0, offsets: stars.field && Array.from(stars.field.offsets), flags: stars.field && Array.from(stars.field.flags), weights: stars.field && Array.from(stars.field.weights), alpha: stars.field && Array.from(stars.field.alpha), mixes: stars.field && Array.from(stars.field.mixes), mark: stars.mark }; }, LOOP, SHOW };
 
 function choose(craft) {
   endEntrance(); first = false;
@@ -12917,6 +14371,14 @@ pause.addEventListener('click', () => {
   stopped = !stopped; draw(); schedule();
 });
 reduced.addEventListener('change', () => {
+  if (loading) {
+    loader.motion?.(reduced.matches);
+    if (reduced.matches) intro = null;
+    first = !reduced.matches;
+    t = reduced.matches ? starts[2] + SHOW[2].still : 0;
+    entrance.clear();
+    nameOn(); if (ready) draw(); schedule(); return;
+  }
   endEntrance(); nameOn();
   if (reduced.matches) choose(sceneAt(t).scene.craft);
   draw(); schedule();
@@ -12926,15 +14388,16 @@ new IntersectionObserver(entries => {
   visible = entries[0].isIntersecting;
   schedule();
 }, { threshold: 0 }).observe(hero);
-// The entrance's inline weights and clips come off while the page is measured, then go back on from fresh geometry.
+// The entrance's transforms and clips come off during measurement, then resume from fresh geometry.
 function measure() {
   if (!ready) return;
   hero.style.setProperty('--leave', '0px'); // JOIN: geometry is read unlifted
-  if (intro) entrance.clear();
+  if (intro || loading) entrance.clear();
   layout.measure();
-  if (intro) entrance.measure(layout.metrics.nameLines);
+  if (intro || loading) entrance.measure(layout.metrics.nameLines);
+  stars?.measure(layout.metrics.h); loader.measure?.(layout.metrics.h); // JOIN: unlifted too, so the stars' homes keep off the labels' resting places
   hero.style.setProperty('--leave', lift + 'px'); // JOIN: and the lift goes back on, before the name's reaction reads its own place (its circle is set in viewport px)
-  stars?.measure(layout.metrics.h); nameReact.measure(); craftWipe.measure();
+  nameReact.measure(); craftWipe.measure();
   if (visible && !document.hidden) draw();
 }
 new ResizeObserver(measure).observe(hero);
@@ -12955,11 +14418,32 @@ function watchName() {
 }
 name.addEventListener('animationstart', watchName);
 
+schedule();
 await fontsReady();
-renderer.setAtlas(makeAtlas());
 await document.fonts.ready;
-ready = true; layout.measure(); stars?.measure(layout.metrics.h); craftWipe.measure();
-if (!query.has('t') && !reduced.matches) { first = true; startEntrance(0); }
+// The review/reduced page says Play. Measure that actual label before creating any homes.
+pause.textContent = stopped || reduced.matches ? 'Play' : 'Pause';
+bootDone('fonts');
+const yieldFrame = () => renderer.warm ? new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0))) : Promise.resolve();
+await stars?.prepare?.(yieldFrame);
+await renderer.setAtlas(await makeAtlas({ yieldFrame }), { yieldFrame });
+bootDone('atlas');
+layout.measure({ callouts: false }); await yieldFrame();
+await callouts.measure({ yieldFrame }); await yieldFrame();
+loader.measure?.(layout.metrics.h); await yieldFrame();
+stars?.measure(layout.metrics.h); craftWipe.measure(); await yieldFrame();
+if (loading && !reduced.matches) { first = true; entrance.measure(layout.metrics.nameLines); }
+if (loading && !reduced.matches && renderer.warm) {
+  await yieldFrame();
+  const h = layout.metrics.h, dpr = Math.min(2, devicePixelRatio || 1, Math.sqrt(5.2e6 / (h.width * h.height)));
+  renderer.warm(frameNow(), layout.view(need, cam, dpr), stars?.frame(), { ...POOL, radius: num('pool', 4.8) });
+  // Restore the entrance's first frame under the same opaque loader; do not advance either visible clock.
+  await yieldFrame();
+}
+ready = true;
+// A resize/scroll can arrive between boot slices while the normal observer is held back by !ready.
+const bootBox = hero.getBoundingClientRect();
+if (['left', 'top', 'width', 'height'].some(key => bootBox[key] !== layout.metrics.h[key])) measure();
 nameOn(); document.fonts.ready.then(() => nameReact.measure());
 draw(); window.__ready = true; schedule(); watchName();
 // JOIN: the one handle the journey map's join uses. setLeave lifts everything but the stars; setAway stops the hero altogether.

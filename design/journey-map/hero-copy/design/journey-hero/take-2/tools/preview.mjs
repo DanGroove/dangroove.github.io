@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ROOT, TAKE, pageMarkup, outputPath } from './page.mjs';
+import { ROOT, TAKE, pageMarkup, outputPath, LOADER_CSS, LOADER_SKIP, LOADER_SCRIPT } from './page.mjs';
 
 // Split a declaration only at its own level, leaving strings, templates and nested expressions intact.
 function splitTop(source, separator) {
@@ -74,10 +74,12 @@ export function previewMarkup() {
   const font = fs.readFileSync(path.join(ROOT, 'public/holding/fonts/outfit-latin-wght-normal.woff2')).toString('base64');
   const css = fs.readFileSync(path.join(ROOT, 'public/journey/journey.css'), 'utf8').replace(/url\([^)]*\)/g, `url(data:font/woff2;base64,${font})`);
   const body = html.match(/<body[^>]*>([\s\S]*)<\/body>/)[1];
-  const clean = body.replace(/\s+href=(['"])[\s\S]*?\1/g, '').replace(/<style>[\s\S]*?<\/style>/g, '');
+  const clean = body.replace(`<script>${LOADER_SCRIPT}</script>`, '').replace(/<script type="module" src="[^"]*"><\/script>/g, '').replace(/\s+href=(['"])[\s\S]*?\1/g, '').replace(/<style>[\s\S]*?<\/style>/g, '');
   const faces = Object.fromEntries(['gelasio-400.woff2', 'gelasio-700.woff2', 'rokkitt-800.woff2'].map(file => [file, 'data:font/woff2;base64,' + fs.readFileSync(path.join(TAKE, 'fonts', file)).toString('base64')]));
   return `<title>Journey hero take two</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<style>${LOADER_CSS}</style>
+<script>${LOADER_SKIP}</script>
 <style>${css}</style>
 <style>${fs.readFileSync(path.join(TAKE, 'take-2.css'), 'utf8')}</style>
 <style>
@@ -86,6 +88,7 @@ html,body,main{height:100%}
 @media(max-width:719px){.hero{min-height:100%!important}}
 </style>
 ${clean.trim()}
+<script>${LOADER_SCRIPT}</script>
 <script>globalThis.__heroFonts=${JSON.stringify(faces)};</script>
 <script type="module">${pack(path.join(TAKE, 'play.mjs'))}</script>
 `;
