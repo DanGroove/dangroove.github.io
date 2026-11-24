@@ -2712,3 +2712,84 @@ node .../tools/checks.mjs                        l7-checks-final.txt
 The full suite ends **`all clean`** and retains **6,582 frames / 477,123 pieces / max 188 / 6 atlas pages / 99.491 s**. `l7-preservation.mjs` / `l7-preservation.json` confirm **198** tracked files remain byte-identical, with only the five permitted tracked source/check/docs edits and the new permitted L7 checker. All **600** mark samples are identical; **2,400** point/path comparisons, **2,558** visible landing comparisons and **4,800** formed/reduced dot comparisons match the baseline exactly on desktop/tablet/phone/scrolled phone. Across **3,606** boot-history samples, fill, target, launch times and full-progress time remain exact; formation/hold move **+.3 s**, explosion start **+.75 s**, landing **+1.15 s**, and reduced/review state objects remain exactly equal. Six individual `node --check` commands exit **0**. These comparisons use visible drawing attributes, rather than incidental metadata on paired versus unpaired home records. Only the permitted runtime module, new L7 checker, two earlier check files, BUILD/README and this run's own r19 notes are written.
 
 No L7 code item is omitted. Browser first-paint/compositing, real worker scheduling, pixels, screenshots and visual approval remain **UNRUN** for external review. No reviewer agents, eye judgement, pixel gate, network, dependency installation, site build, deployment or mutating git command was used. External skill files and RTK.md remain unread because this run forbids access outside the repository.
+
+### L8 follow-up: phone stars share homes
+
+Built L8 on incoming `edb6337`, retaining everything built in `29848be`, including L7's replacement of L6's curves and speed rule. L3 remains withdrawn. Before writing, read AGENTS.md, CORRECTIONS-19, CORRECTIONS-17 G/R2/R3 and the Round 6 entrance/hold/label-exit/check record, then the READMEs and retained Round 18/19 record. The supplied browser finding of L7's growing rectangle is the reference. Acceptance criteria and pre-edit sources/hashes are `.scratch/review-out/r19/l8-acceptance.md` and `l8-baseline.json`.
+
+#### Assignment, landing and handover
+
+Only `loader-stars.mjs` changes runtime behavior. The same angular sort about `placeMark().weight` now assigns **every** mark rank `k` to home rank `floor(k * homeCount / markCount)`. Desktop/tablet use exactly their preceding assignments and drawing. In the existing **390 x 844** phone scene, **600** stars share **305** unchanged field homes: **295 homes take two stars; 10 take one**. Every home is used, and none takes more than two. There are **0** edge-bound leftovers and **0** fading mark stars.
+
+Both stars of a shared home follow L7's straight lines and **1.6 s cubic ease-out**, reaching that home's exact float32 position and size and its field colour together, with alpha **1** throughout. At landing `loaderDots()` emits the home **once**; this also prevents duplicate terminal drawing in the worker/fallback canvas. WebGL still draws its one field star before the loader is removed in that same main-thread frame. The endpoint is the field's home, following rule G. No earlier artwork, scene, layout, picture, palette, mark scale or flight path changes.
+
+No clock changes: launches **1.4 s**, flights **1.0**, formed hold **.15**, shrink **.4** to **.84**, swell **.25** to **1.10**, explosion **1.6**; all-ready landing/entrance zero/pointer **4.8 s**. The L2 timetable, dropped star ring, floor ring **1.8-2.8**, screen **2.4-3.2**, entrance end **3.8**, loop **99.49089474781469 s**, real boot shares, readiness waits, reduced-motion still/cut and review bypass remain exact. Page/preview/player/entrance integration is byte-identical and consumes the shared module automatically.
+
+#### Node gates and negative control
+
+`tools/loader-checks.mjs` adds `checkLoaderLanding()`, exercised on desktop, tablet and phone: valid field home for all **1,800** mark-star landings; exact position/size/colour/alpha/field flag; one drawing per home at landing, **1/240 s** later and **1 s** later (**6,699** field-dot comparisons); and incoming per-star continuity at **end - 1e-7**, including size/colour. Phone occupancy must be one or two, with exactly **295** doubles. The angular gate checks the exact L8 rank formula for all **600** phone stars. The existing **240 Hz** explosion gate checks alpha **1**, straight lines, cubic material interpolation and nonincreasing speed for every trajectory. The inline worker, fallback and worker-error fallback each additionally draw exactly **305** terminal phone dots. The retained player gate verifies field draw precedes removal in the same landing frame.
+
+All L7 timing/flight/scale/speed assertions remain, except its explicitly replaced surplus-ray/fade expectations. Per scene the **144,000 flight**, **117,000 scale** and **231,000 explosion** star samples remain; combined **984,000**, with **689,400** adjacent-speed comparisons and maximum rise **0**. For derivatives only, the single terminal home is looked up for each incoming trajectory. The actual terminal output is separately checked for uniqueness and exact field attributes. Endpoint stencil `h=.00001 s` and allowance **.00001 px/s** are unchanged. Phone's worst measured explosion arrival speed is **3.81317246e-8 px/s**; desktop's remains **7.62634492e-8**.
+
+The new **`edge-leftovers`** control restores L7's minimum-count pairing, ray/edge endpoints and fade, removing terminal merging, in memory. Each of its four source edits matches exactly one site. It fails **`L8 landing: 390x844 star 2 has no field home`**. The preservation test additionally proves this fault's scene and actual dot output exactly equal the incoming L7 implementation over **2,412** sampled desktop/tablet/phone/scrolled-phone frames, so it tests the reported regression rather than an unrelated failure.
+
+All **16** entrance controls fail at their intended gates:
+
+| Control | Observed gate |
+| --- | --- |
+| Coincident name lines | `E1 timetable: Endrawes before 0.6` |
+| Cut labels | `E4 labels: id Flyer text at off-0.25` |
+| Craft click leaves entrance running | `E1 click: craft` |
+| Old screen .5-1.1 | `L2 groups: name, lede, screen at 1.050000 s` |
+| Gather .7 instead of 1.4 | `L4 timing: gathering faster than 1.4 s` |
+| Mark x shifted 1 px | `L4 consistency: mark x 1440/0` |
+| Restored star ring | `L4 entrance: star ring still runs` |
+| Entrance with burst | `L5 groups: burst, mark, nav at .350000 s` |
+| Smoothstep explosion | `L7 explosion curve: line x` |
+| Quartic flight | `L7 flight curve: x` |
+| v35 quartic 1.2 s explosion | `L7 explosion curve: duration: 1.2 != 1.6` |
+| No shrink | `L7 scale: shrink x` |
+| Index/modulo pairing | `L7 angle order: 1440x900 star 0` |
+| Entrance at burst + .9 | `L5 groups: burst, mark, nav at 1.250000 s` |
+| Entrance .05 s before landing | `L5 timing: entrance starts at landing: 4.75 != 4.8` |
+| L7 edge-bound leftovers | `L8 landing: 390x844 star 2 has no field home` |
+
+The **43** Round 17 controls also each fail at their named gate; their runner and gates are unchanged. Complete observed messages are in `l8-entrance-controls-final.txt` and `l8-round17-controls-final.txt`. No source or fixture is written by a negative control.
+
+#### Every earlier check changed, old to new
+
+Only `tools/loader-checks.mjs` and `tools/entrance-checks.mjs` change checks. No time, geometric/pixel tolerance, stencil allowance or earlier Round 17 gate changes.
+
+| Earlier expectation | Old -> new |
+| --- | --- |
+| Phone angular assignments | **305** selected mark ranks with homes and **295** null -> all **600** mark ranks assigned using `floor(k*305/600)`, **0** null. Desktop **600/1,200** and tablet **600/728** rank selection are identical. |
+| Phone home use | **305** assignments, each home once -> **600** assignments over the same **305** distinct homes: **295** used twice, **10** once. Full-coverage comparison now compares distinct identities; its expected identities remain **0-304**. |
+| Surplus ray/endpoint gates | **295** stars checked for collinear outward exits beyond the screen -> **0** exits; all **600** are checked against field homes. L7's three surplus-ray assertions are replaced by L8 landing/coverage/occupancy gates. |
+| Surplus material and fade | Those **295** kept mark size **2.6 px**, mark colour and alpha `1-cubic(p)` ending **0** -> home size/colour using the same cubic curve, alpha **1 -> 1**. All **600** phone trajectories now test alpha **1**. |
+| Explosion's actual dot count | Phone **600** throughout, including terminal -> **600** before landing, **305** from landing. Desktop **1,200 -> 1,200**, tablet **728 -> 728**. The per-trajectory curve/speed samples remain **600 -> 600**, with terminal lookup by home for each shared trajectory. |
+| Pre-handover equality | Positional index joins **600** incoming records to **600** terminal records (295 invisible) -> home identity joins **600** incoming records to **305** visible terminal homes. Probe **4.8-1e-7**, position/alpha limits **.001/.001**, visible field count **305** and total mark/home comparisons **4,033** remain unchanged. New size/colour continuity checks use the same **.001** bound. |
+| Motion summary | Phone paired **305 -> 600**; surplus **295 -> 0**; now reports shared homes **295**. Desktop paired **600 -> 600**, shared **0**. Sample counts and speed limits are unchanged. |
+| Control inventory / summary | Entrance **15 -> 16**, adding only `edge-leftovers`; earlier 15 gate prefixes unchanged. Summary adds the L8 landing/occupancy evidence. Round 17 **43 -> 43**. |
+
+The terminal phone inline probe (**305** dots) and the new landing probes add checks; no existing **1,200**-dot desktop inline assertion changes. **36,000** timing samples, **5** inline modes, **14** player runs, **48,125** floor samples, **60** label-exit samples, and the **239 / 398** entrance/combined group samples retain all earlier counts and unaffected expectations, maximum **2** groups. `round8-checks.mjs`, `round17-checks.mjs`, main `checks.mjs`, all fixtures and all other earlier runners are byte-identical.
+
+#### Preservation and limits
+
+`l8-preservation.mjs` / `.json` compare to incoming `edb6337`: desktop/tablet scene objects and **1,206** drawing frames are exactly equal; phone/scrolled-phone pre-explosion drawing matches over **770** frames. All **600** sampled mark points, shared constants, homes and flight paths remain exact; **16,218** normal/reduced/review timing states over six boot histories and **2,400** reduced dots match. Scrolled phone **390 x 900**, with first viewport **390 x 664** at top **-120**, uses all **325** homes: **275** doubles, **50** singles, exact landed scroll offsets. These compare drawing attributes, excluding only the authorized home/exit metadata change before explosion.
+
+Final Node commands and complete output are retained under `.scratch/review-out/r19/`:
+
+```
+node --check loader-stars.mjs
+node --check tools/loader-checks.mjs
+node --check tools/entrance-checks.mjs
+node --check .scratch/review-out/r19/l8-preservation.mjs
+node .../tools/entrance-checks.mjs --controls     l8-entrance-controls-final.txt
+node .../tools/round17-checks.mjs --controls      l8-round17-controls-final.txt
+node .../tools/checks.mjs                        l8-checks-final.txt
+node .../.scratch/review-out/r19/l8-preservation.mjs  l8-preservation.json
+```
+
+All exit **0**. The full suite ends **`all clean`**, retaining **6,582 frames / 477,123 pieces / max 188 / 6 atlas pages / 99.491 s** and all its earlier negative controls. Both standalone control runners pass only after each of their **16 / 43** faults fails at its named gate. `l8-syntax-final.json` records the four individual syntax checks. Final hash preservation finds **199 of 204 tracked files byte-identical** and exactly the five permitted source/check/docs changes: loader-stars, loader-checks, entrance-checks, BUILD and README. All corrections, fixtures, page/preview/player/entrance files, public/src/CNAME and every other tracked file retain their hashes.
+
+No L8 item or curve is substituted or omitted. Browser pixels/compositing, real worker scheduling, first paint and visual approval remain **UNRUN**, as requested. No screenshots, eye judgement, pixel gate, reviewer agents, network, installation, site build, deployment or mutating git command was used. External skills and RTK.md remain unread under the repository-only rule. Only the permitted runtime module, two check files, BUILD/README and this run's own `l8-*` r19 notes are written.

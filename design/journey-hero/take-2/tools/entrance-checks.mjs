@@ -15,7 +15,7 @@ import { SHOW, LOOP, SCENES, BLOCK, POOL, SCREEN, sceneAt, frameAt, calloutsAt }
 import { createCraftModel, followCraft } from '../craft-wipe.mjs';
 import { pageMarkup, LOADER_CSS, LOADER_SKIP, LOADER_SCRIPT } from './page.mjs';
 import { previewMarkup } from './preview.mjs';
-import { checkLoaderMoves } from './loader-checks.mjs';
+import { checkLoaderLanding, checkLoaderMoves } from './loader-checks.mjs';
 
 const TAKE = new URL('../', import.meta.url);
 // Source mutations match lines, irrespective of this checkout's CRLF/LF convention.
@@ -38,6 +38,25 @@ export const ENTRANCE_CONTROLS = [
   { id: 'index-homes', file: 'loader-stars.mjs', search: '  for (let rank = 0; rank < paired; rank++) {\n    const i = markOrder[Math.floor(rank * points.length / paired)], home = homeOrder[Math.floor(rank * homes.length / paired)];\n    points[i].home = home; used.add(home);\n  }', replacement: '  for (let i = 0; i < points.length; i++) { points[i].home = i % homes.length; used.add(i % homes.length); }', gate: 'L7 angle order:' },
   { id: 'old-burst-entrance', file: 'loader-stars.mjs', search: 'const entranceStart = end;', replacement: 'const entranceStart = burstStart + 0.9;', gate: 'L5 groups:' },
   { id: 'early-entrance', file: 'loader-stars.mjs', search: 'const entranceStart = end;', replacement: 'const entranceStart = end - 0.05;', gate: 'L5 timing:' },
+  {
+    id: 'edge-leftovers', file: 'loader-stars.mjs',
+    search: 'paired = points.length, used = new Set();',
+    replacement: 'paired = Math.min(points.length, homes.length), used = new Set();',
+    also: [
+      ['  return { W, H, centre, weight, mark, points, homes, unpairedHomes:', `  const bounds = [-viewport.left, -viewport.top, viewport.width - viewport.left, viewport.height - viewport.top];
+  for (const p of points) if (p.home === null) {
+    const dx = p.x - weight[0], dy = p.y - weight[1], gap = STARS.mark.size + 2;
+    const tx = dx > 0 ? (bounds[2] + gap - weight[0]) / dx : dx < 0 ? (bounds[0] - gap - weight[0]) / dx : Infinity;
+    const ty = dy > 0 ? (bounds[3] + gap - weight[1]) / dy : dy < 0 ? (bounds[1] - gap - weight[1]) / dy : Infinity;
+    const reach = Math.max(1.10, Math.min(tx, ty));
+    p.exit = [weight[0] + dx * reach, weight[1] + dy * reach];
+  }
+  return { W, H, centre, weight, mark, points, homes, unpairedHomes:`],
+      ['    if (landed?.has(m.home)) continue;\n    landed?.add(m.home);\n    const target = home;', '    const target = home || { x: m.exit[0], y: m.exit[1], size: m.size, colour: m.colour };'],
+      ['home: m.home, alpha: 1 });', 'home: m.home, alpha: home ? 1 : 1 - blend });'],
+    ],
+    gate: 'L8 landing:',
+  },
 ];
 
 async function loadEntrance(source, loaderSource) {
@@ -204,7 +223,7 @@ async function checkLoaderGeometry(P) {
   const sample = S.sampleMark(paths), all = { fonts: 0, atlas: 0, frame: 0 };
   assert.deepEqual(P.sampleMark(paths), sample, 'L4 consistency: sample order');
   let comparisons = 0;
-  const moves = [];
+  const moves = [], landings = [];
   for (const [W, H] of [[1440, 900], [768, 1024], [390, 844]]) {
     const scene = P.loaderScene(sample, W, H), mark = S.placeMark(sample, W, H);
     assert.equal(scene.points.length, S.STARS.mark.count, 'L4 consistency: mark count');
@@ -227,6 +246,7 @@ async function checkLoaderGeometry(P) {
       assert.ok(P.loaderAt(launch + 1.0 - 1e-9, all).arrived <= i, 'L4 flight: early arrival');
       assert.ok(P.loaderAt(launch + 1.0 + 1e-9, all).arrived >= i + 1, 'L4 flight: late arrival');
     }
+    landings.push(checkLoaderLanding(P, scene));
     if (W === 1440 || W === 390) moves.push(checkLoaderMoves(P, scene));
     const end = P.loaderDots(scene, P.loaderAt(4.8, all)), field = S.makeStars(W, H);
     assert.equal(end.filter(d => d.alpha > 0).length, field.length, 'L4 homes: changes field count');
@@ -240,16 +260,17 @@ async function checkLoaderGeometry(P) {
     const still = P.loaderDots(scene, P.loaderAt(0, {}, { reduced: true }));
     assert.equal(still.length, 600, 'L4 reduced: formed count');
     assert.deepEqual(still.map(p => [p.x, p.y]), scene.points.map(p => [p.x, p.y]), 'L4 reduced: formed geometry');
-    // Approaching landing is continuous, including surplus phone stars fading on their own rays.
+    // Shared phone trajectories meet the same single terminal dot at their home.
     const before = P.loaderDots(scene, P.loaderAt(4.8 - 1e-7, all));
-    before.forEach((d, i) => assert.ok(Math.hypot(d.x - end[i].x, d.y - end[i].y) < 0.001 && Math.abs(d.alpha - end[i].alpha) < 0.001, 'L4 homes: endpoint jump'));
+    const byHome = new Map(end.map(d => [d.home, d]));
+    before.forEach(d => { const landed = byHome.get(d.home); assert.ok(landed && Math.hypot(d.x - landed.x, d.y - landed.y) < 0.001 && Math.abs(d.alpha - landed.alpha) < 0.001, 'L4 homes: endpoint jump'); });
   }
   const scrolled = P.loaderScene(sample, 390, 900, { width: 390, height: 664, left: 0, top: -120 });
   close(scrolled.points[0].y, 664 / 2 + 120 + S.placeMark(sample, 390, 900).points[0].y, 'L4 consistency: first screen centre');
   const landed = P.loaderDots(scrolled, P.loaderAt(4.8, all));
   const home = S.makeStars(390, 900)[0], dot = landed.find(d => d.home === 0);
   close(dot.y, Math.fround(home.y) - 120 * S.STARS.scroll * Math.fround(home.d), 'L4 homes: scroll offset');
-  return { comparisons, moves };
+  return { comparisons, moves, landings };
 }
 
 function checkLoaderMarkup() {
@@ -334,6 +355,8 @@ function checkInlineLoader(E) {
       near(view.state(now).entranceTime, 0, 'L5 inline: entrance zero at landing');
       scrollListener();
       bridge.measure({ left: 0, top: 0, width: 390, height: 844 });
+      const beforePhone = fills; animate();
+      assert.equal(fills - beforePhone, 305, 'L8 inline: terminal phone draws each shared home once');
       bridge.motion(true);
     }
     bridge.clear();
@@ -574,7 +597,7 @@ export async function checkEntrance({ loaderSource = read('loader-stars.mjs'), e
   const dots = checkTimetable(E);
   const runs = await checkPlayer(playerSource, E);
   const labelSamples = await checkLabelExit(stageSource);
-  return `L4/L5/L7 computed: ${loaderSamples} timing samples at 1 ms; 1.4 s launches + 1 s flight, .15 hold, .4 shrink, .25 swell, 1.6 explosion; entrance/pointer start at landing (4.8 s all-ready); ${geometry.comparisons} mark/home comparisons at desktop/tablet/phone; ${inlineRuns} inline worker/fallback/reduced/review runs. L7 actual drawing at 240 Hz: ${JSON.stringify(geometry.moves)}. L2 timetable: ${groups.samples} samples, maximum ${groups.maximum} groups. L5 combined explosion + entrance: ${groups.combinedSamples} samples, maximum ${groups.withBurst} groups, no exceptions. E4: ${labelSamples} retained label samples. E1/E2: 3.8 s timetable, ${dots} floor dot samples, ${runs} player runs; review and reduced paths retained. Browser/pixels UNRUN.`;
+  return `L4/L5/L7/L8 computed: ${loaderSamples} timing samples at 1 ms; 1.4 s launches + 1 s flight, .15 hold, .4 shrink, .25 swell, 1.6 explosion; entrance/pointer start at landing (4.8 s all-ready); ${geometry.comparisons} mark/home comparisons at desktop/tablet/phone; ${inlineRuns} inline worker/fallback/reduced/review runs. L7 actual drawing at 240 Hz: ${JSON.stringify(geometry.moves)}. L8 landing/handover: ${JSON.stringify(geometry.landings)}. L2 timetable: ${groups.samples} samples, maximum ${groups.maximum} groups. L5 combined explosion + entrance: ${groups.combinedSamples} samples, maximum ${groups.withBurst} groups, no exceptions. E4: ${labelSamples} retained label samples. E1/E2: 3.8 s timetable, ${dots} floor dot samples, ${runs} player runs; review and reduced paths retained. Browser/pixels UNRUN.`;
 }
 
 // Each edit matches one exact site in memory; the v35 control restores both its duration and curve.
