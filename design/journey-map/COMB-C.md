@@ -1,0 +1,71 @@
+# Polish round 2, part 4b: the fine-toothed comb, C (the delta audits)
+
+Dan, 2026-11-24, on what reviews must catch: "does this make sense?" "what is the purpose of this? and is it justified" "are these things intuitive?" and "nothing should be looked at only in a vacuum, needs to be both". At 6:00 AM ET, on version 15: "you need to review your work, the trail stays while the supernova explodes", so every moving thing here is judged frame by frame, with every other element on screen in the same frames.
+
+Read `BRIEF.md` first; its rules hold. Then `AUDIT-R2.md` for the 64 questions every change here answers to, `COMB-A.md` and your `COMB-A-BUILD.md` (part 4 ran before this one; keep everything it did), and the two delta audits of c8c1835 this part comes from: `audit-r2b/opus-look.md` (L2b-n) and `audit-r2b/opus-behaviour.md` (B2b-n). Their line numbers are from c8c1835 and part 4 has moved code since; find it by name. Each item says what is wrong and the result that must hold. Keep GLIDE's change-only writes and the dense-screen text rule at the top of `map.css` (`text-rendering: geometricPrecision` at 2 device pixels per CSS pixel or more). Part 5 (`COMB-B.md`, the drawings) comes after this one; leave drawings alone here.
+
+Standing rules that matter most here: an animation moves the object that is already there, and everything that opens closes the same way back to where it came from; the journey moves only by its buttons and keys; Red (`#F0484F`) only on the traveller, the X, the find markers and the playhead; legibility floors (stop names and the X's words 10 px on desktop and 9 px on phones; legend and kicker 9 px); nothing ratchets in steps.
+
+## 1. The page's big moment
+
+- **C1. Nothing skips the supernova.** A second Next 1.5 s into the build-up (ArrowRight, ArrowDown, PageDown, or Space outside the supernova's own button) hurries the move today: the rest of the build-up, the flash, the blast and the settle pass in about 0.4 s and the visitor lands on the end (re-checked at 412 x 730: P 1942 at 1.5 s, the end 2144.78 within 0.5 s of the second press). From "Dig here" until the end view, a Next never hurries: it does nothing, or it stacks a flare like a press on the supernova. Back still turns the build-up round; a second Back (A19) may hurry that return to the X but never carries past it. Home and End stay explicit jumps [B2b-1]. Test: a second Next at 0.5, 1.5 and 2.5 s into the build-up and during the blast leaves the end's arrival time unchanged.
+
+## 2. Explore draws a true map at every zoom
+
+- **C2. No stretched picture, no snap.** FRAMES moves the explore map as one CSS-scaled layer from the camera at the start of a motion and holds `#cam` and the labels until the camera equals its target exactly. For a drag that is right (it only translates, and it stays crisp). When the scale changes it is not: zooming in, every stroke thickens with the scale (1.78x after three wheel notches, about 3x in a pinch), the dotted trail fuses into a bar, label text swells and blurs, and the labels the new zoom should add are missing; the opening zoom-out after "Explore the map" (a 0.31 CSS scale) thins everything to hairlines; and at the settle the weights jump in one frame (about 3.2x at the end of the opening) and label tiers pop over 0.12 s. After three wheel notches the map is still by about 0.69 s but stays a blurred raster until about 1.26 s, because the settle needs every camera value within 0.01 of its target under a 0.12 s ease [L2b-1, B2b-2]. Results that must hold, in explore on both pages:
+  - the scripted opening is not a gesture: it is drawn through the camera, with true stroke weights and label sizes in every frame, as version 14 did;
+  - during a gesture (wheel, pinch, keyboard zoom, drag, fling) the map may move as one composited layer only while its scale stays within about 0.87 to 1.15 of the drawn one; past that the camera is written (one re-draw) and the layer carries on from there, so strokes and labels are never more than about 15 % from their true size; translation-only moves stay one layer as now;
+  - a motion ends when what is left of it is under 0.1 px and 0.1 % of scale (not exact equality); the camera is written then, and the map is sharp within 150 ms of its motion falling under 0.5 px a frame (FRAMES's own gate); the fling's velocity cut has a px/s floor;
+  - labels never snap: when the drawn camera catches up they ease to their size and tier over about 0.25 s (`FRAME_PERF.labelSettle`);
+  - FRAMES's other gates hold: never a blank frame. Report the frame cost of FRAMES's scenarios 1 to 4 at the 4x phone emulation before and after; if a re-draw pushes p95 over 33 ms, say by how much rather than give up the look.
+  Tests: the opening writes the camera every frame; at 1440 x 900 after three wheel notches, the camera is written within 150 ms of motion under 0.5 px a frame; in a scripted pinch from 1 to 3x the composited scale never leaves 0.85 to 1.18; no label changes size by more than 10 % between two frames at the settle.
+
+## 3. The card, its tail and its shield
+
+- **C3. Out of the shield and back into it (finish A10).** Check what part 4's A10 did, and finish it so that all of this holds at 1440 x 900, 1024 x 600 and 412 x 730 [B2b-4, L2b-4]:
+  - a press on a closed card's shield answers within 0.1 s: the card is visible from its first frame, at the shield, and grows out of it (today nothing shows for about 0.2 s, then a faint slab appears 35 to 60 px from the rim);
+  - the tail never exceeds its rest length: it grows from zero with the card and shrinks to zero with it, never longer between (today it stretches to 61 to 113 px on desktop and 28 to 47 px on the phone, against 38 and 14 at rest), and it hides, never flips, while the shield is inside the card's box.
+  Test: per 16 ms frame through open, close and reopen, the tail's length is never above its rest length, and the card's first visible frame comes within 0.1 s of the press and touches the shield.
+- **C4. The tail is the card's own edge drawn out** [L2b-3, L2b-5, L2b-6]:
+  - the card's drop shadow never lies over its tail; paint the shadow, then the tail, then the face (today `.c-sh` inside `.c-card` darkens the last third of every desktop tail into a brown-black band, worst on Interkom's cream and Lennard's orange);
+  - the tail's base is at most 0.8 of its shield's on-screen width and its length at most its rest length or about 1.5 shield widths, whichever is less, at every size (today a 28 px base points at a 17 px shield at 1024 x 600 and a 12 px one at 844 x 390, and reads as a cone);
+  - on dark grounds the card and its tail keep a visible edge against the ink map: Mohawk's black card must visibly connect to its shield on a phone (today the tail vanishes), and HMC's navy and Laurier's purple tails read on desktop. For example a 1 px Paper hairline at low alpha (about 0.18) along the card's edge and the tail's two long sides, or a light edge colour per palette in `data.mjs`.
+- **C5. The traveller is never under a tail.** On phones the tail's point covers the red traveller under every open shield, and its glow leaks out on both sides as a red smudge [L2b-2]. While a card is open the traveller is either whole and clear of the tail, or gone with it: for example, on phones it fades out with the tail's opening and back with its closing (the shield marks the place meanwhile). No part of the traveller or its glow shows beside a tail. Test: with each card open at 412 x 730 and 390 x 844, no red pixels within the tail's box or 6 px of it.
+- **C6. The open card's shield closes it.** Pressing the shield of the open card does nothing today (it takes no pointer events while its card is open), shows the default cursor, and drops the focus to the page [B2b-5]. The shield is a toggle at its own stop: pressed with the card open it folds the card into itself (the same fold as the X), with the pointer cursor and the focus staying on the shield. Its name says "Close the <place> card" while its card is open and "Open the <place> card" while its card is closed at its own stop; elsewhere it keeps "Go to ...".
+- **C7. A focused shield shows its focus.** The shield's button is a 400 px box scaled down to the shield, so the page's 2 px focus outline is drawn 0.1 to 0.2 px wide and cannot be seen; focus lands there after every X and Escape [B2b-3]. A focused shield shows a ring at least 2 px wide on screen, contrasting with the map, around the drawn shield (with A17's hit padding), at every size, at the stops, at the overview and in explore. Test: the ring's on-screen width.
+- **C8. Interkom's shield and the beacon stand side by side.** The stop's shield sits on the beacon's flame, so the beam seems to shine out of the shield, and on desktop the cream tail lies across the flame [L2b-7]. Move the beacon a little along the coast, away from the Interkom waypoint (`STOPS` Interkom and `FINDS` beacon in `data.mjs`), with its view, marker and readings, so the shield, the tail and the light each stand clear at every size; A16's reading placement still holds. Re-record the `finds-test` digests that change.
+
+## 4. The sky at the X
+
+- **C9. The sky keeps twinkling at the X.** WHIRL brings the sky's twinkle clock to zero over the last 20 % of the glide into the X so the build-up replays exactly (`twinkleTime` in `stars.mjs`, `NOVA.gather.twinkleHome`). After a few minutes on the page that sweeps minutes of twinkle into about 0.2 s, so the sky shimmers as the camera arrives, and at rest at the X the sky is frozen, at the one beat where the visitor waits [B2b-6]. Arriving at the X never sweeps the clock; the sky twinkles at rest at the X like at every other beat; the build-up stays a pure function of P in its stars' positions (for example, the live twinkle hands over to the build-up's own over its first 0.3 s). A test that pins exact replay of light in that first 0.3 s may compare positions only there; say so.
+
+## 5. Queued items to finish after part 4
+
+Check each against `COMB-A-BUILD.md` and finish what it leaves:
+- **C10. A25:** on phones the legend also rises from about 1.8 s into the build-up and sits under the flash; it stays dimmed or hidden from "Dig here" until the end view, not only at the X beat [L2b-9].
+- **C11. A30:** at 844 x 390 the cards that no longer scroll are 269 to 333 px tall from y 40 and run under the step bar's pills (y 276 to 320) and over the timeline; every card fits above the step bar with no inner scrolling, at its floors [L2b-8].
+- **C12. A4:** compact cards (phones, 1024 x 600, 1280 x 720, 844 x 390) set the crafts labels and the kicker at 9 px, not 9.5; they come to A4's sizes too, with the 360 x 640 card re-fitted without scrolling [L2b-10].
+- **C13. A9 and A12:** after Back the step bar already fades back in over 0.3 s with the focus on "Dig here"; only its exit at "Dig here" was a cut. In explore the six cards' X and "See the case study" are inert and out of the Tab order, like the shields under A12.
+
+## 6. Small things
+
+- **C14.** The mini-map's quartered paint on its 6 px stop dots reads as speckle at 1x: at that size, paint halves, or an A-colour dot with a B ring [L2b-11].
+- **C15. Leftovers** [B2b-7]: cards never scroll now, so `stepsCanScroll` and the `.face` exclusion in `stepsTouchExcluded` go if nothing else uses them; at rest at the X the rush plan is rebuilt on every star frame (`SK.rushPlan`, because `rushT` is 0): build it once per camera and size. Leave `NOVA.build.core` as it is.
+
+## Checks
+
+- All tests pass: `node tools/check.mjs`, `steps-test`, `nova-test`, `depth-test`, `layout-test`, `explore-test`, `finds-test`, `motion-test`, `hammer-test`, `whirl2-test`, `frame-cost-test`, `frame-performance-test`, `frame-render-test`, `tools/origin-check.mjs`, and `tools/frame-cost.mjs` with no worse p95 for the four named stop glides than the last run in `journey-map-runs\glide\dense-text`. Update tests only where this brief changes what they pin, and say which and why; re-record the `finds-test` and `frame-render-test` values that change, with the reason.
+- Add the tests named in the items above.
+- Film what you changed with the local headless Edge (127.0.0.1 only; its profile and captures in the run folder your prompt names, never in the repository), frame by frame at 1440 x 900 and 412 x 730 (Dan's phone, DPR 2.625): the second Next in the build-up; three wheel notches and the opening in explore at 1440 x 900, and a pinch at 412 x 730, every 50 ms from the gesture to 300 ms after the settle; a card's open, close and reopen every 16 ms; each stop with its card open; the X beat for 3 s at rest. List them in the report with what each shows.
+
+## Rules
+
+- You may write only these files, all under `design/journey-map/`: `cards.mjs`, `data.mjs`, `explore.mjs`, `find*.mjs` (the beacon's placement and readings only), `main.mjs`, `map.css` (keep the dense-screen text rule), `stars.mjs` (the traveller's draw, the twinkle clock and the rush plan's rebuild only), `steps.mjs`, `timeline.mjs` (the mini-map's dots only), `trip.mjs` (the explore raster and the labels' settle only), the test files in `tools/`, `dist/journey-map.html`, `dist/journey-joined.html` and `joined.html` (the last three only through `node tools/pack.mjs` and `node tools/pack-joined.mjs`), and your report `COMB-C-BUILD.md`. The browser's profile and captures go only in the run folder your prompt names.
+- Never touch `depth.mjs` (not even a comment), `hero-copy/`, the briefs and other build reports, the audits, or anything else outside `design/journey-map/`.
+- Never run git, never install anything, never use the network (the local headless Edge on 127.0.0.1 is not the network), never start reviewer agents or other agents.
+- If a rule stops you from doing something this brief asks, leave it out and say so in your report. Do not work around a rule.
+- Plain ASCII punctuation in `COMB-C-BUILD.md`.
+
+## Report
+
+`COMB-C-BUILD.md`: for each item, what you changed and where, and how you checked it; the films and what each shows; each test you changed or added and why; the output of every test run; the frame-cost tables before and after; anything you left out and why; what the review should look at on a real phone.
