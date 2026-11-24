@@ -200,6 +200,24 @@ L13's checks:
 - Part 3: draw the same loader burst states (`loaderDots` at fixed times) with the WebGL painter and with the Canvas fallback in the same Edge, at 1440 x 900 and 390 x 844, DPR 1 and 2. No gaps: along every taper's centre line, wherever the Canvas alpha is over 0.1, the WebGL alpha is at least half of it. Report the 99th percentile alpha difference. Negative control: `antialias: false` must fail the gap check. L11's loader frame table again, at both sizes.
 - Part 4: held frames for each export scene at 412 x 730, 390 x 844 and 1440 x 900 at exit times 0, 0.3, 0.6, 0.9, 1.2, 1.4, 1.46, 1.6 and 2.0 s, in a contact sheet in the report. Every format's pieces are untouched until its wipe edge reaches them; after 0.65 only the three red blocks; at 1.15 a single ball at the rest point; nothing of the exports after 1.45; nothing below the floor at any time (the sink's floor clip and `sinkTop` are gone). Update every check that read the sink or the loop length, with old and new values.
 
+## L13b Nothing highlights, and the held mark never streaks
+
+Build on L13. Dan, 24 Nov, 2:08 PM ET: "can we also remove the ability to highlight entirely?" And at 2:09 PM, on v40 (0e1d628, which predates L13): "moving the logo around while holding left click still activates its streaks".
+
+**What happens now** (v40 in Chromium at 1440 x 900, and at 390 x 844 with touch): only the name is unselectable (`take-2.css`, round 8). Everything else highlights: a drag across the page (as when grabbing the stars), a double-click, a triple-click, and select-all (Ctrl+A selects "JOURNEY CONTACT Hey, I'm Dan! Welcome to my portfolio ... 01 GRAPHIC DESIGN ... SCROLL FOR THE JOURNEY PLAY YOUTUBE TIKTOK INSTAGRAM"). Seventeen visible text elements have `user-select: auto`. On phones, every tap on a link, a button or the stage flashes the browser's tap highlight (Chrome's default tint, `rgba(51, 181, 229, 0.4)`).
+
+**Build:**
+1. Nothing on the page can be selected or highlighted: `user-select: none` (with `-webkit-user-select`) for the whole hero page, so a drag, a double-click, a triple-click, a long press and select-all (Ctrl+A or Cmd+A) select nothing. Put it in `take-2.css` (the borrowed first-take stylesheet stays untouched); if select-all still finds text outside `.hero`, set it on the preview page's root in `tools/page.mjs` too. The name's own round 8 rule can fold into it.
+2. No tap highlight: `-webkit-tap-highlight-color: transparent` on everything.
+3. No long-press menu on iOS: `-webkit-touch-callout: none` on everything (the name has it already).
+4. Keep: keyboard focus outlines for keyboard users (`:focus-visible`) stay as they are; every link and button still works by click, tap and keyboard; screen readers still read all the text; the stage's hold and release still work.
+5. The held mark never streaks. Stars the hold has captured (gathering, ring, the formed mark) are not exploding, however fast the mark is dragged (L13 part 1 already says so; this is the regression Dan saw). Only the release, the loader's burst and the export burst set the exploding flag. If L13 already passes check 3 below, change nothing here and say so.
+
+**L13b's checks:**
+1. In Chromium at 1440 x 900, and at 390 x 844 with touch: after Ctrl+A and after Meta+A, after a mouse drag from left of the lede across the crafts list, and after a double-click and a triple-click on the lede and on a craft, `getSelection().toString()` is empty. Every visible text element's computed `user-select` is `none`; every link's, button's and canvas's computed `-webkit-tap-highlight-color` is transparent. Negative control: `take-2.css` as it was at 0e1d628 must fail (Ctrl+A selects text there).
+2. The crafts buttons, Pause and Play, Journey and Contact still respond to a click, a tap and Enter or Space.
+3. On the controlled clock at 1440 x 900 (as L13 part 1's check): hold 3 s until the mark forms, then drag the held mark in a figure of eight (260 x 140 px, one move per 16 ms frame, 2.5 s) while still holding: zero taper submissions through the hold and the drag, and more than zero within 0.05 s of the release. Negative control: v39's speed-only rule must fail the drag.
+
 ## L3 (withdrawn, not to be built) A more impressive loader: the mark, from first sketch to final
 
 Dan, 24 Nov, 4:47 AM ET, on v32 (8c57810): "can we have a more impressive loading screen?". L3 replaces L1's look. L1's rules stay: the loader shows from the first paint without waiting for any script, font or picture; real boot progress (fonts, atlas, first frame, the shares you chose) drives it; it never jumps or goes back; `?t=` skips it; it lasts no longer than loading needs beyond its own minimum. Only the picture and its steps change.
