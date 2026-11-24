@@ -3447,3 +3447,128 @@ No capture deferral, point exchange, reassignment, first-batch change, prelimina
 First-batch mappings match exactly before/after: 300 still and 312 fast. Both runs assign 600 points, without duplicates. [Preservation proof](.scratch/l13b/preservation.json). Fresh reference/revision renders have zero changed pixels at both sizes and were inspected at reading scale: [desktop reference](.scratch/l13b/reference-1440.png), [desktop revision](.scratch/l13b/revision-1440.png), [phone reference](.scratch/l13b/reference-390.png), [phone revision](.scratch/l13b/revision-390.png).
 
 Syntax checks pass. RTK was unavailable; subsequent reads/writes used Node filesystem APIs and Node ran directly without a shell. The UI skill CLI was omitted under the install/network ban. No reviewer agents were run, as instructed. No git, installation, external network request, site build or deployment was run. All writes stay in the permitted take-2 source/CSS/tools/docs and ignored .scratch. Corrections, mocks, fixtures, public, src and CNAME files were not changed.
+
+
+## Round 19, L14
+
+Built L14 parts 1-3 and all four checks. The full node tools/checks.mjs run exits 1 with exactly the pre-existing L13b failure: **125/288 flights cross the centre-distance limit**. That line is unchanged. It does not print all clean. Every retained negative control and every new negative control is caught at its intended gate.
+
+### Reference and acceptance
+
+Read CORRECTIONS-19 L14, L13 part 4, L12's name row and point 8, MOCK-T.md, README.md, and BUILD.md's L13/L13b records. Used the installed motion-playbook. MOCK-T supplied the approved pop/spark numbers only; no review panel, style switch, POP_SPOTS, extra canvas or mock globals were copied.
+
+Acceptance before editing: one shared assetStep; exact per-object L13 blocks; connected reading halves as one scaling unit; 1 -> 1.08 with EASE.exit before k=0.30, cut, 1.08 -> 1 with EASE.enter; each pivot at its own footprint middle on the floor; no red/object mixture, edges, floor crossing or intersecting unit footprints. Exactly 25 pure loop-time spark events, 35 every-fourth burst directions each, top-edge origins frozen at the cut, no field push. Name rises, masks, pen positions and handoff preserved, inherited flow weight from its first frame, only transform/clip writes. The 101.491 s loop and the ball/split/hold/lid/merge/squash/swell/burst clocks remain.
+
+### Runtime changes
+
+stage.mjs renames assetWipe to assetStep. assetUnits computes connected components from visible objects' footprint boxes with the 0.02 gap. Each object's own objectBlock still supplies its red volume; both reading halves share one pivot and scale. Position and all three half sizes move together, preserving screens, pictures, glass and rotations. A 1e-12 k guard resolves exact cut boundaries after global-to-local subtraction.
+
+popBursts derives its events from scene clocks and independently samples each last pre-cut pose (1e-8 seconds before the mathematical cut). It runs once at player setup and never accumulates playback state. Seeking backwards or starting mid-loop gives the same frozen top rectangle; later Figma lid motion cannot drag it. export-sparks.mjs samples the 35 directions with speed x0.3 and life x0.6, preserving tau, head size, color and last-45-percent shrink. Both puff and ball use the imported 0.04 s STREAK_WINDOW and the existing star front pass. Only events without top rectangles can kick the field, so puffs never do. Ball directions, 140 heads, braking, color and four pushes retain L13's checks.
+
+entrance.mjs removes the weight member and the letter fontWeight write. The flow's inherited weight paints every rising generated-content letter. The rise clocks, masks, word overlay, camera and cleanup are unchanged.
+
+### Every earlier changed expectation
+
+| Earlier check | Old expectation -> new expectation |
+| --- | --- |
+| tools/checks.mjs floor clips | Ball emergence or opposite world-x asset/red planes -> only ball emergence. New L14 pure, browser, sheets, timing and controls run in this command. |
+| Main, entrance and round8 player stand-ins | Empty exit burst list -> empty exit and pop burst lists. Existing behavior/clock assertions keep their values. |
+| tools/entrance-checks.mjs E1 name | Each letter weight starts at 300 and ends at 800 -> letter state contains no weight at either endpoint. All rise timings stay. |
+| tools/l12-checks.mjs curves | Cubic-out weight curve and 300 + 500 * cubicOut(p) -> no weight state. Quint-out rise stays exact. |
+| L12 per-frame writes | transform, clipPath, fontWeight -> transform and clipPath only. Layout-read prohibition remains. |
+| tools/l13-checks.mjs pre-0.65 exit | Rigid source pieces with opposite x planes and unscaled red boxes -> complete objects or complete red boxes, no planes; red bounds follow the pop formula about the whole unit's footprint. Before each format's own start, p/s/q/art remain unchanged. |
+| L13 small/missing-box controls | Full per-object wipe bounds gate -> full per-object pop bounds gate. Small-box mutation moves from red.object assignment to the new pc.object assignment. Original 5 controls remain caught. |
+| Round17 R6/R7 retained arrival | Simultaneous red/object with opposite planes -> whole-unit cut and no planes. Rest footprint, complete height, flight/split physics and play-before-built checks remain. |
+| Round17 model, glass and shut-lid dimensions | Literal rendered dimensions through a rigid wipe -> authored dimensions after removing the measured pop scale about its pivot. L14 separately compares actual rendered positions, half sizes, rotations and bounds to an unscaled same-time source oracle, at the original strict 0.5 percent limit. All old model/clearance tolerances remain. |
+| Round17 R12 body presence | Until (local - off[0] - j * 0.10) / 0.45 reaches 1 -> until it reaches 0.30. Devices cut away at +0.135, +0.235, +0.335 seconds. |
+| Round17 C7 reading spine | off[0] through +0.45, 451 samples -> through +0.135, 136 samples (left limit). Seam tolerance stays 1e-12. |
+| Round17 C18 outer lid mark | Arrival from wipe start, exit through +0.45 -> arrival from cut (+0.18 plus 1e-9), exit through +0.135 minus 1e-8. Mark, glass and lid are inspected together; intrinsic dimensions use inverse pop scale. |
+| tools/l13-browser-checks.mjs | Reviewed: it has no rigid-wipe assertion or weight-ramp assertion. Its historical 108 exit frames and pixel/streak gates keep their times and expectations. L14 adds 432 explicit per-format/per-direction k frames in the main suite. No file change needed. |
+| Loop, exit phases, reduced motion | 101.49089474781469 s; 0.65/1.15/1.33/1.45/1.50; no reduced-motion sparks -> exactly the same. |
+
+### Unit list and all cut times
+
+All times below are absolute loop seconds at PACE 1. Arrival steps last 0.60 s and cut +0.18 s after their own start; exit steps last 0.45 s and cut +0.135 s after their own start. Format starts remain 0.10 s apart. InDesign's arrival stack includes its closed reading copy; its exit stack contains five copies. The reading copy has two separate red boxes but one event and one scaling pivot.
+
+| Scene | Direction | Unit | Cut, loop seconds |
+| --- | --- | --- | ---: |
+| id | in | Stack | 34.762352702 |
+| id | in | Phone | 34.862352702 |
+| id | in | Tablet | 34.962352702 |
+| id | out | Stack | 42.917352702 |
+| id | out | Reading copy, both halves | 42.917352702 |
+| id | out | Phone | 43.017352702 |
+| id | out | Tablet | 43.117352702 |
+| pr | in | YouTube tablet | 58.843643141 |
+| pr | in | TikTok phone | 58.943643141 |
+| pr | in | Instagram phone | 59.043643141 |
+| pr | out | YouTube tablet | 62.798643141 |
+| pr | out | TikTok phone | 62.898643141 |
+| pr | out | Instagram phone | 62.998643141 |
+| ae | in | Website tablet | 77.125732163 |
+| ae | in | Story phone | 77.225732163 |
+| ae | in | Feed phone | 77.325732163 |
+| ae | out | Website tablet | 81.080732163 |
+| ae | out | Story phone | 81.180732163 |
+| ae | out | Feed phone | 81.280732163 |
+| fig | in | Laptop | 95.770894748 |
+| fig | in | Tablet | 95.870894748 |
+| fig | in | Phone | 95.970894748 |
+| fig | out | Laptop | 100.125894748 |
+| fig | out | Tablet | 100.225894748 |
+| fig | out | Phone | 100.325894748 |
+
+### Geometry, sparks and negative controls
+
+The new geometry gate checks 888 held/60 Hz samples across 24 format steps and 25 units, plus exact k=0.30 and the six requested held k values. It also includes completed formats when checking the next format's swell. No mixed red/object unit, clip edge, missing layer, changed picture/rotation, below-floor piece or overlapping footprint was found. Worst relative bound/scale error is 2.998287489342628e-14; minimum unit clearance is 0.004000000110 world units, InDesign's stack/reading copy. The unscaled oracle removes only the actual position/half-size multiplication in memory and compares at the same time; this retains the legitimate changing playback layer inventory instead of comparing different times.
+
+All 875 initial puff heads are tested against their frozen top edges and against the actual uploaded projected positions. Each event submits 35 heads at its cut and zero after 0.75 s; the longest selected life is 0.721184087867 s. Ball events still submit 140 heads and make exactly four original field pushes; 25 puffs make zero pushes. The existing L13 shared-window and squared-falloff gates pass.
+
+At 1440x900 and 390x844, 277 entrance frames per size contain 714 moving-letter observations each: zero computed-weight mismatches. Every one of 14 letters is also compared on its own landing; worst box-coordinate error is 0.015625 px at both sizes (limit 0.5 px). The old kerning, floor-clip, two-group, cleanup and player controls remain caught.
+
+New controls: L13's mixed wipe fails "L14 never red and object at once"; centre-origin sparks fail "L14 spark edge"; the restored L12 weight ramp fails "L14 name weight" at both sizes; a per-frame opacity write fails the L12 style whitelist; an injected 25 ms interval fails the strict frame target. No threshold was relaxed. Controls mutate only memory.
+
+### Contact sheets and original comparison
+
+432 new frames: every one of the four scenes' three formats, both directions, k=0/0.15/0.29/0.31/0.5/1, at all three sizes. Each sheet has 24 rows and six columns; full-size individual PNGs are beside it. k=1 in the screenshots is the exact handoff frame. The numeric scale oracle samples its left limit (1e-9 in normalized k) because the next phase owns k=1. No visible duration or clock is altered.
+
+[1440 x 900 contact sheet](.scratch/l14/browser/contact-1440x900.png)
+
+[390 x 844 contact sheet](.scratch/l14/browser/contact-390x844.png)
+
+[412 x 730 contact sheet](.scratch/l14/browser/contact-412x730.png)
+
+Saved the incoming L13b offline page before editing. All 24 exact start-boundary comparisons (four scenes, both directions, three sizes) have **zero changed pixels**. Inspected reading-copy pre/post-cut and Figma/AE arrival frames at useful desktop and phone scale, checking joined halves, clean whole-object cuts, glass containment, edge rings and unchanged content/layout. The boundary images preserve the original; the new k sheets document the authorized adaptation. MOCK-T is a code excerpt, not a separately rendered mock comparison.
+
+[Incoming/current 1440 x 900 comparison](.scratch/l14/comparison-1440x900.png)
+
+[Incoming/current 390 x 844 comparison](.scratch/l14/comparison-390x844.png)
+
+[Incoming/current 412 x 730 comparison](.scratch/l14/comparison-412x730.png)
+
+The first comparison attempts timed out because their inactive tab did not advance; both contexts closed in finally. Bringing each tab to the front before waiting fixed the harness. An exploratory +1e-10-second comparison showed 5-62 changed edge pixels because L13's old wipe had already started. The final comparison uses exact k=0 and is pixel-identical. These attempts did not change product code or the gates.
+
+### L11-style frame tables
+
+Installed Edge 158.0.4370.33, real ANGLE/NVIDIA GeForce RTX 4090/Direct3D11, offline persistent profiles under .scratch/l14/browser, DPR 1. Phone viewport/touch emulation is 412x730 on this PC. Main-thread intervals are measured from actual performance.now() at successive rAF callback starts, not display presentation times. Entrance covers landing through the full 4.60 s; InDesign arrival covers its export action through ballLength('id'), and exit covers the complete 1.50 s. No controlled clock, artificial delay, rescaled duration or screenshot capture is used in these timing windows.
+
+| Viewport | Window | Intervals | Max ms | P95 ms | Over 20 ms |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 1440x900 | entrance | 1104 | 5.000 | 4.300 | 0 |
+| 1440x900 | id in | 637 | 5.200 | 4.400 | 0 |
+| 1440x900 | id out | 360 | 5.600 | 4.500 | 0 |
+| 412x730 | entrance | 1103 | 4.300 | 4.300 | 0 |
+| 412x730 | id in | 638 | 5.100 | 4.400 | 0 |
+| 412x730 | id out | 360 | 4.900 | 4.400 | 0 |
+
+All six final windows have zero intervals above 20 ms. An earlier standalone recording also had zero; its entrance maxima were 15.7 ms desktop and 12.0 ms phone. No repeating-hardware or real-phone claim is made. Entrance frame arrays, six-window interval statistics, contexts and name geometry are saved in the browser JSON evidence.
+
+### Verification, scope and omissions
+
+The final full suite log records the same known L13b fast-run line and no other failure. L13b's still run remains 6/300 (2 percent), fast run 125/288 (43.4027778 percent). stars.mjs and tools/l13b-checks.mjs retain their incoming SHA-256 hashes; neither the assignment nor its gates were edited. All retained controls, including the 40 round17 controls and the 29 entrance/loader/L12 controls, are caught.
+
+Only allowed source modules, check tools and requested documentation changed; .scratch holds evidence. No public, src, CNAME, CORRECTIONS, MOCK, fixture, font, artwork or other protected source was changed. No git command, package installation, external/page network request, site build, deployment or reviewer agent was run. Neither PresentationEngine nor E: was read or changed. Reviewer-agent critique was omitted because this task explicitly forbids it; no independent design approval is claimed. All L14 runtime parts and requested executable gates are implemented. All started Edge contexts closed in finally, and the final profile-path OS audit found none remaining. Added Markdown prose is plain ASCII.
+
+[Full report](.scratch/codex-round19n-report.md), [full suite](.scratch/l14/checks-final.log), [browser evidence](.scratch/l14/browser/results.json), [pure gates](.scratch/l14/pure-result.json).
+
+Final hash/syntax audit: 100 of 112 incoming files are byte-identical; 12 permitted existing files changed and two check tools were added. stars.mjs and tools/l13b-checks.mjs are byte-identical. All 12 changed/new JavaScript modules pass node --check. The final OS audit records zero Edge processes using the task profiles.

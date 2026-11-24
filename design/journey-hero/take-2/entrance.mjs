@@ -80,7 +80,7 @@ export const craftSpan = index => {
 };
 export function riseAt(time, span) {
   const p = linear(time, ...span);
-  return { progress: p, reveal: quintOut(p), weight: 300 + 500 * cubicOut(p) };
+  return { progress: p, reveal: quintOut(p) };
 }
 
 export function entranceAt(time) {
@@ -232,7 +232,7 @@ export function createEntranceView(hero) {
       let landed = true;
       for (const { el, span } of g.letters) {
         const p = riseAt(s.time, span); if (p.progress < 1) landed = false;
-        up(el, (1 - p.reveal) * g.drop); el.style.fontWeight = p.progress >= 1 ? '' : p.weight.toFixed(3);
+        up(el, (1 - p.reveal) * g.drop);
       }
       if (landed) { g.line.style.clipPath = ''; g.line.classList.remove('has-entrance'); g.overlay.remove(); g.landed = true; }
     }

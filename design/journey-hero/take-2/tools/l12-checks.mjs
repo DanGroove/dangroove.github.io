@@ -104,7 +104,7 @@ function modelDOM({ inlineBlocks = false } = {}) {
   const nodes = [];
   const readLayout = () => { reads++; assert.ok(!playing, 'L12 frame: layout read during apply'); };
   const style = () => new Proxy({}, { set(target, key, value) {
-    if (playing) assert.ok(['transform', 'clipPath', 'fontWeight'].includes(key), 'L12 frame: wrote ' + key);
+    if (playing) assert.ok(['transform', 'clipPath'].includes(key), 'L12 frame: wrote ' + key);
     target[key] = value; return true;
   } });
   class Node {
@@ -221,11 +221,10 @@ export async function checkL12(E, { entranceSource = read('entrance.mjs'), playe
     const p = n / 240;
     near(E.quintOut(p), 1 - (1 - p) ** 5, 'L12 curves: quint');
     near(E.quartOut(p), 1 - (1 - p) ** 4, 'L12 curves: quart');
-    near(E.cubicOut(p), 1 - (1 - p) ** 3, 'L12 curves: weight');
     const state = E.entranceAt(1.9 + 2 * p);
     near(state.camera, 1 - (1 - p) ** 4, 'L12 curves: camera clock');
     const name = E.riseAt(.3 + .85 * p, E.nameSpan(0, 0));
-    near(name.reveal, E.quintOut(p), 'L12 curves: letter rise'); near(name.weight, 300 + 500 * E.cubicOut(p), 'L12 curves: letter weight');
+    near(name.reveal, E.quintOut(p), 'L12 curves: letter rise'); assert.ok(!('weight' in name), 'L14 name: no weight ramp');
     near(E.entranceAt(1.9 + p).floor, EASE.wipe(p), 'L12 curves: floor wipe'); curves++;
   }
   assert.ok(playerSource.includes('layout.cover(base, need)') && playerSource.includes('settleView(base, state.camera') && playerSource.includes('liftPieces(frameNow(), state.screen)'), 'L12 integration: home coverage, camera and lift');

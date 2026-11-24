@@ -4,7 +4,7 @@ import { makeCamera, dot } from '../../../public/journey/hero/engine.mjs';
 import { createRenderer } from './sq.mjs';
 import { corners } from './kit.mjs';
 import { makeAtlas, fontsReady } from './art.mjs';
-import { SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, buildingLastState, exitBursts } from './stage.mjs';
+import { SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, buildingLastState, exitBursts, popBursts } from './stage.mjs';
 import { createCallouts } from './labels.mjs';
 import { createPageLayout } from './page-layout.mjs';
 import { ENTRANCE, entranceAt, screenPlane, floorReach, liftPieces, settleView, createEntranceView, loaderAt, createLoaderView } from './entrance.mjs';
@@ -23,7 +23,7 @@ const renderer = createRenderer(canvas), cam = makeCamera(num('yaw', 0), num('pi
 const callouts = createCallouts(hero);
 const layout = createPageLayout(hero, stage, callouts);
 const starts = SHOW.map((_, i) => SHOW.slice(0, i).reduce((sum, scene) => sum + scene.len, 0));
-const stills = [2, 3, 4, 5], bursts = exitBursts();
+const stills = [2, 3, 4, 5], bursts = [...exitBursts(), ...popBursts()];
 
 const need = sceneEnvelope(SCENES, corners, dot, cam);
 const wrap = t => ((t % LOOP) + LOOP) % LOOP;
@@ -193,7 +193,7 @@ new IntersectionObserver(entries => {
   visible = entries[0].isIntersecting;
   schedule();
 }, { threshold: 0 }).observe(hero);
-// The entrance's inline weights and clips come off while the page is measured, then go back on from fresh geometry.
+// The entrance's transforms and clips come off during measurement, then resume from fresh geometry.
 function measure() {
   if (!ready) return;
   if (intro || loading) entrance.clear();

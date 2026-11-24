@@ -8,6 +8,12 @@ export const SPARKS = Array.from({ length: 140 }, (_, i) => {
   return { d: [Math.cos(a) * flat, up, Math.sin(a) * flat], v: 5 + 11 * seed(i, 2) ** 1.4,
     tau: 0.13 + 0.11 * seed(i, 3), size: 1.5 + 1.5 * seed(i, 4), red: red.has(i), life: 0.7 + 0.55 * seed(i, 6) };
 });
+export const PUFF = SPARKS.filter((_, i) => i % 4 === 0).map(s => ({ ...s, v: s.v * 0.3, life: s.life * 0.6 }));
+export function sparkOrigin(event, spark) {
+  if (event.hx === undefined) return event.centre;
+  const [dx, , dz] = spark.d, distance = Math.min(event.hx / Math.abs(dx), event.hz / Math.abs(dz));
+  return [event.centre[0] + dx * distance, event.centre[1], event.centre[2] + dz * distance];
+}
 export function sparkAt(spark, centre, age) {
   const distance = spark.v * spark.tau * (1 - Math.exp(-Math.max(0, age) / spark.tau));
   return centre.map((v, i) => v + spark.d[i] * distance);
@@ -20,13 +26,14 @@ export function sparkFrame(events, time, loop, view) {
   const attrs = [], trails = [];
   for (const event of events) {
     const age = wrap(time - event.at, loop);
-    for (const spark of SPARKS) {
+    for (const spark of event.hx === undefined ? SPARKS : PUFF) {
       if (age > spark.life) continue;
       const fade = 1 - Math.min(1, Math.max(0, (age - 0.55 * spark.life) / (0.45 * spark.life)));
       const size = spark.size * fade * fade * (3 - 2 * fade);
       if (!(size > 0)) continue;
-      const [x, y] = project(sparkAt(spark, event.centre, age), view);
-      const tail = project(sparkAt(spark, event.centre, age - STREAK_WINDOW), view);
+      const origin = sparkOrigin(event, spark);
+      const [x, y] = project(sparkAt(spark, origin, age), view);
+      const tail = project(sparkAt(spark, origin, age - STREAK_WINDOW), view);
       const shape = streakGeometry(x, y, size, tail);
       attrs.push(x, y, 1, size, spark.red ? 1 : 0);
       trails.push(x - tail[0], y - tail[1], ...shape.normal);
@@ -40,7 +47,7 @@ export function sparkFrame(events, time, loop, view) {
 // Called only by forward playback, once per crossed event, including across the loop boundary.
 export function kickExportBursts(events, time, step, loop, view, field) {
   if (!view || !field || !(step > 0)) return;
-  for (const event of events) if (wrap(time - event.at, loop) < step) {
+  for (const event of events) if (event.hx === undefined && wrap(time - event.at, loop) < step) {
     const [x, y] = project(event.centre, view);
     field.burstAt(x, y, 2.6 * view.S);
   }

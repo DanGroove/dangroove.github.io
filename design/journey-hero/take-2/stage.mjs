@@ -360,24 +360,44 @@ const restPoint = formats => {
   return [(Math.min(...blocks.map(r => r[0])) + Math.max(...blocks.map(r => r[0] + r[2]))) / 2,
     (Math.min(...blocks.map(r => r[1])) + Math.max(...blocks.map(r => r[1] + r[3]))) / 2];
 };
-// One reversible red/asset step. The temporary hard wipe lives only here for its later redesign.
-// All objects in a format share one world-x edge, but each owns its full red bounding box.
-export function assetWipe(P, objects, amount, reverse, part) {
-  // Global-to-scene subtraction can straddle an exact boundary by a few ulps.
-  amount = amount < 1e-12 ? 0 : amount > 1 - 1e-12 ? 1 : amount;
-  const blocks = objects.map(objectBlock), x0 = Math.min(...blocks.map(b => b.p[0] - b.s[0])), x1 = Math.max(...blocks.map(b => b.p[0] + b.s[0]));
-  const edge = mix(x0, x1, EASE.wipe(clamp(amount, 0, 1)));
-  objects.forEach((pieces, object) => {
-    const b = blocks[object], red = redPiece(b.p, b.s, b.e, 'shape', part);
-    red.object = object;
-    if (amount <= 0) { P.push(...(reverse ? pieces.filter(pc => !pc.hide) : [red])); return; }
-    if (amount >= 1) { P.push(...(reverse ? [red] : pieces.filter(pc => !pc.hide))); return; }
-    const sign = reverse ? -1 : 1;
-    red.clip = [sign, 0, 0, -sign * edge]; red.edge = edge; P.push(red);
-    for (const pc of pieces) if (!pc.hide) {
-      pc.clip = [-sign, 0, 0, sign * edge]; pc.edge = edge;
-      if (!reverse) pc.wiped = part;
-      P.push(pc);
+export const POP = { at: 0.3, scale: 1.08, gap: 0.02 };
+export function popScale(k) {
+  k = clamp(k, 0, 1);
+  return k < POP.at ? mix(1, POP.scale, EASE.exit(k / POP.at))
+    : mix(POP.scale, 1, EASE.enter((k - POP.at) / (1 - POP.at)));
+}
+// A connected footprint turns as one. Keep each object's block, including both reading halves.
+export function assetUnits(objects) {
+  const units = objects.map((pieces, object) => ({ parts: [{ pieces: pieces.filter(pc => !pc.hide), object }] }))
+    .filter(u => u.parts[0].pieces.length);
+  const block = u => objectBlock(u.parts.flatMap(p => p.pieces));
+  const touches = (a, b) => Math.abs(a.p[0] - b.p[0]) <= a.s[0] + b.s[0] + POP.gap
+    && Math.abs(a.p[2] - b.p[2]) <= a.s[1] + b.s[1] + POP.gap;
+  for (let changed = true; changed;) {
+    changed = false;
+    for (let i = 0; i < units.length && !changed; i++) for (let j = i + 1; j < units.length; j++) {
+      if (!units[i].parts.some(a => units[j].parts.some(b => touches(objectBlock(a.pieces), objectBlock(b.pieces))))) continue;
+      units[i].parts.push(...units[j].parts); units.splice(j, 1); changed = true; break;
+    }
+  }
+  return units.map(u => ({ ...u, block: block(u) }));
+}
+// The single red/asset step, both ways: swell, cut, settle. No partial object or clipping edge.
+export function assetStep(P, objects, k, reverse, part) {
+  if (Math.abs(k - POP.at) < 1e-12) k = POP.at;
+  if (Math.abs(k - POP.at) < 1e-12) k = POP.at;
+  const scale = popScale(k), red = reverse ? k >= POP.at : k < POP.at;
+  assetUnits(objects).forEach((unit, index) => {
+    const b = unit.block, origin = [b.p[0], b.p[1] - b.s[2], b.p[2]];
+    for (const { pieces, object } of unit.parts) {
+      const box = objectBlock(pieces), shown = red ? [redPiece(box.p, box.s, box.e, 'shape', part)] : pieces;
+      for (const pc of shown) {
+        pc.p = pc.p.map((v, i) => origin[i] + (v - origin[i]) * scale); pc.s = pc.s.map(v => v * scale);
+        pc.assetUnit = `${part}:${index}`; pc.assetPart = part; pc.assetObject = object;
+        pc.assetScale = scale; pc.assetOrigin = origin;
+        if (red) pc.object = object;
+        P.push(pc);
+      }
     }
   });
 }
@@ -394,7 +414,7 @@ function exportOut(P, s, t, key, formats) {
     for (const pc of all) pc.exportSeparated = true;
     const v = (t - off[0]) / PACE, b = exitBeats();
     if (v < b.wiped) {
-      formats.forEach((f, j) => assetWipe(P, f.objects || [f.pieces], (v - j * EXIT.stagger) / EXIT.wipe, true, j));
+      formats.forEach((f, j) => assetStep(P, f.objects || [f.pieces], (v - j * EXIT.stagger) / EXIT.wipe, true, j));
       return;
     }
     if (v < b.merged) {
@@ -440,7 +460,7 @@ function exportOut(P, s, t, key, formats) {
       return;
     }
     if (u < b.wiped) {
-      assetWipe(P, [f.pieces], (u - b.wipe) / BALL.become, false, j);
+      assetStep(P, [f.pieces], (u - b.wipe) / BALL.become, false, j);
       return;
     }
     P.push(...f.pieces.filter(pc => !pc.hide));
@@ -1916,6 +1936,24 @@ export function exitBursts() {
     const at = starts[i] + playbackSpans(SCRIPTS[scene.key]).off[0] + exitBeats().burst * PACE;
     const ball = frameAt(at - 1e-6 * PACE).find(pc => pc.morph === 'ball' && pc.where === 'floor');
     return [{ key: scene.key, at, centre: [ball.p[0], BALL_PATH.size / 2 * EXIT.swellTo, ball.p[2]] }];
+  });
+}
+// Sample the last pre-cut pose, rather than accumulating mutable spots during playback.
+// The snapshot is independent of seeks and of later geometry, such as the opening laptop lid.
+export function popBursts() {
+  return SHOW.flatMap((scene, i) => {
+    if (!['id', 'pr', 'ae', 'fig'].includes(scene.key)) return [];
+    const key = scene.key, s = SCRIPTS[key], a = action(s, 'export').start, { off } = playbackSpans(s);
+    return ['in', 'out'].flatMap(direction => [0, 1, 2].flatMap(part => {
+      const at = starts[i] + (direction === 'in' ? a + (ballBeats(key, part).wipe + POP.at * BALL.become) * PACE
+        : off[0] + (part * EXIT.stagger + POP.at * EXIT.wipe) * PACE);
+      const pieces = frameAt(at - 1e-8 * PACE).filter(pc => pc.assetPart === part), units = new Map();
+      for (const pc of pieces) { if (!units.has(pc.assetUnit)) units.set(pc.assetUnit, []); units.get(pc.assetUnit).push(pc); }
+      return [...units].map(([unit, pieces]) => {
+        const b = objectBlock(pieces);
+        return { key, direction, part, unit, at, centre: [b.p[0], b.p[1] + b.s[2], b.p[2]], hx: b.s[0], hz: b.s[1] };
+      });
+    }));
   });
 }
 export const SCENES = SHOW.map((scene, i) => (o = {}) => frameAt(starts[i] + scene.still, o));

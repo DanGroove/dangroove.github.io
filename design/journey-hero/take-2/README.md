@@ -365,3 +365,8 @@ node design/journey-hero/take-2/tools/round17-pixel-checks.mjs [packed-preview.h
 ```
 
 No argument packs this build. The export `checkRound17Pixels(chromium, previewPath)` returns its rows and failures. It tests desktop dpr 1/2 and phone dpr 2 releases, and desktop sinks at 1 ms. Missing Playwright prints UNAVAILABLE and exits 2; failures exit 1. Full measurements, original/new check numbers, cutout pages, release times, choices and local-verification limits are in BUILD.md's **Round 17, critique round 2** and `.scratch/review-out/r17/critique2-audit.json`. The pixel gate has syntax and synthetic PNG/mask/count coverage locally; it has not been run in a browser here.
+
+
+## Round 19, L14
+
+Pop plus top-edge sparks replaces the shared red/asset wipe. The rising name inherits its flow weight throughout. The 101.491 s loop and L13 ball exit remain. Run `node tools/checks.mjs` from this folder for all retained checks and the four L14 gates, their controls, 432 held frames and six performance windows. The only failure remains the known L13b check 4 fast run (125/288). See [BUILD.md](BUILD.md#round-19-l14) and the [full report](.scratch/codex-round19n-report.md). No site build or publication was run.

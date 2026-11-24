@@ -375,6 +375,8 @@ export async function checkCarries(M) {
 }
 
 const bounds = pcs => { const p = pcs.flatMap(corners); return [Math.min(...p.map(q => q[0])), Math.min(...p.map(q => q[2])), Math.max(...p.map(q => q[0])), Math.max(...p.map(q => q[2])), Math.max(...p.map(q => q[1])), Math.min(...p.map(q => q[1]))]; };
+// Model dimensions and clearances are authored values; the separate L14 gate checks the actual pop scale.
+const restPieces = P => P.map(pc => pc.assetScale ? {...pc,p:pc.p.map((v,i)=>pc.assetOrigin[i]+(v-pc.assetOrigin[i])/pc.assetScale),s:pc.s.map(v=>v/pc.assetScale)} : pc);
 export async function checkFlight(M) {
   M ??= await load();
   let samples = 0;
@@ -400,20 +402,20 @@ export async function checkFlight(M) {
     assert.equal(first.length, 3, 'R7 split first frame');
     first.forEach(pc => { pc.p.forEach((v, i) => near(v, last.c[i], 'R7 split equals touchdown', 1e-6)); pc.s.forEach(v => near(v, last.r, 'R7 split starts as ball', 1e-6)); });
     assert.ok(next.every((pc, i) => distance(corners(pc), corners(first[i]), scale(M)) > 0.1), 'R7 split: first step does not visibly move');
-    // Retained round-15 rules: red blocks and formats share opposite wipe planes; no play before complete.
-    for (let j = 0; j < 3; j++) {
-      const beat = M.ballBeats(key, j), shape = held.find(pc => pc.part === j);
-      const format = at(M, key, a + (beat.wipe + beat.wiped) / 2).filter(pc => pc.wiped === j), f = bounds(format), block = bounds([shape]);
-      f.slice(0, 4).forEach((v, i) => near(v, block[i], 'R15 retained: block footprint', 0.001));
-      const fullWidth = format.filter(pc => Math.abs(bounds([pc])[2] - bounds([pc])[0] - (f[2] - f[0])) < 1e-6);
-      near(block[4], f[4], 'L13 arrival: complete object thickness', 0.001);
-      for (const u of grid(beat.wipe + 1e-7, beat.wiped)) {
-        const P = at(M, key, a + u), red = P.find(pc => pc.morph === 'shape' && pc.part === j), pieces = P.filter(pc => pc.wiped === j);
-        assert.ok(red && pieces.length && pieces.every(pc => pc.clip.every((v, k) => v === -red.clip[k])), 'R15 retained: wipe planes disagree');
-        assert.ok(!P.some(pc => pc.where === 'floor' && pc.clock > 0), 'R15 retained: play before built');
-        near(bounds([red])[5], 0, 'R15 retained: block bottom');
+    // L14 replaces opposite wipe planes with a whole-unit cut, while retaining the exact landed blocks.
+    for (let j=0;j<3;j++) {
+      const beat=M.ballBeats(key,j), shape=held.find(pc=>pc.part===j);
+      const format=restPieces(at(M,key,a+(beat.wipe+beat.wiped)/2)).filter(pc=>pc.assetPart===j&&!pc.morph),f=bounds(format),block=bounds([shape]);
+      f.slice(0,4).forEach((v,i)=>near(v,block[i],'R15 retained: block footprint',.001));
+      near(block[4],f[4],'L13 arrival: complete object thickness',.001);
+      for(const u of grid(beat.wipe+1e-7,beat.wiped)) {
+        const P=at(M,key,a+u),own=P.filter(pc=>pc.assetPart===j);
+        const red=own.filter(pc=>pc.morph==='shape');
+        assert.ok(!red.length||red.length===own.length,'L14 never red and object at once');
+        assert.ok(own.every(pc=>!pc.clip&&pc.edge===undefined),'L14 retained: no wipe planes');
+        assert.ok(!P.some(pc=>pc.where==='floor'&&pc.clock>0),'R15 retained: play before built');
       }
-      assert.ok(shape, 'R15 retained: missing block');
+      assert.ok(shape,'R15 retained: missing block');
     }
   }
   return samples;
@@ -423,7 +425,7 @@ export async function checkLidAndSinks(M, behaviourOnly = false) {
   M ??= await load();
   let samples = 0; const endTimes = {};
   for (const key of ['id', 'pr', 'ae', 'fig']) {
-    const { land, off } = M.playbackSpans(M.SCRIPTS[key]), floor = t => at(M, key, t).filter(pc => pc.where === 'floor');
+    const { land, off } = M.playbackSpans(M.SCRIPTS[key]), floor = t => restPieces(at(M, key, t)).filter(pc => pc.where === 'floor');
     near(off[1] - off[0], 1.5, 'L13 exit length');
     if (key === 'ae') near(off[0] - land, 3.2, 'R9 two AE cycles');
     if (key === 'pr') near(off[0] - land, 3.2, 'R9 two Premiere cycles');
@@ -499,11 +501,11 @@ export async function checkDeviceModels(M) {
     const {land,off}=M.playbackSpans(M.SCRIPTS[key]);
     // Include arrival wipes, plays/restarts, closing, and every device until its exit wipe completes.
     for (const t of [...grid(action(M,key,'export').start,off[0]+.65*M.PACE), land+1.599,land+1.601].filter(t=>t<off[1])) {
-      const P=at(M,key,t), bodies=P.filter(pc=>pc.where==='floor'&&pc.model&&pc.deviceBody);
+      const P=restPieces(at(M,key,t)), bodies=P.filter(pc=>pc.where==='floor'&&pc.model&&pc.deviceBody);
       const slabs=P.filter(pc=>pc.where==='floor'&&pc.deviceBody&&!(key==='fig'&&pc.device===0));
       assert.equal(bodies.length,slabs.length,'R12 identical models: unmodelled device');
       const local = M.sceneAt(starts(M)[M.SHOW.findIndex(s => s.key === key)] + t).at;
-      if(t>=land) assert.equal(bodies.length,(key==='pr'||key==='ae'?[0,1,2]:[1,2]).filter(j=>((local-off[0])/M.PACE-j*.1)/.45<=1-1e-12).length,'R12 identical models: missing device');
+      if(t>=land) assert.equal(bodies.length,(key==='pr'||key==='ae'?[0,1,2]:[1,2]).filter(j=>((local-off[0])/M.PACE-j*.1)/.45<.3-1e-12).length,'R12 identical models: missing device');
       for (const body of bodies) {
         const m=expected[body.model], b=bounds([body]), landscape=body.model==='tablet'&&['pr','ae'].includes(key), w=landscape?m.d:m.w,d=landscape?m.w:m.d;
         near(2*body.s[0],w,'R12 identical models: width'); near(2*body.s[1],d,'R12 identical models: depth'); near(2*body.s[2],m.t,'R12 identical models: thickness');
@@ -573,7 +575,7 @@ export async function checkDeviceGlass(M, clearanceOnly = false) {
   for (const key of ['id','pr','ae','fig']) {
     const {off} = M.playbackSpans(M.SCRIPTS[key]);
     for (const t of grid(action(M,key,'export').start,off[0])) {
-      const P = at(M,key,t).filter(pc => pc.where === 'floor');
+      const P = restPieces(at(M,key,t)).filter(pc => pc.where === 'floor');
       for (const body of P.filter(pc => pc.deviceBody && pc.model)) {
         const arts = P.filter(pc => pc.device === body.device && pc.art), glass = bounds([body])[4];
         const lowest = arts.filter(pc => !pc.cut).sort((a,b) => bounds([a])[4] - bounds([b])[4])[0];
@@ -728,7 +730,7 @@ export function checkBuildingMode(code=fs.readFileSync(new URL('../sq.mjs',impor
   assert.ok(!/gl\.uniform1f\(u\.uArtMode,[23]\)/.test(body),'C3 alpha-tested building: cut/blend mode');
 }
 export async function checkSpine(M) {
-  M ??=await load();const [start]=M.playbackSpans(M.SCRIPTS.id).off,end=start+.45*M.PACE;let samples=0,worst=0,pieces=0;
+  M ??=await load();const [start]=M.playbackSpans(M.SCRIPTS.id).off,end=start+.3*.45*M.PACE;let samples=0,worst=0,pieces=0;
   for(let n=0;n<=Math.ceil((end-start)*1000);n++) {
     const P=at(M,'id',Math.min(end-1e-9,start+n/1000)).filter(p=>p.where==='floor'&&!p.morph&&p.device===undefined&&p.p[2]>M.BLOCK_ROW.stack[1]+M.BLOCK_ROW.stack[3]);
     const edges=P.map(pc=>{const xs=corners(pc).map(p=>p[0]);return {pc,l:Math.min(...xs),r:Math.max(...xs)};});
@@ -966,7 +968,7 @@ export async function checkLidMark(M) {
   }
   const {renderer,calls}=rendererTrace(),view={W:1474,H:988,S:100,cx:737,cy:494,cam:HOME};
   renderer.setAtlas({pages:[{}],places:{lidMark:[0,0,0,1,1]}});
-  const windows={shut:[exp+beat.wipe,exp+beat.wiped],opening:[exp+beat.wiped,exp+beat.become],shutting:[off[0]-M.BALL.lid*M.PACE,off[0]],exitWipe:[off[0],off[0]+.45*M.PACE-1e-8]};
+  const windows={shut:[exp+beat.wipe+.3*M.BALL.become*M.PACE+1e-9,exp+beat.wiped],opening:[exp+beat.wiped,exp+beat.become],shutting:[off[0]-M.BALL.lid*M.PACE,off[0]],exitPop:[off[0],off[0]+.3*.45*M.PACE-1e-8]};
   let vertices=0,triangles=0,draws=0,culled=0,worstPlane=0,worstCentre=0;const samples={};
   const height=.22*Math.min(g.lidW,g.lidH),width=height*1080/797.3;
   for(const [name,[from,to]] of Object.entries(windows)) {
@@ -977,7 +979,7 @@ export async function checkLidMark(M) {
       // Global-to-scene subtraction rounds the exact first wipe boundary 4e-15 s early; inspect its emitted side.
       if(name==='shut'&&t===from)t+=1e-9;
       if(t>=off[1]-1e-10) {assert.equal(at(M,'fig',t).filter(p=>p.lidMark).length,0,`${gate} gone at exit end`);continue;}
-      const P=at(M,'fig',t),lid=P.find(p=>p.lid),marks=P.filter(p=>p.lidMark);
+      const P=restPieces(at(M,'fig',t)),lid=P.find(p=>p.lid),marks=P.filter(p=>p.lidMark);
       assert.ok(lid,`${gate} lid present`);assert.equal(marks.length,1,`${gate} exactly one mark`);const pc=marks[0];
       const axes=[[1,0,0],[0,1,0],[0,0,1]].map(v=>quatRotate(lid.q,v)),out=axes[2].map(v=>-v);
       const local=point=>axes.map(axis=>dot(axis,point.map((v,i)=>v-lid.p[i]))),centre=local(pc.p);

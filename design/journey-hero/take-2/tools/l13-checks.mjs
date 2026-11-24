@@ -67,24 +67,15 @@ export function checkExportExit(m = M) {
       if (v < .65) {
         for (const red of pcs.filter(p => p.morph === 'shape')) {
           const object = key === 'id' ? red.part === 0 ? red.object : red.part + 2 : red.part;
-          bounds([red]).forEach((v, k) => near(v, bounds(groups[object])[k], 'L13 wipe: full per-object red bounds', 1e-7));
-          if (red.edge !== undefined) assert.deepEqual(red.clip, [-1, 0, 0, red.edge], 'L13 exit wipe: red behind edge');
+          const group = groups[object], unit = key === 'id' && (object === 1 || object === 2) ? [...groups[1], ...groups[2]] : group;
+          const box = bounds(unit), origin = [(box[0]+box[1])/2,box[2],(box[4]+box[5])/2];
+          const g = m.popScale((v-red.part*.1)/.45);
+          bounds([red]).forEach((value,k) => near(value,origin[Math.floor(k/2)]+(bounds(group)[k]-origin[Math.floor(k/2)])*g,'L13 pop: full per-object red bounds',1e-7));
+          assert.ok(!red.clip && red.edge === undefined,'L13 pop: no wipe edge');
         }
-        for (let j = 0; j < 3; j++) {
-          const list = pcs.filter(p => p.device === (key === 'id' ? j === 0 ? undefined : j : j));
-          // Until a format's clock starts, the entire emitted object retains its geometry.
-          if (v < j * .1) {
-            const before = first.filter(p => p.device === (key === 'id' ? j === 0 ? undefined : j : j));
-            const geometry = g => g.map(({ exportSeparated, ...p }) => p);
-            assert.deepEqual(geometry(list), geometry(before), 'L13 untouched: format before wipe');
-          }
-        }
-        // Each source piece stays rigid, with one common x edge; every retained layer has the opposite red plane.
-        for (const p of pcs.filter(p => p.edge !== undefined && p.tone !== 'red')) {
-          const original = first.find(q => q.art === p.art && q.device === p.device && q.p.every((v, k) => Math.abs(v - p.p[k]) < 1e-10) && q.s.every((v, k) => Math.abs(v - p.s[k]) < 1e-10));
-          assert.ok(original, 'L13 untouched: wipe changes source geometry');
-          assert.deepEqual(p.q, original.q, 'L13 untouched: rotation');
-          assert.deepEqual(p.clip, [1, 0, 0, -p.edge], 'L13 exit wipe: asset ahead of edge');
+        for (let j=0;j<3;j++) if(v<j*.1) {
+          const own = list => list.filter(p=>p.device===(key==='id' ? j===0 ? undefined : j : j)).map(p=>({p:p.p,s:p.s,q:p.q,art:p.art}));
+          assert.deepEqual(own(pcs),own(first),'L13 untouched: format before pop');
         }
       }
       samples++;
@@ -191,8 +182,8 @@ export async function checkL13Controls() {
   };
   await stage('old tail', 'sink: 1.5', 'sink: 1.0', /L13 loop|L13 tail/);
   await stage('late burst', 'v < b.burst - 1e-12', 'v < b.burst + .1', /L13 burst:/);
-  await stage('missing reading halves', 'f.objects || [f.pieces]', '[f.pieces]', /L13 wipe: full per-object red bounds/);
-  await stage('small red block', "red.object = object;", "red.object = object; red.s[0] *= .95;", /L13 wipe: full per-object red bounds/);
+  await stage('missing reading halves', 'f.objects || [f.pieces]', '[f.pieces]', /L13 pop: full per-object red bounds/);
+  await stage('small red block', "if (red) pc.object = object;", "if (red) { pc.object = object; pc.s[0] *= .95; }", /L13 pop: full per-object red bounds/);
   await stage('sink restored', 'pc.object = object; P.push(pc);', 'pc.object = object; pc.p[1] -= .1; P.push(pc);', /L13 per-object:|L13 floor:/);
   return out.join('\n');
 }
