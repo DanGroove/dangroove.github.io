@@ -37,6 +37,7 @@ let loading = !query.has('t');
 let loaderStart = null;
 if (!loading) loader.clear();
 function loaderState(now) {
+  if (loader.state) return loader.state(now);
   // Boot may block the main thread before its first paint. Start the visible clock on rAF, so that work cannot
   // consume the loader's minimum duration unseen. Milestones already complete then belong to time zero.
   const time = loaderStart === null ? 0 : Math.max(0, now - loaderStart);
@@ -46,17 +47,18 @@ function loaderState(now) {
 function bootDone(key) {
   const now = performance.now() / 1000;
   boot[key] = now;
+  loader.boot?.(key);
   if (loading) loader.apply(loaderState(now));
 }
 const frameNow = () => frameAt(t, first && t < 0.5 ? { first: true } : {});
 // Round 8: the name reacts once the entrance has ended (N1); the star field (B1, B2) is drawn first in every frame and takes
-// the pointer once the entrance's rings have reached it (2.80 s). Neither stops with Pause, and neither moves the loop.
+// the pointer once the loader burst lands (.90 s from entrance zero). Neither stops with Pause, and neither moves the loop.
 const nameReact = createNameReact(hero, { reduced });
 // Round 14 (K1, replacing round 12's selection box): the craft list's letters roll from the old row to the new on its own
 // clock; the entrance sets it, so the current row appears lit as its row cuts in.
 const craftWipe = createCraftWipe(hero, { reduced });
 const nameOn = () => nameReact.setLive(ready && !loading && !intro && !held && !reduced.matches);
-const stars = query.get('stars') === '0' ? null : createStars(hero, { reduced, draw, running, available: () => ready && !loading && visible && !document.hidden, open: () => !loading && (!intro || intro.time >= ENTRANCE.stars[1]) });
+const stars = query.get('stars') === '0' ? null : createStars(hero, { reduced, draw, running, available: () => ready && !loading && visible && !document.hidden, open: () => !loading && (!intro || intro.time >= ENTRANCE.starPointer - 1e-12) });
 
 function draw() {
   const { h, b } = layout.metrics;
@@ -70,7 +72,7 @@ function draw() {
   if (state) floor.reveal = floorReach(state.floor, floor.radius);
   const centre = [b.left - h.left + b.width / 2, b.top - h.top + b.height / 2];
   const field = stars?.frame(state ? starReach(state.stars, centre, W, H) : null, centre);
-  renderer.draw(pieces, view, { outline: 0, floor, reveal: state ? screenPlane(state.screen) : null, stars: field });
+  renderer.draw(pieces, view, { outline: 0, floor, reveal: state ? screenPlane(state.screen) : null, stars: loading ? null : field });
   callouts.draw(calloutsAt(t), pieces, view, t, reduced.matches);
   if (state) entrance.apply(state);
   hero.classList.remove('is-entering');
@@ -93,11 +95,16 @@ function tick(now) {
     if (loaderStart === null) loaderStart = now / 1000;
     const state = loaderState(now / 1000);
     loader.apply(state);
-    if (state.done) {
-      loading = false; loader.clear();
-      if (!reduced.matches) { first = true; startEntrance(0); }
-      nameOn(); draw(); previous = now;
+    if (!reduced.matches && state.entranceTime !== null) {
+      if (!intro) { first = true; startEntrance(state.entranceTime); }
+      else intro.time = state.entranceTime;
+      t = Math.max(0, intro.time - ENTRANCE.screen[1]);
     }
+    if (state.done) {
+      loading = false;
+      // Draw the field's homes before removing its canvas copy, in this same main-thread frame.
+      nameOn(); draw(); loader.clear(); previous = now;
+    } else if (intro) draw();
     if (running()) request = requestAnimationFrame(tick);
     return;
   }
@@ -165,6 +172,8 @@ pause.addEventListener('click', () => {
 });
 reduced.addEventListener('change', () => {
   if (loading) {
+    loader.motion?.(reduced.matches);
+    if (reduced.matches) intro = null;
     first = !reduced.matches;
     t = reduced.matches ? starts[2] + SHOW[2].still : 0;
     entrance.clear();
@@ -185,7 +194,7 @@ function measure() {
   if (intro || loading) entrance.clear();
   layout.measure();
   if (intro || loading) entrance.measure(layout.metrics.nameLines);
-  stars?.measure(layout.metrics.h); nameReact.measure(); craftWipe.measure();
+  stars?.measure(layout.metrics.h); loader.measure?.(layout.metrics.h); nameReact.measure(); craftWipe.measure();
   if (visible && !document.hidden) draw();
 }
 new ResizeObserver(measure).observe(hero);
@@ -212,7 +221,7 @@ await document.fonts.ready;
 bootDone('fonts');
 renderer.setAtlas(makeAtlas());
 bootDone('atlas');
-ready = true; layout.measure(); stars?.measure(layout.metrics.h); craftWipe.measure();
+ready = true; layout.measure(); loader.measure?.(layout.metrics.h); stars?.measure(layout.metrics.h); craftWipe.measure();
 if (loading && !reduced.matches) { first = true; entrance.measure(layout.metrics.nameLines); }
 nameOn(); document.fonts.ready.then(() => nameReact.measure());
 draw(); window.__ready = true; schedule(); watchName();

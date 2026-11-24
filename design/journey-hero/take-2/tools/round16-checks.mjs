@@ -10,7 +10,17 @@ import { fileURLToPath } from 'node:url';
 import { markPaths } from './round9-checks.mjs';
 
 const TAKE = new URL('../', import.meta.url);
-const read = name => fs.readFileSync(new URL(name, TAKE), 'utf8');
+// Keep historical one-site controls over a virtual source with the shared declarations expanded.
+// Only pure declarations are expanded; duplicate private math helpers remain the simulation's own.
+const read = name => {
+  const source = fs.readFileSync(new URL(name, TAKE), 'utf8').replace(/\r\n/g, '\n');
+  if (name !== 'stars.mjs') return source;
+  const shared = fs.readFileSync(new URL('loader-stars.mjs', TAKE), 'utf8').split('// L4: progress')[0]
+    .replace('const clamp01 = x => Math.min(1, Math.max(0, x));', '')
+    .replace(/function segmentDistance[\s\S]*?(?=\/\/ ---- Round 9)/, '');
+  return source.replace(/^import \{[^\n]+from '\.\/loader-stars.mjs';/m, shared)
+    .replace(/^export \{ STARS[^\n]+\n/m, '');
+};
 async function load(name, source = read(name)) {
   const url = new URL(name, TAKE);
   const fixed = source.replace(/from (['"])(\.{1,2}\/[^'"]+)\1/g, (_all, _quote, ref) => `from '${new URL(ref, url).href}'`);

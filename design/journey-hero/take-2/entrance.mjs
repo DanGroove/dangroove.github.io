@@ -1,7 +1,9 @@
 // Round 6: the one-time entrance. Pure timetable and renderer values first; the DOM view only writes clip-path and weight.
-// Hard-edged only: wipes and cuts, no opacity. Entrance times are seconds from the loader's exit.
+// Hard-edged except the stars/name. Entrance times are seconds from the loader's burst.
 import { EASE } from '../../../public/journey/hero/engine.mjs';
 import { SCREEN } from './stage.mjs';
+import { LOADER, loaderAt } from './loader-stars.mjs';
+export { LOADER, loaderAt };
 
 export const ENTRANCE = {
   end: 3.8,
@@ -11,7 +13,8 @@ export const ENTRANCE = {
   lede: { start: 1.05, end: 2.0, step: 0.15 }, // one wipe per line, left to right
   crafts: { start: 3.0, end: 3.6, step: 0.1, lines: 5 },   // four top hairlines and the last row's bottom one
   floor: [1.8, 2.8],                           // hard circle of dots and pool, centre outward
-  stars: [1.8, 2.8],                           // round 8 (B1): the star field, wholly on or off, in rings from the stage's centre
+  starPointer: 0.9,                          // L4: open at the burst landing
+  stars: null,                               // L4: the loader burst replaces the star entrance ring
   screen: [2.4, 3.2],                          // clip plane rising from the screen's bottom edge to its top
   foot: [3.6, 3.7],                            // Scroll for the journey, Pause: cuts
 };
@@ -19,47 +22,17 @@ export const ENTRANCE = {
 const linear = (t, a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)));
 const wipe = (t, a, b) => EASE.wipe(linear(t, a, b));
 
-// Round 19: completion times, in seconds from the loader's first animation frame. Integrating each target plateau makes this
-// independent of frame rate: a completed boot step changes the target, never the drawn fill in that instant.
-export const LOADER = {
-  minimum: 0.8, fillSeconds: 0.8,
-  hold: 0.15, wipe: 0.3,
-  shares: { fonts: 0.25, atlas: 0.5, frame: 0.25 },
-};
-export function loaderAt(time, boot = {}, { review = false, reduced = false } = {}) {
-  if (review) return { phase: 'skipped', fill: 0, target: 0, wipe: 0, done: true, entranceStart: null, entranceTime: null };
-  const events = Object.entries(LOADER.shares)
-    .filter(([key]) => Number.isFinite(boot[key]) && boot[key] >= 0)
-    .map(([key, share]) => [boot[key], share]).sort((a, b) => a[0] - b[0]);
-  let fill = 0, target = 0, cursor = 0, full = 0, total = 0, last = 0;
-  for (const [at, share] of events) {
-    full = Math.min(total, full + (at - last) / LOADER.fillSeconds);
-    total += share; last = at;
-    if (at > time) continue;
-    fill = Math.min(target, fill + (at - cursor) / LOADER.fillSeconds);
-    target += share; cursor = at;
-  }
-  const complete = events.length === Object.keys(LOADER.shares).length;
-  const fullAt = complete ? Math.max(LOADER.minimum, last + (1 - full) * LOADER.fillSeconds) : Infinity;
-  const entranceStart = fullAt + LOADER.hold + LOADER.wipe;
-  fill = reduced ? target : Math.min(target, fill + Math.max(0, time - cursor) / LOADER.fillSeconds);
-  if (reduced) return { phase: target === 1 ? 'cut' : 'loading', fill, target, wipe: 0, done: target === 1, entranceStart: null, entranceTime: null };
-  const done = time >= entranceStart;
-  return {
-    phase: done ? 'entrance' : time >= fullAt + LOADER.hold ? 'wipe' : time >= fullAt ? 'hold' : 'loading',
-    fill, target, wipe: complete ? wipe(time, fullAt + LOADER.hold, entranceStart) : 0, done,
-    entranceStart, entranceTime: done ? time - entranceStart : null,
-  };
-}
-
+// The early inline canvas owns its clock and painting; the player owns the same-frame WebGL handover.
+// Stand-alone/review harnesses can still exercise the pure timing without an inline bridge.
 export function createLoaderView(hero) {
-  const group = hero.querySelector('[data-loader]'), fill = hero.querySelector('[data-loader-fill]');
+  const bridge = hero.ownerDocument?.defaultView?.__loaderStars;
   return {
-    apply(state) {
-      fill.style.transform = `scaleX(${state.fill})`;
-      group.style.clipPath = `inset(0 0 0 ${100 * state.wipe}%)`;
-    },
-    clear() { hero.classList.remove('is-loading'); },
+    state: bridge ? now => bridge.state(now) : null,
+    boot: key => bridge?.boot(key),
+    measure: box => bridge?.measure(box),
+    motion: reduced => bridge?.motion(reduced),
+    apply(state) { bridge?.apply(state); },
+    clear() { bridge?.clear(); hero.classList.remove('is-loading'); },
   };
 }
 // The loop's clock starts at 0 when the screen's wipe ends.
@@ -82,7 +55,7 @@ export function entranceAt(time, { ledeLines = 3 } = {}) {
     lede: staggerSpans(E.lede, ledeLines).map(span => wipe(time, ...span)),
     crafts: staggerSpans(E.crafts, E.crafts.lines).map(span => wipe(time, ...span)),
     floor: wipe(time, ...E.floor),
-    stars: wipe(time, ...E.stars),
+    stars: E.stars === null ? 1 : wipe(time, ...E.stars),
     screen: wipe(time, ...E.screen),
     foot: E.foot.map(at => time >= at),
     hover: time >= E.floor[1],

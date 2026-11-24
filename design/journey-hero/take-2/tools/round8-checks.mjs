@@ -130,7 +130,7 @@ async function runPlayer(playerSource) {
   });
   out.run = seconds => { for (let n = 0; n < Math.round(seconds / 0.05); n++) { now += 50; tick?.(now); } };
   tick?.(now);
-  out.run(1.25);
+  out.run(2.45);
   return out;
 }
 
@@ -203,16 +203,16 @@ export async function checkStars(source = read('stars.mjs'), entranceSource = re
   for (let k = 0; k < 10; k++) { pair.push([600 + 20 * k, 450], [620 + 20 * k, 450], 1 / 60); pair.step(1 / 60); }
   assert.ok(Math.abs(pair.offsets[2 * i1] - pair.offsets[2 * i2]) > 1, 'B1 mass: two masses moved alike');
   report.stir = { moved: moved.length, largest: +largest.toFixed(2), masses: [+pair.offsets[2 * i1].toFixed(2), +pair.offsets[2 * i2].toFixed(2)] };
-  // The entrance's rings: the floor's span, each star wholly on or off by its home; the shader uses the same rule.
-  assert.deepEqual(E.ENTRANCE.stars, E.ENTRANCE.floor, 'B1 entrance: rings are not the floor dots\' span');
-  assert.equal(E.entranceAt(1.79).stars, 0, 'B1 entrance: stars before 1.80'); assert.equal(E.entranceAt(2.8).stars, 1, 'B1 entrance: stars not all on at 2.80');
+  // L4 drops the entrance's star ring; keep the independent whole-star ring helper and shader probes.
+  assert.equal(E.ENTRANCE.stars, null, 'B1 entrance: L4 still runs star ring');
+  for (const time of [0, 0.9, 1.79, 1.8, 2.8, 3.8]) assert.equal(E.entranceAt(time).stars, 1, 'B1 entrance: stars hidden after burst');
   const centre = [1060, 455]; let shown = -1;
-  for (let time = 1.8; time <= 2.8 + 1e-9; time += 0.05) {
-    const reach = starReach(E.entranceAt(time).stars, centre, 1440, 900), on = F.stars.filter(s => starOn(s.x, s.y, centre, reach)).length;
-    assert.ok(on >= shown, 'B1 entrance: rings shrink'); shown = on;
+  for (let n = 0; n <= 20; n++) {
+    const reach = starReach(n / 20, centre, 1440, 900), on = F.stars.filter(s => starOn(s.x, s.y, centre, reach)).length;
+    assert.ok(on >= shown, 'B1 rings helper: rings shrink'); shown = on;
   }
-  assert.equal(shown, F.stars.length, 'B1 entrance: not every star on by 2.80');
-  assert.equal(F.stars.filter(s => starOn(s.x, s.y, centre, starReach(0, centre, 1440, 900))).length, 0, 'B1 entrance: stars before the rings');
+  assert.equal(shown, F.stars.length, 'B1 rings helper: not every star on at 1');
+  assert.equal(F.stars.filter(s => starOn(s.x, s.y, centre, starReach(0, centre, 1440, 900))).length, 0, 'B1 rings helper: stars before ring');
   // Round 9 (L1) adds the pass in front for captured stars: one POINTS draw, called once behind and once more only while a star is out.
   // Round 10 (R1): the pass behind draws every star; the pass in front only stars that are out, at their weights.
   assert.ok(rendererSource.includes('bool on = distance(aHome, uRings.xy) <= uRings.z && (!front || (aFlag > 0.5 && aWeight > 0.0));') && rendererSource.split('gl.drawArrays(gl.POINTS, 0, st.count);').length === 2
@@ -330,7 +330,7 @@ export async function checkRound8() {
   const n1 = await checkName(), b1 = await checkStars(), b2 = await checkHold(), g1 = await checkCarried();
   return `N1 computed: numbers equal title.js's; circle radius (px at em 100) by gap ${n1.circle.map(([g, r]) => g + ' em ' + r).join(', ')}; rest height ${n1.rests.map(([d, h]) => d + ' em ' + h).join(', ')} em; knock delays ${n1.delays.join('/')} ms; off during the entrance, a held entrance and reduced motion.
 F3 computed: no floor hover (round5 H7).
-B1 computed: ${b1.count} stars at 1440 x 900 (${b1.red} % red); parallax at 12 pointer/depth samples; follow 0.3 s critically damped (${b1.follow.at03} of 0.5 at 0.3 s, no overshoot); a still pointer moves nothing; a sweep moved ${b1.stir.moved} stars along it, largest ${b1.stir.largest} px, all home monotonically; two masses ${b1.stir.masses.join(' vs ')} px; reduced motion static, touch scroll-only; entrance rings 1.80-2.80 s.
+B1 computed: ${b1.count} stars at 1440 x 900 (${b1.red} % red); parallax at 12 pointer/depth samples; follow 0.3 s critically damped (${b1.follow.at03} of 0.5 at 0.3 s, no overshoot); a still pointer moves nothing; a sweep moved ${b1.stir.moved} stars along it, largest ${b1.stir.largest} px, all home monotonically; two masses ${b1.stir.masses.join(' vs ')} px; reduced motion static, touch scroll-only; L4 entrance ring dropped; independent ring helper still sampled 21 times.
 B2 computed: capture 80/132/210/340/340 px at 0/0.5/1.25/2.5/4 s; 0.3 s hold ${b2.runs[0.3].captured} stars, blast largest ${b2.runs[0.3].largest} px; 2.5 s hold ${b2.runs[2.5].captured} stars, largest ${b2.runs[2.5].largest} px; none crosses the pointer, settled on orbit, all home monotonically; stage presses ${b2.clicks.map(c => c.join('/')).join(', ')}.
 G1 computed: ${g1.drags} drags/carries every 0.01 s, ${g1.samples} samples, ${g1.carriedFrames} with a carried stack (${Object.keys(g1.per).length} actions); no non-carried piece moves; cursor in front of its carried picture; LOOP ${g1.loop.toFixed(3)} s.`;
 }
