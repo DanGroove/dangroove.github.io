@@ -54,6 +54,10 @@ L1's rules stay: the loader shows from the first paint without waiting for the p
 
 L4's checks: replace L1's loader checks with L4's as a pure timing function of time and progress (launch shares and order, flight time, the gathering's speed limit and monotonic count of arrived stars, the 0.35 s hold, the 0.9 s burst, the entrance starting at the burst with the star ring dropped, the pointer handover at the burst's end), plus the consistency check in item 1 and a check that the burst's end positions equal the field's homes. Negative controls: a gathering faster than 1.4 s fails; a loader star whose mark position differs from `stars.mjs`'s fails; an entrance that still runs the star ring fails.
 
+## L5 The page waits for the stars to land
+
+Run 3 (f1f6b52) built L4 and reported that L4's item 5 contradicts itself: started with the burst, L2's timetable puts three groups in motion at 0.35 s and 0.40 to 0.45 s (the burst, the mark's wipe, the name). Resolve it the calm way: the entrance starts when the burst ends (the stars have landed and the WebGL field has taken over), not when it starts. L2's timetable then runs unchanged from that moment (star ring still dropped, floor ring 1.80 to 2.80), and the star field takes the pointer at the same moment. Update the checks so the two-group limit passes with the burst counted, and add a negative control that starts the entrance with the burst again; it must fail. Nothing else changes.
+
 ## L3 (withdrawn, not to be built) A more impressive loader: the mark, from first sketch to final
 
 Dan, 24 Nov, 4:47 AM ET, on v32 (8c57810): "can we have a more impressive loading screen?". L3 replaces L1's look. L1's rules stay: the loader shows from the first paint without waiting for any script, font or picture; real boot progress (fonts, atlas, first frame, the shares you chose) drives it; it never jumps or goes back; `?t=` skips it; it lasts no longer than loading needs beyond its own minimum. Only the picture and its steps change.
