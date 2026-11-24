@@ -3,7 +3,7 @@ import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { C, MAP, NOVA, DEPTH, EXPLORE, STEPS } from '../data.mjs';
 import { mapDefs } from '../art.mjs';
-import { tripBuild, tripResize, tripState, tripApply, SEQ, VIEW, TRAIL_DOTS, smooth, novaBuild, novaBuildGather } from '../trip.mjs';
+import { tripBuild, tripResize, tripState, tripApply, SEQ, VIEW, TRAIL_DOTS, X_U, pointAt, toScreen, smooth, novaBuild, novaBuildGather } from '../trip.mjs';
 import { starsBuild, starsResize, starsJoin, starsTick, starsFrame, starsRushSources, novaGatherPoint, novaGatherSources } from '../stars.mjs';
 import { footerBuild, footerBuildX, footerNovaResize, footerFrame, footerMotion } from '../footer.mjs';
 
@@ -222,7 +222,28 @@ for(const [w,h,n] of [[1440,900,0],[412,730,0],[390,844,0],[360,640,0],[1440,900
   }
   const dots=t=>{starCanvas.ctx.calls.length=0;starsFrame(3,segment('rush',t),[.5,.5]);return starCanvas.ctx.calls.filter(c=>(c.name==='fillRect'||c.name==='arc')&&c.alpha>.004).map(c=>c.name==='arc'?c.args.slice(0,2):[c.args[0]+c.args[2]/2,c.args[1]+c.args[3]/2]);};
   const restDots=dots(0),rushDots=dots(.6),has=(dots,p)=>dots.some(d=>Math.hypot(d[0]-p[0],d[1]-p[1])<1e-6);
-  for(const row of rows.filter(row=>!row.gather&&has(restDots,row.from)))assert.ok(has(rushDots,row.from),'non-gathering visible star stays at its own screen position');
+  // Dan, 2026-11-24: "the trail stays while the supernova explodes". Nothing that does not gather is pinned to the screen while the
+  // rush camera centres the X: the sea keeps its own place on the map, and the trail runs down its own route into the X, the nearest
+  // dots first, all of it gone by the blast. (Until then a non-gathering star stayed at its rush-start screen position.)
+  {
+    const reach=trail[0].reach,pull=(st,m)=>{const X=toScreen(st,MAP.x),dx=X[0]-m[0],dy=X[1]-m[1],d=Math.hypot(dx,dy),k=st.legXT>0&&d<260?.12*st.legXT*(1-d/260):0;return [m[0]+dx*k,m[1]+dy*k];};
+    const on=p=>p[0]>=-10&&p[0]<=w+10&&p[1]>=-10&&p[1]<=h+10;
+    assert.ok(trail.every(row=>row.reach===reach&&!row.gather),'the trail does not whirl; it has one run');
+    assert.ok(trail.some(row=>X_U-row.s.u<reach&&on(row.from)),'the trail on screen at the X takes part in the run');
+    let ran=0,beyond=0;
+    for(const t of [.2,.6,.9]){
+      const st=segment('rush',t),drawn=dots(t),run=reach*t**NOVA.build.pull;
+      for(const row of rows.filter(row=>!row.gather&&row.s.kind==='sea')){const p=pull(st,toScreen(st,row.s.map));if(on(p))assert.ok(has(drawn,p),'a sea star that does not gather keeps its own place on the map at '+t);}
+      for(const row of trail){
+        const d0=X_U-row.s.u,left=d0-run;
+        if(d0>=reach){const q=pull(st,toScreen(st,row.s.map));if(on(q)){assert.ok(t<.9&&has(drawn,q),'the trail beyond the run keeps its place on the map, and the camera takes it off screen before the blast');beyond++;}continue;}
+        const p=pull(st,toScreen(st,pointAt(X_U-left)));
+        if(left>0&&on(p)&&.9*smooth(0,Math.min(MAP.dotGap,d0),left)>.01){assert.ok(has(drawn,p),'a trail dot runs down its route at '+t);ran++;}
+      }
+    }
+    assert.ok(ran>0);if(beyond)console.log(`TRAIL ${w}x${h} ${n||'map'}: ${beyond} draws of an earlier leg at the top edge leave with the camera before t .9`);
+    assert.ok(trail.every(row=>X_U-row.s.u>=reach||X_U-row.s.u-reach*.999**NOVA.build.pull<MAP.dotGap*.05),'the whole trail on screen has run into the X by the blast');
+  }
   for(const row of gather){
     for(let k=0;k<=300;k++){
       const q=NOVA.gather.join*k/300,at=novaGatherPoint(row.from,centre,row.angle,row.radius,q),r=Math.hypot(at[0]-centre[0],at[1]-centre[1]);
