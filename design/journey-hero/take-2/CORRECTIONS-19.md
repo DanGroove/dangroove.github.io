@@ -157,6 +157,49 @@ L12's checks:
 - After the entrance, nothing of it is left in the text column (mark, nav, name, lede, crafts, foot): no overlay, inline transform, clip or weight, and every box equals its box in the same page opened with `?t=`.
 - L11's frame table for the whole entrance, after L12, at both sizes, in the report.
 
+## L13 Streaks only in explosions, stronger streaks, smooth loader edges, and the exports burst instead of sinking
+
+Dan, 24 Nov, on v39 (9236932): "the streaks should only happen when exploding. they are appearing as i gather the stars and move around" (1:33 PM ET), "can we also up the intensity on the streaks?" (1:34 PM), "also im starting to not like the sinking animation. can we have the assets morph back into a ball and explode?" (1:36 PM). And a fault found in review of v39: the loader paints its tapers in WebGL2 with `antialias: false`, so their edges are stepped and their thin tails break into dashes, where v38's Canvas tapers were smooth.
+
+`MOCK-X.diff` in this folder is the mock-up Dan reviewed, as a diff against 9236932: **a reference for the look and the numbers only**. Build it properly; do not apply it as it is. Its review aids stay out: the panel, the `self.__streakMock` and `self.__mockSpeed` globals, `playFrom`, `MOCK_HASH` and its sessionStorage, and the sparks' separate 2D canvas (the sparks belong in the star layer, part 4).
+
+**Part 1, streaks only in explosions.** An explosion is (a) the loader's burst, (b) the hero's hold-and-release blast (the captured stars and the nearby stars it pushes) and (c) the export ball's burst (part 4: its sparks and the field stars it pushes). Nothing else streaks: the loader's gathering flight, stirring with the pointer, the hold's gathering and ring, parallax, scrolling, and the slow return home after an explosion.
+
+1. **The field** (`stars.mjs`): each star has an exploding flag. An explosion's kick sets it. It clears (a) when the star's taper first falls to its own drawn width or less, at least 0.05 s after the kick (the explosion is over, so the return home never streaks); (b) when the star comes home; (c) when a hold captures it. A stirring push neither sets nor clears it.
+2. **The taper measures the star's own motion**: its home plus its offset, recorded now and over the window (part 2), so parallax and scrolling add nothing to it. The head still draws where the star shows.
+3. A star that is not exploding uploads a zero trail, so the existing gate (a taper only where the displacement exceeds the full width) draws a dot.
+4. **The loader**: no taper in the gathering flight (dots only, as before L9); the burst keeps its taper.
+5. Unchanged: the blast's dynamics and caps, homes, colours and passes, the front copies, the hold, the ring and the loader's timing.
+
+**Part 2, stronger streaks.** Dan's pick in the mock (24 Nov, 1:59 PM ET): "x2 length x1 width". The taper's window doubles, from 1/50 s to **2/50 s (1/25 s)**, as one constant in one place used alike by the loader's burst, the field's explosions and the sparks. Widths stay as they are (the mock's width control and its growth rule stay out).
+
+**Part 3, smooth loader edges.** Request the loader painter's WebGL2 context with `antialias: true` (multisampling, as the field's renderer already does; the mock does this and its tapers come out smooth). Rerun L11's loader trace in Edge at both sizes, cold load included, and report any change the multisample buffer makes. If it adds a frame over 20 ms that L11 did not have, draw the taper's edge coverage in the fragment shader instead (as the heads already do) and say so. Either way, part 3's pixel check below decides.
+
+**Part 4, the exports burst instead of sinking** (replaces CORRECTIONS-15 S2's sink in all four export scenes). Dan on the mock: "the ball animation is good". Times are seconds after the exit starts (the old sink's start, `off[0]`), at PACE 1. Labels retract before it and Figma's lid closes before it, as now; the plays keep holding their frame.
+
+**The red-to-asset step is being redesigned with Dan** ("im just concerned about the part where the assets turn red. indeisgn open flyer is broken and the red wipe is looking less clean"; he is choosing between new ways, which comes as L14). For this run: write that step as **one function used both ways** (red to asset at the arrival's "become", asset to red at this exit), keep today's wipe inside it, and fix its faults now:
+- Every object turns red as itself: its red block is exactly its own bounding box at that moment. The stack's block at the exit is the five copies left after the pickup (not the six-copy block); InDesign's open reading copy gets a red piece for each half, the same size as that half, instead of being sliced away with nothing red behind it (the mock's fault at 42.95 to 43.10 s). All the red pieces, four for InDesign, then run together into the ball.
+- No layer pokes out of its block: in the mock, the tablet's glass edge showed a white sliver beside its red block (43.25 s).
+
+| Seconds | What happens |
+|---|---|
+| 0.00 to 0.65 | The red-to-asset step, backwards (for now today's wipe: one hard wipe left to right in world x, 0.45 s, `EASE.wipe`, formats 0.10 s apart left to right, j = 0, 1, 2; behind the edge the red block, ahead of it the object). |
+| 0.65 to 1.15 | The red pieces run together along the floor into one ball (the split, backwards): each moves to the ball's rest point (the centre of the three formats' combined footprint, where the arriving ball landed) while its size and roundness go from its own to the ball's, `EASE.wipe`. |
+| 1.15 to 1.33 | The ball squashes to 0.78 of its radius, `EASE.wipe`, still resting on the floor. |
+| 1.33 to 1.45 | It swells to 1.15, `EASE.exit` (accelerating into the burst). |
+| 1.45 | It bursts: the ball is gone in that frame and the sparks start at its centre. |
+| 1.50 | The scene ends. The tail (`BALL.sink`, 1.0 s) becomes 1.5 s; Figma's fixed `clockLength` grows by the same 0.5 s, so the loop grows by 2.0 s (99.491 to 101.491 s). |
+
+- **Sparks:** 140, drawn by the star layer's front pass (in front of the scene) with part 2's window. Directions over the upper half of a sphere in world space (from flat along the floor to almost straight up, more of them low), so they read in the scene's perspective; speeds 5 to 16 units/s with braking (`v x tau x (1 - exp(-t / tau))`, tau 0.13 to 0.24 s); heads 1.5 to 3 px; 70 % red `#F0484F`, 30 % paper `#F7F6F3`; each lives 0.7 to 1.25 s and shrinks to nothing over its last 45 % (stars may shrink; nothing else fades). They fly on into the next app's opening. Their spread is in world units, so it scales with the stage at every size.
+- **The burst pushes the field:** the field stars within 2.6 units (in screen px at the stage's scale) of the ball's projected centre are kicked outward at 0.75 of the hold blast's base impulse, falling off as `(1 - r / reach)^2`. They are exploding (part 1).
+- **Reduced motion:** unchanged (the held still shows; no exit plays).
+
+L13's checks:
+- Part 1: on a controlled clock (Playwright's clock, as the L11 films), at 1440 x 900: stir across the stage, sweep the parallax, scroll, hold 3 s (gathering, ring, mark) and release; and the loader's gathering. Count taper submissions per frame: zero through the stir, parallax, scroll, the hold and the loader's gathering; more than zero in the release's first 0.05 s and in the loader's burst; and once an exploding star's taper has gone it never comes back on its way home. Negative control: v39's rule (speed alone) must fail the stir and the hold.
+- Part 2: one source for the 2/50 s window, and the field, the loader and the sparks all read it (check by changing it in memory and seeing all three change).
+- Part 3: draw the same loader burst states (`loaderDots` at fixed times) with the WebGL painter and with the Canvas fallback in the same Edge, at 1440 x 900 and 390 x 844, DPR 1 and 2. No gaps: along every taper's centre line, wherever the Canvas alpha is over 0.1, the WebGL alpha is at least half of it. Report the 99th percentile alpha difference. Negative control: `antialias: false` must fail the gap check. L11's loader frame table again, at both sizes.
+- Part 4: held frames for each export scene at 412 x 730, 390 x 844 and 1440 x 900 at exit times 0, 0.3, 0.6, 0.9, 1.2, 1.4, 1.46, 1.6 and 2.0 s, in a contact sheet in the report. Every format's pieces are untouched until its wipe edge reaches them; after 0.65 only the three red blocks; at 1.15 a single ball at the rest point; nothing of the exports after 1.45; nothing below the floor at any time (the sink's floor clip and `sinkTop` are gone). Update every check that read the sink or the loop length, with old and new values.
+
 ## L3 (withdrawn, not to be built) A more impressive loader: the mark, from first sketch to final
 
 Dan, 24 Nov, 4:47 AM ET, on v32 (8c57810): "can we have a more impressive loading screen?". L3 replaces L1's look. L1's rules stay: the loader shows from the first paint without waiting for any script, font or picture; real boot progress (fonts, atlas, first frame, the shares you chose) drives it; it never jumps or goes back; `?t=` skips it; it lasts no longer than loading needs beyond its own minimum. Only the picture and its steps change.

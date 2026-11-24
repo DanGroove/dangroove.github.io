@@ -1,0 +1,452 @@
+diff --git a/loader-stars.mjs b/loader-stars.mjs
+index 4f29f9c..5eb2e0c 100644
+--- a/loader-stars.mjs
++++ b/loader-stars.mjs
+@@ -309,6 +309,8 @@ function burstPoint(m, home, weight, time) {
+     y: p === 1 ? home.y : y + (home.y - y) * blend, blend };
+ }
+ const trail = (x, y, tail) => ({ tail, streak: Math.hypot(x - tail[0], y - tail[1]) });
++// MOCK (streaks): the review panel's length (x the 1/50 s window) and width (fast stars grow by up to this).
++const loaderMock = () => (typeof self !== 'undefined' && self.__streakMock) || { length: 1, width: 1 };
+ // L9: preserve L7's lines and L8's homes; depth breaks up the scaled-picture look.
+ export function loaderDots(scene, state) {
+   const { points, homes, weight } = scene, dots = [];
+@@ -325,8 +327,9 @@ export function loaderDots(scene, state) {
+           y: weight[1] + (m.y - weight[1]) * state.scale, size: m.size * state.charge, alpha: 1 });
+         continue;
+       }
+-      const [x, y] = flightPoint(m, flight), tail = flightPoint(m, clamp01((state.time - state.launches[i] - 1 / 50) / LOADER.flight));
+-      dots.push({ ...m, x, y, ...trail(x, y, tail), alpha: 1 });
++      // MOCK: no streaks while the stars gather; only the burst streaks.
++      const [x, y] = flightPoint(m, flight);
++      dots.push({ ...m, x, y, alpha: 1 });
+       continue;
+     }
+     // L10 gives shared-home stars individual journey times. Merge copies once landed.
+@@ -336,11 +339,13 @@ export function loaderDots(scene, state) {
+       landed.add(m.home);
+     }
+     const target = home, { x, y, blend } = burstPoint(m, target, weight, arrived ? m.duration : elapsed);
+-    const previous = burstPoint(m, target, weight, Math.max(0, elapsed - 1 / 50));
++    const mock = loaderMock(), previous = burstPoint(m, target, weight, Math.max(0, elapsed - mock.length / 50));
+     const depth = 1 + 1.6 * Math.max(0, target.d - 0.4) * Math.sin(Math.PI * blend);
+     const flare = 1 + 0.7 * (1 - clamp01(elapsed / 0.3)) ** 3;
+-    dots.push({ x, y, ...trail(x, y, [previous.x, previous.y]),
+-      size: blend === 1 ? target.size : (m.size + (target.size - m.size) * blend) * depth * flare,
++    const own = blend === 1 ? target.size : (m.size + (target.size - m.size) * blend) * depth * flare, tr = trail(x, y, [previous.x, previous.y]);
++    const sp = Math.min(1, tr.streak / (6 * own));
++    dots.push({ x, y, ...tr,
++      size: own * (1 + (mock.width - 1) * sp),
+       colour: blend === 1 ? target.colour : mixRGB(m.colour, target.colour, blend),
+       flag: blend === 1 ? 0 : m.flag, star: i, home: m.home, alpha: 1 });
+   }
+diff --git a/play.mjs b/play.mjs
+index 921a670..4ea409f 100644
+--- a/play.mjs
++++ b/play.mjs
+@@ -4,12 +4,12 @@ import { makeCamera, dot } from '../../../public/journey/hero/engine.mjs';
+ import { createRenderer } from './sq.mjs';
+ import { corners } from './kit.mjs';
+ import { makeAtlas, fontsReady } from './art.mjs';
+-import { SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, buildingLastState } from './stage.mjs';
++import { SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, buildingLastState, exitBursts, EXIT } from './stage.mjs';
+ import { createCallouts } from './labels.mjs';
+ import { createPageLayout } from './page-layout.mjs';
+ import { ENTRANCE, entranceAt, screenPlane, floorReach, createEntranceView, loaderAt, createLoaderView } from './entrance.mjs';
+ import { createNameReact } from './name-react.mjs';
+-import { createStars, starReach } from './stars.mjs';
++import { createStars, starReach, streakMock, STARS } from './stars.mjs';
+ import { createCraftWipe } from './craft-wipe.mjs';
+ 
+ const query = new URLSearchParams(location.search);
+@@ -25,6 +25,50 @@ const starts = SHOW.map((_, i) => SHOW.slice(0, i).reduce((sum, scene) => sum +
+ const stills = [2, 3, 4, 5];
+ 
+ const need = sceneEnvelope(SCENES, corners, dot, cam);
++
++// MOCK (ball exit): the export ball's sparks, drawn over the scene in the stars' streak look (a taper behind a round head).
++// They fly out over the floor and up from the ball's centre, brake, and shrink away; a weaker push sends the field stars near
++// the ball outward too. Review aid: not the build.
++const sparkCanvas = canvas.cloneNode(false);
++sparkCanvas.removeAttribute('data-art'); sparkCanvas.style.pointerEvents = 'none'; canvas.after(sparkCanvas);
++const sctx = sparkCanvas.getContext('2d');
++const sh = (i, k) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
++const SPARKS = Array.from({ length: 140 }, (_, i) => {
++  const a = 2 * Math.PI * (i + 0.6 * sh(i, 1)) / 140, up = 0.08 + 0.85 * sh(i, 7) ** 1.6, flat = Math.sqrt(1 - up * up);
++  return { d: [Math.cos(a) * flat, up, Math.sin(a) * flat], v: 5 + 11 * sh(i, 2) ** 1.4, tau: 0.13 + 0.11 * sh(i, 3),
++    size: 1.5 + 1.5 * sh(i, 4), red: sh(i, 5) < 0.7, life: 0.7 + 0.55 * sh(i, 6) };
++});
++const prevAge = {};
++function sparkAt(sp, c, age) { const k = sp.v * sp.tau * (1 - Math.exp(-Math.max(0, age) / sp.tau)); return [c[0] + sp.d[0] * k, c[1] + sp.d[1] * k, c[2] + sp.d[2] * k]; }
++function drawSparks(view, W, H, dpr) {
++  const w = Math.round(W * dpr), h = Math.round(H * dpr);
++  if (sparkCanvas.width !== w || sparkCanvas.height !== h) { sparkCanvas.width = w; sparkCanvas.height = h; }
++  sctx.setTransform(dpr, 0, 0, dpr, 0, 0); sctx.clearRect(0, 0, W, H);
++  if (loading || intro) return;
++  const mock = streakMock(), win = mock.length / 50;
++  const vc = view.cam || cam, toScreen = p => [view.cx + view.S * dot(vc.r, p), view.cy - view.S * dot(vc.u, p)];
++  for (const b of exitBursts()) {
++    const age = wrap(t - b.at), was = prevAge[b.key];
++    prevAge[b.key] = age;
++    if (age > EXIT.sparks) continue;
++    const o = toScreen(b.centre);
++    // The push fires once, in the frame the loop passes the burst.
++    if (was !== undefined && was > age && was - age > 1 && stars?.field) stars.field.burstAt(o[0], o[1], 2.6 * view.S, 0.75 * STARS.hold.blast[0]);
++    for (const sp of SPARKS) {
++      if (age > sp.life) continue;
++      const fade = 1 - Math.min(1, Math.max(0, (age - 0.55 * sp.life) / (0.45 * sp.life))), base = sp.size * fade * fade * (3 - 2 * fade);
++      if (!(base > 0.05)) continue;
++      const [x, y] = toScreen(sparkAt(sp, b.centre, age)), [tx, ty] = toScreen(sparkAt(sp, b.centre, age - win));
++      const len = Math.hypot(x - tx, y - ty), size = base * (1 + (mock.width - 1) * Math.min(1, len / (6 * base)));
++      sctx.fillStyle = sp.red ? '#F0484F' : '#F7F6F3';
++      if (len > size) {
++        const nx = -(y - ty) / len * size / 2, ny = (x - tx) / len * size / 2;
++        sctx.beginPath(); sctx.moveTo(tx, ty); sctx.lineTo(x + nx, y + ny); sctx.lineTo(x - nx, y - ny); sctx.closePath(); sctx.fill();
++      }
++      sctx.beginPath(); sctx.arc(x, y, size / 2, 0, 2 * Math.PI); sctx.fill();
++    }
++  }
++}
+ const wrap = t => ((t % LOOP) + LOOP) % LOOP;
+ let t = query.has('t') ? wrap(num('t', 0)) : reduced.matches ? starts[2] + SHOW[2].still : 0;
+ let stopped = query.has('t'), visible = true, ready = false, request = 0, previous = null, lastView;
+@@ -73,6 +117,7 @@ function draw() {
+   const centre = [b.left - h.left + b.width / 2, b.top - h.top + b.height / 2];
+   const field = stars?.frame(state ? starReach(state.stars, centre, W, H) : null, centre);
+   renderer.draw(pieces, view, { outline: 0, floor, reveal: state ? screenPlane(state.screen) : null, stars: loading ? null : field });
++  drawSparks(view, W, H, dpr);
+   callouts.draw(calloutsAt(t), pieces, view, t, reduced.matches);
+   if (state) entrance.apply(state);
+   hero.classList.remove('is-entering');
+@@ -109,7 +154,7 @@ function tick(now) {
+     return;
+   }
+   if (previous !== null) {
+-    const step = Math.min(0.1, (now - previous) / 1000);
++    const step = Math.min(0.1, (now - previous) / 1000) * (self.__mockSpeed || 1); // MOCK: slow motion
+     if (intro) {
+       const next = intro.time + step;
+       // Repeated frame steps can land a few ulps below the endpoint; do not add a frame to the entrance.
+@@ -154,7 +199,9 @@ function seek(time) {
+   if (ready) draw();
+ }
+ if (renderer.buildings) renderer.buildings.lastState = id => renderer.buildings.readPlan(buildingLastState(id));
+-window.__hero = { buildings: renderer.buildings, seek, measure, entrance: hold, get loading() { return loading; }, get entering() { return intro ? intro.time : null; }, get t() { return t; }, get callouts() { return callouts.layout; }, get view() { return lastView; }, get pieces() { return frameNow(); }, get layout() { return layout.metrics; }, crafts: p => craftWipe.hold(p), get craftWipe() { return craftWipe.state; }, get name() { return { live: nameReact.live, open: nameReact.open, lift: nameReact.letters.map(l => l.y) }; }, get stars() { return stars && { holding: stars.holding, radius: stars.radius, fraction: stars.fraction, awake: stars.field?.awake ?? false, count: stars.field?.stars.length ?? 0, offsets: stars.field && Array.from(stars.field.offsets), flags: stars.field && Array.from(stars.field.flags), weights: stars.field && Array.from(stars.field.weights), alpha: stars.field && Array.from(stars.field.alpha), mixes: stars.field && Array.from(stars.field.mixes), mark: stars.mark }; }, LOOP, SHOW };
++// MOCK: play on from a loop time (the review panel's exit jumps).
++function playFrom(time) { endEntrance(); first = false; stopped = false; t = wrap(time); schedule(); if (ready) draw(); }
++window.__hero = { buildings: renderer.buildings, seek, playFrom, exitBursts, measure, entrance: hold, get loading() { return loading; }, get entering() { return intro ? intro.time : null; }, get t() { return t; }, get callouts() { return callouts.layout; }, get view() { return lastView; }, get pieces() { return frameNow(); }, get layout() { return layout.metrics; }, crafts: p => craftWipe.hold(p), get craftWipe() { return craftWipe.state; }, get name() { return { live: nameReact.live, open: nameReact.open, lift: nameReact.letters.map(l => l.y) }; }, get stars() { return stars && { holding: stars.holding, radius: stars.radius, fraction: stars.fraction, awake: stars.field?.awake ?? false, count: stars.field?.stars.length ?? 0, offsets: stars.field && Array.from(stars.field.offsets), flags: stars.field && Array.from(stars.field.flags), weights: stars.field && Array.from(stars.field.weights), alpha: stars.field && Array.from(stars.field.alpha), mixes: stars.field && Array.from(stars.field.mixes), mark: stars.mark }; }, LOOP, SHOW };
+ 
+ function choose(craft) {
+   endEntrance(); first = false;
+diff --git a/sq.mjs b/sq.mjs
+index f433877..f760492 100644
+--- a/sq.mjs
++++ b/sq.mjs
+@@ -213,6 +213,7 @@ uniform vec2 uSize;                    // the hero, css px
+ uniform float uDpr, uScroll;
+ uniform float uPass, uMarkSize;        // 0 the pass behind the scene, 1 the pass in front; a mark star's least size, css px
+ uniform bool uStreak;
++uniform float uWidth;                  // MOCK: fast stars' head and taper grow by up to this
+ uniform vec2 uPar;                     // followed pointer fraction x 28 px
+ uniform vec3 uRings;                   // centre x, y, reach (huge when off, -1 before)
+ uniform vec3 uInk, uPaper, uRedInk;
+@@ -231,11 +232,14 @@ void main() {
+   // R2: a star given a point eases from its own look to the mark's (full strength, at least uMarkSize across) by aMix.
+   float m = flag > 1.5 ? clamp(aMix, 0.0, 1.0) : 0.0;
+   vR = 0.5 * mix(aLook.y, max(aLook.y, uMarkSize), m) * uDpr;
++  // MOCK: a star grows with its explosion speed (its taper over three of its widths is full width x uWidth).
++  float r0 = vR / uDpr, sp = clamp(length(aTrail.xy) / (6.0 * r0), 0.0, 1.0);
++  vR *= 1.0 + (uWidth - 1.0) * sp;
+   vec3 own = mix(uInk, aLook.z > 0.5 ? uRedInk : uPaper, mix(uMix.x, uMix.y, d));
+   vCol = mix(own, flag > 2.5 ? uRedInk : uPaper, m);
+   if (uStreak) {
+     float radius = vR / uDpr;
+-    on = on && length(aTrail.xy) > 2.0 * radius;
++    on = on && length(aTrail.xy) > 2.0 * r0;
+     p += gl_VertexID == 0 ? -aTrail.xy : aTrail.zw * (gl_VertexID == 1 ? radius : -radius);
+   }
+   gl_PointSize = ceil(2.0 * vR) + 2.0;
+@@ -572,6 +576,7 @@ export function createRenderer(canvas, { shadowSize = 2048 } = {}) {
+       gl.uniform3f(starProgram.u.uRings, st.centre?.[0] ?? 0, st.centre?.[1] ?? 0, st.reveal === null || st.reveal === undefined ? 1e9 : st.reveal);
+       gl.uniform3fv(starProgram.u.uInk, ink); gl.uniform3fv(starProgram.u.uPaper, hex('#F7F6F3')); gl.uniform3fv(starProgram.u.uRedInk, hex('#F0484F'));
+       gl.uniform2f(starProgram.u.uMix, 0.12, 0.55);
++      gl.uniform1f(starProgram.u.uWidth, (typeof self !== 'undefined' && self.__streakMock && self.__streakMock.width) || 1);
+       if (st.trails) {
+         gl.disable(gl.CULL_FACE);
+         gl.bindBuffer(gl.ARRAY_BUFFER, starTrail); gl.bufferSubData(gl.ARRAY_BUFFER, 0, st.trails);
+diff --git a/stage.mjs b/stage.mjs
+index 4888a34..53102ec 100644
+--- a/stage.mjs
++++ b/stage.mjs
+@@ -55,6 +55,12 @@ const screenMiddle = SCREEN.l + SCREEN.w / 2, exportMiddle = screenMiddle + EXPO
+ // beat's length in seconds at PACE 1, as one table to tune: the pop, the arc, the rest, the split, the hold, each piece's wipe
+ // (become), the wipes' stagger left to right, Figma's laptop lid opening after its wipe, and the sink.
+ export const BALL = { pop: 0.3, arc: 0.8, rest: 0, split: 0.6, hold: 0.15, become: 0.6, stagger: 0.1, lid: 0.4, sink: 1.0 };
++// MOCK (ball exit, replaces the sink): seconds after the exit starts, at PACE 1. Each format wipes back into its red block (left
++// to right, 0.1 s apart), the blocks run together into the ball, it squashes, swells and bursts; the sparks fly on into the next app.
++export const EXIT = { wipe: 0.45, stagger: 0.1, merge: 0.5, squash: 0.18, swell: 0.12, after: 0.05, squashTo: 0.78, swellTo: 1.15, sparks: 1.3 };
++export const exitBeats = () => { const wiped = EXIT.wipe + 2 * EXIT.stagger, merged = wiped + EXIT.merge, squashed = merged + EXIT.squash, burst = squashed + EXIT.swell; return { wiped, merged, squashed, burst, end: burst + EXIT.after }; };
++BALL.sink = exitBeats().end;
++export const EXIT_CENTRE = {};
+ // World units: full diameter, starting radius, and the peak's height above the Export button's top side.
+ export const BALL_PATH = { size: 0.6, start: 0.1, rise: 0.6 };
+ // R12: one physical model in every scene; landscape turns the tablet, never resizes it.
+@@ -350,26 +356,39 @@ function exportOut(P, s, t, key, formats) {
+     // Close fully before sinking. The other two devices keep the cycle's last frame.
+     for (const f of formats) if (f.lid) poseLid(f.lid, mix(12, -90, EASE.wipe(linear(t, off[0] - BALL.lid * PACE, off[0]))));
+     if (t >= off[0]) {
++      // MOCK: the ball exit in place of the sink.
+       separateFaces(all.filter(pc => !pc.hide));
+-      // S2: everything sinks together, straight down (x and z fixed), cut by the floor's plane in every pass, until nothing is left.
+-      const g = EASE.wipe(linear(t, off[0], off[1]));
+-      // A format can contain separate objects: the reading copy must not inherit the closed stack's depth.
+-      const objects = formats.flatMap(f => f.objects || [f.pieces]);
+-      const top = pc => Math.max(...corners(pc).map(c => c[1]));
+-      const bodies = objects.map(pieces => pieces.filter(pc => pc.deviceBody || pc.lid));
+-      const heights = objects.map((pieces, j) => Math.max(...(bodies[j].length ? bodies[j] : pieces).filter(pc => !pc.hide).map(top)));
+-      // A fixed 0.02 on unequal heights hides the thin devices earlier. Scale the clearance too, so all tops cross y=0 together.
+-      const clearance = 1 + 0.02 / Math.max(...heights);
+-      for (const [j, pieces] of objects.entries()) {
+-        const depth = heights[j] * clearance;
+-        for (const pc of pieces) {
+-          // Keep the floor clip, and clip carried glass layers at their own rest top above the body.
+-          // Their last fragment then crosses with the body, rather than leaving chrome or an island behind.
+-          if (bodies[j].length && !bodies[j].includes(pc)) pc.carryClip = [0, 1, 0, -Math.max(0, top(pc) - heights[j])];
+-          pc.sinkTop = heights[j] - depth * g;
+-          pc.p[1] -= depth * g; pc.clip = [0, 1, 0, 0]; pc.sink = true;
+-        }
++      const v = (t - off[0]) / PACE, B = exitBeats(), R = BALL_PATH.size / 2;
++      const blocks = formats.map(f => f.shape), to = [(Math.min(...blocks.map(r => r[0])) + Math.max(...blocks.map(r => r[0] + r[2]))) / 2, (Math.min(...blocks.map(r => r[1])) + Math.max(...blocks.map(r => r[1] + r[3]))) / 2];
++      EXIT_CENTRE[key] = [to[0], R * EXIT.swellTo, to[1]];
++      if (v < B.wiped) {
++        formats.forEach((f, j) => {
++          const [x, z, w, d, h, e] = f.shape, w0 = j * EXIT.stagger, red = redPiece([x + w / 2, h / 2, z + d / 2], [w / 2, d / 2, h / 2], e.slice(), 'shape', j);
++          if (v < w0) { for (const pc of f.pieces) if (!pc.hide) P.push(pc); return; }
++          if (v >= w0 + EXIT.wipe) { P.push(red); return; }
++          // One hard wipe left to right: behind its edge the red block, ahead of it the format.
++          const edge = mix(x, x + w, EASE.wipe(linear(v, w0, w0 + EXIT.wipe)));
++          red.clip = [-1, 0, 0, edge]; red.edge = edge; P.push(red);
++          for (const pc of f.pieces) if (!pc.hide) { pc.clip = [1, 0, 0, -edge]; pc.edge = edge; P.push(pc); }
++        });
++        return;
++      }
++      if (v < B.merged) {
++        // The blocks run together along the floor and become the ball (the split, backwards).
++        const k = 1 - EASE.wipe(linear(v, B.wiped, B.merged));
++        formats.forEach((f, j) => {
++          const [x, z, w, d, h, e] = f.shape, size = [mix(R, w / 2, k), mix(R, d / 2, k), mix(R, h / 2, k)];
++          P.push(redPiece([mix(to[0], x + w / 2, k), size[2], mix(to[1], z + d / 2, k)], size, [mix(1, e[0], k), mix(1, e[1], k)], 'merge', j));
++        });
++        return;
++      }
++      if (v < B.burst) {
++        // Squash, then swell into the burst; it sits on the floor throughout.
++        const g = v < B.squashed ? mix(1, EXIT.squashTo, EASE.wipe(linear(v, B.merged, B.squashed))) : mix(EXIT.squashTo, EXIT.swellTo, EASE.exit(linear(v, B.squashed, B.burst)));
++        const r = R * g;
++        P.push(redPiece([to[0], r, to[1]], [r, r, r], [1, 1], 'ball'));
+       }
++      return;
+     }
+     P.push(...all.filter(pc => !pc.hide)); return;
+   }
+@@ -830,7 +849,7 @@ export const SCRIPTS = {
+     { id: 'link', kind: 'drag', from: FIG.from, to: FIG.to, duration: 0.6 },
+     { id: 'panel', kind: 'run', from: [PANEL + 0.2, TOP - 0.46], to: [PANEL + 0.45, 0.32], count: 5, duration: 0.2 },
+     { id: 'export', kind: 'export', from: EXPORT, duration: 0.7 },
+-  ], { hold: EXPORT_HOLD.fig, tail: BALL.sink, beats: FIG_BEATS, clockLength: 18.545162584479227 }),
++  ], { hold: EXPORT_HOLD.fig, tail: BALL.sink, beats: FIG_BEATS, clockLength: 18.545162584479227 + (BALL.sink - 1) }), // MOCK: the longer exit
+   id: script([
+     // CORRECTIONS-12 I1: no frames are drawn. The document opens with its blank pages already there (see blankPages).
+     { id: 'map', kind: 'drag', from: centre(DOCK.map), to: centre(ID.frame), duration: 0.45, tool: 'arrow' },
+@@ -1865,6 +1884,19 @@ function separateFaces(P) {
+   }
+ }
+ export function frameAt(t, o = {}) { const { i, at } = sceneAt(t); return build(i, at, o); }
++// MOCK (ball exit): the bursts in loop time, with each one's centre (world) found from its scene's own frame just before it.
++let bursts = null;
++export function exitBursts() {
++  if (bursts) return bursts;
++  bursts = [];
++  SHOW.forEach((scene, i) => {
++    if (!['id', 'pr', 'ae', 'fig'].includes(scene.key)) return;
++    const at = starts[i] + playbackSpans(SCRIPTS[scene.key]).off[0] + exitBeats().burst * PACE;
++    frameAt(at - 0.02 * PACE);
++    bursts.push({ key: scene.key, at, centre: EXIT_CENTRE[scene.key] });
++  });
++  return bursts;
++}
+ export const SCENES = SHOW.map((scene, i) => (o = {}) => frameAt(starts[i] + scene.still, o));
+ export const CRAFT = SHOW.map(scene => scene.craft);
+ 
+diff --git a/stars.mjs b/stars.mjs
+index e46b203..d6e3bf6 100644
+--- a/stars.mjs
++++ b/stars.mjs
+@@ -19,6 +19,8 @@ export const parallaxOffset = (f, d) => [-f[0] * STARS.parallax * depthWeight(d)
+ export const pointerFraction = (x, y, W, H) => [Math.min(0.5, Math.max(-0.5, x / W - 0.5)), Math.min(0.5, Math.max(-0.5, y / H - 0.5))];
+ // Scroll: s px of the hero scrolled away moves a star of depth d up by s * 0.12 * d more than the page.
+ export const scrollOffset = (s, d) => -Math.max(0, s) * STARS.scroll * d;
++// MOCK (streaks): settings from the review panel; length scales the 1/50 s window, width the head and taper of fast stars.
++export const streakMock = () => (typeof self !== 'undefined' && self.__streakMock) || { length: 1, width: 1 };
+ // Positions between simulation frames are line segments. Interpolate the recorded path at exactly now - 1/50,
+ // rather than multiplying this frame's velocity (which loses curved stirring and the blast's braking).
+ export function createTrailHistory(count) {
+@@ -29,7 +31,7 @@ export function createTrailHistory(count) {
+     if (samples.length && time === samples.at(-1).time) return trails;
+     const copy = spare.pop() || new Float64Array(count * 2); copy.set(positions);
+     samples.push({ time, positions: copy });
+-    const at = time - 1 / 50;
++    const at = time - streakMock().length / 50;
+     while (samples.length > 2 && samples[1].time <= at) spare.push(samples.shift().positions);
+     const a = samples[0], b = samples[1] || a;
+     const f = b.time > a.time ? clamp01((at - a.time) / (b.time - a.time)) : 0;
+@@ -78,6 +80,9 @@ export function createField(W, H, mark = null) {
+   // Round 9: once a star's offset starts to shrink after a kick, it may never grow again nor swing past the side of home it
+   // fell from (an impulse with a part toward home could otherwise carry it past home and out again: an overshoot).
+   const last = new Float32Array(n).fill(-1), peak = new Float32Array(n * 2), falling = new Uint8Array(n);
++  // MOCK: 1 from an explosion's kick until its taper first falls back under its own width (then it is over, so the slow
++  // return home never streaks), or it is home or captured.
++  const blasting = new Uint8Array(n);
+   // Round 10 (R1): each star drawn in front has a return weight, the front copy's opacity: 1 while captured and from the
+   // release until its offset starts to shrink, then its offset over its largest offset since the release; it never grows.
+   // far holds that largest offset (-1 while not returning).
+@@ -267,7 +272,7 @@ export function createField(W, H, mark = null) {
+       c.theta += STARS.hold.turn * dt;
+       const s = stars[i], p = parallaxOffset(par, s.d);
+       const tx = hold.anchor[0] + c.rho * Math.cos(c.theta) - s.x - p[0], ty = hold.anchor[1] + c.rho * Math.sin(c.theta) - s.y - p[1];
+-      place(i, tx, ty); V[2 * i] = V[2 * i + 1] = 0; age[i] = 0; big[i] = 1; moving[i] = 1;
++      place(i, tx, ty); V[2 * i] = V[2 * i + 1] = 0; age[i] = 0; big[i] = 1; moving[i] = 1; blasting[i] = 0;
+     }
+     awake = true;
+     return R;
+@@ -278,8 +283,8 @@ export function createField(W, H, mark = null) {
+     for (let i = 0; i < n; i++) {
+       const [px, py] = position(i), dx = px - pointer[0], dy = py - pointer[1], r = Math.hypot(dx, dy);
+       const c = cluster.get(i), dir = r > 1e-6 ? [dx / r, dy / r] : c ? [Math.cos(c.theta), Math.sin(c.theta)] : [1, 0];
+-      if (c) kick(i, dir[0] * blastImpulse(hold.held, stars[i].m), dir[1] * blastImpulse(hold.held, stars[i].m), true);
+-      else if (r < STARS.hold.reach * R) { const k = STARS.hold.weak * (1 - r / (STARS.hold.reach * R)) ** 2; kick(i, dir[0] * k * blastImpulse(hold.held, stars[i].m), dir[1] * k * blastImpulse(hold.held, stars[i].m), true); }
++      if (c) { kick(i, dir[0] * blastImpulse(hold.held, stars[i].m), dir[1] * blastImpulse(hold.held, stars[i].m), true); blasting[i] = 1; }
++      else if (r < STARS.hold.reach * R) { const k = STARS.hold.weak * (1 - r / (STARS.hold.reach * R)) ** 2; kick(i, dir[0] * k * blastImpulse(hold.held, stars[i].m), dir[1] * k * blastImpulse(hold.held, stars[i].m), true); blasting[i] = 1; }
+     }
+     const captured = cluster.size;
+     // R1: every star in front starts (or, if still out from an earlier release, keeps) its return weight.
+@@ -288,6 +293,16 @@ export function createField(W, H, mark = null) {
+     return captured;
+   }
+ 
++  // MOCK (ball exit): the export ball's burst at (x, y) pushes the field stars near it outward, as an explosion.
++  function burstAt(x, y, reach, strength) {
++    for (let i = 0; i < n; i++) {
++      if (cluster?.has(i)) continue;
++      const [px, py] = position(i), dx = px - x, dy = py - y, r = Math.hypot(dx, dy);
++      if (!(r < reach) || r < 1e-6) continue;
++      const k = strength * (1 - r / reach) ** 2 / stars[i].m;
++      kick(i, dx / r * k, dy / r * k, true); blasting[i] = 1;
++    }
++  }
+   function step(dt) {
+     if (!awake || !(dt > 0)) return awake;
+     let any = !!cluster;
+@@ -325,7 +340,7 @@ export function createField(W, H, mark = null) {
+       if (Math.hypot(x, y) < STARS.rest.offset && Math.hypot(V[2 * i] * e, V[2 * i + 1] * e) < STARS.rest.speed) {
+         // Home: the front copy, faded to its weight (near 0 by now, and kept in weights for the checks), leaves the front pass;
+         // the copy behind is the star's own look, as it was all the way home.
+-        S[2 * i] = S[2 * i + 1] = V[2 * i] = V[2 * i + 1] = age[i] = 0; x = y = 0; moving[i] = 0; big[i] = 0; last[i] = -1; falling[i] = 0;
++        S[2 * i] = S[2 * i + 1] = V[2 * i] = V[2 * i + 1] = age[i] = 0; x = y = 0; moving[i] = 0; big[i] = 0; last[i] = -1; falling[i] = 0; blasting[i] = 0;
+         if (flags[i]) { flags[i] = 0; front--; far[i] = -1; }
+       } else any = true;
+       offsets[2 * i] = x; offsets[2 * i + 1] = y;
+@@ -336,7 +351,7 @@ export function createField(W, H, mark = null) {
+     awake = any;
+     return awake;
+   }
+-  function reset() { weights.fill(0); fade.fill(0); mixes.fill(0); alpha.fill(0); far.fill(-1); S.fill(0); V.fill(0); age.fill(0); offsets.fill(0); big.fill(0); moving.fill(0); flags.fill(0); last.fill(-1); falling.fill(0); front = 0; cluster = null; formed = false; ring = null; charge = 0; awake = false; version++; }
++  function reset() { blasting.fill(0); weights.fill(0); fade.fill(0); mixes.fill(0); alpha.fill(0); far.fill(-1); S.fill(0); V.fill(0); age.fill(0); offsets.fill(0); big.fill(0); moving.fill(0); flags.fill(0); last.fill(-1); falling.fill(0); front = 0; cluster = null; formed = false; ring = null; charge = 0; awake = false; version++; }
+   // What the checks and __hero.stars read about the mark.
+   function markState() {
+     let assigned = 0, arrived = 0;
+@@ -347,7 +362,7 @@ export function createField(W, H, mark = null) {
+     return { points: mark ? mark.points.length : 0, height: mark ? mark.height : 0, formed, assigned, arrived, ring: circle, charge, front, centre: centre && centre.slice(), captured: cluster ? cluster.size : 0 };
+   }
+   return {
+-    stars, offsets, flags, weights, fade, mixes, alpha, mark, W, H, base, push, press, gather, blast, step, reset, position, shown, markState,
++    stars, offsets, flags, weights, fade, mixes, alpha, mark, W, H, base, push, press, gather, blast, step, reset, position, shown, markState, blasting, burstAt, ageOf: i => age[i],
+     velocity: i => [V[2 * i] * Math.exp(-age[i]), V[2 * i + 1] * Math.exp(-age[i])],
+     get front() { return front; },
+     setParallax(f) { par = f; },
+@@ -380,7 +395,7 @@ export function readMark(root) {
+ export function createStars(hero, { reduced, win = hero.ownerDocument.defaultView, raf = f => win.requestAnimationFrame(f), draw, running, available, open = () => true, clock = () => win.performance.now() / 1000 } = {}) {
+   let field = null, box = null, top = 0, scrollY = 0, pointer = null, previous = null, target = [0, 0], f = [0, 0], fv = [0, 0];
+   let hold = null, holdStart = null, swallow = false, last = null, pending = false, attrs = null, attrsVersion = 0, markKey = null, sample = null;
+-  let history = null, positions = null, trailVersion = 0;
++  let history = null, positions = null, own = null, trailVersion = 0;
+   const usable = e => !reduced.matches && (e.pointerType === 'mouse' || e.pointerType === 'pen');
+   function redraw() {
+     if (!available() || running() || pending) return;
+@@ -398,7 +413,7 @@ export function createStars(hero, { reduced, win = hero.ownerDocument.defaultVie
+       hold = null; holdStart = null;
+       field = createField(rect.width, rect.height, sample ? placeMark(sample, rect.width, rect.height) : null); attrsVersion++;
+       attrs = new Float32Array(field.stars.length * 5);
+-      history = createTrailHistory(field.stars.length); positions = new Float64Array(field.stars.length * 2);
++      history = createTrailHistory(field.stars.length); positions = new Float64Array(field.stars.length * 2); own = new Float64Array(field.stars.length * 2);
+       field.stars.forEach((s, i) => attrs.set([s.x, s.y, s.d, s.size, s.red ? 1 : 0], i * 5));
+     }
+   }
+@@ -457,7 +472,16 @@ export function createStars(hero, { reduced, win = hero.ownerDocument.defaultVie
+       positions[2 * i + 1] = attrs[5 * i + 1] + p[1] + field.offsets[2 * i + 1] + scrollOffset(scroll, s.d);
+     });
+     if (still || !live) history.reset();
+-    const trails = history.record(now, positions); trailVersion++;
++    // MOCK: the taper comes from the star's own motion (home + offset: no parallax, no scroll), and only while it is exploding.
++    for (let i = 0; i < field.stars.length; i++) { own[2 * i] = attrs[5 * i] + field.offsets[2 * i]; own[2 * i + 1] = attrs[5 * i + 1] + field.offsets[2 * i + 1]; }
++    const trails = history.record(now, own); trailVersion++;
++    for (let i = 0; i < field.stars.length; i++) {
++      if (field.blasting[i] && field.ageOf(i) > 0.05) {
++        const across = field.flags[i] ? Math.max(attrs[5 * i + 3], STARS.mark.size) : attrs[5 * i + 3];
++        if (Math.hypot(trails[4 * i], trails[4 * i + 1]) <= across) field.blasting[i] = 0;
++      }
++      if (!field.blasting[i]) trails[4 * i] = trails[4 * i + 1] = 0;
++    }
+     return {
+       count: field.stars.length, attrs, attrsVersion, offsets: field.offsets, flags: field.flags, weights: field.weights, alpha: field.alpha, mixes: field.mixes, front: field.front, markSize: STARS.mark.size, version: field.version,
+       trails, trailVersion,
+diff --git a/tools/page.mjs b/tools/page.mjs
+index 27a9aa7..fd7946c 100644
+--- a/tools/page.mjs
++++ b/tools/page.mjs
+@@ -61,7 +61,7 @@ function canvasPainter(canvas, paths, box, viewport, ratio) {
+   const sample = sampleMark(paths);
+   // Per-star Canvas gradients created native garbage every frame. Keep the same circular fringe and shared
+   // triangles in two batched GPU draws; Canvas remains the retained-frame fallback where WebGL2 is absent.
+-  const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: false });
++  const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: true }); // MOCK: smooth taper edges
+   const gpu = gl && typeof gl.createShader === 'function' ? makeGPU() : null;
+   const ctx = gpu ? null : canvas.getContext('2d');
+   let scene, dpr;
+@@ -180,7 +180,7 @@ function loaderWorker() {
+   };
+   onmessage = ({ data }) => {
+     if (data.init) {
+-      origin = data.origin; reduced = data.reduced;
++      origin = data.origin; reduced = data.reduced; self.__streakMock = data.streak; // MOCK
+       painter = canvasPainter(data.canvas, data.paths, data.box, data.viewport, data.ratio);
+       // A real worker rAF is required; otherwise the main thread uses the retained-frame fallback.
+       request = requestAnimationFrame(animate);
+@@ -248,14 +248,15 @@ function earlyLoader(pure) {
+       worker.onmessage = ({ data }) => { if (data.start !== undefined) start = data.start; };
+       const offscreen = canvas.transferControlToOffscreen();
+       worker.postMessage({ init: true, canvas: offscreen, paths, box: { width: box.width, height: box.height }, viewport: viewport(),
+-        ratio: devicePixelRatio, reduced, origin: performance.timeOrigin }, [offscreen]);
++        ratio: devicePixelRatio, reduced, origin: performance.timeOrigin, streak: self.__streakMock }, [offscreen]);
+     } catch { fallback(); }
+   } else fallback();
+ }
+ 
+ // One import-free copy of the pure module is the inline runtime and the Blob worker's source.
+ const LOADER_PURE = fs.readFileSync(path.join(TAKE, 'loader-stars.mjs'), 'utf8').replace(/^export /gm, '');
+-export const LOADER_SCRIPT = `(function(){\nfunction loaderCore(){\n${LOADER_PURE}\nreturn { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry };\n}\nconst { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry } = loaderCore();\n${canvasPainter.toString()}\n${loaderWorker.toString()}\n(${earlyLoader.toString()})('const { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry } = (' + loaderCore.toString() + ')();');\n})();`.replace(/<\/script/gi, '<\\/script');
++const MOCK_HASH = `(function(){ let v = null; try { v = JSON.parse(sessionStorage.getItem('mock-streak') || 'null'); } catch (e) {} self.__streakMock = v && v.length ? v : { length: 2, width: 1.5 }; try { self.__mockSpeed = +sessionStorage.getItem('mock-speed') || 1; } catch (e) { self.__mockSpeed = 1; } })();\n`;
++export const LOADER_SCRIPT = MOCK_HASH + `(function(){\nfunction loaderCore(){\n${LOADER_PURE}\nreturn { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry };\n}\nconst { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry } = loaderCore();\n${canvasPainter.toString()}\n${loaderWorker.toString()}\n(${earlyLoader.toString()})('const { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry } = (' + loaderCore.toString() + ')();');\n})();`.replace(/<\/script/gi, '<\\/script');
+ 
+ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+   console.log(writeStillsPage());
