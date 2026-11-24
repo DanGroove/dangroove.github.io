@@ -46,6 +46,7 @@ Check each against `COMB-A-BUILD.md` and finish what it leaves:
 - **C11. A30:** at 844 x 390 the cards that no longer scroll are 269 to 333 px tall from y 40 and run under the step bar's pills (y 276 to 320) and over the timeline; every card fits above the step bar with no inner scrolling, at its floors [L2b-8].
 - **C12. A4:** compact cards (phones, 1024 x 600, 1280 x 720, 844 x 390) set the crafts labels and the kicker at 9 px, not 9.5; they come to A4's sizes too, with the 360 x 640 card re-fitted without scrolling [L2b-10].
 - **C13. A9 and A12:** after Back the step bar already fades back in over 0.3 s with the focus on "Dig here"; only its exit at "Dig here" was a cut. In explore the six cards' X and "See the case study" are inert and out of the Tab order, like the shields under A12.
+- **C16. A31, which part 4 could not reach** (its drawing code was outside part 4's files): explore's remnant rings fade as the camera zooms out instead of crossing the south island and the legend, and the embers stay over the X's island instead of drifting over The Margins [L-24, round 1 L-16]. Change how `footer.mjs` and `stars.mjs` draw them in explore; `depth.mjs` stays untouched, so take its ring radius as it is.
 
 ## 6. Small things
 
@@ -60,7 +61,7 @@ Check each against `COMB-A-BUILD.md` and finish what it leaves:
 
 ## Rules
 
-- You may write only these files, all under `design/journey-map/`: `cards.mjs`, `data.mjs`, `explore.mjs`, `find*.mjs` (the beacon's placement and readings only), `main.mjs`, `map.css` (keep the dense-screen text rule), `stars.mjs` (the traveller's draw, the twinkle clock and the rush plan's rebuild only), `steps.mjs`, `timeline.mjs` (the mini-map's dots only), `trip.mjs` (the explore raster and the labels' settle only), the test files in `tools/`, `dist/journey-map.html`, `dist/journey-joined.html` and `joined.html` (the last three only through `node tools/pack.mjs` and `node tools/pack-joined.mjs`), and your report `COMB-C-BUILD.md`. The browser's profile and captures go only in the run folder your prompt names.
+- You may write only these files, all under `design/journey-map/`: `cards.mjs`, `data.mjs`, `explore.mjs`, `find*.mjs` (the beacon's placement and readings only), `footer.mjs` (the remnant rings in explore only, C16), `main.mjs`, `map.css` (keep the dense-screen text rule), `stars.mjs` (the traveller's draw, the twinkle clock, the rush plan's rebuild and the embers in explore only), `steps.mjs`, `timeline.mjs` (the mini-map's dots only), `trip.mjs` (the explore raster and the labels' settle only), the test files in `tools/`, `dist/journey-map.html`, `dist/journey-joined.html` and `joined.html` (the last three only through `node tools/pack.mjs` and `node tools/pack-joined.mjs`), and your report `COMB-C-BUILD.md`. The browser's profile and captures go only in the run folder your prompt names.
 - Never touch `depth.mjs` (not even a comment), `hero-copy/`, the briefs and other build reports, the audits, or anything else outside `design/journey-map/`.
 - Never run git, never install anything, never use the network (the local headless Edge on 127.0.0.1 is not the network), never start reviewer agents or other agents.
 - If a rule stops you from doing something this brief asks, leave it out and say so in your report. Do not work around a rule.
