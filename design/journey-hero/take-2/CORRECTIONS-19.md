@@ -120,6 +120,43 @@ Dan, 24 Nov, 12:26 to 12:28 PM ET, on v38 (3a5b34d): "there is a lag spike every
 
 L11's checks: the streak geometry in Node for the field (lengths equal the 1/50 s displacement, dots at rest, tapered), the loader's checks unchanged, and the measured frame table before and after in the report. Negative control: a field that draws moving stars as dots fails the streak check.
 
+## L12 A nicer entrance: letters and a camera settle
+
+Dan, 24 Nov, 12:29 PM ET, on v38: "also can we have a nicer entrance for everything else?". He saw three directions, asked "can you mock up A first before i choose?", played the mock-up and answered "good" (12:49 PM ET). `MOCK-A.diff` in this folder is that mock-up as a diff against 3a5b34d: **a reference for the look and the numbers only**. Build it properly on top of L11; do not apply the diff as it is (its `MOCK_SPEED` and its Replay and Slow motion buttons were review aids and stay out).
+
+The idea: the stars land, then every part of the page arrives with eased, weighted motion instead of flat wipes, one idea at a time. Still hard-edged: every part rises behind a fixed mask (a clip that does not move), with no opacity fade. Times are seconds from the burst landing (entrance zero, as L5).
+
+| Part | L12 | Now (L2) |
+|---|---|---|
+| mark: the red D, then the G, each rises behind the mark's box | 0.00 to 0.70, 0.08 to 0.78 | wipe 0 to 0.45 |
+| nav: Journey, Contact rise behind the bar | 0.25 to 0.85, 0.33 to 0.93 | cuts 0.35, 0.45 |
+| name: letter by letter, weight 300 to 800 as each rises | Danial from 0.30, Endrawes from 0.50, 0.055 apart, 0.85 each | two line wipes 0.40 to 1.20 |
+| lede: word by word in reading order | from 1.15, 0.028 apart, plus 0.12 before the second part, 0.70 each | three line wipes 1.05 to 2.00 |
+| floor (hard circle, centre outward, `EASE.wipe`) | 1.90 to 2.90 | 1.80 to 2.80 |
+| screen: rises out of the floor | 2.20 to 3.50 | clip plane 2.40 to 3.20 |
+| camera: turns, tilts and dollies in to the home view | 1.90 to 3.90 | none |
+| crafts: hairlines draw as now; each row's text rises behind its line | lines start 3.10, end 3.90, step 0.10; each row rises 0.60 from 18% into its line | lines 3.00 to 3.60; text cuts |
+| foot: Scroll for the journey, Pause rise behind the footer | 3.95 to 4.50, 4.03 to 4.58 | cuts 3.60, 3.70 |
+| end | 4.60 | 3.80 |
+
+1. **Curves.** Rises use quint-out, `1 - (1 - p)^5`. The screen's rise and the camera use quart-out, `1 - (1 - p)^4`. The name's weight uses cubic-out, `1 - (1 - p)^3`, on each letter's own clock. The floor and the hairlines keep `EASE.wipe`. Nothing overshoots.
+2. **Masks and distances.** Each part starts wholly below its mask and ends exactly in place. The mark's paths start 830 units down (its viewBox is 797.3 tall), clipped to the mark's box. The nav links and the foot start their own top 6 px below the bottom of their bar's box, clipped to that box (widened sideways so nothing is cut at the ends). Each name line is clipped 3 px below its ink bottom (the ink extents `page-layout` already measures), and its letters start ink height + 16 px down. Each lede line has its own mask from 2 px above its line box to 2 px below it, and its words start line height + 6 px down. Each craft row's text area is clipped 2 px clear of both hairlines (1 px left a faint line where the hairline's pixel row was half inside the clip) and its button starts one row height down.
+3. **The name keeps its exact layout.** The letters that move are painted by an overlay at their measured pen positions, the way `name-react.mjs` paints the live name (generated content, so no text node or layout box reaches the ink measurement, and screen readers get the flow text). The flow text is transparent while a line's letters move; when its last letter lands, the overlay goes and the flow text shows, in the same frame, with no visible change. The name reacts only after the entrance, as now.
+4. **The lede the same way:** an overlay of its words at their measured positions, grouped into its lines, each word with a line height equal to its own box height so its baseline matches; the flow text shows again when the last word lands.
+5. **The screen rises out of the floor.** Every piece of the loop's first frame starts 4.5 units below its place and rises with the quart-out curve; a clip plane at the floor (keep y at or above 0) hides whatever is still under it, for the pieces and their shadows alike. A piece's own clip planes and shadow position move with it. At 3.50 the pieces equal the loop's frame exactly, and the loop's clock starts there (`loopAt`), as it starts at the end of the screen's wipe now.
+6. **The camera settles.** From 1.90 the view turns from 12 degrees of extra yaw and 5 of extra pitch and dollies from 0.88 of the home scale, all reaching the home view at 3.90 together on one quart-out clock. It turns about the screen's centre (`SCREEN`), which stays where it lands in the home view, so the screen turns in place while the floor swings under it. The star field is in screen space and does not move with it. The stage box (`layout.cover`) stays sized from the home view, so nothing in the page reflows during the move. (The mock-up ran the camera to 4.10; it ends at 3.90 here, so the foot never makes a third group.)
+7. **At most two groups in motion.** The groups, in order: mark and nav; name; lede; the 3D world (floor, screen, camera); crafts; foot. With the numbers above they overlap only two at a time (0.30 to 0.93, 1.15 to 1.74, 1.90 to 2.59, 3.10 to 3.90, 3.95 to 4.07). The loop's own animation after 3.50 is not an entrance group, as in L2.
+8. **Per frame, only transforms, clip paths and the moving letters' weights are written.** Every overlay is built and measured once (at `measure`, as now: start, resize, fonts ready); no layout is read while it plays. L11's frame target holds through the whole entrance: no frame over 20 ms on this PC at both sizes, from the landing to the end of the entrance.
+9. **Unchanged:** the loader, L5's start at the landing, the star field and its pointer, reduced motion (nothing moves, the finished page shows), `?t=`, and the review hold (`__hero.entrance(t)` shows the exact frame for any time, which is how the frames are checked).
+
+L12's checks:
+- Update `tools/entrance-checks.mjs` and every check that reads the L2 timetable to L12's numbers, listing each changed expectation with its old and new value.
+- The two-groups check on L12's groups (point 7), sampled every 1/60 s. Negative control: the camera running to 4.10 must fail it.
+- In a browser, at 1440 x 900 and 390 x 844: every overlay letter's box at its landing equals that character's box in the flow text (a range over the one character) to 0.5 px; the same for every lede word. Negative control: letters laid out in the flow as inline blocks (kerning lost) must fail it.
+- Before 2.20, no pixel of the screen or its shadow shows; at 3.50 the pieces equal `frameAt(0)` exactly; at 3.90 the view equals the home view exactly (scale, centre and camera vectors). Negative control: the lift without the floor clip plane must fail the first.
+- After the entrance, nothing of it is left in the text column (mark, nav, name, lede, crafts, foot): no overlay, inline transform, clip or weight, and every box equals its box in the same page opened with `?t=`.
+- L11's frame table for the whole entrance, after L12, at both sizes, in the report.
+
 ## L3 (withdrawn, not to be built) A more impressive loader: the mark, from first sketch to final
 
 Dan, 24 Nov, 4:47 AM ET, on v32 (8c57810): "can we have a more impressive loading screen?". L3 replaces L1's look. L1's rules stay: the loader shows from the first paint without waiting for any script, font or picture; real boot progress (fonts, atlas, first frame, the shares you chose) drives it; it never jumps or goes back; `?t=` skips it; it lasts no longer than loading needs beyond its own minimum. Only the picture and its steps change.
