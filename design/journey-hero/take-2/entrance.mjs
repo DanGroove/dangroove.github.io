@@ -3,6 +3,7 @@
 import { EASE, makeCamera, dot } from '../../../public/journey/hero/engine.mjs';
 import { SCREEN } from './stage.mjs';
 import { LOADER, loaderAt, loaderLanding, loaderScene, sampleMark } from './loader-stars.mjs';
+import { readStarLabels } from './star-labels.mjs';
 export { LOADER, loaderAt };
 
 export const ENTRANCE = {
@@ -34,7 +35,7 @@ export function createLoaderView(hero, { sample: suppliedSample } = {}) {
     if (!bridge) return;
     // Resolve the entrance to the painter's actual last ray, once layout is known.
     sample ??= suppliedSample?.() || sampleMark([...hero.querySelectorAll('[data-mark] path')].map(p => ({ d: p.getAttribute('d'), fill: p.getAttribute('fill') })));
-    scene = loaderScene(sample, box.width, box.height, { width: win.innerWidth, height: win.innerHeight, left: box.left, top: box.top });
+    scene = loaderScene(sample, box.width, box.height, { width: win.innerWidth, height: win.innerHeight, left: box.left, top: box.top }, readStarLabels(hero, box));
   };
   // The early painter also remeasures on scroll. Keep its scene's landing clock in sync.
   const onScroll = () => measureScene(hero.getBoundingClientRect());

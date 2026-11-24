@@ -223,6 +223,8 @@ name.addEventListener('animationstart', watchName);
 schedule();
 await fontsReady();
 await document.fonts.ready;
+// The review/reduced page says Play. Measure that actual label before creating any homes.
+pause.textContent = stopped || reduced.matches ? 'Play' : 'Pause';
 bootDone('fonts');
 const yieldFrame = () => renderer.warm ? new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0))) : Promise.resolve();
 await stars?.prepare?.(yieldFrame);

@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readStarLabels } from '../star-labels.mjs';
 
 export const TAKE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const ROOT = path.resolve(TAKE, '../../..');
@@ -57,7 +58,7 @@ export const writePlayerPage = () => writePage('play');
 
 
 // Only the inline bootstrap is browser code. The source below is shared verbatim with the worker.
-function canvasPainter(canvas, paths, box, viewport, ratio) {
+function canvasPainter(canvas, paths, box, viewport, ratio, labels = []) {
   const sample = sampleMark(paths);
   // Per-star Canvas gradients created native garbage every frame. Keep the same circular fringe and shared
   // triangles in two batched GPU draws; Canvas remains the retained-frame fallback where WebGL2 is absent.
@@ -156,10 +157,11 @@ void main() {
       gl.uniform1i(stroke, 0); gl.drawArrays(gl.POINTS, triangles, at / 11 - triangles);
     };
   }
-  function resize(next, screen, scale) {
+  function resize(next, screen, scale, text = labels) {
+    labels = text;
     dpr = Math.min(2, scale || 1, Math.sqrt(5.2e6 / (next.width * next.height)));
     canvas.width = Math.round(next.width * dpr); canvas.height = Math.round(next.height * dpr);
-    scene = loaderScene(sample, next.width, next.height, screen);
+    scene = loaderScene(sample, next.width, next.height, screen, labels);
   }
   resize(box, viewport, ratio);
   if (gpu) {
@@ -205,11 +207,11 @@ function loaderWorker() {
   onmessage = ({ data }) => {
     if (data.init) {
       origin = data.origin; reduced = data.reduced;
-      painter = canvasPainter(data.canvas, data.paths, data.box, data.viewport, data.ratio);
+      painter = canvasPainter(data.canvas, data.paths, data.box, data.viewport, data.ratio, data.labels);
       // A real worker rAF is required; otherwise the main thread uses the retained-frame fallback.
       request = requestAnimationFrame(animate);
     } else if (data.boot) boot[data.boot] = data.at;
-    else if (data.box) painter.resize(data.box, data.viewport, data.ratio);
+    else if (data.box) painter.resize(data.box, data.viewport, data.ratio, data.labels);
     else if (data.motion !== undefined) reduced = data.motion;
     else if (data.stop) { cancelAnimationFrame(request); close(); }
   };
@@ -223,6 +225,7 @@ function earlyLoader(pure) {
   const media = matchMedia('(prefers-reduced-motion: reduce)'), boot = {};
   let reduced = media.matches;
   let box = hero.getBoundingClientRect();
+  let labels = readStarLabels(hero, box);
   const viewport = () => ({ width: innerWidth, height: innerHeight, left: box.left, top: box.top });
   const state = now => loaderAt(start === null ? 0 : Math.max(0, now - start),
     Object.fromEntries(Object.entries(boot).map(([k, at]) => [k, start === null ? 0 : Math.max(0, at - start)])), { reduced });
@@ -231,7 +234,7 @@ function earlyLoader(pure) {
     worker?.terminate(); worker = null;
     // A transferred canvas cannot regain a main-thread context. Replace only that canvas on worker failure.
     const replacement = canvas.cloneNode(); canvas.replaceWith(replacement); canvas = replacement;
-    painter = canvasPainter(canvas, paths, box, viewport(), devicePixelRatio);
+    painter = canvasPainter(canvas, paths, box, viewport(), devicePixelRatio, labels);
     const animate = now => {
       if (cleared) return;
       if (start === null) start = now / 1000;
@@ -244,13 +247,18 @@ function earlyLoader(pure) {
   const onScroll = () => bridge.measure(hero.getBoundingClientRect());
   const bridge = {
     state,
-    boot(key) { const at = performance.now() / 1000; boot[key] = at; worker?.postMessage({ boot: key, at }); },
+    boot(key) {
+      // Fonts and final layout are real boot gates. FIFO worker messages update homes before readiness permits a burst.
+      if (key === 'fonts' || key === 'frame') bridge.measure(hero.getBoundingClientRect());
+      const at = performance.now() / 1000; boot[key] = at; worker?.postMessage({ boot: key, at });
+    },
     apply(s) { hero.classList.toggle('is-bursting', s.entranceTime !== null); },
     measure(rect) {
       if (cleared) return;
       box = rect;
-      const next = { box: { width: box.width, height: box.height }, viewport: viewport(), ratio: devicePixelRatio };
-      if (worker) worker.postMessage(next); else painter?.resize(next.box, next.viewport, next.ratio);
+      labels = readStarLabels(hero, box);
+      const next = { box: { width: box.width, height: box.height }, viewport: viewport(), ratio: devicePixelRatio, labels };
+      if (worker) worker.postMessage(next); else painter?.resize(next.box, next.viewport, next.ratio, labels);
     },
     motion(value) { reduced = value; worker?.postMessage({ motion: value }); },
     clear() {
@@ -272,14 +280,14 @@ function earlyLoader(pure) {
       worker.onmessage = ({ data }) => { if (data.start !== undefined) start = data.start; };
       const offscreen = canvas.transferControlToOffscreen();
       worker.postMessage({ init: true, canvas: offscreen, paths, box: { width: box.width, height: box.height }, viewport: viewport(),
-        ratio: devicePixelRatio, reduced, origin: performance.timeOrigin }, [offscreen]);
+        ratio: devicePixelRatio, labels, reduced, origin: performance.timeOrigin }, [offscreen]);
     } catch { fallback(); }
   } else fallback();
 }
 
 // One import-free copy of the pure module is the inline runtime and the Blob worker's source.
 const LOADER_PURE = fs.readFileSync(path.join(TAKE, 'loader-stars.mjs'), 'utf8').replace(/^export /gm, '');
-export const LOADER_SCRIPT = `(function(){\nfunction loaderCore(){\n${LOADER_PURE}\nreturn { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry };\n}\nconst { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry } = loaderCore();\n${canvasPainter.toString()}\n${loaderWorker.toString()}\n(${earlyLoader.toString()})('const { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry } = (' + loaderCore.toString() + ')();');\n})();`.replace(/<\/script/gi, '<\\/script');
+export const LOADER_SCRIPT = `(function(){\nfunction loaderCore(){\n${LOADER_PURE}\nreturn { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry };\n}\nconst { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry } = loaderCore();\n${readStarLabels.toString()}\n${canvasPainter.toString()}\n${loaderWorker.toString()}\n(${earlyLoader.toString()})('const { sampleMark, loaderScene, loaderDots, loaderAt, streakGeometry } = (' + loaderCore.toString() + ')();');\n})();`.replace(/<\/script/gi, '<\\/script');
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   console.log(writeStillsPage());

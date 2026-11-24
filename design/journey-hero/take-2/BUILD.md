@@ -3654,3 +3654,82 @@ Both runs assign all 600 points. The existing exhaustive oracle confirms all 588
 No requested work was omitted. The original L13c record above is preserved as history; this amendment supersedes its old fill-deadline failures. No product behavior, other check, protected document, fixture, public/src/CNAME file or file outside take-2 was changed. No git, install, network request, reviewer agent, site build or deployment was run; PresentationEngine and E: were not accessed. New Markdown text is ASCII.
 
 [Report](.scratch/codex-round19p-report.md), [full suite](.scratch/round19p/checks-utf8.log), [L13c results](.scratch/round19p/l13c-result.json), [Edge audit](.scratch/round19p/edge-audit.json), [file audit](.scratch/round19p/file-audit.json).
+
+
+## Round 19, L15
+
+Built items 1-4 and the L15 check/control on the supplied L13c-1/L14 files. The complete node tools/checks.mjs run exits 0 and prints all clean; all retained and new negative controls are caught.
+
+### Reference and implementation
+
+Read CORRECTIONS-19.md L15 and the Round 19 BUILD records for shared field generation, angular loader pairing, launch-speed durations, worker/fallback handover, L13c-1 and L14, plus README. The incoming page is saved in .scratch/l15/before.html. Reference-derived acceptance was saved before edits in .scratch/l15/ACCEPTANCE.md. Used the installed motion-playbook; the local UI routing skill was read, with its npx CLI omitted under the install/network restriction.
+
+star-labels.mjs measures Range.getClientRects on the four labels' own text nodes, in hero coordinates. Entrance translations are removed only for that measurement and restored immediately. makeStars accepts those rectangles and rejects a home in their closed expansion by 2 + size/2 + 0.5 * STARS.parallax * (0.12 + 0.88 * d*d) CSS px. Only rejected x/y values change, using the first clear channel pair 40+2k and 41+2k. All 33 requested replacements use k=0. The other 1,750 requested homes are exact matches. Count, order, depth, size, mix, red flag and mass are exact matches for all 1,783 stars.
+
+The field controller passes the rectangles when creating homes and remeasures when font/layout geometry changes. The loader scene uses the same makeStars input. Its main-thread bridge sends rectangles in initial/resize messages to the worker or fallback painter. The fonts and final-frame boot gates remeasure and send the font-ready rectangles before posting their boot milestone; FIFO delivery updates the worker scene before readiness can start the burst, whose first home landing is at least 0.6 s later. The main loader landing-clock scene measures the same rectangles. The Play/Pause text is set before font-ready boot measurement so review and reduced pages measure their actual Play label. No moving-star clipping, exclusion force or label mask was added.
+
+The 7,016-byte assignment/join/re-spacing/turn region in stars.mjs is identical to the incoming page. tools/l13c-checks.mjs retains its incoming SHA-256. Star behaviour, capture and release algorithms, mark sampling, fixed loader phases/curves, entrance schedule, artwork and 101.49089474781469 s loop are retained. Moving stars may cross labels.
+
+### Requested page check, before and after
+
+| Viewport | Stars before / after | Within reach before | Within reach after | Moved |
+| --- | --- | --- | --- | --- |
+| 1440 x 900 | 1200 / 1200 | 8 | 0 | 8 |
+| 390 x 844 | 305 / 305 | 14 | 0 | 14 |
+| 412 x 730 | 278 / 278 | 11 | 0 | 11 |
+
+The incoming actual browser field exactly equals an independent reconstruction of the original channel-0/1 generator. At 412 x 730, star 198 moves from (398.054088255, 35.601200873) to (299.401208850, 495.593957899). Each new home is inside the hero; every non-hazard home and every non-position attribute is unchanged. The old-generator control is reconstructed in memory in the actual browser on every run; all three sizes fail specifically at L15 resting labels with their original 8/14/11 hazards. The independent original-data gate fails there too. The four text rectangles remain equal to the incoming requested-size rectangles.
+
+### Every earlier changed expectation
+
+| Earlier check | Old expectation -> new expectation |
+| --- | --- |
+| tools/checks.mjs | No L15 page gate -> invoke L15 page, loader, pure geometry and old-generator controls. |
+| tools/loader-checks.mjs, L8 occupancy | Every small field has one or two stars per home -> floor(600 / homes) or ceil(600 / homes). At 390 x 844 this remains 1 or 2; at the added 412 x 730 it is 2 or 3. |
+| tools/loader-checks.mjs, L8 shared-count assertion | Count of two-star homes equals points - homes -> sum of occupancy above the floor equals points - floor * homes. At 390 x 844 it is still 295; at 412 x 730 it is 44 third copies, with 234 two-star homes. |
+| tools/loader-checks.mjs, sharedHomes report | Count homes with exactly two copies -> count homes with more than one copy. Existing desktop/tablet/390 numbers stay 0/0/295; added 412 reports 278. |
+| tools/loader-checks.mjs, expand oracle | A merged star may resolve to the last dot sharing its home -> resolve it to the landed dot (flag 0). This avoids selecting a still-flying third sibling. Position/colour/size tolerances, curve, cadence and merge-count assertions stay exact. |
+
+No other earlier expectation, numerical tolerance or control mutation changed. The original synthetic no-label geometry runs remain intact. L15 additionally reruns L7 movement, L8 landing/merge, L9 wave/size/streak, L10 duration/roundness/pop and L5 landing-boundary gates against both original and guarded scenes at all three requested sizes. Endpoint sample counts remain 3,600 / 915 / 834; all 600 mark stars land at existing homes in each scene. At 412 x 730, 234 homes have two mark stars and 44 have three, both before and after. At 390 x 844, ten homes have one and 295 have two.
+
+### Derived loader measurements
+
+| Viewport | Last landing before, s | Last landing after, s | Longest journey before -> after, px | 0.6 s clamps before -> after |
+| --- | --- | --- | --- | --- |
+| 1440 x 900 | 4.832941395 | 4.879544442 | 775.464219 -> 779.465635 | 250 -> 224 |
+| 390 x 844 | 4.852997367 | 4.848674821 | 423.213196 -> 409.183780 | 263 -> 267 |
+| 412 x 730 | 4.899211105 | 4.799869742 | 367.601982 -> 374.774661 | 239 -> 249 |
+
+These are all-ready times from the existing first-visible-frame origin. Burst start stays 3.16 s, individual duration clamps stay 0.6-1.8 s, and entrance zero, pointer opening and field takeover still equal the last landing. New homes change the existing angular pairing and journey-derived durations; no fixed clock or formula was edited. Full requested/actual speed ranges and all movement sample counts are in after.json.
+
+| Viewport | At s | Before ratio | After ratio | Limit: mark ratio |
+| --- | --- | --- | --- | --- |
+| 1440 x 900 | 0.1 | 1.458848581 | 1.455163916 | < 1.538619929 |
+| 1440 x 900 | 0.2 | 1.388728322 | 1.389132021 | < 1.538619929 |
+| 390 x 844 | 0.1 | 1.423425742 | 1.441295148 | < 1.538619929 |
+| 412 x 730 | 0.1 | 1.369307598 | 1.336083398 | < 1.538619929 |
+
+All retained roundness limits pass. Neither original nor guarded requested scenes has an unreachable fading home. The full suite also reruns the unchanged tablet and scrolled-scene checks.
+
+### L13c measurements with unchanged rule and gate
+
+| Run | Version | Later stars | Crossings / far side | p50 / p95 / max px | Formed / filled s | Fill delta s |
+| --- | --- | --- | --- | --- | --- | --- |
+| still | Prior L13c-1 record | 300 | 0 / 0 | 314.802 / 421.606 / 459.041 | 2.360 / 3.688 | 1.328 |
+| still | L15 full run | 298 | 0 / 0 | 313.395 / 422.573 / 459.041 | 2.360 / 3.688 | 1.328 |
+| fast | Prior L13c-1 record | 288 | 0 / 0 | 348.123 / 520.079 / 574.627 | 0.456 / 1.032 | 0.576 |
+| fast | L15 full run | 299 | 0 / 0 | 350.104 / 515.235 / 580.574 | 0.443 / 1.019 | 0.576 |
+
+The prior rows are the existing BUILD L13c-1 record, not a newly run baseline. The new homes change captured membership; the assignment implementation and check file stay unchanged. Both fill deltas still equal 1.328 / 0.576 s, inside unchanged 1.45 / 0.75 s limits. Both runs assign all 600 points and have zero crossings and zero far-side assignments. The nearest-only/no-ring fast control changes from 125/288 crossings and 110 far-side assignments in that prior record to 127/299 crossings and 116 far-side assignments; it still fails L13c flights: fast. Its fill delta remains 0.464 s.
+
+### Browser, visual and completion evidence
+
+Used the same installed local Playwright resolver, Edge executable, GPU/default flags and offline packed page as the other page checks. Profiles are isolated under .scratch/l15; page requests other than file/data/blob are blocked. Requested page runs are 1440 x 900, 390 x 844 touch and 412 x 730 touch, DPR 1, at scroll 0 with final entrance state. Actual live worker loaders are also run through the complete entrance at all three sizes; 412 additionally runs the real main-thread fallback and reduced-motion still/cut. Both moving backends are observed at burst start and first home landing, with exact font-ready rectangles and homes equal to the field upload. All field and loader cases have zero guarded hazards. The running label is Pause, whose wider 412 rectangle rejects 12 original homes; the requested held Play page rejects 11. Both obey the same measured-text rule. Reduced motion has no burst.
+
+Paired incoming/current screenshots at all three sizes were inspected at useful reading scale. They preserve composition, type, text, scene detail, colours and layout; the authorized home moves clear the Contact punctuation and in-letter stars. Files are before-1440.png / after-1440.png, before-390.png / after-390.png and before-412.png / after-412.png under .scratch/l15. No independent review or phone-hardware claim is made.
+
+An initial standalone 412 probe failed the old one-or-two occupancy assumption. The first complete suite then found the merged-copy oracle bug at L7 explosion curve: line x 412x730/409 (132.4072522727393 versus 132.40655517578125). The corrected oracle uses the actually landed copy; it does not loosen a tolerance, change motion, skip a size or remove a gate. The final standalone L15 run passes, and the final complete node tools/checks.mjs run exits 0 and prints all clean. Every retained and new negative control fails at its named gate. Initial and final logs are preserved.
+
+No requested runtime item or check is left out. Reviewer agents were omitted as explicitly forbidden, and no independent design approval is claimed. Only allowed take-2 source, tools, README, BUILD and ignored .scratch files were written. No public/src/CNAME, correction, mock, fixture or outside file was changed. No git, package install, network request, site build or deployment was run; PresentationEngine and E: were not accessed. All task Edge contexts close in finally. Source/syntax, Markdown ASCII and final OS process audits accompany this report.
+
+[Full report and every moved old/new position](.scratch/codex-round19q-report.md), [final full suite](.scratch/l15/checks-final-utf8.log), [incoming page measurements](.scratch/l15/before.json), [L15 page/loader/geometry evidence](.scratch/l15/after.json), [source audit](.scratch/l15/source-audit.json), [Edge audit](.scratch/l15/edge-audit.json).

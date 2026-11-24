@@ -5,6 +5,7 @@
 
 import { STARS, STREAK_WINDOW, hash, starCount, makeStars, markKind, markFlag, FLAG_INK, flattenPath, winding, sampleMark, placeMark, streakGeometry } from './loader-stars.mjs';
 export { STARS, hash, starCount, makeStars, markKind, markFlag, FLAG_INK, flattenPath, winding, sampleMark, placeMark };
+import { readStarLabels } from './star-labels.mjs';
 
 // R2: the fade-in's step, landing on exactly 1 (sums of dt / 0.4 in float32 can stop just short of it).
 const fadeUp = (a, dt) => { const v = a + dt / STARS.fadeIn; return v >= 1 - 1e-5 ? 1 : v; };
@@ -71,8 +72,8 @@ function segmentDistance(px, py, a, b) {
 // The simulation. Each star: S (coasting displacement), v (velocity), age; shown offset D = S * exp(-age). An impulse rebases
 // S to D and age to 0; then S moves with v, v decays by drag / sqrt(m), and D goes home on exp(-age). No spring, no overshoot.
 // Round 9: mark (from placeMark) makes a hold that has captured STARS.mark.threshold stars form the DG mark (round 12, S1); flags holds each star's colour code (markFlag).
-export function createField(W, H, mark = null) {
-  const stars = makeStars(W, H), n = stars.length;
+export function createField(W, H, mark = null, labels = []) {
+  const stars = makeStars(W, H, labels), n = stars.length;
   const offsets = new Float32Array(n * 2), S = new Float32Array(n * 2), V = new Float32Array(n * 2), age = new Float32Array(n);
   const big = new Uint8Array(n), moving = new Uint8Array(n), flags = new Float32Array(n);
   // Round 9: once a star's offset starts to shrink after a kick, it may never grow again nor swing past the side of home it
@@ -442,6 +443,7 @@ export function createStars(hero, { reduced, win = hero.ownerDocument.defaultVie
   let field = null, box = null, top = 0, scrollY = 0, pointer = null, previous = null, target = [0, 0], f = [0, 0], fv = [0, 0];
   let hold = null, holdStart = null, swallow = false, last = null, pending = false, attrs = null, attrsVersion = 0, markKey = null, sample = null;
   let history = null, positions = null, trailVersion = 0;
+  let labelKey = null;
   const usable = e => !reduced.matches && (e.pointerType === 'mouse' || e.pointerType === 'pen');
   function redraw() {
     if (!available() || running() || pending) return;
@@ -455,9 +457,11 @@ export function createStars(hero, { reduced, win = hero.ownerDocument.defaultVie
     // L1: the mark's paths are read from the page and sampled once; placed once per hero size, never per frame.
     const paths = readMark(hero), key = paths ? paths.map(p => p.fill + ' ' + p.d).join('|') : null, changed = key !== markKey;
     if (changed) { markKey = key; sample = paths ? sampleMark(paths, STARS.mark.count) : null; }
-    if (!field || changed || field.W !== rect.width || field.H !== rect.height) {
+    const labels = readStarLabels(hero, rect), nextLabelKey = JSON.stringify(labels);
+    if (!field || changed || field.W !== rect.width || field.H !== rect.height || labelKey !== nextLabelKey) {
+      labelKey = nextLabelKey;
       hold = null; holdStart = null;
-      field = createField(rect.width, rect.height, sample ? placeMark(sample, rect.width, rect.height) : null); attrsVersion++;
+      field = createField(rect.width, rect.height, sample ? placeMark(sample, rect.width, rect.height) : null, labels); attrsVersion++;
       attrs = new Float32Array(field.stars.length * 5);
       history = createTrailHistory(field.stars.length); positions = new Float64Array(field.stars.length * 2);
       field.stars.forEach((s, i) => attrs.set([s.x, s.y, s.d, s.size, s.red ? 1 : 0], i * 5));

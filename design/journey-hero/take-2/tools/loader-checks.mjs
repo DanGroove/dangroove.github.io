@@ -6,7 +6,8 @@ const all = { fonts: 0, atlas: 0, frame: 0 };
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const at = (P, scene, time) => P.loaderLanding(P.loaderAt(time, all), scene.duration);
 const expand = (scene, dots) => {
-  const byStar = new Map(dots.map(d => [d.star, d])), byHome = new Map(dots.map(d => [d.home, d]));
+  // A merged arrival must resolve to the landed copy, not a later sibling still flying to that home.
+  const byStar = new Map(dots.map(d => [d.star, d])), byHome = new Map(dots.filter(d => d.flag === 0).map(d => [d.home, d]));
   return [...scene.points.map((m, i) => byStar.get(i) || byHome.get(m.home)), ...scene.unpairedHomes.map(i => byHome.get(i))];
 };
 
@@ -132,11 +133,13 @@ export function checkLoaderLanding(P, scene) {
   }
   const occupancy = homes.map((_, home) => points.filter(m => m.home === home).length);
   if (homes.length < points.length) {
-    assert.ok(occupancy.every(n => n >= 1 && n <= 2), `L8 homes: ${where} needs one or two stars per home`);
-    assert.equal(occupancy.filter(n => n === 2).length, points.length - homes.length, 'L8 homes: shared count');
+    // L15 also exercises 412x730: 600 mark stars / 278 homes requires two or three, not one or two.
+    const least = Math.floor(points.length / homes.length), most = Math.ceil(points.length / homes.length);
+    assert.ok(occupancy.every(n => n === least || n === most), `L8 homes: ${where} needs ${least} or ${most} stars per home`);
+    assert.equal(occupancy.reduce((sum, n) => sum + n - least, 0), points.length - least * homes.length, 'L8 homes: shared count');
   }
   return { viewport: where, stars: points.length, homes: homes.length,
-    singleHomes: occupancy.filter(n => n === 1).length, sharedHomes: occupancy.filter(n => n === 2).length,
+    singleHomes: occupancy.filter(n => n === 1).length, sharedHomes: occupancy.filter(n => n > 1).length,
     landingSamples, starLandings: points.length };
 }
 

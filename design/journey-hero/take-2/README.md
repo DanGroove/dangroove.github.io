@@ -1,6 +1,6 @@
 # Journey hero, second take
 
-Round 19 L13c builds the eligible-point ring wait for later stars. Both required runs have zero crossings and zero far-side assignments, and the old-rule fast control fails. The strict fill deadlines remain unmet: 1.328 s still (limit 1.25 s), 0.576 s fast (limit 0.5 s). The full suite exits 1 and does not print all clean; all other gates and every negative control pass. BUILD.md, **Round 19, L13c**, and [the report](.scratch/codex-round19o-report.md) record the rule, all before/after numbers and the preserved-behavior conflict.
+Round 19 L15 keeps resting stars clear of the four nav/footer text labels over their full pointer-parallax range. The requested sizes move 8/14/11 homes, leaving zero hazards with all counts and non-position attributes unchanged. Worker and fallback loader homes match the field before landing. The complete Node suite prints all clean, and every negative control is caught. L13c's assignment and its check file are unchanged; its amended fill limits still pass. BUILD.md, **Round 19, L15**, and [the report](.scratch/codex-round19q-report.md) record every moved position, changed expectation, derived landing time and verification.
 
 Earlier checkpoint records follow.
 

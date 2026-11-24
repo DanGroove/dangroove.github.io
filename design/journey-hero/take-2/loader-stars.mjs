@@ -37,11 +37,15 @@ export function hash(i, k = 0) {
 }
 export const starCount = (W, H) => Math.min(STARS.most, Math.round(STARS.density * W * H));
 // The field for a hero of W x H: home position, depth, size, mix, red, mass. Homes scale with the box.
-export function makeStars(W, H) {
+export function makeStars(W, H, labels = []) {
   const n = starCount(W, H), stars = [];
   for (let i = 0; i < n; i++) {
     const d = hash(i, 2);
     stars.push({ x: hash(i, 0) * W, y: hash(i, 1) * H, d, size: STARS.size[0] + (STARS.size[1] - STARS.size[0]) * d, mix: STARS.mix[0] + (STARS.mix[1] - STARS.mix[0]) * d, red: hash(i, 3) < STARS.red, m: STARS.mass[0] + (STARS.mass[1] - STARS.mass[0]) * hash(i, 4) });
+    const star = stars[i], reach = 2 + star.size / 2 + 0.5 * STARS.parallax * (0.12 + 0.88 * d * d);
+    const blocked = () => labels.some(r => star.x >= r.left - reach && star.x <= r.right + reach && star.y >= r.top - reach && star.y <= r.bottom + reach);
+    // Preserve the first draw unless its entire pointer range can reach text. Retry only position channels.
+    for (let k = 0; blocked(); k++) { star.x = hash(i, 40 + 2 * k) * W; star.y = hash(i, 41 + 2 * k) * H; }
   }
   return stars;
 }
@@ -246,9 +250,9 @@ export function loaderLanding(state, duration) {
 const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
 const mixRGB = (a, b, p) => a.map((v, k) => v + (b[k] - v) * p);
 // Home attributes are float32, exactly as uploaded by stars.mjs. Sampling and mark size remain float64.
-export function loaderScene(sample, W, H, viewport = { width: W, height: H, left: 0, top: 0 }) {
+export function loaderScene(sample, W, H, viewport = { width: W, height: H, left: 0, top: 0 }, labels = []) {
   const mark = placeMark(sample, W, H), centre = [viewport.width / 2 - viewport.left, viewport.height / 2 - viewport.top];
-  const homes = makeStars(W, H).map(s => {
+  const homes = makeStars(W, H, labels).map(s => {
     const d = Math.fround(s.d), red = s.red;
     return { ...s, x: Math.fround(s.x), y: Math.fround(s.y) - Math.max(0, -viewport.top) * STARS.scroll * d, d, size: Math.fround(s.size),
       colour: mixRGB(rgb(STARS.ink), rgb(red ? STARS.redInk : STARS.paper), STARS.mix[0] + (STARS.mix[1] - STARS.mix[0]) * d) };
