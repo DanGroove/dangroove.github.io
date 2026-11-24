@@ -2793,3 +2793,120 @@ node .../.scratch/review-out/r19/l8-preservation.mjs  l8-preservation.json
 All exit **0**. The full suite ends **`all clean`**, retaining **6,582 frames / 477,123 pieces / max 188 / 6 atlas pages / 99.491 s** and all its earlier negative controls. Both standalone control runners pass only after each of their **16 / 43** faults fails at its named gate. `l8-syntax-final.json` records the four individual syntax checks. Final hash preservation finds **199 of 204 tracked files byte-identical** and exactly the five permitted source/check/docs changes: loader-stars, loader-checks, entrance-checks, BUILD and README. All corrections, fixtures, page/preview/player/entrance files, public/src/CNAME and every other tracked file retain their hashes.
 
 No L8 item or curve is substituted or omitted. Browser pixels/compositing, real worker scheduling, first paint and visual approval remain **UNRUN**, as requested. No screenshots, eye judgement, pixel gate, reviewer agents, network, installation, site build, deployment or mutating git command was used. External skills and RTK.md remain unread under the repository-only rule. Only the permitted runtime module, two check files, BUILD/README and this run's own `l8-*` r19 notes are written.
+
+### L9 follow-up: depth, streaks, impact and a tighter wind-up
+
+Built on clean incoming `cf97353`, whose retained L8 implementation is `45b0a05`. Before writing, read AGENTS.md, CORRECTIONS-19, CORRECTIONS-17 G/R2/R3 and Round 6's entrance/hold/exit/check record in that order, then the READMEs and retained Round 18/19 records. The supplied v36 finding is the reference: synchronized scaling, no near-size growth, dots at speed, and no impact. Pre-edit acceptance, sources and hashes are `r19/l9-acceptance.md` and `l9-baseline.json` under `.scratch/review-out/`. L3 remains withdrawn. L7 replaces L6's curves and speed rule; the retired final-third rule is not restored.
+
+#### Motion, sizes and the actual landing
+
+Every mark star retains its original sample, curved gathering path, colour and launch share/order. Flights remain **1.0 s cubic ease-out**, with a **1.4 s launch span** and **2.4 s minimum gathering**. The formed hold remains **.15 s**. The weight-centred uniform wind-up is now:
+
+| All-ready time | Phase | Old -> new |
+| --- | --- | --- |
+| 2.40-2.55 | formed hold | .15 -> .15 s |
+| 2.55-2.90 | shrink | .4 -> **.35 s**, scale .84 -> **.78**, cosine -> **cubic ease-in-out** |
+| 2.90-2.98 | compressed hold | absent -> **.08 s** at .78 |
+| 2.98-3.16 | swell | .25 -> **.18 s**, .78 -> **1.10**, squared -> **cubic ease-in** |
+| 3.16 onward | explosion | common 1.6 s -> **individual depth durations** |
+
+Size charges smoothly across the combined **.43 s shrink + compressed hold**: `2.6 * (1 + .3 * cubicInOut(p))`, then holds at **3.38 px** through the swell. At release the charge is replaced by item 3's **1.7 multiplier on the blended mark/home size**, giving **4.42 px** in the first frame; `1 + .7 * (1-clamp(elapsed/.3))^3` returns that multiplier to 1 over **.3 s**. This reading makes the charge release into the flare; it does not multiply charge and flare into an unrequested 2.21 multiplier.
+
+The pairing and every home's `d`, position, size and colour stay exact. Star/home rank assignment is still `floor(k * homeCount / 600)`. Duration is `(1 + .6 * (1-d)) * (.94 + .12 * hash(homeIndex, 21))`. Hashing the **home** preserves L8: both stars sharing it have identical depth/duration and arrive together. Their straight paths and cubic ease-out remain; speed rises only at the blast and then decreases to zero. Close depths may exchange order within the requested hash spread. Gates verify the exact formula, depth order with jitter factored out, and actual duration order wherever the two jitter bands do not overlap.
+
+| Scene | Shortest / longest explosion | Last landing = entrance zero = pointer = WebGL handover | Longest flight / blast streak, CSS px |
+| --- | --- | --- | --- |
+| 1440 x 900 | **.941089359 / 1.681142182 s** | **4.841142182 s** | **58.198295 / 39.190624** |
+| 768 x 1024 | **.941089359 / 1.684261340 s** | **4.844261340 s** | **46.110176 / 29.555386** |
+| 390 x 844 | **.941089359 / 1.668551740 s** | **4.828551740 s** | **33.535919 / 23.127510** |
+| scrolled 390 x 900, viewport 390 x 664, top -120 | **.941089359 / 1.668551740 s** | **4.828551740 s** | **29.822145 / 24.935739** |
+
+The universal duration bound is **.94-1.696 s**. `loaderAt()` retains a scene-free upper-bound landing of **4.856 s**. The pure `loaderLanding()` resolves it to `burstStart + scene.duration`, the actual maximum paired duration. `createLoaderView()` supplies that scene resolution to the player, remeasuring only at layout changes and scroll events. The inline worker/fallback draw individual durations directly. No worker messages or bootstrap clocks change. Three added player runs prove field drawing precedes removal in the same actual landing frame on desktop/tablet/phone. The loop source/player are byte-identical. L2's relative screen **2.4-3.2**, floor **1.8-2.8**, dropped star ring, pointer **0**, entrance end/name activation **3.8**, and every other entrance mechanism stay exact. Absolute loop zero is each landing +3.2; name activation is landing +3.8.
+
+For a home depth above .4, size multiplies by `1 + 1.6*(d-.4)*sin(PI*g)`, with that star's own eased progress `g`. At or below .4 there is no depth growth. The theoretical nearest multiplier is **1.96**, peaking at `g=.5`, not halfway through elapsed time. The 240 Hz/exact-arrival probes reach **1.959371173** desktop and **1.958425796** phone. Every star has exactly its home's size and colour at its own arrival; shared phone homes merge there, rather than waiting for the last star. Phone coverage remains **305 homes**, **295 doubles / 10 singles**, zero edge exits, zero fading mark stars. Terminal field counts remain **1200 / 728 / 305**.
+
+#### Streaks and the outward wave
+
+Each moving flight/blast command carries its actual position **1/50 s earlier**, clamped to the launch/release position if necessary, and the Euclidean displacement. The worker and main-thread common `canvasPainter()` draw a filled triangle from that tail point to a full-diameter head, perpendicular to the trajectory, in the star's existing colour/alpha; the existing circular dot head/fringe is retained. A displacement under the star's diameter draws only that original dot. Wind-up, reduced-motion stills, rested stars and handover retain dots. The table's maxima include the exact **.02 s** lookback boundary in addition to 240 Hz samples. No new layer, picture, blur or colour is introduced.
+
+Other field homes stay stationary. Their fade begins at the earliest time any actual mark-star trajectory reaches their radius about the weight centre. This is computed by solving the straight ray's radius intersection in eased progress and inverting its cubic; it is not a guessed expanding circle or a frame-step approximation. Each fade is cubic ease-out over **.2 s**. The 600 desktop other stars all have reachable crossings: latest starts **.884859741 s** after release and finishes **1.084859741**, before last landing **1.681142182**. On tablet, the latest reachable start is **1.066619610**, finishing **1.266619610** before landing **1.684261340**. Phone has no other homes.
+
+**Constraint exception, left out and reported:** tablet homes **468** and **224** have radii **607.562912** and **616.116866 px**, beyond the maximum paired ray radius **606.961077 px**. The defined leading edge can never pass them without changing the required pairing or endpoints. Their wave fade is therefore omitted: they stay dark, then cut on with the exact field handover. All other home positions, colours, sizes and fades follow the brief. The earlier endpoint-alpha continuity check now explicitly expects **0 -> 1 only for these unreachable homes**, with its original **.001** position/alpha limits retained everywhere reachable. This is a visible two-star tablet exception for external review, not a claimed seamless fade there. No other L9 feature is omitted.
+
+#### Gates, negative controls and every earlier expectation changed
+
+`loader-checks.mjs` measures actual `loaderDots()` output on the existing desktop/phone scenes at **1/240 s**, with exact individual arrivals and the **.02 s** boundary added. Across both scenes: **289,200 flight**, **225,600 wind-up** and **1,027,200 explosion** star samples (**1,542,000** total), plus **1,245,270 historical-tail** and **603,000 stationary wave** comparisons. Maximum sampled speed rise is **0**. Endpoint stencil **h=.00001 s** and numerical allowance **.00001 px/s** remain. Worst flight derivative **2.158e-7**, shrink/swell-start stop **1.527e-6**, individual explosion arrival **1.489e-7 px/s**; analytic endpoint speeds are zero.
+
+New gates check exact depth duration and order, charge/flare/depth sizes, individual home sizes at landing, tail length/position, under-size/rest/reduced dots, stationary field fades after actual leading-edge passage, individual shared-home merging, scene-resolved entrance, scroll synchronization and actual field-before-removal handover. The five inline VM modes remain worker/main/worker-error/reduced/review. Both moving flight and blast frames additionally validate actual emitted triangles: exact tail, head diameter, perpendicular width, head centre and original colour. These are draw-command tests, not pixels.
+
+Only `tools/loader-checks.mjs`, `tools/entrance-checks.mjs` and `tools/round8-checks.mjs` change checks. Main checks, Round 17, all fixtures, pixel gates and every other earlier runner remain byte-identical.
+
+| Earlier check / expectation | Old -> new |
+| --- | --- |
+| Pure shrink duration, minimum scale, curve | **.4 / .84 / cosine -> .35 / .78 / cubic in-out** |
+| Compressed phase | **absent / 0 s -> 2.90-2.98 / .08 s** |
+| Pure swell duration/start/curve | **.25 / 2.95 / p^2 -> .18 / 2.98 / p^3**; endpoint **1.10 -> 1.10** |
+| Pure explosion start / pre-burst probes | **3.20 -> 3.16 s**; null entrance and null pre-burst clock remain |
+| Common explosion duration assertion | **1.6 -> individual formula**; scene-free bound **1.696**, exact range **.94-1.696** |
+| Pure end / entrance / done / pointer probes | **4.8 / 4.8-1e-8 -> 4.856 / 4.856-1e-8** for the scene-free clock; new scene-specific ends in table above |
+| Pure after-landing probe | **5.05 -> 5.106 s**, entrance value **.25 -> .25** |
+| Landing/geometry/streak probe clocks | **4.8 -> scene-specific end**, **4.8-1e-7 -> scene end-1e-7**; original **.001** continuity bounds remain |
+| Wind-up point size | **2.6 px throughout -> 2.6-3.38 px** charge across **.43 s**, held through swell; positions retain uniform weight-centred scale |
+| Explosion curve/size/colour | Common **p=elapsed/1.6 -> p=elapsed/ownDuration**; cubic remains. Size adds exact depth/flare factors; colours still blend to the unchanged home |
+| Other field fade | Common **1.6 s cubic -> .2 s cubic after individual leading-edge crossing**; unreachable tablet alpha **1 at end-1e-7 -> 0**, **1 at end -> 1** |
+| Phone draw count | **600 until global end, then 305 -> 600 down to 305** as each shared home lands; per-trajectory joins now use star identity then home identity. Terminal count/occupancy are unchanged |
+| Endpoint stops | Shrink end **2.95 -> 2.90**, new swell-start stop **2.98**; explosion stop **4.8 -> each individual arrival**. Same **h=1e-5**, allowance **1e-5** |
+| Flight sample count per scene | **144,000 -> 144,600**, adding exact **.02 s** to retained 240 samples; duration/curve/path/look unchanged |
+| Wind-up sample count per scene | **117,000 -> 112,800**, following shorter phases and adding compressed hold/exact pre-end probes; now includes charge |
+| Explosion samples desktop / phone | **231,000 / 231,000 -> 603,000 / 424,200**, adding exact individual landings and .02/.3 boundaries to the 240 Hz grid |
+| Inline phase / before-end / end | **3.2 / 4.75 / 4.8 -> 3.16 / scene end-.05 / scene end**; terminal **1200 / 305 -> identical**, plus actual taper/scroll assertions |
+| Player phase advances | **2.4, .15, .4, .25, 1.55, .05 -> 2.4, .15, .35, .08, .18, 1.646, .05** in scene-free stand-in |
+| Player preload, entrance and Round 8 N1 runners | **4.8 -> 4.856 s**; all following entrance-relative observations retain their numbers |
+| Delayed-font / blocked-draw player pre-end wait | **4.75 -> 4.806 s**, then unchanged **.05** to entrance zero |
+| Stand-in frame advancement | Rounded **50 ms** steps -> same **50 ms** maximum with exact fractional final step, needed for **.08/.18/1.646/4.856**; prior exact-multiple runs stay exact |
+| Combined explosion + entrance scan | **398 -> 570** 60 Hz/exact-boundary samples, duration/offset **1.6 -> 1.696** upper bound, maximum **2 -> 2**, **0** overlap exceptions. Entrance-only **239 / 2 -> identical** |
+| Player runs / inline modes / floor / label samples | **14 -> 17** (three actual-scene handovers); **5 -> 5 / 48,125 -> 48,125 / 60 -> 60** |
+| Existing v35 and no-shrink fault sites | Duration search **1.6 -> 1.696** (fault remains **1.2** plus quartic); no-shrink targets new **.22 cubic** expression instead of **.16 cosine**. Same gate prefixes |
+| Existing L8 leftover control | Old monolithic edge/fade reconstruction -> post-scene missing-home/edge-target mutation, rejected before drawing at the same **L8 landing** gate; rejects star **1** instead of **2**. No source/fixture write |
+| Early-entrance fault's reported values | **4.75 != 4.8 -> 4.806 != 4.856**; fault offset remains **-.05 s** |
+| Control inventory | Entrance **16 -> 24**; Round 8 **4 -> 4**; Round 17 **43 -> 43** |
+
+All **24** entrance controls fail at their named gates. The eight additions are:
+
+| New negative control | Observed gate |
+| --- | --- |
+| v36 single 1.6 s duration | `L9 depth: duration` (**1.6 != 1.239222063** on first desktop star) |
+| Dots without streaks during the blast (gathering still streaks) | `L9 streak: blast length` (**0 != 7.201198175**) |
+| Other field stars fading together | `L9 wave: fade curve` (**.007417008 != 0**) |
+| No depth size growth | `L9 size: depth/flare` |
+| No release flare | `L9 size: depth/flare` (**2.6 != 4.42**) |
+| No charge | `L9 size: charge` |
+| Painter ignores streak commands | `L9 painter: missing tapered strokes` |
+| Entrance keeps unresolved global bound | `L5 scene: resolved landing` (**4.856 != 4.841142182**) |
+
+The sixteen retained controls also each fail: coincident names -> `E1 timetable`; cut labels -> `E4 labels`; craft click -> `E1 click`; old screen -> `L2 groups`; fast gather -> `L4 timing`; displaced mark -> `L4 consistency`; star ring -> `L4 entrance`; entrance with burst -> `L5 groups`; smoothstep blast -> `L7 explosion curve`; quartic flight -> `L7 flight curve`; v35 -> `L7 explosion curve`; no shrink -> `L7 scale`; modulo pairing -> `L7 angle order`; entrance at burst+.9 -> `L5 groups`; early entrance -> `L5 timing`; missing-home leftovers -> `L8 landing`. Full observed messages are in `l9-entrance-controls-final.txt`. The **4** Round 8 and **43** Round 17 controls all fail at their existing gates, in their standalone `--controls` logs. No negative control changes source on disk.
+
+#### Preservation, costs and verification limits
+
+`l9-preservation.mjs` / `.json` compare the pre-edit tracked hashes and pure output. All **600** mark samples and shared STARS constants, all four scenes' homes/weights/mark/path geometry and assignments are identical. **345,600** unchanged flight dot records match the baseline in position/size/colour/alpha. Across six boot histories and **2,166** timing samples, real progress, launch times, formation, full progress, formed hold and arrived count are exact; reduced/review state objects and reduced visible geometry are exact. The entrance from `loopAt` onward is byte-identical. Page code outside `canvasPainter()` is byte-identical, including worker scheduling/messages, first-paint markup and bootstrap. Round 18 sources, stage, pictures, renderer, layout, player, public/src/CNAME, corrections and fixtures retain their hashes. Exactly **8** permitted tracked files change; **196 of 204** remain byte-identical.
+
+`l9-cpu-cost.mjs` / `.json` measure only Node `loaderDots()` CPU geometry: seven warmed, alternating batches of **1,200 frames** against an in-memory variant that skips the historical sample. Median extra tail geometry per frame is desktop **.00570 ms flight / .00440 ms blast**, tablet **.00871 / .01210**, phone **.01112 / .00806**. Complete geometry medians with tails are desktop **.03450 / .08851 ms**, tablet **.03640 / .09699**, phone **.04339 / .08159**. This excludes Canvas triangle/radial rasterization, compositing, worker scheduling and GPU/browser frame cost. The actual streak frame cost is **unmeasured** because browser execution is forbidden; these CPU figures are not a frame-rate claim.
+
+Final commands and complete output under the permitted r19 notes:
+
+```
+node --check loader-stars.mjs
+node --check entrance.mjs
+node --check tools/page.mjs
+node --check tools/loader-checks.mjs
+node --check tools/entrance-checks.mjs
+node --check tools/round8-checks.mjs
+node .../tools/checks.mjs                         l9-checks-final.txt
+node .../tools/entrance-checks.mjs --controls      l9-entrance-controls-final.txt
+node .../tools/round8-checks.mjs --controls        l9-round8-controls-final.txt
+node .../tools/round17-checks.mjs --controls       l9-round17-controls-final.txt
+node .../.scratch/review-out/r19/l9-preservation.mjs
+node .../.scratch/review-out/r19/l9-cpu-cost.mjs
+```
+
+All completed runners exit **0**. The full suite prints **all clean**, retaining **6,582 frames / 477,123 pieces / max 188 / 6 atlas pages / 99.491 s** and the earlier rounds' controls. The Node VM checks run the actual inline/worker script and drawing commands; they do not establish pixels, first-paint compositing, real worker/browser timing or visual quality. Browser review, screenshots, eye judgement and the pixel gate remain **UNRUN** as requested. No agents, network, dependency installation, site build, publication, mutating git command, or access outside the repository occurred. Installed skills and RTK.md were not opened because the repository-only read rule excludes them. The two unreachable tablet fades are the only omitted L9 part; charge/flare interpretation and the home-based hash are recorded above with their reasons.

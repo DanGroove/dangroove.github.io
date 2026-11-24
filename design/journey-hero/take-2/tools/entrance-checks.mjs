@@ -33,30 +33,20 @@ export const ENTRANCE_CONTROLS = [
   { id: 'entrance-with-burst', file: 'loader-stars.mjs', search: 'const entranceStart = end;', replacement: 'const entranceStart = burstStart;', gate: 'L5 groups:' },
   { id: 'smoothstep-burst', file: 'loader-stars.mjs', search: 'blend = 1 - (1 - p) ** 3', replacement: 'blend = p * p * (3 - 2 * p)', gate: 'L7 explosion curve:' },
   { id: 'quartic-flight', file: 'loader-stars.mjs', search: 'const t = 1 - (1 - flight) ** 3,', replacement: 'const t = 1 - (1 - flight) ** 4,', gate: 'L7 flight curve:' },
-  { id: 'v35-burst', file: 'loader-stars.mjs', search: 'burst: 1.6,', replacement: 'burst: 1.2,', also: [['blend = 1 - (1 - p) ** 3', 'blend = 1 - (1 - p) ** 4']], gate: 'L7 explosion curve:' },
-  { id: 'no-shrink', file: 'loader-stars.mjs', search: '1 - 0.16 * (0.5 - 0.5 * Math.cos(Math.PI * shrink))', replacement: '1', gate: 'L7 scale:' },
+  { id: 'v35-burst', file: 'loader-stars.mjs', search: 'burst: 1.696,', replacement: 'burst: 1.2,', also: [['blend = 1 - (1 - p) ** 3', 'blend = 1 - (1 - p) ** 4']], gate: 'L7 explosion curve:' },
+  { id: 'no-shrink', file: 'loader-stars.mjs', search: '1 - 0.22 * cubicInOut(shrink)', replacement: '1', gate: 'L7 scale:' },
   { id: 'index-homes', file: 'loader-stars.mjs', search: '  for (let rank = 0; rank < paired; rank++) {\n    const i = markOrder[Math.floor(rank * points.length / paired)], home = homeOrder[Math.floor(rank * homes.length / paired)];\n    points[i].home = home; used.add(home);\n  }', replacement: '  for (let i = 0; i < points.length; i++) { points[i].home = i % homes.length; used.add(i % homes.length); }', gate: 'L7 angle order:' },
   { id: 'old-burst-entrance', file: 'loader-stars.mjs', search: 'const entranceStart = end;', replacement: 'const entranceStart = burstStart + 0.9;', gate: 'L5 groups:' },
   { id: 'early-entrance', file: 'loader-stars.mjs', search: 'const entranceStart = end;', replacement: 'const entranceStart = end - 0.05;', gate: 'L5 timing:' },
-  {
-    id: 'edge-leftovers', file: 'loader-stars.mjs',
-    search: 'paired = points.length, used = new Set();',
-    replacement: 'paired = Math.min(points.length, homes.length), used = new Set();',
-    also: [
-      ['  return { W, H, centre, weight, mark, points, homes, unpairedHomes:', `  const bounds = [-viewport.left, -viewport.top, viewport.width - viewport.left, viewport.height - viewport.top];
-  for (const p of points) if (p.home === null) {
-    const dx = p.x - weight[0], dy = p.y - weight[1], gap = STARS.mark.size + 2;
-    const tx = dx > 0 ? (bounds[2] + gap - weight[0]) / dx : dx < 0 ? (bounds[0] - gap - weight[0]) / dx : Infinity;
-    const ty = dy > 0 ? (bounds[3] + gap - weight[1]) / dy : dy < 0 ? (bounds[1] - gap - weight[1]) / dy : Infinity;
-    const reach = Math.max(1.10, Math.min(tx, ty));
-    p.exit = [weight[0] + dx * reach, weight[1] + dy * reach];
-  }
-  return { W, H, centre, weight, mark, points, homes, unpairedHomes:`],
-      ['    if (landed?.has(m.home)) continue;\n    landed?.add(m.home);\n    const target = home;', '    const target = home || { x: m.exit[0], y: m.exit[1], size: m.size, colour: m.colour };'],
-      ['home: m.home, alpha: 1 });', 'home: m.home, alpha: home ? 1 : 1 - blend });'],
-    ],
-    gate: 'L8 landing:',
-  },
+  { id: 'edge-leftovers', file: 'loader-stars.mjs', search: '  return { W, H, centre, weight, mark, points, homes, unpairedHomes, duration, wave };', replacement: '  if (homes.length < points.length) for (const i of markOrder.slice(homes.length)) { points[i].home = null; points[i].exit = [W + 5, H + 5]; }\n  return { W, H, centre, weight, mark, points, homes, unpairedHomes, duration, wave };', gate: 'L8 landing:' },
+  { id: 'single-duration', file: 'loader-stars.mjs', search: '(1 + 0.6 * (1 - home.d)) * (0.94 + 0.12 * hash(i, 21))', replacement: '1.6', gate: 'L9 depth:' },
+  { id: 'dots-without-streaks', file: 'loader-stars.mjs', search: 'dots.push({ x, y, ...trail(x, y, [previous.x, previous.y]),', replacement: 'dots.push({ x, y, streak: 0,', gate: 'L9 streak:' },
+  { id: 'simultaneous-field-fade', file: 'loader-stars.mjs', search: 'clamp01((elapsed - start) / 0.2)', replacement: 'clamp01(elapsed / scene.duration)', gate: 'L9 wave:' },
+  { id: 'no-depth-growth', file: 'loader-stars.mjs', search: '1.6 * Math.max(0, target.d - 0.4)', replacement: '0 * Math.max(0, target.d - 0.4)', gate: 'L9 size:' },
+  { id: 'no-flare', file: 'loader-stars.mjs', search: '1 + 0.7 * (1 - clamp01(elapsed / 0.3)) ** 3', replacement: '1', gate: 'L9 size:' },
+  { id: 'no-charge', file: 'loader-stars.mjs', search: '1 + 0.3 * cubicInOut(clamp01((time - shrinkStart) / (LOADER.shrink + LOADER.compressed)))', replacement: '1', gate: 'L9 size:' },
+  { id: 'no-painted-streaks', file: 'tools/page.mjs', search: 'if (dot.streak > dot.size)', replacement: 'if (false)', gate: 'L9 painter:' },
+  { id: 'unresolved-landing', file: 'entrance.mjs', search: 'state: bridge ? now => loaderLanding(bridge.state(now), scene?.duration ?? LOADER.burst) : null,', replacement: 'state: bridge ? now => bridge.state(now) : null,', gate: 'L5 scene:' },
 ];
 
 async function loadEntrance(source, loaderSource) {
@@ -159,25 +149,26 @@ export function checkLoaderTiming({ loaderAt, LOADER }) {
   close(LOADER.launchEnd, 0.85, 'L4 timing: launch shares end at .85');
   close(LOADER.gatherSeconds, 1.4, 'L4 timing: gathering faster than 1.4 s');
   close(LOADER.flight, 1.0, 'L7 flight curve: duration'); close(LOADER.hold, 0.15, 'L7 timing: hold');
-  close(LOADER.shrink, 0.4, 'L7 timing: shrink'); close(LOADER.swell, 0.25, 'L7 timing: swell'); close(LOADER.burst, 1.6, 'L7 explosion curve: duration');
+  close(LOADER.shrink, 0.35, 'L9 timing: shrink'); close(LOADER.compressed, 0.08, 'L9 timing: compressed hold'); close(LOADER.swell, 0.18, 'L9 timing: swell'); close(LOADER.burst, 1.696, 'L7 explosion curve: duration bound');
   close(at(0).fill, 0, 'L4 timing: first paint progress');
   close(at(0).formedAt, 2.4, 'L4 timing: launches plus last flight');
   close(at(0).holdAt, 2.4, 'L7 timing: hold start');
   close(at(0).shrinkStart, 2.55, 'L7 timing: .15 formed hold');
-  close(at(0).swellStart, 2.95, 'L7 timing: .4 shrink');
-  close(at(0).burstStart, 3.2, 'L7 timing: .25 swell');
-  for (const [time, phase] of [[2.4, 'hold'], [2.55, 'shrink'], [2.95, 'swell'], [3.2, 'burst'], [4.8, 'entrance']]) {
+  close(at(0).compressedStart, 2.9, 'L9 timing: .35 shrink');
+  close(at(0).swellStart, 2.98, 'L9 timing: .08 compressed hold');
+  close(at(0).burstStart, 3.16, 'L9 timing: .18 swell');
+  for (const [time, phase] of [[2.4, 'hold'], [2.55, 'shrink'], [2.9, 'compressed'], [2.98, 'swell'], [3.16, 'burst'], [4.856, 'entrance']]) {
     assert.equal(at(time).phase, phase, 'L7 timing: phase boundary');
   }
-  close(at(0).end, 4.8, 'L7 timing: 1.6 explosion');
-  close(at(0).entranceStart, 4.8, 'L5 timing: entrance starts at landing');
-  assert.ok(at(3.2 - 1e-8).burstTime === null && at(3.2).phase === 'burst', 'L4 timing: burst boundary');
-  assert.equal(at(3.2).entranceTime, null, 'L5 timing: entrance at burst start');
-  assert.equal(at(4.8 - 1e-8).entranceTime, null, 'L5 timing: entrance before landing');
-  assert.ok(!at(4.8 - 1e-8).done && at(4.8).done, 'L4 timing: endpoint handover');
-  close(at(4.8).entranceTime, 0, 'L5 timing: entrance zero at landing');
-  close(at(5.05).entranceTime, 0.25, 'L5 timing: entrance after landing');
-  assert.ok(!at(4.8 - 1e-8).pointer && at(4.8).pointer, 'L4 timing: pointer handover');
+  close(at(0).end, 4.856, 'L9 timing: conservative explosion bound');
+  close(at(0).entranceStart, 4.856, 'L5 timing: entrance starts at landing');
+  assert.ok(at(3.16 - 1e-8).burstTime === null && at(3.16).phase === 'burst', 'L4 timing: burst boundary');
+  assert.equal(at(3.16).entranceTime, null, 'L5 timing: entrance at burst start');
+  assert.equal(at(4.856 - 1e-8).entranceTime, null, 'L5 timing: entrance before landing');
+  assert.ok(!at(4.856 - 1e-8).done && at(4.856).done, 'L4 timing: endpoint handover');
+  close(at(4.856).entranceTime, 0, 'L5 timing: entrance zero at landing');
+  close(at(5.106).entranceTime, 0.25, 'L5 timing: entrance after landing');
+  assert.ok(!at(4.856 - 1e-8).pointer && at(4.856).pointer, 'L4 timing: pointer handover');
   const launches = at(0).launches;
   close(launches[0], 0, 'L4 timing: first launch'); close(launches.at(-1), 1.4, 'L4 timing: last launch');
   assert.equal(launches.length, 600, 'L4 timing: count');
@@ -248,7 +239,8 @@ async function checkLoaderGeometry(P) {
     }
     landings.push(checkLoaderLanding(P, scene));
     if (W === 1440 || W === 390) moves.push(checkLoaderMoves(P, scene));
-    const end = P.loaderDots(scene, P.loaderAt(4.8, all)), field = S.makeStars(W, H);
+    const sceneAt = t => P.loaderLanding(P.loaderAt(t, all), scene.duration), landing = sceneAt(0).end;
+    const end = P.loaderDots(scene, sceneAt(landing)), field = S.makeStars(W, H);
     assert.equal(end.filter(d => d.alpha > 0).length, field.length, 'L4 homes: changes field count');
     for (const d of end.filter(d => d.alpha > 0)) {
       const home = field[d.home];
@@ -261,13 +253,18 @@ async function checkLoaderGeometry(P) {
     assert.equal(still.length, 600, 'L4 reduced: formed count');
     assert.deepEqual(still.map(p => [p.x, p.y]), scene.points.map(p => [p.x, p.y]), 'L4 reduced: formed geometry');
     // Shared phone trajectories meet the same single terminal dot at their home.
-    const before = P.loaderDots(scene, P.loaderAt(4.8 - 1e-7, all));
+    const before = P.loaderDots(scene, sceneAt(landing - 1e-7));
     const byHome = new Map(end.map(d => [d.home, d]));
-    before.forEach(d => { const landed = byHome.get(d.home); assert.ok(landed && Math.hypot(d.x - landed.x, d.y - landed.y) < 0.001 && Math.abs(d.alpha - landed.alpha) < 0.001, 'L4 homes: endpoint jump'); });
+    before.forEach(d => {
+      const landed = byHome.get(d.home), outside = scene.wave.some(w => w.home === d.home && !Number.isFinite(w.start));
+      assert.ok(landed && Math.hypot(d.x - landed.x, d.y - landed.y) < 0.001, 'L4 homes: endpoint jump');
+      if (outside) assert.equal(d.alpha, 0, 'L9 wave: unreachable home stays dark until handover');
+      else assert.ok(Math.abs(d.alpha - landed.alpha) < 0.001, 'L4 homes: endpoint alpha jump');
+    });
   }
   const scrolled = P.loaderScene(sample, 390, 900, { width: 390, height: 664, left: 0, top: -120 });
   close(scrolled.points[0].y, 664 / 2 + 120 + S.placeMark(sample, 390, 900).points[0].y, 'L4 consistency: first screen centre');
-  const landed = P.loaderDots(scrolled, P.loaderAt(4.8, all));
+  const landed = P.loaderDots(scrolled, P.loaderLanding(P.loaderAt(3.16 + scrolled.duration, all), scrolled.duration));
   const home = S.makeStars(390, 900)[0], dot = landed.find(d => d.home === 0);
   close(dot.y, Math.fround(home.y) - 120 * S.STARS.scroll * Math.fround(home.d), 'L4 homes: scroll offset');
   return { comparisons, moves, landings };
@@ -290,14 +287,23 @@ function checkLoaderMarkup() {
 
 // Execute the actual inline bootstrap and Blob worker in isolated Node contexts. These record draw commands,
 // not pixels: they prove independent clocks, messages, fallback, reduced motion and synchronous review bypass.
-function checkInlineLoader(E) {
+function checkInlineLoader(E, P, painterSource = read('tools/page.mjs')) {
+  const painter = source => source.slice(source.indexOf('function canvasPainter('), source.indexOf('\nfunction loaderWorker(')).trim();
+  const inlineScript = LOADER_SCRIPT.replace(/\r\n/g, '\n').replace(painter(read('tools/page.mjs')), painter(painterSource));
   const header = pageMarkup().match(/<a[^>]*data-mark[^>]*>([\s\S]*?<\/svg>)/)[1];
   const paths = [...header.matchAll(/<path\b[^>]*>/g)].map(([p]) => ({ d: p.match(/\bd="([^"]+)"/)[1], fill: p.match(/\bfill="([^"]+)"/)[1] }));
   let runs = 0;
   for (const mode of ['worker', 'main', 'worker-error', 'reduced', 'review']) {
-    let now = 0, mainRAF, workerRAF, fills = 0, clears = 0, removed = 0, replaced = 0, workerInstance, scrollListener;
+    let now = 0, mainRAF, workerRAF, fills = 0, clears = 0, removed = 0, replaced = 0, workerInstance;
+    const scrollListeners = new Set();
     const classes = new Set(), media = { matches: mode === 'reduced', addEventListener() {} };
-    const context2d = { setTransform() {}, clearRect() { clears++; }, fillRect() { fills++; }, createRadialGradient() { return { addColorStop() {} }; } };
+    let triangles = [], heads = [], pathPoints = [];
+    const context2d = {
+      setTransform() {}, clearRect() { clears++; triangles = []; heads = []; }, fillRect() { fills++; },
+      createRadialGradient(...args) { heads.push(args); return { addColorStop() {} }; },
+      beginPath() { pathPoints = []; }, moveTo(x, y) { pathPoints.push([x, y]); }, lineTo(x, y) { pathPoints.push([x, y]); },
+      closePath() {}, fill() { triangles.push({ points: pathPoints, colour: this.fillStyle }); },
+    };
     const makeCanvas = () => ({ getContext: () => context2d, cloneNode: () => makeCanvas(), replaceWith() { replaced++; }, transferControlToOffscreen: () => makeCanvas() });
     const canvas = makeCanvas(), overlay = { querySelector: () => canvas, remove() { removed++; } };
     const hero = { querySelector: () => overlay, querySelectorAll: () => paths.map(p => ({ getAttribute: k => p[k] })),
@@ -305,7 +311,7 @@ function checkInlineLoader(E) {
       classList: { toggle(k, v) { if (v) classes.add(k); else classes.delete(k); }, remove(k) { classes.delete(k); } } };
     const urls = new Map(), performance = { timeOrigin: 1000000, now: () => now * 1000 };
     const env = { console, URLSearchParams, location: { search: mode === 'review' ? '?t=0' : '' }, performance,
-      document: { querySelector: () => hero }, window: { addEventListener(_name, f) { scrollListener = f; }, removeEventListener() { scrollListener = null; } }, innerWidth: 1440, innerHeight: 900, devicePixelRatio: 1,
+      document: { querySelector: () => hero }, window: { addEventListener(_name, f) { scrollListeners.add(f); }, removeEventListener(_name, f) { scrollListeners.delete(f); } }, innerWidth: 1440, innerHeight: 900, devicePixelRatio: 1,
       matchMedia: () => media, requestAnimationFrame: f => { mainRAF = f; return 1; }, cancelAnimationFrame() {},
       Blob: class { constructor(parts) { this.code = parts.join(''); } },
       URL: { createObjectURL(blob) { urls.set('blob:local', blob.code); return 'blob:local'; }, revokeObjectURL() {} },
@@ -324,12 +330,13 @@ function checkInlineLoader(E) {
         terminate() { this.terminated = true; }
       };
     }
-    vm.runInNewContext(LOADER_SCRIPT, env);
+    vm.runInNewContext(inlineScript, env);
     const bridge = env.window.__loaderStars;
     if (mode === 'review') { assert.ok(!bridge && fills === 0 && clears === 0, 'L4 inline: review bypass'); runs++; continue; }
     assert.equal(bridge.mode, mode === 'worker' ? 'worker' : 'main', 'L4 inline: backend');
     hero.ownerDocument = { defaultView: env.window };
-    const view = E.createLoaderView(hero);
+    env.window.innerWidth = 1440; env.window.innerHeight = 900;
+    const view = E.createLoaderView(hero); view.measure(hero.getBoundingClientRect());
     if (mode === 'reduced') {
       assert.ok(!workerInstance && fills === 600, 'L4 inline: reduced formed before first rAF');
       for (const k of ['fonts', 'atlas', 'frame']) bridge.boot(k);
@@ -339,28 +346,50 @@ function checkInlineLoader(E) {
       const animate = () => mode === 'worker' ? workerRAF() : mainRAF(now * 1000);
       animate(); now = 0.35; animate();
       assert.ok(fills > 0, 'L4 inline: no stars fly');
+      const scene = P.loaderScene(P.sampleMark(paths), 1440, 900);
+      close(view.state(now).end, 3.16 + scene.duration, 'L5 scene: resolved landing');
+      const checkPaint = () => {
+        const dots = P.loaderDots(scene, P.loaderAt(now, { fonts: 0, atlas: 0, frame: 0 })).filter(d => d.alpha > 0);
+        const streaks = dots.filter(d => d.streak > d.size);
+        assert.ok(streaks.length > 0, 'L9 painter: vacuous moving frame');
+        assert.equal(triangles.length, streaks.length, 'L9 painter: missing tapered strokes');
+        assert.equal(heads.length, dots.length, 'L9 painter: missing round heads');
+        streaks.forEach((d, i) => {
+          const [tail, a, b] = triangles[i].points;
+          close(tail[0], d.tail[0], 'L9 painter: tail x'); close(tail[1], d.tail[1], 'L9 painter: tail y');
+          close(Math.hypot(a[0] - b[0], a[1] - b[1]), d.size, 'L9 painter: full head width');
+          close((a[0] + b[0]) / 2, d.x, 'L9 painter: head x'); close((a[1] + b[1]) / 2, d.y, 'L9 painter: head y');
+          close((a[0] - b[0]) * (d.x - tail[0]) + (a[1] - b[1]) * (d.y - tail[1]), 0, 'L9 painter: perpendicular taper', 1e-8);
+          assert.equal(triangles[i].colour, `rgba(${d.colour.map(n => n.toFixed(4)).join(',')},${d.alpha * Math.min(1, d.size)})`, 'L9 painter: own colour');
+        });
+      };
+      checkPaint();
       const frozen = clears;
       if (mode === 'worker') {
         now = 0.7; workerRAF();
         assert.ok(clears > frozen && !mainRAF, 'L4 inline: worker waits for main-thread rAF');
       } else assert.equal(clears, frozen, 'L4 inline: fallback did not retain its last frame');
-      now = 3.2; animate(); view.apply(view.state(now));
+      now = 3.16; animate(); view.apply(view.state(now));
       assert.ok(classes.has('is-bursting'), 'L4 inline: burst backing stays transparent');
       assert.equal(view.state(now).entranceTime, null, 'L5 inline: entrance starts with burst');
-      now = 4.75; animate();
+      now += 0.05; animate(); checkPaint();
+      now = view.state(now).end - 0.05; animate();
       assert.ok(!view.state(now).done && view.state(now).entranceTime === null, 'L5 inline: early handover');
-      now = 4.8; const beforeLanding = fills; animate();
+      now = view.state(now).end; const beforeLanding = fills; animate();
       assert.equal(fills - beforeLanding, 1200, 'L5 inline: terminal frame is the whole field');
       assert.ok(view.state(now).done && view.state(now).pointer, 'L4 inline: handover clock');
       near(view.state(now).entranceTime, 0, 'L5 inline: entrance zero at landing');
-      scrollListener();
+      hero.getBoundingClientRect = () => ({ left: 0, top: -120, width: 1440, height: 900 });
+      for (const listener of scrollListeners) listener();
+      const scrolled = P.loaderScene(P.sampleMark(paths), 1440, 900, { width: 1440, height: 900, left: 0, top: -120 });
+      close(view.state(now).end, 3.16 + scrolled.duration, 'L5 scene: scrolled landing matches painter');
       bridge.measure({ left: 0, top: 0, width: 390, height: 844 });
       const beforePhone = fills; animate();
       assert.equal(fills - beforePhone, 305, 'L8 inline: terminal phone draws each shared home once');
       bridge.motion(true);
     }
-    bridge.clear();
-    assert.ok(removed === 1 && !scrollListener && !classes.has('is-bursting'), 'L4 inline: disposal');
+    view.clear();
+    assert.ok(removed === 1 && scrollListeners.size === 0 && !classes.has('is-bursting'), 'L4 inline: disposal');
     if (mode === 'worker') assert.ok(workerInstance.terminated && replaced === 0, 'L4 inline: worker shutdown');
     if (mode === 'worker-error') assert.ok(replaced === 1, 'L4 inline: failed transfer fallback');
     runs++;
@@ -443,7 +472,7 @@ function checkTimetable(E) {
 }
 
 // Run the real player with stand-ins, without ?t, so its entrance plays.
-async function runPlayer(playerSource, E, { review = false, reduced = false, withLoader = false, fonts = Promise.resolve(), pageFonts = Promise.resolve(), duringBoot, firstDrawSeconds = 0 } = {}) {
+async function runPlayer(playerSource, E, { review = false, reduced = false, withLoader = false, fonts = Promise.resolve(), pageFonts = Promise.resolve(), duringBoot, firstDrawSeconds = 0, inlineModel } = {}) {
   const node = rect => ({
     events: {}, attributes: {}, textContent: '', style: {}, classList: { remove() {} },
     rect, getBoundingClientRect() { return this.rect; },
@@ -458,6 +487,14 @@ async function runPlayer(playerSource, E, { review = false, reduced = false, wit
   let starOptions;
   const wipe = { model: createCraftModel(), follows: [] };
   let tick = null, now = 0;
+  if (inlineModel) {
+    const { P, paths, W, H } = inlineModel;
+    Object.assign(hero.rect, { width: W, height: H });
+    win.innerWidth = W; win.innerHeight = H; win.addEventListener = () => {}; win.removeEventListener = () => {};
+    hero.ownerDocument = { defaultView: win };
+    hero.querySelectorAll = selector => selector === '[data-mark] path' ? paths.map(p => ({ getAttribute: k => p[k] })) : crafts;
+    win.__loaderStars = { state: time => P.loaderAt(time, { fonts: 0, atlas: 0, frame: 0 }), boot() {}, measure() {}, apply() {}, clear() {} };
+  }
   const renderer = { setAtlas() {}, draw(pieces, v, look) { if (!draws.length) now += firstDrawSeconds * 1000; draws.push({ look }); events.push({ kind: 'draw', look, now }); } };
   const observer = class { observe() {} };
   const player = playerSource.replace(/^import\s+.*?;\s*$/gm, '');
@@ -468,22 +505,22 @@ async function runPlayer(playerSource, E, { review = false, reduced = false, wit
     createRenderer: () => renderer, makeCamera, dot, corners, makeAtlas: () => ({}), fontsReady: () => fonts,
     sceneEnvelope, SHOW, LOOP, SCENES, BLOCK, POOL, sceneAt, frameAt, calloutsAt, createCallouts: () => ({ draw() {}, fit: v => v, layout: [] }),
     createNameReact: () => ({ measure() {}, setLive(on) { live.push(on); }, live: false, open: 0, letters: [] }), createStars: (_hero, options) => { starOptions = options; return { measure() {}, frame: () => field, after() {}, swallowClick: () => false, field: null }; }, starReach: () => null, createPageLayout: () => ({ measure() {}, cover() {}, get metrics() { return { h: hero.rect, b: stage.rect, nameLines: [] }; }, view(need, cam, dpr) { const h = hero.rect, b = stage.rect, S = Math.min(b.width / need.w, b.height / need.h); return { W: h.width, H: h.height, S, cx: b.left + b.width / 2 - S * need.x, cy: b.top + b.height / 2 + S * need.y, cam, dpr }; } }),
-    ENTRANCE: E.ENTRANCE, entranceAt: E.entranceAt, screenPlane: E.screenPlane, floorReach: E.floorReach, loaderAt: E.loaderAt, createLoaderView: h => { const v = E.createLoaderView(h); return { clear() { events.push({ kind: 'clear', now }); v.clear(); }, apply(s) { loaderStates.push({ ...s, now }); v.apply(s); } }; }, performance: { now: () => now },
+    ENTRANCE: E.ENTRANCE, entranceAt: E.entranceAt, screenPlane: E.screenPlane, floorReach: E.floorReach, loaderAt: E.loaderAt, createLoaderView: h => { const v = E.createLoaderView(h); return { ...v, clear() { events.push({ kind: 'clear', now }); v.clear(); }, apply(s) { loaderStates.push({ ...s, now }); v.apply(s); } }; }, performance: { now: () => now },
     createEntranceView: () => ({ measure() {}, apply(s) { view.applied.push(s); }, clear() { view.clears++; }, lines: 3 }),
     devicePixelRatio: 1, requestAnimationFrame: f => { tick = f; return 1; }, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
   });
-  const run = seconds => { for (let n = 0; n < Math.round(seconds / 0.05); n++) { now += 50; tick?.(now); } };
+  const run = seconds => { const until = now + seconds * 1000; while (now < until - 1e-8) { now = Math.min(until, now + 50); tick?.(now); } };
   const result = { win, draws, view, crafts, pause, stage, media, run, wipe, loaderStates, live, starOptions, events, field };
   if (duringBoot) await duringBoot(result);
   await execution;
   tick?.(now);
-  if (!withLoader && !review) run(4.8);
+  if (!withLoader && !review) run(4.856);
   return result;
 }
 
 function near(a, b, message) { close(a, b, message, 1e-6); }
 
-async function checkPlayer(playerSource, E) {
+async function checkPlayer(playerSource, E, P) {
   const starts = SHOW.map((_, i) => SHOW.slice(0, i).reduce((sum, scene) => sum + scene.len, 0));
   // The first frame is ready underneath the loader; no loop/name/star interaction before its exit.
   let loading = await runPlayer(playerSource, E, { withLoader: true });
@@ -494,10 +531,11 @@ async function checkPlayer(playerSource, E) {
   assert.ok(!loading.live.at(-1) && !loading.starOptions.open() && !loading.starOptions.available(), 'L4 player: interactive while loading');
   loading.run(2.4); assert.equal(loading.loaderStates.at(-1).phase, 'hold', 'L4 player: full hold');
   loading.run(0.15); assert.equal(loading.loaderStates.at(-1).phase, 'shrink', 'L7 player: shrink boundary');
-  loading.run(0.4); assert.equal(loading.loaderStates.at(-1).phase, 'swell', 'L7 player: swell boundary');
-  loading.run(0.25); assert.ok(loading.loaderStates.at(-1).fill === 1 && loading.loaderStates.at(-1).burst < 1e-9, 'L4 player: burst boundary');
+  loading.run(0.35); assert.equal(loading.loaderStates.at(-1).phase, 'compressed', 'L9 player: compressed boundary');
+  loading.run(0.08); assert.equal(loading.loaderStates.at(-1).phase, 'swell', 'L9 player: swell boundary');
+  loading.run(0.18); assert.ok(loading.loaderStates.at(-1).fill === 1 && loading.loaderStates.at(-1).burst < 1e-9, 'L4 player: burst boundary');
   assert.equal(loading.win.__hero.entering, null, 'L5 player: entrance starts with burst');
-  loading.run(1.55); assert.equal(loading.win.__hero.entering, null, 'L5 player: entrance advances during burst');
+  loading.run(1.646); assert.equal(loading.win.__hero.entering, null, 'L5 player: entrance advances during burst');
   assert.ok(!loading.starOptions.open(), 'L4 player: pointer before burst ends');
   loading.run(0.05); near(loading.win.__hero.entering, 0, 'L5 player: entrance zero at burst handover');
   assert.ok(loading.starOptions.open(), 'L4 player: pointer at landing');
@@ -529,11 +567,11 @@ async function checkPlayer(playerSource, E) {
     finishPageFonts();
   } });
   assert.ok(late.win.__ready && late.win.__hero.loading && late.loaderStates.at(-1).fill === 0, 'L4 player: delayed readiness jumps fill');
-  late.run(4.75); assert.equal(late.win.__hero.entering, null, 'L5 player: delayed entrance before landing');
+  late.run(4.806); assert.equal(late.win.__hero.entering, null, 'L5 player: delayed entrance before landing');
   late.run(0.05); near(late.win.__hero.entering, 0, 'L5 player: delayed burst landing');
   const blocked = await runPlayer(playerSource, E, { withLoader: true, firstDrawSeconds: 2 });
   assert.ok(blocked.win.__ready && blocked.loaderStates.at(-1).fill === 0, 'L4 player: blocked boot consumes visible fill');
-  blocked.run(4.75); assert.equal(blocked.win.__hero.entering, null, 'L5 player: blocked boot consumes minimum duration');
+  blocked.run(4.806); assert.equal(blocked.win.__hero.entering, null, 'L5 player: blocked boot consumes minimum duration');
   blocked.run(0.05); near(blocked.win.__hero.entering, 0, 'L5 player: blocked boot burst landing');
   for (const release of ['seek', 'entrance']) {
     const p = await runPlayer(playerSource, E, { withLoader: true });
@@ -584,20 +622,34 @@ async function checkPlayer(playerSource, E) {
   p.win.__hero.entrance(null); assert.equal(p.win.__hero.entering, null, 'E2 release'); p.run(0.5); assert.ok(p.win.__hero.t > 0.2, 'E2 release does not play');
   // Reduced motion: no entrance at all.
   p = await runPlayer(playerSource, E); p.media.matches = true; p.media.change(); assert.equal(p.win.__hero.entering, null, 'E1 reduced motion keeps the entrance');
-  return 14;
+  const header = pageMarkup().match(/<a[^>]*data-mark[^>]*>([\s\S]*?<\/svg>)/)[1];
+  const paths = [...header.matchAll(/<path\b[^>]*>/g)].map(([p]) => ({ d: p.match(/\bd="([^"]+)"/)[1], fill: p.match(/\bfill="([^"]+)"/)[1] }));
+  const sample = P.sampleMark(paths);
+  for (const [W, H] of [[1440, 900], [768, 1024], [390, 844]]) {
+    const scene = P.loaderScene(sample, W, H), end = P.loaderAt(0, { fonts: 0, atlas: 0, frame: 0 }).burstStart + scene.duration;
+    const live = await runPlayer(playerSource, E, { withLoader: true, inlineModel: { P, paths, W, H } });
+    live.run(end - 1 / 240);
+    assert.ok(live.win.__hero.loading && live.win.__hero.entering === null && !live.starOptions.open(), 'L5 scene: early player handover');
+    live.run(1 / 240);
+    assert.ok(!live.win.__hero.loading && live.starOptions.open(), 'L5 scene: last landing did not hand over');
+    near(live.win.__hero.entering, 0, 'L5 scene: player entrance zero');
+    const [draw, clear] = live.events.slice(-2);
+    assert.ok(draw.kind === 'draw' && draw.look.stars === live.field && clear.kind === 'clear' && draw.now === clear.now, 'L5 scene: draw before removal');
+  }
+  return 17;
 }
 
-export async function checkEntrance({ loaderSource = read('loader-stars.mjs'), entranceSource = read('entrance.mjs'), playerSource = read('play.mjs'), stageSource = read('stage.mjs') } = {}) {
+export async function checkEntrance({ loaderSource = read('loader-stars.mjs'), entranceSource = read('entrance.mjs'), playerSource = read('play.mjs'), stageSource = read('stage.mjs'), painterSource = read('tools/page.mjs') } = {}) {
   const E = await loadEntrance(entranceSource, loaderSource), P = await import('data:text/javascript;base64,' + Buffer.from(loaderSource).toString('base64'));
 
   const groups = checkEntranceGroups(E), loaderSamples = checkLoaderTiming(E);
   const geometry = await checkLoaderGeometry(P);
   checkLoaderMarkup();
-  const inlineRuns = checkInlineLoader(E);
+  const inlineRuns = checkInlineLoader(E, P, painterSource);
   const dots = checkTimetable(E);
-  const runs = await checkPlayer(playerSource, E);
+  const runs = await checkPlayer(playerSource, E, P);
   const labelSamples = await checkLabelExit(stageSource);
-  return `L4/L5/L7/L8 computed: ${loaderSamples} timing samples at 1 ms; 1.4 s launches + 1 s flight, .15 hold, .4 shrink, .25 swell, 1.6 explosion; entrance/pointer start at landing (4.8 s all-ready); ${geometry.comparisons} mark/home comparisons at desktop/tablet/phone; ${inlineRuns} inline worker/fallback/reduced/review runs. L7 actual drawing at 240 Hz: ${JSON.stringify(geometry.moves)}. L8 landing/handover: ${JSON.stringify(geometry.landings)}. L2 timetable: ${groups.samples} samples, maximum ${groups.maximum} groups. L5 combined explosion + entrance: ${groups.combinedSamples} samples, maximum ${groups.withBurst} groups, no exceptions. E4: ${labelSamples} retained label samples. E1/E2: 3.8 s timetable, ${dots} floor dot samples, ${runs} player runs; review and reduced paths retained. Browser/pixels UNRUN.`;
+  return `L4/L5/L7/L8/L9 computed: ${loaderSamples} timing samples at 1 ms; 1.4 s launches + 1 s flight, .15 hold, .35 shrink, .08 compressed hold, .18 swell, depth-dependent explosion; entrance/pointer start at actual scene landing (fallback bound 4.856 s); ${geometry.comparisons} mark/home comparisons at desktop/tablet/phone; ${inlineRuns} inline worker/fallback/reduced/review runs. L7 actual drawing at 240 Hz: ${JSON.stringify(geometry.moves)}. L8 landing/handover: ${JSON.stringify(geometry.landings)}. L2 timetable: ${groups.samples} samples, maximum ${groups.maximum} groups. L5 combined explosion + entrance: ${groups.combinedSamples} samples, maximum ${groups.withBurst} groups, no exceptions. E4: ${labelSamples} retained label samples. E1/E2: 3.8 s timetable, ${dots} floor dot samples, ${runs} player runs; review and reduced paths retained. Browser/pixels UNRUN.`;
 }
 
 // Each edit matches one exact site in memory; the v35 control restores both its duration and curve.
@@ -612,7 +664,7 @@ export async function checkEntranceControls() {
       edited = edited.replace(search, replacement);
     }
     let message = null;
-    try { await checkEntrance({ 'entrance.mjs': { entranceSource: edited }, 'play.mjs': { playerSource: edited }, 'stage.mjs': { stageSource: edited }, 'loader-stars.mjs': { loaderSource: edited } }[c.file]); } catch (error) { message = error.message.split('\n')[0]; }
+    try { await checkEntrance({ 'entrance.mjs': { entranceSource: edited }, 'play.mjs': { playerSource: edited }, 'stage.mjs': { stageSource: edited }, 'loader-stars.mjs': { loaderSource: edited }, 'tools/page.mjs': { painterSource: edited } }[c.file]); } catch (error) { message = error.message.split('\n')[0]; }
     assert.ok(message && message.startsWith(c.gate), `E1 control ${c.id}: missed (${message})`);
     out.push(`${c.id} caught: ${message}`);
   }

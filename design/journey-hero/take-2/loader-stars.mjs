@@ -156,9 +156,12 @@ export function placeMark(sample, W, H, height = STARS.mark.height) {
 // L4: progress has real 25/50/25 shares. .85 displayed progress launches the last star;
 // .85 / 1.4 is deliberately stricter than 1 / 1.4, so launches themselves span 1.4 s.
 export const LOADER = {
-  launchEnd: 0.85, gatherSeconds: 1.4, flight: 1.0, hold: 0.15, shrink: 0.4, swell: 0.25, burst: 1.6,
+  launchEnd: 0.85, gatherSeconds: 1.4, flight: 1.0, hold: 0.15, shrink: 0.35, compressed: 0.08, swell: 0.18, burst: 1.696,
   shares: { fonts: 0.25, atlas: 0.5, frame: 0.25 },
 };
+const cubicInOut = p => p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2;
+// Hash the home, so L8's two stars sharing it still arrive together.
+export const loaderDuration = (home, i) => (1 + 0.6 * (1 - home.d)) * (0.94 + 0.12 * hash(i, 21));
 export const launchShare = (i, count = STARS.mark.count) => LOADER.launchEnd * i / Math.max(1, count - 1);
 // Farthest-point sampling already supplies a spatially even prefix, across both letters.
 // No sort by path, colour or side is introduced for the loader.
@@ -192,22 +195,29 @@ export function loaderAt(time, boot = {}, { review = false, reduced = false, cou
   const formedAt = launches.at(-1) + LOADER.flight;
   const fullAt = ready ? crossing(1) : Infinity;
   const holdAt = ready ? Math.max(formedAt, fullAt, events.at(-1)[0]) : Infinity;
-  const shrinkStart = holdAt + LOADER.hold, swellStart = shrinkStart + LOADER.shrink;
-  // L7's wind-up is about the mark's weight centre. L5 still waits for the landing.
-  const burstStart = swellStart + LOADER.swell, end = burstStart + LOADER.burst;
-  const entranceStart = end;
+  const shrinkStart = holdAt + LOADER.hold, compressedStart = shrinkStart + LOADER.shrink, swellStart = compressedStart + LOADER.compressed;
+  const burstStart = swellStart + LOADER.swell;
   if (reduced) return { phase: ready && time >= events.at(-1)[0] ? 'cut' : 'loading', fill: target, target,
     done: ready && time >= events.at(-1)[0], entranceStart: null, entranceTime: null, pointer: false,
     launches, arrived: count, formedAt: 0, burst: 0, burstTime: null, reduced: true };
   const shrink = clamp01((time - shrinkStart) / LOADER.shrink), swell = clamp01((time - swellStart) / LOADER.swell);
-  const scale = time >= swellStart ? 0.84 + (1.10 - 0.84) * swell ** 2 : 1 - 0.16 * (0.5 - 0.5 * Math.cos(Math.PI * shrink));
-  return { phase: time >= end ? 'entrance' : time >= burstStart ? 'burst' : time >= swellStart ? 'swell' : time >= shrinkStart ? 'shrink' : time >= holdAt ? 'hold' : 'loading',
-    fill, target, done: time >= end, launches, formedAt, fullAt, holdAt, shrinkStart, swellStart, scale, burstStart, end,
+  const scale = time >= swellStart ? 0.78 + (1.10 - 0.78) * swell ** 3 : 1 - 0.22 * cubicInOut(shrink);
+  const charge = 1 + 0.3 * cubicInOut(clamp01((time - shrinkStart) / (LOADER.shrink + LOADER.compressed)));
+  return loaderLanding({ phase: time >= swellStart ? 'swell' : time >= compressedStart ? 'compressed' : time >= shrinkStart ? 'shrink' : time >= holdAt ? 'hold' : 'loading',
+    fill, target, launches, formedAt, fullAt, holdAt, shrinkStart, compressedStart, swellStart, scale, charge, burstStart,
     arrived: launches.filter(at => time >= at + LOADER.flight).length,
-    burst: time >= end ? 1 : clamp01((time - burstStart) / LOADER.burst),
     burstTime: time >= burstStart ? time - burstStart : null,
-    entranceStart, entranceTime: time >= entranceStart ? time - entranceStart : null,
-    pointer: time >= end, time };
+    time }, LOADER.burst);
+}
+// The early clock has a conservative bound before layout is known. The painter uses
+// individual durations; the entrance view resolves this same clock to the actual last landing.
+export function loaderLanding(state, duration) {
+  if (state.reduced || state.phase === 'skipped') return state;
+  const { time, burstStart } = state, end = burstStart + duration;
+  const entranceStart = end;
+  return { ...state, end, entranceStart, entranceTime: time >= entranceStart ? time - entranceStart : null,
+    done: time >= end, pointer: time >= end, burst: time >= end ? 1 : clamp01((time - burstStart) / duration),
+    phase: time >= end ? 'entrance' : time >= burstStart ? 'burst' : state.phase };
 }
 
 const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
@@ -240,13 +250,46 @@ export function loaderScene(sample, W, H, viewport = { width: W, height: H, left
     const i = markOrder[Math.floor(rank * points.length / paired)], home = homeOrder[Math.floor(rank * homes.length / paired)];
     points[i].home = home; used.add(home);
   }
-  return { W, H, centre, weight, mark, points, homes, unpairedHomes: homeOrder.filter(i => !used.has(i)) };
+  const unpairedHomes = homeOrder.filter(i => !used.has(i));
+  for (const m of points) m.duration = loaderDuration(homes[m.home], m.home);
+  const duration = Math.max(...points.map(m => m.duration));
+  // Earliest crossing of each radius by any ray, including a star that later lands.
+  // Solve in eased progress, then invert the cubic: no frame-step or browser clock approximation.
+  const rays = points.map(m => {
+    const x = (m.x - weight[0]) * 1.10, y = (m.y - weight[1]) * 1.10, home = homes[m.home];
+    const dx = home.x - weight[0] - x, dy = home.y - weight[1] - y;
+    return { x, y, dx, dy, a: dx * dx + dy * dy, b: 2 * (x * dx + y * dy), duration: m.duration };
+  });
+  const wave = unpairedHomes.map(i => {
+    const home = homes[i], radius2 = (home.x - weight[0]) ** 2 + (home.y - weight[1]) ** 2;
+    let start = Infinity;
+    for (const ray of rays) {
+      const c = ray.x * ray.x + ray.y * ray.y - radius2;
+      if (c < 0 && (ray.a === 0 || ray.a + ray.b + c <= 0)) continue;
+      const g = c >= 0 ? 0 : clamp01((-ray.b + Math.sqrt(ray.b * ray.b - 4 * ray.a * c)) / (2 * ray.a));
+      start = Math.min(start, ray.duration * (1 - Math.cbrt(1 - g)));
+    }
+    return { home: i, start };
+  });
+  return { W, H, centre, weight, mark, points, homes, unpairedHomes, duration, wave };
 }
-// L7: cubic ease-out on unchanged gathering paths, then straight lines from the swollen mark.
-// The swell supplies the wind-up; the explosion has no separate kick or change of direction.
+function flightPoint(m, flight) {
+  const t = 1 - (1 - flight) ** 3, u = 1 - t;
+  return [u * u * m.start[0] + 2 * u * t * m.control[0] + t * t * m.x,
+    u * u * m.start[1] + 2 * u * t * m.control[1] + t * t * m.y];
+}
+function burstPoint(m, home, weight, time) {
+  const p = clamp01(time / m.duration), blend = 1 - (1 - p) ** 3;
+  const x = weight[0] + (m.x - weight[0]) * 1.10, y = weight[1] + (m.y - weight[1]) * 1.10;
+  return { x: p === 1 ? home.x : x + (home.x - x) * blend,
+    y: p === 1 ? home.y : y + (home.y - y) * blend, blend };
+}
+const trail = (x, y, tail) => ({ tail, streak: Math.hypot(x - tail[0], y - tail[1]) });
+// L9: preserve L7's lines and L8's homes; depth breaks up the scaled-picture look.
 export function loaderDots(scene, state) {
-  const { points, homes, weight } = scene, p = state.burst || 0, blend = 1 - (1 - p) ** 3, dots = [];
-  const landed = p === 1 ? new Set() : null;
+  const { points, homes, weight } = scene, dots = [];
+  const done = state.burstTime !== null && state.time >= state.burstStart + scene.duration, landed = new Set();
+  const elapsed = done ? Math.max(scene.duration, state.burstTime) : state.burstTime;
   for (let i = 0; i < points.length; i++) {
     const m = points[i], home = homes[m.home];
     if (state.reduced) { dots.push({ ...m, alpha: 1 }); continue; }
@@ -255,24 +298,32 @@ export function loaderDots(scene, state) {
     if (state.burstTime === null) {
       if (state.time >= state.formedAt) {
         dots.push({ ...m, x: weight[0] + (m.x - weight[0]) * state.scale,
-          y: weight[1] + (m.y - weight[1]) * state.scale, alpha: 1 });
+          y: weight[1] + (m.y - weight[1]) * state.scale, size: m.size * state.charge, alpha: 1 });
         continue;
       }
-      const t = 1 - (1 - flight) ** 3, u = 1 - t;
-      dots.push({ ...m, x: u * u * m.start[0] + 2 * u * t * m.control[0] + t * t * m.x,
-        y: u * u * m.start[1] + 2 * u * t * m.control[1] + t * t * m.y, alpha: 1 });
+      const [x, y] = flightPoint(m, flight), tail = flightPoint(m, clamp01((state.time - state.launches[i] - 1 / 50) / LOADER.flight));
+      dots.push({ ...m, x, y, ...trail(x, y, tail), alpha: 1 });
       continue;
     }
-    const x = weight[0] + (m.x - weight[0]) * 1.10, y = weight[1] + (m.y - weight[1]) * 1.10;
-    // Shared stars arrive together. Draw their home once from landing, as WebGL does.
-    if (landed?.has(m.home)) continue;
-    landed?.add(m.home);
-    const target = home;
-    dots.push({ x: p === 1 ? target.x : x + (target.x - x) * blend,
-      y: p === 1 ? target.y : y + (target.y - y) * blend,
-      size: p === 1 ? target.size : m.size + (target.size - m.size) * blend, colour: p === 1 ? target.colour : mixRGB(m.colour, target.colour, blend),
-      flag: p === 1 ? 0 : m.flag, home: m.home, alpha: 1 });
+    // Shared stars have the same home/depth/hash, so merge at their own landing.
+    const arrived = state.time >= state.burstStart + m.duration;
+    if (arrived) {
+      if (landed.has(m.home)) continue;
+      landed.add(m.home);
+    }
+    const target = home, { x, y, blend } = burstPoint(m, target, weight, arrived ? m.duration : elapsed);
+    const previous = burstPoint(m, target, weight, Math.max(0, elapsed - 1 / 50));
+    const depth = 1 + 1.6 * Math.max(0, target.d - 0.4) * Math.sin(Math.PI * blend);
+    const flare = 1 + 0.7 * (1 - clamp01(elapsed / 0.3)) ** 3;
+    dots.push({ x, y, ...trail(x, y, [previous.x, previous.y]),
+      size: blend === 1 ? target.size : (m.size + (target.size - m.size) * blend) * depth * flare,
+      colour: blend === 1 ? target.colour : mixRGB(m.colour, target.colour, blend),
+      flag: blend === 1 ? 0 : m.flag, star: i, home: m.home, alpha: 1 });
   }
-  if (state.burstTime !== null) for (const i of scene.unpairedHomes) dots.push({ ...homes[i], home: i, flag: 0, alpha: blend });
+  if (elapsed !== null) for (const { home: i, start } of scene.wave) {
+    // A home beyond every ray has no wave crossing. Preserve the exact field handover there.
+    const alpha = done ? 1 : 1 - (1 - clamp01((elapsed - start) / 0.2)) ** 3;
+    dots.push({ ...homes[i], home: i, flag: 0, alpha });
+  }
   return dots;
 }

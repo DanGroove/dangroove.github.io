@@ -128,9 +128,9 @@ async function runPlayer(playerSource) {
     createEntranceView: () => ({ measure() {}, apply() {}, clear() {}, lines: 3 }),
     devicePixelRatio: 1, requestAnimationFrame: f => { tick = f; return 1; }, cancelAnimationFrame() {}, IntersectionObserver: observer, ResizeObserver: observer,
   });
-  out.run = seconds => { for (let n = 0; n < Math.round(seconds / 0.05); n++) { now += 50; tick?.(now); } };
+  out.run = seconds => { const until = now + seconds * 1000; while (now < until - 1e-8) { now = Math.min(until, now + 50); tick?.(now); } };
   tick?.(now);
-  out.run(4.8);
+  out.run(4.856);
   return out;
 }
 

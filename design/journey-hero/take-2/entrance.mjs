@@ -2,7 +2,7 @@
 // Hard-edged except the stars/name. Entrance times are seconds from the loader's burst landing.
 import { EASE } from '../../../public/journey/hero/engine.mjs';
 import { SCREEN } from './stage.mjs';
-import { LOADER, loaderAt } from './loader-stars.mjs';
+import { LOADER, loaderAt, loaderLanding, loaderScene, sampleMark } from './loader-stars.mjs';
 export { LOADER, loaderAt };
 
 export const ENTRANCE = {
@@ -25,16 +25,29 @@ const wipe = (t, a, b) => EASE.wipe(linear(t, a, b));
 // The early inline canvas owns its clock and painting; the player owns the same-frame WebGL handover.
 // Stand-alone/review harnesses can still exercise the pure timing without an inline bridge.
 export function createLoaderView(hero) {
-  const bridge = hero.ownerDocument?.defaultView?.__loaderStars;
+  const win = hero.ownerDocument?.defaultView, bridge = win?.__loaderStars;
+  let sample = null, scene = null;
+  const measureScene = box => {
+    if (!bridge) return;
+    // Resolve the entrance to the painter's actual last ray, once layout is known.
+    sample ??= sampleMark([...hero.querySelectorAll('[data-mark] path')].map(p => ({ d: p.getAttribute('d'), fill: p.getAttribute('fill') })));
+    scene = loaderScene(sample, box.width, box.height, { width: win.innerWidth, height: win.innerHeight, left: box.left, top: box.top });
+  };
+  // The early painter also remeasures on scroll. Keep its scene's landing clock in sync.
+  const onScroll = () => measureScene(hero.getBoundingClientRect());
+  if (bridge) win.addEventListener('scroll', onScroll, { passive: true });
   return {
-    state: bridge ? now => bridge.state(now) : null,
+    state: bridge ? now => loaderLanding(bridge.state(now), scene?.duration ?? LOADER.burst) : null,
     boot: key => bridge?.boot(key),
-    measure: box => bridge?.measure(box),
+    measure(box) {
+      bridge?.measure(box);
+      measureScene(box);
+    },
     motion: reduced => bridge?.motion(reduced),
     // The inline bridge's legacy entranceTime input only switches the burst's transparent backing.
     // Keep that switch at burst start while the page's entranceTime waits for the landing.
     apply(state) { bridge?.apply({ ...state, entranceTime: state.burstTime }); },
-    clear() { bridge?.clear(); hero.classList.remove('is-loading'); },
+    clear() { if (bridge) win.removeEventListener('scroll', onScroll); bridge?.clear(); hero.classList.remove('is-loading'); },
   };
 }
 // The loop's clock starts at 0 when the screen's wipe ends.

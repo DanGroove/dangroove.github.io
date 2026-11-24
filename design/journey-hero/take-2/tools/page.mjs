@@ -74,6 +74,14 @@ function canvasPainter(canvas, paths, box, viewport, ratio) {
       const r = dot.size / 2, fringe = 0.5 / dpr, outer = r + fringe;
       const colour = dot.colour.map(n => n.toFixed(4)).join(',');
       const alpha = dot.alpha * Math.min(1, dot.size * dpr);
+      if (dot.streak > dot.size) {
+        const dx = dot.x - dot.tail[0], dy = dot.y - dot.tail[1];
+        const nx = -dy / dot.streak * r, ny = dx / dot.streak * r;
+        ctx.fillStyle = `rgba(${colour},${alpha})`;
+        ctx.beginPath(); ctx.moveTo(dot.tail[0], dot.tail[1]);
+        ctx.lineTo(dot.x + nx, dot.y + ny); ctx.lineTo(dot.x - nx, dot.y - ny);
+        ctx.closePath(); ctx.fill();
+      }
       const ink = ctx.createRadialGradient(dot.x, dot.y, 0, dot.x, dot.y, outer);
       ink.addColorStop(Math.max(0, r - fringe) / outer, `rgba(${colour},${alpha})`);
       ink.addColorStop(1, `rgba(${colour},0)`);
