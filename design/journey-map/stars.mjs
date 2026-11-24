@@ -2,7 +2,7 @@
 // On the joined page (join.mjs) the list is built from the real hero's stars instead of the stand-in field.
 import { STARS, C, MAP, NOVA, DEPTH, STEPS } from './data.mjs';
 import { rnd, onLand, COAST_A, COAST_B, polyLen } from './art.mjs';
-import { TRAIL_DOTS, VIEW, SEQ, tripState, toScreen, smooth, lerp, clamp01, easeIO, novaBuildGather, coastAt } from './trip.mjs';
+import { TRAIL_DOTS, X_U, pointAt, VIEW, SEQ, tripState, toScreen, smooth, lerp, clamp01, easeIO, novaBuildGather, coastAt } from './trip.mjs';
 import { depthFrameBox, depthFrameCovers, novaRingRadius, novaFlare, novaShare, NOVA_LIVE } from './depth.mjs';
 
 const SK = { cv: null, ctx: null, dpr: 1, list: [], trav: null, src: null, n: -1, standN: 0, seaN: 0, keepP: .3, bins: new Map(), tails: new Map(), supplyBins: new Map(), supplyTails: new Map(), pt: [0, 0], drift: 0, orbit: 0, burn: 0, skyPointer: [0.5, 0.5], skyCount: 0, tuning: '', assignment: '', skyVisible: false, rushPlan: null, supplied: false };
@@ -15,7 +15,7 @@ export function starsBuild(canvas) {
   for (let i = 0; i < n; i++) list.push({ hx: r(), hy: r(), z: .25 + r() * .75, r: .5 + r() * 1.1, a: .35 + r() * .6, red: r() < STARS.red, ang: r() * Math.PI * 2, far: r(), sgn: r() < .5 ? -1 : 1, keep: r() < .3, kr: r(), ord2: r() });
   // red stars go to the sea; the rest are shuffled onto trail dots
   const order = list.map((s, i) => i).sort((a, b) => (list[a].red - list[b].red) || (r() - .5));
-  order.forEach((idx, k) => { const s = list[idx]; if (k < nDots) { s.kind = 'trail'; s.map = TRAIL_DOTS[k]; s.ord = k / nDots; } else { s.kind = 'sea'; s.map = seaPoint(r); s.ord = r(); } });
+  order.forEach((idx, k) => { const s = list[idx]; if (k < nDots) { s.kind = 'trail'; s.map = TRAIL_DOTS[k]; s.u = k * MAP.dotGap; s.ord = k / nDots; } else { s.kind = 'sea'; s.map = seaPoint(r); s.ord = r(); } });
   SK.list = list; SK.trav = { hx: .62, hy: .4, z: 1, i: -1 };
   SK.standN = n; SK.seaN = n - nDots;
   SK.skyCount = 0; starsAddSky();
@@ -84,7 +84,7 @@ export function novaGatherSources(homes, centre, w, h, phone = false) {
 // Source geometry is evaluated at the X beat, before the rush camera's push. This also works for a direct scrub.
 export function starsRushSources(look = [0, 0]) {
   const start = SEQ.find(q => q.kind === 'rush'), st = tripState(start.a), X = toScreen(st, MAP.x), W = VIEW.w, H = VIEW.h;
-  const centre = toScreen(st, [MAP.w / 2, MAP.h / 2]), c0 = [VIEW.ox + MAP.w / 2 * VIEW.s0, VIEW.oy + MAP.h / 2 * VIEW.s0];
+  const centre = toScreen(st, [MAP.w / 2, MAP.h / 2]), c0 = [VIEW.ox + MAP.w / 2 * VIEW.s0, VIEW.oy + MAP.h / 2 * VIEW.s0], reach = trailReach(start);
   const homes = SK.list.filter(s => SK.src || s.kind !== 'sky' || s.si < STARS.sky).map(s => {
     let from;
     if (s.kind === 'sky' || s.skyHome) {
@@ -97,10 +97,24 @@ export function starsRushSources(look = [0, 0]) {
       const d = Math.hypot(from[0] - X[0], from[1] - X[1]), k = .12 * st.legXT * Math.max(0, 1 - d / 260);
       from = from.map((v, i) => v + (X[i] - v) * k);
     }
-    return { s, from, visible: s.kind !== 'coast' || !!s.skyHome };
+    return { s, from, visible: s.kind !== 'trail' && (s.kind !== 'coast' || !!s.skyHome), reach };
   });
   return novaGatherSources(homes, X, W, H, VIEW.phone);
 }
+// The trail does not whirl: it runs down its own route into the X (Dan, 2026-11-24: "the trail stays while the
+// supernova explodes"). Every dot from the X back to the first one the rush never shows takes part; the rest keep
+// their place on the map like the sea (on a tall phone a stretch of an earlier leg at the top edge leaves with the
+// camera early in the rush). Returned as a distance along the route from the X.
+function trailReach(start) {
+  const W = VIEW.w, H = VIEW.h, states = [0, .2, .4, .6, .8, .99].map(t => tripState(start.a + start.len * t));
+  for (let k = TRAIL_DOTS.length - 1; k >= 0; k--) {
+    const seen = states.some(st => { const [x, y] = toScreen(st, TRAIL_DOTS[k]); return x >= -10 && y >= -10 && x <= W + 10 && y <= H + 10; });
+    if (!seen) return X_U - k * MAP.dotGap;
+  }
+  return X_U + MAP.dotGap;
+}
+// How far along its route the trail has run into the X: eased like the gather, the last dot arrives at the blast.
+const trailRun = (rushT, reach) => reach * clamp01(rushT) ** NOVA.build.pull;
 function seaPoint(r) { let p; for (let t = 0; t < 60; t++) { p = [30 + r() * 540, 30 + r() * 780]; if (!onLand(p)) break; } return p; }
 
 // ---- the joined page: the hero's own stars ----
@@ -133,7 +147,7 @@ function heroList() {
   for (let k = 0; k < nDots + nSea; k++) {
     const s = star(k < order.length ? order[k] : -1);
     s.fade = s.i < 0; // fewer hero stars than places (small phones): the missing ones fade up in place
-    if (k < nDots) { s.kind = 'trail'; s.map = TRAIL_DOTS[k]; s.ord = k / nDots; } else { s.kind = 'sea'; s.map = seaPoint(r); s.ord = r(); }
+    if (k < nDots) { s.kind = 'trail'; s.map = TRAIL_DOTS[k]; s.u = k * MAP.dotGap; s.ord = k / nDots; } else { s.kind = 'sea'; s.map = seaPoint(r); s.ord = r(); }
     list.push(s);
   }
   // the rest fall evenly along the coast outlines, matched by angle so each lands on the side of the view it came from
@@ -353,15 +367,23 @@ export function starsFrame(time, st, pointer, opt = {}) {
         if (s.kind === 'coast') al *= 1 - smooth(s.hu, s.hu + .06, h); // the coast line passes it and it dissolves into the line
       }
       else { x = m[0]; y = m[1]; rad = endR; al = endA; }
+      // In the rush the map's stars keep to the map as the camera centres the X; the trail runs down its route into it.
+      const flows = source && rushing && !opt.still && !source.gather && s.kind === 'trail' && X_U - s.u < source.reach;
+      let left = Infinity;
+      if (flows) { left = X_U - s.u - trailRun(st.rushT, source.reach); if (left <= 0) continue; [x, y] = toScreen(st, pointAt(X_U - left)); }
       let pullTail = null;
       if (st.legXT > 0 && st.blastT === 0) { const dx = Xs[0] - x, dy = Xs[1] - y, d = Math.hypot(dx, dy), R = 260; if (d < R) { const k = .12 * st.legXT * (1 - d / R); x += dx * k; y += dy * k; pullTail = [dx / d * 6 * st.legXT, dy / d * 6 * st.legXT]; } }
       if (st.rushT === 0 && pullTail) tail = pullTail;
       if (source && rushing && !opt.still) {
-        [x, y] = source.gather ? rushAt(source) : source.from;
         if (source.gather) {
+          [x, y] = rushAt(source);
           const tt = gatherT(s), join = smooth(0, G.join, tt);
           tail = rushTail(source); al = lerp(al, Math.max(al, .6), join) * (1 - smooth(G.coreFade, 1, tt));
           if (pullTail) tail = tail.map((v, i) => v + pullTail[i] * (1 - join));
+        } else if (flows) {
+          const before = toScreen(st, pointAt(Math.min(X_U, s.u + trailRun(st.rushT - G.tail / STEPS.pace.rush, source.reach)))), base = toScreen(st, pointAt(X_U - left));
+          tail = [0, 1].map(i => (base[i] - before[i]) * G.tailGain / G.tail + (pullTail ? pullTail[i] : 0));
+          al *= smooth(0, Math.min(MAP.dotGap, X_U - s.u), left); // into the X's core over its last dot gap (the nearest dot from where it starts)
         } else if (pullTail) tail = pullTail;
         if (s.kind === 'coast') al = 0;
       }
