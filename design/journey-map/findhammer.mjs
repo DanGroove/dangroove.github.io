@@ -1,9 +1,9 @@
 // The map find, accessible sheet and cached line-art renderer. The kit owns the frame clock.
-import { C, FIND_COPY, FIND_PLAY, HAMMER } from './data.mjs';
+import { C, FIND_COPY, FIND_PLAY, HAMMER, COMB } from './data.mjs';
 import { VIEW, lerp } from './trip.mjs';
 import { runeGlyph } from './art.mjs';
 import { hammerStart, hammerStep, hammerPick } from './hammer.mjs';
-import { FD, FIND_BY, attr, ease, press, opened, found, attend, findSheet, closeSheet, findFormat, findSlot, findStyle } from './findkit.mjs';
+import { FD, FIND_BY, attr, ease, press, opened, found, attend, findSheet, closeSheet, findFormat, findSlot, findStyle, findWhenReady, findSheetFrame } from './findkit.mjs';
 
 export function hammerBestRead(fallback = 0) { try { const value = Number(localStorage.getItem(HAMMER.ui.bestKey)); return Number.isFinite(value) && value >= 0 ? Math.max(fallback, value) : fallback; } catch { return fallback; } }
 export function hammerBestWrite(score, fallback = 0) { const best = Math.max(score, hammerBestRead(fallback)); try { localStorage.setItem(HAMMER.ui.bestKey, String(best)); } catch {} return best; }
@@ -20,7 +20,7 @@ export function findHammer(svg) {
   const pause = () => { if (!o.game || o.game.phase === 'end' || o.game.paused) return; o.game.paused = true; clearInput(); refresh(); };
   const run = () => { o.game = hammerStart(o.serial++); o.game.reduced = FD.rm; o.auto = false; o.seen = {}; o.version = -1; clearInput(); refresh(); focusField(); };
   const resume = () => { if (!o.game) return; o.game.paused = false; clearInput(); refresh(); if (o.game.phase === 'play') focusField(); };
-  const toggle = () => { o.auto = !o.auto; if (o.autoButton) attr(o.autoButton, 'aria-pressed', o.auto); };
+  const toggle = () => { if (!o.game || o.game.phase !== 'play' || o.game.paused) return; o.auto = !o.auto; if (o.autoButton) attr(o.autoButton, 'aria-pressed', o.auto); };
   const choose = i => { if (o.game && !o.game.paused && hammerPick(o.game, i)) { refresh(); focusField(); } };
   const runeCards = () => o.game.choices.map((r, i) => { const n = o.game.levels[r] + 1, count = hammerRuneNumber(r, n), row = FIND_COPY.hammer.runes[r], line = findFormat(row[1], { n: count, s: count === 1 ? '' : 's' }); return `<button type="button" class="hm-rune" data-rune="${i}" aria-label="${hammerText('runeLevel', { key: i + 1, name: row[0], n, line })}">${hammerRuneArt(r)}<span><strong>${i + 1}. ${row[0]}</strong><span>${line}</span></span></button>`; }).join('');
   function refresh() {
@@ -29,23 +29,26 @@ export function findHammer(svg) {
     if (!s) html = `<h2>${H.title}</h2><p>${H.intro}</p><p class="hm-quiet">${FD.hover ? H.controls : H.controlsTouch}</p><button type="button" class="hm-start">${H.start}</button>${findSlot(FIND_COPY.hammerFact)}`;
     else if (s.paused) html = `<h2>${H.pause}</h2><button type="button" class="hm-resume">${H.resume}</button><button type="button" class="hm-new">${H.newRun}</button>`;
     else if (s.phase === 'runes') html = `<h2>${hammerText('runeTitle', { n: s.wave })}</h2><p class="hm-quiet">${H.runeKeys}</p>${runeCards()}`;
-    else if (s.phase === 'end') {
+    else if (s.phase === 'end' && (FD.rm || s.reason !== 'won' || s.fall >= HAMMER.boss.fall)) {
       o.best = hammerBestWrite(s.silver, o.best);
       html = `<h2>${s.reason === 'won' ? H.won : hammerText(s.reason === 'hearts' ? 'lostHearts' : 'lost', { n: s.wave })}</h2><p>${hammerText('stats', { silver: s.silver, foes: s.felled })}</p><div class="hm-taken" aria-label="${H.runes}">${s.levels.map((n, r) => n ? `<span aria-label="${H.runes[r][0]}, ${n}">${hammerRuneArt(r, true)}<span>${n}</span></span>` : '').join('')}</div><p>${hammerText('best', { silver: o.best })}</p>${findSlot(FIND_COPY.hammerFact)}<button type="button" class="hm-new">${H.newRun}</button><button type="button" class="hm-end-close">${H.close}</button>`;
     }
-    const cardKey = !s ? 'start' : s.paused ? 'pause' : s.phase === 'runes' ? 'runes' + s.wave : s.phase;
+    const cardKey = !s ? 'start' : s.paused ? 'pause' : s.phase === 'runes' ? 'runes' + s.wave : s.phase === 'end' && s.reason === 'won' && !FD.rm && s.fall < HAMMER.boss.fall ? 'falling' : s.phase;
     if (o.cardKey !== cardKey) {
-      o.cardKey = cardKey; o.card.innerHTML = html; o.card.hidden = !html;
+      o.cardKey = cardKey; const epoch = o.panelEpoch = (o.panelEpoch || 0) + 1;
+      const apply = () => { if (FD.sheetOwner !== o || o.panelEpoch !== epoch) return; o.card.innerHTML = html; o.card.hidden = !html;
       o.card.querySelector('.hm-start')?.addEventListener('click', run); o.card.querySelector('.hm-resume')?.addEventListener('click', resume);
       o.card.querySelectorAll('.hm-new').forEach(b => b.addEventListener('click', run)); o.card.querySelector('.hm-end-close')?.addEventListener('click', () => closeSheet());
       o.card.querySelectorAll('.hm-rune').forEach((b, i) => b.addEventListener('click', () => choose(i)));
       const first = o.card.querySelector('button'); if (first) first.focus({ preventScroll: true });
+      if (html && !FD.rm) o.card.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140, fill: 'both' }); };
+      if (!FD.rm && !o.card.hidden && o.card.innerHTML) { const fade = o.card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, fill: 'both' }); fade.onfinish = () => { fade.cancel(); apply(); }; } else apply();
     }
     o.wave.textContent = hammerText('waveLine', { n: s ? s.wave : 1 }) + (s && s.fate >= 0 ? ' / ' + H.fates[s.fate][0] : '');
     const hearts = s ? s.hearts : HAMMER.hearts, most = s ? s.maxHearts : HAMMER.hearts;
     o.hearts.innerHTML = Array.from({ length: most }, (_, i) => `<svg viewBox="${HAMMER.paths.heartBox}" aria-hidden="true"><path d="${HAMMER.paths.heart}" fill="${i < hearts ? C.paper : C.ink}"/></svg>`).join('');
     attr(o.hearts, 'aria-label', hammerText('hearts', { n: hearts, max: most })); o.silver.textContent = hammerText('silver', { n: s ? s.silver : 0 });
-    attr(o.autoButton, 'aria-pressed', o.auto); o.pauseButton.disabled = !s || s.phase === 'end'; o.pauseButton.textContent = s?.paused ? H.resume : H.pauseButton;
+    attr(o.autoButton, 'aria-pressed', o.auto); o.autoButton.disabled = !s || s.phase !== 'play' || s.paused; o.pauseButton.disabled = !s || s.phase === 'end'; o.pauseButton.textContent = s?.paused ? H.resume : H.pauseButton;
     if (s) {
       o.announcement = '';
       if (s.events.rune !== (o.seen.rune || 0)) announce('rune', hammerText('runeTaken', { name: H.runes[s.taken][0], n: s.levels[s.taken] }));
@@ -61,7 +64,8 @@ export function findHammer(svg) {
   }
   const measure = () => {
     if (FD.sheetOwner !== o || !o.canvas) return;
-    const U = HAMMER.ui; o.fit = Math.min(1, (VIEW.w - FIND_PLAY.kit.sheet.edge * 2) / U.w, (VIEW.h - FIND_PLAY.kit.sheet.edge * 2) / U.h);
+    const U = HAMMER.ui; o.fit = Math.min(1, (VIEW.w - FIND_PLAY.kit.sheet.edge * 2) / U.w, (VIEW.h - FIND_PLAY.kit.sheet.edge * 2 - COMB.target) / (U.h - U.buttons));
+    o.sheetY = VIEW.h / 2 - Math.max(0, COMB.target - U.buttons * o.fit) / 2;
     const scale = Math.min(HAMMER.field.dpr, window.devicePixelRatio || 1) * o.fit;
     o.canvas.width = Math.round(HAMMER.field.w * scale); o.canvas.height = Math.round(HAMMER.field.h * scale); const previous = o.scale; o.scale = scale;
     o.ctx = o.canvas.getContext('2d');
@@ -147,7 +151,7 @@ export function findHammer(svg) {
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) o.canvas.addEventListener(type, release);
     found(o.id); o.stage = 'sheet'; o.sheetTs = FD.now; o.accumulator = 0;
   };
-  press(el, sheet);
+  press(el, () => findWhenReady(o, sheet));
   o.onSheetClose = () => { if (o.game && o.game.phase !== 'end') o.game.paused = true; clearInput(); o.canvas = o.ctx = null; o.stage = 'rest'; };
   o.hear = () => { if (!FD.rm) o.hearTs = FD.now; };
   window.addEventListener('resize', measure);
@@ -164,13 +168,13 @@ export function findHammer(svg) {
     const hop = !FD.rm && ringing ? M.hop * Math.sin(Math.PI * age / M.hopTime) : 0, tremble = !FD.rm && attend(o, M.near) ? M.tremble * Math.sin(t * M.trembleRate) : 0;
     attr(lift, 'transform', `translate(${tremble} ${-hop})`); attr(spark, 'opacity', !FD.rm && (ringing || t % M.every < M.sparkTime) ? 1 : 0);
     if (FD.sheetOwner !== o) return;
-    const q = FD.rm ? 1 : ease((t - o.sheetTs) / FIND_PLAY.kit.sheet.grow), from = FD.sheetFrom;
-    findStyle(FD.sheet, 'transform', `translate(${lerp(from[0], VIEW.w / 2, q)}px,${lerp(from[1], VIEW.h / 2, q)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, o.fit, q)})`);
+    findSheetFrame(o, o.fit, o.sheetY);
+    if (FD.sheetClosing) return;
     const s = o.game;
     if (s && !s.paused) {
       o.input.move = Number(o.keys.right) - Number(o.keys.left); o.input.throw = o.auto || o.keys.fire || o.held; o.accumulator = Math.min(o.accumulator + FD.dt, HAMMER.step * HAMMER.steps);
       let n = 0; while (o.accumulator >= HAMMER.step && n++ < HAMMER.steps) { hammerStep(s, o.input, HAMMER.step); o.accumulator -= HAMMER.step; }
-      if (s.version !== o.version && !o.queued) { o.queued = true; queueMicrotask(() => { o.queued = false; refresh(); }); }
+      if ((s.version !== o.version || s.phase === 'end' && o.cardKey === 'falling' && s.fall >= HAMMER.boss.fall) && !o.queued) { o.queued = true; queueMicrotask(() => { o.queued = false; refresh(); }); }
     }
     draw();
   };

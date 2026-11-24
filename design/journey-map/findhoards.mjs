@@ -1,5 +1,5 @@
 // Part A: the instrument and the five persistent, hand-dug chests.
-import { C, COPY, CRAFTS, STOPS, MAP, FIND_COPY, FIND_PLAY, PALETTES } from './data.mjs';
+import { C, COPY, CRAFTS, STOPS, MAP, FIND_COPY, FIND_PLAY, PALETTES, COMB } from './data.mjs';
 import { clamp01, lerp, VIEW } from './trip.mjs';
 import { pieceIcon, hoardInside } from './art.mjs';
 import { cardsSetCraft, arrowSvg } from './cards.mjs';
@@ -24,6 +24,7 @@ export function findWay(svg) {
     svg.querySelectorAll('#finds > .find, #bc-notes').forEach(g => { if (g !== el) g.style.opacity = mask ? FIND_PLAY.way.dim : 1; });
     FD.list.hoards?.items.forEach(h => { const i = STOPS.findIndex(s => s.id === h.d.stop); h.setCraftLit(!!mask?.[i]); h.el.style.opacity = mask && !mask[i] ? FIND_PLAY.way.dim : 1; });
   };
+  const wayResultView = mask => { const points = [[f.x - 70, f.y - 60], [f.x + 70, f.y + 105], ...STOPS.filter((s,i) => mask[i]).map(s => MAP.waypoints[s.w])], xs = points.map(p=>p[0]), ys = points.map(p=>p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys); return [(x0+x1)/2, (y0+y1)/2, Math.max(x1-x0,y1-y0)/2+40, 0]; };
   const startLines = () => { o.lineTs = FD.now; o.linePhase = 'grow'; o.lines.forEach((l, i) => { l.lit = !!o.mask?.[i]; l.arrived = false; attr(l.line, 'stroke-dasharray', o.craft === CRAFTS.length ? 'none' : FIND_PLAY.way.dash.join(' ')); }); };
   const set = i => {
     if (i === CRAFTS.length && (!o.unlocked || !wayAllStops().some(Boolean))) i = -1;
@@ -36,7 +37,8 @@ export function findWay(svg) {
     applyMask(mask);
     // With a craft chosen the lines have to be seen arriving, so on a wide screen the camera pulls back for them.
     document.documentElement.classList.toggle('jm-way', i >= 0);
-    if (JOURNEY.focus === o.id && !VIEW.phone) stepsFocus(o.id, i < 0 ? f.view : FIND_PLAY.way.wide);
+    if (JOURNEY.focus === o.id) stepsFocus(o.id, i < 0 ? f.view : wayResultView(mask));
+    if (FD.say) FD.say.textContent = i < 0 ? f.label : findFormat(COMB.waySay, { craft: FIND_COPY.crafts[i] || FIND_COPY.wayAll.split(':')[0], names: STOPS.filter((s,j) => mask?.[j]).map(s => s.short).join(', ') });
     tally.textContent = i < 0 ? '' : i === CRAFTS.length ? findFormat(FIND_COPY.wayAll, { names: STOPS.filter((s, j) => mask[j]).map(s => s.short + ', ' + s.dates).join('; ') }) : findFormat(FIND_COPY.wayTally, { craft: FIND_COPY.crafts[i], n: mask.filter(Boolean).length, t: STOPS.length });
     o.retract = o.lines.map(l => l.v); o.lineTs = FD.now; o.linePhase = 'retract'; if (FD.rm || o.retract.every(v => v === 0)) { startLines(); if (FD.rm) o.lines.forEach(l => l.v = l.lit ? 1 : 0); }
   };
@@ -69,7 +71,8 @@ export function findWay(svg) {
     arms.forEach((arm, i) => attr(arm, 'transform', `rotate(${i * FIND_PLAY.kit.turn / CRAFTS.length}) scale(${1 + (W.pulse[0] - 1) * pulse * (o.craft === i || o.craft === CRAFTS.length ? 1 : 0)})`));
     if (o.kept && !FD.rm) { o.runesAngle += W.runes * dt; attr(runes, 'transform', `rotate(${o.runesAngle})`); }
     // The tally is read from far out as well: it never falls under tally[3] px on screen, up to tally[4] units.
-    attr(tally, 'font-size', Math.min(W.tally[4], Math.max(W.tally[1], W.tally[3] / FD.st.cam.s)));
+    words.forEach(w => attr(w, 'font-size', COMB.wordPx / FD.st.cam.s));
+    attr(tally, 'font-size', Math.max(W.tally[1], W.tally[3] / FD.st.cam.s));
     attr(ring, 'opacity', o.unlocked ? 1 : 0);
     if (o.unlocked && !FD.rm) attr(ring, 'transform', `scale(${lerp(W.ring[0], W.ring[1], (1 - Math.cos(t * Math.PI * 2 / W.ring[2])) / 2) / W.ring[0]})`);
     if (o.linePhase === 'retract') { const q = FD.rm ? 1 : clamp01((t - o.lineTs) / W.line); o.lines.forEach((l, i) => l.v = o.retract[i] * (1 - ease(q))); if (q === 1) queueMicrotask(startLines); }
@@ -94,7 +97,7 @@ export function findHoards(svg) {
     h.planks = [el.querySelector('.hd-plank-0'), el.querySelector('.hd-plank-1')];
     const group = el.querySelector('.hd-clods');
     for (let i = 0; i < H.clods * H.hole.length; i++) { const bit = findSvg('path', { class: 'g', d: FIND_PLAY.bits.kinds.clod[0], opacity: 0 }); group.appendChild(bit); h.clods.push({ el: bit, live: false }); }
-    const hint = () => { h.hintLine = FIND_COPY.hoardHints[h.open ? H.hole.length + 1 : h.digs]; if (JOURNEY.focus === h.id) findHint(h.id); };
+    const hint = () => { h.hintLine = FIND_COPY.hoardHints[h.open ? H.hole.length + 1 : h.digs]; attr(h.el, 'aria-label', h.d.label.split('. ')[0] + '. ' + h.hintLine); if (JOURNEY.focus === h.id) findHint(h.id); };
     const stage = value => { h.stage = value; hint(); };
     hint();
     h.setCraftLit = on => {
@@ -106,7 +109,7 @@ export function findHoards(svg) {
       if (FD.popOwner === h) return true;
       const stop = STOPS.find(s => s.id === d.stop), n = o.items.filter(item => item.open).length;
       const title = !d.image && d.title === COPY.pieceToCome ? '' : '<p class="pop-t">' + fEsc(d.title) + '</p>';
-      const shown = showPop(h, [d.x, d.y - H.anchor], '<p class="pop-k">' + fEsc(stop.name) + '<br>' + fEsc(findFormat(FIND_COPY.hoardTally, { n, t: o.items.length })) + '</p>' + (d.image ? '<img src="' + d.image + '" alt="' + fEsc(d.title) + '">' : '<div class="piece-empty"><svg viewBox="' + H.iconBox.join(' ') + '" aria-hidden="true">' + pieceIcon(d.kind) + '</svg><span>' + fEsc(COPY.pieceToCome) + '</span></div>') + title + '<button class="pop-link" type="button">' + fEsc(COPY.caseStudy) + arrowSvg + '</button>', 'piece');
+      const shown = showPop(h, [d.x, d.y - H.anchor], '<p class="pop-k">' + fEsc(stop.short) + '<br>' + fEsc(findFormat(FIND_COPY.hoardTally, { n, t: o.items.length })) + '</p>' + (d.image ? '<img src="' + d.image + '" alt="' + fEsc(d.title) + '">' : '<div class="piece-empty"><svg viewBox="' + H.iconBox.join(' ') + '" aria-hidden="true">' + pieceIcon(d.kind) + '</svg><span>' + fEsc(COPY.pieceToCome) + '</span></div>') + title + '<button class="pop-link" type="button">' + fEsc(COPY.caseStudy) + arrowSvg + '</button>', 'piece');
       if (shown) FD.pop.style.setProperty('--piece-mark', PALETTES[stop.palette].mark);
       return shown;
     };
@@ -149,6 +152,11 @@ export function findHoards(svg) {
     findPointer(el, e => { e.stopPropagation(); h.hold = true; h.nextHold = FD.now + H.repeat; el.setPointerCapture(e.pointerId); request(); el._dragged = true; }, { tap: request, cancel: () => h.hold = false });
     el.addEventListener('pointerup', () => h.hold = false); el.addEventListener('pointercancel', () => h.hold = false);
     press(el, e => { e.stopPropagation(); request(); });
+    h.reduce = () => {
+      h.queued = h.hold = false; h.pending = false; h.lift = h.digs ? H.lift[h.digs-1] : 0; h.y = H.travel * (1-h.lift); h.lidAngle = h.open ? H.lidRest : 0;
+      h.clods.forEach(b => { b.live = false; attr(b.el,'opacity',0); });
+      attr(h.chest,'transform','translate(0 '+h.y+')'); paintLid(); stage(h.open ? 'open' : h.digs === H.hole.length ? 'out' : 'buried');
+    };
     h.undo = () => { if (FD.popOwner === h) closePop(); };
     h.hear = () => { if (!h.open) h.glintTs = h.hearTs = FD.now; };
     h.tick = (t, dt) => {
@@ -190,5 +198,6 @@ export function findHoards(svg) {
     o.items.push(h);
   });
   o.tick = (t, dt) => { o.items.forEach(h => h.tick(t, dt)); o.stage = o.items.some(h => h.open) ? 'opened' : 'buried'; };
+  o.reduce = () => o.items.forEach(h => h.reduce());
   o.hear = () => o.items.forEach(h => h.hear()); return o;
 }

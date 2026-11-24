@@ -1,5 +1,5 @@
 // End-only camera. The geometry helpers are pure and can be imported by Node.
-import { EXPLORE, DEPTH, COPY, STEPS } from './data.mjs';
+import { EXPLORE, DEPTH, COPY, STEPS, CAMERA, COMB } from './data.mjs';
 import { VIEW, tripState, lerp, clamp01, easeIO } from './trip.mjs';
 import { findPointerCancel, findPointerMove } from './findkit.mjs';
 
@@ -71,13 +71,14 @@ export function exploreStart() {
   EX.active = true; EX.departing = false; EX.footer = 1; EX.cam = { ...EX.end }; EX.target = exploreFitCam(); EX.velocity = [0, 0];
   EX.motion = { from: { ...EX.cam }, to: { ...EX.target }, k0: 0, k1: 1, elapsed: 0, duration: EXPLORE.in };
   document.documentElement.classList.add('jm-explore');
-  if (!EX.hintUsed) { EX.hintUsed = true; EX.hintLeft = EXPLORE.hintTime; EX.hint.textContent = VIEW.phone ? COPY.explore.hintPhone : COPY.explore.hint; EX.hint.classList.add('on'); }
+  if (!EX.hintUsed) { EX.hintUsed = true; EX.hintLeft = EXPLORE.hintTime; EX.hint.textContent = VIEW.phone ? COPY.explore.hintPhone : COPY.explore.hint; EX.hintWait = COMB.hintDelay; }
   document.getElementById('go-say').textContent = COPY.explore.say;
   explorePromote(); exploreNotify(); return true;
 }
 export function exploreEnd() {
   exploreSuppressClear();
   if (!EX.active) return false;
+  if (document.activeElement?.closest?.('.find,.pop')) document.getElementById('go')?.querySelector('.go-back')?.focus({preventScroll:true});
   EX.active = false; EX.target = { ...EX.end }; EX.velocity = [0, 0];
   EX.motion = { from: { ...EX.cam }, to: { ...EX.end }, k0: EX.k, k1: 0, elapsed: 0, duration: EXPLORE.out, footer0: EX.footer };
   const say = document.getElementById?.('go-say'); if (say) say.textContent = COPY.steps.say.end;
@@ -96,7 +97,7 @@ export function exploreResize() {
   const margin = VIEW.phone ? EXPLORE.marginPhone : EXPLORE.margin;
   EX.view = { w: VIEW.w, h: VIEW.h - (VIEW.phone ? STEPS.nav.bar : STEPS.nav.h + STEPS.nav.gap), stageH: VIEW.h };
   EX.fit = Math.min((EX.view.w - 2 * margin) / (EX.bounds[2] - EX.bounds[0]), (EX.view.h - 2 * margin) / (EX.bounds[3] - EX.bounds[1]));
-  EX.top = Math.max(EX.fit, EXPLORE.most * VIEW.sT);
+  EX.top = Math.max(EX.fit, Math.max(EXPLORE.most, CAMERA.holdZoom) * VIEW.sT);
   if (exploreBusy() && world) {
     const s = lerp(EX.fit, EX.top, share); EX.cam = exploreBound({ s, tx: EX.view.w / 2 - world[0] * s, ty: EX.view.stageH / 2 - world[1] * s }); EX.target = { ...EX.cam };
     if (EX.motion) EX.motion = { from: { ...EX.cam }, to: EX.active ? exploreFitCam() : { ...EX.end }, k0: EX.k, k1: EX.active ? 1 : 0, elapsed: 0, duration: EX.active ? EXPLORE.in : EXPLORE.out, footer0: EX.footer };
@@ -113,6 +114,7 @@ function exploreTakeover() {
   EX.velocity = [0, 0]; exploreHintOff();
 }
 export function exploreApply(st, dt) {
+  delete st.coverRects;
   if (EX.rm) return false;
   const coveredDeparture = EX.departing && EX.journey.moving && EX.journey.P === EX.journey.beats.at(-1).P;
   if (exploreBusy() && !exploreAllowed() && !coveredDeparture) exploreReset();
@@ -134,6 +136,7 @@ export function exploreApply(st, dt) {
       if (['s', 'tx', 'ty'].every(key => Math.abs(EX.cam[key] - EX.target[key]) < DEPTH.epsilon)) EX.cam = { ...EX.target };
     }
   }
+  if (EX.hintWait > 0 && EX.active) { EX.hintWait = Math.max(0, EX.hintWait - dt); if (!EX.hintWait) EX.hint.classList.add('on'); }
   if (EX.hintLeft > 0) { EX.hintLeft = Math.max(0, EX.hintLeft - dt); if (!EX.hintLeft) exploreHintOff(); }
   st.exploreK = EX.k; st.exploring = EX.active; st.exploreFooter = EX.footer; st.sEnd = EX.end?.s || st.cam.s;
   // The SVG camera stays at its last raster while input/glide changes this virtual camera.
@@ -148,7 +151,7 @@ export function exploreApply(st, dt) {
   const after = [EX.cam.s, EX.cam.tx, EX.cam.ty, EX.k, EX.footer];
   const changed = EX.changed || before.some((value, i) => value !== after[i]); EX.changed = false; return changed;
 }
-const exploreExcluded = target => target?.closest?.('.sheet.on, input, textarea, select, .tl, [data-review]');
+const exploreExcluded = target => target?.closest?.('.sheet.on, .sheet-dismiss, .pop button, .pop a, .go button, input, textarea, select, .tl, [data-review]');
 const exploreOwned = target => target?.closest?.('#f-wayfinder, #f-beacon, .find.hoard, .rubbing, #f-mist, #f-horn, .hm-canvas, .ft-name');
 const explorePoint = e => [e.clientX, e.clientY];
 function exploreSample(e) {
@@ -224,3 +227,5 @@ export function exploreBuild({ stage, world, journey, rm }) {
   });
   window.addEventListener('blur', () => { exploreClearPointers(); exploreSuppressClear(); EX.velocity = [0, 0]; EX.changed = true; explorePromote(); });
 }
+
+export function exploreReduced(on) { if (on) exploreReset(); EX.rm = on; }

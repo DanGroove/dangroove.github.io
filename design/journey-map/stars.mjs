@@ -363,7 +363,7 @@ export function starsFrame(time, st, pointer, opt = {}) {
       if (h < 1) {
         const e = easeIO(s.kind === 'coast' ? clamp01((h - s.t0) / (s.t1 - s.t0)) : clamp01((h - late - s.ord * .45) / .45));
         if (src && s.fade) { x = m[0]; y = m[1]; rad = endR; al = endA * e; }
-        else { const hp = src ? [x, y] : heroPos(s), r0 = src ? rad : s.r, a0 = src ? al : s.a; x = lerp(hp[0], m[0], e); y = lerp(hp[1], m[1], e) - Math.sin(Math.PI * e) * 30 * s.z; rad = lerp(r0, endR, e); al = lerp(a0, endA, e); }
+        else { const hp = src ? [x, y] : heroPos(s), r0 = src ? rad : s.r, a0 = src ? al : s.a; x = lerp(hp[0], m[0], e); y = lerp(hp[1], m[1], e) - Math.sin(Math.PI * e) * 30 * s.z; rad = lerp(r0, endR, e) * (1 + .65 * Math.sin(Math.PI * e)); al = lerp(a0, endA, e); }
         if (s.kind === 'coast') al *= 1 - smooth(s.hu, s.hu + .06, h); // the coast line passes it and it dissolves into the line
       }
       else { x = m[0]; y = m[1]; rad = endR; al = endA; }

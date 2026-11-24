@@ -186,7 +186,7 @@ for(const [w,h,bar] of [[1440,900,120],[390,844,96]]) {
   // Walk actual text markup, inheriting the secondary visibility and geometric scales.
   for(const source of [c1map.detail,c1map.finds]){const stack=[{scale:1,secondary:false}];for(const tag of source.matchAll(/<\/?([\w-]+)([^>]*?)\/?\s*>/g)){
     if(tag[0].startsWith('</')){if(stack.length>1)stack.pop();continue;}
-    const a=Object.fromEntries([...tag[2].matchAll(/([\w-]+)="([^"]*)"/g)].map(m=>[m[1],m[2]])),parent=stack.at(-1),kind=a['data-label'];let scale=parent.scale;
+    const a=Object.fromEntries([...tag[2].matchAll(/([\w-]+)="([^"]*)"/g)].map(m=>[m[1],m[2]])),parent=stack.at(-1),kind=a['data-label'];let scale=parent.scale; if (a.class?.split(' ').includes('mk-size')) scale=17/(12.4*VIEW.s0);
     for(const m of (a.transform||'').matchAll(/scale\(([-\d.]+)/g))scale*=Number(m[1]);if(kind)scale*=labelScale(kind,VIEW.s0);
     const secondary=parent.secondary||a.opacity==='0'||(a.class||'').split(' ').includes('map-tier2');
     if(tag[1]==='text'&&!secondary)ok(Number(a['font-size'])*scale*VIEW.s0>=6-1e-9,w+': visible text below 6 px '+tag[0]);
@@ -219,7 +219,7 @@ const sourceC2=name=>readFileSync(join(ROOT,name),'utf8');
 const flashFooter = sourceC2('footer.mjs'), flashX = flashFooter.slice(flashFooter.indexOf('const xStroke'), flashFooter.indexOf('export function footerBuild(el'));
 ok(!/fx-(?:rg|og|rays|lobes|waves|flares|streaks|ringr|ring|r1|r2|core|white)\b|fxray/.test(flashX), 'animated nova classes/gradient must leave the SVG build string');
 ok(/<svg id="map"[^]*?<\/svg>\s*<canvas id="nova" aria-hidden="true"><\/canvas>\s*<canvas id="stars"/.test(sourceC2('main.mjs')), 'nova canvas must be directly after map and before stars');
-ok(/\['ArrowLeft', 'ArrowRight', 'Home', 'End'\]/.test(sourceC2('timeline.mjs'))&&/TL\.hooks\.jump\(e\.key === 'Home' \? 0 : STOPS\.length - 1\)/.test(sourceC2('timeline.mjs')),'timeline Home/End stop navigation');
+ok(/'ArrowLeft'.*'ArrowRight'.*'ArrowUp'.*'ArrowDown'.*'PageUp'.*'PageDown'.*'Home'.*'End'/.test(sourceC2('timeline.mjs'))&&/TL\.pending = e\.key === 'Home' \? \(TL\.rm \? -1 : 0\) : STOPS\.length - 1; TL\.hooks\.jump\(TL\.pending\)/.test(sourceC2('timeline.mjs')),'timeline Home/End stop navigation');
 ok(/P = stepsFrame\(ts\);\s*if \(JOIN.leave\) JOIN.leave\(P\);/.test(sourceC2('main.mjs')),'hero leave hook directly after stepsFrame');ok(/JOIN.leave = place;/.test(sourceC2('join.mjs'))&&!/JOIN.frame =[^]*?\{\s*place\(P\)/.test(sourceC2('join.mjs')),'join frame no longer writes leave');
 ok(/\.jm-sheet-open \.find-hint\s*\{\s*opacity: 0;/.test(sourceC2('map.css'))&&sourceC2('findkit.mjs').includes("classList.add('jm-sheet-open')")&&sourceC2('findkit.mjs').includes("classList.remove('jm-sheet-open')"),'sheet hides find hint and close clears class');
 for(const row of FIND_COPY.hammer.runes)ok(!/\{n\} (?:more )?(?:foes|hearts|neighbours|ending blows|hail shards|times)\b/.test(row[1]),'hammer numeral needs plural mark: '+row[1]);

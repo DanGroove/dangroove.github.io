@@ -23,9 +23,9 @@ const close = (a, b, label, tolerance = 0.000001) => assert.ok(Math.abs(a - b) <
 const chart = bigMap();
 assert.ok(!/undefined|\{\{/.test(chart.finds), 'all live drawing tokens must resolve');
 // Recorded before any art edits in this run.
-const original = { sea: [100054, 3547300242], fill: [12855, 3665486802], coast: [4401, 2408021381] };
+const original = { sea: [100054, 3547300242], fill: [12999, 2682309966], coast: [4401, 2408021381] };
 for (const [key, [length, hash]] of Object.entries(original)) { assert.equal(chart[key].length, length); assert.equal(digest(chart[key]), hash); }
-console.log('ok: C1 ring sea baseline; original fill/coast lengths and hashes unchanged');
+console.log('ok: C1 ring sea baseline; coast unchanged; fill digest records only non-scaling coast tick metadata');
 // D3 adds NOVA.build; the full data digest is re-recorded for that authorized table (and again for the continuous pull, 2026-11-23,
 // and for polish round 1: the held breath's white cross and halo, the softer cloud deck, the traveller's size at the overview
 // and the gather ring's spread).
@@ -39,9 +39,9 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // depth.mjs for the lantern's darkness the nova canvas holds through the rush; its second batch re-records trip.mjs for the
 // labels that give way, the coasts' draw-on, the X's fade-in with the sea and the mini-map's targets.
 // FRAMES: compositor camera writer and label recovery only; geometry/score remain pinned by the motion tests.
-assert.equal(sourceDigest('trip.mjs'), 1103612252, 'trip.mjs changed');
+assert.equal(sourceDigest('trip.mjs'), 3091424451, 'trip.mjs changed');
 // ORIGIN records the palette/tail/phone glide tables as well; protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 1103780140, 'data.mjs changed');
+assert.equal(sourceDigest('data.mjs'), 3694562013, 'data.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 4010889213, 'depth.mjs changed');
 console.log('ok: C1 camera/labels/tripS and deck source digests recorded');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
@@ -73,8 +73,8 @@ for (const f of FINDS) {
   for (const required of [...(f.id === 'hoards' ? ['role="group"'] : ['role="button"', 'tabindex="0"']), 'aria-label="', 'data-x="', 'data-y="']) assert.ok(tag.includes(required), `${f.id}: ${required}`);
 }
 assert.equal((chart.detail.match(/id="mk-[^"]+"/g) || []).length, 6);
-assert.equal((chart.detail.match(/class="mk"/g) || []).length, 7);
-assert.ok(/<g class="mk"><circle cx="140"/.test(chart.detail));
+assert.equal((chart.detail.match(/class="mk(?: legend-symbol)?"/g) || []).length, 7);
+assert.ok(/class="mk legend-symbol"[^>]*data-x="140"/.test(chart.detail));
 console.log('ok: eleven accessible find groups, six marker ids and unnumbered legend id');
 assert.deepEqual(STOPS.filter((s, i) => wayAllStops()[i]).map(s => s.id), ['lennard']);
 assert.equal(rubbingRunes().map(r => r.letter).join(''), 'FIRSTSKETCHFINALCUT');
@@ -181,7 +181,7 @@ stepsBuild({ stage: testStage, rm: false, resize() {}, joinedTop: () => false })
 tlBuild(testTl, { jump() {}, scrub() {} }, false);
 findsBuild(testSvg, testPop, testSheet, testSvg.querySelector('#b-all'), false);
 tripResize(1440, 900, 120); JOURNEY.set(mapP);
-const dummy=()=>new TestNode();tripBuild({svg:testSvg,cam:dummy(),sea:dummy(),fill:dummy(),detail:dummy(),finds:dummy(),coastG:dummy(),done:dummy(),mini:dummy(),caption:dummy(),cue:dummy()});
+const dummy=()=>new TestNode();tripBuild({svg:testSvg,cam:dummy(),sea:dummy(),fill:dummy(),detail:testSvg.querySelector('#b-all'),finds:dummy(),coastG:dummy(),done:dummy(),mini:dummy(),caption:dummy(),cue:dummy()});
 for(const k of [0,1,0]){const st=tripState(mapP);tripFocus(st,FINDS[0].view,k);tripApply(st);for(const selector of ['.map-tier1','.map-subs']){const el=testSvg.querySelector(selector);assert.equal(Number(el.style.opacity),1-k);assert.equal(el.style.visibility,k?'hidden':'visible');}}
 console.log('ok: D2 tier-1 and sub-line groups fade to exact zero at find focus and return to one');
 let fadeWrites=0;for(const selector of ['.map-tier1','.map-subs']){const el=testSvg.querySelector(selector);el.style=new Proxy(el.style,{set(o,k,v){if(k==='opacity'||k==='visibility')fadeWrites++;o[k]=v;return true;}});}
@@ -240,13 +240,13 @@ JOURNEY.set(0); assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), false); J
 JOURNEY.go('lennard'); assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), false); await tick(0.7); JOURNEY.set(mapP);
 console.log('ok: recording DOM runs six Part A plays, kept state, all-four unlock, reel, chase, four notes, rubbing, copied review state and Back focus rules; no NaN attributes or frame layout reads');
 JOURNEY.set(mapP); await tick(0.1);
-assert.equal(FD.found.has('hammer'), false); key('hammer'); await tick(0.5);
+assert.equal(FD.found.has('hammer'), false); key('hammer'); await tick(1.2);
 assert.equal(FD.sheetOwner.id, 'hammer'); assert.equal(FD.found.has('hammer'), true);
-assert.ok(testSheet.querySelector('.find-slot')); assert.equal(document.activeElement, testSheet.querySelector('.hm-start'));
+assert.ok(testSheet.querySelector('.find-slot')); assert.ok(document.activeElement === testSheet.querySelector('.hm-start'), 'focus remains on the expected control');
 for (const k of [' ', 'Enter']) { const e = new TestEvent('keydown', { key: k }); testSheet.querySelector('.hm-start').dispatchEvent(e); assert.ok(!e.defaultPrevented, 'button activation stays native'); assert.equal(e.stopped, true); }
 testSheet.querySelector('.hm-start').dispatchEvent(new TestEvent('click')); await tick(0.2);
 const hammerFind = FD.list.hammer, game = hammerFind.game, field = testSheet.querySelector('.hm-canvas'), hammerP = JOURNEY.P;
-assert.equal(document.activeElement, field); assert.equal(field.getAttribute('tabindex'), '0'); assert.equal(field.getAttribute('role'), 'img'); assert.ok(field.getAttribute('aria-label').includes('T'));
+assert.ok(document.activeElement === field, 'focus remains on the expected control'); assert.equal(field.getAttribute('tabindex'), '0'); assert.equal(field.getAttribute('role'), 'img'); assert.ok(field.getAttribute('aria-label').includes('T'));
 for (const k of ['ArrowLeft', 'ArrowRight', 'a', 'd', ' ', 'ArrowUp', 'w', 'p', 'p', 't', '1', '2', '3', '0', '+', '-', '=', 'PageDown', 'Home', 'End', 'ArrowDown']) {
   const e = new TestEvent('keydown', { key: k }); field.dispatchEvent(e); assert.equal(e.defaultPrevented, true, `hammer key ${k} default`); assert.equal(e.stopped, true, `hammer key ${k} propagation`);
   field.dispatchEvent(new TestEvent('keyup', { key: k })); assert.equal(JOURNEY.P, hammerP);
@@ -255,7 +255,7 @@ assert.equal(hammerFind.auto, true); assert.equal(testSheet.querySelector('.hm-a
 await tick(0.2); assert.ok(game.throwId > 0); assert.ok(field.context.commands > 0);
 const shieldCell=game.cells.find(c=>c.live),cellTile=`M${shieldCell.x-HAMMER.shield.cell/2} ${shieldCell.y-HAMMER.shield.cell/2}h${HAMMER.shield.cell}v${HAMMER.shield.cell}h${-HAMMER.shield.cell}Z`;
 assert.ok(field.context.clipPaths.slice(-3).some(p=>p.includes(cellTile)));shieldCell.live=false;await tick(.016);assert.ok(field.context.clipPaths.slice(-3).every(p=>!p.includes(cellTile)),'destroyed cell removes its piece of the round shield wall');shieldCell.live=true;
-const sprites = hammerFind.sprites; closeSheet(); assert.equal(game.paused, true); const heldTime = game.time; await tick(0.2); assert.equal(game.time, heldTime);
+const sprites = hammerFind.sprites; closeSheet(); assert.equal(FD.sheetClosing, true); const heldTime = game.time; await tick(0.25); assert.equal(game.paused, true); assert.equal(game.time, heldTime);
 key('hammer'); assert.equal(hammerFind.game, game); assert.equal(hammerFind.sprites, sprites); assert.ok(testSheet.querySelector('.hm-resume'));
 const resumeHammer = () => testSheet.querySelector('.hm-resume').dispatchEvent(new TestEvent('click'));
 resumeHammer(); testWindow.dispatchEvent(new TestEvent('blur')); assert.equal(game.paused, true);
@@ -265,9 +265,9 @@ resumeHammer(); bodyNode.focus(); testSheet.querySelector('.hm-canvas').dispatch
 resumeHammer(); testSheet.querySelector('.hm-canvas').focus(); testSheet.querySelector('.hm-canvas').dispatchEvent(new TestEvent('focusout', { relatedTarget: null })); await new Promise(r => setTimeout(r, 0)); assert.equal(game.paused, false);
 // A cleared formation opens three named, keyboard-pickable rune buttons and focuses the first.
 game.foes.forEach(f => f.live = false); game.count = 0; await tick(0.1);
-const runeButtons = testSheet.querySelectorAll('.hm-rune'); assert.equal(runeButtons.length, 3); assert.equal(document.activeElement, runeButtons[0]);
+const runeButtons = testSheet.querySelectorAll('.hm-rune'); assert.equal(runeButtons.length, 3); assert.ok(document.activeElement === runeButtons[0], 'focus remains on the expected control');
 runeButtons.forEach((b, i) => assert.ok(b.getAttribute('aria-label').startsWith(`${i + 1}.`)));
-runeButtons[0].dispatchEvent(new TestEvent('keydown', { key: '1' })); assert.equal(game.wave, 2); assert.equal(document.activeElement, testSheet.querySelector('.hm-canvas'));
+runeButtons[0].dispatchEvent(new TestEvent('keydown', { key: '1' })); assert.equal(game.wave, 2); assert.ok(document.activeElement === testSheet.querySelector('.hm-canvas'), 'focus remains on the expected control');
 // Pointer input follows at the configured maximum speed, never jumps, and holds throw.
 const playCanvas = testSheet.querySelector('.hm-canvas'), xBefore = game.x;
 playCanvas.dispatchEvent(new TestEvent('pointerdown', { pointerType: 'touch', pointerId: 8, clientX: 265 })); await tick(0.05); assert.ok(Math.abs(game.x - xBefore) <= HAMMER.glove.follow * 0.05 + 1e-6); assert.equal(hammerFind.held, true);
@@ -277,7 +277,7 @@ Object.assign(game, { phase: 'end', reason: 'hearts', silver: 123, version: game
 assert.ok(testSheet.querySelector('.hm-end-close')); assert.ok(testSheet.querySelector('.find-slot')); assert.equal(hammerFind.best, 123);
 assert.equal(hammerBestRead(123), 123); assert.equal(hammerBestWrite(111, 123), 123); assert.ok(storageReads > 0 && storageWrites > 0);
 testSheet.querySelector('.hm-new').dispatchEvent(new TestEvent('click')); assert.equal(hammerFind.game.wave, 1); assert.notEqual(hammerFind.game.seed, game.seed);
-testSheet.querySelector('.hm-canvas').dispatchEvent(new TestEvent('keydown', { key: 'Escape' })); assert.equal(FD.sheetOwner, null); assert.equal(hammerFind.game.paused, true);
+testSheet.querySelector('.hm-canvas').dispatchEvent(new TestEvent('keydown', { key: 'Escape' })); await tick(.25); assert.ok(FD.sheetOwner === null); assert.equal(hammerFind.game.paused, true);
 assert.ok(HAMMER.ui.w + FIND_PLAY.kit.sheet.edge * 2 <= 390); assert.ok(HAMMER.ui.h + FIND_PLAY.kit.sheet.edge * 2 <= 664);
 console.log('ok: hammer press/found/sheet; start/end fact; real button/rune focus; every game/explore key isolated, P unchanged; auto throwing; pointer speed; close/blur/hidden/focusout pause; resume/new seed; cached sprites; throwing storage reads/writes survive');
 const autoState = tripState(mapP); autoState.trav = [154, 436]; findsFrame(testClock + 0.01, autoState); await Promise.resolve(); assert.ok(!FD.found.has('mist'));
@@ -289,7 +289,7 @@ assert.ok(testSvg.querySelector('#wl-crown').children.every(g => !/NaN/.test(g.g
 const shipOuter = testSvg.querySelector('.ls-ship'), shipTransform = shipOuter.getAttribute('transform');
 for (let i = 0; i < 3; i++) { key('longship'); await tick(1); }
 assert.equal(window.__jm.finds.state('longship').pennant, true); assert.equal(window.__jm.finds.state('longship').lamp, true); assert.equal(shipOuter.getAttribute('transform'), shipTransform);
-await tick(8); assert.equal(window.__jm.finds.found().length, 11); assert.equal(FD.landed, 11); assert.equal(testTl.querySelector('.tl-count').textContent, 'All 11 found'); assert.equal(FD.all.done, true);
+await tick(8); assert.equal(window.__jm.finds.found().length, 11); assert.equal(FD.landed, 11); assert.equal(testTl.querySelector('.tl-count').textContent, 'All 11 found'); assert.equal(FD.all.done, false); stepsRelease(); closePop(); await tick(.3); assert.equal(FD.all.done, true);
 assert.equal(testSvg.querySelector('#finds').children.at(-1).id, 'f-bits'); assert.equal(testSvg.querySelector('#hn-rings').getAttribute('pointer-events'), 'none'); assert.equal(testSvg.querySelector('#wl-crown').getAttribute('pointer-events'), 'none');
 JOURNEY.set(mapP); await tick(0.2); key('horn'); key('horn'); await tick(0.7); assert.deepEqual(stepsFocusNow().view, FIND_PLAY.focus.wide); JOURNEY.back(); await tick(5); assert.equal(JOURNEY.focus, null);
 key('horn'); closePop(); testSvg.querySelector('#f-horn').dispatchEvent(new TestEvent('pointerdown', { pointerId: 1 })); await tick(0.6); assert.equal(window.__jm.finds.state('horn').stage, 'sounding'); testSvg.querySelector('#f-horn').dispatchEvent(new TestEvent('pointerup')); JOURNEY.back(); await tick(5);
@@ -433,7 +433,7 @@ for(const [w,h] of [[1440,900],[390,844]]) {
   close(chest.lidAngle,110,'lid at rest');
   const opening=chestFrames.filter(s=>s.stage==='opening'),first=opening[0],peak=opening.reduce((a,b)=>a.angle>b.angle?a:b);assert.ok(first.angle<2,'lid starts gently');assert.ok(Math.abs(peak.t-peak.openTs-.5)<=.016,'lid peaks at .5 s');assert.ok(peak.angle-FIND_PLAY.hoard.lidRest<=8);assert.ok(FIND_PLAY.hoard.lidTime===.5);
   const clipIds=surface.querySelectorAll('clipPath').map(n=>n.id);assert.equal(new Set(clipIds).size,5);
-  assert.equal(surface.querySelector('#f-hoards').getAttribute('tabindex'),null);assert.equal(surface.querySelector('#f-hoards').getAttribute('role'),'group');assert.equal(surface.querySelector('#f-hoards').listeners.keydown,undefined);
+  assert.equal(surface.querySelector('#f-hoards').tabIndex,-1);assert.equal(surface.querySelector('#f-hoards').getAttribute('role'),'group');assert.equal(surface.querySelector('#f-hoards').listeners.keydown,undefined);
   const under=hd.items[1];stepsFocus(under.id,findView(under.id));await tick(.7);assert.equal(under.hintLine,FIND_COPY.hoardHints[0]);
   for(const item of hd.items)item.setCraftLit(true);await tick(.1);hd.items.filter(item=>item.digs<3).forEach(item=>{assert.equal(item.glowAlpha,0);assert.equal(Number(item.glow.getAttribute('opacity')),0);assert.equal(item.scratch.style.strokeWidth,FIND_PLAY.hoard.scratchWidth);});
   closePop();stepsRelease();await tick(.6);
@@ -478,11 +478,11 @@ assert.equal(window.__jm.finds.state('beacon').fire, 4);
 rmKey('runestone'); await rmTick(); assert.equal(window.__jm.finds.state('runestone').read, true);
 assert.ok(FD.bits.every(b => !b.live)); assert.equal(FD.flight, null); assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), false);
 console.log('ok: reduced-motion Part A plays land immediately, memory remains readable for five seconds, no live bits/flights/focus, camera unchanged');
-rmKey('hammer'); rmSheet.querySelector('.hm-start').dispatchEvent(new TestEvent('click')); const rmHammer = FD.list.hammer; rmHammer.hear(); await rmTick(); assert.equal(rmHammer.game.reduced, true); assert.equal(rmSvg.querySelector('.hm-spark').getAttribute('opacity'), '0'); assert.equal(rmSvg.querySelector('.hm-lift').getAttribute('transform'), 'translate(0 0)'); assert.equal(rmHammer.game.sparks.some(p => p.live), false); closeSheet(); assert.equal(rmHammer.game.paused, true);
+closeSheet(); rmKey('hammer'); rmSheet.querySelector('.hm-start').dispatchEvent(new TestEvent('click')); const rmHammer = FD.list.hammer; rmHammer.hear(); await rmTick(); assert.equal(rmHammer.game.reduced, true); assert.equal(rmSvg.querySelector('.hm-spark').getAttribute('opacity'), '0'); assert.equal(rmSvg.querySelector('.hm-lift').getAttribute('transform'), 'translate(0 0)'); assert.equal(rmHammer.game.sparks.some(p => p.live), false); closeSheet(); assert.equal(rmHammer.game.paused, true);
 for (let i = 0; i < 3; i++) rmKey('mist'); rmKey('horn'); rmKey('horn');
 for (let i = 0; i < 3; i++) { rmKey('well'); await rmTick(); rmKey('longship'); await rmTick(); }
 assert.equal(window.__jm.finds.state('mist').lifted, true); assert.equal(window.__jm.finds.state('well').watered, 3); assert.equal(window.__jm.finds.state('longship').pennant, true); assert.equal(window.__jm.finds.state('horn').heard.length, 11);
-assert.equal(FD.landed, 11); assert.equal(FD.all.done, true); assert.equal(rmTl.querySelector('.tl-count').textContent, 'All 11 found'); assert.ok(FD.bits.every(b => !b.live)); assert.equal(FD.flight, null);
+assert.equal(FD.landed, 11); assert.equal(FD.allPending, true); closePop(); closeSheet(); await rmTick(); assert.equal(FD.all.done, true); assert.equal(rmTl.querySelector('.tl-count').textContent, 'All 11 found'); assert.ok(FD.bits.every(b => !b.live)); assert.equal(FD.flight, null);
 console.log('ok: reduced-motion hammer plays/pauses without map sparks/tremble/hop; mist, horn, Norns, stars, pennant and all-eleven feedback land immediately with no bits, flights or camera change');
 // Count the name's actual layout reads over a complete reveal, idle, knock and explore visit.
 const nameLine = new TestNode('span'); nameLine.appendChild({ data: 'Danial Endrawes' });

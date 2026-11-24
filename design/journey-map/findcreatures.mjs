@@ -1,8 +1,8 @@
 // Part A: thought and memory return; deadlines become a three-poke chase.
-import { STOPS, MAP, FIND_COPY, FIND_PLAY, FIND_TIMING, RAVEN_RIG } from './data.mjs';
+import { STOPS, MAP, FIND_COPY, FIND_PLAY, FIND_TIMING, RAVEN_RIG, COPY } from './data.mjs';
 import { JORM, jormPoint, ravenPose, ravenPoseTransforms } from './art.mjs';
 import { clamp01, lerp, VIEW } from './trip.mjs';
-import { FD, FIND_BY, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, closeSheet, attend, findBits, findFormat, findRange, findSheet, findSlot, findReady, findStyle } from './findkit.mjs';
+import { FD, FIND_BY, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, closeSheet, attend, findBits, findFormat, findRange, findSheet, findSlot, findReady, findStyle, findSheetFrame } from './findkit.mjs';
 
 export function findRavens(svg) {
   const R = FIND_PLAY.raven, G = RAVEN_RIG, f = FIND_BY.ravens, el = svg.querySelector('#f-ravens'), gifts = el.querySelector('.rv-gifts');
@@ -42,15 +42,23 @@ export function findRavens(svg) {
     else start('flight', index);
   };
   press(el, request);
+  o.reduce = () => {
+    if (!['flight','hear','landing'].includes(o.stage) && !o.queued) return;
+    if (o.stage === 'flight' || o.stage === 'landing') o.next = o.activeBird;
+    o.stage = 'rest'; o.queued = o.hearPending = false;
+    birds.forEach(b => { b.done = true; b.shy = b.shyTo = b.shyFrom = 0; b.face = b.mirror = b.want = b.side; b.lockedXY = null; b.giftDown = false; attr(b.item,'opacity',0); });
+  };
   o.hear = () => { if (FD.rm) return; if (o.stage === 'rest') start('hear', 0); else o.hearPending = true; };
   o.onSheetClose = () => { o.stage = 'rest'; };
-  o.undo = () => { if (FD.sheetOwner === o) closeSheet(true); if (FD.popOwner === o) closePop(); };
+  o.onSheetReopen = () => { if (FD.now-o.ts < FIND_PLAY.kit.sheet.grow+FIND_TIMING.reel) return; o.ts=FD.now-FIND_PLAY.kit.sheet.grow; if (!FD.rm) { const ring=FD.sheet.querySelector('.ring-p'); ring.getAnimations().forEach(a=>a.cancel()); ring.animate([{strokeDashoffset:R.reel.ring},{strokeDashoffset:0}],{duration:FIND_TIMING.reel*1000,fill:'forwards'}); } };
+  o.undo = () => { if (FD.sheetOwner === o) closeSheet(); if (FD.popOwner === o) closePop(); };
   const reel = anchor => {
-    const shown = findSheet(o, 'reel', '<div class="iris"><div class="iris-in"><div class="player" role="img" aria-label="' + fEsc(FIND_COPY.reelLabel) + '"><p class="reel-k pop-k">' + fEsc(FIND_COPY.muninn) + '</p><i class="sh sh1"></i><i class="sh sh2"></i><i class="sh sh3"></i><div class="reel-slot">' + findSlot(FIND_COPY.reelToCome) + '</div>' + R.reel.ringSvg + '<span class="tc">' + FIND_COPY.ravenTime.join(R.reel.timeJoin) + '</span></div></div></div>', anchor);
+    const shown = findSheet(o, 'reel', '<div class="iris"><div class="iris-in"><div class="player" role="img" aria-label="' + fEsc(FIND_COPY.reelLabel) + '"><p class="reel-k pop-k">' + fEsc(FIND_COPY.muninn) + '</p><i class="sh sh1"></i><i class="sh sh2"></i><i class="sh sh3"></i><div class="reel-slot">' + findSlot(FIND_COPY.reelToCome) + '</div>' + R.reel.ringSvg + '<span class="tc">' + FIND_COPY.ravenTime.join(R.reel.timeJoin) + '</span></div></div></div><button type="button" class="reel-close">' + fEsc(COPY.close) + '</button>', anchor);
     if (!shown) { o.stage = 'rest'; return; }
+    FD.sheet.querySelector('.reel-close')?.addEventListener('click', () => closeSheet());
     o.iris = FD.sheet.querySelector('.iris'); o.irisIn = FD.sheet.querySelector('.iris-in'); o.sh = [...FD.sheet.querySelectorAll('.sh')]; o.tc = FD.sheet.querySelector('.tc');
     if (!FD.rm) FD.sheet.querySelector('.ring-p').animate([{ strokeDashoffset: R.reel.ring }, { strokeDashoffset: 0 }], { duration: FIND_TIMING.reel * 1000, fill: 'forwards' });
-    o.stage = 'reel'; o.ts = FD.now;
+    o.stage = 'reel'; o.ts = o.motionTs = FD.now;
   };
   const landed = index => {
     birds[index].lockedXY = birds[index].flightBase?.slice() || baseAt(birds[index]);
@@ -159,15 +167,13 @@ export function findRavens(svg) {
     if (o.stage === 'reel') {
       if (FD.sheetOwner !== o) o.stage = 'rest';
       else {
-        const e = t - o.ts, grow = FD.rm ? 1 : out3(e / FIND_PLAY.kit.sheet.grow), from = FD.sheetFrom;
+        const e = t - o.ts;
         const fit = Math.min(1, (Math.min(VIEW.w, VIEW.h) - FIND_PLAY.kit.sheet.edge) / R.reel.iris);
-        findStyle(FD.sheet, 'transform', 'translate(' + lerp(from[0], VIEW.w / 2, grow) + 'px,' + lerp(from[1], VIEW.h / 2 - FIND_PLAY.kit.sheet.offset, grow) + 'px) scale(' + lerp(FIND_PLAY.kit.sheet.from, fit, grow) + ')');
+        findSheetFrame(o, fit, VIEW.h / 2 - FIND_PLAY.kit.sheet.offset, o.iris, o.irisIn);
         const q = clamp01((e - (FD.rm ? 0 : FIND_PLAY.kit.sheet.grow)) / FIND_TIMING.reel), digits = Math.min(FIND_TIMING.reel, Math.floor(q * FIND_TIMING.reel));
         if (digits !== o.digits) { o.digits = digits; const tc = o.tc; queueMicrotask(() => { if (tc.isConnected) tc.textContent = findFormat(R.reel.tc, { n: digits, end: FIND_COPY.ravenTime[1] }); }); }
-        if (!FD.rm) o.sh.forEach((s, i) => { const M = R.reel.motion; findStyle(s, 'transform', 'translate(' + Math.sin(e * (M[0] + i * M[1]) + i * M[2]) * M[3] + 'px,' + Math.cos(e * (M[4] + i * M[5]) + i) * M[6] + 'px) rotate(' + e * M[7] * (i - 1) + 'deg)'); });
-        const end = FD.rm ? q === 1 ? 1 : 0 : clamp01((e - FIND_PLAY.kit.sheet.grow - FIND_TIMING.reel) / FIND_TIMING.iris), iris = Math.max(Number.EPSILON, 1 - ease(end));
-        findStyle(o.iris, 'transform', 'scale(' + iris + ')'); findStyle(o.irisIn, 'transform', 'scale(' + 1 / iris + ')');
-        if (end === 1) queueMicrotask(() => closeSheet(true));
+        if (!FD.rm) o.sh.forEach((s, i) => { const M = R.reel.motion, mt = t - (o.motionTs ?? o.ts); findStyle(s, 'transform', 'translate(' + Math.sin(mt * (M[0] + i * M[1]) + i * M[2]) * M[3] + 'px,' + Math.cos(mt * (M[4] + i * M[5]) + i) * M[6] + 'px) rotate(' + mt * M[7] * (i - 1) + 'deg)'); });
+        if (q === 1 && !FD.sheetClosing) queueMicrotask(() => closeSheet());
       }
     }
   };
@@ -198,6 +204,14 @@ export function findSerpent(svg) {
   };
   press(el, start); remaining(); attr(pad, 'transform', 'translate(' + FIND_PLAY.serpent.pad.join(' ') + ')');
   o.undo = () => { if (FD.popOwner === o) closePop(); };
+  o.reduce = keep => {
+    swells.forEach(s => s.live = false); o.playing = false; o.queued = false;
+    if (o.stage === 'waking') { o.stage = 'ready'; return; }
+    if (!['step','closing'].includes(o.stage)) return;
+    o.held = false; if (o.leaf) attr(o.leaf,'opacity',0); remaining();
+    o.stage = 'hungry'; o.tailOut = o.pokes === leaves.length ? 0 : 1; o.jawAngle = o.pokes === leaves.length ? 0 : FIND_PLAY.serpent.hungryJaw;
+    if (o.pokes === leaves.length) { o.gulped = true; o.padTs = -Infinity; if (keep) opened(o); reward(); }
+  };
   o.hear = () => { if (!FD.rm) { o.hearTs = FD.now; swell(FIND_PLAY.serpent.hear[2], true); o.playing = true; } };
   o.tick = (t, dt) => {
     const S = FIND_PLAY.serpent, J = MAP.jorm, e = t - o.ts, asleep = o.stage === 'asleep', here = { x: f.x + S.head[0], y: f.y + S.head[1] }, target = attend(here, S.attend);

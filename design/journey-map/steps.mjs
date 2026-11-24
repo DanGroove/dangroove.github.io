@@ -1,5 +1,5 @@
 // The single progress owner: top/map scroll, then button/key Steps.
-import { STEPS, COPY, STOPS, DEPTH, NOVA, FIND_PLAY, EXPLORE, WORLD, PHONE_LAYOUT } from './data.mjs';
+import { STEPS, COPY, STOPS, DEPTH, NOVA, FIND_PLAY, EXPLORE, WORLD, PHONE_LAYOUT, COMB } from './data.mjs';
 import { VIEW, TOTAL_P, tripState, easeIO, lerp, glideMove, GLIDES, glideSeconds, tripWarmGlides } from './trip.mjs';
 import { BEATS, PACE_PARTS, paceMove, paceAt, paceEase } from './pace.mjs';
 import { arrowSvg } from './cards.mjs';
@@ -22,7 +22,7 @@ const stepsFormat = (s, values) => s.replace(/\{(\w+)\}/g, (m, k) => values[k]);
 const stepsReadScroll = () => { SC.P = window.scrollY / VIEW.unit; return SC.P; };
 
 export const JOURNEY = {
-  get mode() { return SC.mode; }, get P() { return SC.P; }, get moving() { return !!(SC.move || SC.cut); },
+  get direction() { return SC.direction; }, get mode() { return SC.mode; }, get P() { return SC.P; }, get moving() { return !!(SC.move || SC.cut); },
   get visiting() { return !!SC.focus?.held; }, get focus() { return SC.focus?.held ? SC.focus.id : null; }, depth: DEPTH, nova: NOVA, setDepth: stepsSetDepth,
   beats: BEATS, go: stepsGo, next: stepsNext, back: stepsBack, set: stepsSet,
 };
@@ -41,12 +41,14 @@ export function stepsFocus(id, view) {
   const now = stepsFocusNow(), old = SC.focus;
   stepsCancel();
   SC.focus = { id, from: now ? now.view : view.slice(), to: view.slice(), swap: now ? 0 : 1, k: old ? old.k : 0, held: true };
-  SC.root.classList.add('jm-focus'); stepsArrive(); return true;
+  SC.scrollLive = false; SC.root.classList.add('jm-focus'); stepsArrive(); return true;
 }
-export function stepsRelease() {
+export function stepsRelease(returnFocus = false) {
   if (!SC.focus || !SC.focus.held) return false;
   SC.focus.held = false; SC.root.classList.remove('jm-focus');
-  window.dispatchEvent(new Event('jm-find-release')); stepsButtons(); return true;
+  window.dispatchEvent(new Event('jm-find-release')); stepsButtons();
+  if (returnFocus && (document.activeElement===document.body || document.activeElement?.closest?.('.find,.pop,.sheet'))) SC.go?.querySelector('.go-back')?.focus({preventScroll:true});
+  return true;
 }
 
 function stepsClasses() {
@@ -63,12 +65,16 @@ function stepsButtons() {
   if (!SC.go) return;
   const top = SC.P <= 1e-6, end = !JOURNEY.moving && Math.abs(SC.P - stepsEnd) < 1e-6;
   const beatState = tripState(SC.P), blasting = beatState.kind === 'rush' ? JOURNEY.moving || beatState.t > 0 : ['blast', 'settle'].includes(beatState.kind);
-  if (blasting && !SC.go.hidden) { SC.returnFocus = SC.go.contains(document.activeElement); SC.shown = false; }
+  if (blasting && !SC.go.hidden) { SC.returnFocus ||= SC.go.contains(document.activeElement); SC.shown = false; SC.go.classList.add('go-leaving'); if (SC.returnFocus) { const nova = document.getElementById('nova-hit'); nova?.focus({ preventScroll: true }); } if (SC.say.textContent !== COMB.novaSay) SC.say.textContent = COMB.novaSay; }
   // Joined page: the bar waits for the map, so one Start shows at a time; focus follows (the bar at the map, the hero's Start above).
   const hero = SC.joinedTop() && SC.P < stepsMap - 1e-6, wasHidden = SC.go.hidden;
   if (hero && !wasHidden && SC.go.contains(document.activeElement)) SC.heroFocus = true;
   const hidden = !SC.ready || SC.mode !== 'steps' || hero || blasting;
-  if (SC.go.hidden !== hidden) SC.go.hidden = hidden;
+  if (SC.go.inert !== hidden) SC.go.inert = hidden;
+  if (!blasting) SC.go.classList.remove('go-leaving');
+  const faded = blasting && SC.go.classList.contains('go-leaving');
+  if (faded && !SC.goFade) { SC.goFade = true; setTimeout(() => { SC.goFade = false; if (SC.go.classList.contains('go-leaving')) SC.go.hidden = true; }, 180); }
+  if (!faded && SC.go.hidden !== hidden) SC.go.hidden = hidden;
   const lost = !document.activeElement || document.activeElement === document.body || !!document.activeElement.closest?.('[data-hero]');
   if (SC.heroFocus && top && !JOURNEY.moving) { SC.heroFocus = false; const start = document.querySelector?.('.jm-start'); if (start && lost) start.focus({ preventScroll: true }); }
   if (SC.joinedTop() && wasHidden && !SC.go.hidden && !hero && !blasting && lost && !JOURNEY.moving && Math.abs(SC.P - stepsMap) < 1e-6) SC.go.querySelector('.go-next').focus({ preventScroll: true });
@@ -116,12 +122,16 @@ function stepsArrive() {
   stepsButtons();
 }
 function stepsCancel() {
-  SC.move = null; SC.cut = null; SC.fill = 0;
+  SC.move = null; SC.cut = null; SC.fill = 0; SC.pendingTarget = null;
   if (SC.cover) { SC.cover.style.opacity = 0; SC.cover.hidden = true; }
 }
 function stepsPlay(target, next = false) {
   const p = stepsClamp(target);
-  SC.move = SC.move ? stepsCarry(SC.move, p, next && Math.abs(SC.move.P1 - p) < 1e-6) : { ...(glideMove(SC.P, p) || paceMove(SC.P, p)), elapsed: 0, baseFill: 0 };
+  const old = SC.move;
+  SC.move = old ? stepsCarry(old, p, next && Math.abs(old.P1 - p) < 1e-6 && !old.hurry) : { ...(glideMove(SC.P, p) || paceMove(SC.P, p)), elapsed: 0, baseFill: 0 };
+  // If the bounded carry cannot brake before the beat, remember the requested
+  // reversal and turn there. Never discard an acknowledged press.
+  SC.pendingTarget = old && SC.move === old && p !== old.P1 ? p : null;
   SC.root.dataset.beat = ''; SC.announced = null; stepsButtons();
 }
 // Exact position and derivative of the active clock. Camera/cards remain pure P functions.
@@ -209,6 +219,7 @@ function stepsJump(target, after) {
 }
 function stepsNavigate(target, opts = {}) {
   if (SC.cut) return;
+  if (document.activeElement?.closest?.('.c-card, .find')) SC.go?.querySelector(target < SC.P ? '.go-back' : '.go-next')?.focus({ preventScroll: true });
   SC.scroll = null; SC.touch = null;
   if (target > stepsMap || opts.start) SC.scrollLive = false;
   if (SC.rm) { window.scrollTo({ top: target * VIEW.unit, behavior: 'instant' }); stepsReadScroll(); return; }
@@ -220,18 +231,18 @@ function stepsNavigate(target, opts = {}) {
 function stepsGo(id, opts = {}) {
   if (SC.cut) return;
   const beat = BEATS.find(b => b.id === id); if (!beat) return;
-  stepsRelease(); stepsNavigate(beat.P, { ...opts, start: id === 'map' });
+  stepsRelease(); if (SC.rm && SC.reducedGo) { SC.reducedGo(id); stepsReadScroll(); return; } stepsNavigate(beat.P, { ...opts, start: id === 'map' });
 }
 function stepsNext() {
   if (SC.cut) return;
-  stepsRelease(); const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true, start: true, next: true });
+  SC.direction = 'next'; stepsRelease(); const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true, start: true, next: true });
   stepsButtons();
 }
 function stepsBack() {
   if (SC.cut) return;
   if (exploreEnd()) { stepsButtons(); return; }
-  if (stepsRelease()) return;
-  const beat = stepsBackBeat(); if (beat) stepsNavigate(beat.P, { move: true });
+  if (stepsRelease(true)) return;
+  SC.direction = 'back'; const beat = stepsBackBeat(); if (beat) stepsNavigate(beat.P, { move: true, next: true });
 }
 function stepsSet(P) {
   if (SC.cut) return;
@@ -270,7 +281,7 @@ export function stepsFrame(ts) {
     SC.P = stepsMoveAt(move, move.elapsed);
     SC.fill = move.baseFill + (1 - move.baseFill) * q;
     if (move.fill0 !== undefined && !move.hurry) SC.fill = lerp(move.fill0, SC.fill, easeIO(Math.min(1, q / STEPS.carry.fillBlend)));
-    if (q >= 1) { SC.P = move.P1; SC.move = null; stepsArrive(); }
+    if (q >= 1) { SC.P = move.P1; SC.move = null; const pending = SC.pendingTarget; SC.pendingTarget = null; if (pending !== null && pending !== undefined) stepsPlay(pending); else stepsArrive(); }
   } else if (cut) {
     cut.elapsed += dt;
     if (cut.elapsed < STEPS.cut[0]) SC.cover.style.opacity = cut.elapsed / STEPS.cut[0];
@@ -310,7 +321,7 @@ function stepsScrollSettle(flick) {
   SC.scroll = null;
   if (Math.abs(target - SC.P) < 1e-6) { SC.P = target; stepsArrive(); } else stepsPlay(target);
 }
-const stepsTouchExcluded = target => target?.closest('.sheet.on, .face, .tl, input, textarea, select, [data-review]');
+const stepsTouchExcluded = target => target?.closest('.sheet.on, .sheet-dismiss, .pop button, .pop a, .face, .tl, input, textarea, select, [data-review]');
 function stepsTouchOwned(target) {
   const hero = target?.closest('[data-hero]'); if (!hero) return false;
   for (let el = target; el; el = el.parentElement) {
@@ -345,7 +356,7 @@ function stepsTouchEnd(e) {
 function stepsKey(e) {
   if (SC.mode !== 'steps' || SC.rm || exploreActive() || e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
   const target = stepsTarget(e);
-  if (target && target.closest('.tl')) return;
+  if (target && target.closest('.tl, .sheet.on') || SC.root.classList.contains('jm-sheet-open')) return;
   if (e.key === ' ' && target && target.closest('button, a, input, textarea, select, .find, [role="button"]')) return;
   let act = null;
   if (['ArrowDown', 'ArrowRight', 'PageDown'].includes(e.key) || (e.key === ' ' && !e.shiftKey)) act = stepsNext;
@@ -354,8 +365,8 @@ function stepsKey(e) {
   else if (e.key === 'End') act = () => stepsGo('end');
   if (act) { e.preventDefault(); act(); }
 }
-export function stepsBuild({ stage, rm, joinedTop }) {
-  SC.root = document.documentElement; SC.rm = rm; SC.joinedTop = joinedTop;
+export function stepsBuild({ stage, rm, joinedTop, reducedGo = null }) {
+  SC.root = document.documentElement; SC.rm = rm; SC.joinedTop = joinedTop; SC.reducedGo = reducedGo;
   VIEW.depth = new URLSearchParams(window.location.search).get('depth') === '0' ? 0 : 1;
   window.__jm = JOURNEY;
   window.addEventListener('scroll', () => { if (SC.rm) stepsReadScroll(); }, { passive: true });
@@ -390,4 +401,10 @@ export function stepsBuild({ stage, rm, joinedTop }) {
   window.addEventListener('touchmove', stepsTouchMove, { passive: false });
   window.addEventListener('touchend', stepsTouchEnd); window.addEventListener('touchcancel', stepsTouchEnd);
   window.addEventListener('click', e => { if (SC.swallow && e.detail !== 0) { SC.swallow = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+}
+
+export function stepsReduced(on, i = 0) {
+  stepsCancel(); SC.focus = null; SC.root.classList.remove('jm-focus'); SC.rm = on; SC.mode = on ? 'scroll' : 'steps';
+  SC.root.classList.toggle('jm-steps', !on); SC.go.hidden = on;
+  if (!on) { SC.P = i < -1 ? 0 : i >= STOPS.length ? stepsEnd : BEATS[Math.max(1, i + 2)].P; window.scrollTo({ top: 0, behavior: 'instant' }); stepsArrive(); }
 }

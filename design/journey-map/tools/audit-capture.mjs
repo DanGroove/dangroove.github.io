@@ -19,7 +19,8 @@ import { pathToFileURL } from 'node:url';
 
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, v, i, all) => (v.startsWith('--') ? [...a, [v.slice(2), all[i + 1]?.startsWith('--') ? true : all[i + 1]]] : a), []));
 const SIZES = { desk: [1440, 900, false], phone: [390, 844, true], small: [360, 640, true], tablet: [820, 1180, true] };
-const [W, H, touch] = SIZES[args.size || 'desk'] || SIZES.desk;
+const customSize = /^(\d+)x(\d+)$/.exec(args.size || '');
+const [W, H, touch] = customSize ? [+customSize[1], +customSize[2], true] : SIZES[args.size || 'desk'] || SIZES.desk;
 const out = resolve(args.out || 'audit-frames'); mkdirSync(out, { recursive: true });
 const page = resolve(args.page || 'dist/journey-map.html');
 const tag = args.size || 'desk';
@@ -34,9 +35,9 @@ function findBrowser() {
   return hit;
 }
 
-const profile = mkdtempSync(join(tmpdir(), 'jm-audit-'));
+const profile = mkdtempSync(join(out, 'edge-profile-'));
 const proc = spawn(findBrowser(), ['--headless=new', '--remote-debugging-port=0', '--remote-debugging-address=127.0.0.1', `--user-data-dir=${profile}`,
-  '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--hide-scrollbars', '--mute-audio',
+  '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--disable-background-networking', '--hide-scrollbars', '--mute-audio',
   ...(process.platform === 'linux' && process.getuid?.() === 0 ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });
 let ws, seq = 0, session = null; const waiting = new Map(), listeners = [];
 const send = (method, params = {}, sid = session) => new Promise((ok, fail) => { const id = ++seq; waiting.set(id, { ok, fail }); ws.send(JSON.stringify({ id, method, params, ...(sid ? { sessionId: sid } : {}) })); });

@@ -76,7 +76,7 @@ try {
     let offset = 0;
     const src = { count: n, drawn(i, out) { out[0] = (i * 83 % w) + offset; out[1] = i * 137 % h; return out; }, look(i) { return { size: 2, alpha: .8, colour: i % 20 ? C.paper : C.red }; } };
     starsJoin(src);
-    const atSwitch = tripState(SEQ.find(s => s.kind === 'handoff').a);
+    const atSwitch = tripState(SEQ.find(s => s.kind === 'handoff').a - 28); // COMB-A: hand-over now overlaps the hero exit by 28 vh.
     starsTick(0, atSwitch);
     starsFrame(0, atSwitch, [.5, .5]);
     const positions = records.map(row => `${row[0]}/${row[1]}`).sort(), expected = Array.from({ length: n }, (_, i) => `${i * 83 % w}/${i * 137 % h}`).sort();

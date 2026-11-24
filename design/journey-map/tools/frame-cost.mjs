@@ -90,8 +90,8 @@ const frameArgs=Object.fromEntries(process.argv.slice(2).flatMap((v,i,a)=>v.star
 const framePages=frameArgs.page?[frameArgs.page]:['dist/journey-map.html','dist/journey-joined.html'];
 const frameScenarios=['pinch x3 / 300 ms out + 300 ms in / three repeats','fling + glide','wayfinder / one turn in 1.5 s','slow pan with glow','stop glide','rush into blast','map -> Laurier','Laurier -> HMC','HMC again -> Interkom','Interkom -> HMC again / Back'];
 const frameWidth=Number(frameArgs.width||412),frameHeight=Number(frameArgs.height||730),frameDpr=Number(frameArgs.dpr||2.625),frameCpu=Number(frameArgs.cpu||4);
-const frameOut=frameArgs.out&&resolve(frameArgs.out),frameAllowed=resolve('C:/Users/Admin/Documents/Portfolio/journey-map-runs/glide');
-if(frameOut&&frameOut!==frameAllowed&&!frameOut.startsWith(frameAllowed+sep))throw Error('--out must be in the authorized glide run folder');
+const frameOut=frameArgs.out&&resolve(frameArgs.out),frameAllowed=resolve('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-a');
+if(frameOut&&frameOut!==frameAllowed&&!frameOut.startsWith(frameAllowed+sep))throw Error('--out must be in the authorized comb-a run folder');
 if(frameOut)mkdirSync(frameOut,{recursive:true});
 const frameResults=[];
 const frameWait=ms=>new Promise(ok=>setTimeout(ok,ms));

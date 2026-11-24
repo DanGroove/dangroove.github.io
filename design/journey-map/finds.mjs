@@ -1,9 +1,8 @@
 // Eleven finds share the camera/life/overlay kit.
-import { FIND_COPY, FIND_PLAY } from './data.mjs';
-import { toScreen } from './trip.mjs';
+import { FIND_COPY, FIND_PLAY, COMB } from './data.mjs';
 import { JOURNEY } from './steps.mjs';
 import { depthBeam } from './depth.mjs';
-import { FD, FIND_BY, findKitBuild, findKitFrame, findCapture, findPlace, findLife, closePop, closeSheet, findKitStyle, findHint } from './findkit.mjs';
+import { FD, FIND_BY, findKitBuild, findKitFrame, findCapture, findPlace, findLife, closePop, closeSheet, findKitStyle, findHint, findSvg, attr, findScreen } from './findkit.mjs';
 import { findWay, findHoards } from './findhoards.mjs';
 import { findRavens, findSerpent } from './findcreatures.mjs';
 import { findBeacon, findRune } from './findsheets.mjs';
@@ -29,6 +28,17 @@ export function findsBuild(svg, pop, sheet, base, rm) {
   findKitBuild(svg, pop, sheet, base, rm);
   const builders = { wayfinder: findWay, hoards: findHoards, ravens: findRavens, serpent: findSerpent, beacon: findBeacon, runestone: findRune, hammer: findHammer, mist: findMist, horn: findHorn, well: findWell, longship: findShip };
   Object.entries(builders).forEach(([id, build]) => { const o = build(svg); o.el ??= svg.querySelector('#f-' + id); o.stage ??= 'rest'; o.kept ??= false; FD.list[id] = o; });
+  for (const o of [...Object.values(FD.list), ...FD.list.hoards.items]) {
+    if (o.id === 'hoards') continue; o.el.tabIndex=-1; attr(o.el,'aria-hidden',true);
+    o.hit = findSvg('circle', { class: 'hit touch-hit', r: .01 }); o.el.insertBefore ? o.el.insertBefore(o.hit, o.el.firstChild) : o.el.appendChild(o.hit);
+    o.focusRing = findSvg('circle', { class: 'find-focus-ring', fill: 'none', 'pointer-events': 'none' }); o.el.appendChild(o.focusRing);
+  }
+  FD.markerHits = [];
+  for (const f of Object.values(FIND_BY).filter(f => f.n)) {
+    const marker = svg.querySelector('#mk-' + f.id); if (!marker) continue;
+    const hit = findSvg('circle', { class: 'hit touch-hit', r: .01, cx: f.mark[0], cy: f.mark[1] }); marker.appendChild(hit); FD.markerHits.push(hit);
+    marker.style.cursor = 'pointer'; marker.addEventListener('click', e => { e.stopPropagation(); const target = f.id === 'hoards' ? FD.list.hoards.items[2].el : FD.list[f.id].el; target.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+  }
   FD.all = findAll(svg);
   // Builders add non-interactive decorations. The one reusable bit pool remains last.
   const pool = svg.querySelector('#f-bits'); svg.querySelector('#finds').appendChild(pool);
@@ -40,7 +50,7 @@ export function findsBuild(svg, pop, sheet, base, rm) {
     found: () => [...FD.found],
     state: id => { const o = FD.list[id] || FD.list.hoards.items.find(h => h.id === id); return o ? findPlain(o) : null; },
     hear: () => Object.values(FD.list).forEach(o => o.hear?.()),
-    place: id => { const p = findPlace(id); return FD.st && p ? toScreen(FD.st, p) : null; },
+    place: id => { const p = findPlace(id); return FD.st && p ? findScreen(p) : null; },
   };
   FD.styleKey = JSON.stringify(FIND_PLAY);
 }

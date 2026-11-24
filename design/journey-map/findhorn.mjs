@@ -3,7 +3,7 @@ import { FIND_PLAY, FIND_COPY, FINDS } from './data.mjs';
 import { clamp01 } from './trip.mjs';
 import { starPath } from './art.mjs';
 import { JOURNEY, stepsFocus } from './steps.mjs';
-import { findPointer, FD, FIND_BY, ease, attr, fEsc, found, opened, press, showPop, closePop, attend, findSlot, findPlace, findView, findSvg } from './findkit.mjs';
+import { findPointer, FD, FIND_BY, ease, attr, fEsc, found, opened, press, showPop, closePop, attend, findSlot, findPlace, findView, findSvg, findHint } from './findkit.mjs';
 
 export function findHorn(svg) {
   const f = FIND_BY.horn, el = svg.querySelector('#f-horn'), horn = el.querySelector('.hn-horn');
@@ -26,11 +26,12 @@ export function findHorn(svg) {
     if (o.stage === 'sounding' || o.stage === 'echo') return;
     if (o.up) { sound(); return; }
     o.up = 1; o.stage = 'raised'; o.raiseTs = FD.now; opened(o); found(o.id);
-    showPop(o, [f.x + FIND_PLAY.horn.anchor[0], f.y + FIND_PLAY.horn.anchor[1]], `<p class="pop-t pop-big">${fEsc(FIND_COPY.horn[0])}</p>${findSlot(FIND_COPY.horn[1])}`);
+    showPop(o, [f.x, f.y - 12], `<p class="pop-t pop-big">${fEsc(FIND_COPY.horn[0])}</p>${findSlot(FIND_COPY.horn[1])}`);
   };
   findPointer(el, e => { el.setPointerCapture(e.pointerId); raise(); o.hold = o.stage === 'raised'; o.holdTs = FD.now; el._dragged = true; }, { tap: raise, cancel: () => o.hold = false });
   el.addEventListener('pointerup', () => o.hold = false); el.addEventListener('pointercancel', () => o.hold = false);
   press(el, raise);
+  o.reduce = () => { o.hold = false; if (['sounding','echo'].includes(o.stage)) { FINDS.filter(d => !o.heard.includes(d.id)).forEach(d => deliver(d.id)); o.up = o.v = 0; o.stage = 'rest'; o.playing = false; } };
   o.onPopClose = () => { if (o.stage === 'raised') { o.up = 0; o.stage = 'rest'; o.hold = false; } };
   o.onEscape = () => { o.hold = false; if (o.stage === 'raised') { o.up = 0; o.stage = 'rest'; } };
   o.hear = () => { if (!FD.rm) { o.hearTs = FD.now; o.hearing = true; } };
@@ -53,6 +54,7 @@ export function findHorn(svg) {
       if (o.stage === 'echo' && o.heard.length === FINDS.length && glints.every(g => t - g.ts >= H.glint[1])) o.stage = 'rest';
     }
     glints.forEach(g => { const k = FD.rm ? 1 : clamp01((t - g.ts) / H.glint[1]), pulse = Math.sin(Math.PI * k); attr(g.star, 'opacity', pulse); attr(g.star, 'transform', `rotate(${H.glint[2] * k}) scale(${pulse})`); });
+    if (JOURNEY.focus === o.id && o.hintStage !== o.stage) { o.hintStage = o.stage; findHint(o.id); attr(el, 'aria-label', f.label.split('. ')[0] + '. ' + FD.hint.textContent); }
     o.playing = o.hold || ['sounding', 'echo'].includes(o.stage) || o.v !== o.up;
   };
   return o;

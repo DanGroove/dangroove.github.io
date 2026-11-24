@@ -163,6 +163,7 @@ class ExploreNode {
   toggleClass(x, force) { const set = new Set(this.className.split(/\s+/).filter(Boolean)); const on = force ?? !set.has(x); if (on) set.add(x); else set.delete(x); this.className = [...set].join(' '); return on; }
   setAttribute(k, v) { assert.ok(!/NaN/.test(String(v)), `NaN attribute ${this.id}/${k}: ${v}`); this.attrs[k] = String(v); if (k.startsWith('data-')) this.dataset[k.slice(5)] = String(v); }
   getAttribute(k) { return this.attrs[k] ?? null; }
+  after() {}
   appendChild(node) { if (node.parentElement) node.parentElement.children = node.parentElement.children.filter(c => c !== node); this.children.push(node); node.parentElement = this; return node; }
   append(...nodes) { nodes.forEach(n => this.appendChild(n)); }
   remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(c => c !== this); this.parentElement = null; }

@@ -1,13 +1,14 @@
 // Part A: persistent beacon reading and a rub/read/flip sheet.
-import { C, COPY, FIND_COPY, FIND_PLAY, FIND_TIMING } from './data.mjs';
+import { C, COPY, FIND_COPY, FIND_PLAY, FIND_TIMING, COMB } from './data.mjs';
 import { VIEW, clamp01, lerp } from './trip.mjs';
 import { rubbingSvg } from './art.mjs';
 import { depthBeam } from './depth.mjs';
-import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, closeSheet, findBits, findSvg, findSheet, findSlot, findAngleDelta, findStyle } from './findkit.mjs';
+import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, closeSheet, findBits, findSvg, findSheet, findSlot, findAngleDelta, findStyle, findSheetFrame } from './findkit.mjs';
 
 export function findBeacon(svg) {
   const f = FIND_BY.beacon, el = svg.querySelector('#f-beacon'), beam = el.querySelector('.bc-beam'), flame = el.querySelector('.bc-flame'), glow = el.querySelector('.bc-glow');
-  const notes = [...svg.querySelectorAll('.bc-note')].map((g, i) => ({ g, inner: g.querySelector('.bc-note-in'), en: g.querySelector('.bc-en'), d: FIND_COPY.beaconNotes[i], time: 0, read: false, v: 0, ev: 0, flash: -Infinity }));
+  const notes = [...svg.querySelectorAll('.bc-note')].map((g, i) => ({ g, inner: g.querySelector('.bc-note-in'), en: g.querySelector('.bc-en'), d: { ...FIND_COPY.beaconNotes[i], x: COMB.readings[i][0], y: COMB.readings[i][1] }, time: 0, read: false, v: 0, ev: 0, flash: -Infinity }));
+  notes.forEach(n => { attr(n.g, 'transform', `translate(${n.d.x} ${n.d.y})`); n.g.classList.add('reading-halo'); });
   const o = { id: f.id, el, stage: 'idle', head: FIND_PLAY.beacon.baseAngle, manualTs: -Infinity, fire: 0, read: notes.map(() => false), kept: false, drag: false, ember: 0, litTs: -Infinity, hearTs: -Infinity };
   const origin = () => [f.x + FIND_PLAY.beacon.origin[0] * FIND_PLAY.beacon.scale, f.y + FIND_PLAY.beacon.origin[1] * FIND_PLAY.beacon.scale];
   const aimAt = e => { const p = toMap([e.clientX, e.clientY]), O = origin(); o.head = Math.atan2(p[1] - O[1], p[0] - O[0]) * FIND_PLAY.kit.deg / Math.PI; o.snap = null; o.manualTs = FD.now; found(o.id); opened(o); };
@@ -28,6 +29,13 @@ export function findBeacon(svg) {
   el.addEventListener('pointerup', () => o.drag = false); el.addEventListener('pointercancel', () => o.drag = false);
   press(el, () => snapNext());
   el.addEventListener('keydown', e => { if (!['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(e.key)) return; e.preventDefault(); o.head += FIND_PLAY.beacon.arrow * (['ArrowLeft', 'ArrowUp'].includes(e.key) ? -1 : 1); o.snap = null; o.manualTs = FD.now; found(o.id); opened(o); });
+  o.reduce = () => {
+    const manual = o.drag || FD.now-o.manualTs < FIND_PLAY.beacon.manual;
+    if (o.snap) { o.head = o.snap.to; o.snap = null; }
+    if (!manual) return;
+    const at = origin(), reach = FIND_PLAY.beacon.baseReach * FIND_PLAY.beacon.scale;
+    notes.forEach((n,i) => { const dx=n.d.x-at[0],dy=n.d.y-at[1],angle=Math.atan2(dy,dx)*FIND_PLAY.kit.deg/Math.PI; if (Math.abs(findAngleDelta(o.head,angle)) < FIND_TIMING.beamCone/2 && Math.hypot(dx,dy)<reach) read(n,i); });
+  };
   o.undo = () => { o.manualTs = -Infinity; o.drag = false; }; o.hear = () => o.hearTs = FD.now;
   o.tick = (t, dt) => {
     const B = FIND_PLAY.beacon, manual = o.drag || t - o.manualTs < B.manual, lit = o.fire === notes.length;
@@ -81,7 +89,7 @@ export function findRune(svg) {
   };
   const sheet = () => {
     const R = FIND_PLAY.rune, P = FIND_COPY.poster;
-    const shown = findSheet(o, 'poster rubbing-sheet', `<div class="pz"><div class="pz-in"><div class="pz-front rubbing-front">${rubbingSvg()}</div><div class="pz-back poster-back"><span class="pz-pin"></span><span class="pz-pin r"></span><b class="pz-h">${fEsc(P.head)}</b><div class="pz-pic"><i></i><s></s></div><b class="pz-who">${fEsc(P.who)}</b><p>${fEsc(P.line1)}<br>${fEsc(P.line2)}</p><b class="pz-rw">${fEsc(P.reward)}</b><span class="pz-stamp">${fEsc(P.stamp)}</span><div class="poster-slot">${findSlot(P.foot)}</div><span class="pz-fold"></span></div></div></div><div class="pz-ctl"><button type="button" class="rub-do">${fEsc(FIND_COPY.rubDo)}</button><button type="button" class="pz-flip" hidden>${fEsc(COPY.flip)}</button><button type="button" class="pz-x" hidden>${fEsc(COPY.close)}</button></div>`, [f.x, f.y + R.anchor]);
+    const shown = findSheet(o, 'poster rubbing-sheet', `<div class="pz"><div class="pz-in"><div class="pz-front rubbing-front">${rubbingSvg()}</div><div class="pz-back poster-back"><span class="pz-pin"></span><span class="pz-pin r"></span><b class="pz-h">${fEsc(P.head)}</b><div class="pz-pic"><i></i><s></s></div><b class="pz-who">${fEsc(P.who)}</b><p>${fEsc(P.line1)}<br>${fEsc(P.line2)}</p><b class="pz-rw">${fEsc(P.reward)}</b><span class="pz-stamp">${fEsc(P.stamp)}</span><div class="poster-slot">${findSlot(P.foot)}</div><span class="pz-fold"></span></div></div></div><div class="pz-ctl"><button type="button" class="rub-do">${fEsc(FIND_COPY.rubDo)}</button><button type="button" class="pz-flip" hidden>${fEsc(COPY.flip)}</button><button type="button" class="pz-x">${fEsc(COPY.close)}</button></div>`, [f.x, f.y + R.anchor]);
     if (!shown) { o.stage = 'rest'; return; }
     o.pz = FD.sheet.querySelector('.pz'); o.pin = FD.sheet.querySelector('.pz-in'); o.rubbing = FD.sheet.querySelector('.rubbing'); o.circles = FD.sheet.querySelector('.rub-circles'); o.fill = FD.sheet.querySelector('.rub-fill'); o.letters = [...FD.sheet.querySelectorAll('.rub-letter')]; o.stamp = FD.sheet.querySelector('.pz-stamp');
     o.flipped = false; o.controls = false; o.stampTs = o.stamped ? -Infinity : Infinity; o.stage = 'sheet'; o.ts = FD.now; o.autoTs = null; o.lastRub = null; o.tilt = [0, 0];
@@ -107,7 +115,7 @@ export function findRune(svg) {
   };
   press(el, e => { if (o.stage !== 'rest') return; opened(o); o.keyboard = e.type === 'keydown'; o.stage = 'trace'; o.ts = FD.now; dash(true); if (FD.rm) sheet(); });
   o.hear = () => { o.dashTs = FD.now; dash(false); };
-  o.beginClose = () => { if (FD.rm) return false; if (o.stage !== 'closing') { o.stage = 'closing'; o.closeTs = FD.now; } return true; };
+
   o.onSheetClose = () => { o.stage = 'rest'; o.rubDown = false; trace.classList.remove('red'); trace.style.opacity = 0; trace.getAnimations().forEach(a => a.cancel()); };
   o.undo = () => { if (FD.sheetOwner === o) closeSheet(); };
   o.onEscape = () => { if (o.stage === 'trace') { o.stage = 'rest'; trace.classList.remove('red'); } };
@@ -116,12 +124,11 @@ export function findRune(svg) {
     if (o.stage === 'rest' && o.awake && !FD.rm && t - o.dashTs >= R.dashTime) { o.dashTs = t; queueMicrotask(() => dash(false)); }
     if (o.stage === 'trace' && t - o.ts >= D(R.carving)) { o.stage = 'opening'; queueMicrotask(sheet); return; }
     if (!['sheet', 'closing'].includes(o.stage) || FD.sheetOwner !== o) return;
-    const q = FD.rm ? 1 : ease((t - o.ts) / R.grow), closing = o.stage === 'closing', out = closing ? 1 - ease((t - o.closeTs) / R.close) : q;
-    const fit = Math.min(1, (VIEW.w - FIND_PLAY.kit.sheet.edge) / R.width, (VIEW.h - FIND_PLAY.kit.sheet.edge * 2) / (R.height + Math.abs(R.controlTop) - R.height / 2));
-    const from = FD.sheetFrom;
-    findStyle(FD.sheet, 'transform', `translate(${lerp(from[0], VIEW.w / 2, out)}px,${lerp(from[1], VIEW.h / 2 - FIND_PLAY.kit.sheet.offset, out)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, fit, out)})`);
+    const closing = FD.sheetClosing;
+    const fit = Math.min(1, (VIEW.w - FIND_PLAY.kit.sheet.edge) / R.width, (VIEW.h - FIND_PLAY.kit.sheet.edge * 2 - COMB.target) / (R.height + Math.abs(R.controlTop) - R.height / 2));
+    findSheetFrame(o, fit, (VIEW.h - (R.controlTop - R.height / 2) * fit - COMB.target) / 2);
     findStyle(o.pz, 'transform', `rotateX(${o.tilt[0]}deg) rotateY(${o.tilt[1]}deg)`);
-    if (closing) { if (out === 0) queueMicrotask(() => closeSheet(true)); return; }
+    if (closing) return;
     if (!o.read && !o.rubs && o.autoTs === null && t - o.ts >= R.auto[0]) o.autoTs = t;
     if (!o.read && o.autoTs !== null) {
       const p = FD.rm ? 1 : clamp01((t - o.autoTs) / R.auto[1]), count = R.auto[2], pass = Math.min(count - 1, Math.floor(p * count)), u = p * count - pass, b = R.cells;

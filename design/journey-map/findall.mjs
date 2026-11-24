@@ -1,7 +1,7 @@
 // A single completion accent, started by the eleventh count landing.
 import { FINDS, FIND_PLAY } from './data.mjs';
 import { clamp01 } from './trip.mjs';
-import { JOURNEY, stepsFocus } from './steps.mjs';
+import { JOURNEY, stepsFocus, stepsRelease } from './steps.mjs';
 import { FD, attr, ease, findSvg, findView } from './findkit.mjs';
 
 export function findAll(svg) {
@@ -13,6 +13,7 @@ export function findAll(svg) {
     const Q = FIND_PLAY.all;
     // A find that has the camera hands it to the whole chart while the comet goes round, then takes it back.
     if (!FD.rm && JOURNEY.focus) { o.wide = JOURNEY.focus; stepsFocus(o.wide, FIND_PLAY.focus.wide); o.ts += Q.wait; }
+    else if (!FD.rm && stepsFocus('all-found', FIND_PLAY.focus.wide)) { o.chart = true; o.ts += Q.wait; }
     if (FD.rm) attr(frame, 'stroke-opacity', Q.frameAlpha);
     else {
       const wait = (o.ts - FD.now) * 1000;
@@ -26,7 +27,7 @@ export function findAll(svg) {
     attr(comet, 'opacity', age < 0 ? 0 : age <= Q.time ? 1 : 1 - clamp01((age - Q.time) / Q.fade));
     knots.forEach((knot, i) => { const q = clamp01((age - Q.time * Q.corners[i] / perimeter) / Q.knotTime), at = Q.knots[i]; attr(knot, 'transform', `translate(${at[0]} ${at[1]}) rotate(${FIND_PLAY.kit.turn * ease(q)})`); });
     const pulse = Math.sin(Math.PI * clamp01(age / Q.markerTime)); markers.forEach(m => { const p = m.at; attr(m.el, 'transform', `translate(${p[0]} ${p[1]}) scale(${1 + (Q.markerScale - 1) * pulse}) translate(${-p[0]} ${-p[1]})`); });
-    if (age >= Q.time + Math.max(Q.fade, Q.knotTime)) { o.ts = null; if (o.wide && JOURNEY.focus === o.wide) queueMicrotask(() => stepsFocus(o.wide, findView(o.wide))); }
+    if (age >= Q.time + Math.max(Q.fade, Q.knotTime)) { o.ts = null; if (o.chart && JOURNEY.focus === 'all-found') queueMicrotask(stepsRelease); else if (o.wide && JOURNEY.focus === o.wide) queueMicrotask(() => stepsFocus(o.wide, findView(o.wide))); }
   };
   return o;
 }

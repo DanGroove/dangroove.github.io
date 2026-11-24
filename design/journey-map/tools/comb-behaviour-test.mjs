@@ -1,0 +1,72 @@
+import { combBrowser, combWait } from './comb-browser.mjs';
+import { appendFileSync } from 'node:fs';
+const b = await combBrowser(), lines = []; let failures = 0;
+const check = (value, label, detail='') => { const line = `${value?'PASS':'FAIL'} ${label} ${detail}`; console.log(line); lines.push(line); if (!value) failures++; };
+const key = async k => { for (const type of ['keyDown','keyUp']) await b.send('Input.dispatchKeyEvent',{type,key:k,code:k,windowsVirtualKeyCode:{Escape:27,ArrowRight:39,ArrowLeft:37,ArrowUp:38,ArrowDown:40,End:35,Home:36,Tab:9}[k]||0}); };
+const press = id => b.evaluate(`(()=>{const el=document.querySelector('#f-${id}');el.focus({preventScroll:true});el.dispatchEvent(new MouseEvent('click',{bubbles:true}));})()`);
+const open = async id => { await b.evaluate('window.__jm.go("map",{instant:true})'); await combWait(250); await press(id); };
+const closeSample = async selector => b.evaluate(`new Promise(resolve=>{const rows=[],start=performance.now();document.querySelector('${selector}').click();const sample=()=>{rows.push({ms:performance.now()-start,on:document.querySelector('#sheet').classList.contains('on'),transform:document.querySelector('#sheet').style.transform});if(performance.now()-start<280)requestAnimationFrame(sample);else resolve(rows);};sample();})`);
+try {
+  await b.size(412,730); await b.page('dist/journey-map.html');
+  await b.evaluate('window.__jm.go("map",{instant:true})'); await combWait(300);
+  const hits=await b.evaluate(`[...document.querySelectorAll('.find > .touch-hit')].map(e=>({width:parseFloat(getComputedStyle(e).strokeWidth),vector:getComputedStyle(e).vectorEffect}))`);
+  check(hits.length===15&&hits.every(h=>h.width>=44&&h.vector==='non-scaling-stroke'),'all fifteen individual finds use >=44 px non-scaling hit padding',JSON.stringify(hits));
+  await open('hammer'); await combWait(120);
+  check(!await b.evaluate('document.querySelector("#sheet").classList.contains("on")'),'hammer waits for arrival');
+  await combWait(1250);
+  check(await b.evaluate('document.querySelector("#sheet").classList.contains("on")'),'hammer opens on arrival'); await b.shot('412x730-hammer');
+  check(await b.evaluate("+getComputedStyle(document.querySelector('.find-hint:not(.explore-hint)')).opacity===0"),'focused hint hidden behind sheet');
+  const close = await b.evaluate(`(()=>{const r=document.querySelector('#sheet-dismiss').getBoundingClientRect();return {w:r.width,h:r.height};})()`);
+  check(close.w>=44&&close.h>=44,'sheet Close target',JSON.stringify(close));
+  await b.evaluate('document.querySelector("#sheet-dismiss").focus()');
+  await b.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9,modifiers:8}); await b.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+  check(await b.evaluate('document.activeElement.classList.contains("hm-close")'),'Shift+Tab from fixed Close reaches the last sheet control');
+  await b.evaluate('document.querySelector("#sheet-dismiss").focus()');
+  const before=await b.evaluate('window.__jm.P'); await key('0'); await key('ArrowRight');
+  check(await b.evaluate('window.__jm.P')===before,'sheet owns page keys');
+  check(await b.evaluate('document.querySelector(".hm-auto").disabled'),'Keep throwing disabled before run');
+  const sample=await closeSample('#sheet-dismiss'), lastOn=sample.filter(r=>r.on).at(-1)?.ms||0;
+  check(lastOn>=120&&!sample.at(-1).on,'hammer closes over time',JSON.stringify({lastOn,last:sample.at(-1)}));
+  check(await b.evaluate('document.activeElement.id')==='f-hammer','sheet focus returns to hammer');
+  await b.evaluate('window.__jm.go("map",{instant:true})'); await combWait(300); await press('runestone');
+  for(let n=0;n<100;n++){if(await b.evaluate('document.querySelector("#sheet").classList.contains("on")'))break;await combWait(25);}
+  await combWait(60);
+  const rub=await closeSample('#sheet-dismiss'), first=rub[0].transform, scales=rub.map(r=>+(r.transform.match(/scale\(([^)]+)\)/)?.[1]||0));
+  check(rub.filter(r=>r.on).at(-1)?.ms>=120&&!rub.at(-1).on,'rubbing early close lasts >=120 ms');
+  check(Math.max(...scales)<=scales[0]+.05,'rubbing reverses from current size',JSON.stringify({first,max:Math.max(...scales)}));
+  await open('hoard-hmc1'); await combWait(1500);
+  for(let i=0;i<3;i++){await press('hoard-hmc1');await combWait(850);}
+  check(await b.evaluate('document.querySelector("#pop").classList.contains("on")'),'chest popup opens'); await b.shot('412x730-chest');
+  await b.evaluate('document.querySelector("#pop button")?.focus()'); await key('Escape');
+  const exitNow=await b.evaluate('!!document.querySelector(".pop-exit")'); await combWait(80);
+  const exit80=await b.evaluate('!!document.querySelector(".pop-exit")'); await combWait(180);
+  check(exitNow&&exit80&&!await b.evaluate('!!document.querySelector(".pop-exit")'),'popup shrinks before removal');
+  check(await b.evaluate('document.activeElement.id')==='f-hoard-hmc1','popup focus returns to its find');
+  await press('hoard-hmc1'); await combWait(350); await b.evaluate('document.querySelector("#pop button")?.focus()');
+  await b.send('Input.dispatchMouseEvent',{type:'mousePressed',x:20,y:70,button:'left',clickCount:1}); await b.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:20,y:70,button:'left',clickCount:1}); await combWait(100);
+  check(await b.evaluate('document.activeElement.id')==='f-hoard-hmc1','outside popup press restores focus after native default actions');
+  await open('ravens'); await combWait(5200); await press('ravens'); await combWait(4600);
+  check(await b.evaluate('document.querySelector("#sheet").classList.contains("on")'),'Muninn reel opens'); await b.shot('412x730-reel');
+  const reel=await closeSample('#sheet-dismiss');
+  check(reel.filter(r=>r.on).at(-1)?.ms>=120&&!reel.at(-1).on,'Muninn early iris close lasts >=120 ms');
+  await b.evaluate('window.__jm.go("hmc1",{instant:true})'); await combWait(900);
+  await b.evaluate('document.querySelector("#stop-hmc1 .c-btn").focus();document.querySelector(".go-next").click()'); await combWait(40);
+  check(await b.evaluate('document.activeElement.classList.contains("go-next")'),'leaving card returns focus from any content');
+  await b.evaluate('window.__jm.go("end",{instant:true})'); await combWait(400);
+  check(await b.evaluate('document.querySelector("#cards").inert&&document.querySelector("#tl").inert'),'map controls inert at end');
+  await b.evaluate('window.__jm.go("hmc2",{instant:true})'); await combWait(400);
+  await b.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]}); await combWait(500);
+  check(await b.evaluate('document.documentElement.classList.contains("rm")&&window.__jm.mode==="scroll"'),'live reduced motion switches to stack');
+  await b.evaluate('document.querySelector("#tl").focus()'); await key('End'); await combWait(150); await key('ArrowLeft'); await combWait(150);
+  const reduced=await b.evaluate('document.querySelector("#tl").getAttribute("aria-valuetext")');
+  check(/Interkom/.test(reduced),'reduced timeline End then Left reaches Interkom',reduced);
+  await b.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]}); await combWait(600);
+  check(await b.evaluate('window.__jm.mode==="steps"&&!document.documentElement.classList.contains("rm")'),'motion returns without reload');
+  for(const [w,h] of [[1440,900],[412,730]]) { await b.size(w,h); await open('hammer'); await combWait(1300); await b.shot(w+'x'+h+'-hammer'); await b.evaluate('document.querySelector("#sheet-dismiss").click()'); await combWait(300); await open('wayfinder'); await combWait(800); await key('ArrowRight'); await combWait(900); await b.shot(w+'x'+h+'-wayfinder'); }
+  await b.evaluate('window.__jm.go("end",{instant:true})'); await combWait(400);
+  await b.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]}); await combWait(400);
+  check(await b.evaluate("getComputedStyle(document.querySelector('#nova')).display==='none'&&getComputedStyle(document.querySelector('#nova-hit')).display==='none'&&getComputedStyle(document.querySelector('#fxg')).visibility==='visible'"),'reduced motion from end clears the moving nova and restores static X');
+  check(b.errors.length===0,'no browser exceptions',JSON.stringify(b.errors));
+} catch(e) { check(false,'unexpected browser test error',e.stack); }
+finally { await b.close(); appendFileSync('COMB-A-BUILD.md','\n## Behaviour browser tests\n\n```text\n'+lines.join('\n').replace(/[^\x00-\x7F]/g,'?')+'\n```\n'); }
+process.exitCode=failures?1:0;

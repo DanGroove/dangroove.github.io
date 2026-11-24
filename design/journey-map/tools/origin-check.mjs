@@ -6,7 +6,7 @@ import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { CARD_TAIL, MARK, STOPS } from '../data.mjs';
 
-const originSizes = [[1440,900],[1280,720],[1024,600],[820,1180],[390,844],[412,730],[360,640]];
+const originSizes = [[1440,900],[1280,720],[1024,600],[820,1180],[390,844],[412,730],[360,640],[844,390]];
 const originEndpoint = process.argv[process.argv.indexOf('--cdp') + 1];
 const originWait = ms => new Promise(ok => setTimeout(ok, ms));
 let originSocket, originSession, originTarget, originServer, originSeq = 0;
@@ -30,7 +30,7 @@ const originReady = async () => {
 function originMeasure(id, constants) {
   const article = document.getElementById('stop-' + id), face = article.querySelector('.face'), shield = article.querySelector('.st-btn'), close = article.querySelector('.c-close'), tail = article.querySelector('.c-tail');
   const rect = node => { const b = node.getBoundingClientRect(); return {x:b.x,y:b.y,left:b.left,right:b.right,top:b.top,bottom:b.bottom,width:b.width,height:b.height}; };
-  const f = rect(face), s = rect(shield), sw = document.querySelector('[data-review]'), review = sw && getComputedStyle(sw).display !== 'none' ? rect(sw) : null, bar = rect(document.getElementById('go'));
+  const f = rect(face), s = rect(shield.querySelector('.stone')), sw = document.querySelector('[data-review]'), review = sw && getComputedStyle(sw).display !== 'none' ? rect(sw) : null, bar = rect(document.getElementById('go'));
   const matrix = tail.getScreenCTM(), tip = new DOMPoint(1,.5).matrixTransform(matrix), centre = [s.x+s.width/2,s.y+s.height/2], radius = s.width * constants.rim;
   const vertices = [[0,0],[1,.5],[0,1]].map(p => new DOMPoint(...p).matrixTransform(matrix));
   const rimError = Math.abs(Math.hypot(tip.x-centre[0],tip.y-centre[1]) - radius - constants.gap);

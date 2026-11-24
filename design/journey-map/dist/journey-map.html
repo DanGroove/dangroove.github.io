@@ -35,10 +35,12 @@ button { font-family: inherit; }
 .rn-dim { stroke-opacity: .5; stroke-width: .7; }
 .done { fill: none; stroke: var(--paper); stroke-width: 1.3; stroke-linecap: round; vector-effect: non-scaling-stroke; opacity: 0; }
 .find { cursor: pointer; outline: none; }
-.find:focus-visible .hit { stroke: var(--paper); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-dasharray: none; }
+.find-focus-ring { stroke: none; }
+.find:focus-visible > .find-focus-ring { stroke: var(--paper); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .hit { fill: transparent; stroke: none; pointer-events: all; }
+.touch-hit { fill: none; stroke: transparent; stroke-width: 44px; vector-effect: non-scaling-stroke; pointer-events: stroke; }
 #f-wayfinder, #f-beacon { touch-action: none; }
-.wf-word.on { fill: var(--red); }
+.wf-word.on { fill: var(--paper); text-decoration: underline; }
 .rs-trace { stroke: transparent; }
 .rs-trace.red { stroke: var(--red); stroke-width: 1.6; }
 
@@ -147,7 +149,7 @@ button { font-family: inherit; }
 .ft-in { height: 100%; display: flex; flex-direction: column; padding: 15vh 48px 30px; }
 .ft-r { opacity: 0; }
 .ft-q { font-weight: 800; font-size: clamp(26px, 3vw, 42px); letter-spacing: -.02em; line-height: 1.08; max-width: 14em; margin: 0 0 20px; }
-.ft-talk { background: var(--red); color: var(--ink); border: 0; border-radius: 999px; padding: 13px 24px; font-weight: 800; font-size: 16px; display: inline-flex; gap: 10px; align-items: center; cursor: pointer; }
+.ft-talk { background: var(--paper); color: var(--ink); border: 0; border-radius: 999px; padding: 13px 24px; font-weight: 800; font-size: 16px; display: inline-flex; gap: 10px; align-items: center; cursor: pointer; }
 .ft-sp { flex: 1; }
 .ft-name { margin: 0; font-weight: 800; letter-spacing: -.02em; line-height: .86; white-space: nowrap; }
 .ft-name span { display: inline-block; }
@@ -304,9 +306,9 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .mk.found text { fill: var(--ink); }
 .mk { transition: opacity .3s; }
 .find-hint { position: absolute; z-index: 5; left: 50%; bottom: 124px; transform: translateX(-50%); margin: 0; max-width: calc(100% - 32px); padding: 6px 12px; border-radius: 8px; background: var(--ink); text-align: center; white-space: nowrap; font-size: 12px; line-height: 1.4; letter-spacing: .02em; color: var(--dim); opacity: 0; transition: opacity .3s; pointer-events: none; }
-.jm-focus .find-hint { opacity: 1; }
+.jm-focus .find-hint:not(.explore-hint) { opacity: 1; }
 .jm-sheet-open .find-hint { opacity: 0; }
-.explore-hint.on { opacity: 1; }
+.jm-explore:not(.jm-sheet-open) .explore-hint.on { opacity: 1; }
 @media (max-width: 640px) { .find-hint { bottom: 104px; white-space: normal; width: calc(100% - 32px); } }
 .jm-focus .mk { opacity: 0; }
 #b-detail text { transition: opacity .4s; }
@@ -454,6 +456,108 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .c-role, .c-para, .c-took { text-wrap: pretty; }
 .c-h { text-wrap: balance; }
 
+/* COMB-A: controls, counting and reversible overlays. */
+.tl-count { position: relative; z-index: 1; flex: none; }
+.tl-tick b { font-size: 11px; }
+.tl-view { mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 16px), transparent); }
+.tl-tip { transition: opacity .15s; }
+.tl-head svg { stroke: var(--ink); stroke-width: 2px; paint-order: stroke; }
+.tl-blk em { background: linear-gradient(to bottom, var(--mk) 0 75%, var(--mk2) 75% 100%); }
+.mm-interkom i::after { background: conic-gradient(var(--shield-b) 0deg 270deg, var(--shield-a) 270deg 360deg); }
+.tl-blk { transition: opacity .3s; }
+.mm-trav { r: 21; stroke: var(--paper); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.mm-stop { width: 44px; height: 44px; margin: calc(var(--oy) - 22px) 0 0 calc(var(--ox) - 22px); }
+.st-btn { display: grid; place-items: center; }
+.st-btn .stone { flex: none; }
+.c-close:focus-visible { outline: 2px solid var(--ink); box-shadow: 0 0 0 4px var(--paper); outline-offset: 0; }
+.c-crafts, .c-compact .c-crafts { font-size: 11px; }
+.c-crafts .lit { text-decoration: underline; text-underline-offset: 3px; }
+.find-hint { font-size: 13px; color: var(--note); visibility: hidden; transition: opacity .3s, visibility 0s .3s; }
+.jm-focus .find-hint:not(.explore-hint), .jm-explore:not(.jm-sheet-open) .explore-hint.on { visibility: visible; transition-delay: 0s; }
+.jm-sheet-open .find-hint { opacity: 0; visibility: hidden; }
+.jm-focus[data-find="well"] .well-name, .jm-focus[data-find="well"] .well-name text { opacity: 1 !important; }
+#b-all, #finds > .find, #bc-notes, .find.hoard { transition: opacity .3s; }
+.reading-halo text, .reading-halo path { paint-order: stroke; stroke: var(--ink); stroke-width: 2px; stroke-linejoin: round; }
+.reading-halo path { stroke: var(--paper); }
+.go { transition: opacity .18s; }
+.go.go-leaving { opacity: 0; pointer-events: none; }
+.go-top, .jm-explore .go.go-end .go-top { min-height: 44px; font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.pop-link, .pz-ctl button, .ft-link { min-height: 44px; min-width: 44px; }
+.pop-exit { pointer-events: none; }
+.pop-exit .pop-in { pointer-events: none; }
+.reel-close { position: absolute; left: -36px; top: 120px; min-width: 72px; min-height: 44px; color: var(--paper); background: var(--ink); border: 1px solid var(--note); border-radius: 24px; pointer-events: auto; font: inherit; }
+.hm-card { overflow: visible; }
+.hm-panel button, .pz-ctl button { min-height: calc(44px * var(--sheet-unit, 1)); min-width: calc(44px * var(--sheet-unit, 1)); }
+.hm-card h2 { letter-spacing: -.02em; }
+.rm .tl { touch-action: pan-x; }
+.rm .tl-view { overflow-x: auto; mask-image: none; }
+.rm .tl-track { position: relative; }
+.rm .tl-blk.current { outline: 2px solid var(--paper); outline-offset: 2px; }
+.rm .c-close { display: none; }
+@media (max-width: 640px) {
+  .tl-count { width: 92px; font-size: 11px; }
+  .tl-tick b { font-size: 11px; }
+  .c-compact .c-foot { flex-wrap: wrap; }
+  .c-compact .c-foot .c-crafts { flex-basis: 100%; max-width: none; }
+  .c-compact .c-foot .c-btn { width: 100%; }
+  .ft-small { white-space: normal; }
+  .ft-links { gap: 0; }
+}
+@media (max-height: 440px) and (min-width: 641px) {
+  .mini { display: none; }
+  .go.go-end { top: 40px; bottom: auto; flex-wrap: wrap; width: 370px; }
+  .go.go-end .go-top { flex-basis: 100%; }
+  .ft-in { padding: 156px 24px 8px; }
+  .ft-q { font-size: 21px; margin-bottom: 8px; }
+  .ft-name { max-width: 50%; }
+  .ft-tag { font-size: 11px; margin: 4px 0; }
+  .ft-links { position: absolute; right: 20px; bottom: 4px; max-width: 46%; flex-wrap: wrap; gap: 0; }
+  .ft-big .ft-link { font-size: 16px; margin-right: 10px; }
+  .ft-small i { margin: 0 3px; }
+  .c-compact .c-in { padding: 8px 12px; }
+  .c-compact .c-top { min-height: 44px; margin-bottom: 4px; padding-bottom: 4px; }
+  .c-compact .c-h { font-size: 20px; margin-bottom: 4px; }
+  .c-compact .c-body { grid-template-columns: minmax(0,1.6fr) minmax(0,1fr) 76px; gap: 8px; }
+  .c-compact .c-main { grid-column: 1; grid-row: 1; }
+  .c-compact .c-take { grid-column: 2; grid-row: 1; }
+  .c-compact .c-side { grid-column: 3; grid-row: 1; }
+  .c-compact .c-foot { margin-top: 4px; }
+  .c-compact .c-steps { margin-top: 4px; }
+}
+.rm *, .rm *::before, .rm *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
+
+.sheet-dismiss { position: absolute; z-index: 7; top: 48px; right: 16px; min-width: 72px; min-height: 44px; padding: 0 16px; border: 1px solid var(--note); border-radius: 24px; background: var(--ink); color: var(--paper); font: 600 13px Outfit, sans-serif; pointer-events: auto; }
+.sheet-dismiss[hidden] { display: none; }
+.jm-focus .mk { pointer-events: none; }
+@media (max-height: 440px) and (min-width: 641px) { .go { bottom: 44px; } .tl { height: 44px; } .tl-tick { top: 20px; } .tl-tick b { top: 7px; } .tl-base { top: 23px; } .tl-head { top: 16px; } }
+
+@media (max-height: 440px) and (min-width: 641px) {
+  .c-compact.lay-band .c-top { margin: -8px -12px 4px; padding: 4px 12px; }
+  .c-compact .c-role { margin-bottom: 4px; }
+  .c-compact .c-body { grid-template-columns: minmax(0,1.8fr) minmax(0,1fr) 60px; }
+  .c-compact .c-para { font-size: 12.5px; line-height: 1.3; }
+  .c-compact .c-steps { font-size: 10px; margin: 2px 0 0; }
+  .c-compact .c-steps li { padding: 2px 4px; }
+  .c-compact.has-panel .c-panel { padding: 6px 8px; }
+}
+.rm .ft-name > .is-live { -webkit-text-fill-color: currentcolor; } .rm .ft-name .foot-name-fx { display: none !important; }
+
+.marker-layer { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; overflow: visible; pointer-events: none; } .marker-layer .mk { pointer-events: auto; } .jm-focus .marker-layer .mk { pointer-events: none; }
+
+.find-hint:empty { display: none; } .jm-focus[data-find="all-found"] .label-anchor text { opacity: 1 !important; }
+.jm-sheet-open.jm-focus .find-hint, .jm-sheet-open.jm-explore .find-hint { opacity: 0; visibility: hidden; }
+@media (max-height: 440px) { .hm-card { gap: 4px; padding: 8px; } .hm-card p { line-height: 14px; } .hm-card h2 { font-size: 21px; } .hm-card .find-slot { padding: 4px; } .hm-end-close { display: none; } }
+.tl-count-space { flex: none; width: 110px; } .tl-count-screen { position: absolute; z-index: 5; top: 0; right: 28px; bottom: auto; padding: 5px 8px; line-height: 1; border-radius: 12px; background: var(--ink); pointer-events: auto; translate: 0 calc(100vh - 39px); transition: translate .3s, opacity .3s; } html[data-beat="end"] .tl-count-screen { translate: 0 26px; } .rm .tl-count-space { display: none; } @media (max-width: 640px) { .tl-count-space { width: 92px; } .tl-count-screen { right: 16px; translate: 0 calc(100vh - var(--go-bar) - 35px); } html[data-beat="end"] .tl-count-screen { translate: 0 104px; } .jm-explore[data-beat="end"] .tl-count-screen { translate: 0 calc(100vh - var(--go-bar) - 35px); } }
+@media (max-width: 640px) { html:has(.stop[data-state="open"], .stop[data-state="moving"]) .tl-count-screen { translate: 0 48px; } }
+.tl-count-screen, .marker-layer { opacity: 0; }
+.rm #nova, .rm .fx-hit { display: none; }
+.rm .pop, .rm .sheet, .rm .sheet-dismiss { position: fixed; }
+.rm .tl { position: fixed; left: 0; right: 0; padding-bottom: env(safe-area-inset-bottom); } .rm .ft-in { padding-bottom: 80px; } @media (max-width: 640px) { .rm .tl { height: calc(44px + env(safe-area-inset-bottom)); } }
+.fx-hit { min-width: 44px; min-height: 44px; } .sheet { touch-action: none; } .sheet-dismiss { touch-action: manipulation; } .jm-review button { position: relative; min-width: 44px; } .jm-review button::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; min-width: 44px; transform: translateY(-50%); }
+.tl-tip { max-width: calc(100vw - 16px); white-space: normal; }
+.map, .marker-layer { visibility: hidden; }
+.rm, .rm body { overflow-anchor: none; }
+
 </style>
 </head>
 <body>
@@ -566,11 +670,11 @@ const COPY = {
   timelineStart: 'Before the first stop',
   close: 'Close',
   flip: 'Flip it over',
-  nova: 'The supernova. Press it.',
+  nova: 'The supernova. Press to add a flare.',
   steps: {
     group: 'Move through the journey', start: 'Start the journey', setOut: 'Set out', next: 'Next: {name}',
     toX: 'Next: the X', dig: 'Dig here', top: 'Back to the top', back: 'Back: {name}', returnTo: 'Back to the trail',
-    names: { top: 'the top', map: 'the whole map', x: 'the X', end: 'the end' },
+    names: { hmc2: 'back to HMC', top: 'the top', map: 'the whole map', x: 'the X', end: 'the end' },
     say: { top: 'The top of the page', map: 'The whole map', stop: 'Stop {n} of {t}: {name}, {dates}', x: 'The X', end: 'The end of the trail: contact and links' },
     review: { label: 'Preview only', depth: 'Depth' },
   },
@@ -640,7 +744,7 @@ const HAMMER = {
   boss: { hearts: 64, fan: 1.6, fans: 5, speed: 17, x: [72, 228], y: 59, shardSpeed: 124, aimSpread: 0.23, clay: 13, clayAt: 0.6, heartAt: 0.3, clayY: 203, claySpeed: 30, clayX: [72, 228], faster: 0.66, exposed: 2, heartRX: 13, heartRY: 15, heartY: 17, silver: 500, fall: 1.3, gravity: 90 },
   fx: { sparks: 4, life: 0.25, speed: 40, shake: 1.8, flash: 0.09, flashAlpha: 0.65, trail: 12 },
   map: { near: 20, scale: 0.7, hit: [-6, -6, 34, 34], centre: [10.5, 10.5], stone: 'M-3 23L0 20L24 20L27 23L25 25L-2 25Z', hammer: 'M8 14V3Q7 1 10 1Q13 1 12 3V14M8 4H12M8 7H12M8 10H12M2 12L5 14H15L18 12L20 13V21L18 22L15 20H5L2 22L0 21V13ZM4 15L8 18L12 15L16 18M4 18L8 15L12 18L16 15M2 13V21M18 13V21', spark: 'M-2 12L-5 10L-4 7M21 16L25 14L24 11M9 23L11 26', every: 4.3, sparkTime: 0.18, tremble: 0.55, trembleRate: 33, hop: 2, hopTime: 0.3 },
-  ui: { w: 330, h: 550, fieldW: 300, fieldH: 400, pad: 14, border: 1, radius: 10, gap: 8, header: 24, status: 36, buttons: 36, font: 12, line: 17, small: 11, title: 22, titleWeight: '600', autoFlex: '2', waveShare: '50%', cardPad: 14, inset: 12, rune: 32, runeW: 18, mini: 17, miniW: 11, spritePad: 4, glyphLine: 1.4, heartW: 10, heartH: 9, heartGap: 2, notice: 1, bestKey: 'jm-hammer-best' },
+  ui: { w: 330, h: 558, fieldW: 300, fieldH: 400, pad: 14, border: 1, radius: 10, gap: 8, header: 24, status: 36, buttons: 44, font: 12, line: 17, small: 11, title: 22, titleWeight: '800', autoFlex: '2', waveShare: '50%', cardPad: 14, inset: 12, rune: 32, runeW: 18, mini: 17, miniW: 11, spritePad: 4, glyphLine: 1.4, heartW: 10, heartH: 9, heartGap: 2, notice: 1, bestKey: 'jm-hammer-best' },
   paths: {
     bridge: ['M0 386Q150 364 300 386', 'M0 391Q150 369 300 391', 'M0 396Q150 374 300 396'],
     heart: 'M0 3C-6 -3 -6 -7 -2 -7Q0 -7 0 -5Q0 -7 2 -7C6 -7 6 -3 0 3Z', heartBox: '-6 -8 12 12',
@@ -727,8 +831,8 @@ const FIND_COPY = {
   // One short line of what to do, shown above the step buttons while a find has the camera. Draft copy.
   hints: { wayfinder: 'Pick a craft to light the stops that used it.', hoards: 'Dig three times, then open it.', ravens: 'Press to send a raven out.',
     serpent: 'Jörmungandr, the world serpent. Poke it.', beacon: 'Press the tower for the next note, or drag to aim the beam.', runestone: 'Rub the stone to lift its carving.',
-    hammer: 'Press the hammer to play.', mist: 'Wipe the mist away.', horn: 'Press to raise it, press again to sound it.',
-    well: 'Drop a pebble in. The Norns answer.', longship: 'Press to pull the oars.' },
+    hammer: 'Press it to hold the bridge.', mist: 'Press or wipe to clear it.', horn: 'Press to raise it, press again to sound it.',
+    well: 'Drop a pebble in. The Norns answer.', longship: 'Pull three times to fly its pennant.' },
   shipLog: 'The 2023 crossing', longship: { t: '2023: Dan to write this line.', todo: 1 },
 };
 
@@ -1487,6 +1591,16 @@ const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor
 const WORLD = { scrim: [150,190,.85], titleOut: [.3, .8], titleZoom: [1.15, 1.6], coastDraw: [.04, .72], card: { w:640, edge:32, phoneBottom:6, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
 const PHONE_LAYOUT = { gap: 16, edge: 16, ctaShare: .14, headlineGap: 20, exploreGap: 8, exploreBottom: 8, exploreBack: 152, exploreTop: 172 };
 
+// COMB-A: interaction and responsive label values. Original drawing geometry stays in place.
+const COMB = { target: 44, popClose: .16, sheetClose: .2, panelFade: .14, wayFade: .3,
+  markerPx: 17, wordPx: 10, hintDelay: .5, handoverOverlap: 28,
+  labels: { laurier: [160,226], hmc1: [478,277], hmc2: [494,351] },
+  readings: [[440,419],[427,453],[452,488],[455,525]],
+  hornHints: ['Press to raise it.', 'Press again to sound it.', 'Listen as the other finds answer.'],
+  craftLit: '{craft}: used here', craftUnlit: '{craft}: not used here',
+  waySay: '{craft}. Matching stops: {names}.', novaSay: 'The supernova is building. Press to add a flare.',
+};
+
 // ---- art.mjs ----
 // Every drawing as a function that returns an SVG string. Geometry and glyphs ported from reference/round2.cjs.
 
@@ -1577,7 +1691,7 @@ const runeSvg = (word, h, x, y, a, cls = 'rn') => `<path class="${cls}" d="${run
 const svgText = (x, y, s, o = {}) => `<text x="${x}" y="${y}" font-size="${o.s || 8}" fill="${o.c || C.dim}" font-weight="${o.w || 500}" text-anchor="${o.a || 'start'}"${o.i ? ' font-style="italic"' : ''}${o.ls ? ` letter-spacing="${o.ls}"` : ''}${o.h ? ' class="h"' : ''}${o.t ? ` transform="${o.t}"` : ''}${o.op ? ` opacity="${o.op}"` : ''}${o.cls ? ` class="${o.cls}"` : ''}>${s}</text>`;
 const grp = (x, y, k, s, rot) => `<g transform="translate(${x} ${y})${rot ? ` rotate(${rot})` : ''} scale(${k})">${s}</g>`;
 const starPath = (x, y, s) => `M${n1(x)} ${n1(y - s)}Q${n1(x)} ${n1(y)} ${n1(x + s)} ${n1(y)}Q${n1(x)} ${n1(y)} ${n1(x)} ${n1(y + s)}Q${n1(x)} ${n1(y)} ${n1(x - s)} ${n1(y)}Q${n1(x)} ${n1(y)} ${n1(x)} ${n1(y - s)}Z`;
-const marker = (x, y, n, id) => `<g class="mk"${id ? ` id="mk-${id}"` : ''}><circle cx="${x}" cy="${y}" r="6.2" fill="${C.ink}" stroke="${C.red}" stroke-width="1.2"/><g transform="translate(${x} ${y})"><g class="label-scale" data-label="marker"><text y="2.6" font-size="7.5" font-weight="800" fill="${C.red}" text-anchor="middle">${n}</text></g></g></g>`;
+const marker = (x, y, n, id) => `<g class="mk"${id ? ` id="mk-${id}"` : ''}><g transform="translate(${x} ${y})"><g class="mk-size"><circle r="6.2" fill="${C.ink}" stroke="${C.red}" stroke-width="1.2"/><g><g><text y="2.6" font-size="7.5" font-weight="800" fill="${C.red}" text-anchor="middle">${n}</text></g></g></g></g></g>`;
 
 // ---- terrain ----
 const peak = (x, y, s) => `<path class="g" d="M${n1(x - s)} ${y}L${x} ${n1(y - s * 1.5)}L${n1(x + s)} ${y}"/><path class="t" d="M${x} ${n1(y - s * 1.5)}l${n1(s * .28)} ${n1(s * .55)}l${n1(-s * .2)} ${n1(s * .3)}M${n1(x + s * .34)} ${n1(y - s * .62)}l${n1(-s * .1)} ${n1(s * .42)}M${n1(x + s * .6)} ${n1(y - s * .32)}l${n1(-s * .08)} ${n1(s * .24)}"/>`;
@@ -1714,7 +1828,7 @@ function bigMap() {
   [[40, 200], [52, 300], [36, 560], [150, 640], [60, 610], [536, 300], [548, 420], [552, 600], [520, 690], [250, 630], [340, 622], [120, 790], [540, 780], [380, 100], [330, 70], [560, 170], [40, 420]].forEach(p => sea += wave(p[0], p[1]));
   sea += shore(COAST_A, 5) + shore(COAST_B, 6) + jormungandr() + '</g>';
   let fill = '', coast = '';
-  [[COAST_A, 'cA'], [COAST_B, 'cB']].forEach(([P, id]) => { const d = pathD(P, 1); fill += `<path d="${d}" fill="none" stroke="${C.paper}" stroke-opacity=".38" stroke-width="12" stroke-dasharray=".7 2.5"/><path d="${d}" fill="${C.land}"/><path d="${d}" fill="none" stroke="${C.landEdge}" stroke-width="12" clip-path="url(#${id})"/>`; coast += `<path class="coast" d="${d}" fill="none" stroke="${C.paper}" stroke-width="1.2" stroke-opacity=".9" vector-effect="non-scaling-stroke"/>`; });
+  [[COAST_A, 'cA'], [COAST_B, 'cB']].forEach(([P, id]) => { const d = pathD(P, 1); fill += `<path d="${d}" fill="none" stroke="${C.paper}" class="coast-ticks" data-weight="12" stroke-opacity=".38" stroke-width="12" stroke-dasharray=".7 2.5" vector-effect="non-scaling-stroke"/><path d="${d}" fill="${C.land}"/><path d="${d}" fill="none" stroke="${C.landEdge}" stroke-width="12" clip-path="url(#${id})"/>`; coast += `<path class="coast" d="${d}" fill="none" stroke="${C.paper}" stroke-width="1.2" stroke-opacity=".9" vector-effect="non-scaling-stroke"/>`; });
 
   // water on land, the well, cliff
   const riv = d => `<path d="${d}" fill="none" stroke="${C.paper}" stroke-opacity=".75" stroke-width="2.8" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${C.land}" stroke-width="1.4" stroke-linecap="round"/>`;
@@ -1749,12 +1863,12 @@ function bigMap() {
   top += '<g transform="translate(' + K.join(' ') + ')"><g class="label-scale" data-label="small" data-unit="' + LABELS.small.unit + '"><rect x="' + P[0] + '" y="' + P[1] + '" width="' + P[2] + '" height="' + P[3] + '" fill="' + C.ink + '" class="kick-r"/>' + svgText(0, 0, COPY.kicker, { s: LABELS.small.unit, ls: 1.8, cls: 'kick' }) + '<path class="t kick-r" d="M' + rule[0] + ' ' + rule[1] + 'h' + rule[2] + '"/></g></g></g>';
   s += `<rect x="23" y="822" width="554" height="55" fill="${C.ink}"/><line x1="23" y1="822.5" x2="577" y2="822.5" stroke="${C.paper}" stroke-opacity=".3"/>`;
   const M = MARK.legend, [sx, sy, sr, sw, sb, sa] = M;
-  s += '<g transform="translate(' + sx + ' ' + sy + ')"><circle class="o" r="' + sr + '"/><path d="M0 0V-' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 ' + sr + ' 0ZM0 0V' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 -' + sr + ' 0Z" fill="' + C.note + '" opacity="' + sa + '"/><circle class="l" r="' + sr + '" stroke-width="' + sw + '"/><circle class="pf" r="' + sb + '"/></g>';
-  s += '<path d="M64 853l8 8m0 -8l-8 8" stroke="' + C.red + '" stroke-width="2" stroke-linecap="round"/>' + marker(140, 838, 1) + '<path d="M133 857h14" stroke="' + C.paper + '" stroke-width="2.3" stroke-linecap="round" stroke-dasharray=".1 4.5"/>';
+  s += '<g class="legend-symbol" data-i="0" data-x="68" data-y="836" transform="translate(' + sx + ' ' + sy + ')"><circle class="o" r="' + sr + '"/><path d="M0 0V-' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 ' + sr + ' 0ZM0 0V' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 -' + sr + ' 0Z" fill="' + C.note + '" opacity="' + sa + '"/><circle class="l" r="' + sr + '" stroke-width="' + sw + '"/><circle class="pf" r="' + sb + '"/></g>';
+  s += '<path class="legend-symbol" data-i="1" data-x="68" data-y="857" d="M64 853l8 8m0 -8l-8 8" stroke="' + C.red + '" stroke-width="2" stroke-linecap="round"/>' + marker(140, 838, 1).replace('class="mk"', 'class="mk legend-symbol" data-i="2" data-x="140" data-y="838"') + '<path class="legend-symbol" data-i="3" data-x="140" data-y="857" d="M133 857h14" stroke="' + C.paper + '" stroke-width="2.3" stroke-linecap="round" stroke-dasharray=".1 4.5"/>';
   top += Object.values(COPY.legend).map((text, i) => { const p = LABELS.legendAt[i]; return '<g class="lg" transform="translate(' + p.join(' ') + ')"><g class="label-scale" data-label="legend" data-unit="' + LABELS.legend.unit + '">' + svgText(0, 0, text, { s: LABELS.legend.unit, c: C.note }) + '</g></g>'; }).join('');
   s += '<g class="map-tier1">' + top + '</g>';
 
-  s += `<rect x="14.5" y="14.5" width="571" height="871" fill="none" stroke="${C.paper}" stroke-opacity=".35"/><rect x="18" y="18" width="564" height="864" fill="none" stroke="${C.paper}" stroke-opacity=".28" stroke-width="5" stroke-dasharray="1 15"/><rect x="22.5" y="22.5" width="555" height="855" fill="none" stroke="${C.paper}" stroke-opacity=".2"/>`;
+  s += `<rect x="14.5" y="14.5" width="571" height="871" fill="none" stroke="${C.paper}" stroke-opacity=".35"/><rect x="18" y="18" width="564" height="864" fill="none" stroke="${C.paper}" class="frame-ticks" data-weight="5" stroke-opacity=".28" stroke-width="5" stroke-dasharray="1 15" vector-effect="non-scaling-stroke"/><rect x="22.5" y="22.5" width="555" height="855" fill="none" stroke="${C.paper}" stroke-opacity=".2"/>`;
   s += knot(36, 36) + knot(564, 36) + knot(36, 864) + knot(564, 864);
 
   // finds
@@ -1915,15 +2029,29 @@ const dateAt = P => { if (P <= PIECES[0][0]) return PIECES[0][2]; for (const q o
 const progressForDate = d => { for (const q of PIECES) { const lo = Math.min(q[2], q[3]), hi = Math.max(q[2], q[3]); if (d >= lo && d <= hi && q[3] !== q[2]) return lerp(q[0], q[1], (d - q[2]) / (q[3] - q[2])); } return d <= PIECES[0][2] ? PIECES[0][0] : PIECES[PIECES.length - 1][1]; };
 
 // ---- view ----
-const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1, depth: 1, footerY: null, cards: [] };
+const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1, depth: 1, footerY: null, cards: [], stageTop: 0, mapReady: true };
 function tripCardPlace(height, steps = true, reviewFloor = WORLD.card.gap) {
   const Q = WORLD.card, stone = Math.max(MARK.min, Math.min(MARK.max, MARK.k * VIEW.sT * CAMERA.holdZoom)), rim = stone * (MARK.radius + MARK.rim / 2) / MARK.box;
-  const width = VIEW.phone ? VIEW.w : Math.min(Q.w, VIEW.w - 2 * Q.edge - stone / 2 - rim - CARD_TAIL.len);
+  const width = VIEW.phone ? VIEW.w : Math.min(Q.w + (VIEW.h <= 440 ? 96 : 0), VIEW.w - 2 * Q.edge - stone / 2 - rim - CARD_TAIL.len);
   const floor = VIEW.phone ? VIEW.h - Q.phoneBottom - (steps ? STEPS.nav.bar : 0) : steps ? VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h - Q.gap : VIEW.h - Q.gap;
   const left = VIEW.phone ? 0 : (VIEW.w - (stone / 2 + rim + CARD_TAIL.len + width)) / 2;
   const top = VIEW.phone ? floor - height : Math.max(reviewFloor, Math.min(VIEW.h / 2 - Q.gap - height / 2, floor - height));
   const sx = VIEW.phone ? VIEW.w / 2 : left + stone / 2, sy = VIEW.phone ? top - CARD_TAIL.lenPhone - rim : top + height / 2;
-  return { w: width, x: VIEW.phone ? VIEW.w / 2 : sx + rim + CARD_TAIL.len + width / 2, y: top + height / 2, sx, sy };
+  return { w: width, h: height, x: VIEW.phone ? VIEW.w / 2 : sx + rim + CARD_TAIL.len + width / 2, y: top + height / 2, sx, sy };
+}
+function tripVisible(st, box) {
+  if (st.reduced && !VIEW.mapReady || st.handoffT < 1 || st.blastT > 0 && !st.exploreK) return false;
+  const c = st.cam, top = st.reduced ? VIEW.stageTop : 0, b = [box[0] * c.s + c.tx, box[1] * c.s + c.ty + top, box[2] * c.s + c.tx, box[3] * c.s + c.ty + top];
+  const floor = VIEW.h - (st.reduced ? 56 : VIEW.phone ? STEPS.nav.bar + 44 : 56 + STEPS.nav.h + STEPS.nav.gap);
+  return b[0] >= 0 && b[2] <= VIEW.w && b[1] >= 40 && b[3] <= floor;
+}
+function tripCardCover(st, box, except = -1) {
+  if (st.cardOpen === 0) return 0;
+  const c = st.cam, b = [box[0] * c.s + c.tx, box[1] * c.s + c.ty, box[2] * c.s + c.tx, box[3] * c.s + c.ty];
+  const cards = st.coverRects ||= VIEW.cards.map((p,i) => ({ p, i, k: st.cardK[i] })).filter(r => r.k > 0 && r.p.h);
+  let cover = 0;
+  cards.forEach(({p,i,k}) => { if (i !== except && b[0] < p.x + p.w / 2 && b[2] > p.x - p.w / 2 && b[1] < p.y + p.h / 2 && b[3] > p.y - p.h / 2) cover = Math.max(cover, k); });
+  return cover;
 }
 function tripResize(w, h, tlH) {
   glideCache.clear();
@@ -1958,18 +2086,23 @@ const camFinal = c => ({ s: c.s, tx: c.ax - c.cx * c.s, ty: c.ay - c.cy * c.s, a
 const labelScale = (kind, s, phone = VIEW.phone) => { const L = LABELS[kind]; return Math.max(1, (phone ? L.phone : L.floor) / (L.unit * s)); };
 // The X beat's view. Phones: the X and its label centred across the screen at the trip's scale, as low as lets the map's
 // bottom edge rest on the floor above the timeline (inside the xBand). Portrait tablets keep the desktop scale and the floor.
-function tripXCamera() {
+function tripXCamera(frameGroup = true) {
   const band = CAMERA.xBand;
+  // Frame the actual group, including the whole Toronto skyline. Keep the
+  // pre-existing footer/build-up anchor and score; only this resting view fits.
+  const group = [MAP.x[0] - 20, MAP.toronto.box[1] - 12, MAP.toronto.box[2] + 12, MAP.x[1] + 38];
+  const room = VIEW.h - (VIEW.phone ? STEPS.nav.bar + 44 : 56 + STEPS.nav.h + STEPS.nav.gap) - 64;
+  const fitGroup = base => { if (!frameGroup) return base; const s = Math.min(base.s, (VIEW.w - 2 * CAMERA.xMargin) / (group[2] - group[0]), room / (group[3] - group[1])); return { ...base, cx: (group[0] + group[2]) / 2, s }; };
   if (VIEW.phone) {
     const g = CAMERA.xGroupPhone, h = VIEW.h - STEPS.nav.bar, s = Math.min(VIEW.sT, (VIEW.w - 2 * CAMERA.xMargin) / (g[1] - g[0]));
     const floor = h - CAMERA.timeline - CAMERA.xGap, ay = Math.max(band[0] * h, Math.min(band[1] * h, floor - (CAMERA.frameBottom - MAP.x[1]) * s));
-    return { cx: MAP.x[0] + (g[0] + g[1]) / 2, cy: MAP.x[1], s, ax: VIEW.w / 2, ay };
+    return fitGroup({ cx: MAP.x[0] + (g[0] + g[1]) / 2, cy: MAP.x[1], s, ax: VIEW.w / 2, ay });
   }
   const base = camTrip(X_U, 1), floor = VIEW.h - CAMERA.timeline - STEPS.nav.gap - STEPS.nav.h - CAMERA.xGap;
   base.ay = CAMERA.xAnchorY * VIEW.h;
   const fit = (floor - base.ay) / (CAMERA.frameBottom - base.cy); base.s = Math.max(VIEW.sT * CAMERA.xFloor, Math.min(base.s, fit));
   if (VIEW.h > VIEW.w) base.ay = Math.max(base.ay, Math.min(band[1] * VIEW.h, floor - (CAMERA.frameBottom - base.cy) * base.s));
-  return base;
+  return fitGroup(base);
 }
 
 // Each resting view owns one stretch of P. The clock is linear in this stretch;
@@ -2044,7 +2177,7 @@ function tripState(P) {
   st.kind = seg.kind; st.i = seg.i; st.t = clamp01((P - seg.a) / seg.len);
   const idx = SEQ.indexOf(seg), passed = k => SEQ.findIndex(q => q.kind === k) < idx;
   st.heroT = seg.kind === 'hero' ? st.t : 1;
-  st.handoffT = seg.kind === 'handoff' ? st.t : passed('handoff') ? 1 : 0;
+  st.handoffT = P < ACTS.hero + ACTS.handoff ? clamp01((P - ACTS.hero + COMB.handoverOverlap) / (ACTS.handoff + COMB.handoverOverlap)) : 1;
   st.overviewT = seg.kind === 'overview' ? st.t : passed('overview') ? 1 : 0;
   st.pushT = seg.kind === 'pushIn' ? st.t : passed('pushIn') ? 1 : 0;
   st.rushT = seg.kind === 'rush' ? st.t : passed('rush') ? 1 : 0;
@@ -2071,7 +2204,7 @@ function tripState(P) {
     st.u = lerp(u0, u1, easeIO(st.t)); cam = camTrip(st.u, 1 - arc);
     if (seg.kind === 'legX') cam = camMix(cam, tripXCamera(), easeIO(smooth(...CAMERA.xEase, st.t)));
   } else { // footer acts: X fixed, anchor slides
-    st.u = X_U; const base = tripXCamera(), startAX = base.ax, startAY = base.ay;
+    st.u = X_U; const base = camMix(tripXCamera(), tripXCamera(false), smooth((NOVA.handover.fadeIn + NOVA.handover.fadeOut) / STEPS.pace.rush, .3, st.rushT)), startAX = base.ax, startAY = base.ay;
     const fx = VIEW.phone ? CAMERA.footerXPhone : CAMERA.footerX;
     const e1 = easeIO(st.rushT), e2 = easeIO(smooth(0, .8, st.settleT));
     base.cx = lerp(base.cx, MAP.x[0], e1); base.cy = lerp(base.cy, MAP.x[1], e1);
@@ -2100,12 +2233,16 @@ function tripBuild(els) {
   TRIP_EL.legend = [...els.svg.querySelectorAll('.lg')].map((el, i) => ({ el, p: LABELS.legendAt[i], n: Object.values(COPY.legend)[i].length, o: '' }));
   TRIP_EL.t2 = [...els.svg.querySelectorAll('.t2b')].map(el => ({ el, b: String(el.dataset?.b || el.getAttribute?.('data-b') || '').split(' ').map(Number), o: '' })).filter(t => t.b.length === 4 && t.b.every(Number.isFinite));
   TRIP_EL.title = els.svg.querySelector('.map-title'); TRIP_EL.tier1 = els.svg.querySelector('.map-tier1'); TRIP_EL.tier2 = els.svg.querySelector('.map-tier2'); TRIP_EL.subs = els.svg.querySelector('.map-subs');
+  if (TRIP_EL.subs?.parentElement) els.detail.appendChild(TRIP_EL.subs);
   TRIP_EL.secondary = [...els.svg.querySelectorAll('.map-tier2')]; if (!TRIP_EL.secondary.length) TRIP_EL.secondary = [TRIP_EL.tier2];
   TRIP_EL.focusFade = null;
   TRIP_EL.scrim = document.createElement('div'); TRIP_EL.scrim.className = 'stage-scrim'; TRIP_EL.scrim.setAttribute('aria-hidden', 'true'); TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px'; TRIP_EL.scrim.style.background = 'linear-gradient(to bottom, transparent, color-mix(in srgb, var(--ink) ' + WORLD.scrim[2] * 100 + '%, transparent))'; els.svg.parentElement.appendChild(TRIP_EL.scrim);
   TRIP_EL.coasts = [...els.svg.querySelectorAll('.coast')];
   TRIP_EL.coastLen = [polyLen(COAST_A, 1), polyLen(COAST_B, 1)];
   TRIP_EL.ship = els.svg.querySelector('.ls-ship');
+  TRIP_EL.markers = [...els.svg.querySelectorAll('.mk-size')];
+  TRIP_EL.symbols = [...els.svg.querySelectorAll('.legend-symbol')].map(el => ({ el, base: el.getAttribute('transform') || '' }));
+  TRIP_EL.ticks = [...els.svg.querySelectorAll('.coast-ticks, .frame-ticks')];
   // 24 px stone targets (B-9): overlapping ones (the HMC stops) push apart along the axis that parts them, the dots stay put.
   // 104 / 600: the mini-map's CSS width over the map's (25: 24 and its 1 px border's share).
   const mm = STOPS.map(s => MAP.waypoints[s.w].map(v => v * 104 / 600)), off = mm.map(() => [0, 0]);
@@ -2114,6 +2251,58 @@ function tripBuild(els) {
     + STOPS.map((s, i) => `<button class="mm-stop" data-i="${i}" style="left:${(MAP.waypoints[s.w][0] / 6).toFixed(2)}%;top:${(MAP.waypoints[s.w][1] / 9).toFixed(2)}%;--ox:${off[i][0].toFixed(1)}px;--oy:${off[i][1].toFixed(1)}px" aria-label="${COPY.stoneGo.replace('{name}', s.name).replace('{dates}', s.dates)}"><i></i></button>`).join('');
   TRIP_EL.mmView = els.mini.querySelector('.mm-view'); TRIP_EL.mmTrav = els.mini.querySelector('.mm-trav');
   TRIP_EL.mmStops = [...els.mini.querySelectorAll('.mm-stop')];
+}
+// Font metrics and the placed card boxes are read only at resize/font boundaries.
+function tripMeasureLabels() {
+  const E = TRIP_EL; if (!E.rows) return;
+  for (const r of E.rows) {
+    const text = r.el.querySelector('text'), row = r.row, pos = COMB.labels[row.stop];
+    if (row.stop === 'x' && !row.stopSub) text.textContent = COPY.xLabel;
+    r.base = pos ? [pos[0], pos[1] + (row.stopSub ? 18 : 0)] : [row.x, row.y];
+    if (row.stop === 'x') r.base[1] = MAP.x[1] + (row.stopSub ? 14 : -4);
+    if (row.stop === 'hmc1' || row.stop === 'hmc2') { r.base = [574, (row.stop === 'hmc1' ? 253 : 350) + (row.stopSub ? 18 : 0)]; text.setAttribute('text-anchor', 'end'); }
+    r.box = text.getBBox ? text.getBBox() : null;
+    r.overview = r.base.slice();
+    if (row.stopSub) r.overview[1] += Math.max(0, 16 / VIEW.s0 - 18);
+    if (row.stop === 'x' && row.stopSub) r.overview[1] = MAP.x[1] - 4 + 14 / VIEW.s0;
+    if (VIEW.h <= 440 && VIEW.w > 640 && row.stop !== 'x') {
+      const i = STOPS.findIndex(s => s.id === row.stop), left = i < 3;
+      r.overview = [(left ? VIEW.w * .23 : VIEW.w * .76) / VIEW.s0 - VIEW.ox / VIEW.s0, (120 + i % 3 * 56 + (row.stopSub ? 16 : 0) - VIEW.oy) / VIEW.s0];
+      text.setAttribute('text-anchor', 'middle');
+    }
+  }
+  E.markers?.forEach(el => el.setAttribute('transform', `scale(${COMB.markerPx / (12.4 * (el.parentElement?.parentElement?.dataset.screen ? 1 : VIEW.s0))})`));
+  const kicker = E.title?.querySelector('.kick');
+  if (kicker) {
+    const lines = VIEW.h <= 720 || VIEW.phone ? COPY.kicker.split(', ') : [COPY.kicker];
+    kicker.innerHTML = lines.map((t,i) => `<tspan x="0" y="${i * 9}">${t}${i < lines.length-1 ? ', ' : ''}</tspan>`).join('');
+    const host = kicker.closest('.label-scale'), width = Math.min(200, MAP.w * VIEW.s0 * .6) / (VIEW.s0 * labelScale('small', VIEW.s0));
+    host?.querySelector('path')?.setAttribute('d', `M0 ${lines.length > 1 ? 15 : 8}h${width}`);
+    host?.querySelector('rect')?.setAttribute('width', width + 6);
+  }
+  const short = VIEW.h <= 440 && VIEW.w > 640;
+  if (E.title) {
+    const title = E.title.querySelector('text');
+    title?.setAttribute('font-size', short ? 20 / VIEW.s0 : 30);
+    E.title.setAttribute('transform', short ? `translate(${(24 - VIEW.ox) / VIEW.s0 - 44} ${(55 - VIEW.oy) / VIEW.s0 - 78})` : '');
+    kicker?.closest('.label-scale')?.parentElement.setAttribute('transform', `translate(45 ${short || VIEW.h <= 720 || VIEW.phone ? 78 + 19 / VIEW.s0 : 101})`);
+  }
+  E.legend?.forEach((g,i) => {
+    const col = i > 1, line = i % 2;
+    g.place = short ? [(VIEW.w * .78 - VIEW.ox) / VIEW.s0, (269 + i * 17 - VIEW.oy) / VIEW.s0] : [80 + (col ? 66 / VIEW.s0 : 0), 840.5 + line * 18 / VIEW.s0];
+    g.el.setAttribute('transform', `translate(${g.place.join(' ')})`);
+    g.p = g.place;
+    const text = g.el.querySelector('text'); g.box = text?.getBBox?.();
+  });
+  E.symbols?.forEach(s => { const p = E.legend[+s.el.dataset.i].place; s.el.setAttribute('transform', `translate(${p[0] - 16 / VIEW.s0 - +s.el.dataset.x} ${p[1] - 3 / VIEW.s0 - +s.el.dataset.y}) ${s.base}`); });
+  E.t2?.forEach(t => {
+    const words = t.el.textContent;
+    if (words.includes(COPY.ygg) || words.includes(COPY.well) || words.includes(COPY.wellSub)) t.el.classList.add('well-name');
+    if (words.includes('HERE BE DEADLINES')) t.el.setAttribute('transform', 'translate(-46 -58)');
+    if (words.includes('the diploma climb')) t.el.setAttribute('transform', 'translate(220 348) rotate(-75) translate(-238 -356)');
+    if (words.includes('MOHAWKFJELL')) t.el.setAttribute('transform', 'translate(0 16)');
+    if (t.el.getBBox && typeof DOMPoint !== 'undefined') { const b = t.el.getBBox(), m = t.el.transform.baseVal.consolidate()?.matrix, corners = [[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]].map(([x,y]) => m ? new DOMPoint(x,y).matrixTransform(m) : {x,y}); t.b = [Math.min(...corners.map(p=>p.x))-2, Math.min(...corners.map(p=>p.y))-2, Math.max(...corners.map(p=>p.x))+2, Math.max(...corners.map(p=>p.y))+2]; }
+  });
 }
 const tripWrites = new WeakMap();
 function tripWrite(el, key, value, attribute = false) {
@@ -2140,12 +2329,18 @@ function tripLabels(st) {
     let o = 1;
     if (r.stop >= 0) { let other = 0; st.cardK.forEach((k, i) => { if (i !== r.stop && k > other) other = k; }); o = (1 - st.cardK[r.stop]) * (1 - dim * other); }
     else o = 1 - dim * open;
-    if (!free && o > 0) o *= gone(mapLabelBox(r.row, c.s, phone));
+    const blend = 1 - smooth(1.05, 1.7, c.s / VIEW.s0), at = r.base ? r.base.map((v,i) => lerp(v, r.overview[i], blend)) : [r.row.x,r.row.y];
+    tripWrite(r.el, 'transform', `translate(${at[0]} ${at[1]})`, true);
+    const row = { ...r.row, x: at[0], y: at[1] }, k = labelScale(row.kind, c.s), b = r.box, box = b ? [at[0] + (b.x - LABELS.halo) * k, at[1] + (b.y - LABELS.halo) * k, at[0] + (b.x + b.width + LABELS.halo) * k, at[1] + (b.y + b.height + LABELS.halo) * k] : mapLabelBox(row, c.s, phone);
+    o *= 1 - tripCardCover(st, box);
+    if (!free && o > 0) o *= gone(box);
     put(r, o);
   });
   const u = L.legend.unit * labelScale('legend', c.s), back = 1 - dim * open;
-  (E.t2 || []).forEach(t => put(t, free ? 1 : back * gone(t.b)));
-  (E.legend || []).forEach(g => put(g, free ? 1 : back * gone([g.p[0], g.p[1] - u * L.ascent, g.p[0] + g.n * u * L.width, g.p[1] + u * L.descent])));
+  (E.t2 || []).forEach(t => put(t, (free ? 1 : back * gone(t.b)) * (1 - tripCardCover(st, t.b))));
+  const xQuiet = st.legXT * (1 - (st.exploreK || 0));
+  E.symbols?.forEach(s => tripWrite(s.el, 'opacity', 1 - .85 * xQuiet));
+  (E.legend || []).forEach(g => { const k = labelScale('legend', c.s), b = g.box, box = b ? [g.p[0]+b.x*k,g.p[1]+b.y*k,g.p[0]+(b.x+b.width)*k,g.p[1]+(b.y+b.height)*k] : [g.p[0],g.p[1]-u*L.ascent,g.p[0]+g.n*u*L.width,g.p[1]+u*L.descent]; put(g, (free ? 1 : back * gone(box)) * (1-tripCardCover(st,box)) * (1-.85*xQuiet)); });
 }
 function tripApply(st) {
   const E = TRIP_EL, c = st.cam;
@@ -2185,10 +2380,12 @@ function tripApply(st) {
     const k = q < 1 && label.from !== null && label.from !== undefined ? label.from * (label.target / label.from) ** q : label.target;
     if (label.k !== k) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; }
   });
+  E.markers?.forEach(el => { tripWrite(el, 'transform', `scale(${COMB.markerPx / (12.4 * (el.parentElement?.parentElement?.dataset.screen ? 1 : c.s))})`, true); const mk = el.parentElement?.parentElement, f = FINDS.find(f=>mk?.id === 'mk-'+f.id); if (f) { const half = COMB.markerPx / (2*c.s), cover = tripCardCover(st,[f.mark[0]-half,f.mark[1]-half,f.mark[0]+half,f.mark[1]+half]); tripWrite(mk,'opacity',(1-cover)*(1-(st.focusK||0))); tripWrite(mk,'visibility',cover>=.995||st.focusK>=1?'hidden':''); } });
+  E.ticks?.forEach(el => tripWrite(el, 'stroke-width', Math.min(+el.dataset.weight * c.s, +el.dataset.weight * VIEW.s0), true));
   const focusFade = 1 - smooth(0, .4, st.focusK || 0);
   if (E.focusFade === null || Math.abs(focusFade - E.focusFade) > .01 || (focusFade === 0 || focusFade === 1) && focusFade !== E.focusFade) {
     E.focusFade = focusFade;
-    for (const group of [E.tier1, E.subs]) if (group) { tripWrite(group, 'opacity', focusFade); tripWrite(group, 'visibility', focusFade === 0 ? 'hidden' : 'visible'); }
+    for (const group of [E.tier1, E.subs]) if (group) { tripWrite(group, 'opacity', ['wayfinder','all-found'].includes(st.focusId) ? 1 : focusFade); tripWrite(group, 'visibility', ['wayfinder','all-found'].includes(st.focusId) || focusFade !== 0 ? 'visible' : 'hidden'); }
   }
   E.secondary.forEach(group => { tripWrite(group, 'opacity', labelFade); tripWrite(group, 'visibility', labelFade === 0 ? 'hidden' : 'visible'); }); tripWrite(E.scrim, 'opacity', labelFade);
   const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
@@ -2227,6 +2424,7 @@ function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.tog
 // Rewrites only the frame's camera and card strength; progress and traveller stay on the trail.
 function tripFocus(st, view, k) {
   if (k === 0) return;
+  delete st.coverRects;
   const F = FIND_PLAY.focus, [x, y, r, least = F.least] = view;
   const target = Math.max(Math.max(VIEW.s0, least * VIEW.sT), Math.min(F.most * VIEW.sT, F.fill * Math.min(VIEW.w, VIEW.h) / (2 * r)));
   const before = toScreen(st, [x, y]), at = [F.at[0] * VIEW.w, F.at[1] * VIEW.h];
@@ -2875,7 +3073,7 @@ function starsFrame(time, st, pointer, opt = {}) {
       if (h < 1) {
         const e = easeIO(s.kind === 'coast' ? clamp01((h - s.t0) / (s.t1 - s.t0)) : clamp01((h - late - s.ord * .45) / .45));
         if (src && s.fade) { x = m[0]; y = m[1]; rad = endR; al = endA * e; }
-        else { const hp = src ? [x, y] : heroPos(s), r0 = src ? rad : s.r, a0 = src ? al : s.a; x = lerp(hp[0], m[0], e); y = lerp(hp[1], m[1], e) - Math.sin(Math.PI * e) * 30 * s.z; rad = lerp(r0, endR, e); al = lerp(a0, endA, e); }
+        else { const hp = src ? [x, y] : heroPos(s), r0 = src ? rad : s.r, a0 = src ? al : s.a; x = lerp(hp[0], m[0], e); y = lerp(hp[1], m[1], e) - Math.sin(Math.PI * e) * 30 * s.z; rad = lerp(r0, endR, e) * (1 + .65 * Math.sin(Math.PI * e)); al = lerp(a0, endA, e); }
         if (s.kind === 'coast') al *= 1 - smooth(s.hu, s.hu + .06, h); // the coast line passes it and it dissolves into the line
       }
       else { x = m[0]; y = m[1]; rad = endR; al = endA; }
@@ -3023,12 +3221,14 @@ function tlBuild(el, hooks, rm) {
   TL.el = el; TL.hooks = hooks; TL.rm = rm;
   let ticks = ''; for (let y = Y0; y <= Math.floor(DATE_NOW); y++) ticks += `<i class="tl-tick" style="left:${(xOf(y) * 100).toFixed(3)}%"><b>'${String(y % 100).padStart(2, '0')}</b></i>`;
   let blocks = { school: '', work: '' };
-  STOPS.forEach((s, i) => s.spans.forEach(sp => { const a = xOf(yearOf(sp[0])), b = xOf(yearOf(sp[1], 1)); blocks[s.track] += `<span class="tl-blk" data-i="${i}" style="left:${(a * 100).toFixed(3)}%;width:${((b - a) * 100).toFixed(3)}%;--mk:${PALETTES[s.palette].mark}"><em></em></span>`; }));
+  STOPS.forEach((s, i) => s.spans.forEach(sp => { const a = xOf(yearOf(sp[0])), b = xOf(yearOf(sp[1], 1)); blocks[s.track] += `<span class="tl-blk" data-i="${i}" style="left:${(a * 100).toFixed(3)}%;width:${((b - a) * 100).toFixed(3)}%;--mk:${s.palette === 'interkom' ? PALETTES[s.palette].shield[1] : PALETTES[s.palette].shield[0]};--mk2:${s.palette === 'interkom' ? PALETTES[s.palette].shield[0] : PALETTES[s.palette].shield[1]}"><em></em></span>`; }));
   el.innerHTML = `<div class="tl-bg tl-f"></div><div class="tl-view"><div class="tl-track"><div class="tl-ticks tl-f">${ticks}</div><div class="tl-rows tl-f"><div class="tl-row">${blocks.school}</div><div class="tl-row">${blocks.work}</div></div><div class="tl-head"><svg viewBox="-8 -8 16 16" aria-hidden="true"><path d="M0 -7Q0 0 7 0Q0 0 0 7Q0 0 -7 0Q0 0 0 -7Z"/></svg></div></div></div><div class="tl-base"></div><span class="tl-count tl-f" aria-hidden="true"></span><div class="tl-tip" aria-hidden="true"></div>`;
   el.setAttribute('role', 'slider'); el.tabIndex = 0; el.setAttribute('aria-label', COPY.timeline);
-  el.setAttribute('aria-valuemin', Y0); el.setAttribute('aria-valuemax', Math.floor(DATE_NOW));
+  el.setAttribute('aria-valuemin', rm ? 0 : Y0); el.setAttribute('aria-valuemax', rm ? STOPS.length : Math.floor(DATE_NOW));
   TL.track = el.querySelector('.tl-track'); TL.head = el.querySelector('.tl-head'); TL.rows = el.querySelector('.tl-rows');
   TL.fades = [...el.querySelectorAll('.tl-f')]; TL.tip = el.querySelector('.tl-tip'); TL.count = el.querySelector('.tl-count');
+  TL.countHome = el.closest?.('.ov');
+  if (TL.countHome) { TL.countSpace = document.createElement('span'); TL.countSpace.className = 'tl-count-space'; TL.countSpace.setAttribute('aria-hidden','true'); el.insertBefore(TL.countSpace, TL.count); TL.countHome.appendChild(TL.count); TL.count.classList.add('tl-count-screen'); }
   TL.say = document.createElement?.('span'); if (TL.say && el.after) { TL.say.className = 'sr'; TL.say.setAttribute('aria-live', 'polite'); el.after(TL.say); }
   TL.blocks = [...el.querySelectorAll('.tl-blk')].map(b => ({ el: b, em: b.firstChild, i: +b.dataset.i }));
   TL.view = el.querySelector('.tl-view'); TL.base = el.querySelector('.tl-base');
@@ -3039,11 +3239,11 @@ function tlBuild(el, hooks, rm) {
   el.addEventListener('focus', () => { const i = currentStop(TL.lastP || 0); if (i >= 0) tipFor(i, null); });
   el.addEventListener('blur', () => TL.tip.classList.remove('on'));
   el.addEventListener('keydown', e => {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return; e.preventDefault();
-    if (e.key === 'Home' || e.key === 'End') { TL.hooks.jump(e.key === 'Home' ? 0 : STOPS.length - 1); return; }
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) return; e.preventDefault();
+    if (e.key === 'Home' || e.key === 'End') { TL.pending = e.key === 'Home' ? (TL.rm ? -1 : 0) : STOPS.length - 1; TL.hooks.jump(TL.pending); return; }
     const P = TL.lastP || 0, cur = currentStop(P), on = TL.hooks.moving?.() && TL.pending != null;
-    let i = on ? TL.pending + (e.key === 'ArrowRight' ? 1 : -1) : e.key === 'ArrowRight' ? cur + 1 : (P > progressForStop(Math.max(cur, 0)) + 1 ? cur : cur - 1);
-    i = Math.max(0, Math.min(STOPS.length - 1, i)); TL.pending = i; TL.hooks.jump(i);
+    let i = on ? TL.pending + (['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key) ? 1 : -1) : ['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key) ? cur + 1 : (P > progressForStop(Math.max(cur, 0)) + 1 ? cur : cur - 1);
+    i = Math.max(TL.rm ? -1 : 0, Math.min(STOPS.length - 1, i)); TL.pending = i; TL.hooks.jump(i);
   });
   el.addEventListener('pointerdown', e => {
     TL.drag = { x: e.clientX, moved: false, P: TL.lastP || 0, blk: e.target.closest('.tl-blk') };
@@ -3063,11 +3263,11 @@ function tlBuild(el, hooks, rm) {
 }
 function tipFor(i, blk) {
   const s = STOPS[i]; TL.tip.textContent = fmt(COPY.timelineValue, { name: s.name, dates: s.dates });
-  const r = blk ? blk.getBoundingClientRect() : null, er = TL.el.getBoundingClientRect();
-  TL.tip.style.transform = `translateX(${Math.max(8, Math.min(er.width - 220, (r ? r.left - er.left : TL.headX + TL.viewRect.left - er.left) - 10)).toFixed(0)}px)`;
+  const r = blk ? blk.getBoundingClientRect() : null, er = TL.el.getBoundingClientRect(), width=TL.tip.getBoundingClientRect().width;
+  TL.tip.style.transform = `translateX(${Math.max(8, Math.min(er.width-width-8, (r ? r.left - er.left : TL.headX + TL.viewRect.left - er.left) - 10)).toFixed(0)}px)`;
   TL.tip.classList.add('on');
 }
-const currentStop = P => { let c = -1; STOPS.forEach((s, i) => { if (P >= holdStart(i)) c = i; }); return c; };
+const currentStop = P => { if (TL.rm) return TL.current ?? 0; let c = -1; STOPS.forEach((s, i) => { if (P >= holdStart(i)) c = i; }); return c; };
 const tlSetCount = (n, t) => { TL.count.textContent = fmt(n === t ? COPY.countAll : COPY.count, { n, t }); if (TL.say) TL.say.textContent = TL.count.textContent; };
 const tlSetCraft = mask => TL.blocks.forEach(b => { b.el.classList.toggle('craft-lit', !!mask?.[b.i]); b.el.style.opacity = mask && !mask[b.i] ? FIND_PLAY.way.timelineDim : 1; });
 
@@ -3075,6 +3275,7 @@ function tlResize(ruleRect) {
   const el = TL.el; el.style.transform = 'none';
   TL.viewRect = TL.view.getBoundingClientRect(); TL.viewW = TL.viewRect.width;
   TL.trackW = VIEW.phone ? TL.viewW * 2.4 : TL.viewW; TL.track.style.width = TL.trackW + 'px';
+  if (TL.rm) tlCurrent(TL.current ?? -1, true);
   if (ruleRect) {
     const b = TL.base.getBoundingClientRect(), er = el.getBoundingClientRect();
     TL.ox = b.left - er.left; TL.oy = b.top - er.top; el.style.transformOrigin = `${TL.ox}px ${TL.oy}px`;
@@ -3089,7 +3290,7 @@ function tlFrame(st) {
   const sx = lerp(1, TL.sx, m);
   tlStyle(TL.el, 'transform', `translate(${(TL.dx * m).toFixed(2)}px,${(TL.dy * m + (1 - show) * 80).toFixed(2)}px) scaleX(${sx.toFixed(4)})`);
   tlStyle(TL.el, 'opacity', show);
-  TL.fades.forEach(f => tlStyle(f, 'opacity', fade));
+  TL.fades.forEach(f => tlStyle(f, 'opacity', f === TL.count ? show : fade));
   tlStyle(TL.rows, 'transform', `scaleY(${(1 - st.cardOpen * .85).toFixed(3)})`);
   const hx = xOf(st.date) * TL.trackW; TL.headX = hx;
   TL.off = VIEW.phone ? Math.max(TL.viewW - TL.trackW, Math.min(0, TL.viewW / 2 - hx)) : 0;
@@ -3099,8 +3300,19 @@ function tlFrame(st) {
   TL.blocks.forEach(b => tlStyle(b.em, 'opacity', st.visited[b.i] ? 1 : 0));
   const i = currentStop(st.P), v = i < 0 ? COPY.timelineStart : fmt(COPY.timelineValue, { name: STOPS[i].name, dates: STOPS[i].dates });
   const now = Math.floor(st.date); if (!TL.hooks?.moving?.()) TL.pending = null;
-  if (v !== TL.val) { TL.val = v; TL.el.setAttribute('aria-valuetext', v); }
+  if (v !== TL.val) { TL.val = v; TL.el.setAttribute('aria-valuetext', v); if (document.activeElement === TL.el && i >= 0) queueMicrotask(() => tipFor(i, null)); }
   if (now !== TL.now) { TL.now = now; TL.el.setAttribute('aria-valuenow', now); }
+}
+
+function tlReduced(on) { TL.rm = on; TL.now = null; TL.val = ''; TL.el.setAttribute('aria-valuemin', on ? 0 : Y0); TL.el.setAttribute('aria-valuemax', on ? STOPS.length : Math.floor(DATE_NOW)); if (TL.countHome) { if (on) TL.el.insertBefore(TL.count, TL.countSpace); else TL.countHome.appendChild(TL.count); TL.count.classList.toggle('tl-count-screen', !on); } if (on) tlCurrent(TL.current ?? -1); }
+function tlCurrent(i, force = false) {
+  const changed=TL.current!==i || !TL.val; TL.current = i; const s = STOPS[i]; if (!TL.rm || !changed&&!force) return;
+  if (!s) { TL.view.scrollLeft=0; TL.val=COPY.timelineStart; TL.tip.classList.remove('on'); TL.el.querySelectorAll('.tl-blk').forEach(b=>b.classList.remove('current')); TL.el.setAttribute('aria-valuenow', 0); TL.el.setAttribute('aria-valuetext', COPY.timelineStart); return; }
+  TL.val=fmt(COPY.timelineValue,{name:s.short,dates:s.dates});
+  TL.el.setAttribute('aria-valuenow', i + 1); TL.el.setAttribute('aria-valuetext', fmt(COPY.timelineValue, { name: s.short, dates: s.dates }));
+  TL.el.querySelectorAll('.tl-blk').forEach(b => b.classList.toggle('current', +b.dataset.i === i));
+  const b = TL.blocks.find(b => b.i === i)?.el; if (TL.rm && b) TL.view.scrollLeft = Math.max(0, b.offsetLeft - TL.viewW / 2);
+  if (document.activeElement===TL.el) queueMicrotask(()=>tipFor(i,b));
 }
 
 // ---- findkit.mjs ----
@@ -3158,7 +3370,8 @@ function findPointer(el, start, { drag = false, tap = null, cancel = null } = {}
   };
   el.addEventListener('pointerup', release); el.addEventListener('pointercancel', release);
 }
-const toMap = p => [(p[0] - FD.st.cam.tx) / FD.st.cam.s, (p[1] - FD.st.cam.ty) / FD.st.cam.s];
+const toMap = p => [(p[0] - FD.st.cam.tx) / FD.st.cam.s, (p[1] - FD.st.cam.ty - (FD.rm ? VIEW.stageTop : 0)) / FD.st.cam.s];
+const findScreen = p => { const at = toScreen(FD.st,p); if (FD.rm) at[1] += VIEW.stageTop; return at; };
 const FIND_BY = Object.fromEntries(FINDS.map(f => [f.id, f]));
 const findRandom = findRnd;
 const findReady = id => {
@@ -3166,6 +3379,11 @@ const findReady = id => {
   const f = stepsFocusNow();
   return JOURNEY.mode === 'steps' && JOURNEY.focus === id && f?.id === id && f.k === 1 && f.swapped;
 };
+// All delayed find actions share the same arrival gate.
+function findWhenReady(owner, action) {
+  if (findReady(owner.id)) { action(); return; }
+  FD.readyAction = { owner, action, epoch: FD.overlayEpoch };
+}
 const findRange = pair => lerp(pair[0], pair[1], findRandom());
 const findFormat = (s, values) => s.replace(/\{(\w+)\}/g, (m, k) => values[k]);
 const findAngleDelta = (a, b) => ((b - a + FIND_PLAY.kit.deg) % FIND_PLAY.kit.turn + FIND_PLAY.kit.turn) % FIND_PLAY.kit.turn - FIND_PLAY.kit.deg;
@@ -3193,19 +3411,31 @@ function findLife(o, x, y, rad, reach = rad) {
   const pointer = FD.hover && FD.now - FD.pointerT <= FIND_PLAY.fresh ? toMap(FD.pointer) : null;
   o.awake = JOURNEY.focus === o.id || document.activeElement === o.el || !!(pointer && Math.hypot(pointer[0] - x, pointer[1] - y) <= reach);
   o.kept ??= false;
+  if (o.id === 'hoards') { if (o.el.tabIndex !== -1) o.el.tabIndex = -1; attr(o.el,'aria-hidden',false); return; }
   // Only a find on screen after the hand-over is in the tab order; the focused one keeps its place.
-  const seen = p[0] >= 0 && p[0] <= VIEW.w && p[1] >= 0 && p[1] <= VIEW.h, tab = FD.rm || (FD.st.handoffT >= 1 && (seen || document.activeElement === o.el)) ? 0 : -1;
+  const hit = COMB.target / FD.st.cam.s, box = [x - hit / 2, y - hit / 2, x + hit / 2, y + hit / 2];
+  const covered = tripCardCover(FD.st, box), seen = tripVisible(FD.st, box);
+  const tab = o.id !== 'hoards' && (seen && covered < .05) ? 0 : -1;
   if (o.el && o.el.tabIndex !== tab) o.el.tabIndex = tab;
+  if (o.el) {
+    attr(o.el, 'aria-hidden', !seen || covered >= .95);
+    findStyle(o.el, 'opacity', (1 - covered) * (FD.list.wayfinder?.mask && o.id !== 'wayfinder' && !o.craftLit ? FIND_PLAY.way.dim : 1));
+    if (o.cover !== covered) { o.cover = covered; findStyle(o.el, 'visibility', covered >= .995 ? 'hidden' : ''); }
+    if (o.hit) { attr(o.hit, 'cx', x); attr(o.hit, 'cy', y); }
+    if (o.focusRing) { attr(o.focusRing, 'cx', x); attr(o.focusRing, 'cy', y); attr(o.focusRing, 'r', Math.min(rad, 50)); }
+  }
 }
 function found(id, atId = id) {
   if (FD.found.has(id)) return;
-  FD.found.add(id); FD.svg.querySelector('#mk-' + id)?.classList.add('found');
+  FD.found.add(id); (FD.svg.querySelector('#mk-' + id) || document.getElementById('mk-' + id))?.classList.add('found');
   if (FD.rm) { FD.landed = FD.found.size; findLandCount(); return; }
   FD.flights.push({ id: atId, number: FD.found.size }); findStartFlight();
 }
-function findLandCount() { tlSetCount(FD.landed, FINDS.length); if (FD.landed === FINDS.length) FD.all?.start(); }
+function findLandCount() { tlSetCount(FD.landed, FINDS.length); if (FD.landed === FINDS.length) FD.allPending = true; }
 function findStartFlight() {
-  if (FD.flight || !FD.flights.length) return;
+  if (FD.flight || FD.flightWaiting || !FD.flights.length) return;
+  const moving = FD.count.getAnimations?.().filter(a => a.transitionProperty === 'translate') || [];
+  if (moving.length) { FD.flightWaiting = true; Promise.all(moving.map(a => a.finished.catch(() => {}))).then(() => { FD.flightWaiting = false; findStartFlight(); }); return; }
   const next = FD.flights.shift(), box = FD.count.getBoundingClientRect();
   FD.flight = { ...next, from: toScreen(FD.st, findPlace(next.id)), to: [box.left + box.width / 2, box.top + box.height / 2], ts: FD.now };
 }
@@ -3222,21 +3452,40 @@ function showPop(owner, anchor, html, cls = '', side = 'auto') {
   FD.popInner = FD.pop.firstElementChild; FD.popTail = FD.pop.querySelector('.pop-tail'); FD.popBody = FD.pop.querySelector('.pop-body');
   const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height];
   // A popup stays above the step buttons and the timeline: their tops are read once here, when it opens, never in the frame loop.
-  FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go, .tl, .jm-focus .find-hint')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
+  const title = document.querySelector('.map-title'); FD.popCeiling = title && globalThis.getComputedStyle && getComputedStyle(title).visibility !== 'hidden' && +getComputedStyle(title).opacity > .1 ? Math.max(48, title.getBoundingClientRect().bottom + 8) : 48;
+  FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go:not([hidden]), .tl, .jm-focus .find-hint:not(.explore-hint)')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
   placePop();
   FD.popInner.style.transformOrigin = `${FD.popOrigin[0]}px ${FD.popOrigin[1]}px`;
   return true;
 }
 function closePop() {
   const o = FD.popOwner; if (!o) return;
-  FD.popOwner = null; FD.pop.className = 'pop'; FD.pop.innerHTML = ''; if (o.onPopClose) o.onPopClose();
+  const inner = FD.popInner, focused = FD.pop.contains(document.activeElement);
+  FD.popOwner = null;
+  // Move the same outgoing popup into its own anchored wrapper. Its completion
+  // only removes that wrapper, never the popup that may have replaced it.
+  const exit = document.createElement('div'); exit.className = FD.pop.className + ' pop-exit'; exit.style.transform = FD.pop.style.transform;
+  FD.pop.after?.(exit); if (inner) exit.appendChild(inner); exit.inert = true;
+  FD.pop.className = 'pop';
+  if (FD.rm) exit.remove?.();
+  else { const a = inner?.animate?.([{ transform: inner.style.transform, opacity: 1 }, { transform: `scale(${FIND_PLAY.kit.popup.scale})`, opacity: 0 }], { duration: COMB.popClose * 1000, easing: 'ease-in', fill: 'forwards' }); if (a) a.onfinish = () => exit.remove?.(); }
+  if (o.onPopClose) o.onPopClose();
+  if (focused) setTimeout(() => { const a=document.activeElement; if (!FD.popOwner && (a===document.body || exit.contains?.(a))) findReturnFocus(o); }, 0);
 }
+function findReturnFocus(owner) {
+  let target=owner.el;
+  const returning=!JOURNEY.focus && stepsFocusNow();
+  if (JOURNEY.moving || returning) { const nova=FD.st?.kind==='rush' || FD.st?.blastT>0 && FD.st?.settleT<1; target=nova ? document.getElementById?.('nova-hit') : document.querySelector?.(returning&&!JOURNEY.moving || JOURNEY.direction==='back' ? '.go-back' : '.go-next'); }
+  else if (!findOwnerVisible(owner)) target=document.getElementById?.('tl');
+  if (target && !target.inert) target.focus({preventScroll:true});
+}
+function findOwnerVisible(owner) { const p=findPlace(owner.id), r=COMB.target/(2*FD.st.cam.s); return !!p && tripVisible(FD.st,[p[0]-r,p[1]-r,p[0]+r,p[1]+r]); }
 function placePop() {
   if (!FD.popOwner) return;
-  const K = FIND_PLAY.kit.popup, anchor = typeof FD.popAnchor === 'function' ? FD.popAnchor() : FD.popAnchor, p = toScreen(FD.st, anchor), [w, h] = FD.popSize;
+  const K = FIND_PLAY.kit.popup, anchor = typeof FD.popAnchor === 'function' ? FD.popAnchor() : FD.popAnchor, p = findScreen(anchor), [w, h] = FD.popSize;
   const below = FD.popSide === 'below' || FD.popSide !== 'above' && p[1] - h - K.tail[1] < K.edge;
   const x = Math.max(K.edge, Math.min(VIEW.w - w - K.edge, p[0] - w / 2));
-  const y = Math.max(K.edge, Math.min((FD.popFloor ?? VIEW.h) - h - K.edge, below ? p[1] + K.tail[1] : p[1] - h - K.tail[1]));
+  const y = Math.max(FD.popCeiling ?? K.edge, Math.min((FD.popFloor ?? VIEW.h) - h - K.edge, below ? p[1] + K.tail[1] : p[1] - h - K.tail[1]));
   FD.popOrigin = [Math.max(0, Math.min(w, p[0] - x)), below ? 0 : h];
   findStyle(FD.pop, 'transform', `translate(${x}px,${y}px)`);
   const q = FD.rm ? 1 : clamp01((FD.now - FD.popTs) / K.time), back = 1 + (K.over - 1) / (1 - K.scale);
@@ -3246,22 +3495,51 @@ function placePop() {
 }
 function findSheet(owner, cls, html, anchor) {
   if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return false;
-  closeSheet(true); closePop();
-  FD.sheetOwner = owner; FD.sheetP = FD.st.P; FD.sheetFrom = toScreen(FD.st, anchor); FD.sheetTs = FD.now;
+  if (findSheetReopen(owner)) return true;
+  if (FD.sheetOwner) return false;
+  closePop();
+  FD.sheetOwner = owner; FD.sheetP = FD.st.P; FD.sheetFrom = findScreen(anchor); FD.sheetTs = FD.now;
+  FD.sheetAnchor = anchor;
+  FD.sheetK = FD.rm ? 1 : 0; FD.sheetClosing = false; FD.sheetMotion = { from: FD.sheetK, to: 1, ts: FD.now, duration: FIND_PLAY.kit.sheet.grow };
   // The first frame grows from the find, never the last sheet's full size (a one-frame flash on Dan's phone, 2026-11-24)
   if (!FD.rm) FD.sheet.style.transform = `translate(${FD.sheetFrom[0]}px,${FD.sheetFrom[1]}px) scale(${FIND_PLAY.kit.sheet.from})`;
-  FD.sheet.className = 'sheet on ' + cls; FD.sheet.innerHTML = html;
+  FD.sheet.className = 'sheet on ' + cls; FD.sheet.innerHTML = html; FD.sheet.inert = !FD.rm;
   document.documentElement.classList.add('jm-sheet-open');
+  FD.dismiss.hidden = false; FD.dismiss.setAttribute('aria-label', COPY.close + ': ' + FIND_BY[owner.id].label.split('. ')[0]);
+  FD.sheet.setAttribute('aria-owns', 'sheet-dismiss');
   FD.sheet.setAttribute('aria-label', FIND_BY[owner.id].label); FD.sheet.tabIndex = -1;
-  const target = FD.sheet.querySelector('button:not([hidden])') || FD.sheet; target.focus({ preventScroll: true });
+  const target = FD.rm ? FD.sheet.querySelector('button:not([hidden])') || FD.sheet : FD.dismiss; target.focus({ preventScroll: true });
   return true;
+}
+function findSheetReopen(owner) {
+  if (FD.sheetOwner !== owner || !FD.sheetClosing) return false;
+  FD.sheetClosing = false; FD.sheetMotion = { from: FD.sheetK, to: 1, ts: FD.now, duration: FIND_PLAY.kit.sheet.grow };
+  owner.onSheetReopen?.(); return true;
 }
 function closeSheet(force = false) {
   const o = FD.sheetOwner; if (!o) return;
-  if (!force && o.beginClose && o.beginClose()) return;
+  if (!FD.rm) { if (!FD.sheetClosing) { FD.sheetClosing = true; FD.sheetMotion = { from: FD.sheetK, to: 0, ts: FD.now, duration: COMB.sheetClose }; } return; }
+  findSheetDone(o);
+}
+function findSheetDone(o) {
+  if (FD.sheetOwner !== o) return;
+  const active=document.activeElement, restore=active===document.body || active===FD.dismiss || FD.sheet.contains?.(active);
   FD.sheetOwner = null; FD.sheet.className = 'sheet'; FD.sheet.innerHTML = '';
+  FD.dismiss.hidden = true;
   document.documentElement.classList.remove('jm-sheet-open');
-  if (o.onSheetClose) o.onSheetClose(); o.el?.focus({ preventScroll: true });
+  if (o.onSheetClose) o.onSheetClose(); if (restore) findReturnFocus(o);
+}
+function findSheetFrame(owner, fit, y = VIEW.h / 2, iris = null, irisIn = null) {
+  if (FD.sheetOwner !== owner) return 0;
+  const m = FD.sheetMotion, q = FD.rm ? 1 : clamp01((FD.now - m.ts) / m.duration);
+  FD.sheetK = lerp(m.from, m.to, easeIO(q));
+  const k = FD.sheetK, from = FD.sheetClosing ? findScreen(FD.sheetAnchor) : FD.sheetFrom;
+  if (FD.sheet.inert !== (k < .96)) FD.sheet.inert = k < .96;
+  if (FD.sheetFit !== fit) { FD.sheetFit = fit; FD.sheet.style.setProperty('--sheet-unit', 1 / fit); }
+  findStyle(FD.sheet, 'transform', `translate(${lerp(from[0], VIEW.w / 2, k)}px,${lerp(from[1], y, k)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, fit, k)})`);
+  if (iris) { const v = Math.max(Number.EPSILON, k); findStyle(iris, 'transform', `scale(${v})`); findStyle(irisIn, 'transform', `scale(${1 / v})`); }
+  if (m.to === 0 && q === 1) queueMicrotask(() => { if (FD.sheetClosing && FD.sheetMotion === m) findSheetDone(owner); });
+  return k;
 }
 function findBits(kind, x, y, n, options = {}) {
   if (FD.rm) return;
@@ -3282,17 +3560,21 @@ function findKitBuild(svg, pop, sheet, base, rm) {
   for (let i = 0; i < FIND_PLAY.bits.pool; i++) { const el = findSvg('path'); el.style.display = 'none'; pool.appendChild(el); FD.bits.push({ el, live: false, serial: -1 }); }
   FD.star = document.createElement('div'); FD.star.className = 'find-star'; FD.star.setAttribute('aria-hidden', 'true');
   FD.star.innerHTML = `<svg viewBox="-1 -1 2 2"><path d="${starPath(0, 0, 1)}"/></svg>`; pop.parentElement.appendChild(FD.star);
+  FD.dismiss = document.createElement('button'); FD.dismiss.id = 'sheet-dismiss'; FD.dismiss.className = 'sheet-dismiss'; FD.dismiss.type = 'button'; FD.dismiss.textContent = COPY.close; FD.dismiss.hidden = true; sheet.after?.(FD.dismiss); FD.dismiss.addEventListener('click', () => closeSheet());
   findKitStyle();
   // an open sheet keeps Tab and Shift+Tab inside it (B-4)
   sheet.addEventListener('keydown', e => {
-    if (e.key === 'Tab' && FD.sheetOwner) { const f = [...sheet.querySelectorAll('button:not([hidden]):not([disabled]),[tabindex="0"]')], i = f.indexOf(document.activeElement); if (!f.length || (e.shiftKey ? i <= 0 : i === f.length - 1)) { e.preventDefault(); f.at(e.shiftKey ? -1 : 0)?.focus(); } return; }
-    if (FD.sheetOwner?.id === 'hammer') return; if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) { e.preventDefault(); e.stopPropagation(); } });
+    if (e.key === 'Tab' && FD.sheetOwner) { const f = [...sheet.querySelectorAll('button:not([hidden]):not([disabled]),[tabindex="0"]'), FD.dismiss], i = f.indexOf(document.activeElement); if (!f.length || (e.shiftKey ? i <= 0 : i === f.length - 1)) { e.preventDefault(); f.at(e.shiftKey ? -1 : 0)?.focus(); } return; }
+    if (e.key === 'Escape' || FD.sheetOwner?.id === 'hammer') return;
+    e.stopPropagation(); if (!['Enter', ' '].includes(e.key) || !e.target.closest?.('button')) e.preventDefault(); });
   sheet.addEventListener('wheel', e => { e.preventDefault(); e.stopPropagation(); }, { passive: false });
-  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (FD.popOwner || FD.sheetOwner) { e.preventDefault(); closePop(); closeSheet(); } else if (stepsRelease()) e.preventDefault(); });
+  document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (FD.popOwner || FD.sheetOwner) { e.preventDefault(); closePop(); closeSheet(); } else if (stepsRelease(true)) e.preventDefault(); });
   // A popup closes on a press anywhere but a find (a find opens its own popup or keeps it) or a control inside the popup.
   // On a phone in explore a popup can sit over the other chests, and there is no Escape key to close it.
-  document.addEventListener('pointerdown', e => { if (!FD.popOwner) return; const t = e.target?.closest ? e.target : null; if (t && (t.closest('.find') || t.closest('.pop button, .pop a'))) return; closePop(); }, true);
+  document.addEventListener('pointerdown', e => { if (FD.sheetOwner && !FD.sheet.contains(e.target) && e.target !== FD.dismiss) closeSheet(); if (!FD.popOwner) return; const t = e.target?.closest ? e.target : null; if (t && (t.closest('.find') || t.closest('.pop button, .pop a'))) return; closePop(); }, true);
+  window.addEventListener('keydown', e => { if (!FD.sheetOwner || FD.sheet.contains(e.target)) return; if (e.key === 'Escape') { e.preventDefault(); closeSheet(); } else if (e.key === 'Tab') { e.preventDefault(); const items = [...FD.sheet.querySelectorAll('button:not([hidden]):not([disabled]),[tabindex="0"]')].filter(el => !el.getClientRects || el.getClientRects().length); items.at(e.shiftKey ? -1 : 0)?.focus(); } else if (e.target !== FD.dismiss || !['Enter',' '].includes(e.key)) e.preventDefault(); e.stopImmediatePropagation(); }, true);
   matchMedia('(hover: hover)').addEventListener('change', e => FD.hover = e.matches);
+  FD.say = document.createElement('p'); FD.say.className = 'sr'; FD.say.setAttribute('role', 'status'); pop.after?.(FD.say);
   tlSetCount(0, FINDS.length);
 }
 function findKitStyle() {
@@ -3302,6 +3584,7 @@ function findKitStyle() {
 }
 function findKitFrame() {
   const dt = FD.dt;
+
   FD.bits.forEach(b => {
     if (!b.live) return; b.age += dt;
     if (b.age >= b.life) { b.live = false; attr(b.el, 'opacity', 0); queueMicrotask(() => { if (!b.live) b.el.style.display = 'none'; }); return; }
@@ -3319,18 +3602,26 @@ function findKitFrame() {
   placePop();
   if (FD.popOwner && Math.abs(FD.st.P - FD.popP) > FIND_TIMING.closeScroll) closePop();
   if (FD.sheetOwner && Math.abs(FD.st.P - FD.sheetP) > FIND_TIMING.closeScroll) closeSheet();
+  if (FD.rm && FD.popOwner && !findOwnerVisible(FD.popOwner)) closePop();
+  if (FD.rm && FD.sheetOwner && !findOwnerVisible(FD.sheetOwner)) closeSheet();
+  const ready = FD.readyAction;
+  if (ready && findReady(ready.owner.id)) { FD.readyAction = null; if (ready.epoch === FD.overlayEpoch) queueMicrotask(ready.action); }
+  if (FD.pendingPress && !JOURNEY.moving) { const el = FD.pendingPress; FD.pendingPress = null; queueMicrotask(() => { const dragged = el._dragged; el._dragged = false; el.dispatchEvent(new MouseEvent('click', { bubbles: true })); if (dragged) el._dragged = true; }); }
+  if (FD.allPending && !FD.popOwner && !FD.sheetOwner && !JOURNEY.focus && !JOURNEY.moving && (FD.rm || !Object.values(FD.list).some(o => o.playing))) { FD.allPending = false; FD.all?.start(); }
 }
 // The hint line keeps its words while it fades out, so it changes only when a find takes the camera.
-function findHint(id) { if (FD.hint && id) FD.hint.textContent = FD.list.hoards?.items.find(h => h.id === id)?.hintLine || FIND_COPY.hints[id.startsWith('hoard') ? 'hoards' : id] || ''; }
+function findHint(id) { if (FD.hint && id) FD.hint.textContent = id === 'horn' ? COMB.hornHints[FD.list.horn?.stage === 'raised' ? 1 : ['sounding','echo'].includes(FD.list.horn?.stage) ? 2 : 0] : FD.list.hoards?.items.find(h => h.id === id)?.hintLine || FIND_COPY.hints[id.startsWith('hoard') ? 'hoards' : id] || ''; }
 function findCapture(e) {
   if (FD.rm || JOURNEY.mode !== 'steps' || !FD.st) return;
   if (e.type === 'keydown' && !['Enter', ' '].includes(e.key)) return;
   const el = e.target.closest?.('.find'); if (!el) return;
+  if (JOURNEY.moving) { FD.pendingPress = el; e.preventDefault(); e.stopImmediatePropagation(); return; }
   if (e.type === 'click' && el._focusBlocked) { el._focusBlocked = false; e.preventDefault(); e.stopImmediatePropagation(); return; }
   const id = el.id.slice(2), key = id === 'hoards' ? FIND_COPY.hoards[0].id : id;
+  if (FD.sheetOwner?.id === key && FD.sheetClosing) { if (!FD.rm && JOURNEY.focus !== key) stepsFocus(key,findView(key)); FD.sheetOwner.overlayEpoch = FD.overlayEpoch; if (findSheetReopen(FD.sheetOwner)) return; }
   if (JOURNEY.focus === key) return;
   if (!stepsFocus(key, findView(key))) { if (e.type === 'pointerdown') el._focusBlocked = true; e.preventDefault(); e.stopImmediatePropagation(); }
-  else { FD.overlayEpoch++; closePop(); closeSheet(true); if (e.type === 'pointerdown') el._focusBlocked = false; }
+  else { findHint(key); FD.overlayEpoch++; closePop(); closeSheet(true); if (e.type === 'pointerdown') el._focusBlocked = false; }
 }
 
 // ---- explore.mjs ----
@@ -3406,13 +3697,14 @@ function exploreStart() {
   EX.active = true; EX.departing = false; EX.footer = 1; EX.cam = { ...EX.end }; EX.target = exploreFitCam(); EX.velocity = [0, 0];
   EX.motion = { from: { ...EX.cam }, to: { ...EX.target }, k0: 0, k1: 1, elapsed: 0, duration: EXPLORE.in };
   document.documentElement.classList.add('jm-explore');
-  if (!EX.hintUsed) { EX.hintUsed = true; EX.hintLeft = EXPLORE.hintTime; EX.hint.textContent = VIEW.phone ? COPY.explore.hintPhone : COPY.explore.hint; EX.hint.classList.add('on'); }
+  if (!EX.hintUsed) { EX.hintUsed = true; EX.hintLeft = EXPLORE.hintTime; EX.hint.textContent = VIEW.phone ? COPY.explore.hintPhone : COPY.explore.hint; EX.hintWait = COMB.hintDelay; }
   document.getElementById('go-say').textContent = COPY.explore.say;
   explorePromote(); exploreNotify(); return true;
 }
 function exploreEnd() {
   exploreSuppressClear();
   if (!EX.active) return false;
+  if (document.activeElement?.closest?.('.find,.pop')) document.getElementById('go')?.querySelector('.go-back')?.focus({preventScroll:true});
   EX.active = false; EX.target = { ...EX.end }; EX.velocity = [0, 0];
   EX.motion = { from: { ...EX.cam }, to: { ...EX.end }, k0: EX.k, k1: 0, elapsed: 0, duration: EXPLORE.out, footer0: EX.footer };
   const say = document.getElementById?.('go-say'); if (say) say.textContent = COPY.steps.say.end;
@@ -3431,7 +3723,7 @@ function exploreResize() {
   const margin = VIEW.phone ? EXPLORE.marginPhone : EXPLORE.margin;
   EX.view = { w: VIEW.w, h: VIEW.h - (VIEW.phone ? STEPS.nav.bar : STEPS.nav.h + STEPS.nav.gap), stageH: VIEW.h };
   EX.fit = Math.min((EX.view.w - 2 * margin) / (EX.bounds[2] - EX.bounds[0]), (EX.view.h - 2 * margin) / (EX.bounds[3] - EX.bounds[1]));
-  EX.top = Math.max(EX.fit, EXPLORE.most * VIEW.sT);
+  EX.top = Math.max(EX.fit, Math.max(EXPLORE.most, CAMERA.holdZoom) * VIEW.sT);
   if (exploreBusy() && world) {
     const s = lerp(EX.fit, EX.top, share); EX.cam = exploreBound({ s, tx: EX.view.w / 2 - world[0] * s, ty: EX.view.stageH / 2 - world[1] * s }); EX.target = { ...EX.cam };
     if (EX.motion) EX.motion = { from: { ...EX.cam }, to: EX.active ? exploreFitCam() : { ...EX.end }, k0: EX.k, k1: EX.active ? 1 : 0, elapsed: 0, duration: EX.active ? EXPLORE.in : EXPLORE.out, footer0: EX.footer };
@@ -3448,6 +3740,7 @@ function exploreTakeover() {
   EX.velocity = [0, 0]; exploreHintOff();
 }
 function exploreApply(st, dt) {
+  delete st.coverRects;
   if (EX.rm) return false;
   const coveredDeparture = EX.departing && EX.journey.moving && EX.journey.P === EX.journey.beats.at(-1).P;
   if (exploreBusy() && !exploreAllowed() && !coveredDeparture) exploreReset();
@@ -3469,6 +3762,7 @@ function exploreApply(st, dt) {
       if (['s', 'tx', 'ty'].every(key => Math.abs(EX.cam[key] - EX.target[key]) < DEPTH.epsilon)) EX.cam = { ...EX.target };
     }
   }
+  if (EX.hintWait > 0 && EX.active) { EX.hintWait = Math.max(0, EX.hintWait - dt); if (!EX.hintWait) EX.hint.classList.add('on'); }
   if (EX.hintLeft > 0) { EX.hintLeft = Math.max(0, EX.hintLeft - dt); if (!EX.hintLeft) exploreHintOff(); }
   st.exploreK = EX.k; st.exploring = EX.active; st.exploreFooter = EX.footer; st.sEnd = EX.end?.s || st.cam.s;
   // The SVG camera stays at its last raster while input/glide changes this virtual camera.
@@ -3483,7 +3777,7 @@ function exploreApply(st, dt) {
   const after = [EX.cam.s, EX.cam.tx, EX.cam.ty, EX.k, EX.footer];
   const changed = EX.changed || before.some((value, i) => value !== after[i]); EX.changed = false; return changed;
 }
-const exploreExcluded = target => target?.closest?.('.sheet.on, input, textarea, select, .tl, [data-review]');
+const exploreExcluded = target => target?.closest?.('.sheet.on, .sheet-dismiss, .pop button, .pop a, .go button, input, textarea, select, .tl, [data-review]');
 const exploreOwned = target => target?.closest?.('#f-wayfinder, #f-beacon, .find.hoard, .rubbing, #f-mist, #f-horn, .hm-canvas, .ft-name');
 const explorePoint = e => [e.clientX, e.clientY];
 function exploreSample(e) {
@@ -3560,6 +3854,8 @@ function exploreBuild({ stage, world, journey, rm }) {
   window.addEventListener('blur', () => { exploreClearPointers(); exploreSuppressClear(); EX.velocity = [0, 0]; EX.changed = true; explorePromote(); });
 }
 
+function exploreReduced(on) { if (on) exploreReset(); EX.rm = on; }
+
 // ---- steps.mjs ----
 // The single progress owner: top/map scroll, then button/key Steps.
 
@@ -3584,7 +3880,7 @@ const stepsFormat = (s, values) => s.replace(/\{(\w+)\}/g, (m, k) => values[k]);
 const stepsReadScroll = () => { SC.P = window.scrollY / VIEW.unit; return SC.P; };
 
 const JOURNEY = {
-  get mode() { return SC.mode; }, get P() { return SC.P; }, get moving() { return !!(SC.move || SC.cut); },
+  get direction() { return SC.direction; }, get mode() { return SC.mode; }, get P() { return SC.P; }, get moving() { return !!(SC.move || SC.cut); },
   get visiting() { return !!SC.focus?.held; }, get focus() { return SC.focus?.held ? SC.focus.id : null; }, depth: DEPTH, nova: NOVA, setDepth: stepsSetDepth,
   beats: BEATS, go: stepsGo, next: stepsNext, back: stepsBack, set: stepsSet,
 };
@@ -3603,12 +3899,14 @@ function stepsFocus(id, view) {
   const now = stepsFocusNow(), old = SC.focus;
   stepsCancel();
   SC.focus = { id, from: now ? now.view : view.slice(), to: view.slice(), swap: now ? 0 : 1, k: old ? old.k : 0, held: true };
-  SC.root.classList.add('jm-focus'); stepsArrive(); return true;
+  SC.scrollLive = false; SC.root.classList.add('jm-focus'); stepsArrive(); return true;
 }
-function stepsRelease() {
+function stepsRelease(returnFocus = false) {
   if (!SC.focus || !SC.focus.held) return false;
   SC.focus.held = false; SC.root.classList.remove('jm-focus');
-  window.dispatchEvent(new Event('jm-find-release')); stepsButtons(); return true;
+  window.dispatchEvent(new Event('jm-find-release')); stepsButtons();
+  if (returnFocus && (document.activeElement===document.body || document.activeElement?.closest?.('.find,.pop,.sheet'))) SC.go?.querySelector('.go-back')?.focus({preventScroll:true});
+  return true;
 }
 
 function stepsClasses() {
@@ -3625,12 +3923,16 @@ function stepsButtons() {
   if (!SC.go) return;
   const top = SC.P <= 1e-6, end = !JOURNEY.moving && Math.abs(SC.P - stepsEnd) < 1e-6;
   const beatState = tripState(SC.P), blasting = beatState.kind === 'rush' ? JOURNEY.moving || beatState.t > 0 : ['blast', 'settle'].includes(beatState.kind);
-  if (blasting && !SC.go.hidden) { SC.returnFocus = SC.go.contains(document.activeElement); SC.shown = false; }
+  if (blasting && !SC.go.hidden) { SC.returnFocus ||= SC.go.contains(document.activeElement); SC.shown = false; SC.go.classList.add('go-leaving'); if (SC.returnFocus) { const nova = document.getElementById('nova-hit'); nova?.focus({ preventScroll: true }); } if (SC.say.textContent !== COMB.novaSay) SC.say.textContent = COMB.novaSay; }
   // Joined page: the bar waits for the map, so one Start shows at a time; focus follows (the bar at the map, the hero's Start above).
   const hero = SC.joinedTop() && SC.P < stepsMap - 1e-6, wasHidden = SC.go.hidden;
   if (hero && !wasHidden && SC.go.contains(document.activeElement)) SC.heroFocus = true;
   const hidden = !SC.ready || SC.mode !== 'steps' || hero || blasting;
-  if (SC.go.hidden !== hidden) SC.go.hidden = hidden;
+  if (SC.go.inert !== hidden) SC.go.inert = hidden;
+  if (!blasting) SC.go.classList.remove('go-leaving');
+  const faded = blasting && SC.go.classList.contains('go-leaving');
+  if (faded && !SC.goFade) { SC.goFade = true; setTimeout(() => { SC.goFade = false; if (SC.go.classList.contains('go-leaving')) SC.go.hidden = true; }, 180); }
+  if (!faded && SC.go.hidden !== hidden) SC.go.hidden = hidden;
   const lost = !document.activeElement || document.activeElement === document.body || !!document.activeElement.closest?.('[data-hero]');
   if (SC.heroFocus && top && !JOURNEY.moving) { SC.heroFocus = false; const start = document.querySelector?.('.jm-start'); if (start && lost) start.focus({ preventScroll: true }); }
   if (SC.joinedTop() && wasHidden && !SC.go.hidden && !hero && !blasting && lost && !JOURNEY.moving && Math.abs(SC.P - stepsMap) < 1e-6) SC.go.querySelector('.go-next').focus({ preventScroll: true });
@@ -3678,12 +3980,16 @@ function stepsArrive() {
   stepsButtons();
 }
 function stepsCancel() {
-  SC.move = null; SC.cut = null; SC.fill = 0;
+  SC.move = null; SC.cut = null; SC.fill = 0; SC.pendingTarget = null;
   if (SC.cover) { SC.cover.style.opacity = 0; SC.cover.hidden = true; }
 }
 function stepsPlay(target, next = false) {
   const p = stepsClamp(target);
-  SC.move = SC.move ? stepsCarry(SC.move, p, next && Math.abs(SC.move.P1 - p) < 1e-6) : { ...(glideMove(SC.P, p) || paceMove(SC.P, p)), elapsed: 0, baseFill: 0 };
+  const old = SC.move;
+  SC.move = old ? stepsCarry(old, p, next && Math.abs(old.P1 - p) < 1e-6 && !old.hurry) : { ...(glideMove(SC.P, p) || paceMove(SC.P, p)), elapsed: 0, baseFill: 0 };
+  // If the bounded carry cannot brake before the beat, remember the requested
+  // reversal and turn there. Never discard an acknowledged press.
+  SC.pendingTarget = old && SC.move === old && p !== old.P1 ? p : null;
   SC.root.dataset.beat = ''; SC.announced = null; stepsButtons();
 }
 // Exact position and derivative of the active clock. Camera/cards remain pure P functions.
@@ -3771,6 +4077,7 @@ function stepsJump(target, after) {
 }
 function stepsNavigate(target, opts = {}) {
   if (SC.cut) return;
+  if (document.activeElement?.closest?.('.c-card, .find')) SC.go?.querySelector(target < SC.P ? '.go-back' : '.go-next')?.focus({ preventScroll: true });
   SC.scroll = null; SC.touch = null;
   if (target > stepsMap || opts.start) SC.scrollLive = false;
   if (SC.rm) { window.scrollTo({ top: target * VIEW.unit, behavior: 'instant' }); stepsReadScroll(); return; }
@@ -3782,18 +4089,18 @@ function stepsNavigate(target, opts = {}) {
 function stepsGo(id, opts = {}) {
   if (SC.cut) return;
   const beat = BEATS.find(b => b.id === id); if (!beat) return;
-  stepsRelease(); stepsNavigate(beat.P, { ...opts, start: id === 'map' });
+  stepsRelease(); if (SC.rm && SC.reducedGo) { SC.reducedGo(id); stepsReadScroll(); return; } stepsNavigate(beat.P, { ...opts, start: id === 'map' });
 }
 function stepsNext() {
   if (SC.cut) return;
-  stepsRelease(); const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true, start: true, next: true });
+  SC.direction = 'next'; stepsRelease(); const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true, start: true, next: true });
   stepsButtons();
 }
 function stepsBack() {
   if (SC.cut) return;
   if (exploreEnd()) { stepsButtons(); return; }
-  if (stepsRelease()) return;
-  const beat = stepsBackBeat(); if (beat) stepsNavigate(beat.P, { move: true });
+  if (stepsRelease(true)) return;
+  SC.direction = 'back'; const beat = stepsBackBeat(); if (beat) stepsNavigate(beat.P, { move: true, next: true });
 }
 function stepsSet(P) {
   if (SC.cut) return;
@@ -3832,7 +4139,7 @@ function stepsFrame(ts) {
     SC.P = stepsMoveAt(move, move.elapsed);
     SC.fill = move.baseFill + (1 - move.baseFill) * q;
     if (move.fill0 !== undefined && !move.hurry) SC.fill = lerp(move.fill0, SC.fill, easeIO(Math.min(1, q / STEPS.carry.fillBlend)));
-    if (q >= 1) { SC.P = move.P1; SC.move = null; stepsArrive(); }
+    if (q >= 1) { SC.P = move.P1; SC.move = null; const pending = SC.pendingTarget; SC.pendingTarget = null; if (pending !== null && pending !== undefined) stepsPlay(pending); else stepsArrive(); }
   } else if (cut) {
     cut.elapsed += dt;
     if (cut.elapsed < STEPS.cut[0]) SC.cover.style.opacity = cut.elapsed / STEPS.cut[0];
@@ -3872,7 +4179,7 @@ function stepsScrollSettle(flick) {
   SC.scroll = null;
   if (Math.abs(target - SC.P) < 1e-6) { SC.P = target; stepsArrive(); } else stepsPlay(target);
 }
-const stepsTouchExcluded = target => target?.closest('.sheet.on, .face, .tl, input, textarea, select, [data-review]');
+const stepsTouchExcluded = target => target?.closest('.sheet.on, .sheet-dismiss, .pop button, .pop a, .face, .tl, input, textarea, select, [data-review]');
 function stepsTouchOwned(target) {
   const hero = target?.closest('[data-hero]'); if (!hero) return false;
   for (let el = target; el; el = el.parentElement) {
@@ -3907,7 +4214,7 @@ function stepsTouchEnd(e) {
 function stepsKey(e) {
   if (SC.mode !== 'steps' || SC.rm || exploreActive() || e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
   const target = stepsTarget(e);
-  if (target && target.closest('.tl')) return;
+  if (target && target.closest('.tl, .sheet.on') || SC.root.classList.contains('jm-sheet-open')) return;
   if (e.key === ' ' && target && target.closest('button, a, input, textarea, select, .find, [role="button"]')) return;
   let act = null;
   if (['ArrowDown', 'ArrowRight', 'PageDown'].includes(e.key) || (e.key === ' ' && !e.shiftKey)) act = stepsNext;
@@ -3916,8 +4223,8 @@ function stepsKey(e) {
   else if (e.key === 'End') act = () => stepsGo('end');
   if (act) { e.preventDefault(); act(); }
 }
-function stepsBuild({ stage, rm, joinedTop }) {
-  SC.root = document.documentElement; SC.rm = rm; SC.joinedTop = joinedTop;
+function stepsBuild({ stage, rm, joinedTop, reducedGo = null }) {
+  SC.root = document.documentElement; SC.rm = rm; SC.joinedTop = joinedTop; SC.reducedGo = reducedGo;
   VIEW.depth = new URLSearchParams(window.location.search).get('depth') === '0' ? 0 : 1;
   window.__jm = JOURNEY;
   window.addEventListener('scroll', () => { if (SC.rm) stepsReadScroll(); }, { passive: true });
@@ -3952,6 +4259,12 @@ function stepsBuild({ stage, rm, joinedTop }) {
   window.addEventListener('touchmove', stepsTouchMove, { passive: false });
   window.addEventListener('touchend', stepsTouchEnd); window.addEventListener('touchcancel', stepsTouchEnd);
   window.addEventListener('click', e => { if (SC.swallow && e.detail !== 0) { SC.swallow = false; e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+}
+
+function stepsReduced(on, i = 0) {
+  stepsCancel(); SC.focus = null; SC.root.classList.remove('jm-focus'); SC.rm = on; SC.mode = on ? 'scroll' : 'steps';
+  SC.root.classList.toggle('jm-steps', !on); SC.go.hidden = on;
+  if (!on) { SC.P = i < -1 ? 0 : i >= STOPS.length ? stepsEnd : BEATS[Math.max(1, i + 2)].P; window.scrollTo({ top: 0, behavior: 'instant' }); stepsArrive(); }
 }
 
 // ---- cards.mjs ----
@@ -3997,10 +4310,12 @@ ${rm ? '' : cardTailSvg()}<div class="c-card"><div class="c-sh" aria-hidden="tru
 <div class="c-side"><figure class="c-piece">${piece}${cp.caption ? `<figcaption>${esc(cp.caption)}</figcaption>` : ''}</figure></div></div>
 <div class="c-foot"><ul class="c-crafts">${CRAFTS.map(c => `<li class="${s.crafts.includes(c) ? 'lit' : ''}"><i></i>${c}</li>`).join('')}</ul>
 <button class="c-btn" type="button" aria-label="${esc(COPY.caseStudy + ': ' + s.name)}">${COPY.caseStudy}${arrowSvg}</button></div></div></div></div></div>`;
-    a.querySelector('.st-btn').addEventListener('click', () => {
+    a.querySelectorAll('.c-crafts li').forEach((li, j) => { li.setAttribute('aria-label', (s.crafts.includes(CRAFTS[j]) ? COMB.craftLit : COMB.craftUnlit).replace('{craft}', CRAFTS[j])); li.classList.toggle('craft-used', s.crafts.includes(CRAFTS[j])); });
+    a.querySelector('.st-btn').addEventListener('click', e => {
       if (CD.closed?.i === i && CD.last?.P === CD.closed.P && !JOURNEY.moving) { CD.closed = { ...CD.closed, from: CD.closed.k, to: 1, elapsed: 0 }; CD.list[i].reopenFocus = true; return; }
-      CD.onGo(i);
+      CD.list[i].keyboardOpen = e.detail === 0; CD.onGo(i);
     });
+    a.querySelector('.face').inert = !rm;
     a.querySelector('.c-close')?.addEventListener('click', () => cardsClose(i));
     container.appendChild(a);
     CD.list.push({ el: a, card: a.querySelector('.c-card'), tail: a.querySelector('.c-tail'), face: a.querySelector('.face'), shadow: a.querySelector('.c-sh'), inn: a.querySelector('.c-in'), btn: a.querySelector('.st-btn'), fill: a.querySelector('.st-fill'), boss: a.querySelector('.st-boss-paint'), glow: a.querySelector('.st-glow'), mini: document.getElementById('mini')?.querySelectorAll('.mm-stop')[i], stop: s, state: '', paint: 0, tilt: [0, 0, 0, 0] });
@@ -4026,7 +4341,7 @@ function cardsDepthConfig(c) {
   c.shadow.style.boxShadow = `0 0 ${cfg.blur}px ${cfg.spread}px var(--shade)`; c.shadow.style.borderRadius = cfg.radius + 'px';
   c.depthPending = false;
 }
-const cardsSetCraft = mask => { CD.craft = mask; };
+const cardsSetCraft = mask => { CD.craft = mask; CD.list.forEach(c => c.el.style.transition = 'opacity .3s'); };
 
 function cardsClose(index = CD.last?.i) {
   const st = CD.last;
@@ -4036,6 +4351,7 @@ function cardsClose(index = CD.last?.i) {
   return true;
 }
 function cardsOverride(st, dt, moving) {
+  delete st.coverRects;
   CD.dt = dt;
   const closed = CD.closed; let changed = false;
   if (closed) {
@@ -4056,6 +4372,7 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
   const stonePx = Math.max(MARK.min, Math.min(MARK.max, MARK.k * st.cam.s));
   CD.list.forEach((c, i) => {
     const close = c.el.querySelector('.c-close');
+    if (JOURNEY.moving && c.face.contains(document.activeElement)) document.querySelector(JOURNEY.direction === 'back' ? '.go-back' : '.go-next')?.focus({ preventScroll: true });
     if (close) {
       if (JOURNEY.moving && document.activeElement === close) document.getElementById('go')?.querySelector('.go-next')?.focus({ preventScroll: true });
       const inert = JOURNEY.moving || st.cardK[i] < .96;
@@ -4064,10 +4381,13 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const W = c.W || CD.W, H = c.H, oc = c.place || { x: VIEW.w / 2, y: VIEW.h / 2 };
     const e = st.cardK[i], p = toScreen(st, MAP.waypoints[c.stop.w]);
     const k0 = stonePx / Math.max(W, H), k = Math.pow(k0, 1 - e), py = p[1] - stonePx / 2 - MARK.stand;
-    const cx = lerp(p[0], oc.x, e), cy = lerp(py, oc.y, e);
+    // Position completes its return before the face disappears into the boss.
+    const travel = smooth(.12, 1, e), cx = lerp(p[0], oc.x, travel), cy = lerp(py, oc.y, travel);
     cardsStyle(c.el, 'transform', `translate(${p[0]}px,${py}px)`);
     cardsStyle(c.card, 'transform', `translate(${cx - W * k / 2 - p[0]}px,${cy - H * k / 2 - py}px) scale(${k})`);
-    cardsStyle(c.btn, 'transform', `translate(-50%,-50%) scale(${stonePx / MARK.box})`);
+    cardsStyle(c.btn, 'transform', 'translate(-50%,-50%)');
+    cardsStyle(c.btn, 'width', Math.max(COMB.target, stonePx) + 'px'); cardsStyle(c.btn, 'height', Math.max(COMB.target, stonePx) + 'px');
+    const stone = c.btn.firstElementChild; if (stone) { cardsStyle(stone, 'width', stonePx + 'px'); cardsStyle(stone, 'height', stonePx + 'px'); }
     const lit = CD.craft ? CD.craft[i] : false;
     cardsStyle(c.el, 'opacity', op * (CD.craft && !lit ? .55 : 1));
     // Size, not the score, hands the mark over to the card: the face and its words come in together as it grows (no flat slab).
@@ -4096,11 +4416,16 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const state = e > .96 ? 'open' : e < .02 ? 'rest' : 'moving';
     if (state !== c.state) { c.state = state; c.el.dataset.state = state; c.face.inert = state !== 'open'; }
     // A stone mark is in the tab order only at rest and on screen (the keyboard never lands on a stop it cannot see).
-    const tab = state === 'rest' && (document.activeElement === c.btn || p[0] >= 0 && p[0] <= VIEW.w && p[1] >= 0 && p[1] <= VIEW.h) ? 0 : -1;
+    const at = MAP.waypoints[c.stop.w], half = COMB.target / (2 * st.cam.s), visible = tripVisible(st, [at[0]-half, at[1]-half, at[0]+half, at[1]+half]);
+    const clear = tripCardCover(st, [at[0]-half,at[1]-half,at[0]+half,at[1]+half], i) < .05;
+    const tab = state === 'rest' && visible && clear ? 0 : -1;
     if (c.btn.tabIndex !== tab) c.btn.tabIndex = tab;
+    if (c.btn.inert !== !visible) { c.btn.inert = !visible; c.btn.setAttribute('aria-hidden', !visible); }
     if (c.reopenFocus && (JOURNEY.moving || st.kind !== 'hold' || st.i !== i)) c.reopenFocus = false;
     if (c.reopenFocus && state === 'open') { c.reopenFocus = false; c.el.querySelector('.c-close').focus({ preventScroll: true }); }
+    if (c.keyboardOpen && state === 'open' && !JOURNEY.moving) { c.keyboardOpen = false; close?.focus({ preventScroll: true }); }
   });
+  CD.previousP = JOURNEY.P;
 }
 
 // Project the actual face edge through its existing tilt, without a DOM layout read.
@@ -4130,6 +4455,8 @@ function cardsTailFrame(c, f) {
   cardsStyle(c.tail, 'opacity', c.face.style.opacity);
 }
 const cardsList = () => CD.list;
+
+function cardsReduced(on) { CD.rm = on; }
 
 // ---- footname.mjs ----
 // The hero's name model, copied locally. Only measure reads layout; the shared frame paints it.
@@ -4599,6 +4926,7 @@ function findWay(svg) {
     svg.querySelectorAll('#finds > .find, #bc-notes').forEach(g => { if (g !== el) g.style.opacity = mask ? FIND_PLAY.way.dim : 1; });
     FD.list.hoards?.items.forEach(h => { const i = STOPS.findIndex(s => s.id === h.d.stop); h.setCraftLit(!!mask?.[i]); h.el.style.opacity = mask && !mask[i] ? FIND_PLAY.way.dim : 1; });
   };
+  const wayResultView = mask => { const points = [[f.x - 70, f.y - 60], [f.x + 70, f.y + 105], ...STOPS.filter((s,i) => mask[i]).map(s => MAP.waypoints[s.w])], xs = points.map(p=>p[0]), ys = points.map(p=>p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys); return [(x0+x1)/2, (y0+y1)/2, Math.max(x1-x0,y1-y0)/2+40, 0]; };
   const startLines = () => { o.lineTs = FD.now; o.linePhase = 'grow'; o.lines.forEach((l, i) => { l.lit = !!o.mask?.[i]; l.arrived = false; attr(l.line, 'stroke-dasharray', o.craft === CRAFTS.length ? 'none' : FIND_PLAY.way.dash.join(' ')); }); };
   const set = i => {
     if (i === CRAFTS.length && (!o.unlocked || !wayAllStops().some(Boolean))) i = -1;
@@ -4611,7 +4939,8 @@ function findWay(svg) {
     applyMask(mask);
     // With a craft chosen the lines have to be seen arriving, so on a wide screen the camera pulls back for them.
     document.documentElement.classList.toggle('jm-way', i >= 0);
-    if (JOURNEY.focus === o.id && !VIEW.phone) stepsFocus(o.id, i < 0 ? f.view : FIND_PLAY.way.wide);
+    if (JOURNEY.focus === o.id) stepsFocus(o.id, i < 0 ? f.view : wayResultView(mask));
+    if (FD.say) FD.say.textContent = i < 0 ? f.label : findFormat(COMB.waySay, { craft: FIND_COPY.crafts[i] || FIND_COPY.wayAll.split(':')[0], names: STOPS.filter((s,j) => mask?.[j]).map(s => s.short).join(', ') });
     tally.textContent = i < 0 ? '' : i === CRAFTS.length ? findFormat(FIND_COPY.wayAll, { names: STOPS.filter((s, j) => mask[j]).map(s => s.short + ', ' + s.dates).join('; ') }) : findFormat(FIND_COPY.wayTally, { craft: FIND_COPY.crafts[i], n: mask.filter(Boolean).length, t: STOPS.length });
     o.retract = o.lines.map(l => l.v); o.lineTs = FD.now; o.linePhase = 'retract'; if (FD.rm || o.retract.every(v => v === 0)) { startLines(); if (FD.rm) o.lines.forEach(l => l.v = l.lit ? 1 : 0); }
   };
@@ -4644,7 +4973,8 @@ function findWay(svg) {
     arms.forEach((arm, i) => attr(arm, 'transform', `rotate(${i * FIND_PLAY.kit.turn / CRAFTS.length}) scale(${1 + (W.pulse[0] - 1) * pulse * (o.craft === i || o.craft === CRAFTS.length ? 1 : 0)})`));
     if (o.kept && !FD.rm) { o.runesAngle += W.runes * dt; attr(runes, 'transform', `rotate(${o.runesAngle})`); }
     // The tally is read from far out as well: it never falls under tally[3] px on screen, up to tally[4] units.
-    attr(tally, 'font-size', Math.min(W.tally[4], Math.max(W.tally[1], W.tally[3] / FD.st.cam.s)));
+    words.forEach(w => attr(w, 'font-size', COMB.wordPx / FD.st.cam.s));
+    attr(tally, 'font-size', Math.max(W.tally[1], W.tally[3] / FD.st.cam.s));
     attr(ring, 'opacity', o.unlocked ? 1 : 0);
     if (o.unlocked && !FD.rm) attr(ring, 'transform', `scale(${lerp(W.ring[0], W.ring[1], (1 - Math.cos(t * Math.PI * 2 / W.ring[2])) / 2) / W.ring[0]})`);
     if (o.linePhase === 'retract') { const q = FD.rm ? 1 : clamp01((t - o.lineTs) / W.line); o.lines.forEach((l, i) => l.v = o.retract[i] * (1 - ease(q))); if (q === 1) queueMicrotask(startLines); }
@@ -4669,7 +4999,7 @@ function findHoards(svg) {
     h.planks = [el.querySelector('.hd-plank-0'), el.querySelector('.hd-plank-1')];
     const group = el.querySelector('.hd-clods');
     for (let i = 0; i < H.clods * H.hole.length; i++) { const bit = findSvg('path', { class: 'g', d: FIND_PLAY.bits.kinds.clod[0], opacity: 0 }); group.appendChild(bit); h.clods.push({ el: bit, live: false }); }
-    const hint = () => { h.hintLine = FIND_COPY.hoardHints[h.open ? H.hole.length + 1 : h.digs]; if (JOURNEY.focus === h.id) findHint(h.id); };
+    const hint = () => { h.hintLine = FIND_COPY.hoardHints[h.open ? H.hole.length + 1 : h.digs]; attr(h.el, 'aria-label', h.d.label.split('. ')[0] + '. ' + h.hintLine); if (JOURNEY.focus === h.id) findHint(h.id); };
     const stage = value => { h.stage = value; hint(); };
     hint();
     h.setCraftLit = on => {
@@ -4681,7 +5011,7 @@ function findHoards(svg) {
       if (FD.popOwner === h) return true;
       const stop = STOPS.find(s => s.id === d.stop), n = o.items.filter(item => item.open).length;
       const title = !d.image && d.title === COPY.pieceToCome ? '' : '<p class="pop-t">' + fEsc(d.title) + '</p>';
-      const shown = showPop(h, [d.x, d.y - H.anchor], '<p class="pop-k">' + fEsc(stop.name) + '<br>' + fEsc(findFormat(FIND_COPY.hoardTally, { n, t: o.items.length })) + '</p>' + (d.image ? '<img src="' + d.image + '" alt="' + fEsc(d.title) + '">' : '<div class="piece-empty"><svg viewBox="' + H.iconBox.join(' ') + '" aria-hidden="true">' + pieceIcon(d.kind) + '</svg><span>' + fEsc(COPY.pieceToCome) + '</span></div>') + title + '<button class="pop-link" type="button">' + fEsc(COPY.caseStudy) + arrowSvg + '</button>', 'piece');
+      const shown = showPop(h, [d.x, d.y - H.anchor], '<p class="pop-k">' + fEsc(stop.short) + '<br>' + fEsc(findFormat(FIND_COPY.hoardTally, { n, t: o.items.length })) + '</p>' + (d.image ? '<img src="' + d.image + '" alt="' + fEsc(d.title) + '">' : '<div class="piece-empty"><svg viewBox="' + H.iconBox.join(' ') + '" aria-hidden="true">' + pieceIcon(d.kind) + '</svg><span>' + fEsc(COPY.pieceToCome) + '</span></div>') + title + '<button class="pop-link" type="button">' + fEsc(COPY.caseStudy) + arrowSvg + '</button>', 'piece');
       if (shown) FD.pop.style.setProperty('--piece-mark', PALETTES[stop.palette].mark);
       return shown;
     };
@@ -4724,6 +5054,11 @@ function findHoards(svg) {
     findPointer(el, e => { e.stopPropagation(); h.hold = true; h.nextHold = FD.now + H.repeat; el.setPointerCapture(e.pointerId); request(); el._dragged = true; }, { tap: request, cancel: () => h.hold = false });
     el.addEventListener('pointerup', () => h.hold = false); el.addEventListener('pointercancel', () => h.hold = false);
     press(el, e => { e.stopPropagation(); request(); });
+    h.reduce = () => {
+      h.queued = h.hold = false; h.pending = false; h.lift = h.digs ? H.lift[h.digs-1] : 0; h.y = H.travel * (1-h.lift); h.lidAngle = h.open ? H.lidRest : 0;
+      h.clods.forEach(b => { b.live = false; attr(b.el,'opacity',0); });
+      attr(h.chest,'transform','translate(0 '+h.y+')'); paintLid(); stage(h.open ? 'open' : h.digs === H.hole.length ? 'out' : 'buried');
+    };
     h.undo = () => { if (FD.popOwner === h) closePop(); };
     h.hear = () => { if (!h.open) h.glintTs = h.hearTs = FD.now; };
     h.tick = (t, dt) => {
@@ -4765,6 +5100,7 @@ function findHoards(svg) {
     o.items.push(h);
   });
   o.tick = (t, dt) => { o.items.forEach(h => h.tick(t, dt)); o.stage = o.items.some(h => h.open) ? 'opened' : 'buried'; };
+  o.reduce = () => o.items.forEach(h => h.reduce());
   o.hear = () => o.items.forEach(h => h.hear()); return o;
 }
 
@@ -4812,15 +5148,23 @@ function findRavens(svg) {
     else start('flight', index);
   };
   press(el, request);
+  o.reduce = () => {
+    if (!['flight','hear','landing'].includes(o.stage) && !o.queued) return;
+    if (o.stage === 'flight' || o.stage === 'landing') o.next = o.activeBird;
+    o.stage = 'rest'; o.queued = o.hearPending = false;
+    birds.forEach(b => { b.done = true; b.shy = b.shyTo = b.shyFrom = 0; b.face = b.mirror = b.want = b.side; b.lockedXY = null; b.giftDown = false; attr(b.item,'opacity',0); });
+  };
   o.hear = () => { if (FD.rm) return; if (o.stage === 'rest') start('hear', 0); else o.hearPending = true; };
   o.onSheetClose = () => { o.stage = 'rest'; };
-  o.undo = () => { if (FD.sheetOwner === o) closeSheet(true); if (FD.popOwner === o) closePop(); };
+  o.onSheetReopen = () => { if (FD.now-o.ts < FIND_PLAY.kit.sheet.grow+FIND_TIMING.reel) return; o.ts=FD.now-FIND_PLAY.kit.sheet.grow; if (!FD.rm) { const ring=FD.sheet.querySelector('.ring-p'); ring.getAnimations().forEach(a=>a.cancel()); ring.animate([{strokeDashoffset:R.reel.ring},{strokeDashoffset:0}],{duration:FIND_TIMING.reel*1000,fill:'forwards'}); } };
+  o.undo = () => { if (FD.sheetOwner === o) closeSheet(); if (FD.popOwner === o) closePop(); };
   const reel = anchor => {
-    const shown = findSheet(o, 'reel', '<div class="iris"><div class="iris-in"><div class="player" role="img" aria-label="' + fEsc(FIND_COPY.reelLabel) + '"><p class="reel-k pop-k">' + fEsc(FIND_COPY.muninn) + '</p><i class="sh sh1"></i><i class="sh sh2"></i><i class="sh sh3"></i><div class="reel-slot">' + findSlot(FIND_COPY.reelToCome) + '</div>' + R.reel.ringSvg + '<span class="tc">' + FIND_COPY.ravenTime.join(R.reel.timeJoin) + '</span></div></div></div>', anchor);
+    const shown = findSheet(o, 'reel', '<div class="iris"><div class="iris-in"><div class="player" role="img" aria-label="' + fEsc(FIND_COPY.reelLabel) + '"><p class="reel-k pop-k">' + fEsc(FIND_COPY.muninn) + '</p><i class="sh sh1"></i><i class="sh sh2"></i><i class="sh sh3"></i><div class="reel-slot">' + findSlot(FIND_COPY.reelToCome) + '</div>' + R.reel.ringSvg + '<span class="tc">' + FIND_COPY.ravenTime.join(R.reel.timeJoin) + '</span></div></div></div><button type="button" class="reel-close">' + fEsc(COPY.close) + '</button>', anchor);
     if (!shown) { o.stage = 'rest'; return; }
+    FD.sheet.querySelector('.reel-close')?.addEventListener('click', () => closeSheet());
     o.iris = FD.sheet.querySelector('.iris'); o.irisIn = FD.sheet.querySelector('.iris-in'); o.sh = [...FD.sheet.querySelectorAll('.sh')]; o.tc = FD.sheet.querySelector('.tc');
     if (!FD.rm) FD.sheet.querySelector('.ring-p').animate([{ strokeDashoffset: R.reel.ring }, { strokeDashoffset: 0 }], { duration: FIND_TIMING.reel * 1000, fill: 'forwards' });
-    o.stage = 'reel'; o.ts = FD.now;
+    o.stage = 'reel'; o.ts = o.motionTs = FD.now;
   };
   const landed = index => {
     birds[index].lockedXY = birds[index].flightBase?.slice() || baseAt(birds[index]);
@@ -4929,15 +5273,13 @@ function findRavens(svg) {
     if (o.stage === 'reel') {
       if (FD.sheetOwner !== o) o.stage = 'rest';
       else {
-        const e = t - o.ts, grow = FD.rm ? 1 : out3(e / FIND_PLAY.kit.sheet.grow), from = FD.sheetFrom;
+        const e = t - o.ts;
         const fit = Math.min(1, (Math.min(VIEW.w, VIEW.h) - FIND_PLAY.kit.sheet.edge) / R.reel.iris);
-        findStyle(FD.sheet, 'transform', 'translate(' + lerp(from[0], VIEW.w / 2, grow) + 'px,' + lerp(from[1], VIEW.h / 2 - FIND_PLAY.kit.sheet.offset, grow) + 'px) scale(' + lerp(FIND_PLAY.kit.sheet.from, fit, grow) + ')');
+        findSheetFrame(o, fit, VIEW.h / 2 - FIND_PLAY.kit.sheet.offset, o.iris, o.irisIn);
         const q = clamp01((e - (FD.rm ? 0 : FIND_PLAY.kit.sheet.grow)) / FIND_TIMING.reel), digits = Math.min(FIND_TIMING.reel, Math.floor(q * FIND_TIMING.reel));
         if (digits !== o.digits) { o.digits = digits; const tc = o.tc; queueMicrotask(() => { if (tc.isConnected) tc.textContent = findFormat(R.reel.tc, { n: digits, end: FIND_COPY.ravenTime[1] }); }); }
-        if (!FD.rm) o.sh.forEach((s, i) => { const M = R.reel.motion; findStyle(s, 'transform', 'translate(' + Math.sin(e * (M[0] + i * M[1]) + i * M[2]) * M[3] + 'px,' + Math.cos(e * (M[4] + i * M[5]) + i) * M[6] + 'px) rotate(' + e * M[7] * (i - 1) + 'deg)'); });
-        const end = FD.rm ? q === 1 ? 1 : 0 : clamp01((e - FIND_PLAY.kit.sheet.grow - FIND_TIMING.reel) / FIND_TIMING.iris), iris = Math.max(Number.EPSILON, 1 - ease(end));
-        findStyle(o.iris, 'transform', 'scale(' + iris + ')'); findStyle(o.irisIn, 'transform', 'scale(' + 1 / iris + ')');
-        if (end === 1) queueMicrotask(() => closeSheet(true));
+        if (!FD.rm) o.sh.forEach((s, i) => { const M = R.reel.motion, mt = t - (o.motionTs ?? o.ts); findStyle(s, 'transform', 'translate(' + Math.sin(mt * (M[0] + i * M[1]) + i * M[2]) * M[3] + 'px,' + Math.cos(mt * (M[4] + i * M[5]) + i) * M[6] + 'px) rotate(' + mt * M[7] * (i - 1) + 'deg)'); });
+        if (q === 1 && !FD.sheetClosing) queueMicrotask(() => closeSheet());
       }
     }
   };
@@ -4968,6 +5310,14 @@ function findSerpent(svg) {
   };
   press(el, start); remaining(); attr(pad, 'transform', 'translate(' + FIND_PLAY.serpent.pad.join(' ') + ')');
   o.undo = () => { if (FD.popOwner === o) closePop(); };
+  o.reduce = keep => {
+    swells.forEach(s => s.live = false); o.playing = false; o.queued = false;
+    if (o.stage === 'waking') { o.stage = 'ready'; return; }
+    if (!['step','closing'].includes(o.stage)) return;
+    o.held = false; if (o.leaf) attr(o.leaf,'opacity',0); remaining();
+    o.stage = 'hungry'; o.tailOut = o.pokes === leaves.length ? 0 : 1; o.jawAngle = o.pokes === leaves.length ? 0 : FIND_PLAY.serpent.hungryJaw;
+    if (o.pokes === leaves.length) { o.gulped = true; o.padTs = -Infinity; if (keep) opened(o); reward(); }
+  };
   o.hear = () => { if (!FD.rm) { o.hearTs = FD.now; swell(FIND_PLAY.serpent.hear[2], true); o.playing = true; } };
   o.tick = (t, dt) => {
     const S = FIND_PLAY.serpent, J = MAP.jorm, e = t - o.ts, asleep = o.stage === 'asleep', here = { x: f.x + S.head[0], y: f.y + S.head[1] }, target = attend(here, S.attend);
@@ -5033,7 +5383,8 @@ function findSerpent(svg) {
 
 function findBeacon(svg) {
   const f = FIND_BY.beacon, el = svg.querySelector('#f-beacon'), beam = el.querySelector('.bc-beam'), flame = el.querySelector('.bc-flame'), glow = el.querySelector('.bc-glow');
-  const notes = [...svg.querySelectorAll('.bc-note')].map((g, i) => ({ g, inner: g.querySelector('.bc-note-in'), en: g.querySelector('.bc-en'), d: FIND_COPY.beaconNotes[i], time: 0, read: false, v: 0, ev: 0, flash: -Infinity }));
+  const notes = [...svg.querySelectorAll('.bc-note')].map((g, i) => ({ g, inner: g.querySelector('.bc-note-in'), en: g.querySelector('.bc-en'), d: { ...FIND_COPY.beaconNotes[i], x: COMB.readings[i][0], y: COMB.readings[i][1] }, time: 0, read: false, v: 0, ev: 0, flash: -Infinity }));
+  notes.forEach(n => { attr(n.g, 'transform', `translate(${n.d.x} ${n.d.y})`); n.g.classList.add('reading-halo'); });
   const o = { id: f.id, el, stage: 'idle', head: FIND_PLAY.beacon.baseAngle, manualTs: -Infinity, fire: 0, read: notes.map(() => false), kept: false, drag: false, ember: 0, litTs: -Infinity, hearTs: -Infinity };
   const origin = () => [f.x + FIND_PLAY.beacon.origin[0] * FIND_PLAY.beacon.scale, f.y + FIND_PLAY.beacon.origin[1] * FIND_PLAY.beacon.scale];
   const aimAt = e => { const p = toMap([e.clientX, e.clientY]), O = origin(); o.head = Math.atan2(p[1] - O[1], p[0] - O[0]) * FIND_PLAY.kit.deg / Math.PI; o.snap = null; o.manualTs = FD.now; found(o.id); opened(o); };
@@ -5054,6 +5405,13 @@ function findBeacon(svg) {
   el.addEventListener('pointerup', () => o.drag = false); el.addEventListener('pointercancel', () => o.drag = false);
   press(el, () => snapNext());
   el.addEventListener('keydown', e => { if (!['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(e.key)) return; e.preventDefault(); o.head += FIND_PLAY.beacon.arrow * (['ArrowLeft', 'ArrowUp'].includes(e.key) ? -1 : 1); o.snap = null; o.manualTs = FD.now; found(o.id); opened(o); });
+  o.reduce = () => {
+    const manual = o.drag || FD.now-o.manualTs < FIND_PLAY.beacon.manual;
+    if (o.snap) { o.head = o.snap.to; o.snap = null; }
+    if (!manual) return;
+    const at = origin(), reach = FIND_PLAY.beacon.baseReach * FIND_PLAY.beacon.scale;
+    notes.forEach((n,i) => { const dx=n.d.x-at[0],dy=n.d.y-at[1],angle=Math.atan2(dy,dx)*FIND_PLAY.kit.deg/Math.PI; if (Math.abs(findAngleDelta(o.head,angle)) < FIND_TIMING.beamCone/2 && Math.hypot(dx,dy)<reach) read(n,i); });
+  };
   o.undo = () => { o.manualTs = -Infinity; o.drag = false; }; o.hear = () => o.hearTs = FD.now;
   o.tick = (t, dt) => {
     const B = FIND_PLAY.beacon, manual = o.drag || t - o.manualTs < B.manual, lit = o.fire === notes.length;
@@ -5107,7 +5465,7 @@ function findRune(svg) {
   };
   const sheet = () => {
     const R = FIND_PLAY.rune, P = FIND_COPY.poster;
-    const shown = findSheet(o, 'poster rubbing-sheet', `<div class="pz"><div class="pz-in"><div class="pz-front rubbing-front">${rubbingSvg()}</div><div class="pz-back poster-back"><span class="pz-pin"></span><span class="pz-pin r"></span><b class="pz-h">${fEsc(P.head)}</b><div class="pz-pic"><i></i><s></s></div><b class="pz-who">${fEsc(P.who)}</b><p>${fEsc(P.line1)}<br>${fEsc(P.line2)}</p><b class="pz-rw">${fEsc(P.reward)}</b><span class="pz-stamp">${fEsc(P.stamp)}</span><div class="poster-slot">${findSlot(P.foot)}</div><span class="pz-fold"></span></div></div></div><div class="pz-ctl"><button type="button" class="rub-do">${fEsc(FIND_COPY.rubDo)}</button><button type="button" class="pz-flip" hidden>${fEsc(COPY.flip)}</button><button type="button" class="pz-x" hidden>${fEsc(COPY.close)}</button></div>`, [f.x, f.y + R.anchor]);
+    const shown = findSheet(o, 'poster rubbing-sheet', `<div class="pz"><div class="pz-in"><div class="pz-front rubbing-front">${rubbingSvg()}</div><div class="pz-back poster-back"><span class="pz-pin"></span><span class="pz-pin r"></span><b class="pz-h">${fEsc(P.head)}</b><div class="pz-pic"><i></i><s></s></div><b class="pz-who">${fEsc(P.who)}</b><p>${fEsc(P.line1)}<br>${fEsc(P.line2)}</p><b class="pz-rw">${fEsc(P.reward)}</b><span class="pz-stamp">${fEsc(P.stamp)}</span><div class="poster-slot">${findSlot(P.foot)}</div><span class="pz-fold"></span></div></div></div><div class="pz-ctl"><button type="button" class="rub-do">${fEsc(FIND_COPY.rubDo)}</button><button type="button" class="pz-flip" hidden>${fEsc(COPY.flip)}</button><button type="button" class="pz-x">${fEsc(COPY.close)}</button></div>`, [f.x, f.y + R.anchor]);
     if (!shown) { o.stage = 'rest'; return; }
     o.pz = FD.sheet.querySelector('.pz'); o.pin = FD.sheet.querySelector('.pz-in'); o.rubbing = FD.sheet.querySelector('.rubbing'); o.circles = FD.sheet.querySelector('.rub-circles'); o.fill = FD.sheet.querySelector('.rub-fill'); o.letters = [...FD.sheet.querySelectorAll('.rub-letter')]; o.stamp = FD.sheet.querySelector('.pz-stamp');
     o.flipped = false; o.controls = false; o.stampTs = o.stamped ? -Infinity : Infinity; o.stage = 'sheet'; o.ts = FD.now; o.autoTs = null; o.lastRub = null; o.tilt = [0, 0];
@@ -5133,7 +5491,7 @@ function findRune(svg) {
   };
   press(el, e => { if (o.stage !== 'rest') return; opened(o); o.keyboard = e.type === 'keydown'; o.stage = 'trace'; o.ts = FD.now; dash(true); if (FD.rm) sheet(); });
   o.hear = () => { o.dashTs = FD.now; dash(false); };
-  o.beginClose = () => { if (FD.rm) return false; if (o.stage !== 'closing') { o.stage = 'closing'; o.closeTs = FD.now; } return true; };
+
   o.onSheetClose = () => { o.stage = 'rest'; o.rubDown = false; trace.classList.remove('red'); trace.style.opacity = 0; trace.getAnimations().forEach(a => a.cancel()); };
   o.undo = () => { if (FD.sheetOwner === o) closeSheet(); };
   o.onEscape = () => { if (o.stage === 'trace') { o.stage = 'rest'; trace.classList.remove('red'); } };
@@ -5142,12 +5500,11 @@ function findRune(svg) {
     if (o.stage === 'rest' && o.awake && !FD.rm && t - o.dashTs >= R.dashTime) { o.dashTs = t; queueMicrotask(() => dash(false)); }
     if (o.stage === 'trace' && t - o.ts >= D(R.carving)) { o.stage = 'opening'; queueMicrotask(sheet); return; }
     if (!['sheet', 'closing'].includes(o.stage) || FD.sheetOwner !== o) return;
-    const q = FD.rm ? 1 : ease((t - o.ts) / R.grow), closing = o.stage === 'closing', out = closing ? 1 - ease((t - o.closeTs) / R.close) : q;
-    const fit = Math.min(1, (VIEW.w - FIND_PLAY.kit.sheet.edge) / R.width, (VIEW.h - FIND_PLAY.kit.sheet.edge * 2) / (R.height + Math.abs(R.controlTop) - R.height / 2));
-    const from = FD.sheetFrom;
-    findStyle(FD.sheet, 'transform', `translate(${lerp(from[0], VIEW.w / 2, out)}px,${lerp(from[1], VIEW.h / 2 - FIND_PLAY.kit.sheet.offset, out)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, fit, out)})`);
+    const closing = FD.sheetClosing;
+    const fit = Math.min(1, (VIEW.w - FIND_PLAY.kit.sheet.edge) / R.width, (VIEW.h - FIND_PLAY.kit.sheet.edge * 2 - COMB.target) / (R.height + Math.abs(R.controlTop) - R.height / 2));
+    findSheetFrame(o, fit, (VIEW.h - (R.controlTop - R.height / 2) * fit - COMB.target) / 2);
     findStyle(o.pz, 'transform', `rotateX(${o.tilt[0]}deg) rotateY(${o.tilt[1]}deg)`);
-    if (closing) { if (out === 0) queueMicrotask(() => closeSheet(true)); return; }
+    if (closing) return;
     if (!o.read && !o.rubs && o.autoTs === null && t - o.ts >= R.auto[0]) o.autoTs = t;
     if (!o.read && o.autoTs !== null) {
       const p = FD.rm ? 1 : clamp01((t - o.autoTs) / R.auto[1]), count = R.auto[2], pass = Math.min(count - 1, Math.floor(p * count)), u = p * count - pass, b = R.cells;
@@ -5483,7 +5840,7 @@ function findHammer(svg) {
   const pause = () => { if (!o.game || o.game.phase === 'end' || o.game.paused) return; o.game.paused = true; clearInput(); refresh(); };
   const run = () => { o.game = hammerStart(o.serial++); o.game.reduced = FD.rm; o.auto = false; o.seen = {}; o.version = -1; clearInput(); refresh(); focusField(); };
   const resume = () => { if (!o.game) return; o.game.paused = false; clearInput(); refresh(); if (o.game.phase === 'play') focusField(); };
-  const toggle = () => { o.auto = !o.auto; if (o.autoButton) attr(o.autoButton, 'aria-pressed', o.auto); };
+  const toggle = () => { if (!o.game || o.game.phase !== 'play' || o.game.paused) return; o.auto = !o.auto; if (o.autoButton) attr(o.autoButton, 'aria-pressed', o.auto); };
   const choose = i => { if (o.game && !o.game.paused && hammerPick(o.game, i)) { refresh(); focusField(); } };
   const runeCards = () => o.game.choices.map((r, i) => { const n = o.game.levels[r] + 1, count = hammerRuneNumber(r, n), row = FIND_COPY.hammer.runes[r], line = findFormat(row[1], { n: count, s: count === 1 ? '' : 's' }); return `<button type="button" class="hm-rune" data-rune="${i}" aria-label="${hammerText('runeLevel', { key: i + 1, name: row[0], n, line })}">${hammerRuneArt(r)}<span><strong>${i + 1}. ${row[0]}</strong><span>${line}</span></span></button>`; }).join('');
   function refresh() {
@@ -5492,23 +5849,26 @@ function findHammer(svg) {
     if (!s) html = `<h2>${H.title}</h2><p>${H.intro}</p><p class="hm-quiet">${FD.hover ? H.controls : H.controlsTouch}</p><button type="button" class="hm-start">${H.start}</button>${findSlot(FIND_COPY.hammerFact)}`;
     else if (s.paused) html = `<h2>${H.pause}</h2><button type="button" class="hm-resume">${H.resume}</button><button type="button" class="hm-new">${H.newRun}</button>`;
     else if (s.phase === 'runes') html = `<h2>${hammerText('runeTitle', { n: s.wave })}</h2><p class="hm-quiet">${H.runeKeys}</p>${runeCards()}`;
-    else if (s.phase === 'end') {
+    else if (s.phase === 'end' && (FD.rm || s.reason !== 'won' || s.fall >= HAMMER.boss.fall)) {
       o.best = hammerBestWrite(s.silver, o.best);
       html = `<h2>${s.reason === 'won' ? H.won : hammerText(s.reason === 'hearts' ? 'lostHearts' : 'lost', { n: s.wave })}</h2><p>${hammerText('stats', { silver: s.silver, foes: s.felled })}</p><div class="hm-taken" aria-label="${H.runes}">${s.levels.map((n, r) => n ? `<span aria-label="${H.runes[r][0]}, ${n}">${hammerRuneArt(r, true)}<span>${n}</span></span>` : '').join('')}</div><p>${hammerText('best', { silver: o.best })}</p>${findSlot(FIND_COPY.hammerFact)}<button type="button" class="hm-new">${H.newRun}</button><button type="button" class="hm-end-close">${H.close}</button>`;
     }
-    const cardKey = !s ? 'start' : s.paused ? 'pause' : s.phase === 'runes' ? 'runes' + s.wave : s.phase;
+    const cardKey = !s ? 'start' : s.paused ? 'pause' : s.phase === 'runes' ? 'runes' + s.wave : s.phase === 'end' && s.reason === 'won' && !FD.rm && s.fall < HAMMER.boss.fall ? 'falling' : s.phase;
     if (o.cardKey !== cardKey) {
-      o.cardKey = cardKey; o.card.innerHTML = html; o.card.hidden = !html;
+      o.cardKey = cardKey; const epoch = o.panelEpoch = (o.panelEpoch || 0) + 1;
+      const apply = () => { if (FD.sheetOwner !== o || o.panelEpoch !== epoch) return; o.card.innerHTML = html; o.card.hidden = !html;
       o.card.querySelector('.hm-start')?.addEventListener('click', run); o.card.querySelector('.hm-resume')?.addEventListener('click', resume);
       o.card.querySelectorAll('.hm-new').forEach(b => b.addEventListener('click', run)); o.card.querySelector('.hm-end-close')?.addEventListener('click', () => closeSheet());
       o.card.querySelectorAll('.hm-rune').forEach((b, i) => b.addEventListener('click', () => choose(i)));
       const first = o.card.querySelector('button'); if (first) first.focus({ preventScroll: true });
+      if (html && !FD.rm) o.card.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140, fill: 'both' }); };
+      if (!FD.rm && !o.card.hidden && o.card.innerHTML) { const fade = o.card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, fill: 'both' }); fade.onfinish = () => { fade.cancel(); apply(); }; } else apply();
     }
     o.wave.textContent = hammerText('waveLine', { n: s ? s.wave : 1 }) + (s && s.fate >= 0 ? ' / ' + H.fates[s.fate][0] : '');
     const hearts = s ? s.hearts : HAMMER.hearts, most = s ? s.maxHearts : HAMMER.hearts;
     o.hearts.innerHTML = Array.from({ length: most }, (_, i) => `<svg viewBox="${HAMMER.paths.heartBox}" aria-hidden="true"><path d="${HAMMER.paths.heart}" fill="${i < hearts ? C.paper : C.ink}"/></svg>`).join('');
     attr(o.hearts, 'aria-label', hammerText('hearts', { n: hearts, max: most })); o.silver.textContent = hammerText('silver', { n: s ? s.silver : 0 });
-    attr(o.autoButton, 'aria-pressed', o.auto); o.pauseButton.disabled = !s || s.phase === 'end'; o.pauseButton.textContent = s?.paused ? H.resume : H.pauseButton;
+    attr(o.autoButton, 'aria-pressed', o.auto); o.autoButton.disabled = !s || s.phase !== 'play' || s.paused; o.pauseButton.disabled = !s || s.phase === 'end'; o.pauseButton.textContent = s?.paused ? H.resume : H.pauseButton;
     if (s) {
       o.announcement = '';
       if (s.events.rune !== (o.seen.rune || 0)) announce('rune', hammerText('runeTaken', { name: H.runes[s.taken][0], n: s.levels[s.taken] }));
@@ -5524,7 +5884,8 @@ function findHammer(svg) {
   }
   const measure = () => {
     if (FD.sheetOwner !== o || !o.canvas) return;
-    const U = HAMMER.ui; o.fit = Math.min(1, (VIEW.w - FIND_PLAY.kit.sheet.edge * 2) / U.w, (VIEW.h - FIND_PLAY.kit.sheet.edge * 2) / U.h);
+    const U = HAMMER.ui; o.fit = Math.min(1, (VIEW.w - FIND_PLAY.kit.sheet.edge * 2) / U.w, (VIEW.h - FIND_PLAY.kit.sheet.edge * 2 - COMB.target) / (U.h - U.buttons));
+    o.sheetY = VIEW.h / 2 - Math.max(0, COMB.target - U.buttons * o.fit) / 2;
     const scale = Math.min(HAMMER.field.dpr, window.devicePixelRatio || 1) * o.fit;
     o.canvas.width = Math.round(HAMMER.field.w * scale); o.canvas.height = Math.round(HAMMER.field.h * scale); const previous = o.scale; o.scale = scale;
     o.ctx = o.canvas.getContext('2d');
@@ -5610,7 +5971,7 @@ function findHammer(svg) {
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) o.canvas.addEventListener(type, release);
     found(o.id); o.stage = 'sheet'; o.sheetTs = FD.now; o.accumulator = 0;
   };
-  press(el, sheet);
+  press(el, () => findWhenReady(o, sheet));
   o.onSheetClose = () => { if (o.game && o.game.phase !== 'end') o.game.paused = true; clearInput(); o.canvas = o.ctx = null; o.stage = 'rest'; };
   o.hear = () => { if (!FD.rm) o.hearTs = FD.now; };
   window.addEventListener('resize', measure);
@@ -5627,13 +5988,13 @@ function findHammer(svg) {
     const hop = !FD.rm && ringing ? M.hop * Math.sin(Math.PI * age / M.hopTime) : 0, tremble = !FD.rm && attend(o, M.near) ? M.tremble * Math.sin(t * M.trembleRate) : 0;
     attr(lift, 'transform', `translate(${tremble} ${-hop})`); attr(spark, 'opacity', !FD.rm && (ringing || t % M.every < M.sparkTime) ? 1 : 0);
     if (FD.sheetOwner !== o) return;
-    const q = FD.rm ? 1 : ease((t - o.sheetTs) / FIND_PLAY.kit.sheet.grow), from = FD.sheetFrom;
-    findStyle(FD.sheet, 'transform', `translate(${lerp(from[0], VIEW.w / 2, q)}px,${lerp(from[1], VIEW.h / 2, q)}px) scale(${lerp(FIND_PLAY.kit.sheet.from, o.fit, q)})`);
+    findSheetFrame(o, o.fit, o.sheetY);
+    if (FD.sheetClosing) return;
     const s = o.game;
     if (s && !s.paused) {
       o.input.move = Number(o.keys.right) - Number(o.keys.left); o.input.throw = o.auto || o.keys.fire || o.held; o.accumulator = Math.min(o.accumulator + FD.dt, HAMMER.step * HAMMER.steps);
       let n = 0; while (o.accumulator >= HAMMER.step && n++ < HAMMER.steps) { hammerStep(s, o.input, HAMMER.step); o.accumulator -= HAMMER.step; }
-      if (s.version !== o.version && !o.queued) { o.queued = true; queueMicrotask(() => { o.queued = false; refresh(); }); }
+      if ((s.version !== o.version || s.phase === 'end' && o.cardKey === 'falling' && s.fall >= HAMMER.boss.fall) && !o.queued) { o.queued = true; queueMicrotask(() => { o.queued = false; refresh(); }); }
     }
     draw();
   };
@@ -5724,6 +6085,7 @@ function findWell(svg) {
   const eagle = svg.querySelector('.yg-eagle'), wings = svg.querySelector('.yg-wings'), rat = svg.querySelector('.yg-rat'), tail = svg.querySelector('.yg-tail'), nid = svg.querySelector('.yg-nid-head');
   const treeRandom = rnd(YGG.life.seed), treeInterval = pair => lerp(pair[0], pair[1], treeRandom());
   o.ratAt = FD.now + treeInterval(YGG.life.ratEvery); o.eagleAt = FD.now + treeInterval(YGG.life.eagleEvery); o.ratTs = o.eagleTs = o.flightTs = -Infinity;
+  o.reduce = keep => { if (['pebble','landing'].includes(o.stage)) { if (keep) opened(o); land(); } o.playing = false; };
   o.hear = () => { if (FD.rm) return; ring(1); o.flightTs = FD.now; o.playing = true; };
   o.tick = t => {
     const W = FIND_PLAY.well, Y = YGG, L = Y.life;
@@ -5823,11 +6185,12 @@ function findHorn(svg) {
     if (o.stage === 'sounding' || o.stage === 'echo') return;
     if (o.up) { sound(); return; }
     o.up = 1; o.stage = 'raised'; o.raiseTs = FD.now; opened(o); found(o.id);
-    showPop(o, [f.x + FIND_PLAY.horn.anchor[0], f.y + FIND_PLAY.horn.anchor[1]], `<p class="pop-t pop-big">${fEsc(FIND_COPY.horn[0])}</p>${findSlot(FIND_COPY.horn[1])}`);
+    showPop(o, [f.x, f.y - 12], `<p class="pop-t pop-big">${fEsc(FIND_COPY.horn[0])}</p>${findSlot(FIND_COPY.horn[1])}`);
   };
   findPointer(el, e => { el.setPointerCapture(e.pointerId); raise(); o.hold = o.stage === 'raised'; o.holdTs = FD.now; el._dragged = true; }, { tap: raise, cancel: () => o.hold = false });
   el.addEventListener('pointerup', () => o.hold = false); el.addEventListener('pointercancel', () => o.hold = false);
   press(el, raise);
+  o.reduce = () => { o.hold = false; if (['sounding','echo'].includes(o.stage)) { FINDS.filter(d => !o.heard.includes(d.id)).forEach(d => deliver(d.id)); o.up = o.v = 0; o.stage = 'rest'; o.playing = false; } };
   o.onPopClose = () => { if (o.stage === 'raised') { o.up = 0; o.stage = 'rest'; o.hold = false; } };
   o.onEscape = () => { o.hold = false; if (o.stage === 'raised') { o.up = 0; o.stage = 'rest'; } };
   o.hear = () => { if (!FD.rm) { o.hearTs = FD.now; o.hearing = true; } };
@@ -5850,6 +6213,7 @@ function findHorn(svg) {
       if (o.stage === 'echo' && o.heard.length === FINDS.length && glints.every(g => t - g.ts >= H.glint[1])) o.stage = 'rest';
     }
     glints.forEach(g => { const k = FD.rm ? 1 : clamp01((t - g.ts) / H.glint[1]), pulse = Math.sin(Math.PI * k); attr(g.star, 'opacity', pulse); attr(g.star, 'transform', `rotate(${H.glint[2] * k}) scale(${pulse})`); });
+    if (JOURNEY.focus === o.id && o.hintStage !== o.stage) { o.hintStage = o.stage; findHint(o.id); attr(el, 'aria-label', f.label.split('. ')[0] + '. ' + FD.hint.textContent); }
     o.playing = o.hold || ['sounding', 'echo'].includes(o.stage) || o.v !== o.up;
   };
   return o;
@@ -5870,6 +6234,7 @@ function findAll(svg) {
     const Q = FIND_PLAY.all;
     // A find that has the camera hands it to the whole chart while the comet goes round, then takes it back.
     if (!FD.rm && JOURNEY.focus) { o.wide = JOURNEY.focus; stepsFocus(o.wide, FIND_PLAY.focus.wide); o.ts += Q.wait; }
+    else if (!FD.rm && stepsFocus('all-found', FIND_PLAY.focus.wide)) { o.chart = true; o.ts += Q.wait; }
     if (FD.rm) attr(frame, 'stroke-opacity', Q.frameAlpha);
     else {
       const wait = (o.ts - FD.now) * 1000;
@@ -5883,14 +6248,13 @@ function findAll(svg) {
     attr(comet, 'opacity', age < 0 ? 0 : age <= Q.time ? 1 : 1 - clamp01((age - Q.time) / Q.fade));
     knots.forEach((knot, i) => { const q = clamp01((age - Q.time * Q.corners[i] / perimeter) / Q.knotTime), at = Q.knots[i]; attr(knot, 'transform', `translate(${at[0]} ${at[1]}) rotate(${FIND_PLAY.kit.turn * ease(q)})`); });
     const pulse = Math.sin(Math.PI * clamp01(age / Q.markerTime)); markers.forEach(m => { const p = m.at; attr(m.el, 'transform', `translate(${p[0]} ${p[1]}) scale(${1 + (Q.markerScale - 1) * pulse}) translate(${-p[0]} ${-p[1]})`); });
-    if (age >= Q.time + Math.max(Q.fade, Q.knotTime)) { o.ts = null; if (o.wide && JOURNEY.focus === o.wide) queueMicrotask(() => stepsFocus(o.wide, findView(o.wide))); }
+    if (age >= Q.time + Math.max(Q.fade, Q.knotTime)) { o.ts = null; if (o.chart && JOURNEY.focus === 'all-found') queueMicrotask(stepsRelease); else if (o.wide && JOURNEY.focus === o.wide) queueMicrotask(() => stepsFocus(o.wide, findView(o.wide))); }
   };
   return o;
 }
 
 // ---- finds.mjs ----
 // Eleven finds share the camera/life/overlay kit.
-
 
 
 
@@ -5919,6 +6283,17 @@ function findsBuild(svg, pop, sheet, base, rm) {
   findKitBuild(svg, pop, sheet, base, rm);
   const builders = { wayfinder: findWay, hoards: findHoards, ravens: findRavens, serpent: findSerpent, beacon: findBeacon, runestone: findRune, hammer: findHammer, mist: findMist, horn: findHorn, well: findWell, longship: findShip };
   Object.entries(builders).forEach(([id, build]) => { const o = build(svg); o.el ??= svg.querySelector('#f-' + id); o.stage ??= 'rest'; o.kept ??= false; FD.list[id] = o; });
+  for (const o of [...Object.values(FD.list), ...FD.list.hoards.items]) {
+    if (o.id === 'hoards') continue; o.el.tabIndex=-1; attr(o.el,'aria-hidden',true);
+    o.hit = findSvg('circle', { class: 'hit touch-hit', r: .01 }); o.el.insertBefore ? o.el.insertBefore(o.hit, o.el.firstChild) : o.el.appendChild(o.hit);
+    o.focusRing = findSvg('circle', { class: 'find-focus-ring', fill: 'none', 'pointer-events': 'none' }); o.el.appendChild(o.focusRing);
+  }
+  FD.markerHits = [];
+  for (const f of Object.values(FIND_BY).filter(f => f.n)) {
+    const marker = svg.querySelector('#mk-' + f.id); if (!marker) continue;
+    const hit = findSvg('circle', { class: 'hit touch-hit', r: .01, cx: f.mark[0], cy: f.mark[1] }); marker.appendChild(hit); FD.markerHits.push(hit);
+    marker.style.cursor = 'pointer'; marker.addEventListener('click', e => { e.stopPropagation(); const target = f.id === 'hoards' ? FD.list.hoards.items[2].el : FD.list[f.id].el; target.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+  }
   FD.all = findAll(svg);
   // Builders add non-interactive decorations. The one reusable bit pool remains last.
   const pool = svg.querySelector('#f-bits'); svg.querySelector('#finds').appendChild(pool);
@@ -5930,7 +6305,7 @@ function findsBuild(svg, pop, sheet, base, rm) {
     found: () => [...FD.found],
     state: id => { const o = FD.list[id] || FD.list.hoards.items.find(h => h.id === id); return o ? findPlain(o) : null; },
     hear: () => Object.values(FD.list).forEach(o => o.hear?.()),
-    place: id => { const p = findPlace(id); return FD.st && p ? toScreen(FD.st, p) : null; },
+    place: id => { const p = findPlace(id); return FD.st && p ? findScreen(p) : null; },
   };
   FD.styleKey = JSON.stringify(FIND_PLAY);
 }
@@ -5964,10 +6339,11 @@ function findsFrame(time, st) {
 
 
 
-const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Set by join.mjs on the joined page only (the real hero in the stage): frame(st, moved, P) returns false to leave the star
 // canvas alone, options for starsFrame, or nothing for the map's own rule; resize(w, h) follows the map's resize.
-const JOIN = { leave: null, frame: null, resize: null, heroStart: false };
+const JOIN = { leave: null, frame: null, resize: null, reduce: null, heroStart: false };
 const ROOT = document.documentElement;
 Object.entries(C).forEach(([k, v]) => ROOT.style.setProperty('--' + k, v));
 if (RM) ROOT.classList.add('rm');
@@ -5980,32 +6356,77 @@ MAIN.innerHTML = `<h1 class="sr">${COPY.title}</h1><section class="trip" id="tri
 <svg id="map" class="map" role="group" aria-label="${COPY.srMap}">${mapDefs()}<g id="cam"><g id="b-all"><g id="b-sea">${M.sea}</g><g id="b-fill">${M.fill}</g><g id="b-coast">${M.coast}</g><g id="b-detail">${M.detail}</g></g><path id="trail-done" class="done" d="${pathD(TRAIL)}"/><g id="finds">${M.finds}</g><g id="fxg" transform="translate(${MAP.x[0]} ${MAP.x[1]})"></g></g></svg>
 <canvas id="nova" aria-hidden="true"></canvas><canvas id="stars" aria-hidden="true"></canvas>
 <canvas id="air" aria-hidden="true"></canvas><svg id="sky" aria-hidden="true"></svg>
-${RM ? '' : `<button type="button" class="fx-hit" id="nova-hit" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true"></button>`}
-<div class="ov">${stoneDefs()}<p class="caption">${COPY.heroCaption}</p><p class="cue">${COPY.cue}</p><div class="cards" id="cards"></div><div class="mini" id="mini" role="navigation" aria-label="${COPY.miniMap}"></div><div class="pop" id="pop" role="status"></div><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div><footer class="ft" id="ft"></footer></div>
+<button type="button" class="fx-hit" id="nova-hit" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true"></button>
+<div class="ov">${stoneDefs()}<p class="caption">${COPY.heroCaption}</p><p class="cue">${COPY.cue}</p><div class="cards" id="cards" inert></div><div class="mini" id="mini" role="navigation" aria-label="${COPY.miniMap}"></div><div class="pop" id="pop" role="status"></div><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div><footer class="ft" id="ft"></footer></div>
 </div></section><div class="rm-cards" id="rmcards"></div><div class="tl" id="tl"></div>`;
 
 const $ = id => document.getElementById(id);
 const SVG = $('map'), CANVAS = $('stars'), TLEL = $('tl');
 // timeline sits in the stage overlay so it can become the footer rule; in reduced motion it is a sticky jump menu
-let FTWORLD = null;
-if (!RM) { FTWORLD = document.createElement('div'); FTWORLD.id = 'ft-world'; $('stage').querySelector('.ov').appendChild(FTWORLD); FTWORLD.append($('ft'), TLEL); }
-else { $('rmcards').appendChild(TLEL); MAIN.appendChild($('ft')); }
+const FTWORLD = document.createElement('div'); FTWORLD.id = 'ft-world'; $('stage').querySelector('.ov').appendChild(FTWORLD); FTWORLD.append($('ft'), TLEL);
 
 let P = 0, dirty = true;
-const goStop = i => { if (RM) { cardsList()[i].el.scrollIntoView({ behavior: 'auto', block: 'start' }); return; } JOURNEY.go(STOPS[i].id, { jump: exploreActive() }); };
+let mainCurrent = 0, mainModeVersion = 0;
+const mainHeroEnd = SEQ.find(s=>s.kind==='handoff').a, mainMapStart = SEQ.find(s=>s.kind==='overview').a;
+const goStop = i => { mainCurrent = i; tlCurrent(Math.min(i, STOPS.length - 1), true); if (RM) { if (i < 0) { window.scrollTo({top:(JOIN.heroStart ? mainMapStart : 0)*VIEW.unit,behavior:'instant'}); return; } if (i >= STOPS.length) { $('ft').scrollIntoView({behavior:'auto',block:'start'}); return; } cardsList()[i].el.scrollIntoView({ behavior: 'auto', block: 'start' }); return; } JOURNEY.go(STOPS[i].id, { jump: exploreActive() }); };
 
 tripBuild({ svg: SVG, cam: $('cam'), sea: $('b-sea'), fill: $('b-fill'), coastG: $('b-coast'), detail: $('b-detail'), finds: $('finds'), done: $('trail-done'), x: $('fxg'), caption: document.querySelector('.caption'), cue: document.querySelector('.cue'), mini: $('mini') });
-$('mini').querySelectorAll('.mm-stop').forEach(b => { const p = PALETTES[STOPS[+b.dataset.i].palette]; b.style.setProperty('--mk', p.mark); p.shield.forEach((v, j) => b.style.setProperty('--shield-' + 'abc'[j], v)); b.addEventListener('click', () => goStop(+b.dataset.i)); });
+$('mini').querySelectorAll('.mm-stop').forEach(b => { const p = PALETTES[STOPS[+b.dataset.i].palette]; b.style.setProperty('--mk', p.mark); if (STOPS[+b.dataset.i].palette === 'interkom') { b.classList.add('mm-interkom'); b.style.setProperty('--shield-a', p.shield[1]); b.style.setProperty('--shield-b', p.shield[0]); } p.shield.forEach((v, j) => b.style.setProperty('--shield-' + 'abc'[j], v)); b.addEventListener('click', () => goStop(+b.dataset.i)); });
+$('mini').addEventListener('click', e => {
+  if (!e.detail || !e.target.closest?.('.mm-stop')) return;
+  const r = $('mini').getBoundingClientRect(), distances = STOPS.map(s => { const p = MAP.waypoints[s.w]; return Math.hypot(e.clientX-r.left-p[0]/MAP.w*r.width,e.clientY-r.top-p[1]/MAP.h*r.height); });
+  e.preventDefault(); e.stopImmediatePropagation(); goStop(distances.indexOf(Math.min(...distances)));
+}, true);
 starsBuild(CANVAS);
 depthBuild($('deep'), $('air'), $('sky'), RM);
-cardsBuild(RM ? $('rmcards') : $('cards'), goStop, RM);
+cardsBuild($('cards'), goStop, false);
 cardsList().forEach(c => c.el.querySelectorAll('img').forEach(img => img.addEventListener('load', () => { if (!RM) { cardsResize(true); dirty = true; } })));
-tlBuild(TLEL, { jump: goStop, scrub: p => JOURNEY.set(p), moving: () => JOURNEY.moving }, RM);
-footerBuild($('ft'), RM); footerBuildX($('fxg'), RM, $('nova'), $('nova-hit'));
-if (RM) $('rmcards').appendChild(TLEL);
-stepsBuild({ stage: $('stage'), rm: RM, resize, joinedTop: () => JOIN.heroStart });
+tlBuild(TLEL, { jump: goStop, scrub: p => JOURNEY.set(p), moving: () => JOURNEY.moving }, false);
+footerBuild($('ft'), false); footerBuildX($('fxg'), false, $('nova'), $('nova-hit'));
+const mainXStrokes = [...SVG.querySelectorAll('.fx-red')];
+
+stepsBuild({ stage: $('stage'), rm: false, resize, joinedTop: () => JOIN.heroStart, reducedGo: id => { if (id === 'top') window.scrollTo({top:0,behavior:'instant'}); else goStop(id === 'map' ? -1 : id === 'end' ? STOPS.length : STOPS.findIndex(s=>s.id===id)); } });
 findsBuild(SVG, $('pop'), $('sheet'), $('b-all'), RM);
-exploreBuild({ stage: $('stage'), world: FTWORLD, journey: JOURNEY, rm: RM });
+// The same six markers move in screen space, so their type never needs to be
+// resized and rasterized on every camera frame. No marker is copied.
+const mainMarkerLayer = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); mainMarkerLayer.classList.add('marker-layer');
+$('stage').querySelector('.ov').appendChild(mainMarkerLayer);
+const mainMarkers = FINDS.filter(f => f.n).map(f => { const el = $('mk-' + f.id), place = document.createElementNS('http://www.w3.org/2000/svg', 'g'); el.dataset.screen = 'true'; place.appendChild(el); mainMarkerLayer.appendChild(place); return { el, place, at: f.mark }; });
+function mainPlaceMarkers(st) {
+  mainMarkers.forEach(m => { const p = toScreen(st, m.at), transform = `translate(${p[0]-m.at[0]} ${p[1]-m.at[1]})`; if (m.place.getAttribute('transform') !== transform) m.place.setAttribute('transform', transform); });
+  const opacity = String(smooth(.5, 1, st.handoffT) * Number(SVG.style.opacity || 1)); if (mainMarkerLayer.style.opacity !== opacity) mainMarkerLayer.style.opacity = opacity;
+  const visible=Number(opacity)>0&&SVG.style.visibility!=='hidden'?'visible':'hidden'; if (mainMarkerLayer.style.visibility!==visible) mainMarkerLayer.style.visibility=visible;
+}
+exploreBuild({ stage: $('stage'), world: FTWORLD, journey: JOURNEY, rm: false });
+
+// Touch padding can overlap at the overview. Resolve it by the nearest drawing
+// before either target handles the press; keep native drag/pinch ownership.
+let mainTouchPick = null;
+window.addEventListener('pointerdown', e => {
+  if (!e.isTrusted || e.pointerType !== 'touch') return;
+  mainTouchPick = null;
+  if (RM || JOURNEY.moving || FD.sheetOwner || !FD.st || FD.st.exploring || e.target.closest?.('.pop,.go,.tl,.tl-count,[data-review]')) return;
+  const candidates = [...Object.values(FD.list), ...FD.list.hoards.items].filter(o => o.id !== 'hoards' && o.el.tabIndex === 0).map(o => ({ el: o.el, p: toScreen(FD.st, [o.x, o.y]) }));
+  if ($('nova-hit').getAttribute('aria-disabled') !== 'true') candidates.push({el:$('nova-hit'),p:toScreen(FD.st,MAP.x)});
+  cardsList().filter(c => !c.btn.inert && c.btn.tabIndex === 0).forEach(c => { const p = toScreen(FD.st, MAP.waypoints[c.stop.w]), stone = Math.max(14, Math.min(36, 10 * FD.st.cam.s)); candidates.push({ el: c.btn, p: [p[0], p[1] - stone / 2 - 3] }); });
+  const near = candidates.map(c => ({ ...c, d: Math.hypot(e.clientX-c.p[0],e.clientY-c.p[1]) })).filter(c => c.d <= COMB.target / 2).sort((a,b) => a.d-b.d)[0];
+  if (!near || near.el.contains(e.target)) return;
+  mainTouchPick = { el: near.el, x: e.clientX, y: e.clientY };
+  e.preventDefault(); e.stopImmediatePropagation();
+  near.el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: e.pointerId, pointerType: 'touch', clientX: e.clientX, clientY: e.clientY, button: 0, buttons: 1, isPrimary: e.isPrimary }));
+}, true);
+window.addEventListener('pointerup', e => {
+  const p = mainTouchPick; if (!p || !e.isTrusted) return; mainTouchPick = null;
+  e.preventDefault(); e.stopImmediatePropagation();
+  p.el.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: e.pointerId, pointerType: 'touch', clientX: e.clientX, clientY: e.clientY }));
+  if (Math.hypot(e.clientX-p.x,e.clientY-p.y) <= 6) p.el.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1, clientX: e.clientX, clientY: e.clientY }));
+}, true);
+window.addEventListener('click', e => {
+  const p = mainTouchPick; mainTouchPick = null;
+  if (!e.isTrusted || !p || p.el.contains(e.target) || Math.hypot(e.clientX-p.x,e.clientY-p.y) > 6) return;
+  e.preventDefault(); e.stopImmediatePropagation(); p.el.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1, clientX: e.clientX, clientY: e.clientY }));
+}, true);
+$('nova-hit')?.addEventListener('click', e => { const st = tripState(JOURNEY.P); if (st.rushT > 0 && st.settleT < 1) { e.stopImmediatePropagation(); novaPress(); } }, true);
 document.addEventListener('dragstart', e => e.preventDefault(), true);
 // Escape folds the open card, but not while a find is still letting go of the camera (a quick second Escape after leaving a find).
 window.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.defaultPrevented && !RM && !JOURNEY.moving && !stepsFocusNow() && cardsClose()) e.preventDefault(); });
@@ -6016,7 +6437,8 @@ function resize() {
   const room = stepMode ? (phone ? STEPS.nav.bar : STEPS.nav.h + STEPS.nav.gap + 6) : 0;
   tripResize(w, h, RM ? 0 : (phone ? 44 : 56) + room);
   SVG.setAttribute('width', w); SVG.setAttribute('height', h); SVG.setAttribute('viewBox', `0 0 ${w} ${h}`);
-  starsResize(w, h);
+  mainMarkerLayer.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  tripMeasureLabels(); starsResize(w, h);
   footerNovaResize(w, h);
   depthResize(w, h);
   if (!RM) cardsResize(stepMode);
@@ -6029,7 +6451,7 @@ function resize() {
   if (JOIN.resize) JOIN.resize(w, h);
 }
 const OVERVIEW_P = SEQ.find(s => s.kind === 'overview').a + 1;
-function still() { const st = tripState(OVERVIEW_P); tripApply(st); starsStill(st); depthFrame(st, 0, 0, [.5, .5], { look: [0, 0], changed: false, fine: false }, true); FIXED = st; }
+function still() { const st = tripState(OVERVIEW_P); st.reduced = true; tripApply(st); mainPlaceMarkers(st); starsStill(st); depthFrame(st, 0, 0, [.5, .5], { look: [0, 0], changed: false, fine: false }, true); FIXED = st; }
 let FIXED = null;
 
 window.addEventListener('scroll', () => { if (RM) dirty = true; }, { passive: true });
@@ -6048,14 +6470,19 @@ function frame(ts) {
   if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], { ...jr, still: true }); raf = requestAnimationFrame(frame); return; }
   const st = tripState(P); const f = stepsFocusNow(); if (f) tripFocus(st, f.view, f.k);
   const explored = exploreApply(st, dt), folded = cardsOverride(st, dt, JOURNEY.moving);
+  if (f && f.k > 0) mainCurrent = -1; else if (!JOURNEY.moving && st.settleT >= 1 && !st.exploring) mainCurrent = STOPS.length; else if (!JOURNEY.moving && st.kind === 'hold') mainCurrent = st.i; else if (['hero','handoff','overview'].includes(st.kind)) mainCurrent = JOIN.heroStart && st.P < mainHeroEnd ? -2 : -1;
   st.visiting = JOURNEY.visiting;
   // Nothing unseen takes the keyboard: the stone marks and the timeline wait for the map's hand-over; the timeline leaves in explore.
-  const keys = `${st.handoffT >= 1}/${st.handoffT >= 1 && !st.exploring && !(st.exploreK > 0)}`;
-  if (keys !== mainKeys) { mainKeys = keys; $('cards').inert = st.handoffT < 1; TLEL.inert = !(st.handoffT >= 1 && !st.exploring && !(st.exploreK > 0)); }
+  st.focusId = f?.id; if (ROOT.dataset.find !== (f?.id || '')) ROOT.dataset.find = f?.id || '';
+  const mapKeys = st.handoffT >= 1 && (st.blastT === 0 || st.exploreK > 0);
+  const timelineKeys = mapKeys && st.rushT === 0 && !st.exploring && !(st.exploreK > 0);
+  const keys = `${mapKeys}/${timelineKeys}`;
+  if (keys !== mainKeys) { mainKeys = keys; $('cards').inert = !mapKeys; TLEL.inert = !timelineKeys; TLEL.tabIndex = timelineKeys ? 0 : -1; TLEL.setAttribute('aria-hidden', !timelineKeys); }
   const focusKey = JSON.stringify(f), tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || explored || folded || mainMapPending || P !== lastP || tuning !== mainTuning || focusKey !== mainFocus;
   mainFocus = focusKey;
   const aim = depthLook(dt, PTR);
-  if (moved) { mainMapPending = tripApply(st); tlFrame(st); footerFrame(st); if (!JOIN.frame && CANVAS.style.opacity !== String(st.dim)) CANVAS.style.opacity = st.dim; lastP = P; mainTuning = tuning; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
+  if (moved) { const xp = toScreen(st, MAP.x); if (st.rushT === 0 && xp[0] >= 0 && xp[0] <= VIEW.w && xp[1] >= 0 && xp[1] <= VIEW.h) { const weight = String(3.6 * Math.min(1, tripXCamera().s / st.cam.s)); mainXStrokes.forEach(el => { if (el.getAttribute('stroke-width') !== weight) el.setAttribute('stroke-width', weight); }); } mainMapPending = tripApply(st); tlFrame(st); footerFrame(st); if (!JOIN.frame && CANVAS.style.opacity !== String(st.dim)) CANVAS.style.opacity = st.dim; lastP = P; mainTuning = tuning; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
+  if (moved) mainPlaceMarkers(st);
   const jo = JOIN.frame ? JOIN.frame(st, moved, P) : undefined;
   depthFrame(st, time, dt, PTR, aim, moved);
   footerMotion(time, dt, st, aim.look, moved);
@@ -6064,14 +6491,39 @@ function frame(ts) {
   if (jo !== false && (moved || starsChanged || st.handoffT < 1 || jo || aim.changed || skyIdle || st.blastT > 0)) {
     starsFrame(time, st, PTR, { ...(jo || {}), look: aim.look }); mainSkyDraw = time;
   }
+  if (st.rushT > 0 && !RM) { const hit = $('nova-hit'); hit.tabIndex = 0; hit.setAttribute('aria-disabled', 'false'); hit.setAttribute('aria-label', COMB.novaSay); }
   cardsFrame(st, aim.look, PTR);
   findsFrame(time, st);
   raf = requestAnimationFrame(frame);
 }
 document.addEventListener('visibilitychange', () => { stepsPause(); mainTs = null; if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else if (!raf) raf = requestAnimationFrame(frame); });
 document.fonts?.addEventListener('loadingdone', resize);
-const start = () => { resize(); raf = requestAnimationFrame(frame); };
+const start = () => { if (RM) mainReduced(true, true); resize(); raf = requestAnimationFrame(frame); };
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+
+function mainReduced(on, initial = false) {
+  const version=++mainModeVersion;
+  if (initial) mainCurrent = -1;
+  const priorEpoch = FD.overlayEpoch;
+  const request = FD.readyAction?.owner || (FD.list.ravens?.queued ? FD.list.ravens : FD.list.hoards?.items.find(h => h.queued));
+  if (on && request) { FD.pendingPress = request.el; FD.readyAction = null; }
+  if (on && FD.pendingPress) mainCurrent = -1;
+  const place=mainCurrent;
+  findsCloseAll(); RM = on; JOIN.reduce?.(on); ROOT.classList.toggle('rm', on); FD.rm = on; cardsReduced(on); tlReduced(on); exploreReduced(on); stepsReduced(on, mainCurrent);
+  for (const c of cardsList()) { (on ? $('rmcards') : $('cards')).appendChild(c.el); if (on) { c.el.style.transform = ''; c.el.style.width = ''; c.el.style.height = ''; c.el.style.opacity = ''; c.card.removeAttribute('style'); c.face.removeAttribute('style'); c.inn.removeAttribute('style'); c.face.inert = false; } }
+  if (on) {
+    $('rmcards').appendChild(TLEL); MAIN.appendChild($('ft')); $('cards').inert = true; TLEL.inert = false; TLEL.tabIndex = 0; TLEL.removeAttribute('aria-hidden');
+    TLEL.style.opacity = 1; TLEL.querySelectorAll('.tl-f').forEach(el => el.style.opacity = 1); TLEL.querySelector('.tl-rows').style.transform = 'none';
+    const ft = $('ft'); ft.style.visibility = 'visible'; ft.inert = false; ft.querySelector('.ft-in').style.opacity = 1; ft.querySelectorAll('.ft-r').forEach(el => { el.style.opacity = 1; el.style.transform = ''; });
+    $('fxg').style.visibility = 'visible'; mainXStrokes.forEach(el => el.setAttribute('stroke-width', 3.6));
+    FD.bits.forEach(bit => { bit.live = false; bit.el.style.display = 'none'; }); FD.flight = null; FD.flights = []; FD.landed = FD.found.size; if (FD.star) FD.star.style.opacity = 0; tlSetCount(FD.landed, FINDS.length);
+  }
+  else FTWORLD.append($('ft'), TLEL);
+  mainKeys = ''; dirty = true; resize(); if (on) VIEW.stageTop = $('stage').getBoundingClientRect().top; if (on && mainCurrent < 0) tlCurrent(-1); if (on && !initial) { const park=()=>{if(place < -1)window.scrollTo({top:0,behavior:'instant'});else goStop(place);}; park(); const settle=left=>requestAnimationFrame(()=>{if(!RM||version!==mainModeVersion)return;park();if(left)settle(left-1);}); settle(3); }
+  if (on) { FD.st = FIXED; Object.values(FD.list).forEach(o => o.reduce?.(o.overlayEpoch === priorEpoch)); }
+}
+window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', e => mainReduced(e.matches));
+window.addEventListener('scroll', () => { if (!RM) return; VIEW.stageTop = $('stage').getBoundingClientRect().top; const list = cardsList(); let near = 0, distance = Infinity; list.forEach((c,i) => { const d = Math.abs(c.el.getBoundingClientRect().top - VIEW.h / 3); if (d < distance) { distance = d; near = i; } }); mainCurrent = JOIN.heroStart && scrollY/VIEW.unit < mainHeroEnd ? -2 : VIEW.stageTop + VIEW.h > VIEW.h / 2 ? -1 : $('ft').getBoundingClientRect().top < VIEW.h / 2 ? STOPS.length : near; tlCurrent(Math.min(mainCurrent, STOPS.length - 1)); }, { passive: true });
 
 </script>
 </body>

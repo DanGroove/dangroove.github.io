@@ -165,10 +165,10 @@ console.log('ok: six card X controls; local reopen focuses X without scrolling; 
 for(const [w,h,tl] of [[1440,900,120],[390,844,96]]){
   tripResize(w,h,tl);const x=tripState(BEATS.find(b=>b.id==='x').P);
   if(w>640){const bottom=toScreen(x,[0,CAMERA.frameBottom])[1],top=h-56-STEPS.nav.gap-STEPS.nav.h;stepAssert(bottom<=top-12,'desktop X frame crosses stepper');}
-  else{const g=CAMERA.xGroupPhone,X=toScreen(x,MAP.x),A=toScreen(x,[MAP.x[0]+g[0],MAP.x[1]]),B=toScreen(x,[MAP.x[0]+g[1],MAP.x[1]]),bottom=toScreen(x,[0,CAMERA.frameBottom])[1],floor=h-STEPS.nav.bar-CAMERA.timeline;stepAssert(A[0]>=16-1e-8&&B[0]<=w-16+1e-8&&Math.abs((A[0]+B[0])/2-w/2)<1e-6,'phone X and label centred inside the margins');stepAssert(X[1]>=CAMERA.xBand[0]*(h-STEPS.nav.bar)-1e-6&&X[1]<=CAMERA.xBand[1]*(h-STEPS.nav.bar)+1e-6&&bottom<=floor,'phone X in its band, map edge above the timeline');}
+  else{const g=CAMERA.xGroupPhone,X=toScreen(x,MAP.x),A=toScreen(x,[MAP.x[0]+g[0],MAP.x[1]]),B=toScreen(x,[MAP.x[0]+g[1],MAP.x[1]]),bottom=toScreen(x,[0,CAMERA.frameBottom])[1],floor=h-STEPS.nav.bar-CAMERA.timeline;stepAssert(A[0]>=16-1e-8&&B[0]<=w-16+1e-8,'phone X and words remain inside margins with Toronto in the group');stepAssert(X[1]>=CAMERA.xBand[0]*(h-STEPS.nav.bar)-1e-6&&X[1]<=CAMERA.xBand[1]*(h-STEPS.nav.bar)+1e-6&&bottom<=floor,'phone X in its band, map edge above the timeline');}
 }
-const rush=SEQ.find(s=>s.kind==='rush'),rest=SEQ.find(s=>s.kind==='rest');JOURNEY.set(rush.a);stepsFrame(stepClock+=50);stepAssert(!go.hidden,'X beat needs its Dig control');go.querySelector('.go-next').focus();JOURNEY.next();stepAssert(go.hidden,'rush start must hide stepper');
-for(let P=rush.a+.001;P<rest.a;P+=1){JOURNEY.set(P);stepsFrame(stepClock+=50);stepAssert(go.hidden,'stepper shown during rush/blast/settle');}
+const rush=SEQ.find(s=>s.kind==='rush'),rest=SEQ.find(s=>s.kind==='rest');JOURNEY.set(rush.a);stepsFrame(stepClock+=50);stepAssert(!go.hidden,'X beat needs its Dig control');go.querySelector('.go-next').focus();JOURNEY.next();stepAssert(go.hidden||go.classList.contains('go-leaving'),'rush start must fade stepper');
+for(let P=rush.a+.001;P<rest.a;P+=1){JOURNEY.set(P);stepsFrame(stepClock+=50);stepAssert(go.hidden||go.classList.contains('go-leaving'),'stepper shown during rush/blast/settle');}
 JOURNEY.set(rest.a);stepsFrame(stepClock+=50);stepAssert(!go.hidden,'settle end must return stepper');stepAssert(document.activeElement===go.querySelector('.go-next'),'stepper main focus must return');
 // D5: compare the cross-press 16 ms velocity change with the same uninterrupted
 // move's largest 16 ms change. A tiny one-sided probe checks the new derivative

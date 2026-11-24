@@ -104,11 +104,11 @@ export const COPY = {
   timelineStart: 'Before the first stop',
   close: 'Close',
   flip: 'Flip it over',
-  nova: 'The supernova. Press it.',
+  nova: 'The supernova. Press to add a flare.',
   steps: {
     group: 'Move through the journey', start: 'Start the journey', setOut: 'Set out', next: 'Next: {name}',
     toX: 'Next: the X', dig: 'Dig here', top: 'Back to the top', back: 'Back: {name}', returnTo: 'Back to the trail',
-    names: { top: 'the top', map: 'the whole map', x: 'the X', end: 'the end' },
+    names: { hmc2: 'back to HMC', top: 'the top', map: 'the whole map', x: 'the X', end: 'the end' },
     say: { top: 'The top of the page', map: 'The whole map', stop: 'Stop {n} of {t}: {name}, {dates}', x: 'The X', end: 'The end of the trail: contact and links' },
     review: { label: 'Preview only', depth: 'Depth' },
   },
@@ -178,7 +178,7 @@ export const HAMMER = {
   boss: { hearts: 64, fan: 1.6, fans: 5, speed: 17, x: [72, 228], y: 59, shardSpeed: 124, aimSpread: 0.23, clay: 13, clayAt: 0.6, heartAt: 0.3, clayY: 203, claySpeed: 30, clayX: [72, 228], faster: 0.66, exposed: 2, heartRX: 13, heartRY: 15, heartY: 17, silver: 500, fall: 1.3, gravity: 90 },
   fx: { sparks: 4, life: 0.25, speed: 40, shake: 1.8, flash: 0.09, flashAlpha: 0.65, trail: 12 },
   map: { near: 20, scale: 0.7, hit: [-6, -6, 34, 34], centre: [10.5, 10.5], stone: 'M-3 23L0 20L24 20L27 23L25 25L-2 25Z', hammer: 'M8 14V3Q7 1 10 1Q13 1 12 3V14M8 4H12M8 7H12M8 10H12M2 12L5 14H15L18 12L20 13V21L18 22L15 20H5L2 22L0 21V13ZM4 15L8 18L12 15L16 18M4 18L8 15L12 18L16 15M2 13V21M18 13V21', spark: 'M-2 12L-5 10L-4 7M21 16L25 14L24 11M9 23L11 26', every: 4.3, sparkTime: 0.18, tremble: 0.55, trembleRate: 33, hop: 2, hopTime: 0.3 },
-  ui: { w: 330, h: 550, fieldW: 300, fieldH: 400, pad: 14, border: 1, radius: 10, gap: 8, header: 24, status: 36, buttons: 36, font: 12, line: 17, small: 11, title: 22, titleWeight: '600', autoFlex: '2', waveShare: '50%', cardPad: 14, inset: 12, rune: 32, runeW: 18, mini: 17, miniW: 11, spritePad: 4, glyphLine: 1.4, heartW: 10, heartH: 9, heartGap: 2, notice: 1, bestKey: 'jm-hammer-best' },
+  ui: { w: 330, h: 558, fieldW: 300, fieldH: 400, pad: 14, border: 1, radius: 10, gap: 8, header: 24, status: 36, buttons: 44, font: 12, line: 17, small: 11, title: 22, titleWeight: '800', autoFlex: '2', waveShare: '50%', cardPad: 14, inset: 12, rune: 32, runeW: 18, mini: 17, miniW: 11, spritePad: 4, glyphLine: 1.4, heartW: 10, heartH: 9, heartGap: 2, notice: 1, bestKey: 'jm-hammer-best' },
   paths: {
     bridge: ['M0 386Q150 364 300 386', 'M0 391Q150 369 300 391', 'M0 396Q150 374 300 396'],
     heart: 'M0 3C-6 -3 -6 -7 -2 -7Q0 -7 0 -5Q0 -7 2 -7C6 -7 6 -3 0 3Z', heartBox: '-6 -8 12 12',
@@ -265,8 +265,8 @@ export const FIND_COPY = {
   // One short line of what to do, shown above the step buttons while a find has the camera. Draft copy.
   hints: { wayfinder: 'Pick a craft to light the stops that used it.', hoards: 'Dig three times, then open it.', ravens: 'Press to send a raven out.',
     serpent: 'Jörmungandr, the world serpent. Poke it.', beacon: 'Press the tower for the next note, or drag to aim the beam.', runestone: 'Rub the stone to lift its carving.',
-    hammer: 'Press the hammer to play.', mist: 'Wipe the mist away.', horn: 'Press to raise it, press again to sound it.',
-    well: 'Drop a pebble in. The Norns answer.', longship: 'Press to pull the oars.' },
+    hammer: 'Press it to hold the bridge.', mist: 'Press or wipe to clear it.', horn: 'Press to raise it, press again to sound it.',
+    well: 'Drop a pebble in. The Norns answer.', longship: 'Pull three times to fly its pennant.' },
   shipLog: 'The 2023 crossing', longship: { t: '2023: Dan to write this line.', todo: 1 },
 };
 
@@ -1024,3 +1024,13 @@ export const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5
 // coastDraw: the share of the fall over which the coasts draw, from its first moments
 export const WORLD = { scrim: [150,190,.85], titleOut: [.3, .8], titleZoom: [1.15, 1.6], coastDraw: [.04, .72], card: { w:640, edge:32, phoneBottom:6, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
 export const PHONE_LAYOUT = { gap: 16, edge: 16, ctaShare: .14, headlineGap: 20, exploreGap: 8, exploreBottom: 8, exploreBack: 152, exploreTop: 172 };
+
+// COMB-A: interaction and responsive label values. Original drawing geometry stays in place.
+export const COMB = { target: 44, popClose: .16, sheetClose: .2, panelFade: .14, wayFade: .3,
+  markerPx: 17, wordPx: 10, hintDelay: .5, handoverOverlap: 28,
+  labels: { laurier: [160,226], hmc1: [478,277], hmc2: [494,351] },
+  readings: [[440,419],[427,453],[452,488],[455,525]],
+  hornHints: ['Press to raise it.', 'Press again to sound it.', 'Listen as the other finds answer.'],
+  craftLit: '{craft}: used here', craftUnlit: '{craft}: not used here',
+  waySay: '{craft}. Matching stops: {names}.', novaSay: 'The supernova is building. Press to add a flare.',
+};

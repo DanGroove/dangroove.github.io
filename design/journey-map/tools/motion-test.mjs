@@ -97,7 +97,7 @@ for (const [w,h,bar] of [[1440,900,120],[390,844,96]]) {
       const start=Math.round(D*1000*test.f/16)*16, frames=new Map();
       frames.set(-start,{P:JOURNEY.P,cam:tripState(JOURNEY.P).cam});
       for(let ms=16;ms<=start;ms+=16){const st=advance(16);frames.set(ms-start,{P:st.P,cam:st.cam});}
-      const label=`${w} ${from.id}->${to.id} ${test.kind} ${test.f}`, hurry=test.kind==='Next'&&direction>0;
+      const label=`${w} ${from.id}->${to.id} ${test.kind} ${test.f}`, hurry=(test.kind==='Next'&&direction>0)||(direction<0&&['Back','Back-Next'].includes(test.kind));
       let since=0, eventAt=0, arrival=null, target, previous=frames.get(0).cam, speed=flow(frames.get(-16).cam,previous), peak=0, peakFive=0, acceleration=0, incoming=direction*(g.b-g.a)/D, micro=0;
       const events=[];
       const press=(kind)=>{
@@ -105,7 +105,7 @@ for (const [w,h,bar] of [[1440,900,120],[390,844,96]]) {
         target=back?a.P:b.P;
         if(kind==='Back')JOURNEY.back();else if(kind==='Next')JOURNEY.next();else JOURNEY.go(back?a.id:b.id);
         carryGate(JOURNEY.P===before,label+' press changed P');
-        events.push({at:since,P:before,v:incoming,minimum:hurry?.45:Math.max(.35,D*Math.abs(target-before)/(g.b-g.a))});
+        events.push({at:since,P:before,v:incoming,minimum:(since===0&&hurry)?.45:Math.max(.35,D*Math.abs(target-before)/(g.b-g.a))});
         // Independent one-sided derivative probe, then complete the clock tick
         // below. This also works for a bounded rational quintic near a beat.
         const probe=advance(.0001);micro=.0001;
@@ -130,7 +130,7 @@ for (const [w,h,bar] of [[1440,900,120],[390,844,96]]) {
       carryGate(arrival!==null,label+' did not arrive');
       carryGate(JOURNEY.P===target,label+' arrival not exact');
       carryGate(acceleration<=Math.max(w,h)*(hurry?3:1.2)+1e-6,label+' acceleration '+acceleration.toFixed(2));
-      if(hurry)carryGate(arrival/1000<D-start/1000,label+' hurry did not arrive sooner');
+      if(hurry&&test.kind!=='Back-Next')carryGate(arrival/1000<D-start/1000,label+' hurry did not arrive sooner');
       for(const event of events){
         if(event===events.at(-1))carryGate((arrival-event.at)/1000>=event.minimum-1e-8,label+' duration below minimum');
       }

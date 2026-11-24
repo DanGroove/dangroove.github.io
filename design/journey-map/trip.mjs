@@ -1,5 +1,5 @@
 // Scroll progress, acts, camera, traveller. Everything here is a pure function of progress P (in viewport heights).
-import { ACTS, CAMERA, HOLD, MAP, STOPS, COPY, DEPTH, FIND_PLAY, LABELS, WORLD, STEPS, NOVA, MARK, CARD_TAIL, FRAME_PERF } from './data.mjs';
+import { FINDS, ACTS, CAMERA, HOLD, MAP, STOPS, COPY, DEPTH, FIND_PLAY, LABELS, WORLD, STEPS, NOVA, MARK, CARD_TAIL, FRAME_PERF, COMB } from './data.mjs';
 import { TRAIL, polyLen, COAST_A, COAST_B, onLand, miniMapSvg, mapLabelRows, mapLabelBox } from './art.mjs';
 
 export const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -76,15 +76,29 @@ export const dateAt = P => { if (P <= PIECES[0][0]) return PIECES[0][2]; for (co
 export const progressForDate = d => { for (const q of PIECES) { const lo = Math.min(q[2], q[3]), hi = Math.max(q[2], q[3]); if (d >= lo && d <= hi && q[3] !== q[2]) return lerp(q[0], q[1], (d - q[2]) / (q[3] - q[2])); } return d <= PIECES[0][2] ? PIECES[0][0] : PIECES[PIECES.length - 1][1]; };
 
 // ---- view ----
-export const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1, depth: 1, footerY: null, cards: [] };
+export const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1, depth: 1, footerY: null, cards: [], stageTop: 0, mapReady: true };
 export function tripCardPlace(height, steps = true, reviewFloor = WORLD.card.gap) {
   const Q = WORLD.card, stone = Math.max(MARK.min, Math.min(MARK.max, MARK.k * VIEW.sT * CAMERA.holdZoom)), rim = stone * (MARK.radius + MARK.rim / 2) / MARK.box;
-  const width = VIEW.phone ? VIEW.w : Math.min(Q.w, VIEW.w - 2 * Q.edge - stone / 2 - rim - CARD_TAIL.len);
+  const width = VIEW.phone ? VIEW.w : Math.min(Q.w + (VIEW.h <= 440 ? 96 : 0), VIEW.w - 2 * Q.edge - stone / 2 - rim - CARD_TAIL.len);
   const floor = VIEW.phone ? VIEW.h - Q.phoneBottom - (steps ? STEPS.nav.bar : 0) : steps ? VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h - Q.gap : VIEW.h - Q.gap;
   const left = VIEW.phone ? 0 : (VIEW.w - (stone / 2 + rim + CARD_TAIL.len + width)) / 2;
   const top = VIEW.phone ? floor - height : Math.max(reviewFloor, Math.min(VIEW.h / 2 - Q.gap - height / 2, floor - height));
   const sx = VIEW.phone ? VIEW.w / 2 : left + stone / 2, sy = VIEW.phone ? top - CARD_TAIL.lenPhone - rim : top + height / 2;
-  return { w: width, x: VIEW.phone ? VIEW.w / 2 : sx + rim + CARD_TAIL.len + width / 2, y: top + height / 2, sx, sy };
+  return { w: width, h: height, x: VIEW.phone ? VIEW.w / 2 : sx + rim + CARD_TAIL.len + width / 2, y: top + height / 2, sx, sy };
+}
+export function tripVisible(st, box) {
+  if (st.reduced && !VIEW.mapReady || st.handoffT < 1 || st.blastT > 0 && !st.exploreK) return false;
+  const c = st.cam, top = st.reduced ? VIEW.stageTop : 0, b = [box[0] * c.s + c.tx, box[1] * c.s + c.ty + top, box[2] * c.s + c.tx, box[3] * c.s + c.ty + top];
+  const floor = VIEW.h - (st.reduced ? 56 : VIEW.phone ? STEPS.nav.bar + 44 : 56 + STEPS.nav.h + STEPS.nav.gap);
+  return b[0] >= 0 && b[2] <= VIEW.w && b[1] >= 40 && b[3] <= floor;
+}
+export function tripCardCover(st, box, except = -1) {
+  if (st.cardOpen === 0) return 0;
+  const c = st.cam, b = [box[0] * c.s + c.tx, box[1] * c.s + c.ty, box[2] * c.s + c.tx, box[3] * c.s + c.ty];
+  const cards = st.coverRects ||= VIEW.cards.map((p,i) => ({ p, i, k: st.cardK[i] })).filter(r => r.k > 0 && r.p.h);
+  let cover = 0;
+  cards.forEach(({p,i,k}) => { if (i !== except && b[0] < p.x + p.w / 2 && b[2] > p.x - p.w / 2 && b[1] < p.y + p.h / 2 && b[3] > p.y - p.h / 2) cover = Math.max(cover, k); });
+  return cover;
 }
 export function tripResize(w, h, tlH) {
   glideCache.clear();
@@ -119,18 +133,23 @@ const camFinal = c => ({ s: c.s, tx: c.ax - c.cx * c.s, ty: c.ay - c.cy * c.s, a
 export const labelScale = (kind, s, phone = VIEW.phone) => { const L = LABELS[kind]; return Math.max(1, (phone ? L.phone : L.floor) / (L.unit * s)); };
 // The X beat's view. Phones: the X and its label centred across the screen at the trip's scale, as low as lets the map's
 // bottom edge rest on the floor above the timeline (inside the xBand). Portrait tablets keep the desktop scale and the floor.
-export function tripXCamera() {
+export function tripXCamera(frameGroup = true) {
   const band = CAMERA.xBand;
+  // Frame the actual group, including the whole Toronto skyline. Keep the
+  // pre-existing footer/build-up anchor and score; only this resting view fits.
+  const group = [MAP.x[0] - 20, MAP.toronto.box[1] - 12, MAP.toronto.box[2] + 12, MAP.x[1] + 38];
+  const room = VIEW.h - (VIEW.phone ? STEPS.nav.bar + 44 : 56 + STEPS.nav.h + STEPS.nav.gap) - 64;
+  const fitGroup = base => { if (!frameGroup) return base; const s = Math.min(base.s, (VIEW.w - 2 * CAMERA.xMargin) / (group[2] - group[0]), room / (group[3] - group[1])); return { ...base, cx: (group[0] + group[2]) / 2, s }; };
   if (VIEW.phone) {
     const g = CAMERA.xGroupPhone, h = VIEW.h - STEPS.nav.bar, s = Math.min(VIEW.sT, (VIEW.w - 2 * CAMERA.xMargin) / (g[1] - g[0]));
     const floor = h - CAMERA.timeline - CAMERA.xGap, ay = Math.max(band[0] * h, Math.min(band[1] * h, floor - (CAMERA.frameBottom - MAP.x[1]) * s));
-    return { cx: MAP.x[0] + (g[0] + g[1]) / 2, cy: MAP.x[1], s, ax: VIEW.w / 2, ay };
+    return fitGroup({ cx: MAP.x[0] + (g[0] + g[1]) / 2, cy: MAP.x[1], s, ax: VIEW.w / 2, ay });
   }
   const base = camTrip(X_U, 1), floor = VIEW.h - CAMERA.timeline - STEPS.nav.gap - STEPS.nav.h - CAMERA.xGap;
   base.ay = CAMERA.xAnchorY * VIEW.h;
   const fit = (floor - base.ay) / (CAMERA.frameBottom - base.cy); base.s = Math.max(VIEW.sT * CAMERA.xFloor, Math.min(base.s, fit));
   if (VIEW.h > VIEW.w) base.ay = Math.max(base.ay, Math.min(band[1] * VIEW.h, floor - (CAMERA.frameBottom - base.cy) * base.s));
-  return base;
+  return fitGroup(base);
 }
 
 // Each resting view owns one stretch of P. The clock is linear in this stretch;
@@ -205,7 +224,7 @@ export function tripState(P) {
   st.kind = seg.kind; st.i = seg.i; st.t = clamp01((P - seg.a) / seg.len);
   const idx = SEQ.indexOf(seg), passed = k => SEQ.findIndex(q => q.kind === k) < idx;
   st.heroT = seg.kind === 'hero' ? st.t : 1;
-  st.handoffT = seg.kind === 'handoff' ? st.t : passed('handoff') ? 1 : 0;
+  st.handoffT = P < ACTS.hero + ACTS.handoff ? clamp01((P - ACTS.hero + COMB.handoverOverlap) / (ACTS.handoff + COMB.handoverOverlap)) : 1;
   st.overviewT = seg.kind === 'overview' ? st.t : passed('overview') ? 1 : 0;
   st.pushT = seg.kind === 'pushIn' ? st.t : passed('pushIn') ? 1 : 0;
   st.rushT = seg.kind === 'rush' ? st.t : passed('rush') ? 1 : 0;
@@ -232,7 +251,7 @@ export function tripState(P) {
     st.u = lerp(u0, u1, easeIO(st.t)); cam = camTrip(st.u, 1 - arc);
     if (seg.kind === 'legX') cam = camMix(cam, tripXCamera(), easeIO(smooth(...CAMERA.xEase, st.t)));
   } else { // footer acts: X fixed, anchor slides
-    st.u = X_U; const base = tripXCamera(), startAX = base.ax, startAY = base.ay;
+    st.u = X_U; const base = camMix(tripXCamera(), tripXCamera(false), smooth((NOVA.handover.fadeIn + NOVA.handover.fadeOut) / STEPS.pace.rush, .3, st.rushT)), startAX = base.ax, startAY = base.ay;
     const fx = VIEW.phone ? CAMERA.footerXPhone : CAMERA.footerX;
     const e1 = easeIO(st.rushT), e2 = easeIO(smooth(0, .8, st.settleT));
     base.cx = lerp(base.cx, MAP.x[0], e1); base.cy = lerp(base.cy, MAP.x[1], e1);
@@ -261,12 +280,16 @@ export function tripBuild(els) {
   TRIP_EL.legend = [...els.svg.querySelectorAll('.lg')].map((el, i) => ({ el, p: LABELS.legendAt[i], n: Object.values(COPY.legend)[i].length, o: '' }));
   TRIP_EL.t2 = [...els.svg.querySelectorAll('.t2b')].map(el => ({ el, b: String(el.dataset?.b || el.getAttribute?.('data-b') || '').split(' ').map(Number), o: '' })).filter(t => t.b.length === 4 && t.b.every(Number.isFinite));
   TRIP_EL.title = els.svg.querySelector('.map-title'); TRIP_EL.tier1 = els.svg.querySelector('.map-tier1'); TRIP_EL.tier2 = els.svg.querySelector('.map-tier2'); TRIP_EL.subs = els.svg.querySelector('.map-subs');
+  if (TRIP_EL.subs?.parentElement) els.detail.appendChild(TRIP_EL.subs);
   TRIP_EL.secondary = [...els.svg.querySelectorAll('.map-tier2')]; if (!TRIP_EL.secondary.length) TRIP_EL.secondary = [TRIP_EL.tier2];
   TRIP_EL.focusFade = null;
   TRIP_EL.scrim = document.createElement('div'); TRIP_EL.scrim.className = 'stage-scrim'; TRIP_EL.scrim.setAttribute('aria-hidden', 'true'); TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px'; TRIP_EL.scrim.style.background = 'linear-gradient(to bottom, transparent, color-mix(in srgb, var(--ink) ' + WORLD.scrim[2] * 100 + '%, transparent))'; els.svg.parentElement.appendChild(TRIP_EL.scrim);
   TRIP_EL.coasts = [...els.svg.querySelectorAll('.coast')];
   TRIP_EL.coastLen = [polyLen(COAST_A, 1), polyLen(COAST_B, 1)];
   TRIP_EL.ship = els.svg.querySelector('.ls-ship');
+  TRIP_EL.markers = [...els.svg.querySelectorAll('.mk-size')];
+  TRIP_EL.symbols = [...els.svg.querySelectorAll('.legend-symbol')].map(el => ({ el, base: el.getAttribute('transform') || '' }));
+  TRIP_EL.ticks = [...els.svg.querySelectorAll('.coast-ticks, .frame-ticks')];
   // 24 px stone targets (B-9): overlapping ones (the HMC stops) push apart along the axis that parts them, the dots stay put.
   // 104 / 600: the mini-map's CSS width over the map's (25: 24 and its 1 px border's share).
   const mm = STOPS.map(s => MAP.waypoints[s.w].map(v => v * 104 / 600)), off = mm.map(() => [0, 0]);
@@ -275,6 +298,58 @@ export function tripBuild(els) {
     + STOPS.map((s, i) => `<button class="mm-stop" data-i="${i}" style="left:${(MAP.waypoints[s.w][0] / 6).toFixed(2)}%;top:${(MAP.waypoints[s.w][1] / 9).toFixed(2)}%;--ox:${off[i][0].toFixed(1)}px;--oy:${off[i][1].toFixed(1)}px" aria-label="${COPY.stoneGo.replace('{name}', s.name).replace('{dates}', s.dates)}"><i></i></button>`).join('');
   TRIP_EL.mmView = els.mini.querySelector('.mm-view'); TRIP_EL.mmTrav = els.mini.querySelector('.mm-trav');
   TRIP_EL.mmStops = [...els.mini.querySelectorAll('.mm-stop')];
+}
+// Font metrics and the placed card boxes are read only at resize/font boundaries.
+export function tripMeasureLabels() {
+  const E = TRIP_EL; if (!E.rows) return;
+  for (const r of E.rows) {
+    const text = r.el.querySelector('text'), row = r.row, pos = COMB.labels[row.stop];
+    if (row.stop === 'x' && !row.stopSub) text.textContent = COPY.xLabel;
+    r.base = pos ? [pos[0], pos[1] + (row.stopSub ? 18 : 0)] : [row.x, row.y];
+    if (row.stop === 'x') r.base[1] = MAP.x[1] + (row.stopSub ? 14 : -4);
+    if (row.stop === 'hmc1' || row.stop === 'hmc2') { r.base = [574, (row.stop === 'hmc1' ? 253 : 350) + (row.stopSub ? 18 : 0)]; text.setAttribute('text-anchor', 'end'); }
+    r.box = text.getBBox ? text.getBBox() : null;
+    r.overview = r.base.slice();
+    if (row.stopSub) r.overview[1] += Math.max(0, 16 / VIEW.s0 - 18);
+    if (row.stop === 'x' && row.stopSub) r.overview[1] = MAP.x[1] - 4 + 14 / VIEW.s0;
+    if (VIEW.h <= 440 && VIEW.w > 640 && row.stop !== 'x') {
+      const i = STOPS.findIndex(s => s.id === row.stop), left = i < 3;
+      r.overview = [(left ? VIEW.w * .23 : VIEW.w * .76) / VIEW.s0 - VIEW.ox / VIEW.s0, (120 + i % 3 * 56 + (row.stopSub ? 16 : 0) - VIEW.oy) / VIEW.s0];
+      text.setAttribute('text-anchor', 'middle');
+    }
+  }
+  E.markers?.forEach(el => el.setAttribute('transform', `scale(${COMB.markerPx / (12.4 * (el.parentElement?.parentElement?.dataset.screen ? 1 : VIEW.s0))})`));
+  const kicker = E.title?.querySelector('.kick');
+  if (kicker) {
+    const lines = VIEW.h <= 720 || VIEW.phone ? COPY.kicker.split(', ') : [COPY.kicker];
+    kicker.innerHTML = lines.map((t,i) => `<tspan x="0" y="${i * 9}">${t}${i < lines.length-1 ? ', ' : ''}</tspan>`).join('');
+    const host = kicker.closest('.label-scale'), width = Math.min(200, MAP.w * VIEW.s0 * .6) / (VIEW.s0 * labelScale('small', VIEW.s0));
+    host?.querySelector('path')?.setAttribute('d', `M0 ${lines.length > 1 ? 15 : 8}h${width}`);
+    host?.querySelector('rect')?.setAttribute('width', width + 6);
+  }
+  const short = VIEW.h <= 440 && VIEW.w > 640;
+  if (E.title) {
+    const title = E.title.querySelector('text');
+    title?.setAttribute('font-size', short ? 20 / VIEW.s0 : 30);
+    E.title.setAttribute('transform', short ? `translate(${(24 - VIEW.ox) / VIEW.s0 - 44} ${(55 - VIEW.oy) / VIEW.s0 - 78})` : '');
+    kicker?.closest('.label-scale')?.parentElement.setAttribute('transform', `translate(45 ${short || VIEW.h <= 720 || VIEW.phone ? 78 + 19 / VIEW.s0 : 101})`);
+  }
+  E.legend?.forEach((g,i) => {
+    const col = i > 1, line = i % 2;
+    g.place = short ? [(VIEW.w * .78 - VIEW.ox) / VIEW.s0, (269 + i * 17 - VIEW.oy) / VIEW.s0] : [80 + (col ? 66 / VIEW.s0 : 0), 840.5 + line * 18 / VIEW.s0];
+    g.el.setAttribute('transform', `translate(${g.place.join(' ')})`);
+    g.p = g.place;
+    const text = g.el.querySelector('text'); g.box = text?.getBBox?.();
+  });
+  E.symbols?.forEach(s => { const p = E.legend[+s.el.dataset.i].place; s.el.setAttribute('transform', `translate(${p[0] - 16 / VIEW.s0 - +s.el.dataset.x} ${p[1] - 3 / VIEW.s0 - +s.el.dataset.y}) ${s.base}`); });
+  E.t2?.forEach(t => {
+    const words = t.el.textContent;
+    if (words.includes(COPY.ygg) || words.includes(COPY.well) || words.includes(COPY.wellSub)) t.el.classList.add('well-name');
+    if (words.includes('HERE BE DEADLINES')) t.el.setAttribute('transform', 'translate(-46 -58)');
+    if (words.includes('the diploma climb')) t.el.setAttribute('transform', 'translate(220 348) rotate(-75) translate(-238 -356)');
+    if (words.includes('MOHAWKFJELL')) t.el.setAttribute('transform', 'translate(0 16)');
+    if (t.el.getBBox && typeof DOMPoint !== 'undefined') { const b = t.el.getBBox(), m = t.el.transform.baseVal.consolidate()?.matrix, corners = [[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]].map(([x,y]) => m ? new DOMPoint(x,y).matrixTransform(m) : {x,y}); t.b = [Math.min(...corners.map(p=>p.x))-2, Math.min(...corners.map(p=>p.y))-2, Math.max(...corners.map(p=>p.x))+2, Math.max(...corners.map(p=>p.y))+2]; }
+  });
 }
 const tripWrites = new WeakMap();
 function tripWrite(el, key, value, attribute = false) {
@@ -301,12 +376,18 @@ function tripLabels(st) {
     let o = 1;
     if (r.stop >= 0) { let other = 0; st.cardK.forEach((k, i) => { if (i !== r.stop && k > other) other = k; }); o = (1 - st.cardK[r.stop]) * (1 - dim * other); }
     else o = 1 - dim * open;
-    if (!free && o > 0) o *= gone(mapLabelBox(r.row, c.s, phone));
+    const blend = 1 - smooth(1.05, 1.7, c.s / VIEW.s0), at = r.base ? r.base.map((v,i) => lerp(v, r.overview[i], blend)) : [r.row.x,r.row.y];
+    tripWrite(r.el, 'transform', `translate(${at[0]} ${at[1]})`, true);
+    const row = { ...r.row, x: at[0], y: at[1] }, k = labelScale(row.kind, c.s), b = r.box, box = b ? [at[0] + (b.x - LABELS.halo) * k, at[1] + (b.y - LABELS.halo) * k, at[0] + (b.x + b.width + LABELS.halo) * k, at[1] + (b.y + b.height + LABELS.halo) * k] : mapLabelBox(row, c.s, phone);
+    o *= 1 - tripCardCover(st, box);
+    if (!free && o > 0) o *= gone(box);
     put(r, o);
   });
   const u = L.legend.unit * labelScale('legend', c.s), back = 1 - dim * open;
-  (E.t2 || []).forEach(t => put(t, free ? 1 : back * gone(t.b)));
-  (E.legend || []).forEach(g => put(g, free ? 1 : back * gone([g.p[0], g.p[1] - u * L.ascent, g.p[0] + g.n * u * L.width, g.p[1] + u * L.descent])));
+  (E.t2 || []).forEach(t => put(t, (free ? 1 : back * gone(t.b)) * (1 - tripCardCover(st, t.b))));
+  const xQuiet = st.legXT * (1 - (st.exploreK || 0));
+  E.symbols?.forEach(s => tripWrite(s.el, 'opacity', 1 - .85 * xQuiet));
+  (E.legend || []).forEach(g => { const k = labelScale('legend', c.s), b = g.box, box = b ? [g.p[0]+b.x*k,g.p[1]+b.y*k,g.p[0]+(b.x+b.width)*k,g.p[1]+(b.y+b.height)*k] : [g.p[0],g.p[1]-u*L.ascent,g.p[0]+g.n*u*L.width,g.p[1]+u*L.descent]; put(g, (free ? 1 : back * gone(box)) * (1-tripCardCover(st,box)) * (1-.85*xQuiet)); });
 }
 export function tripApply(st) {
   const E = TRIP_EL, c = st.cam;
@@ -346,10 +427,12 @@ export function tripApply(st) {
     const k = q < 1 && label.from !== null && label.from !== undefined ? label.from * (label.target / label.from) ** q : label.target;
     if (label.k !== k) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; }
   });
+  E.markers?.forEach(el => { tripWrite(el, 'transform', `scale(${COMB.markerPx / (12.4 * (el.parentElement?.parentElement?.dataset.screen ? 1 : c.s))})`, true); const mk = el.parentElement?.parentElement, f = FINDS.find(f=>mk?.id === 'mk-'+f.id); if (f) { const half = COMB.markerPx / (2*c.s), cover = tripCardCover(st,[f.mark[0]-half,f.mark[1]-half,f.mark[0]+half,f.mark[1]+half]); tripWrite(mk,'opacity',(1-cover)*(1-(st.focusK||0))); tripWrite(mk,'visibility',cover>=.995||st.focusK>=1?'hidden':''); } });
+  E.ticks?.forEach(el => tripWrite(el, 'stroke-width', Math.min(+el.dataset.weight * c.s, +el.dataset.weight * VIEW.s0), true));
   const focusFade = 1 - smooth(0, .4, st.focusK || 0);
   if (E.focusFade === null || Math.abs(focusFade - E.focusFade) > .01 || (focusFade === 0 || focusFade === 1) && focusFade !== E.focusFade) {
     E.focusFade = focusFade;
-    for (const group of [E.tier1, E.subs]) if (group) { tripWrite(group, 'opacity', focusFade); tripWrite(group, 'visibility', focusFade === 0 ? 'hidden' : 'visible'); }
+    for (const group of [E.tier1, E.subs]) if (group) { tripWrite(group, 'opacity', ['wayfinder','all-found'].includes(st.focusId) ? 1 : focusFade); tripWrite(group, 'visibility', ['wayfinder','all-found'].includes(st.focusId) || focusFade !== 0 ? 'visible' : 'hidden'); }
   }
   E.secondary.forEach(group => { tripWrite(group, 'opacity', labelFade); tripWrite(group, 'visibility', labelFade === 0 ? 'hidden' : 'visible'); }); tripWrite(E.scrim, 'opacity', labelFade);
   const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
@@ -388,6 +471,7 @@ export function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classL
 // Rewrites only the frame's camera and card strength; progress and traveller stay on the trail.
 export function tripFocus(st, view, k) {
   if (k === 0) return;
+  delete st.coverRects;
   const F = FIND_PLAY.focus, [x, y, r, least = F.least] = view;
   const target = Math.max(Math.max(VIEW.s0, least * VIEW.sT), Math.min(F.most * VIEW.sT, F.fill * Math.min(VIEW.w, VIEW.h) / (2 * r)));
   const before = toScreen(st, [x, y]), at = [F.at[0] * VIEW.w, F.at[1] * VIEW.h];

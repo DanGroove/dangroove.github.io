@@ -72,7 +72,7 @@ for (const [w, h, n] of [[1440,900,0],[412,730,0],[390,844,0],[360,640,0],[1440,
   for (const t of [0,.69,.7,.75,.8,.9,1]) {
     draw(current, segment('handoff', t));
     for (const [s, at] of settled) assert.deepEqual([s.hx,s.hy], at, 'added stars fade in place');
-    if (n && t <= .7) assert.equal(current.records.filter(r => r.s?.added).length, 0, 'new sky is absent before late hand-over');
+    if (n && segment('handoff', t).handoffT <= .7) assert.equal(current.records.filter(r => r.s?.added).length, 0, 'new sky is absent before late hand-over');
   }
   const rush = segment('rush', .8), calls = serial(draw(current, rush));
   draw(current, segment('rush', 0)); assert.deepEqual(serial(draw(current, rush)), calls, 'Back and replay are identical');

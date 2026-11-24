@@ -47,8 +47,9 @@ assert.equal(hit.listeners.keydown,undefined,'native button owns keyboard activa
 const main = readFileSync(new URL('../main.mjs',import.meta.url),'utf8');
 assert.match(main,/<svg id="map"[^]*?<\/svg>\s*<canvas id="nova" aria-hidden="true"><\/canvas>\s*<canvas id="stars"/);
 assert.ok(main.indexOf('id="nova-hit"') < main.indexOf('class="cards"'),'press target precedes cards/footer');
-assert.match(main, /RM \? '' : `<button type="button" class="fx-hit"/);
-console.log('ok: SVG X retains only rough red strokes; nova canvas follows map; native HTML hit precedes cards and is omitted in reduced motion');
+assert.match(main, /<button type="button" class="fx-hit" id="nova-hit"/);
+assert.ok(main.includes("addEventListener('change', e => mainReduced(e.matches))"), 'retained native hit supports live reduced-motion changes');
+console.log('ok: SVG X retains only rough red strokes; nova canvas follows map; native HTML hit precedes cards and is available for live reduced-motion switching');
 
 const all = [], node = () => { const n = new NovaNode(); all.push(n); return n; };
 const svg=node(), cam=node(), sea=node(), fill=node(), coastG=node(), detail=node(), finds=node(), done=node(), mini=node(), tier=node(), subs=node(), subHome=node(), ship=node(), coasts=[node(),node()];

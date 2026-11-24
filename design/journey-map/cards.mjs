@@ -1,7 +1,7 @@
 // The fixed map shield, its growing callout and the join are one article throughout.
-import { STOPS, PALETTES, COPY, CRAFTS, MAP, DEPTH, CARD_CLOSE, CARD_GROW, CARD_TAIL, MARK, WORLD } from './data.mjs';
+import { STOPS, PALETTES, COPY, CRAFTS, MAP, DEPTH, CARD_CLOSE, CARD_GROW, CARD_TAIL, MARK, WORLD, COMB } from './data.mjs';
 import { shieldSvg, cardTailSvg } from './art.mjs';
-import { VIEW, STOP_U, tripCardPlace, toScreen, smooth, easeIO, lerp } from './trip.mjs';
+import { VIEW, STOP_U, tripCardPlace, toScreen, smooth, easeIO, lerp, tripVisible, tripCardCover } from './trip.mjs';
 import { JOURNEY } from './steps.mjs';
 
 const CD = { list: [], W: 640, craft: null, onGo: null, rm: false, closed: null, last: null, dt: 0 };
@@ -41,10 +41,12 @@ ${rm ? '' : cardTailSvg()}<div class="c-card"><div class="c-sh" aria-hidden="tru
 <div class="c-side"><figure class="c-piece">${piece}${cp.caption ? `<figcaption>${esc(cp.caption)}</figcaption>` : ''}</figure></div></div>
 <div class="c-foot"><ul class="c-crafts">${CRAFTS.map(c => `<li class="${s.crafts.includes(c) ? 'lit' : ''}"><i></i>${c}</li>`).join('')}</ul>
 <button class="c-btn" type="button" aria-label="${esc(COPY.caseStudy + ': ' + s.name)}">${COPY.caseStudy}${arrowSvg}</button></div></div></div></div></div>`;
-    a.querySelector('.st-btn').addEventListener('click', () => {
+    a.querySelectorAll('.c-crafts li').forEach((li, j) => { li.setAttribute('aria-label', (s.crafts.includes(CRAFTS[j]) ? COMB.craftLit : COMB.craftUnlit).replace('{craft}', CRAFTS[j])); li.classList.toggle('craft-used', s.crafts.includes(CRAFTS[j])); });
+    a.querySelector('.st-btn').addEventListener('click', e => {
       if (CD.closed?.i === i && CD.last?.P === CD.closed.P && !JOURNEY.moving) { CD.closed = { ...CD.closed, from: CD.closed.k, to: 1, elapsed: 0 }; CD.list[i].reopenFocus = true; return; }
-      CD.onGo(i);
+      CD.list[i].keyboardOpen = e.detail === 0; CD.onGo(i);
     });
+    a.querySelector('.face').inert = !rm;
     a.querySelector('.c-close')?.addEventListener('click', () => cardsClose(i));
     container.appendChild(a);
     CD.list.push({ el: a, card: a.querySelector('.c-card'), tail: a.querySelector('.c-tail'), face: a.querySelector('.face'), shadow: a.querySelector('.c-sh'), inn: a.querySelector('.c-in'), btn: a.querySelector('.st-btn'), fill: a.querySelector('.st-fill'), boss: a.querySelector('.st-boss-paint'), glow: a.querySelector('.st-glow'), mini: document.getElementById('mini')?.querySelectorAll('.mm-stop')[i], stop: s, state: '', paint: 0, tilt: [0, 0, 0, 0] });
@@ -70,7 +72,7 @@ function cardsDepthConfig(c) {
   c.shadow.style.boxShadow = `0 0 ${cfg.blur}px ${cfg.spread}px var(--shade)`; c.shadow.style.borderRadius = cfg.radius + 'px';
   c.depthPending = false;
 }
-export const cardsSetCraft = mask => { CD.craft = mask; };
+export const cardsSetCraft = mask => { CD.craft = mask; CD.list.forEach(c => c.el.style.transition = 'opacity .3s'); };
 
 export function cardsClose(index = CD.last?.i) {
   const st = CD.last;
@@ -80,6 +82,7 @@ export function cardsClose(index = CD.last?.i) {
   return true;
 }
 export function cardsOverride(st, dt, moving) {
+  delete st.coverRects;
   CD.dt = dt;
   const closed = CD.closed; let changed = false;
   if (closed) {
@@ -100,6 +103,7 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
   const stonePx = Math.max(MARK.min, Math.min(MARK.max, MARK.k * st.cam.s));
   CD.list.forEach((c, i) => {
     const close = c.el.querySelector('.c-close');
+    if (JOURNEY.moving && c.face.contains(document.activeElement)) document.querySelector(JOURNEY.direction === 'back' ? '.go-back' : '.go-next')?.focus({ preventScroll: true });
     if (close) {
       if (JOURNEY.moving && document.activeElement === close) document.getElementById('go')?.querySelector('.go-next')?.focus({ preventScroll: true });
       const inert = JOURNEY.moving || st.cardK[i] < .96;
@@ -108,10 +112,13 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const W = c.W || CD.W, H = c.H, oc = c.place || { x: VIEW.w / 2, y: VIEW.h / 2 };
     const e = st.cardK[i], p = toScreen(st, MAP.waypoints[c.stop.w]);
     const k0 = stonePx / Math.max(W, H), k = Math.pow(k0, 1 - e), py = p[1] - stonePx / 2 - MARK.stand;
-    const cx = lerp(p[0], oc.x, e), cy = lerp(py, oc.y, e);
+    // Position completes its return before the face disappears into the boss.
+    const travel = smooth(.12, 1, e), cx = lerp(p[0], oc.x, travel), cy = lerp(py, oc.y, travel);
     cardsStyle(c.el, 'transform', `translate(${p[0]}px,${py}px)`);
     cardsStyle(c.card, 'transform', `translate(${cx - W * k / 2 - p[0]}px,${cy - H * k / 2 - py}px) scale(${k})`);
-    cardsStyle(c.btn, 'transform', `translate(-50%,-50%) scale(${stonePx / MARK.box})`);
+    cardsStyle(c.btn, 'transform', 'translate(-50%,-50%)');
+    cardsStyle(c.btn, 'width', Math.max(COMB.target, stonePx) + 'px'); cardsStyle(c.btn, 'height', Math.max(COMB.target, stonePx) + 'px');
+    const stone = c.btn.firstElementChild; if (stone) { cardsStyle(stone, 'width', stonePx + 'px'); cardsStyle(stone, 'height', stonePx + 'px'); }
     const lit = CD.craft ? CD.craft[i] : false;
     cardsStyle(c.el, 'opacity', op * (CD.craft && !lit ? .55 : 1));
     // Size, not the score, hands the mark over to the card: the face and its words come in together as it grows (no flat slab).
@@ -140,11 +147,16 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const state = e > .96 ? 'open' : e < .02 ? 'rest' : 'moving';
     if (state !== c.state) { c.state = state; c.el.dataset.state = state; c.face.inert = state !== 'open'; }
     // A stone mark is in the tab order only at rest and on screen (the keyboard never lands on a stop it cannot see).
-    const tab = state === 'rest' && (document.activeElement === c.btn || p[0] >= 0 && p[0] <= VIEW.w && p[1] >= 0 && p[1] <= VIEW.h) ? 0 : -1;
+    const at = MAP.waypoints[c.stop.w], half = COMB.target / (2 * st.cam.s), visible = tripVisible(st, [at[0]-half, at[1]-half, at[0]+half, at[1]+half]);
+    const clear = tripCardCover(st, [at[0]-half,at[1]-half,at[0]+half,at[1]+half], i) < .05;
+    const tab = state === 'rest' && visible && clear ? 0 : -1;
     if (c.btn.tabIndex !== tab) c.btn.tabIndex = tab;
+    if (c.btn.inert !== !visible) { c.btn.inert = !visible; c.btn.setAttribute('aria-hidden', !visible); }
     if (c.reopenFocus && (JOURNEY.moving || st.kind !== 'hold' || st.i !== i)) c.reopenFocus = false;
     if (c.reopenFocus && state === 'open') { c.reopenFocus = false; c.el.querySelector('.c-close').focus({ preventScroll: true }); }
+    if (c.keyboardOpen && state === 'open' && !JOURNEY.moving) { c.keyboardOpen = false; close?.focus({ preventScroll: true }); }
   });
+  CD.previousP = JOURNEY.P;
 }
 
 // Project the actual face edge through its existing tilt, without a DOM layout read.
@@ -174,3 +186,5 @@ function cardsTailFrame(c, f) {
   cardsStyle(c.tail, 'opacity', c.face.style.opacity);
 }
 export const cardsList = () => CD.list;
+
+export function cardsReduced(on) { CD.rm = on; }
