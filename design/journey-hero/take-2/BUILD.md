@@ -2463,3 +2463,64 @@ node .../tools/checks.mjs                                     l4-checks-final.tx
 ```
 
 The required full suite exits **0**, ending **`all clean`**; standalone runners exit **0**, with every negative control failing at its gate. The known L4 group conflict is printed separately as **NOT MET**. No browser, screenshot, eye judgement, pixel-gate execution, reviewer agent, network, installation, site build, publish or mutating git command was used. Canvas/WebGL raster/compositor equality, real first paint, actual worker scheduling and external visual approval remain **UNRUN**. Node VM execution is not represented as browser review. Installed skills and RTK were not read because the explicit read boundary excludes their locations. Only allowed sources/checks/docs and this run's own r19 notes were written; corrections, fixtures and public/src/CNAME were untouched.
+
+### L5 follow-up: the page waits for the stars to land
+
+L5 resolves the L4 conflict recorded above. Built only L5 on the retained `f1f6b52` implementation (incoming HEAD `d533a0e`, the L5 brief). Before writing, read AGENTS.md, CORRECTIONS-19, CORRECTIONS-17 G/R2/R3, Round 6's entrance/hold/exit/check record, both READMEs and the Round 18/19 preservation/review record. Pre-edit acceptance and the clean working-tree source/hash snapshot are `.scratch/review-out/r19/l5-acceptance.md` and `l5-baseline.json`. All earlier artwork, registered construction/releases, device and star behavior remain constraints. L3 remains withdrawn and was not built.
+
+#### One boundary for landing, entrance and pointer
+
+`loaderAt()` now names **`burstStart = holdAt + .35`** independently of **`entranceStart = end = burstStart + .9`**. It exposes `burstTime` for the existing canvas flight/burst drawing; `entranceTime` stays **null throughout the burst**, becomes **0 at landing**, then advances from that boundary. The original progress integration, launch shares/order, .7 flights, .35 hold, .9 burst and every dot's position/size/colour/alpha are unchanged. For an all-ready boot the burst remains **2.45–3.35 s**; entrance, field handover and pointer now coincide at **3.35 s**. Late readiness extends the original gather/flight wait only.
+
+**How the page knows, worker and fallback.** The inline worker and main-thread bridge both execute the same pure `loaderAt()`. The worker receives the real boot timestamps, translates its performance clock to the main thread's origin and posts its first-animation-frame start. The bridge uses that same start and boot history, so `time >= end` is the terminal condition on both sides: burst **1**, `done` and `pointer` true, entrance time beginning at zero. There is no new timeout or worker-completion message. The main-thread fallback uses its own first rAF as zero and retains the last drawn canvas frame while synchronous work blocks it; it evaluates the same terminal condition when frames resume. In `play.mjs`'s existing terminal branch, entrance zero is prepared, loading becomes false, WebGL draws the field's unchanged homes, then the loader is cleared **in that same main-thread frame**. The player stand-in now records and asserts this draw-before-removal order and asserts that no WebGL star copy is submitted during the burst. Actual browser scheduling/compositing remains external review.
+
+`ENTRANCE.starPointer` changes **.9 → 0 entrance seconds**; its absolute landing time is unchanged. Loading still closes the pointer gate, so no hidden pointer target accumulates before handover. The name remains inactive through loading and the whole **3.8 s** entrance. Every L2 span stays exact: floor **1.8–2.8**, screen **2.4–3.2**, loop zero at **3.2**, all header/name/lede/craft/foot timing unchanged. The star ring remains dropped. All-ready loop zero moves **5.65 → 6.55 loader seconds**, and entrance completion/name activation **6.25 → 7.15**, solely from the new origin; the loop itself stays **99.49089474781469 s**.
+
+**Inline scope decision.** `tools/page.mjs` and `tools/preview.mjs` remain byte-identical, respecting their markup/CSS-only write allowance. Their legacy `bridge.apply()` input named `entranceTime` controls only the transparent burst backing. `createLoaderView.apply()` passes it the new `burstTime`, without changing the real timing state. Thus the backing still cuts transparent at **2.45 s**, the canvas still bursts on schedule and the hero underneath remains at entrance zero until landing. The worker/fallback already consume the inlined shared pure module, so they need no bootstrap edit or new message protocol. No alternative entrance or burst design was substituted.
+
+Reduced motion is unchanged: the **formed, still star mark** appears synchronously, with no flight or burst, and readiness cuts to the existing finished InDesign still. `?t=` still skips loader and entrance before painting and holds the requested loop time. `__hero.entrance(t/null)`, first-frame `window.__ready`, readiness dismissal, reduced-motion changes and review holds retain their contracts; an entrance-zero hold now also verifies the pointer is open.
+
+#### Two-group gate and the regression control
+
+The retained entrance-only scan still checks **239** 60 Hz/exact-boundary samples and reading order, maximum **2**. The combined scan now uses a clock measured from burst start and shifts all page groups by the **actual `loaderAt().entranceStart - burstStart`**. It checks **362** samples: every **1/60 s** over burst plus entrance, shifted entrance samples, every exact wipe/cut boundary and both loader boundaries. The burst counts as its own group on **[0, .9)**. Both name lines are one group; the floor is one; nav/foot cuts count only at their instants. The new scan uses the retained **1e-10 s** cut-boundary precision also for numerical span-boundary residue. There are **no collision exceptions**; maximum is **2** with the burst included.
+
+New one-site, in-memory control **`entrance-with-burst`** changes **`const entranceStart = end;` → `const entranceStart = burstStart;`**. It fails at its intended gate with **`L5 groups: burst, mark, nav at 0.350000 s from burst start`**. All seven incoming entrance controls remain and fail at their original gates, including the old screen at **.5–1.1**, fast gather, displaced mark and restored star ring. Entrance controls **7 → 8**; Round 8 retains **4**, Round 17 **43**. No fixtures or pixel-gate files changed.
+
+#### Every earlier check changed, old → new
+
+Only `tools/entrance-checks.mjs` and `tools/round8-checks.mjs` changed checks. Main `tools/checks.mjs`, Round 17 and all other runners are byte-identical. No earlier geometric, pixel or motion tolerance was relaxed.
+
+| Earlier check / expectation | L4 → L5 |
+| --- | --- |
+| Pure formed-hold boundary | `.entranceStart = 2.45` → `.burstStart = 2.45`; same **.35 s** hold. `.entranceStart` now equals the unchanged end **3.35**. |
+| Pure entrance clock | At burst start **2.45: 0 → null**; at **3.35−1e-8: about .9 → null**; at landing **3.35: .9 → 0**. Added after-landing probe **3.60: .25**. Burst/end and absolute pointer boundaries remain **2.45 / 3.35 / 3.35**. |
+| All **36,000** timing samples | Existing bounds/speed/continuity/arrival/boot checks unchanged. Added `entranceTime !== null` iff `done`, `entranceStart === end`, and pointer iff done, including incomplete histories with infinite end. **36,000 → 36,000** samples. |
+| Combined group scan | **239** entrance-clock samples with burst concurrent, maximum **3**, exceptions at **.35/.40–.45** → **362** burst-clock samples with actual entrance offset **.9**, maximum **2**, **0** exceptions. Entrance-only **239 / 2 → identical**; reading order unchanged. |
+| Inline worker/main/error-fallback runs | Burst backing still transparent at **2.45** (now through the real loader-view adapter). Entrance at **2.45: 0 → null**, at added **3.30** probe **null**, at **3.35: .9 → 0**. Added terminal draw count **1,200** at desktop; endpoint/readiness still **3.35**. Backend inventory **5 → 5**, including reduced and review. |
+| Entrance player runner preload | **2.45 → 3.35 s**, to observe entrance zero after landing. All subsequent entrance-relative clock, click, hold, craft and media probes retain their numbers. |
+| Main loader/player burst observations | At **2.45: entering 0 → null**; after **.85 s** at **3.30: .85 → null**; after unchanged **.05 s** at **3.35: .9 → 0**. Pointer remains closed before landing/open at landing. Added field-draw-before-clear/same-frame, no duplicate WebGL stars and inactive name assertions. |
+| Delayed-font and blocked-first-draw players | Post-ready before-start wait **2.40 → 3.30 s**, next step **.05 → .05**, now observing entrance zero at burst landing instead of burst start. Their real readiness, boot-share and first-visible-frame clock-origin checks remain. |
+| Pointer and held entrance zero | Relative threshold **.9 → 0**, absolute handover **3.35 → 3.35**. The prior **2.75** entrance-seconds observation stays open; a new held **0** observation must also be open. |
+| Round 8 N1 player runner | Preload **2.45 → 3.35 s**. Name inactive/active at **3.75 / 3.85 entrance seconds → identical**; held **.8** and reduced paths unchanged. No other Round 8 expectation changes. |
+| Control inventories | Entrance **7 → 8**, adding only `entrance-with-burst`; Round 8 **4 → 4**, Round 17 **43 → 43**. Existing exact-site controls all remain. |
+
+The new handover-zero draw assertion uses the existing player `near()` precision (**1e-6 s**); the observed residue is **4.44e-16 s**. No authored time was rounded or moved to remove it. The pure boundary probes retain their existing **1e-8 s** before-end offset and **1e-9 s** equality precision. Earlier L2 spans, five lede-line-count cases, **48,125** floor-dot samples, **60** E4 label samples, **4,328** mark/home comparisons, **14** player runs and all prior loop observations keep their original numbers.
+
+#### Preservation, verification and limits
+
+`l5-preservation.mjs` / `.json` compare every tracked file to the pre-edit byte hashes and enforce this run's seven-file source/check/docs allowlist. Stage, art, stars, renderer, kit, layout, name/craft/labels/stills/view, CSS, page/preview and Round 17 remain byte-identical. `STARS`, `LOADER` and all **600** sampled mark points are exactly equal. Across six boot histories, **2,166** pure L4 state samples retain every earlier field except entrance origin; across desktop/tablet/phone and instant/delayed boot histories, **2,166** loader frames / **1,269,609** dot-command records are exactly equal, including through the entire burst and handover. Reduced still geometry also matches. The original entrance functions from `loopAt` onward are byte-identical, and `play.mjs` changes only its pointer-origin comment. All **115** action definitions/routes/clocks and every scene length/start/still remain from the unchanged stage, including Round 18's artwork, deck/lid/mark and steady-star corrections.
+
+Final Node evidence is under `.scratch/review-out/r19/`:
+
+```text
+node --check [five changed .mjs files and preservation probe]  l5-syntax-final.txt
+node .../tools/entrance-checks.mjs --controls                   l5-entrance-controls-final.txt
+node .../tools/round8-checks.mjs --controls                     l5-round8-controls-final.txt
+node .../tools/round17-checks.mjs --controls                    l5-round17-controls-final.txt
+node .../tools/checks.mjs                                      l5-checks-final.txt
+node .../.scratch/review-out/r19/l5-preservation.mjs            l5-preservation.json
+```
+
+All syntax checks and runners exit **0**. Full checks end **`all clean`**, retaining **6,582 frames / 477,123 pieces / max 188 / 6 atlas pages**, loop **99.491 s** when printed. Every negative control fails at its intended gate: **8 / 4 / 43** in the required/changed runners, including the new L5 regression. The full suite also runs the retained controls from the other rounds.
+
+No L5 code requirement is left out. Browser pixels, actual first-paint/compositor behavior, real worker scheduling and visual approval are **UNRUN**, for the requested external browser review. No screenshot, eye judgement, pixel gate, reviewer agent, network, install, site build, deployment or mutating git command was used. External skills and RTK could not be read under the repository-only boundary; their design/critique workflows were not run. Only the seven permitted source/check/docs files and this run's own `l5-*` r19 notes were written; every correction, fixture and public/src/CNAME file retains its hash.

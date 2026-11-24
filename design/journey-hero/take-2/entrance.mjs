@@ -1,5 +1,5 @@
 // Round 6: the one-time entrance. Pure timetable and renderer values first; the DOM view only writes clip-path and weight.
-// Hard-edged except the stars/name. Entrance times are seconds from the loader's burst.
+// Hard-edged except the stars/name. Entrance times are seconds from the loader's burst landing.
 import { EASE } from '../../../public/journey/hero/engine.mjs';
 import { SCREEN } from './stage.mjs';
 import { LOADER, loaderAt } from './loader-stars.mjs';
@@ -13,7 +13,7 @@ export const ENTRANCE = {
   lede: { start: 1.05, end: 2.0, step: 0.15 }, // one wipe per line, left to right
   crafts: { start: 3.0, end: 3.6, step: 0.1, lines: 5 },   // four top hairlines and the last row's bottom one
   floor: [1.8, 2.8],                           // hard circle of dots and pool, centre outward
-  starPointer: 0.9,                          // L4: open at the burst landing
+  starPointer: 0,                             // L5: entrance zero is the burst landing
   stars: null,                               // L4: the loader burst replaces the star entrance ring
   screen: [2.4, 3.2],                          // clip plane rising from the screen's bottom edge to its top
   foot: [3.6, 3.7],                            // Scroll for the journey, Pause: cuts
@@ -31,7 +31,9 @@ export function createLoaderView(hero) {
     boot: key => bridge?.boot(key),
     measure: box => bridge?.measure(box),
     motion: reduced => bridge?.motion(reduced),
-    apply(state) { bridge?.apply(state); },
+    // The inline bridge's legacy entranceTime input only switches the burst's transparent backing.
+    // Keep that switch at burst start while the page's entranceTime waits for the landing.
+    apply(state) { bridge?.apply({ ...state, entranceTime: state.burstTime }); },
     clear() { bridge?.clear(); hero.classList.remove('is-loading'); },
   };
 }

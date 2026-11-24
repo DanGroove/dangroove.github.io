@@ -130,7 +130,7 @@ async function runPlayer(playerSource) {
   });
   out.run = seconds => { for (let n = 0; n < Math.round(seconds / 0.05); n++) { now += 50; tick?.(now); } };
   tick?.(now);
-  out.run(2.45);
+  out.run(3.35);
   return out;
 }
 

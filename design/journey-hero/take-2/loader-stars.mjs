@@ -163,7 +163,7 @@ export const launchShare = (i, count = STARS.mark.count) => LOADER.launchEnd * i
 // Farthest-point sampling already supplies a spatially even prefix, across both letters.
 // No sort by path, colour or side is introduced for the loader.
 export function loaderAt(time, boot = {}, { review = false, reduced = false, count = STARS.mark.count } = {}) {
-  if (review) return { phase: 'skipped', fill: 0, target: 0, done: true, entranceStart: null, entranceTime: null, pointer: false };
+  if (review) return { phase: 'skipped', fill: 0, target: 0, done: true, burstTime: null, entranceStart: null, entranceTime: null, pointer: false };
   const events = Object.entries(LOADER.shares)
     .filter(([key]) => Number.isFinite(boot[key]) && boot[key] >= 0)
     .map(([key, share]) => [boot[key], share]).sort((a, b) => a[0] - b[0]);
@@ -192,14 +192,17 @@ export function loaderAt(time, boot = {}, { review = false, reduced = false, cou
   const formedAt = launches.at(-1) + LOADER.flight;
   const fullAt = ready ? crossing(1) : Infinity;
   const holdAt = ready ? Math.max(formedAt, fullAt, events.at(-1)[0]) : Infinity;
-  const entranceStart = holdAt + LOADER.hold, end = entranceStart + LOADER.burst;
+  // L5: keep the canvas's burst clock; the page waits for its landing.
+  const burstStart = holdAt + LOADER.hold, end = burstStart + LOADER.burst;
+  const entranceStart = end;
   if (reduced) return { phase: ready && time >= events.at(-1)[0] ? 'cut' : 'loading', fill: target, target,
     done: ready && time >= events.at(-1)[0], entranceStart: null, entranceTime: null, pointer: false,
-    launches, arrived: count, formedAt: 0, burst: 0, reduced: true };
-  return { phase: time >= end ? 'entrance' : time >= entranceStart ? 'burst' : time >= holdAt ? 'hold' : 'loading',
-    fill, target, done: time >= end, launches, formedAt, fullAt, holdAt, end,
+    launches, arrived: count, formedAt: 0, burst: 0, burstTime: null, reduced: true };
+  return { phase: time >= end ? 'entrance' : time >= burstStart ? 'burst' : time >= holdAt ? 'hold' : 'loading',
+    fill, target, done: time >= end, launches, formedAt, fullAt, holdAt, burstStart, end,
     arrived: launches.filter(at => time >= at + LOADER.flight).length,
-    burst: time >= end ? 1 : clamp01((time - entranceStart) / LOADER.burst),
+    burst: time >= end ? 1 : clamp01((time - burstStart) / LOADER.burst),
+    burstTime: time >= burstStart ? time - burstStart : null,
     entranceStart, entranceTime: time >= entranceStart ? time - entranceStart : null,
     pointer: time >= end, time };
 }
@@ -236,7 +239,7 @@ export function loaderDots(scene, state) {
     if (state.reduced) { dots.push({ ...m, alpha: 1 }); continue; }
     const flight = clamp01((state.time - state.launches[i]) / LOADER.flight);
     if (!(flight > 0)) continue;
-    if (state.entranceTime === null) {
+    if (state.burstTime === null) {
       const t = 1 - (1 - flight) ** 3, u = 1 - t;
       dots.push({ ...m, x: u * u * m.start[0] + 2 * u * t * m.control[0] + t * t * m.x,
         y: u * u * m.start[1] + 2 * u * t * m.control[1] + t * t * m.y, alpha: 1 });
@@ -250,6 +253,6 @@ export function loaderDots(scene, state) {
       size: p === 1 ? home.size : m.size + (home.size - m.size) * blend, colour: p === 1 ? home.colour : mixRGB(m.colour, home.colour, blend),
       flag: p === 1 ? 0 : m.flag, home: m.home, alpha: i < homes.length ? 1 : 1 - blend });
   }
-  if (state.entranceTime !== null) for (let i = points.length; i < homes.length; i++) dots.push({ ...homes[i], home: i, flag: 0, alpha: blend });
+  if (state.burstTime !== null) for (let i = points.length; i < homes.length; i++) dots.push({ ...homes[i], home: i, flag: 0, alpha: blend });
   return dots;
 }

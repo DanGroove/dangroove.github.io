@@ -52,7 +52,7 @@ function bootDone(key) {
 }
 const frameNow = () => frameAt(t, first && t < 0.5 ? { first: true } : {});
 // Round 8: the name reacts once the entrance has ended (N1); the star field (B1, B2) is drawn first in every frame and takes
-// the pointer once the loader burst lands (.90 s from entrance zero). Neither stops with Pause, and neither moves the loop.
+// the pointer once the loader burst lands (entrance zero). Neither stops with Pause, and neither moves the loop.
 const nameReact = createNameReact(hero, { reduced });
 // Round 14 (K1, replacing round 12's selection box): the craft list's letters roll from the old row to the new on its own
 // clock; the entrance sets it, so the current row appears lit as its row cuts in.
