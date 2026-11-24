@@ -156,7 +156,7 @@ export function placeMark(sample, W, H, height = STARS.mark.height) {
 // L4: progress has real 25/50/25 shares. .85 displayed progress launches the last star;
 // .85 / 1.4 is deliberately stricter than 1 / 1.4, so launches themselves span 1.4 s.
 export const LOADER = {
-  launchEnd: 0.85, gatherSeconds: 1.4, flight: 0.7, hold: 0.35, burst: 1.2,
+  launchEnd: 0.85, gatherSeconds: 1.4, flight: 1.0, hold: 0.15, shrink: 0.4, swell: 0.25, burst: 1.6,
   shares: { fonts: 0.25, atlas: 0.5, frame: 0.25 },
 };
 export const launchShare = (i, count = STARS.mark.count) => LOADER.launchEnd * i / Math.max(1, count - 1);
@@ -192,14 +192,17 @@ export function loaderAt(time, boot = {}, { review = false, reduced = false, cou
   const formedAt = launches.at(-1) + LOADER.flight;
   const fullAt = ready ? crossing(1) : Infinity;
   const holdAt = ready ? Math.max(formedAt, fullAt, events.at(-1)[0]) : Infinity;
-  // L5: keep the canvas's burst clock; the page waits for its landing.
-  const burstStart = holdAt + LOADER.hold, end = burstStart + LOADER.burst;
+  const shrinkStart = holdAt + LOADER.hold, swellStart = shrinkStart + LOADER.shrink;
+  // L7's wind-up is about the mark's weight centre. L5 still waits for the landing.
+  const burstStart = swellStart + LOADER.swell, end = burstStart + LOADER.burst;
   const entranceStart = end;
   if (reduced) return { phase: ready && time >= events.at(-1)[0] ? 'cut' : 'loading', fill: target, target,
     done: ready && time >= events.at(-1)[0], entranceStart: null, entranceTime: null, pointer: false,
     launches, arrived: count, formedAt: 0, burst: 0, burstTime: null, reduced: true };
-  return { phase: time >= end ? 'entrance' : time >= burstStart ? 'burst' : time >= holdAt ? 'hold' : 'loading',
-    fill, target, done: time >= end, launches, formedAt, fullAt, holdAt, burstStart, end,
+  const shrink = clamp01((time - shrinkStart) / LOADER.shrink), swell = clamp01((time - swellStart) / LOADER.swell);
+  const scale = time >= swellStart ? 0.84 + (1.10 - 0.84) * swell ** 2 : 1 - 0.16 * (0.5 - 0.5 * Math.cos(Math.PI * shrink));
+  return { phase: time >= end ? 'entrance' : time >= burstStart ? 'burst' : time >= swellStart ? 'swell' : time >= shrinkStart ? 'shrink' : time >= holdAt ? 'hold' : 'loading',
+    fill, target, done: time >= end, launches, formedAt, fullAt, holdAt, shrinkStart, swellStart, scale, burstStart, end,
     arrived: launches.filter(at => time >= at + LOADER.flight).length,
     burst: time >= end ? 1 : clamp01((time - burstStart) / LOADER.burst),
     burstTime: time >= burstStart ? time - burstStart : null,
@@ -225,38 +228,56 @@ export function loaderScene(sample, W, H, viewport = { width: W, height: H, left
     const dx = x - sx, dy = y - sy, len = Math.max(1, Math.hypot(dx, dy)), bend = (hash(i, 20) - 0.5) * Math.min(W, H) * 0.16;
     return { x, y, size: STARS.mark.size, flag: markFlag(p.kind), colour: rgb(FLAG_INK[markFlag(p.kind)]),
       edge, start: [sx, sy], control: [(sx + x) / 2 - dy / len * bend, (sy + y) / 2 + dx / len * bend],
-      home: i % homes.length };
+      home: null };
   });
-  return { W, H, centre, mark, points, homes };
+  const weight = [centre[0] + mark.weight[0], centre[1] + mark.weight[1]];
+  const angle = p => Math.atan2(p.y - weight[1], p.x - weight[0]);
+  const order = list => list.map((p, i) => i).sort((a, b) => angle(list[a]) - angle(list[b]) || a - b);
+  const markOrder = order(points), homeOrder = order(homes), paired = Math.min(points.length, homes.length), used = new Set();
+  // Select evenly spaced angular ranks from the larger set; the smaller set is used in full.
+  for (let rank = 0; rank < paired; rank++) {
+    const i = markOrder[Math.floor(rank * points.length / paired)], home = homeOrder[Math.floor(rank * homes.length / paired)];
+    points[i].home = home; used.add(home);
+  }
+  // Surplus phone stars continue along their own rays to just outside the first screen.
+  // They never converge on an already assigned home; their alpha reaches zero at landing.
+  const bounds = [-viewport.left, -viewport.top, viewport.width - viewport.left, viewport.height - viewport.top];
+  for (const p of points) if (p.home === null) {
+    const dx = p.x - weight[0], dy = p.y - weight[1], gap = STARS.mark.size + 2;
+    const tx = dx > 0 ? (bounds[2] + gap - weight[0]) / dx : dx < 0 ? (bounds[0] - gap - weight[0]) / dx : Infinity;
+    const ty = dy > 0 ? (bounds[3] + gap - weight[1]) / dy : dy < 0 ? (bounds[1] - gap - weight[1]) / dy : Infinity;
+    const reach = Math.max(1.10, Math.min(tx, ty));
+    p.exit = [weight[0] + dx * reach, weight[1] + dy * reach];
+  }
+  return { W, H, centre, weight, mark, points, homes, unpairedHomes: homeOrder.filter(i => !used.has(i)) };
 }
-// L6: quartic ease-out for both moves; flights keep their quadratic paths. The kick needs
-// power 10: powers 6 and 8 let some stars accelerate again in the final third.
-// It dies sooner than the pull. Normalize its peak at p=1/11 to the old peak, 4/27.
-const BURST_KICK_SCALE = (4 / 27) / (10 ** 10 / 11 ** 11);
-// Extra mark points on a small field still merge into its homes.
+// L7: cubic ease-out on unchanged gathering paths, then straight lines from the swollen mark.
+// The swell supplies the wind-up; the explosion has no separate kick or change of direction.
 export function loaderDots(scene, state) {
-  const { points, homes, centre } = scene, p = state.burst || 0, blend = 1 - (1 - p) ** 4, dots = [];
+  const { points, homes, weight } = scene, p = state.burst || 0, blend = 1 - (1 - p) ** 3, dots = [];
   for (let i = 0; i < points.length; i++) {
     const m = points[i], home = homes[m.home];
     if (state.reduced) { dots.push({ ...m, alpha: 1 }); continue; }
     const flight = clamp01((state.time - state.launches[i]) / LOADER.flight);
     if (!(flight > 0)) continue;
     if (state.burstTime === null) {
-      const t = 1 - (1 - flight) ** 4, u = 1 - t;
+      if (state.time >= state.formedAt) {
+        dots.push({ ...m, x: weight[0] + (m.x - weight[0]) * state.scale,
+          y: weight[1] + (m.y - weight[1]) * state.scale, alpha: 1 });
+        continue;
+      }
+      const t = 1 - (1 - flight) ** 3, u = 1 - t;
       dots.push({ ...m, x: u * u * m.start[0] + 2 * u * t * m.control[0] + t * t * m.x,
         y: u * u * m.start[1] + 2 * u * t * m.control[1] + t * t * m.y, alpha: 1 });
       continue;
     }
-    const dx = m.x - centre[0], dy = m.y - centre[1], len = Math.max(1e-6, Math.hypot(dx, dy));
-    const impulse = (STARS.hold.blast[0] + STARS.hold.blast[1]) / home.m;
-    // .9 is the old impulse-to-distance factor, not the new duration: the peak must not grow.
-    const kick = Math.min(impulse * 0.9, STARS.hold.max * scene.W) * BURST_KICK_SCALE;
-    const out = kick * p * (1 - p) ** 10;
-    dots.push({ x: p === 1 ? home.x : m.x + (home.x - m.x) * blend + dx / len * out,
-      y: p === 1 ? home.y : m.y + (home.y - m.y) * blend + dy / len * out,
-      size: p === 1 ? home.size : m.size + (home.size - m.size) * blend, colour: p === 1 ? home.colour : mixRGB(m.colour, home.colour, blend),
-      flag: p === 1 ? 0 : m.flag, home: m.home, alpha: i < homes.length ? 1 : 1 - blend });
+    const x = weight[0] + (m.x - weight[0]) * 1.10, y = weight[1] + (m.y - weight[1]) * 1.10;
+    const target = home || { x: m.exit[0], y: m.exit[1], size: m.size, colour: m.colour };
+    dots.push({ x: p === 1 ? target.x : x + (target.x - x) * blend,
+      y: p === 1 ? target.y : y + (target.y - y) * blend,
+      size: p === 1 ? target.size : m.size + (target.size - m.size) * blend, colour: p === 1 ? target.colour : mixRGB(m.colour, target.colour, blend),
+      flag: p === 1 ? 0 : m.flag, home: m.home, alpha: home ? 1 : 1 - blend });
   }
-  if (state.burstTime !== null) for (let i = points.length; i < homes.length; i++) dots.push({ ...homes[i], home: i, flag: 0, alpha: blend });
+  if (state.burstTime !== null) for (const i of scene.unpairedHomes) dots.push({ ...homes[i], home: i, flag: 0, alpha: blend });
   return dots;
 }

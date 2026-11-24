@@ -2613,3 +2613,102 @@ node .../.scratch/review-out/r19/l6-preservation.mjs  l6-preservation.json
 All commands exit **0**; the full suite ends **`all clean`**, retaining **6,582 frames / 477,123 pieces / max 188 / 6 atlas pages / 99.491 s**. All **11 / 4 / 43** negative controls in the required/changed standalone runners fail at their intended gates. `l6-syntax-final.json` records each individual syntax check. Final preservation finds only the five permitted source/check/docs changes; the other **198 tracked files** retain their pre-edit hashes.
 
 No L6 code item is intentionally omitted. Browser pixels, first-paint/compositor behavior, real worker scheduling and visual approval remain **UNRUN**, as requested. No screenshots, eye judgement, pixel gate, reviewer agents, network, installation, site build, deployment or mutating git command were used. External skills and RTK remain unread under the repository-only boundary. Only the five permitted source/check/docs files and this run's own `l6-*` r19 notes were written.
+
+### L7 follow-up: shrink, swell and radial explosion
+
+L7 replaces L6's curves and speed rule on the retained `4c56935` build. L3 remains withdrawn. Before writing, read AGENTS.md, CORRECTIONS-19, CORRECTIONS-17 G/R2/R3 and Round 6's entrance, review hold, label-exit and check record in that order, then the READMEs and retained Round 18/19 evidence. Pre-edit acceptance, source copies and tracked-file hashes are `.scratch/review-out/r19/l7-acceptance.md` and `l7-baseline.json`. The existing artwork, registration, devices, steady held stars and all L1/L2/L4/L5 rules remain constraints except where L7 expressly replaces them.
+
+#### Phases and curves
+
+Only `loader-stars.mjs` changes runtime behavior. All-ready times, measured from the loader's existing first-visible-frame origin:
+
+| Phase | Time | Curve and behavior |
+| --- | --- | --- |
+| Flights | launches 0–1.4; last arrival 2.4 s | Each flight **.7 → 1.0 s**, `1-(1-f)^3`; original quadratic Bezier, four-edge seed, launch share and farthest-point order unchanged. |
+| Formed hold | 2.4–2.55 | **.35 → .15 s**; the formed mark is still. Readiness can extend the original wait before this hold. |
+| Shrink | 2.55–2.95 | New **.4 s**, scale **1 → .84**, `0.5-0.5*cos(PI*p)`. |
+| Swell | 2.95–3.2 | New **.25 s**, scale **.84 → 1.10**, `p^2`. |
+| Explosion | 3.2–4.8 | **1.2 → 1.6 s**, straight lines with `1-(1-p)^3` for position, size, colour and all fades. No separate kick. |
+| Landing / entrance zero / field / pointer | 4.8 | **3.65 → 4.8 s**; L5's shared boundary remains. |
+
+Shrink and swell use `centre + placeMark(...).weight`, the sampled fill's weight centre, rather than the box centre. Every position is that centre plus its original offset times one common scale. Each individual star retains its **2.6 px** size and its red/paper colour through the hold and wind-up. The cosine starts and ends at zero speed; the swell starts at zero speed and accelerates into the blast. No tremble or jitter is added. The explosion's velocity is its fixed line vector times `3*(1-p)^2/1.6`, so it can jump once at the blast and then only decreases to zero.
+
+#### Angular pairing and the phone surplus
+
+Mark points and float32 field homes are sorted by `atan2(y-weightY, x-weightX)`, from -PI to PI, with original index breaking ties. For rank `r` out of `min(markCount, homeCount)`, pair sorted mark rank `floor(r*markCount/pairedCount)` with sorted home rank `floor(r*homeCount/pairedCount)`. This preserves angle order and spreads the selected ranks evenly in the larger set.
+
+- **1440×900:** 600 mark stars, 1,200 homes. All 600 paired homes are distinct, every second sorted home is selected, and the other 600 stars fade in at their unchanged homes using the cubic curve.
+- **768×1024:** 600 mark stars, 728 homes. The same rank rule selects 600 distinct homes; the other 128 fade in at home.
+- **390×844:** 600 mark stars, 305 homes. Select 305 evenly spread mark ranks and use every sorted home exactly once. The other 295 mark stars have no home assignment. Each travels straight along its own ray from the weight centre, from its swollen position to just outside the first screen, and fades by `1-cubic(p)` to exactly zero. Its size and colour stay unchanged. This replaces the old surplus merging into duplicate homes.
+
+The surplus destination distance was unspecified; the chosen endpoint is the first-screen rectangle's ray intersection plus the existing **2.6+2 px** offscreen margin. It gives a deterministic outward destination without adding a kick or changing any visible field home. No alternate curve, duration or angular order was substituted.
+
+At landing the visible dots contain exactly one copy of every unchanged field home, with its exact position, size, colour, field flag and alpha. Invisible surplus dots remain alpha zero until disposal. The retained terminal player branch still draws WebGL's homes before removing the loader in the same main-thread frame. `tools/page.mjs`, `tools/preview.mjs`, `entrance.mjs` and `play.mjs` remain byte-identical: both inline backends consume the updated pure module automatically, and the backing becomes transparent at the new explosion start via the existing burst clock.
+
+The 25/50/25 boot shares, monotone progress at most .85/1.4 per second, 1.4 s launches, readiness pauses, reduced formed/still mark then ready cut, `?t=` bypass, `window.__ready` and `__hero.entrance` contracts stay. All L2 entrance-relative spans remain exact: floor **1.8–2.8**, screen **2.4–3.2**, loop zero **3.2**, end/name activation **3.8**, star ring dropped, star pointer **0**. Absolute all-ready loop zero moves **6.85 → 8.0 s**, and name activation **7.45 → 8.6 s**. The loop stays **99.49089474781469 s**.
+
+#### New Node gates and negative controls
+
+`tools/loader-checks.mjs`, called by `tools/entrance-checks.mjs`, samples the actual `loaderDots()` output at **1/240 s** on the existing desktop and phone scenes. Per scene: **144,000** flight position/look samples, **117,000** hold/shrink/swell star samples and **231,000** explosion star samples; **984,000** combined. The gates check the exact cubic Bezier timing and durations, unchanged flight look, weight-centred scale formula, unchanged point size/colour/alpha, zero flight arrival and wind-up endpoint speeds, fixed explosion lines, cubic size/colour/fades, angular ranks, unique/full home coverage, stationary unpaired homes and surplus rays. Every explosion interval's speed is nonincreasing, including surplus stars and stationary field stars: **689,400** adjacent-speed comparisons, maximum rise **0**. One-sided three-point endpoint derivatives use **h=.00001 s**, with **.00001 px/s** subtraction/stencil allowance. Worst measured flight arrival **2.158e-7**, scale stop **3.315e-8**, explosion arrival **7.627e-8 px/s**; analytic endpoint speeds are zero. The old average/6 rule is retired, as L7 requires, rather than relaxed.
+
+All **15** in-memory entrance controls fail at their intended gates; each source edit matches exactly one site. The v35 control restores its two coupled curve/duration values, with each site counted independently:
+
+| Control | Observed gate |
+| --- | --- |
+| v35 quartic **1.2 s** burst | `L7 explosion curve: duration: 1.2 != 1.6` |
+| No shrink | `L7 scale: shrink x` at the first nonzero shrink sample |
+| Index/modulo homes | `L7 angle order: 1440x900 star 0` |
+| Entrance **.05 s before landing** | `L5 timing: entrance starts at landing: 4.75 != 4.8` |
+| Smoothstep burst retained as a regression fault | `L7 explosion curve: line x` |
+| Quartic flight (replaces obsolete cubic-flight fault) | `L7 flight curve: x` |
+| Earlier entrance at burst + **.9 s** | `L5 groups: burst, mark, nav at 1.250000 s` |
+| Entrance with burst | `L5 groups: burst, mark, nav at .350000 s` |
+| Coincident name lines / cut labels / craft click leaving entrance | `E1 timetable: Endrawes` / `E4 labels:` / `E1 click: craft` |
+| Old screen **.5–1.1** / gather **.7 instead of 1.4** | `L2 groups:` / `L4 timing:` |
+| Mark x shifted **1 px** / restored star ring | `L4 consistency:` / `L4 entrance:` |
+
+All **4** Round 8 and **43** Round 17 controls also fail at their intended gates. No negative control writes source files or fixtures. The complete observed messages are in `l7-entrance-controls-final.txt`, `l7-round8-controls-final.txt` and `l7-round17-controls-final.txt` under the permitted r19 notes.
+
+#### Every earlier expectation changed or removed
+
+Only `tools/entrance-checks.mjs` and `tools/round8-checks.mjs` alter earlier checks; the new `tools/loader-checks.mjs` supplies L7's replacement gates. Main checks, Round 17, fixtures and pixel-gate files stay byte-identical.
+
+| Earlier check | Old → new |
+| --- | --- |
+| Flight duration / own-launch arrival probes | **.7 → 1.0 s**; formation/formed-dot probe **2.1 → 2.4 s**. Launch indices 0/100/300/599 and ±1e-9 probes unchanged. |
+| Delayed final-step hold oracle | **10 + .1*1.4/.85 + .7 → 10 + .1*1.4/.85 + 1.0 s**. |
+| Hold / start of explosion | **.35 → .15 s**; explosion start **2.45 → 3.2 s**, including null burst clock and null entrance probes. New shrink/swell boundaries **2.55 / 2.95**. |
+| Explosion duration | **1.2 → 1.6 s**. |
+| End / entrance / done / pointer boundaries | **3.65 → 4.8 s**; just-before probe **3.65−1e-8 → 4.8−1e-8**, unchanged null/false expectations. |
+| After-landing clock | **3.90 → 5.05 s**, entrance **.25 → .25**. |
+| Home equality and scrolled home probe | **3.65 → 4.8 s**; **4,328 → 4,033** mark/home comparisons because 295 invisible phone surplus stars now have ray endpoints rather than duplicate homes. Every visible field home still compares; new surplus-ray/fade and angular-coverage gates cover all 295. Scrolled home 0 is found by home identity rather than assumed dot index 0. |
+| Pre-handover continuity | **3.65−1e-7 → 4.8−1e-7**; position/alpha bounds remain **.001 / .001**. Includes the new alpha-zero surplus endpoints. |
+| Inline worker/fallback | Backing transparent probe **2.45 → 3.2**; pre-landing **3.60 → 4.75**, landing **3.65 → 4.8**; terminal visible field count **1,200 → 1,200**. |
+| Entrance player preload | **3.65 → 4.8 s**. All subsequent entrance-relative click, hold, loop, craft, name and media probes unchanged. |
+| Player phase advances | Formation **2.1 → 2.4**, hold **.35 → .15**, add shrink **.4**, swell **.25**, pre-landing explosion advance **1.15 → 1.55**, final **.05 → .05**. Same null entrance, closed pointer and draw-before-removal assertions. |
+| Delayed-font / blocked-first-draw players | Readiness-relative before-landing wait **3.60 → 4.75**, then **.05 → .05**. Original boot and visible-frame origins retained. |
+| L5 combined group scan | Explosion **[0,1.2) → [0,1.6)**, actual entrance offset **1.2 → 1.6**, samples **446 → 398** (the Set's floating-point duplicate count changes with the offset); maximum **2 → 2**, no exceptions. Entrance-only **239 / 2 → identical**. |
+| L6 final-third stop gate removed | **243,000** average/6 samples → L7's whole-path curve/scale gates and **689,400** monotone explosion-speed comparisons. No average/6 bound remains. |
+| L6 normalized kick gate removed | **290** p probes per viewport (including p=1/11), power **10**, peaks **96 / 51.2 / 26 px** → no kick, straight explosion lines. Cubic material/fade interpolation replaces quartic. |
+| Cubic-flight negative control replaced | Cubic was the L6 fault; cubic is now required. Replacement fault is quartic, caught by `L7 flight curve:`. |
+| Earlier smoothstep / old-.9-entrance control gates | `L6 burst stop:` → `L7 explosion curve:`; `L5 timing:` → earlier `L5 groups:` because the longer explosion now overlaps mark/nav at that old entrance offset. The .9 fault value itself stays. |
+| Control inventory / summary | Entrance **11 → 15**; Round 8 **4 → 4**, Round 17 **43 → 43**; L6 summary replaced with L7 phases and sample evidence. |
+| Round 8 N1 player preload | **3.65 → 4.8 s** only. Name tests **3.75 / 3.85 entrance seconds**, held **.8**, reduced path unchanged. |
+
+The **36,000** timing samples, **5** inline runs, **14** player runs, **48,125** floor samples and **60** label-exit samples retain their counts and unaffected assertions. No earlier geometry, colour, pixel or registration tolerance is changed. The combined scan still covers every 60 Hz instant and every exact wipe/cut/loader boundary; its lower unique-Set count does not remove a time or exempt a collision.
+
+#### Verification and limits
+
+Final Node commands and complete output are retained under `.scratch/review-out/r19/`:
+
+```
+node --check loader-stars.mjs, tools/loader-checks.mjs, tools/entrance-checks.mjs, tools/round8-checks.mjs
+node .../tools/entrance-checks.mjs --controls     l7-entrance-controls-final.txt
+node .../tools/round8-checks.mjs --controls       l7-round8-controls-final.txt
+node .../tools/round17-checks.mjs --controls      l7-round17-controls-final.txt
+node .../tools/checks.mjs                        l7-checks-final.txt
+```
+
+The full suite ends **`all clean`** and retains **6,582 frames / 477,123 pieces / max 188 / 6 atlas pages / 99.491 s**. `l7-preservation.mjs` / `l7-preservation.json` confirm **198** tracked files remain byte-identical, with only the five permitted tracked source/check/docs edits and the new permitted L7 checker. All **600** mark samples are identical; **2,400** point/path comparisons, **2,558** visible landing comparisons and **4,800** formed/reduced dot comparisons match the baseline exactly on desktop/tablet/phone/scrolled phone. Across **3,606** boot-history samples, fill, target, launch times and full-progress time remain exact; formation/hold move **+.3 s**, explosion start **+.75 s**, landing **+1.15 s**, and reduced/review state objects remain exactly equal. Six individual `node --check` commands exit **0**. These comparisons use visible drawing attributes, rather than incidental metadata on paired versus unpaired home records. Only the permitted runtime module, new L7 checker, two earlier check files, BUILD/README and this run's own r19 notes are written.
+
+No L7 code item is omitted. Browser first-paint/compositing, real worker scheduling, pixels, screenshots and visual approval remain **UNRUN** for external review. No reviewer agents, eye judgement, pixel gate, network, dependency installation, site build, deployment or mutating git command was used. External skill files and RTK.md remain unread because this run forbids access outside the repository.
