@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { C, MAP, NOVA, DEPTH, EXPLORE, STEPS } from '../data.mjs';
 import { mapDefs } from '../art.mjs';
 import { tripBuild, tripResize, tripState, tripApply, SEQ, VIEW, smooth, novaBuild, novaBuildGather } from '../trip.mjs';
-import { starsBuild, starsResize, starsTick, starsFrame, novaGatherPoint } from '../stars.mjs';
+import { starsBuild, starsResize, starsJoin, starsTick, starsFrame, starsRushSources, novaGatherPoint, novaGatherSources } from '../stars.mjs';
 import { footerBuild, footerBuildX, footerNovaResize, footerFrame, footerMotion } from '../footer.mjs';
 
 class NovaNode {
@@ -112,8 +112,9 @@ for(const phone of [false,true])for(let ms=0;ms<=2984;ms++){
 // and no 16 ms frame moves a star more than 2 % of its way in (the old throbs lurched about 4 % in a frame, then nearly froze).
 for(const order of [0,.5,1]){let last=0;for(let ms=16;ms<=3000;ms+=16){const v=novaBuildGather(ms/3000,order)-novaBuildGather((ms-16)/3000,order);assert.ok(v<=.02,'gather lurch at '+ms+' ms, order '+order);if(ms/3000<=NOVA.build.draw){assert.ok(v>=last-2e-4,'gather slows before the draw-in at '+ms+' ms, order '+order);last=v;}}}
 {let last=0;for(let ms=16;ms/3000<=NOVA.build.draw;ms+=16){const v=novaBuild(ms/3000).len-novaBuild((ms-16)/3000).len;assert.ok(v>=last-1e-9,'spike growth slows before the draw-in at '+ms+' ms');last=v;}}
-assert.ok(novaBuild(.93).len<novaBuild(.72).len);assert.equal(novaBuild(1).len,NOVA.build.compressed);assert.deepEqual(novaBuild(.93).jitter,[0,0]);
-for(let order=0;order<=1;order+=.01){const q=novaBuildGather(.93,order);assert.equal(q,1);assert.deepEqual(novaGatherPoint([10,20],[500,400],order*6,150,q),[500,400]);}
+assert.ok(novaBuild(.93).len<novaBuild(.72).len);assert.equal(novaBuild(1).len,NOVA.build.compressed);
+assert.ok(Math.hypot(...novaBuild(.93).jitter)>0&&Math.hypot(...novaBuild(1).jitter)>0,'tremble continues into the blast');
+for(let order=0;order<=1;order+=.01){const q=novaBuildGather(1,order);assert.equal(q,1);assert.deepEqual(novaGatherPoint([10,20],[500,400],order*6,150,q),[500,400]);}
 for(const size of [[1440,900,120],[390,844,96]]){
   tripResize(...size);footerNovaResize(size[0],size[1]);
   const rush=segment('rush',.76), blast=segment('blast',.4/STEPS.pace.blast);
@@ -178,7 +179,8 @@ const starCanvas=novaCanvas();starsBuild(starCanvas);starsResize(1440,900);
 const starSnapshot=(t,time)=>{starCanvas.ctx.calls.length=0;const st=segment('rush',t);starsTick(.1,st);starsFrame(time,st,[.5,.5]);return JSON.stringify(starCanvas.ctx.calls.map(c=>[c.name,c.args,/^(fill|fillRect|stroke)$/.test(c.name)?c.alpha:null]));};
 const starForward=[.01,.26,.45,.60,.72,.83,.93,.97].map(t=>[t,starSnapshot(t,3)]);
 for(const [t,frame] of starForward.slice().reverse())assert.ok(starSnapshot(t,200)===frame,'stars ignore elapsed clock during rush at '+t);
-starSnapshot(.93,1);const heldState=segment('rush',.93),heldX=[MAP.x[0]*heldState.cam.s+heldState.cam.tx,MAP.x[1]*heldState.cam.s+heldState.cam.ty];assert.ok(!starCanvas.ctx.calls.some(c=>(c.name==='fillRect'||c.name==='arc')&&Math.hypot(c.args[0]-heldX[0],c.args[1]-heldX[1])<3),'gathered stars vanish before held breath');
+starSnapshot(0,800);
+for(const [t,frame] of starForward)assert.equal(starSnapshot(t,900),frame,'return to the X then replay has the same positions and light at '+t);
 // V4-1: the stars carry straight on through the first rush frame (no twinkle phase switch, no release of the pull toward the X, no alpha jump).
 {
   const dots=(st,time)=>{starCanvas.ctx.calls.length=0;starsTick(.016,st);starsFrame(time,st,[.5,.5]);return starCanvas.ctx.calls.filter(c=>(c.name==='fillRect'||c.name==='arc')&&c.alpha>.004).map(c=>[c.args[0],c.args[1],c.alpha]);};
@@ -190,7 +192,53 @@ starSnapshot(.93,1);const heldState=segment('rush',.93),heldX=[MAP.x[0]*heldStat
 }
 // The actual writer already has zero identical-frame map writes; reject new SVG effects too.
 assert.ok(!/createElementNS|findSvg\(/.test(readFileSync(new URL('../footer.mjs',import.meta.url),'utf8')));
-console.log('ok: D3 3 s reversible canvas/star score; four increasing throbs >=340 ms apart (light only); stars and spikes speed up without lurches; 16 ms alpha deltas <=.08; gather complete at .93; compressed blast, anchored push/recoil and rough 3.6-width handoff at DPR 1/3');
+console.log('ok: D3 3 s reversible canvas/star score; four increasing throbs >=340 ms apart (light only); stars and spikes speed up without lurches; 16 ms alpha deltas <=.08; tremble to the blast; compressed blast, anchored push/recoil and rough 3.6-width handoff at DPR 1/3');
+// WHIRL: use the same source planner and position model as the actual canvas, at the X beat.
+for(const [w,h,n] of [[1440,900,0],[390,844,0],[1440,900,1200],[390,844,240]]){
+  tripResize(w,h,w>640?120:96);starsJoin(null);starsBuild(starCanvas);starsResize(w,h);
+  if(n){starsJoin({count:n,drawn(i,out){out[0]=i*83%w;out[1]=i*137%h;return out;},look(i){return {size:2,alpha:.8,colour:i%20?C.paper:C.red};}});starsFrame(0,segment('handoff',0),[.5,.5]);}
+  starsFrame(0,segment('rush',0),[.5,.5]);
+  const st=segment('rush',0),centre=[MAP.x[0]*st.cam.s+st.cam.tx,MAP.x[1]*st.cam.s+st.cam.ty];
+  const rows=starsRushSources(),gather=rows.filter(row=>row.gather),counts=Array(NOVA.gather.sectors).fill(0);
+  for(const row of gather){counts[row.sector]++;assert.ok(row.from[0]>=0&&row.from[0]<=w&&row.from[1]>=0&&row.from[1]<=h,'source starts on screen');}
+  console.log(`WHIRL ${w}x${h} ${n?'joined '+n:'standalone'}: sectors ${counts.join(', ')}; ${gather.length} gathering`);
+  assert.ok(gather.length>0,'a visible source in every sector is required');assert.ok(Math.max(...counts)-Math.min(...counts)<=1);
+  assert.deepEqual(starsRushSources(),rows,'seeded sources repeat');
+  const replanned=novaGatherSources(rows.map(({s,from,visible})=>({s,from,visible})),centre,w,h,VIEW.phone);
+  assert.deepEqual(replanned.filter(row=>row.gather).map(row=>row.s),gather.map(row=>row.s),'renderer uses the sector selector');
+  for(let sector=0;sector<counts.length;sector++){
+    const pool=rows.filter(row=>row.sector===sector&&row.visible&&row.from[0]>=0&&row.from[0]<=w&&row.from[1]>=0&&row.from[1]<=h&&row.distance>0).sort((a,b)=>a.distance-b.distance);
+    const selected=pool.filter(row=>row.gather);
+    for(let i=0;i<selected.length;i++)assert.ok(pool.indexOf(selected[i])>=Math.floor(i*pool.length/selected.length)&&pool.indexOf(selected[i])<Math.floor((i+1)*pool.length/selected.length),'one stable source from every depth stratum');
+  }
+  const dots=t=>{starCanvas.ctx.calls.length=0;starsFrame(3,segment('rush',t),[.5,.5]);return starCanvas.ctx.calls.filter(c=>(c.name==='fillRect'||c.name==='arc')&&c.alpha>.004).map(c=>c.name==='arc'?c.args.slice(0,2):[c.args[0]+c.args[2]/2,c.args[1]+c.args[3]/2]);};
+  const restDots=dots(0),rushDots=dots(.6),has=(dots,p)=>dots.some(d=>Math.hypot(d[0]-p[0],d[1]-p[1])<1e-6);
+  for(const row of rows.filter(row=>!row.gather&&has(restDots,row.from)))assert.ok(has(rushDots,row.from),'non-gathering visible star stays at its own screen position');
+  for(const row of gather){
+    for(let k=0;k<=300;k++){
+      const q=NOVA.gather.join*k/300,at=novaGatherPoint(row.from,centre,row.angle,row.radius,q),r=Math.hypot(at[0]-centre[0],at[1]-centre[1]);
+      assert.ok(r>=row.radius-1e-6,'approach cuts inside its own ring');
+    }
+    const at=novaGatherPoint(row.from,centre,row.angle,row.radius,NOVA.gather.join);
+    assert.ok(Math.hypot(at[0]-centre[0]-row.radius*Math.cos(row.angle),at[1]-centre[1]-row.radius*Math.sin(row.angle))<1e-6,'own bearing plus swirl meets the ring');
+  }
+  const point=(row,seconds)=>{const s=segment('rush',seconds/STEPS.pace.rush),c=[MAP.x[0]*s.cam.s+s.cam.tx,MAP.x[1]*s.cam.s+s.cam.ty];return novaGatherPoint(row.from,row.centre,row.angle,row.radius,novaBuildGather(seconds/STEPS.pace.rush,row.order)).map((v,i)=>v+c[i]-row.centre[i]);};
+  for(const row of gather){let last=row.distance;for(let frame=1;frame<=180;frame++){const seconds=frame/60,s=segment('rush',seconds/3),c=[MAP.x[0]*s.cam.s+s.cam.tx,MAP.x[1]*s.cam.s+s.cam.ty],p=point(row,seconds),r=Math.hypot(p[0]-c[0],p[1]-c[1]);assert.ok(r<=last+1e-6,'radius must never travel backwards');last=r;}}
+  const speed=seconds=>{const active=gather.filter(row=>novaBuildGather(seconds/STEPS.pace.rush,row.order)<1),delta=1/60;return {active:active.length,mean:active.reduce((sum,row)=>{const a=point(row,seconds-delta),b=point(row,seconds);return sum+Math.hypot(b[0]-a[0],b[1]-a[1])/delta;},0)/active.length};};
+  const base=speed(1);let least=Infinity,leastOnWay=1;
+  for(let frame=60;frame<180;frame++){const seconds=frame/60,v=speed(seconds);least=Math.min(least,v.mean);leastOnWay=Math.min(leastOnWay,v.active/gather.length);assert.ok(v.mean>=base.mean-1e-6,`mean speed falls below 1 s: ${seconds}s ${v.mean} < ${base.mean}`);assert.ok(v.active/gather.length>=.05,`under 5% on the way at ${seconds}s`);}
+  for(const seconds of [1,2,2.5,2.9,2.98]){const v=speed(seconds);console.log(`WHIRL ${w}x${h} ${n?'joined':'standalone'} ${seconds.toFixed(2)}s: ${v.mean.toFixed(2)} px/s, ${v.active}/${gather.length} on way`);}
+  const arrivals=gather.map(row=>{let lo=0,hi=1;for(let k=0;k<40;k++){const mid=(lo+hi)/2;if(novaBuildGather(mid,row.order)<1)lo=mid;else hi=mid;}return hi;});
+  assert.ok((1-Math.max(...arrivals))*STEPS.pace.rush<=1/60+1e-9,'last arrival must land within one frame of the blast');
+  assert.ok(gather.every(row=>novaBuildGather(1,row.order)===1));
+  console.log(`WHIRL ${w}x${h} ${n?'joined':'standalone'}: minimum ${least.toFixed(2)} px/s vs ${base.mean.toFixed(2)} at 1s; minimum on way ${(leastOnWay*100).toFixed(2)}%; last ${(Math.max(...arrivals)*STEPS.pace.rush).toFixed(6)}s`);
+}
+for(const phone of [false,true])for(const key of ['heat','core','glowAlpha']){
+  let flat=0;
+  for(let frame=120;frame<180;frame++){const a=novaBuild(frame/180,phone),b=novaBuild((frame+1)/180,phone),throb=NOVA.build.throbs.some(t=>frame/180>=t&&(frame+1)/180<=t+NOVA.build.fall/3);
+    if(throb&&key==='glowAlpha')continue;assert.ok(b[key]>=a[key]-1e-9,key+' falls after 2s');flat=b[key]-a[key]<1e-10?flat+1:0;assert.ok(flat<=6,key+' flat for more than .1s');}
+}
+console.log('ok: WHIRL balanced visible sectors, own-side ring approach, continuous drain through last frame, speed/5%/last-arrival gates and rising late heat/core/glow alpha');
 const rmX=new NovaNode(),rmCanvas=novaCanvas();footerBuildX(rmX,true,rmCanvas,hit);footerNovaResize(390,844);footerMotion(2,.016,segment('rest',0),[0,0],true);
 assert.equal(rmCanvas.ctx.calls.length,0);assert.equal(rmX.style.visibility,undefined);assert.ok(!/fx-hit|fx-white/.test(rmX.innerHTML));
 console.log('ok: rough sprite grows on resize; reduced motion leaves canvas empty and static SVG X unchanged');

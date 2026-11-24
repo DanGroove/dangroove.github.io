@@ -365,11 +365,11 @@ export const DEPTH = {
 
 export const NOVA_CANVAS = { dpr: 2, glowSprite: 512 };
 export const NOVA = {
-  build: { kindle: 0.2, draw: 0.76, hold: 0.93, throbs: [0.26, 0.45, 0.60, 0.72], rise: 0.12, fall: 0.32, pull: 1.8,
+  build: { kindle: 0.2, draw: 0.76, hold: 1, throbs: [0.26, 0.45, 0.60, 0.72], rise: 0.12, fall: 0.32, pull: 1.8,
     push: 0.08, pushPhone: 0.06, recoil: 0.4, veil: 0.65, veilPhone: 0.45, veilOut: 0.25, hole: [0.6, 0.18], holeBreath: 0.04,
     kindleGlow: 36, kindleAlpha: 0, kindleHeat: 0, glow: [104, 44], swell: [0.15, 0.22, 0.29, 0.35], glowAlpha: [0.18, 0.44, 0.72], throbAlpha: [0.08, 0.11, 0.14, 0.18],
     spikeGrow: 1.12, compressed: 0.6, thickness: 1.12, heat: [0.15, 0.9, 1], core: [4, 13, 9],
-    gatherTop: 0.7, gatherStagger: 0.035, jitter: [0.5, 2], jitterHz: 24,
+    arrival: [0.82, 1], arrivalTail: 0.85, jitter: [0.5, 2], jitterHz: 24,
     // The white along each arm: half its share of the arm at full heat, grown over this heat range (the held breath's white cross),
     // and gone within this many seconds of the blast, under its first flash.
     whiteReach: 0.34, whiteFrom: [0.6, 1], whiteOut: 0.06 },
@@ -383,8 +383,9 @@ export const NOVA = {
   shells: [6, -4], shellDash: [2, 10],
   orbit: 0.06, embers: { n: 40, nPhone: 20, life: [2.5, 5], reach: [0.16, 0.45], alpha: 1, r: [1, 2.4], slow: 3, burst: 2, fade: [0.15, 1] },
   flare: { time: 1.6, core: 0.5, kick: 0.12, hit: 70, alpha: 0.9, reach: 0.85, auto: [7, 12], cap: 8, coreMax: 1.2, kickMax: 0.3 },
-  // spread: each star's ring radius varies by up to this share; ringTail: the tails shorten to it as the stars join (L-12)
-  gather: { ring: 0.32, swirl: 0.35, sky: 0.5, join: 0.5, stagger: 0.35, time: 0.6, tail: 0.02, tailGain: 0.08, golden: 0.6180339887498949, spread: 0.24, ringTail: 0.3 },
+  // The original release settings stay intact. Rush sources are stratified across each sector's whole visible depth.
+  gather: { ring: 0.32, swirl: 0.35, sky: 0.5, join: 0.5, stagger: 0.35, time: 0.6, tail: 0.02, tailGain: 0.08, golden: 0.6180339887498949, spread: 0.24, ringTail: 0.3,
+    sectors: 12, perSector: 14, perSectorPhone: 8, sourceRing: 0.55, drain: 0.45, turnPower: 2, coreFade: 0.995, twinkleHome: [0.8, 1] },
   motionIn: [0, 1], orbitIn: [0.5, 1], seed: 149,
   base: { spikeLength: 12.7, angles: [45, -45], rushLen: 2.4, peakLen: 10, endLen: 5, spikePeak: 0.3, spikeEnd: 58,
     thin: [1, 0.55, 0.8, 0.5], heat: [0.05, 0.7], redOut: [0.2, 0.9],

@@ -14,26 +14,26 @@ export function novaBuild(rushT, phone = VIEW.phone) {
   const B = NOVA.build, t = clamp01(rushT), u = clamp01(t / B.kindle), k = 1 - (1 - u) * (1 - u), d = smooth(B.draw, B.hold, t);
   const pulses = B.throbs.map(centre => smooth(centre - B.rise / STEPS.pace.rush, centre, t) * (1 - smooth(centre, centre + B.fall / STEPS.pace.rush, t)));
   const swell = pulses.reduce((sum, p, i) => sum + p * B.swell[i], 0), pulse = pulses.reduce((sum, p, i) => sum + p * B.throbAlpha[i], 0);
-  // The pull is not clamped at the draw, so its speed carries into the draw-in; the light stops growing at full.
-  const pull = (t / B.draw) ** B.pull, lit = Math.min(1, pull);
+  // Motion has no heartbeat steps. Charge and compression continue right up to the first blast frame.
+  const pull = (t / B.draw) ** B.pull, lit = t ** B.pull;
   const glow = (t > 0 ? lerp(B.kindleGlow, B.glow[0], k) : 0) * (1 + swell), len = 1 + B.spikeGrow * pull;
   const heat = (t > 0 ? lerp(B.kindleHeat, B.heat[0], k) : 0) + (B.heat[1] - B.heat[0]) * lit;
-  // Seeded continuous noise: never integrates dt, and ends before the held breath.
+  // Seeded continuous noise: never integrates dt; its amplitude grows all the way into the blast.
   const noise = axis => { const v = t * STEPS.pace.rush * B.jitterHz, i = Math.floor(v), hash = n => { let h = Math.imul(n + NOVA.seed + axis * 101, 1597334677); h ^= h >>> 16; return (h >>> 0) / 4294967295 * 2 - 1; }; return lerp(hash(i), hash(i+1), smooth(0,1,v-i)); };
-  const tremble = t > B.draw && t < B.hold ? lerp(...B.jitter, d) * smooth(B.draw, B.draw + .02, t) * (1 - smooth(B.hold - .02, B.hold, t)) : 0;
+  const tremble = t > B.draw ? lerp(...B.jitter, d) * smooth(B.draw, B.draw + .02, t) : 0;
   const jitter = [noise(0), noise(1)], jitterLength = Math.max(1, Math.hypot(...jitter));
   return { len: d === 1 ? B.compressed : lerp(len, B.compressed, d), thin: lerp(1, B.thickness, d), heat: lerp(heat, B.heat[2], d),
     glow: lerp(glow, B.glow[1], d), glowAlpha: lerp((t > 0 ? lerp(B.kindleAlpha, B.glowAlpha[0], k) : 0) + (B.glowAlpha[1] - B.glowAlpha[0]) * lit + pulse, B.glowAlpha[2], d),
-    core: lerp(B.core[0] * k + (B.core[1] - B.core[0]) * lit, B.core[2], d), coreAlpha: lerp(heat, 1, d),
+    core: B.core[0] * k + (B.core[2] - B.core[0]) * lit, coreAlpha: lerp(heat, 1, d),
     veil: (phone ? B.veilPhone : B.veil) * (0.2 * k + 0.6 * lit + 0.2 * d),
     hole: lerp(...B.hole, 0.2 * k + 0.6 * lit + 0.2 * d) * (1 + B.holeBreath * swell * (1 - d)),
     push: (phone ? B.pushPhone : B.push) * smooth(0, B.draw, t), jitter: tremble ? jitter.map(v => v * tremble / jitterLength) : [0, 0],
-    gather: lerp(B.gatherTop * pull, 1 + B.gatherStagger, d) };
+    gather: lit };
 }
 
 export const novaBuildGather = (rushT, order = 0) => {
-  const B = NOVA.build, score = novaBuild(rushT);
-  return clamp01((score.gather - order * B.gatherStagger * smooth(0, B.kindle, rushT)) / (1 - order * B.gatherStagger));
+  const B = NOVA.build, arrival = lerp(...B.arrival, clamp01(order / B.arrivalTail));
+  return clamp01(rushT / arrival) ** B.pull;
 };
 
 // ---- geometry along the trail ----

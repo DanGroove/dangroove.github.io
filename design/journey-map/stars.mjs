@@ -2,10 +2,10 @@
 // On the joined page (join.mjs) the list is built from the real hero's stars instead of the stand-in field.
 import { STARS, C, MAP, NOVA, DEPTH, STEPS } from './data.mjs';
 import { rnd, onLand, COAST_A, COAST_B, polyLen } from './art.mjs';
-import { TRAIL_DOTS, VIEW, toScreen, smooth, lerp, clamp01, easeIO, novaBuildGather, coastAt } from './trip.mjs';
+import { TRAIL_DOTS, VIEW, SEQ, tripState, toScreen, smooth, lerp, clamp01, easeIO, novaBuildGather, coastAt } from './trip.mjs';
 import { depthFrameBox, depthFrameCovers, novaRingRadius, novaFlare, novaShare, NOVA_LIVE } from './depth.mjs';
 
-const SK = { cv: null, ctx: null, dpr: 1, list: [], trav: null, src: null, n: -1, standN: 0, seaN: 0, keepP: .3, bins: new Map(), tails: new Map(), pt: [0, 0], drift: 0, orbit: 0, burn: 0, skyPointer: [0.5, 0.5], skyCount: 0, tuning: '', assignment: '', skyVisible: false, rushAnchor: null };
+const SK = { cv: null, ctx: null, dpr: 1, list: [], trav: null, src: null, n: -1, standN: 0, seaN: 0, keepP: .3, bins: new Map(), tails: new Map(), pt: [0, 0], drift: 0, orbit: 0, burn: 0, skyPointer: [0.5, 0.5], skyCount: 0, tuning: '', assignment: '', skyVisible: false, rushPlan: null };
 const HERO_MOST = 2000;
 
 export function starsBuild(canvas) {
@@ -27,23 +27,78 @@ function starsAddSky() {
   }
   starsAngles();
 }
-// Independent seeded shuffles prevent neighbouring map places sharing an arrival side.
+// Preserve the original blast/remnant identities independently of the rush's source selection.
 function starsAngles() {
+  SK.rushPlan = null;
   const r = rnd(NOVA.seed), map = SK.list.filter(s => s.kind !== 'sky'), sky = SK.list.filter(s => s.kind === 'sky');
   for (const list of [map, sky]) {
     for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
     // gr: the star's share of the ring's spread, hashed from its index
-    list.forEach((s, i) => { s.ang = (i * NOVA.gather.golden % 1) * Math.PI * 2; s.gather = s.kind !== 'sky' || i < Math.floor(sky.length * NOVA.gather.sky); s.ord2 ??= r(); s.gr = Math.abs(Math.sin((i + (list === sky ? .5 : 0)) * 12.9898) * 43758.5453) % 1; });
+    list.forEach((s, i) => { s.ang = (i * NOVA.gather.golden % 1) * Math.PI * 2; s.burstGather = s.kind !== 'sky' || i < Math.floor(sky.length * NOVA.gather.sky); s.ord2 ??= r(); s.gr = Math.abs(Math.sin((i + (list === sky ? .5 : 0)) * 12.9898) * 43758.5453) % 1; });
   }
 }
-// One C1 path: a cubic meets the ring with the spiral's exact tangent, then curls into the X.
-export function novaGatherPoint(from, centre, angle, radius, t) {
+// The release/explore path is deliberately unchanged: the blast keeps its exact previous field.
+function novaReleasePoint(from, centre, angle, radius, t) {
   const G = NOVA.gather, j = G.join, turn = G.swirl * Math.PI * 2, a = angle - turn;
   const ring = [centre[0] + radius * Math.cos(a), centre[1] + radius * Math.sin(a)];
   if (t >= j) { const q = (t - j) / (1 - j), r = radius * (1 - q) ** 2, theta = a + turn * q; return [centre[0] + Math.cos(theta) * r, centre[1] + Math.sin(theta) * r]; }
   const tangent = [radius * (-2 * Math.cos(a) - turn * Math.sin(a)) / (1 - j), radius * (-2 * Math.sin(a) + turn * Math.cos(a)) / (1 - j)];
   const c1 = from.map((v, i) => v + (ring[i] - v) / 3), c2 = ring.map((v, i) => v - tangent[i] * j / 3), q = t / j;
   return from.map((v, i) => (1 - q) ** 3 * v + 3 * (1 - q) ** 2 * q * c1[i] + 3 * (1 - q) * q * q * c2[i] + q ** 3 * ring[i]);
+}
+// Polar throughout: no chord can cut across the core on the way to the ring. The radial and angular
+// derivatives agree at the ring; the drain turns faster as it shrinks, with no final brake.
+export function novaGatherPoint(from, centre, angle, radius, t) {
+  if (t <= 0) return from.slice();
+  if (t >= 1) return centre.slice();
+  const G = NOVA.gather, j = G.join, p = G.drain, n = G.turnPower;
+  const dx = from[0] - centre[0], dy = from[1] - centre[1], distance = Math.hypot(dx, dy), bearing = Math.atan2(dy, dx), turn = angle - bearing;
+  const R = Math.min(radius, distance * G.sourceRing), v1 = R * p / (1 - j), v0 = 2 * (distance - R) / j - v1;
+  const r = t < j ? distance - v0 * t - (v1 - v0) * t * t / (2 * j) : R * ((1 - t) / (1 - j)) ** p;
+  const theta = t < j ? bearing + turn * (t / j) ** n : angle + turn * n * (1 - j) / (j * (1 - p)) * (1 - ((1 - t) / (1 - j)) ** (1 - p));
+  return [centre[0] + r * Math.cos(theta), centre[1] + r * Math.sin(theta)];
+}
+// Equal populations, sampled across each sector's full depth. No off-screen star or new identity is used.
+export function novaGatherSources(homes, centre, w, h, phone = false) {
+  const G = NOVA.gather, sectors = Array.from({ length: G.sectors }, () => []), turn = G.swirl * Math.PI * 2;
+  const rows = homes.map(home => {
+    const [x, y] = home.from, distance = Math.hypot(x - centre[0], y - centre[1]), bearing = Math.atan2(y - centre[1], x - centre[0]);
+    const sector = Math.min(G.sectors - 1, Math.floor(((bearing / (Math.PI * 2) + 1) % 1) * G.sectors));
+    const radius = Math.min(G.ring * Math.min(w, h) * (1 + G.spread * (home.s.gr - .5)), distance * G.sourceRing);
+    const row = { ...home, centre: centre.slice(), distance, sector, angle: bearing + turn, radius, gather: false };
+    if (home.visible !== false && x >= 0 && x <= w && y >= 0 && y <= h && distance > 0) sectors[sector].push(row);
+    return row;
+  });
+  const count = Math.min(phone ? G.perSectorPhone : G.perSector, ...sectors.map(list => list.length));
+  sectors.forEach((list, sector) => {
+    list.sort((a, b) => a.distance - b.distance || a.s.ord2 - b.s.ord2);
+    const random = rnd(NOVA.seed + sector);
+    for (let i = 0; i < count; i++) { const lo = Math.floor(i * list.length / count), hi = Math.floor((i + 1) * list.length / count); list[lo + Math.floor(random() * (hi - lo))].gather = true; }
+  });
+  // Rank the seeded identities so even a sparse phone field has a final cohort still arriving at the flash.
+  const selected = rows.filter(row => row.gather).sort((a, b) => a.s.ord2 - b.s.ord2);
+  selected.forEach((row, i) => { row.order = selected.length > 1 ? i / (selected.length - 1) : 1; });
+  return rows;
+}
+// Source geometry is evaluated at the X beat, before the rush camera's push. This also works for a direct scrub.
+export function starsRushSources(look = [0, 0]) {
+  const start = SEQ.find(q => q.kind === 'rush'), st = tripState(start.a), X = toScreen(st, MAP.x), W = VIEW.w, H = VIEW.h;
+  const centre = toScreen(st, [MAP.w / 2, MAP.h / 2]), c0 = [VIEW.ox + MAP.w / 2 * VIEW.s0, VIEW.oy + MAP.h / 2 * VIEW.s0];
+  const homes = SK.list.filter(s => SK.src || s.kind !== 'sky' || s.si < STARS.sky).map(s => {
+    let from;
+    if (s.kind === 'sky' || s.skyHome) {
+      if (SK.src && !s.skyFrozen) { const at = SK.src.drawn(s.i, [0, 0]), lk = SK.src.look(s.i); s.sx = at[0]; s.sy = at[1]; s.sr = lightR(lk.size / 2); s.sa = lk.alpha; s.sc = lk.colour; s.skyFrozen = true; }
+      const z = SK.src ? s.z : lerp(...STARS.fieldZ, s.uz), pt = SK.skyPointer;
+      from = SK.src ? [s.sx, s.sy] : [(((s.hx + SK.drift * STARS.drift * z) % 1) + 1) % 1 * W + (pt[0] - .5) * STARS.parallax * z, s.hy * H + (pt[1] - .5) * STARS.parallax * z];
+      from = from.map((v, i) => v + look[i] * z * STARS.skyLook + (centre[i] - c0[i]) * STARS.skyFollow);
+    } else {
+      from = toScreen(st, s.map);
+      const d = Math.hypot(from[0] - X[0], from[1] - X[1]), k = .12 * st.legXT * Math.max(0, 1 - d / 260);
+      from = from.map((v, i) => v + (X[i] - v) * k);
+    }
+    return { s, from, visible: s.kind !== 'coast' || !!s.skyHome };
+  });
+  return novaGatherSources(homes, X, W, H, VIEW.phone);
 }
 function seaPoint(r) { let p; for (let t = 0; t < 60; t++) { p = [30 + r() * 540, 30 + r() * 780]; if (!onLand(p)) break; } return p; }
 
@@ -91,14 +146,45 @@ function heroList() {
   places.sort((a, b) => ANGLE(a.m[0] / MAP.w - .5, a.m[1] / MAP.h - .5) - ANGLE(b.m[0] / MAP.w - .5, b.m[1] / MAP.h - .5));
   rest.forEach((i, j) => { const s = star(i), p = places[j]; s.kind = 'coast'; s.map = p.m; s.hu = p.hu; s.t0 = p.t0; s.t1 = p.t1; s.ord = 0; list.push(s); });
   skyIds.forEach(i => { const s = star(i); s.kind = 'sky'; s.f = r(); s.phase = r() * Math.PI * 2; list.push(s); });
+  starsReserveSky(list, at);
   SK.list = list; SK.trav = { hx: .62, hy: .4, z: 1, i: tv }; SK.n = src.count;
   starsAngles();
+}
+// Keep existing hero identities in the sky when its old reserve leaves a side empty (especially small phones).
+// Their map destination is omitted, not duplicated. At the flash they use the original map burst data below.
+function starsReserveSky(list, at) {
+  const G = NOVA.gather, start = tripState(SEQ.find(q => q.kind === 'rush').a), X = toScreen(start, MAP.x);
+  const centre = toScreen(start, [MAP.w / 2, MAP.h / 2]), c0 = [VIEW.ox + MAP.w / 2 * VIEW.s0, VIEW.oy + MAP.h / 2 * VIEW.s0];
+  const sectors = Array.from({ length: G.sectors }, () => ({ sky: 0, candidates: [] })), want = VIEW.phone ? G.perSectorPhone : G.perSector;
+  for (const s of list) {
+    if (s.i < 0) continue;
+    const from = at[s.i].map((v, i) => v + (centre[i] - c0[i]) * STARS.skyFollow);
+    if (from[0] < 0 || from[0] > VIEW.w || from[1] < 0 || from[1] > VIEW.h) continue;
+    const a = Math.atan2(from[1] - X[1], from[0] - X[0]), sector = Math.min(G.sectors - 1, Math.floor(((a / (Math.PI * 2) + 1) % 1) * G.sectors));
+    if (s.kind === 'sky') sectors[sector].sky++;
+    else sectors[sector].candidates.push({ s, distance: Math.hypot(from[0] - X[0], from[1] - X[1]) });
+  }
+  sectors.forEach(({sky,candidates},sector) => {
+    candidates.sort((a,b) => a.distance-b.distance || a.s.ord2-b.s.ord2);
+    let need = Math.max(0,want-sky);
+    const random = rnd(NOVA.seed+sector);
+    // Coasts already dissolve after handoff. Keep trail destinations wherever the existing field allows it.
+    for(const kind of ['coast','sea','trail']){
+      const pool=candidates.filter(row=>row.s.kind===kind),count=Math.min(need,pool.length);
+      for(let i=0;i<count;i++){
+        const lo=Math.floor(i*pool.length/count),hi=Math.floor((i+1)*pool.length/count),s=pool[lo+Math.floor(random()*(hi-lo))].s;
+        s.skyHome=true;s.f=rnd(NOVA.seed+s.i)();s.phase=s.f*Math.PI*2;
+      }
+      need-=count;
+    }
+  });
 }
 // a star of the hero's look as a 2D disc (or square) of the same total light as the hero's point sprite: the sprite's
 // coverage ramp is one device px wide, so its light is pi (r^2 + 1/12) for r >= .5 device px, less below.
 const lightR = rad => { const r = rad * SK.dpr, I = r < .5 ? 2 * r * Math.PI * Math.pow(r + .5, 3) / 3 : Math.PI * (r * r + 1 / 12); return Math.sqrt(I / Math.PI) / SK.dpr; };
 
 export function starsResize(w, h) {
+  SK.rushPlan = null;
   SK.dpr = Math.min(STARS.dprCap, window.devicePixelRatio || 1);
   SK.cv.width = Math.round(w * SK.dpr); SK.cv.height = Math.round(h * SK.dpr);
   if (SK.src) SK.n = -1;
@@ -150,20 +236,31 @@ export function starsFrame(time, st, pointer, opt = {}) {
   if (K <= 0) { flush(ctx); ctx.globalAlpha = 1; return; }
   const h = st.handoffT, px = (pointer[0] - .5) * STARS.parallax, py = (pointer[1] - .5) * STARS.parallax;
   const Xs = toScreen(st, MAP.x), diag = Math.hypot(W, H), worldScale = st.exploreK ? st.cam.s / st.sEnd : 1;
-  const gatherRadius = NOVA.gather.ring * Math.min(W, H), gatherT = s => novaBuildGather(st.rushT, s.ord2), G = NOVA.gather;
+  const gatherRadius = NOVA.gather.ring * Math.min(W, H), gatherT = s => novaBuildGather(st.rushT, SK.rushPlan?.get(s)?.order ?? s.ord2), G = NOVA.gather;
   const ringOf = s => gatherRadius * (1 + G.spread * (s.gr - .5)), tailOf = q => G.tailGain / G.tail * (1 - (1 - G.ringTail) * smooth(G.join - .15, G.join, q));
   const dotR = Math.min(2.1, .75 + .38 * st.cam.s);
   if (h <= 0) SK.skyPointer = pointer.slice();
   const heroPos = (s, sky = false) => { const pt = sky && h > 0 ? SK.skyPointer : pointer; return [(((s.hx + SK.drift * STARS.drift * s.z) % 1) + 1) % 1 * W + (pt[0] - .5) * STARS.parallax * s.z, s.hy * H + (pt[1] - .5) * STARS.parallax * s.z]; };
   const look = opt.look || [0, 0], box = depthFrameBox(st), centre = toScreen(st, [MAP.w / 2, MAP.h / 2]), c0 = [VIEW.ox + MAP.w / 2 * VIEW.s0, VIEW.oy + MAP.h / 2 * VIEW.s0];
+  const start = SEQ.find(q => q.kind === 'rush');
+  const rushBox = st.rushT > 0 && st.blastT === 0 ? depthFrameBox(tripState(start.a)) : box;
+  if (st.P < start.a) SK.rushPlan = null;
+  else if (!opt.still && (!SK.rushPlan || st.rushT === 0 && st.blastT === 0)) SK.rushPlan = new Map(starsRushSources(look).map(row => [row.s, row]));
+  const rushAt = row => novaGatherPoint(row.from, row.centre, row.angle, row.radius, gatherT(row.s)).map((v, i) => v + Xs[i] - row.centre[i]);
+  const rushTail = row => {
+    const at = rushAt(row), before = novaGatherPoint(row.from, row.centre, row.angle, row.radius, novaBuildGather(Math.max(0, st.rushT - G.tail / STEPS.pace.rush), row.order)).map((v, i) => v + Xs[i] - row.centre[i]);
+    return at.map((v, i) => (v - before[i]) * G.tailGain / G.tail);
+  };
   const late = src ? .02 : .05; // joined: the first stars move within the first 3 % of the fall
-  // In the rush the twinkle follows rushT (Back and a scrub repeat it), anchored on the clock at the rush's first frame so it carries on without a jump.
+  // Bring the twinkle's phase smoothly to zero on the last leg, then use only rushT. Returning to the X
+  // and replaying, or jumping straight into the rush, gives the same light as well as the same positions.
   const rushing = st.rushT > 0 && st.blastT === 0;
-  if (!rushing) SK.rushAnchor = null; else if (SK.rushAnchor === null) SK.rushAnchor = time - st.rushT * STEPS.pace.rush;
-  const twinkleTime = rushing ? SK.rushAnchor + st.rushT * STEPS.pace.rush : time;
+  const twinkleTime = st.blastT > 0 ? time : st.P >= start.a ? st.rushT * STEPS.pace.rush : time * (1 - smooth(...NOVA.gather.twinkleHome, st.legXT));
   for (const s of SK.list) {
     let x, y, rad, al, col, tail = null;
-    if (s.kind === 'sky') {
+    if (s.skyHome && h <= 0) s.skyFrozen = false;
+    const source = SK.rushPlan?.get(s);
+    if (s.kind === 'sky' || s.skyHome && h > 0 && st.blastT === 0 && !opt.still) {
       if (!src && s.si >= STARS.sky) continue;
       if (!src) { s.z = lerp(...STARS.fieldZ, s.uz); s.r = lerp(...STARS.fieldR, s.ur); s.a = lerp(...STARS.fieldAlpha, s.ua); s.red = s.ured < STARS.red; }
       if (src) {
@@ -173,17 +270,20 @@ export function starsFrame(time, st, pointer, opt = {}) {
       const follow = smooth(...STARS.skyMove, h);
       x += follow * (look[0] * s.z * STARS.skyLook + (centre[0] - c0[0]) * STARS.skyFollow);
       y += follow * (look[1] * s.z * STARS.skyLook + (centre[1] - c0[1]) * STARS.skyFollow);
+      if (source && rushing && !opt.still) [x, y] = source.from;
       if (h > 0) {
-        const outside = Math.hypot(Math.max(box[0] - x, 0, x - box[2]), Math.max(box[1] - y, 0, y - box[3]));
-        al *= 1 - smooth(...STARS.skyCover, h) * (1 - smooth(0, STARS.skyEdge, outside)) * (1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0))) * (s.gather ? 1 - smooth(0, 1, st.rushT) : 1);
+        const outside = Math.hypot(Math.max(rushBox[0] - x, 0, x - rushBox[2]), Math.max(rushBox[1] - y, 0, y - rushBox[3]));
+        al *= 1 - smooth(...STARS.skyCover, h) * (1 - smooth(0, STARS.skyEdge, outside)) * (1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0))) * ((st.blastT > 0 ? s.burstGather : source?.gather) ? 1 - smooth(0, 1, st.rushT) : 1);
         if (!opt.still) al *= 1 - STARS.twinkle * follow * (.5 + .5 * Math.sin(twinkleTime * lerp(...STARS.skyF, s.f) + s.phase));
       }
-      if (s.gather && st.rushT > 0 && !opt.still) {
-        const home = [x, y], gt = gatherT(s), q = st.blastT > 0 ? 1 - easeIO(st.blastT) : gt;
-        const R = ringOf(s), at = novaGatherPoint(home, Xs, s.ang, R, q), prior = novaGatherPoint(home, Xs, s.ang, R, Math.max(0, q - G.tail)), k = tailOf(q);
+      if (source?.gather && rushing && !opt.still) {
+        [x, y] = rushAt(source); tail = rushTail(source);
+        al *= 1 - smooth(G.coreFade, 1, gatherT(s));
+      } else if (s.burstGather && st.blastT > 0 && !opt.still) {
+        const home = [x, y], q = 1 - easeIO(st.blastT);
+        const R = ringOf(s), at = novaReleasePoint(home, Xs, s.ang, R, q), prior = novaReleasePoint(home, Xs, s.ang, R, Math.max(0, q - G.tail)), k = tailOf(q);
         x = at[0]; y = at[1]; tail = [(at[0] - prior[0]) * k, (at[1] - prior[1]) * k];
-        if (st.blastT > 0) tail = tail.map(v => -v);
-        else al *= 1 - smooth(.94, 1, gt);
+        tail = tail.map(v => -v);
       } else if (st.blastT > 0 && !opt.still) {
         const dx = x - Xs[0], dy = y - Xs[1], d = Math.hypot(dx, dy), bump = Math.exp(-(((d - novaRingRadius(st)) / STARS.skyShock) ** 2)) * (1 - smooth(...NOVA.base.ringFade, st.blastT));
         if (d) { x += dx / d * STARS.skyPush * bump; y += dy / d * STARS.skyPush * bump; }
@@ -211,12 +311,14 @@ export function starsFrame(time, st, pointer, opt = {}) {
       let pullTail = null;
       if (st.legXT > 0 && st.blastT === 0) { const dx = Xs[0] - x, dy = Xs[1] - y, d = Math.hypot(dx, dy), R = 260; if (d < R) { const k = .12 * st.legXT * (1 - d / R); x += dx * k; y += dy * k; pullTail = [dx / d * 6 * st.legXT, dy / d * 6 * st.legXT]; } }
       if (st.rushT === 0 && pullTail) tail = pullTail;
-      if (st.rushT > 0 && st.blastT === 0) {
-        const tt = gatherT(s), e = tt, home = [x, y], join = smooth(0, NOVA.gather.join, tt);
-        const R = ringOf(s), at = novaGatherPoint(home, Xs, s.ang, R, e), prior = novaGatherPoint(home, Xs, s.ang, R, Math.max(0, e - G.tail)), k = tailOf(e);
-        tail = [(at[0] - prior[0]) * k, (at[1] - prior[1]) * k]; x = at[0]; y = at[1]; al = s.kind === 'coast' ? .6 * join : lerp(al, Math.max(al, .6), join);
-        if (pullTail) tail = [tail[0] + pullTail[0] * (1 - join), tail[1] + pullTail[1] * (1 - join)];
-        al *= 1 - smooth(.94, 1, tt);
+      if (source && rushing && !opt.still) {
+        [x, y] = source.gather ? rushAt(source) : source.from;
+        if (source.gather) {
+          const tt = gatherT(s), join = smooth(0, G.join, tt);
+          tail = rushTail(source); al = lerp(al, Math.max(al, .6), join) * (1 - smooth(G.coreFade, 1, tt));
+          if (pullTail) tail = tail.map((v, i) => v + pullTail[i] * (1 - join));
+        } else if (pullTail) tail = pullTail;
+        if (s.kind === 'coast') al = 0;
       }
       if (st.blastT > 0) {
         const b = 1 - Math.pow(1 - clamp01(st.blastT / NOVA.base.starBlast), 3), kick = opt.still ? 0 : novaShare(NOVA.flare.kick, NOVA.flare.kickMax);
@@ -228,7 +330,7 @@ export function starsFrame(time, st, pointer, opt = {}) {
         col = s.red && s.keep ? C.red : C.paper;
         if (st.exploreK > 0) {
           const q = smooth(s.ord2 * NOVA.gather.stagger, s.ord2 * NOVA.gather.stagger + NOVA.gather.time, st.exploreK);
-          const at = novaGatherPoint(m, Xs, s.ang, ringOf(s) * worldScale, 1 - q), remaining = (1 - q) ** 3;
+          const at = novaReleasePoint(m, Xs, s.ang, ringOf(s) * worldScale, 1 - q), remaining = (1 - q) ** 3;
           x = at[0] + (x - Xs[0]) * remaining; y = at[1] + (y - Xs[1]) * remaining;
           rad = lerp(rad, endR, q); al = lerp(al, endA, q); col = C.paper; tail = null;
         }

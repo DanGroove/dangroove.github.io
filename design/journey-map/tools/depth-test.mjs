@@ -109,9 +109,11 @@ try {
   depthAssert(novaShare(NOVA.flare.core, NOVA.flare.coreMax) <= NOVA.flare.coreMax && novaShare(NOVA.flare.kick, NOVA.flare.kickMax) <= NOVA.flare.kickMax, 'additive flare shares exceed caps');
   NOVA_LIVE.time += NOVA.flare.time; novaPrune(); depthAssert(NOVA_LIVE.flares.length === 0, 'expired flares retained');
   console.log('ok: presses stack independently; first expires on time; cap rejects without mutation; additive shares clamp; expired flares leave the list');
-  const centre = [700, 450], from = [100, 40], radius = 200, delta = 1e-6;
+  const centre = [700, 450], radius = 200, delta = 1e-6;
   for (let i = 0; i < 32; i++) {
-    const angle = i * Math.PI / 16, start = novaGatherPoint(from, centre, angle, radius, 0), end = novaGatherPoint(from, centre, angle, radius, 1);
+    // WHIRL: ring directions now belong to the source, rather than an unrelated shuffled angle.
+    const bearing = i * Math.PI / 16 - Math.PI, from = centre.map((v,k) => v + 700 * (k ? Math.sin(bearing) : Math.cos(bearing)));
+    const angle = bearing + NOVA.gather.swirl * Math.PI * 2, start = novaGatherPoint(from, centre, angle, radius, 0), end = novaGatherPoint(from, centre, angle, radius, 1);
     depthAssert(Math.hypot(start[0] - from[0], start[1] - from[1]) < 1e-6 && Math.hypot(end[0] - centre[0], end[1] - centre[1]) < 1e-6, 'gather endpoints');
     const j = NOVA.gather.join, a = novaGatherPoint(from, centre, angle, radius, j - delta), b = novaGatherPoint(from, centre, angle, radius, j), c = novaGatherPoint(from, centre, angle, radius, j + delta);
     depthAssert(Math.hypot(...b.map((v, k) => (v - a[k]) / delta - (c[k] - v) / delta)) < .1, 'gather has a corner at ring');
