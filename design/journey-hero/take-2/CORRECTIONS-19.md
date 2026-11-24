@@ -37,7 +37,24 @@ The same parts, the same wipes and cuts, the same order, but slower and one idea
 - The star field takes the pointer when its rings end (2.80 s, was 0.90 s); the name reacts once the entrance has ended (3.80 s), as now.
 - Every other rule of the round 6 entrance stays: hard edges, `staggerSpans`, the floor's and stars' wholly-on-or-off rings, the screen's clip plane, the review hold.
 
-## L3 A more impressive loader: the mark, from first sketch to final
+## L4 A more impressive loader: the stars gather into the mark
+
+Dan, 24 Nov, 4:47 AM ET, on v32 (8c57810): "can we have a more impressive loading screen?". Offered two directions, he chose (4:52 AM ET) "Stars gather into your mark": stars fly in from the edges and form his DG mark as the page loads, then burst out into the hero's star field. **L4 replaces L1's look. L3 below is withdrawn: do not build it.**
+
+L1's rules stay: the loader shows from the first paint without waiting for the page's module graph, fonts or pictures; real boot progress (fonts, atlas, first frame, the shares already chosen) drives it; what it shows never jumps or goes back; `?t=` skips it; it lasts no longer than loading needs beyond its own minimum. Stars may move softly (the brand's exception); everything else stays hard-edged.
+
+1. **The same stars as the hero.** The mark is the hero's own star mark: the stars `stars.mjs` uses when a hold forms the DG mark (`STARS.mark`: its count, sampling, size once arrived, and colour flags, so the D's stars are red and the G's are paper exactly as the hero shows them), at the hero's own mark size (`STARS.mark.height` of the hero's height), centred in the first screen. The loader computes these with the same code as `stars.mjs` (build a small pure module both use, and have `tools/page.mjs` inline it so the first paint does not wait for the module graph). Add a check that the loader's positions, sizes and colours equal `stars.mjs`'s for desktop, tablet and phone viewports.
+2. **They fly in from the edges.** Each of the mark's stars starts just outside a screen edge (a seeded point, spread round all four edges) and flies to its place in the mark along a gentle curve, 0.7 s, easing out. Star i launches when the displayed progress passes its share, spread over 0 to 0.85 so the last ones launch before the end. Order the launches so the mark fills evenly, not one part first. The displayed progress moves at no more than a whole gather per 1.4 s, so the gathering takes at least 2.1 s (1.4 s of launches plus the last flight), and it waits where loading waits.
+3. **Formed.** When every star has arrived and the page is ready, the mark holds for 0.35 s.
+4. **The burst.** The mark's stars blast outward, as the hero's release does, and each settles at its own home in the hero's star field over 0.9 s; the field's other stars fade in at their homes over the same 0.9 s. When they land, the WebGL star field takes over in that same frame with identical positions, sizes and colours, and the loader is removed. Nothing jumps at the handover.
+5. **The entrance starts with the burst.** L2's timetable runs from the burst's start, with the stars' ring step dropped (the stars are already there); the floor's ring stays at 1.80 to 2.80. The star field takes the pointer when the burst ends. At most two groups move at once still holds (the burst counts as one).
+6. **Keeps moving while the page builds.** Prefer drawing the loader in a worker with an `OffscreenCanvas`, so the stars keep flying while the main thread builds the atlas; the main thread posts each boot step. Where that is not available, draw on the main thread and hold the last frame through the build, with no gap. If a rule stops you, leave it out and say so.
+7. **Reduced motion.** The mark of stars shows formed and still, with no flight and no burst. When the page is ready, cut to the finished page.
+8. **Light.** A canvas and a small inline script; no new dependencies.
+
+L4's checks: replace L1's loader checks with L4's as a pure timing function of time and progress (launch shares and order, flight time, the gathering's speed limit and monotonic count of arrived stars, the 0.35 s hold, the 0.9 s burst, the entrance starting at the burst with the star ring dropped, the pointer handover at the burst's end), plus the consistency check in item 1 and a check that the burst's end positions equal the field's homes. Negative controls: a gathering faster than 1.4 s fails; a loader star whose mark position differs from `stars.mjs`'s fails; an entrance that still runs the star ring fails.
+
+## L3 (withdrawn, not to be built) A more impressive loader: the mark, from first sketch to final
 
 Dan, 24 Nov, 4:47 AM ET, on v32 (8c57810): "can we have a more impressive loading screen?". L3 replaces L1's look. L1's rules stay: the loader shows from the first paint without waiting for any script, font or picture; real boot progress (fonts, atlas, first frame, the shares you chose) drives it; it never jumps or goes back; `?t=` skips it; it lasts no longer than loading needs beyond its own minimum. Only the picture and its steps change.
 
