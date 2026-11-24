@@ -290,6 +290,7 @@ export function footerMotion(time, dt, st, look, moved) {
   const stS = lerp(B.streak[0], big * B.streak[1], out(bT));
   // settled: two faint rings
   const ro = smooth(...B.shellIn, sT);
+  const exploreRings = lerp(1, smooth(.9, 2.2, st.cam.s / VIEW.s0), st.exploreK || 0);
   // Paint in the former SVG order. Widths below stay in screen pixels.
   footerGroup(ctx, strength * calmAlpha, ctx => {
   ctx.save(); ctx.rotate(clock * NOVA.rays.turn);
@@ -309,18 +310,18 @@ export function footerMotion(time, dt, st, look, moved) {
     footerGlow(ctx, i % 2 ? 'orange' : 'red', u(Math.cos(a) * orbit + look[0] * DEPTH.foot.lobes) * calm * z, u(Math.sin(a) * orbit + look[1] * DEPTH.foot.lobes) * calm * z, u(r) * calm * z, u(r) * calm * z, i < (VIEW.phone ? L.nPhone : L.n) ? lerp(...L.alpha, lobe.u[6]) : 0);
   });
   }, u(Math.max(...NOVA.lobes.orbit) + Math.max(...NOVA.lobes.r) * (1 + NOVA.lobes.breathe) + Math.hypot(...look) * DEPTH.foot.lobes) * calm * z);
-  footerGroup(ctx, strength, ctx => {
+  footerGroup(ctx, strength * exploreRings, ctx => {
   FT.waves.forEach((circle, i) => {
     if (i >= NOVA.waves.n) return;
     const age = clock / NOVA.waves.every - i, q = ((age / NOVA.waves.n) % 1 + 1) % 1;
     footerRing(ctx, u(lerp(core, big * NOVA.waves.reach, q)) * z, C.paper, NOVA.waves.width, age >= 0 ? NOVA.waves.alpha * (1 - q) : 0);
   });
   }, u(Math.max(core, big * NOVA.waves.reach)) * z + NOVA.waves.width / 2);
-  for (let i = 0; i < NOVA.flare.cap; i++) { const live = NOVA_LIVE.flares.find(f => f.serial % NOVA.flare.cap === i); if (!live) continue; const fq = novaFlare(live); footerRing(ctx, u(lerp(core, big * NOVA.flare.reach, out(fq))) * z, C.paper, NOVA.waves.width, NOVA.flare.alpha * (1 - fq) * strength); }
+  for (let i = 0; i < NOVA.flare.cap; i++) { const live = NOVA_LIVE.flares.find(f => f.serial % NOVA.flare.cap === i); if (!live) continue; const fq = novaFlare(live); footerRing(ctx, u(lerp(core, big * NOVA.flare.reach, out(fq))) * z, C.paper, NOVA.waves.width, NOVA.flare.alpha * (1 - fq) * strength * exploreRings); }
   const streakO = bT > 0 ? smooth(...B.streakIn, bT) * (1 - smooth(...B.streakOut, bT)) : 0;
   footerGroup(ctx, streakO, ctx => FT.streaks.forEach(line => footerLine(ctx, line.from.map(v => v * u(stS) * z), line.to.map(v => v * u(stS) * z), line.colour, line.width, line.alpha)), Math.max(...FT.streaks.map(line => Math.hypot(...line.to) * u(stS) * z + line.width / 2)));
   footerRing(ctx, u(ringR) * z, C.red, 8, ringO * B.ringAlpha[1]); footerRing(ctx, u(ringR) * z, C.paper, 2, ringO * B.ringAlpha[0]);
-  [0, 1].forEach(i => footerRing(ctx, u((VIEW.phone ? B.shellPhone : B.shellR)[i]) * z, C.paper, i ? .6 : .8, B.shellAlpha[i] * ro, clock * NOVA.shells[i], NOVA.shellDash));
+  [0, 1].forEach(i => footerRing(ctx, u((VIEW.phone ? B.shellPhone : B.shellR)[i]) * z, C.paper, i ? .6 : .8, B.shellAlpha[i] * ro * exploreRings, clock * NOVA.shells[i], NOVA.shellDash));
   footerGlow(ctx, 'core', 0, 0, u(core * pulse) * calm * z, u(core * pulse) * calm * z, build.coreAlpha * calmAlpha);
   // The hand-over: the exact sprite stands in for the map's X at full strength from the first rush frame (never over it, so no
   // edge is drawn twice); the stretchable canvas X fades in under the sprite (canvasIn), then the sprite fades out (exactOn).

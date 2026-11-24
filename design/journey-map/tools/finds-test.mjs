@@ -39,9 +39,9 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // depth.mjs for the lantern's darkness the nova canvas holds through the rush; its second batch re-records trip.mjs for the
 // labels that give way, the coasts' draw-on, the X's fade-in with the sea and the mini-map's targets.
 // FRAMES: compositor camera writer and label recovery only; geometry/score remain pinned by the motion tests.
-assert.equal(sourceDigest('trip.mjs'), 3091424451, 'trip.mjs changed');
+assert.equal(sourceDigest('trip.mjs'), 1367940136, 'trip.mjs changed');
 // ORIGIN records the palette/tail/phone glide tables as well; protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 3694562013, 'data.mjs changed');
+assert.equal(sourceDigest('data.mjs'), 4140766664, 'data.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 4010889213, 'depth.mjs changed');
 console.log('ok: C1 camera/labels/tripS and deck source digests recorded');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];

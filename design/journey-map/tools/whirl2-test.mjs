@@ -76,6 +76,9 @@ for (const [w, h, n] of [[1440,900,0],[412,730,0],[390,844,0],[360,640,0],[1440,
   }
   const rush = segment('rush', .8), calls = serial(draw(current, rush));
   draw(current, segment('rush', 0)); assert.deepEqual(serial(draw(current, rush)), calls, 'Back and replay are identical');
+  draw(current, segment('rush',0));const cachedPlan=current.SK.rushPlan;
+  for(let i=0;i<30;i++)draw(current,segment('rush',0));
+  assert.equal(current.SK.rushPlan,cachedPlan,'C15 X rest reuses the camera/size plan');
   // Once outside the first flash, all existing blast/remnant drawing primitives are identical.
   for (const t of [.05,.1,.3,.7,1]) {
     const at = serial(draw(current, segment('blast', t)));

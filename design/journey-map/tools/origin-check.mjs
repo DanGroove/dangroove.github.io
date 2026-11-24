@@ -31,8 +31,7 @@ function originMeasure(id, constants) {
   const article = document.getElementById('stop-' + id), face = article.querySelector('.face'), shield = article.querySelector('.st-btn'), close = article.querySelector('.c-close'), tail = article.querySelector('.c-tail');
   const rect = node => { const b = node.getBoundingClientRect(); return {x:b.x,y:b.y,left:b.left,right:b.right,top:b.top,bottom:b.bottom,width:b.width,height:b.height}; };
   const f = rect(face), s = rect(shield.querySelector('.stone')), sw = document.querySelector('[data-review]'), review = sw && getComputedStyle(sw).display !== 'none' ? rect(sw) : null, bar = rect(document.getElementById('go'));
-  const matrix = tail.getScreenCTM(), tip = new DOMPoint(1,.5).matrixTransform(matrix), centre = [s.x+s.width/2,s.y+s.height/2], radius = s.width * constants.rim;
-  const vertices = [[0,0],[1,.5],[0,1]].map(p => new DOMPoint(...p).matrixTransform(matrix));
+  const matrix = tail.getScreenCTM(), coords=tail.querySelector('path').getAttribute('d').match(/-?[\d.]+(?:e[+-]?\d+)?/g).map(Number),vertices=[0,2,4].map(i=>new DOMPoint(coords[i],coords[i+1]).matrixTransform(matrix)),tip=vertices[1],centre = [s.x+s.width/2,s.y+s.height/2], radius = s.width * constants.rim;
   const rimError = Math.abs(Math.hypot(tip.x-centre[0],tip.y-centre[1]) - radius - constants.gap);
   const inside = b => b.left >= -.75 && b.top >= -.75 && b.right <= innerWidth+.75 && b.bottom <= innerHeight+.75;
   const overlaps = (a,b) => a && b && a.left < b.right-.5 && a.right > b.left+.5 && a.top < b.bottom-.5 && a.bottom > b.top+.5;

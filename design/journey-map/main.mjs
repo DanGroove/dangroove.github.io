@@ -144,6 +144,8 @@ function frame(ts) {
   const explored = exploreApply(st, dt), folded = cardsOverride(st, dt, JOURNEY.moving);
   if (f && f.k > 0) mainCurrent = -1; else if (!JOURNEY.moving && st.settleT >= 1 && !st.exploring) mainCurrent = STOPS.length; else if (!JOURNEY.moving && st.kind === 'hold') mainCurrent = st.i; else if (['hero','handoff','overview'].includes(st.kind)) mainCurrent = JOIN.heroStart && st.P < mainHeroEnd ? -2 : -1;
   st.visiting = JOURNEY.visiting;
+  const novaAway = !(st.exploreK > 0) && ((st.kind === 'rush' && JOURNEY.moving) || st.rushT > 0 || st.blastT > 0);
+  if (ROOT.classList.contains('jm-nova-away') !== novaAway) ROOT.classList.toggle('jm-nova-away', novaAway);
   // Nothing unseen takes the keyboard: the stone marks and the timeline wait for the map's hand-over; the timeline leaves in explore.
   st.focusId = f?.id; if (ROOT.dataset.find !== (f?.id || '')) ROOT.dataset.find = f?.id || '';
   const mapKeys = st.handoffT >= 1 && (st.blastT === 0 || st.exploreK > 0);

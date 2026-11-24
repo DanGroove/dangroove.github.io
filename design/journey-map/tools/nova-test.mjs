@@ -179,9 +179,12 @@ console.log('ok: V4-1 hand-over sprite at DPR 1/3: map X strokes and rough filte
 const starCanvas=novaCanvas();starsBuild(starCanvas);starsResize(1440,900);
 const starSnapshot=(t,time)=>{starCanvas.ctx.calls.length=0;const st=segment('rush',t);starsTick(.1,st);starsFrame(time,st,[.5,.5]);return JSON.stringify(starCanvas.ctx.calls.map(c=>[c.name,c.args,/^(fill|fillRect|stroke)$/.test(c.name)?c.alpha:null]));};
 const starForward=[.01,.26,.45,.60,.72,.83,.93,.97].map(t=>[t,starSnapshot(t,3)]);
-for(const [t,frame] of starForward.slice().reverse())assert.ok(starSnapshot(t,200)===frame,'stars ignore elapsed clock during rush at '+t);
+const positionsOnly = frame => JSON.stringify(JSON.parse(frame).filter(c=>['fillRect','arc','moveTo','lineTo','quadraticCurveTo'].includes(c[0])).map(c=>JSON.stringify(c.slice(0,2))).sort());
+for(const [t,frame] of starForward.slice().reverse())assert.ok(t*STEPS.pace.rush<.3 ? positionsOnly(starSnapshot(t,200))===positionsOnly(frame) : starSnapshot(t,200)===frame,'rush replay at '+t);
 starSnapshot(0,800);
-for(const [t,frame] of starForward)assert.equal(starSnapshot(t,900),frame,'return to the X then replay has the same positions and light at '+t);
+for(const [t,frame] of starForward)assert.equal(t*STEPS.pace.rush<.3 ? positionsOnly(starSnapshot(t,900)) : starSnapshot(t,900),t*STEPS.pace.rush<.3 ? positionsOnly(frame) : frame,'replay positions during first .3 s; positions and light thereafter at '+t);
+const xLight=starSnapshot(0,40),xLater=starSnapshot(0,41);
+assert.notEqual(xLight,xLater,'X sky keeps twinkling');assert.equal(positionsOnly(xLight),positionsOnly(xLater),'X twinkle does not move stars');
 // V4-1: the stars carry straight on through the first rush frame (no twinkle phase switch, no release of the pull toward the X, no alpha jump).
 {
   const dots=(st,time)=>{starCanvas.ctx.calls.length=0;starsTick(.016,st);starsFrame(time,st,[.5,.5]);return starCanvas.ctx.calls.filter(c=>(c.name==='fillRect'||c.name==='arc')&&c.alpha>.004).map(c=>[c.args[0],c.args[1],c.alpha]);};

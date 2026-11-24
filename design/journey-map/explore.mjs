@@ -1,5 +1,5 @@
 // End-only camera. The geometry helpers are pure and can be imported by Node.
-import { EXPLORE, DEPTH, COPY, STEPS, CAMERA, COMB } from './data.mjs';
+import { EXPLORE, DEPTH, COPY, STEPS, CAMERA, COMB, FRAME_PERF } from './data.mjs';
 import { VIEW, tripState, lerp, clamp01, easeIO } from './trip.mjs';
 import { findPointerCancel, findPointerMove } from './findkit.mjs';
 
@@ -28,7 +28,7 @@ export function exploreGlide(cam, velocity, dt, bounds, view, fit, top, keep) {
   const damp = Math.exp(-EXPLORE.friction * dt), distance = (1 - damp) / EXPLORE.friction;
   const desired = { ...cam, tx: cam.tx + velocity[0] * distance, ty: cam.ty + velocity[1] * distance };
   const next = exploreClamp(desired, bounds, view, fit, top, keep);
-  const v = velocity.map((speed, i) => Math.abs(speed * damp) < DEPTH.epsilon || Math.abs(next[i ? 'ty' : 'tx'] - desired[i ? 'ty' : 'tx']) > DEPTH.epsilon ? 0 : speed * damp);
+  const v = velocity.map((speed, i) => Math.abs(speed * damp) < FRAME_PERF.flingEnd || Math.abs(next[i ? 'ty' : 'tx'] - desired[i ? 'ty' : 'tx']) > DEPTH.epsilon ? 0 : speed * damp);
   return { cam: next, velocity: v };
 }
 
@@ -133,7 +133,7 @@ export function exploreApply(st, dt) {
     else {
       const q = 1 - Math.exp(-dt / EXPLORE.ease);
       EX.cam = exploreBound({ s: lerp(EX.cam.s, EX.target.s, q), tx: lerp(EX.cam.tx, EX.target.tx, q), ty: lerp(EX.cam.ty, EX.target.ty, q) });
-      if (['s', 'tx', 'ty'].every(key => Math.abs(EX.cam[key] - EX.target[key]) < DEPTH.epsilon)) EX.cam = { ...EX.target };
+      if (Math.abs(EX.cam.s / EX.target.s - 1) < FRAME_PERF.scaleEnd && Math.abs(EX.cam.tx - EX.target.tx) < FRAME_PERF.positionEnd && Math.abs(EX.cam.ty - EX.target.ty) < FRAME_PERF.positionEnd) EX.cam = { ...EX.target };
     }
   }
   if (EX.hintWait > 0 && EX.active) { EX.hintWait = Math.max(0, EX.hintWait - dt); if (!EX.hintWait) EX.hint.classList.add('on'); }
@@ -141,6 +141,9 @@ export function exploreApply(st, dt) {
   st.exploreK = EX.k; st.exploring = EX.active; st.exploreFooter = EX.footer; st.sEnd = EX.end?.s || st.cam.s;
   // The SVG camera stays at its last raster while input/glide changes this virtual camera.
   st.exploreMoving = !!(EX.motion || EX.gesture?.dragged || EX.velocity.some(Boolean) || EX.active && ['s', 'tx', 'ty'].some(key => EX.cam[key] !== EX.target[key]));
+  st.exploreScripted = !!motion?.from;
+  const ratio = EX.cam.s / before[0];
+  st.exploreSharp = !EX.gesture?.dragged && Math.max(...[[0,0],[VIEW.w,0],[0,VIEW.h],[VIEW.w,VIEW.h]].map(([x,y]) => Math.hypot(EX.cam.tx + (x-before[1])*ratio-x, EX.cam.ty + (y-before[2])*ratio-y))) < FRAME_PERF.sharpStep;
   st.exploreDt = dt;
   if (EX.k > 0 || EX.active) {
     st.cam = { ...EX.cam, ax: VIEW.w / 2, ay: VIEW.h / 2 };

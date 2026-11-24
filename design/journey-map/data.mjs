@@ -115,6 +115,7 @@ export const COPY = {
   explore: { button: 'Explore the map', back: 'Back to the end', hint: 'Scroll to zoom. Drag to look around.',
     hintPhone: 'Pinch to zoom. Drag to look around.', say: 'Exploring the map. Back returns to the end.' },
   cardClose: 'Close the {name} card',
+  cardOpen: 'Open the {name} card',
   footer: {
     label: 'Footer',
     cta: 'Got an idea that needs carrying to the final cut?',
@@ -132,7 +133,7 @@ export const FINDS = [
   { id: 'hoards', n: 2, x: 366, y: 354, mark: [382, 346], label: 'Hoards. Five buried chests, each near a stop.' },
   { id: 'ravens', n: 3, x: 440.5, y: 201.5, view: [442.5, 181.5, 42], mark: [462.5, 193.5], label: 'Huginn and Muninn, two ravens in a bare tree. Press to send the next raven for a thought or memory.' },
   { id: 'serpent', n: 4, x: 500, y: 101, view: [478, 96, 50], mark: [550, 74], label: 'Jörmungandr, the world serpent. Poke it three times to feed it a deadline.' },
-  { id: 'beacon', n: 5, x: 536, y: 514, view: [468, 498, 92], mark: [558, 478], label: 'The beacon. Drag or arrows aim; Enter finds the next unread note.' },
+  { id: 'beacon', n: 5, x: 514, y: 472, view: [458, 482, 100], mark: [532, 420], label: 'The beacon. Drag or arrows aim; Enter finds the next unread note.' },
   { id: 'runestone', n: 6, x: 250, y: 516, view: [250, 500, 40], mark: [270, 492], label: 'The rune stone. Press, rub, read, then flip the sheet.' },
   { id: 'hammer', n: 0, x: 112, y: 222, view: [112, 218, 34], label: 'Mjölnir on a stone near Laurier. Press it to hold the bridge.' },
   { id: 'mist', n: 0, x: 156, y: 438, view: [154, 436, 62], label: 'The mist of 2020. Press or wipe to clear it.' },
@@ -308,7 +309,7 @@ export const EXPLORE = { in: 1.6, out: 0.9, most: 3, margin: 24, marginPhone: 12
   // keep: the share of the view's width and height a pan keeps on the map frame (L-15)
   keep: 0.65 };
 // A growing card's scale (1 = open) at which the stone mark hands over to the card's face, and at which its words come in.
-export const CARD_GROW = { face: [0.12, 0.3], words: [0.16, 0.42] };
+export const CARD_GROW = { face: [0, 0.002], words: [0.16, 0.42] };
 export const CARD_CLOSE = { time: 0.45, hit: 44, inset: 0, icon: 12, stroke: 1.6 };
 export const CARD_TAIL = { base: 28, basePhone: 24, gap: 2, len: 40, lenPhone: 16, reviewGap: 8, paintTime: 0.4 };
 // Copied from the hero's NAME table, entrance name renderer and EASE curves.
@@ -366,7 +367,7 @@ export const DEPTH = {
 
 export const NOVA_CANVAS = { dpr: 2, glowSprite: 512 };
 // Performance only: label recovery after a composited gesture (seconds), raster guard (CSS px).
-export const FRAME_PERF = { labelSettle: 0.12, rasterPad: 2 };
+export const FRAME_PERF = { labelSettle: 0.25, rasterPad: 2, scaleMin: .87, scaleMax: 1.15, positionEnd: .1, scaleEnd: .001, sharpStep: .5, flingEnd: 6 };
 export const NOVA = {
   build: { kindle: 0.2, draw: 0.76, hold: 1, throbs: [0.26, 0.45, 0.60, 0.72], rise: 0.12, fall: 0.32, pull: 1.8,
     push: 0.08, pushPhone: 0.06, recoil: 0.4, veil: 0.65, veilPhone: 0.45, veilOut: 0.25, hole: [0.6, 0.18], holeBreath: 0.04,

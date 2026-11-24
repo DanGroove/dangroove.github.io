@@ -235,6 +235,9 @@ function stepsGo(id, opts = {}) {
 }
 function stepsNext() {
   if (SC.cut) return;
+  // Dig-to-end has one clock. Repeated Next must never replace it with a hurry.
+  const x = BEATS.find(b => b.id === 'x').P;
+  if (SC.move && SC.P >= x && SC.P < stepsEnd) return;
   SC.direction = 'next'; stepsRelease(); const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true, start: true, next: true });
   stepsButtons();
 }
@@ -242,7 +245,8 @@ function stepsBack() {
   if (SC.cut) return;
   if (exploreEnd()) { stepsButtons(); return; }
   if (stepsRelease(true)) return;
-  SC.direction = 'back'; const beat = stepsBackBeat(); if (beat) stepsNavigate(beat.P, { move: true, next: true });
+  SC.direction = 'back'; const x = BEATS.find(b => b.id === 'x');
+  const beat = SC.move?.P1 === x.P && SC.P >= x.P ? x : stepsBackBeat(); if (beat) stepsNavigate(beat.P, { move: true, next: true });
 }
 function stepsSet(P) {
   if (SC.cut) return;
@@ -299,12 +303,10 @@ export function stepsFrame(ts) {
   stepsButtons(); return SC.P;
 }
 const stepsTarget = e => e.target && e.target.closest ? e.target : null;
-const stepsCanScroll = (face, direction) => !!(face && direction && (direction > 0 ? face.scrollTop + face.clientHeight < face.scrollHeight - 1 : face.scrollTop > 1));
 function stepsBlockWheel(e) {
   if (SC.rm || e.ctrlKey || exploreActive() || e.defaultPrevented) return;
-  const target = stepsTarget(e), direction = Math.sign(e.deltaY);
+  const target = stepsTarget(e);
   if (target?.closest('.sheet.on')) { e.preventDefault(); return; }
-  if (stepsCanScroll(target?.closest('.face'), direction)) return;
   e.preventDefault();
   if (SC.scrollLive && !SC.cut && SC.P <= stepsMap) stepsScrollBy(e.deltaY * (e.deltaMode === 1 ? STEPS.scroll.line : e.deltaMode === 2 ? VIEW.h : 1));
 }
@@ -321,7 +323,7 @@ function stepsScrollSettle(flick) {
   SC.scroll = null;
   if (Math.abs(target - SC.P) < 1e-6) { SC.P = target; stepsArrive(); } else stepsPlay(target);
 }
-const stepsTouchExcluded = target => target?.closest('.sheet.on, .sheet-dismiss, .pop button, .pop a, .face, .tl, input, textarea, select, [data-review]');
+const stepsTouchExcluded = target => target?.closest('.sheet.on, .sheet-dismiss, .pop button, .pop a, .tl, input, textarea, select, [data-review]');
 function stepsTouchOwned(target) {
   const hero = target?.closest('[data-hero]'); if (!hero) return false;
   for (let el = target; el; el = el.parentElement) {
@@ -361,8 +363,8 @@ function stepsKey(e) {
   let act = null;
   if (['ArrowDown', 'ArrowRight', 'PageDown'].includes(e.key) || (e.key === ' ' && !e.shiftKey)) act = stepsNext;
   else if (['ArrowUp', 'ArrowLeft', 'PageUp'].includes(e.key) || (e.key === ' ' && e.shiftKey)) act = stepsBack;
-  else if (e.key === 'Home') act = () => stepsGo('top');
-  else if (e.key === 'End') act = () => stepsGo('end');
+  else if (e.key === 'Home') act = () => stepsGo('top', { jump: true });
+  else if (e.key === 'End') act = () => stepsGo('end', { jump: true });
   if (act) { e.preventDefault(); act(); }
 }
 export function stepsBuild({ stage, rm, joinedTop, reducedGo = null }) {

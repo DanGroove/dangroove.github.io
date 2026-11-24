@@ -394,37 +394,40 @@ export function tripApply(st) {
   const free = !!st.exploring || st.exploreK > 0;
   const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
   if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
-  const moving = free && !!st.exploreMoving;
-  if (moving) {
-    if (!r.base) { r.base = { ...c }; tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true); }
-    r.elapsed = FRAME_PERF.labelSettle;
-    // One promoted SVG, no clone: its complete overflow follows the virtual camera.
-    // No #cam or label rewrites while the gesture/glide is moving its raster.
+  const ratio = r.base ? c.s / r.base.s : 1;
+  const zooming = r.base && Math.abs(c.s / r.base.s - 1) > 1e-6;
+  const moving = free && !!st.exploreMoving && !st.exploreScripted && !(zooming && st.exploreSharp);
+  const rebase = !r.base || ratio < FRAME_PERF.scaleMin || ratio > FRAME_PERF.scaleMax;
+  if (moving && !rebase) {
+    // Translation stays one layer; a zoom may carry at most 15% size error.
     const k = c.s / r.base.s;
     tripWrite(E.svg, 'transform', `matrix(${k},0,0,${k},${c.tx - r.base.tx * k},${c.ty - r.base.ty * k})`);
   } else {
-    if (r.moving && free) { r.from = r.scale; r.elapsed = 0; E.labels.forEach(label => label.from = label.k); }
-    if (free && r.elapsed < FRAME_PERF.labelSettle) {
-      r.elapsed = Math.min(FRAME_PERF.labelSettle, r.elapsed + (st.exploreDt || 0));
-      r.scale = r.from * (c.s / r.from) ** easeIO(r.elapsed / FRAME_PERF.labelSettle);
-    } else { r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; }
     r.base = { ...c };
     tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true);
     tripWrite(E.svg, 'transform', 'none');
   }
+  // Keep the displayed label state across camera commits. Its own size and tier
+  // clock eases continuously, including across interrupted gestures/rebases.
+  const settle = free ? 1 - Math.exp(-(st.exploreDt || 0) / (FRAME_PERF.labelSettle / 3)) : 1;
+  r.settleLeft = st.exploreMoving ? FRAME_PERF.labelSettle : Math.max(0, (r.settleLeft ?? FRAME_PERF.labelSettle) - (st.exploreDt || 0));
+  r.scale = free && !st.exploreScripted ? r.scale * (c.s / r.scale) ** settle : c.s;
+  if (!r.settleLeft || Math.abs(r.scale / c.s - 1) < .0001) r.scale = c.s;
   r.moving = moving;
-  const paint = moving ? r.base : c, labelS = free ? r.scale : c.s;
+  const paint = r.base, labelS = free ? r.scale : c.s;
   if (E.rows) tripLabels(st);
   const labelFade = smooth(...LABELS.fade, labelS / VIEW.s0);
   E.labels.forEach(label => {
-    const ideal = labelScale(label.kind, c.s);
+    const ideal = labelScale(label.kind, paint.s);
     // Follow the old epsilon rule in memory even while the visible label is held.
     // The final text size therefore equals the old writer's at the same camera.
     label.target ??= label.k;
     if (label.target === null || Math.abs(ideal / label.target - 1) > LABELS.epsilon) label.target = ideal;
-    if (moving) return;
-    const q = free && r.elapsed < FRAME_PERF.labelSettle ? easeIO(r.elapsed / FRAME_PERF.labelSettle) : 1;
-    const k = q < 1 && label.from !== null && label.from !== undefined ? label.from * (label.target / label.from) ** q : label.target;
+    const from = label.k ?? label.target;
+    const remaining = Math.abs(from / label.target - 1);
+    const eased = free && !st.exploreScripted && r.settleLeft && remaining > .0001 ? from * (label.target / from) ** Math.min(settle, .09 / Math.max(.09, Math.abs(Math.log(label.target / from)))) : label.target;
+    const trueSize = labelScale(label.kind, c.s);
+    const k = free ? Math.max(trueSize * FRAME_PERF.scaleMin, Math.min(trueSize * FRAME_PERF.scaleMax, eased)) : eased;
     if (label.k !== k) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; }
   });
   E.markers?.forEach(el => { tripWrite(el, 'transform', `scale(${COMB.markerPx / (12.4 * (el.parentElement?.parentElement?.dataset.screen ? 1 : c.s))})`, true); const mk = el.parentElement?.parentElement, f = FINDS.find(f=>mk?.id === 'mk-'+f.id); if (f) { const half = COMB.markerPx / (2*c.s), cover = tripCardCover(st,[f.mark[0]-half,f.mark[1]-half,f.mark[0]+half,f.mark[1]+half]); tripWrite(mk,'opacity',(1-cover)*(1-(st.focusK||0))); tripWrite(mk,'visibility',cover>=.995||st.focusK>=1?'hidden':''); } });
@@ -463,7 +466,7 @@ export function tripApply(st) {
     tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
     const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
-  return free && !moving && r.elapsed < FRAME_PERF.labelSettle;
+  return free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target));
 }
 const n2 = v => v.toFixed(2);
 export function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }

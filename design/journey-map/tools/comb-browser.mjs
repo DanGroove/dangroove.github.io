@@ -1,9 +1,9 @@
-// Local Edge/CDP fixture. All writes are confined to COMB-A's authorized run folder.
+// Local Edge/CDP fixture. All writes are confined to COMB-C's authorized run folder.
 import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-export const combRoot = resolve('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-a');
+export const combRoot = resolve('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-c');
 export const combWait = ms => new Promise(r => setTimeout(r, ms));
 export async function combBrowser() {
   mkdirSync(combRoot, { recursive: true });

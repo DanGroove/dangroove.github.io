@@ -124,6 +124,24 @@ JOURNEY.set(BEATS[1].P); stepWindow.fire('keydown', { target: empty, key: 'Arrow
 stepAssert(JOURNEY.moving, 'key did not start a move'); const keyStart = JOURNEY.P; stepsFrame(stepClock += 50); stepAssert(JOURNEY.P > keyStart, 'key move did not progress');
 console.log('ok: address cannot select Scroll; review only Depth; locked wheel never steps; only end CTA explores; two Back presses return then step; keyboard still advances');
 
+for (const size of [[1440,900,120],[412,730,96]]) {
+  tripResize(...size);
+  const x=BEATS.find(b=>b.id==='x');
+  JOURNEY.set(x.P);tick(16);let started=stepClock;JOURNEY.next();finish();const duration=stepClock-started;
+  for(const ms of [500,1500,2500,3300,4400])for(const key of ['ArrowRight','ArrowDown','PageDown',' ']) {
+    JOURNEY.set(x.P);tick(16);started=stepClock;JOURNEY.next();tick(ms);
+    stepWindow.fire('keydown',{target:empty,key});finish();
+    stepAssert(Math.abs(stepClock-started-duration)<17,'second '+key+' at '+ms+' shortened supernova');
+  }
+  JOURNEY.set(x.P);tick(16);JOURNEY.next();tick(1500);JOURNEY.back();tick(50);JOURNEY.back();finish();
+  stepAssert(JOURNEY.P===x.P,'second Back crossed the X');
+  JOURNEY.set(x.P);tick(16);JOURNEY.next();tick(500);stepWindow.fire('keydown',{target:empty,key:'End'});tick(800);
+  stepAssert(JOURNEY.P===stepEnd&&!JOURNEY.moving,'explicit End must still jump');
+  stepWindow.fire('keydown',{target:empty,key:'Home'});tick(800);stepAssert(JOURNEY.P===0&&!JOURNEY.moving,'explicit Home must still jump');
+  console.log('ok: C1 '+size[0]+'x'+size[1]+' 20 repeated Next keys preserve '+duration+' ms arrival; repeated Back returns only to X');
+}
+tripResize(1440,900,120);
+
 const cardContainer = new StepNode(); let navigations = 0; cardsBuild(cardContainer, () => navigations++);
 stepAssert(cardContainer.querySelectorAll('.c-close').length === 6, 'every motion card needs X');
 for (const c of cardsList()) {
@@ -141,8 +159,8 @@ for(const[w,h]of [[1440,900],[390,844]]){
   cardsList().forEach((c,i)=>{c.W=tripCardPlace(c.H).w;c.place=tripCardPlace(c.H);VIEW.cards[i]=c.place;});
   for(const direction of [1,-1])for(let ms=0;ms<=500;ms+=50){
     const state=tripState(stopP);state.cardK.fill(0);state.cardK[0]=direction>0?ms/500:1-ms/500;cardsOverride(tripState(stopP),.05,false);cardsFrame(state,[15,-15],[0,0]);
-    const c=cardsList()[0],m=c.tail.style.transform.slice(7,-1).split(',').map(Number),tip=[m[0]+m[2]/2+m[4],m[1]+m[3]/2+m[5]],size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*state.cam.s));
-    stepAssert(Math.abs(Math.hypot(...tip)-size*(MARK.radius+MARK.rim/2)/MARK.box-CARD_TAIL.gap)<1e-7,'tail left rim during open/close/tilt');
+    const c=cardsList()[0],m=c.tail.querySelector('path').getAttribute('d').match(/-?[\d.]+(?:e[+-]?\d+)?/g).map(Number),tip=[m[2],m[3]],size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*state.cam.s));
+    if(c.tail.style.opacity>0)stepAssert(Math.abs(Math.hypot(...tip)-size*(MARK.radius+MARK.rim/2)/MARK.box-CARD_TAIL.gap)<1e-7,'tail left rim during open/close/tilt');
     stepAssert(c.btn.style.opacity===1,'opening must never fade the shield');stepAssert(!c.el.style.transform.includes('scale'),'article must not scale its shield');
   }
 }

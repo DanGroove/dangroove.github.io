@@ -290,17 +290,20 @@ export function starsFrame(time, st, pointer, opt = {}) {
   const start = SEQ.find(q => q.kind === 'rush');
   const rushBox = st.rushT > 0 && st.blastT === 0 ? depthFrameBox(tripState(start.a)) : box;
   if (st.P < start.a) SK.rushPlan = null;
-  else if (!opt.still && (!SK.rushPlan || st.rushT === 0 && st.blastT === 0)) SK.rushPlan = new Map(starsRushSources(look).map(row => [row.s, row]));
+  else if (!opt.still) {
+    const homeCamera = tripState(start.a).cam, key = [W,H,homeCamera.s,homeCamera.tx,homeCamera.ty].join('/');
+    if (!SK.rushPlan || SK.rushKey !== key) { SK.rushKey = key; SK.rushPlan = new Map(starsRushSources(look).map(row => [row.s, row])); }
+  }
   const rushAt = row => novaGatherPoint(row.from, row.centre, row.angle, row.radius, gatherT(row.s)).map((v, i) => v + Xs[i] - row.centre[i]);
   const rushTail = row => {
     const at = rushAt(row), before = novaGatherPoint(row.from, row.centre, row.angle, row.radius, novaBuildGather(Math.max(0, st.rushT - G.tail / STEPS.pace.rush), row.order)).map((v, i) => v + Xs[i] - row.centre[i]);
     return at.map((v, i) => (v - before[i]) * G.tailGain / G.tail);
   };
   const late = src ? .02 : .05; // joined: the first stars move within the first 3 % of the fall
-  // Bring the twinkle's phase smoothly to zero on the last leg, then use only rushT. Returning to the X
-  // and replaying, or jumping straight into the rush, gives the same light as well as the same positions.
+  // Live light never rewinds. Only light hands over for the first 0.3 seconds;
+  // the gathering stars' positions remain a pure function of progress.
   const rushing = st.rushT > 0 && st.blastT === 0;
-  const twinkleTime = st.blastT > 0 ? time : st.P >= start.a ? st.rushT * STEPS.pace.rush : time * (1 - smooth(...NOVA.gather.twinkleHome, st.legXT));
+  const twinkleTime = time, rushTime = st.rushT * STEPS.pace.rush, twinkleMix = rushing ? smooth(0, .3, rushTime) : 0;
   const home = h >= 1 && st.blastT > 0 && st.exploreK === 1 && G.stagger + G.time <= 1;
   for (const s of SK.list) {
     let x, y, rad, al, col, tail = null;
@@ -332,7 +335,7 @@ export function starsFrame(time, st, pointer, opt = {}) {
       if (h > 0) {
         const outside = Math.hypot(Math.max(rushBox[0] - x, 0, x - rushBox[2]), Math.max(rushBox[1] - y, 0, y - rushBox[3]));
         al *= 1 - smooth(...STARS.skyCover, h) * (1 - smooth(0, STARS.skyEdge, outside)) * (1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0))) * ((st.blastT > 0 ? s.burstGather : source?.gather) ? 1 - smooth(0, 1, st.rushT) : 1);
-        if (!opt.still) al *= 1 - STARS.twinkle * follow * (.5 + .5 * Math.sin(twinkleTime * lerp(...STARS.skyF, s.f) + s.phase));
+        if (!opt.still) { const f = lerp(...STARS.skyF, s.f); al *= 1 - STARS.twinkle * follow * (.5 + .5 * lerp(Math.sin(twinkleTime * f + s.phase), Math.sin(rushTime * f + s.phase), twinkleMix)); }
       }
       if (source?.gather && rushing && !opt.still) {
         [x, y] = rushAt(source); tail = rushTail(source);
@@ -412,7 +415,9 @@ export function starsFrame(time, st, pointer, opt = {}) {
     const E = NOVA.embers, count = VIEW.phone ? E.nPhone : E.n, big = Math.max(W, H), fade = smooth(...NOVA.motionIn, st.blastT);
     const spark = (i, age, round, burst) => {
       const r = rnd(NOVA.seed + i + round * (count + 1)), angle = r() * Math.PI * 2, reach = lerp(...E.reach, r()) * big;
-      const distance = reach * (1 - (1 - age) ** E.slow) * worldScale, rad = lerp(...E.r, r()) * worldScale;
+      let distance = reach * (1 - (1 - age) ** E.slow) * worldScale;
+      if (st.exploreK > 0) distance = lerp(distance, Math.min(distance, starsEmberReach(angle) * st.cam.s), st.exploreK);
+      const rad = lerp(...E.r, r()) * worldScale;
       put(Xs[0] + Math.cos(angle) * distance, Xs[1] + Math.sin(angle) * distance, rad, E.alpha * (1 - smooth(...E.fade, age)) * fade * K * burst, C.warm);
     };
     for (let i = 0; i < count; i++) {
@@ -428,7 +433,7 @@ export function starsFrame(time, st, pointer, opt = {}) {
   if (src && T.i >= 0) { hp = src.drawn(T.i, [0, 0]); lk = src.look(T.i); g = smooth(.02, .6, h); }
   if (h <= 0) { tx = hp[0]; ty = hp[1]; }
   else { const m = toScreen(st, st.trav || MAP.waypoints[0]); const e = easeIO(smooth(.5, 1, h)); tx = lerp(hp[0], m[0], e); ty = lerp(hp[1], m[1], e); }
-  const ta = (1 - smooth(.2, .7, st.rushT)) * K;
+  const ta = (1 - smooth(.2, .7, st.rushT)) * K * (VIEW.phone ? 1 - smooth(0, .02, st.cardOpen) : 1);
   if (lk && g < 1) { put(tx, ty, lightR(lk.size / 2), lk.alpha * (1 - g) * K, lk.colour); flush(ctx); }
   if (ta > 0 && g > 0) {
     const r0 = lk ? lightR(lk.size / 2) : 7, zk = lerp(STARS.travZoomed, 1, smooth(VIEW.s0, VIEW.sT, st.cam.s));
@@ -439,3 +444,14 @@ export function starsFrame(time, st, pointer, opt = {}) {
 }
 // one still frame for reduced motion
 export function starsStill(st) { starsFrame(0, st, [.5, .5], { still: true }); }
+
+// Distance to the existing south coast along an ember's ray, with an island margin.
+export function starsEmberReach(angle) {
+  const ray = [Math.cos(angle), Math.sin(angle)], cross = (a,b) => a[0]*b[1]-a[1]*b[0]; let reach = Infinity;
+  for (let i=0;i<COAST_B.length;i++) {
+    const a=COAST_B[i].map((v,j)=>v-MAP.x[j]), b=COAST_B[(i+1)%COAST_B.length].map((v,j)=>v-COAST_B[i][j]), den=cross(ray,b);
+    if (Math.abs(den)<1e-9) continue;
+    const t=cross(a,b)/den, u=cross(a,ray)/den; if(t>=0&&u>=0&&u<=1) reach=Math.min(reach,t);
+  }
+  return Math.max(0,reach-8);
+}

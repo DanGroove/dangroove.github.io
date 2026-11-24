@@ -46,7 +46,7 @@ button { font-family: inherit; }
 .cards { position: absolute; inset: 0; }
 .stop { position: absolute; left: 0; top: 0; width: 640px; height: 420px; transform-origin: 0 0; pointer-events: none; }
 .stop[data-state="open"], .stop[data-state="moving"] { z-index: 4; }
-.stop[data-state="rest"] .st-btn { pointer-events: auto; }
+.stop[data-state="rest"] .st-btn, .stop[data-state="open"] .st-btn, .stop[data-state="moving"] .st-btn { pointer-events: auto; }
 .stop[data-state="open"] .face { pointer-events: auto; }
 .st-btn { position: absolute; z-index: 3; left: 0; top: 0; width: 400px; height: 400px; transform: translate(-50%,-50%); padding: 0; border: 0; background: none; cursor: pointer; border-radius: 50%; }
 .stone { display: block; width: 100%; height: 100%; overflow: visible; }
@@ -93,7 +93,7 @@ button { font-family: inherit; }
 .mm-stop { position: absolute; width: 24px; height: 24px; margin: calc(var(--oy) - 12px) 0 0 calc(var(--ox) - 12px); padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
 .mm-stop i { width: 6px; height: 6px; border-radius: 50%; border: 1px solid var(--paper); background: var(--ink); transform: translate(calc(0px - var(--ox)), calc(0px - var(--oy))); }
 .mm-stop i { position: relative; }
-.mm-stop i::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: conic-gradient(var(--shield-a) 0deg 90deg, var(--shield-b) 90deg 180deg, var(--shield-a) 180deg 270deg, var(--shield-b) 270deg 360deg); opacity: var(--paint, 0); }
+.mm-stop i::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(90deg, var(--shield-a) 50%, var(--shield-b) 50%); opacity: var(--paint, 0); }
 
 /* find popups */
 .pop { position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none; display: none; }
@@ -408,6 +408,11 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 
 /* The shield stays on the map; only its callout grows. */
 .c-card { position: absolute; left: 0; top: 0; transform-origin: 0 0; z-index: 2; }
+.c-shadow { position: absolute; left: 0; top: 0; transform-origin: 0 0; z-index: 0; pointer-events: none; }
+.face { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--paper) 18%, transparent); }
+.c-tail-edge { fill: none; stroke: var(--paper); stroke-opacity: .18; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.st-btn:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; box-shadow: 0 0 0 2px var(--ink); }
+.jm-nova-away:not(.rm) .map .lg, .jm-nova-away:not(.rm) .map .legend-symbol { opacity: 0 !important; }
 .c-tail { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; transform-origin: 0 0; z-index: 1; fill: var(--g); pointer-events: none; }
 .st-boss-paint { opacity: 0; }
 .c-top .c-logo { min-width: 0; flex-shrink: 1; margin-right: auto; }
@@ -458,14 +463,15 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .tl-tip { transition: opacity .15s; }
 .tl-head svg { stroke: var(--ink); stroke-width: 2px; paint-order: stroke; }
 .tl-blk em { background: linear-gradient(to bottom, var(--mk) 0 75%, var(--mk2) 75% 100%); }
-.mm-interkom i::after { background: conic-gradient(var(--shield-b) 0deg 270deg, var(--shield-a) 270deg 360deg); }
+.mm-interkom i::after { background: linear-gradient(90deg, var(--shield-b) 65%, var(--shield-a) 65%); }
 .tl-blk { transition: opacity .3s; }
 .mm-trav { r: 21; stroke: var(--paper); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .mm-stop { width: 44px; height: 44px; margin: calc(var(--oy) - 22px) 0 0 calc(var(--ox) - 22px); }
 .st-btn { display: grid; place-items: center; }
 .st-btn .stone { flex: none; }
 .c-close:focus-visible { outline: 2px solid var(--ink); box-shadow: 0 0 0 4px var(--paper); outline-offset: 0; }
-.c-crafts, .c-compact .c-crafts { font-size: 11px; }
+.c-crafts { font-size: 11px; }
+.c-compact .c-crafts { font-size: 9px; }
 .c-crafts .lit { text-decoration: underline; text-underline-offset: 3px; }
 .find-hint { font-size: 13px; color: var(--note); visibility: hidden; transition: opacity .3s, visibility 0s .3s; }
 .jm-focus .find-hint:not(.explore-hint), .jm-explore:not(.jm-sheet-open) .explore-hint.on { visibility: visible; transition-delay: 0s; }
