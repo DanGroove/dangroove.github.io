@@ -156,12 +156,13 @@ export function placeMark(sample, W, H, height = STARS.mark.height) {
 // L4: progress has real 25/50/25 shares. .85 displayed progress launches the last star;
 // .85 / 1.4 is deliberately stricter than 1 / 1.4, so launches themselves span 1.4 s.
 export const LOADER = {
-  launchEnd: 0.85, gatherSeconds: 1.4, flight: 1.0, hold: 0.15, shrink: 0.35, compressed: 0.08, swell: 0.18, burst: 1.696,
+  launchEnd: 0.85, gatherSeconds: 1.4, flight: 1.0, hold: 0.15, shrink: 0.35, compressed: 0.08, swell: 0.18, burst: 1.8,
   shares: { fonts: 0.25, atlas: 0.5, frame: 0.25 },
 };
 const cubicInOut = p => p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2;
-// Hash the home, so L8's two stars sharing it still arrive together.
-export const loaderDuration = (home, i) => (1 + 0.6 * (1 - home.d)) * (0.94 + 0.12 * hash(i, 21));
+// L10: the home keeps its depth/hash; journey length sets duration, not launch speed.
+export const loaderDuration = (home, i, length, longest) => Math.min(1.8, Math.max(0.6,
+  3 * length / (2 * longest * (0.8 + 0.4 * home.d) * (0.94 + 0.12 * hash(i, 21)))));
 export const launchShare = (i, count = STARS.mark.count) => LOADER.launchEnd * i / Math.max(1, count - 1);
 // Farthest-point sampling already supplies a spatially even prefix, across both letters.
 // No sort by path, colour or side is introduced for the loader.
@@ -251,7 +252,10 @@ export function loaderScene(sample, W, H, viewport = { width: W, height: H, left
     points[i].home = home; used.add(home);
   }
   const unpairedHomes = homeOrder.filter(i => !used.has(i));
-  for (const m of points) m.duration = loaderDuration(homes[m.home], m.home);
+  const lengths = points.map(m => Math.hypot(homes[m.home].x - weight[0] - (m.x - weight[0]) * 1.10,
+    homes[m.home].y - weight[1] - (m.y - weight[1]) * 1.10));
+  const longest = Math.max(...lengths);
+  for (const [i, m] of points.entries()) m.duration = loaderDuration(homes[m.home], m.home, lengths[i], longest);
   const duration = Math.max(...points.map(m => m.duration));
   // Earliest crossing of each radius by any ray, including a star that later lands.
   // Solve in eased progress, then invert the cubic: no frame-step or browser clock approximation.
@@ -305,7 +309,7 @@ export function loaderDots(scene, state) {
       dots.push({ ...m, x, y, ...trail(x, y, tail), alpha: 1 });
       continue;
     }
-    // Shared stars have the same home/depth/hash, so merge at their own landing.
+    // L10 gives shared-home stars individual journey times. Merge copies once landed.
     const arrived = state.time >= state.burstStart + m.duration;
     if (arrived) {
       if (landed.has(m.home)) continue;
@@ -321,8 +325,10 @@ export function loaderDots(scene, state) {
       flag: blend === 1 ? 0 : m.flag, star: i, home: m.home, alpha: 1 });
   }
   if (elapsed !== null) for (const { home: i, start } of scene.wave) {
-    // A home beyond every ray has no wave crossing. Preserve the exact field handover there.
-    const alpha = done ? 1 : 1 - (1 - clamp01((elapsed - start) / 0.2)) ** 3;
+    // L10: even homes beyond every ray finish fading before the field takes over.
+    const fade = Number.isFinite(start) ? clamp01((elapsed - start) / 0.2)
+      : clamp01((elapsed - (scene.duration - 0.3)) / 0.3);
+    const alpha = done ? 1 : 1 - (1 - fade) ** 3;
     dots.push({ ...homes[i], home: i, flag: 0, alpha });
   }
   return dots;

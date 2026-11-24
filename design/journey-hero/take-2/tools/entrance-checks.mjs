@@ -15,7 +15,7 @@ import { SHOW, LOOP, SCENES, BLOCK, POOL, SCREEN, sceneAt, frameAt, calloutsAt }
 import { createCraftModel, followCraft } from '../craft-wipe.mjs';
 import { pageMarkup, LOADER_CSS, LOADER_SKIP, LOADER_SCRIPT } from './page.mjs';
 import { previewMarkup } from './preview.mjs';
-import { checkLoaderLanding, checkLoaderMoves } from './loader-checks.mjs';
+import { checkLoaderLanding, checkLoaderMoves, checkLoaderRoundness, checkLoaderDurations, checkLoaderPop } from './loader-checks.mjs';
 
 const TAKE = new URL('../', import.meta.url);
 // Source mutations match lines, irrespective of this checkout's CRLF/LF convention.
@@ -33,13 +33,13 @@ export const ENTRANCE_CONTROLS = [
   { id: 'entrance-with-burst', file: 'loader-stars.mjs', search: 'const entranceStart = end;', replacement: 'const entranceStart = burstStart;', gate: 'L5 groups:' },
   { id: 'smoothstep-burst', file: 'loader-stars.mjs', search: 'blend = 1 - (1 - p) ** 3', replacement: 'blend = p * p * (3 - 2 * p)', gate: 'L7 explosion curve:' },
   { id: 'quartic-flight', file: 'loader-stars.mjs', search: 'const t = 1 - (1 - flight) ** 3,', replacement: 'const t = 1 - (1 - flight) ** 4,', gate: 'L7 flight curve:' },
-  { id: 'v35-burst', file: 'loader-stars.mjs', search: 'burst: 1.696,', replacement: 'burst: 1.2,', also: [['blend = 1 - (1 - p) ** 3', 'blend = 1 - (1 - p) ** 4']], gate: 'L7 explosion curve:' },
+  { id: 'v35-burst', file: 'loader-stars.mjs', search: 'burst: 1.8,', replacement: 'burst: 1.2,', also: [['blend = 1 - (1 - p) ** 3', 'blend = 1 - (1 - p) ** 4']], gate: 'L7 explosion curve:' },
   { id: 'no-shrink', file: 'loader-stars.mjs', search: '1 - 0.22 * cubicInOut(shrink)', replacement: '1', gate: 'L7 scale:' },
   { id: 'index-homes', file: 'loader-stars.mjs', search: '  for (let rank = 0; rank < paired; rank++) {\n    const i = markOrder[Math.floor(rank * points.length / paired)], home = homeOrder[Math.floor(rank * homes.length / paired)];\n    points[i].home = home; used.add(home);\n  }', replacement: '  for (let i = 0; i < points.length; i++) { points[i].home = i % homes.length; used.add(i % homes.length); }', gate: 'L7 angle order:' },
   { id: 'old-burst-entrance', file: 'loader-stars.mjs', search: 'const entranceStart = end;', replacement: 'const entranceStart = burstStart + 0.9;', gate: 'L5 groups:' },
   { id: 'early-entrance', file: 'loader-stars.mjs', search: 'const entranceStart = end;', replacement: 'const entranceStart = end - 0.05;', gate: 'L5 timing:' },
   { id: 'edge-leftovers', file: 'loader-stars.mjs', search: '  return { W, H, centre, weight, mark, points, homes, unpairedHomes, duration, wave };', replacement: '  if (homes.length < points.length) for (const i of markOrder.slice(homes.length)) { points[i].home = null; points[i].exit = [W + 5, H + 5]; }\n  return { W, H, centre, weight, mark, points, homes, unpairedHomes, duration, wave };', gate: 'L8 landing:' },
-  { id: 'single-duration', file: 'loader-stars.mjs', search: '(1 + 0.6 * (1 - home.d)) * (0.94 + 0.12 * hash(i, 21))', replacement: '1.6', gate: 'L9 depth:' },
+  { id: 'single-duration', file: 'loader-stars.mjs', search: '3 * length / (2 * longest * (0.8 + 0.4 * home.d) * (0.94 + 0.12 * hash(i, 21)))', replacement: '1.6', gate: 'L10 duration:' },
   { id: 'dots-without-streaks', file: 'loader-stars.mjs', search: 'dots.push({ x, y, ...trail(x, y, [previous.x, previous.y]),', replacement: 'dots.push({ x, y, streak: 0,', gate: 'L9 streak:' },
   { id: 'simultaneous-field-fade', file: 'loader-stars.mjs', search: 'clamp01((elapsed - start) / 0.2)', replacement: 'clamp01(elapsed / scene.duration)', gate: 'L9 wave:' },
   { id: 'no-depth-growth', file: 'loader-stars.mjs', search: '1.6 * Math.max(0, target.d - 0.4)', replacement: '0 * Math.max(0, target.d - 0.4)', gate: 'L9 size:' },
@@ -47,6 +47,8 @@ export const ENTRANCE_CONTROLS = [
   { id: 'no-charge', file: 'loader-stars.mjs', search: '1 + 0.3 * cubicInOut(clamp01((time - shrinkStart) / (LOADER.shrink + LOADER.compressed)))', replacement: '1', gate: 'L9 size:' },
   { id: 'no-painted-streaks', file: 'tools/page.mjs', search: 'if (dot.streak > dot.size)', replacement: 'if (false)', gate: 'L9 painter:' },
   { id: 'unresolved-landing', file: 'entrance.mjs', search: 'state: bridge ? now => loaderLanding(bridge.state(now), scene?.duration ?? LOADER.burst) : null,', replacement: 'state: bridge ? now => bridge.state(now) : null,', gate: 'L5 scene:' },
+  { id: 'l9-depth-only', file: 'loader-stars.mjs', search: 'Math.min(1.8, Math.max(0.6,\n  3 * length / (2 * longest * (0.8 + 0.4 * home.d) * (0.94 + 0.12 * hash(i, 21)))))', replacement: '(1 + 0.6 * (1 - home.d)) * (0.94 + 0.12 * hash(i, 21))', gate: 'L10 roundness:', check: 'roundness' },
+  { id: 'handover-pop', file: 'loader-stars.mjs', search: 'clamp01((elapsed - (scene.duration - 0.3)) / 0.3)', replacement: '0', gate: 'L10 pop:', check: 'pop' },
 ];
 
 async function loadEntrance(source, loaderSource) {
@@ -149,7 +151,7 @@ export function checkLoaderTiming({ loaderAt, LOADER }) {
   close(LOADER.launchEnd, 0.85, 'L4 timing: launch shares end at .85');
   close(LOADER.gatherSeconds, 1.4, 'L4 timing: gathering faster than 1.4 s');
   close(LOADER.flight, 1.0, 'L7 flight curve: duration'); close(LOADER.hold, 0.15, 'L7 timing: hold');
-  close(LOADER.shrink, 0.35, 'L9 timing: shrink'); close(LOADER.compressed, 0.08, 'L9 timing: compressed hold'); close(LOADER.swell, 0.18, 'L9 timing: swell'); close(LOADER.burst, 1.696, 'L7 explosion curve: duration bound');
+  close(LOADER.shrink, 0.35, 'L9 timing: shrink'); close(LOADER.compressed, 0.08, 'L9 timing: compressed hold'); close(LOADER.swell, 0.18, 'L9 timing: swell'); close(LOADER.burst, 1.8, 'L7 explosion curve: duration bound');
   close(at(0).fill, 0, 'L4 timing: first paint progress');
   close(at(0).formedAt, 2.4, 'L4 timing: launches plus last flight');
   close(at(0).holdAt, 2.4, 'L7 timing: hold start');
@@ -157,18 +159,18 @@ export function checkLoaderTiming({ loaderAt, LOADER }) {
   close(at(0).compressedStart, 2.9, 'L9 timing: .35 shrink');
   close(at(0).swellStart, 2.98, 'L9 timing: .08 compressed hold');
   close(at(0).burstStart, 3.16, 'L9 timing: .18 swell');
-  for (const [time, phase] of [[2.4, 'hold'], [2.55, 'shrink'], [2.9, 'compressed'], [2.98, 'swell'], [3.16, 'burst'], [4.856, 'entrance']]) {
+  for (const [time, phase] of [[2.4, 'hold'], [2.55, 'shrink'], [2.9, 'compressed'], [2.98, 'swell'], [3.16, 'burst'], [4.96, 'entrance']]) {
     assert.equal(at(time).phase, phase, 'L7 timing: phase boundary');
   }
-  close(at(0).end, 4.856, 'L9 timing: conservative explosion bound');
-  close(at(0).entranceStart, 4.856, 'L5 timing: entrance starts at landing');
+  close(at(0).end, 4.96, 'L9 timing: conservative explosion bound');
+  close(at(0).entranceStart, 4.96, 'L5 timing: entrance starts at landing');
   assert.ok(at(3.16 - 1e-8).burstTime === null && at(3.16).phase === 'burst', 'L4 timing: burst boundary');
   assert.equal(at(3.16).entranceTime, null, 'L5 timing: entrance at burst start');
-  assert.equal(at(4.856 - 1e-8).entranceTime, null, 'L5 timing: entrance before landing');
-  assert.ok(!at(4.856 - 1e-8).done && at(4.856).done, 'L4 timing: endpoint handover');
-  close(at(4.856).entranceTime, 0, 'L5 timing: entrance zero at landing');
-  close(at(5.106).entranceTime, 0.25, 'L5 timing: entrance after landing');
-  assert.ok(!at(4.856 - 1e-8).pointer && at(4.856).pointer, 'L4 timing: pointer handover');
+  assert.equal(at(4.96 - 1e-8).entranceTime, null, 'L5 timing: entrance before landing');
+  assert.ok(!at(4.96 - 1e-8).done && at(4.96).done, 'L4 timing: endpoint handover');
+  close(at(4.96).entranceTime, 0, 'L5 timing: entrance zero at landing');
+  close(at(5.21).entranceTime, 0.25, 'L5 timing: entrance after landing');
+  assert.ok(!at(4.96 - 1e-8).pointer && at(4.96).pointer, 'L4 timing: pointer handover');
   const launches = at(0).launches;
   close(launches[0], 0, 'L4 timing: first launch'); close(launches.at(-1), 1.4, 'L4 timing: last launch');
   assert.equal(launches.length, 600, 'L4 timing: count');
@@ -214,7 +216,7 @@ async function checkLoaderGeometry(P) {
   const sample = S.sampleMark(paths), all = { fonts: 0, atlas: 0, frame: 0 };
   assert.deepEqual(P.sampleMark(paths), sample, 'L4 consistency: sample order');
   let comparisons = 0;
-  const moves = [], landings = [];
+  const moves = [], landings = [], blasts = [], roundness = [], pops = [];
   for (const [W, H] of [[1440, 900], [768, 1024], [390, 844]]) {
     const scene = P.loaderScene(sample, W, H), mark = S.placeMark(sample, W, H);
     assert.equal(scene.points.length, S.STARS.mark.count, 'L4 consistency: mark count');
@@ -238,6 +240,8 @@ async function checkLoaderGeometry(P) {
       assert.ok(P.loaderAt(launch + 1.0 + 1e-9, all).arrived >= i + 1, 'L4 flight: late arrival');
     }
     landings.push(checkLoaderLanding(P, scene));
+    pops.push(checkLoaderPop(P, scene));
+    blasts.push(checkLoaderDurations(P, scene));
     if (W === 1440 || W === 390) moves.push(checkLoaderMoves(P, scene));
     const sceneAt = t => P.loaderLanding(P.loaderAt(t, all), scene.duration), landing = sceneAt(0).end;
     const end = P.loaderDots(scene, sceneAt(landing)), field = S.makeStars(W, H);
@@ -256,18 +260,18 @@ async function checkLoaderGeometry(P) {
     const before = P.loaderDots(scene, sceneAt(landing - 1e-7));
     const byHome = new Map(end.map(d => [d.home, d]));
     before.forEach(d => {
-      const landed = byHome.get(d.home), outside = scene.wave.some(w => w.home === d.home && !Number.isFinite(w.start));
+      const landed = byHome.get(d.home);
       assert.ok(landed && Math.hypot(d.x - landed.x, d.y - landed.y) < 0.001, 'L4 homes: endpoint jump');
-      if (outside) assert.equal(d.alpha, 0, 'L9 wave: unreachable home stays dark until handover');
-      else assert.ok(Math.abs(d.alpha - landed.alpha) < 0.001, 'L4 homes: endpoint alpha jump');
+      assert.ok(Math.abs(d.alpha - landed.alpha) < 0.001, 'L4 homes: endpoint alpha jump');
     });
+    roundness.push(scene);
   }
   const scrolled = P.loaderScene(sample, 390, 900, { width: 390, height: 664, left: 0, top: -120 });
   close(scrolled.points[0].y, 664 / 2 + 120 + S.placeMark(sample, 390, 900).points[0].y, 'L4 consistency: first screen centre');
   const landed = P.loaderDots(scrolled, P.loaderLanding(P.loaderAt(3.16 + scrolled.duration, all), scrolled.duration));
   const home = S.makeStars(390, 900)[0], dot = landed.find(d => d.home === 0);
   close(dot.y, Math.fround(home.y) - 120 * S.STARS.scroll * Math.fround(home.d), 'L4 homes: scroll offset');
-  return { comparisons, moves, landings };
+  return { comparisons, moves, landings, blasts, roundness, pops };
 }
 
 function checkLoaderMarkup() {
@@ -383,7 +387,11 @@ function checkInlineLoader(E, P, painterSource = read('tools/page.mjs')) {
       for (const listener of scrollListeners) listener();
       const scrolled = P.loaderScene(P.sampleMark(paths), 1440, 900, { width: 1440, height: 900, left: 0, top: -120 });
       close(view.state(now).end, 3.16 + scrolled.duration, 'L5 scene: scrolled landing matches painter');
+      env.innerWidth = env.window.innerWidth = 390; env.innerHeight = env.window.innerHeight = 844;
       bridge.measure({ left: 0, top: 0, width: 390, height: 844 });
+      // Resize no longer guarantees phone landing precedes desktop; sample its own terminal frame.
+      // One 240 Hz step clears the worker's epoch-subtraction rounding at the exact boundary.
+      now = 3.16 + P.loaderScene(P.sampleMark(paths), 390, 844).duration + 1 / 240;
       const beforePhone = fills; animate();
       assert.equal(fills - beforePhone, 305, 'L8 inline: terminal phone draws each shared home once');
       bridge.motion(true);
@@ -514,7 +522,7 @@ async function runPlayer(playerSource, E, { review = false, reduced = false, wit
   if (duringBoot) await duringBoot(result);
   await execution;
   tick?.(now);
-  if (!withLoader && !review) run(4.856);
+  if (!withLoader && !review) run(4.96);
   return result;
 }
 
@@ -535,7 +543,7 @@ async function checkPlayer(playerSource, E, P) {
   loading.run(0.08); assert.equal(loading.loaderStates.at(-1).phase, 'swell', 'L9 player: swell boundary');
   loading.run(0.18); assert.ok(loading.loaderStates.at(-1).fill === 1 && loading.loaderStates.at(-1).burst < 1e-9, 'L4 player: burst boundary');
   assert.equal(loading.win.__hero.entering, null, 'L5 player: entrance starts with burst');
-  loading.run(1.646); assert.equal(loading.win.__hero.entering, null, 'L5 player: entrance advances during burst');
+  loading.run(1.75); assert.equal(loading.win.__hero.entering, null, 'L5 player: entrance advances during burst');
   assert.ok(!loading.starOptions.open(), 'L4 player: pointer before burst ends');
   loading.run(0.05); near(loading.win.__hero.entering, 0, 'L5 player: entrance zero at burst handover');
   assert.ok(loading.starOptions.open(), 'L4 player: pointer at landing');
@@ -567,11 +575,11 @@ async function checkPlayer(playerSource, E, P) {
     finishPageFonts();
   } });
   assert.ok(late.win.__ready && late.win.__hero.loading && late.loaderStates.at(-1).fill === 0, 'L4 player: delayed readiness jumps fill');
-  late.run(4.806); assert.equal(late.win.__hero.entering, null, 'L5 player: delayed entrance before landing');
+  late.run(4.91); assert.equal(late.win.__hero.entering, null, 'L5 player: delayed entrance before landing');
   late.run(0.05); near(late.win.__hero.entering, 0, 'L5 player: delayed burst landing');
   const blocked = await runPlayer(playerSource, E, { withLoader: true, firstDrawSeconds: 2 });
   assert.ok(blocked.win.__ready && blocked.loaderStates.at(-1).fill === 0, 'L4 player: blocked boot consumes visible fill');
-  blocked.run(4.806); assert.equal(blocked.win.__hero.entering, null, 'L5 player: blocked boot consumes minimum duration');
+  blocked.run(4.91); assert.equal(blocked.win.__hero.entering, null, 'L5 player: blocked boot consumes minimum duration');
   blocked.run(0.05); near(blocked.win.__hero.entering, 0, 'L5 player: blocked boot burst landing');
   for (const release of ['seek', 'entrance']) {
     const p = await runPlayer(playerSource, E, { withLoader: true });
@@ -649,7 +657,8 @@ export async function checkEntrance({ loaderSource = read('loader-stars.mjs'), e
   const dots = checkTimetable(E);
   const runs = await checkPlayer(playerSource, E, P);
   const labelSamples = await checkLabelExit(stageSource);
-  return `L4/L5/L7/L8/L9 computed: ${loaderSamples} timing samples at 1 ms; 1.4 s launches + 1 s flight, .15 hold, .35 shrink, .08 compressed hold, .18 swell, depth-dependent explosion; entrance/pointer start at actual scene landing (fallback bound 4.856 s); ${geometry.comparisons} mark/home comparisons at desktop/tablet/phone; ${inlineRuns} inline worker/fallback/reduced/review runs. L7 actual drawing at 240 Hz: ${JSON.stringify(geometry.moves)}. L8 landing/handover: ${JSON.stringify(geometry.landings)}. L2 timetable: ${groups.samples} samples, maximum ${groups.maximum} groups. L5 combined explosion + entrance: ${groups.combinedSamples} samples, maximum ${groups.withBurst} groups, no exceptions. E4: ${labelSamples} retained label samples. E1/E2: 3.8 s timetable, ${dots} floor dot samples, ${runs} player runs; review and reduced paths retained. Browser/pixels UNRUN.`;
+  const roundness = geometry.roundness.map(scene => ({ viewport: `${scene.W}x${scene.H}`, samples: checkLoaderRoundness(P, scene) }));
+  return `L4/L5/L7/L8/L9/L10 computed: ${loaderSamples} timing samples at 1 ms; 1.4 s launches + 1 s flight, .15 hold, .35 shrink, .08 compressed hold, .18 swell, shared launch-speed explosion; entrance/pointer start at actual scene landing (fallback bound 4.96 s); ${geometry.comparisons} mark/home comparisons at desktop/tablet/phone; ${inlineRuns} inline worker/fallback/reduced/review runs. L10 durations: ${JSON.stringify(geometry.blasts)}. L10 roundness: ${JSON.stringify(roundness)}. L10 pop: ${JSON.stringify(geometry.pops)}. L7 actual drawing at 240 Hz: ${JSON.stringify(geometry.moves)}. L8 landing/handover: ${JSON.stringify(geometry.landings)}. L2 timetable: ${groups.samples} samples, maximum ${groups.maximum} groups. L5 combined explosion + entrance: ${groups.combinedSamples} samples, maximum ${groups.withBurst} groups, no exceptions. E4: ${labelSamples} retained label samples. E1/E2: 3.8 s timetable, ${dots} floor dot samples, ${runs} player runs; review and reduced paths retained. Browser/pixels UNRUN.`;
 }
 
 // Each edit matches one exact site in memory; the v35 control restores both its duration and curve.
@@ -664,7 +673,18 @@ export async function checkEntranceControls() {
       edited = edited.replace(search, replacement);
     }
     let message = null;
-    try { await checkEntrance({ 'entrance.mjs': { entranceSource: edited }, 'play.mjs': { playerSource: edited }, 'stage.mjs': { stageSource: edited }, 'loader-stars.mjs': { loaderSource: edited }, 'tools/page.mjs': { painterSource: edited } }[c.file]); } catch (error) { message = error.message.split('\n')[0]; }
+    try {
+      if (c.check) {
+        const P = await import('data:text/javascript;base64,' + Buffer.from(edited).toString('base64'));
+        const header = pageMarkup().match(/<a[^>]*data-mark[^>]*>([\s\S]*?<\/svg>)/)[1];
+        const paths = [...header.matchAll(/<path\b[^>]*>/g)].map(([p]) => ({ d: p.match(/\bd="([^"]+)"/)[1], fill: p.match(/\bfill="([^"]+)"/)[1] }));
+        const sample = P.sampleMark(paths);
+        for (const [W, H] of [[1440, 900], [768, 1024], [390, 844]]) {
+          const scene = P.loaderScene(sample, W, H);
+          (c.check === 'roundness' ? checkLoaderRoundness : checkLoaderPop)(P, scene);
+        }
+      } else await checkEntrance({ 'entrance.mjs': { entranceSource: edited }, 'play.mjs': { playerSource: edited }, 'stage.mjs': { stageSource: edited }, 'loader-stars.mjs': { loaderSource: edited }, 'tools/page.mjs': { painterSource: edited } }[c.file]);
+    } catch (error) { message = error.message.split('\n')[0]; }
     assert.ok(message && message.startsWith(c.gate), `E1 control ${c.id}: missed (${message})`);
     out.push(`${c.id} caught: ${message}`);
   }
@@ -672,6 +692,9 @@ export async function checkEntranceControls() {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  console.log(await checkEntrance());
+  let failure;
+  try { console.log(await checkEntrance()); } catch (error) { failure = error; }
+  // A failing positive gate must not prevent the requested independent fault audits.
   if (process.argv.includes('--controls')) console.log(await checkEntranceControls());
+  if (failure) throw failure;
 }

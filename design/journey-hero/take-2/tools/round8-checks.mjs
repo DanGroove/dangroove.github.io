@@ -130,7 +130,7 @@ async function runPlayer(playerSource) {
   });
   out.run = seconds => { const until = now + seconds * 1000; while (now < until - 1e-8) { now = Math.min(until, now + 50); tick?.(now); } };
   tick?.(now);
-  out.run(4.856);
+  out.run(4.96);
   return out;
 }
 

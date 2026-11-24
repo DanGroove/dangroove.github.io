@@ -2910,3 +2910,111 @@ node .../.scratch/review-out/r19/l9-cpu-cost.mjs
 ```
 
 All completed runners exit **0**. The full suite prints **all clean**, retaining **6,582 frames / 477,123 pieces / max 188 / 6 atlas pages / 99.491 s** and the earlier rounds' controls. The Node VM checks run the actual inline/worker script and drawing commands; they do not establish pixels, first-paint compositing, real worker/browser timing or visual quality. Browser review, screenshots, eye judgement and the pixel gate remain **UNRUN** as requested. No agents, network, dependency installation, site build, publication, mutating git command, or access outside the repository occurred. Installed skills and RTK.md were not opened because the repository-only read rule excludes them. The two unreachable tablet fades are the only omitted L9 part; charge/flare interpretation and the home-based hash are recorded above with their reasons.
+
+### L10 follow-up: launch speed and the final field fade; roundness gate incomplete
+
+Built on clean incoming `00d7892`, retaining the implementation in `6ebf3d6`. Read AGENTS.md, CORRECTIONS-19, CORRECTIONS-17 G/R2/R3 and Round 6's entrance/hold/exit/check record before writing, then the READMEs and retained Round 18/19 evidence. The supplied v37 cloud finding is the visual reference; no local image review was attempted. Acceptance and incoming hashes/source copies are `l10-acceptance.md` and `l10-baseline.json` under `.scratch/review-out/r19/`. L3 is still withdrawn; L7 replaces L6's curves and speed rule. No scene construction, registered replacement, artwork or earlier loop timing changed.
+
+**The mandatory roundness gate is not met.** L10's exact formula and preserved scene geometry produce the ratios below. The strict gate rejects them; the full suite exits **1**, and does **not** print `all clean`. The threshold, sectors, percentile and trajectories were not adjusted to manufacture a pass. An optional clarification was requested after measuring the conflict; absent a direction authorizing different motion, the exact formula was retained. A motion adjustment to meet the ratio is left out because it would depart from that formula and/or the protected geometry. This records an incomplete requirement, not a completed or visually approved L10.
+
+#### Formula, clamps and actual landing
+
+For every mark star, `L` is the straight-line distance from its **1.10 swollen position** to its unchanged paired home; `L_max` is the maximum of those 600 distances in that scene. The stable home hash remains channel **21**. Requested launch speed is exactly `2 * L_max * (.8 + .4 * d) * h`, duration is exactly `clamp(3 * L / v, .6, 1.8)`, and position retains cubic ease-out. Actual initial speed is `3 * L / T`: a minimum-clamped short journey therefore starts slower than the requested speed, as the brief describes. No maximum clamp is active in these scenes.
+
+All ranges are shortest to longest; speeds are CSS px/s. Clamp counts count mark stars, including shared-home copies.
+
+| Scene | L_max, px | Requested launch speed | Actual launch speed after clamps | Duration, s | .6 / 1.8 s clamp counts |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| desktop 1440 x 900 | 775.464219 | 1181.039448–1944.856846 | 35.801743–1939.064084 | .600000–1.672941 | **250 / 0** |
+| tablet 768 x 1024 | 555.715673 | 846.360304–1393.729594 | 27.601366–1382.117493 | .600000–1.770688 | **254 / 0** |
+| phone 390 x 844 | 423.213196 | 644.557759–1058.253221 | 14.798983–1058.253221 | .600000–1.692997 | **263 / 0** |
+| supplied cloud phone 412 x 730 (additional probe) | 367.601982 | 559.861347–919.196249 | 6.561316–919.196249 | .600000–1.739211 | **239 / 0** |
+
+| Scene | Old landing / entrance zero | New landing = entrance zero = pointer = field handover | New loop zero / name activation |
+| --- | ---: | ---: | ---: |
+| desktop | 4.841142182 | **4.832941395** | 8.032941395 / 8.632941395 |
+| tablet | 4.844261340 | **4.930687960** | 8.130687960 / 8.730687960 |
+| phone | 4.828551740 | **4.852997367** | 8.052997367 / 8.652997367 |
+| cloud phone | not previously gated | **4.899211105** | 8.099211105 / 8.699211105 |
+| scrolled 390 x 900, viewport 390 x 664, top -120 | 4.828551740 | **4.826275077** | 8.026275077 / 8.626275077 |
+
+The all-ready blast start is still **3.16 s**. Scene-free fallback end is **4.96 s**, resolved to the actual scene by the unchanged entrance view. The player still draws the field before removing the loader in that same landing frame, on all three standard scene tests. Relative floor **1.8–2.8**, screen **2.4–3.2**, entrance end/name activation **3.8**, dropped star ring and pointer at entrance **0** are unchanged.
+
+**Shared homes:** L8's angular rank assignment, homes, occupancy and final dot count remain exact. Individual `L` necessarily changes the co-arrival property: on the 390 x 844 phone, **176 of 295** double homes now have different arrival times; **119** pairs share the .6 s clamp. Copies merge once landed. Every star still lands with its home's exact position, size and colour; the final field is still **305** dots, **295** double homes and **10** singles. Forcing each pair to share a duration would break L10's required per-star formula, so it was not done. The 412 x 730 probe preserves its incoming angular assignment too; its inherited 278 homes include triples, so the existing fixture-specific one-or-two occupancy assertion is not applied to that additional probe.
+
+#### Roundness measurements and the unresolved conflict
+
+At each specified elapsed time, take the actual **600 mark-star positions**, subtract the weight centre, bin their current `atan2` angles into **16 equal sectors**, sort each sector's radii and use the nearest-rank 90th percentile (`ceil(.9 * count) - 1`). All sectors are populated. The ratio is maximum percentile radius / minimum percentile radius. Full sector radii and populations are in `l10-verification.json`.
+
+| Scene | Ratio at .1 s | Ratio at .2 s | Required |
+| --- | ---: | ---: | --- |
+| desktop 1440 x 900 | **1.458848581 FAIL** | **1.388728322 FAIL** | <= 1.25 |
+| tablet 768 x 1024 | **1.302684864 FAIL** | **1.234554982 PASS** | <= 1.25 |
+| phone 390 x 844 | **1.423425742 FAIL** | **1.543657705 FAIL** | <= 1.25 |
+| supplied cloud phone 412 x 730 | **1.369307598 FAIL** | **1.344376662 FAIL** | additional probe, same limit |
+| scrolled phone probe | **1.515719247 FAIL** | **1.745853662 FAIL** | additional probe, same limit |
+
+The measurement gate itself is exercised with synthetic output: a circle passes with ratio **1**, an ellipse fails. L9's depth-only duration control fails the same real-output gate at desktop .1 s, ratio **1.772833689**. The new formula improves that measurement but still fails it. Its durations are independently checked for every star, so the conflicting positive result cannot be attributed to using the old duration rule. No passing score, pixel evidence or visual judgement is claimed.
+
+#### Never-passed field stars
+
+Tablet homes **468** and **224** still lie beyond every paired ray. Their positions, sizes and colours stay fixed; instead of cutting on, they now fade with cubic ease-out across `scene.duration - .3` through `scene.duration`. That is **1.470687960–1.770687960 s** after release, or **4.630687960–4.930687960 s** on an all-ready boot. At half that span alpha is **.875**; at landing it is **1**. No never-passed field home remains dark until the handover. Desktop and phone have no such unpaired homes.
+
+Reachable homes retain the exact L9 rule: earliest actual ray-radius crossing, then **.2 s** cubic fade, stationary at home. Latest reachable starts change with the authorized timing: desktop **.884859741 -> .964977311**, tablet **1.066619610 -> 1.184278926 s** after release. Both complete before the last landing. The old unreachable-home endpoint alpha exception **0 -> 1** is removed; every home must now satisfy the retained **.001** continuity bound.
+
+#### New gates, negative controls and changed earlier expectations
+
+`tools/loader-checks.mjs` adds pure duration/formula/clamp/speed reporting, roundness and pop gates. Synthetic duration cases exercise both clamps even though no standard scene hits the upper clamp. The pop gate checks every field home's alpha immediately before/at handover and every never-passed home's exact fade over **73 samples** at **240 Hz** (146 tablet samples), with unchanged position, size and colour. The existing full motion gates still sample every star at 240 Hz, plus individual arrivals and historical-tail boundaries. Maximum measured speed rise remains **0**; position, size, colour, trail, charge, flare, depth-growth and stationary-wave assertions all pass. No check was added to the pixel gate.
+
+The **26** entrance controls all fail at their named gates. The two additions are independently routed to their specific pure gate so the retired duration rule is diagnosed as a roundness fault rather than merely failing the exact-formula assertion:
+
+| New control | Observed failure |
+| --- | --- |
+| `l9-depth-only` | `L10 roundness: 1440x900 at 0.1s ratio 1.7728336890727212 > 1.25` |
+| `handover-pop` | `L10 pop: handover alpha: 0 != 1` |
+
+The retained controls are also observed, individually: timetable -> `E1 timetable`; labels-cut -> `E4 labels`; craft click -> `E1 click`; old screen -> `L2 groups`; fast gather -> `L4 timing`; displaced mark -> `L4 consistency`; star ring -> `L4 entrance`; entrance with burst -> `L5 groups`; smoothstep blast -> `L7 explosion curve`; quartic flight -> `L7 flight curve`; v35 burst -> `L7 explosion curve`; no shrink -> `L7 scale`; modulo homes -> `L7 angle order`; burst+.9 entrance -> `L5 groups`; early entrance -> `L5 timing`; edge leftovers -> `L8 landing`; single 1.6 s duration -> **`L10 duration`**; missing blast streaks -> `L9 streak`; simultaneous field fade -> `L9 wave`; no depth growth / no flare / no charge -> `L9 size`; painter ignores streaks -> `L9 painter`; unresolved landing -> `L5 scene`. Complete actual messages are retained in the entrance-controls log. All mutations are in memory. A caught negative control does not cure the failing positive roundness gate.
+
+Only `loader-checks.mjs`, `entrance-checks.mjs` and `round8-checks.mjs` change checks. Main checks, Round 17, fixtures and every other runner retain their bytes.
+
+| Earlier expectation / check | Old -> new |
+| --- | --- |
+| Per-star explosion duration | `(1 + .6*(1-d))*h` -> `clamp(3*L/(2*L_max*(.8+.4*d)*h), .6, 1.8)` |
+| Duration range | **.94–1.696 -> .6–1.8 s**; exact per-scene ranges/clamps above |
+| Depth-only normalized duration order and nonoverlapping depth-band arrival order | Removed as superseded by L10: duration also depends on L. Exact requested speed now follows `( .8 + .4*d ) * h`; clamps explain slower short journeys. Existing cubic position/speed checks stay |
+| Scene-free explosion bound | **1.696 -> 1.8 s** |
+| Pure end / entrance / done / pointer probes | **4.856 / 4.856-1e-8 -> 4.96 / 4.96-1e-8** |
+| Pure post-landing probe | **5.106 -> 5.21 s**, entrance **.25 -> .25** |
+| Scene geometry / inline / actual-player landing clocks | Old -> new exact per-scene landings in the table; all **.001** continuity bounds retained |
+| Unreachable tablet endpoint alpha | **0 before / 1 at end -> final .3 s cubic fade, 1 before / 1 at end**; exception removed |
+| Shared-home arrival assumption | Same depth/hash gave the same T -> per-star L gives individual T; landed copies still merge; occupancy and final count unchanged |
+| Stand-in default preload and Round 8 N1 preload | **4.856 -> 4.96 s** |
+| Stand-in pre-end explosion advance | **1.646 -> 1.75 s**, followed by unchanged **.05 s** to landing |
+| Delayed-font / blocked-draw pre-end wait | **4.806 -> 4.91 s**, followed by unchanged **.05 s** |
+| Inline phone terminal probe after resize | Implicit old desktop end **4.841142182 -> own phone end + 1/240 = 4.857164033 s**; stand-in viewport **1440x900 -> 390x844** at resize. The 240 Hz step avoids epoch-subtraction rounding at the exact worker boundary; actual player handover remains tested at exact scene end. Expected phone count **305 -> 305** |
+| Combined explosion + entrance scan | **570 -> 433** distinct 60 Hz/exact-boundary samples as offset **1.696 -> 1.8** changes overlap of the sample sets; maximum groups **2 -> 2**, exceptions **0 -> 0**. Entrance-only **239 / 2 -> identical** |
+| v35 control's search / rejected bound | Search **1.696 -> 1.8**, injected **1.2 -> 1.2**; gate `L7 explosion curve` unchanged |
+| Single-duration control target / gate | Old depth expression -> new length/speed expression; injected duration **1.6 -> 1.6**, gate **L9 depth -> L10 duration**, first expected T **1.239222063 -> 1.289127814** |
+| Early-entrance control report | **4.806 != 4.856 -> 4.91 != 4.96**, offset remains **-.05 s** |
+| Standalone entrance CLI | Failed positive gate formerly stopped fault auditing -> all requested controls run, then positive failure is rethrown; exit stays nonzero |
+| Control inventory | Entrance **24 -> 26**, Round 8 **4 -> 4**, Round 17 **43 -> 43** |
+| Derived 240 Hz explosion sample count, desktop / phone | **603,000 / 424,200 -> 451,800 / 447,000**, following new durations and distinct exact-arrival samples. Flight **144,600** and wind-up **112,800** per scene unchanged |
+| Derived historical-tail / stationary-wave comparisons, both move scenes | **1,245,270 / 603,000 -> 1,059,128 / 451,800**, following the new arrival times; same assertions/lookback |
+
+No entrance-relative timetable expectation, floor/label sample, player-run count, worker-mode count, final field size or earlier scene/action number changes. The new mandatory roundness assertion is intentionally **not** weakened to the measured values.
+
+#### Verification, preservation and limits
+
+`l10-verify.mjs` / `l10-verification.json` compare the incoming module and tracked hashes. All **600** mark samples and STARS constants match. All five probed scenes preserve homes, weight/centre, mark geometry, edge starts, Beziers and angular assignments exactly, excluding only the authorized duration metadata. **3,795 pre-blast frames / 1,771,495 drawing records** match. Across five boot histories and **12,005 timing samples**, progress, launch times, gathering, wind-up, charge and arrived counts match; reduced/review state objects and reduced still geometry match too. Only the permitted runtime module, three check files, BUILD/README and this run's `l10-*` notes change. The final hash audit leaves **198 of 204 tracked files byte-identical**; every correction/fixture, page/painter, player, entrance, Round 18 source, public/src/CNAME and all other tracked files retain their hashes.
+
+Commands and raw output are under `.scratch/review-out/r19/`. All changed JavaScript and the new notes' executable scripts pass `node --check`. The completed test results are:
+
+| Command | Result |
+| --- | --- |
+| `node .../tools/checks.mjs` | **exit 1**: only `L10 roundness: 1440x900 at 0.1s ratio 1.458848580604394 > 1.25`; no `all clean` |
+| `node .../tools/entrance-checks.mjs --controls` | All **26** controls caught at named gates; **exit 1** for that same failing positive roundness gate |
+| `node .../tools/round8-checks.mjs --controls` | **exit 0**, all **4** controls caught |
+| `node .../tools/round17-checks.mjs --controls` | **exit 0**, all **43** controls caught |
+| `node .../r19/l10-verify.mjs` | **exit 0** for preservation, duration/pop/motion tests and complete measurement reporting; explicitly records roundness failures, does not certify them as passing |
+
+All other gates reached by the full suite pass, including Round 17 and the retained Round 18 logic; the full suite's sole failure is reported above. The required `all clean` outcome is therefore **unfulfilled**. No local screenshots, eye judgement, pixel gate, reviewer agents, network, installations, dependencies, site build, deployment or mutating git command were used. External skills and RTK.md remain unread because the user's repository-only rule excludes them. Real browser compositing/worker scheduling and visual quality remain **UNRUN**, exactly as requested. No alternative motion was substituted to satisfy the conflicting roundness threshold.

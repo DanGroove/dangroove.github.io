@@ -1,4 +1,4 @@
-// L7/L8/L9 pure drawing gates. Exercise loaderDots itself; no browser or pixels.
+// L7/L8/L9/L10 pure drawing gates. Exercise loaderDots itself; no browser or pixels.
 import assert from 'node:assert/strict';
 
 const close = (a, b, message, epsilon = 1e-9) => assert.ok(Math.abs(a - b) <= epsilon, `${message}: ${a} != ${b}`);
@@ -9,6 +9,78 @@ const expand = (scene, dots) => {
   const byStar = new Map(dots.map(d => [d.star, d])), byHome = new Map(dots.map(d => [d.home, d]));
   return [...scene.points.map((m, i) => byStar.get(i) || byHome.get(m.home)), ...scene.unpairedHomes.map(i => byHome.get(i))];
 };
+
+export function checkLoaderRoundness(P, scene) {
+  const base = at(P, scene, 0), where = `${scene.W}x${scene.H}`;
+  return [0.1, 0.2].map(elapsed => {
+    const sectors = Array.from({ length: 16 }, () => []);
+    const dots = P.loaderDots(scene, at(P, scene, base.burstStart + elapsed));
+    const stars = dots.filter(d => d.star !== undefined);
+    assert.equal(stars.length, scene.points.length, 'L10 roundness: missing mark stars');
+    for (const d of stars) {
+      const x = d.x - scene.weight[0], y = d.y - scene.weight[1];
+      const sector = Math.min(15, Math.floor((Math.atan2(y, x) + Math.PI) * 16 / (2 * Math.PI)));
+      sectors[sector].push(Math.hypot(x, y));
+    }
+    assert.ok(sectors.every(a => a.length), 'L10 roundness: empty sector');
+    // Nearest-rank 90th percentile, measured from actual positions about the weight centre.
+    const radii = sectors.map(a => a.sort((a, b) => a - b)[Math.ceil(0.9 * a.length) - 1]);
+    const ratio = Math.max(...radii) / Math.min(...radii);
+    assert.ok(ratio <= 1.25, `L10 roundness: ${where} at ${elapsed}s ratio ${ratio} > 1.25`);
+    return { elapsed, ratio, radii, counts: sectors.map(a => a.length) };
+  });
+}
+
+export function checkLoaderDurations(P, scene) {
+  const lengths = scene.points.map(m => Math.hypot(
+    scene.homes[m.home].x - scene.weight[0] - (m.x - scene.weight[0]) * 1.10,
+    scene.homes[m.home].y - scene.weight[1] - (m.y - scene.weight[1]) * 1.10));
+  const longest = Math.max(...lengths), requested = [], actual = [];
+  let minimumClamp = 0, maximumClamp = 0;
+  for (const [i, m] of scene.points.entries()) {
+    const home = scene.homes[m.home], jitter = 0.94 + 0.12 * P.hash(m.home, 21);
+    const speed = 2 * longest * (0.8 + 0.4 * home.d) * jitter, raw = 3 * lengths[i] / speed;
+    const expected = Math.min(1.8, Math.max(0.6, raw));
+    close(m.duration, expected, `L10 duration: ${scene.W}x${scene.H}/${i}`);
+    assert.ok(m.duration >= 0.6 && m.duration <= 1.8, 'L10 duration: clamp range');
+    minimumClamp += raw < 0.6 ? 1 : 0; maximumClamp += raw > 1.8 ? 1 : 0;
+    requested.push(speed); actual.push(3 * lengths[i] / m.duration);
+  }
+  // Exercise both clamp branches even when a scene has no maximum-clamped stars.
+  for (const d of [0, 0.4, 1]) for (const length of [0, 10, 500, 1000]) {
+    const speed = 2000 * (0.8 + 0.4 * d) * (0.94 + 0.12 * P.hash(17, 21));
+    close(P.loaderDuration({ d }, 17, length, 1000), Math.min(1.8, Math.max(0.6, 3 * length / speed)), 'L10 duration: pure clamps');
+  }
+  const range = a => [Math.min(...a), Math.max(...a)];
+  const durations = scene.points.map(m => m.duration);
+  close(scene.duration, Math.max(...durations), 'L10 duration: last landing');
+  return { viewport: `${scene.W}x${scene.H}`, longest, duration: range(durations),
+    requestedSpeed: range(requested), actualSpeed: range(actual), minimumClamp, maximumClamp };
+}
+
+export function checkLoaderPop(P, scene) {
+  const base = at(P, scene, 0), unreachable = scene.wave.filter(w => !Number.isFinite(w.start));
+  let samples = 0;
+  // Every field home must approach the same fully-visible dot before the landing frame.
+  const incoming = new Map(P.loaderDots(scene, at(P, scene, base.end - 1e-7)).map(d => [d.home, d]));
+  const landed = P.loaderDots(scene, at(P, scene, base.end));
+  for (const d of landed) close(incoming.get(d.home)?.alpha, d.alpha, 'L10 pop: handover alpha', 0.001);
+  for (const w of unreachable) {
+    const home = scene.homes[w.home];
+    for (let n = 0; n <= 72; n++) {
+      const elapsed = scene.duration - 0.3 + n / 240;
+      const d = P.loaderDots(scene, at(P, scene, base.burstStart + elapsed)).find(d => d.home === w.home);
+      const f = Math.min(1, Math.max(0, (elapsed - (scene.duration - 0.3)) / 0.3));
+      close(d.alpha, 1 - (1 - f) ** 3, 'L10 pop: final .3s fade');
+      assert.equal(d.x, home.x, 'L10 pop: stationary x'); assert.equal(d.y, home.y, 'L10 pop: stationary y');
+      assert.equal(d.size, home.size, 'L10 pop: home size'); assert.deepEqual(d.colour, home.colour, 'L10 pop: home colour');
+      samples++;
+    }
+    const before = P.loaderDots(scene, at(P, scene, base.end - 0.3 - 1e-7)).find(d => d.home === w.home);
+    assert.equal(before.alpha, 0, 'L10 pop: fade starts early');
+  }
+  return { viewport: `${scene.W}x${scene.H}`, unreachable: unreachable.map(w => w.home), samples, homes: landed.length };
+}
 
 export function checkLoaderLanding(P, scene) {
   const { points, homes } = scene, where = `${scene.W}x${scene.H}`;
@@ -67,22 +139,7 @@ export function checkLoaderMoves(P, scene) {
   assert.deepEqual(scene.unpairedHomes, unused, `L7 homes: unpaired field stars ${where}`);
   close(P.LOADER.flight, 1, 'L7 flight curve: duration');
   const durations = points.map(m => m.duration), minDuration = Math.min(...durations), maxDuration = Math.max(...durations);
-  close(scene.duration, maxDuration, 'L9 depth: last landing');
-  for (const [i, m] of points.entries()) {
-    const d = homes[m.home].d, jitter = 0.94 + 0.12 * P.hash(m.home, 21);
-    close(m.duration, (1 + 0.6 * (1 - d)) * jitter, `L9 depth: duration ${where}/${i}`);
-    assert.ok(m.duration >= 0.94 && m.duration <= 1.696, 'L9 depth: range');
-  }
-  // Jitter can exchange close depths. Removing it must give strict depth order;
-  // depths with nonoverlapping jitter bands must land in that order even with jitter.
-  const depthOrder = [...points].sort((a, b) => homes[a.home].d - homes[b.home].d);
-  for (let i = 1; i < depthOrder.length; i++) {
-    const far = depthOrder[i - 1], near = depthOrder[i];
-    assert.ok(far.duration / (0.94 + 0.12 * P.hash(far.home, 21)) >= near.duration / (0.94 + 0.12 * P.hash(near.home, 21)) - 1e-12, 'L9 depth: normalized order');
-  }
-  for (const far of points) for (const near of points) {
-    if ((1 + 0.6 * (1 - homes[far.home].d)) * 0.94 > (1 + 0.6 * (1 - homes[near.home].d)) * 1.06) assert.ok(far.duration > near.duration, 'L9 depth: separated order');
-  }
+  checkLoaderDurations(P, scene);
   close(base.end, base.burstStart + maxDuration, 'L5 timing: scene landing');
   assert.ok(!at(P, scene, base.end - 1e-8).done && at(P, scene, base.end).done, 'L5 timing: actual last star boundary');
   assert.equal(at(P, scene, base.end).entranceTime, 0, 'L5 timing: scene entrance zero');
@@ -184,7 +241,8 @@ export function checkLoaderMoves(P, scene) {
       const d = dots[points.length + j], target = homes[home], start = scene.wave.find(w => w.home === home).start;
       assert.equal(d.home, home, 'L7 homes: field identity'); assert.equal(d.x, target.x, 'L7 homes: field x'); assert.equal(d.y, target.y, 'L7 homes: field y');
       assert.equal(d.size, target.size, 'L7 homes: field size'); assert.deepEqual(d.colour, target.colour, 'L7 homes: field colour');
-      const fade = Math.min(1, Math.max(0, (elapsed - start) / 0.2));
+      const fade = Number.isFinite(start) ? Math.min(1, Math.max(0, (elapsed - start) / 0.2))
+        : Math.min(1, Math.max(0, (elapsed - (maxDuration - 0.3)) / 0.3));
       close(d.alpha, elapsed >= maxDuration ? 1 : 1 - (1 - fade) ** 3, 'L9 wave: fade curve');
       assert.ok(!(d.streak > 0), 'L9 streak: stationary field star'); waveSamples++;
     }
