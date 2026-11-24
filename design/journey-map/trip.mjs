@@ -1,5 +1,5 @@
 // Scroll progress, acts, camera, traveller. Everything here is a pure function of progress P (in viewport heights).
-import { ACTS, CAMERA, HOLD, MAP, STOPS, COPY, DEPTH, FIND_PLAY, LABELS, WORLD, STEPS, NOVA, MARK, CARD_TAIL } from './data.mjs';
+import { ACTS, CAMERA, HOLD, MAP, STOPS, COPY, DEPTH, FIND_PLAY, LABELS, WORLD, STEPS, NOVA, MARK, CARD_TAIL, FRAME_PERF } from './data.mjs';
 import { TRAIL, polyLen, COAST_A, COAST_B, onLand, miniMapSvg, mapLabelRows, mapLabelBox } from './art.mjs';
 
 export const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
@@ -310,16 +310,48 @@ function tripLabels(st) {
 }
 export function tripApply(st) {
   const E = TRIP_EL, c = st.cam;
+  const free = !!st.exploring || st.exploreK > 0;
+  const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
+  if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
+  const moving = free && !!st.exploreMoving;
+  if (moving) {
+    if (!r.base) { r.base = { ...c }; tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true); }
+    r.elapsed = FRAME_PERF.labelSettle;
+    // One promoted SVG, no clone: its complete overflow follows the virtual camera.
+    // No #cam or label rewrites while the gesture/glide is moving its raster.
+    const k = c.s / r.base.s;
+    tripWrite(E.svg, 'transform', `matrix(${k},0,0,${k},${c.tx - r.base.tx * k},${c.ty - r.base.ty * k})`);
+  } else {
+    if (r.moving && free) { r.from = r.scale; r.elapsed = 0; E.labels.forEach(label => label.from = label.k); }
+    if (free && r.elapsed < FRAME_PERF.labelSettle) {
+      r.elapsed = Math.min(FRAME_PERF.labelSettle, r.elapsed + (st.exploreDt || 0));
+      r.scale = r.from * (c.s / r.from) ** easeIO(r.elapsed / FRAME_PERF.labelSettle);
+    } else { r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; }
+    r.base = { ...c };
+    tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true);
+    tripWrite(E.svg, 'transform', 'none');
+  }
+  r.moving = moving;
+  const paint = moving ? r.base : c, labelS = free ? r.scale : c.s;
   if (E.rows) tripLabels(st);
-  const labelFade = smooth(...LABELS.fade, c.s / VIEW.s0);
-  E.labels.forEach(label => { const k = labelScale(label.kind, c.s); if (label.k === null || Math.abs(k / label.k - 1) > LABELS.epsilon) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; } });
+  const labelFade = smooth(...LABELS.fade, labelS / VIEW.s0);
+  E.labels.forEach(label => {
+    const ideal = labelScale(label.kind, c.s);
+    // Follow the old epsilon rule in memory even while the visible label is held.
+    // The final text size therefore equals the old writer's at the same camera.
+    label.target ??= label.k;
+    if (label.target === null || Math.abs(ideal / label.target - 1) > LABELS.epsilon) label.target = ideal;
+    if (moving) return;
+    const q = free && r.elapsed < FRAME_PERF.labelSettle ? easeIO(r.elapsed / FRAME_PERF.labelSettle) : 1;
+    const k = q < 1 && label.from !== null && label.from !== undefined ? label.from * (label.target / label.from) ** q : label.target;
+    if (label.k !== k) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; }
+  });
   const focusFade = 1 - smooth(0, .4, st.focusK || 0);
   if (E.focusFade === null || Math.abs(focusFade - E.focusFade) > .01 || (focusFade === 0 || focusFade === 1) && focusFade !== E.focusFade) {
     E.focusFade = focusFade;
     for (const group of [E.tier1, E.subs]) if (group) { tripWrite(group, 'opacity', focusFade); tripWrite(group, 'visibility', focusFade === 0 ? 'hidden' : 'visible'); }
   }
   E.secondary.forEach(group => { tripWrite(group, 'opacity', labelFade); tripWrite(group, 'visibility', labelFade === 0 ? 'hidden' : 'visible'); }); tripWrite(E.scrim, 'opacity', labelFade);
-  tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true);
   const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
   tripWrite(E.sea, 'opacity', smooth(...DEPTH.fade.sea, h)); tripWrite(E.fill, 'opacity', smooth(.25, .75, h));
   tripWrite(E.detail, 'opacity', smooth(.45, .95, h)); tripWrite(E.finds, 'opacity', smooth(.5, 1, h));
@@ -327,18 +359,19 @@ export function tripApply(st) {
   const dr = coastDrawn(h);
   E.coasts.forEach((p, i) => { if (dr >= 1) { tripWrite(p, 'strokeDasharray', 'none'); return; } const L = E.coastLen[i] * c.s; tripWrite(p, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(p, 'strokeDashoffset', (L * (1 - dr)).toFixed(1)); });
   // solid trail behind the traveller (dash in screen units because the stroke does not scale)
-  const L = TRAIL_LEN * c.s; tripWrite(E.done, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(E.done, 'strokeDashoffset', (st.exploreK ? 0 : (TRAIL_LEN - st.u) * c.s).toFixed(1));
+  const L = TRAIL_LEN * paint.s; tripWrite(E.done, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(E.done, 'strokeDashoffset', (st.exploreK ? 0 : (TRAIL_LEN - st.u) * paint.s).toFixed(1));
   tripWrite(E.done, 'opacity', st.inTrip ? 1 : 0);
   // the longship rides the crossing
   const sp = pointAt(Math.max(WATER[0], Math.min(WATER[1], st.u))); tripWrite(E.ship, 'transform', `translate(${n2(sp[0])} ${n2(sp[1] + 5)}) scale(.55)`, true);
   const opacity = st.dim * fade;
   tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
-  tripWrite(E.svg, 'willChange', fade > 0 && fade < 1 ? 'opacity' : '');
+  tripWrite(E.svg, 'willChange', free ? 'transform, opacity' : fade > 0 && fade < 1 ? 'opacity' : '');
+  tripWrite(E.svg, 'overflow', free ? 'visible' : '');
   tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
   // the X fades in with the sea, so neither page shows it before the map exists
   if (E.x) tripWrite(E.x, 'opacity', h < 1 ? smooth(.2, .7, h).toFixed(3) : '');
   // In explore the title fades as the camera zooms in past the overview, before it can grow huge and run off the screen (Dan's recording, 2026-11-24).
-  if (E.title) { const t = (1 - smooth(...WORLD.titleOut, st.pushT) * (1 - (st.exploreK || 0))) * (1 - (st.exploreK || 0) * smooth(...WORLD.titleZoom, c.s / VIEW.s0)); tripWrite(E.title, 'opacity', t); tripWrite(E.title, 'visibility', t === 0 ? 'hidden' : 'visible'); }
+  if (E.title) { const t = (1 - smooth(...WORLD.titleOut, st.pushT) * (1 - (st.exploreK || 0))) * (1 - (st.exploreK || 0) * smooth(...WORLD.titleZoom, labelS / VIEW.s0)); tripWrite(E.title, 'opacity', t); tripWrite(E.title, 'visibility', t === 0 ? 'hidden' : 'visible'); }
   tripWrite(E.cue, 'opacity', smooth(.2, .5, st.overviewT) * (1 - smooth(0, .3, st.pushT)));
   // mini-map
   const mo = smooth(.5, 1, st.pushT) * (1 - smooth(0, .4, st.rushT));
@@ -347,6 +380,7 @@ export function tripApply(st) {
     tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
     const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
+  return free && !moving && r.elapsed < FRAME_PERF.labelSettle;
 }
 const n2 = v => v.toFixed(2);
 export function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }

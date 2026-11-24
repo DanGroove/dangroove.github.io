@@ -116,7 +116,7 @@ export function exploreApply(st, dt) {
   if (EX.rm) return false;
   const coveredDeparture = EX.departing && EX.journey.moving && EX.journey.P === EX.journey.beats.at(-1).P;
   if (exploreBusy() && !exploreAllowed() && !coveredDeparture) exploreReset();
-  const before = JSON.stringify([EX.cam, EX.k, EX.footer]), motion = EX.motion;
+  const before = [EX.cam.s, EX.cam.tx, EX.cam.ty, EX.k, EX.footer], motion = EX.motion;
   if (EX.active) EX.footer = Math.max(0, EX.footer - dt / EXPLORE.footerFade);
   if (motion) {
     motion.elapsed = Math.min(motion.duration, motion.elapsed + dt);
@@ -136,13 +136,17 @@ export function exploreApply(st, dt) {
   }
   if (EX.hintLeft > 0) { EX.hintLeft = Math.max(0, EX.hintLeft - dt); if (!EX.hintLeft) exploreHintOff(); }
   st.exploreK = EX.k; st.exploring = EX.active; st.exploreFooter = EX.footer; st.sEnd = EX.end?.s || st.cam.s;
+  // The SVG camera stays at its last raster while input/glide changes this virtual camera.
+  st.exploreMoving = !!(EX.motion || EX.gesture?.dragged || EX.velocity.some(Boolean) || EX.active && ['s', 'tx', 'ty'].some(key => EX.cam[key] !== EX.target[key]));
+  st.exploreDt = dt;
   if (EX.k > 0 || EX.active) {
     st.cam = { ...EX.cam, ax: VIEW.w / 2, ay: VIEW.h / 2 };
     st.cardK = st.cardK.map(() => 0); st.cardOpen = 0;
     EX.layer = exploreLayer(st.cam, EX.end);
   } else EX.layer = { c: 1, dx: 0, dy: 0 };
   exploreWorldStyle('transform', EX.k > 0 || EX.active ? `translate(${EX.layer.dx}px,${EX.layer.dy}px) scale(${EX.layer.c})` : 'none'); explorePromote();
-  const changed = EX.changed || before !== JSON.stringify([EX.cam, EX.k, EX.footer]); EX.changed = false; return changed;
+  const after = [EX.cam.s, EX.cam.tx, EX.cam.ty, EX.k, EX.footer];
+  const changed = EX.changed || before.some((value, i) => value !== after[i]); EX.changed = false; return changed;
 }
 const exploreExcluded = target => target?.closest?.('.sheet.on, input, textarea, select, .tl, [data-review]');
 const exploreOwned = target => target?.closest?.('#f-wayfinder, #f-beacon, .find.hoard, .rubbing, #f-mist, #f-horn, .hm-canvas, .ft-name');
@@ -203,9 +207,10 @@ export function exploreBuild({ stage, world, journey, rm }) {
     if (dragged && e.type === 'pointerup' && samples.length > 1) { const a = samples[0], b = samples.at(-1), dt = b.time - a.time; EX.velocity = dt ? [(b.tx - a.tx) / dt, (b.ty - a.ty) / dt] : [0, 0]; }
     else EX.velocity = [0, 0];
     EX.gesture = null; stage.classList.remove('is-dragging'); explorePromote();
+    if (dragged) EX.changed = true; // A stationary release must still commit the held SVG raster.
   };
   stage.addEventListener('pointerup', release, true); stage.addEventListener('pointercancel', release, true);
-  stage.addEventListener('lostpointercapture', e => { if (e.target === stage && !stage.hasPointerCapture?.(e.pointerId) && EX.pointers.has(e.pointerId)) { const dragged = EX.gesture?.dragged; EX.pointers.delete(e.pointerId); EX.owners.delete(e.pointerId); EX.velocity = [0, 0]; exploreGesture(dragged); stage.classList.remove('is-dragging'); explorePromote(); } });
+  stage.addEventListener('lostpointercapture', e => { if (e.target === stage && !stage.hasPointerCapture?.(e.pointerId) && EX.pointers.has(e.pointerId)) { const dragged = EX.gesture?.dragged; EX.pointers.delete(e.pointerId); EX.owners.delete(e.pointerId); EX.velocity = [0, 0]; exploreGesture(dragged); EX.changed = true; stage.classList.remove('is-dragging'); explorePromote(); } });
   stage.addEventListener('click', e => { if (EX.suppress && e.detail !== 0) { exploreSuppressClear(); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
   window.addEventListener('keydown', exploreSuppressClear, true);
   window.addEventListener('keydown', e => {
@@ -217,5 +222,5 @@ export function exploreBuild({ stage, world, journey, rm }) {
     if (!['+', '=', '-'].includes(e.key)) return;
     e.preventDefault(); exploreTakeover(); EX.target = exploreBound(exploreZoom(EX.cam, [VIEW.w / 2, VIEW.h / 2], EX.target.s * (e.key === '-' ? 1 / EXPLORE.key : EXPLORE.key) / EX.cam.s, EX.fit, EX.top));
   });
-  window.addEventListener('blur', () => { exploreClearPointers(); exploreSuppressClear(); EX.velocity = [0, 0]; explorePromote(); });
+  window.addEventListener('blur', () => { exploreClearPointers(); exploreSuppressClear(); EX.velocity = [0, 0]; EX.changed = true; explorePromote(); });
 }

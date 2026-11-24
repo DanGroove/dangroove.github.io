@@ -86,7 +86,7 @@ window.addEventListener('jm-depth', () => { dirty = true; depthInvalidate(); if 
 const PTR = [.5, .5];
 window.addEventListener('pointermove', e => { PTR[0] = e.clientX / VIEW.w; PTR[1] = e.clientY / VIEW.h; findsPointer(e.clientX, e.clientY); }, { passive: true });
 
-let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainFocus = '', mainKeys = '';
+let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainFocus = '', mainKeys = '', mainMapPending = false;
 function frame(ts) {
   const time = ts / 1000;
   const dt = mainTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - mainTs) / 1000)); mainTs = ts;
@@ -99,10 +99,10 @@ function frame(ts) {
   // Nothing unseen takes the keyboard: the stone marks and the timeline wait for the map's hand-over; the timeline leaves in explore.
   const keys = `${st.handoffT >= 1}/${st.handoffT >= 1 && !st.exploring && !(st.exploreK > 0)}`;
   if (keys !== mainKeys) { mainKeys = keys; $('cards').inert = st.handoffT < 1; TLEL.inert = !(st.handoffT >= 1 && !st.exploring && !(st.exploreK > 0)); }
-  const focusKey = JSON.stringify(f), tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || explored || folded || P !== lastP || tuning !== mainTuning || focusKey !== mainFocus;
+  const focusKey = JSON.stringify(f), tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || explored || folded || mainMapPending || P !== lastP || tuning !== mainTuning || focusKey !== mainFocus;
   mainFocus = focusKey;
   const aim = depthLook(dt, PTR);
-  if (moved) { tripApply(st); tlFrame(st); footerFrame(st); if (!JOIN.frame) CANVAS.style.opacity = st.dim; lastP = P; mainTuning = tuning; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
+  if (moved) { mainMapPending = tripApply(st); tlFrame(st); footerFrame(st); if (!JOIN.frame && CANVAS.style.opacity !== String(st.dim)) CANVAS.style.opacity = st.dim; lastP = P; mainTuning = tuning; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
   const jo = JOIN.frame ? JOIN.frame(st, moved, P) : undefined;
   depthFrame(st, time, dt, PTR, aim, moved);
   footerMotion(time, dt, st, aim.look, moved);

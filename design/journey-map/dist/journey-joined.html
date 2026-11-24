@@ -19,7 +19,7 @@ button { font-family: inherit; }
 .trip { position: relative; }
 .stage { position: sticky; top: 0; height: 100vh; overflow: clip; }
 .map, #nova, #stars { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
-.map { display: block; }
+.map { display: block; transform-origin: 0 0; }
 #nova, #stars { pointer-events: none; }
 #deep, #air, #sky { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .map text { font-family: Outfit, system-ui, sans-serif; }
@@ -450,6 +450,9 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .rm .c-main { grid-row: 1; }
 .rm .c-take { grid-row: 2; }
 @media (max-width: 640px) { .rm .c-main, .rm .c-take, .rm .c-side { grid-column: 1; grid-row: auto; } }
+/* No one-word last lines in a card's copy ("The / Q." on Dan's phone size, review of polish round 2, 2026-11-24). */
+.c-role, .c-para, .c-took { text-wrap: pretty; }
+.c-h { text-wrap: balance; }
 
 </style>
 <style>
@@ -1413,6 +1416,8 @@ const DEPTH = {
 };
 
 const NOVA_CANVAS = { dpr: 2, glowSprite: 512 };
+// Performance only: label recovery after a composited gesture (seconds), raster guard (CSS px).
+const FRAME_PERF = { labelSettle: 0.12, rasterPad: 2 };
 const NOVA = {
   build: { kindle: 0.2, draw: 0.76, hold: 1, throbs: [0.26, 0.45, 0.60, 0.72], rise: 0.12, fall: 0.32, pull: 1.8,
     push: 0.08, pushPhone: 0.06, recoil: 0.4, veil: 0.65, veilPhone: 0.45, veilOut: 0.25, hole: [0.6, 0.18], holeBreath: 0.04,
@@ -2733,16 +2738,48 @@ function tripLabels(st) {
 }
 function tripApply(st) {
   const E = TRIP_EL, c = st.cam;
+  const free = !!st.exploring || st.exploreK > 0;
+  const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
+  if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
+  const moving = free && !!st.exploreMoving;
+  if (moving) {
+    if (!r.base) { r.base = { ...c }; tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true); }
+    r.elapsed = FRAME_PERF.labelSettle;
+    // One promoted SVG, no clone: its complete overflow follows the virtual camera.
+    // No #cam or label rewrites while the gesture/glide is moving its raster.
+    const k = c.s / r.base.s;
+    tripWrite(E.svg, 'transform', `matrix(${k},0,0,${k},${c.tx - r.base.tx * k},${c.ty - r.base.ty * k})`);
+  } else {
+    if (r.moving && free) { r.from = r.scale; r.elapsed = 0; E.labels.forEach(label => label.from = label.k); }
+    if (free && r.elapsed < FRAME_PERF.labelSettle) {
+      r.elapsed = Math.min(FRAME_PERF.labelSettle, r.elapsed + (st.exploreDt || 0));
+      r.scale = r.from * (c.s / r.from) ** easeIO(r.elapsed / FRAME_PERF.labelSettle);
+    } else { r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; }
+    r.base = { ...c };
+    tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true);
+    tripWrite(E.svg, 'transform', 'none');
+  }
+  r.moving = moving;
+  const paint = moving ? r.base : c, labelS = free ? r.scale : c.s;
   if (E.rows) tripLabels(st);
-  const labelFade = smooth(...LABELS.fade, c.s / VIEW.s0);
-  E.labels.forEach(label => { const k = labelScale(label.kind, c.s); if (label.k === null || Math.abs(k / label.k - 1) > LABELS.epsilon) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; } });
+  const labelFade = smooth(...LABELS.fade, labelS / VIEW.s0);
+  E.labels.forEach(label => {
+    const ideal = labelScale(label.kind, c.s);
+    // Follow the old epsilon rule in memory even while the visible label is held.
+    // The final text size therefore equals the old writer's at the same camera.
+    label.target ??= label.k;
+    if (label.target === null || Math.abs(ideal / label.target - 1) > LABELS.epsilon) label.target = ideal;
+    if (moving) return;
+    const q = free && r.elapsed < FRAME_PERF.labelSettle ? easeIO(r.elapsed / FRAME_PERF.labelSettle) : 1;
+    const k = q < 1 && label.from !== null && label.from !== undefined ? label.from * (label.target / label.from) ** q : label.target;
+    if (label.k !== k) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; }
+  });
   const focusFade = 1 - smooth(0, .4, st.focusK || 0);
   if (E.focusFade === null || Math.abs(focusFade - E.focusFade) > .01 || (focusFade === 0 || focusFade === 1) && focusFade !== E.focusFade) {
     E.focusFade = focusFade;
     for (const group of [E.tier1, E.subs]) if (group) { tripWrite(group, 'opacity', focusFade); tripWrite(group, 'visibility', focusFade === 0 ? 'hidden' : 'visible'); }
   }
   E.secondary.forEach(group => { tripWrite(group, 'opacity', labelFade); tripWrite(group, 'visibility', labelFade === 0 ? 'hidden' : 'visible'); }); tripWrite(E.scrim, 'opacity', labelFade);
-  tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true);
   const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
   tripWrite(E.sea, 'opacity', smooth(...DEPTH.fade.sea, h)); tripWrite(E.fill, 'opacity', smooth(.25, .75, h));
   tripWrite(E.detail, 'opacity', smooth(.45, .95, h)); tripWrite(E.finds, 'opacity', smooth(.5, 1, h));
@@ -2750,18 +2787,19 @@ function tripApply(st) {
   const dr = coastDrawn(h);
   E.coasts.forEach((p, i) => { if (dr >= 1) { tripWrite(p, 'strokeDasharray', 'none'); return; } const L = E.coastLen[i] * c.s; tripWrite(p, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(p, 'strokeDashoffset', (L * (1 - dr)).toFixed(1)); });
   // solid trail behind the traveller (dash in screen units because the stroke does not scale)
-  const L = TRAIL_LEN * c.s; tripWrite(E.done, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(E.done, 'strokeDashoffset', (st.exploreK ? 0 : (TRAIL_LEN - st.u) * c.s).toFixed(1));
+  const L = TRAIL_LEN * paint.s; tripWrite(E.done, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(E.done, 'strokeDashoffset', (st.exploreK ? 0 : (TRAIL_LEN - st.u) * paint.s).toFixed(1));
   tripWrite(E.done, 'opacity', st.inTrip ? 1 : 0);
   // the longship rides the crossing
   const sp = pointAt(Math.max(WATER[0], Math.min(WATER[1], st.u))); tripWrite(E.ship, 'transform', `translate(${n2(sp[0])} ${n2(sp[1] + 5)}) scale(.55)`, true);
   const opacity = st.dim * fade;
   tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
-  tripWrite(E.svg, 'willChange', fade > 0 && fade < 1 ? 'opacity' : '');
+  tripWrite(E.svg, 'willChange', free ? 'transform, opacity' : fade > 0 && fade < 1 ? 'opacity' : '');
+  tripWrite(E.svg, 'overflow', free ? 'visible' : '');
   tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
   // the X fades in with the sea, so neither page shows it before the map exists
   if (E.x) tripWrite(E.x, 'opacity', h < 1 ? smooth(.2, .7, h).toFixed(3) : '');
   // In explore the title fades as the camera zooms in past the overview, before it can grow huge and run off the screen (Dan's recording, 2026-11-24).
-  if (E.title) { const t = (1 - smooth(...WORLD.titleOut, st.pushT) * (1 - (st.exploreK || 0))) * (1 - (st.exploreK || 0) * smooth(...WORLD.titleZoom, c.s / VIEW.s0)); tripWrite(E.title, 'opacity', t); tripWrite(E.title, 'visibility', t === 0 ? 'hidden' : 'visible'); }
+  if (E.title) { const t = (1 - smooth(...WORLD.titleOut, st.pushT) * (1 - (st.exploreK || 0))) * (1 - (st.exploreK || 0) * smooth(...WORLD.titleZoom, labelS / VIEW.s0)); tripWrite(E.title, 'opacity', t); tripWrite(E.title, 'visibility', t === 0 ? 'hidden' : 'visible'); }
   tripWrite(E.cue, 'opacity', smooth(.2, .5, st.overviewT) * (1 - smooth(0, .3, st.pushT)));
   // mini-map
   const mo = smooth(.5, 1, st.pushT) * (1 - smooth(0, .4, st.rushT));
@@ -2770,6 +2808,7 @@ function tripApply(st) {
     tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
     const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
+  return free && !moving && r.elapsed < FRAME_PERF.labelSettle;
 }
 const n2 = v => v.toFixed(2);
 function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }
@@ -3318,8 +3357,19 @@ function starsFrame(time, st, pointer, opt = {}) {
   // and replaying, or jumping straight into the rush, gives the same light as well as the same positions.
   const rushing = st.rushT > 0 && st.blastT === 0;
   const twinkleTime = st.blastT > 0 ? time : st.P >= start.a ? st.rushT * STEPS.pace.rush : time * (1 - smooth(...NOVA.gather.twinkleHome, st.legXT));
+  const home = h >= 1 && st.blastT > 0 && st.exploreK === 1 && G.stagger + G.time <= 1;
   for (const s of SK.list) {
     let x, y, rad, al, col, tail = null;
+    // At the explore endpoint every map star has returned to its own place.
+    // Its discarded release/orbit/tail calculations cannot affect this draw.
+    if (home && s.kind !== 'sky') {
+      if (src && s.kind === 'coast' && st.rushT === 0) continue;
+      const m = toScreen(st, s.map), tr = s.kind === 'trail';
+      rad = src ? (tr ? dotR : s.kind === 'coast' ? .7 : .6) : (tr ? dotR : s.r * .8);
+      al = src ? (tr ? .9 : s.kind === 'coast' ? .75 : .45) : (tr ? .9 : s.a * .45);
+      if (m[0] >= -10 && m[1] >= -10 && m[0] <= W + 10 && m[1] <= H + 10) put(m[0], m[1], rad, al * K, C.paper);
+      continue;
+    }
     if (s.skyHome && h <= 0) s.skyFrozen = false;
     const source = SK.rushPlan?.get(s);
     if (s.kind === 'sky' || s.skyHome && h > 0 && st.blastT === 0 && !opt.still) {
@@ -3921,7 +3971,7 @@ function exploreApply(st, dt) {
   if (EX.rm) return false;
   const coveredDeparture = EX.departing && EX.journey.moving && EX.journey.P === EX.journey.beats.at(-1).P;
   if (exploreBusy() && !exploreAllowed() && !coveredDeparture) exploreReset();
-  const before = JSON.stringify([EX.cam, EX.k, EX.footer]), motion = EX.motion;
+  const before = [EX.cam.s, EX.cam.tx, EX.cam.ty, EX.k, EX.footer], motion = EX.motion;
   if (EX.active) EX.footer = Math.max(0, EX.footer - dt / EXPLORE.footerFade);
   if (motion) {
     motion.elapsed = Math.min(motion.duration, motion.elapsed + dt);
@@ -3941,13 +3991,17 @@ function exploreApply(st, dt) {
   }
   if (EX.hintLeft > 0) { EX.hintLeft = Math.max(0, EX.hintLeft - dt); if (!EX.hintLeft) exploreHintOff(); }
   st.exploreK = EX.k; st.exploring = EX.active; st.exploreFooter = EX.footer; st.sEnd = EX.end?.s || st.cam.s;
+  // The SVG camera stays at its last raster while input/glide changes this virtual camera.
+  st.exploreMoving = !!(EX.motion || EX.gesture?.dragged || EX.velocity.some(Boolean) || EX.active && ['s', 'tx', 'ty'].some(key => EX.cam[key] !== EX.target[key]));
+  st.exploreDt = dt;
   if (EX.k > 0 || EX.active) {
     st.cam = { ...EX.cam, ax: VIEW.w / 2, ay: VIEW.h / 2 };
     st.cardK = st.cardK.map(() => 0); st.cardOpen = 0;
     EX.layer = exploreLayer(st.cam, EX.end);
   } else EX.layer = { c: 1, dx: 0, dy: 0 };
   exploreWorldStyle('transform', EX.k > 0 || EX.active ? `translate(${EX.layer.dx}px,${EX.layer.dy}px) scale(${EX.layer.c})` : 'none'); explorePromote();
-  const changed = EX.changed || before !== JSON.stringify([EX.cam, EX.k, EX.footer]); EX.changed = false; return changed;
+  const after = [EX.cam.s, EX.cam.tx, EX.cam.ty, EX.k, EX.footer];
+  const changed = EX.changed || before.some((value, i) => value !== after[i]); EX.changed = false; return changed;
 }
 const exploreExcluded = target => target?.closest?.('.sheet.on, input, textarea, select, .tl, [data-review]');
 const exploreOwned = target => target?.closest?.('#f-wayfinder, #f-beacon, .find.hoard, .rubbing, #f-mist, #f-horn, .hm-canvas, .ft-name');
@@ -4008,9 +4062,10 @@ function exploreBuild({ stage, world, journey, rm }) {
     if (dragged && e.type === 'pointerup' && samples.length > 1) { const a = samples[0], b = samples.at(-1), dt = b.time - a.time; EX.velocity = dt ? [(b.tx - a.tx) / dt, (b.ty - a.ty) / dt] : [0, 0]; }
     else EX.velocity = [0, 0];
     EX.gesture = null; stage.classList.remove('is-dragging'); explorePromote();
+    if (dragged) EX.changed = true; // A stationary release must still commit the held SVG raster.
   };
   stage.addEventListener('pointerup', release, true); stage.addEventListener('pointercancel', release, true);
-  stage.addEventListener('lostpointercapture', e => { if (e.target === stage && !stage.hasPointerCapture?.(e.pointerId) && EX.pointers.has(e.pointerId)) { const dragged = EX.gesture?.dragged; EX.pointers.delete(e.pointerId); EX.owners.delete(e.pointerId); EX.velocity = [0, 0]; exploreGesture(dragged); stage.classList.remove('is-dragging'); explorePromote(); } });
+  stage.addEventListener('lostpointercapture', e => { if (e.target === stage && !stage.hasPointerCapture?.(e.pointerId) && EX.pointers.has(e.pointerId)) { const dragged = EX.gesture?.dragged; EX.pointers.delete(e.pointerId); EX.owners.delete(e.pointerId); EX.velocity = [0, 0]; exploreGesture(dragged); EX.changed = true; stage.classList.remove('is-dragging'); explorePromote(); } });
   stage.addEventListener('click', e => { if (EX.suppress && e.detail !== 0) { exploreSuppressClear(); e.preventDefault(); e.stopImmediatePropagation(); } }, true);
   window.addEventListener('keydown', exploreSuppressClear, true);
   window.addEventListener('keydown', e => {
@@ -4022,7 +4077,7 @@ function exploreBuild({ stage, world, journey, rm }) {
     if (!['+', '=', '-'].includes(e.key)) return;
     e.preventDefault(); exploreTakeover(); EX.target = exploreBound(exploreZoom(EX.cam, [VIEW.w / 2, VIEW.h / 2], EX.target.s * (e.key === '-' ? 1 / EXPLORE.key : EXPLORE.key) / EX.cam.s, EX.fit, EX.top));
   });
-  window.addEventListener('blur', () => { exploreClearPointers(); exploreSuppressClear(); EX.velocity = [0, 0]; explorePromote(); });
+  window.addEventListener('blur', () => { exploreClearPointers(); exploreSuppressClear(); EX.velocity = [0, 0]; EX.changed = true; explorePromote(); });
 }
 
 // ---- steps.mjs ----
@@ -4867,14 +4922,19 @@ function footerRing(ctx, radius, colour, width, alpha, angle = 0, dash = []) {
   ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
 }
 // SVG group opacity composites overlapping children together. Reuse one scratch layer for that same operation.
-function footerGroup(ctx, alpha, paint) {
+function footerGroup(ctx, alpha, paint, radius) {
   if (!(alpha > 0)) return;
+  // Integer device-pixel crop: preserve the original grid, group alpha and all
+  // drawing geometry while clearing/copying only the group's possible ink.
+  const reach = (radius + FRAME_PERF.rasterPad) * FT.dpr;
+  const x = Math.max(0, Math.floor(FT.centre[0] - reach)), y = Math.max(0, Math.floor(FT.centre[1] - reach));
+  const w = Math.max(0, Math.min(FT.canvas.width, Math.ceil(FT.centre[0] + reach)) - x), h = Math.max(0, Math.min(FT.canvas.height, Math.ceil(FT.centre[1] + reach)) - y);
   if (!FT.layer) { FT.layer = document.createElement('canvas'); FT.layerCtx = FT.layer.getContext('2d'); }
   const layer = FT.layer, c = FT.layerCtx;
   if (layer.width !== FT.canvas.width || layer.height !== FT.canvas.height) { layer.width = FT.canvas.width; layer.height = FT.canvas.height; }
-  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, layer.width, layer.height);
+  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(x, y, w, h);
   c.setTransform(FT.dpr, 0, 0, FT.dpr, ...FT.centre); paint(c);
-  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = alpha; ctx.drawImage(layer, 0, 0); ctx.restore();
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = alpha; if (w && h) ctx.drawImage(layer, x, y, w, h, x, y, w, h); ctx.restore();
 }
 function footerMotion(time, dt, st, look, moved) {
   if (FT.rm) return;
@@ -4967,23 +5027,23 @@ function footerMotion(time, dt, st, look, moved) {
     footerLine(ctx, from, to, gradient, NOVA.rays.width, alpha, 'butt');
   });
   ctx.restore();
-  });
+  }, u(core * Math.max(NOVA.rays.start, ...NOVA.rays.len)) * calm * z + NOVA.rays.width / 2);
   footerGroup(ctx, strength * calmAlpha, ctx => {
   FT.lobes.forEach((lobe, i) => {
     const L = NOVA.lobes, a = lobe.u[0] * Math.PI * 2 + clock * lerp(...L.speed, lobe.u[1]) * (i % 2 ? -1 : 1), orbit = lerp(...L.orbit, lobe.u[2]), r = lerp(...L.r, lobe.u[3]) * (1 + L.breathe * Math.sin(clock * lerp(...L.speed, lobe.u[4]) + lobe.u[5] * Math.PI * 2));
     footerGlow(ctx, i % 2 ? 'orange' : 'red', u(Math.cos(a) * orbit + look[0] * DEPTH.foot.lobes) * calm * z, u(Math.sin(a) * orbit + look[1] * DEPTH.foot.lobes) * calm * z, u(r) * calm * z, u(r) * calm * z, i < (VIEW.phone ? L.nPhone : L.n) ? lerp(...L.alpha, lobe.u[6]) : 0);
   });
-  });
+  }, u(Math.max(...NOVA.lobes.orbit) + Math.max(...NOVA.lobes.r) * (1 + NOVA.lobes.breathe) + Math.hypot(...look) * DEPTH.foot.lobes) * calm * z);
   footerGroup(ctx, strength, ctx => {
   FT.waves.forEach((circle, i) => {
     if (i >= NOVA.waves.n) return;
     const age = clock / NOVA.waves.every - i, q = ((age / NOVA.waves.n) % 1 + 1) % 1;
     footerRing(ctx, u(lerp(core, big * NOVA.waves.reach, q)) * z, C.paper, NOVA.waves.width, age >= 0 ? NOVA.waves.alpha * (1 - q) : 0);
   });
-  });
+  }, u(Math.max(core, big * NOVA.waves.reach)) * z + NOVA.waves.width / 2);
   for (let i = 0; i < NOVA.flare.cap; i++) { const live = NOVA_LIVE.flares.find(f => f.serial % NOVA.flare.cap === i); if (!live) continue; const fq = novaFlare(live); footerRing(ctx, u(lerp(core, big * NOVA.flare.reach, out(fq))) * z, C.paper, NOVA.waves.width, NOVA.flare.alpha * (1 - fq) * strength); }
   const streakO = bT > 0 ? smooth(...B.streakIn, bT) * (1 - smooth(...B.streakOut, bT)) : 0;
-  footerGroup(ctx, streakO, ctx => FT.streaks.forEach(line => footerLine(ctx, line.from.map(v => v * u(stS) * z), line.to.map(v => v * u(stS) * z), line.colour, line.width, line.alpha)));
+  footerGroup(ctx, streakO, ctx => FT.streaks.forEach(line => footerLine(ctx, line.from.map(v => v * u(stS) * z), line.to.map(v => v * u(stS) * z), line.colour, line.width, line.alpha)), Math.max(...FT.streaks.map(line => Math.hypot(...line.to) * u(stS) * z + line.width / 2)));
   footerRing(ctx, u(ringR) * z, C.red, 8, ringO * B.ringAlpha[1]); footerRing(ctx, u(ringR) * z, C.paper, 2, ringO * B.ringAlpha[0]);
   [0, 1].forEach(i => footerRing(ctx, u((VIEW.phone ? B.shellPhone : B.shellR)[i]) * z, C.paper, i ? .6 : .8, B.shellAlpha[i] * ro, clock * NOVA.shells[i], NOVA.shellDash));
   footerGlow(ctx, 'core', 0, 0, u(core * pulse) * calm * z, u(core * pulse) * calm * z, build.coreAlpha * calmAlpha);
@@ -6478,7 +6538,7 @@ window.addEventListener('jm-depth', () => { dirty = true; depthInvalidate(); if 
 const PTR = [.5, .5];
 window.addEventListener('pointermove', e => { PTR[0] = e.clientX / VIEW.w; PTR[1] = e.clientY / VIEW.h; findsPointer(e.clientX, e.clientY); }, { passive: true });
 
-let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainFocus = '', mainKeys = '';
+let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainFocus = '', mainKeys = '', mainMapPending = false;
 function frame(ts) {
   const time = ts / 1000;
   const dt = mainTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - mainTs) / 1000)); mainTs = ts;
@@ -6491,10 +6551,10 @@ function frame(ts) {
   // Nothing unseen takes the keyboard: the stone marks and the timeline wait for the map's hand-over; the timeline leaves in explore.
   const keys = `${st.handoffT >= 1}/${st.handoffT >= 1 && !st.exploring && !(st.exploreK > 0)}`;
   if (keys !== mainKeys) { mainKeys = keys; $('cards').inert = st.handoffT < 1; TLEL.inert = !(st.handoffT >= 1 && !st.exploring && !(st.exploreK > 0)); }
-  const focusKey = JSON.stringify(f), tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || explored || folded || P !== lastP || tuning !== mainTuning || focusKey !== mainFocus;
+  const focusKey = JSON.stringify(f), tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || explored || folded || mainMapPending || P !== lastP || tuning !== mainTuning || focusKey !== mainFocus;
   mainFocus = focusKey;
   const aim = depthLook(dt, PTR);
-  if (moved) { tripApply(st); tlFrame(st); footerFrame(st); if (!JOIN.frame) CANVAS.style.opacity = st.dim; lastP = P; mainTuning = tuning; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
+  if (moved) { mainMapPending = tripApply(st); tlFrame(st); footerFrame(st); if (!JOIN.frame && CANVAS.style.opacity !== String(st.dim)) CANVAS.style.opacity = st.dim; lastP = P; mainTuning = tuning; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
   const jo = JOIN.frame ? JOIN.frame(st, moved, P) : undefined;
   depthFrame(st, time, dt, PTR, aim, moved);
   footerMotion(time, dt, st, aim.look, moved);

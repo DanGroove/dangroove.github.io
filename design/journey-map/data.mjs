@@ -364,6 +364,8 @@ export const DEPTH = {
 };
 
 export const NOVA_CANVAS = { dpr: 2, glowSprite: 512 };
+// Performance only: label recovery after a composited gesture (seconds), raster guard (CSS px).
+export const FRAME_PERF = { labelSettle: 0.12, rasterPad: 2 };
 export const NOVA = {
   build: { kindle: 0.2, draw: 0.76, hold: 1, throbs: [0.26, 0.45, 0.60, 0.72], rise: 0.12, fall: 0.32, pull: 1.8,
     push: 0.08, pushPhone: 0.06, recoil: 0.4, veil: 0.65, veilPhone: 0.45, veilOut: 0.25, hole: [0.6, 0.18], holeBreath: 0.04,

@@ -11,7 +11,7 @@ button { font-family: inherit; }
 .trip { position: relative; }
 .stage { position: sticky; top: 0; height: 100vh; overflow: clip; }
 .map, #nova, #stars { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
-.map { display: block; }
+.map { display: block; transform-origin: 0 0; }
 #nova, #stars { pointer-events: none; }
 #deep, #air, #sky { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .map text { font-family: Outfit, system-ui, sans-serif; }

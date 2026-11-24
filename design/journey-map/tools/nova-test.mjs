@@ -86,10 +86,10 @@ for(const g of [sea,fill,coastG,detail,finds,done])assert.equal(g.style.opacity,
 assert.equal(svg.style.willChange,'opacity');
 run(segment('blast',.8));assert.equal(svg.style.opacity,'0');assert.equal(svg.style.visibility,'hidden');assert.equal(svg.style.willChange,'');
 const explored=segment('rest',0);explored.exploreK=.5;explored.sEnd=explored.cam.s*2;explored.cam.s/=2;explored.dim=.6;
-run(explored);assert.equal(svg.style.visibility,'visible');assert.equal(svg.style.willChange,'opacity');assert.equal(canvas.style.opacity,'0.6');
+run(explored);assert.equal(svg.style.visibility,'visible');assert.equal(svg.style.willChange,'transform, opacity');assert.equal(canvas.style.opacity,'0.6');
 assert.equal(hit.getAttribute('aria-disabled'),'false');assert.equal(hit.tabIndex,0);
 assert.equal(hit.style.width,(NOVA.flare.hit*explored.cam.s/explored.sEnd*2).toFixed(2)+'px');
-explored.exploreK=1;run(explored);assert.equal(svg.style.willChange,'');
+explored.exploreK=1;run(explored);assert.equal(svg.style.willChange,'transform, opacity');
 console.log('ok: dpr cap, original rough filter, fallback then sprite, rush/blast/settle continuous drawing, screen mapping, no still-frame SVG/button writes, clear-once rest, one-layer map fade');
 
 // Grow after a ready sprite, and verify that its raster density covers the largest visible red stroke.

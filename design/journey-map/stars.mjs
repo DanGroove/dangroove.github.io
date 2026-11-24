@@ -256,8 +256,19 @@ export function starsFrame(time, st, pointer, opt = {}) {
   // and replaying, or jumping straight into the rush, gives the same light as well as the same positions.
   const rushing = st.rushT > 0 && st.blastT === 0;
   const twinkleTime = st.blastT > 0 ? time : st.P >= start.a ? st.rushT * STEPS.pace.rush : time * (1 - smooth(...NOVA.gather.twinkleHome, st.legXT));
+  const home = h >= 1 && st.blastT > 0 && st.exploreK === 1 && G.stagger + G.time <= 1;
   for (const s of SK.list) {
     let x, y, rad, al, col, tail = null;
+    // At the explore endpoint every map star has returned to its own place.
+    // Its discarded release/orbit/tail calculations cannot affect this draw.
+    if (home && s.kind !== 'sky') {
+      if (src && s.kind === 'coast' && st.rushT === 0) continue;
+      const m = toScreen(st, s.map), tr = s.kind === 'trail';
+      rad = src ? (tr ? dotR : s.kind === 'coast' ? .7 : .6) : (tr ? dotR : s.r * .8);
+      al = src ? (tr ? .9 : s.kind === 'coast' ? .75 : .45) : (tr ? .9 : s.a * .45);
+      if (m[0] >= -10 && m[1] >= -10 && m[0] <= W + 10 && m[1] <= H + 10) put(m[0], m[1], rad, al * K, C.paper);
+      continue;
+    }
     if (s.skyHome && h <= 0) s.skyFrozen = false;
     const source = SK.rushPlan?.get(s);
     if (s.kind === 'sky' || s.skyHome && h > 0 && st.blastT === 0 && !opt.still) {

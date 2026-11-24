@@ -1,5 +1,5 @@
 // The X, its supernova and the footer that settles over the glow.
-import { C, COPY, MAP, NOVA, NOVA_CANVAS, DEPTH, FOOT_NAME, EXPLORE, CAMERA, PHONE_LAYOUT, STEPS } from './data.mjs';
+import { C, COPY, MAP, NOVA, NOVA_CANVAS, DEPTH, FOOT_NAME, EXPLORE, CAMERA, PHONE_LAYOUT, STEPS, FRAME_PERF } from './data.mjs';
 import { rnd, n1, mapDefs } from './art.mjs';
 import { VIEW, SEQ, smooth, lerp, easeIO, clamp01, novaBuild } from './trip.mjs';
 import { JOURNEY } from './steps.mjs';
@@ -186,14 +186,19 @@ function footerRing(ctx, radius, colour, width, alpha, angle = 0, dash = []) {
   ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
 }
 // SVG group opacity composites overlapping children together. Reuse one scratch layer for that same operation.
-function footerGroup(ctx, alpha, paint) {
+function footerGroup(ctx, alpha, paint, radius) {
   if (!(alpha > 0)) return;
+  // Integer device-pixel crop: preserve the original grid, group alpha and all
+  // drawing geometry while clearing/copying only the group's possible ink.
+  const reach = (radius + FRAME_PERF.rasterPad) * FT.dpr;
+  const x = Math.max(0, Math.floor(FT.centre[0] - reach)), y = Math.max(0, Math.floor(FT.centre[1] - reach));
+  const w = Math.max(0, Math.min(FT.canvas.width, Math.ceil(FT.centre[0] + reach)) - x), h = Math.max(0, Math.min(FT.canvas.height, Math.ceil(FT.centre[1] + reach)) - y);
   if (!FT.layer) { FT.layer = document.createElement('canvas'); FT.layerCtx = FT.layer.getContext('2d'); }
   const layer = FT.layer, c = FT.layerCtx;
   if (layer.width !== FT.canvas.width || layer.height !== FT.canvas.height) { layer.width = FT.canvas.width; layer.height = FT.canvas.height; }
-  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, layer.width, layer.height);
+  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(x, y, w, h);
   c.setTransform(FT.dpr, 0, 0, FT.dpr, ...FT.centre); paint(c);
-  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = alpha; ctx.drawImage(layer, 0, 0); ctx.restore();
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = alpha; if (w && h) ctx.drawImage(layer, x, y, w, h, x, y, w, h); ctx.restore();
 }
 export function footerMotion(time, dt, st, look, moved) {
   if (FT.rm) return;
@@ -286,23 +291,23 @@ export function footerMotion(time, dt, st, look, moved) {
     footerLine(ctx, from, to, gradient, NOVA.rays.width, alpha, 'butt');
   });
   ctx.restore();
-  });
+  }, u(core * Math.max(NOVA.rays.start, ...NOVA.rays.len)) * calm * z + NOVA.rays.width / 2);
   footerGroup(ctx, strength * calmAlpha, ctx => {
   FT.lobes.forEach((lobe, i) => {
     const L = NOVA.lobes, a = lobe.u[0] * Math.PI * 2 + clock * lerp(...L.speed, lobe.u[1]) * (i % 2 ? -1 : 1), orbit = lerp(...L.orbit, lobe.u[2]), r = lerp(...L.r, lobe.u[3]) * (1 + L.breathe * Math.sin(clock * lerp(...L.speed, lobe.u[4]) + lobe.u[5] * Math.PI * 2));
     footerGlow(ctx, i % 2 ? 'orange' : 'red', u(Math.cos(a) * orbit + look[0] * DEPTH.foot.lobes) * calm * z, u(Math.sin(a) * orbit + look[1] * DEPTH.foot.lobes) * calm * z, u(r) * calm * z, u(r) * calm * z, i < (VIEW.phone ? L.nPhone : L.n) ? lerp(...L.alpha, lobe.u[6]) : 0);
   });
-  });
+  }, u(Math.max(...NOVA.lobes.orbit) + Math.max(...NOVA.lobes.r) * (1 + NOVA.lobes.breathe) + Math.hypot(...look) * DEPTH.foot.lobes) * calm * z);
   footerGroup(ctx, strength, ctx => {
   FT.waves.forEach((circle, i) => {
     if (i >= NOVA.waves.n) return;
     const age = clock / NOVA.waves.every - i, q = ((age / NOVA.waves.n) % 1 + 1) % 1;
     footerRing(ctx, u(lerp(core, big * NOVA.waves.reach, q)) * z, C.paper, NOVA.waves.width, age >= 0 ? NOVA.waves.alpha * (1 - q) : 0);
   });
-  });
+  }, u(Math.max(core, big * NOVA.waves.reach)) * z + NOVA.waves.width / 2);
   for (let i = 0; i < NOVA.flare.cap; i++) { const live = NOVA_LIVE.flares.find(f => f.serial % NOVA.flare.cap === i); if (!live) continue; const fq = novaFlare(live); footerRing(ctx, u(lerp(core, big * NOVA.flare.reach, out(fq))) * z, C.paper, NOVA.waves.width, NOVA.flare.alpha * (1 - fq) * strength); }
   const streakO = bT > 0 ? smooth(...B.streakIn, bT) * (1 - smooth(...B.streakOut, bT)) : 0;
-  footerGroup(ctx, streakO, ctx => FT.streaks.forEach(line => footerLine(ctx, line.from.map(v => v * u(stS) * z), line.to.map(v => v * u(stS) * z), line.colour, line.width, line.alpha)));
+  footerGroup(ctx, streakO, ctx => FT.streaks.forEach(line => footerLine(ctx, line.from.map(v => v * u(stS) * z), line.to.map(v => v * u(stS) * z), line.colour, line.width, line.alpha)), Math.max(...FT.streaks.map(line => Math.hypot(...line.to) * u(stS) * z + line.width / 2)));
   footerRing(ctx, u(ringR) * z, C.red, 8, ringO * B.ringAlpha[1]); footerRing(ctx, u(ringR) * z, C.paper, 2, ringO * B.ringAlpha[0]);
   [0, 1].forEach(i => footerRing(ctx, u((VIEW.phone ? B.shellPhone : B.shellR)[i]) * z, C.paper, i ? .6 : .8, B.shellAlpha[i] * ro, clock * NOVA.shells[i], NOVA.shellDash));
   footerGlow(ctx, 'core', 0, 0, u(core * pulse) * calm * z, u(core * pulse) * calm * z, build.coreAlpha * calmAlpha);

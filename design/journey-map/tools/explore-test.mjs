@@ -123,6 +123,13 @@ for(const target of [novaTarget,stopTarget,hornTarget])for(const pair of [[targe
 fresh();point('pointerdown',1,100,200,novaTarget);point('pointermove',1,103,202,novaTarget);point('pointerup',1,103,202,novaTarget);assert.equal(click(1).defaultPrevented,false,'nova tap is a press');assert.equal(captures.size,0);
 const drag=target=>{point('pointerdown',1,100,200,target);point('pointermove',1,130,220,target);point('pointerup',1,130,220,target);};
 const zoomForPan=()=>{for(let i=0;i<6;i++){dispatch('keydown',{key:'+'});apply(1);}apply(1);};
+// FRAMES: pointercancel has no fling. Its final, stationary camera still has to
+// wake the frame loop once so the held SVG raster can be committed and sharpened.
+fresh();zoomForPan();point('pointerdown',1,100,200,novaTarget);point('pointermove',1,130,220,novaTarget);
+assert.equal(apply(0).exploreMoving,true);point('pointercancel',1,130,220,novaTarget);
+const released=tripState(journey.P);assert.equal(exploreApply(released,0),true,'stationary release invalidates');assert.equal(released.exploreMoving,false);
+assert.equal(exploreApply(tripState(journey.P),0),false,'release invalidates only once');
+console.log('ok: FRAMES stationary pointer cancellation wakes one raster commit, then returns to idle');
 for(const target of [novaTarget,stopTarget,eventTarget])for(const detail of [1,0]){fresh();zoomForPan();const before=apply(0).cam;drag(target);assert.notDeepEqual(apply(0).cam,before,'ordinary target can pan');assert.equal(click(detail).defaultPrevented,detail===1,'pointer clicks only after drag');}
 fresh();pinch(novaTarget,hornTarget);dispatch('keydown',{key:'Tab'});assert.equal(click(1).defaultPrevented,false,'any key clears suppression');
 fresh();pinch(novaTarget,hornTarget);exploreEnd();assert.equal(click(1).defaultPrevented,false,'exit clears suppression');
