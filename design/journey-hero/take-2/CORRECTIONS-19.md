@@ -250,6 +250,24 @@ Dan, 24 Nov, on the red-to-asset step: "im just concerned about the part where t
 3. The name: in a browser at 1440 x 900 and 390 x 844, sample the entrance every 1/60 s: every moving letter's computed weight equals the flow text's in every frame, and every overlay letter's box at its landing still equals its character's box in the flow text to 0.5 px. Negative control: L12's ramp must fail the first.
 4. Update every check that read the wipe or the weight ramp (`tools/l13-checks.mjs`, `tools/l13-browser-checks.mjs`, `tools/entrance-checks.mjs` and any other), listing each changed expectation with its old and new value. L11's frame table again for the entrance and for one export scene's arrival and exit, at both sizes.
 
+## L13c No star crosses the mark on a fast drag either
+
+Build on L13b and L14. Dan, 24 Nov, 2:21 PM ET: "sometimes the stars go crazy if you drag very quickly around the screen"; 2:24 PM: "it might be on a star wants to go to the opposite side of the logo". L13b item 6 gave every later star the free point nearest to it. That fixed the still hold but not a fast drag: the held mark trails the pointer (it follows at 12 a second), so the stars it captures all arrive from the pointer's side; the free points on that side go first, and the rest are reached only by flying across the mark. Run 13's check 4 gave 125 of 288 crossing on the fast run (43 %), and the mock's probe of 9ef30e9 gives 93 of 296 (90 of them to the far side; flights p50 300 px, p95 540 px, max 580 px). L13b's 2 % was never measured on the fast run; that was the brief's error, not the build's.
+
+`MOCK-U.md` in this folder is the mock's change to 9ef30e9's `stars.mjs`, as a diff, with how its numbers were measured: **a reference for the rule and the numbers only**. Build it properly; do not paste it.
+
+**Build**, in `stars.mjs` `assign` (replacing L13b item 6's "every later star takes the free point nearest to where it is"):
+1. A later star may take a free point only if that point is nearer to it than the mark's centre is (the `centre` the points are laid out about), so its flight never passes the centre and never ends on the far side. Among the stars that may, the closest star-and-point pair goes first, then the next closest, as now.
+2. Stars waiting in the ring are candidates too, in every frame while any point is free, not only the stars captured in that frame. A ring star given a point leaves the ring, and the members left re-space the way they do when a star joins (the same circular-mean targets, which they follow with the ring's own easing, so nothing jumps).
+3. A captured star with no such point joins the ring and waits there; the ring's turn and the mark's own motion bring free points to its side. `hold.next` counts the points actually given. The first batch keeps its rule. Nothing else changes: the ring's radius, band, turn and easing, the gather radius, the release and every burst.
+
+**L13c's check** (replaces L13b check 4): the same two 9 s runs on the controlled clock at 1440 x 900 (the still hold at the stage's centre; the fast drag on L13b check 4's path). For every star given a point after the first batch, ring stars included, record its flight (the length of its offset when given the point) and its distance from the mark's centre at that moment.
+- At most 1 % fly farther than that distance, in each run, and none ends on the far side of the centre (the angle at the centre between where it starts and its point is under 90 degrees). The mock: 0 of 300 still, 0 of 286 fast, none on the far side.
+- Every point is taken within 1.25 s of the mark forming on the still hold, and within 0.5 s on the fast drag (the mock: 0.91 s and 0.32 s; 9ef30e9 on the fast drag: 0.23 s).
+- Report, for both runs, the count, the p50, p95 and max flight (the mock: still 316, 429 and 456 px; fast 275, 380 and 428 px) and the two fill times.
+- Negative control: 9ef30e9's rule (the nearest free point, no ring candidates) must fail the fast run.
+- L13b checks 1 to 3 and every L14 check stay as they are; rerun only the checks that read `stars.mjs`.
+
 ## L3 (withdrawn, not to be built) A more impressive loader: the mark, from first sketch to final
 
 Dan, 24 Nov, 4:47 AM ET, on v32 (8c57810): "can we have a more impressive loading screen?". L3 replaces L1's look. L1's rules stay: the loader shows from the first paint without waiting for any script, font or picture; real boot progress (fonts, atlas, first frame, the shares you chose) drives it; it never jumps or goes back; `?t=` skips it; it lasts no longer than loading needs beyond its own minimum. Only the picture and its steps change.
