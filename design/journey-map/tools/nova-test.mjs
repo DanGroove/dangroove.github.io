@@ -3,7 +3,7 @@ import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { C, MAP, NOVA, DEPTH, EXPLORE, STEPS } from '../data.mjs';
 import { mapDefs } from '../art.mjs';
-import { tripBuild, tripResize, tripState, tripApply, SEQ, VIEW, smooth, novaBuild, novaBuildGather } from '../trip.mjs';
+import { tripBuild, tripResize, tripState, tripApply, SEQ, VIEW, TRAIL_DOTS, smooth, novaBuild, novaBuildGather } from '../trip.mjs';
 import { starsBuild, starsResize, starsJoin, starsTick, starsFrame, starsRushSources, novaGatherPoint, novaGatherSources } from '../stars.mjs';
 import { footerBuild, footerBuildX, footerNovaResize, footerFrame, footerMotion } from '../footer.mjs';
 
@@ -194,14 +194,23 @@ for(const [t,frame] of starForward)assert.equal(starSnapshot(t,900),frame,'retur
 assert.ok(!/createElementNS|findSvg\(/.test(readFileSync(new URL('../footer.mjs',import.meta.url),'utf8')));
 console.log('ok: D3 3 s reversible canvas/star score; four increasing throbs >=340 ms apart (light only); stars and spikes speed up without lurches; 16 ms alpha deltas <=.08; tremble to the blast; compressed blast, anchored push/recoil and rough 3.6-width handoff at DPR 1/3');
 // WHIRL: use the same source planner and position model as the actual canvas, at the X beat.
-for(const [w,h,n] of [[1440,900,0],[390,844,0],[1440,900,1200],[390,844,240]]){
+for(const [w,h,n] of [[1440,900,0],[412,730,0],[390,844,0],[360,640,0],[1440,900,1200],[412,730,278],[390,844,305],[360,640,213],[390,844,240]]){
   tripResize(w,h,w>640?120:96);starsJoin(null);starsBuild(starCanvas);starsResize(w,h);
   if(n){starsJoin({count:n,drawn(i,out){out[0]=i*83%w;out[1]=i*137%h;return out;},look(i){return {size:2,alpha:.8,colour:i%20?C.paper:C.red};}});starsFrame(0,segment('handoff',0),[.5,.5]);}
   starsFrame(0,segment('rush',0),[.5,.5]);
   const st=segment('rush',0),centre=[MAP.x[0]*st.cam.s+st.cam.tx,MAP.x[1]*st.cam.s+st.cam.ty];
   const rows=starsRushSources(),gather=rows.filter(row=>row.gather),counts=Array(NOVA.gather.sectors).fill(0);
+  const trail=rows.filter(row=>row.s.kind==='trail'),seaStars=rows.filter(row=>row.s.kind==='sea');
+  assert.equal(trail.length,TRAIL_DOTS.length,'every trail destination retains its own star');
+  assert.equal(new Set(trail.map(row=>row.s.map)).size,TRAIL_DOTS.length,'trail destinations are unique');
+  assert.ok(TRAIL_DOTS.every(dot=>trail.some(row=>row.s.map===dot)),'no trail destination is missing');
+  assert.ok(seaStars.length>0&&[...trail,...seaStars].every(row=>!row.s.skyHome),'no trail or sea identity may be reserved for sky');
+  assert.equal(new Set([...trail,...seaStars].map(row=>row.s)).size,trail.length+seaStars.length,'destinations have distinct identities');
+  assert.ok(rows.filter(row=>row.s.skyHome).every(row=>row.s.kind==='coast'),'only coast identities may stay in the sky');
   for(const row of gather){counts[row.sector]++;assert.ok(row.from[0]>=0&&row.from[0]<=w&&row.from[1]>=0&&row.from[1]<=h,'source starts on screen');}
   console.log(`WHIRL ${w}x${h} ${n?'joined '+n:'standalone'}: sectors ${counts.join(', ')}; ${gather.length} gathering`);
+  assert.ok(counts.every(count=>count===(VIEW.phone?8:14)),'each sector meets its full phone/desktop target');
+  console.log(`WHIRL2 ${w}x${h} ${n?'joined '+n:'standalone'}: added ${rows.filter(row=>row.s.added).length}; trail ${trail.length}/${TRAIL_DOTS.length}; sea ${seaStars.length}; coast-only reservation`);
   assert.ok(gather.length>0,'a visible source in every sector is required');assert.ok(Math.max(...counts)-Math.min(...counts)<=1);
   assert.deepEqual(starsRushSources(),rows,'seeded sources repeat');
   const replanned=novaGatherSources(rows.map(({s,from,visible})=>({s,from,visible})),centre,w,h,VIEW.phone);

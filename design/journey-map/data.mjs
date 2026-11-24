@@ -324,6 +324,7 @@ export const STARS = { count: 420, red: 0.05, dprCap: 2, drift: 0.012, parallax:
   sky: 300, skyShare: 0.38, skyLook: 0.5, skyFollow: 0.04, twinkle: 0.35, skyPush: 26,
   skyReserve: 200, skyMargin: 10, skyEdge: 14, skyShock: 90, skyF: [0.5, 1.6], skyMove: [0, 0.3], skyCover: [0.25, 0.75],
   skySeed: 157, fieldZ: [0.25, 1], fieldR: [0.5, 1.6], fieldAlpha: [0.35, 0.95],
+  supply: { seed: 173, alpha: 0.4, radius: 0.65, margin: 0.04, fade: [0.7, 1], out: 0.04 },
 };
 
 // All new depth geometry, drawing paths and tuning values. Random identities are unit samples;

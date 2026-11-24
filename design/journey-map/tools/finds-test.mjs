@@ -29,8 +29,9 @@ console.log('ok: C1 ring sea baseline; original fill/coast lengths and hashes un
 // D3 adds NOVA.build; the full data digest is re-recorded for that authorized table (and again for the continuous pull, 2026-11-23,
 // and for polish round 1: the held breath's white cross and halo, the softer cloud deck, the traveller's size at the overview
 // and the gather ring's spread).
-assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 2413750747);
-console.log('ok: STARS/DEPTH preserved; NOVA.build data digest recorded');
+// WHIRL2 adds only STARS.supply; DEPTH and NOVA remain unchanged.
+assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 1102335767);
+console.log('ok: DEPTH/NOVA preserved; STARS.supply data digest recorded');
 // D4 authorizes the pure rest-to-rest glide in trip. Depth remains protected.
 // Line endings are evened out so the numbers are the same on Windows and in the cloud.
 const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.meta.url), 'utf8').replace(/\r\n/g, '\n'));
@@ -40,7 +41,7 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // FRAMES: compositor camera writer and label recovery only; geometry/score remain pinned by the motion tests.
 assert.equal(sourceDigest('trip.mjs'), 1103612252, 'trip.mjs changed');
 // ORIGIN records the palette/tail/phone glide tables as well; protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 2384053998, 'data.mjs changed');
+assert.equal(sourceDigest('data.mjs'), 1103780140, 'data.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 4010889213, 'depth.mjs changed');
 console.log('ok: C1 camera/labels/tripS and deck source digests recorded');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];

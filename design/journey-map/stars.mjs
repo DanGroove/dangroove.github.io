@@ -5,7 +5,7 @@ import { rnd, onLand, COAST_A, COAST_B, polyLen } from './art.mjs';
 import { TRAIL_DOTS, VIEW, SEQ, tripState, toScreen, smooth, lerp, clamp01, easeIO, novaBuildGather, coastAt } from './trip.mjs';
 import { depthFrameBox, depthFrameCovers, novaRingRadius, novaFlare, novaShare, NOVA_LIVE } from './depth.mjs';
 
-const SK = { cv: null, ctx: null, dpr: 1, list: [], trav: null, src: null, n: -1, standN: 0, seaN: 0, keepP: .3, bins: new Map(), tails: new Map(), pt: [0, 0], drift: 0, orbit: 0, burn: 0, skyPointer: [0.5, 0.5], skyCount: 0, tuning: '', assignment: '', skyVisible: false, rushPlan: null };
+const SK = { cv: null, ctx: null, dpr: 1, list: [], trav: null, src: null, n: -1, standN: 0, seaN: 0, keepP: .3, bins: new Map(), tails: new Map(), supplyBins: new Map(), supplyTails: new Map(), pt: [0, 0], drift: 0, orbit: 0, burn: 0, skyPointer: [0.5, 0.5], skyCount: 0, tuning: '', assignment: '', skyVisible: false, rushPlan: null, supplied: false };
 const HERO_MOST = 2000;
 
 export function starsBuild(canvas) {
@@ -29,7 +29,8 @@ function starsAddSky() {
 }
 // Preserve the original blast/remnant identities independently of the rush's source selection.
 function starsAngles() {
-  SK.rushPlan = null;
+  SK.rushPlan = null; SK.supplied = false;
+  SK.list = SK.list.filter(s => !s.added);
   const r = rnd(NOVA.seed), map = SK.list.filter(s => s.kind !== 'sky'), sky = SK.list.filter(s => s.kind === 'sky');
   for (const list of [map, sky]) {
     for (let i = list.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [list[i], list[j]] = [list[j], list[i]]; }
@@ -58,7 +59,7 @@ export function novaGatherPoint(from, centre, angle, radius, t) {
   const theta = t < j ? bearing + turn * (t / j) ** n : angle + turn * n * (1 - j) / (j * (1 - p)) * (1 - ((1 - t) / (1 - j)) ** (1 - p));
   return [centre[0] + r * Math.cos(theta), centre[1] + r * Math.sin(theta)];
 }
-// Equal populations, sampled across each sector's full depth. No off-screen star or new identity is used.
+// Equal populations, sampled across each sector's full depth, from stars already present on screen.
 export function novaGatherSources(homes, centre, w, h, phone = false) {
   const G = NOVA.gather, sectors = Array.from({ length: G.sectors }, () => []), turn = G.swirl * Math.PI * 2;
   const rows = homes.map(home => {
@@ -87,10 +88,10 @@ export function starsRushSources(look = [0, 0]) {
   const homes = SK.list.filter(s => SK.src || s.kind !== 'sky' || s.si < STARS.sky).map(s => {
     let from;
     if (s.kind === 'sky' || s.skyHome) {
-      if (SK.src && !s.skyFrozen) { const at = SK.src.drawn(s.i, [0, 0]), lk = SK.src.look(s.i); s.sx = at[0]; s.sy = at[1]; s.sr = lightR(lk.size / 2); s.sa = lk.alpha; s.sc = lk.colour; s.skyFrozen = true; }
-      const z = SK.src ? s.z : lerp(...STARS.fieldZ, s.uz), pt = SK.skyPointer;
-      from = SK.src ? [s.sx, s.sy] : [(((s.hx + SK.drift * STARS.drift * z) % 1) + 1) % 1 * W + (pt[0] - .5) * STARS.parallax * z, s.hy * H + (pt[1] - .5) * STARS.parallax * z];
-      from = from.map((v, i) => v + look[i] * z * STARS.skyLook + (centre[i] - c0[i]) * STARS.skyFollow);
+      if (SK.src && !s.added && !s.skyFrozen) { const at = SK.src.drawn(s.i, [0, 0]), lk = SK.src.look(s.i); s.sx = at[0]; s.sy = at[1]; s.sr = lightR(lk.size / 2); s.sa = lk.alpha; s.sc = lk.colour; s.skyFrozen = true; }
+      const z = SK.src && !s.added ? s.z : lerp(...STARS.fieldZ, s.uz), pt = SK.skyPointer;
+      from = s.added ? [s.hx * W, s.hy * H] : SK.src ? [s.sx, s.sy] : [(((s.hx + SK.drift * STARS.drift * z) % 1) + 1) % 1 * W + (pt[0] - .5) * STARS.parallax * z, s.hy * H + (pt[1] - .5) * STARS.parallax * z];
+      from = from.map((v, i) => v + (s.added ? 0 : look[i] * z * STARS.skyLook) + (centre[i] - c0[i]) * STARS.skyFollow);
     } else {
       from = toScreen(st, s.map);
       const d = Math.hypot(from[0] - X[0], from[1] - X[1]), k = .12 * st.legXT * Math.max(0, 1 - d / 260);
@@ -151,7 +152,7 @@ function heroList() {
   starsAngles();
 }
 // Keep existing hero identities in the sky when its old reserve leaves a side empty (especially small phones).
-// Their map destination is omitted, not duplicated. At the flash they use the original map burst data below.
+// Only dissolving coast identities may stay in the sky. Trail and sea destinations always retain their stars.
 function starsReserveSky(list, at) {
   const G = NOVA.gather, start = tripState(SEQ.find(q => q.kind === 'rush').a), X = toScreen(start, MAP.x);
   const centre = toScreen(start, [MAP.w / 2, MAP.h / 2]), c0 = [VIEW.ox + MAP.w / 2 * VIEW.s0, VIEW.oy + MAP.h / 2 * VIEW.s0];
@@ -162,29 +163,58 @@ function starsReserveSky(list, at) {
     if (from[0] < 0 || from[0] > VIEW.w || from[1] < 0 || from[1] > VIEW.h) continue;
     const a = Math.atan2(from[1] - X[1], from[0] - X[0]), sector = Math.min(G.sectors - 1, Math.floor(((a / (Math.PI * 2) + 1) % 1) * G.sectors));
     if (s.kind === 'sky') sectors[sector].sky++;
-    else sectors[sector].candidates.push({ s, distance: Math.hypot(from[0] - X[0], from[1] - X[1]) });
+    else if (s.kind === 'coast') sectors[sector].candidates.push({ s, distance: Math.hypot(from[0] - X[0], from[1] - X[1]) });
   }
   sectors.forEach(({sky,candidates},sector) => {
     candidates.sort((a,b) => a.distance-b.distance || a.s.ord2-b.s.ord2);
-    let need = Math.max(0,want-sky);
+    const count = Math.min(Math.max(0,want-sky),candidates.length);
     const random = rnd(NOVA.seed+sector);
-    // Coasts already dissolve after handoff. Keep trail destinations wherever the existing field allows it.
-    for(const kind of ['coast','sea','trail']){
-      const pool=candidates.filter(row=>row.s.kind===kind),count=Math.min(need,pool.length);
-      for(let i=0;i<count;i++){
-        const lo=Math.floor(i*pool.length/count),hi=Math.floor((i+1)*pool.length/count),s=pool[lo+Math.floor(random()*(hi-lo))].s;
-        s.skyHome=true;s.f=rnd(NOVA.seed+s.i)();s.phase=s.f*Math.PI*2;
-      }
-      need-=count;
+    for(let i=0;i<count;i++){
+      const lo=Math.floor(i*candidates.length/count),hi=Math.floor((i+1)*candidates.length/count),s=candidates[lo+Math.floor(random()*(hi-lo))].s;
+      s.skyHome=true;s.f=rnd(NOVA.seed+s.i)();s.phase=s.f*Math.PI*2;
     }
   });
+}
+// Cover the remaining shortages before the hand-over. These faint sky identities never enter
+// starsAngles' original shuffle, so no original blast/remnant identity or random value changes.
+function starsSupplySky() {
+  SK.list = SK.list.filter(s => !s.added);
+  const rows = starsRushSources(), G = NOVA.gather, S = STARS.supply, W = VIEW.w, H = VIEW.h;
+  const st = tripState(SEQ.find(q => q.kind === 'rush').a), X = toScreen(st, MAP.x);
+  const centre = toScreen(st, [MAP.w / 2, MAP.h / 2]), c0 = [VIEW.ox + MAP.w / 2 * VIEW.s0, VIEW.oy + MAP.h / 2 * VIEW.s0];
+  const counts = Array(G.sectors).fill(0), want = VIEW.phone ? G.perSectorPhone : G.perSector, margin = S.margin * Math.min(W, H);
+  // The stand-in hero may drift for any length of time before departure. Only its map destinations
+  // are a guaranteed supply at the X; the moving sky still participates in the actual selection.
+  rows.forEach(row => {
+    if (!row.visible || row.distance <= 0 || !SK.src && row.s.kind === 'sky') return;
+    const d = row.s.kind === 'sky' || row.s.skyHome ? DEPTH.look * row.s.z * STARS.skyLook : 0;
+    // Count a frozen hero sky source only if it stays on this side over the full pointer-look range.
+    for (const dx of [-d, d]) for (const dy of [-d, d]) {
+      const x = row.from[0] + dx, y = row.from[1] + dy, a = Math.atan2(y - X[1], x - X[0]);
+      const sector = Math.min(G.sectors - 1, Math.floor(((a / (Math.PI * 2) + 1) % 1) * G.sectors));
+      if (x < 0 || x > W || y < 0 || y > H || sector !== row.sector) return;
+    }
+    counts[row.sector]++;
+  });
+  counts.forEach((count, sector) => {
+    const need = Math.max(0, want - count), r = rnd(S.seed + sector);
+    for (let k = 0; k < need; k++) {
+      const angle = (sector + .15 + .7 * r()) / G.sectors * Math.PI * 2, dx = Math.cos(angle), dy = Math.sin(angle);
+      const reach = Math.min((dx > 0 ? W - margin - X[0] : margin - X[0]) / dx, (dy > 0 ? H - margin - X[1] : margin - X[1]) / dy);
+      const distance = reach * (.25 + .7 * (k + r()) / need), from = [X[0] + dx * distance, X[1] + dy * distance];
+      SK.list.push({ kind: 'sky', added: true, fade: !!SK.src, i: -1, si: -1,
+        hx: (from[0] - (centre[0] - c0[0]) * STARS.skyFollow) / W, hy: (from[1] - (centre[1] - c0[1]) * STARS.skyFollow) / H,
+        uz: r(), ur: r(), ua: r(), ured: 1, f: r(), phase: r() * Math.PI * 2, ord2: r(), gr: r(), ang: angle, burstGather: false });
+    }
+  });
+  SK.supplied = true; SK.rushPlan = null;
 }
 // a star of the hero's look as a 2D disc (or square) of the same total light as the hero's point sprite: the sprite's
 // coverage ramp is one device px wide, so its light is pi (r^2 + 1/12) for r >= .5 device px, less below.
 const lightR = rad => { const r = rad * SK.dpr, I = r < .5 ? 2 * r * Math.PI * Math.pow(r + .5, 3) / 3 : Math.PI * (r * r + 1 / 12); return Math.sqrt(I / Math.PI) / SK.dpr; };
 
 export function starsResize(w, h) {
-  SK.rushPlan = null;
+  SK.rushPlan = null; SK.supplied = false;
   SK.dpr = Math.min(STARS.dprCap, window.devicePixelRatio || 1);
   SK.cv.width = Math.round(w * SK.dpr); SK.cv.height = Math.round(h * SK.dpr);
   if (SK.src) SK.n = -1;
@@ -204,15 +234,15 @@ const fourStar = (ctx, x, y, s) => { ctx.beginPath(); ctx.moveTo(x, y - s); ctx.
 
 // ---- batching: stars are grouped by colour and opacity; under 1.5 px across they are squares ----
 const binOf = (map, col, al) => { const q = Math.min(64, Math.round(al * 64)); if (q <= 0) return null; const key = col + q; let b = map.get(key); if (!b) { b = { col, a: q / 64, sq: [], arc: [] }; map.set(key, b); } return b; };
-function put(x, y, rad, al, col) {
-  const b = binOf(SK.bins, col, al); if (!b) return;
+function put(x, y, rad, al, col, added = false) {
+  const b = binOf(added ? SK.supplyBins : SK.bins, col, al); if (!b) return;
   if (rad < .75) { const s = rad * 1.7725; b.sq.push(x - s / 2, y - s / 2, s); } else b.arc.push(x, y, rad);
 }
-function putTail(x, y, tail, al, col) { const b = binOf(SK.tails, col, al * .5); if (b) b.arc.push(x, y, x - tail[0], y - tail[1]); }
+function putTail(x, y, tail, al, col, added = false) { const b = binOf(added ? SK.supplyTails : SK.tails, col, al * .5); if (b) b.arc.push(x, y, x - tail[0], y - tail[1]); }
 function flush(ctx) {
   ctx.lineWidth = .7;
-  for (const b of SK.tails.values()) { const v = b.arc; if (!v.length) continue; ctx.globalAlpha = b.a; ctx.strokeStyle = b.col; ctx.beginPath(); for (let k = 0; k < v.length; k += 4) { ctx.moveTo(v[k], v[k + 1]); ctx.lineTo(v[k + 2], v[k + 3]); } ctx.stroke(); v.length = 0; }
-  for (const b of SK.bins.values()) {
+  for (const tails of [SK.tails, SK.supplyTails]) for (const b of tails.values()) { const v = b.arc; if (!v.length) continue; ctx.globalAlpha = b.a; ctx.strokeStyle = b.col; ctx.beginPath(); for (let k = 0; k < v.length; k += 4) { ctx.moveTo(v[k], v[k + 1]); ctx.lineTo(v[k + 2], v[k + 3]); } ctx.stroke(); v.length = 0; }
+  for (const bins of [SK.bins, SK.supplyBins]) for (const b of bins.values()) {
     if (!b.sq.length && !b.arc.length) continue;
     ctx.globalAlpha = b.a; ctx.fillStyle = b.col;
     const s = b.sq; for (let k = 0; k < s.length; k += 3) ctx.fillRect(s[k], s[k + 1], s[k + 2], s[k + 2]);
@@ -228,6 +258,7 @@ export function starsFrame(time, st, pointer, opt = {}) {
   SK.skyVisible = false;
   const src = SK.src && SK.src.count > 0 ? SK.src : null;
   if (src && src.count !== SK.n) heroList();
+  if (!SK.supplied && !opt.still) starsSupplySky();
   ctx.setTransform(SK.dpr, 0, 0, SK.dpr, 0, 0); ctx.clearRect(0, 0, W, H);
   if (opt.ink) { ctx.globalAlpha = opt.ink; ctx.fillStyle = C.ink; ctx.fillRect(0, 0, W, H); }
   const P = SK.pt;
@@ -259,6 +290,7 @@ export function starsFrame(time, st, pointer, opt = {}) {
   const home = h >= 1 && st.blastT > 0 && st.exploreK === 1 && G.stagger + G.time <= 1;
   for (const s of SK.list) {
     let x, y, rad, al, col, tail = null;
+    if (s.added && (opt.still || st.blastT >= STARS.supply.out)) continue;
     // At the explore endpoint every map star has returned to its own place.
     // Its discarded release/orbit/tail calculations cannot affect this draw.
     if (home && s.kind !== 'sky') {
@@ -273,14 +305,15 @@ export function starsFrame(time, st, pointer, opt = {}) {
     const source = SK.rushPlan?.get(s);
     if (s.kind === 'sky' || s.skyHome && h > 0 && st.blastT === 0 && !opt.still) {
       if (!src && s.si >= STARS.sky) continue;
-      if (!src) { s.z = lerp(...STARS.fieldZ, s.uz); s.r = lerp(...STARS.fieldR, s.ur); s.a = lerp(...STARS.fieldAlpha, s.ua); s.red = s.ured < STARS.red; }
-      if (src) {
+      if (!src || s.added) { s.z = lerp(...STARS.fieldZ, s.uz); s.r = s.added ? STARS.supply.radius : lerp(...STARS.fieldR, s.ur); s.a = s.added ? STARS.supply.alpha : lerp(...STARS.fieldAlpha, s.ua); s.red = s.ured < STARS.red; }
+      if (src && !s.added) {
         if (h <= 0 || !s.skyFrozen) { src.drawn(s.i, P); const lk = src.look(s.i); s.sx = P[0]; s.sy = P[1]; s.sr = lightR(lk.size / 2); s.sa = lk.alpha; s.sc = lk.colour; s.skyFrozen = h > 0; }
         x = s.sx; y = s.sy; rad = s.sr; al = s.sa; col = h < .5 ? s.sc : C.paper;
-      } else { [x, y] = heroPos(s, true); rad = s.r; al = s.a; col = s.red && h < .5 ? C.red : C.paper; }
+      } else { [x, y] = s.added ? [s.hx * W, s.hy * H] : heroPos(s, true); rad = s.r; al = s.a; col = s.red && h < .5 ? C.red : C.paper; }
+      if (s.fade) al *= smooth(...STARS.supply.fade, h);
       const follow = smooth(...STARS.skyMove, h);
-      x += follow * (look[0] * s.z * STARS.skyLook + (centre[0] - c0[0]) * STARS.skyFollow);
-      y += follow * (look[1] * s.z * STARS.skyLook + (centre[1] - c0[1]) * STARS.skyFollow);
+      x += follow * ((s.added ? 0 : look[0] * s.z * STARS.skyLook) + (centre[0] - c0[0]) * STARS.skyFollow);
+      y += follow * ((s.added ? 0 : look[1] * s.z * STARS.skyLook) + (centre[1] - c0[1]) * STARS.skyFollow);
       if (source && rushing && !opt.still) [x, y] = source.from;
       if (h > 0) {
         const outside = Math.hypot(Math.max(rushBox[0] - x, 0, x - rushBox[2]), Math.max(rushBox[1] - y, 0, y - rushBox[3]));
@@ -290,17 +323,18 @@ export function starsFrame(time, st, pointer, opt = {}) {
       if (source?.gather && rushing && !opt.still) {
         [x, y] = rushAt(source); tail = rushTail(source);
         al *= 1 - smooth(G.coreFade, 1, gatherT(s));
-      } else if (s.burstGather && st.blastT > 0 && !opt.still) {
+      } else if ((s.burstGather || s.added) && st.blastT > 0 && !opt.still) {
         const home = [x, y], q = 1 - easeIO(st.blastT);
         const R = ringOf(s), at = novaReleasePoint(home, Xs, s.ang, R, q), prior = novaReleasePoint(home, Xs, s.ang, R, Math.max(0, q - G.tail)), k = tailOf(q);
         x = at[0]; y = at[1]; tail = [(at[0] - prior[0]) * k, (at[1] - prior[1]) * k];
         tail = tail.map(v => -v);
+        if (s.added) al *= 1 - smooth(0, STARS.supply.out, st.blastT);
       } else if (st.blastT > 0 && !opt.still) {
         const dx = x - Xs[0], dy = y - Xs[1], d = Math.hypot(dx, dy), bump = Math.exp(-(((d - novaRingRadius(st)) / STARS.skyShock) ** 2)) * (1 - smooth(...NOVA.base.ringFade, st.blastT));
         if (d) { x += dx / d * STARS.skyPush * bump; y += dy / d * STARS.skyPush * bump; }
         al *= 1 + bump;
       }
-      if (x >= -STARS.skyMargin && y >= -STARS.skyMargin && x <= W + STARS.skyMargin && y <= H + STARS.skyMargin) { if (al * K > 0) SK.skyVisible = true; if (tail) putTail(x, y, tail, al * K, col); put(x, y, rad, al * K, col); }
+      if (x >= -STARS.skyMargin && y >= -STARS.skyMargin && x <= W + STARS.skyMargin && y <= H + STARS.skyMargin) { if (al * K > 0) SK.skyVisible = true; if (tail) putTail(x, y, tail, al * K, col, s.added); put(x, y, rad, al * K, col, s.added); }
       continue;
     }
     if (src) {
