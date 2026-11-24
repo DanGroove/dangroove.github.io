@@ -37,6 +37,23 @@ The same parts, the same wipes and cuts, the same order, but slower and one idea
 - The star field takes the pointer when its rings end (2.80 s, was 0.90 s); the name reacts once the entrance has ended (3.80 s), as now.
 - Every other rule of the round 6 entrance stays: hard edges, `staggerSpans`, the floor's and stars' wholly-on-or-off rings, the screen's clip plane, the review hold.
 
+## L3 A more impressive loader: the mark, from first sketch to final
+
+Dan, 24 Nov, 4:47 AM ET, on v32 (8c57810): "can we have a more impressive loading screen?". L3 replaces L1's look. L1's rules stay: the loader shows from the first paint without waiting for any script, font or picture; real boot progress (fonts, atlas, first frame, the shares you chose) drives it; it never jumps or goes back; `?t=` skips it; it lasts no longer than loading needs beyond its own minimum. Only the picture and its steps change.
+
+The idea is Dan's line, "From first sketch to final cut", played on his own DG mark in the hero's own tool language (guides, a pen path with anchor points, a fill), hard-edged throughout.
+
+1. **Size and place.** The mark centred in the first screen, 128 px tall on desktop and 88 px on phones (width from the mark's 1080 x 797.3). Nothing else shows behind it: ink only.
+2. **Guides (0 to 0.4 s).** Construction hairlines draw on, each as a line drawing itself from one end (a dash offset, `EASE.wipe`, 0.2 s each, 0.05 s apart): the mark's bounding box, its vertical and horizontal centre lines extended 24 px past the box, each of the three parts' bounding boxes, and one circle fitted to the outer curve of the G's bowl and one to the D's bowl (fitted to the path's own curve points). 1 px, #3A3637, square ends.
+3. **The pen (from 0.3 s, driven by progress).** The outline of `MARK_D`'s three parts (the G's two parts, then the D) is traced in a 1.5 px paper stroke, as if drawn with a pen tool. The traced length is the displayed progress: it moves at no more than one whole outline per 1.0 s, so the trace takes at least 1.0 s, and it waits where progress waits. As the trace passes each on-curve point of the path, a 5 px paper square (an anchor point, hollow, 1 px) cuts in there and stays. The anchor just placed shows its two bezier handles (1 px paper lines to small 3 px filled dots at its control points); the previous anchor's handles cut away when the next anchor appears.
+4. **The fill (when the trace is complete and the page is ready).** Hold 0.1 s. Then the three parts fill with a hard wipe up from their bottom edge over 0.35 s: the G's parts in paper and the D in red, exactly as the header mark draws them on ink. The instant the fill completes, the guides, anchors, handles and the stroke cut away together.
+5. **The arrival.** Hold 0.25 s. Then the filled mark moves and scales from the centre to the header mark's place and size over 0.6 s (`EASE.wipe`, a hard-edged move, no fade), landing exactly on the header's mark. In the frame it lands, the header mark shows and the loader is gone, so there is never a second mark. The entrance then starts with the header mark already in: skip its mark wipe and keep the rest of L2's timetable as it is (nav at 0.35 and 0.45, the name at 0.40, and so on).
+6. **Reduced motion.** The filled mark sits centred, with no guides, trace or move. When the page is ready, cut to the finished page.
+7. **When loading is instant**, the whole loader takes about 2.2 s (guides and trace 1.3 s, hold, fill 0.35 s, hold, move 0.6 s). When loading is slower, only the trace waits.
+8. **Keep it light.** Inline SVG and a small inline script that needs nothing else from the page; no new dependencies, no canvas library. It must keep drawing (or hold its last drawn frame without a gap) while the atlas is being built.
+
+L3's checks: update L1's loader checks to L3's steps as a pure timing function of time and progress (the guides' spans, the trace's speed limit and monotonic length, anchor and handle timing, the fill's 0.35 s, the 0.25 s hold, the 0.6 s move, the entrance starting after the landing with the mark wipe skipped). Check that the move's end rectangle equals the header mark's rectangle. Negative controls: a trace faster than one outline per 1.0 s fails; an entrance that runs the mark wipe after the arrival fails.
+
 ## Checks
 
 1. Update `tools/entrance-checks.mjs` (and any other check that reads the old timetable) to the new numbers, and list every changed expectation with its old and new value.
