@@ -268,6 +268,18 @@ Build on L13b and L14. Dan, 24 Nov, 2:21 PM ET: "sometimes the stars go crazy if
 - Negative control: 9ef30e9's rule (the nearest free point, no ring candidates) must fail the fast run.
 - L13b checks 1 to 3 and every L14 check stay as they are; rerun only the checks that read `stars.mjs`.
 
+## L15 Stars stay off the nav and footer labels
+
+Build on L13c-1. Found in review (Dan has not reported it): at 412 x 730, field star 198 rests at (398.1, 35.6), 2 px after the last letter of the nav's Contact and on its baseline, so the label reads "CONTACT." It has done so since at least v41, and 412 x 730 is a size Dan reviews phones at. Other stars rest inside the labels' letters.
+
+**Build:**
+1. When the stars are made, a star whose resting place could come within 2 px of the text of one of the hero's four small labels (Journey and Contact in the nav; Scroll for the journey and Play at the foot) gets a new resting place. "Could come" covers its whole pointer-parallax range at scroll 0 (0.5 x `STARS.parallax` x `depthWeight(d)` px each way, up to 14 px) plus half its size. A label's rectangle is its text's line box as laid out with the hero's own fonts (`Range.getClientRects` of the text node).
+2. Its new place is the first of its further seeded draws that is clear of all four labels by the same rule: x from `hash(i, 40 + 2k)` and y from `hash(i, 41 + 2k)` for k = 0, 1, 2 and so on, scaled to W and H like its first draw (channels 0 to 8 and 19 to 21 are taken). Everything else about the star stays: its index, depth, size, mix, colour and every behaviour. The star count does not change.
+3. The loader's stars land where the field's stars rest (`makeStars` serves both), so a moved star lands at its new place. If the loader makes its stars before the labels are laid out with the hero's fonts, give it the labels' rectangles before any star lands, so no star ever lands on a label, and say how.
+4. Moving stars (stirred, captured, exploding, gathering in the loader) may cross the labels as now. Only resting places move.
+
+**L15's check:** in Chromium at 1440 x 900, 390 x 844 (touch) and 412 x 730 (touch), after the entrance at scroll 0, list the stars whose resting place is within reach of a label as in item 1. None at any size (at 70e9f7f: 8 of 1,200, 14 of 305 and 11 of 278 stars; 412 x 730 includes star 198). The star count and every star's depth, size, mix and colour are unchanged; every moved star's new place is inside the hero; no other star's resting place changes. Report each size's moved stars with their old and new places. Negative control: the stars as made at 70e9f7f must fail. Rerun the checks that read the stars' resting places or the loader's landing, and list any expectation that changes with its old and new value.
+
 ## L3 (withdrawn, not to be built) A more impressive loader: the mark, from first sketch to final
 
 Dan, 24 Nov, 4:47 AM ET, on v32 (8c57810): "can we have a more impressive loading screen?". L3 replaces L1's look. L1's rules stay: the loader shows from the first paint without waiting for any script, font or picture; real boot progress (fonts, atlas, first frame, the shares you chose) drives it; it never jumps or goes back; `?t=` skips it; it lasts no longer than loading needs beyond its own minimum. Only the picture and its steps change.
