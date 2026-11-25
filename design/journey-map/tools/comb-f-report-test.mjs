@@ -1,6 +1,6 @@
 import {readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {strict as assert} from 'node:assert';
-const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g',file='COMB-F-BUILD.md';
+const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2',file='COMB-F-BUILD.md';
 const read=f=>JSON.parse(readFileSync(root+'/'+f,'utf8'));
 const link=(f,t=f)=>'['+t+']('+root+'/'+f+')';
 const latest=new Map();

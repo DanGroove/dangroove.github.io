@@ -59,7 +59,7 @@ class StepNode {
 }
 const stepWindow = new StepNode(), stepStage = new StepNode(), stepRoot = new StepNode(), stepBody = new StepNode();
 globalThis.window = Object.assign(stepWindow, { location: { search: '?mode=scroll' }, scrollY: 0, scrollTo() {}, dispatchEvent() {} });
-globalThis.document = { documentElement: stepRoot, body: stepBody, activeElement: null, createElement: tag => new StepNode(tag), getElementById: id => stepStage.children.find(n => n.id === id) };
+globalThis.document = { documentElement: stepRoot, body: stepBody, activeElement: null, createElement: tag => new StepNode(tag), getElementById: id => stepStage.children.find(n => n.id === id), querySelector: s => stepStage.querySelector(s) };
 globalThis.history = { scrollRestoration: 'auto' };
 let stepJoined = false;
 tripResize(1440, 900, 120); stepsBuild({ stage: stepStage, rm: false, resize() {}, joinedTop: () => stepJoined });

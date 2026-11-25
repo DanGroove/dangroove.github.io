@@ -128,18 +128,28 @@ export function findWell(svg) {
 
 export function findShip(svg) {
   const el = svg.querySelector('#f-longship'), rock = el.querySelector('.ls-rock'), sail = el.querySelector('.ls-sail'), oars = el.querySelector('.ls-oars'), pennant = el.querySelector('.ls-pennant'), lamp = el.querySelector('.ls-lamp'), shields = [...el.querySelectorAll('.ls-shield')];
-  const o = { id: 'longship', el, stage: 'rest', kept: false, pulls: [], pennant: false, lamp: false, shieldMask: [], pullTs: -Infinity, pennantTs: -Infinity, hearTs: -Infinity };
-  press(el, () => {
-    const S = FIND_PLAY.ship; if (!FD.rm && FD.now - o.pullTs < S.pull[2] + S.pull[3]) return;
-    opened(o); found(o.id); o.pullTs = FD.now; o.stage = 'pull'; o.pulls = o.pulls.filter(t => FD.now - t <= S.window); o.pulls.push(FD.now);
-    if (!o.pennant && o.pulls.length >= S.pulls) { o.pennant = o.kept = true; o.pennantTs = FD.now; }
+  const o = { id: 'longship', el, stage: 'rest', kept: false, pulls: [], queued: [], pennant: false, lamp: false, shieldMask: [], pullTs: -Infinity, pennantTs: -Infinity, hearTs: -Infinity };
+  const startPull = (fly, ts = FD.now) => {
+    const S = FIND_PLAY.ship; o.pullTs = ts; o.stage = 'pull';
+    if (!o.pennant && fly) { o.pennant = o.kept = true; o.pennantTs = ts; }
     const p = findPlace(o.id); findBits('ring', p[0] + S.water[0] * S.scale, p[1] + S.water[1] * S.scale, 1, FIND_PLAY.bits.wake); findBits('drop', p[0], p[1] + S.water[1] * S.scale, S.drops, FIND_PLAY.bits.drops);
+  };
+  press(el, () => {
+    const S = FIND_PLAY.ship;
+    opened(o); found(o.id); o.pulls = o.pulls.filter(t => FD.now - t <= S.window); o.pulls.push(FD.now);
+    const fly = o.pulls.length >= S.pulls;
+    if (!FD.rm && o.stage === 'pull') { if (o.queued.length < S.pulls) o.queued.push(fly); }
+    else startPull(fly);
     showPop(o, () => { const here = findPlace(o.id); return [here[0] + FIND_PLAY.ship.anchor[0], here[1] + FIND_PLAY.ship.anchor[1]]; }, `<p class="pop-k">${fEsc(FIND_COPY.shipLog)}</p>${findSlot(FIND_COPY.longship)}`);
   });
   o.hear = () => { if (!FD.rm) { o.hearTs = FD.now; o.hearing = true; } };
   o.tick = t => {
-    const S = FIND_PLAY.ship, age = t - o.pullTs, total = S.pull[2] + S.pull[3], hearing = !FD.rm && t - o.hearTs < S.hear[3]; o.hearing = hearing;
-    if (o.stage === 'pull' && (FD.rm || age >= total)) o.stage = 'rest';
+    const S = FIND_PLAY.ship, total = S.pull[2] + S.pull[3], hearing = !FD.rm && t - o.hearTs < S.hear[3]; o.hearing = hearing;
+    while (o.stage === 'pull' && (FD.rm || t - o.pullTs >= total)) {
+      if (o.queued.length) startPull(o.queued.shift(), FD.rm ? t : o.pullTs + total);
+      else o.stage = 'rest';
+    }
+    const age = t - o.pullTs;
     const pull = o.stage === 'pull' && !FD.rm ? age < S.pull[2] ? ease(age / S.pull[2]) : 1 - ease((age - S.pull[2]) / S.pull[3]) : 0;
     attr(oars, 'opacity', o.stage === 'pull' && !FD.rm ? 1 : 0); attr(oars, 'transform', `rotate(${lerp(S.pull[0], S.pull[1], pull)} ${S.rail[0]} ${S.rail[1]})`);
     attr(rock, 'transform', `translate(${S.surge * pull} ${FD.rm ? 0 : S.rock[2] * Math.sin(S.rock[3] * t)}) rotate(${FD.rm ? 0 : S.rock[0] * Math.sin(S.rock[1] * t) * (hearing ? S.hear[2] : 1)})`);

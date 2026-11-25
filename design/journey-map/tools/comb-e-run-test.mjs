@@ -1,6 +1,6 @@
 import {spawn} from 'node:child_process';
 import {appendFileSync,mkdirSync} from 'node:fs';
-const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g';
+const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2';
 mkdirSync(root,{recursive:true});
 export async function combERun(args){
  if(args.some(a=>/^(?:tools\/)?(?:frame-cost|comb-[bc]-cost-test)\.mjs$/.test(a)))throw Error('Prohibited launcher');

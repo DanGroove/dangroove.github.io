@@ -9,7 +9,7 @@ import { footerBuild, footerBuildX, footerNovaResize, footerFrame, footerMotion 
 
 class NovaNode {
   constructor() {
-    this.attrs = {}; this.writes = 0; this.listeners = {}; this.classList = { contains: () => false };
+    this.attrs = {}; this.writes = 0; this.listeners = {}; this.classList = { contains: () => false, toggle() {} };
     this.style = new Proxy({}, { set: (o, k, v) => { this.writes++; o[k] = String(v); return true; } });
   }
   setAttribute(k, v) { this.writes++; this.attrs[k] = String(v); }

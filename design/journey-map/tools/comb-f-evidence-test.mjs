@@ -2,7 +2,7 @@ import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
 import {combDClock,combDAdvance} from './comb-d-clock-test.mjs';
 import {readFileSync,writeFileSync} from 'node:fs';
 import {FINDS} from '../data.mjs';
-const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g',tag=process.argv[2]||'before',mode=process.argv[3]||'capture',b=await combBBrowser();
+const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2',tag=process.argv[2]||'before',mode=process.argv[3]||'capture',b=await combBBrowser();
 const quant=a=>{a.sort((a,b)=>a-b);return {n:a.length,p50:a[Math.floor(a.length*.5)]||0,p95:a[Math.floor(a.length*.95)]||0,max:a.at(-1)||0};};
 let trace=[],done=false;b.on('Tracing.dataCollected',p=>trace.push(...p.value));b.on('Tracing.tracingComplete',()=>done=true);
 try{

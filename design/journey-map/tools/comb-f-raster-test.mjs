@@ -3,7 +3,7 @@
 import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
 import {combDClock,combDAdvance} from './comb-d-clock-test.mjs';
 import {readFileSync,writeFileSync} from 'node:fs';
-const b=await combBBrowser(),root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g',rows=[],fail=[];
+const b=await combBBrowser(),root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2',rows=[],fail=[];
 const html=readFileSync('dist/journey-map.html','utf8').replace('</script>','\nwindow.__fRaster={SK,DP,FT,FD,EX,VIEW,starsFrame,depthDeep};\n</script>');
 const tick=async ms=>{for(let t=0;t<ms;t+=100)await combDAdvance(b,Math.min(100,ms-t));};
 try{

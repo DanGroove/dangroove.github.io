@@ -45,7 +45,7 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // Part 8 cloud fixes: explore keeps the map promoted while its camera moves, and releases it at rest after a zoom (F10 lag).
 assert.equal(sourceDigest('trip.mjs'), 3466094747, 'trip.mjs changed');
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 3084219443, 'data.mjs changed');
+assert.equal(sourceDigest('data.mjs'), 2550069667, 'data.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 4010889213, 'depth.mjs changed');
 console.log('ok: COMB-D camera/labels/tripS digests recorded; depth source remains pinned');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];

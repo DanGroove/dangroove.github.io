@@ -81,7 +81,9 @@ window.addEventListener('pointerdown', e => {
   const candidates = [...Object.values(FD.list), ...FD.list.hoards.items].filter(o => o.id !== 'hoards' && o.el.tabIndex === 0).map(o => ({ el: o.el, p: toScreen(FD.st, [o.x, o.y]) }));
   if ($('nova-hit').getAttribute('aria-disabled') !== 'true') candidates.push({el:$('nova-hit'),p:toScreen(FD.st,MAP.x)});
   cardsList().filter(c => !c.btn.inert && c.btn.tabIndex === 0).forEach(c => { const p = toScreen(FD.st, MAP.waypoints[c.stop.w]), stone = Math.max(14, Math.min(36, 10 * FD.st.cam.s)); candidates.push({ el: c.btn, p: [p[0], p[1] - stone / 2 - 3] }); });
-  const near = candidates.map(c => ({ ...c, d: Math.hypot(e.clientX-c.p[0],e.clientY-c.p[1]) })).filter(c => c.d <= COMB.target / 2).sort((a,b) => a.d-b.d)[0];
+  const ranked = candidates.map(c => ({ ...c, d: Math.hypot(e.clientX-c.p[0],e.clientY-c.p[1]) })).filter(c => c.d <= COMB.target / 2).sort((a,b) => a.d-b.d);
+  const chest = ranked.find(c => c.el.id === 'f-hoard-lennard'), xHit = ranked.find(c => c.el.id === 'nova-hit');
+  const near = VIEW.h <= 440 && VIEW.w > 640 && chest && xHit && chest.d < xHit.d ? chest : ranked[0];
   if (!near || near.el.contains(e.target)) return;
   mainTouchPick = { el: near.el, x: e.clientX, y: e.clientY };
   e.preventDefault(); e.stopImmediatePropagation();
@@ -153,7 +155,7 @@ function frame(ts) {
   const explored = exploreApply(st, dt), folded = cardsOverride(st, dt, JOURNEY.moving);
   if (f && f.k > 0) mainCurrent = -1; else if (!JOURNEY.moving && st.settleT >= 1 && !st.exploring) mainCurrent = STOPS.length; else if (!JOURNEY.moving && st.kind === 'hold') mainCurrent = st.i; else if (['hero','handoff','overview'].includes(st.kind)) mainCurrent = JOIN.heroStart && st.P < mainHeroEnd ? -2 : -1;
   st.visiting = JOURNEY.visiting;
-  const novaAway = !(st.exploreK > 0) && ((st.kind === 'rush' && JOURNEY.moving) || st.rushT > 0 || st.blastT > 0);
+  const novaAway = !(st.exploreK > 0) && (st.rushT > 0 || st.blastT > 0);
   if (ROOT.classList.contains('jm-nova-away') !== novaAway) ROOT.classList.toggle('jm-nova-away', novaAway);
   const novaFlashed = st.blastT > 0;
   if (ROOT.classList.contains('jm-nova-flashed') !== novaFlashed) ROOT.classList.toggle('jm-nova-flashed', novaFlashed);

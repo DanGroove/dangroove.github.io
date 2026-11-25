@@ -48,6 +48,7 @@ export function cardsBuild(container, onGo, rm = false) {
         else cardsClose(i);
         return;
       }
+      window.dispatchEvent(new Event('jm-destination'));
       CD.list[i].keyboardOpen = e.detail === 0; CD.onGo(i);
     });
     a.querySelector('.face').inert = !rm;

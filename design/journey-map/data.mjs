@@ -301,6 +301,7 @@ export const STEPS = {
   ramp: 0.35, back: 0.6, hurry: 0.3, minMove: 0.3, cut: [0.18, 0.32],
   nav: { h: 44, gap: 14, bar: 52 },
   frameMax: 0.05, reveal: 0.3,
+  shine: { time: 700, reduced: 600, cooldown: 2500, glow: 14, alpha: 0.65 },
 };
 
 export const EXPLORE = { in: 1.6, out: 0.9, most: 3, margin: 24, marginPhone: 12, wheel: 0.0016, wheelMax: 120, pinchWheel: 0.01,

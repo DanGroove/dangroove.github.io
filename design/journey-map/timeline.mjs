@@ -15,6 +15,7 @@ const fmt = (s, o) => s.replace(/\{(\w+)\}/g, (m, k) => o[k]);
 
 export function tlBuild(el, hooks, rm) {
   TL.el = el; TL.hooks = hooks; TL.rm = rm;
+  const jump = i => { window.dispatchEvent(new Event('jm-destination')); TL.hooks.jump(i); };
   let ticks = ''; for (let y = Y0; y <= Math.floor(DATE_NOW); y++) ticks += `<i class="tl-tick" style="left:${(xOf(y) * 100).toFixed(3)}%"><b>'${String(y % 100).padStart(2, '0')}</b></i>`;
   let blocks = { school: '', work: '' };
   STOPS.forEach((s, i) => s.spans.forEach(sp => { const a = xOf(yearOf(sp[0])), b = xOf(yearOf(sp[1], 1)); blocks[s.track] += `<span class="tl-blk" data-i="${i}" style="left:${(a * 100).toFixed(3)}%;width:${((b - a) * 100).toFixed(3)}%;--mk:${s.palette === 'interkom' ? PALETTES[s.palette].shield[1] : PALETTES[s.palette].shield[0]};--mk2:${s.palette === 'interkom' ? PALETTES[s.palette].shield[0] : PALETTES[s.palette].shield[1]}"><em></em></span>`; }));
@@ -36,10 +37,10 @@ export function tlBuild(el, hooks, rm) {
   el.addEventListener('blur', () => TL.tip.classList.remove('on'));
   el.addEventListener('keydown', e => {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) return; e.preventDefault();
-    if (e.key === 'Home' || e.key === 'End') { TL.pending = e.key === 'Home' ? (TL.rm ? -1 : 0) : STOPS.length - 1; TL.hooks.jump(TL.pending); return; }
+    if (e.key === 'Home' || e.key === 'End') { TL.pending = e.key === 'Home' ? (TL.rm ? -1 : 0) : STOPS.length - 1; jump(TL.pending); return; }
     const P = TL.lastP || 0, cur = currentStop(P), on = TL.hooks.moving?.() && TL.pending != null;
     let i = on ? TL.pending + (['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key) ? 1 : -1) : ['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key) ? cur + 1 : (P > progressForStop(Math.max(cur, 0)) + 1 ? cur : cur - 1);
-    i = Math.max(TL.rm ? -1 : 0, Math.min(STOPS.length - 1, i)); TL.pending = i; TL.hooks.jump(i);
+    i = Math.max(TL.rm ? -1 : 0, Math.min(STOPS.length - 1, i)); TL.pending = i; jump(i);
   });
   el.addEventListener('pointerdown', e => {
     e.preventDefault();
@@ -56,7 +57,7 @@ export function tlBuild(el, hooks, rm) {
     else date = Y0 + (e.clientX - r.left) / TL.trackW * (DATE_NOW - Y0);
     TL.hooks.scrub(progressForDate(Math.max(Y0, Math.min(DATE_NOW, date))));
   });
-  const end = () => { const d = TL.drag; TL.drag = null; if (d && !d.moved && d.blk) TL.hooks.jump(+d.blk.dataset.i); };
+  const end = () => { const d = TL.drag; TL.drag = null; if (d && !d.moved && d.blk) jump(+d.blk.dataset.i); };
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', () => { TL.drag = null; });
 }
 function tipFor(i, blk) {

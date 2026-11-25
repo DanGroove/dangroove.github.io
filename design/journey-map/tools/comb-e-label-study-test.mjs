@@ -10,5 +10,5 @@ try{
   const row=await b.evaluate(`({w:innerWidth,h:innerHeight,ready:window.__eDebug.TRIP_EL.exploreReady,rows:window.__eDebug.TRIP_EL.rows.map(r=>({id:r.row.stop,sub:!!r.row.stopSub,at:r.exploreLocal,from:Number.isFinite(r.exploreFrom)?r.exploreFrom:null,clear:r.el.dataset.exploreClear}))})`);out.push(row);console.log(JSON.stringify(row));
  }
 }finally{await b.close();}
-writeFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g/label-study.json',JSON.stringify(out,null,2));
+writeFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2/label-study.json',JSON.stringify(out,null,2));
 if(out.some(r=>!r.ready))process.exitCode=1;

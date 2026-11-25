@@ -68,5 +68,5 @@ try {
   check(await b.evaluate("getComputedStyle(document.querySelector('#nova')).display==='none'&&getComputedStyle(document.querySelector('#nova-hit')).display==='none'&&getComputedStyle(document.querySelector('#fxg')).visibility==='visible'"),'reduced motion from end clears the moving nova and restores static X');
   check(b.errors.length===0,'no browser exceptions',JSON.stringify(b.errors));
 } catch(e) { check(false,'unexpected browser test error',e.stack); }
-finally { await b.close(); appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g/inherited-tests.log','\n## Behaviour browser tests\n\n```text\n'+lines.join('\n').replace(/[^\x00-\x7F]/g,'?')+'\n```\n'); }
+finally { await b.close(); appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2/inherited-tests.log','\n## Behaviour browser tests\n\n```text\n'+lines.join('\n').replace(/[^\x00-\x7F]/g,'?')+'\n```\n'); }
 process.exitCode=failures?1:0;

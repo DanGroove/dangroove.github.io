@@ -284,6 +284,17 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .go-top { background: none; border: 0; padding: 8px 0; color: var(--note); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
 .go.go-end { left: 28px; top: 20px; bottom: auto; transform: none; }
 .go-reveal { animation: goReveal var(--go-reveal) both; }
+.go-next, .go-back { position: relative; overflow: visible; }
+.go-fill { border-radius: inherit; }
+.go-light { position: absolute; inset: 0; z-index: 2; overflow: hidden; border-radius: inherit; pointer-events: none; opacity: 0; box-shadow: 0 0 var(--go-shine-glow) var(--paper), inset 0 0 var(--go-shine-glow) var(--paper); }
+.go-light::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, var(--paper), transparent); mix-blend-mode: screen; opacity: var(--go-shine-alpha); transform: translateX(-100%); }
+.go-shining .go-light { animation: goGlow var(--go-shine-time) ease-in-out both; }
+.go-shining .go-light::after { animation: goSweep var(--go-shine-time) ease-in-out both; }
+.go-back.go-shining .go-light::after { animation-direction: reverse; }
+@keyframes goGlow { 0%, 100% { opacity: 0; } 40%, 60% { opacity: var(--go-shine-alpha); } }
+@keyframes goSweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@media (max-width: 640px) { .go:not(.go-end) { overflow: hidden; } }
+@media (prefers-reduced-motion: reduce) { .go-shining .go-light { animation-duration: var(--go-shine-reduced) !important; } .go-shining .go-light::after { animation: none; opacity: 0; } }
 @keyframes goReveal { from { opacity: 0; } to { opacity: 1; } }
 .jm-review { position: fixed; left: 50%; top: 5px; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: var(--ink); color: var(--dim); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
 .jm-review button { background: none; border: 0; padding: 3px 2px; color: var(--dim); font: inherit; letter-spacing: inherit; text-transform: inherit; cursor: pointer; }
@@ -569,6 +580,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .rm .pop, .rm .sheet, .rm .sheet-dismiss { position: fixed; }
 .rm .tl { position: fixed; left: 0; right: 0; padding-bottom: env(safe-area-inset-bottom); } .rm .ft-in { padding-bottom: 80px; } @media (max-width: 640px) { .rm .tl { height: calc(44px + env(safe-area-inset-bottom)); } }
 .fx-hit { min-width: 44px; min-height: 44px; } .sheet { touch-action: none; } .sheet-dismiss { touch-action: manipulation; } .jm-review button { position: relative; min-width: 44px; } .jm-review button::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; min-width: 44px; transform: translateY(-50%); }
+.fx-hit.fx-mark-hit { min-width: 0; min-height: 0; }
 .jm-pointer-focus .hero .jm-start:focus { outline: none; }
 .tl-tip { max-width: calc(100vw - 16px); white-space: normal; }
 .map, .marker-layer { visibility: hidden; }
@@ -1554,6 +1566,7 @@ const STEPS = {
   ramp: 0.35, back: 0.6, hurry: 0.3, minMove: 0.3, cut: [0.18, 0.32],
   nav: { h: 44, gap: 14, bar: 52 },
   frameMax: 0.05, reveal: 0.3,
+  shine: { time: 700, reduced: 600, cooldown: 2500, glow: 14, alpha: 0.65 },
 };
 
 const EXPLORE = { in: 1.6, out: 0.9, most: 3, margin: 24, marginPhone: 12, wheel: 0.0016, wheelMax: 120, pinchWheel: 0.01,
@@ -4125,6 +4138,7 @@ const fmt = (s, o) => s.replace(/\{(\w+)\}/g, (m, k) => o[k]);
 
 function tlBuild(el, hooks, rm) {
   TL.el = el; TL.hooks = hooks; TL.rm = rm;
+  const jump = i => { window.dispatchEvent(new Event('jm-destination')); TL.hooks.jump(i); };
   let ticks = ''; for (let y = Y0; y <= Math.floor(DATE_NOW); y++) ticks += `<i class="tl-tick" style="left:${(xOf(y) * 100).toFixed(3)}%"><b>'${String(y % 100).padStart(2, '0')}</b></i>`;
   let blocks = { school: '', work: '' };
   STOPS.forEach((s, i) => s.spans.forEach(sp => { const a = xOf(yearOf(sp[0])), b = xOf(yearOf(sp[1], 1)); blocks[s.track] += `<span class="tl-blk" data-i="${i}" style="left:${(a * 100).toFixed(3)}%;width:${((b - a) * 100).toFixed(3)}%;--mk:${s.palette === 'interkom' ? PALETTES[s.palette].shield[1] : PALETTES[s.palette].shield[0]};--mk2:${s.palette === 'interkom' ? PALETTES[s.palette].shield[0] : PALETTES[s.palette].shield[1]}"><em></em></span>`; }));
@@ -4146,10 +4160,10 @@ function tlBuild(el, hooks, rm) {
   el.addEventListener('blur', () => TL.tip.classList.remove('on'));
   el.addEventListener('keydown', e => {
     if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) return; e.preventDefault();
-    if (e.key === 'Home' || e.key === 'End') { TL.pending = e.key === 'Home' ? (TL.rm ? -1 : 0) : STOPS.length - 1; TL.hooks.jump(TL.pending); return; }
+    if (e.key === 'Home' || e.key === 'End') { TL.pending = e.key === 'Home' ? (TL.rm ? -1 : 0) : STOPS.length - 1; jump(TL.pending); return; }
     const P = TL.lastP || 0, cur = currentStop(P), on = TL.hooks.moving?.() && TL.pending != null;
     let i = on ? TL.pending + (['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key) ? 1 : -1) : ['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key) ? cur + 1 : (P > progressForStop(Math.max(cur, 0)) + 1 ? cur : cur - 1);
-    i = Math.max(TL.rm ? -1 : 0, Math.min(STOPS.length - 1, i)); TL.pending = i; TL.hooks.jump(i);
+    i = Math.max(TL.rm ? -1 : 0, Math.min(STOPS.length - 1, i)); TL.pending = i; jump(i);
   });
   el.addEventListener('pointerdown', e => {
     e.preventDefault();
@@ -4166,7 +4180,7 @@ function tlBuild(el, hooks, rm) {
     else date = Y0 + (e.clientX - r.left) / TL.trackW * (DATE_NOW - Y0);
     TL.hooks.scrub(progressForDate(Math.max(Y0, Math.min(DATE_NOW, date))));
   });
-  const end = () => { const d = TL.drag; TL.drag = null; if (d && !d.moved && d.blk) TL.hooks.jump(+d.blk.dataset.i); };
+  const end = () => { const d = TL.drag; TL.drag = null; if (d && !d.moved && d.blk) jump(+d.blk.dataset.i); };
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', () => { TL.drag = null; });
 }
 function tipFor(i, blk) {
@@ -4822,6 +4836,7 @@ const stepsName = b => b ? COPY.steps.names[b.id] || STOPS.find(s => s.id === b.
 const stepsBackName = b => b ? STOPS.find(s => s.id === b.id)?.short || COPY.steps.names[b.id] : COPY.steps.names.top;
 const stepsFormat = (s, values) => s.replace(/\{(\w+)\}/g, (m, k) => values[k]);
 const stepsReadScroll = () => { SC.P = window.scrollY / VIEW.unit; return SC.P; };
+const stepsDestination = () => window.dispatchEvent(new Event('jm-destination'));
 
 const JOURNEY = {
   get direction() { return SC.direction; }, get mode() { return SC.mode; }, get P() { return SC.P; }, get moving() { return !!(SC.move || SC.cut); },
@@ -4866,7 +4881,7 @@ function stepsSetDepth(on) {
 function stepsButtons() {
   if (!SC.go) return;
   const top = SC.P <= 1e-6, end = !JOURNEY.moving && Math.abs(SC.P - stepsEnd) < 1e-6;
-  const beatState = tripState(SC.P), blasting = beatState.kind === 'rush' ? JOURNEY.moving || beatState.t > 0 : ['blast', 'settle'].includes(beatState.kind);
+  const beatState = tripState(SC.P), blasting = beatState.kind === 'rush' ? !!SC.move || beatState.t > 0 : ['blast', 'settle'].includes(beatState.kind);
   if (blasting && !SC.go.hidden) { SC.returnFocus ||= SC.go.contains(document.activeElement); SC.shown = false; SC.go.classList.add('go-leaving'); if (SC.returnFocus) { const nova = document.getElementById('nova-hit'); nova?.focus({ preventScroll: true }); } if (SC.say.textContent !== COMB.novaSay) SC.say.textContent = COMB.novaSay; }
   // Joined page: the bar waits for the map, so one Start shows at a time; focus follows (the bar at the map, the hero's Start above).
   const hero = SC.joinedTop() && SC.P < stepsMap - 1e-6, wasHidden = SC.go.hidden;
@@ -4923,6 +4938,7 @@ function stepsArrive() {
   }
   SC.announced = beat ? beat.id : null;
   stepsButtons();
+  if (beat?.id === 'map') queueMicrotask(stepsFirstShine);
 }
 function stepsCancel() {
   SC.move = null; SC.cut = null; SC.fill = 0; SC.pendingTarget = null;
@@ -5019,6 +5035,10 @@ function stepsJump(target, after) {
   if (target !== stepsEnd) exploreDepart();
   stepsCancel(); SC.cut = { target: stepsClamp(target), elapsed: 0, placed: false, after };
   SC.cover.hidden = false; SC.cover.style.opacity = 0; SC.root.dataset.beat = ''; stepsButtons();
+  if (target === BEATS.find(b => b.id === 'x').P) {
+    SC.say.textContent = COPY.steps.say.x; SC.go.querySelector('.go-t').textContent = COPY.steps.dig;
+    SC.go.querySelector('.go-next').focus({ preventScroll: true });
+  }
 }
 function stepsNavigate(target, opts = {}) {
   if (SC.cut) return;
@@ -5032,6 +5052,7 @@ function stepsNavigate(target, opts = {}) {
   else { if (target !== stepsEnd) exploreReset(); stepsPlay(target, opts.next); }
 }
 function stepsGo(id, opts = {}) {
+  stepsDestination();
   if (SC.cut) return;
   const beat = BEATS.find(b => b.id === id); if (!beat) return;
   // A shield pressed during its own arrival keeps the current landing clock.
@@ -5039,6 +5060,7 @@ function stepsGo(id, opts = {}) {
   stepsRelease(); if (SC.rm && SC.reducedGo) { SC.reducedGo(id); stepsReadScroll(); return; } stepsNavigate(beat.P, { ...opts, start: id === 'map' });
 }
 function stepsNext() {
+  stepsDestination();
   if (SC.cut) return;
   // Dig-to-end has one clock. Repeated Next must never replace it with a hurry.
   const x = BEATS.find(b => b.id === 'x').P;
@@ -5047,6 +5069,7 @@ function stepsNext() {
   stepsButtons();
 }
 function stepsBack() {
+  stepsDestination();
   if (SC.cut) return;
   if (exploreEnd()) { stepsButtons(); return; }
   if (stepsRelease(true)) return;
@@ -5054,6 +5077,7 @@ function stepsBack() {
   const beat = SC.move?.P1 === x.P && SC.P >= x.P ? x : stepsBackBeat(); if (beat) stepsNavigate(beat.P, { move: true, next: true });
 }
 function stepsSet(P) {
+  stepsDestination();
   if (SC.cut) return;
   stepsRelease();
   SC.scroll = null; SC.touch = null; if (P > stepsMap) SC.scrollLive = false;
@@ -5107,6 +5131,21 @@ const stepsTarget = e => e.target && e.target.closest ? e.target : null;
 // nothing moves behind the loader. A held gesture still counts as a gesture: its own momentum never starts the move later.
 function stepsHoldTop(test) { SC.holdTop = test; }
 const stepsHeld = () => !!(SC.holdTop && SC.P <= stepsMap && SC.holdTop());
+function stepsShine(forward) {
+  const button = SC.go.querySelector(forward ? '.go-next' : '.go-back'), now = performance.now();
+  if (button.hidden || now - (button._shineAt ?? -Infinity) < STEPS.shine.cooldown) return;
+  button._shineAt = now; button.classList.add('go-shining');
+}
+function stepsFirstShine() {
+  if (SC.shineSeen || SC.P !== stepsMap || JOURNEY.moving || SC.go.hidden || SC.go.classList.contains('go-reveal')) return;
+  SC.shineSeen = true; stepsShine(true);
+}
+function stepsNudge(pixels, stamp, target) {
+  const same = SC.shineStamp !== undefined && stamp - SC.shineStamp < STEPS.scroll.gesture;
+  SC.shineStamp = stamp;
+  if (same || !pixels || SC.P < stepsMap || JOURNEY.moving || SC.go.hidden || SC.go.inert || stepsHeld() || exploreBusy() || SC.root.classList.contains('jm-sheet-open') || document.querySelector('.pop.on') || target?.closest('.c-card, .sheet')) return;
+  stepsShine(pixels > 0);
+}
 function stepsBlockWheel(e) {
   if (SC.rm || e.ctrlKey || exploreActive() || e.defaultPrevented) return;
   const target = stepsTarget(e);
@@ -5114,6 +5153,7 @@ function stepsBlockWheel(e) {
   e.preventDefault();
   if (stepsHeld()) { SC.scroll = { stamp: e.timeStamp }; return; }
   if (SC.scrollLive && !SC.cut && SC.P <= stepsMap) stepsScrollBy(e.deltaY, e.timeStamp);
+  if (Math.abs(e.deltaY) > Math.abs(e.deltaX || 0)) stepsNudge(e.deltaY, e.timeStamp, target);
 }
 function stepsScrollBy(pixels, stamp) {
   if (!pixels) return;
@@ -5122,6 +5162,7 @@ function stepsScrollBy(pixels, stamp) {
   if (same) return;
   const target = pixels > 0 ? stepsMap : 0;
   if (SC.move?.P1 === target || !SC.move && Math.abs(SC.P - target) < 1e-6) return;
+  stepsDestination();
   SC.direction = pixels > 0 ? 'next' : 'back'; stepsPlay(target);
 }
 const stepsTouchExcluded = target => target?.closest('.sheet.on, .sheet-dismiss, .pop button, .pop a, .tl, input, textarea, select, [data-review]');
@@ -5155,12 +5196,14 @@ function stepsTouchMove(e) {
     else if (first) stepsScrollBy(-dy, e.timeStamp);
     else if (SC.scroll) SC.scroll.stamp = e.timeStamp;
   }
+  if (first) stepsNudge(-dy, e.timeStamp, stepsTarget(e));
   touch.last = p.clientY; touch.samples.push([e.timeStamp, p.clientY]);
   while (touch.samples.length > 2 && e.timeStamp - touch.samples[0][0] > STEPS.scroll.velocityWindow) touch.samples.shift();
 }
 function stepsTouchEnd(e) {
   const touch = SC.touch; SC.touch = null; SC.pointerOwned = false;
   if (touch?.dragged && SC.scroll) SC.scroll.stamp = e.timeStamp;
+  if (touch?.dragged) SC.shineStamp = e.timeStamp;
 }
 function stepsKey(e) {
   SC.root.classList.remove('jm-pointer-focus');
@@ -5193,7 +5236,14 @@ function stepsBuild({ stage, rm, joinedTop, reducedGo = null }) {
   SC.say = document.createElement('p'); SC.say.className = 'sr'; SC.say.id = 'go-say'; SC.say.setAttribute('role', 'status');
   SC.cover = document.createElement('div'); SC.cover.className = 'jm-cut'; SC.cover.hidden = true; SC.cover.setAttribute('aria-hidden', 'true');
   stage.prepend(SC.go, SC.say, SC.cover);
-  SC.go.addEventListener('animationend', () => SC.go.classList.remove('go-reveal'));
+  for (const button of SC.go.querySelectorAll('.go-next, .go-back')) {
+    const light = document.createElement('i'); light.className = 'go-light'; light.setAttribute('aria-hidden', 'true'); button.appendChild(light);
+  }
+  SC.go.addEventListener('animationend', e => {
+    if (e.target === SC.go) { SC.go.classList.remove('go-reveal'); stepsFirstShine(); }
+    else if (e.animationName === 'goGlow') e.target.parentElement.classList.remove('go-shining');
+  });
+  SC.go.addEventListener('animationcancel', e => { if (e.animationName === 'goGlow') e.target.parentElement.classList.remove('go-shining'); });
   SC.go.querySelector('.go-back').addEventListener('click', stepsBack);
   SC.go.querySelector('.go-next').addEventListener('click', () => { if (!JOURNEY.moving && SC.P === stepsEnd) { exploreStart(); stepsButtons(); } else stepsNext(); });
   SC.go.querySelector('.go-top').addEventListener('click', () => stepsGo('top'));
@@ -5202,6 +5252,7 @@ function stepsBuild({ stage, rm, joinedTop, reducedGo = null }) {
   SC.review.querySelector('[data-depth]').addEventListener('click', () => stepsSetDepth(!VIEW.depth)); document.body.appendChild(SC.review);
   const vars = { 'go-h': STEPS.nav.h + 'px', 'go-gap': STEPS.nav.gap + 'px', 'go-bar': STEPS.nav.bar + 'px', 'go-reveal': STEPS.reveal + 's', 'go-top-pad': WORLD.card.topPad + 'px', 'go-top-pad-x': WORLD.card.topPadX + 'px' };
   Object.entries(vars).forEach(([k, v]) => SC.root.style.setProperty('--' + k, v));
+  Object.entries(STEPS.shine).forEach(([k, v]) => SC.root.style.setProperty('--go-shine-' + k, v + (['time', 'reduced'].includes(k) ? 'ms' : k === 'glow' ? 'px' : '')));
   Object.entries(EXPLORE.bar).forEach(([k, v]) => SC.root.style.setProperty('--explore-' + k, v + 'px'));
   Object.entries(PHONE_LAYOUT).forEach(([k, v]) => SC.root.style.setProperty('--phone-' + k, v + 'px'));
   stepsClasses(); stepsArrive();
@@ -5271,6 +5322,7 @@ function cardsBuild(container, onGo, rm = false) {
         else cardsClose(i);
         return;
       }
+      window.dispatchEvent(new Event('jm-destination'));
       CD.list[i].keyboardOpen = e.detail === 0; CD.onGo(i);
     });
     a.querySelector('.face').inert = !rm;
@@ -5567,7 +5619,7 @@ function footerBuildX(g, rm = false, canvas = null, hit = null) {
       if (FT.hit.getAttribute('aria-disabled') === 'true') return;
       if (FT.settled) { novaPress(); return; }
       if (Math.abs(JOURNEY.P - JOURNEY.beats.find(b => b.id === 'x').P) < NOVA.base.hitTolerance) JOURNEY.next();
-      else JOURNEY.go('x');
+      else JOURNEY.go('x', { jump: true });
     };
     FT.hit.addEventListener('click', dig);
   }
@@ -5642,7 +5694,9 @@ function footerFrame(st) {
       if (FT.hit.getAttribute('aria-disabled') !== disabled) FT.hit.setAttribute('aria-disabled', disabled);
       if (FT.hit.getAttribute('aria-label') !== label) FT.hit.setAttribute('aria-label', label);
     }
-    const s = st.exploreK ? st.sEnd : st.cam.s, radius = FT.settled ? NOVA.flare.hit * st.cam.s / s : NOVA.base.digHit * st.cam.s;
+    const s = st.exploreK ? st.sEnd : st.cam.s, short = VIEW.h <= 440 && VIEW.w > 640 && !FT.settled && st.rushT === 0;
+    FT.hit.classList.toggle('fx-mark-hit', short);
+    const radius = FT.settled ? NOVA.flare.hit * st.cam.s / s : short ? 10.8 * Math.min(st.cam.s, tripXCamera().s) : NOVA.base.digHit * st.cam.s;
     footerStyle(FT.hit, 'width', (radius * 2).toFixed(2) + 'px'); footerStyle(FT.hit, 'height', (radius * 2).toFixed(2) + 'px');
     footerStyle(FT.hit, 'transform', `translate(${(MAP.x[0] * st.cam.s + st.cam.tx).toFixed(2)}px,${(MAP.x[1] * st.cam.s + st.cam.ty).toFixed(2)}px) translate(-50%,-50%)`);
   }
@@ -6009,7 +6063,7 @@ function findHoards(svg) {
     };
     const show = () => {
       if (FD.popOwner === h) return true;
-      const stop = STOPS.find(s => s.id === d.stop), n = o.items.filter(item => item.open).length;
+      const stop = STOPS.find(s => s.id === d.stop), n = h.number;
       const title = !d.image && d.title === COPY.pieceToCome ? '' : '<p class="pop-t">' + fEsc(d.title) + '</p>';
       const shown = showPop(h, [d.x, d.y - H.anchor], '<p class="pop-k">' + fEsc(stop.short) + '<br>' + fEsc(findFormat(FIND_COPY.hoardTally, { n, t: o.items.length })) + '</p>' + (d.image ? '<img src="' + d.image + '" alt="' + fEsc(d.title) + '">' : '<div class="piece-empty"><svg viewBox="' + H.iconBox.join(' ') + '" aria-hidden="true">' + pieceIcon(d.kind) + '</svg><span>' + fEsc(COPY.pieceToCome) + '</span></div>') + title + '<button class="pop-link" type="button">' + fEsc(COPY.caseStudy) + arrowSvg + '</button>', 'piece');
       if (shown) FD.pop.style.setProperty('--piece-mark', PALETTES[stop.palette].mark);
@@ -6029,6 +6083,7 @@ function findHoards(svg) {
         }
         if (FD.rm) { h.lift = H.lift[h.digs - 1]; h.y = H.travel * (1 - h.lift); attr(h.chest, 'transform', 'translate(0 ' + h.y + ')'); stage(h.digs === H.hole.length ? 'out' : 'buried'); }
       } else if (!h.open) {
+        h.number = o.items.filter(item => item.open).length + 1;
         h.open = h.kept = o.kept = true; h.openTs = FD.now; stage('opening');
         found('hoards', d.id); findBits('star', d.x, d.y - H.anchor, H.stars, FIND_PLAY.bits.stars);
         h.pending = true;
@@ -7146,18 +7201,28 @@ function findWell(svg) {
 
 function findShip(svg) {
   const el = svg.querySelector('#f-longship'), rock = el.querySelector('.ls-rock'), sail = el.querySelector('.ls-sail'), oars = el.querySelector('.ls-oars'), pennant = el.querySelector('.ls-pennant'), lamp = el.querySelector('.ls-lamp'), shields = [...el.querySelectorAll('.ls-shield')];
-  const o = { id: 'longship', el, stage: 'rest', kept: false, pulls: [], pennant: false, lamp: false, shieldMask: [], pullTs: -Infinity, pennantTs: -Infinity, hearTs: -Infinity };
-  press(el, () => {
-    const S = FIND_PLAY.ship; if (!FD.rm && FD.now - o.pullTs < S.pull[2] + S.pull[3]) return;
-    opened(o); found(o.id); o.pullTs = FD.now; o.stage = 'pull'; o.pulls = o.pulls.filter(t => FD.now - t <= S.window); o.pulls.push(FD.now);
-    if (!o.pennant && o.pulls.length >= S.pulls) { o.pennant = o.kept = true; o.pennantTs = FD.now; }
+  const o = { id: 'longship', el, stage: 'rest', kept: false, pulls: [], queued: [], pennant: false, lamp: false, shieldMask: [], pullTs: -Infinity, pennantTs: -Infinity, hearTs: -Infinity };
+  const startPull = (fly, ts = FD.now) => {
+    const S = FIND_PLAY.ship; o.pullTs = ts; o.stage = 'pull';
+    if (!o.pennant && fly) { o.pennant = o.kept = true; o.pennantTs = ts; }
     const p = findPlace(o.id); findBits('ring', p[0] + S.water[0] * S.scale, p[1] + S.water[1] * S.scale, 1, FIND_PLAY.bits.wake); findBits('drop', p[0], p[1] + S.water[1] * S.scale, S.drops, FIND_PLAY.bits.drops);
+  };
+  press(el, () => {
+    const S = FIND_PLAY.ship;
+    opened(o); found(o.id); o.pulls = o.pulls.filter(t => FD.now - t <= S.window); o.pulls.push(FD.now);
+    const fly = o.pulls.length >= S.pulls;
+    if (!FD.rm && o.stage === 'pull') { if (o.queued.length < S.pulls) o.queued.push(fly); }
+    else startPull(fly);
     showPop(o, () => { const here = findPlace(o.id); return [here[0] + FIND_PLAY.ship.anchor[0], here[1] + FIND_PLAY.ship.anchor[1]]; }, `<p class="pop-k">${fEsc(FIND_COPY.shipLog)}</p>${findSlot(FIND_COPY.longship)}`);
   });
   o.hear = () => { if (!FD.rm) { o.hearTs = FD.now; o.hearing = true; } };
   o.tick = t => {
-    const S = FIND_PLAY.ship, age = t - o.pullTs, total = S.pull[2] + S.pull[3], hearing = !FD.rm && t - o.hearTs < S.hear[3]; o.hearing = hearing;
-    if (o.stage === 'pull' && (FD.rm || age >= total)) o.stage = 'rest';
+    const S = FIND_PLAY.ship, total = S.pull[2] + S.pull[3], hearing = !FD.rm && t - o.hearTs < S.hear[3]; o.hearing = hearing;
+    while (o.stage === 'pull' && (FD.rm || t - o.pullTs >= total)) {
+      if (o.queued.length) startPull(o.queued.shift(), FD.rm ? t : o.pullTs + total);
+      else o.stage = 'rest';
+    }
+    const age = t - o.pullTs;
     const pull = o.stage === 'pull' && !FD.rm ? age < S.pull[2] ? ease(age / S.pull[2]) : 1 - ease((age - S.pull[2]) / S.pull[3]) : 0;
     attr(oars, 'opacity', o.stage === 'pull' && !FD.rm ? 1 : 0); attr(oars, 'transform', `rotate(${lerp(S.pull[0], S.pull[1], pull)} ${S.rail[0]} ${S.rail[1]})`);
     attr(rock, 'transform', `translate(${S.surge * pull} ${FD.rm ? 0 : S.rock[2] * Math.sin(S.rock[3] * t)}) rotate(${FD.rm ? 0 : S.rock[0] * Math.sin(S.rock[1] * t) * (hearing ? S.hear[2] : 1)})`);
@@ -7317,6 +7382,7 @@ function findsBuild(svg, pop, sheet, base, rm) {
   const capture = e => { if (FD.st?.exploring) { const el = e.target.closest?.('.find'); if (el) el._focusBlocked = false; return; } findCapture(e); };
   svg.addEventListener('click', capture, true); svg.addEventListener('keydown', capture, true); svg.addEventListener('pointerdown', capture, true);
   window.addEventListener('jm-find-release', findsCloseAll);
+  window.addEventListener('jm-destination', () => { FD.pendingPress = null; });
   window.addEventListener('jm-explore', () => { if (!FD.st?.exploring || !document.documentElement.classList.contains('jm-explore')) findsCloseAll(); });
   window.__jm.finds = {
     found: () => [...FD.found],
@@ -7426,7 +7492,9 @@ window.addEventListener('pointerdown', e => {
   const candidates = [...Object.values(FD.list), ...FD.list.hoards.items].filter(o => o.id !== 'hoards' && o.el.tabIndex === 0).map(o => ({ el: o.el, p: toScreen(FD.st, [o.x, o.y]) }));
   if ($('nova-hit').getAttribute('aria-disabled') !== 'true') candidates.push({el:$('nova-hit'),p:toScreen(FD.st,MAP.x)});
   cardsList().filter(c => !c.btn.inert && c.btn.tabIndex === 0).forEach(c => { const p = toScreen(FD.st, MAP.waypoints[c.stop.w]), stone = Math.max(14, Math.min(36, 10 * FD.st.cam.s)); candidates.push({ el: c.btn, p: [p[0], p[1] - stone / 2 - 3] }); });
-  const near = candidates.map(c => ({ ...c, d: Math.hypot(e.clientX-c.p[0],e.clientY-c.p[1]) })).filter(c => c.d <= COMB.target / 2).sort((a,b) => a.d-b.d)[0];
+  const ranked = candidates.map(c => ({ ...c, d: Math.hypot(e.clientX-c.p[0],e.clientY-c.p[1]) })).filter(c => c.d <= COMB.target / 2).sort((a,b) => a.d-b.d);
+  const chest = ranked.find(c => c.el.id === 'f-hoard-lennard'), xHit = ranked.find(c => c.el.id === 'nova-hit');
+  const near = VIEW.h <= 440 && VIEW.w > 640 && chest && xHit && chest.d < xHit.d ? chest : ranked[0];
   if (!near || near.el.contains(e.target)) return;
   mainTouchPick = { el: near.el, x: e.clientX, y: e.clientY };
   e.preventDefault(); e.stopImmediatePropagation();
@@ -7498,7 +7566,7 @@ function frame(ts) {
   const explored = exploreApply(st, dt), folded = cardsOverride(st, dt, JOURNEY.moving);
   if (f && f.k > 0) mainCurrent = -1; else if (!JOURNEY.moving && st.settleT >= 1 && !st.exploring) mainCurrent = STOPS.length; else if (!JOURNEY.moving && st.kind === 'hold') mainCurrent = st.i; else if (['hero','handoff','overview'].includes(st.kind)) mainCurrent = JOIN.heroStart && st.P < mainHeroEnd ? -2 : -1;
   st.visiting = JOURNEY.visiting;
-  const novaAway = !(st.exploreK > 0) && ((st.kind === 'rush' && JOURNEY.moving) || st.rushT > 0 || st.blastT > 0);
+  const novaAway = !(st.exploreK > 0) && (st.rushT > 0 || st.blastT > 0);
   if (ROOT.classList.contains('jm-nova-away') !== novaAway) ROOT.classList.toggle('jm-nova-away', novaAway);
   const novaFlashed = st.blastT > 0;
   if (ROOT.classList.contains('jm-nova-flashed') !== novaFlashed) ROOT.classList.toggle('jm-nova-flashed', novaFlashed);

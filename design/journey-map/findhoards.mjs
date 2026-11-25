@@ -116,7 +116,7 @@ export function findHoards(svg) {
     };
     const show = () => {
       if (FD.popOwner === h) return true;
-      const stop = STOPS.find(s => s.id === d.stop), n = o.items.filter(item => item.open).length;
+      const stop = STOPS.find(s => s.id === d.stop), n = h.number;
       const title = !d.image && d.title === COPY.pieceToCome ? '' : '<p class="pop-t">' + fEsc(d.title) + '</p>';
       const shown = showPop(h, [d.x, d.y - H.anchor], '<p class="pop-k">' + fEsc(stop.short) + '<br>' + fEsc(findFormat(FIND_COPY.hoardTally, { n, t: o.items.length })) + '</p>' + (d.image ? '<img src="' + d.image + '" alt="' + fEsc(d.title) + '">' : '<div class="piece-empty"><svg viewBox="' + H.iconBox.join(' ') + '" aria-hidden="true">' + pieceIcon(d.kind) + '</svg><span>' + fEsc(COPY.pieceToCome) + '</span></div>') + title + '<button class="pop-link" type="button">' + fEsc(COPY.caseStudy) + arrowSvg + '</button>', 'piece');
       if (shown) FD.pop.style.setProperty('--piece-mark', PALETTES[stop.palette].mark);
@@ -136,6 +136,7 @@ export function findHoards(svg) {
         }
         if (FD.rm) { h.lift = H.lift[h.digs - 1]; h.y = H.travel * (1 - h.lift); attr(h.chest, 'transform', 'translate(0 ' + h.y + ')'); stage(h.digs === H.hole.length ? 'out' : 'buried'); }
       } else if (!h.open) {
+        h.number = o.items.filter(item => item.open).length + 1;
         h.open = h.kept = o.kept = true; h.openTs = FD.now; stage('opening');
         found('hoards', d.id); findBits('star', d.x, d.y - H.anchor, H.stars, FIND_PLAY.bits.stars);
         h.pending = true;

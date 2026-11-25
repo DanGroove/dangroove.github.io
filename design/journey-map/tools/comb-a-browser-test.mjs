@@ -38,6 +38,6 @@ try {
   for (const [w,h] of [[412,730],[360,640]]) { await b.size(w,h); record(`joined ${w}x${h} Start ${JSON.stringify(await b.evaluate(`(()=>{const e=document.querySelector('.jm-start'),r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,bottom:r.bottom};})()`))}`); await b.shot(`${w}x${h}-start`); }
   for (const [w,h] of [[1440,900],[412,730]]) { await b.size(w,h); for (const P of [85,100,120]) { await b.evaluate('window.__jm.set('+P+')'); await combWait(120); await b.shot(w+'x'+h+'-handover-'+P); } }
   failures += b.errors.length; record('browser exceptions: '+JSON.stringify(b.errors));
-} finally { await b.close(); appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g/inherited-tests.log','\n## Browser measurements\n\n```text\n'+log.join('\n').replace(/[^\x00-\x7F]/g,'?')+'\n```\n'); }
+} finally { await b.close(); appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2/inherited-tests.log','\n## Browser measurements\n\n```text\n'+log.join('\n').replace(/[^\x00-\x7F]/g,'?')+'\n```\n'); }
 
 console.log('browser layout failures:',failures); process.exitCode=failures?1:0;

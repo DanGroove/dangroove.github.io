@@ -1,7 +1,7 @@
 // The X, its supernova and the footer that settles over the glow.
 import { C, COPY, MAP, NOVA, NOVA_CANVAS, DEPTH, FOOT_NAME, EXPLORE, CAMERA, PHONE_LAYOUT, STEPS, FRAME_PERF } from './data.mjs';
 import { rnd, n1, mapDefs } from './art.mjs';
-import { VIEW, SEQ, smooth, lerp, easeIO, clamp01, novaBuild } from './trip.mjs';
+import { VIEW, SEQ, smooth, lerp, easeIO, clamp01, novaBuild, tripXCamera } from './trip.mjs';
 import { JOURNEY } from './steps.mjs';
 import { novaRingRadius, novaFlare, novaPress, novaPrune, novaShare, NOVA_LIVE, depthLantern, depthLanternHeld } from './depth.mjs';
 import { footnameBuild, footnameMeasure, footnameReveal, footnameFrame } from './footname.mjs';
@@ -24,7 +24,7 @@ export function footerBuildX(g, rm = false, canvas = null, hit = null) {
       if (FT.hit.getAttribute('aria-disabled') === 'true') return;
       if (FT.settled) { novaPress(); return; }
       if (Math.abs(JOURNEY.P - JOURNEY.beats.find(b => b.id === 'x').P) < NOVA.base.hitTolerance) JOURNEY.next();
-      else JOURNEY.go('x');
+      else JOURNEY.go('x', { jump: true });
     };
     FT.hit.addEventListener('click', dig);
   }
@@ -99,7 +99,9 @@ export function footerFrame(st) {
       if (FT.hit.getAttribute('aria-disabled') !== disabled) FT.hit.setAttribute('aria-disabled', disabled);
       if (FT.hit.getAttribute('aria-label') !== label) FT.hit.setAttribute('aria-label', label);
     }
-    const s = st.exploreK ? st.sEnd : st.cam.s, radius = FT.settled ? NOVA.flare.hit * st.cam.s / s : NOVA.base.digHit * st.cam.s;
+    const s = st.exploreK ? st.sEnd : st.cam.s, short = VIEW.h <= 440 && VIEW.w > 640 && !FT.settled && st.rushT === 0;
+    FT.hit.classList.toggle('fx-mark-hit', short);
+    const radius = FT.settled ? NOVA.flare.hit * st.cam.s / s : short ? 10.8 * Math.min(st.cam.s, tripXCamera().s) : NOVA.base.digHit * st.cam.s;
     footerStyle(FT.hit, 'width', (radius * 2).toFixed(2) + 'px'); footerStyle(FT.hit, 'height', (radius * 2).toFixed(2) + 'px');
     footerStyle(FT.hit, 'transform', `translate(${(MAP.x[0] * st.cam.s + st.cam.tx).toFixed(2)}px,${(MAP.x[1] * st.cam.s + st.cam.ty).toFixed(2)}px) translate(-50%,-50%)`);
   }

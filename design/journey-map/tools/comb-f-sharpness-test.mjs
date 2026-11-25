@@ -3,7 +3,7 @@
 import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
 import {createServer} from 'node:http';
 import {readFileSync,writeFileSync} from 'node:fs';
-const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g',b=await combBBrowser(),rows=[],fail=[];let served='';
+const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2',b=await combBBrowser(),rows=[],fail=[];let served='';
 const server=createServer((q,r)=>{r.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});r.end(served);});await new Promise(r=>server.listen(0,'127.0.0.1',r));
 await b.send('Fetch.enable',{patterns:[{urlPattern:'*'}]});b.on('Fetch.requestPaused',p=>{const u=new URL(p.request.url),ok=['data:','blob:'].includes(u.protocol)||u.hostname==='127.0.0.1';void b.send(ok?'Fetch.continueRequest':'Fetch.failRequest',ok?{requestId:p.requestId}:{requestId:p.requestId,errorReason:'BlockedByClient'});});await b.send('Network.setBlockedURLs',{urls:[]});
 const probe=`

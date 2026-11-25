@@ -1,7 +1,7 @@
 import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
 import {combDClock,combDAdvance} from './comb-d-clock-test.mjs';
 import {readFileSync,writeFileSync} from 'node:fs';
-const b=await combBBrowser(),root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g',fail=[],rows=[];
+const b=await combBBrowser(),root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2',fail=[],rows=[];
 const tick=async ms=>{for(let t=0;t<ms;t+=100)await combDAdvance(b,Math.min(100,ms-t));};
 const html=readFileSync('dist/journey-map.html','utf8').replace('</script>','\nwindow.__f={FD,EX,stepsFocus,findView,findPlace,showPop,closePop,placePop};\n</script>');
 try{

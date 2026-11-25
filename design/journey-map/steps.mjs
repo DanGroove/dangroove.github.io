@@ -21,6 +21,7 @@ const stepsName = b => b ? COPY.steps.names[b.id] || STOPS.find(s => s.id === b.
 const stepsBackName = b => b ? STOPS.find(s => s.id === b.id)?.short || COPY.steps.names[b.id] : COPY.steps.names.top;
 const stepsFormat = (s, values) => s.replace(/\{(\w+)\}/g, (m, k) => values[k]);
 const stepsReadScroll = () => { SC.P = window.scrollY / VIEW.unit; return SC.P; };
+const stepsDestination = () => window.dispatchEvent(new Event('jm-destination'));
 
 export const JOURNEY = {
   get direction() { return SC.direction; }, get mode() { return SC.mode; }, get P() { return SC.P; }, get moving() { return !!(SC.move || SC.cut); },
@@ -65,7 +66,7 @@ function stepsSetDepth(on) {
 function stepsButtons() {
   if (!SC.go) return;
   const top = SC.P <= 1e-6, end = !JOURNEY.moving && Math.abs(SC.P - stepsEnd) < 1e-6;
-  const beatState = tripState(SC.P), blasting = beatState.kind === 'rush' ? JOURNEY.moving || beatState.t > 0 : ['blast', 'settle'].includes(beatState.kind);
+  const beatState = tripState(SC.P), blasting = beatState.kind === 'rush' ? !!SC.move || beatState.t > 0 : ['blast', 'settle'].includes(beatState.kind);
   if (blasting && !SC.go.hidden) { SC.returnFocus ||= SC.go.contains(document.activeElement); SC.shown = false; SC.go.classList.add('go-leaving'); if (SC.returnFocus) { const nova = document.getElementById('nova-hit'); nova?.focus({ preventScroll: true }); } if (SC.say.textContent !== COMB.novaSay) SC.say.textContent = COMB.novaSay; }
   // Joined page: the bar waits for the map, so one Start shows at a time; focus follows (the bar at the map, the hero's Start above).
   const hero = SC.joinedTop() && SC.P < stepsMap - 1e-6, wasHidden = SC.go.hidden;
@@ -122,6 +123,7 @@ function stepsArrive() {
   }
   SC.announced = beat ? beat.id : null;
   stepsButtons();
+  if (beat?.id === 'map') queueMicrotask(stepsFirstShine);
 }
 function stepsCancel() {
   SC.move = null; SC.cut = null; SC.fill = 0; SC.pendingTarget = null;
@@ -218,6 +220,10 @@ function stepsJump(target, after) {
   if (target !== stepsEnd) exploreDepart();
   stepsCancel(); SC.cut = { target: stepsClamp(target), elapsed: 0, placed: false, after };
   SC.cover.hidden = false; SC.cover.style.opacity = 0; SC.root.dataset.beat = ''; stepsButtons();
+  if (target === BEATS.find(b => b.id === 'x').P) {
+    SC.say.textContent = COPY.steps.say.x; SC.go.querySelector('.go-t').textContent = COPY.steps.dig;
+    SC.go.querySelector('.go-next').focus({ preventScroll: true });
+  }
 }
 function stepsNavigate(target, opts = {}) {
   if (SC.cut) return;
@@ -231,6 +237,7 @@ function stepsNavigate(target, opts = {}) {
   else { if (target !== stepsEnd) exploreReset(); stepsPlay(target, opts.next); }
 }
 function stepsGo(id, opts = {}) {
+  stepsDestination();
   if (SC.cut) return;
   const beat = BEATS.find(b => b.id === id); if (!beat) return;
   // A shield pressed during its own arrival keeps the current landing clock.
@@ -238,6 +245,7 @@ function stepsGo(id, opts = {}) {
   stepsRelease(); if (SC.rm && SC.reducedGo) { SC.reducedGo(id); stepsReadScroll(); return; } stepsNavigate(beat.P, { ...opts, start: id === 'map' });
 }
 function stepsNext() {
+  stepsDestination();
   if (SC.cut) return;
   // Dig-to-end has one clock. Repeated Next must never replace it with a hurry.
   const x = BEATS.find(b => b.id === 'x').P;
@@ -246,6 +254,7 @@ function stepsNext() {
   stepsButtons();
 }
 function stepsBack() {
+  stepsDestination();
   if (SC.cut) return;
   if (exploreEnd()) { stepsButtons(); return; }
   if (stepsRelease(true)) return;
@@ -253,6 +262,7 @@ function stepsBack() {
   const beat = SC.move?.P1 === x.P && SC.P >= x.P ? x : stepsBackBeat(); if (beat) stepsNavigate(beat.P, { move: true, next: true });
 }
 function stepsSet(P) {
+  stepsDestination();
   if (SC.cut) return;
   stepsRelease();
   SC.scroll = null; SC.touch = null; if (P > stepsMap) SC.scrollLive = false;
@@ -306,6 +316,21 @@ const stepsTarget = e => e.target && e.target.closest ? e.target : null;
 // nothing moves behind the loader. A held gesture still counts as a gesture: its own momentum never starts the move later.
 export function stepsHoldTop(test) { SC.holdTop = test; }
 const stepsHeld = () => !!(SC.holdTop && SC.P <= stepsMap && SC.holdTop());
+function stepsShine(forward) {
+  const button = SC.go.querySelector(forward ? '.go-next' : '.go-back'), now = performance.now();
+  if (button.hidden || now - (button._shineAt ?? -Infinity) < STEPS.shine.cooldown) return;
+  button._shineAt = now; button.classList.add('go-shining');
+}
+function stepsFirstShine() {
+  if (SC.shineSeen || SC.P !== stepsMap || JOURNEY.moving || SC.go.hidden || SC.go.classList.contains('go-reveal')) return;
+  SC.shineSeen = true; stepsShine(true);
+}
+function stepsNudge(pixels, stamp, target) {
+  const same = SC.shineStamp !== undefined && stamp - SC.shineStamp < STEPS.scroll.gesture;
+  SC.shineStamp = stamp;
+  if (same || !pixels || SC.P < stepsMap || JOURNEY.moving || SC.go.hidden || SC.go.inert || stepsHeld() || exploreBusy() || SC.root.classList.contains('jm-sheet-open') || document.querySelector('.pop.on') || target?.closest('.c-card, .sheet')) return;
+  stepsShine(pixels > 0);
+}
 function stepsBlockWheel(e) {
   if (SC.rm || e.ctrlKey || exploreActive() || e.defaultPrevented) return;
   const target = stepsTarget(e);
@@ -313,6 +338,7 @@ function stepsBlockWheel(e) {
   e.preventDefault();
   if (stepsHeld()) { SC.scroll = { stamp: e.timeStamp }; return; }
   if (SC.scrollLive && !SC.cut && SC.P <= stepsMap) stepsScrollBy(e.deltaY, e.timeStamp);
+  if (Math.abs(e.deltaY) > Math.abs(e.deltaX || 0)) stepsNudge(e.deltaY, e.timeStamp, target);
 }
 function stepsScrollBy(pixels, stamp) {
   if (!pixels) return;
@@ -321,6 +347,7 @@ function stepsScrollBy(pixels, stamp) {
   if (same) return;
   const target = pixels > 0 ? stepsMap : 0;
   if (SC.move?.P1 === target || !SC.move && Math.abs(SC.P - target) < 1e-6) return;
+  stepsDestination();
   SC.direction = pixels > 0 ? 'next' : 'back'; stepsPlay(target);
 }
 const stepsTouchExcluded = target => target?.closest('.sheet.on, .sheet-dismiss, .pop button, .pop a, .tl, input, textarea, select, [data-review]');
@@ -354,12 +381,14 @@ function stepsTouchMove(e) {
     else if (first) stepsScrollBy(-dy, e.timeStamp);
     else if (SC.scroll) SC.scroll.stamp = e.timeStamp;
   }
+  if (first) stepsNudge(-dy, e.timeStamp, stepsTarget(e));
   touch.last = p.clientY; touch.samples.push([e.timeStamp, p.clientY]);
   while (touch.samples.length > 2 && e.timeStamp - touch.samples[0][0] > STEPS.scroll.velocityWindow) touch.samples.shift();
 }
 function stepsTouchEnd(e) {
   const touch = SC.touch; SC.touch = null; SC.pointerOwned = false;
   if (touch?.dragged && SC.scroll) SC.scroll.stamp = e.timeStamp;
+  if (touch?.dragged) SC.shineStamp = e.timeStamp;
 }
 function stepsKey(e) {
   SC.root.classList.remove('jm-pointer-focus');
@@ -392,7 +421,14 @@ export function stepsBuild({ stage, rm, joinedTop, reducedGo = null }) {
   SC.say = document.createElement('p'); SC.say.className = 'sr'; SC.say.id = 'go-say'; SC.say.setAttribute('role', 'status');
   SC.cover = document.createElement('div'); SC.cover.className = 'jm-cut'; SC.cover.hidden = true; SC.cover.setAttribute('aria-hidden', 'true');
   stage.prepend(SC.go, SC.say, SC.cover);
-  SC.go.addEventListener('animationend', () => SC.go.classList.remove('go-reveal'));
+  for (const button of SC.go.querySelectorAll('.go-next, .go-back')) {
+    const light = document.createElement('i'); light.className = 'go-light'; light.setAttribute('aria-hidden', 'true'); button.appendChild(light);
+  }
+  SC.go.addEventListener('animationend', e => {
+    if (e.target === SC.go) { SC.go.classList.remove('go-reveal'); stepsFirstShine(); }
+    else if (e.animationName === 'goGlow') e.target.parentElement.classList.remove('go-shining');
+  });
+  SC.go.addEventListener('animationcancel', e => { if (e.animationName === 'goGlow') e.target.parentElement.classList.remove('go-shining'); });
   SC.go.querySelector('.go-back').addEventListener('click', stepsBack);
   SC.go.querySelector('.go-next').addEventListener('click', () => { if (!JOURNEY.moving && SC.P === stepsEnd) { exploreStart(); stepsButtons(); } else stepsNext(); });
   SC.go.querySelector('.go-top').addEventListener('click', () => stepsGo('top'));
@@ -401,6 +437,7 @@ export function stepsBuild({ stage, rm, joinedTop, reducedGo = null }) {
   SC.review.querySelector('[data-depth]').addEventListener('click', () => stepsSetDepth(!VIEW.depth)); document.body.appendChild(SC.review);
   const vars = { 'go-h': STEPS.nav.h + 'px', 'go-gap': STEPS.nav.gap + 'px', 'go-bar': STEPS.nav.bar + 'px', 'go-reveal': STEPS.reveal + 's', 'go-top-pad': WORLD.card.topPad + 'px', 'go-top-pad-x': WORLD.card.topPadX + 'px' };
   Object.entries(vars).forEach(([k, v]) => SC.root.style.setProperty('--' + k, v));
+  Object.entries(STEPS.shine).forEach(([k, v]) => SC.root.style.setProperty('--go-shine-' + k, v + (['time', 'reduced'].includes(k) ? 'ms' : k === 'glow' ? 'px' : '')));
   Object.entries(EXPLORE.bar).forEach(([k, v]) => SC.root.style.setProperty('--explore-' + k, v + 'px'));
   Object.entries(PHONE_LAYOUT).forEach(([k, v]) => SC.root.style.setProperty('--phone-' + k, v + 'px'));
   stepsClasses(); stepsArrive();

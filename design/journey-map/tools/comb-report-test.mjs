@@ -45,7 +45,7 @@ for(const mode of ['phone','desktop']) {
   table+='| '+mode+' / '+row.page+' / '+row.name+' | '+old.toFixed(2)+' | '+row.p95.toFixed(2)+' | '+row.style.toFixed(2)+' | '+(pass?'PASS':'FAIL')+' |\n';
  }
 }
-const runRoot=resolve('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g'),captures=[];
+const runRoot=resolve('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2'),captures=[];
 function walk(dir){for(const e of readdirSync(dir,{withFileTypes:true})){const path=join(dir,e.name);if(e.isDirectory()){if(!/^(?:profile-|edge-profile-)/i.test(e.name))walk(path);}else if(/\.png$/i.test(e.name))captures.push(relative(runRoot,path).replaceAll('\\','/'));}}
 walk(runRoot);captures.sort();assert.ok(captures.some(p=>p.includes('1440x900'))&&captures.some(p=>p.includes('412x730')));
 let intro=combReportIntro.replace('__SIZE__',size+' KB / 160 KB source; map '+mapSize+' KB / 320 KB and joined '+joinedSize+' KB / 540 KB packed').replace('__PERFORMANCE__',table).replace('__CAPTURES__',captures.map(p=>'- '+p).join('\n'));

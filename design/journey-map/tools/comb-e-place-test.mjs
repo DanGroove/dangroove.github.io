@@ -30,5 +30,5 @@ const hoards=FIND_COPY.hoards.map((h,i)=>{
 const humps=MAP.jorm.surf.map(([a,z],i)=>{
  const edge=jormEdges(a,z,a===0?0:MAP.jorm.surfaceTaper),points=[...edge.left,...edge.right];
  const results=cases.map(c=>clear(points,c));return {i,interval:[a,z],min:Math.min(...results.map(r=>r.min)),limiting:results.map((r,j)=>({...r,w:cases[j].w}))};
-});const out={cases,hoards,humps};writeFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g/placement-study.json',JSON.stringify(out,null,2));
+});const out={cases,hoards,humps};writeFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2/placement-study.json',JSON.stringify(out,null,2));
 console.log(JSON.stringify({hoards,humps},null,2));
