@@ -142,11 +142,14 @@ export function showPop(owner, anchor, html, cls = '', side = 'auto') {
     const b = ink.getBBox(), matrix = FD.svg.querySelector('#cam').getCTM().inverse().multiply(ink.getCTM());
     const points = [[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]].map(([x,y])=>[matrix.a*x+matrix.c*y+matrix.e,matrix.b*x+matrix.d*y+matrix.f]);
     FD.popBox = [Math.min(...points.map(p=>p[0])),Math.min(...points.map(p=>p[1])),Math.max(...points.map(p=>p[0])),Math.max(...points.map(p=>p[1]))];
-    if(owner.id==='horn')FD.popShape={b,matrix:FD.svg.querySelector('#cam').getCTM().inverse().multiply(ink.parentElement.getCTM())};
+    // The raised horn turns, so the corners of its box reach far past the drawing: sample its outline once here instead.
+    if(owner.id==='horn'){const pts=[];ink.querySelectorAll('path').forEach(p=>{const L=p.getTotalLength?.()||0,n=Math.max(8,Math.ceil(L));if(L>0)for(let i=0;i<=n;i++){const q=p.getPointAtLength(L*i/n);pts.push([q.x,q.y]);}});FD.popShape={b,pts,matrix:FD.svg.querySelector('#cam').getCTM().inverse().multiply(ink.parentElement.getCTM())};}
   }
-  // A popup stays above the step buttons and the timeline: their tops are read once here, when it opens, never in the frame loop.
-  const controls=document.querySelector('.jm-review');FD.popCeiling=Math.max(48,controls?.getBoundingClientRect().bottom+8||0);
-  FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go:not([hidden]), .tl, .jm-focus .find-hint:not(.explore-hint)')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
+  // A popup stays clear of the step buttons and the timeline: their boxes are read once here, when it opens, never in the
+  // frame loop. A bar in the bottom half is a floor; a bar in the top half (the end and explore bar on a computer) is a ceiling.
+  const controls=document.querySelector('.jm-review'), bars=[...document.querySelectorAll('.go:not([hidden]), .tl, .jm-focus .find-hint:not(.explore-hint)')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0), low=r=>r.top+r.height/2>=VIEW.h/2;
+  FD.popCeiling=Math.max(48,controls?.getBoundingClientRect().bottom+8||0,...bars.filter(r=>!low(r)).map(r=>r.bottom+8));
+  FD.popFloor = Math.min(VIEW.h, ...bars.filter(low).map(r => r.top));
   FD.popOrigin=[box.width/2,box.height];placePop();
   FD.popInner.style.transformOrigin = `${FD.popOrigin[0]}px ${FD.popOrigin[1]}px`;
   return true;
@@ -180,7 +183,7 @@ export function placePop() {
   const v = 1 + (back + 1) * (q - 1) ** 3 + back * (q - 1) ** 2;
   findStyle(FD.popInner, 'transform', `scale(${lerp(K.scale, 1, q === 1 ? 1 : v)})`); findStyle(FD.popBody, 'opacity', q);
   let worldBox=FD.popBox;
-  if(FD.popShape&&FD.popOwner.popPose){const {b,matrix:m}=FD.popShape,[tx,ty,angle,s]=FD.popOwner.popPose,[px,py]=FIND_PLAY.horn.pivot,c=Math.cos(angle*Math.PI/180),sn=Math.sin(angle*Math.PI/180),points=[[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]].map(([x,y])=>{const u=x*s-px,v=y*s-py,X=tx+px+c*u-sn*v,Y=ty+py+sn*u+c*v;return[m.a*X+m.c*Y+m.e,m.b*X+m.d*Y+m.f];});worldBox=[Math.min(...points.map(p=>p[0])),Math.min(...points.map(p=>p[1])),Math.max(...points.map(p=>p[0])),Math.max(...points.map(p=>p[1]))];}
+  if(FD.popShape&&FD.popOwner.popPose){const {b,pts,matrix:m}=FD.popShape,[tx,ty,angle,s]=FD.popOwner.popPose,[px,py]=FIND_PLAY.horn.pivot,c=Math.cos(angle*Math.PI/180),sn=Math.sin(angle*Math.PI/180),points=(pts?.length?pts:[[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]]).map(([x,y])=>{const u=x*s-px,v=y*s-py,X=tx+px+c*u-sn*v,Y=ty+py+sn*u+c*v;return[m.a*X+m.c*Y+m.e,m.b*X+m.d*Y+m.f];});worldBox=[Math.min(...points.map(p=>p[0])),Math.min(...points.map(p=>p[1])),Math.max(...points.map(p=>p[0])),Math.max(...points.map(p=>p[1]))];}
   const a = worldBox ? findScreen(worldBox.slice(0,2)) : p, b = worldBox ? findScreen(worldBox.slice(2)) : p;
   const gap = K.anchorGap, ceiling = FD.popCeiling ?? K.edge, floor = (FD.popFloor ?? VIEW.h) - K.edge;
   const cx = (a[0]+b[0])/2, cy = (a[1]+b[1])/2;

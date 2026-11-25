@@ -9,7 +9,7 @@ const SC = {
   mode: 'steps', P: 0, rm: false, move: null, cut: null, lastTs: null, fill: 0, focus: null,
   root: null, go: null, cover: null, say: null, review: null, joinedTop: null,
   restoreP: null, announced: null, shown: false, ready: false, endShown: false,
-  scrollLive: true, scroll: null, touch: null, pointerOwned: false, swallow: false,
+  scrollLive: true, scroll: null, touch: null, pointerOwned: false, swallow: false, holdTop: null,
 };
 const stepsEnd = BEATS[BEATS.length - 1].P;
 const stepsMap = BEATS[1].P;
@@ -299,11 +299,16 @@ export function stepsFrame(ts) {
   stepsButtons(); return SC.P;
 }
 const stepsTarget = e => e.target && e.target.closest ? e.target : null;
+// The joined page holds scrolls, swipes and keys at the top while the hero's loader still runs (join.mjs gives the test), so
+// nothing moves behind the loader. A held gesture still counts as a gesture: its own momentum never starts the move later.
+export function stepsHoldTop(test) { SC.holdTop = test; }
+const stepsHeld = () => !!(SC.holdTop && SC.P <= stepsMap && SC.holdTop());
 function stepsBlockWheel(e) {
   if (SC.rm || e.ctrlKey || exploreActive() || e.defaultPrevented) return;
   const target = stepsTarget(e);
   if (target?.closest('.sheet.on')) { e.preventDefault(); return; }
   e.preventDefault();
+  if (stepsHeld()) { SC.scroll = { stamp: e.timeStamp }; return; }
   if (SC.scrollLive && !SC.cut && SC.P <= stepsMap) stepsScrollBy(e.deltaY, e.timeStamp);
 }
 function stepsScrollBy(pixels, stamp) {
@@ -333,12 +338,17 @@ function stepsTouchMove(e) {
   const touch = SC.touch; if (!touch) return;
   if (e.defaultPrevented || e.touches.length !== 1) { SC.touch = null; return; }
   const p = e.touches[0], dx = p.clientX - touch.x, dy = p.clientY - touch.y;
+  // A vertical finger is the page's from the slop on, so the browser never takes the gesture over and later cancels are
+  // honoured; it only counts as a swipe from STEPS.scroll.swipe on (F1), and only a swipe swallows the tap.
+  if (!touch.held && Math.abs(dy) <= STEPS.scroll.slop) return;
+  if (!touch.held && Math.abs(dx) >= Math.abs(dy)) { SC.touch = null; return; }
+  touch.held = true; if (e.cancelable) e.preventDefault();
   if (!touch.dragged && Math.abs(dy) < STEPS.scroll.swipe) return;
-  if (!touch.dragged && Math.abs(dx) >= Math.abs(dy)) { SC.touch = null; return; }
   const first = !touch.dragged;
-  touch.dragged = true; e.preventDefault(); SC.swallow = true;
+  touch.dragged = true; SC.swallow = true;
   if (SC.scrollLive && !SC.cut && SC.P <= stepsMap) {
-    if (first) stepsScrollBy(-dy, e.timeStamp);
+    if (stepsHeld()) SC.scroll = { stamp: e.timeStamp };
+    else if (first) stepsScrollBy(-dy, e.timeStamp);
     else if (SC.scroll) SC.scroll.stamp = e.timeStamp;
   }
   touch.last = p.clientY; touch.samples.push([e.timeStamp, p.clientY]);
@@ -358,6 +368,7 @@ function stepsKey(e) {
   else if (['ArrowUp', 'ArrowLeft', 'PageUp'].includes(e.key) || (e.key === ' ' && e.shiftKey)) act = stepsBack;
   else if (e.key === 'Home') act = () => stepsGo('top', { jump: true });
   else if (e.key === 'End') act = () => stepsGo('end', { jump: true });
+  if (act && stepsHeld()) { e.preventDefault(); return; }
   if (act) { e.preventDefault(); act(); }
 }
 export function stepsBuild({ stage, rm, joinedTop, reducedGo = null }) {

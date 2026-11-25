@@ -5,7 +5,7 @@ import { ACTS, COPY, COMB } from './data.mjs';
 import { smooth, VIEW } from './trip.mjs';
 import { starsJoin } from './stars.mjs';
 import { JOIN } from './main.mjs';
-import { JOURNEY, stepsProgress } from './steps.mjs';
+import { JOURNEY, stepsProgress, stepsHoldTop } from './steps.mjs';
 
 const JN = {
   hero: document.querySelector('[data-hero]'), stage: document.getElementById('stage'), cv: document.getElementById('stars'),
@@ -22,6 +22,9 @@ JN.stage.prepend(JN.hero);
 document.documentElement.classList.add('jm-joined');
 JOIN.heroStart = true;
 JOIN.reduce = on => { JN.rm = on; JN.dirty = true; };
+// Nothing leaves the hero while its loader runs: input at the top waits for the hero (its handle, then the end of its loader).
+// If the hero never answers, input is let through after 15 s rather than held for good.
+stepsHoldTop(() => JN.api ? window.__hero?.loading === true : performance.now() < 15000);
 
 // Run before the hero's own entry script, without changing the copied hero files.
 JN.cue = JN.hero.querySelector('[data-cue]');

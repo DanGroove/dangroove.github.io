@@ -118,7 +118,7 @@ function resize() {
   const rule = footerResize();
   tlResize(RM ? null : rule);
   if (!RM) { $('trip').style.height = h + 'px'; exploreResize(); }
-  stepsResize(); P = stepsProgress(); dirty = true;
+  stepsResize(); P = stepsProgress(); dirty = true; mainHeroTidy = false;
   if (RM) still();
   if (JOIN.resize) JOIN.resize(w, h);
 }
@@ -129,11 +129,11 @@ let FIXED = null;
 window.addEventListener('scroll', () => { if (RM) dirty = true; }, { passive: true });
 window.addEventListener('jm-explore', () => { dirty = true; });
 window.addEventListener('resize', resize);
-window.addEventListener('jm-depth', () => { dirty = true; depthInvalidate(); if (RM && FIXED) still(); });
+window.addEventListener('jm-depth', () => { dirty = true; mainHeroTidy = false; depthInvalidate(); if (RM && FIXED) still(); });
 const PTR = [.5, .5];
 window.addEventListener('pointermove', e => { PTR[0] = e.clientX / VIEW.w; PTR[1] = e.clientY / VIEW.h; findsPointer(e.clientX, e.clientY); }, { passive: true });
 
-let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainFocus = '', mainKeys = '', mainMapPending = false;
+let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainFocus = '', mainKeys = '', mainMapPending = false, mainHeroTidy = false;
 function frame(ts) {
   const time = ts / 1000;
   const dt = mainTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - mainTs) / 1000)); mainTs = ts;
@@ -141,7 +141,10 @@ function frame(ts) {
   if (JOIN.leave) JOIN.leave(P);
   if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], { ...jr, still: true }); raf = requestAnimationFrame(frame); return; }
   const st = tripState(P);
-  if (JOIN.heroStart && P < mainHeroEnd) {
+  // Under the opaque hero the map's frame is skipped (F2), but only once a full frame has put every map layer in its hero
+  // state (shields, cards, footer, mini-map, timeline, explore): after a load or a resize, and after a cut or a glide back
+  // to the top, where the map's last frame would otherwise stay drawn over the hero.
+  if (JOIN.heroStart && P < mainHeroEnd && mainHeroTidy) {
     const jo=JOIN.frame(st,true,P);
     if(jo!==false)starsFrame(time,st,PTR,jo||{});
     dirty=true;raf=requestAnimationFrame(frame);return;
@@ -177,6 +180,7 @@ function frame(ts) {
   const shown=st.handoffT>=COMB.mapFindsIn,cardVisibility=shown?'':'hidden';
   if($('cards').style.visibility!==cardVisibility)$('cards').style.visibility=cardVisibility;
   if(shown){cardsFrame(st, aim.look, PTR);findsFrame(time, st);}
+  mainHeroTidy = !!JOIN.heroStart && P < mainHeroEnd && !mainMapPending;
   raf = requestAnimationFrame(frame);
 }
 document.addEventListener('visibilitychange', () => { stepsPause(); mainTs = null; if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else if (!raf) raf = requestAnimationFrame(frame); });
@@ -185,7 +189,7 @@ const start = () => { if (RM) mainReduced(true, true); resize(); raf = requestAn
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
 
 function mainReduced(on, initial = false) {
-  const version=++mainModeVersion;
+  const version=++mainModeVersion; mainHeroTidy = false;
   if (initial) mainCurrent = -1;
   const priorEpoch = FD.overlayEpoch;
   const request = FD.readyAction?.owner || (FD.list.ravens?.queued ? FD.list.ravens : FD.list.hoards?.items.find(h => h.queued));

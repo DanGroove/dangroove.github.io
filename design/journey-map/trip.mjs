@@ -571,6 +571,15 @@ export function tripApply(st) {
     tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true);
     tripWrite(E.svg, 'transform', 'none');
   }
+  // Explore promotes the map while its camera moves, so the held raster above moves on the compositor instead of being
+  // re-rastered every frame. A pan keeps the layer's raster scale, so the promotion stays for the next gesture. Once a
+  // held frame has been scaled (wheel, pinch, keys), rest releases it, so the map re-rasters sharp at the new zoom (F10).
+  if (!free) r.promo = r.soft = false;
+  else {
+    if (st.exploreMoving) r.promo = true;
+    if (moving && !rebase && zooming) r.soft = true;
+    if (!st.exploreMoving && r.soft) r.promo = r.soft = false;
+  }
   // Keep the displayed label state across camera commits. Its own size and tier
   // clock eases continuously, including across interrupted gestures/rebases.
   const settle = free ? 1 - Math.exp(-(st.exploreDt || 0) / (FRAME_PERF.labelSettle / 3)) : 1;
@@ -615,7 +624,7 @@ export function tripApply(st) {
   const sp = longshipPoint(st.u); tripWrite(E.ship, 'transform', `translate(${n2(sp[0])} ${n2(sp[1])}) scale(.55)`, true);
   const opacity = st.dim * fade;
   tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
-  tripWrite(E.svg, 'willChange', fade > 0 && fade < 1 ? 'opacity' : '');
+  tripWrite(E.svg, 'willChange', r.promo ? 'transform, opacity' : fade > 0 && fade < 1 ? 'opacity' : '');
   tripWrite(E.svg, 'overflow', free ? 'visible' : '');
   tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
   // the X fades in with the sea, so neither page shows it before the map exists

@@ -42,7 +42,8 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // depth.mjs for the lantern's darkness the nova canvas holds through the rush; its second batch re-records trip.mjs for the
 // labels that give way, the coasts' draw-on, the X's fade-in with the sea and the mini-map's targets.
 // FRAMES: compositor camera writer and label recovery only; geometry/score remain pinned by the motion tests.
-assert.equal(sourceDigest('trip.mjs'), 3720764308, 'trip.mjs changed');
+// Part 8 cloud fixes: explore keeps the map promoted while its camera moves, and releases it at rest after a zoom (F10 lag).
+assert.equal(sourceDigest('trip.mjs'), 2966642649, 'trip.mjs changed');
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
 assert.equal(sourceDigest('data.mjs'), 1665362642, 'data.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 4010889213, 'depth.mjs changed');

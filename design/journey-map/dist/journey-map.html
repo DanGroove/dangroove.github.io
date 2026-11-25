@@ -2547,6 +2547,15 @@ function tripApply(st) {
     tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true);
     tripWrite(E.svg, 'transform', 'none');
   }
+  // Explore promotes the map while its camera moves, so the held raster above moves on the compositor instead of being
+  // re-rastered every frame. A pan keeps the layer's raster scale, so the promotion stays for the next gesture. Once a
+  // held frame has been scaled (wheel, pinch, keys), rest releases it, so the map re-rasters sharp at the new zoom (F10).
+  if (!free) r.promo = r.soft = false;
+  else {
+    if (st.exploreMoving) r.promo = true;
+    if (moving && !rebase && zooming) r.soft = true;
+    if (!st.exploreMoving && r.soft) r.promo = r.soft = false;
+  }
   // Keep the displayed label state across camera commits. Its own size and tier
   // clock eases continuously, including across interrupted gestures/rebases.
   const settle = free ? 1 - Math.exp(-(st.exploreDt || 0) / (FRAME_PERF.labelSettle / 3)) : 1;
@@ -2591,7 +2600,7 @@ function tripApply(st) {
   const sp = longshipPoint(st.u); tripWrite(E.ship, 'transform', `translate(${n2(sp[0])} ${n2(sp[1])}) scale(.55)`, true);
   const opacity = st.dim * fade;
   tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
-  tripWrite(E.svg, 'willChange', fade > 0 && fade < 1 ? 'opacity' : '');
+  tripWrite(E.svg, 'willChange', r.promo ? 'transform, opacity' : fade > 0 && fade < 1 ? 'opacity' : '');
   tripWrite(E.svg, 'overflow', free ? 'visible' : '');
   tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
   // the X fades in with the sea, so neither page shows it before the map exists
@@ -3678,11 +3687,14 @@ function showPop(owner, anchor, html, cls = '', side = 'auto') {
     const b = ink.getBBox(), matrix = FD.svg.querySelector('#cam').getCTM().inverse().multiply(ink.getCTM());
     const points = [[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]].map(([x,y])=>[matrix.a*x+matrix.c*y+matrix.e,matrix.b*x+matrix.d*y+matrix.f]);
     FD.popBox = [Math.min(...points.map(p=>p[0])),Math.min(...points.map(p=>p[1])),Math.max(...points.map(p=>p[0])),Math.max(...points.map(p=>p[1]))];
-    if(owner.id==='horn')FD.popShape={b,matrix:FD.svg.querySelector('#cam').getCTM().inverse().multiply(ink.parentElement.getCTM())};
+    // The raised horn turns, so the corners of its box reach far past the drawing: sample its outline once here instead.
+    if(owner.id==='horn'){const pts=[];ink.querySelectorAll('path').forEach(p=>{const L=p.getTotalLength?.()||0,n=Math.max(8,Math.ceil(L));if(L>0)for(let i=0;i<=n;i++){const q=p.getPointAtLength(L*i/n);pts.push([q.x,q.y]);}});FD.popShape={b,pts,matrix:FD.svg.querySelector('#cam').getCTM().inverse().multiply(ink.parentElement.getCTM())};}
   }
-  // A popup stays above the step buttons and the timeline: their tops are read once here, when it opens, never in the frame loop.
-  const controls=document.querySelector('.jm-review');FD.popCeiling=Math.max(48,controls?.getBoundingClientRect().bottom+8||0);
-  FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go:not([hidden]), .tl, .jm-focus .find-hint:not(.explore-hint)')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
+  // A popup stays clear of the step buttons and the timeline: their boxes are read once here, when it opens, never in the
+  // frame loop. A bar in the bottom half is a floor; a bar in the top half (the end and explore bar on a computer) is a ceiling.
+  const controls=document.querySelector('.jm-review'), bars=[...document.querySelectorAll('.go:not([hidden]), .tl, .jm-focus .find-hint:not(.explore-hint)')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0), low=r=>r.top+r.height/2>=VIEW.h/2;
+  FD.popCeiling=Math.max(48,controls?.getBoundingClientRect().bottom+8||0,...bars.filter(r=>!low(r)).map(r=>r.bottom+8));
+  FD.popFloor = Math.min(VIEW.h, ...bars.filter(low).map(r => r.top));
   FD.popOrigin=[box.width/2,box.height];placePop();
   FD.popInner.style.transformOrigin = `${FD.popOrigin[0]}px ${FD.popOrigin[1]}px`;
   return true;
@@ -3716,7 +3728,7 @@ function placePop() {
   const v = 1 + (back + 1) * (q - 1) ** 3 + back * (q - 1) ** 2;
   findStyle(FD.popInner, 'transform', `scale(${lerp(K.scale, 1, q === 1 ? 1 : v)})`); findStyle(FD.popBody, 'opacity', q);
   let worldBox=FD.popBox;
-  if(FD.popShape&&FD.popOwner.popPose){const {b,matrix:m}=FD.popShape,[tx,ty,angle,s]=FD.popOwner.popPose,[px,py]=FIND_PLAY.horn.pivot,c=Math.cos(angle*Math.PI/180),sn=Math.sin(angle*Math.PI/180),points=[[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]].map(([x,y])=>{const u=x*s-px,v=y*s-py,X=tx+px+c*u-sn*v,Y=ty+py+sn*u+c*v;return[m.a*X+m.c*Y+m.e,m.b*X+m.d*Y+m.f];});worldBox=[Math.min(...points.map(p=>p[0])),Math.min(...points.map(p=>p[1])),Math.max(...points.map(p=>p[0])),Math.max(...points.map(p=>p[1]))];}
+  if(FD.popShape&&FD.popOwner.popPose){const {b,pts,matrix:m}=FD.popShape,[tx,ty,angle,s]=FD.popOwner.popPose,[px,py]=FIND_PLAY.horn.pivot,c=Math.cos(angle*Math.PI/180),sn=Math.sin(angle*Math.PI/180),points=(pts?.length?pts:[[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]]).map(([x,y])=>{const u=x*s-px,v=y*s-py,X=tx+px+c*u-sn*v,Y=ty+py+sn*u+c*v;return[m.a*X+m.c*Y+m.e,m.b*X+m.d*Y+m.f];});worldBox=[Math.min(...points.map(p=>p[0])),Math.min(...points.map(p=>p[1])),Math.max(...points.map(p=>p[0])),Math.max(...points.map(p=>p[1]))];}
   const a = worldBox ? findScreen(worldBox.slice(0,2)) : p, b = worldBox ? findScreen(worldBox.slice(2)) : p;
   const gap = K.anchorGap, ceiling = FD.popCeiling ?? K.edge, floor = (FD.popFloor ?? VIEW.h) - K.edge;
   const cx = (a[0]+b[0])/2, cy = (a[1]+b[1])/2;
@@ -4115,7 +4127,7 @@ const SC = {
   mode: 'steps', P: 0, rm: false, move: null, cut: null, lastTs: null, fill: 0, focus: null,
   root: null, go: null, cover: null, say: null, review: null, joinedTop: null,
   restoreP: null, announced: null, shown: false, ready: false, endShown: false,
-  scrollLive: true, scroll: null, touch: null, pointerOwned: false, swallow: false,
+  scrollLive: true, scroll: null, touch: null, pointerOwned: false, swallow: false, holdTop: null,
 };
 const stepsEnd = BEATS[BEATS.length - 1].P;
 const stepsMap = BEATS[1].P;
@@ -4405,11 +4417,16 @@ function stepsFrame(ts) {
   stepsButtons(); return SC.P;
 }
 const stepsTarget = e => e.target && e.target.closest ? e.target : null;
+// The joined page holds scrolls, swipes and keys at the top while the hero's loader still runs (join.mjs gives the test), so
+// nothing moves behind the loader. A held gesture still counts as a gesture: its own momentum never starts the move later.
+function stepsHoldTop(test) { SC.holdTop = test; }
+const stepsHeld = () => !!(SC.holdTop && SC.P <= stepsMap && SC.holdTop());
 function stepsBlockWheel(e) {
   if (SC.rm || e.ctrlKey || exploreActive() || e.defaultPrevented) return;
   const target = stepsTarget(e);
   if (target?.closest('.sheet.on')) { e.preventDefault(); return; }
   e.preventDefault();
+  if (stepsHeld()) { SC.scroll = { stamp: e.timeStamp }; return; }
   if (SC.scrollLive && !SC.cut && SC.P <= stepsMap) stepsScrollBy(e.deltaY, e.timeStamp);
 }
 function stepsScrollBy(pixels, stamp) {
@@ -4439,12 +4456,17 @@ function stepsTouchMove(e) {
   const touch = SC.touch; if (!touch) return;
   if (e.defaultPrevented || e.touches.length !== 1) { SC.touch = null; return; }
   const p = e.touches[0], dx = p.clientX - touch.x, dy = p.clientY - touch.y;
+  // A vertical finger is the page's from the slop on, so the browser never takes the gesture over and later cancels are
+  // honoured; it only counts as a swipe from STEPS.scroll.swipe on (F1), and only a swipe swallows the tap.
+  if (!touch.held && Math.abs(dy) <= STEPS.scroll.slop) return;
+  if (!touch.held && Math.abs(dx) >= Math.abs(dy)) { SC.touch = null; return; }
+  touch.held = true; if (e.cancelable) e.preventDefault();
   if (!touch.dragged && Math.abs(dy) < STEPS.scroll.swipe) return;
-  if (!touch.dragged && Math.abs(dx) >= Math.abs(dy)) { SC.touch = null; return; }
   const first = !touch.dragged;
-  touch.dragged = true; e.preventDefault(); SC.swallow = true;
+  touch.dragged = true; SC.swallow = true;
   if (SC.scrollLive && !SC.cut && SC.P <= stepsMap) {
-    if (first) stepsScrollBy(-dy, e.timeStamp);
+    if (stepsHeld()) SC.scroll = { stamp: e.timeStamp };
+    else if (first) stepsScrollBy(-dy, e.timeStamp);
     else if (SC.scroll) SC.scroll.stamp = e.timeStamp;
   }
   touch.last = p.clientY; touch.samples.push([e.timeStamp, p.clientY]);
@@ -4464,6 +4486,7 @@ function stepsKey(e) {
   else if (['ArrowUp', 'ArrowLeft', 'PageUp'].includes(e.key) || (e.key === ' ' && e.shiftKey)) act = stepsBack;
   else if (e.key === 'Home') act = () => stepsGo('top', { jump: true });
   else if (e.key === 'End') act = () => stepsGo('end', { jump: true });
+  if (act && stepsHeld()) { e.preventDefault(); return; }
   if (act) { e.preventDefault(); act(); }
 }
 function stepsBuild({ stage, rm, joinedTop, reducedGo = null }) {
@@ -5799,6 +5822,8 @@ function findRune(svg) {
       if (p === 1) { o.autoTs = null; queueMicrotask(() => { o.cells.forEach(p => rub(...p)); }); }
     }
     if (o.read) {
+      // the rubbing is read, so its hint goes with the rub button
+      if (o.hinted) { o.hinted = false; queueMicrotask(() => { if (FD.sheetOwner === o) FD.sheet.querySelector('.rub-hint')?.remove(); }); }
       attr(o.fill, 'opacity', FD.rm ? 1 : ease((t - o.readTs) / R.fill));
       o.letters.forEach((letter, i) => { const k = FD.rm ? 1 : out3((t - o.readTs - R.fill - i * R.letter[0]) / R.letter[1]); attr(letter, 'opacity', k); attr(letter, 'transform', `translate(0 ${R.letterRise * (1 - k)})`); });
       if (!o.controls && (FD.rm || t - o.readTs >= R.fill + (o.letters.length - 1) * R.letter[0] + R.letter[1])) { o.controls = true; queueMicrotask(() => { if (FD.sheetOwner !== o) return; FD.sheet.querySelector('.rub-do').hidden = true; FD.sheet.querySelector('.pz-flip').hidden = false; FD.sheet.querySelector('.pz-x').hidden = false; FD.sheet.querySelector('.pz-flip').focus({ preventScroll: true }); }); }
@@ -6736,7 +6761,7 @@ function resize() {
   const rule = footerResize();
   tlResize(RM ? null : rule);
   if (!RM) { $('trip').style.height = h + 'px'; exploreResize(); }
-  stepsResize(); P = stepsProgress(); dirty = true;
+  stepsResize(); P = stepsProgress(); dirty = true; mainHeroTidy = false;
   if (RM) still();
   if (JOIN.resize) JOIN.resize(w, h);
 }
@@ -6747,11 +6772,11 @@ let FIXED = null;
 window.addEventListener('scroll', () => { if (RM) dirty = true; }, { passive: true });
 window.addEventListener('jm-explore', () => { dirty = true; });
 window.addEventListener('resize', resize);
-window.addEventListener('jm-depth', () => { dirty = true; depthInvalidate(); if (RM && FIXED) still(); });
+window.addEventListener('jm-depth', () => { dirty = true; mainHeroTidy = false; depthInvalidate(); if (RM && FIXED) still(); });
 const PTR = [.5, .5];
 window.addEventListener('pointermove', e => { PTR[0] = e.clientX / VIEW.w; PTR[1] = e.clientY / VIEW.h; findsPointer(e.clientX, e.clientY); }, { passive: true });
 
-let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainFocus = '', mainKeys = '', mainMapPending = false;
+let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainFocus = '', mainKeys = '', mainMapPending = false, mainHeroTidy = false;
 function frame(ts) {
   const time = ts / 1000;
   const dt = mainTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - mainTs) / 1000)); mainTs = ts;
@@ -6759,7 +6784,10 @@ function frame(ts) {
   if (JOIN.leave) JOIN.leave(P);
   if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], { ...jr, still: true }); raf = requestAnimationFrame(frame); return; }
   const st = tripState(P);
-  if (JOIN.heroStart && P < mainHeroEnd) {
+  // Under the opaque hero the map's frame is skipped (F2), but only once a full frame has put every map layer in its hero
+  // state (shields, cards, footer, mini-map, timeline, explore): after a load or a resize, and after a cut or a glide back
+  // to the top, where the map's last frame would otherwise stay drawn over the hero.
+  if (JOIN.heroStart && P < mainHeroEnd && mainHeroTidy) {
     const jo=JOIN.frame(st,true,P);
     if(jo!==false)starsFrame(time,st,PTR,jo||{});
     dirty=true;raf=requestAnimationFrame(frame);return;
@@ -6795,6 +6823,7 @@ function frame(ts) {
   const shown=st.handoffT>=COMB.mapFindsIn,cardVisibility=shown?'':'hidden';
   if($('cards').style.visibility!==cardVisibility)$('cards').style.visibility=cardVisibility;
   if(shown){cardsFrame(st, aim.look, PTR);findsFrame(time, st);}
+  mainHeroTidy = !!JOIN.heroStart && P < mainHeroEnd && !mainMapPending;
   raf = requestAnimationFrame(frame);
 }
 document.addEventListener('visibilitychange', () => { stepsPause(); mainTs = null; if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else if (!raf) raf = requestAnimationFrame(frame); });
@@ -6803,7 +6832,7 @@ const start = () => { if (RM) mainReduced(true, true); resize(); raf = requestAn
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
 
 function mainReduced(on, initial = false) {
-  const version=++mainModeVersion;
+  const version=++mainModeVersion; mainHeroTidy = false;
   if (initial) mainCurrent = -1;
   const priorEpoch = FD.overlayEpoch;
   const request = FD.readyAction?.owner || (FD.list.ravens?.queued ? FD.list.ravens : FD.list.hoards?.items.find(h => h.queued));

@@ -138,6 +138,8 @@ export function findRune(svg) {
       if (p === 1) { o.autoTs = null; queueMicrotask(() => { o.cells.forEach(p => rub(...p)); }); }
     }
     if (o.read) {
+      // the rubbing is read, so its hint goes with the rub button
+      if (o.hinted) { o.hinted = false; queueMicrotask(() => { if (FD.sheetOwner === o) FD.sheet.querySelector('.rub-hint')?.remove(); }); }
       attr(o.fill, 'opacity', FD.rm ? 1 : ease((t - o.readTs) / R.fill));
       o.letters.forEach((letter, i) => { const k = FD.rm ? 1 : out3((t - o.readTs - R.fill - i * R.letter[0]) / R.letter[1]); attr(letter, 'opacity', k); attr(letter, 'transform', `translate(0 ${R.letterRise * (1 - k)})`); });
       if (!o.controls && (FD.rm || t - o.readTs >= R.fill + (o.letters.length - 1) * R.letter[0] + R.letter[1])) { o.controls = true; queueMicrotask(() => { if (FD.sheetOwner !== o) return; FD.sheet.querySelector('.rub-do').hidden = true; FD.sheet.querySelector('.pz-flip').hidden = false; FD.sheet.querySelector('.pz-x').hidden = false; FD.sheet.querySelector('.pz-flip').focus({ preventScroll: true }); }); }
