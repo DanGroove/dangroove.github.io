@@ -3733,3 +3733,96 @@ An initial standalone 412 probe failed the old one-or-two occupancy assumption. 
 No requested runtime item or check is left out. Reviewer agents were omitted as explicitly forbidden, and no independent design approval is claimed. Only allowed take-2 source, tools, README, BUILD and ignored .scratch files were written. No public/src/CNAME, correction, mock, fixture or outside file was changed. No git, package install, network request, site build or deployment was run; PresentationEngine and E: were not accessed. All task Edge contexts close in finally. Source/syntax, Markdown ASCII and final OS process audits accompany this report.
 
 [Full report and every moved old/new position](.scratch/codex-round19q-report.md), [final full suite](.scratch/l15/checks-final-utf8.log), [incoming page measurements](.scratch/l15/before.json), [L15 page/loader/geometry evidence](.scratch/l15/after.json), [source audit](.scratch/l15/source-audit.json), [Edge audit](.scratch/l15/edge-audit.json).
+
+
+## Round 19, L16
+
+Built L16 items 1-3. The final node tools/checks.mjs exits 0 and prints all clean. Every registered negative control fails at its intended gate, including L16's historical progress-crossing rule.
+
+### Implementation and reference constraints
+
+Read CORRECTIONS-19.md L16, MOCK-V.md, README.md and the relevant Round 19 BUILD records before editing. Acceptance and incoming page/source/hash evidence are under .scratch/l16. Used motion-playbook for the narrow clock correction. The supplied L16 rule controls the change; no generic timing or easing defaults replace it.
+
+loaderAt now schedules each launch from launchShare(i) / rate and uses the last real boot timestamp for readiness. The obsolete progress-crossing inverse is removed. The formed hold starts at max(last landing, last boot step), and remains Infinity while a step is missing. Honest fill and target remain integrated at the existing rate. Only the formed mark waits for loading.
+
+The module, inline bootstrap and Blob worker all obtain the same loaderAt from loader-stars.mjs. No separate copy or tools/page.mjs edit was needed. The check wraps the existing bridge.boot in an init-script setter and reads bridge.state(performance.now()/1000) just after each boot notification, using the same first-frame origin and clamp. The page's visible output is unchanged. Reduced motion still shows the formed mark and cuts on readiness; ?t= bypass and scene-resolved burst landing, entrance and pointer handover remain.
+
+### Every earlier changed expectation
+
+| Earlier check | Old expectation -> new expectation |
+| --- | --- |
+| entrance-checks.mjs, checkLoaderTiming launch schedule | Launch at the progress crossing of each share, with pauses and unknown future launches -> every boot has all 600 launch times fixed at 1.4 * i / 599 s. No reorder. |
+| checkLoaderTiming formation during incomplete/late boot | Formation follows the last progress-driven flight, or Infinity with a missing launch share -> formation is always 2.40 s and all 600 have arrived then. Missing steps still prevent hold and completion at 20 s. |
+| checkLoaderTiming plateau assertion | At fonts:0, arrived counts at 1.5 and 3 s both 177; assertion says progress must not invent launches -> 214 at 1.5 s, 600 by 2.40 s and at 3 s; launches proceed on time. Fill remains .25 and holdAt remains Infinity. |
+| checkLoaderTiming late frame | fonts:0, atlas:0, frame:10 holds at 11.164705882 s -> 10.000000000 s. Formation 11.164705882 -> 2.40 s; burst 11.924705882 -> 10.76 s; conservative landing 13.724705882 -> 12.56 s. |
+| checkLoaderTiming fullAt diagnostic | Full displayed-progress crossing -> final real boot step, or Infinity if missing. On all-ready boot, 1.647058824 -> 0 s. Fill/target integration and reduced hard steps are unchanged. This diagnostic is not a visible all-ready phase time. |
+| checkLoaderTiming history count | Six histories / 36,000 samples -> eight histories / 48,000 samples, still every 1 ms through 6 s. The existing empty history stays; fonts:0 and frame:10 histories are added. Per-history exact launch/formation/readiness gates and missing-step checks at 20 s are added. |
+| checkPlayer delayed fonts | After readiness, advance 4.91 s before landing then .05 s to landing -> advance 2.96 s then the unchanged .05 s. Total wait 4.96 -> 3.01 s. The actual fixture starts its clock on its first 50 ms tick and finishes fonts at wall time 2 s, so 1.95 s of launches now count while waiting. |
+| tools/checks.mjs | No L16 invocation -> run the eight real-time loads and the same eight loads with the historical launch rule; the historical rule must fail the launch-gap gate in the delayed-atlas case. |
+
+No other earlier check expectation, tolerance, control mutation or source file changed. In particular, the blocked-first-draw fixture retains its 4.91 + .05 s wait because its first visible clock frame still follows the blocking draw. All-ready phases remain hold 2.40, shrink 2.55, compressed hold 2.90, swell 2.98, burst 3.16 and conservative landing/entrance/pointer 4.96 s. Real landing still uses the existing scene duration. The 1 s cubic flights, .15/.35/.08/.18 s wind-up phases and all burst formulas remain exact.
+
+### Pure timing before and after
+
+Infinity means a missing step/launch; JSON evidence serializes nonfinite numbers as null. These are declared pure-clock times. Progress, all-ready visible phase boundaries, drawing functions and scene durations are preserved.
+
+| Boot | Last launch before / after s | fullAt before / after s | Hold before / after s | Burst before / after s | Conservative landing before / after s |
+| --- | --- | --- | --- | --- | --- |
+| {"fonts":0,"atlas":0,"frame":0} | 1.400000 / 1.400000 | 1.647059 / 0.000000 | 2.400000 / 2.400000 | 3.160000 / 3.160000 | 4.960000 / 4.960000 |
+| {} | Infinity / 1.400000 | Infinity / Infinity | Infinity / Infinity | Infinity / Infinity | Infinity / Infinity |
+| {"fonts":0} | Infinity / 1.400000 | Infinity / Infinity | Infinity / Infinity | Infinity / Infinity | Infinity / Infinity |
+| {"fonts":0.2} | Infinity / 1.400000 | Infinity / Infinity | Infinity / Infinity | Infinity / Infinity | Infinity / Infinity |
+| {"fonts":0.1,"atlas":1.2} | Infinity / 1.400000 | Infinity / Infinity | Infinity / Infinity | Infinity / Infinity | Infinity / Infinity |
+| {"fonts":0.13,"atlas":0.23,"frame":0.41} | 1.530000 / 1.400000 | 1.777059 / 0.410000 | 2.530000 / 2.400000 | 3.290000 / 3.160000 | 5.090000 / 4.960000 |
+| {"fonts":0.2,"atlas":1.7,"frame":3.01} | 3.174706 / 1.400000 | 3.421765 / 3.010000 | 4.174706 / 3.010000 | 4.934706 / 3.770000 | 6.734706 / 5.570000 |
+| {"fonts":0,"atlas":0,"frame":10} | 10.164706 / 1.400000 | 10.411765 / 10.000000 | 11.164706 / 10.000000 | 11.924706 / 10.760000 | 13.724706 / 12.560000 |
+
+At 2.40 s the old empty/fonts-only/fonts-at-.2/two-step/.13-.23-.41/.2-1.7-3.01/late-frame histories have 0/177/177/262/544/177/529 arrivals; all now have 600. All-ready already had 600 and keeps it. At 20 s, every incomplete history remains loading, with no hold and done false.
+
+### Real-time browser baseline
+
+Installed local Playwright resolution and Edge executable/default GPU flags match the other page checks. Persistent isolated profiles are under .scratch/l16. The offline pack is the built page; file/data/blob assets are allowed and all page network requests are blocked. No ?t or controlled clock is used. Desktop DPR is 1 and phone DPR is 3 with mobile/touch emulation, following MOCK-V's measuring method. A CDP session sets CPU rate 4 before navigation for the throttled load. The late probe adds exactly a 2.5 s wait immediately before bootDone('atlas').
+
+| Load | Fonts s | Atlas s | Frame s | Max gap ms | Last launch s | Hold s | Burst s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| before-1440-900-1 | 0.000000 | 0.224000 | 0.261100 | 2.337 | 1.400000 | 2.400000 | 3.160000 |
+| before-1440-900-2 | 0.000000 | 0.231500 | 0.268900 | 2.337 | 1.400000 | 2.400000 | 3.160000 |
+| before-390-844-1 | 0.000000 | 0.259300 | 0.291600 | 2.337 | 1.400000 | 2.400000 | 3.160000 |
+| before-390-844-2 | 0.000000 | 0.248700 | 0.282700 | 2.337 | 1.400000 | 2.400000 | 3.160000 |
+| before-412-730-1 | 0.000000 | 0.264300 | 0.299100 | 2.337 | 1.400000 | 2.400000 | 3.160000 |
+| before-412-730-2 | 0.000000 | 0.261000 | 0.296400 | 2.337 | 1.400000 | 2.400000 | 3.160000 |
+| before-1440-cpu4 | 0.000000 | 1.188700 | 1.356400 | 779.272 | 2.176935 | 3.176935 | 3.936935 |
+| before-1440-late-atlas | 0.000000 | 2.750400 | 2.793900 | 2340.873 | 3.738535 | 4.738535 | 5.498535 |
+
+This PC completes ordinary boots sooner than MOCK-V's machine, before the first plateau becomes a visible gap. That is observed baseline evidence, not a changed threshold. Its CPU and delayed-atlas baselines expose the split.
+
+### Real-time browser revision
+
+| Load | Fonts s | Atlas s | Frame s | Max gap ms | Last launch s | Hold s | Burst s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| current-1440-900-1 | 0.000000 | 0.275900 | 0.317700 | 2.337 | 1.400000 | 2.400000 | 3.160000 |
+| current-1440-900-2 | 0.000000 | 0.279900 | 0.320600 | 2.337 | 1.400000 | 2.400000 | 3.160000 |
+| current-390-844-1 | 0.000000 | 0.279500 | 0.314600 | 2.337 | 1.400000 | 2.400000 | 3.160000 |
+| current-390-844-2 | 0.000000 | 0.292400 | 0.326800 | 2.337 | 1.400000 | 2.400000 | 3.160000 |
+| current-412-730-1 | 0.000000 | 0.278600 | 0.314100 | 2.337 | 1.400000 | 2.400000 | 3.160000 |
+| current-412-730-2 | 0.000000 | 0.293100 | 0.330100 | 2.337 | 1.400000 | 2.400000 | 3.160000 |
+| current-1440-cpu4 | 0.000000 | 1.603200 | 1.802000 | 2.337 | 1.400000 | 2.400000 | 3.160000 |
+| current-1440-late-atlas | 0.000000 | 2.751000 | 2.801800 | 2.337 | 1.400000 | 2.801800 | 3.561800 |
+
+All eight loads have 600 launches from 0 to 1.40 s, largest gap 2.337229 ms, below the unchanged 10 ms limit. All 600 arrive by 2.40 s. Hold is within the prescribed 17 ms of max(2.40, last boot step), and burst is hold + .76 s. In the delayed probe, final boot is 2.801800 s, hold 2.801800 s and burst 3.561800 s. Every frame reads all launch times and phase timestamps through the bridge's entrance phase. The evidence stores every frame's phase/arrival/progress data, every distinct launch schedule and the final full schedule.
+
+### Negative control and retained gates
+
+One control restores 3232c60's progress-crossing launches and full-progress readiness in memory in both packed copies, including the worker source. It reruns all eight cases against the same browser gate. The delayed-atlas case fails at L16 stream: launch gap 2381.073 ms exceeds 10 ms. Its largest gap is 2381.073 ms, with 177 then 423 stars; last launch 3.778735 s, hold 4.778735 s and burst 5.538735 s. The control's failing cases are legacy-1440-cpu4, legacy-1440-late-atlas. Ordinary legacy runs may pass on a fast machine; the delayed member makes failure deterministic. No positive gate was weakened or skipped.
+
+The complete final suite reruns all earlier gates and controls. L13c's assignment and check file, L15's label rule, stars.mjs, star-labels.mjs, play.mjs and entrance.mjs are byte-identical to the incoming files. An independent preservation probe finds identical scenes and identical all-ready draw arrays at 14 times for each requested size (42 states); every landing/scene/drawing function following loaderAt is byte-identical. Guarded-home movement, endpoint, merge and handover checks pass in the full suite.
+
+### Render comparison, iteration and limits
+
+Paired incoming/revision held renders at 1.20, 2.40 and 3.26 s were compared at all three sizes with the same all-ready state. Eight of nine PNG pairs are byte-identical. The 412 x 730 explosion pair differs at one of 300,760 pixels, by one RGB level at (260,260); its paired images were inspected at reading scale and preserve the same composition, mark, stars, colours and taper treatment. The supplementary strict PNG-byte assertion stopped on that ninth pair; no perfect nine-pair pixel-identity claim is made, and no runtime change or prescribed gate adjustment was made for this one-level raster difference.
+
+The first standalone entrance run and first full suite exposed the stale delayed-font wait. An initial 3.91 s replacement was also too long because it overlooked the fixture's first 50 ms tick; the corrected 2.96 s probe plus .05 s landing passes all 17 player cases. The first full suite reported only that old loaded assertion. Final full verification uses the corrected file. Initial logs are retained. The L16 browser harness was also corrected to judge the historical rule over the full case set, rather than assume every ordinary fast-machine load must show a gap, and to evaluate final launch timestamps rather than treat the old rule's not-yet-known future predictions as actual delayed launches.
+
+No requested runtime item or prescribed check is left out. Reviewer agents were omitted as explicitly forbidden; no independent design approval is claimed. No git, install, network request, site build or deployment ran. PresentationEngine and E: were not accessed. Only the allowed take-2 files and ignored .scratch files were written. Every Edge context started by these checks closes in finally; final process, source and ASCII audits are recorded beside the evidence. All added Markdown text is ASCII, with the preceding BUILD record preserved.
+
+[Full report](.scratch/codex-round19r-report.md), [final suite](.scratch/l16/checks-final.log), [browser evidence](.scratch/l16/after-browser.json).

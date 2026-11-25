@@ -32,6 +32,7 @@ import { checkL13, checkL13Controls } from './l13-checks.mjs';
 import { checkL13b } from './l13b-checks.mjs';
 import { checkL13c } from './l13c-checks.mjs';
 import { checkL15 } from './l15-checks.mjs';
+import { checkL16 } from './l16-checks.mjs';
 import { checkL14 } from './l14-checks.mjs';
 import { checkL14Browser } from './l14-browser-checks.mjs';
 import { checkL11, checkL11Controls } from './l11-checks.mjs';
@@ -563,6 +564,7 @@ try { console.log('L14: ' + JSON.stringify(await checkL14())); console.log('L14 
 try { const r = await checkL13b(); console.log('L13b: ' + JSON.stringify({ selection: r.selection.map(s => ({ width: s.W, gestures: s.selection.length, textElements: s.text.length })), interaction: r.interaction.map(s => ({ width: s.W, activations: s.checked.length, focus: s.focus })), motion: r.motion, controls: r.controls })); } catch (error) { fail(0, error.message); }
 try { console.log('L13c: ' + JSON.stringify(await checkL13c())); } catch (error) { fail(0, error.message); }
 try { const r = await checkL15(); console.log('L15: ' + JSON.stringify({ sizes: r.sizes, loaders: r.loaders, geometry: r.geometry })); } catch (error) { fail(0, error.message); }
+try { console.log('L16: ' + JSON.stringify(await checkL16())); } catch (error) { fail(0, error.message); }
 try { console.log(await checkL11()); console.log('L11 negative control: ' + await checkL11Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound9()); console.log('Round 9 negative controls: ' + await withSourceLines(checkRound9Controls)); } catch (error) { fail(0, error.message.split('\n')[0]); }
 try { console.log(await checkRound10()); console.log('Round 10 negative controls: ' + await checkRound10Controls()); } catch (error) { fail(0, error.message.split('\n')[0]); }

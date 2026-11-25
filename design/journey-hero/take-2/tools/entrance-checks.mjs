@@ -139,14 +139,29 @@ export function checkLoaderTiming({ loaderAt, LOADER }) {
   assert.equal(launches.length, 600, 'L4 timing: count');
   for (let i = 1; i < 600; i++) assert.ok(launches[i] > launches[i - 1], 'L4 timing: launch order');
   let samples = 0;
-  const boots = [all, {}, { fonts: 0.2 }, { fonts: 0.1, atlas: 1.2 }, { fonts: 0.13, atlas: 0.23, frame: 0.41 }, { fonts: 0.2, atlas: 1.7, frame: 3.01 }];
+  const boots = [all, {}, { fonts: 0 }, { fonts: 0.2 }, { fonts: 0.1, atlas: 1.2 }, { fonts: 0.13, atlas: 0.23, frame: 0.41 }, { fonts: 0.2, atlas: 1.7, frame: 3.01 }, { fonts: 0, atlas: 0, frame: 10 }];
   for (const boot of boots) {
     let prev = loaderAt(0, boot);
+    const ready = ['fonts', 'atlas', 'frame'].every(key => Number.isFinite(boot[key]));
+    const holdAt = ready ? Math.max(2.4, ...Object.values(boot)) : Infinity;
+    for (let i = 0; i < 600; i++) close(prev.launches[i], 1.4 * i / 599, 'L16 timing: launch ignores boot ' + i);
+    close(prev.formedAt, 2.4, 'L16 timing: formation ignores boot');
+    assert.equal(loaderAt(2.4, boot).arrived, 600, 'L16 timing: all arrive by 2.40 s');
+    assert.equal(prev.holdAt, holdAt, 'L16 timing: hold waits only for formation and readiness');
+    assert.equal(prev.fullAt, ready ? Math.max(...Object.values(boot)) : Infinity, 'L16 timing: fullAt is final boot step');
+    if (ready) {
+      assert.equal(loaderAt(holdAt - 1e-9, boot).phase, 'loading', 'L16 timing: hold before ready');
+      assert.equal(loaderAt(holdAt, boot).phase, 'hold', 'L16 timing: hold at readiness');
+    } else {
+      assert.equal(loaderAt(20, boot).phase, 'loading', 'L16 timing: missing step permits hold');
+      assert.equal(loaderAt(20, boot).done, false, 'L16 timing: missing step permits completion');
+    }
     for (let n = 1; n <= 6000; n++) {
       const t = n / 1000, s = loaderAt(t, boot), delta = s.fill - prev.fill;
       assert.ok(s.fill >= 0 && s.fill <= s.target && s.target <= 1 && Number.isFinite(s.burst), 'L4 timing: finite bounded progress');
       assert.ok(delta >= -1e-12 && delta <= 0.001 * 0.85 / 1.4 + 1e-12, 'L4 timing: progress jumps, reverses or exceeds launch speed');
       assert.ok(s.arrived >= prev.arrived && s.arrived <= 600, 'L4 timing: arrived count reverses');
+      assert.deepEqual(s.launches, launches, 'L16 timing: launch schedule changes with progress');
       if (s.done) assert.ok(s.arrived === 600 && s.fill === 1 && s.burst === 1 && t >= Math.max(...Object.values(boot)), 'L4 timing: ends before ready/arrivals');
       assert.equal(s.entranceTime !== null, s.done, 'L5 timing: entrance before burst ended');
       assert.equal(s.pointer, s.done, 'L5 timing: pointer differs from landing');
@@ -155,12 +170,15 @@ export function checkLoaderTiming({ loaderAt, LOADER }) {
     }
     for (const time of Object.values(boot)) close(loaderAt(time - 1e-9, boot).fill, loaderAt(time, boot).fill, 'L4 timing: boot jumps progress', 2e-9);
   }
-  // A plateau really pauses launches; flight already in progress still finishes.
+  // Progress stays honest at a plateau; the launch stream and flights keep running.
   const paused = { fonts: 0 };
-  assert.equal(loaderAt(1.5, paused).arrived, loaderAt(3, paused).arrived, 'L4 timing: progress invents launches at a plateau');
+  assert.ok(loaderAt(1.5, paused).arrived < loaderAt(2.4, paused).arrived, 'L16 timing: progress pauses launches at a plateau');
+  assert.equal(loaderAt(2.4, paused).arrived, 600, 'L16 timing: plateau flights arrive');
+  assert.equal(loaderAt(3, paused).fill, 0.25, 'L16 timing: plateau keeps honest progress');
+  assert.equal(loaderAt(3, paused).holdAt, Infinity, 'L16 timing: plateau holds only the formed mark');
   assert.equal(loaderAt(20, paused).done, false, 'L4 timing: missing boot step');
   const late = { fonts: 0, atlas: 0, frame: 10 }, s = loaderAt(10, late);
-  close(s.holdAt, 10 + 0.1 * 1.4 / 0.85 + 1.0, 'L4 timing: waits for last flight after final progress');
+  close(s.holdAt, 10, 'L16 timing: hold at late final boot step');
   for (const [time, target] of [[0, 0], [0.2, 0.25], [1.7, 0.75], [3.01, 1]]) {
     const state = loaderAt(time, { fonts: 0.2, atlas: 1.7, frame: 3.01 }, { reduced: true });
     assert.equal(state.fill, target, 'L4 timing: reduced real shares');
@@ -525,7 +543,8 @@ async function checkPlayer(playerSource, E, P) {
     finishPageFonts();
   } });
   assert.ok(late.win.__ready && late.win.__hero.loading && late.loaderStates.at(-1).fill === 0, 'L4 player: delayed readiness jumps fill');
-  late.run(4.91); assert.equal(late.win.__hero.entering, null, 'L5 player: delayed entrance before landing');
+  // The loader started at .05 s and fonts finished at 2 s; launches now use that 1.95 s.
+  late.run(2.96); assert.equal(late.win.__hero.entering, null, 'L5 player: delayed entrance before landing');
   late.run(0.05); near(late.win.__hero.entering, 0, 'L5 player: delayed burst landing');
   const blocked = await runPlayer(playerSource, E, { withLoader: true, firstDrawSeconds: 2 });
   assert.ok(blocked.win.__ready && blocked.loaderStates.at(-1).fill === 0, 'L4 player: blocked boot consumes visible fill');
