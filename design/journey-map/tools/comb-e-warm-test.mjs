@@ -1,7 +1,7 @@
 // Load/hero/first-glide renderer trace, separate from the deferred cost pass.
 import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
 import {writeFileSync} from 'node:fs';
-const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-f',b=await combBBrowser(),fail=[];
+const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g',b=await combBBrowser(),fail=[];
 let trace=[],done=false;
 b.on('Tracing.dataCollected',p=>trace.push(...p.value));b.on('Tracing.tracingComplete',()=>done=true);
 try{

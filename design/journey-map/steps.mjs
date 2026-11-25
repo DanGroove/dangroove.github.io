@@ -18,6 +18,7 @@ const stepsNextBeat = () => BEATS.find(b => b.P > SC.P + .5);
 const stepsBackBeat = () => BEATS.slice().reverse().find(b => b.P < SC.P - .5);
 const stepsRestBeat = () => BEATS.find(b => Math.abs(b.P - SC.P) < 1e-6);
 const stepsName = b => b ? COPY.steps.names[b.id] || STOPS.find(s => s.id === b.id).short : COPY.steps.names.top;
+const stepsBackName = b => b ? STOPS.find(s => s.id === b.id)?.short || COPY.steps.names[b.id] : COPY.steps.names.top;
 const stepsFormat = (s, values) => s.replace(/\{(\w+)\}/g, (m, k) => values[k]);
 const stepsReadScroll = () => { SC.P = window.scrollY / VIEW.unit; return SC.P; };
 
@@ -77,7 +78,7 @@ function stepsButtons() {
   if (!faded && SC.go.hidden !== hidden) SC.go.hidden = hidden;
   const lost = !document.activeElement || document.activeElement === document.body || !!document.activeElement.closest?.('[data-hero]');
   if (SC.heroFocus && top && !JOURNEY.moving) { SC.heroFocus = false; const start = document.querySelector?.('.jm-start'); if (start && lost) start.focus({ preventScroll: true }); }
-  if (SC.joinedTop() && wasHidden && !SC.go.hidden && !hero && !blasting && lost && !JOURNEY.moving && Math.abs(SC.P - stepsMap) < 1e-6) SC.go.querySelector('.go-next').focus({ preventScroll: true });
+  if (SC.joinedTop() && !SC.go.hidden && !hero && !blasting && lost && !JOURNEY.moving && Math.abs(SC.P - stepsMap) < 1e-6) SC.go.querySelector('.go-next').focus({ preventScroll: true });
   if (!hero) SC.heroFocus = false;
   if (SC.go.classList.contains('go-end') !== end) SC.go.classList.toggle('go-end', end);
   const back = SC.go.querySelector('.go-back'), next = SC.go.querySelector('.go-next'), home = SC.go.querySelector('.go-top');
@@ -88,7 +89,7 @@ function stepsButtons() {
   if (!SC.go.hidden && ((next.hidden && focus === next) || (home.hidden && focus === home))) back.focus({ preventScroll: true });
   if (!SC.go.hidden && back.hidden && focus === back) next.focus({ preventScroll: true });
   const returning = exploreActive() ? COPY.explore.back : JOURNEY.visiting ? COPY.steps.returnTo : '';
-  const label = returning || stepsFormat(COPY.steps.back, { name: stepsName(stepsBackBeat()) });
+  const label = returning || stepsFormat(COPY.steps.back, { name: stepsBackName(stepsBackBeat()) });
   if (back.getAttribute('aria-label') !== label) back.setAttribute('aria-label', label);
   const words = back.querySelector('span'); if (words.textContent !== returning) words.textContent = returning;
   if (end) { const words = SC.go.querySelector('.go-t'); if (words.textContent !== COPY.explore.button) words.textContent = COPY.explore.button; }
@@ -232,6 +233,8 @@ function stepsNavigate(target, opts = {}) {
 function stepsGo(id, opts = {}) {
   if (SC.cut) return;
   const beat = BEATS.find(b => b.id === id); if (!beat) return;
+  // A shield pressed during its own arrival keeps the current landing clock.
+  if (!opts.instant && STOPS.some(s => s.id === id) && SC.move && SC.move.P1 === beat.P) return;
   stepsRelease(); if (SC.rm && SC.reducedGo) { SC.reducedGo(id); stepsReadScroll(); return; } stepsNavigate(beat.P, { ...opts, start: id === 'map' });
 }
 function stepsNext() {
@@ -359,17 +362,18 @@ function stepsTouchEnd(e) {
   if (touch?.dragged && SC.scroll) SC.scroll.stamp = e.timeStamp;
 }
 function stepsKey(e) {
+  SC.root.classList.remove('jm-pointer-focus');
   if (SC.mode !== 'steps' || SC.rm || exploreActive() || e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-  const target = stepsTarget(e);
-  if (target && target.closest('.tl, .sheet.on') || SC.root.classList.contains('jm-sheet-open')) return;
-  if (e.key === ' ' && target && target.closest('button, a, input, textarea, select, .find, [role="button"]')) return;
+  const target = stepsTarget(e), backSpace = e.key === ' ' && e.shiftKey;
+  if (target && target.closest('.sheet.on') || SC.root.classList.contains('jm-sheet-open') || !backSpace && target?.closest('.tl')) return;
+  if (e.key === ' ' && !e.shiftKey && target && target.closest('button, a, input, textarea, select, .find, [role="button"]')) return;
   let act = null;
   if (['ArrowDown', 'ArrowRight', 'PageDown'].includes(e.key) || (e.key === ' ' && !e.shiftKey)) act = stepsNext;
   else if (['ArrowUp', 'ArrowLeft', 'PageUp'].includes(e.key) || (e.key === ' ' && e.shiftKey)) act = stepsBack;
   else if (e.key === 'Home') act = () => stepsGo('top', { jump: true });
   else if (e.key === 'End') act = () => stepsGo('end', { jump: true });
   if (act && stepsHeld()) { e.preventDefault(); return; }
-  if (act) { e.preventDefault(); act(); }
+  if (act) { e.preventDefault(); if (backSpace) e.stopImmediatePropagation(); act(); }
 }
 export function stepsBuild({ stage, rm, joinedTop, reducedGo = null }) {
   SC.root = document.documentElement; SC.rm = rm; SC.joinedTop = joinedTop; SC.reducedGo = reducedGo;
@@ -402,7 +406,8 @@ export function stepsBuild({ stage, rm, joinedTop, reducedGo = null }) {
   stepsClasses(); stepsArrive();
   if (SC.mode === 'steps') window.scrollTo({ top: 0, behavior: 'instant' });
   window.addEventListener('wheel', stepsBlockWheel, { passive: false }); window.addEventListener('keydown', stepsKey);
-  window.addEventListener('pointerdown', e => { SC.swallow = false; if (e.pointerType === 'touch') SC.pointerOwned = e.defaultPrevented || stepsTouchOwned(stepsTarget(e)); });
+  window.addEventListener('keydown', e => { if (e.key === ' ' && e.shiftKey) stepsKey(e); }, true);
+  window.addEventListener('pointerdown', e => { SC.root.classList.add('jm-pointer-focus'); SC.swallow = false; if (e.pointerType === 'touch') SC.pointerOwned = e.defaultPrevented || stepsTouchOwned(stepsTarget(e)); });
   window.addEventListener('touchstart', stepsTouchStart, { passive: true });
   window.addEventListener('touchmove', stepsTouchMove, { passive: false });
   window.addEventListener('touchend', stepsTouchEnd); window.addEventListener('touchcancel', stepsTouchEnd);

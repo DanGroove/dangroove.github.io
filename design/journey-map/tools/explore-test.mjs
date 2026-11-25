@@ -58,7 +58,7 @@ const listeners = {}, classes = new Set(), hint = { classList: { add() {}, remov
 const eventTarget = { closest: () => null };
 const captures = new Set(), listenerOptions = {};
 const stage = { classList: hint.classList, appendChild() {}, addEventListener(type, fn, options) { (listeners['stage:' + type] ??= []).push(fn); (listenerOptions[type] ??= []).push(options); }, setPointerCapture(id) { captures.add(id); }, releasePointerCapture(id) { captures.delete(id); }, hasPointerCapture: id => captures.has(id) };
-globalThis.window = { addEventListener(type, fn) { (listeners[type] ??= []).push(fn); }, dispatchEvent() {}, getComputedStyle() { throw new Error('frame layout read'); } };
+globalThis.window = { matchMedia: () => ({ matches: false }), addEventListener(type, fn) { (listeners[type] ??= []).push(fn); }, dispatchEvent() {}, getComputedStyle() { throw new Error('frame layout read'); } };
 globalThis.document = { createElement: () => hint, getElementById: () => status, documentElement: { classList: { add: c => classes.add(c), remove: c => classes.delete(c) } } };
 const journey = { P: 0, moving: false, beats: BEATS }, endP = BEATS.at(-1).P;
 exploreBuild({ stage, world, journey, rm: false }); tripResize(1440, 900, 120); exploreResize(); assert.equal(exploreStart(), false);

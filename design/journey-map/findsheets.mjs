@@ -90,7 +90,7 @@ export function findRune(svg) {
   const sheet = () => {
     const R = FIND_PLAY.rune, P = FIND_COPY.poster;
     const shown = findSheet(o, 'poster rubbing-sheet', `<div class="pz"><div class="pz-in"><div class="pz-front rubbing-front">${rubbingSvg()}</div><div class="pz-back poster-back"><span class="pz-pin"></span><span class="pz-pin r"></span><b class="pz-h">${fEsc(P.head)}</b><div class="pz-pic"><i></i><s></s></div><b class="pz-who">${fEsc(P.who)}</b><p>${fEsc(P.line1)}<br>${fEsc(P.line2)}</p><b class="pz-rw">${fEsc(P.reward)}</b><span class="pz-stamp">${fEsc(P.stamp)}</span><div class="poster-slot">${findSlot(P.foot)}</div><span class="pz-fold"></span></div></div></div><div class="pz-ctl"><button type="button" class="rub-do">${fEsc(FIND_COPY.rubDo)}</button><button type="button" class="pz-flip" hidden>${fEsc(COPY.flip)}</button><button type="button" class="pz-x">${fEsc(COPY.close)}</button></div>`, [f.x, f.y + R.anchor]);
-    if (!shown) { o.stage = 'rest'; return; }
+    if (!shown) { o.onSheetClose(); return; }
     o.pz = FD.sheet.querySelector('.pz'); o.pin = FD.sheet.querySelector('.pz-in'); o.rubbing = FD.sheet.querySelector('.rubbing'); o.circles = FD.sheet.querySelector('.rub-circles'); o.fill = FD.sheet.querySelector('.rub-fill'); o.letters = [...FD.sheet.querySelectorAll('.rub-letter')]; o.stamp = FD.sheet.querySelector('.pz-stamp');
     o.flipped = false; o.controls = false; o.hinted=false; o.lastRubTs=FD.now; o.stampTs = o.stamped ? -Infinity : Infinity; o.stage = 'sheet'; o.ts = FD.now; o.autoTs = null; o.lastRub = null; o.tilt = [0, 0];
     const bounds = R.cells; o.cells = [];

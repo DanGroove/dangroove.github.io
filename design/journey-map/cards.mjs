@@ -121,7 +121,9 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const travel = smooth(.12, 1, e); let cx = lerp(p[0], oc.x, travel), cy = lerp(py, oc.y, travel);
     cardsStyle(c.el, 'transform', `translate(${p[0]}px,${py}px)`);
     cardsStyle(c.btn, 'transform', 'translate(-50%,-50%)');
-    cardsStyle(c.btn, 'width', Math.max(COMB.target, stonePx) + 'px'); cardsStyle(c.btn, 'height', Math.max(COMB.target, stonePx) + 'px');
+    // The visible disk owns its box; invisible squares covered nearby finds in landscape.
+    const hitPx = VIEW.h <= 440 && VIEW.w > 640 ? stonePx : Math.max(COMB.target, stonePx);
+    cardsStyle(c.btn, 'width', hitPx + 'px'); cardsStyle(c.btn, 'height', hitPx + 'px');
     const stone = c.btn.firstElementChild; if (stone) { cardsStyle(stone, 'width', stonePx + 'px'); cardsStyle(stone, 'height', stonePx + 'px'); }
     const lit = CD.craft ? CD.craft[i] : false;
     cardsStyle(c.el, 'opacity', op * (CD.craft && !lit ? .55 : 1));
@@ -167,7 +169,7 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     if (c.btn.getAttribute('aria-label') !== name) c.btn.setAttribute('aria-label',name);
     const tab = (state === 'rest' || own) && visible && clear ? 0 : -1;
     if (c.btn.tabIndex !== tab) c.btn.tabIndex = tab;
-    if (c.btn.inert !== !visible) { c.btn.inert = !visible; c.btn.setAttribute('aria-hidden', !visible); }
+    if (c.btn.inert !== !visible) { if (!visible && document.activeElement === c.btn) document.querySelector('.go-next')?.focus({ preventScroll: true }); c.btn.inert = !visible; c.btn.setAttribute('aria-hidden', !visible); }
     if (c.reopenFocus && (JOURNEY.moving || st.kind !== 'hold' || st.i !== i)) c.reopenFocus = false;
     if (c.reopenFocus && state === 'open') { c.reopenFocus = false; c.el.querySelector('.c-close').focus({ preventScroll: true }); }
     if (c.keyboardOpen && state === 'open' && !JOURNEY.moving) { c.keyboardOpen = false; close?.focus({ preventScroll: true }); }

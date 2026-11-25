@@ -10,4 +10,4 @@ const values=JSON.parse(r.stdout),path='tools/frame-render-test.mjs';let source=
 for(const[key,hash]of Object.entries(values)){const re=new RegExp('("'+key+'": ")[a-f0-9]+(" )'.trim().replace('" )','")'));const old=source.match(new RegExp('"'+key+'": "([a-f0-9]+)"'))?.[1];if(old!==hash){changed.push(key);source=source.replace('"'+key+'": "'+old+'"','"'+key+'": "'+hash+'"');}}
 writeFileSync(path,source);
 const output='C8/C2 data/trip normalized digests: '+data+' / '+trip+'\nC16 remnant/ember command snapshots changed: '+changed.join(', ')+'\n'+r.stdout;
-console.log(output);appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-f/inherited-tests.log','\n## comb-c-record-test (exit 0)\n\n```text\n'+output+'```\n');
+console.log(output);appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g/inherited-tests.log','\n## comb-c-record-test (exit 0)\n\n```text\n'+output+'```\n');

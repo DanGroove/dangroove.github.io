@@ -5,7 +5,7 @@ export async function combDRun(args){
  const child=spawn(process.execPath,args,{stdio:['ignore','pipe','pipe']});let output='';
  for(const stream of[child.stdout,child.stderr])stream.on('data',b=>output+=b);
  const code=await new Promise(ok=>child.on('close',ok));
- appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-f/inherited-tests.log','\n## node '+args.join(' ')+' (exit '+code+')\n\n```text\n'+(output||'(no output)\n').replace(/[^\x00-\x7f]/g,'?')+'```\n');
+ appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g/inherited-tests.log','\n## node '+args.join(' ')+' (exit '+code+')\n\n```text\n'+(output||'(no output)\n').replace(/[^\x00-\x7f]/g,'?')+'```\n');
  console.log(args.join(' ')+' -> '+code+'\n'+(code?output:output.trim().split('\n').slice(-2).join('\n')));return code;
 }
 if(process.argv[1]?.replaceAll('\\','/').endsWith('/comb-d-suite-test.mjs')){

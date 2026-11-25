@@ -35,6 +35,7 @@ button { font-family: inherit; }
 .hit { fill: transparent; stroke: none; pointer-events: all; }
 .touch-hit { fill: none; stroke: transparent; stroke-width: 44px; vector-effect: non-scaling-stroke; pointer-events: stroke; }
 #f-wayfinder, #f-beacon { touch-action: none; }
+.jm-way .wf-result { opacity: 1 !important; visibility: visible !important; }
 .wf-word.on { fill: var(--paper); text-decoration: underline; }
 .rs-trace { stroke: transparent; }
 .rs-trace.red { stroke: var(--red); stroke-width: 1.6; }
@@ -507,8 +508,10 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 }
 @media (max-height: 440px) and (min-width: 641px) {
   .mini { display: none; }
-  .go.go-end { top: 40px; bottom: auto; flex-wrap: wrap; width: 370px; }
-  .go.go-end .go-top { flex-basis: 100%; }
+  .touch-hit { stroke-width: 14px; }
+  .go.go-end { top: 40px; bottom: auto; left: auto; right: 24px; flex-wrap: nowrap; width: auto; }
+  .go.go-end .go-next { min-width: 200px; }
+  .go.go-end .go-top { flex-basis: auto; white-space: nowrap; }
   .ft-in { padding: 156px 24px 8px; }
   .ft-q { font-size: 21px; margin-bottom: 8px; }
   .ft-name { max-width: 50%; }
@@ -558,6 +561,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .rm .pop, .rm .sheet, .rm .sheet-dismiss { position: fixed; }
 .rm .tl { position: fixed; left: 0; right: 0; padding-bottom: env(safe-area-inset-bottom); } .rm .ft-in { padding-bottom: 80px; } @media (max-width: 640px) { .rm .tl { height: calc(44px + env(safe-area-inset-bottom)); } }
 .fx-hit { min-width: 44px; min-height: 44px; } .sheet { touch-action: none; } .sheet-dismiss { touch-action: manipulation; } .jm-review button { position: relative; min-width: 44px; } .jm-review button::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; min-width: 44px; transform: translateY(-50%); }
+.jm-pointer-focus .hero .jm-start:focus { outline: none; }
 .tl-tip { max-width: calc(100vw - 16px); white-space: normal; }
 .map, .marker-layer { visibility: hidden; }
 .rm, .rm body { overflow-anchor: none; }

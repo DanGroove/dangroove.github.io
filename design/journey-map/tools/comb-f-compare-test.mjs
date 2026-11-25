@@ -1,7 +1,7 @@
 // Screenshot comparisons only; reference files are read, never changed.
 import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
 import {readFileSync,existsSync} from 'node:fs';
-const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-f',b=await combBBrowser();
+const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g',b=await combBBrowser();
 const uri=f=>'data:image/png;base64,'+readFileSync(root+'/'+f).toString('base64');
 const page=async(html,w,h)=>{await b.size(w,h);await b.send('Page.navigate',{url:'about:blank'});const{frameTree}=await b.send('Page.getFrameTree');await b.send('Page.setDocumentContent',{frameId:frameTree.frame.id,html:'<!doctype html><html><meta charset="utf-8"><style>body{margin:0;background:#151314;color:#f7f6f3;font:14px Arial}main{display:flex;gap:16px;padding:16px}figure{margin:0}figcaption{height:28px;line-height:28px}img{display:block;width:100%;height:auto}</style>'+html+'</html>'});await b.evaluate('Promise.all([...document.images].map(i=>i.decode())).then(()=>true)');await combBWait(200);};
 try{

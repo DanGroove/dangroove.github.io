@@ -24,7 +24,7 @@ const headline=new LayoutNode(),talk=new LayoutNode(),rule=new LayoutNode(),spac
 headline.box=()=>({height:fixture.headlineH});talk.box=()=>({width:fixture.talkW,height:fixture.talkH});
 const footer=new LayoutNode();footer.querySelector=s=>({'.ft-in':inner,'.ft-name span':name,'.ft-rule':rule,'.ft-q':headline,'.ft-talk':talk,'.ft-sp':spacer})[s];footer.querySelectorAll=()=>[];
 globalThis.document={documentElement:root,getElementById:id=>id==='go'?go:new LayoutNode(),createElement:()=>new LayoutNode()};
-globalThis.window={addEventListener(){},dispatchEvent(){}};
+globalThis.window={matchMedia:()=>({matches:false}),addEventListener(){},dispatchEvent(){}};
 footerBuild(footer,true);footerBuildX(new LayoutNode(),false);
 const endP=BEATS.at(-1).P,journey={P:endP,moving:false,beats:BEATS},stage=new LayoutNode(),world=new LayoutNode();
 exploreBuild({stage,world,journey,rm:false});

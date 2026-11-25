@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, existsSync, appendFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-export const combBRoot = resolve('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-f');
+export const combBRoot = resolve('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g');
 export const combBWait = ms => new Promise(r => setTimeout(r, ms));
 export async function combBBrowser() {
   mkdirSync(combBRoot, { recursive: true });

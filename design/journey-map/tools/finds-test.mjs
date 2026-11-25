@@ -43,9 +43,9 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // labels that give way, the coasts' draw-on, the X's fade-in with the sea and the mini-map's targets.
 // FRAMES: compositor camera writer and label recovery only; geometry/score remain pinned by the motion tests.
 // Part 8 cloud fixes: explore keeps the map promoted while its camera moves, and releases it at rest after a zoom (F10 lag).
-assert.equal(sourceDigest('trip.mjs'), 2966642649, 'trip.mjs changed');
+assert.equal(sourceDigest('trip.mjs'), 3466094747, 'trip.mjs changed');
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 1665362642, 'data.mjs changed');
+assert.equal(sourceDigest('data.mjs'), 3084219443, 'data.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 4010889213, 'depth.mjs changed');
 console.log('ok: COMB-D camera/labels/tripS digests recorded; depth source remains pinned');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
@@ -164,7 +164,7 @@ class TestNode {
   setPointerCapture() {}
   getAnimations() { return []; }
   animate() { return { cancel() {} }; }
-  getBoundingClientRect() { assert.equal(testInFrame, false, 'layout read in frame callback'); return { left: 30, top: 40, width: this.classList.contains('tl-count') ? 90 : 240, height: this.classList.contains('tl-count') ? 20 : 140 }; }
+  getBoundingClientRect() { assert.equal(testInFrame, false, 'layout read in frame callback'); const width = this.classList.contains('tl-count') ? 90 : 240, height = this.classList.contains('tl-count') ? 20 : 140; return { left: 30, top: 40, right: 30 + width, bottom: 40 + height, width, height }; }
 }
 class TestEvent {
   constructor(type, props = {}) { Object.assign(this, { type, bubbles: true, detail: 0, preventDefault() { this.defaultPrevented = true; }, stopPropagation() { this.stopped = true; }, stopImmediatePropagation() { this.stopped = this.immediate = true; } }, props); }

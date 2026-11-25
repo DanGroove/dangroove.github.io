@@ -149,7 +149,7 @@ export function cardTailSvg() { return '<svg class="c-tail" viewBox="0 0 1 1" ar
 
 // ---- finds (each wrapped in a group the finds module wires up) ----
 const findWrap = (id, label, inner, x, y) => `<g class="find" id="f-${id}" role="button" tabindex="0" aria-label="${label}" data-x="${x}" data-y="${y}">${inner}</g>`;
-const findDrawing = kind => FIND_PLAY.drawings[kind].replace(/\{\{([\w.]+)\}\}/g, (match, path) => path === 'hoard.glintPath' ? starPath(...FIND_PLAY.hoard.glintAt, FIND_PLAY.hoard.glintSize) : path.split('.').reduce((value, key) => value[key], FIND_PLAY)).replace(/<text\b[^]*?<\/text>/g, text => '<g class="map-tier2">' + text + '</g>');
+const findDrawing = kind => FIND_PLAY.drawings[kind].replace(/\{\{([\w.]+)\}\}/g, (match, path) => path === 'hoard.glintPath' ? starPath(...FIND_PLAY.hoard.glintAt, FIND_PLAY.hoard.glintSize) : path.split('.').reduce((value, key) => value[key], FIND_PLAY)).replace(/<text\b[^]*?<\/text>/g, text => '<g class="' + (kind === 'wayfinder' ? 'map-tier2 wf-result' : 'map-tier2') + '">' + text + '</g>');
 const wayfinder = () => findDrawing('wayfinder');
 export function hoardInside(lean) {
   const [w, d, crown] = FIND_PLAY.hoard.inside;

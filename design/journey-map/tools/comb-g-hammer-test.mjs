@@ -1,0 +1,14 @@
+import {gBrowser,gRoot,gWait} from './comb-g-browser-test.mjs';
+import {writeFileSync} from 'node:fs';
+const b=await gBrowser(),fail=[],log=[];const check=(x,s)=>{if(!x)fail.push(s);};
+async function open(){await b.page();await b.tabTo('#f-hammer');await b.key('Enter');await b.until('__g.FD.sheetOwner?.id==="hammer"&&!__g.FD.sheet.inert');await gWait(250);await b.key('Enter');await gWait(150);}
+async function aim(x){const r=await b.box('.hm-canvas');await b.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:r.x+r.w*x/300,y:r.y+r.h*.95});}
+try{
+ await b.size(1440,900);await open();await b.click('.hm-auto');let start=Date.now();
+ while(Date.now()-start<150000){const s=await b.read('({phase:__g.FD.list.hammer.game.phase,hearts:__g.FD.list.hammer.game.hearts,x:__g.FD.list.hammer.game.x,foes:__g.FD.list.hammer.game.foes.filter(f=>f.live).map(f=>({x:f.x,y:f.y})),mode:__g.FD.list.hammer.game.hammer.mode})');if(s.phase!=='play'){log.push(s);break;}if(s.mode==='held'&&s.foes.length)await aim(s.foes.sort((a,c)=>Math.abs(a.x-s.x)-Math.abs(c.x-s.x))[0].x);await gWait(100);}
+ const runes=await b.read('({phase:__g.FD.list.hammer.game.phase,disabled:document.querySelector(".hm-auto").disabled,pressed:document.querySelector(".hm-auto").getAttribute("aria-pressed"),auto:__g.FD.list.hammer.auto})');log.push(runes);await b.shot('after-G7-runes');check(runes.phase==='runes'&&runes.disabled&&runes.pressed==='false'&&runes.auto,'G7 disabled choice looks off, preference kept');if(runes.phase==='runes'){await b.key('1');await gWait(400);check(await b.read('document.querySelector(".hm-auto").getAttribute("aria-pressed")==="true"'),'G7 toggle preference restored');}
+ await open();start=Date.now();let last=5;
+ while(Date.now()-start<150000){const s=await b.read('({phase:__g.FD.list.hammer.game.phase,reason:__g.FD.list.hammer.game.reason,hearts:__g.FD.list.hammer.game.hearts,shots:__g.FD.list.hammer.game.shots.filter(p=>p.live&&p.y<350).map(p=>({x:p.x,y:p.y})),status:document.querySelector(".hm-status").textContent})');if(s.hearts!==last){log.push(s);last=s.hearts;}if(s.phase==='end'){await gWait(250);const status=await b.read('document.querySelector(".hm-status").textContent');log.push({status});await b.shot('after-G6-last-heart');check(s.reason==='hearts'&&status.indexOf('A heart lost.')===0&&status.indexOf('Your hearts gave out')>status.indexOf('A heart lost.'),'G6 heart loss announced before run end');break;}if(s.shots.length)await aim(s.shots.sort((a,c)=>c.y-a.y)[0].x);await gWait(65);}
+ check(await b.read('__g.FD.list.hammer.game.reason==="hearts"'),'G6 reached last heart through input');check(!b.errors.length,'runtime exceptions');
+}catch(e){fail.push(e.stack);}finally{await b.close();writeFileSync(gRoot+'/hammer-results.json',JSON.stringify({fail,log},null,2));}
+console.log('Hammer failures '+JSON.stringify(fail));process.exitCode=fail.length?1:0;

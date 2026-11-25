@@ -99,7 +99,7 @@ for(const joined of [false,true]) {
     JOURNEY.go('top');finish();wheel(100);tick(120);stepAssert(JOURNEY.P>0,'Back to top must restore scroll');
   }
   JOURNEY.set(0);JOURNEY.next();finish();JOURNEY.back();finish();wheel(100);tick(120);stepAssert(JOURNEY.P>0,'Back steps to top must restore scroll');
-  const touch=(type,y,time,props={})=>stepWindow.fire(type,{target:empty,timeStamp:time,touches:type==='touchend'?[]:[{clientX:100,clientY:y}],...props});
+  const touch=(type,y,time,props={})=>stepWindow.fire(type,{target:empty,timeStamp:time,cancelable:true,touches:type==='touchend'?[]:[{clientX:100,clientY:y}],...props});
   // Both fast and slow 24+ px swipes start before release and stay at the map.
   JOURNEY.set(0);touch('touchstart',300,0);touch('touchmove',240,40);tick(40);touch('touchend',240,60);finish();stepAssert(JOURNEY.P===mapP,'fast swipe must finish in its direction');
   JOURNEY.set(0);touch('touchstart',300,0);touch('touchmove',276,400);tick(16);stepAssert(JOURNEY.moving,'slow swipe starts at 24 px before release');touch('touchend',276,410);finish();stepAssert(JOURNEY.P===mapP,'slow swipe finishes at the map');

@@ -1,5 +1,5 @@
 import {readFileSync,writeFileSync} from 'node:fs';
-const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-f';
+const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g';
 for(const w of [412,1440]){
  const {traceEvents:e,sample:s}=JSON.parse(readFileSync(root+'/after-trace-'+w+'.json','utf8'));
  const markers=e.filter(x=>x.ph==='X'&&x.name==='FunctionCall'&&x.args?.data?.functionName==='frame');

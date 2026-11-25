@@ -35,5 +35,5 @@ try{
   const result={worstJump:+worstJump.toFixed(2),geometryMisses,inkMisses,examples:[...collisions.values()]};log(page+' '+w+'x'+h+' controlled-rAF 0..1600 ms: '+JSON.stringify(result));
   if(!previous.some(r=>r.visible)||worstJump>2.01||geometryMisses||inkMisses)failures.push(page+' '+w+' opening '+JSON.stringify({jump:result.worstJump,geometryMisses,inkMisses,visibleAtRest:previous.some(r=>r.visible)}));
  }
-}catch(e){failures.push(e.stack);}finally{await b.close();log('Failures: '+JSON.stringify(failures));appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-f/inherited-tests.log','\n## node tools/comb-d-opening-ink-test.mjs (exit '+(failures.length?1:0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
+}catch(e){failures.push(e.stack);}finally{await b.close();log('Failures: '+JSON.stringify(failures));appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g/inherited-tests.log','\n## node tools/comb-d-opening-ink-test.mjs (exit '+(failures.length?1:0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
 process.exitCode=failures.length?1:0;

@@ -40,7 +40,7 @@ export function findHammer(svg) {
       o.card.querySelector('.hm-start')?.addEventListener('click', run); o.card.querySelector('.hm-resume')?.addEventListener('click', resume);
       o.card.querySelectorAll('.hm-new').forEach(b => b.addEventListener('click', run)); o.card.querySelector('.hm-end-close')?.addEventListener('click', () => closeSheet());
       o.card.querySelectorAll('.hm-rune').forEach((b, i) => b.addEventListener('click', () => choose(i)));
-      const first = o.card.querySelector('button'); if (first) first.focus({ preventScroll: true });
+      const first = o.card.querySelector('button'); if (first && (FD.sheet.contains(document.activeElement) || document.activeElement === FD.dismiss)) first.focus({ preventScroll: true });
       if (html && !FD.rm) o.card.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140, fill: 'both' }); };
       if (!FD.rm && !o.card.hidden && o.card.innerHTML) { const fade = o.card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, fill: 'both' }); fade.onfinish = () => { fade.cancel(); apply(); }; } else apply();
     }
@@ -48,7 +48,7 @@ export function findHammer(svg) {
     const hearts = s ? s.hearts : HAMMER.hearts, most = s ? s.maxHearts : HAMMER.hearts;
     o.hearts.innerHTML = Array.from({ length: most }, (_, i) => `<svg viewBox="${HAMMER.paths.heartBox}" aria-hidden="true"><path d="${HAMMER.paths.heart}" fill="${i < hearts ? C.paper : C.ink}"/></svg>`).join('');
     attr(o.hearts, 'aria-label', hammerText('hearts', { n: hearts, max: most })); o.silver.textContent = hammerText('silver', { n: s ? s.silver : 0 });
-    attr(o.autoButton, 'aria-pressed', o.auto); o.autoButton.disabled = !s || s.phase !== 'play' || s.paused; o.pauseButton.disabled = !s || s.phase === 'end'; o.pauseButton.textContent = s?.paused ? H.resume : H.pauseButton;
+    o.autoButton.disabled = !s || s.phase !== 'play' || s.paused; attr(o.autoButton, 'aria-pressed', o.auto && !o.autoButton.disabled); o.pauseButton.disabled = !s || s.phase === 'end'; o.pauseButton.textContent = s?.paused ? H.resume : H.pauseButton;
     if (s) {
       o.announcement = '';
       if (s.events.rune !== (o.seen.rune || 0)) announce('rune', hammerText('runeTaken', { name: H.runes[s.taken][0], n: s.levels[s.taken] }));
@@ -56,16 +56,21 @@ export function findHammer(svg) {
       if (s.events.gift !== (o.seen.gift || 0)) announce('gift', H.gift);
       if (s.events.clay !== (o.seen.clay || 0)) announce('clay', H.clay);
       if (s.events.heart !== (o.seen.heart || 0)) announce('heart', H.heart);
-      if (s.events.end !== (o.seen.end || 0)) announce('end', s.reason === 'won' ? H.won : hammerText(s.reason === 'hearts' ? 'lostHearts' : 'lost', { n: s.wave }));
       if (s.events.hurt !== (o.seen.hurt || 0)) announce('hurt', hammerText('heartLost', { n: s.hearts }), true);
+      if (s.events.end !== (o.seen.end || 0)) announce('end', s.reason === 'won' ? H.won : hammerText(s.reason === 'hearts' ? 'lostHearts' : 'lost', { n: s.wave }));
       if (o.announcement) o.status.textContent = o.announcement;
       Object.assign(o.seen, s.events); o.version = s.version;
     }
   }
   const measure = () => {
     if (FD.sheetOwner !== o || !o.canvas) return;
-    const U = HAMMER.ui; o.fit = Math.min(1, (VIEW.w - FIND_PLAY.kit.sheet.edge * 2) / U.w, (VIEW.h - FIND_PLAY.kit.sheet.edge * 2 - COMB.target) / (U.h - U.buttons));
-    o.sheetY = VIEW.h / 2 - Math.max(0, COMB.target - U.buttons * o.fit) / 2;
+    const U = HAMMER.ui, edge = FIND_PLAY.kit.sheet.edge;
+    const review = document.querySelector('[data-review]')?.getBoundingClientRect(), bar = document.querySelector('.go:not([hidden])')?.getBoundingClientRect();
+    const top = Math.max(edge, (review?.bottom || 0) + edge, bar && bar.top < VIEW.h / 2 ? bar.bottom + edge : 0), bottom = Math.min(VIEW.h - edge, bar && bar.top > VIEW.h / 2 ? bar.top - edge : VIEW.h - edge);
+    o.fit = Math.min(1, (VIEW.w - edge * 2) / U.w, (bottom - top - COMB.target) / (U.h - U.buttons));
+    o.sheetY = (top + bottom) / 2;
+    FD.sheet.style.setProperty('--hm-h', (U.h - U.buttons + COMB.target / o.fit) + 'px');
+    FD.sheet.style.setProperty('--hm-buttons', COMB.target / o.fit + 'px');
     const scale = Math.min(HAMMER.field.dpr, window.devicePixelRatio || 1) * o.fit;
     o.canvas.width = Math.round(HAMMER.field.w * scale); o.canvas.height = Math.round(HAMMER.field.h * scale); const previous = o.scale; o.scale = scale;
     o.ctx = o.canvas.getContext('2d');
@@ -114,7 +119,7 @@ export function findHammer(svg) {
     if (FD.sheetOwner !== o) return;
     const key = e.key.toLowerCase(), used = ['arrowleft', 'arrowright', 'a', 'd', ' ', 'arrowup', 'w', 'p', 't', '1', '2', '3', 'escape'].includes(key);
     e.stopPropagation();
-    const nativeButton = key === ' ' && e.target.closest?.('button');
+    const nativeButton = key === ' ' && e.target.closest?.('button') && !o.game;
     if (!nativeButton && (used || ['0', '+', '-', '=', 'arrowdown', 'pageup', 'pagedown', 'home', 'end'].includes(key))) e.preventDefault();
     if (e.type === 'keyup') { if (['arrowleft', 'a'].includes(key)) o.keys.left = false; if (['arrowright', 'd'].includes(key)) o.keys.right = false; if ([' ', 'arrowup', 'w'].includes(key)) o.keys.fire = false; return; }
     if (key === 'escape') { closeSheet(); return; }
@@ -123,7 +128,7 @@ export function findHammer(svg) {
       if (key === 't') toggle();
       if (['1', '2', '3'].includes(key)) choose(Number(key) - 1);
     }
-    if (e.target !== o.canvas || !o.game || o.game.paused || o.game.phase !== 'play') return;
+    if (!o.game || o.game.paused || o.game.phase !== 'play') return;
     if (['arrowleft', 'a'].includes(key)) { o.keys.left = true; o.input.target = NaN; }
     if (['arrowright', 'd'].includes(key)) { o.keys.right = true; o.input.target = NaN; }
     if ([' ', 'arrowup', 'w'].includes(key)) o.keys.fire = true;
@@ -152,19 +157,23 @@ export function findHammer(svg) {
     const release = e => { if (o.pointer === e.pointerId) { o.pointer = null; o.held = false; } };
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) o.canvas.addEventListener(type, release);
     found(o.id); attr(el.querySelector('.hm-kept'), 'opacity', 1); o.stage = 'sheet'; o.sheetTs = FD.now; o.accumulator = 0;
+    // The growing sheet is inert until its first full-size frame. Focus Start after that frame.
+    setTimeout(() => { if (FD.sheetOwner === o && !FD.sheetClosing) (o.card.querySelector('button') || o.canvas).focus({ preventScroll: true }); }, FIND_PLAY.kit.sheet.grow * 1000 + 80);
   };
   press(el, () => findWhenReady(o, sheet));
   o.onSheetClose = () => { if (o.game && o.game.phase !== 'end') o.game.paused = true; clearInput(); o.canvas = o.ctx = null; o.stage = 'rest'; };
   o.hear = () => { if (!FD.rm) o.hearTs = FD.now; };
-  window.addEventListener('resize', measure);
+  window.addEventListener('resize', () => requestAnimationFrame(measure));
   window.addEventListener('blur', pause);
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
   // Chrome and Edge send focusout when a focused button is removed (Start, a rune, Resume), so the check waits until the
   // press has finished and the field has its focus back; only focus that really left the sheet pauses the run.
-  FD.sheet.addEventListener('focusout', () => { if (FD.sheetOwner === o) setTimeout(() => { if (FD.sheetOwner === o && !FD.sheet.contains(document.activeElement)) pause(); }, 0); });
+  FD.sheet.addEventListener('focusout', () => { if (FD.sheetOwner === o) setTimeout(() => { if (FD.sheetOwner === o && !FD.sheet.contains(document.activeElement) && document.activeElement !== FD.dismiss) pause(); }, 0); });
+  FD.dismiss.addEventListener('focusout', () => { if (FD.sheetOwner === o) setTimeout(() => { if (FD.sheetOwner === o && !FD.sheet.contains(document.activeElement) && document.activeElement !== FD.dismiss) pause(); }, 0); });
   FD.sheet.addEventListener('keydown', handleKey); FD.sheet.addEventListener('keyup', handleKey);
+  FD.dismiss.addEventListener('keydown', handleKey); FD.dismiss.addEventListener('keyup', handleKey);
   // Also isolate page hotkeys if focus has left the open sheet. Tab remains native.
-  window.addEventListener('keydown', e => { if (FD.sheetOwner === o && !FD.sheet.contains(e.target)) { if (e.key !== 'Tab') e.preventDefault(); e.stopImmediatePropagation(); if (e.key === 'Escape') closeSheet(); } }, true);
+  window.addEventListener('keydown', e => { if (FD.sheetOwner === o && !FD.sheet.contains(e.target) && e.target !== FD.dismiss) { if (e.key !== 'Tab') e.preventDefault(); e.stopImmediatePropagation(); if (e.key === 'Escape') closeSheet(); } }, true);
   o.tick = t => {
     const M = HAMMER.map, age = t - o.hearTs, ringing = age >= 0 && age < M.hopTime;
     const hop = !FD.rm && ringing ? M.hop * Math.sin(Math.PI * age / M.hopTime) : 0, tremble = !FD.rm && attend(o, M.near) ? M.tremble * Math.sin(t * M.trembleRate) : 0;

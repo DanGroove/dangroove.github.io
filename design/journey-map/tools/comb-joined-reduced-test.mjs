@@ -17,5 +17,5 @@ try {
   await b.evaluate('document.querySelector("#tl").focus({preventScroll:true})');for(const type of ['keyDown','keyUp'])await b.send('Input.dispatchKeyEvent',{type,key:'Home',code:'Home',windowsVirtualKeyCode:36});await combWait(400);
   const home=await b.evaluate(`({top:document.querySelector('#stage').getBoundingClientRect().top,value:document.querySelector('#tl').getAttribute('aria-valuenow'),bar:getComputedStyle(document.querySelector('#tl')).visibility})`);check(Math.abs(home.top)<1&&home.value==='0'&&home.bar==='visible','reduced timeline Home returns to Map with focus still visible',home);
   check(b.errors.length===0,'no browser exceptions',b.errors);
-}catch(e){check(false,'unexpected error',e.stack);}finally{await b.close();appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-f/inherited-tests.log','\n## Joined reduced-motion checks\n\n```text\n'+lines.join('\n').replace(/[^\x00-\x7F]/g,'?')+'\n```\n');}
+}catch(e){check(false,'unexpected error',e.stack);}finally{await b.close();appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g/inherited-tests.log','\n## Joined reduced-motion checks\n\n```text\n'+lines.join('\n').replace(/[^\x00-\x7F]/g,'?')+'\n```\n');}
 process.exitCode=failed?1:0;

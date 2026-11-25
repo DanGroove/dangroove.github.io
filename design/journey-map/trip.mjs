@@ -314,6 +314,7 @@ export function tripMeasureLabels() {
   const E = TRIP_EL; if (!E.rows) return;
   for (const r of E.rows) {
     const text = r.el.querySelector('text'), row = r.row, pos = COMB.labels[row.stop];
+    text.setAttribute('text-anchor', row.anchor || 'start');
     if (r.exploreMarkup && E.exploreOn) text.innerHTML = r.normalMarkup;
     if (row.stop === 'x' && !row.stopSub) text.textContent = COPY.xLabel;
     r.base = pos ? [pos[0], pos[1] + (row.stopSub ? 18 : 0)] : [row.x, row.y];
@@ -331,6 +332,7 @@ export function tripMeasureLabels() {
       const i = STOPS.findIndex(s => s.id === row.stop), left = i < 3;
       r.overview = [(left ? VIEW.w * .23 : VIEW.w * .76) / VIEW.s0 - VIEW.ox / VIEW.s0, (120 + i % 3 * 56 + (row.stopSub ? 16 : 0) - VIEW.oy) / VIEW.s0];
       text.setAttribute('text-anchor', 'middle');
+      r.box = text.getBBox ? text.getBBox() : r.box; r.exploreBox = r.box;
     }
   }
   E.markers?.forEach(el => el.setAttribute('transform', `scale(${COMB.markerPx / (12.4 * (el.parentElement?.parentElement?.dataset.screen ? 1 : VIEW.s0))})`));
@@ -367,6 +369,8 @@ export function tripMeasureLabels() {
   });
   E.exploreReady = false;
   tripMeasureExploreLabels();
+  // Resize rebuilt the normal text while Explore is already open. Publish its fresh seed immediately.
+  if (E.exploreOn) for (const r of E.rows) { if (r.exploreMarkup) r.el.querySelector('text').innerHTML = r.exploreMarkup; if (r.row.stop === 'x' && r.row.stopSub) r.exploreFrom = 0; }
 }
 // Short idle tasks warm real ink, not empty drawing boxes, before Explore.
 // Placement is fixed in map space; the existing frame writer is unchanged.

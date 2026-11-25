@@ -43,6 +43,7 @@ button { font-family: inherit; }
 .hit { fill: transparent; stroke: none; pointer-events: all; }
 .touch-hit { fill: none; stroke: transparent; stroke-width: 44px; vector-effect: non-scaling-stroke; pointer-events: stroke; }
 #f-wayfinder, #f-beacon { touch-action: none; }
+.jm-way .wf-result { opacity: 1 !important; visibility: visible !important; }
 .wf-word.on { fill: var(--paper); text-decoration: underline; }
 .rs-trace { stroke: transparent; }
 .rs-trace.red { stroke: var(--red); stroke-width: 1.6; }
@@ -515,8 +516,10 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 }
 @media (max-height: 440px) and (min-width: 641px) {
   .mini { display: none; }
-  .go.go-end { top: 40px; bottom: auto; flex-wrap: wrap; width: 370px; }
-  .go.go-end .go-top { flex-basis: 100%; }
+  .touch-hit { stroke-width: 14px; }
+  .go.go-end { top: 40px; bottom: auto; left: auto; right: 24px; flex-wrap: nowrap; width: auto; }
+  .go.go-end .go-next { min-width: 200px; }
+  .go.go-end .go-top { flex-basis: auto; white-space: nowrap; }
   .ft-in { padding: 156px 24px 8px; }
   .ft-q { font-size: 21px; margin-bottom: 8px; }
   .ft-name { max-width: 50%; }
@@ -566,6 +569,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .rm .pop, .rm .sheet, .rm .sheet-dismiss { position: fixed; }
 .rm .tl { position: fixed; left: 0; right: 0; padding-bottom: env(safe-area-inset-bottom); } .rm .ft-in { padding-bottom: 80px; } @media (max-width: 640px) { .rm .tl { height: calc(44px + env(safe-area-inset-bottom)); } }
 .fx-hit { min-width: 44px; min-height: 44px; } .sheet { touch-action: none; } .sheet-dismiss { touch-action: manipulation; } .jm-review button { position: relative; min-width: 44px; } .jm-review button::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; min-width: 44px; transform: translateY(-50%); }
+.jm-pointer-focus .hero .jm-start:focus { outline: none; }
 .tl-tip { max-width: calc(100vw - 16px); white-space: normal; }
 .map, .marker-layer { visibility: hidden; }
 .rm, .rm body { overflow-anchor: none; }
@@ -1153,6 +1157,22 @@ body {
 }
 .jm-joined.rm .marker-layer, .jm-joined.rm .tl { opacity: var(--joined-map-alpha, 0) !important; } .jm-joined.rm:not(.jm-rm-map) .tl { visibility: hidden; }
 
+/* The joined hero keeps its content inside a short stage; the standalone hero is untouched. */
+@media (max-height: 679px) and (max-width: 719px) {
+  .jm-joined .hero .hero-box { min-height: 100px; margin-top: 56px; }
+}
+@media (max-height: 679px) and (min-width: 720px) {
+  .jm-joined .hero .hero-nav { top: 16px; }
+  .jm-joined .hero .hero-mark { height: 32px; }
+  .jm-joined .hero .hero-say { top: 68px; transform: none; width: 45%; }
+  .jm-joined .hero .hero-name { font-size: 36px; }
+  .jm-joined .hero .hero-lede { margin-top: 12px; font-size: 14px; line-height: 1.3; }
+  .jm-joined .hero .hero-crafts { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; }
+  .jm-joined .hero .hero-crafts button { padding: 9px 0; }
+  .jm-joined .hero .hero-box { left: 52%; top: 68px; height: calc(100% - 144px); }
+  .jm-joined .hero .hero-foot { bottom: 12px; }
+}
+
 </style>
 <style>
 .hero-loader { display: none; }
@@ -1498,6 +1518,7 @@ const FIND_COPY = {
   nornKicker: '{name}, {time}', wellStop: '{name}, {dates}',
   wellNone: 'nothing yet', wellMap: 'the whole map', wellNext: 'not yet carved',
   // One short line of what to do, shown above the step buttons while a find has the camera. Draft copy.
+  wayPickedHint: 'Pick another craft, or press the centre to clear.',
   hints: { wayfinder: 'Pick a craft to light the stops that used it.', hoards: 'Dig three times, then open it.', ravens: 'Press to send a raven out.',
     serpent: 'Jörmungandr, the world serpent. Poke it.', beacon: 'Press the tower for the next note, or drag to aim the beam.', runestone: 'Rub the stone to lift its carving.',
     hammer: 'Press it to hold the bridge.', mist: 'Press or wipe to clear it.', horn: 'Press to raise it, press again to sound it.',
@@ -1762,7 +1783,7 @@ const FIND_PLAY = {
     hatch: [[-200, 520, 7, 231, 2.6, 0.42], [-100, 420, 11, 107, 1.6, 0.3]], jitter: 2, charcoal: 0.34, guide: 0.1, outlineAlpha: 0.45, outlineWidth: 1.5, carvingWidth: 4.4, maskCore: 0.6, runeHeight: 30, runeGap: 0.32, tops: [92, 158, 224, 290], cx: 150, cells: [40, 30, 260, 390], cellR: 30, letterSize: 13, letterWeight: 800, letterDown: 15, letterRise: 4, near: 24, dash: [6, 200], dashTime: 1.5, scale: 0.55, anchor: -20, stampAngle: -14, flipTime: 0.6, perspective: 1400, controlTop: 214,
   },
   drawings: {
-    wayfinder: `<circle class="hit" r="58"/><circle class="o" r="42"/><circle class="t" r="34.4"/><g class="wf-runes"><path class="rn" transform="rotate(8) translate(-0.7 -40.5)" d="M0 0L0 4.6M0 0L1.4 1.2M1.4 1.2L0.8 1.7M0 4.6L1.4 3.5M1.4 3.5L0.8 2.9"/><path class="rn" transform="rotate(24.4) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(40.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(57.1) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(73.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(89.8) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3"/><path class="rn" transform="rotate(106.2) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(122.5) translate(-0.7 -40.5)" d="M0 0L0 4.6L1.4 0L1.4 4.6L0 0"/><path class="rn" transform="rotate(138.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(155.3) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(171.6) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.7M1.4 4.6L1.4 0L0 1.7"/><path class="rn" transform="rotate(188) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(204.4) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(220.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(237.1) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(253.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(269.8) translate(-0.7 -40.5)" d="M1.4 0L0 1.7L1.4 2.9L0 4.6"/><path class="rn" transform="rotate(286.2) translate(-0.6 -40.5)" d="M1.3 0L0 1.2L1.3 2.3"/><path class="rn" transform="rotate(302.5) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(318.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(335.3) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(351.6) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/></g><g class="wf-arm" data-i="0" transform="rotate(0)"><path class="l" d="M0 0V-31.08M0 -31.08l-4 -4M0 -31.08l4 -4M0 -31.08v-5"/></g><g class="wf-arm" data-i="1" transform="rotate(90)"><path class="l" d="M0 0V-31.08M0 -34.08m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/></g><g class="wf-arm" data-i="2" transform="rotate(180)"><path class="l" d="M0 0V-31.08M-4 -27.08L0 -33.08L4 -27.08"/></g><g class="wf-arm" data-i="3" transform="rotate(270)"><path class="l" d="M0 0V-31.08M-5 -31.08H5M-3 -35.08H3"/></g><g transform="rotate(45)"><path class="l" d="M0 0V-17.64M0 -17.64l-3 -3"/></g><g transform="rotate(135)"><path class="l" d="M0 0V-17.64M0 -17.64l3 -3"/></g><g transform="rotate(225)"><path class="l" d="M0 0V-17.64M-3 -17.64H3"/></g><g transform="rotate(315)"><path class="l" d="M0 0V-17.64M0 -17.64m-1.5 -2a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0"/></g><text x="0" y="-48" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[0]}</text><text x="46" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="start" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[1]}</text><text x="0" y="54" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[2]}</text><text x="-46" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="end" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[3]}</text><g class="wf-needle"><path class="pf" d="M0 -26L3 0L-3 0Z"/><path class="o" d="M0 26L3 0L-3 0Z"/></g><circle class="o wf-hub" r="3.4"/><circle class="t wf-all" r="{{way.ring.0}}" opacity="0"/><text x="0" y="64" font-size="{{way.tally.1}}" fill="${C.note}" font-weight="500" text-anchor="middle" letter-spacing="{{way.tally.2}}" class="wf-tally"></text>`,
+    wayfinder: `<circle class="hit" r="58"/><circle class="o" r="42"/><circle class="t" r="34.4"/><g class="wf-runes"><path class="rn" transform="rotate(8) translate(-0.7 -40.5)" d="M0 0L0 4.6M0 0L1.4 1.2M1.4 1.2L0.8 1.7M0 4.6L1.4 3.5M1.4 3.5L0.8 2.9"/><path class="rn" transform="rotate(24.4) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(40.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(57.1) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(73.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(89.8) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3"/><path class="rn" transform="rotate(106.2) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(122.5) translate(-0.7 -40.5)" d="M0 0L0 4.6L1.4 0L1.4 4.6L0 0"/><path class="rn" transform="rotate(138.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(155.3) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(171.6) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.7M1.4 4.6L1.4 0L0 1.7"/><path class="rn" transform="rotate(188) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(204.4) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(220.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(237.1) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(253.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(269.8) translate(-0.7 -40.5)" d="M1.4 0L0 1.7L1.4 2.9L0 4.6"/><path class="rn" transform="rotate(286.2) translate(-0.6 -40.5)" d="M1.3 0L0 1.2L1.3 2.3"/><path class="rn" transform="rotate(302.5) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(318.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(335.3) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(351.6) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/></g><g class="wf-arm" data-i="0" transform="rotate(0)"><path class="l" d="M0 0V-31.08M0 -31.08l-4 -4M0 -31.08l4 -4M0 -31.08v-5"/></g><g class="wf-arm" data-i="1" transform="rotate(90)"><path class="l" d="M0 0V-31.08M0 -34.08m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/></g><g class="wf-arm" data-i="2" transform="rotate(180)"><path class="l" d="M0 0V-31.08M-4 -27.08L0 -33.08L4 -27.08"/></g><g class="wf-arm" data-i="3" transform="rotate(270)"><path class="l" d="M0 0V-31.08M-5 -31.08H5M-3 -35.08H3"/></g><g transform="rotate(45)"><path class="l" d="M0 0V-17.64M0 -17.64l-3 -3"/></g><g transform="rotate(135)"><path class="l" d="M0 0V-17.64M0 -17.64l3 -3"/></g><g transform="rotate(225)"><path class="l" d="M0 0V-17.64M-3 -17.64H3"/></g><g transform="rotate(315)"><path class="l" d="M0 0V-17.64M0 -17.64m-1.5 -2a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0"/></g><text x="0" y="-66" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[0]}</text><text x="60" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="start" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[1]}</text><text x="0" y="90" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[2]}</text><text x="-60" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="end" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[3]}</text><g class="wf-needle"><path class="pf" d="M0 -26L3 0L-3 0Z"/><path class="o" d="M0 26L3 0L-3 0Z"/></g><circle class="o wf-hub" r="3.4"/><circle class="t wf-all" r="{{way.ring.0}}" opacity="0"/><text x="0" y="-112" font-size="{{way.tally.1}}" fill="${C.note}" font-weight="500" text-anchor="middle" letter-spacing="{{way.tally.2}}" class="wf-tally"></text>`,
     serpent: `<g class="jg-tail"><path class="o" d="{{serpent.tailPath}}"/></g><g class="jg-head"><g class="jg-skull"><path fill="${C.ink}" stroke="none" d="M0 -3.2C-3 -6.4 -7 -8.8 -12 -9.4C-16 -9.8 -20 -9.6 -23 -8.4C-26 -7.2 -29 -6.4 -32 -6.6C-34 -6.8 -35.6 -8 -36.6 -7.6C-37.8 -7 -37.6 -5 -36.2 -3.8C-35 -2.8 -33.4 -2.4 -32 -2.4L-24 -.6L4 1.6L4 -3.2Z"/><path class="l" d="M0 -3.2C-3 -6.4 -7 -8.8 -12 -9.4C-16 -9.8 -20 -9.6 -23 -8.4C-26 -7.2 -29 -6.4 -32 -6.6C-34 -6.8 -35.6 -8 -36.6 -7.6C-37.8 -7 -37.6 -5 -36.2 -3.8C-35 -2.8 -33.4 -2.4 -32 -2.4L-24 -.6"/><path class="l" d="M-7 -8.4C-4 -12.6 1 -15.4 7 -15C11 -14.6 13 -11.8 11.6 -9.4C10.4 -7.6 7.8 -7.8 7.4 -9.6C7.2 -10.8 8.6 -11.4 9.4 -10.6"/><g class="jg-eye"><path class="l" d="M-22.6 -4.6C-21 -6.4 -17.6 -6.6 -15.6 -5.2C-14.6 -4.6 -13.4 -4.2 -12 -4.2C-13.6 -3 -15.4 -2.6 -17.2 -2.8C-19.4 -3 -21.4 -3.6 -22.6 -4.6Z"/><circle class="pf" cx="-18.6" cy="-4.4" r="1"/></g><path class="l jg-shut" d="{{serpent.shutPath}}" opacity="0"/><path class="l" d="M-24 -.6C-20 1.6 -15 2.2 -11 1C-8.6 .2 -8 -2.2 -9.8 -2.8C-11.2 -3.2 -12 -1.8 -11 -1.2M-33.6 -6.6C-33 -5.6 -32.2 -5.2 -31.4 -5.4"/><path class="pf" d="M-30.6 -2.2L-29.6 .2L-28.8 -1.9ZM-27 -1.4L-26.2 .4L-25.4 -1.1Z"/><path class="t" d="M-6 -6.6C-4 -4.2 -2.6 -1.6 -2 1.2M-10 -8.6C-8 -6 -6.8 -3 -6.4 0"/></g><g class="jg-jaw"><path fill="${C.ink}" stroke="none" d="M-24 -.6L-33.6 1.8C-35 2.2 -35.6 3.4 -35 4.4C-33.6 6.4 -29.6 7.4 -25 7.6C-20 7.8 -14 8 -9 7C-5 6.2 -2 5 0 3.2L4 3.2L4 -.6Z"/><path class="l" d="M-24 -.6L-33.6 1.8C-35 2.2 -35.6 3.4 -35 4.4C-33.6 6.4 -29.6 7.4 -25 7.6C-20 7.8 -14 8 -9 7C-5 6.2 -2 5 0 3.2"/><path class="pf" d="M-31.6 1.6L-30.8 -.6L-29.9 1.3Z"/></g><path class="l jg-tongue" d="{{serpent.tonguePath}}" opacity="0"/></g><g class="jg-pad"><path class="g" d="{{serpent.padBoard}}"/><g class="jg-leaf" data-i="2"><path class="o" d="{{serpent.leafPath}}"/><rect class="pf" x="{{serpent.binding.0}}" y="{{serpent.binding.1}}" width="{{serpent.binding.2}}" height="{{serpent.binding.3}}"/><circle class="o" cx="{{serpent.rings.0}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><circle class="o" cx="{{serpent.rings.1}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><text text-anchor="middle" y="{{serpent.dayY}}" font-size="{{serpent.daySize}}" font-weight="{{serpent.weight}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[2][0]}</text><text text-anchor="middle" y="{{serpent.timeY}}" font-size="{{serpent.timeSize}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[2][1]}</text></g><g class="jg-leaf" data-i="1"><path class="o" d="{{serpent.leafPath}}"/><rect class="pf" x="{{serpent.binding.0}}" y="{{serpent.binding.1}}" width="{{serpent.binding.2}}" height="{{serpent.binding.3}}"/><circle class="o" cx="{{serpent.rings.0}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><circle class="o" cx="{{serpent.rings.1}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><text text-anchor="middle" y="{{serpent.dayY}}" font-size="{{serpent.daySize}}" font-weight="{{serpent.weight}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[1][0]}</text><text text-anchor="middle" y="{{serpent.timeY}}" font-size="{{serpent.timeSize}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[1][1]}</text></g><g class="jg-leaf" data-i="0"><path class="o" d="{{serpent.leafPath}}"/><rect class="pf" x="{{serpent.binding.0}}" y="{{serpent.binding.1}}" width="{{serpent.binding.2}}" height="{{serpent.binding.3}}"/><circle class="o" cx="{{serpent.rings.0}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><circle class="o" cx="{{serpent.rings.1}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><text text-anchor="middle" y="{{serpent.dayY}}" font-size="{{serpent.daySize}}" font-weight="{{serpent.weight}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[0][0]}</text><text text-anchor="middle" y="{{serpent.timeY}}" font-size="{{serpent.timeSize}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[0][1]}</text></g></g><path class="t" d="{{serpent.padWave}}"/><rect class="hit" x="{{serpent.hit.0}}" y="{{serpent.hit.1}}" width="{{serpent.hit.2}}" height="{{serpent.hit.3}}"/>`,
     beacon: `<circle class="bc-glow" cx="{{beacon.flameFoot.0}}" cy="{{beacon.flameFoot.1}}" r="{{beacon.glowR}}" fill="url(#glow)" opacity="0"/><g class="bc-light" clip-path="url(#beacon-frame)"><g class="bc-beam" transform="translate(0 -34) rotate(0)"><path d="M0 0L-230 -44.7L-230 44.7Z" fill="url(#beam)"/></g></g><rect class="hit" x="-26" y="-66" width="52" height="70"/><path class="g" d="M-5.8 0L-4 -3L-1 -2L1 -4L3 -2L5.8 0Z"/><path class="g" d="M-5.6 -3L-4.2 -24H4.2L5.6 -3Z"/><path class="t" d="M-5.1 -9H5.1M-4.6 -17H4.6M-1 -3V-9M2 -9V-17M-2 -17V-24"/><rect class="o" x="-1.3" y="-9" width="2.6" height="6"/><path class="l" d="M-6 -24H6M-3 -24L-4 -30M3 -24L4 -30"/><path class="o" d="M-5.5 -31L-4 -26H4L5.5 -31Z"/><path class="pf bc-flame" d="M-2 -31Q-2.5 -34 0 -37Q.7 -34 1.7 -33Q2.5 -32 2 -31Z"/>`,
     runestone: `<rect class="hit" x="-20" y="-66" width="40" height="70"/><path class="g" d="M-14 0L-16 -40Q-12 -60 0 -62Q13 -60 15 -38L13 0Z"/><path d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3" fill="none" stroke="${C.paper}" stroke-width="4" stroke-linecap="round"/><path d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3" fill="none" stroke="${C.land}" stroke-width="2.2" stroke-linecap="round"/><path class="l rs-trace" d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3"/><circle class="pf" cx="5" cy="-3" r="1"/><g transform="translate(2.2 -9) rotate(-90)"><path class="rn" d="M0 0L0 3.4M0 1.4L1.1 0.4M0 2.3L1.1 1.4M2.2 0L2.2 3.4M3.2 3.4L3.2 0L4.3 0.8L3.2 1.7L4.3 3.4M6.5 0L5.4 1.3L6.5 2.1L5.4 3.4M8.1 0L8.1 3.4M7.5 0.8L8.1 0L8.6 0.8M13.1 0L12.1 1.3L13.1 2.1L12.1 3.4M15.2 0L14.2 0.8L15.2 1.7M16.2 3.4L16.2 0L16.8 0.8L17.3 0L17.3 3.4M18.9 0L18.9 3.4M18.4 0.8L18.9 0L19.5 0.8M21.5 0L20.5 0.8L21.5 1.7M22.6 0L22.6 3.4M23.6 0L23.6 3.4M22.6 1.3L23.6 2.1M27.1 0L27.1 3.4M27.1 1.4L28.2 0.4M27.1 2.3L28.2 1.4M29.2 0L29.2 3.4M30.9 0L30.9 3.4M30.3 1.3L31.4 2.1M32.5 0L32.5 3.4M32.5 0L33.5 0.8M32.5 1.1L33.5 2M34.6 3.4L34.6 0L35.7 0.8M40.1 0L39.2 0.8L40.1 1.7M41.2 3.4L41.2 0L42.3 1.1L42.3 3.4M43.9 0L43.9 3.4M43.3 0.8L43.9 0L44.4 0.8"/></g><path class="t" d="M-20 0H20"/>`,
@@ -2253,7 +2274,7 @@ const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor
   cardDim: [0.35, 0.12], underFade: 0.4, sideFade: 0.1, bar: [190, 6], hint: 44 };
 // titleOut: the push-in share over which the map's title and kicker fade out (back in at the overview and in explore).
 // coastDraw: the share of the fall over which the coasts draw, from its first moments
-const WORLD = { scrim: [150,190,.85], titleOut: [.3, .8], titleZoom: [1.15, 1.6], coastDraw: [.04, .72], card: { w:640, edge:32, phoneBottom:0, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
+const WORLD = { scrim: [150,190,.85], titleOut: [.3, .8], titleZoom: [1.15, 1.6], coastDraw: [.1891891891891892, .72], card: { w:640, edge:32, phoneBottom:0, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
 const PHONE_LAYOUT = { gap: 16, edge: 16, ctaShare: .14, headlineGap: 20, exploreGap: 8, exploreBottom: 8, exploreBack: 152, exploreTop: 172 };
 
 // COMB-A: interaction and responsive label values. Original drawing geometry stays in place.
@@ -2418,7 +2439,7 @@ function cardTailSvg() { return '<svg class="c-tail" viewBox="0 0 1 1" aria-hidd
 
 // ---- finds (each wrapped in a group the finds module wires up) ----
 const findWrap = (id, label, inner, x, y) => `<g class="find" id="f-${id}" role="button" tabindex="0" aria-label="${label}" data-x="${x}" data-y="${y}">${inner}</g>`;
-const findDrawing = kind => FIND_PLAY.drawings[kind].replace(/\{\{([\w.]+)\}\}/g, (match, path) => path === 'hoard.glintPath' ? starPath(...FIND_PLAY.hoard.glintAt, FIND_PLAY.hoard.glintSize) : path.split('.').reduce((value, key) => value[key], FIND_PLAY)).replace(/<text\b[^]*?<\/text>/g, text => '<g class="map-tier2">' + text + '</g>');
+const findDrawing = kind => FIND_PLAY.drawings[kind].replace(/\{\{([\w.]+)\}\}/g, (match, path) => path === 'hoard.glintPath' ? starPath(...FIND_PLAY.hoard.glintAt, FIND_PLAY.hoard.glintSize) : path.split('.').reduce((value, key) => value[key], FIND_PLAY)).replace(/<text\b[^]*?<\/text>/g, text => '<g class="' + (kind === 'wayfinder' ? 'map-tier2 wf-result' : 'map-tier2') + '">' + text + '</g>');
 const wayfinder = () => findDrawing('wayfinder');
 function hoardInside(lean) {
   const [w, d, crown] = FIND_PLAY.hoard.inside;
@@ -2945,6 +2966,7 @@ function tripMeasureLabels() {
   const E = TRIP_EL; if (!E.rows) return;
   for (const r of E.rows) {
     const text = r.el.querySelector('text'), row = r.row, pos = COMB.labels[row.stop];
+    text.setAttribute('text-anchor', row.anchor || 'start');
     if (r.exploreMarkup && E.exploreOn) text.innerHTML = r.normalMarkup;
     if (row.stop === 'x' && !row.stopSub) text.textContent = COPY.xLabel;
     r.base = pos ? [pos[0], pos[1] + (row.stopSub ? 18 : 0)] : [row.x, row.y];
@@ -2962,6 +2984,7 @@ function tripMeasureLabels() {
       const i = STOPS.findIndex(s => s.id === row.stop), left = i < 3;
       r.overview = [(left ? VIEW.w * .23 : VIEW.w * .76) / VIEW.s0 - VIEW.ox / VIEW.s0, (120 + i % 3 * 56 + (row.stopSub ? 16 : 0) - VIEW.oy) / VIEW.s0];
       text.setAttribute('text-anchor', 'middle');
+      r.box = text.getBBox ? text.getBBox() : r.box; r.exploreBox = r.box;
     }
   }
   E.markers?.forEach(el => el.setAttribute('transform', `scale(${COMB.markerPx / (12.4 * (el.parentElement?.parentElement?.dataset.screen ? 1 : VIEW.s0))})`));
@@ -2998,6 +3021,8 @@ function tripMeasureLabels() {
   });
   E.exploreReady = false;
   tripMeasureExploreLabels();
+  // Resize rebuilt the normal text while Explore is already open. Publish its fresh seed immediately.
+  if (E.exploreOn) for (const r of E.rows) { if (r.exploreMarkup) r.el.querySelector('text').innerHTML = r.exploreMarkup; if (r.row.stop === 'x' && r.row.stopSub) r.exploreFrom = 0; }
 }
 // Short idle tasks warm real ink, not empty drawing boxes, before Explore.
 // Placement is fixed in map space; the existing frame writer is unchanged.
@@ -4127,6 +4152,8 @@ function tlBuild(el, hooks, rm) {
     i = Math.max(TL.rm ? -1 : 0, Math.min(STOPS.length - 1, i)); TL.pending = i; TL.hooks.jump(i);
   });
   el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    el.focus({ preventScroll: true });
     TL.drag = { x: e.clientX, moved: false, P: TL.lastP || 0, blk: e.target.closest('.tl-blk') };
     el.setPointerCapture(e.pointerId);
   });
@@ -4609,7 +4636,7 @@ function exploreStart() {
   EX.active = true; EX.departing = false; EX.footer = 1; EX.cam = { ...EX.end }; EX.target = exploreFitCam(); EX.velocity = [0, 0];
   EX.motion = { from: { ...EX.cam }, to: { ...EX.target }, k0: 0, k1: 1, elapsed: 0, duration: EXPLORE.in };
   document.documentElement.classList.add('jm-explore');
-  if (!EX.hintUsed) { EX.hintUsed = true; EX.hintLeft = EXPLORE.hintTime; EX.hint.textContent = VIEW.phone ? COPY.explore.hintPhone : COPY.explore.hint; EX.hintWait = COMB.hintDelay; }
+  if (!EX.hintUsed) { EX.hintUsed = true; EX.hintLeft = EXPLORE.hintTime; EX.hint.textContent = EX.touchInput || window.matchMedia('(pointer: coarse)').matches ? COPY.explore.hintPhone : COPY.explore.hint; EX.hintWait = COMB.hintDelay; }
   document.getElementById('go-say').textContent = COPY.explore.say;
   explorePromote(); exploreNotify(); return true;
 }
@@ -4708,6 +4735,7 @@ function exploreGesture(dragged = false) {
 }
 function exploreBuild({ stage, world, journey, rm }) {
   Object.assign(EX, { stage, world, journey, rm }); if (rm) return;
+  window.addEventListener('pointerdown', e => { EX.touchInput = e.pointerType === 'touch'; }, { passive: true, capture: true });
   document.documentElement.style?.setProperty('--explore-row-delay', EXPLORE.rowDelay + 's');
   document.documentElement.style?.setProperty('--explore-row-fade', EXPLORE.rowFade + 's');
   EX.hint = document.createElement('p'); EX.hint.className = 'find-hint explore-hint'; EX.hint.setAttribute('aria-hidden', 'true'); stage.appendChild(EX.hint);
@@ -4791,6 +4819,7 @@ const stepsNextBeat = () => BEATS.find(b => b.P > SC.P + .5);
 const stepsBackBeat = () => BEATS.slice().reverse().find(b => b.P < SC.P - .5);
 const stepsRestBeat = () => BEATS.find(b => Math.abs(b.P - SC.P) < 1e-6);
 const stepsName = b => b ? COPY.steps.names[b.id] || STOPS.find(s => s.id === b.id).short : COPY.steps.names.top;
+const stepsBackName = b => b ? STOPS.find(s => s.id === b.id)?.short || COPY.steps.names[b.id] : COPY.steps.names.top;
 const stepsFormat = (s, values) => s.replace(/\{(\w+)\}/g, (m, k) => values[k]);
 const stepsReadScroll = () => { SC.P = window.scrollY / VIEW.unit; return SC.P; };
 
@@ -4850,7 +4879,7 @@ function stepsButtons() {
   if (!faded && SC.go.hidden !== hidden) SC.go.hidden = hidden;
   const lost = !document.activeElement || document.activeElement === document.body || !!document.activeElement.closest?.('[data-hero]');
   if (SC.heroFocus && top && !JOURNEY.moving) { SC.heroFocus = false; const start = document.querySelector?.('.jm-start'); if (start && lost) start.focus({ preventScroll: true }); }
-  if (SC.joinedTop() && wasHidden && !SC.go.hidden && !hero && !blasting && lost && !JOURNEY.moving && Math.abs(SC.P - stepsMap) < 1e-6) SC.go.querySelector('.go-next').focus({ preventScroll: true });
+  if (SC.joinedTop() && !SC.go.hidden && !hero && !blasting && lost && !JOURNEY.moving && Math.abs(SC.P - stepsMap) < 1e-6) SC.go.querySelector('.go-next').focus({ preventScroll: true });
   if (!hero) SC.heroFocus = false;
   if (SC.go.classList.contains('go-end') !== end) SC.go.classList.toggle('go-end', end);
   const back = SC.go.querySelector('.go-back'), next = SC.go.querySelector('.go-next'), home = SC.go.querySelector('.go-top');
@@ -4861,7 +4890,7 @@ function stepsButtons() {
   if (!SC.go.hidden && ((next.hidden && focus === next) || (home.hidden && focus === home))) back.focus({ preventScroll: true });
   if (!SC.go.hidden && back.hidden && focus === back) next.focus({ preventScroll: true });
   const returning = exploreActive() ? COPY.explore.back : JOURNEY.visiting ? COPY.steps.returnTo : '';
-  const label = returning || stepsFormat(COPY.steps.back, { name: stepsName(stepsBackBeat()) });
+  const label = returning || stepsFormat(COPY.steps.back, { name: stepsBackName(stepsBackBeat()) });
   if (back.getAttribute('aria-label') !== label) back.setAttribute('aria-label', label);
   const words = back.querySelector('span'); if (words.textContent !== returning) words.textContent = returning;
   if (end) { const words = SC.go.querySelector('.go-t'); if (words.textContent !== COPY.explore.button) words.textContent = COPY.explore.button; }
@@ -5005,6 +5034,8 @@ function stepsNavigate(target, opts = {}) {
 function stepsGo(id, opts = {}) {
   if (SC.cut) return;
   const beat = BEATS.find(b => b.id === id); if (!beat) return;
+  // A shield pressed during its own arrival keeps the current landing clock.
+  if (!opts.instant && STOPS.some(s => s.id === id) && SC.move && SC.move.P1 === beat.P) return;
   stepsRelease(); if (SC.rm && SC.reducedGo) { SC.reducedGo(id); stepsReadScroll(); return; } stepsNavigate(beat.P, { ...opts, start: id === 'map' });
 }
 function stepsNext() {
@@ -5132,17 +5163,18 @@ function stepsTouchEnd(e) {
   if (touch?.dragged && SC.scroll) SC.scroll.stamp = e.timeStamp;
 }
 function stepsKey(e) {
+  SC.root.classList.remove('jm-pointer-focus');
   if (SC.mode !== 'steps' || SC.rm || exploreActive() || e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-  const target = stepsTarget(e);
-  if (target && target.closest('.tl, .sheet.on') || SC.root.classList.contains('jm-sheet-open')) return;
-  if (e.key === ' ' && target && target.closest('button, a, input, textarea, select, .find, [role="button"]')) return;
+  const target = stepsTarget(e), backSpace = e.key === ' ' && e.shiftKey;
+  if (target && target.closest('.sheet.on') || SC.root.classList.contains('jm-sheet-open') || !backSpace && target?.closest('.tl')) return;
+  if (e.key === ' ' && !e.shiftKey && target && target.closest('button, a, input, textarea, select, .find, [role="button"]')) return;
   let act = null;
   if (['ArrowDown', 'ArrowRight', 'PageDown'].includes(e.key) || (e.key === ' ' && !e.shiftKey)) act = stepsNext;
   else if (['ArrowUp', 'ArrowLeft', 'PageUp'].includes(e.key) || (e.key === ' ' && e.shiftKey)) act = stepsBack;
   else if (e.key === 'Home') act = () => stepsGo('top', { jump: true });
   else if (e.key === 'End') act = () => stepsGo('end', { jump: true });
   if (act && stepsHeld()) { e.preventDefault(); return; }
-  if (act) { e.preventDefault(); act(); }
+  if (act) { e.preventDefault(); if (backSpace) e.stopImmediatePropagation(); act(); }
 }
 function stepsBuild({ stage, rm, joinedTop, reducedGo = null }) {
   SC.root = document.documentElement; SC.rm = rm; SC.joinedTop = joinedTop; SC.reducedGo = reducedGo;
@@ -5175,7 +5207,8 @@ function stepsBuild({ stage, rm, joinedTop, reducedGo = null }) {
   stepsClasses(); stepsArrive();
   if (SC.mode === 'steps') window.scrollTo({ top: 0, behavior: 'instant' });
   window.addEventListener('wheel', stepsBlockWheel, { passive: false }); window.addEventListener('keydown', stepsKey);
-  window.addEventListener('pointerdown', e => { SC.swallow = false; if (e.pointerType === 'touch') SC.pointerOwned = e.defaultPrevented || stepsTouchOwned(stepsTarget(e)); });
+  window.addEventListener('keydown', e => { if (e.key === ' ' && e.shiftKey) stepsKey(e); }, true);
+  window.addEventListener('pointerdown', e => { SC.root.classList.add('jm-pointer-focus'); SC.swallow = false; if (e.pointerType === 'touch') SC.pointerOwned = e.defaultPrevented || stepsTouchOwned(stepsTarget(e)); });
   window.addEventListener('touchstart', stepsTouchStart, { passive: true });
   window.addEventListener('touchmove', stepsTouchMove, { passive: false });
   window.addEventListener('touchend', stepsTouchEnd); window.addEventListener('touchcancel', stepsTouchEnd);
@@ -5311,7 +5344,9 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const travel = smooth(.12, 1, e); let cx = lerp(p[0], oc.x, travel), cy = lerp(py, oc.y, travel);
     cardsStyle(c.el, 'transform', `translate(${p[0]}px,${py}px)`);
     cardsStyle(c.btn, 'transform', 'translate(-50%,-50%)');
-    cardsStyle(c.btn, 'width', Math.max(COMB.target, stonePx) + 'px'); cardsStyle(c.btn, 'height', Math.max(COMB.target, stonePx) + 'px');
+    // The visible disk owns its box; invisible squares covered nearby finds in landscape.
+    const hitPx = VIEW.h <= 440 && VIEW.w > 640 ? stonePx : Math.max(COMB.target, stonePx);
+    cardsStyle(c.btn, 'width', hitPx + 'px'); cardsStyle(c.btn, 'height', hitPx + 'px');
     const stone = c.btn.firstElementChild; if (stone) { cardsStyle(stone, 'width', stonePx + 'px'); cardsStyle(stone, 'height', stonePx + 'px'); }
     const lit = CD.craft ? CD.craft[i] : false;
     cardsStyle(c.el, 'opacity', op * (CD.craft && !lit ? .55 : 1));
@@ -5357,7 +5392,7 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     if (c.btn.getAttribute('aria-label') !== name) c.btn.setAttribute('aria-label',name);
     const tab = (state === 'rest' || own) && visible && clear ? 0 : -1;
     if (c.btn.tabIndex !== tab) c.btn.tabIndex = tab;
-    if (c.btn.inert !== !visible) { c.btn.inert = !visible; c.btn.setAttribute('aria-hidden', !visible); }
+    if (c.btn.inert !== !visible) { if (!visible && document.activeElement === c.btn) document.querySelector('.go-next')?.focus({ preventScroll: true }); c.btn.inert = !visible; c.btn.setAttribute('aria-hidden', !visible); }
     if (c.reopenFocus && (JOURNEY.moving || st.kind !== 'hold' || st.i !== i)) c.reopenFocus = false;
     if (c.reopenFocus && state === 'open') { c.reopenFocus = false; c.el.querySelector('.c-close').focus({ preventScroll: true }); }
     if (c.keyboardOpen && state === 'open' && !JOURNEY.moving) { c.keyboardOpen = false; close?.focus({ preventScroll: true }); }
@@ -5898,9 +5933,11 @@ function findWay(svg) {
     if (JOURNEY.focus === o.id) stepsFocus(o.id, i < 0 ? f.view : wayResultView(mask));
     if (FD.say) FD.say.textContent = i < 0 ? f.label : findFormat(COMB.waySay, { craft: FIND_COPY.crafts[i] || FIND_COPY.wayAll.split(':')[0], names: STOPS.filter((s,j) => mask?.[j]).map(s => s.short).join(', ') });
     tally.textContent = i < 0 ? '' : i === CRAFTS.length ? findFormat(FIND_COPY.wayAll, { names: STOPS.filter((s, j) => mask[j]).map(s => s.short + ', ' + s.dates).join('; ') }) : findFormat(FIND_COPY.wayTally, { craft: FIND_COPY.crafts[i], n: mask.filter(Boolean).length, t: STOPS.length });
+    if (FD.hint) FD.hint.textContent = i < 0 ? FIND_COPY.hints.wayfinder : FIND_COPY.wayPickedHint;
     o.retract = o.lines.map(l => l.v); o.lineTs = FD.now; o.linePhase = 'retract'; if (FD.rm || o.retract.every(v => v === 0)) { startLines(); if (FD.rm) o.lines.forEach(l => l.v = l.lit ? 1 : 0); }
   };
   const pick = e => {
+    if (!Number.isFinite(e.clientX) || !Number.isFinite(e.clientY) || e.clientX === 0 && e.clientY === 0) return;
     const p = toMap([e.clientX, e.clientY]), dx = p[0] - f.x, dy = p[1] - f.y;
     if (Math.hypot(dx, dy) < FIND_PLAY.way.hub) { set(o.craft >= 0 ? -1 : o.unlocked ? CRAFTS.length : -1); return; }
     const angle = Math.atan2(dx, -dy) * FIND_PLAY.kit.deg / Math.PI; o.angle = angle; o.speed = 0;
@@ -6001,7 +6038,8 @@ function findHoards(svg) {
       }
     };
     const request = () => {
-      if (h.queued) return;
+      if (h.queued && h.overlayEpoch === FD.overlayEpoch) return;
+      h.queued = false;
       opened(h);
       if (!ready()) { h.queued = true; return; }
       act();
@@ -6429,7 +6467,7 @@ function findRune(svg) {
   const sheet = () => {
     const R = FIND_PLAY.rune, P = FIND_COPY.poster;
     const shown = findSheet(o, 'poster rubbing-sheet', `<div class="pz"><div class="pz-in"><div class="pz-front rubbing-front">${rubbingSvg()}</div><div class="pz-back poster-back"><span class="pz-pin"></span><span class="pz-pin r"></span><b class="pz-h">${fEsc(P.head)}</b><div class="pz-pic"><i></i><s></s></div><b class="pz-who">${fEsc(P.who)}</b><p>${fEsc(P.line1)}<br>${fEsc(P.line2)}</p><b class="pz-rw">${fEsc(P.reward)}</b><span class="pz-stamp">${fEsc(P.stamp)}</span><div class="poster-slot">${findSlot(P.foot)}</div><span class="pz-fold"></span></div></div></div><div class="pz-ctl"><button type="button" class="rub-do">${fEsc(FIND_COPY.rubDo)}</button><button type="button" class="pz-flip" hidden>${fEsc(COPY.flip)}</button><button type="button" class="pz-x">${fEsc(COPY.close)}</button></div>`, [f.x, f.y + R.anchor]);
-    if (!shown) { o.stage = 'rest'; return; }
+    if (!shown) { o.onSheetClose(); return; }
     o.pz = FD.sheet.querySelector('.pz'); o.pin = FD.sheet.querySelector('.pz-in'); o.rubbing = FD.sheet.querySelector('.rubbing'); o.circles = FD.sheet.querySelector('.rub-circles'); o.fill = FD.sheet.querySelector('.rub-fill'); o.letters = [...FD.sheet.querySelectorAll('.rub-letter')]; o.stamp = FD.sheet.querySelector('.pz-stamp');
     o.flipped = false; o.controls = false; o.hinted=false; o.lastRubTs=FD.now; o.stampTs = o.stamped ? -Infinity : Infinity; o.stage = 'sheet'; o.ts = FD.now; o.autoTs = null; o.lastRub = null; o.tilt = [0, 0];
     const bounds = R.cells; o.cells = [];
@@ -6826,7 +6864,7 @@ function findHammer(svg) {
       o.card.querySelector('.hm-start')?.addEventListener('click', run); o.card.querySelector('.hm-resume')?.addEventListener('click', resume);
       o.card.querySelectorAll('.hm-new').forEach(b => b.addEventListener('click', run)); o.card.querySelector('.hm-end-close')?.addEventListener('click', () => closeSheet());
       o.card.querySelectorAll('.hm-rune').forEach((b, i) => b.addEventListener('click', () => choose(i)));
-      const first = o.card.querySelector('button'); if (first) first.focus({ preventScroll: true });
+      const first = o.card.querySelector('button'); if (first && (FD.sheet.contains(document.activeElement) || document.activeElement === FD.dismiss)) first.focus({ preventScroll: true });
       if (html && !FD.rm) o.card.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 140, fill: 'both' }); };
       if (!FD.rm && !o.card.hidden && o.card.innerHTML) { const fade = o.card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, fill: 'both' }); fade.onfinish = () => { fade.cancel(); apply(); }; } else apply();
     }
@@ -6834,7 +6872,7 @@ function findHammer(svg) {
     const hearts = s ? s.hearts : HAMMER.hearts, most = s ? s.maxHearts : HAMMER.hearts;
     o.hearts.innerHTML = Array.from({ length: most }, (_, i) => `<svg viewBox="${HAMMER.paths.heartBox}" aria-hidden="true"><path d="${HAMMER.paths.heart}" fill="${i < hearts ? C.paper : C.ink}"/></svg>`).join('');
     attr(o.hearts, 'aria-label', hammerText('hearts', { n: hearts, max: most })); o.silver.textContent = hammerText('silver', { n: s ? s.silver : 0 });
-    attr(o.autoButton, 'aria-pressed', o.auto); o.autoButton.disabled = !s || s.phase !== 'play' || s.paused; o.pauseButton.disabled = !s || s.phase === 'end'; o.pauseButton.textContent = s?.paused ? H.resume : H.pauseButton;
+    o.autoButton.disabled = !s || s.phase !== 'play' || s.paused; attr(o.autoButton, 'aria-pressed', o.auto && !o.autoButton.disabled); o.pauseButton.disabled = !s || s.phase === 'end'; o.pauseButton.textContent = s?.paused ? H.resume : H.pauseButton;
     if (s) {
       o.announcement = '';
       if (s.events.rune !== (o.seen.rune || 0)) announce('rune', hammerText('runeTaken', { name: H.runes[s.taken][0], n: s.levels[s.taken] }));
@@ -6842,16 +6880,21 @@ function findHammer(svg) {
       if (s.events.gift !== (o.seen.gift || 0)) announce('gift', H.gift);
       if (s.events.clay !== (o.seen.clay || 0)) announce('clay', H.clay);
       if (s.events.heart !== (o.seen.heart || 0)) announce('heart', H.heart);
-      if (s.events.end !== (o.seen.end || 0)) announce('end', s.reason === 'won' ? H.won : hammerText(s.reason === 'hearts' ? 'lostHearts' : 'lost', { n: s.wave }));
       if (s.events.hurt !== (o.seen.hurt || 0)) announce('hurt', hammerText('heartLost', { n: s.hearts }), true);
+      if (s.events.end !== (o.seen.end || 0)) announce('end', s.reason === 'won' ? H.won : hammerText(s.reason === 'hearts' ? 'lostHearts' : 'lost', { n: s.wave }));
       if (o.announcement) o.status.textContent = o.announcement;
       Object.assign(o.seen, s.events); o.version = s.version;
     }
   }
   const measure = () => {
     if (FD.sheetOwner !== o || !o.canvas) return;
-    const U = HAMMER.ui; o.fit = Math.min(1, (VIEW.w - FIND_PLAY.kit.sheet.edge * 2) / U.w, (VIEW.h - FIND_PLAY.kit.sheet.edge * 2 - COMB.target) / (U.h - U.buttons));
-    o.sheetY = VIEW.h / 2 - Math.max(0, COMB.target - U.buttons * o.fit) / 2;
+    const U = HAMMER.ui, edge = FIND_PLAY.kit.sheet.edge;
+    const review = document.querySelector('[data-review]')?.getBoundingClientRect(), bar = document.querySelector('.go:not([hidden])')?.getBoundingClientRect();
+    const top = Math.max(edge, (review?.bottom || 0) + edge, bar && bar.top < VIEW.h / 2 ? bar.bottom + edge : 0), bottom = Math.min(VIEW.h - edge, bar && bar.top > VIEW.h / 2 ? bar.top - edge : VIEW.h - edge);
+    o.fit = Math.min(1, (VIEW.w - edge * 2) / U.w, (bottom - top - COMB.target) / (U.h - U.buttons));
+    o.sheetY = (top + bottom) / 2;
+    FD.sheet.style.setProperty('--hm-h', (U.h - U.buttons + COMB.target / o.fit) + 'px');
+    FD.sheet.style.setProperty('--hm-buttons', COMB.target / o.fit + 'px');
     const scale = Math.min(HAMMER.field.dpr, window.devicePixelRatio || 1) * o.fit;
     o.canvas.width = Math.round(HAMMER.field.w * scale); o.canvas.height = Math.round(HAMMER.field.h * scale); const previous = o.scale; o.scale = scale;
     o.ctx = o.canvas.getContext('2d');
@@ -6900,7 +6943,7 @@ function findHammer(svg) {
     if (FD.sheetOwner !== o) return;
     const key = e.key.toLowerCase(), used = ['arrowleft', 'arrowright', 'a', 'd', ' ', 'arrowup', 'w', 'p', 't', '1', '2', '3', 'escape'].includes(key);
     e.stopPropagation();
-    const nativeButton = key === ' ' && e.target.closest?.('button');
+    const nativeButton = key === ' ' && e.target.closest?.('button') && !o.game;
     if (!nativeButton && (used || ['0', '+', '-', '=', 'arrowdown', 'pageup', 'pagedown', 'home', 'end'].includes(key))) e.preventDefault();
     if (e.type === 'keyup') { if (['arrowleft', 'a'].includes(key)) o.keys.left = false; if (['arrowright', 'd'].includes(key)) o.keys.right = false; if ([' ', 'arrowup', 'w'].includes(key)) o.keys.fire = false; return; }
     if (key === 'escape') { closeSheet(); return; }
@@ -6909,7 +6952,7 @@ function findHammer(svg) {
       if (key === 't') toggle();
       if (['1', '2', '3'].includes(key)) choose(Number(key) - 1);
     }
-    if (e.target !== o.canvas || !o.game || o.game.paused || o.game.phase !== 'play') return;
+    if (!o.game || o.game.paused || o.game.phase !== 'play') return;
     if (['arrowleft', 'a'].includes(key)) { o.keys.left = true; o.input.target = NaN; }
     if (['arrowright', 'd'].includes(key)) { o.keys.right = true; o.input.target = NaN; }
     if ([' ', 'arrowup', 'w'].includes(key)) o.keys.fire = true;
@@ -6938,19 +6981,23 @@ function findHammer(svg) {
     const release = e => { if (o.pointer === e.pointerId) { o.pointer = null; o.held = false; } };
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) o.canvas.addEventListener(type, release);
     found(o.id); attr(el.querySelector('.hm-kept'), 'opacity', 1); o.stage = 'sheet'; o.sheetTs = FD.now; o.accumulator = 0;
+    // The growing sheet is inert until its first full-size frame. Focus Start after that frame.
+    setTimeout(() => { if (FD.sheetOwner === o && !FD.sheetClosing) (o.card.querySelector('button') || o.canvas).focus({ preventScroll: true }); }, FIND_PLAY.kit.sheet.grow * 1000 + 80);
   };
   press(el, () => findWhenReady(o, sheet));
   o.onSheetClose = () => { if (o.game && o.game.phase !== 'end') o.game.paused = true; clearInput(); o.canvas = o.ctx = null; o.stage = 'rest'; };
   o.hear = () => { if (!FD.rm) o.hearTs = FD.now; };
-  window.addEventListener('resize', measure);
+  window.addEventListener('resize', () => requestAnimationFrame(measure));
   window.addEventListener('blur', pause);
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
   // Chrome and Edge send focusout when a focused button is removed (Start, a rune, Resume), so the check waits until the
   // press has finished and the field has its focus back; only focus that really left the sheet pauses the run.
-  FD.sheet.addEventListener('focusout', () => { if (FD.sheetOwner === o) setTimeout(() => { if (FD.sheetOwner === o && !FD.sheet.contains(document.activeElement)) pause(); }, 0); });
+  FD.sheet.addEventListener('focusout', () => { if (FD.sheetOwner === o) setTimeout(() => { if (FD.sheetOwner === o && !FD.sheet.contains(document.activeElement) && document.activeElement !== FD.dismiss) pause(); }, 0); });
+  FD.dismiss.addEventListener('focusout', () => { if (FD.sheetOwner === o) setTimeout(() => { if (FD.sheetOwner === o && !FD.sheet.contains(document.activeElement) && document.activeElement !== FD.dismiss) pause(); }, 0); });
   FD.sheet.addEventListener('keydown', handleKey); FD.sheet.addEventListener('keyup', handleKey);
+  FD.dismiss.addEventListener('keydown', handleKey); FD.dismiss.addEventListener('keyup', handleKey);
   // Also isolate page hotkeys if focus has left the open sheet. Tab remains native.
-  window.addEventListener('keydown', e => { if (FD.sheetOwner === o && !FD.sheet.contains(e.target)) { if (e.key !== 'Tab') e.preventDefault(); e.stopImmediatePropagation(); if (e.key === 'Escape') closeSheet(); } }, true);
+  window.addEventListener('keydown', e => { if (FD.sheetOwner === o && !FD.sheet.contains(e.target) && e.target !== FD.dismiss) { if (e.key !== 'Tab') e.preventDefault(); e.stopImmediatePropagation(); if (e.key === 'Escape') closeSheet(); } }, true);
   o.tick = t => {
     const M = HAMMER.map, age = t - o.hearTs, ringing = age >= 0 && age < M.hopTime;
     const hop = !FD.rm && ringing ? M.hop * Math.sin(Math.PI * age / M.hopTime) : 0, tremble = !FD.rm && attend(o, M.near) ? M.tremble * Math.sin(t * M.trembleRate) : 0;
@@ -7474,7 +7521,7 @@ function frame(ts) {
   if (jo !== false && (moved || starsChanged || st.handoffT < 1 || jo || aim.changed || skyIdle || st.blastT > 0)) {
     starsFrame(time, st, PTR, { ...(jo || {}), look: aim.look }); mainSkyDraw = time;
   }
-  if (st.rushT > 0 && !RM) { const hit = $('nova-hit'), tab = st.blastT > 0 ? -1 : 0; if (hit.tabIndex !== tab) hit.tabIndex = tab; if (hit.getAttribute('aria-disabled') !== 'false') hit.setAttribute('aria-disabled', 'false'); if (hit.getAttribute('aria-label') !== COMB.novaSay) hit.setAttribute('aria-label', COMB.novaSay); }
+  if (st.rushT > 0 && st.settleT < 1 && !RM) { const hit = $('nova-hit'), tab = st.blastT > 0 ? -1 : 0; if (hit.tabIndex !== tab) hit.tabIndex = tab; if (hit.getAttribute('aria-disabled') !== 'false') hit.setAttribute('aria-disabled', 'false'); if (hit.getAttribute('aria-label') !== COMB.novaSay) hit.setAttribute('aria-label', COMB.novaSay); }
   const shown=st.handoffT>=COMB.mapFindsIn,cardVisibility=shown?'':'hidden';
   if($('cards').style.visibility!==cardVisibility)$('cards').style.visibility=cardVisibility;
   if(shown){cardsFrame(st, aim.look, PTR);findsFrame(time, st);}

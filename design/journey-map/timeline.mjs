@@ -42,6 +42,8 @@ export function tlBuild(el, hooks, rm) {
     i = Math.max(TL.rm ? -1 : 0, Math.min(STOPS.length - 1, i)); TL.pending = i; TL.hooks.jump(i);
   });
   el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    el.focus({ preventScroll: true });
     TL.drag = { x: e.clientX, moved: false, P: TL.lastP || 0, blk: e.target.closest('.tl-blk') };
     el.setPointerCapture(e.pointerId);
   });

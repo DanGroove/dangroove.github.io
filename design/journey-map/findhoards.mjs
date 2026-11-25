@@ -40,9 +40,11 @@ export function findWay(svg) {
     if (JOURNEY.focus === o.id) stepsFocus(o.id, i < 0 ? f.view : wayResultView(mask));
     if (FD.say) FD.say.textContent = i < 0 ? f.label : findFormat(COMB.waySay, { craft: FIND_COPY.crafts[i] || FIND_COPY.wayAll.split(':')[0], names: STOPS.filter((s,j) => mask?.[j]).map(s => s.short).join(', ') });
     tally.textContent = i < 0 ? '' : i === CRAFTS.length ? findFormat(FIND_COPY.wayAll, { names: STOPS.filter((s, j) => mask[j]).map(s => s.short + ', ' + s.dates).join('; ') }) : findFormat(FIND_COPY.wayTally, { craft: FIND_COPY.crafts[i], n: mask.filter(Boolean).length, t: STOPS.length });
+    if (FD.hint) FD.hint.textContent = i < 0 ? FIND_COPY.hints.wayfinder : FIND_COPY.wayPickedHint;
     o.retract = o.lines.map(l => l.v); o.lineTs = FD.now; o.linePhase = 'retract'; if (FD.rm || o.retract.every(v => v === 0)) { startLines(); if (FD.rm) o.lines.forEach(l => l.v = l.lit ? 1 : 0); }
   };
   const pick = e => {
+    if (!Number.isFinite(e.clientX) || !Number.isFinite(e.clientY) || e.clientX === 0 && e.clientY === 0) return;
     const p = toMap([e.clientX, e.clientY]), dx = p[0] - f.x, dy = p[1] - f.y;
     if (Math.hypot(dx, dy) < FIND_PLAY.way.hub) { set(o.craft >= 0 ? -1 : o.unlocked ? CRAFTS.length : -1); return; }
     const angle = Math.atan2(dx, -dy) * FIND_PLAY.kit.deg / Math.PI; o.angle = angle; o.speed = 0;
@@ -143,7 +145,8 @@ export function findHoards(svg) {
       }
     };
     const request = () => {
-      if (h.queued) return;
+      if (h.queued && h.overlayEpoch === FD.overlayEpoch) return;
+      h.queued = false;
       opened(h);
       if (!ready()) { h.queued = true; return; }
       act();

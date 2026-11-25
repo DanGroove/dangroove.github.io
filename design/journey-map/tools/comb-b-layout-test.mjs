@@ -45,5 +45,5 @@ try{
   }
   require(!b.errors.length,'browser exceptions '+JSON.stringify(b.errors));
 }catch(e){failures.push(e.stack);}
-finally{await b.close();log('Failures: '+JSON.stringify(failures));appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-f/inherited-tests.log','\n## node tools/comb-b-layout-test.mjs '+process.argv.slice(2).join(' ')+' (exit '+(failures.length?1:0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
+finally{await b.close();log('Failures: '+JSON.stringify(failures));appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g/inherited-tests.log','\n## node tools/comb-b-layout-test.mjs '+process.argv.slice(2).join(' ')+' (exit '+(failures.length?1:0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
 process.exitCode=failures.length?1:0;

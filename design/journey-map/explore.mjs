@@ -71,7 +71,7 @@ export function exploreStart() {
   EX.active = true; EX.departing = false; EX.footer = 1; EX.cam = { ...EX.end }; EX.target = exploreFitCam(); EX.velocity = [0, 0];
   EX.motion = { from: { ...EX.cam }, to: { ...EX.target }, k0: 0, k1: 1, elapsed: 0, duration: EXPLORE.in };
   document.documentElement.classList.add('jm-explore');
-  if (!EX.hintUsed) { EX.hintUsed = true; EX.hintLeft = EXPLORE.hintTime; EX.hint.textContent = VIEW.phone ? COPY.explore.hintPhone : COPY.explore.hint; EX.hintWait = COMB.hintDelay; }
+  if (!EX.hintUsed) { EX.hintUsed = true; EX.hintLeft = EXPLORE.hintTime; EX.hint.textContent = EX.touchInput || window.matchMedia('(pointer: coarse)').matches ? COPY.explore.hintPhone : COPY.explore.hint; EX.hintWait = COMB.hintDelay; }
   document.getElementById('go-say').textContent = COPY.explore.say;
   explorePromote(); exploreNotify(); return true;
 }
@@ -170,6 +170,7 @@ function exploreGesture(dragged = false) {
 }
 export function exploreBuild({ stage, world, journey, rm }) {
   Object.assign(EX, { stage, world, journey, rm }); if (rm) return;
+  window.addEventListener('pointerdown', e => { EX.touchInput = e.pointerType === 'touch'; }, { passive: true, capture: true });
   document.documentElement.style?.setProperty('--explore-row-delay', EXPLORE.rowDelay + 's');
   document.documentElement.style?.setProperty('--explore-row-fade', EXPLORE.rowFade + 's');
   EX.hint = document.createElement('p'); EX.hint.className = 'find-hint explore-hint'; EX.hint.setAttribute('aria-hidden', 'true'); stage.appendChild(EX.hint);

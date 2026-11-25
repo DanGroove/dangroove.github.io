@@ -12,4 +12,4 @@ try{
   const state=await b.evaluate('({elapsed:window.__dClock.now-window.__dT,cam:document.getElementById("cam").getAttribute("transform"),opacity:Number(getComputedStyle(document.getElementById("map")).opacity)})');await b.shot('final-412x730-opening-clock-'+String(i*100).padStart(4,'0'));log(i*100+' ms: '+JSON.stringify(state));
   if(Math.abs(state.elapsed-i*100)>.01||i===16&&state.opacity<.02)throw Error('clock/capture did not advance the visible map');
  }
-}catch(e){log('FAIL '+e.stack);process.exitCode=1;}finally{await b.close();appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-f/inherited-tests.log','\n## node tools/comb-d-opening-capture-test.mjs (exit '+(process.exitCode||0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
+}catch(e){log('FAIL '+e.stack);process.exitCode=1;}finally{await b.close();appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g/inherited-tests.log','\n## node tools/comb-d-opening-capture-test.mjs (exit '+(process.exitCode||0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
