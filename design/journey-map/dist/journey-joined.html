@@ -7760,8 +7760,8 @@ function streakGeometry(x, y, size, tail) {
   const nx = normal[0] * size / 2, ny = normal[1] * size / 2;
   return { length, normal, triangle: length > size ? [tail[0], tail[1], x + nx, y + ny, x - nx, y - ny] : [] };
 }
-// L4: progress has real 25/50/25 shares. .85 displayed progress launches the last star;
-// .85 / 1.4 is deliberately stricter than 1 / 1.4, so launches themselves span 1.4 s.
+// L16: launches span 1.4 s on the loader's clock, independently of boot progress.
+// Progress keeps its real 25/50/25 shares; only the formed mark waits for readiness.
 const LOADER = {
   launchEnd: 0.85, gatherSeconds: 1.4, flight: 1.0, hold: 0.15, shrink: 0.35, compressed: 0.08, swell: 0.18, burst: 1.8,
   shares: { fonts: 0.25, atlas: 0.5, frame: 0.25 },
@@ -7788,20 +7788,10 @@ function loaderAt(time, boot = {}, { review = false, reduced = false, count = ST
     }
     return { fill: Math.min(target, fill + Math.max(0, t - cursor) * rate), target };
   };
-  // Invert the continuous piecewise-linear progress, including pauses at a boot plateau.
-  const crossing = share => {
-    let fill = 0, target = 0, cursor = 0;
-    for (const [at, amount] of events) {
-      if (target > 0 && share <= target && share <= fill + (at - cursor) * rate) return cursor + Math.max(0, share - fill) / rate;
-      fill = Math.min(target, fill + (at - cursor) * rate);
-      target += amount; cursor = at;
-    }
-    return target > 0 && share <= target ? cursor + Math.max(0, share - fill) / rate : Infinity;
-  };
   const { fill, target } = progress(time), ready = events.length === Object.keys(LOADER.shares).length;
-  const launches = Array.from({ length: count }, (_, i) => crossing(launchShare(i, count)));
+  const launches = Array.from({ length: count }, (_, i) => launchShare(i, count) / rate);
   const formedAt = launches.at(-1) + LOADER.flight;
-  const fullAt = ready ? crossing(1) : Infinity;
+  const fullAt = ready ? events.at(-1)[0] : Infinity;
   const holdAt = ready ? Math.max(formedAt, fullAt, events.at(-1)[0]) : Infinity;
   const shrinkStart = holdAt + LOADER.hold, compressedStart = shrinkStart + LOADER.shrink, swellStart = compressedStart + LOADER.compressed;
   const burstStart = swellStart + LOADER.swell;
@@ -12783,8 +12773,8 @@ function streakGeometry(x, y, size, tail) {
   const nx = normal[0] * size / 2, ny = normal[1] * size / 2;
   return { length, normal, triangle: length > size ? [tail[0], tail[1], x + nx, y + ny, x - nx, y - ny] : [] };
 }
-// L4: progress has real 25/50/25 shares. .85 displayed progress launches the last star;
-// .85 / 1.4 is deliberately stricter than 1 / 1.4, so launches themselves span 1.4 s.
+// L16: launches span 1.4 s on the loader's clock, independently of boot progress.
+// Progress keeps its real 25/50/25 shares; only the formed mark waits for readiness.
 const LOADER = {
   launchEnd: 0.85, gatherSeconds: 1.4, flight: 1.0, hold: 0.15, shrink: 0.35, compressed: 0.08, swell: 0.18, burst: 1.8,
   shares: { fonts: 0.25, atlas: 0.5, frame: 0.25 },
@@ -12811,20 +12801,10 @@ function loaderAt(time, boot = {}, { review = false, reduced = false, count = ST
     }
     return { fill: Math.min(target, fill + Math.max(0, t - cursor) * rate), target };
   };
-  // Invert the continuous piecewise-linear progress, including pauses at a boot plateau.
-  const crossing = share => {
-    let fill = 0, target = 0, cursor = 0;
-    for (const [at, amount] of events) {
-      if (target > 0 && share <= target && share <= fill + (at - cursor) * rate) return cursor + Math.max(0, share - fill) / rate;
-      fill = Math.min(target, fill + (at - cursor) * rate);
-      target += amount; cursor = at;
-    }
-    return target > 0 && share <= target ? cursor + Math.max(0, share - fill) / rate : Infinity;
-  };
   const { fill, target } = progress(time), ready = events.length === Object.keys(LOADER.shares).length;
-  const launches = Array.from({ length: count }, (_, i) => crossing(launchShare(i, count)));
+  const launches = Array.from({ length: count }, (_, i) => launchShare(i, count) / rate);
   const formedAt = launches.at(-1) + LOADER.flight;
-  const fullAt = ready ? crossing(1) : Infinity;
+  const fullAt = ready ? events.at(-1)[0] : Infinity;
   const holdAt = ready ? Math.max(formedAt, fullAt, events.at(-1)[0]) : Infinity;
   const shrinkStart = holdAt + LOADER.hold, compressedStart = shrinkStart + LOADER.shrink, swellStart = compressedStart + LOADER.compressed;
   const burstStart = swellStart + LOADER.swell;

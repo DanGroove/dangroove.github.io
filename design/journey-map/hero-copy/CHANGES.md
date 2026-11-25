@@ -26,3 +26,7 @@ The copy was refreshed from `0f38758` to `3232c60` (round 19: the loader, the en
 | `stars.mjs` | The frame's scroll term is the lift (0 under reduced motion), now also handed to the hero's new `field.setScroll()` and kept for `drawn()`; the trails and CPU positions are the hero's. The window's scroll listener keeps the pinned pointer (`clientY - box.top`) and hands the field the lift, not the window's scroll. `drawn`, `look` and `letGo()` sit beside the hero's new `prepare()` and `sample`. | 5.3 and 5.4: the hero is pinned in the map's stage; `drawn()` still matches `VERT_STARS` (home, own offset, less parallax by depth weight, less the scroll term times 0.12 times depth). |
 
 Outside this folder, `design/journey-map/tools/pack-joined.mjs` now puts the loader where the copy's own page puts it: `LOADER_CSS` and `LOADER_SKIP` in the head, `LOADER_SCRIPT` right before the hero's script (the loader's markup comes inside the hero section from `pageMarkup('play')`).
+
+## Refresh to `fca16c6` (2026-11-25)
+
+The copy was refreshed from `3232c60` to `fca16c6` (round 19, L16: the loader's stars pour in as one stream instead of two batches). Among the copied files only `design/journey-hero/take-2/loader-stars.mjs` changed in the source, and it is now `fca16c6`'s byte for byte (`loaderAt` launches the stars on the loader's own clock; progress keeps its real shares and only the formed mark waits for readiness). `play.mjs` and `stars.mjs` keep their `// JOIN:` changes above unchanged.
