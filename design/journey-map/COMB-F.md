@@ -6,7 +6,7 @@ Read `BRIEF.md` first; its rules hold. Then `COMB-E.md`. Part 7 was stopped earl
 
 The run folder your prompt names holds copies of this map's modules as they were at 6d71e9f (part 4b, before part 5) in `ref-6d71e9f\` and at 375cd6a (part 5) in `ref-375cd6a\`, and captures of the map at 6d71e9f in `ref-captures\`. Read them where an item points to them; never import them.
 
-Do F0, F1, F15 and F3 first, then F8 and F12, then the rest in order. An item still marked WAITING ON DAN when you start is left out: say so in your report.
+Do F0, F1, F15 and F3 first, then F8, F12 and F16, then the rest in order. An item still marked WAITING ON DAN when you start is left out: say so in your report.
 
 ## 0. The names alone (new, first)
 
@@ -52,7 +52,11 @@ Do F0, F1, F15 and F3 first, then F8 and F12, then the rest in order. An item st
 - **F6. Yggdrasil.** Dan: "ygdrasil is supposed to have its roots everywhere, it just looks like a normal tree here, also where did ratatoskr go?" Part 5 cut the roots to three short ones and Ratatoskr and Nidhogg went out of sight. Bring back long roots spreading out across the land as at 6d71e9f, one running into Urd's well, keeping part 6's canopy; put Ratatoskr back on the trunk and Nidhogg at the roots, each big enough to read as what it is in the tree's view at 412 x 730 (at least 18 CSS px long) and as a small creature at the overview. Roots, animals and the well keep clear of the well's labels (B1) and the trail.
 - **F7. The footer's rule left behind.** Dan: "random line here", then, with a screenshot of explore zoomed in near the X, "I meant this line": a long faint horizontal line below the map's frame. It is the timeline's base line (`.tl-base`), which becomes the rule under the name in the footer. When "Explore the map" is pressed the timeline's other parts fade out, but `.tl-base` is not one of its fading parts (`tl-f`), so it stays at full opacity and is carried and zoomed with the map in explore (at 1396 x 718 after zooming in it runs from x 281 to 1015 at y 662). The result that must hold: in explore, and anywhere else the timeline's other parts are hidden and the footer's name is not showing, the base line does not show; it fades out and back in with the timeline's other parts. The rule under the name in the footer and the timeline at the stops stay exactly as they are. Change nothing in the sea for this note.
   Test: explore at rest and after three zooms in at 412 x 730, 360 x 640 and 1440 x 900: the base line's opacity is 0; at the footer and at each stop's hold it is as before.
-- **F16. A line that should curve.** Dan: "this line should curve downward smoothly, it looks awkward rn", drawn as a box on the map; which line he means is not yet known. WAITING ON DAN.
+- **F16. The trail's last stretch curves down into the X.** Dan: "this line should curve downward smoothly, it looks awkward rn", and, drawing over the trail from the 2023 crossing's landing to the X, "something like this, this is very rough" (his sketch: `reference/dan-trail-sketch.png`, the blue line). Today that stretch, the end of `MAP.waypoints` ([404, 662], [376, 694] at Lennard, [330, 720], [290, 746], [256, 768] at the X), runs as a straight diagonal. In his sketch it leaves the landing heading down and left as today, eases flatter as it reaches Lennard and passes through Lennard's shield, then sweeps down in a smooth curve to arrive at the X from above. The result that must hold:
+  - That stretch reads as one smooth S like his sketch, with no corner or kink, still ending at the X (the X does not move) and still passing through Lennard's stop, its shield on the trail (the stop's point may move up to 12 map units to get there).
+  - Everything tied to the route follows it: the dots (evenly spaced), the traveller, Lennard's hold and the glides through it, the stars that land on the trail's dots, the nova's run-in and the trail's draw-in.
+  - Lennard's name, "X marks the work" and its line, the hoard's dig mark, LENNARDGARD and the skyline keep 4 px clear of the trail at the eight sizes; move a name or the dig mark if one needs room, never the X.
+  Test: the overview and Lennard's hold at 412 x 730 and 1440 x 900, beside Dan's sketch; along the stretch the trail's heading changes smoothly from dot to dot (no step).
 
 ## 4. Finds
 
