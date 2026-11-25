@@ -24,6 +24,7 @@ export const PACE_PARTS = (() => {
 })();
 const paceLimit = BEATS[BEATS.length - 1].P;
 const paceLast = PACE_PARTS[PACE_PARTS.length - 1];
+const paceMap = BEATS[1].P;
 export const PACE_SECONDS = paceLast.t + paceLast.seconds;
 const paceClamp = (v, hi) => Math.max(0, Math.min(hi, v));
 export function paceT(P) {
@@ -36,7 +37,11 @@ export function paceP(T) {
 }
 export function paceMove(P0, P1) {
   const T0 = paceT(P0), T1 = paceT(P1);
-  return { P0: paceP(T0), P1: paceP(T1), T0, T1, D: Math.max(STEPS.minMove, Math.abs(T1 - T0) * (P1 < P0 ? STEPS.back : 1)) };
+  const move = { P0: paceP(T0), P1: paceP(T1), T0, T1, D: Math.max(STEPS.minMove, Math.abs(T1 - T0) * (P1 < P0 ? STEPS.back : 1)) };
+  // Use the existing quintic carry evaluator, including its exact derivative,
+  // for one uninterrupted score across all three opening acts.
+  if(P0<=paceMap&&P1<=paceMap){move.carry=true;move.weights=[1,1,1,1,1,1];move.points=STEPS.heroCurve.map(q=>q*(move.P1-move.P0));}
+  return move;
 }
 export function paceEase(x, D) {
   const q = paceClamp(x, 1), r = Math.min(0.5, STEPS.ramp / D);
@@ -47,5 +52,6 @@ export function paceEase(x, D) {
 export function paceAt(move, t) {
   if (t <= 0) return move.P0;
   if (t >= move.D) return move.P1;
+  if(move.carry){const q=t/move.D,u=1-q,B=[u**5,5*u**4*q,10*u**3*q*q,10*u*u*q**3,5*u*q**4,q**5];return move.P0+B.reduce((s,b,i)=>s+b*move.points[i],0);}
   return paceP(move.T0 + (move.T1 - move.T0) * paceEase(t / move.D, move.D));
 }

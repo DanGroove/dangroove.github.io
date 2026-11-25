@@ -88,7 +88,7 @@ export function frameTrace(events, start, end, frames, pid) {
 
 const frameArgs=Object.fromEntries(process.argv.slice(2).flatMap((v,i,a)=>v.startsWith('--')?[[v.slice(2),a[i+1]]]:[]));
 const framePages=frameArgs.page?[frameArgs.page]:['dist/journey-map.html','dist/journey-joined.html'];
-const frameScenarios=['pinch x3 / 300 ms out + 300 ms in / three repeats','fling + glide','wayfinder / one turn in 1.5 s','slow pan with glow','stop glide','rush into blast','map -> Laurier','Laurier -> HMC','HMC again -> Interkom','Interkom -> HMC again / Back'];
+const frameScenarios=['pinch x3 / 300 ms out + 300 ms in / three repeats','fling + glide','wayfinder / one turn in 1.5 s','slow pan with glow','stop glide','rush into blast','map -> Laurier','Laurier -> HMC','HMC again -> Interkom','Interkom -> HMC again / Back','hero -> map'];
 const frameWidth=Number(frameArgs.width||412),frameHeight=Number(frameArgs.height||730),frameDpr=Number(frameArgs.dpr||2.625),frameCpu=Number(frameArgs.cpu||4);
 const frameOut=frameArgs.out&&resolve(frameArgs.out),frameAllowed=resolve('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-a');
 if(frameOut&&frameOut!==frameAllowed&&!frameOut.startsWith(frameAllowed+sep))throw Error('--out must be in the authorized comb-a run folder');
@@ -163,6 +163,7 @@ async function frameMeasure(name,gesture,capture,glide=false) {
   if(frameOut){const slug=framePageTag+'-'+name.replace(/[^a-z0-9]+/gi,'-');writeFileSync(join(frameOut,slug+'-'+(capture?'capture':'timing')+'-trace.json'),JSON.stringify({traceEvents:events}));for(let i=0;i<images.length;i++)writeFileSync(join(frameOut,slug+'-'+String(i).padStart(4,'0')+'.png'),images[i].png);}
 }
 async function frameScenario(index) {
+  if(index===10){await frameEval('window.__jm.go("top",{instant:true})');await frameWait(8000);for(let n=0;n<200;n++){if(await frameEval('!window.__hero || (!window.__hero.loading && window.__hero.entering == null)'))break;await frameWait(100);}if(!await frameEval('!window.__hero || (!window.__hero.loading && window.__hero.entering == null)'))throw Error('hero entrance did not finish');return async()=>{await frameEval('window.__jm.next()');for(let n=0;n<160;n++){await frameWait(50);if(!await frameEval('window.__jm.moving')){if(!await frameEval('Math.abs(window.__jm.P-window.__jm.beats[1].P)<.01'))throw Error('hero move did not reach whole map');return;}}throw Error('hero move did not finish');};}
   if(index>=6){await frameEval('window.__jm.go('+JSON.stringify(['map','laurier','hmc2','interkom'][index-6])+',{instant:true})');await frameWait(2400);return async()=>{await frameEval(index===9?'window.__jm.back()':'window.__jm.next()');for(let n=0;n<160;n++){await frameWait(50);if(!await frameEval('window.__jm.moving'))return;}throw Error('glide did not finish');};}
   if(index<4){await frameExplore();if(index===1||index===3){const at=index===3?await frameEval('(()=>{const r=document.getElementById("nova-hit").getBoundingClientRect();return [r.x+r.width/2,r.y+r.height/2]})()'):[206,330];await frameZoom(at,3);await frameWait(1800);}}
   else {await frameEval('window.__jm.go('+JSON.stringify(index===4?'hmc1':'x')+',{instant:true})');await frameWait(2200);}

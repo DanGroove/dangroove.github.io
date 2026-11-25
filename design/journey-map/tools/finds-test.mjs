@@ -23,17 +23,17 @@ const close = (a, b, label, tolerance = 0.000001) => assert.ok(Math.abs(a - b) <
 const chart = bigMap();
 assert.ok(!/undefined|\{\{/.test(chart.finds), 'all live drawing tokens must resolve');
 // COMB-B records the surfaced serpent drawing; fill and coasts retain their earlier baselines.
-const original = { sea: [72442, 1555875863], fill: [12999, 2682309966], coast: [4401, 2408021381] };
+const original = { sea: [75564, 3132355843], fill: [12999, 2682309966], coast: [4401, 2408021381] };
 for (const [key, [length, hash]] of Object.entries(original)) { assert.equal(chart[key].length, length); assert.equal(digest(chart[key]), hash); }
 console.log('ok: COMB-D body/stipple sea digest recorded; coast and fill unchanged');
 // D3 adds NOVA.build; the full data digest is re-recorded for that authorized table (and again for the continuous pull, 2026-11-23,
 // and for polish round 1: the held breath's white cross and halo, the softer cloud deck, the traveller's size at the overview
 // and the gather ring's spread).
 // WHIRL2 adds only STARS.supply; DEPTH and NOVA remain unchanged.
-assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 4022828084);
+assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 4233329790);
 // D10: restore only the moved cloud to verify all other sky data.
-const beforeD = structuredClone(DEPTH); beforeD.clouds.list[9][0] = 330;
-assert.equal(digest(JSON.stringify([STARS,beforeD,NOVA])),1102335767);
+const beforeD = structuredClone(DEPTH); beforeD.clouds.list[9][0] = 330; beforeD.dpr=2; beforeD.field.sprite=128;const beforeFStars=structuredClone(STARS);beforeFStars.dprCap=2;delete beforeFStars.fall;
+assert.equal(digest(JSON.stringify([beforeFStars,beforeD,NOVA])),1102335767);
 console.log('ok: D10 cloud pin recorded; restoring that cloud verifies original STARS/DEPTH/NOVA');
 // D4 authorizes the pure rest-to-rest glide in trip. Depth remains protected.
 // Line endings are evened out so the numbers are the same on Windows and in the cloud.
@@ -42,9 +42,9 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // depth.mjs for the lantern's darkness the nova canvas holds through the rush; its second batch re-records trip.mjs for the
 // labels that give way, the coasts' draw-on, the X's fade-in with the sea and the mini-map's targets.
 // FRAMES: compositor camera writer and label recovery only; geometry/score remain pinned by the motion tests.
-assert.equal(sourceDigest('trip.mjs'), 2994301100, 'trip.mjs changed');
+assert.equal(sourceDigest('trip.mjs'), 3720764308, 'trip.mjs changed');
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 3242277270, 'data.mjs changed');
+assert.equal(sourceDigest('data.mjs'), 3598064824, 'data.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 4010889213, 'depth.mjs changed');
 console.log('ok: COMB-D camera/labels/tripS digests recorded; depth source remains pinned');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
@@ -286,7 +286,7 @@ console.log('ok: hammer press/found/sheet; start/end fact; real button/rune focu
 const autoState = tripState(mapP); autoState.trav = [154, 436]; findsFrame(testClock + 0.01, autoState); await Promise.resolve(); assert.ok(!FD.found.has('mist'));
 key('mist'); key('mist'); key('mist'); await tick(2); assert.equal(window.__jm.finds.state('mist').lifted, true); assert.equal(window.__jm.finds.state('mist').stage, 'lifted');
 key('horn'); assert.equal(window.__jm.finds.state('horn').up, 1); key('horn'); await tick(5.5); assert.equal(window.__jm.finds.state('horn').heard.length, 11); assert.equal(window.__jm.finds.state('horn').up, 0);
-for (let i = 0; i < 3; i++) { key('well'); await tick(1.3); assert.equal(window.__jm.finds.state('well').norn, i); assert.equal(FD.popSide, 'below'); assert.equal(FD.popOrigin[1], 0); }
+for (let i = 0; i < 3; i++) { key('well'); await tick(1.3); assert.equal(window.__jm.finds.state('well').norn, i); assert.equal(FD.popSide, 'below'); assert.ok(FD.popOrigin.every(Number.isFinite),'F8 selected side owns the popup origin'); }
 assert.equal(window.__jm.finds.state('well').watered, 3); assert.equal(window.__jm.finds.state('well').answer, FIND_COPY.wellStop.replace('{name}', STOPS[0].short).replace('{dates}', STOPS[0].dates));
 assert.ok(testSvg.querySelector('#wl-crown').children.every(g => !/NaN/.test(g.getAttribute('transform') || '')));
 const shipOuter = testSvg.querySelector('.ls-ship'), shipTransform = shipOuter.getAttribute('transform');

@@ -49,6 +49,9 @@ export const pointAt = u => {
 const smoothCenter = u => { let x = 0, y = 0; const n = 4, w = CAMERA.smooth; for (let k = -n; k <= n; k++) { const p = pointAt(Math.max(0, Math.min(TRAIL_LEN, u + k * w / n))); x += p[0]; y += p[1]; } return [x / (2 * n + 1), y / (2 * n + 1)]; };
 // the water crossing, found from the coasts
 export const WATER = (() => { let a = null, b = null; for (let u = STOP_U[4]; u < STOP_U[5]; u += 1) { const w = !onLand(pointAt(u)); if (w && a === null) a = u; if (!w && a !== null && b === null && u > a + 10) b = u; } return [a - 2, b + 2]; })();
+// A berth in the open-water lane south of the ring, shared by drawing, hit
+// target, focus view and popup. Only the ship is offset from the route.
+export const longshipPoint = u => { const p=pointAt(Math.max(WATER[0],Math.min(WATER[1],u)));return [p[0],FIND_PLAY.kit.shipWaterY]; };
 // trail dots: one star per dot
 export const TRAIL_DOTS = (() => { const out = []; for (let u = 0; u <= X_U; u += MAP.dotGap) out.push(pointAt(u)); return out; })();
 
@@ -117,7 +120,7 @@ export function tripWarmGlides(P) {
   if (typeof setTimeout !== 'function') return;
   clearTimeout(glideWarmTimer);
   const queue = GLIDES.filter(g => Math.abs(g.a - P) < 1e-6 || Math.abs(g.b - P) < 1e-6);
-  const step = () => { const g = queue.shift(); if (!g) return; glidePath(g, .5); glideWarmTimer = setTimeout(step, STEPS.glide.warmGap * 1000); glideWarmTimer?.unref?.(); };
+  const step = () => { if(globalThis.window?.__jm?.moving){glideWarmTimer=setTimeout(step,120);glideWarmTimer?.unref?.();return;} const g = queue.shift(); if (!g) return; glidePath(g, .5); glideWarmTimer = setTimeout(step, STEPS.glide.warmGap * 1000); glideWarmTimer?.unref?.(); };
   glideWarmTimer = setTimeout(step, STEPS.glide.warmDelay * 1000); glideWarmTimer?.unref?.();
 }
 const camOverview = () => ({ cx: MAP.w / 2, cy: MAP.h / 2, s: VIEW.s0, ax: VIEW.ox + MAP.w / 2 * VIEW.s0, ay: VIEW.oy + MAP.h / 2 * VIEW.s0 });
@@ -609,10 +612,10 @@ export function tripApply(st) {
   const L = TRAIL_LEN * paint.s; tripWrite(E.done, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(E.done, 'strokeDashoffset', (st.exploreK ? 0 : (TRAIL_LEN - st.u) * paint.s).toFixed(1));
   tripWrite(E.done, 'opacity', st.inTrip ? 1 : 0);
   // the longship rides the crossing
-  const sp = pointAt(Math.max(WATER[0], Math.min(WATER[1], st.u))); tripWrite(E.ship, 'transform', `translate(${n2(sp[0])} ${n2(sp[1] + 5)}) scale(.55)`, true);
+  const sp = longshipPoint(st.u); tripWrite(E.ship, 'transform', `translate(${n2(sp[0])} ${n2(sp[1])}) scale(.55)`, true);
   const opacity = st.dim * fade;
   tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
-  tripWrite(E.svg, 'willChange', free ? 'transform, opacity' : fade > 0 && fade < 1 ? 'opacity' : '');
+  tripWrite(E.svg, 'willChange', fade > 0 && fade < 1 ? 'opacity' : '');
   tripWrite(E.svg, 'overflow', free ? 'visible' : '');
   tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
   // the X fades in with the sea, so neither page shows it before the map exists

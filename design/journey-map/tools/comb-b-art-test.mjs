@@ -19,8 +19,8 @@ for(const i of[5,41,59]){
 assert.deepEqual(HAMMER.map.hit,[-6,-6,34,34]);assert.deepEqual(FIND_PLAY.horn.hit,[-18,-30,34,38]);
 assert.deepEqual(FIND_PLAY.mist.box,[102,410,104,50]);assert.deepEqual(FIND_PLAY.serpent.hit,[-50,-30,62,42]);
 assert.ok(!/find-mist-soft|filter=/.test(map.finds.match(/id="f-mist"[^]*?(?=<g class="find" id="f-horn")/)?.[0]||''));
-assert.ok(YGG.rat.includes('yg-tail')&&!YGG.rat.includes('<path')&&YGG.nid.includes('yg-nid-head')&&!YGG.nid.includes('<path'),'tiny actors are explicitly omitted, with existing animation hooks retained');
+assert.ok(YGG.rat.includes('yg-tail')&&YGG.rat.includes('<path')&&YGG.nid.includes('yg-nid-head')&&YGG.nid.includes('<path'),'F6 restores both creatures with their animation hooks');
 const radius=(HAMMER.shield.cell-HAMMER.field.line)/2-.25;
 assert.ok(radius+HAMMER.field.line/2<HAMMER.shield.cell/2,'complete rim including ink fits each live tile');
 assert.ok(map.finds.includes('hm-kept')&&map.finds.includes('hn-kept'));
-console.log('ok: unchanged hammer/horn/mist/serpent hits; ink-only masked mist; omitted tiny actors; full cell rims and persistent sign hooks');
+console.log('ok: unchanged hammer/horn/mist/serpent hits; ink-only masked mist; restored creatures; full cell rims and persistent sign hooks');

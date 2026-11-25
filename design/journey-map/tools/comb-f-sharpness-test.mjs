@@ -1,0 +1,30 @@
+// Isolated F10 old/new settings comparison. This does not launch/import the
+// deferred frame-cost machinery. Instrumentation exists only in served memory.
+import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
+import {createServer} from 'node:http';
+import {readFileSync,writeFileSync} from 'node:fs';
+const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-f',b=await combBBrowser(),rows=[],fail=[];let served='';
+const server=createServer((q,r)=>{r.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});r.end(served);});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+await b.send('Fetch.enable',{patterns:[{urlPattern:'*'}]});b.on('Fetch.requestPaused',p=>{const u=new URL(p.request.url),ok=['data:','blob:'].includes(u.protocol)||u.hostname==='127.0.0.1';void b.send(ok?'Fetch.continueRequest':'Fetch.failRequest',ok?{requestId:p.requestId}:{requestId:p.requestId,errorReason:'BlockedByClient'});});await b.send('Network.setBlockedURLs',{urls:[]});
+const probe=`
+window.__fSubmit={};window.__fCalls={};window.__fFrames=[];window.__fOn=false;
+for(const name of ['clearRect','fillRect','drawImage','fill','stroke']){const fn=CanvasRenderingContext2D.prototype[name];CanvasRenderingContext2D.prototype[name]=function(...args){if(!window.__fOn||!this.canvas.id)return fn.apply(this,args);const t=performance.now(),v=fn.apply(this,args),key=this.canvas.id;window.__fSubmit[key]=(window.__fSubmit[key]||0)+performance.now()-t;window.__fCalls[key]=(window.__fCalls[key]||0)+1;return v;};}
+window.__fReset=()=>{window.__fSubmit={};window.__fCalls={};window.__fFrames=[];window.__fOn=true;const f=t=>{if(!window.__fOn)return;window.__fFrames.push(t);requestAnimationFrame(f)};requestAnimationFrame(f)};
+window.__fRead=()=>{window.__fOn=false;return {submit:window.__fSubmit,calls:window.__fCalls,frames:window.__fFrames,scale:devicePixelRatio,canvases:[...document.querySelectorAll('canvas[id]')].map(c=>({id:c.id,w:c.width,h:c.height})),svg:getComputedStyle(document.getElementById('map')).willChange,world:getComputedStyle(document.getElementById('ft-world')).willChange}};
+`;
+const load=async(mode,joined=false)=>{let html=readFileSync('dist/journey-'+(joined?'joined':'map')+'.html','utf8');if(mode==='old-settings')html=html.replace('dprCap: 3','dprCap: 2').replace('seed: 137, dpr: 3','seed: 137, dpr: 2').replace('sprite: 384','sprite: 128').replace('NOVA_CANVAS = { dpr: 3','NOVA_CANVAS = { dpr: 2').replace("tripWrite(E.svg, 'willChange', fade > 0", "tripWrite(E.svg, 'willChange', free ? 'transform, opacity' : fade > 0").replace('EX.gesture?.dragged || (EX.active','EX.gesture || (EX.active');const at=joined?html.indexOf('// ---- join.mjs ----'):html.indexOf('</script>');served=html.slice(0,at)+probe+html.slice(at);await b.send('Page.navigate',{url:'http://127.0.0.1:'+server.address().port+'/'+mode+'-'+Date.now()});for(let i=0;i<300;i++){await combBWait(50);if(await b.evaluate('!!window.__fRead&&!!window.__jm'+(joined?'&&!!window.__ready&&!!window.__heroJoin':'')))break;}await b.evaluate('document.fonts.ready.then(()=>true)');await combBWait(joined?2500:500);};
+const explore=async()=>{await b.evaluate('__jm.go("end",{instant:true})');await combBWait(1400);await b.evaluate('document.querySelector(".go-next").click()');await combBWait(2000);await b.evaluate('(()=>{const p=__jm.finds.place("well");for(let n=0;n<6;n++)window.dispatchEvent(new WheelEvent("wheel",{clientX:p[0],clientY:p[1],deltaY:-120,bubbles:true,cancelable:true}));})()');await combBWait(1600);};
+const record=async(mode,scenario)=>{const r=await b.evaluate('__fRead()'),a=r.frames.slice(1).map((t,i)=>t-r.frames[i]).sort((a,b)=>a-b),n=r.frames.length;rows.push({mode,scenario,...r,intervals:{n:a.length,p50:a[Math.floor(a.length*.5)],p95:a[Math.floor(a.length*.95)],max:a.at(-1)},perFrame:Object.fromEntries(Object.entries(r.submit).map(([k,v])=>[k,v/Math.max(1,n)]))});console.log(mode+' '+scenario+' '+JSON.stringify(rows.at(-1).perFrame));};
+try{
+ await b.size(412,730,2.625);await b.send('Emulation.setCPUThrottlingRate',{rate:4});
+ for(const mode of ['old-settings','native-settings']){
+  await load(mode);await explore();await b.evaluate('__fReset()');await combBWait(1200);await record(mode,'rest');
+  await b.evaluate('__fReset()');await b.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:170,y:300,id:1},{x:230,y:300,id:2}]});for(let n=1;n<=15;n++){await b.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:170-n*3,y:300,id:1},{x:230+n*3,y:300,id:2}]});await combBWait(20);}await b.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await combBWait(500);await record(mode,'pinch');
+  await b.key('Escape');await combBWait(1300);await b.evaluate('__jm.go("map",{instant:true})');await combBWait(1000);await b.evaluate('__fReset();__jm.next()');for(let n=0;n<150;n++){await combBWait(50);if(!await b.evaluate('__jm.moving'))break;}await record(mode,'glide');
+  await load(mode,true);await b.evaluate('__fReset();__jm.next()');for(let n=0;n<180;n++){await combBWait(50);if(!await b.evaluate('__jm.moving'))break;}await record(mode,'hero move');
+ }
+ await b.send('Emulation.setCPUThrottlingRate',{rate:1});
+ for(const dpr of [1,1.5,2.625]){await b.size(1440,900,dpr);await load('native-settings');await explore();await b.shot('sharpness-native-'+dpr+'-well-rest');const q=await b.evaluate('__fRead()');if(q.svg!=='auto')fail.push('retained SVG promotion at '+dpr+' '+q.svg);for(const c of q.canvases.filter(c=>['stars','deep','air','nova'].includes(c.id)))if(c.w!==Math.round(1440*dpr))fail.push('canvas density '+dpr+' '+JSON.stringify(c));}
+ if(b.errors.length)fail.push(...b.errors);
+}finally{await b.close();server.close();}
+writeFileSync(root+'/sharpness-cost.json',JSON.stringify({note:'old-settings is a controlled reconstruction of F10 settings on the same final build; API submission times include test instrumentation and exclude GPU completion',rows,fail},null,2));console.log('Failures '+JSON.stringify(fail));process.exitCode=fail.length?1:0;

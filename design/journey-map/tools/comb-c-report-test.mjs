@@ -12,7 +12,7 @@ const blankTotal=captureStats.reduce((sum,row)=>sum+row[0],0),captureTotal=captu
 assert.equal(before.length,8);assert.equal(phone.length,16);assert.equal(desktop.length,8);assert.equal(baseline.length,8);
 const names=['check','steps-test','nova-test','depth-test','layout-test','explore-test','finds-test','motion-test','hammer-test','whirl2-test','frame-cost-test','frame-performance-test','frame-render-test'];
 for(const name of names){const hits=[...history.matchAll(new RegExp('^## '+name+' \\(exit (\\d+)\\)','gm'))];assert.equal(hits.at(-1)?.[1],'0','latest '+name);}
-const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-c',caps=JSON.parse(readFileSync(root+'/captures.json','utf8'));
+const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-f',caps=JSON.parse(readFileSync(root+'/captures.json','utf8'));
 assert.ok(caps.length>1000);for(const name of caps)assert.ok(existsSync(root+'/'+name),'missing capture '+name);
 const f=n=>Number(n).toFixed(2),label=r=>r.page.includes('joined')?'joined':'map';
 const frameTable=['| Page / scenario | Before p50 / p95 / max ms | Final p50 / p95 / max ms | Before script / style+layout / raster ms | Final script / style+layout / raster ms | Final p95 above 33 ms |','| --- | ---: | ---: | ---: | ---: | ---: |'];

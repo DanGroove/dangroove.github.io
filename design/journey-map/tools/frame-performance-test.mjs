@@ -54,7 +54,7 @@ console.log(`${baseline?'BEFORE':'AFTER'} 412x730 / 72 moving frames: #cam write
 if(!baseline){
   assert.ok(during.cam>=6&&during.cam<=9,'3x pinch re-rasterises at bounded scale intervals');assert.ok(!pending&&frames/60<=.27,'labels finish within about 250 ms');
   labels.forEach((n,i)=>assert.ok(Math.abs(Number(n.attrs.transform.slice(6,-1))/api.labelScale(n.dataset.label,last.cam.s)-1)<=data.LABELS.epsilon,'rest text scale remains at its floor'));
-  assert.equal(svg.style.willChange,'transform, opacity');assert.equal(svg.style.overflow,'visible','pan reveals the complete map raster');
+  assert.equal(svg.style.willChange,'','F10 releases SVG raster promotion at rest');assert.equal(svg.style.overflow,'visible','pan reveals the complete map raster');
 }
 const idle=total;for(let i=0;i<20;i++)api.tripApply(last);assert.equal(total,idle,'identical idle frames write nothing');
 if(!baseline){

@@ -88,6 +88,7 @@ export function tlFrame(st) {
   tlStyle(TL.el, 'opacity', show);
   const count = st.exploreK >= 1 ? show : st.exploreK > 0 || (st.kind === 'rush' && TL.hooks?.moving?.()) || st.rushT > 0 || st.blastT > 0 ? 0 : show;
   TL.fades.forEach(f => tlStyle(f, 'opacity', f === TL.count ? count : fade));
+  tlStyle(TL.base, 'opacity', st.exploreK > 0 ? st.exploreFooter ?? 1 - st.exploreK : st.rushT === 0 ? 1 : Math.max(fade, m));
   tlStyle(TL.rows, 'transform', `scaleY(${(1 - st.cardOpen * .85).toFixed(3)})`);
   const hx = xOf(st.date) * TL.trackW; TL.headX = hx;
   TL.off = VIEW.phone ? Math.max(TL.viewW - TL.trackW, Math.min(0, TL.viewW / 2 - hx)) : 0;
@@ -101,7 +102,7 @@ export function tlFrame(st) {
   if (now !== TL.now) { TL.now = now; TL.el.setAttribute('aria-valuenow', now); }
 }
 
-export function tlReduced(on) { TL.rm = on; TL.now = null; TL.val = ''; TL.el.setAttribute('aria-valuemin', on ? 0 : Y0); TL.el.setAttribute('aria-valuemax', on ? STOPS.length : Math.floor(DATE_NOW)); if (TL.countHome) { if (on) TL.el.insertBefore(TL.count, TL.countSpace); else TL.countHome.appendChild(TL.count); TL.count.classList.toggle('tl-count-screen', !on); } if (on) { tlStyle(TL.count, 'opacity', 1); tlCurrent(TL.current ?? -1); } }
+export function tlReduced(on) { TL.rm = on; TL.now = null; TL.val = ''; TL.el.setAttribute('aria-valuemin', on ? 0 : Y0); TL.el.setAttribute('aria-valuemax', on ? STOPS.length : Math.floor(DATE_NOW)); if (TL.countHome) { if (on) TL.el.insertBefore(TL.count, TL.countSpace); else TL.countHome.appendChild(TL.count); TL.count.classList.toggle('tl-count-screen', !on); } if (on) { tlStyle(TL.count, 'opacity', 1); tlStyle(TL.base, 'opacity', 1); tlCurrent(TL.current ?? -1); } }
 export function tlCurrent(i, force = false) {
   const changed=TL.current!==i || !TL.val; TL.current = i; const s = STOPS[i]; if (!TL.rm || !changed&&!force) return;
   if (!s) { TL.view.scrollLeft=0; TL.val=COPY.timelineStart; TL.tip.classList.remove('on'); TL.el.querySelectorAll('.tl-blk').forEach(b=>b.classList.remove('current')); TL.el.setAttribute('aria-valuenow', 0); TL.el.setAttribute('aria-valuetext', COPY.timelineStart); return; }

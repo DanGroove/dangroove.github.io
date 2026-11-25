@@ -45,7 +45,7 @@ const exploreNotify = () => { EX.changed = true; window.dispatchEvent(new Event(
 const exploreHintOff = () => { EX.hintLeft = 0; EX.hint?.classList.remove('on'); };
 const exploreSuppressClear = () => { EX.suppress = false; clearTimeout(EX.suppressTimer); EX.suppressTimer = null; };
 const exploreWorldStyle = (key, value) => { if (EX.world && EX.world.style[key] !== value) EX.world.style[key] = value; };
-const explorePromote = () => exploreWorldStyle('willChange', EX.motion || EX.velocity.some(Boolean) || EX.gesture || (EX.active && JSON.stringify(EX.cam) !== JSON.stringify(EX.target)) ? 'transform' : '');
+const explorePromote = () => exploreWorldStyle('willChange', EX.motion || EX.velocity.some(Boolean) || EX.gesture?.dragged || (EX.active && JSON.stringify(EX.cam) !== JSON.stringify(EX.target)) ? 'transform' : '');
 function exploreClearPointers() {
   findPointerCancel();
   for (const id of EX.pointers.keys()) if (EX.stage.hasPointerCapture?.(id)) EX.stage.releasePointerCapture(id);

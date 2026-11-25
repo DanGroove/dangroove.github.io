@@ -44,6 +44,7 @@ export function findHorn(svg) {
     const p = attend(o, H.near), tip = o.awake && p ? H.tip * Math.max(-1, Math.min(1, (p[0] - f.x) / H.near)) : 0, q = ease(o.v), age = t - o.ts;
     const swell = !FD.rm && o.stage === 'sounding' && age < H.swell[2] ? (H.swell[0] - 1) * (1 - Math.cos(Math.PI * 2 * H.swell[1] * age)) / 2 : 0;
     const hear = FD.rm ? 0 : H.tip * Math.sin(Math.PI * clamp01((t - o.hearTs) / H.raise));
+    o.popPose=[H.lift[0]*q,H.lift[1]*q,H.turn*q+tip*(1-q)+hear,1+swell];
     attr(horn, 'transform', `translate(${H.lift[0] * q} ${H.lift[1] * q}) rotate(${H.turn * q + tip * (1 - q) + hear} ${H.pivot[0]} ${H.pivot[1]}) scale(${1 + swell})`);
     rings.forEach((r, i) => { const a = age - i * H.gap, radius = H.radius + H.speed * Math.max(0, Math.min(H.life, a)); attr(r, 'transform', `translate(${f.x + H.bell[0]} ${f.y + H.bell[1]}) scale(${radius})`); attr(r, 'opacity', !FD.rm && a >= 0 && a < H.life && o.stage === 'sounding' ? H.alpha * (1 - a / H.life) ** H.power : 0); });
     if (['sounding', 'echo'].includes(o.stage)) {

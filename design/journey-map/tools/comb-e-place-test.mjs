@@ -2,7 +2,7 @@
 import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
 import {writeFileSync} from 'node:fs';
 import {FIND_COPY,MAP,FIND_PLAY} from '../data.mjs';
-import {jormPoint,JORM} from '../art.mjs';
+import {jormPoint,jormEdges,JORM} from '../art.mjs';
 const b=await combBBrowser(),cases=[];
 try{
  for(const[w,h]of[[1440,900],[1280,720],[1024,600],[820,1180],[412,730],[390,844],[360,640],[844,390]]){
@@ -28,15 +28,7 @@ const hoards=FIND_COPY.hoards.map((h,i)=>{
  }return best;
 });
 const humps=MAP.jorm.surf.map(([a,z],i)=>{
- const original=(a+z)/2,span=MAP.jorm.span[i],height=span/2.5;
- let best=null;
- for(let t=.015;t<.99;t+=.0025){
-  const p=jormPoint(t*JORM.L),points=[];
-  for(let n=0;n<=40;n++){const u=n/40;points.push([p.x+(u-.5)*span,p.y-4*height*u*(1-u)-MAP.jorm.w/2],[p.x+(u-.5)*span,p.y-4*height*u*(1-u)+MAP.jorm.w/2]);}
-  for(const end of [-1,1])points.push([p.x+end*(span/2+6),p.y+2]);
-  const results=cases.map(c=>clear(points,c)),min=Math.min(...results.map(r=>r.min)),dist=Math.abs(t-original),score=Math.min(4.5,min)*100-dist*40;
-  if(!best||score>best.score)best={i,t,min,score,centre:p,limiting:results.map((r,j)=>({...r,w:cases[j].w}))};
- }return best;
-});
-const out={cases,hoards,humps};writeFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-e/placement-study.json',JSON.stringify(out,null,2));
+ const edge=jormEdges(a,z,a===0?0:MAP.jorm.surfaceTaper),points=[...edge.left,...edge.right];
+ const results=cases.map(c=>clear(points,c));return {i,interval:[a,z],min:Math.min(...results.map(r=>r.min)),limiting:results.map((r,j)=>({...r,w:cases[j].w}))};
+});const out={cases,hoards,humps};writeFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-f/placement-study.json',JSON.stringify(out,null,2));
 console.log(JSON.stringify({hoards,humps},null,2));

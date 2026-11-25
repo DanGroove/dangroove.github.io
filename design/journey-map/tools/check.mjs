@@ -58,7 +58,8 @@ ok(ACTS.hero === 100 && ACTS.handoff === 120 && ACTS.overview === 70 && ACTS.pus
 ok(Math.abs(SEQ.reduce((a, s) => a + s.len, 0) - TOTAL_P) < 1e-9 && SEQ.filter(s => s.kind === 'hold').length === 6, 'act sequence does not add up');
 
 const checkStepsNumbers = (v, path) => {
-  if (path === 'STEPS.glide.ease') ok(v === 'cosine-ramp', 'D4 one configured glide ease');
+  if (path === 'STEPS.heroCurve.0') ok(v===0,'F15 opening curve begins at zero');
+  else if (path === 'STEPS.glide.ease') ok(v === 'cosine-ramp', 'D4 one configured glide ease');
   else if (typeof v === 'number') ok(Number.isFinite(v) && v > 0, `${path}: must be finite and positive`);
   else if (v && typeof v === 'object') Object.entries(v).forEach(([k, x]) => checkStepsNumbers(x, `${path}.${k}`));
   else ok(false, `${path}: expected a number or a table of numbers`);
@@ -93,7 +94,7 @@ ok(FIND_PLAY.mist.strokes.length === 5 && FIND_PLAY.mist.fill.endsWith('Z') && F
 ok(FIND_PLAY.well.stars.length === 3 && FIND_PLAY.well.stars.every(row => row.length === 5 && row.every(p => p.length === 2 && p.every(Number.isFinite))), 'fifteen crown stars in three batches');
 ok(FIND_PLAY.ship.shields.length === STOPS.length, 'one longship shield per stop');
 checkDepthNumbers(HAMMER, 'HAMMER');
-ok(FINDS.some(f => f.id === 'hammer' && f.n === 0 && f.x === 110 && f.y === 288 && f.view.join() === '116,290,34'), 'D5 hammer place/view follows its stone below Laurier dates');
+ok(FINDS.some(f => f.id === 'hammer' && f.n === 0 && Math.hypot(f.x-112,f.y-222)<=10 && f.view.join() === '108,224,34'), 'F4 hammer place/view beside Laurier');
 ok(!FINDS.some(f => f.id === 'tafl') && !FIND_PLAY.tafl && !Object.keys(FIND_COPY).some(k => k.startsWith('tafl')), 'retired board data removed');
 ok(HAMMER.runes.map(r => r.key).join() === 'th,r,k,g,h,n,i,j,ei,l,d,e', 'game needs exactly the twelve approved runes');
 HAMMER.runes.forEach(r => { ok(RUNES.some(row => row[1] === r.key), `unknown game rune ${r.key}`); ok(!['z', 's', 't', 'o'].includes(r.key), `excluded game rune ${r.key}`); });
@@ -176,7 +177,7 @@ for(const [w,h,bar] of [[1440,900,120],[390,844,96]]) {
   const stroke=.55/VIEW.s0, crown=crownMasses.flat(), crownBox=[Math.min(...crown.map(p=>p[0]))-stroke,Math.min(...crown.map(p=>p[1]))-stroke,Math.max(...crown.map(p=>p[0]))+stroke,Math.max(...crown.map(p=>p[1]))+stroke];
   const glyphs=GROVE.map(([x,y,s,pine],i)=>({name:(pine?'caret':'tent')+' '+i,b:[x-s-stroke,y-2.7*s-stroke,x+s+stroke,y+stroke]})).concat([{name:'crown',b:crownBox}]);
   boxes.forEach(row=>{boxes.filter(other=>other!==row).forEach(other=>ok(rectGap(row.b,other.b)>=2,w+': labels need 2 units: '+row.text+'/'+other.text));glyphs.forEach(g=>ok(rectGap(row.b,g.b)>=2,w+': '+row.text+'/'+g.name+' gap '+rectGap(row.b,g.b).toFixed(2)+' '+JSON.stringify(g.b)));});
-  const sub=mapLabelRows().find(r=>r.text==='on contract, 2021 to 2022');ok(rectGap(mapLabelBox(sub,VIEW.sT,VIEW.phone),crownBox)>=2,'HMC-again sub-line clears crown at trip scale');
+  ok(mapLabelRows().filter(r=>r.stop!=='x').every(r=>!r.stopSub),'F0: names alone on the map');
   // 2026-11-23: HMC Connections sits in the fork of its two trails with its dates above the name, HMC, again in the harbour above its pier.
   // At the stop zoom both names and date lines clear the coast by 2 units and the trail centreline by 1.5 (a dot is about 1 unit wide).
   const trailGap=b=>Math.min(...TRAIL.slice(1).map((z,i)=>{const a=TRAIL[i];let d=Infinity;for(let k=0;k<=8;k++)d=Math.min(d,pointBoxGap([a[0]+(z[0]-a[0])*k/8,a[1]+(z[1]-a[1])*k/8],b));return d;}));

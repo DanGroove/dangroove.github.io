@@ -139,7 +139,7 @@ fresh();pinch(novaTarget,hornTarget);await new Promise(resolve=>setTimeout(resol
 fresh();pinch(novaTarget,hornTarget);point('pointerdown',1,100,200,novaTarget);point('pointerup',1,100,200,novaTarget);assert.equal(click(1).defaultPrevented,false,'next pointerdown clears suppression');
 fresh();zoomForPan();const beforeOwn=apply(0).cam;drag(wayTarget);assert.deepEqual(apply(0).cam,beforeOwn,'wayfinder owns a single drag');assert.equal(click(1).defaultPrevented,false);
 assert.equal(world.style.willChange,'','no world promotion at rest');
-point('pointerdown',1,100,200,novaTarget);assert.equal(world.style.willChange,'transform');point('pointerup',1,100,200,novaTarget);assert.equal(world.style.willChange,'');
+point('pointerdown',1,100,200,novaTarget);assert.equal(world.style.willChange,'','F10 stationary contact does not retain a raster layer');point('pointerup',1,100,200,novaTarget);assert.equal(world.style.willChange,'');
 for(const target of [fakeTarget(['.sheet.on']),fakeTarget(['input']),fakeTarget(['textarea']),fakeTarget(['select']),fakeTarget(['.tl']),fakeTarget(['[data-review]'])]){point('pointerdown',1,100,200,target);assert.equal(captures.size,0);point('pointermove',1,300,200,target);point('pointerup',1,300,200,target);assert.deepEqual(apply(0).cam,beforeOwn);}
 assert.equal(listenerOptions.pointerdown[0],true,'pointerdown precedes find capture');assert.equal(listenerOptions.pointermove[0],true);assert.equal(listenerOptions.pointerup[0],true);
 exploreReset();

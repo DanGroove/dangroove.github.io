@@ -1,5 +1,5 @@
 // Part A: the instrument and the five persistent, hand-dug chests.
-import { C, COPY, CRAFTS, STOPS, MAP, FIND_COPY, FIND_PLAY, PALETTES, COMB } from './data.mjs';
+import { C, COPY, CRAFTS, STOPS, MAP, FIND_COPY, FIND_PLAY, PALETTES, COMB, EXPLORE } from './data.mjs';
 import { clamp01, lerp, VIEW } from './trip.mjs';
 import { pieceIcon, hoardInside } from './art.mjs';
 import { cardsSetCraft, arrowSvg } from './cards.mjs';
@@ -58,6 +58,13 @@ export function findWay(svg) {
     else if (['Enter', ' '].includes(e.key)) { e.preventDefault(); set(o.craft >= 0 ? -1 : o.unlocked ? CRAFTS.length : -1); }
   });
   o.undo = () => set(-1); o.onEscape = () => { if (o.craft >= 0) set(-1); };
+  const taps = new Map();
+  document.addEventListener('pointerdown', e => { if(taps.size)for(const p of taps.values())p.drag=true;taps.set(e.pointerId,{x:e.clientX,y:e.clientY,drag:taps.size>0}); },true);
+  document.addEventListener('pointermove', e => {const p=taps.get(e.pointerId);if(p&&Math.hypot(e.clientX-p.x,e.clientY-p.y)>EXPLORE.slop)p.drag=true;},true);
+  document.addEventListener('pointercancel', e => taps.delete(e.pointerId),true);
+  document.addEventListener('pointerup', e => {const p=taps.get(e.pointerId);taps.delete(e.pointerId);if(!p||p.drag||e.target.closest?.('.find'))return;o.onEscape();},true);
+  window.addEventListener('blur',()=>taps.clear());
+  document.addEventListener('click',e=>{if(e.detail===0&&!e.target.closest?.('.find'))o.onEscape();});
   o.hear = () => { o.hearTs = FD.now; o.hearAngle = o.angle; };
   o.tick = (t, dt) => {
     const W = FIND_PLAY.way, p = attend(o, W.near);

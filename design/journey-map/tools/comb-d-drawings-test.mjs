@@ -5,13 +5,26 @@ function measure(){
  const visible=e=>{for(let p=e;p&&p!==document.body;p=p.parentElement){const s=getComputedStyle(p);if(s.visibility==='hidden'||s.display==='none'||Number(s.opacity)<.02)return false;}return true;};
  const box=e=>{const r=e.getBoundingClientRect();return[r.left,r.top,r.right,r.bottom];};
  const gap=(a,b)=>Math.hypot(Math.max(a[0]-b[2],b[0]-a[2],0),Math.max(a[1]-b[3],b[1]-a[3],0));
+ const segmentRect=(a,b,r)=>{
+  let best=Math.min(gap(r,[...a,...a]),gap(r,[...b,...b]));const dx=b[0]-a[0],dy=b[1]-a[1],d=dx*dx+dy*dy;
+  for(const x of[r[0],r[2]])for(const y of[r[1],r[3]]){const t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/(d||1)));best=Math.min(best,Math.hypot(x-a[0]-dx*t,y-a[1]-dy*t));}
+  for(const x of[r[0],r[2]]){const t=(x-a[0])/dx,y=a[1]+t*dy;if(t>=0&&t<=1&&y>=r[1]&&y<=r[3])return 0;}
+  for(const y of[r[1],r[3]]){const t=(y-a[1])/dy,x=a[0]+t*dx;if(t>=0&&t<=1&&x>=r[0]&&x<=r[2])return 0;}
+  return best;
+ };
  const labels=[...document.querySelectorAll('#b-detail text,#b-detail .rn-dim,#bc-notes text')].filter(e=>visible(e)&&!e.closest('.lg')).map(e=>({b:box(e),text:e.textContent||'region runes'}));
  const result=[];
- for(const[id,selector]of Object.entries({...Object.fromEntries(['laurier','hmc1','hmc2','interkom','lennard'].map(id=>['dig-'+id,'#f-hoard-'+id+' .hd-scratch'])),serpent:'.jg-hump path,.jg-neck path,.jg-head path,.jg-pad path,.jg-pad rect,.jg-pad circle',horn:'.hn-horn path',hammer:'#f-hammer .g',ygg:'.ygg path',well:'.wl-rip ellipse,.wl-bank',mist:'#f-mist path.g',beacon:'#f-beacon .g,#f-beacon .o,#f-beacon .l,#f-beacon .t,#f-beacon .bc-flame'})){
+ for(const[id,selector]of Object.entries({...Object.fromEntries(['laurier','hmc1','hmc2','interkom','lennard'].map(id=>['dig-'+id,'#f-hoard-'+id+' .hd-scratch'])),serpent:'.jg-ring > path,.jg-head path,.jg-tail path,.jg-pad path,.jg-pad rect,.jg-pad circle',horn:'.hn-horn path',hammer:'#f-hammer .g',ygg:'.ygg path',well:'.wl-rip ellipse,.wl-bank',mist:'#f-mist path.g',beacon:'#f-beacon .g,#f-beacon .o,#f-beacon .l,#f-beacon .t,#f-beacon .bc-flame'})){
   let min=Infinity,near='';
   for(const e of document.querySelectorAll(selector)){
-   if(!visible(e))continue;const m=e.getScreenCTM(),s=getComputedStyle(e),L=e.getTotalLength?.();if(!L)continue;
+   if(!visible(e))continue;const screen=e.getBoundingClientRect();if(screen.right < -4||screen.left>innerWidth+4||screen.bottom < -4||screen.top>innerHeight+4)continue;const m=e.getScreenCTM(),s=getComputedStyle(e),L=e.getTotalLength?.();if(!L)continue;
    const scale=Math.hypot(m.a,m.b),half=parseFloat(s.strokeWidth)/2*(s.vectorEffect==='non-scaling-stroke'?1:scale);
+   // F3 restores long polyline bands. Check their segments exactly instead of
+   // thousands of native whole-path length queries at every close view.
+   const d=e.getAttribute('d');
+   if(e.closest('.jg-ring')&&d&&!/[CQAHVSTcqahvst]/.test(d)){
+    let last,home;for(const q of d.matchAll(/([MLZ])(?:(-?[\d.]+) (-?[\d.]+))?/g)){const p=q[1]==='Z'?home:[m.a*+q[2]+m.c*+q[3]+m.e,m.b*+q[2]+m.d*+q[3]+m.f];if(q[1]==='M')home=p;else if(last&&p)for(const l of labels){const v=segmentRect(last,p,l.b)-half;if(v<min){min=v;near=l.text;}}last=p;}continue;
+   }
    for(let u=0;u<=L;u+=.5/Math.max(.1,scale)){const p=e.getPointAtLength(u),x=m.a*p.x+m.c*p.y+m.e,y=m.b*p.x+m.d*p.y+m.f;for(const l of labels){const d=gap(l.b,[x,y,x,y])-half;if(d<min){min=d;near=l.text;}}}
   }result.push({id,gap:Number.isFinite(min)?+min.toFixed(2):null,near});
  }
@@ -40,6 +53,7 @@ try{
   // All six phone cards retain their floor without an inner scroll.
   if(w<=640)for(const id of ['laurier','hmc1','mohawk','hmc2','lennard']){await b.evaluate(`window.__jm.go('${id}',{instant:true})`);await combBWait(1500);const r=await b.evaluate('('+measure.toString()+')()');if(r.phoneCard&&(Math.abs(r.phoneCard.gap)>.6||r.phoneCard.scroll))failures.push(w+' '+id+' card '+JSON.stringify(r.phoneCard));}
   const closeViews=FINDS.filter(f=>['horn','hammer','well','mist','beacon','serpent'].includes(f.id)).map(f=>[f.id,f.view]).concat(FIND_COPY.hoards.map(h=>['hoards',[h.x+FIND_PLAY.focus.chest[0],h.y+FIND_PLAY.focus.chest[1],FIND_PLAY.focus.chest[2]],h.id]));
+  if(process.argv.includes('--final-small'))closeViews.splice(0,closeViews.length,...closeViews.filter(([id,view,tag])=>['hammer','well','beacon','serpent'].includes(id)||tag==='hoard-hmc2'));
   for(const[id,view,tag=id]of closeViews){
    await b.key('Escape');await b.evaluate('window.__jm.go("map",{instant:true})');await combBWait(600);await b.evaluate(`window.__dFocus(${JSON.stringify(id)},${JSON.stringify(view)})`);await combBWait(900);
    const r=await b.evaluate('('+measure.toString()+')()');log(w+'x'+h+' closest '+tag+': '+JSON.stringify(r.result));
@@ -47,5 +61,5 @@ try{
   }
  }
  if(b.errors.length)failures.push(...b.errors);
-}catch(e){failures.push(e.stack);}finally{await b.close();log('Failures: '+JSON.stringify(failures));appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-e/inherited-tests.log','\n## node tools/comb-d-drawings-test.mjs (exit '+(failures.length?1:0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
+}catch(e){failures.push(e.stack);}finally{await b.close();log('Failures: '+JSON.stringify(failures));appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-f/inherited-tests.log','\n## node tools/comb-d-drawings-test.mjs (exit '+(failures.length?1:0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
 process.exitCode=failures.length?1:0;

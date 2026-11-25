@@ -1,6 +1,6 @@
 // Shared life, particles, overlays and first-found feedback. No progress mutation.
 import { FINDS, FIND_COPY, FIND_PLAY, FIND_TIMING, COPY, EXPLORE, COMB } from './data.mjs';
-import { VIEW, toScreen, clamp01, lerp, easeIO, WATER, pointAt, tripVisible, tripCardCover } from './trip.mjs';
+import { VIEW, toScreen, clamp01, lerp, easeIO, WATER, pointAt, tripVisible, tripCardCover, longshipPoint } from './trip.mjs';
 import { findRnd, starPath } from './art.mjs';
 import { tlSetCount } from './timeline.mjs';
 import { JOURNEY, stepsFocus, stepsRelease, stepsFocusNow } from './steps.mjs';
@@ -74,7 +74,7 @@ export const findSvg = (tag, attributes = {}) => { const el = document.createEle
 export const findSlot = line => typeof line === 'object' && line.todo ? `<div class="find-slot"><span class="pop-k">${fEsc(COPY.todo)}</span><p>${fEsc(line)}</p></div>` : `<p class="pop-t">${fEsc(line)}</p>`;
 export const findPlace = id => {
   const h = FIND_COPY.hoards.find(d => d.id === id); if (h) return [h.x, h.y];
-  if (id === 'longship' && FD.st) { const p = pointAt(Math.max(WATER[0], Math.min(WATER[1], FD.st.u))); return [p[0], p[1] + FIND_PLAY.kit.shipY]; }
+  if (id === 'longship' && FD.st) return longshipPoint(FD.st.u);
   const f = FD.list[id], d = FIND_BY[id]; return f?.place ? f.place() : d ? [d.x, d.y] : null;
 };
 export const findView = id => {
@@ -134,10 +134,20 @@ export function showPop(owner, anchor, html, cls = '', side = 'auto') {
   FD.pop.innerHTML = `<div class="pop-in"><div class="pop-body">${html}</div><i class="pop-tail" aria-hidden="true"></i></div>`;
   FD.popInner = FD.pop.firstElementChild; FD.popTail = FD.pop.querySelector('.pop-tail'); FD.popBody = FD.pop.querySelector('.pop-body');
   const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height];
+  // Measure drawing ink once at open. Project its map-space box through the
+  // existing camera each frame; never read layout during a pan or zoom.
+  const ink = owner.el?.querySelector('.hd-chest,.hn-horn,.jg-head,.rv-tree,.ls-rock') || owner.el;
+  FD.popBox = null;FD.popShape=null;
+  if (ink?.getBBox && ink.getCTM?.()) {
+    const b = ink.getBBox(), matrix = FD.svg.querySelector('#cam').getCTM().inverse().multiply(ink.getCTM());
+    const points = [[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]].map(([x,y])=>[matrix.a*x+matrix.c*y+matrix.e,matrix.b*x+matrix.d*y+matrix.f]);
+    FD.popBox = [Math.min(...points.map(p=>p[0])),Math.min(...points.map(p=>p[1])),Math.max(...points.map(p=>p[0])),Math.max(...points.map(p=>p[1]))];
+    if(owner.id==='horn')FD.popShape={b,matrix:FD.svg.querySelector('#cam').getCTM().inverse().multiply(ink.parentElement.getCTM())};
+  }
   // A popup stays above the step buttons and the timeline: their tops are read once here, when it opens, never in the frame loop.
-  const title = document.querySelector('.map-title'); FD.popCeiling = title && globalThis.getComputedStyle && getComputedStyle(title).visibility !== 'hidden' && +getComputedStyle(title).opacity > .1 ? Math.max(48, title.getBoundingClientRect().bottom + 8) : 48;
+  const controls=document.querySelector('.jm-review');FD.popCeiling=Math.max(48,controls?.getBoundingClientRect().bottom+8||0);
   FD.popFloor = Math.min(VIEW.h, ...[...document.querySelectorAll('.go:not([hidden]), .tl, .jm-focus .find-hint:not(.explore-hint)')].map(e => e.getBoundingClientRect()).filter(r => r.height > 0).map(r => r.top));
-  placePop();
+  FD.popOrigin=[box.width/2,box.height];placePop();
   FD.popInner.style.transformOrigin = `${FD.popOrigin[0]}px ${FD.popOrigin[1]}px`;
   return true;
 }
@@ -166,15 +176,31 @@ function findOwnerVisible(owner) { const p=findPlace(owner.id), r=COMB.target/(2
 export function placePop() {
   if (!FD.popOwner) return;
   const K = FIND_PLAY.kit.popup, anchor = typeof FD.popAnchor === 'function' ? FD.popAnchor() : FD.popAnchor, p = findScreen(anchor), [w, h] = FD.popSize;
-  const below = FD.popSide === 'below' || FD.popSide !== 'above' && p[1] - h - K.tail[1] < K.edge;
-  const x = Math.max(K.edge, Math.min(VIEW.w - w - K.edge, p[0] - w / 2));
-  const y = Math.max(FD.popCeiling ?? K.edge, Math.min((FD.popFloor ?? VIEW.h) - h - K.edge, below ? p[1] + K.tail[1] : p[1] - h - K.tail[1]));
-  FD.popOrigin = [Math.max(0, Math.min(w, p[0] - x)), below ? 0 : h];
-  findStyle(FD.pop, 'transform', `translate(${x}px,${y}px)`);
   const q = FD.rm ? 1 : clamp01((FD.now - FD.popTs) / K.time), back = 1 + (K.over - 1) / (1 - K.scale);
   const v = 1 + (back + 1) * (q - 1) ** 3 + back * (q - 1) ** 2;
   findStyle(FD.popInner, 'transform', `scale(${lerp(K.scale, 1, q === 1 ? 1 : v)})`); findStyle(FD.popBody, 'opacity', q);
-  findStyle(FD.popTail, 'transform', `translate(${Math.max(0, Math.min(w - K.tail[0], p[0] - x - K.tail[0] / 2))}px,${below ? -K.tail[1] : h}px) rotate(${below ? FIND_PLAY.kit.deg : 0}deg)`);
+  let worldBox=FD.popBox;
+  if(FD.popShape&&FD.popOwner.popPose){const {b,matrix:m}=FD.popShape,[tx,ty,angle,s]=FD.popOwner.popPose,[px,py]=FIND_PLAY.horn.pivot,c=Math.cos(angle*Math.PI/180),sn=Math.sin(angle*Math.PI/180),points=[[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]].map(([x,y])=>{const u=x*s-px,v=y*s-py,X=tx+px+c*u-sn*v,Y=ty+py+sn*u+c*v;return[m.a*X+m.c*Y+m.e,m.b*X+m.d*Y+m.f];});worldBox=[Math.min(...points.map(p=>p[0])),Math.min(...points.map(p=>p[1])),Math.max(...points.map(p=>p[0])),Math.max(...points.map(p=>p[1]))];}
+  const a = worldBox ? findScreen(worldBox.slice(0,2)) : p, b = worldBox ? findScreen(worldBox.slice(2)) : p;
+  const gap = K.anchorGap, ceiling = FD.popCeiling ?? K.edge, floor = (FD.popFloor ?? VIEW.h) - K.edge;
+  const cx = (a[0]+b[0])/2, cy = (a[1]+b[1])/2;
+  const across = Math.max(K.edge,Math.min(VIEW.w-w-K.edge,cx-w/2)), down = Math.max(ceiling,Math.min(floor-h,cy-h/2));
+  const options = [[across,a[1]-gap-h,'above'],[b[0]+gap,down,'right'],[a[0]-gap-w,down,'left'],[across,b[1]+gap,'below']];
+  const visible=b[0]>0&&a[0]<VIEW.w&&b[1]>0&&a[1]<VIEW.h;
+  const at = visible&&options.find(([x,y])=>x>=K.edge&&x+w<=VIEW.w-K.edge&&y>=ceiling&&y+h<=floor&&Math.hypot(Math.max(x-b[0],a[0]-x-w,0),Math.max(y-b[1],a[1]-y-h,0))<=K.anchorMax);
+  findStyle(FD.pop,'visibility',at?'visible':'hidden');
+  if (!at) return;
+  const [x,y,side] = at, below = side === 'below';
+  const aim = side === 'above' || below ? [Math.max(a[0],Math.min(b[0],x+w/2)),below?a[1]:b[1]] : [side==='right'?b[0]:a[0],Math.max(a[1],Math.min(b[1],y+h/2))];
+  FD.popOrigin = [Math.max(0,Math.min(w,aim[0]-x)),Math.max(0,Math.min(h,aim[1]-y))];
+  if(FD.pop.dataset.side!==side)FD.pop.dataset.side=side;
+  findStyle(FD.pop, 'transform', `translate(${x}px,${y}px)`);
+  const tx = side==='right'?-K.tail[1]:side==='left'?w:Math.max(0,Math.min(w-K.tail[0],aim[0]-x-K.tail[0]/2));
+  const ty = side==='above'?h:below?-K.tail[1]:Math.max(0,Math.min(h-K.tail[0],aim[1]-y-K.tail[0]/2));
+  findStyle(FD.popTail,'width',(side==='left'||side==='right'?K.tail[1]:K.tail[0])+'px');
+  findStyle(FD.popTail,'height',(side==='left'||side==='right'?K.tail[0]:K.tail[1])+'px');
+  findStyle(FD.popTail,'clipPath',side==='right'?'polygon(100% 0,100% 100%,0 50%)':side==='left'?'polygon(0 0,100% 50%,0 100%)':below?'polygon(0 100%,50% 0,100% 100%)':'polygon(0 0,100% 0,50% 100%)');
+  findStyle(FD.popTail, 'transform', `translate(${tx}px,${ty}px)`);
 }
 export function findSheet(owner, cls, html, anchor) {
   if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return false;

@@ -58,7 +58,7 @@ svg.querySelector = s => ({'.map-tier2':tier,'.map-subs':subs,'.ls-ship':ship})[
 svg.querySelectorAll = s => s === '.coast' ? coasts : [];
 tripBuild({svg,cam,sea,fill,coastG,detail,finds,done,mini,caption:node(),cue:node()});
 tripResize(1440,900,120);footerNovaResize(1440,900);
-assert.equal(canvas.width,2880);assert.equal(canvas.height,1800);
+assert.equal(canvas.width,4320);assert.equal(canvas.height,2700);
 assert.equal(images.length,1,'rough stroke image is prepared at resize');
 let rough = decodeURIComponent(images[0].source.split(',').slice(1).join(','));
 assert.ok(rough.includes(mapDefs().match(/<filter id="rough"[^]*?<\/filter>/)[0]));
@@ -72,8 +72,8 @@ assert.ok(canvas.ctx.calls.some(c=>c.name==='stroke'&&c.colour===C.red&&c.width=
 images[0].onload();
 for (const [kind,t] of [['rush',.2],['blast',.2],['settle',.6]]) {
   const st=segment(kind,t), before=count('clearRect');run(st,.016);run(st,.016);assert.equal(count('clearRect'),before+2,kind+' draws every frame');
-  const mapping=canvas.ctx.calls.filter(c=>c.name==='setTransform'&&c.args[0]===2).at(-1).args;
-  assert.deepEqual(mapping,[2,0,0,2,(MAP.x[0]*st.cam.s+st.cam.tx)*2,(MAP.x[1]*st.cam.s+st.cam.ty)*2]);
+  const mapping=canvas.ctx.calls.filter(c=>c.name==='setTransform'&&c.args[0]===3).at(-1).args;
+  assert.deepEqual(mapping,[3,0,0,3,(MAP.x[0]*st.cam.s+st.cam.tx)*3,(MAP.x[1]*st.cam.s+st.cam.ty)*3]);
   all.forEach(n=>n.writes=0);x.writes=hit.writes=0;run(st,0);
   assert.equal(all.reduce((sum,n)=>sum+n.writes,0)+x.writes,0,kind+' identical frame does not write SVG');
   assert.equal(hit.writes,0,kind+' identical frame does not write press target');
@@ -87,10 +87,10 @@ for(const g of [sea,fill,coastG,detail,finds,done])assert.equal(g.style.opacity,
 assert.equal(svg.style.willChange,'opacity');
 run(segment('blast',.8));assert.equal(svg.style.opacity,'0');assert.equal(svg.style.visibility,'hidden');assert.equal(svg.style.willChange,'');
 const explored=segment('rest',0);explored.exploreK=.5;explored.sEnd=explored.cam.s*2;explored.cam.s/=2;explored.dim=.6;
-run(explored);assert.equal(svg.style.visibility,'visible');assert.equal(svg.style.willChange,'transform, opacity');assert.equal(canvas.style.opacity,'0.6');
+run(explored);assert.equal(svg.style.visibility,'visible');assert.equal(svg.style.willChange,'opacity');assert.equal(canvas.style.opacity,'0.6');
 assert.equal(hit.getAttribute('aria-disabled'),'false');assert.equal(hit.tabIndex,0);
 assert.equal(hit.style.width,(NOVA.flare.hit*explored.cam.s/explored.sEnd*2).toFixed(2)+'px');
-explored.exploreK=1;run(explored);assert.equal(svg.style.willChange,'transform, opacity');
+explored.exploreK=1;run(explored);assert.equal(svg.style.willChange,'');
 console.log('ok: dpr cap, original rough filter, fallback then sprite, rush/blast/settle continuous drawing, screen mapping, no still-frame SVG/button writes, clear-once rest, one-layer map fade');
 
 // Grow after a ready sprite, and verify that its raster density covers the largest visible red stroke.

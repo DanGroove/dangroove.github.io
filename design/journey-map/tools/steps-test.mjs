@@ -69,22 +69,24 @@ stepAssert(stepBody.children[0].querySelectorAll('button').length === 1 && stepB
 const empty = new StepNode(); let stepClock = 0;
 const tick = ms => { for(let remaining=ms;remaining>0;){const dt=Math.min(16,remaining);stepClock+=dt;stepsFrame(stepClock);remaining-=dt;} };
 const finish = () => { for(let n=0;JOURNEY.moving&&n<600;n++)tick(16);stepAssert(!JOURNEY.moving,'move did not finish'); };
-const wheel = dy => stepWindow.fire('wheel',{target:empty,deltaY:dy,deltaMode:0});
+const wheel = dy => stepWindow.fire('wheel',{target:empty,deltaY:dy,deltaMode:0,timeStamp:stepClock});
 const mapP = BEATS[1].P, unit = 9;
 // Run the joined page's actual leave function against its recording hero API.
 const joinSource=readFileSync(new URL('../join.mjs',import.meta.url),'utf8');
 stepAssert(/button\.addEventListener\('click', \(\) => JOURNEY\.next\(\)\)/.test(joinSource),'joined Start must use the locking next action');
 let lift=0;const joinNodes=()=>({classList:{toggle(){}},style:{}}),JN={api:{setAway(){},setLeave(px){lift=px;}},hero:joinNodes(),svg:joinNodes(),ov:joinNodes(),hit:joinNodes()};
-const joinPlace=runInNewContext(joinSource.slice(joinSource.indexOf('function place('),joinSource.indexOf('const setOp'))+'\nplace',{JN,LEAVE_END:100,stepsProgress:()=>JOURNEY.P,JOURNEY,unit:()=>unit,window:{dispatchEvent(){}},Event});
+const joinPlace=runInNewContext(joinSource.slice(joinSource.indexOf('function place('),joinSource.indexOf('const setOp'))+'\nplace',{JN,LEAVE_END:100,JOIN_OVERLAP:28,stepsProgress:()=>JOURNEY.P,JOURNEY,unit:()=>unit,window:{dispatchEvent(){}},Event});
 for(const joined of [false,true]) {
   stepJoined=joined;JOURNEY.set(0);tick(16);
   wheel(mapP*.1*unit);tick(120);const first=JOURNEY.P;
-  stepAssert(first>0&&first<mapP*.1,'wheel must ease continuously toward target');
-  stepAssert(Math.abs(first/(mapP*.1)-(1-Math.exp(-1)))<.001,'120 ms time constant');
+  stepAssert(first>0&&first<mapP,'F1 first wheel starts the complete move immediately');
   stepAssert(tripState(first).heroT===first/100,'title/hero leave follows P');
   if(joined){joinPlace();stepAssert(Math.abs(lift-first*unit)<1e-6,'real joined leave must follow P');}
-  wheel(-mapP*.05*unit);tick(120);stepAssert(JOURNEY.P<first,'wheel up must reverse continuously');
-  JOURNEY.set(0);wheel(mapP*.1*unit);tick(401);stepAssert(JOURNEY.moving,'small scroll must settle at step pace');finish();stepAssert(JOURNEY.P===0,'10 percent must return to top');
+  wheel(-mapP*.05*unit);tick(120);stepAssert(JOURNEY.P>first,'same-gesture reversal is ignored');
+  tick(251);wheel(-100);finish();stepAssert(JOURNEY.P===0,'a fresh reverse gesture turns the move around');
+  JOURNEY.set(0);wheel(100);finish();stepAssert(JOURNEY.P===mapP,'one notch reaches whole map');
+  JOURNEY.set(0);for(let n=0;n<40;n++){wheel(3);tick(15);}finish();stepAssert(JOURNEY.P===mapP,'trackpad momentum starts only one move');
+  JOURNEY.set(0);
   wheel(mapP*.3*unit);tick(401);finish();stepAssert(JOURNEY.P===mapP,'30 percent must finish at map');
   wheel(200);tick(700);stepAssert(JOURNEY.P===mapP&&!JOURNEY.moving,'wheel down at map must do nothing');
   wheel(-mapP*.3*unit);tick(401);finish();stepAssert(JOURNEY.P===0,'scroll from map must return to top');
@@ -98,19 +100,19 @@ for(const joined of [false,true]) {
   }
   JOURNEY.set(0);JOURNEY.next();finish();JOURNEY.back();finish();wheel(100);tick(120);stepAssert(JOURNEY.P>0,'Back steps to top must restore scroll');
   const touch=(type,y,time,props={})=>stepWindow.fire(type,{target:empty,timeStamp:time,touches:type==='touchend'?[]:[{clientX:100,clientY:y}],...props});
-  // Fast short swipe bypasses the 12-percent return; slow one returns after 400 ms.
+  // Both fast and slow 24+ px swipes start before release and stay at the map.
   JOURNEY.set(0);touch('touchstart',300,0);touch('touchmove',240,40);tick(40);touch('touchend',240,60);finish();stepAssert(JOURNEY.P===mapP,'fast swipe must finish in its direction');
-  JOURNEY.set(0);touch('touchstart',300,0);touch('touchmove',240,400);tick(400);touch('touchend',240,410);tick(401);finish();stepAssert(JOURNEY.P===0,'slow small swipe must settle back');
+  JOURNEY.set(0);touch('touchstart',300,0);touch('touchmove',276,400);tick(16);stepAssert(JOURNEY.moving,'slow swipe starts at 24 px before release');touch('touchend',276,410);finish();stepAssert(JOURNEY.P===mapP,'slow swipe finishes at the map');
   // Respect default-prevented touch/pointer starts and hero-owned touch-action.
   const hero=new StepNode();hero.setAttribute('data-hero','');const drag=new StepNode();hero.appendChild(drag);stepWindow.getComputedStyle=el=>({touchAction:el===drag?'none':'auto'});
   for(const props of [{defaultPrevented:true},{target:drag}]){JOURNEY.set(0);touch('touchstart',300,0,props);touch('touchmove',100,40);touch('touchend',100,50);tick(1000);stepAssert(JOURNEY.P===0,'owned hero touch was stolen');}
   stepWindow.fire('pointerdown',{target:empty,pointerType:'touch',defaultPrevented:true});touch('touchstart',300,0);touch('touchmove',100,40);touch('touchend',100,50);tick(1000);stepAssert(JOURNEY.P===0,'prevented pointer start was stolen');
   JOURNEY.next();finish();const locked=JOURNEY.P;touch('touchstart',300,0);const swipe=touch('touchmove',100,40);touch('touchend',100,50);tick(600);stepAssert(swipe.defaultPrevented&&JOURNEY.P===locked,'locked swipe moved journey');
   JOURNEY.set(0);touch('touchstart',300,0);touch('touchend',300,50);stepAssert(!stepWindow.fire('click',{detail:1}).defaultPrevented,'tap on a button/link must survive');
-  console.log('ok: D4 '+(joined?'joined hero':'map title')+' top/map wheel and touch, 120 ms easing, 10/30 percent settle, clamps, Start/Set out lock, Back reset, flicks, owned drags and taps');
+  console.log('ok: F1 '+(joined?'joined hero':'map title')+' one-notch/burst/swipe, 250 ms gesture latch, fresh reverse, Start/Set out lock, owned drags and taps');
 }
 for (const beat of BEATS.slice(1)) {
-  JOURNEY.set(beat.P); stepsFrame(stepClock += 50);
+  JOURNEY.go(beat.id,{instant:true}); stepsFrame(stepClock += 50);
   for (let i = 0; i < 12; i++) stepWindow.fire('wheel', { target: empty, deltaY: i % 2 ? -120 : 120 });
   stepAssert(JOURNEY.P === beat.P && !JOURNEY.moving, 'wheel moved journey');
 }

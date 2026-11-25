@@ -19,7 +19,7 @@ function geometry(constants){
   }
   const world=[(box[0]-matrix.e)/scale,(box[1]-matrix.f)/scale,(box[2]-matrix.e)/scale,(box[3]-matrix.f)/scale];
   return{text:e.textContent,anchor:[e.transform.baseVal.consolidate().matrix.e,e.transform.baseVal.consolidate().matrix.f],box,world,distance,height:box[3]-box[1],frame:box[0]>=frame[0].x-.5&&box[1]>=frame[0].y-.5&&box[2]<=frame[1].x+.5&&box[3]<=frame[1].y+.5,screen:box[0]>=-.5&&box[2]<=innerWidth+.5,lines:e.querySelectorAll('tspan').length};
- });const subs=[...document.querySelectorAll('.label-scale[data-stop-sub="true"]')].map(e=>{const a=e.closest('.label-anchor');return {text:a.textContent,box:rect(e.querySelector('text')),from:Number(a.dataset.exploreFrom),opacity:Number(getComputedStyle(a).opacity),name:Math.floor(Number(a.dataset.row)/2)};});return{scale,rows,subs};
+ });const subs=[...document.querySelectorAll('.label-scale[data-stop-sub="true"]')].map(e=>{const a=e.closest('.label-anchor');return {text:a.textContent,box:rect(e.querySelector('text')),from:Number(a.dataset.exploreFrom),opacity:Number(getComputedStyle(a).opacity),name:6};});return{scale,rows,subs};
 }
 const constants={points:[...STOPS.map(s=>MAP.waypoints[s.w]),MAP.x],ids:STOPS.map(s=>s.id),rim:(MARK.radius+MARK.rim/2)/MARK.box,spike:NOVA.base.spikeEnd*EXPLORE.calmScale*(1-NOVA.spike[1])*(1-NOVA.pulse[1]-NOVA.pulse[3])*.95,angles:NOVA.base.angles.map(a=>a*Math.PI/180)};
 try{
@@ -33,7 +33,7 @@ try{
   // World-normalized offsets remove camera travel; residual motion is the label's own.
   let jump=0;for(let i=1;i<opening.frames.length;i++)for(let j=0;j<7;j++){const a=opening.frames[i-1],c=opening.frames[i];jump=Math.max(jump,Math.hypot(c.rows[j].anchor[0]-a.rows[j].anchor[0],c.rows[j].anchor[1]-a.rows[j].anchor[1])*Math.min(a.scale,c.scale));}
   require(jump<=2.01,page+' '+w+' opening label drift '+jump.toFixed(2));
-  require(opening.frames.some(f=>f.subs.some(s=>s.opacity>0&&s.opacity<1)),page+' '+w+' no intermediate sub-line fade');
+  require(opening.frames.every(f=>f.subs.length===1),page+' F0 only X sub-line remains');
   const idle=await b.evaluate(`new Promise(resolve=>{const records=[],observer=new MutationObserver(rows=>records.push(...rows.map(r=>r.attributeName||r.type)));document.querySelectorAll('.label-anchor').forEach(e=>observer.observe(e,{attributes:true,childList:true,subtree:true}));setTimeout(()=>{observer.disconnect();resolve(records);},350);})`);
   require(!idle.length,page+' '+w+' new idle label writes '+JSON.stringify(idle));
   log(page+' '+w+' opening anchors: max drift '+jump.toFixed(2)+' px; idle label writes '+idle.length);
@@ -48,5 +48,5 @@ try{
   }
  }
  require(!b.errors.length,'browser exceptions '+JSON.stringify(b.errors));
-}catch(e){failures.push(e.stack);}finally{await b.close();log('Failures: '+JSON.stringify(failures));appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-e/inherited-tests.log','\n## node tools/comb-d-layout-test.mjs (exit '+(failures.length?1:0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
+}catch(e){failures.push(e.stack);}finally{await b.close();log('Failures: '+JSON.stringify(failures));appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-f/inherited-tests.log','\n## node tools/comb-d-layout-test.mjs (exit '+(failures.length?1:0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
 process.exitCode=failures.length?1:0;

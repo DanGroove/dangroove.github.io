@@ -140,7 +140,13 @@ function frame(ts) {
   P = stepsFrame(ts);
   if (JOIN.leave) JOIN.leave(P);
   if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], { ...jr, still: true }); raf = requestAnimationFrame(frame); return; }
-  const st = tripState(P); const f = stepsFocusNow(); if (f) tripFocus(st, f.view, f.k);
+  const st = tripState(P);
+  if (JOIN.heroStart && P < mainHeroEnd) {
+    const jo=JOIN.frame(st,true,P);
+    if(jo!==false)starsFrame(time,st,PTR,jo||{});
+    dirty=true;raf=requestAnimationFrame(frame);return;
+  }
+  const f = stepsFocusNow(); if (f) tripFocus(st, f.view, f.k);
   const explored = exploreApply(st, dt), folded = cardsOverride(st, dt, JOURNEY.moving);
   if (f && f.k > 0) mainCurrent = -1; else if (!JOURNEY.moving && st.settleT >= 1 && !st.exploring) mainCurrent = STOPS.length; else if (!JOURNEY.moving && st.kind === 'hold') mainCurrent = st.i; else if (['hero','handoff','overview'].includes(st.kind)) mainCurrent = JOIN.heroStart && st.P < mainHeroEnd ? -2 : -1;
   st.visiting = JOURNEY.visiting;
@@ -168,8 +174,9 @@ function frame(ts) {
     starsFrame(time, st, PTR, { ...(jo || {}), look: aim.look }); mainSkyDraw = time;
   }
   if (st.rushT > 0 && !RM) { const hit = $('nova-hit'), tab = st.blastT > 0 ? -1 : 0; if (hit.tabIndex !== tab) hit.tabIndex = tab; if (hit.getAttribute('aria-disabled') !== 'false') hit.setAttribute('aria-disabled', 'false'); if (hit.getAttribute('aria-label') !== COMB.novaSay) hit.setAttribute('aria-label', COMB.novaSay); }
-  cardsFrame(st, aim.look, PTR);
-  findsFrame(time, st);
+  const shown=st.handoffT>=COMB.mapFindsIn,cardVisibility=shown?'':'hidden';
+  if($('cards').style.visibility!==cardVisibility)$('cards').style.visibility=cardVisibility;
+  if(shown){cardsFrame(st, aim.look, PTR);findsFrame(time, st);}
   raf = requestAnimationFrame(frame);
 }
 document.addEventListener('visibilitychange', () => { stepsPause(); mainTs = null; if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else if (!raf) raf = requestAnimationFrame(frame); });

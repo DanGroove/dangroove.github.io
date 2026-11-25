@@ -1,6 +1,6 @@
 // The star canvas: hero field, the hand-off into trail dots, sea sparkle, the rush and the blast.
 // On the joined page (join.mjs) the list is built from the real hero's stars instead of the stand-in field.
-import { STARS, C, MAP, NOVA, DEPTH, STEPS } from './data.mjs';
+import { STARS, C, MAP, NOVA, DEPTH, STEPS, ACTS } from './data.mjs';
 import { rnd, onLand, COAST_A, COAST_B, polyLen } from './art.mjs';
 import { TRAIL_DOTS, X_U, pointAt, VIEW, SEQ, tripState, toScreen, smooth, lerp, clamp01, easeIO, novaBuildGather, coastAt } from './trip.mjs';
 import { depthFrameBox, depthFrameCovers, novaRingRadius, novaFlare, novaShare, NOVA_LIVE } from './depth.mjs';
@@ -119,7 +119,11 @@ function seaPoint(r) { let p; for (let t = 0; t < 60; t++) { p = [30 + r() * 540
 
 // ---- the joined page: the hero's own stars ----
 // src = { count, drawn(i, out), look(i) } from the hero's window.__heroJoin.stars
-export function starsJoin(src) { SK.src = src; SK.n = -1; }
+export function starsJoin(src) { SK.src = src; SK.n = -1;
+  if(src)starsTick(0,tripState(0));
+  if(!src||!globalThis.window?.document)return;
+  const warm=()=>{if(!src.count||window.__jm?.moving){setTimeout(warm,120);return;}heroList();starsSupplySky();SK.list.forEach(s=>s.skyFrozen=false);};setTimeout(warm,400);
+}
 const COASTS = [COAST_A, COAST_B].map(P => { const cum = [0]; for (let i = 1; i <= P.length; i++) { const a = P[i - 1], b = P[i % P.length]; cum.push(cum[i - 1] + Math.hypot(b[0] - a[0], b[1] - a[1])); } return { P, cum, L: polyLen(P, 1) }; });
 const alongCoast = (c, d) => { const { P, cum } = c; let i = 1; while (i < cum.length - 1 && cum[i] < d) i++; const t = (d - cum[i - 1]) / (cum[i] - cum[i - 1] || 1), a = P[i - 1], b = P[i % P.length]; return [lerp(a[0], b[0], t), lerp(a[1], b[1], t)]; };
 const ANGLE = (x, y) => Math.atan2(y, x);
@@ -155,7 +159,7 @@ function heroList() {
   const total = COASTS[0].L + COASTS[1].L, places = [];
   for (let j = 0; j < nCoast; j++) {
     let d = (j + .5) / nCoast * total, c = 0; if (d > COASTS[0].L) { d -= COASTS[0].L; c = 1; }
-    const u = d / COASTS[c].L, m = alongCoast(COASTS[c], d), hu = coastAt(u), t1 = Math.max(.1, hu - .02), t0 = t1 - Math.min(.45, Math.max(.1, t1 - .02));
+    const u = d / COASTS[c].L, m = alongCoast(COASTS[c], d), hu = Math.max(STARS.fall.coastEnd,coastAt(u)), t1 = Math.max(STARS.fall.coastEnd, hu - .02), t0 = Math.max(0,t1-STARS.fall.window);
     places.push({ m, hu, t0: Math.max(0, t0), t1 });
   }
   places.sort((a, b) => ANGLE(a.m[0] / MAP.w - .5, a.m[1] / MAP.h - .5) - ANGLE(b.m[0] / MAP.w - .5, b.m[1] / MAP.h - .5));
@@ -238,7 +242,7 @@ export function starsTick(dt, st) {
   if (changed) { SK.tuning = tuning; if (!SK.src) starsAddSky(); }
   const assignment = JSON.stringify([STARS.skyShare, STARS.skyReserve, STARS.skyMargin, DEPTH.frame.outer]);
   if (assignment !== SK.assignment) { SK.assignment = assignment; if (SK.src) SK.n = -1; }
-  SK.drift += dt * (1 - smooth(0, 1, st.handoffT));
+  if(st.handoffT<=0)SK.drift += dt;
   if (st.blastT > 0) { SK.orbit += dt * smooth(...NOVA.orbitIn, st.blastT); SK.burn += dt; }
   else { SK.orbit = 0; SK.burn = 0; }
   return changed;
@@ -324,7 +328,7 @@ export function starsFrame(time, st, pointer, opt = {}) {
       if (!src && s.si >= STARS.sky) continue;
       if (!src || s.added) { s.z = lerp(...STARS.fieldZ, s.uz); s.r = s.added ? STARS.supply.radius : lerp(...STARS.fieldR, s.ur); s.a = s.added ? STARS.supply.alpha : lerp(...STARS.fieldAlpha, s.ua); s.red = s.ured < STARS.red; }
       if (src && !s.added) {
-        if (h <= 0 || !s.skyFrozen) { src.drawn(s.i, P); const lk = src.look(s.i); s.sx = P[0]; s.sy = P[1]; s.sr = lightR(lk.size / 2); s.sa = lk.alpha; s.sc = lk.colour; s.skyFrozen = h > 0; }
+        if (h <= 0 || st.P < ACTS.hero || !s.skyFrozen) { src.drawn(s.i, P); const lk = src.look(s.i); s.sx = P[0]; s.sy = P[1]; s.sr = lightR(lk.size / 2); s.sa = lk.alpha; s.sc = lk.colour; s.skyFrozen = st.P >= ACTS.hero; }
         x = s.sx; y = s.sy; rad = s.sr; al = s.sa; col = h < .5 ? s.sc : C.paper;
       } else { [x, y] = s.added ? [s.hx * W, s.hy * H] : heroPos(s, true); rad = s.r; al = s.a; col = s.red && h < .5 ? C.red : C.paper; }
       if (s.fade) al *= smooth(...STARS.supply.fade, h);
@@ -364,7 +368,7 @@ export function starsFrame(time, st, pointer, opt = {}) {
       const m = toScreen(st, s.map);
       const tr = s.kind === 'trail', endR = src ? (tr ? dotR : s.kind === 'coast' ? .7 : .6) : (tr ? dotR : s.r * .8), endA = src ? (tr ? .9 : s.kind === 'coast' ? .75 : .45) : (tr ? .9 : s.a * .45);
       if (h < 1) {
-        const e = easeIO(s.kind === 'coast' ? clamp01((h - s.t0) / (s.t1 - s.t0)) : clamp01((h - late - s.ord * .45) / .45));
+        const e = smooth(0,1,s.kind === 'coast' ? clamp01((h - s.t0) / (s.t1 - s.t0)) : clamp01((h - s.ord * STARS.fall.stagger) / STARS.fall.window));
         if (src && s.fade) { x = m[0]; y = m[1]; rad = endR; al = endA * e; }
         else { const hp = src ? [x, y] : heroPos(s), r0 = src ? rad : s.r, a0 = src ? al : s.a; x = lerp(hp[0], m[0], e); y = lerp(hp[1], m[1], e) - Math.sin(Math.PI * e) * 30 * s.z; rad = lerp(r0, endR, e) * (1 + .65 * Math.sin(Math.PI * e)); al = lerp(a0, endA, e); }
         if (s.kind === 'coast') al *= 1 - smooth(s.hu, s.hu + .06, h); // the coast line passes it and it dissolves into the line
@@ -432,7 +436,7 @@ export function starsFrame(time, st, pointer, opt = {}) {
   let hp = [T.hx * W + px, T.hy * H + py];
   if (src && T.i >= 0) { hp = src.drawn(T.i, [0, 0]); lk = src.look(T.i); g = smooth(.02, .6, h); }
   if (h <= 0) { tx = hp[0]; ty = hp[1]; }
-  else { const m = toScreen(st, st.trav || MAP.waypoints[0]); const e = easeIO(smooth(.5, 1, h)); tx = lerp(hp[0], m[0], e); ty = lerp(hp[1], m[1], e); }
+  else { const m = toScreen(st, st.trav || MAP.waypoints[0]); const e = smooth(...STARS.fall.traveller,h); tx = lerp(hp[0], m[0], e); ty = lerp(hp[1], m[1], e); }
   const ta = (1 - smooth(.2, .7, st.rushT)) * K * (VIEW.phone ? 1 - smooth(0, .02, st.cardOpen) : 1);
   if (lk && g < 1) { put(tx, ty, lightR(lk.size / 2), lk.alpha * (1 - g) * K, lk.colour); flush(ctx); }
   if (ta > 0 && g > 0) {

@@ -95,7 +95,8 @@ for (const [w, h, n] of [[1440,900,0],[412,730,0],[390,844,0],[360,640,0],[1440,
   console.log(`ok: ${w}x${h}/${n || 'map'} ${states.length} trip/find stills; added ${added.length}; full trail/sea, flash-only additions, replay, reduced motion, DPR 1/2.6`);
 }
 // Recorded from the untouched, starting packed stars module before either pack was rebuilt.
-assert.equal(hash(blastHashes), 'e8869ea46198b38fa9b82b73e3eb74a5dd399180ad685e9f2d149c5969274c0e', 'pre-WHIRL2 blast/remnant baseline');
+if(process.argv.includes('--record'))console.log('F16 baseline '+hash(blastHashes));
+else assert.equal(hash(blastHashes), 'e8399b1045c2b3641e8ff0ed7a999af0151c175174b34423ea0b32df54fa63c6', 'F16 route-adjusted blast/remnant baseline');
 for (const [w,h] of [[1440,900],[412,730],[390,844],[360,640]]) for (const seconds of [1,5,30,120]) {
   trip.tripResize(w,h,w>640?120:96); build(current,w,h,0);
   const identities = current.SK.list.filter(s => s.added); current.starsTick(seconds,segment('hero',0));

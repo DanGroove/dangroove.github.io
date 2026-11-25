@@ -76,7 +76,7 @@ export function findRune(svg) {
   const autoStart = () => { if (o.read) return; o.autoTs = FD.now; o.autoLast = null; };
   const rub = (x, y) => {
     if (o.read || o.stage !== 'sheet') return;
-    const R = FIND_PLAY.rune, c = findSvg('circle', { cx: x, cy: y, r: R.r, fill: 'url(#rub-soft)' }); o.circles.appendChild(c); o.rubs++;
+    const R = FIND_PLAY.rune, c = findSvg('circle', { cx: x, cy: y, r: R.r, fill: 'url(#rub-soft)' }); o.circles.appendChild(c); o.rubs++; o.lastRubTs=FD.now;
     const [x0, y0, x1, y1] = R.cells;
     o.cells.forEach((p, i) => { if (Math.hypot(p[0] - x, p[1] - y) <= R.cellR) o.rubbed[i] = true; });
     if (o.rubbed.filter(Boolean).length / o.cells.length >= R.done) complete();
@@ -92,7 +92,7 @@ export function findRune(svg) {
     const shown = findSheet(o, 'poster rubbing-sheet', `<div class="pz"><div class="pz-in"><div class="pz-front rubbing-front">${rubbingSvg()}</div><div class="pz-back poster-back"><span class="pz-pin"></span><span class="pz-pin r"></span><b class="pz-h">${fEsc(P.head)}</b><div class="pz-pic"><i></i><s></s></div><b class="pz-who">${fEsc(P.who)}</b><p>${fEsc(P.line1)}<br>${fEsc(P.line2)}</p><b class="pz-rw">${fEsc(P.reward)}</b><span class="pz-stamp">${fEsc(P.stamp)}</span><div class="poster-slot">${findSlot(P.foot)}</div><span class="pz-fold"></span></div></div></div><div class="pz-ctl"><button type="button" class="rub-do">${fEsc(FIND_COPY.rubDo)}</button><button type="button" class="pz-flip" hidden>${fEsc(COPY.flip)}</button><button type="button" class="pz-x">${fEsc(COPY.close)}</button></div>`, [f.x, f.y + R.anchor]);
     if (!shown) { o.stage = 'rest'; return; }
     o.pz = FD.sheet.querySelector('.pz'); o.pin = FD.sheet.querySelector('.pz-in'); o.rubbing = FD.sheet.querySelector('.rubbing'); o.circles = FD.sheet.querySelector('.rub-circles'); o.fill = FD.sheet.querySelector('.rub-fill'); o.letters = [...FD.sheet.querySelectorAll('.rub-letter')]; o.stamp = FD.sheet.querySelector('.pz-stamp');
-    o.flipped = false; o.controls = false; o.stampTs = o.stamped ? -Infinity : Infinity; o.stage = 'sheet'; o.ts = FD.now; o.autoTs = null; o.lastRub = null; o.tilt = [0, 0];
+    o.flipped = false; o.controls = false; o.hinted=false; o.lastRubTs=FD.now; o.stampTs = o.stamped ? -Infinity : Infinity; o.stage = 'sheet'; o.ts = FD.now; o.autoTs = null; o.lastRub = null; o.tilt = [0, 0];
     const bounds = R.cells; o.cells = [];
     for (let j = 0; j < R.grid[1]; j++) for (let i = 0; i < R.grid[0]; i++) o.cells.push([lerp(bounds[0], bounds[2], (i + 0.5) / R.grid[0]), lerp(bounds[1], bounds[3], (j + 0.5) / R.grid[1])]);
     if (!o.read) o.rubbed = o.cells.map(() => false); else { o.readTs = FD.now - R.fill - o.letters.length * R.letter[0] - R.letter[1]; attr(o.fill, 'opacity', 1); }
@@ -111,7 +111,7 @@ export function findRune(svg) {
     o.pz.addEventListener('pointermove', e => { if (!FD.hover || FD.rm || o.rubDown) return; const box = o.pz.getBoundingClientRect(); o.tilt = [(0.5 - (e.clientY - box.top) / box.height) * 2 * R.tilt, ((e.clientX - box.left) / box.width - 0.5) * 2 * R.tilt]; });
     o.pz.addEventListener('pointerleave', () => o.tilt = [0, 0]);
     FD.sheet.querySelector('.rub-do').addEventListener('click', autoStart); FD.sheet.querySelector('.pz-flip').addEventListener('click', flip); FD.sheet.querySelector('.pz-x').addEventListener('click', () => closeSheet());
-    found(o.id); if (o.keyboard) autoStart(); if (FD.rm) { o.cells.forEach(p => rub(...p)); complete(); }
+    found(o.id); if (o.keyboard) autoStart();
   };
   press(el, e => { if (o.stage !== 'rest') return; opened(o); o.keyboard = e.type === 'keydown'; o.stage = 'trace'; o.ts = FD.now; dash(true); if (FD.rm) sheet(); });
   o.hear = () => { o.dashTs = FD.now; dash(false); };
@@ -129,7 +129,8 @@ export function findRune(svg) {
     findSheetFrame(o, fit, (VIEW.h - (R.controlTop - R.height / 2) * fit - COMB.target) / 2);
     findStyle(o.pz, 'transform', `rotateX(${o.tilt[0]}deg) rotateY(${o.tilt[1]}deg)`);
     if (closing) return;
-    if (!o.read && !o.rubs && o.autoTs === null && t - o.ts >= R.auto[0]) o.autoTs = t;
+    if (!o.read && !o.rubs && o.autoTs === null && o.keyboard && t - o.ts >= R.auto[0]) o.autoTs = t;
+    if (!o.read && !o.keyboard && t-o.lastRubTs>=R.hintDelay && !o.hinted) { o.hinted=true;FD.sheet.querySelector('.rub-do').insertAdjacentHTML('beforebegin','<span class="rub-hint">'+fEsc(FIND_COPY.rubHint)+'</span>'); }
     if (!o.read && o.autoTs !== null) {
       const p = FD.rm ? 1 : clamp01((t - o.autoTs) / R.auto[1]), count = R.auto[2], pass = Math.min(count - 1, Math.floor(p * count)), u = p * count - pass, b = R.cells;
       const point = [lerp(b[0], b[2], pass % 2 ? 1 - u : u), lerp(b[1], b[3], (pass + u) / count)];

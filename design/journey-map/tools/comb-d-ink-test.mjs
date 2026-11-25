@@ -3,6 +3,7 @@ export function combDInk(){
  const visible=e=>{for(let p=e;p&&p!==document.body;p=p.parentElement){const s=getComputedStyle(p);if(s.visibility==='hidden'||s.display==='none'||Number(s.opacity)<.02)return false;}return true;};
  const rect=e=>{const r=e.getBoundingClientRect();return[r.left,r.top,r.right,r.bottom];};
  const gap=(a,p)=>Math.hypot(Math.max(a[0]-p.x,0,p.x-a[2]),Math.max(a[1]-p.y,0,p.y-a[3]));
+ const segmentRect=(a,b,r)=>{let best=Math.min(gap(r,{x:a[0],y:a[1]}),gap(r,{x:b[0],y:b[1]}));const dx=b[0]-a[0],dy=b[1]-a[1],D=dx*dx+dy*dy;for(const x of[r[0],r[2]])for(const y of[r[1],r[3]]){const t=Math.max(0,Math.min(1,((x-a[0])*dx+(y-a[1])*dy)/(D||1)));best=Math.min(best,Math.hypot(x-a[0]-dx*t,y-a[1]-dy*t));}for(const x of[r[0],r[2]]){const t=(x-a[0])/dx,y=a[1]+t*dy;if(t>=0&&t<=1&&y>=r[1]&&y<=r[3])return 0;}for(const y of[r[1],r[3]]){const t=(y-a[1])/dy,x=a[0]+t*dx;if(t>=0&&t<=1&&x>=r[0]&&x<=r[2])return 0;}return best;};
  const ink=[];
  for(const e of document.querySelectorAll('#b-detail path,#b-detail line,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-sea path,#b-sea circle,#finds path,#finds circle,#finds ellipse,#b-coast path')){
   if(e.closest('.label-anchor,.map-tier1,.map-tier2,.lg,.legend-symbol,.mk,defs,.bc-beam,.bc-glow,.jg-swell,.hd-chest,.hd-glow,.hd-stars,.wl-rip,.rv-gifts')||e.matches('.hit,.touch-hit,.find-focus-ring')||!visible(e))continue;
@@ -10,6 +11,7 @@ export function combDInk(){
   const s=getComputedStyle(e),m=e.getScreenCTM(),L=e.getTotalLength?.();if(!L||L>6000||s.stroke==='none'&&s.fill==='none')continue;
   const scale=Math.hypot(m.a,m.b),half=s.vectorEffect==='non-scaling-stroke'?parseFloat(s.strokeWidth)/2:parseFloat(s.strokeWidth)*scale/2;
   const who=e.closest('.find')?.id||e.getAttribute('d')?.slice(0,55)||e.tagName;
+  const d=e.getAttribute('d');if(e.closest('.jg-ring')&&d&&!/[CQAHVSTcqahvst]/.test(d)){let last,home;for(const q of d.matchAll(/([MLZ])(?:(-?[\d.]+) (-?[\d.]+))?/g)){const p=q[1]==='Z'?home:[m.a*+q[2]+m.c*+q[3]+m.e,m.b*+q[2]+m.d*+q[3]+m.f];if(q[1]==='M')home=p;else if(last&&p)ink.push({a:last,b:p,half,who});last=p;}continue;}
   for(let u=0;u<=L;u+=e.classList.contains('sea-stipple')?.004:.6/Math.max(.1,scale)){const p=e.getPointAtLength(u);ink.push({x:m.a*p.x+m.c*p.y+m.e,y:m.b*p.x+m.d*p.y+m.f,half,who});}
  }
  const path=document.getElementById('trail-done'),m=path.getScreenCTM(),L=path.getTotalLength();
@@ -33,7 +35,7 @@ export function combDInk(){
  const labels=[];
  for(const e of document.querySelectorAll('.label-anchor')){
   if(!visible(e))continue;const b=rect(e.querySelector('text'));let min=Infinity,who;
-  for(const p of ink){const d=gap(b,p)-p.half;if(d<min){min=d;who=p.who;}}
+  for(const p of ink){const d=(p.a?segmentRect(p.a,p.b,b):gap(b,p))-p.half;if(d<min){min=d;who=p.who;}}
   // The live X is in its own canvas. Query its visible red/white stroke cores
   // beside the label; exclude the soft glow and the dark build-up veil.
   const cv=document.getElementById('nova');

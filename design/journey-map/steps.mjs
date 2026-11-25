@@ -295,11 +295,6 @@ export function stepsFrame(ts) {
     if (cut.placed && cut.elapsed >= STEPS.cut[0] + STEPS.cut[1]) {
       SC.cut = null; SC.cover.hidden = true; stepsArrive(); if (cut.after) cut.after();
     }
-  } else if (SC.scroll) {
-    const scroll = SC.scroll; scroll.idle += dt;
-    SC.P = lerp(SC.P, scroll.target, 1 - Math.exp(-dt / STEPS.scroll.ease));
-    if (Math.abs(SC.P - scroll.target) < 1e-5) SC.P = scroll.target;
-    if (!SC.touch && scroll.idle >= STEPS.scroll.settle) stepsScrollSettle(false);
   }
   stepsButtons(); return SC.P;
 }
@@ -309,20 +304,16 @@ function stepsBlockWheel(e) {
   const target = stepsTarget(e);
   if (target?.closest('.sheet.on')) { e.preventDefault(); return; }
   e.preventDefault();
-  if (SC.scrollLive && !SC.cut && SC.P <= stepsMap) stepsScrollBy(e.deltaY * (e.deltaMode === 1 ? STEPS.scroll.line : e.deltaMode === 2 ? VIEW.h : 1));
+  if (SC.scrollLive && !SC.cut && SC.P <= stepsMap) stepsScrollBy(e.deltaY, e.timeStamp);
 }
-function stepsScrollBy(pixels) {
+function stepsScrollBy(pixels, stamp) {
   if (!pixels) return;
-  const target = Math.max(0, Math.min(stepsMap, (SC.scroll?.target ?? SC.P) + pixels / VIEW.unit));
-  if (target === (SC.scroll?.target ?? SC.P)) return;
-  if (!SC.scroll) { stepsCancel(); SC.scroll = { origin: SC.P, target: SC.P, idle: 0, direction: 0 }; }
-  SC.scroll.target = target; SC.scroll.idle = 0; SC.scroll.direction = Math.sign(pixels); SC.announced = null;
-}
-function stepsScrollSettle(flick) {
-  const scroll = SC.scroll; if (!scroll) return;
-  const target = !flick && Math.abs(scroll.target - scroll.origin) < STEPS.scroll.threshold * stepsMap ? scroll.origin : scroll.direction > 0 ? stepsMap : 0;
-  SC.scroll = null;
-  if (Math.abs(target - SC.P) < 1e-6) { SC.P = target; stepsArrive(); } else stepsPlay(target);
+  const same = SC.scroll && stamp - SC.scroll.stamp < STEPS.scroll.gesture;
+  SC.scroll = { stamp };
+  if (same) return;
+  const target = pixels > 0 ? stepsMap : 0;
+  if (SC.move?.P1 === target || !SC.move && Math.abs(SC.P - target) < 1e-6) return;
+  SC.direction = pixels > 0 ? 'next' : 'back'; stepsPlay(target);
 }
 const stepsTouchExcluded = target => target?.closest('.sheet.on, .sheet-dismiss, .pop button, .pop a, .tl, input, textarea, select, [data-review]');
 function stepsTouchOwned(target) {
@@ -342,19 +333,20 @@ function stepsTouchMove(e) {
   const touch = SC.touch; if (!touch) return;
   if (e.defaultPrevented || e.touches.length !== 1) { SC.touch = null; return; }
   const p = e.touches[0], dx = p.clientX - touch.x, dy = p.clientY - touch.y;
-  if (!touch.dragged && Math.abs(dy) <= STEPS.scroll.slop) return;
+  if (!touch.dragged && Math.abs(dy) < STEPS.scroll.swipe) return;
   if (!touch.dragged && Math.abs(dx) >= Math.abs(dy)) { SC.touch = null; return; }
+  const first = !touch.dragged;
   touch.dragged = true; e.preventDefault(); SC.swallow = true;
-  if (SC.scrollLive && !SC.cut && SC.P <= stepsMap) stepsScrollBy(touch.last - p.clientY);
+  if (SC.scrollLive && !SC.cut && SC.P <= stepsMap) {
+    if (first) stepsScrollBy(-dy, e.timeStamp);
+    else if (SC.scroll) SC.scroll.stamp = e.timeStamp;
+  }
   touch.last = p.clientY; touch.samples.push([e.timeStamp, p.clientY]);
   while (touch.samples.length > 2 && e.timeStamp - touch.samples[0][0] > STEPS.scroll.velocityWindow) touch.samples.shift();
 }
 function stepsTouchEnd(e) {
   const touch = SC.touch; SC.touch = null; SC.pointerOwned = false;
-  if (!touch?.dragged || !SC.scroll) return;
-  const last = touch.samples.at(-1), first = touch.samples[0], elapsed = e.timeStamp - first[0];
-  const velocity = elapsed > 0 ? (first[1] - last[1]) / elapsed : 0;
-  if (e.type !== 'touchcancel' && Math.abs(velocity) > STEPS.scroll.flick) { SC.scroll.direction = Math.sign(velocity); stepsScrollSettle(true); }
+  if (touch?.dragged && SC.scroll) SC.scroll.stamp = e.timeStamp;
 }
 function stepsKey(e) {
   if (SC.mode !== 'steps' || SC.rm || exploreActive() || e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
