@@ -1,6 +1,6 @@
 // COMB-D evidence only; files stay in the authorized run folder.
 import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
-const b=await combBBrowser(),phase=process.argv[2]||'before';
+const b=await combBBrowser(),phase=process.argv[2]||'verified-after';
 try{
  for(const[w,h]of[[412,730],[360,640],[1440,900]]){
   const tag=phase+'-'+w+'x'+h;await b.size(w,h);await b.page('dist/journey-map.html');

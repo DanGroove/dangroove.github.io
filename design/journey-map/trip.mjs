@@ -371,17 +371,36 @@ function tripMeasureExploreLabels() {
   const E=TRIP_EL;
   if(!E.rows?.every(r=>r.box)||typeof DOMPoint==='undefined')return;
   const epoch=E.exploreEpoch=(E.exploreEpoch||0)+1;
-  const later=fn=>setTimeout(()=>{if(epoch===E.exploreEpoch)fn();},0);
+  // Read the existing public journey state only from an idle callback, never
+  // from the animation loop. The joined hero stays excluded until it is away.
+  const busy=()=>{
+    const j=globalThis.window?.__jm,root=document.documentElement;
+    return document.hidden||E.exploreOn||j?.moving||root.classList.contains('jm-focus')||
+      root.classList.contains('jm-joined')&&!document.querySelector('[data-hero]')?.classList.contains('jm-away')||
+      j&&['handoff','pushIn','leg','legX','rush','blast','settle'].includes(tripState(j.P).kind);
+  };
+  const later=()=>{
+    if(epoch!==E.exploreEpoch)return;
+    if(busy()){setTimeout(later,120);return;}
+    if(globalThis.requestIdleCallback)requestIdleCallback(run,{timeout:32});
+    else setTimeout(()=>run({timeRemaining:()=>4}),32);
+  };
+  const run=deadline=>{
+    if(epoch!==E.exploreEpoch)return;
+    if(busy()){setTimeout(later,120);return;}
+    const start=performance.now(),budget=Math.min(2,Math.max(1,deadline.timeRemaining()-.2));
+    while(performance.now()-start<budget){if(work.next().done)return;}
+    later();
+  };
   const end=tripState(TOTAL_P).cam,f=DEPTH.frame.outer,m=VIEW.phone?EXPLORE.marginPhone:EXPLORE.margin;
   const bounds=[Math.min(f[0],-end.tx/end.s),Math.min(f[1],-end.ty/end.s),Math.max(f[2],(VIEW.w-end.tx)/end.s),Math.max(f[3],(VIEW.h-end.ty)/end.s)];
   const fit=Math.min((VIEW.w-2*m)/(bounds[2]-bounds[0]),(VIEW.h-(VIEW.phone?STEPS.nav.bar:STEPS.nav.h+STEPS.nav.gap)-2*m)/(bounds[3]-bounds[1]));
   const top=Math.max(fit,Math.max(EXPLORE.most,CAMERA.holdZoom)*VIEW.sT),grid=new Map(),cell=12;
   const add=(x,y,half=0,fixed=false,offset=null)=>{if(x<10||x>590||y<120||y>820)return;const key=Math.floor(x/cell)+','+Math.floor(y/cell);if(!grid.has(key))grid.set(key,[]);grid.get(key).push([x,y,half,fixed,offset]);};
-  const elements=[...E.svg.querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-sea path,#b-sea circle,#finds path,#finds circle,#finds ellipse,#finds rect')];let i=0;
-  const sample=()=>{
-    const start=performance.now();
-    while(i<elements.length&&performance.now()-start<6){
-      const el=elements[i++];
+  const elements=[...E.svg.querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-sea path,#b-sea circle,#finds path,#finds circle,#finds ellipse,#finds rect')];
+  function* sample(){
+    for(const el of elements){
+      yield;
       if(el.closest('.label-anchor,.map-tier1,.map-tier2,.lg,.legend-symbol,.mk,defs,.bc-beam,.bc-glow,.hd-chest,.hd-stars,.hd-glow,.jg-swell,.wl-rip,.rv-gifts')||el.matches('.hit,.touch-hit,.find-focus-ring')||el.getAttribute('opacity')==='0')continue;
       // Ignore hidden parts, while still warming the chart behind its global
       // hand-off fade. Those layer fades are not the drawing's occupied ink.
@@ -390,18 +409,25 @@ function tripMeasureExploreLabels() {
       if(hidden)continue;
       const b=el.getBBox();if(b.width>500&&b.height>800)continue;
       const style=getComputedStyle(el);if(style.stroke==='none'&&style.fill==='none')continue;
-      const matrix=E.cam.getCTM().inverse().multiply(el.getCTM()),L=el.getTotalLength?.();if(!L||L>6000)continue;
+      const matrix=E.cam.getCTM().inverse().multiply(el.getCTM());
       const scale=Math.hypot(matrix.a,matrix.b),fixed=style.vectorEffect==='non-scaling-stroke',half=(parseFloat(style.strokeWidth)*(fixed?1:scale)/2)||.5;
-      for(let u=0;u<=L;u+=el.classList.contains('sea-stipple')?.004:Math.min(1,.75/Math.max(.1,scale))){const p=el.getPointAtLength(u);add(matrix.a*p.x+matrix.c*p.y+matrix.e,matrix.b*p.x+matrix.d*p.y+matrix.f,half,fixed);}
+      // These batched paths are explicit M x y h .01 dots. Read each dot
+      // once, exactly, instead of thousands of native path-length queries.
+      if(el.classList.contains('sea-stipple')){
+        for(const match of el.getAttribute('d').matchAll(/M(-?[\d.]+) (-?[\d.]+)h\.01/g)){
+          const x=+match[1]+.005,y=+match[2];add(matrix.a*x+matrix.c*y+matrix.e,matrix.b*x+matrix.d*y+matrix.f,half+.005,fixed);yield;
+        }
+        continue;
+      }
+      const L=el.getTotalLength?.();yield;if(!L||L>6000)continue;
+      for(let u=0;u<=L;u+=Math.min(1,.75/Math.max(.1,scale))){const p=el.getPointAtLength(u);add(matrix.a*p.x+matrix.c*p.y+matrix.e,matrix.b*p.x+matrix.d*p.y+matrix.f,half,fixed);yield;}
     }
-    if(i<elements.length){later(sample);return;}
     for(const P of [COAST_A,COAST_B,TRAIL])for(let j=1;j<P.length;j++){
       const a=P[j-1],b=P[j],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy),n=[-dy/L,dx/L];
       if(P!==TRAIL&&onLand([(a[0]+b[0])/2+n[0],(a[1]+b[1])/2+n[1]])){n[0]*=-1;n[1]*=-1;}
-      for(let u=0;u<=L;u+=.6){const x=lerp(a[0],b[0],u/L),y=lerp(a[1],b[1],u/L);add(x,y,P===TRAIL?1.4:.6,true);if(P!==TRAIL)add(x,y,3*VIEW.s0,true,n.map(v=>v*3*VIEW.s0));}
+      for(let u=0;u<=L;u+=.6){const x=lerp(a[0],b[0],u/L),y=lerp(a[1],b[1],u/L);add(x,y,P===TRAIL?1.4:.6,true);if(P!==TRAIL)add(x,y,3*VIEW.s0,true,n.map(v=>v*3*VIEW.s0));yield;}
     }
-    later(place);
-  };
+  }
   const gap=(a,b)=>Math.hypot(Math.max(a[0]-b[2],b[0]-a[2],0),Math.max(a[1]-b[3],b[1]-a[3],0)),placed=[];
   const box=(r,local,s)=>{const k=labelScale(r.row.kind,s);return[local[0]*k+r.explore[0],local[1]*k+r.explore[1],local[2]*k+r.explore[0],local[3]*k+r.explore[1]];};
   const clear=(q,s)=>{
@@ -412,17 +438,26 @@ function tripMeasureExploreLabels() {
     if(FINDS.some(f=>f.mark&&gap(q,[...f.mark,...f.mark])<(COMB.markerPx/2+2.4)/s))return false;
     return !STOPS.some(st=>{const p=MAP.waypoints[st.w],size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*s)),rad=size*(MARK.radius+MARK.rim/2)/MARK.box/s,cy=p[1]-(size/2+MARK.stand)/s;return gap(q,[p[0],cy,p[0],cy])<rad+pad;});
   };
-  const scales=Array.from({length:25},(_,i)=>fit*(top/fit)**(i/24)),rows=E.rows.filter(r=>!r.row.stopSub).concat(E.rows.filter(r=>r.row.stopSub));let rowIndex=0;
-  const place=()=>{
-    const r=rows[rowIndex++];if(!r){E.exploreReady=true;return;}
-    const sub=r.row.stopSub,name=sub?E.rows.find(n=>n.row.stop===r.row.stop&&!n.row.stopSub):null;
+  const scales=Array.from({length:13},(_,i)=>fit*(top/fit)**(i/12)),rows=E.rows.filter(r=>!r.row.stopSub).concat(E.rows.filter(r=>r.row.stopSub)).map(r=>({...r}));
+  const markup=(r,at)=>'<tspan x="'+(at[0]-r.box.x)+'" y="'+(at[1]-r.box.y)+'">'+r.row.text.replaceAll('&','&amp;').replaceAll('<','&lt;')+'</tspan>';
+  // Constant-cost seed for a press before the idle work completes. All rows
+  // already belong to their shields and stay fixed throughout that session.
+  for(const r of E.rows){
+    const p=r.stop>=0?MAP.waypoints[STOPS[r.stop].w]:MAP.x,b=r.box,k=labelScale(r.row.kind,fit),px=1/(fit*k),side=COMB.exploreSides[r.row.stop],size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*fit));
+    const cy=-(size/2+MARK.stand)*px,rad=size*(MARK.radius+MARK.rim/2)/MARK.box*px;
+    const x=Math.max((24-p[0])/k,Math.min((576-p[0])/k-b.width,side==='left'?-b.width-18*px:side==='below'?-b.width/2:18*px)),y=(side==='below'?cy+rad+5*px:cy-b.height/2)+(r.row.stopSub?22*px:0);
+    const at=[x,y,x+b.width,y+b.height];r.explore=p.slice();r.exploreLocal=at;r.exploreBox={x,y,width:b.width,height:b.height};r.exploreFrom=r.row.stopSub?Infinity:0;r.exploreMarkup=markup(r,at);
+  }
+  function* place(r){
+    const sub=r.row.stopSub,name=sub?rows.find(n=>n.row.stop===r.row.stop&&!n.row.stopSub):null;
     const p=r.stop>=0?MAP.waypoints[STOPS[r.stop].w]:MAP.x,b=r.box,k=labelScale(r.row.kind,fit),px=1/(fit*k),candidates=[];r.explore=p.slice();
     if(sub){
       const n=name.exploreLocal,nk=labelScale(name.row.kind,fit),nx=n[0]*nk/k,ny=n[3]*nk/k,w=b.width;
       for(let dy=4*px;dy<=20*px;dy+=2*px)for(const x of[nx,n[2]*nk/k-w,(nx+n[2]*nk/k-w)/2])for(const shift of [0,-2,2,-4,4,-6,6,-8,8])candidates.push([x+shift*px,ny+dy,x+shift*px+w,ny+dy+b.height]);
     }else{
       const size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*fit)),cy=-(r.row.stop==='x'?0:(size/2+MARK.stand))*px,rad=(r.row.stop==='x'?8:size*(MARK.radius+MARK.rim/2)/MARK.box)*px,preference=COMB.exploreSides[r.row.stop]||'right';
-      for(let y=cy-rad-b.height-16*px;y<=cy+rad+16*px;y+=.5*px)for(let x=-rad-b.width-16*px;x<=rad+16*px;x+=.5*px){
+      for(let y=cy-rad-b.height-16*px;y<=cy+rad+16*px;y+=2*px)for(let x=-rad-b.width-16*px;x<=rad+16*px;x+=2*px){
+        yield;
         const q=[x,y,x+b.width,y+b.height],distance=gap(q,[0,cy,0,cy])-rad;
         if(distance<3*px||distance>b.height+4*px)continue;
         const side=preference==='left'?q[2]<=0:preference==='below'?q[1]>=cy:q[0]>=0;
@@ -436,20 +471,41 @@ function tripMeasureExploreLabels() {
       const size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*s)),rad=size*(MARK.radius+MARK.rim/2)/MARK.box/s,cy=p[1]-(size/2+MARK.stand)/s;
       return gap(q,[p[0],cy,p[0],cy])-rad<=b.height*labelScale(r.row.kind,s);
     };
-    const bounded=sub?candidates:candidates.filter(q=>inside(box(r,q,fit))&&scales.every(s=>near(box(r,q,s),s)));
+    const bounded=[];
+    if(!sub)for(const q of candidates){if(inside(box(r,q,fit))&&scales.every(s=>near(box(r,q,s),s)))bounded.push(q);yield;}
     if(!sub&&bounded.length){candidates.length=0;candidates.push(...bounded);}
     let at,from=fit;
-    if(sub){for(const s of scales){at=candidates.find(p=>scales.filter(t=>t>=s).every(t=>clear(box(r,p,t),t)));if(at){from=s;break;}}}
-    else at=candidates.find(p=>scales.every(s=>clear(box(r,p,s),s)));
+    if(sub){
+      // Each candidate is tested once from close to far, not once per suffix.
+      let best=scales.length;
+      for(const q of candidates){let i=scales.length-1;for(;i>=0;i--){const ok=clear(box(r,q,scales[i]),scales[i]);yield;if(!ok)break;}if(i+1<best){best=i+1;at=q;from=scales[best];}if(best===0)break;}
+    }else{
+      for(const q of candidates){let ok=true;for(const s of scales){ok=clear(box(r,q,s),s);yield;if(!ok)break;}if(ok){at=q;break;}}
+      // Refine the first promising coarse neighbourhoods at half-pixel steps.
+      if(!at)for(const q of candidates.slice(0,48)){
+        for(let dy=-1.5;dy<=1.5&&!at;dy+=.5)for(let dx=-1.5;dx<=1.5;dx+=.5){const v=q.map((n,i)=>n+(i%2?dy:dx)*px);let ok=inside(box(r,v,fit));for(const s of scales){if(!ok)break;ok=near(box(r,v,s),s)&&clear(box(r,v,s),s);yield;}if(ok){at=v;break;}}
+        if(at)break;
+      }
+    }
     const allClear=!!at;
     at ||= candidates.find(p=>clear(box(r,p,fit),fit))||candidates.find(p=>inside(box(r,p,fit)))||candidates[0]||[b.x,b.y,b.x+b.width,b.y+b.height];
     r.exploreLocal=at;r.exploreBox={x:at[0],y:at[1],width:b.width,height:b.height};r.exploreFrom=sub?(allClear?from:Infinity):0;
-    r.exploreMarkup='<tspan x="'+(at[0]-b.x)+'" y="'+(at[1]-b.y)+'">'+r.row.text.replaceAll('&','&amp;').replaceAll('<','&lt;')+'</tspan>';
-    r.el.dataset.exploreClear=String(allClear);r.el.dataset.exploreAt=r.explore.join(' ');r.el.dataset.exploreFrom=String(r.exploreFrom||fit);
-    if(E.exploreOn)r.el.querySelector('text').innerHTML=r.exploreMarkup;
-    if(!sub||Number.isFinite(r.exploreFrom))placed.push({r,at});later(place);
-  };
-  later(sample);
+    r.exploreMarkup=markup(r,at);r.exploreClear=allClear;
+    if(!sub||Number.isFinite(r.exploreFrom))placed.push({r,at});
+  }
+  function* warm(){
+    yield* sample();
+    // Work on private rows. Publish once at idle, never a row at a time while
+    // Explore is visible. An early opening retains its stable seed layout.
+    for(const r of rows)yield* place(r);
+    for(const r of rows){
+      const target=E.rows.find(n=>n.row.i===r.row.i);
+      for(const key of ['explore','exploreLocal','exploreBox','exploreFrom','exploreMarkup'])target[key]=r[key];
+      r.el.dataset.exploreClear=String(r.exploreClear);r.el.dataset.exploreAt=r.explore.join(' ');r.el.dataset.exploreFrom=String(r.exploreFrom||fit);
+    }
+    E.exploreReady=true;
+  }
+  const work=warm();later();
 }
 const tripWrites = new WeakMap();
 function tripWrite(el, key, value, attribute = false) {

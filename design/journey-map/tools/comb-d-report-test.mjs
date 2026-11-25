@@ -1,7 +1,7 @@
 // Build the sole allowed Markdown record, retaining every accumulated formal log.
 import {readFileSync,writeFileSync,readdirSync,existsSync,appendFileSync} from 'node:fs';
 import {strict as assert} from 'node:assert';
-const file='COMB-D-BUILD.md',root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-d',marker='<!-- COMB-D LOG -->';
+const file='COMB-D-BUILD.md',root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-e',marker='<!-- COMB-D LOG -->';
 let raw=readFileSync(file,'utf8');if(raw.includes(marker))raw=raw.slice(raw.indexOf(marker)+marker.length).trimStart();
 const latest=new Map();for(const m of raw.matchAll(/^## node (.*?) \(exit (\d+)\)/gm))latest.set(m[1].trim().replace(/--cdp\s+ws:\S+/,'--cdp LOCAL'),Number(m[2]));
 const link=(name,label=name)=>'['+label+']('+root+'/'+name+'.png)';

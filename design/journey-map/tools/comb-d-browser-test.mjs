@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, existsSync, appendFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-export const combBRoot = resolve('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-d');
+export const combBRoot = resolve('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-e');
 export const combBWait = ms => new Promise(r => setTimeout(r, ms));
 export async function combBBrowser() {
   mkdirSync(combBRoot, { recursive: true });
@@ -18,6 +18,7 @@ export async function combBBrowser() {
   const send=(method,params={},sessionId=sid)=>new Promise((ok,fail)=>{const id=++seq,timer=setTimeout(()=>fail(Error(method+' timeout')),30000);pending.set(id,{ok,fail,timer});socket.send(JSON.stringify({id,method,params,...(sessionId?{sessionId}:{})}));});
   const {targetId}=await send('Target.createTarget',{url:'about:blank'},null);({sessionId:sid}=await send('Target.attachToTarget',{targetId,flatten:true},null));
   await send('Page.enable');await send('Runtime.enable');await send('Network.enable');await send('Network.setBlockedURLs',{urls:['http://*','https://*']});
+  await send('Page.bringToFront');
   const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value;};
   return {send,evaluate,errors,url,on(name,fn){if(!listeners.has(name))listeners.set(name,[]);listeners.get(name).push(fn);},
     async size(w,h,dpr=2){await send('Emulation.setDeviceMetricsOverride',{width:w,height:h,deviceScaleFactor:dpr,mobile:w<641});await send('Emulation.setTouchEmulationEnabled',{enabled:w<641,maxTouchPoints:5});await combBWait(180);},

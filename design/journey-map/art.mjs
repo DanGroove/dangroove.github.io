@@ -156,7 +156,7 @@ export function hoardInside(lean) {
   return `M${-w} 0L${-w + lean} ${-d}Q0 ${-d - crown} ${w - lean} ${-d}L${w} 0Z`;
 }
 const hoard = id => {
-  const H = FIND_PLAY.hoard, [x, y, r] = H.hit, [cx, cy, cw, ch] = H.clip;
+  const H = { ...FIND_PLAY.hoard, scratchPath: 'M-36 2H36M-28 2Q-2 -13 27 2M6 -4L10 -19M5 -20L15 -18M2 -6L10 -4L7 3L3 0ZM-38 4L-35 0L-31 4ZM30 5L34 1L38 4ZM-23 6L-19 3L-15 6Z' }, [x, y, r] = H.hit, [cx, cy, cw, ch] = H.clip;
   return `<circle class="hit" cx="${x}" cy="${y}" r="${r}"/><path class="l hd-scratch" d="${H.scratchPath}"/><ellipse class="o hd-hole" rx="0" ry="0"/><defs><clipPath id="clip-${id}" clipPathUnits="userSpaceOnUse"><rect x="${cx}" y="${cy}" width="${cw}" height="${ch}"/><ellipse class="hd-clip-hole" rx="0" ry="0"/></clipPath></defs><g class="hd-clods" pointer-events="none"></g><g transform="translate(${H.pileAt.join(' ')})"><path class="g hd-pile" d="${H.pilePath}" opacity="0"/></g><path class="pf hd-glint" d="${starPath(...H.glintAt, H.glintSize)}" opacity="0"/><g clip-path="url(#clip-${id})"><circle class="hd-glow" cy="${H.rim}" r="${H.glowR}" fill="url(#litGlow)" opacity="0"/><g class="hd-chest" transform="translate(0 ${H.travel})">${H.body}<g class="hd-inside" transform="translate(0 ${H.rim}) scale(1 0)"><path class="g hd-face" fill-rule="nonzero" d="${hoardInside(0)}"/>${H.insideLines.map((d, i) => '<path class="t hd-plank-' + i + '" d="' + d + '"/>').join('')}</g><g class="hd-mouth" transform="translate(0 ${H.rim}) scale(1 0)"><path class="o" d="${H.mouth}"/><path d="${H.mouthLine}" fill="none" stroke="${C.warm}" stroke-opacity="${H.mouthAlpha}" stroke-width="${H.mouthWidth}" vector-effect="non-scaling-stroke"/></g><g class="hd-lid">${H.dome}</g></g></g><path class="t hd-rim" d="${H.rimPath}" transform="scale(0 0)"/><g class="hd-stars">${Array.from({ length: H.starCount }, (_, i) => `<path class="pf hd-star" d="${starPath(0, H.starY, H.starSizes[i % H.starSizes.length])}" opacity="0"/>`).join('')}</g>`;
 };
 export const ravenPose = (a, b, t) => {
@@ -176,7 +176,12 @@ const ravens = () => {
   return `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="rv-tree" transform="scale(${R.TK})">` + R.TREE.map(d => `<path class="g" style="stroke-width:${R.treeLine}" d="${d}"/>`).join('') + R.TREE.map(d => `<path class="g" style="stroke:none" d="${d}"/>`).join('') + `<path class="t" d="${R.TREELINES}"/></g><g class="rv-gifts" pointer-events="none"></g>${ravenBird(0)}${ravenBird(1)}<g class="rv-tally">${FIND_PLAY.raven.tally.map(d => `<path class="t" d="${d}" opacity="0"/>`).join('')}</g>`;
 };
 const serpent = () => findDrawing('serpent');
-const beacon = () => findDrawing('beacon');
+const beacon = () => {
+  const f=FINDS.find(f=>f.id==='beacon'),k=FIND_PLAY.beacon.scale;
+  // The clip is outside the animated aim group, in the tower's local map
+  // coordinates. It follows the camera with the chart, never the beam angle.
+  return `<defs><clipPath id="beacon-frame" clipPathUnits="userSpaceOnUse"><rect x="${(23-f.x)/k}" y="${(23-f.y)/k}" width="${554/k}" height="${854/k}"/></clipPath></defs>`+findDrawing('beacon');
+};
 const runestone = () => findDrawing('runestone');
 const hammerMapArt = () => { const M = HAMMER.map, h = M.hit; return `<rect class="hit" x="${h[0]}" y="${h[1]}" width="${h[2]}" height="${h[3]}"/><path class="g" d="${M.stone}"/><path class="t hm-kept" d="${M.kept}" opacity="0"/><g class="hm-lift"><path class="g" d="${M.hammer}"/><path class="l hm-spark" d="${M.spark}" opacity="0" pointer-events="none"/></g>`; };
 const horn = () => { const H = FIND_PLAY.horn, [x, y, w, h] = H.hit; return `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="hn-horn"><path class="g" d="${H.paths[0]}"/><path class="t" d="${H.paths[1]}"/><path class="o" d="${H.paths[2]}"/><path class="t hn-kept" d="${H.kept}" opacity="0"/></g><path class="t" d="${H.paths[3]}"/>`; };
@@ -340,8 +345,10 @@ export function jormungandr() {
   let s = '<g class="jg-ring"><path d="' + pathD([...all.left, ...all.right.slice().reverse()], true) + '" fill="' + C.ink + '" opacity="' + J.subAlpha + '"/><path d="' + pathD(all.left) + pathD(all.right) + '" fill="none" stroke="' + C.paper + '" stroke-opacity="' + J.edgeAlpha + '" stroke-width="' + J.edgeWidth + '" stroke-dasharray="' + J.dash + '" vector-effect="non-scaling-stroke"/>';
   J.surf.forEach(([a, b], index) => {
     // A short surfaced arch is a constant-width tube, with blunt submerged feet.
-    const centre=(a+b)/2, span=Math.min((b-a)*JORM.L,J.span[index]), A=jormPoint(centre*JORM.L-span/2), B=jormPoint(centre*JORM.L+span/2);
-    const dx=B.x-A.x,dy=B.y-A.y,len=Math.hypot(dx,dy),nx=-dy/len,ny=dx/len;
+    const centre=(a+b)/2, span=Math.min((b-a)*JORM.L,J.span[index]), C=jormPoint(centre*JORM.L), A={x:C.x-span/2,y:C.y};
+    // Each arch stands up from level feet on its own point of the ring.
+    // The submerged ring still determines where it lives, not its rotation.
+    const dx=span,dy=0,len=span,nx=0,ny=1;
     const height=len/2.5, back=[],belly=[],point=(t,h)=>[A.x+dx*t+nx*h,A.y+dy*t+ny*h];
     for(let i=0;i<=24;i++){
       const t=i/24,h=-4*height*t*(1-t),dh=-4*height*(1-2*t),tx=dx+nx*dh,ty=dy+ny*dh,L=Math.hypot(tx,ty),p=point(t,h),w=J.w/2;

@@ -23,7 +23,7 @@ const close = (a, b, label, tolerance = 0.000001) => assert.ok(Math.abs(a - b) <
 const chart = bigMap();
 assert.ok(!/undefined|\{\{/.test(chart.finds), 'all live drawing tokens must resolve');
 // COMB-B records the surfaced serpent drawing; fill and coasts retain their earlier baselines.
-const original = { sea: [72527, 1476824667], fill: [12999, 2682309966], coast: [4401, 2408021381] };
+const original = { sea: [72442, 1555875863], fill: [12999, 2682309966], coast: [4401, 2408021381] };
 for (const [key, [length, hash]] of Object.entries(original)) { assert.equal(chart[key].length, length); assert.equal(digest(chart[key]), hash); }
 console.log('ok: COMB-D body/stipple sea digest recorded; coast and fill unchanged');
 // D3 adds NOVA.build; the full data digest is re-recorded for that authorized table (and again for the continuous pull, 2026-11-23,
@@ -42,9 +42,9 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // depth.mjs for the lantern's darkness the nova canvas holds through the rush; its second batch re-records trip.mjs for the
 // labels that give way, the coasts' draw-on, the X's fade-in with the sea and the mini-map's targets.
 // FRAMES: compositor camera writer and label recovery only; geometry/score remain pinned by the motion tests.
-assert.equal(sourceDigest('trip.mjs'), 4193169908, 'trip.mjs changed');
+assert.equal(sourceDigest('trip.mjs'), 2994301100, 'trip.mjs changed');
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 1137947755, 'data.mjs changed');
+assert.equal(sourceDigest('data.mjs'), 3242277270, 'data.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 4010889213, 'depth.mjs changed');
 console.log('ok: COMB-D camera/labels/tripS digests recorded; depth source remains pinned');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
@@ -435,7 +435,8 @@ for(const [w,h] of [[1440,900],[390,844]]) {
   }
   close(chest.lidAngle,110,'lid at rest');
   const opening=chestFrames.filter(s=>s.stage==='opening'),first=opening[0],peak=opening.reduce((a,b)=>a.angle>b.angle?a:b);assert.ok(first.angle<2,'lid starts gently');assert.ok(Math.abs(peak.t-peak.openTs-.5)<=.016,'lid peaks at .5 s');assert.ok(peak.angle-FIND_PLAY.hoard.lidRest<=8);assert.ok(FIND_PLAY.hoard.lidTime===.5);
-  const clipIds=surface.querySelectorAll('clipPath').map(n=>n.id);assert.equal(new Set(clipIds).size,5);
+  const clipIds=surface.querySelectorAll('clipPath').map(n=>n.id);assert.equal(new Set(clipIds).size,6);
+  assert.equal(clipIds.filter(id=>id.startsWith('clip-hoard-')).length,5);assert.ok(clipIds.includes('beacon-frame'),'E3 adds only the static map-frame beam clip');
   assert.equal(surface.querySelector('#f-hoards').tabIndex,-1);assert.equal(surface.querySelector('#f-hoards').getAttribute('role'),'group');assert.equal(surface.querySelector('#f-hoards').listeners.keydown,undefined);
   const under=hd.items[1];stepsFocus(under.id,findView(under.id));await tick(.7);assert.equal(under.hintLine,FIND_COPY.hoardHints[0]);
   for(const item of hd.items)item.setCraftLit(true);await tick(.1);hd.items.filter(item=>item.digs<3).forEach(item=>{assert.equal(item.glowAlpha,0);assert.equal(Number(item.glow.getAttribute('opacity')),0);assert.equal(item.scratch.style.strokeWidth,FIND_PLAY.hoard.scratchWidth);});
