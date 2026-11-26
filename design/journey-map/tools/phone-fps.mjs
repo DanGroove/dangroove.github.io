@@ -9,6 +9,8 @@
 // then removes the forward and the reverse at the end, also after an error. On Dan's Samsung in Adaptive mode Chrome
 // runs at 60 Hz with no finger down (a tap does not lift it), so a Next-tap glide tops out at 60 fps there.
 // --no-adb skips adb (for a desktop Chrome started with --remote-debugging-port=9222).
+// A beat written press:<craft> (for example press:screen) measures a compass press instead of a glide: it opens ?beat=map,
+// clicks the compass marker, waits for the compass to open, then records while it clicks that craft's word.
 import { spawnSync } from 'node:child_process';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -67,29 +69,45 @@ async function connect() {
 
 async function oneRun(p, beat, run) {
   events.length = 0;
-  await send('Page.navigate', { url: `http://localhost:${PORT}/${p.name}.html?beat=${beat}` });
+  const press = beat.startsWith('press:') ? beat.slice(6).toLowerCase() : null;
+  await send('Page.navigate', { url: `http://localhost:${PORT}/${p.name}.html?beat=${press ? 'map' : beat}` });
   await waitEvent('Page.loadEventFired', 30000); await sleep(SETTLE);
   const env = await evaluate(`({ rm: matchMedia('(prefers-reduced-motion: reduce)').matches, dpr: devicePixelRatio, w: innerWidth, h: innerHeight, jm: !!window.__jm, P: window.__jm && +window.__jm.P.toFixed(1) })`);
   if (env.rm) throw new Error('prefers-reduced-motion is on: turn off "Remove animations" on the phone and run again');
-  const box = await evaluate(`(() => { const e = document.querySelector('.go-next'); if (!e) return null; const r = e.getBoundingClientRect(); return r.width ? [r.left + r.width / 2, r.top + r.height / 2] : null; })()`);
-  if (!box) throw new Error('no visible Next button at ' + beat);
+  const centre = find => evaluate(`(() => { const e = (${find})(); if (!e) return null; const r = e.getBoundingClientRect(); return r.width ? [r.left + r.width / 2, r.top + r.height / 2] : null; })()`);
+  const click = async xy => { for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type, x: xy[0], y: xy[1], button: 'left', buttons: type === 'mousePressed' ? 1 : 0, clickCount: type === 'mouseMoved' ? 0 : 1 }); };
+  let box;
+  if (press) {
+    const marker = await centre(`() => document.querySelector('#mk-wayfinder')`);
+    if (!marker) throw new Error('no compass marker at the map beat');
+    await click(marker); await sleep(3000);
+    if (await evaluate('window.__jm.focus') !== 'wayfinder') throw new Error('the click on the compass marker did not open the compass');
+    box = await centre(`() => [...document.querySelectorAll('.wf-word')].find(w => w.textContent.trim().toLowerCase().startsWith(${JSON.stringify(press)}))`);
+    if (!box) throw new Error('no visible compass word ' + press);
+  } else {
+    box = await centre(`() => document.querySelector('.go-next')`);
+    if (!box) throw new Error('no visible Next button at ' + beat);
+  }
   await evaluate(`(() => { const t = []; window.__pf = t; const f = n => { t.push(n); if (t.length < 4000) requestAnimationFrame(f); }; requestAnimationFrame(f); return true; })()`);
   await sleep(400);
   const t0 = await evaluate('performance.now()');
   // Next is pressed by a DevTools mouse click at its centre. Raw DevTools touch events never made a click on the phone
   // (phone-p21: every run ended at its start stop) and a synthesized tap gesture makes none on desktop either; a click
   // is enough here because Chrome keeps a page at 60 Hz after a tap anyway. A run that does not start moving stops here.
-  for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type, x: box[0], y: box[1], button: 'left', buttons: type === 'mousePressed' ? 1 : 0, clickCount: type === 'mouseMoved' ? 0 : 1 });
+  await click(box);
   await sleep(400);
-  const go = await evaluate(`({ moving: !!window.__jm.moving, P: +window.__jm.P.toFixed(1) })`);
-  if (!go.moving && go.P === env.P) throw new Error(`the tap on Next did not start a move at ${beat} (P still ${go.P})`);
+  if (press) { if (!await evaluate(`document.documentElement.classList.contains('jm-way')`)) throw new Error(`the click on ${press} did not pick that craft`); }
+  else {
+    const go = await evaluate(`({ moving: !!window.__jm.moving, P: +window.__jm.P.toFixed(1) })`);
+    if (!go.moving && go.P === env.P) throw new Error(`the tap on Next did not start a move at ${beat} (P still ${go.P})`);
+  }
   await sleep(WINDOW - 100);
   const r = await evaluate(`(() => { const t0 = ${t0}, t = window.__pf.filter(x => x > t0 && x < t0 + ${WINDOW}); return { t, P: +window.__jm.P.toFixed(1), moving: window.__jm.moving }; })()`);
   const d = r.t.slice(1).map((x, i) => x - r.t[i]).sort((a, b) => a - b), q = k => d.length ? +d[Math.min(d.length - 1, Math.floor(d.length * k))].toFixed(1) : null;
   const med = q(0.5) || 16.7, row = { build: p.name, beat, run, frames: r.t.length, fps: +(r.t.length / (WINDOW / 1000)).toFixed(1), p50: med, p90: q(0.9), p99: q(0.99), max: d.length ? +d.at(-1).toFixed(1) : null,
     over25: d.filter(x => x > 25).length, overMed: d.filter(x => x > 1.5 * med).length, Pbefore: env.P, Pafter: r.P, dpr: env.dpr, w: env.w, h: env.h };
-  if (r.P === env.P) throw new Error(`no move recorded at ${beat}: P is still ${r.P}`);
-  fs.writeFileSync(path.join(OUT, `${p.name}-${beat}-${run}.json`), JSON.stringify({ row, frames: r.t }, null, 0));
+  if (!press && r.P === env.P) throw new Error(`no move recorded at ${beat}: P is still ${r.P}`);
+  fs.writeFileSync(path.join(OUT, `${p.name}-${beat.replace(':', '-')}-${run}.json`), JSON.stringify({ row, frames: r.t }, null, 0));
   note(JSON.stringify(row));
   return row;
 }
@@ -107,7 +125,7 @@ try {
   for (let run = 1; run <= RUNS; run++) for (const beat of BEATS) for (const p of (run % 2 ? PAGES : [...PAGES].reverse())) rows.push(await oneRun(p, beat, run));
   const sum = {};
   for (const r of rows) { const k = r.build + ' ' + r.beat; (sum[k] ??= []).push(r); }
-  const lines = ['| Build | Glide | Runs | fps (mean) | p50 ms | p90 ms | max ms | frames > 25 ms | frames > 1.5x p50 |', '| --- | --- | --- | --- | --- | --- | --- | --- | --- |'];
+  const lines = ['| Build | Glide or press | Runs | fps (mean) | p50 ms | p90 ms | max ms | frames > 25 ms | frames > 1.5x p50 |', '| --- | --- | --- | --- | --- | --- | --- | --- | --- |'];
   const mean = (a, k) => +(a.reduce((s, r) => s + r[k], 0) / a.length).toFixed(1);
   for (const [k, a] of Object.entries(sum)) lines.push(`| ${k.split(' ')[0]} | ${k.split(' ')[1]} | ${a.length} | ${mean(a, 'fps')} | ${mean(a, 'p50')} | ${mean(a, 'p90')} | ${Math.max(...a.map(r => r.max))} | ${mean(a, 'over25')} | ${mean(a, 'overMed')} |`);
   fs.writeFileSync(path.join(OUT, 'summary.md'), lines.join('\n') + '\n'); note('\n' + lines.join('\n'));
