@@ -21,7 +21,7 @@ import path from 'node:path';
 const args = process.argv.slice(2), opt = { page: [] };
 for (let i = 0; i < args.length; i++) {
   const k = args[i].replace(/^--/, '');
-  if (k === 'no-adb') opt.noAdb = true; else if (k === 'touch') opt.touch = true; else if (k === 'page') opt.page.push(args[++i]); else opt[k] = args[++i];
+  if (k === 'no-adb') opt.noAdb = true; else if (k === 'touch') opt.touch = true; else if (k === 'unthrottled') opt.unthrottled = true; else if (k === 'page') opt.page.push(args[++i]); else opt[k] = args[++i];
 }
 if (opt.launch) opt.noAdb = true;
 const ADB = opt.adb, SERIAL = opt.serial, PORT = +(opt.port || 8765), DEV = +(opt.devtools || 9222);
@@ -204,14 +204,16 @@ try {
   }
   if (opt.launch) {
     // --launch <chrome.exe>: a headless Chrome of our own at Dan's screen (1920x950 CSS px at DPR 2 by default, --size and
-    // --dpr change it), unthrottled so frame times show each frame's real cost, with a fresh profile deleted at the end.
+    // --dpr change it; the page gets exactly that viewport), held to the display's rate like pc-p23 unless --unthrottled
+    // (then frame times show each frame's own cost), with a fresh profile deleted at the end.
     const [w, h] = (opt.size || '1920x950').split('x').map(Number);
     profile = path.join(OUT, 'profile-' + Date.now());
-    browser = spawn(opt.launch, ['--headless=new', `--remote-debugging-port=${DEV}`, '--remote-debugging-address=127.0.0.1', `--user-data-dir=${profile}`, `--window-size=${w},${h}`, `--force-device-scale-factor=${opt.dpr || 2}`, '--no-first-run', '--no-default-browser-check', '--disable-gpu-vsync', '--disable-frame-rate-limit', '--hide-scrollbars', ...(opt['chrome-args'] ? opt['chrome-args'].split(' ') : []), 'about:blank'], { stdio: 'ignore' });
+    browser = spawn(opt.launch, ['--headless=new', `--remote-debugging-port=${DEV}`, '--remote-debugging-address=127.0.0.1', `--user-data-dir=${profile}`, `--window-size=${w},${h}`, `--force-device-scale-factor=${opt.dpr || 2}`, '--no-first-run', '--no-default-browser-check', ...(opt.unthrottled ? ['--disable-gpu-vsync', '--disable-frame-rate-limit'] : []), '--hide-scrollbars', ...(opt['chrome-args'] ? opt['chrome-args'].split(' ') : []), 'about:blank'], { stdio: 'ignore' });
     for (let i = 0; i < 60; i++) { try { await fetch(`http://127.0.0.1:${DEV}/json/version`, { signal: AbortSignal.timeout(1000) }); break; } catch (e) { await sleep(500); } }
     note('launched ' + opt.launch + ` at ${w}x${h}, DPR ${opt.dpr || 2}`);
   }
   await connect();
+  if (opt.launch) { const [w, h] = (opt.size || '1920x950').split('x').map(Number); await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: +(opt.dpr || 2), mobile: false }); }
   const rows = [];
   if (opt.touch) await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
   for (let run = 1; run <= RUNS; run++) for (const beat of BEATS) for (const p of (run % 2 ? PAGES : [...PAGES].reverse())) rows.push(...await oneRun(p, beat, run));
