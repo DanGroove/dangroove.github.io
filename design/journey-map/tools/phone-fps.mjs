@@ -4,11 +4,13 @@
 //     --page be=<path to be25990's journey-map.html> --page new=dist/journey-map.html --beats hmc1,mohawk --runs 4 --out <folder>
 // What it does: serves the pages from 127.0.0.1:<port> (adb reverse, so the phone opens http://localhost:<port>/...),
 // forwards Chrome's DevTools socket to tcp:9222, and for each run (builds alternate) opens ?beat=<stop>, waits for the
-// page to settle, records requestAnimationFrame times, presses Next (a DevTools mouse click at the button's centre), and
+// page to settle, records requestAnimationFrame times, presses Next (a click at the button's centre, see click below), and
 // keeps recording for --window ms. It works in a Chrome tab of its own (never one of the person's tabs) and closes it,
 // then removes the forward and the reverse at the end, also after an error. On Dan's Samsung in Adaptive mode Chrome
 // runs at 60 Hz with no finger down (a tap does not lift it), so a Next-tap glide tops out at 60 fps there.
 // --no-adb skips adb (for a desktop Chrome started with --remote-debugging-port=9222).
+// --click script|mouse picks how a press is made: script (a click event on the element, the phone's default) or mouse
+// (a DevTools mouse click, the default with --no-adb).
 // A beat written press:<craft> (for example press:screen) measures a compass press instead of a glide: it opens ?beat=map,
 // clicks the compass marker, waits for the compass to open, then records while it clicks that craft's word.
 import { spawnSync } from 'node:child_process';
@@ -23,7 +25,7 @@ for (let i = 0; i < args.length; i++) {
 }
 const ADB = opt.adb, SERIAL = opt.serial, PORT = +(opt.port || 8765), DEV = +(opt.devtools || 9222);
 const BEATS = (opt.beats || 'hmc1,mohawk').split(','), RUNS = +(opt.runs || 4), SETTLE = +(opt.settle || 9000), WINDOW = +(opt.window || 4500);
-const OUT = opt.out || path.resolve('phone-fps-out');
+const OUT = opt.out || path.resolve('phone-fps-out'), CLICK = opt.click || (opt.noAdb ? 'mouse' : 'script');
 const PAGES = opt.page.map(s => { const i = s.indexOf('='); return { name: s.slice(0, i), file: path.resolve(s.slice(i + 1)) }; });
 if (!PAGES.length || (!opt.noAdb && (!ADB || !SERIAL))) { console.error('usage: --adb <adb.exe> --serial <ip:port> --page name=file [--page ...] [--beats a,b] [--runs n] [--out dir]'); process.exit(2); }
 fs.mkdirSync(OUT, { recursive: true });
@@ -71,7 +73,7 @@ async function connect() {
   await sleep(1000);
   const vis = await evaluate('document.visibilityState');
   if (vis !== 'visible') throw new Error('our tab is not on screen (visibilityState ' + vis + '): is the phone unlocked with the screen on?');
-  note('our tab is on screen');
+  note('our tab is on screen; presses by ' + CLICK + ' click');
 }
 
 async function oneRun(p, beat, run) {
@@ -82,26 +84,32 @@ async function oneRun(p, beat, run) {
   const env = await evaluate(`({ rm: matchMedia('(prefers-reduced-motion: reduce)').matches, dpr: devicePixelRatio, w: innerWidth, h: innerHeight, jm: !!window.__jm, P: window.__jm && +window.__jm.P.toFixed(1) })`);
   if (env.rm) throw new Error('prefers-reduced-motion is on: turn off "Remove animations" on the phone and run again');
   const centre = find => evaluate(`(() => { const e = (${find})(); if (!e) return null; const r = e.getBoundingClientRect(); return r.width ? [r.left + r.width / 2, r.top + r.height / 2] : null; })()`);
-  const click = async xy => { for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type, x: xy[0], y: xy[1], button: 'left', buttons: type === 'mousePressed' ? 1 : 0, clickCount: type === 'mouseMoved' ? 0 : 1 }); };
+  // On the phone neither DevTools touch events (phone-p21) nor DevTools mouse clicks (phone-p23) made a click, so there
+  // the press is a click event sent to the element at its centre, which runs the same handlers a tap ends in. Desktop
+  // Chrome (--no-adb) keeps the DevTools mouse click unless --click script asks for the phone's way.
+  const click = async (find, xy) => {
+    if (CLICK === 'mouse') { for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type, x: xy[0], y: xy[1], button: 'left', buttons: type === 'mousePressed' ? 1 : 0, clickCount: type === 'mouseMoved' ? 0 : 1 }); return; }
+    await evaluate(`(() => { const e = (${find})(); e.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, detail: 1, button: 0, clientX: ${xy[0]}, clientY: ${xy[1]} })); return true; })()`);
+  };
+  const findMarker = `() => document.querySelector('#mk-wayfinder')`, findWord = `() => [...document.querySelectorAll('.wf-word')].find(w => w.textContent.trim().toLowerCase().startsWith(${JSON.stringify(press || '')}))`, findNext = `() => document.querySelector('.go-next')`;
   let box;
   if (press) {
-    const marker = await centre(`() => document.querySelector('#mk-wayfinder')`);
+    const marker = await centre(findMarker);
     if (!marker) throw new Error('no compass marker at the map beat');
-    await click(marker); await sleep(3000);
+    await click(findMarker, marker); await sleep(3000);
     if (await evaluate('window.__jm.focus') !== 'wayfinder') throw new Error('the click on the compass marker did not open the compass');
-    box = await centre(`() => [...document.querySelectorAll('.wf-word')].find(w => w.textContent.trim().toLowerCase().startsWith(${JSON.stringify(press)}))`);
+    box = await centre(findWord);
     if (!box) throw new Error('no visible compass word ' + press);
   } else {
-    box = await centre(`() => document.querySelector('.go-next')`);
+    box = await centre(findNext);
     if (!box) throw new Error('no visible Next button at ' + beat);
   }
   await evaluate(`(() => { const t = []; window.__pf = t; const f = n => { t.push(n); if (t.length < 4000) requestAnimationFrame(f); }; requestAnimationFrame(f); return true; })()`);
   await sleep(400);
   const t0 = await evaluate('performance.now()');
-  // Next is pressed by a DevTools mouse click at its centre. Raw DevTools touch events never made a click on the phone
-  // (phone-p21: every run ended at its start stop) and a synthesized tap gesture makes none on desktop either; a click
-  // is enough here because Chrome keeps a page at 60 Hz after a tap anyway. A run that does not start moving stops here.
-  await click(box);
+  // The press (see click above) comes once the frame recorder is running. A click is enough here because Chrome keeps
+  // a page at 60 Hz after a tap anyway. A run that does not start moving, or a press that picks no craft, stops here.
+  await click(press ? findWord : findNext, box);
   await sleep(400);
   if (press) { if (!await evaluate(`document.documentElement.classList.contains('jm-way')`)) throw new Error(`the click on ${press} did not pick that craft`); }
   else {
