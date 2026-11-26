@@ -142,8 +142,7 @@ export function exploreApply(st, dt) {
   // The SVG camera stays at its last raster while input/glide changes this virtual camera.
   st.exploreMoving = !!(EX.motion || EX.gesture?.dragged || EX.velocity.some(Boolean) || EX.active && ['s', 'tx', 'ty'].some(key => EX.cam[key] !== EX.target[key]));
   st.exploreScripted = !!motion?.from;
-  const ratio = EX.cam.s / before[0];
-  st.exploreSharp = !EX.gesture?.dragged && Math.max(...[[0,0],[VIEW.w,0],[0,VIEW.h],[VIEW.w,VIEW.h]].map(([x,y]) => Math.hypot(EX.cam.tx + (x-before[1])*ratio-x, EX.cam.ty + (y-before[2])*ratio-y))) < FRAME_PERF.sharpStep;
+  st.exploreSharp = false;
   st.exploreDt = dt;
   if (EX.k > 0 || EX.active) {
     st.cam = { ...EX.cam, ax: VIEW.w / 2, ay: VIEW.h / 2 };

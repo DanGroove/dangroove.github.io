@@ -1,5 +1,5 @@
 // The one layer model, plus its three render surfaces. Importing this module needs no DOM.
-import { C, MAP, DEPTH, NOVA, STOPS, STEPS } from './data.mjs';
+import { C, MAP, DEPTH, NOVA, STOPS, STEPS, FRAME_PERF } from './data.mjs';
 import { rnd, COAST_A, COAST_B, depthCloudDrawing, depthRavenDrawing } from './art.mjs';
 import { VIEW, toScreen, smooth, lerp, clamp01 } from './trip.mjs';
 
@@ -40,7 +40,7 @@ export const novaShare = (share, cap) => Math.min(cap, NOVA_LIVE.flares.reduce((
 
 const DP = { deep: null, air: null, sky: null, dc: null, ac: null, dpr: 1, rm: false, fine: false,
   look: [0, 0], clouds: [], birds: [], mist: [], deck: [], dust: [], waves: [], waveKey: '', sprite: null, spriteKey: '',
-  lastDraw: -Infinity, wind: 0, light: null, beam: null, config: '', tuning: '', pending: false, force: true, mistVisible: false, cloudVisible: false, pointer: [0.5, 0.5] };
+  lastDraw: -Infinity, wind: 0, light: null, beam: null, config: '', tuning: '', pending: false, force: true, airForce: false, airEmpty: true, mistVisible: false, cloudVisible: false, pointer: [0.5, 0.5] };
 const depthCentres = [COAST_A, COAST_B].map(coast => coast.reduce((a, p) => [a[0] + p[0] / coast.length, a[1] + p[1] / coast.length], [0, 0]));
 const depthRange = (range, u) => lerp(range[0], range[1], u);
 const depthSamples = (list, n, seed) => { if (list.length >= n && list.seed === seed) return; const r = rnd(seed); list.length = 0; list.seed = seed; for (let i = 0; i < n; i++) list.push(Array.from({ length: 8 }, () => r())); };
@@ -108,10 +108,42 @@ export function depthInvalidate() { DP.force = true; }
 // An additive hook: insert the beacon cut at the veil's existing compositing boundary.
 // The beacon's beam: a third hole in the veil. b is null or { x, y, angle, half, reach, soft, steps } (map units, degrees).
 export function depthBeam(b) {
-  if (JSON.stringify(DP.beam) !== JSON.stringify(b)) DP.force = true;
+  if (DP.light?.v > 0 && JSON.stringify(DP.beam) !== JSON.stringify(b)) DP.airForce = true;
   DP.beam = b;
 }
 
+function depthPolygon(c, points) {
+  if (points.length < 3) return;
+  c.beginPath(); c.moveTo(...points[0]); points.slice(1).forEach(p => c.lineTo(...p)); c.closePath(); c.fill();
+}
+function depthCut(points, axis, edge, sign) {
+  const out = [];
+  for (let i=0;i<points.length;i++) {
+    const a=points[i], b=points[(i+1)%points.length], inside=(a[axis]-edge)*sign>=0, next=(b[axis]-edge)*sign>=0;
+    if (inside) out.push(a);
+    if (inside!==next) { const t=(edge-a[axis])/(b[axis]-a[axis]); out.push(a.map((v,j)=>v+(b[j]-v)*t)); }
+  }
+  return out;
+}
+function depthOutside(c, polygon, b) {
+  depthPolygon(c,depthCut(polygon,0,b[0],-1)); depthPolygon(c,depthCut(polygon,0,b[2],1));
+  const middle=depthCut(depthCut(polygon,0,b[0],1),0,b[2],-1);
+  depthPolygon(c,depthCut(middle,1,b[1],-1)); depthPolygon(c,depthCut(middle,1,b[3],1));
+}
+function depthRing(c, points) {
+  const limit=FRAME_PERF.ringBox/DP.dpr; let last=points[0], box=[...last,...last], length=0;
+  c.beginPath(); c.moveTo(...last); c.lineDashOffset=0;
+  for (const end of [...points.slice(1),points[0]]) {
+    const n=Math.max(1,Math.ceil(Math.hypot(end[0]-last[0],end[1]-last[1])/(limit*.5))), from=last;
+    for(let j=1;j<=n;j++) {
+      const p=from.map((v,i)=>v+(end[i]-v)*j/n), next=[Math.min(box[0],p[0]),Math.min(box[1],p[1]),Math.max(box[2],p[0]),Math.max(box[3],p[1])];
+      if(Math.max(next[2]-next[0],next[3]-next[1])>limit) { c.stroke(); c.beginPath(); c.lineDashOffset=length; c.moveTo(...last); box=[...last,...last]; }
+      c.lineTo(...p); length+=Math.hypot(p[0]-last[0],p[1]-last[1]); last=p;
+      box=[Math.min(box[0],p[0]),Math.min(box[1],p[1]),Math.max(box[2],p[0]),Math.max(box[3],p[1])];
+    }
+  }
+  c.stroke(); c.lineDashOffset=0;
+}
 function depthDeep(st, look) {
   const c = DP.dc, w = VIEW.w, h = VIEW.h, R = DEPTH.rings, O = DEPTH.outer;
   c.setTransform(DP.dpr, 0, 0, DP.dpr, 0, 0); c.clearRect(0, 0, w, h);
@@ -120,8 +152,9 @@ function depthDeep(st, look) {
     c.strokeStyle = C[R.colour]; c.lineWidth = R.width;
     [COAST_A, COAST_B].forEach((coast, i) => R.scale.forEach((scale, j) => {
       c.globalAlpha = R.alpha[j]; c.setLineDash(j === R.scale.length - 1 ? R.dash : []); c.beginPath();
-      coast.forEach((p, k) => { const ct = depthCentres[i], q = depthPoint(st, [ct[0] + (p[0] - ct[0]) * scale, ct[1] + (p[1] - ct[1]) * scale], R.a[j], look); if (!k) c.moveTo(q.x, q.y); else c.lineTo(q.x, q.y); });
-      c.closePath(); c.stroke();
+      const points=coast.map(p => { const ct=depthCentres[i], q=depthPoint(st,[ct[0]+(p[0]-ct[0])*scale,ct[1]+(p[1]-ct[1])*scale],R.a[j],look); return [q.x,q.y]; });
+      if(FRAME_PERF.ringPieces) depthRing(c,points);
+      else { points.forEach((p,k)=>k?c.lineTo(...p):c.moveTo(...p)); c.closePath(); c.stroke(); }
     })); c.restore();
   }
   if (!O.on) return;
@@ -141,10 +174,21 @@ function depthDeep(st, look) {
     for (let j = 0; j < O.waveCount; j++) c.quadraticCurveTo(g[0] + (O.wave[2] * j + O.wave[0]) * scale, g[1] + (j % 2 ? -O.wave[1] : O.wave[1]) * scale, g[0] + O.wave[2] * (j + 1) * scale, g[1]);
     c.stroke();
   }
-  const b = depthFrameBox(st); c.beginPath(); c.rect(0, 0, w, h); c.rect(b[0], b[1], b[2] - b[0], b[3] - b[1]); c.clip('evenodd');
-  c.globalAlpha = O.rays; c.beginPath(); const origin = toScreen(st, O.origin);
-  for (let i = 0; i < O.n; i++) { const angle = i * Math.PI * 2 / O.n + O.angle, end = toScreen(st, [O.origin[0] + Math.cos(angle) * O.reach, O.origin[1] + Math.sin(angle) * O.reach]); c.moveTo(...origin); c.lineTo(...end); }
-  c.stroke();
+  const b = depthFrameBox(st), geometry=FRAME_PERF.outerGeometry;
+  if (geometry && depthFrameCovers(st)) { c.restore(); c.globalAlpha=1; return; }
+  if (!geometry || !FRAME_PERF.rayBands) { c.save(); c.beginPath(); c.rect(0,0,w,h); c.rect(b[0],b[1],b[2]-b[0],b[3]-b[1]); c.clip('evenodd'); }
+  c.globalAlpha = O.rays; c.beginPath(); const origin = toScreen(st, O.origin); c.fillStyle=C.paper;
+  for (let i=0;i<O.n;i++) {
+    const angle=i*Math.PI*2/O.n+O.angle, end=toScreen(st,[O.origin[0]+Math.cos(angle)*O.reach,O.origin[1]+Math.sin(angle)*O.reach]);
+    if(FRAME_PERF.rayBands) {
+      const dx=end[0]-origin[0],dy=end[1]-origin[1],len=Math.hypot(dx,dy),nx=-dy/len*O.width/2,ny=dx/len*O.width/2;
+      const band=[[origin[0]+nx,origin[1]+ny],[end[0]+nx,end[1]+ny],[end[0]-nx,end[1]-ny],[origin[0]-nx,origin[1]-ny]];
+      if(geometry) depthOutside(c,band,b); else depthPolygon(c,band);
+    } else { c.moveTo(...origin); c.lineTo(...end); }
+  }
+  if(!FRAME_PERF.rayBands) c.stroke();
+  if (!geometry || !FRAME_PERF.rayBands) c.restore();
+  if (!geometry) { c.save(); c.beginPath(); c.rect(0,0,w,h); c.rect(b[0],b[1],b[2]-b[0],b[3]-b[1]); c.clip('evenodd'); }
   const U = DEPTH.dust, show = U.on * smooth(...U.show, depthLift(st));
   if (show > 0) {
     depthSamples(DP.dust, Math.max(0, Math.floor(VIEW.phone ? U.nPhone : U.n)), DEPTH.seed + 2); c.fillStyle = C.paper;
@@ -153,9 +197,18 @@ function depthDeep(st, look) {
       const k = depthFactor(st, depthRange(U.a, u[2])), g = toScreen(st, [u[0] * U.tile[0], u[1] * U.tile[1]]);
       const dx = U.tile[0] * st.cam.s * k, dy = U.tile[1] * st.cam.s * k, r = depthRange(U.r, u[3]);
       c.globalAlpha = depthRange(U.alpha, u[4]) * show;
-      for (let x = ((vx + (g[0] - vx) * k) % dx + dx) % dx; x < w; x += dx) for (let y = ((vy + (g[1] - vy) * k) % dy + dy) % dy; y < h; y += dy) c.fillRect(x - r, y - r, r * 2, r * 2);
+      for (let x = ((vx + (g[0] - vx) * k) % dx + dx) % dx; x < w; x += dx) for (let y = ((vy + (g[1] - vy) * k) % dy + dy) % dy; y < h; y += dy) {
+        if(!geometry) c.fillRect(x-r,y-r,r*2,r*2);
+        else {
+          const x0=x-r,y0=y-r,x1=x+r,y1=y+r,mid0=Math.max(x0,b[0]),mid1=Math.min(x1,b[2]);
+          if(x0<b[0]) c.fillRect(x0,y0,Math.min(x1,b[0])-x0,y1-y0);
+          if(x1>b[2]) c.fillRect(Math.max(x0,b[2]),y0,x1-Math.max(x0,b[2]),y1-y0);
+          if(mid1>mid0) { if(y0<b[1]) c.fillRect(mid0,y0,mid1-mid0,Math.min(y1,b[1])-y0); if(y1>b[3]) c.fillRect(mid0,Math.max(y0,b[3]),mid1-mid0,y1-Math.max(y0,b[3])); }
+        }
+      }
     }
   }
+  if(!geometry) c.restore();
   c.restore(); c.globalAlpha = 1;
 }
 const depthHole = (distance, radius, core) => radius > 0 ? 1 - clamp01((distance - core * radius) / (radius * (1 - core))) : 0;
@@ -173,11 +226,13 @@ export function lightAt(x, y) {
 }
 function depthAir(st, look, pointer, fine) {
   const c = DP.ac, w = VIEW.w, h = VIEW.h, small = Math.min(w, h), L = DEPTH.light, M = DEPTH.mist, D = DEPTH.deck;
-  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w, h);
   const trav = toScreen(st, st.trav || MAP.waypoints[0]), pt = fine ? [pointer[0] * w, pointer[1] * h] : null;
   const lantern = depthLantern(st), v = lantern * (1 - smooth(...L.rush, st.rushT)), vLight = v + lantern * depthLanternHeld(st);
   const B = DP.beam, beam = B && v > 0 ? { p: toScreen(st, [B.x, B.y]), radius: B.reach * st.cam.s, angle: B.angle, half: B.half, soft: B.soft } : null;
   DP.light = { trav, pointer: pt, r: L.r * small, pr: L.ptrR * small, v, vLight, beam };
+  const fields=[], empty=FRAME_PERF.airEmpty;
+  const paintField=(p,rx,radius,turn,alpha)=>{c.save();c.globalAlpha=alpha;c.translate(p.x,p.y);c.rotate(turn);c.drawImage(DP.sprite,-rx,-radius,rx*2,radius*2);c.restore();};
+  if(!empty || v>0) { c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,w,h); }
   if (v > 0) {
     c.globalAlpha = v * (VIEW.phone ? L.darkPhone : L.dark); c.fillStyle = C.ink; c.fillRect(0, 0, w, h); c.globalAlpha = 1;
     c.globalCompositeOperation = 'destination-out';
@@ -213,10 +268,15 @@ function depthAir(st, look, pointer, fine) {
       }
       if (alpha <= 0) continue;
       if (!deck) DP.mistVisible = true;
-      c.save(); c.globalAlpha = alpha; c.translate(p.x, p.y); c.rotate((u[5] * 2 - 1) * M.turn); c.drawImage(DP.sprite, -rx, -radius, rx * 2, radius * 2); c.restore();
+      const args=[p,rx,radius,(u[5]*2-1)*M.turn,alpha]; if(empty) fields.push(args); else paintField(...args);
     }
   };
-  drawField(DP.mist, M, false); drawField(DP.deck, D, true); c.globalAlpha = 1;
+  drawField(DP.mist,M,false); drawField(DP.deck,D,true);
+  if(empty) {
+    if(v<=0 && (fields.length || !DP.airEmpty)) { c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,w,h); }
+    fields.forEach(args=>paintField(...args));
+  }
+  DP.airEmpty=v<=0&&!fields.length&&empty; c.globalAlpha=1;
 }
 function depthSky(st, look, time) {
   const Cld = DEPTH.clouds, Rv = DEPTH.ravens, r = rnd(DEPTH.seed), fade = depthBlastFade(st);
@@ -267,7 +327,7 @@ export function depthFrame(st, time, dt, pointer, aim, moved) {
   if (!active) return;
   const idle = time - DP.lastDraw >= 1 / DEPTH.idleFps;
   const mistDrifting = idle && DEPTH.mist.on && DEPTH.mist.wind !== 0 && (DP.mistVisible || depthMistEntering(st, aim.look));
-  if (fade > 0 && (force || moved || aim.changed || aim.pointerChanged || mistDrifting)) depthAir(st, aim.look, pointer, aim.fine);
+  if (fade > 0 && (force || moved || aim.changed || aim.pointerChanged || mistDrifting || idle && DP.airForce)) { depthAir(st, aim.look, pointer, aim.fine); DP.airForce = false; }
   if (force || moved || aim.changed || (idle && DP.cloudVisible)) depthSky(st, aim.look, time);
   if (idle) DP.lastDraw = time;
 }

@@ -67,14 +67,14 @@ function stepsButtons() {
   if (!SC.go) return;
   const top = SC.P <= 1e-6, end = !JOURNEY.moving && Math.abs(SC.P - stepsEnd) < 1e-6;
   const beatState = tripState(SC.P), blasting = beatState.kind === 'rush' ? !!SC.move || beatState.t > 0 : ['blast', 'settle'].includes(beatState.kind);
-  if (blasting && !SC.go.hidden) { SC.returnFocus ||= SC.go.contains(document.activeElement); SC.shown = false; SC.go.classList.add('go-leaving'); if (SC.returnFocus) { const nova = document.getElementById('nova-hit'); nova?.focus({ preventScroll: true }); } if (SC.say.textContent !== COMB.novaSay) SC.say.textContent = COMB.novaSay; }
+  if (blasting && !SC.go.hidden) { SC.returnFocus ||= SC.go.contains(document.activeElement); SC.shown = false; if (!SC.go.classList.contains('go-leaving')) SC.go.classList.add('go-leaving'); if (SC.returnFocus) { const nova = document.getElementById('nova-hit'); nova?.focus({ preventScroll: true }); } if (SC.say.textContent !== COMB.novaSay) SC.say.textContent = COMB.novaSay; }
   // Joined page: the bar waits for the map, so one Start shows at a time; focus follows (the bar at the map, the hero's Start above).
   const hero = SC.joinedTop() && SC.P < stepsMap - 1e-6, wasHidden = SC.go.hidden;
   if (hero && !wasHidden && SC.go.contains(document.activeElement)) SC.heroFocus = true;
   const hidden = !SC.ready || SC.mode !== 'steps' || hero || blasting;
   const aside = VIEW.h <= 440 && VIEW.w > 640 && SC.root.classList.contains('jm-sheet-open');
   if (SC.go.inert !== (hidden || aside)) SC.go.inert = hidden || aside;
-  if (!blasting) SC.go.classList.remove('go-leaving');
+  if (!blasting && SC.go.classList.contains('go-leaving')) SC.go.classList.remove('go-leaving');
   const faded = blasting && SC.go.classList.contains('go-leaving');
   if (faded && !SC.goFade) { SC.goFade = true; setTimeout(() => { SC.goFade = false; if (SC.go.classList.contains('go-leaving')) SC.go.hidden = true; }, 180); }
   if (!faded && SC.go.hidden !== hidden) SC.go.hidden = hidden;

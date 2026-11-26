@@ -139,7 +139,8 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const inside = pointer[0] * VIEW.w >= cx - W * k / 2 && pointer[0] * VIEW.w <= cx + W * k / 2 && pointer[1] * VIEW.h >= cy - H * k / 2 && pointer[1] * VIEW.h <= cy + H * k / 2;
     const plate = inside ? 0 : e;
     const target = [cfg.tilt * (1 - smooth(...cfg.open, e)) - ly * cfg.ptrTilt[1] * plate, lx * cfg.ptrTilt[0] * plate, -lx * cfg.shift * plate, -ly * cfg.shift * plate];
-    c.tilt.forEach((v, j) => { c.tilt[j] = lift ? v + (target[j] - v) * cfg.ease : 0; if (Math.abs(c.tilt[j]) < cfg.flat) c.tilt[j] = 0; });
+    const nextTilt = c.tilt.map((v, j) => lift ? v + (target[j] - v) * cfg.ease : 0);
+    c.tilt = lift && nextTilt.every((v,j) => Math.abs(v-target[j]) < cfg.flat) ? target : nextTilt;
     const [rx, ryTilt, sx, sy] = c.tilt;
     const join = e > 0 ? cardsTailLayout({ W,H,k,cx:cx-p[0],cy:cy-py,stonePx,rx,ryTilt,sx,sy,lift,e,phone:VIEW.phone }) : { cx:cx-p[0],cy:cy-py,visible:false };
     cx = join.cx + p[0]; cy = join.cy + py;

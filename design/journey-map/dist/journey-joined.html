@@ -1650,7 +1650,7 @@ const DEPTH = {
 
 const NOVA_CANVAS = { dpr: 3, glowSprite: 512 };
 // Performance only: label recovery after a composited gesture (seconds), raster guard (CSS px).
-const FRAME_PERF = { labelSettle: 0.25, rasterPad: 2, scaleMin: .87, scaleMax: 1.15, positionEnd: .1, scaleEnd: .001, sharpStep: .5, flingEnd: 6 };
+const FRAME_PERF = { labelSettle: 0.25, rasterPad: 2, scaleMin: .87, scaleMax: 1.15, positionEnd: .1, scaleEnd: .001, sharpStep: .5, flingEnd: 6, starPaths: true, outerGeometry: true, rayBands: true, ringPieces: true, airEmpty: true, ringBox: 160 };
 const NOVA = {
   build: { kindle: 0.2, draw: 0.76, hold: 1, throbs: [0.26, 0.45, 0.60, 0.72], rise: 0.12, fall: 0.32, pull: 1.8,
     push: 0.08, pushPhone: 0.06, recoil: 0.4, veil: 0.65, veilPhone: 0.45, veilOut: 0.25, hole: [0.6, 0.18], holeBreath: 0.04,
@@ -3384,7 +3384,7 @@ const novaShare = (share, cap) => Math.min(cap, NOVA_LIVE.flares.reduce((sum, f)
 
 const DP = { deep: null, air: null, sky: null, dc: null, ac: null, dpr: 1, rm: false, fine: false,
   look: [0, 0], clouds: [], birds: [], mist: [], deck: [], dust: [], waves: [], waveKey: '', sprite: null, spriteKey: '',
-  lastDraw: -Infinity, wind: 0, light: null, beam: null, config: '', tuning: '', pending: false, force: true, mistVisible: false, cloudVisible: false, pointer: [0.5, 0.5] };
+  lastDraw: -Infinity, wind: 0, light: null, beam: null, config: '', tuning: '', pending: false, force: true, airForce: false, airEmpty: true, mistVisible: false, cloudVisible: false, pointer: [0.5, 0.5] };
 const depthCentres = [COAST_A, COAST_B].map(coast => coast.reduce((a, p) => [a[0] + p[0] / coast.length, a[1] + p[1] / coast.length], [0, 0]));
 const depthRange = (range, u) => lerp(range[0], range[1], u);
 const depthSamples = (list, n, seed) => { if (list.length >= n && list.seed === seed) return; const r = rnd(seed); list.length = 0; list.seed = seed; for (let i = 0; i < n; i++) list.push(Array.from({ length: 8 }, () => r())); };
@@ -3452,10 +3452,42 @@ function depthInvalidate() { DP.force = true; }
 // An additive hook: insert the beacon cut at the veil's existing compositing boundary.
 // The beacon's beam: a third hole in the veil. b is null or { x, y, angle, half, reach, soft, steps } (map units, degrees).
 function depthBeam(b) {
-  if (JSON.stringify(DP.beam) !== JSON.stringify(b)) DP.force = true;
+  if (DP.light?.v > 0 && JSON.stringify(DP.beam) !== JSON.stringify(b)) DP.airForce = true;
   DP.beam = b;
 }
 
+function depthPolygon(c, points) {
+  if (points.length < 3) return;
+  c.beginPath(); c.moveTo(...points[0]); points.slice(1).forEach(p => c.lineTo(...p)); c.closePath(); c.fill();
+}
+function depthCut(points, axis, edge, sign) {
+  const out = [];
+  for (let i=0;i<points.length;i++) {
+    const a=points[i], b=points[(i+1)%points.length], inside=(a[axis]-edge)*sign>=0, next=(b[axis]-edge)*sign>=0;
+    if (inside) out.push(a);
+    if (inside!==next) { const t=(edge-a[axis])/(b[axis]-a[axis]); out.push(a.map((v,j)=>v+(b[j]-v)*t)); }
+  }
+  return out;
+}
+function depthOutside(c, polygon, b) {
+  depthPolygon(c,depthCut(polygon,0,b[0],-1)); depthPolygon(c,depthCut(polygon,0,b[2],1));
+  const middle=depthCut(depthCut(polygon,0,b[0],1),0,b[2],-1);
+  depthPolygon(c,depthCut(middle,1,b[1],-1)); depthPolygon(c,depthCut(middle,1,b[3],1));
+}
+function depthRing(c, points) {
+  const limit=FRAME_PERF.ringBox/DP.dpr; let last=points[0], box=[...last,...last], length=0;
+  c.beginPath(); c.moveTo(...last); c.lineDashOffset=0;
+  for (const end of [...points.slice(1),points[0]]) {
+    const n=Math.max(1,Math.ceil(Math.hypot(end[0]-last[0],end[1]-last[1])/(limit*.5))), from=last;
+    for(let j=1;j<=n;j++) {
+      const p=from.map((v,i)=>v+(end[i]-v)*j/n), next=[Math.min(box[0],p[0]),Math.min(box[1],p[1]),Math.max(box[2],p[0]),Math.max(box[3],p[1])];
+      if(Math.max(next[2]-next[0],next[3]-next[1])>limit) { c.stroke(); c.beginPath(); c.lineDashOffset=length; c.moveTo(...last); box=[...last,...last]; }
+      c.lineTo(...p); length+=Math.hypot(p[0]-last[0],p[1]-last[1]); last=p;
+      box=[Math.min(box[0],p[0]),Math.min(box[1],p[1]),Math.max(box[2],p[0]),Math.max(box[3],p[1])];
+    }
+  }
+  c.stroke(); c.lineDashOffset=0;
+}
 function depthDeep(st, look) {
   const c = DP.dc, w = VIEW.w, h = VIEW.h, R = DEPTH.rings, O = DEPTH.outer;
   c.setTransform(DP.dpr, 0, 0, DP.dpr, 0, 0); c.clearRect(0, 0, w, h);
@@ -3464,8 +3496,9 @@ function depthDeep(st, look) {
     c.strokeStyle = C[R.colour]; c.lineWidth = R.width;
     [COAST_A, COAST_B].forEach((coast, i) => R.scale.forEach((scale, j) => {
       c.globalAlpha = R.alpha[j]; c.setLineDash(j === R.scale.length - 1 ? R.dash : []); c.beginPath();
-      coast.forEach((p, k) => { const ct = depthCentres[i], q = depthPoint(st, [ct[0] + (p[0] - ct[0]) * scale, ct[1] + (p[1] - ct[1]) * scale], R.a[j], look); if (!k) c.moveTo(q.x, q.y); else c.lineTo(q.x, q.y); });
-      c.closePath(); c.stroke();
+      const points=coast.map(p => { const ct=depthCentres[i], q=depthPoint(st,[ct[0]+(p[0]-ct[0])*scale,ct[1]+(p[1]-ct[1])*scale],R.a[j],look); return [q.x,q.y]; });
+      if(FRAME_PERF.ringPieces) depthRing(c,points);
+      else { points.forEach((p,k)=>k?c.lineTo(...p):c.moveTo(...p)); c.closePath(); c.stroke(); }
     })); c.restore();
   }
   if (!O.on) return;
@@ -3485,10 +3518,21 @@ function depthDeep(st, look) {
     for (let j = 0; j < O.waveCount; j++) c.quadraticCurveTo(g[0] + (O.wave[2] * j + O.wave[0]) * scale, g[1] + (j % 2 ? -O.wave[1] : O.wave[1]) * scale, g[0] + O.wave[2] * (j + 1) * scale, g[1]);
     c.stroke();
   }
-  const b = depthFrameBox(st); c.beginPath(); c.rect(0, 0, w, h); c.rect(b[0], b[1], b[2] - b[0], b[3] - b[1]); c.clip('evenodd');
-  c.globalAlpha = O.rays; c.beginPath(); const origin = toScreen(st, O.origin);
-  for (let i = 0; i < O.n; i++) { const angle = i * Math.PI * 2 / O.n + O.angle, end = toScreen(st, [O.origin[0] + Math.cos(angle) * O.reach, O.origin[1] + Math.sin(angle) * O.reach]); c.moveTo(...origin); c.lineTo(...end); }
-  c.stroke();
+  const b = depthFrameBox(st), geometry=FRAME_PERF.outerGeometry;
+  if (geometry && depthFrameCovers(st)) { c.restore(); c.globalAlpha=1; return; }
+  if (!geometry || !FRAME_PERF.rayBands) { c.save(); c.beginPath(); c.rect(0,0,w,h); c.rect(b[0],b[1],b[2]-b[0],b[3]-b[1]); c.clip('evenodd'); }
+  c.globalAlpha = O.rays; c.beginPath(); const origin = toScreen(st, O.origin); c.fillStyle=C.paper;
+  for (let i=0;i<O.n;i++) {
+    const angle=i*Math.PI*2/O.n+O.angle, end=toScreen(st,[O.origin[0]+Math.cos(angle)*O.reach,O.origin[1]+Math.sin(angle)*O.reach]);
+    if(FRAME_PERF.rayBands) {
+      const dx=end[0]-origin[0],dy=end[1]-origin[1],len=Math.hypot(dx,dy),nx=-dy/len*O.width/2,ny=dx/len*O.width/2;
+      const band=[[origin[0]+nx,origin[1]+ny],[end[0]+nx,end[1]+ny],[end[0]-nx,end[1]-ny],[origin[0]-nx,origin[1]-ny]];
+      if(geometry) depthOutside(c,band,b); else depthPolygon(c,band);
+    } else { c.moveTo(...origin); c.lineTo(...end); }
+  }
+  if(!FRAME_PERF.rayBands) c.stroke();
+  if (!geometry || !FRAME_PERF.rayBands) c.restore();
+  if (!geometry) { c.save(); c.beginPath(); c.rect(0,0,w,h); c.rect(b[0],b[1],b[2]-b[0],b[3]-b[1]); c.clip('evenodd'); }
   const U = DEPTH.dust, show = U.on * smooth(...U.show, depthLift(st));
   if (show > 0) {
     depthSamples(DP.dust, Math.max(0, Math.floor(VIEW.phone ? U.nPhone : U.n)), DEPTH.seed + 2); c.fillStyle = C.paper;
@@ -3497,9 +3541,18 @@ function depthDeep(st, look) {
       const k = depthFactor(st, depthRange(U.a, u[2])), g = toScreen(st, [u[0] * U.tile[0], u[1] * U.tile[1]]);
       const dx = U.tile[0] * st.cam.s * k, dy = U.tile[1] * st.cam.s * k, r = depthRange(U.r, u[3]);
       c.globalAlpha = depthRange(U.alpha, u[4]) * show;
-      for (let x = ((vx + (g[0] - vx) * k) % dx + dx) % dx; x < w; x += dx) for (let y = ((vy + (g[1] - vy) * k) % dy + dy) % dy; y < h; y += dy) c.fillRect(x - r, y - r, r * 2, r * 2);
+      for (let x = ((vx + (g[0] - vx) * k) % dx + dx) % dx; x < w; x += dx) for (let y = ((vy + (g[1] - vy) * k) % dy + dy) % dy; y < h; y += dy) {
+        if(!geometry) c.fillRect(x-r,y-r,r*2,r*2);
+        else {
+          const x0=x-r,y0=y-r,x1=x+r,y1=y+r,mid0=Math.max(x0,b[0]),mid1=Math.min(x1,b[2]);
+          if(x0<b[0]) c.fillRect(x0,y0,Math.min(x1,b[0])-x0,y1-y0);
+          if(x1>b[2]) c.fillRect(Math.max(x0,b[2]),y0,x1-Math.max(x0,b[2]),y1-y0);
+          if(mid1>mid0) { if(y0<b[1]) c.fillRect(mid0,y0,mid1-mid0,Math.min(y1,b[1])-y0); if(y1>b[3]) c.fillRect(mid0,Math.max(y0,b[3]),mid1-mid0,y1-Math.max(y0,b[3])); }
+        }
+      }
     }
   }
+  if(!geometry) c.restore();
   c.restore(); c.globalAlpha = 1;
 }
 const depthHole = (distance, radius, core) => radius > 0 ? 1 - clamp01((distance - core * radius) / (radius * (1 - core))) : 0;
@@ -3517,11 +3570,13 @@ function lightAt(x, y) {
 }
 function depthAir(st, look, pointer, fine) {
   const c = DP.ac, w = VIEW.w, h = VIEW.h, small = Math.min(w, h), L = DEPTH.light, M = DEPTH.mist, D = DEPTH.deck;
-  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w, h);
   const trav = toScreen(st, st.trav || MAP.waypoints[0]), pt = fine ? [pointer[0] * w, pointer[1] * h] : null;
   const lantern = depthLantern(st), v = lantern * (1 - smooth(...L.rush, st.rushT)), vLight = v + lantern * depthLanternHeld(st);
   const B = DP.beam, beam = B && v > 0 ? { p: toScreen(st, [B.x, B.y]), radius: B.reach * st.cam.s, angle: B.angle, half: B.half, soft: B.soft } : null;
   DP.light = { trav, pointer: pt, r: L.r * small, pr: L.ptrR * small, v, vLight, beam };
+  const fields=[], empty=FRAME_PERF.airEmpty;
+  const paintField=(p,rx,radius,turn,alpha)=>{c.save();c.globalAlpha=alpha;c.translate(p.x,p.y);c.rotate(turn);c.drawImage(DP.sprite,-rx,-radius,rx*2,radius*2);c.restore();};
+  if(!empty || v>0) { c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,w,h); }
   if (v > 0) {
     c.globalAlpha = v * (VIEW.phone ? L.darkPhone : L.dark); c.fillStyle = C.ink; c.fillRect(0, 0, w, h); c.globalAlpha = 1;
     c.globalCompositeOperation = 'destination-out';
@@ -3557,10 +3612,15 @@ function depthAir(st, look, pointer, fine) {
       }
       if (alpha <= 0) continue;
       if (!deck) DP.mistVisible = true;
-      c.save(); c.globalAlpha = alpha; c.translate(p.x, p.y); c.rotate((u[5] * 2 - 1) * M.turn); c.drawImage(DP.sprite, -rx, -radius, rx * 2, radius * 2); c.restore();
+      const args=[p,rx,radius,(u[5]*2-1)*M.turn,alpha]; if(empty) fields.push(args); else paintField(...args);
     }
   };
-  drawField(DP.mist, M, false); drawField(DP.deck, D, true); c.globalAlpha = 1;
+  drawField(DP.mist,M,false); drawField(DP.deck,D,true);
+  if(empty) {
+    if(v<=0 && (fields.length || !DP.airEmpty)) { c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,w,h); }
+    fields.forEach(args=>paintField(...args));
+  }
+  DP.airEmpty=v<=0&&!fields.length&&empty; c.globalAlpha=1;
 }
 function depthSky(st, look, time) {
   const Cld = DEPTH.clouds, Rv = DEPTH.ravens, r = rnd(DEPTH.seed), fade = depthBlastFade(st);
@@ -3611,7 +3671,7 @@ function depthFrame(st, time, dt, pointer, aim, moved) {
   if (!active) return;
   const idle = time - DP.lastDraw >= 1 / DEPTH.idleFps;
   const mistDrifting = idle && DEPTH.mist.on && DEPTH.mist.wind !== 0 && (DP.mistVisible || depthMistEntering(st, aim.look));
-  if (fade > 0 && (force || moved || aim.changed || aim.pointerChanged || mistDrifting)) depthAir(st, aim.look, pointer, aim.fine);
+  if (fade > 0 && (force || moved || aim.changed || aim.pointerChanged || mistDrifting || idle && DP.airForce)) { depthAir(st, aim.look, pointer, aim.fine); DP.airForce = false; }
   if (force || moved || aim.changed || (idle && DP.cloudVisible)) depthSky(st, aim.look, time);
   if (idle) DP.lastDraw = time;
 }
@@ -3877,12 +3937,12 @@ function put(x, y, rad, al, col, added = false) {
 function putTail(x, y, tail, al, col, added = false) { const b = binOf(added ? SK.supplyTails : SK.tails, col, al * .5); if (b) b.arc.push(x, y, x - tail[0], y - tail[1]); }
 function flush(ctx) {
   ctx.lineWidth = .7;
-  for (const tails of [SK.tails, SK.supplyTails]) for (const b of tails.values()) { const v = b.arc; if (!v.length) continue; ctx.globalAlpha = b.a; ctx.strokeStyle = b.col; ctx.beginPath(); for (let k = 0; k < v.length; k += 4) { ctx.moveTo(v[k], v[k + 1]); ctx.lineTo(v[k + 2], v[k + 3]); } ctx.stroke(); v.length = 0; }
+  for (const tails of [SK.tails, SK.supplyTails]) for (const b of tails.values()) { const v = b.arc; if (!v.length) continue; ctx.globalAlpha = b.a; ctx.strokeStyle = b.col; ctx.beginPath(); for (let k = 0; k < v.length; k += 4) { if (FRAME_PERF.starPaths) ctx.beginPath(); ctx.moveTo(v[k], v[k + 1]); ctx.lineTo(v[k + 2], v[k + 3]); if (FRAME_PERF.starPaths) ctx.stroke(); } if (!FRAME_PERF.starPaths) ctx.stroke(); v.length = 0; }
   for (const bins of [SK.bins, SK.supplyBins]) for (const b of bins.values()) {
     if (!b.sq.length && !b.arc.length) continue;
     ctx.globalAlpha = b.a; ctx.fillStyle = b.col;
     const s = b.sq; for (let k = 0; k < s.length; k += 3) ctx.fillRect(s[k], s[k + 1], s[k + 2], s[k + 2]);
-    const v = b.arc; if (v.length) { ctx.beginPath(); for (let k = 0; k < v.length; k += 3) { ctx.moveTo(v[k] + v[k + 2], v[k + 1]); ctx.arc(v[k], v[k + 1], v[k + 2], 0, 6.2832); } ctx.fill(); }
+    const v = b.arc; if (v.length) { ctx.beginPath(); for (let k = 0; k < v.length; k += 3) { if (FRAME_PERF.starPaths) ctx.beginPath(); ctx.moveTo(v[k] + v[k + 2], v[k + 1]); ctx.arc(v[k], v[k + 1], v[k + 2], 0, 6.2832); if (FRAME_PERF.starPaths) ctx.fill(); } if (!FRAME_PERF.starPaths) ctx.fill(); }
     s.length = 0; v.length = 0;
   }
 }
@@ -4753,8 +4813,7 @@ function exploreApply(st, dt) {
   // The SVG camera stays at its last raster while input/glide changes this virtual camera.
   st.exploreMoving = !!(EX.motion || EX.gesture?.dragged || EX.velocity.some(Boolean) || EX.active && ['s', 'tx', 'ty'].some(key => EX.cam[key] !== EX.target[key]));
   st.exploreScripted = !!motion?.from;
-  const ratio = EX.cam.s / before[0];
-  st.exploreSharp = !EX.gesture?.dragged && Math.max(...[[0,0],[VIEW.w,0],[0,VIEW.h],[VIEW.w,VIEW.h]].map(([x,y]) => Math.hypot(EX.cam.tx + (x-before[1])*ratio-x, EX.cam.ty + (y-before[2])*ratio-y))) < FRAME_PERF.sharpStep;
+  st.exploreSharp = false;
   st.exploreDt = dt;
   if (EX.k > 0 || EX.active) {
     st.cam = { ...EX.cam, ax: VIEW.w / 2, ay: VIEW.h / 2 };
@@ -4914,14 +4973,14 @@ function stepsButtons() {
   if (!SC.go) return;
   const top = SC.P <= 1e-6, end = !JOURNEY.moving && Math.abs(SC.P - stepsEnd) < 1e-6;
   const beatState = tripState(SC.P), blasting = beatState.kind === 'rush' ? !!SC.move || beatState.t > 0 : ['blast', 'settle'].includes(beatState.kind);
-  if (blasting && !SC.go.hidden) { SC.returnFocus ||= SC.go.contains(document.activeElement); SC.shown = false; SC.go.classList.add('go-leaving'); if (SC.returnFocus) { const nova = document.getElementById('nova-hit'); nova?.focus({ preventScroll: true }); } if (SC.say.textContent !== COMB.novaSay) SC.say.textContent = COMB.novaSay; }
+  if (blasting && !SC.go.hidden) { SC.returnFocus ||= SC.go.contains(document.activeElement); SC.shown = false; if (!SC.go.classList.contains('go-leaving')) SC.go.classList.add('go-leaving'); if (SC.returnFocus) { const nova = document.getElementById('nova-hit'); nova?.focus({ preventScroll: true }); } if (SC.say.textContent !== COMB.novaSay) SC.say.textContent = COMB.novaSay; }
   // Joined page: the bar waits for the map, so one Start shows at a time; focus follows (the bar at the map, the hero's Start above).
   const hero = SC.joinedTop() && SC.P < stepsMap - 1e-6, wasHidden = SC.go.hidden;
   if (hero && !wasHidden && SC.go.contains(document.activeElement)) SC.heroFocus = true;
   const hidden = !SC.ready || SC.mode !== 'steps' || hero || blasting;
   const aside = VIEW.h <= 440 && VIEW.w > 640 && SC.root.classList.contains('jm-sheet-open');
   if (SC.go.inert !== (hidden || aside)) SC.go.inert = hidden || aside;
-  if (!blasting) SC.go.classList.remove('go-leaving');
+  if (!blasting && SC.go.classList.contains('go-leaving')) SC.go.classList.remove('go-leaving');
   const faded = blasting && SC.go.classList.contains('go-leaving');
   if (faded && !SC.goFade) { SC.goFade = true; setTimeout(() => { SC.goFade = false; if (SC.go.classList.contains('go-leaving')) SC.go.hidden = true; }, 180); }
   if (!faded && SC.go.hidden !== hidden) SC.go.hidden = hidden;
@@ -5459,7 +5518,8 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const inside = pointer[0] * VIEW.w >= cx - W * k / 2 && pointer[0] * VIEW.w <= cx + W * k / 2 && pointer[1] * VIEW.h >= cy - H * k / 2 && pointer[1] * VIEW.h <= cy + H * k / 2;
     const plate = inside ? 0 : e;
     const target = [cfg.tilt * (1 - smooth(...cfg.open, e)) - ly * cfg.ptrTilt[1] * plate, lx * cfg.ptrTilt[0] * plate, -lx * cfg.shift * plate, -ly * cfg.shift * plate];
-    c.tilt.forEach((v, j) => { c.tilt[j] = lift ? v + (target[j] - v) * cfg.ease : 0; if (Math.abs(c.tilt[j]) < cfg.flat) c.tilt[j] = 0; });
+    const nextTilt = c.tilt.map((v, j) => lift ? v + (target[j] - v) * cfg.ease : 0);
+    c.tilt = lift && nextTilt.every((v,j) => Math.abs(v-target[j]) < cfg.flat) ? target : nextTilt;
     const [rx, ryTilt, sx, sy] = c.tilt;
     const join = e > 0 ? cardsTailLayout({ W,H,k,cx:cx-p[0],cy:cy-py,stonePx,rx,ryTilt,sx,sy,lift,e,phone:VIEW.phone }) : { cx:cx-p[0],cy:cy-py,visible:false };
     cx = join.cx + p[0]; cy = join.cy + py;

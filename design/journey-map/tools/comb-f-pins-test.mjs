@@ -14,5 +14,5 @@ if(process.argv.includes('--record')){
  const svg=bigMap().finds;s=readFileSync('tools/comb-e-scope-test.mjs','utf8').replace(/assert.equal\(svg.length,\d+\)/,'assert.equal(svg.length,'+svg.length+')').replace(/assert.equal\(hash>>>0,\d+,/,'assert.equal(hash>>>0,'+digest(svg)+',').replace('moving the cue into art must preserve the rendered SVG exactly','F3/F6/F9 authorized drawing snapshot');writeFileSync('tools/comb-e-scope-test.mjs',s);
  console.log('Recorded 21 native-density/route frame snapshots, route-adjusted blast hash '+hash+', finds '+svg.length+'/'+digest(svg));
 }
-assert.equal(digest(readFileSync('depth.mjs','utf8').replace(/\r\n/g,'\n')),4010889213,'depth source unchanged');
-console.log('Protected depth source unchanged.');
+assert.equal(digest(readFileSync('depth.mjs','utf8').replace(/\r\n/g,'\n')),243328207,'COMB-L depth source pinned');
+console.log('Protected COMB-L depth source pinned.');

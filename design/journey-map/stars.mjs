@@ -1,6 +1,6 @@
 // The star canvas: hero field, the hand-off into trail dots, sea sparkle, the rush and the blast.
 // On the joined page (join.mjs) the list is built from the real hero's stars instead of the stand-in field.
-import { STARS, C, MAP, NOVA, DEPTH, STEPS, ACTS } from './data.mjs';
+import { STARS, C, MAP, NOVA, DEPTH, STEPS, ACTS, FRAME_PERF } from './data.mjs';
 import { rnd, onLand, COAST_A, COAST_B, polyLen } from './art.mjs';
 import { TRAIL_DOTS, X_U, pointAt, VIEW, SEQ, tripState, toScreen, smooth, lerp, clamp01, easeIO, novaBuildGather, coastAt } from './trip.mjs';
 import { depthFrameBox, depthFrameCovers, novaRingRadius, novaFlare, novaShare, NOVA_LIVE } from './depth.mjs';
@@ -259,12 +259,12 @@ function put(x, y, rad, al, col, added = false) {
 function putTail(x, y, tail, al, col, added = false) { const b = binOf(added ? SK.supplyTails : SK.tails, col, al * .5); if (b) b.arc.push(x, y, x - tail[0], y - tail[1]); }
 function flush(ctx) {
   ctx.lineWidth = .7;
-  for (const tails of [SK.tails, SK.supplyTails]) for (const b of tails.values()) { const v = b.arc; if (!v.length) continue; ctx.globalAlpha = b.a; ctx.strokeStyle = b.col; ctx.beginPath(); for (let k = 0; k < v.length; k += 4) { ctx.moveTo(v[k], v[k + 1]); ctx.lineTo(v[k + 2], v[k + 3]); } ctx.stroke(); v.length = 0; }
+  for (const tails of [SK.tails, SK.supplyTails]) for (const b of tails.values()) { const v = b.arc; if (!v.length) continue; ctx.globalAlpha = b.a; ctx.strokeStyle = b.col; ctx.beginPath(); for (let k = 0; k < v.length; k += 4) { if (FRAME_PERF.starPaths) ctx.beginPath(); ctx.moveTo(v[k], v[k + 1]); ctx.lineTo(v[k + 2], v[k + 3]); if (FRAME_PERF.starPaths) ctx.stroke(); } if (!FRAME_PERF.starPaths) ctx.stroke(); v.length = 0; }
   for (const bins of [SK.bins, SK.supplyBins]) for (const b of bins.values()) {
     if (!b.sq.length && !b.arc.length) continue;
     ctx.globalAlpha = b.a; ctx.fillStyle = b.col;
     const s = b.sq; for (let k = 0; k < s.length; k += 3) ctx.fillRect(s[k], s[k + 1], s[k + 2], s[k + 2]);
-    const v = b.arc; if (v.length) { ctx.beginPath(); for (let k = 0; k < v.length; k += 3) { ctx.moveTo(v[k] + v[k + 2], v[k + 1]); ctx.arc(v[k], v[k + 1], v[k + 2], 0, 6.2832); } ctx.fill(); }
+    const v = b.arc; if (v.length) { ctx.beginPath(); for (let k = 0; k < v.length; k += 3) { if (FRAME_PERF.starPaths) ctx.beginPath(); ctx.moveTo(v[k] + v[k + 2], v[k + 1]); ctx.arc(v[k], v[k + 1], v[k + 2], 0, 6.2832); if (FRAME_PERF.starPaths) ctx.fill(); } if (!FRAME_PERF.starPaths) ctx.fill(); }
     s.length = 0; v.length = 0;
   }
 }
