@@ -283,16 +283,18 @@ export function tripBuild(els) {
   TRIP_EL.legend = [...els.svg.querySelectorAll('.lg')].map((el, i) => ({ el, p: LABELS.legendAt[i], n: Object.values(COPY.legend)[i].length, o: '' }));
   TRIP_EL.t2 = [...els.svg.querySelectorAll('.t2b')].map(el => ({ el, b: String(el.dataset?.b || el.getAttribute?.('data-b') || '').split(' ').map(Number), o: '' })).filter(t => t.b.length === 4 && t.b.every(Number.isFinite));
   TRIP_EL.title = els.svg.querySelector('.map-title'); TRIP_EL.tier1 = els.svg.querySelector('.map-tier1'); TRIP_EL.tier2 = els.svg.querySelector('.map-tier2'); TRIP_EL.subs = els.svg.querySelector('.map-subs');
-  if (TRIP_EL.subs?.parentElement) els.detail.appendChild(TRIP_EL.subs);
+  if (TRIP_EL.subs?.parentElement) (els.rest || els.detail).appendChild(TRIP_EL.subs);
   TRIP_EL.secondary = [...els.svg.querySelectorAll('.map-tier2')]; if (!TRIP_EL.secondary.length) TRIP_EL.secondary = [TRIP_EL.tier2];
+  TRIP_EL.secondaryText = TRIP_EL.secondary.filter(g => g !== TRIP_EL.tier2).flatMap(g => [...g.querySelectorAll('text')].map(el => ({ el, group: g, fill: Number(el.getAttribute('fill-opacity') ?? 1), stroke: Number(el.getAttribute('stroke-opacity') ?? 1) })));
   TRIP_EL.focusFade = null;
   TRIP_EL.scrim = document.createElement('div'); TRIP_EL.scrim.className = 'stage-scrim'; TRIP_EL.scrim.setAttribute('aria-hidden', 'true'); TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px'; TRIP_EL.scrim.style.background = 'linear-gradient(to bottom, transparent, color-mix(in srgb, var(--ink) ' + WORLD.scrim[2] * 100 + '%, transparent))'; els.svg.parentElement.appendChild(TRIP_EL.scrim);
-  TRIP_EL.coasts = [...els.svg.querySelectorAll('.coast')];
+  const both = sel => [...(els.base ? els.base.querySelectorAll(sel) : []), ...els.svg.querySelectorAll(sel)];
+  TRIP_EL.coasts = both('.coast');
   TRIP_EL.coastLen = [polyLen(COAST_A, 1), polyLen(COAST_B, 1)];
   TRIP_EL.ship = els.svg.querySelector('.ls-ship');
   TRIP_EL.markers = [...els.svg.querySelectorAll('.mk-size')];
   TRIP_EL.symbols = [...els.svg.querySelectorAll('.legend-symbol')].map(el => ({ el, base: el.getAttribute('transform') || '' }));
-  TRIP_EL.ticks = [...els.svg.querySelectorAll('.coast-ticks, .frame-ticks')];
+  TRIP_EL.ticks = both('.coast-ticks, .frame-ticks');
   // 24 px stone targets (B-9): overlapping ones (the HMC stops) push apart along the axis that parts them, the dots stay put.
   // 104 / 600: the mini-map's CSS width over the map's (25: 24 and its 1 px border's share).
   const mm = STOPS.map(s => MAP.waypoints[s.w].map(v => v * 104 / 600)), off = mm.map(() => [0, 0]);
@@ -404,7 +406,7 @@ function tripMeasureExploreLabels() {
   const fit=Math.min((VIEW.w-2*m)/(bounds[2]-bounds[0]),(VIEW.h-(VIEW.phone?STEPS.nav.bar:STEPS.nav.h+STEPS.nav.gap)-2*m)/(bounds[3]-bounds[1]));
   const top=Math.max(fit,Math.max(EXPLORE.most,CAMERA.holdZoom)*VIEW.sT),grid=new Map(),cell=12;
   const add=(x,y,half=0,fixed=false,offset=null)=>{if(x<10||x>590||y<120||y>820)return;const key=Math.floor(x/cell)+','+Math.floor(y/cell);if(!grid.has(key))grid.set(key,[]);grid.get(key).push([x,y,half,fixed,offset]);};
-  const elements=[...E.svg.querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-sea path,#b-sea circle,#finds path,#finds circle,#finds ellipse,#finds rect')];
+  const elements=[...(E.base?E.base.querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-sea path,#b-sea circle'):[]),...E.svg.querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-rest path,#b-rest circle,#b-rest ellipse,#b-rest rect,#b-rest line,#b-sea path,#b-sea circle,#finds path,#finds circle,#finds ellipse,#finds rect')];
   function* sample(){
     for(const el of elements){
       yield;
@@ -412,11 +414,11 @@ function tripMeasureExploreLabels() {
       // Ignore hidden parts, while still warming the chart behind its global
       // hand-off fade. Those layer fades are not the drawing's occupied ink.
       let hidden=false;
-      for(let parent=el;parent&&parent!==E.detail&&parent!==E.finds&&parent!==E.sea;parent=parent.parentElement){const style=getComputedStyle(parent);if(Number(style.opacity)<.02||style.display==='none'||parent.style.visibility==='hidden'||parent.getAttribute('visibility')==='hidden'){hidden=true;break;}}
+      for(let parent=el;parent&&parent!==E.detail&&parent!==E.rest&&parent!==E.finds&&parent!==E.sea;parent=parent.parentElement){const style=getComputedStyle(parent);if(Number(style.opacity)<.02||style.display==='none'||parent.style.visibility==='hidden'||parent.getAttribute('visibility')==='hidden'){hidden=true;break;}}
       if(hidden)continue;
       const b=el.getBBox();if(b.width>500&&b.height>800)continue;
       const style=getComputedStyle(el);if(style.stroke==='none'&&style.fill==='none')continue;
-      const matrix=E.cam.getCTM().inverse().multiply(el.getCTM());
+      const camera=E.base?.contains(el)?E.camBase:E.cam, matrix=camera.getCTM().inverse().multiply(el.getCTM());
       const scale=Math.hypot(matrix.a,matrix.b),fixed=style.vectorEffect==='non-scaling-stroke',half=(parseFloat(style.strokeWidth)*(fixed?1:scale)/2)||.5;
       // These batched paths are explicit M x y h .01 dots. Read each dot
       // once, exactly, instead of thousands of native path-length queries.
@@ -526,7 +528,7 @@ export const coastDrawn = h => { const [a, b] = WORLD.coastDraw, x = clamp01((h 
 export const coastAt = u => { const [a, b] = WORLD.coastDraw; return a + (b - a) * (1 - Math.sqrt(1 - clamp01(u))); };
 // Labels give way (polish round 1): a stop's label fades as its card opens (L-6) and the map's other words dim (L-8); all of
 // them fade under the timeline, the step bar and a find's hint, and off the screen's sides (K-2, L-17). Explore frees them.
-function tripLabels(st) {
+function tripLabels(st, t2Fade = 1) {
   const E = TRIP_EL, c = st.cam, phone = VIEW.phone, L = LABELS, open = Math.max(0, ...st.cardK), dim = 1 - L.cardDim[phone ? 1 : 0];
   const free = !!st.exploring || st.exploreK > 0, lift = st.focusK > 0 ? L.hint : 0, timeline = VIEW.h - (phone ? STEPS.nav.bar : 0) - CAMERA.timeline;
   const floor = phone ? timeline - lift : timeline, bar = phone ? null : [VIEW.w / 2 - L.bar[0], timeline - STEPS.nav.gap - STEPS.nav.h - L.bar[1] - lift, VIEW.w / 2 + L.bar[0]];
@@ -552,12 +554,12 @@ function tripLabels(st) {
     put(r, o);
   });
   const u = L.legend.unit * labelScale('legend', c.s), back = 1 - dim * open;
-  (E.t2 || []).forEach(t => put(t, (free ? 1 : back * gone(t.b)) * (1 - tripCardCover(st, t.b))));
+  (E.t2 || []).forEach(t => put(t, (free ? 1 : back * gone(t.b)) * (1 - tripCardCover(st, t.b)) * t2Fade));
   const xQuiet = st.legXT * (1 - (st.exploreK || 0));
   E.symbols?.forEach(s => tripWrite(s.el, 'opacity', 1 - .85 * xQuiet));
   (E.legend || []).forEach(g => { const k = labelScale('legend', c.s), b = g.box, box = b ? [g.p[0]+b.x*k,g.p[1]+b.y*k,g.p[0]+(b.x+b.width)*k,g.p[1]+(b.y+b.height)*k] : [g.p[0],g.p[1]-u*L.ascent,g.p[0]+g.n*u*L.width,g.p[1]+u*L.descent]; put(g, (free ? 1 : back * gone(box)) * (1-tripCardCover(st,box)) * (1-.85*xQuiet)); });
 }
-export function tripApply(st) {
+export function tripApply(st, focus = null) {
   const E = TRIP_EL, c = st.cam;
   const free = !!st.exploring || st.exploreK > 0;
   const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
@@ -574,6 +576,39 @@ export function tripApply(st) {
     r.base = { ...c };
     tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true);
     tripWrite(E.svg, 'transform', 'none');
+  }
+  if (E.base) {
+    const B = E.baseRaster ??= { camera: null, last: null, w: VIEW.w, h: VIEW.h };
+    if (B.w !== VIEW.w || B.h !== VIEW.h) { B.camera = null; B.w = VIEW.w; B.h = VIEW.h; }
+    const last = B.last, still = last && last.s === c.s && last.tx === c.tx && last.ty === c.ty;
+    const rounded = p => ({ s: +p.s.toFixed(4), tx: +p.tx.toFixed(2), ty: +p.ty.toFixed(2) });
+    const text = p => `matrix(${p.s.toFixed(4)} 0 0 ${p.s.toFixed(4)} ${p.tx.toFixed(2)} ${p.ty.toFixed(2)})`;
+    if (free) {
+      B.camera = rounded(r.base); B.held = false;
+      tripWrite(E.camBase, 'transform', text(r.base), true);
+      tripWrite(E.base, 'transform', E.svg.style.transform || 'none');
+    } else {
+      const canHold = !!B.camera && st.handoffT >= 1 && !st.reduced && !still;
+      const q = B.camera ? c.s / B.camera.s : 1;
+      if (!canHold || q < FRAME_PERF.baseMin || q > FRAME_PERF.baseMax) {
+        let k = 1;
+        if (canHold && q > FRAME_PERF.baseMax) {
+          const glide = GLIDES.find(g => st.P >= g.a && st.P < g.b);
+          let end = glide ? tripState(last && st.P < last.P ? glide.a : glide.b).cam.s : c.s;
+          if (focus && focus.k > (last?.focus || 0)) { const target = { ...st, cam: { ...c }, cardK: st.cardK.slice() }; tripFocus(target, focus.view, 1); end = target.cam.s; }
+          else if (focus) end = tripState(st.P).cam.s;
+          k = Math.min(FRAME_PERF.baseAhead, Math.max(1, end / c.s));
+        }
+        B.camera = rounded({ s: c.s * k, tx: VIEW.w / 2 - (VIEW.w / 2 - c.tx) * k, ty: VIEW.h / 2 - (VIEW.h / 2 - c.ty) * k });
+        tripWrite(E.camBase, 'transform', text(B.camera), true);
+      }
+      B.held = !!canHold;
+      if (B.held) {
+        const shown = rounded(c), k = shown.s / B.camera.s;
+        tripWrite(E.base, 'transform', `matrix(${k},0,0,${k},${shown.tx - B.camera.tx * k},${shown.ty - B.camera.ty * k})`);
+      } else tripWrite(E.base, 'transform', 'none');
+    }
+    B.last = { ...c, P: st.P, focus: focus?.k || 0 };
   }
   // Explore promotes the map while its camera moves, so the held raster above moves on the compositor instead of being
   // re-rastered every frame. A pan keeps the layer's raster scale, so the promotion stays for the next gesture. Once a
@@ -592,8 +627,8 @@ export function tripApply(st) {
   if (!r.settleLeft || Math.abs(r.scale / c.s - 1) < .0001) r.scale = c.s;
   r.moving = moving;
   const paint = r.base, labelS = free ? r.scale : c.s;
-  if (E.rows) tripLabels(st);
   const labelFade = smooth(...LABELS.fade, labelS / VIEW.s0);
+  if (E.rows) tripLabels(st, labelFade);
   E.labels.forEach(label => {
     const ideal = labelScale(label.kind,paint.s);
     // Follow the old epsilon rule in memory even while the visible label is held.
@@ -614,10 +649,12 @@ export function tripApply(st) {
     E.focusFade = focusFade;
     for (const group of [E.tier1, E.subs]) if (group) { tripWrite(group, 'opacity', ['wayfinder','all-found'].includes(st.focusId) ? 1 : focusFade); tripWrite(group, 'visibility', ['wayfinder','all-found'].includes(st.focusId) || focusFade !== 0 ? 'visible' : 'hidden'); }
   }
-  E.secondary.forEach(group => { tripWrite(group, 'opacity', labelFade); tripWrite(group, 'visibility', labelFade === 0 ? 'hidden' : 'visible'); }); tripWrite(E.scrim, 'opacity', labelFade);
+  E.secondary.forEach(group => { tripWrite(group, 'opacity', ''); tripWrite(group, 'visibility', labelFade === 0 ? 'hidden' : 'visible'); });
+  E.secondaryText?.forEach(t => { const fade = t.group.classList.contains('wf-result') && document.documentElement.classList.contains('jm-way') ? 1 : labelFade; tripWrite(t.el, 'fillOpacity', t.fill * fade); tripWrite(t.el, 'strokeOpacity', t.stroke * fade); });
+  tripWrite(E.scrim, 'opacity', labelFade);
   const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
   tripWrite(E.sea, 'opacity', smooth(...DEPTH.fade.sea, h)); tripWrite(E.fill, 'opacity', smooth(.25, .75, h));
-  tripWrite(E.detail, 'opacity', smooth(.45, .95, h)); tripWrite(E.finds, 'opacity', smooth(.5, 1, h));
+  tripWrite(E.detail, 'opacity', smooth(.45, .95, h)); if (E.rest) tripWrite(E.rest, 'opacity', smooth(.45, .95, h)); tripWrite(E.finds, 'opacity', smooth(.5, 1, h));
   tripWrite(E.coastG, 'opacity', 1);
   const dr = coastDrawn(h);
   E.coasts.forEach((p, i) => { if (dr >= 1) { tripWrite(p, 'strokeDasharray', 'none'); return; } const L = E.coastLen[i] * c.s; tripWrite(p, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(p, 'strokeDashoffset', (L * (1 - dr)).toFixed(1)); });
@@ -630,6 +667,7 @@ export function tripApply(st) {
   tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
   tripWrite(E.svg, 'willChange', r.promo ? 'transform, opacity' : fade > 0 && fade < 1 ? 'opacity' : '');
   tripWrite(E.svg, 'overflow', free ? 'visible' : '');
+  if (E.base) { tripWrite(E.base, 'opacity', opacity); tripWrite(E.base, 'visibility', opacity === 0 ? 'hidden' : 'visible'); tripWrite(E.base, 'willChange', 'transform'); tripWrite(E.base, 'overflow', 'visible'); }
   tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
   // the X fades in with the sea, so neither page shows it before the map exists
   if (E.x) tripWrite(E.x, 'opacity', h < 1 ? smooth(.2, .7, h).toFixed(3) : '');
@@ -643,7 +681,7 @@ export function tripApply(st) {
     tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
     const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
-  return free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading);
+  return (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.baseRaster?.held;
 }
 const n2 = v => v.toFixed(2);
 export function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }

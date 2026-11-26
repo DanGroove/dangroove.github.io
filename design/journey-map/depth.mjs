@@ -107,8 +107,17 @@ export function depthInvalidate() { DP.force = true; }
 
 // An additive hook: insert the beacon cut at the veil's existing compositing boundary.
 // The beacon's beam: a third hole in the veil. b is null or { x, y, angle, half, reach, soft, steps } (map units, degrees).
-export function depthBeam(b) {
-  if (DP.light?.v > 0 && JSON.stringify(DP.beam) !== JSON.stringify(b)) DP.airForce = true;
+export function depthBeam(b, st) {
+  if (DP.light?.v > 0 && JSON.stringify(DP.beam) !== JSON.stringify(b)) {
+    const old = DP.light.beam;
+    const point = (p, r, a) => [p[0] + r * Math.cos(a * Math.PI / 180), p[1] + r * Math.sin(a * Math.PI / 180)];
+    const origin = b && st ? toScreen(st, [b.x, b.y]) : null;
+    const fast = !b || !old || origin && (Math.hypot(origin[0] - old.p[0], origin[1] - old.p[1]) > .5 || [-1, 0, 1].some(edge => {
+      const a = point(origin, b.reach * st.cam.s, b.angle + edge * b.half), z = point(old.p, old.radius, old.angle + edge * old.half);
+      return Math.hypot(a[0] - z[0], a[1] - z[1]) > .5;
+    }));
+    DP.airForce = fast || DP.airForce === 2 ? 2 : true;
+  }
   DP.beam = b;
 }
 
@@ -327,7 +336,7 @@ export function depthFrame(st, time, dt, pointer, aim, moved) {
   if (!active) return;
   const idle = time - DP.lastDraw >= 1 / DEPTH.idleFps;
   const mistDrifting = idle && DEPTH.mist.on && DEPTH.mist.wind !== 0 && (DP.mistVisible || depthMistEntering(st, aim.look));
-  if (fade > 0 && (force || moved || aim.changed || aim.pointerChanged || mistDrifting || idle && DP.airForce)) { depthAir(st, aim.look, pointer, aim.fine); DP.airForce = false; }
+  if (fade > 0 && (force || moved || aim.changed || aim.pointerChanged || mistDrifting || DP.airForce === 2 || idle && DP.airForce)) { depthAir(st, aim.look, pointer, aim.fine); DP.airForce = false; }
   if (force || moved || aim.changed || (idle && DP.cloudVisible)) depthSky(st, aim.look, time);
   if (idle) DP.lastDraw = time;
 }

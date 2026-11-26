@@ -320,9 +320,10 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-explore:not(.jm-sheet-open) .explore-hint.on { opacity: 1; }
 @media (max-width: 640px) { .find-hint { bottom: 104px; white-space: normal; width: calc(100% - 32px); } }
 .jm-focus .mk { opacity: 0; }
-#b-detail text { transition: opacity .4s; }
-.jm-focus #b-detail text { opacity: .3; }
-.jm-focus.jm-way #b-detail text { opacity: 1; }
+#b-detail text, #b-rest text { transition: opacity .4s; }
+#map-base { pointer-events: none; }
+.jm-focus #b-detail text, .jm-focus #b-rest text { opacity: .3; }
+.jm-focus.jm-way #b-detail text, .jm-focus.jm-way #b-rest text { opacity: 1; }
 .wf-arm.on .l { stroke-width: var(--find-arm); }
 .tl-blk.craft-lit { outline: var(--find-slot-rule) solid var(--paper); }
 .pop-in { position: relative; transform: none; max-width: min(var(--find-pop-w), calc(100vw - var(--find-pop-edge) * 2)); width: max-content; border-radius: var(--find-pop-r); padding: var(--find-pop-pad); font-size: var(--find-pop-font); line-height: var(--find-pop-line); transform-origin: center bottom; }
@@ -491,7 +492,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-focus .find-hint:not(.explore-hint), .jm-explore:not(.jm-sheet-open) .explore-hint.on { visibility: visible; transition-delay: 0s; }
 .jm-sheet-open .find-hint { opacity: 0; visibility: hidden; }
 .jm-focus[data-find="well"] .well-name, .jm-focus[data-find="well"] .well-name text { opacity: 1 !important; }
-#b-all, #finds > .find, #bc-notes, .find.hoard { transition: opacity .3s; }
+#b-all, #b-rest, #finds > .find, #bc-notes, .find.hoard { transition: opacity .3s; }
 .reading-halo text, .reading-halo path { paint-order: stroke; stroke: var(--ink); stroke-width: 2px; stroke-linejoin: round; }
 .reading-halo path { stroke: var(--paper); }
 .go { transition: opacity .18s; }

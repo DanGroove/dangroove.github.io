@@ -3,11 +3,11 @@ import {spawn} from 'node:child_process';
 import {readFileSync,writeFileSync,mkdirSync,existsSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
-export const gRoot='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-l';
+export const gRoot='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-l2';
 export const gWait=ms=>new Promise(r=>setTimeout(r,ms));
 export async function gBrowser(){
  mkdirSync(gRoot,{recursive:true});const profile=gRoot+'/profile-'+Date.now();mkdirSync(profile+'/pages',{recursive:true});
- const child=spawn('C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',['--headless=new','--remote-debugging-port=0','--remote-debugging-address=127.0.0.1','--user-data-dir='+profile,'--disk-cache-dir='+profile+'/cache','--crash-dumps-dir='+profile,'--no-first-run','--no-default-browser-check','--disable-background-networking','--disable-component-update','--disable-sync','--disable-extensions','--mute-audio','about:blank'],{stdio:'ignore'});
+ const child=spawn(process.env.COMB_BROWSER==='chrome'?'C:/Program Files/Google/Chrome/Application/chrome.exe':'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',['--headless=new','--remote-debugging-port=0','--remote-debugging-address=127.0.0.1','--user-data-dir='+profile,'--disk-cache-dir='+profile+'/cache','--crash-dumps-dir='+profile,'--no-first-run','--no-default-browser-check','--disable-background-networking','--disable-component-update','--disable-sync','--disable-extensions','--mute-audio','about:blank'],{stdio:'ignore'});
  for(let i=0;i<100&&!existsSync(profile+'/DevToolsActivePort');i++)await gWait(100);
  const [port,ep]=readFileSync(profile+'/DevToolsActivePort','utf8').trim().split('\n'),ws=new WebSocket('ws://127.0.0.1:'+port+ep);await new Promise((r,j)=>{ws.onopen=r;ws.onerror=j;});
  let seq=0,sid;const pending=new Map(),errors=[];

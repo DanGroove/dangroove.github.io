@@ -182,7 +182,7 @@ export function findRavens(svg) {
 export function findSerpent(svg) {
   const f = FIND_BY.serpent, el = svg.querySelector('#f-serpent'), head = el.querySelector('.jg-head'), jaw = el.querySelector('.jg-jaw'), tail = el.querySelector('.jg-tail'), pad = el.querySelector('.jg-pad'), eye = el.querySelector('.jg-eye'), shut = el.querySelector('.jg-shut'), tongue = el.querySelector('.jg-tongue'), joint = head.parentElement;
   const leaves = [...el.querySelectorAll('.jg-leaf')].sort((a, b) => +a.dataset.i - +b.dataset.i);
-  const swells = [...svg.querySelectorAll('.jg-swell')].map(g => ({ g, gulp: g.querySelector('.jg-gulp'), hearPath: g.querySelector('.jg-hear'), live: false }));
+  const swells = [...(document.getElementById('b-sea') || svg).querySelectorAll('.jg-swell')].map(g => ({ g, gulp: g.querySelector('.jg-gulp'), hearPath: g.querySelector('.jg-hear'), live: false }));
   const o = { id: f.id, el, stage: 'ready', pokes: 0, round: 0, kept: false, ts: -Infinity, headAngle: 0, headTurn: 0, jawAngle: 0, tailOut: 0, queued: false, held: false, hearTs: -Infinity, padTs: -Infinity, swells };
   o.place = () => [f.x, f.y];
   const remaining = () => leaves.forEach((leaf, i) => { if (i >= o.pokes) { attr(leaf, 'opacity', 1); const offset = (i - o.pokes) * FIND_PLAY.serpent.leafOffset; attr(leaf, 'transform', 'translate(' + offset + ' ' + offset + ')'); } });

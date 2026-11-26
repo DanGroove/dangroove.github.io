@@ -58,7 +58,7 @@ export function findBeacon(svg) {
     attr(flame, 'transform', `translate(${foot[0]} ${foot[1]}) scale(${sx} ${sy}) translate(${-foot[0]} ${-foot[1]})`); attr(glow, 'opacity', B.glowAlpha * o.fire);
     if (o.onScreen && !FD.rm) { o.ember += o.fire * B.embers * dt; const n = Math.floor(o.ember); o.ember -= n; if (n) findBits('spark', ...O, n, FIND_PLAY.bits.sparks); }
     o.stage = lit ? 'lit' : manual ? 'aiming' : 'idle';
-    depthBeam(!FD.rm && o.onScreen && VIEW.depth && FD.st.pushT > 0 && FD.st.rushT === 0 ? { x: O[0], y: O[1], angle: o.head, half, reach, soft: B.soft, steps: B.wedgeSteps } : null);
+    depthBeam(!FD.rm && o.onScreen && VIEW.depth && FD.st.pushT > 0 && FD.st.rushT === 0 ? { x: O[0], y: O[1], angle: o.head, half, reach, soft: B.soft, steps: B.wedgeSteps } : null, FD.st);
   };
   return o;
 }

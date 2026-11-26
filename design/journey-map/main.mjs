@@ -33,6 +33,16 @@ MAIN.innerHTML = `<h1 class="sr">${COPY.title}</h1><section class="trip" id="tri
 </div></section><div class="rm-cards" id="rmcards"></div><div class="tl" id="tl"></div>`;
 
 const $ = id => document.getElementById(id);
+// L2: the base (sea, land, coasts and the land's marks before the tree) gets its own svg right under svg#map.
+{
+  const NS = 'http://www.w3.org/2000/svg', det = $('b-detail'), kids = [...det.children], yi = kids.findIndex(k => k.classList.contains('ygg'));
+  const base = document.createElementNS(NS, 'svg'); base.id = 'map-base'; base.setAttribute('class', 'map map-base'); base.setAttribute('aria-hidden', 'true');
+  const camB = document.createElementNS(NS, 'g'); camB.id = 'cam-base'; base.appendChild(camB);
+  const rest = document.createElementNS(NS, 'g'); rest.id = 'b-rest';
+  const detail = document.createElementNS(NS, 'g'); detail.id = 'b-rest-detail'; rest.appendChild(detail);
+  if (yi >= 0) kids.slice(yi).forEach(k => detail.appendChild(k));
+  camB.appendChild($('b-all')); $('cam').prepend(rest); $('map').before(base);
+}
 const SVG = $('map'), CANVAS = $('stars'), TLEL = $('tl');
 // timeline sits in the stage overlay so it can become the footer rule; in reduced motion it is a sticky jump menu
 const FTWORLD = document.createElement('div'); FTWORLD.id = 'ft-world'; $('stage').querySelector('.ov').appendChild(FTWORLD); FTWORLD.append($('ft'), TLEL);
@@ -42,7 +52,7 @@ let mainCurrent = 0, mainModeVersion = 0;
 const mainHeroEnd = SEQ.find(s=>s.kind==='handoff').a, mainMapStart = SEQ.find(s=>s.kind==='overview').a;
 const goStop = i => { mainCurrent = i; tlCurrent(Math.min(i, STOPS.length - 1), true); if (RM) { if (i < 0) { window.scrollTo({top:(JOIN.heroStart ? mainMapStart : 0)*VIEW.unit,behavior:'instant'}); return; } if (i >= STOPS.length) { $('ft').scrollIntoView({behavior:'auto',block:'start'}); return; } cardsList()[i].el.scrollIntoView({ behavior: 'auto', block: 'start' }); return; } JOURNEY.go(STOPS[i].id, { jump: exploreActive() }); };
 
-tripBuild({ svg: SVG, cam: $('cam'), sea: $('b-sea'), fill: $('b-fill'), coastG: $('b-coast'), detail: $('b-detail'), finds: $('finds'), done: $('trail-done'), x: $('fxg'), caption: document.querySelector('.caption'), cue: document.querySelector('.cue'), mini: $('mini') });
+tripBuild({ svg: SVG, base: $('map-base'), camBase: $('cam-base'), rest: $('b-rest-detail'), cam: $('cam'), sea: $('b-sea'), fill: $('b-fill'), coastG: $('b-coast'), detail: $('b-detail'), finds: $('finds'), done: $('trail-done'), x: $('fxg'), caption: document.querySelector('.caption'), cue: document.querySelector('.cue'), mini: $('mini') });
 $('mini').querySelectorAll('.mm-stop').forEach(b => { const p = PALETTES[STOPS[+b.dataset.i].palette]; b.style.setProperty('--mk', p.mark); if (STOPS[+b.dataset.i].palette === 'interkom') { b.classList.add('mm-interkom'); b.style.setProperty('--shield-a', p.shield[1]); b.style.setProperty('--shield-b', p.shield[0]); } p.shield.forEach((v, j) => b.style.setProperty('--shield-' + 'abc'[j], v)); b.addEventListener('click', () => goStop(+b.dataset.i)); });
 $('mini').addEventListener('click', e => {
   if (!e.detail || !e.target.closest?.('.mm-stop')) return;
@@ -58,7 +68,7 @@ footerBuild($('ft'), false); footerBuildX($('fxg'), false, $('nova'), $('nova-hi
 const mainXStrokes = [...SVG.querySelectorAll('.fx-red')];
 
 stepsBuild({ stage: $('stage'), rm: false, resize, joinedTop: () => JOIN.heroStart, reducedGo: id => { if (id === 'top') window.scrollTo({top:0,behavior:'instant'}); else goStop(id === 'map' ? -1 : id === 'end' ? STOPS.length : STOPS.findIndex(s=>s.id===id)); } });
-findsBuild(SVG, $('pop'), $('sheet'), $('b-all'), RM);
+findsBuild(SVG, $('pop'), $('sheet'), { style: { set opacity(v) { $('b-all').style.opacity = v; $('b-rest').style.opacity = v; } } }, RM);
 // The same six markers move in screen space, so their type never needs to be
 // resized and rasterized on every camera frame. No marker is copied.
 const mainMarkerLayer = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); mainMarkerLayer.classList.add('marker-layer');
@@ -111,7 +121,7 @@ function resize() {
   const stepMode = !RM;
   const room = stepMode ? (phone ? STEPS.nav.bar : STEPS.nav.h + STEPS.nav.gap + 6) : 0;
   tripResize(w, h, RM ? 0 : (phone ? 44 : 56) + room);
-  SVG.setAttribute('width', w); SVG.setAttribute('height', h); SVG.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  for (const el of [SVG, $('map-base')]) { el.setAttribute('width', w); el.setAttribute('height', h); el.setAttribute('viewBox', `0 0 ${w} ${h}`); }
   mainMarkerLayer.setAttribute('viewBox', `0 0 ${w} ${h}`);
   tripMeasureLabels(); starsResize(w, h);
   footerNovaResize(w, h);
@@ -169,7 +179,7 @@ function frame(ts) {
   const focusKey = JSON.stringify(f), tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || explored || folded || mainMapPending || P !== lastP || tuning !== mainTuning || focusKey !== mainFocus;
   mainFocus = focusKey;
   const aim = depthLook(dt, PTR);
-  if (moved) { const xp = toScreen(st, MAP.x); if (st.rushT === 0 && xp[0] >= 0 && xp[0] <= VIEW.w && xp[1] >= 0 && xp[1] <= VIEW.h) { const weight = String(3.6 * Math.min(1, tripXCamera().s / st.cam.s)); mainXStrokes.forEach(el => { if (el.getAttribute('stroke-width') !== weight) el.setAttribute('stroke-width', weight); }); } mainMapPending = tripApply(st); tlFrame(st); footerFrame(st); if (!JOIN.frame && CANVAS.style.opacity !== String(st.dim)) CANVAS.style.opacity = st.dim; lastP = P; mainTuning = tuning; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
+  if (moved) { const xp = toScreen(st, MAP.x); if (st.rushT === 0 && xp[0] >= 0 && xp[0] <= VIEW.w && xp[1] >= 0 && xp[1] <= VIEW.h) { const weight = String(3.6 * Math.min(1, tripXCamera().s / st.cam.s)); mainXStrokes.forEach(el => { if (el.getAttribute('stroke-width') !== weight) el.setAttribute('stroke-width', weight); }); } mainMapPending = tripApply(st, f); tlFrame(st); footerFrame(st); if (!JOIN.frame && CANVAS.style.opacity !== String(st.dim)) CANVAS.style.opacity = st.dim; lastP = P; mainTuning = tuning; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
   if (moved) mainPlaceMarkers(st);
   const jo = JOIN.frame ? JOIN.frame(st, moved, P) : undefined;
   depthFrame(st, time, dt, PTR, aim, moved);
