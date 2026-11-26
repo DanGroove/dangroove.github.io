@@ -1,4 +1,4 @@
-# Polish round 2, part 10c: the X gives back control (M1 to M3)
+# Polish round 2, part 10c: the X gives back control, and no flashes on the phone (M1 to M4)
 
 Dan, 2026-11-26 4:33 AM ET, on preview 19: "when exploring the map and clicking a node then clicking the X, it wont allow me to zoom in/out or move the map. clicking X should give me back full control and should undim the map".
 
@@ -24,6 +24,14 @@ The X (`.c-close`) then only folds the card (`cardsClose` in `cards.mjs`). The j
 
 **M3. Closing a card lifts the hold dim, everywhere (`cards.mjs`).** At any stop, opened from explore or in the guided tour: while the card folds, `st.dim` goes from its hold value to 1 by the fold's progress, and it comes back if the card reopens through its shield. In `cardsOverride`, which runs after `tripState` and before `tripApply`, that is `st.dim = lerp(1, st.dim, closed.k)`. Everything that reads `st.dim` (the map, the base map, the stars canvas) follows. Nothing else at holds changes.
 
+**M4. Keep the markers' and the bar's layers alive through a glide (`map.css`).** Dan's phone recording of preview 19 (Android, in the Claude app's web view) shows five one- or two-frame flashes near the end of stop-to-stop glides, at 31.2, 31.7, 44.6, 50.0 and 55.8 s: everything except the base map drops out (the find markers, the timeline, the Next bar, the find drawings, the trail). The cloud found why. As a glide leaves a stop, the card folds and the hold dim lifts, the find markers' opacities reach 1, and the markers (`.mk`) and the layers above them (`#tl`, and the bar `#go` squashed in with them) lose their compositor layers; at the next stop the card opens and the map dims again, and they are built again as new layers. A new layer has no raster yet, and the phone's web view draws it empty for a frame. Measured with real touch on Next at 360x660, DPR 3: part 10b destroys 7 painted layers between +370 and +885 ms and builds 9 new ones at the arrival (about +3560 ms); HMC Connections to Mohawk destroys and builds 19, Mohawk to HMC, again 6; at 1920x950, DPR 2, Laurier to HMC Connections destroys 11 at +800 ms. With this rule:
+
+```css
+.marker-layer, .marker-layer .mk, #go { will-change: opacity; }
+```
+
+no painted layer bigger than a marker is built during or after those glides (only the markers the card covers end and come back as it opens and folds), and the desktop glide's tile rasters stay the same (2,662 before, 2,674 after). It must be `opacity`, not `transform`: `#go` holds a `position: fixed` light that a transform would re-anchor. Add the rule to `map.css` with a one-line comment, nothing else in that file. The first glide (Set out) and explore's entry still build layers (two full-screen ones at about +400 ms, and 18 at explore's entry); leave those for now and report their counts.
+
 ## Checks
 
 New `tools/comb-m-browser-test.mjs` (or more than one file), driving `dist/journey-joined.html` with real CDP input only. Read state through the page's existing test hooks, computed styles and classes; never move the journey by calling its functions.
@@ -37,11 +45,12 @@ New `tools/comb-m-browser-test.mjs` (or more than one file), driving `dist/journ
 7. Two quick presses of the X, and a press during the cover: one return, no console error.
 8. The reduced motion page: unchanged.
 9. Rerun the tests that touch cards, steps and explore (at least `steps-test`, `explore-test`, `comb-close-test`, `comb-reopen-test`, `comb-g-focus-test`, `comb-g3-interaction-test`, `comb-g3-press-test`, `comb-l-explore-test`, `comb-l2-explore-state-test`) and `node tools/check.mjs`. Change an existing assertion only where it encodes the old X behaviour (the dim staying, the X not going back to explore), and list each one with why.
+10. M4: new `tools/comb-m-layers-test.mjs`. With CDP `LayerTree` events, count the painted layers (`drawsContent`) built and destroyed from 100 ms after a real press of Next until 1 s after the arrival, for the glides from Laurier, HMC Connections and Mohawk, at 360x660, DPR 3, touch, and at 1920x950, DPR 2, mouse. No layer bigger than 100x30 CSS px may be built in those windows. Report the counts with and without the rule (you can switch it off in the test page with a style override), and the counts for Set out and explore's entry.
 
 ## Rules
 
-- You may write only these files, all under `design/journey-map/`: `steps.mjs` (M1, M2's return and cut), `cards.mjs` (M2's close path, M3), `explore.mjs` (M2's entry, and a covered arrival if you take that route), `main.mjs` only if M1 cannot work without changing the options `goStop` passes (nothing else in it), `tools/check.mjs` (`RUNTIME_KB` only, with a dated note), the test files in `tools/`, `joined.html`, `dist/journey-map.html` and `dist/journey-joined.html` (these three only through `node tools/pack.mjs` and `node tools/pack-joined.mjs`), and your report `COMB-M-BUILD.md`. The browser's profile, captures and full test logs go only in the run folder your prompt names.
-- Never touch `trip.mjs`, `data.mjs`, `depth.mjs`, `stars.mjs`, `map.css`, the find modules, `hero-copy/`, the briefs, the other build reports, the audits, or anything outside `design/journey-map/`.
+- You may write only these files, all under `design/journey-map/`: `steps.mjs` (M1, M2's return and cut), `cards.mjs` (M2's close path, M3), `explore.mjs` (M2's entry, and a covered arrival if you take that route), `map.css` (M4's rule and its comment only), `main.mjs` only if M1 cannot work without changing the options `goStop` passes (nothing else in it), `tools/check.mjs` (`RUNTIME_KB` only, with a dated note), the test files in `tools/`, `joined.html`, `dist/journey-map.html` and `dist/journey-joined.html` (these three only through `node tools/pack.mjs` and `node tools/pack-joined.mjs`), and your report `COMB-M-BUILD.md`. The browser's profile, captures and full test logs go only in the run folder your prompt names.
+- Never touch `trip.mjs`, `data.mjs`, `depth.mjs`, `stars.mjs`, the find modules, `hero-copy/`, the briefs, the other build reports, the audits, or anything outside `design/journey-map/`.
 - Never run git, never install anything, never use the network (a local headless Edge or Chrome on 127.0.0.1 is not the network), never start reviewer agents or other agents.
 - No timing measurements: tests check behaviour, state and pixels, never time.
 - If a rule stops you from doing something this brief asks, leave it out and say so in your report. Do not work around a rule.
@@ -49,4 +58,4 @@ New `tools/comb-m-browser-test.mjs` (or more than one file), driving `dist/journ
 
 ## Report
 
-`COMB-M-BUILD.md`, short: for each item, what you changed and why; which route you took for the trap in M2 and why; each test you changed or added and why; one table with the last exit of every test you ran; anything you left out and why; what the review should look at.
+`COMB-M-BUILD.md`, short: for each item, what you changed and why; which route you took for the trap in M2 and why; M4's layer counts before and after; each test you changed or added and why; one table with the last exit of every test you ran; anything you left out and why; what the review should look at.
