@@ -46,20 +46,22 @@ const evaluate = async expr => { const r = await send('Runtime.evaluate', { expr
 const waitEvent = (method, ms) => new Promise((resolve, reject) => { const t0 = Date.now(); const tick = () => { const i = events.findIndex(e => e.method === method); if (i >= 0) { resolve(events.splice(i, 1)[0]); return; } if (Date.now() - t0 > ms) { reject(new Error('timeout ' + method)); return; } setTimeout(tick, 50); }; tick(); });
 
 async function connect() {
-  let list = null;
-  for (let i = 0; i < 20 && !list; i++) { try { list = await (await fetch(`http://127.0.0.1:${DEV}/json/list`)).json(); } catch (e) { await sleep(500); } }
-  if (!list) throw new Error('no DevTools at 127.0.0.1:' + DEV + ' (is Chrome open on the phone?)');
-  // Never drive a tab the person has open: open a tab of our own (closed again at the end).
   const blank = `http://localhost:${PORT}/blank?t=${Date.now()}`; let page = null;
-  // On the phone the tab is opened with a VIEW intent, which brings Chrome to the front with it. A tab made through
-  // /json/new stays behind whatever app is showing (phone-p23: the home screen), where requestAnimationFrame never runs.
+  const list = async () => { try { return await (await fetch(`http://127.0.0.1:${DEV}/json/list`, { signal: AbortSignal.timeout(3000) })).json(); } catch (e) { return null; } };
   if (!opt.noAdb) {
+    // Never drive a tab the person has open: a VIEW intent opens a tab of our own (closed again at the end) and brings
+    // Chrome to the front with it. Behind another app (phone-p23: the home screen) Android freezes Chrome, so its DevTools
+    // socket does not answer, a tab made through /json/new stays hidden and requestAnimationFrame never runs.
     adb('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', blank, 'com.android.chrome');
-    for (let i = 0; i < 20 && !page; i++) { await sleep(500); try { page = (await (await fetch(`http://127.0.0.1:${DEV}/json/list`)).json()).find(t => t.type === 'page' && t.url === blank) || null; } catch (e) {} }
-  } else { try { const r = await fetch(`http://127.0.0.1:${DEV}/json/new?${blank}`, { method: 'PUT' }); if (r.ok) page = await r.json(); } catch (e) {} }
+    for (let i = 0; i < 30 && !page; i++) { await sleep(500); page = (await list())?.find(t => t.type === 'page' && t.url === blank) || null; }
+    if (!page) throw new Error('Chrome did not open our tab within 15 s (is the phone unlocked with the screen on?)');
+  } else {
+    if (!await list()) throw new Error('no DevTools at 127.0.0.1:' + DEV + ' (start Chrome with --remote-debugging-port)');
+    try { const r = await fetch(`http://127.0.0.1:${DEV}/json/new?${blank}`, { method: 'PUT', signal: AbortSignal.timeout(5000) }); if (r.ok) page = await r.json(); } catch (e) {}
+  }
   if (!page?.webSocketDebuggerUrl) throw new Error('could not open a tab of our own');
   ownTab = page.id;
-  try { await fetch(`http://127.0.0.1:${DEV}/json/activate/${page.id}`); } catch (e) {}
+  try { await fetch(`http://127.0.0.1:${DEV}/json/activate/${page.id}`, { signal: AbortSignal.timeout(3000) }); } catch (e) {}
   note('DevTools target (own tab): ' + page.id + ' ' + page.url);
   cdp = new WebSocket(page.webSocketDebuggerUrl);
   await new Promise((resolve, reject) => { cdp.onopen = resolve; cdp.onerror = e => reject(new Error('websocket: ' + (e.message || e.type))); });
@@ -138,7 +140,7 @@ try {
 } catch (e) { note('ERROR ' + e.message); }
 finally {
   try { cdp?.close(); } catch (e) {}
-  if (ownTab) { try { await fetch(`http://127.0.0.1:${DEV}/json/close/${ownTab}`); note('closed own tab ' + ownTab); } catch (e) { note('cleanup: tab ' + e.message); } }
+  if (ownTab) { try { await fetch(`http://127.0.0.1:${DEV}/json/close/${ownTab}`, { signal: AbortSignal.timeout(5000) }); note('closed own tab ' + ownTab); } catch (e) { note('cleanup: tab ' + e.message); } }
   server.close();
   if (!opt.noAdb) { for (const a of [['forward', '--remove', `tcp:${DEV}`], ['reverse', '--remove', `tcp:${PORT}`]]) { try { adb(...a); note('removed ' + a.join(' ')); } catch (e) { note('cleanup: ' + e.message); } } }
   process.exit(ok ? 0 : 1);
