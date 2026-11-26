@@ -5,7 +5,9 @@
 // What it does: serves the pages from 127.0.0.1:<port> (adb reverse, so the phone opens http://localhost:<port>/...),
 // forwards Chrome's DevTools socket to tcp:9222, and for each run (builds alternate) opens ?beat=<stop>, waits for the
 // page to settle, records requestAnimationFrame times, presses Next with a DevTools touch at the button's centre, and
-// keeps recording for --window ms. It removes the forward and the reverse at the end, also after an error.
+// keeps recording for --window ms. It works in a Chrome tab of its own (never one of the person's tabs) and closes it,
+// then removes the forward and the reverse at the end, also after an error. On Dan's Samsung in Adaptive mode Chrome
+// runs at 60 Hz with no finger down (a tap does not lift it), so a Next-tap glide tops out at 60 fps there.
 // --no-adb skips adb (for a desktop Chrome started with --remote-debugging-port=9222).
 import { spawnSync } from 'node:child_process';
 import http from 'node:http';
@@ -30,12 +32,13 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 // Static server for the pages only (127.0.0.1, read-only, the listed files and nothing else).
 const server = http.createServer((req, res) => {
   const name = decodeURIComponent((req.url || '/').split('?')[0]).replace(/^\/+/, '').replace(/\.html$/, '');
+  if (name === 'blank') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); res.end('<!doctype html><title>phone-fps</title>'); return; }
   const p = PAGES.find(q => q.name === name);
   if (!p) { res.writeHead(404); res.end(); return; }
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }); fs.createReadStream(p.file).pipe(res);
 });
 
-let cdp = null, id = 0; const waiters = new Map(), events = [];
+let cdp = null, id = 0, ownTab = null; const waiters = new Map(), events = [];
 const send = (method, params = {}) => new Promise((resolve, reject) => { const n = ++id; waiters.set(n, { resolve, reject }); cdp.send(JSON.stringify({ id: n, method, params })); });
 const evaluate = async expr => { const r = await send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true }); if (r.exceptionDetails) throw new Error('page: ' + JSON.stringify(r.exceptionDetails).slice(0, 300)); return r.result.value; };
 const waitEvent = (method, ms) => new Promise((resolve, reject) => { const t0 = Date.now(); const tick = () => { const i = events.findIndex(e => e.method === method); if (i >= 0) { resolve(events.splice(i, 1)[0]); return; } if (Date.now() - t0 > ms) { reject(new Error('timeout ' + method)); return; } setTimeout(tick, 50); }; tick(); });
@@ -44,9 +47,17 @@ async function connect() {
   let list = null;
   for (let i = 0; i < 20 && !list; i++) { try { list = await (await fetch(`http://127.0.0.1:${DEV}/json/list`)).json(); } catch (e) { await sleep(500); } }
   if (!list) throw new Error('no DevTools at 127.0.0.1:' + DEV + ' (is Chrome open on the phone?)');
-  let page = list.find(t => t.type === 'page' && /localhost:/.test(t.url)) || list.find(t => t.type === 'page');
-  if (!page) { page = await (await fetch(`http://127.0.0.1:${DEV}/json/new?about:blank`, { method: 'PUT' })).json(); }
-  note('DevTools target: ' + page.title + ' ' + page.url);
+  // Never drive a tab the person has open: open a tab of our own (closed again at the end).
+  const blank = `http://localhost:${PORT}/blank`; let page = null;
+  try { const r = await fetch(`http://127.0.0.1:${DEV}/json/new?${blank}`, { method: 'PUT' }); if (r.ok) page = await r.json(); } catch (e) {}
+  if (!page && !opt.noAdb) {
+    adb('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', blank, 'com.android.chrome');
+    for (let i = 0; i < 20 && !page; i++) { await sleep(500); try { page = (await (await fetch(`http://127.0.0.1:${DEV}/json/list`)).json()).find(t => t.type === 'page' && t.url.startsWith(blank)) || null; } catch (e) {} }
+  }
+  if (!page?.webSocketDebuggerUrl) throw new Error('could not open a tab of our own');
+  ownTab = page.id;
+  try { await fetch(`http://127.0.0.1:${DEV}/json/activate/${page.id}`); } catch (e) {}
+  note('DevTools target (own tab): ' + page.id + ' ' + page.url);
   cdp = new WebSocket(page.webSocketDebuggerUrl);
   await new Promise((resolve, reject) => { cdp.onopen = resolve; cdp.onerror = e => reject(new Error('websocket: ' + (e.message || e.type))); });
   cdp.onmessage = m => { const d = JSON.parse(typeof m.data === 'string' ? m.data : m.data.toString()); if (d.id && waiters.has(d.id)) { const w = waiters.get(d.id); waiters.delete(d.id); d.error ? w.reject(new Error(d.error.message)) : w.resolve(d.result); } else if (d.method) events.push(d); };
@@ -100,6 +111,7 @@ try {
 } catch (e) { note('ERROR ' + e.message); }
 finally {
   try { cdp?.close(); } catch (e) {}
+  if (ownTab) { try { await fetch(`http://127.0.0.1:${DEV}/json/close/${ownTab}`); note('closed own tab ' + ownTab); } catch (e) { note('cleanup: tab ' + e.message); } }
   server.close();
   if (!opt.noAdb) { for (const a of [['forward', '--remove', `tcp:${DEV}`], ['reverse', '--remove', `tcp:${PORT}`]]) { try { adb(...a); note('removed ' + a.join(' ')); } catch (e) { note('cleanup: ' + e.message); } } }
   process.exit(ok ? 0 : 1);
