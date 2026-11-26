@@ -14,8 +14,11 @@ export const attr = (el, k, v) => { const text = String(v); if (el.getAttribute(
 const findStyleWrites = new WeakMap();
 export function findStyle(el, key, value) {
   const text = String(value), cache = findStyleWrites.get(el) || {}, old = cache[key];
-  if (old?.text === text && el.style[key] === old.value) return;
-  el.style[key] = value; cache[key] = { text, value: el.style[key] }; findStyleWrites.set(el, cache);
+  // A --name property goes through setProperty and getPropertyValue.
+  const custom = key.startsWith('--'), read = () => custom ? el.style.getPropertyValue?.(key) ?? el.style[key] : el.style[key];
+  if (old?.text === text && read() === old.value) return;
+  if (custom) el.style.setProperty(key, text); else el.style[key] = value;
+  cache[key] = { text, value: read() }; findStyleWrites.set(el, cache);
 }
 
 // Explore touch intent is shared by every pointerdown find. Nothing acts or captures
@@ -102,7 +105,8 @@ export function findLife(o, x, y, rad, reach = rad) {
   if (o.el && o.el.tabIndex !== tab) o.el.tabIndex = tab;
   if (o.el) {
     attr(o.el, 'aria-hidden', !seen || covered >= .95);
-    findStyle(o.el, 'opacity', (1 - covered) * (FD.list.wayfinder?.mask && o.id !== 'wayfinder' && !o.craftLit ? FIND_PLAY.way.dim : 1));
+    // Through --jm-find (map.css): an opacity fade would give the find a layer of its own.
+    findStyle(o.el, '--jm-find', (1 - covered) * (FD.list.wayfinder?.mask && o.id !== 'wayfinder' && !o.craftLit ? FIND_PLAY.way.dim : 1));
     if (o.cover !== covered) { o.cover = covered; findStyle(o.el, 'visibility', covered >= .995 ? 'hidden' : ''); }
     if (o.hit) { attr(o.hit, 'cx', x); attr(o.hit, 'cy', y); }
     if (o.focusRing) { attr(o.focusRing, 'cx', x); attr(o.focusRing, 'cy', y); attr(o.focusRing, 'r', Math.min(rad, 50)); }

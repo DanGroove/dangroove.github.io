@@ -328,10 +328,14 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-explore:not(.jm-sheet-open) .explore-hint.on { opacity: 1; }
 @media (max-width: 640px) { .find-hint { bottom: 104px; white-space: normal; width: calc(100% - 32px); } }
 .jm-focus .mk { opacity: 0; }
-#b-detail text, #b-rest text { transition: opacity .4s; }
+/* Words and finds fade through these numbers, not their own opacity: an opacity transition gave each its own layer and split
+   the moving map into full-screen layers redrawn on every frame of a find press. */
+@property --jm-word { syntax: '<number>'; inherits: true; initial-value: 1; }
+@property --jm-find { syntax: '<number>'; inherits: false; initial-value: 1; }
+#b-detail text, #b-rest text { opacity: var(--jm-word); }
 #map-base { pointer-events: none; overflow: hidden; }
-.jm-focus #b-detail text, .jm-focus #b-rest text { opacity: .3; }
-.jm-focus.jm-way #b-detail text, .jm-focus.jm-way #b-rest text { opacity: 1; }
+.jm-focus #b-detail, .jm-focus #b-rest { --jm-word: .3; }
+.jm-focus.jm-way #b-detail, .jm-focus.jm-way #b-rest { --jm-word: 1; }
 .wf-arm.on .l { stroke-width: var(--find-arm); }
 .tl-blk.craft-lit { outline: var(--find-slot-rule) solid var(--paper); }
 .pop-in { position: relative; transform: none; max-width: min(var(--find-pop-w), calc(100vw - var(--find-pop-edge) * 2)); width: max-content; border-radius: var(--find-pop-r); padding: var(--find-pop-pad); font-size: var(--find-pop-font); line-height: var(--find-pop-line); transform-origin: center bottom; }
@@ -500,7 +504,9 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-focus .find-hint:not(.explore-hint), .jm-explore:not(.jm-sheet-open) .explore-hint.on { visibility: visible; transition-delay: 0s; }
 .jm-sheet-open .find-hint { opacity: 0; visibility: hidden; }
 .jm-focus[data-find="well"] .well-name, .jm-focus[data-find="well"] .well-name text { opacity: 1 !important; }
-#b-all, #b-rest, #finds > .find, #bc-notes, .find.hoard { transition: opacity .3s; }
+#b-all, #bc-notes, .find.hoard { transition: opacity .3s; }
+#b-detail { transition: --jm-word .4s; } #b-rest { transition: opacity .3s, --jm-word .4s; }
+#finds > .find { opacity: var(--jm-find); transition: --jm-find .3s; }
 .reading-halo text, .reading-halo path { paint-order: stroke; stroke: var(--ink); stroke-width: 2px; stroke-linejoin: round; }
 .reading-halo path { stroke: var(--paper); }
 .go { transition: opacity .18s; }
@@ -2549,10 +2555,20 @@ function tripWrite(el, key, value, attribute = false) {
 // The coasts draw over WORLD.coastDraw of the fall, slowing as they close; coastAt is the inverse, for the coast stars.
 const coastDrawn = h => { const [a, b] = WORLD.coastDraw, x = clamp01((h - a) / (b - a)); return x * (2 - x); };
 const coastAt = u => { const [a, b] = WORLD.coastDraw; return a + (b - a) * (1 - Math.sqrt(1 - clamp01(u))); };
+// A find that takes the camera fades tier 1 (stop names, title, legend) and the sub-line on each label (E.groupFade). The groups
+// only hide at zero: a fading group gave the names layers of their own and split the moving map (the find press stutter).
+function tripFocusFade(st) {
+  const E = TRIP_EL, focusFade = 1 - smooth(0, .4, st.focusK || 0), keep = ['wayfinder','all-found'].includes(st.focusId);
+  if (E.focusFade === null || keep !== E.focusKeep || Math.abs(focusFade - E.focusFade) > .01 || (focusFade === 0 || focusFade === 1) && focusFade !== E.focusFade) {
+    E.focusFade = focusFade; E.focusKeep = keep;
+    E.groupFade = keep ? 1 : focusFade;
+    for (const group of [E.tier1, E.subs]) if (group) tripWrite(group, 'visibility', keep || focusFade !== 0 ? 'visible' : 'hidden');
+  }
+}
 // Labels give way (polish round 1): a stop's label fades as its card opens (L-6) and the map's other words dim (L-8); all of
 // them fade under the timeline, the step bar and a find's hint, and off the screen's sides (K-2, L-17). Explore frees them.
 function tripLabels(st, t2Fade = 1) {
-  const E = TRIP_EL, c = st.cam, phone = VIEW.phone, L = LABELS, open = Math.max(0, ...st.cardK), dim = 1 - L.cardDim[phone ? 1 : 0];
+  const E = TRIP_EL, c = st.cam, phone = VIEW.phone, L = LABELS, open = Math.max(0, ...st.cardK), dim = 1 - L.cardDim[phone ? 1 : 0], group = E.groupFade ?? 1;
   const free = !!st.exploring || st.exploreK > 0, lift = st.focusK > 0 ? L.hint : 0, timeline = VIEW.h - (phone ? STEPS.nav.bar : 0) - CAMERA.timeline;
   const floor = phone ? timeline - lift : timeline, bar = phone ? null : [VIEW.w / 2 - L.bar[0], timeline - STEPS.nav.gap - STEPS.nav.h - L.bar[1] - lift, VIEW.w / 2 + L.bar[0]];
   const gone = b => { const x0 = b[0] * c.s + c.tx, x1 = b[2] * c.s + c.tx, y0 = b[1] * c.s + c.ty, y1 = b[3] * c.s + c.ty, tall = Math.max(1, y1 - y0);
@@ -2574,13 +2590,13 @@ function tripLabels(st, t2Fade = 1) {
       r.subOpacity+=Math.sign(target-r.subOpacity)*Math.min(Math.abs(target-r.subOpacity),dt/.2);o*=r.subOpacity;E.subFading ||= r.subOpacity!==target;
     }
     if (!free && o > 0) o *= gone(box);
-    put(r, o);
+    put(r, o * group);
   });
   const u = L.legend.unit * labelScale('legend', c.s), back = 1 - dim * open;
   (E.t2 || []).forEach(t => put(t, (free ? 1 : back * gone(t.b)) * (1 - tripCardCover(st, t.b)) * t2Fade));
   const xQuiet = st.legXT * (1 - (st.exploreK || 0));
   E.symbols?.forEach(s => tripWrite(s.el, 'opacity', 1 - .85 * xQuiet));
-  (E.legend || []).forEach(g => { const k = labelScale('legend', c.s), b = g.box, box = b ? [g.p[0]+b.x*k,g.p[1]+b.y*k,g.p[0]+(b.x+b.width)*k,g.p[1]+(b.y+b.height)*k] : [g.p[0],g.p[1]-u*L.ascent,g.p[0]+g.n*u*L.width,g.p[1]+u*L.descent]; put(g, (free ? 1 : back * gone(box)) * (1-tripCardCover(st,box)) * (1-.85*xQuiet)); });
+  (E.legend || []).forEach(g => { const k = labelScale('legend', c.s), b = g.box, box = b ? [g.p[0]+b.x*k,g.p[1]+b.y*k,g.p[0]+(b.x+b.width)*k,g.p[1]+(b.y+b.height)*k] : [g.p[0],g.p[1]-u*L.ascent,g.p[0]+g.n*u*L.width,g.p[1]+u*L.descent]; put(g, (free ? 1 : back * gone(box)) * (1-tripCardCover(st,box)) * (1-.85*xQuiet) * group); });
 }
 function tripApply(st, focus = null) {
   const E = TRIP_EL, c = st.cam;
@@ -2651,6 +2667,7 @@ function tripApply(st, focus = null) {
   r.moving = moving;
   const paint = r.base, labelS = free ? r.scale : c.s;
   const labelFade = smooth(...LABELS.fade, labelS / VIEW.s0);
+  tripFocusFade(st);
   if (E.rows) tripLabels(st, labelFade);
   E.labels.forEach(label => {
     const ideal = labelScale(label.kind,paint.s);
@@ -2667,11 +2684,6 @@ function tripApply(st, focus = null) {
   });
   E.markers?.forEach(el => { tripWrite(el, 'transform', `scale(${COMB.markerPx / (12.4 * (el.parentElement?.parentElement?.dataset.screen ? 1 : c.s))})`, true); const mk = el.parentElement?.parentElement, f = FINDS.find(f=>mk?.id === 'mk-'+f.id); if (f) { const half = COMB.markerPx / (2*c.s), cover = tripCardCover(st,[f.mark[0]-half,f.mark[1]-half,f.mark[0]+half,f.mark[1]+half]); tripWrite(mk,'opacity',(1-cover)*(1-(st.focusK||0))); tripWrite(mk,'visibility',cover>=.995||st.focusK>=1?'hidden':''); } });
   E.ticks?.forEach(el => tripWrite(el, 'stroke-width', Math.min(+el.dataset.weight * c.s, +el.dataset.weight * VIEW.s0), true));
-  const focusFade = 1 - smooth(0, .4, st.focusK || 0);
-  if (E.focusFade === null || Math.abs(focusFade - E.focusFade) > .01 || (focusFade === 0 || focusFade === 1) && focusFade !== E.focusFade) {
-    E.focusFade = focusFade;
-    for (const group of [E.tier1, E.subs]) if (group) { tripWrite(group, 'opacity', ['wayfinder','all-found'].includes(st.focusId) ? 1 : focusFade); tripWrite(group, 'visibility', ['wayfinder','all-found'].includes(st.focusId) || focusFade !== 0 ? 'visible' : 'hidden'); }
-  }
   E.secondary.forEach(group => { tripWrite(group, 'opacity', ''); tripWrite(group, 'visibility', labelFade === 0 ? 'hidden' : 'visible'); });
   E.secondaryText?.forEach(t => { const fade = t.group.classList.contains('wf-result') && document.documentElement.classList.contains('jm-way') ? 1 : labelFade; tripWrite(t.el, 'fillOpacity', t.fill * fade); tripWrite(t.el, 'strokeOpacity', t.stroke * fade); });
   tripWrite(E.scrim, 'opacity', labelFade);
@@ -2695,7 +2707,7 @@ function tripApply(st, focus = null) {
   // the X fades in with the sea, so neither page shows it before the map exists
   if (E.x) tripWrite(E.x, 'opacity', h < 1 ? smooth(.2, .7, h).toFixed(3) : '');
   // In explore the title fades as the camera zooms in past the overview, before it can grow huge and run off the screen (Dan's recording, 2026-11-24).
-  if (E.title) { const t = (1 - smooth(...WORLD.titleOut, st.pushT) * (1 - (st.exploreK || 0))) * (1 - (st.exploreK || 0) * smooth(...WORLD.titleZoom, labelS / VIEW.s0)); tripWrite(E.title, 'opacity', t); tripWrite(E.title, 'visibility', t === 0 ? 'hidden' : 'visible'); }
+  if (E.title) { const t = (1 - smooth(...WORLD.titleOut, st.pushT) * (1 - (st.exploreK || 0))) * (1 - (st.exploreK || 0) * smooth(...WORLD.titleZoom, labelS / VIEW.s0)); tripWrite(E.title, 'opacity', t * (E.groupFade ?? 1)); tripWrite(E.title, 'visibility', t === 0 ? 'hidden' : 'visible'); }
   tripWrite(E.cue, 'opacity', smooth(.2, .5, st.overviewT) * (1 - smooth(0, .3, st.pushT)));
   // mini-map
   const mo = smooth(.5, 1, st.pushT) * (1 - smooth(0, .4, st.rushT));
@@ -3720,8 +3732,11 @@ const attr = (el, k, v) => { const text = String(v); if (el.getAttribute(k) !== 
 const findStyleWrites = new WeakMap();
 function findStyle(el, key, value) {
   const text = String(value), cache = findStyleWrites.get(el) || {}, old = cache[key];
-  if (old?.text === text && el.style[key] === old.value) return;
-  el.style[key] = value; cache[key] = { text, value: el.style[key] }; findStyleWrites.set(el, cache);
+  // A --name property goes through setProperty and getPropertyValue.
+  const custom = key.startsWith('--'), read = () => custom ? el.style.getPropertyValue?.(key) ?? el.style[key] : el.style[key];
+  if (old?.text === text && read() === old.value) return;
+  if (custom) el.style.setProperty(key, text); else el.style[key] = value;
+  cache[key] = { text, value: read() }; findStyleWrites.set(el, cache);
 }
 
 // Explore touch intent is shared by every pointerdown find. Nothing acts or captures
@@ -3808,7 +3823,8 @@ function findLife(o, x, y, rad, reach = rad) {
   if (o.el && o.el.tabIndex !== tab) o.el.tabIndex = tab;
   if (o.el) {
     attr(o.el, 'aria-hidden', !seen || covered >= .95);
-    findStyle(o.el, 'opacity', (1 - covered) * (FD.list.wayfinder?.mask && o.id !== 'wayfinder' && !o.craftLit ? FIND_PLAY.way.dim : 1));
+    // Through --jm-find (map.css): an opacity fade would give the find a layer of its own.
+    findStyle(o.el, '--jm-find', (1 - covered) * (FD.list.wayfinder?.mask && o.id !== 'wayfinder' && !o.craftLit ? FIND_PLAY.way.dim : 1));
     if (o.cover !== covered) { o.cover = covered; findStyle(o.el, 'visibility', covered >= .995 ? 'hidden' : ''); }
     if (o.hit) { attr(o.hit, 'cx', x); attr(o.hit, 'cy', y); }
     if (o.focusRing) { attr(o.focusRing, 'cx', x); attr(o.focusRing, 'cy', y); attr(o.focusRing, 'r', Math.min(rad, 50)); }
@@ -5464,7 +5480,7 @@ function findWay(svg) {
   const applyMask = mask => {
     o.mask = mask; cardsSetCraft(mask); tlSetCraft(mask);
     FD.base.style.opacity = mask ? FIND_PLAY.way.dim : 1;
-    svg.querySelectorAll('#finds > .find, #bc-notes').forEach(g => { if (g !== el) g.style.opacity = mask ? FIND_PLAY.way.dim : 1; });
+    svg.querySelectorAll('#finds > .find, #bc-notes').forEach(g => { if (g === el) return; const v = mask ? FIND_PLAY.way.dim : 1; if (g.id === 'bc-notes') g.style.opacity = v; else findStyle(g, '--jm-find', v); });
     FD.list.hoards?.items.forEach(h => { const i = STOPS.findIndex(s => s.id === h.d.stop); h.setCraftLit(!!mask?.[i]); h.el.style.opacity = mask && !mask[i] ? FIND_PLAY.way.dim : 1; });
   };
   const wayResultView = mask => { const points = [[f.x - 70, f.y - 60], [f.x + 70, f.y + 105], ...STOPS.filter((s,i) => mask[i]).map(s => MAP.waypoints[s.w])], xs = points.map(p=>p[0]), ys = points.map(p=>p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys); return [(x0+x1)/2, (y0+y1)/2, Math.max(x1-x0,y1-y0)/2+40, 0]; };

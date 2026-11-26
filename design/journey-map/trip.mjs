@@ -541,10 +541,20 @@ function tripWrite(el, key, value, attribute = false) {
 // The coasts draw over WORLD.coastDraw of the fall, slowing as they close; coastAt is the inverse, for the coast stars.
 export const coastDrawn = h => { const [a, b] = WORLD.coastDraw, x = clamp01((h - a) / (b - a)); return x * (2 - x); };
 export const coastAt = u => { const [a, b] = WORLD.coastDraw; return a + (b - a) * (1 - Math.sqrt(1 - clamp01(u))); };
+// A find that takes the camera fades tier 1 (stop names, title, legend) and the sub-line on each label (E.groupFade). The groups
+// only hide at zero: a fading group gave the names layers of their own and split the moving map (the find press stutter).
+function tripFocusFade(st) {
+  const E = TRIP_EL, focusFade = 1 - smooth(0, .4, st.focusK || 0), keep = ['wayfinder','all-found'].includes(st.focusId);
+  if (E.focusFade === null || keep !== E.focusKeep || Math.abs(focusFade - E.focusFade) > .01 || (focusFade === 0 || focusFade === 1) && focusFade !== E.focusFade) {
+    E.focusFade = focusFade; E.focusKeep = keep;
+    E.groupFade = keep ? 1 : focusFade;
+    for (const group of [E.tier1, E.subs]) if (group) tripWrite(group, 'visibility', keep || focusFade !== 0 ? 'visible' : 'hidden');
+  }
+}
 // Labels give way (polish round 1): a stop's label fades as its card opens (L-6) and the map's other words dim (L-8); all of
 // them fade under the timeline, the step bar and a find's hint, and off the screen's sides (K-2, L-17). Explore frees them.
 function tripLabels(st, t2Fade = 1) {
-  const E = TRIP_EL, c = st.cam, phone = VIEW.phone, L = LABELS, open = Math.max(0, ...st.cardK), dim = 1 - L.cardDim[phone ? 1 : 0];
+  const E = TRIP_EL, c = st.cam, phone = VIEW.phone, L = LABELS, open = Math.max(0, ...st.cardK), dim = 1 - L.cardDim[phone ? 1 : 0], group = E.groupFade ?? 1;
   const free = !!st.exploring || st.exploreK > 0, lift = st.focusK > 0 ? L.hint : 0, timeline = VIEW.h - (phone ? STEPS.nav.bar : 0) - CAMERA.timeline;
   const floor = phone ? timeline - lift : timeline, bar = phone ? null : [VIEW.w / 2 - L.bar[0], timeline - STEPS.nav.gap - STEPS.nav.h - L.bar[1] - lift, VIEW.w / 2 + L.bar[0]];
   const gone = b => { const x0 = b[0] * c.s + c.tx, x1 = b[2] * c.s + c.tx, y0 = b[1] * c.s + c.ty, y1 = b[3] * c.s + c.ty, tall = Math.max(1, y1 - y0);
@@ -566,13 +576,13 @@ function tripLabels(st, t2Fade = 1) {
       r.subOpacity+=Math.sign(target-r.subOpacity)*Math.min(Math.abs(target-r.subOpacity),dt/.2);o*=r.subOpacity;E.subFading ||= r.subOpacity!==target;
     }
     if (!free && o > 0) o *= gone(box);
-    put(r, o);
+    put(r, o * group);
   });
   const u = L.legend.unit * labelScale('legend', c.s), back = 1 - dim * open;
   (E.t2 || []).forEach(t => put(t, (free ? 1 : back * gone(t.b)) * (1 - tripCardCover(st, t.b)) * t2Fade));
   const xQuiet = st.legXT * (1 - (st.exploreK || 0));
   E.symbols?.forEach(s => tripWrite(s.el, 'opacity', 1 - .85 * xQuiet));
-  (E.legend || []).forEach(g => { const k = labelScale('legend', c.s), b = g.box, box = b ? [g.p[0]+b.x*k,g.p[1]+b.y*k,g.p[0]+(b.x+b.width)*k,g.p[1]+(b.y+b.height)*k] : [g.p[0],g.p[1]-u*L.ascent,g.p[0]+g.n*u*L.width,g.p[1]+u*L.descent]; put(g, (free ? 1 : back * gone(box)) * (1-tripCardCover(st,box)) * (1-.85*xQuiet)); });
+  (E.legend || []).forEach(g => { const k = labelScale('legend', c.s), b = g.box, box = b ? [g.p[0]+b.x*k,g.p[1]+b.y*k,g.p[0]+(b.x+b.width)*k,g.p[1]+(b.y+b.height)*k] : [g.p[0],g.p[1]-u*L.ascent,g.p[0]+g.n*u*L.width,g.p[1]+u*L.descent]; put(g, (free ? 1 : back * gone(box)) * (1-tripCardCover(st,box)) * (1-.85*xQuiet) * group); });
 }
 export function tripApply(st, focus = null) {
   const E = TRIP_EL, c = st.cam;
@@ -643,6 +653,7 @@ export function tripApply(st, focus = null) {
   r.moving = moving;
   const paint = r.base, labelS = free ? r.scale : c.s;
   const labelFade = smooth(...LABELS.fade, labelS / VIEW.s0);
+  tripFocusFade(st);
   if (E.rows) tripLabels(st, labelFade);
   E.labels.forEach(label => {
     const ideal = labelScale(label.kind,paint.s);
@@ -659,11 +670,6 @@ export function tripApply(st, focus = null) {
   });
   E.markers?.forEach(el => { tripWrite(el, 'transform', `scale(${COMB.markerPx / (12.4 * (el.parentElement?.parentElement?.dataset.screen ? 1 : c.s))})`, true); const mk = el.parentElement?.parentElement, f = FINDS.find(f=>mk?.id === 'mk-'+f.id); if (f) { const half = COMB.markerPx / (2*c.s), cover = tripCardCover(st,[f.mark[0]-half,f.mark[1]-half,f.mark[0]+half,f.mark[1]+half]); tripWrite(mk,'opacity',(1-cover)*(1-(st.focusK||0))); tripWrite(mk,'visibility',cover>=.995||st.focusK>=1?'hidden':''); } });
   E.ticks?.forEach(el => tripWrite(el, 'stroke-width', Math.min(+el.dataset.weight * c.s, +el.dataset.weight * VIEW.s0), true));
-  const focusFade = 1 - smooth(0, .4, st.focusK || 0);
-  if (E.focusFade === null || Math.abs(focusFade - E.focusFade) > .01 || (focusFade === 0 || focusFade === 1) && focusFade !== E.focusFade) {
-    E.focusFade = focusFade;
-    for (const group of [E.tier1, E.subs]) if (group) { tripWrite(group, 'opacity', ['wayfinder','all-found'].includes(st.focusId) ? 1 : focusFade); tripWrite(group, 'visibility', ['wayfinder','all-found'].includes(st.focusId) || focusFade !== 0 ? 'visible' : 'hidden'); }
-  }
   E.secondary.forEach(group => { tripWrite(group, 'opacity', ''); tripWrite(group, 'visibility', labelFade === 0 ? 'hidden' : 'visible'); });
   E.secondaryText?.forEach(t => { const fade = t.group.classList.contains('wf-result') && document.documentElement.classList.contains('jm-way') ? 1 : labelFade; tripWrite(t.el, 'fillOpacity', t.fill * fade); tripWrite(t.el, 'strokeOpacity', t.stroke * fade); });
   tripWrite(E.scrim, 'opacity', labelFade);
@@ -687,7 +693,7 @@ export function tripApply(st, focus = null) {
   // the X fades in with the sea, so neither page shows it before the map exists
   if (E.x) tripWrite(E.x, 'opacity', h < 1 ? smooth(.2, .7, h).toFixed(3) : '');
   // In explore the title fades as the camera zooms in past the overview, before it can grow huge and run off the screen (Dan's recording, 2026-11-24).
-  if (E.title) { const t = (1 - smooth(...WORLD.titleOut, st.pushT) * (1 - (st.exploreK || 0))) * (1 - (st.exploreK || 0) * smooth(...WORLD.titleZoom, labelS / VIEW.s0)); tripWrite(E.title, 'opacity', t); tripWrite(E.title, 'visibility', t === 0 ? 'hidden' : 'visible'); }
+  if (E.title) { const t = (1 - smooth(...WORLD.titleOut, st.pushT) * (1 - (st.exploreK || 0))) * (1 - (st.exploreK || 0) * smooth(...WORLD.titleZoom, labelS / VIEW.s0)); tripWrite(E.title, 'opacity', t * (E.groupFade ?? 1)); tripWrite(E.title, 'visibility', t === 0 ? 'hidden' : 'visible'); }
   tripWrite(E.cue, 'opacity', smooth(.2, .5, st.overviewT) * (1 - smooth(0, .3, st.pushT)));
   // mini-map
   const mo = smooth(.5, 1, st.pushT) * (1 - smooth(0, .4, st.rushT));

@@ -43,9 +43,10 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // labels that give way, the coasts' draw-on, the X's fade-in with the sea and the mini-map's targets.
 // FRAMES: compositor camera writer and label recovery only; geometry/score remain pinned by the motion tests.
 // Part 8 cloud fixes: explore keeps the map promoted while its camera moves, and releases it at rest after a zoom (F10 lag).
-assert.equal(sourceDigest('trip.mjs'), 2785319578, 'trip.mjs changed');
+// Part 10b cloud fixes: the held base on whole device pixels with a margin (blur), and the find press fades on each name, not its group.
+assert.equal(sourceDigest('trip.mjs'), 1389662448, 'trip.mjs changed');
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 3793903539, 'data.mjs changed');
+assert.equal(sourceDigest('data.mjs'), 3496926102, 'data.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 324351587, 'depth.mjs changed');
 console.log('ok: COMB-D camera/labels/tripS digests recorded; depth source remains pinned');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
@@ -186,10 +187,13 @@ tlBuild(testTl, { jump() {}, scrub() {} }, false);
 findsBuild(testSvg, testPop, testSheet, testSvg.querySelector('#b-all'), false);
 tripResize(1440, 900, 120); JOURNEY.set(mapP);
 const dummy=()=>new TestNode();tripBuild({svg:testSvg,cam:dummy(),sea:dummy(),fill:dummy(),detail:testSvg.querySelector('#b-all'),finds:dummy(),coastG:dummy(),done:dummy(),mini:dummy(),caption:dummy(),cue:dummy()});
-for(const k of [0,1,0]){const st=tripState(mapP);tripFocus(st,FINDS[0].view,k);tripApply(st);for(const selector of ['.map-tier1','.map-subs']){const el=testSvg.querySelector(selector);assert.equal(Number(el.style.opacity),1-k);assert.equal(el.style.visibility,k?'hidden':'visible');}}
-console.log('ok: D2 tier-1 and sub-line groups fade to exact zero at find focus and return to one');
+for(const k of [0,1,0]){const st=tripState(mapP);tripFocus(st,FINDS[0].view,k);tripApply(st);for(const selector of ['.map-tier1','.map-subs']){const el=testSvg.querySelector(selector),rows=el.querySelectorAll('.label-anchor');assert.ok(!el.style.opacity,'the group itself never fades: the fade rides on each label (cloud review of part 10b)');assert.equal(el.style.visibility,k?'hidden':'visible');assert.ok(rows.length>0);if(k)for(const row of rows)assert.equal(Number(row.style.opacity),0);else for(const row of rows)assert.notEqual(row.style.opacity,'0.000');}}
+// The wayfinder and the all-found chart keep the names, also when one takes over straight from a find that hid them.
+for(const id of ['wayfinder','all-found']){const other=tripState(mapP);tripFocus(other,FINDS[0].view,1);other.focusId='ravens';tripApply(other);assert.equal(testSvg.querySelector('.map-tier1').style.visibility,'hidden');const st=tripState(mapP);tripFocus(st,FINDS[0].view,1);st.focusId=id;tripApply(st);for(const selector of ['.map-tier1','.map-subs']){const el=testSvg.querySelector(selector);assert.equal(el.style.visibility,'visible',id+' keeps '+selector);for(const row of el.querySelectorAll('.label-anchor'))assert.notEqual(row.style.opacity,'0.000',id+' keeps every name');}}
+{const st=tripState(mapP);tripApply(st);}
+console.log('ok: D2 tier-1 and sub-line labels fade to exact zero at find focus and return (the fade rides on each label, the groups only hide); the wayfinder and all-found keep them');
 let fadeWrites=0;for(const selector of ['.map-tier1','.map-subs']){const el=testSvg.querySelector(selector);el.style=new Proxy(el.style,{set(o,k,v){if(k==='opacity'||k==='visibility')fadeWrites++;o[k]=v;return true;}});}
-for(const k of [.0001,.4,1,.3999,0,0]){const st=tripState(mapP);st.focusK=k;tripApply(st);}assert.equal(fadeWrites,8,'focus fade ignores sub-.01 changes, writes no still frame and snaps both endpoints');
+for(const k of [.0001,.4,1,.3999,0,0]){const st=tripState(mapP);st.focusK=k;tripApply(st);}assert.equal(fadeWrites,4,'focus fade ignores sub-.01 changes, writes no still frame and snaps both endpoints (visibility only, never group opacity)');
 let testClock = 1, testObserve = null;
 async function tick(seconds) {
   const frames = Math.ceil(seconds / 0.016);

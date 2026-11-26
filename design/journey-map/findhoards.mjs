@@ -5,7 +5,7 @@ import { pieceIcon, hoardInside } from './art.mjs';
 import { cardsSetCraft, arrowSvg } from './cards.mjs';
 import { tlSetCraft } from './timeline.mjs';
 import { JOURNEY, stepsFocus } from './steps.mjs';
-import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, attend, findBits, findSvg, findFormat, findRange, findLife, findAngleDelta, findReady, findHint } from './findkit.mjs';
+import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, attend, findBits, findSvg, findFormat, findRange, findLife, findAngleDelta, findReady, findHint, findStyle } from './findkit.mjs';
 
 export const wayAllStops = () => STOPS.map(s => CRAFTS.every(c => s.crafts.includes(c)));
 export function findWay(svg) {
@@ -21,7 +21,7 @@ export function findWay(svg) {
   const applyMask = mask => {
     o.mask = mask; cardsSetCraft(mask); tlSetCraft(mask);
     FD.base.style.opacity = mask ? FIND_PLAY.way.dim : 1;
-    svg.querySelectorAll('#finds > .find, #bc-notes').forEach(g => { if (g !== el) g.style.opacity = mask ? FIND_PLAY.way.dim : 1; });
+    svg.querySelectorAll('#finds > .find, #bc-notes').forEach(g => { if (g === el) return; const v = mask ? FIND_PLAY.way.dim : 1; if (g.id === 'bc-notes') g.style.opacity = v; else findStyle(g, '--jm-find', v); });
     FD.list.hoards?.items.forEach(h => { const i = STOPS.findIndex(s => s.id === h.d.stop); h.setCraftLit(!!mask?.[i]); h.el.style.opacity = mask && !mask[i] ? FIND_PLAY.way.dim : 1; });
   };
   const wayResultView = mask => { const points = [[f.x - 70, f.y - 60], [f.x + 70, f.y + 105], ...STOPS.filter((s,i) => mask[i]).map(s => MAP.waypoints[s.w])], xs = points.map(p=>p[0]), ys = points.map(p=>p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys); return [(x0+x1)/2, (y0+y1)/2, Math.max(x1-x0,y1-y0)/2+40, 0]; };
