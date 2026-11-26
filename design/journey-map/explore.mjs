@@ -40,7 +40,7 @@ export const exploreBusy = () => EX.active || EX.k > 0;
 export const exploreTransform = () => EX.layer;
 const exploreAllowed = () => !EX.rm && EX.end && !EX.journey.moving && Math.abs(EX.journey.P - EX.journey.beats.at(-1).P) < Number.EPSILON;
 const exploreBound = cam => exploreClamp(cam, EX.bounds, EX.view, EX.fit, EX.top, EX.keep);
-const exploreFitCam = () => ({ s: EX.fit, tx: EX.view.w / 2 - (EX.bounds[0] + EX.bounds[2]) / 2 * EX.fit, ty: EX.view.h / 2 - (EX.bounds[1] + EX.bounds[3]) / 2 * EX.fit });
+const exploreFitCam = () => exploreBound({ s: EX.fit, tx: EX.view.w / 2 - (EX.fitBounds[0] + EX.fitBounds[2]) / 2 * EX.fit, ty: EX.view.h / 2 - (EX.fitBounds[1] + EX.fitBounds[3]) / 2 * EX.fit });
 const exploreNotify = () => { EX.changed = true; window.dispatchEvent(new Event('jm-explore')); };
 const exploreHintOff = () => { EX.hintLeft = 0; EX.hint?.classList.remove('on'); };
 const exploreSuppressClear = () => { EX.suppress = false; clearTimeout(EX.suppressTimer); EX.suppressTimer = null; };
@@ -102,11 +102,15 @@ export function exploreResize() {
   const share = oldCam ? clamp01((oldCam.s - oldFit) / (oldTop - oldFit || 1)) : 0;
   const end = tripState(EX.journey.beats.at(-1).P).cam, f = DEPTH.frame.outer;
   EX.end = { s: end.s, tx: end.tx, ty: end.ty };
-  EX.bounds = [Math.min(f[0], -end.tx / end.s), Math.min(f[1], -end.ty / end.s), Math.max(f[2], (VIEW.w - end.tx) / end.s), Math.max(f[3], (VIEW.h - end.ty) / end.s)];
+  // The end view reaches past the map on its own side only (left and bottom on a PC, the bottom on a phone), so the
+  // fit keeps that union while drags get the same room past both edges of each axis (Dan on preview 21).
+  const u = [Math.min(f[0], -end.tx / end.s), Math.min(f[1], -end.ty / end.s), Math.max(f[2], (VIEW.w - end.tx) / end.s), Math.max(f[3], (VIEW.h - end.ty) / end.s)];
+  const ox = Math.max(f[0] - u[0], u[2] - f[2]), oy = Math.max(f[1] - u[1], u[3] - f[3]);
+  EX.fitBounds = u; EX.bounds = [f[0] - ox, f[1] - oy, f[2] + ox, f[3] + oy];
   EX.keep = { frame: f, share: EXPLORE.keep };
   const margin = VIEW.phone ? EXPLORE.marginPhone : EXPLORE.margin;
   EX.view = { w: VIEW.w, h: VIEW.h - (VIEW.phone ? STEPS.nav.bar : STEPS.nav.h + STEPS.nav.gap), stageH: VIEW.h };
-  EX.fit = Math.min((EX.view.w - 2 * margin) / (EX.bounds[2] - EX.bounds[0]), (EX.view.h - 2 * margin) / (EX.bounds[3] - EX.bounds[1]));
+  EX.fit = Math.min((EX.view.w - 2 * margin) / (u[2] - u[0]), (EX.view.h - 2 * margin) / (u[3] - u[1]));
   EX.top = Math.max(EX.fit, Math.max(EXPLORE.most, CAMERA.holdZoom) * VIEW.sT);
   if (exploreBusy() && world) {
     const s = lerp(EX.fit, EX.top, share); EX.cam = exploreBound({ s, tx: EX.view.w / 2 - world[0] * s, ty: EX.view.stageH / 2 - world[1] * s }); EX.target = { ...EX.cam };

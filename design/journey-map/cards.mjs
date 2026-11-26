@@ -119,7 +119,7 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     }
     const W = c.W || CD.W, H = c.H, oc = c.place || { x: VIEW.w / 2, y: VIEW.h / 2 };
     const e = st.cardK[i], p = toScreen(st, MAP.waypoints[c.stop.w]);
-    const k0 = stonePx / Math.max(W, H), k = Math.pow(k0, 1 - e), py = p[1] - stonePx / 2 - MARK.stand;
+    const k0 = stonePx / Math.max(W, H), k = Math.pow(k0, 1 - e), py = p[1] - (stonePx / 2 + MARK.stand) * MARK.lift;
     // Position completes its return before the face disappears into the boss.
     const travel = smooth(.12, 1, e); let cx = lerp(p[0], oc.x, travel), cy = lerp(py, oc.y, travel);
     cardsStyle(c.el, 'transform', `translate(${p[0]}px,${py}px)`);

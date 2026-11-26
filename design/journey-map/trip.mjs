@@ -143,7 +143,7 @@ const camTrip = (u, zoom) => { const c = smoothCenter(u); return { cx: c[0], cy:
 export function tripStopCamera(i, zoom = CAMERA.holdZoom) {
   const pos = VIEW.cards[i]; if (!pos) return camTrip(STOP_U[i], zoom);
   const p = MAP.waypoints[STOPS[i].w], size = Math.max(MARK.min, Math.min(MARK.max, MARK.k * VIEW.sT * zoom));
-  return { cx: p[0], cy: p[1], s: VIEW.sT * zoom, ax: pos.sx, ay: pos.sy + size / 2 + MARK.stand };
+  return { cx: p[0], cy: p[1], s: VIEW.sT * zoom, ax: pos.sx, ay: pos.sy + (size / 2 + MARK.stand) * MARK.lift };
 }
 const camMix = (a, b, t) => ({ cx: lerp(a.cx, b.cx, t), cy: lerp(a.cy, b.cy, t), s: Math.exp(lerp(Math.log(a.s), Math.log(b.s), t)), ax: lerp(a.ax, b.ax, t), ay: lerp(a.ay, b.ay, t) });
 const camFinal = c => ({ s: c.s, tx: c.ax - c.cx * c.s, ty: c.ay - c.cy * c.s, ax: c.ax, ay: c.ay });
@@ -460,7 +460,7 @@ function tripMeasureExploreLabels() {
     for(let x=Math.floor((q[0]-reach)/cell);x<=Math.floor((q[2]+reach)/cell);x++)for(let y=Math.floor((q[1]-reach)/cell);y<=Math.floor((q[3]+reach)/cell);y++)for(const p of grid.get(x+','+y)||[])if(gap(q,[p[0]+(p[4]?.[0]||0)/s,p[1]+(p[4]?.[1]||0)/s,p[0]+(p[4]?.[0]||0)/s,p[1]+(p[4]?.[1]||0)/s])<pad+(p[3]?p[2]/s:p[2])){return false;}
     if(placed.some(p=>(!p.r.row.stopSub||s>=p.r.exploreFrom)&&gap(q,box(p.r,p.at,s))<pad)){return false;}
     if(FINDS.some(f=>f.mark&&gap(q,[...f.mark,...f.mark])<(COMB.markerPx/2+2.4)/s))return false;
-    return !STOPS.some(st=>{const p=MAP.waypoints[st.w],size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*s)),rad=size*(MARK.radius+MARK.rim/2)/MARK.box/s,cy=p[1]-(size/2+MARK.stand)/s;return gap(q,[p[0],cy,p[0],cy])<rad+pad;});
+    return !STOPS.some(st=>{const p=MAP.waypoints[st.w],size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*s)),rad=size*(MARK.radius+MARK.rim/2)/MARK.box/s,cy=p[1]-(size/2+MARK.stand)*MARK.lift/s;return gap(q,[p[0],cy,p[0],cy])<rad+pad;});
   };
   const scales=Array.from({length:13},(_,i)=>fit*(top/fit)**(i/12)),rows=E.rows.filter(r=>!r.row.stopSub).concat(E.rows.filter(r=>r.row.stopSub)).map(r=>({...r}));
   const markup=(r,at)=>'<tspan x="'+(at[0]-r.box.x)+'" y="'+(at[1]-r.box.y)+'">'+r.row.text.replaceAll('&','&amp;').replaceAll('<','&lt;')+'</tspan>';
@@ -468,7 +468,7 @@ function tripMeasureExploreLabels() {
   // already belong to their shields and stay fixed throughout that session.
   for(const r of E.rows){
     const p=r.stop>=0?MAP.waypoints[STOPS[r.stop].w]:MAP.x,b=r.box,k=labelScale(r.row.kind,fit),px=1/(fit*k),side=COMB.exploreSides[r.row.stop],size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*fit));
-    const cy=-(size/2+MARK.stand)*px,rad=size*(MARK.radius+MARK.rim/2)/MARK.box*px;
+    const cy=-(size/2+MARK.stand)*MARK.lift*px,rad=size*(MARK.radius+MARK.rim/2)/MARK.box*px;
     const x=Math.max((24-p[0])/k,Math.min((576-p[0])/k-b.width,side==='left'?-b.width-18*px:side==='below'?-b.width/2:18*px)),y=(side==='below'?cy+rad+5*px:cy-b.height/2)+(r.row.stopSub?22*px:0);
     const at=[x,y,x+b.width,y+b.height];r.explore=p.slice();r.exploreLocal=at;r.exploreBox={x,y,width:b.width,height:b.height};r.exploreFrom=r.row.stopSub?Infinity:0;r.exploreMarkup=markup(r,at);
   }
@@ -479,7 +479,7 @@ function tripMeasureExploreLabels() {
       const n=name.exploreLocal,nk=labelScale(name.row.kind,fit),nx=n[0]*nk/k,ny=n[3]*nk/k,w=b.width;
       for(let dy=4*px;dy<=20*px;dy+=2*px)for(const x of[nx,n[2]*nk/k-w,(nx+n[2]*nk/k-w)/2])for(const shift of [0,-2,2,-4,4,-6,6,-8,8])candidates.push([x+shift*px,ny+dy,x+shift*px+w,ny+dy+b.height]);
     }else{
-      const size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*fit)),cy=-(r.row.stop==='x'?0:(size/2+MARK.stand))*px,rad=(r.row.stop==='x'?8:size*(MARK.radius+MARK.rim/2)/MARK.box)*px,preference=COMB.exploreSides[r.row.stop]||'right';
+      const size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*fit)),cy=-(r.row.stop==='x'?0:(size/2+MARK.stand)*MARK.lift)*px,rad=(r.row.stop==='x'?8:size*(MARK.radius+MARK.rim/2)/MARK.box)*px,preference=COMB.exploreSides[r.row.stop]||'right';
       for(let y=cy-rad-b.height-16*px;y<=cy+rad+16*px;y+=2*px)for(let x=-rad-b.width-16*px;x<=rad+16*px;x+=2*px){
         yield;
         const q=[x,y,x+b.width,y+b.height],distance=gap(q,[0,cy,0,cy])-rad;
@@ -492,7 +492,7 @@ function tripMeasureExploreLabels() {
     const inside=q=>q[0]>=24&&q[1]>=130&&q[2]<=576&&q[3]<=816;
     const near=(q,s)=>{
       if(r.row.stop==='x')return true;
-      const size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*s)),rad=size*(MARK.radius+MARK.rim/2)/MARK.box/s,cy=p[1]-(size/2+MARK.stand)/s;
+      const size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*s)),rad=size*(MARK.radius+MARK.rim/2)/MARK.box/s,cy=p[1]-(size/2+MARK.stand)*MARK.lift/s;
       return gap(q,[p[0],cy,p[0],cy])-rad<=b.height*labelScale(r.row.kind,s);
     };
     const bounded=[];

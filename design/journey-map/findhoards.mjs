@@ -79,9 +79,13 @@ export function findWay(svg) {
     const pulse = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - (o.pickTs ?? -Infinity)) / W.pulse[1]));
     arms.forEach((arm, i) => attr(arm, 'transform', `rotate(${i * FIND_PLAY.kit.turn / CRAFTS.length}) scale(${1 + (W.pulse[0] - 1) * pulse * (o.craft === i || o.craft === CRAFTS.length ? 1 : 0)})`));
     if (o.kept && !FD.rm) { o.runesAngle += W.runes * dt; attr(runes, 'transform', `rotate(${o.runesAngle})`); }
-    // The tally is read from far out as well: it never falls under tally[3] px on screen, up to tally[4] units.
-    words.forEach(w => attr(w, 'font-size', COMB.wordPx / FD.st.cam.s));
-    attr(tally, 'font-size', Math.max(W.tally[1], W.tally[3] / FD.st.cam.s));
+    // The words keep one screen size and one screen gap off the ring at every zoom (Dan on preview 21: they sat far out).
+    // Order: Print above, Video right (start), Motion below, Screen left (end); a word's trailing letter-spacing is left out.
+    const size = COMB.wordPx / FD.st.cam.s, out = W.wordRing + W.wordGap / FD.st.cam.s, cap = size * W.wordCap;
+    words.forEach((w, i) => { const ls = +w.getAttribute('letter-spacing') || 0; attr(w, 'font-size', size); attr(w, 'x', [ls / 2, out, ls / 2, ls - out][i]); attr(w, 'y', [-out, cap / 2, out + cap, cap / 2][i]); });
+    // The tally is read from far out as well: it never falls under tally[3] px on screen, up to tally[4] units. It reads as
+    // the compass's title, one word gap above Print, with its own halo over any line behind it.
+    attr(tally, 'font-size', Math.max(W.tally[1], W.tally[3] / FD.st.cam.s)); attr(tally, 'x', W.tally[2] / 2); attr(tally, 'y', -(out + cap + W.wordGap / FD.st.cam.s));
     attr(ring, 'opacity', o.unlocked ? 1 : 0);
     if (o.unlocked && !FD.rm) attr(ring, 'transform', `scale(${lerp(W.ring[0], W.ring[1], (1 - Math.cos(t * Math.PI * 2 / W.ring[2])) / 2) / W.ring[0]})`);
     if (o.linePhase === 'retract') { const q = FD.rm ? 1 : clamp01((t - o.lineTs) / W.line); o.lines.forEach((l, i) => l.v = o.retract[i] * (1 - ease(q))); if (q === 1) queueMicrotask(startLines); }
