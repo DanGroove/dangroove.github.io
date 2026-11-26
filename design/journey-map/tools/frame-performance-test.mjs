@@ -21,7 +21,7 @@ class RecordNode {
   querySelector(){return new RecordNode();}
   querySelectorAll(){return [];}
 }
-globalThis.document={createElement:()=>new RecordNode()};
+globalThis.document={createElement:()=>new RecordNode(),getElementById:id=>id==='trail-pieces'?new RecordNode():null,documentElement:{classList:{contains:()=>false}}};
 const labels=['name','sub','small','legend','marker'].map(label=>new RecordNode({label})),cam=new RecordNode(),svg=new RecordNode();
 svg.querySelectorAll=s=>s==='.label-scale'?labels:s==='.coast'?[new RecordNode(),new RecordNode()]:[];
 const els={svg,cam,...Object.fromEntries(['sea','fill','coastG','detail','finds','done','x','caption','cue','mini'].map(k=>[k,new RecordNode()]))};

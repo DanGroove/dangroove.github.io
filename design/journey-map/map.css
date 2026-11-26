@@ -15,15 +15,14 @@ button { font-family: inherit; }
 #nova, #stars { pointer-events: none; }
 #deep, #air, #sky { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #sky { display: contents; }
-#sky[style*="opacity: 0;"] > * { display: none; }
+#sky.sky-off > * { display: none; }
 #sky > svg { position: absolute; left: 0; top: 0; overflow: visible; transform-origin: 0 0; pointer-events: none; }
 /* One composited craft veil; the shared raster camera keeps its holes on the ink. */
 #map-veil { pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .3s; }
 .rm #map-veil { transition: none; }
 .rm .st-traveller { display: none; }
 .st-traveller { position: absolute; left: 0; top: 0; transform: translate(-50%,-50%); fill: none; stroke: var(--red); pointer-events: none; z-index: 3; opacity: 0; visibility: hidden; }
-#sky > .sky-glow, #sky > .sky-dim { position: absolute; left: 0; top: 0; pointer-events: none; visibility: hidden; opacity: 0; transform-origin: 0 0; }
-#sky > .sky-dim { width: 300vw; height: 300vh; z-index: 2; }
+#sky > .sky-glow { position: absolute; left: 0; top: 0; pointer-events: none; visibility: hidden; opacity: 0; transform-origin: 0 0; }
 #sky > .sky-glow { border-radius: 50%; z-index: 2; }
 .jm-steps #sky > svg { z-index: 2; }
 .map text { font-family: Outfit, system-ui, sans-serif; }
@@ -444,10 +443,12 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .c-card { position: absolute; left: 0; top: 0; transform-origin: 0 0; z-index: 2; }
 .c-shadow { position: absolute; left: 0; top: 0; transform-origin: 0 0; z-index: 0; pointer-events: none; }
 .face { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--paper) 18%, transparent); }
-.c-tail-edge { fill: none; stroke: var(--paper); stroke-opacity: .18; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.c-tail .c-leader-line { fill: none; stroke: var(--paper); stroke-width: 1.3px; stroke-opacity: .8; }
+.c-tail .c-leader-dot { fill: var(--paper); }
+.c-tail .c-leader-bar { fill: none; stroke: var(--paper); stroke-width: 2.2px; stroke-linecap: round; }
 .st-btn:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; box-shadow: 0 0 0 2px var(--ink); }
 .jm-nova-away:not(.rm) .map .lg, .jm-nova-away:not(.rm) .map .legend-symbol { opacity: 0 !important; }
-.c-tail { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; transform-origin: 0 0; z-index: 1; fill: var(--g); pointer-events: none; }
+.c-tail { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; transform-origin: 0 0; z-index: 1; fill: var(--paper); pointer-events: none; }
 .st-boss-paint { opacity: 0; }
 .c-top .c-logo { min-width: 0; flex-shrink: 1; margin-right: auto; }
 .c-top { gap: 12px; }
@@ -480,7 +481,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .c-compact .c-foot { display: flex; flex-direction: row; align-items: center; gap: 8px; margin-top: 8px; }
 .c-compact .c-crafts { min-width: 0; font-size: 9px; gap: 4px; }
 .c-compact .c-foot .c-btn { width: auto; padding: 8px 10px; font-size: 12px; }
-@media (max-width: 640px) { .lay-band .c-tail { fill: var(--band); } }
+@media (max-width: 640px) { .lay-band .c-tail { fill: var(--paper); } }
 /* The ordinary reduced-motion page keeps the roomy reading composition. */
 .rm .c-card { position: relative; width: 100%; }
 .rm .c-main { grid-row: 1; }

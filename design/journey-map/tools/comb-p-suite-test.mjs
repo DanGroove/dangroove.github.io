@@ -1,0 +1,4 @@
+﻿// Runs only requested tests; logs and profiles stay in COMB_RUN. No performance durations are measured.
+import{spawn}from'node:child_process';import{createWriteStream,appendFileSync,mkdirSync}from'node:fs';
+const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-p';mkdirSync(root,{recursive:true});
+for(const test of process.argv.slice(2)){const log=createWriteStream(root+'/'+test+'.log');const child=spawn(process.execPath,['--experimental-loader','./tools/comb-p-loader.mjs','tools/'+test+'.mjs'],{env:{...process.env,COMB_RUN:'comb-p'},stdio:['ignore','pipe','pipe']});child.stdout.pipe(log,{end:false});child.stderr.pipe(log,{end:false});const code=await new Promise(r=>child.on('exit',r));log.end();appendFileSync(root+'/test-exits.ndjson',JSON.stringify({test,exit:code})+'\n');console.log(test+': '+code);}

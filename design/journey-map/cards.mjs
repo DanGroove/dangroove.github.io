@@ -34,7 +34,7 @@ export function cardsBuild(container, onGo, rm = false) {
     const piece = cp.piece ? `<img src="${cp.piece}" alt="${esc(cp.caption)}">` : `<div class="c-empty">${COPY.pieceToCome}</div>`;
     const steps = cp.steps ? `<ol class="c-steps">${cp.steps.map(t => `<li>${esc(t)}</li>`).join('')}</ol>` : '';
     a.innerHTML = `<button class="st-btn" type="button" aria-label="${esc(COPY.stoneGo.replace('{name}', s.name).replace('{dates}', s.dates))}">${shieldSvg()}</button>
-<div class="c-shadow" aria-hidden="true"><div class="c-sh"></div></div>${rm ? '' : cardTailSvg().replace(' viewBox="0 0 1 1"', '').replace('</svg>', '<path class="c-tail-edge" d="M0 0L1 .5L0 1"/></svg>')}<div class="c-card"><div class="face"><div class="c-in">
+<div class="c-shadow" aria-hidden="true"><div class="c-sh"></div></div>${rm ? '' : cardTailSvg().replace(' viewBox="0 0 1 1"', '')}<div class="c-card"><div class="face"><div class="c-in">
 <header class="c-top"><img class="c-logo" src="${p.logo}" alt="${esc(s.name)}"><span class="c-pill">${esc(s.dates)}</span>${rm ? '' : `<button class="c-close" type="button" aria-label="${esc(COPY.cardClose.replace('{name}', s.name))}"><i aria-hidden="true"></i></button>`}</header>
 <h2 class="c-h" id="h-${s.id}">${esc(cp.headline)}</h2><div class="c-panel"><div class="c-body"><div class="c-main"><p class="c-role">${esc(s.role)}</p><p class="c-para">${esc(cp.para)}</p>${steps}
  </div><div class="c-take"><p class="c-kick">${COPY.took}</p><p class="c-took">${esc(cp.took)}</p></div>
@@ -190,47 +190,51 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
 
 // Project the actual face edge through its existing tilt, without a DOM layout read.
 export function cardsTailLayout(f) {
-  const { W, H, k, stonePx, rx, ryTilt, sx, sy, lift, e, phone } = f, cfg = DEPTH.card;
-  let { cx, cy } = f;
-  const project = (x, y) => {
-    const a = rx * Math.PI / 180, b = ryTilt * Math.PI / 180, z = -x * Math.sin(b), yy = y * Math.cos(a) - z * Math.sin(a), zz = y * Math.sin(a) + z * Math.cos(a);
-    const perspective = lift ? cfg.perspective / (cfg.perspective - zz) : 1;
-    return [cx + (x * Math.cos(b) + sx) * perspective * k, cy + (yy + sy) * perspective * k];
+  const { W,H,k,stonePx,rx,ryTilt,sx,sy,lift,e,phone } = f, cfg = DEPTH.card;
+  let { cx,cy } = f;
+  const project = (x,y) => {
+    const a=rx*Math.PI/180,b=ryTilt*Math.PI/180,z=-x*Math.sin(b),yy=y*Math.cos(a)-z*Math.sin(a),zz=y*Math.sin(a)+z*Math.cos(a);
+    const perspective=lift?cfg.perspective/(cfg.perspective-zz):1;
+    return [cx+(x*Math.cos(b)+sx)*perspective*k,cy+(yy+sy)*perspective*k];
   };
-  const base = Math.min(phone ? CARD_TAIL.basePhone : CARD_TAIL.base, .8 * stonePx) * k;
-  const cap = Math.min((phone ? CARD_TAIL.lenPhone : CARD_TAIL.len) - CARD_TAIL.gap, 1.5 * stonePx) * e;
+  const ring = stonePx*(MARK.radius+MARK.rim/2)/MARK.box+MARK.ringGap+MARK.ringWidth;
+  const startRadius=ring+CARD_TAIL.ringGap;
+  const cap=(Math.min(CARD_TAIL.len-44-CARD_TAIL.gap,1.5*stonePx)+44)*e;
   let result;
-  for (let pass=0;pass<8;pass++) {
-  const corners = [[-W/2,-H/2],[W/2,-H/2],[W/2,H/2],[-W/2,H/2]].map(p => project(...p)), centre = project(0,0), ray = centre.map(v => -v), cross = (a,b) => a[0]*b[1]-a[1]*b[0];
-  let edge = phone ? 0 : 3, along = .5, nearest = Infinity;
-  for(let i=0;i<4;i++) {
-    const a = corners[i], delta = corners[(i+1)%4].map((v,j) => v-a[j]), offset = a.map((v,j) => v-centre[j]), den = cross(ray,delta);
-    if(Math.abs(den)<1e-9) continue;
-    const travel = cross(offset,delta)/den, t = cross(offset,ray)/den;
-    if(travel>=0 && travel<nearest && t>=0 && t<=1) { edge=i;along=t;nearest=travel; }
-  }
-  const a = corners[edge], delta = corners[(edge+1)%4].map((v,j) => v-a[j]), half = Math.min(along,1-along,base / (2 * Math.max(1e-9,Math.hypot(...delta))));
-  let b0 = a.map((v,j) => v + delta[j]*(along-half)), b1 = a.map((v,j) => v + delta[j]*(along+half));
-  const mid = [(b0[0] + b1[0]) / 2, (b0[1] + b1[1]) / 2], distance = Math.hypot(...mid), rim = stonePx * (MARK.radius + MARK.rim / 2) / MARK.box + CARD_TAIL.gap;
-  const tip = distance ? mid.map(v => v / distance * rim) : [rim, 0];
-  const visible = nearest < 1 && distance > rim;
-  if (!visible) { b0 = tip; b1 = tip; }
-  const length = visible ? distance-rim : 0;
-  result = { cx,cy,b0,b1,tip,length,visible };
-  if (length <= cap + .0001) break;
-  const move = (length-cap) / distance; cx -= mid[0]*move; cy -= mid[1]*move;
+  for(let pass=0;pass<8;pass++) {
+    const corners=[[-W/2,-H/2],[W/2,-H/2],[W/2,H/2],[-W/2,H/2]].map(p=>project(...p)),centre=project(0,0),ray=centre.map(v=>-v),cross=(a,b)=>a[0]*b[1]-a[1]*b[0];
+    let edge=phone?0:3,along=.5,nearest=Infinity;
+    for(let i=0;i<4;i++) {
+      const a=corners[i],delta=corners[(i+1)%4].map((v,j)=>v-a[j]),offset=a.map((v,j)=>v-centre[j]),den=cross(ray,delta);
+      if(Math.abs(den)<1e-9)continue;
+      const travel=cross(offset,delta)/den,t=cross(offset,ray)/den;
+      if(travel>=0&&travel<nearest&&t>=0&&t<=1){edge=i;along=t;nearest=travel;}
+    }
+    const a=corners[edge],delta=corners[(edge+1)%4].map((v,j)=>v-a[j]),edgeLength=Math.hypot(...delta),mid=a.map((v,j)=>v+delta[j]*along),distance=Math.hypot(...mid),unit=mid.map(v=>v/(distance||1));
+    const tip=unit.map(v=>v*startRadius),end=mid.map((v,j)=>v-unit[j]*CARD_TAIL.edgeGap);
+    // Orient the bar's normal out of the face, toward the shield, independently of the ray's angle.
+    const tangent=delta.map(v=>v/(edgeLength||1)),normal=[tangent[1],-tangent[0]];
+    if(normal[0]*(centre[0]-mid[0])+normal[1]*(centre[1]-mid[1])>0){normal[0]*=-1;normal[1]*=-1;}
+    const barMid=mid.map((v,j)=>v+normal[j]*CARD_TAIL.barGap),half=CARD_TAIL.bar/2;
+    const b0=barMid.map((v,j)=>v-tangent[j]*half),b1=barMid.map((v,j)=>v+tangent[j]*half);
+    const length=distance-startRadius-CARD_TAIL.edgeGap,visible=e>0&&nearest<1&&length>0;
+    result={cx,cy,b0,b1,tip,end,mid,ring,length:visible?length:0,visible};
+    if(!phone&&visible&&distance-(ring-MARK.ringGap-MARK.ringWidth+CARD_TAIL.gap)>cap+.0001){
+      const excess=distance-(ring-MARK.ringGap-MARK.ringWidth+CARD_TAIL.gap)-cap;cx-=unit[0]*excess;cy-=unit[1]*excess;continue;
+    }
+    if(phone&&nearest<1&&length<CARD_TAIL.minLine){const move=CARD_TAIL.minLine-length;cx+=unit[0]*move;cy+=unit[1]*move;continue;}
+    break;
   }
   return result;
 }
-function cardsTailFrame(c, f) {
-  const { b0,b1,tip,visible } = f;
-  cardsStyle(c.tail, 'opacity', visible ? c.face.style.opacity : 0);
-  if (!visible) return;
-  // CSS transforms scale even a non-scaling SVG stroke in Edge. Keep the same
-  // two paths in screen units instead, so the long-side hairline is truly 1 px.
-  const d = `M${b0.join(' ')}L${tip.join(' ')}L${b1.join(' ')}`;
-  const paths = c.tail.querySelectorAll('path');
-  paths.forEach((path,i) => { const value=d+(i?'':'Z'); if(path.getAttribute('d')!==value)path.setAttribute('d',value); });
+function cardsTailFrame(c,f) {
+  cardsStyle(c.tail,'opacity',f.visible?c.face.style.opacity:0);
+  if(!f.visible)return;
+  const set=(el,key,value)=>{if(el.getAttribute(key)!==String(value))el.setAttribute(key,value);};
+  const line=c.tail.querySelector('.c-leader-line'),dot=c.tail.querySelector('.c-leader-dot'),bar=c.tail.querySelector('.c-leader-bar');
+  for(const[key,value]of Object.entries({x1:f.tip[0],y1:f.tip[1],x2:f.end[0],y2:f.end[1]}))set(line,key,value);
+  set(dot,'cx',f.tip[0]);set(dot,'cy',f.tip[1]);set(dot,'r',CARD_TAIL.dot);
+  set(bar,'d','M'+f.b0.join(' ')+'L'+f.b1.join(' '));
 }
 export const cardsList = () => CD.list;
 

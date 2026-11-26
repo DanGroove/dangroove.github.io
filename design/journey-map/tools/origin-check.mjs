@@ -25,20 +25,20 @@ const originReady = async () => {
   throw Error('card did not open within 5 seconds');
 };
 
-// Run inside the actual browser. The SVG's own CTM supplies the tail tip;
+// Run inside the actual browser. The SVG's own CTM supplies the leader start;
 // the shield's rendered box and authored rim supply an independent circle.
 function originMeasure(id, constants) {
   const article = document.getElementById('stop-' + id), face = article.querySelector('.face'), shield = article.querySelector('.st-btn'), close = article.querySelector('.c-close'), tail = article.querySelector('.c-tail');
   const rect = node => { const b = node.getBoundingClientRect(); return {x:b.x,y:b.y,left:b.left,right:b.right,top:b.top,bottom:b.bottom,width:b.width,height:b.height}; };
   const f = rect(face), s = rect(shield.querySelector('.stone')), sw = document.querySelector('[data-review]'), review = sw && getComputedStyle(sw).display !== 'none' ? rect(sw) : null, bar = rect(document.getElementById('go'));
-  const matrix = tail.getScreenCTM(), coords=tail.querySelector('path').getAttribute('d').match(/-?[\d.]+(?:e[+-]?\d+)?/g).map(Number),vertices=[0,2,4].map(i=>new DOMPoint(coords[i],coords[i+1]).matrixTransform(matrix)),tip=vertices[1],centre = [s.x+s.width/2,s.y+s.height/2], radius = s.width * constants.rim;
+  const matrix=tail.getScreenCTM(),line=tail.querySelector('.c-leader-line'),barPath=tail.querySelector('.c-leader-bar'),barCoords=barPath.getAttribute('d').match(/-?[\d.]+(?:e[+-]?\d+)?/g).map(Number),local=[[+line.getAttribute('x1'),+line.getAttribute('y1')],[+line.getAttribute('x2'),+line.getAttribute('y2')],[barCoords[0],barCoords[1]],[barCoords[2],barCoords[3]]],vertices=local.map(p=>new DOMPoint(...p).matrixTransform(matrix)),tip=vertices[0],centre=[s.x+s.width/2,s.y+s.height/2],radius=s.width*constants.rim;
   const rimError = Math.abs(Math.hypot(tip.x-centre[0],tip.y-centre[1]) - radius - constants.gap);
   const inside = b => b.left >= -.75 && b.top >= -.75 && b.right <= innerWidth+.75 && b.bottom <= innerHeight+.75;
   const overlaps = (a,b) => a && b && a.left < b.right-.5 && a.right > b.left+.5 && a.top < b.bottom-.5 && a.bottom > b.top+.5;
   const errors=[];
   if (face.scrollHeight !== face.clientHeight || face.scrollWidth !== face.clientWidth) errors.push('face scrolls');
   if (!inside(f)) errors.push('face off screen'); if (!inside(s)) errors.push('shield off screen');
-  if (vertices.some(p => p.x < -.75 || p.y < -.75 || p.x > innerWidth+.75 || p.y > innerHeight+.75)) errors.push('tail off screen');
+  if (vertices.some(p => p.x < -.75 || p.y < -.75 || p.x > innerWidth+.75 || p.y > innerHeight+.75)) errors.push('leader off screen');
   if (overlaps(f,s)) errors.push('face covers shield');
   for (const [name,b] of [['step bar',bar],['review switch',review]]) {
     if (overlaps(s,b)) errors.push(name+' covers shield'); if (overlaps(f,b)) errors.push(name+' covers face');
@@ -46,7 +46,7 @@ function originMeasure(id, constants) {
   if (review && s.top < review.bottom+constants.reviewGap-.75) errors.push('shield above review clearance');
   if (!face.contains(close)) errors.push('close outside face');
   if (close.getBoundingClientRect().width < 43.5 || close.getBoundingClientRect().height < 43.5) errors.push('close target below 44 px');
-  if (rimError > 1.5) errors.push('tail rim error '+rimError.toFixed(3));
+  if (rimError > 1.5) errors.push('leader ring-gap error '+rimError.toFixed(3));
   if (Number(getComputedStyle(shield).opacity) < .999) errors.push('shield faded');
   // An open stop's shield takes no pointer events, and hit testing skips such elements, so let it take them for this one probe
   const was = shield.style.pointerEvents; shield.style.pointerEvents = 'auto';
@@ -77,7 +77,7 @@ async function originRun() {
   const local='http://127.0.0.1:'+originServer.address().port+'/journey-map.html';
   await originSend('Fetch.enable',{patterns:[{urlPattern:'*'}]});
   originEvents.set('Fetch.requestPaused',p=>{void originSend(p.request.url===local||p.request.url.startsWith('data:')?'Fetch.continueRequest':'Fetch.failRequest',p.request.url===local||p.request.url.startsWith('data:')?{requestId:p.requestId}:{requestId:p.requestId,errorReason:'BlockedByClient'});});
-  const constants={rim:(MARK.radius+MARK.rim/2)/MARK.box,gap:CARD_TAIL.gap,reviewGap:CARD_TAIL.reviewGap};
+  const constants={rim:(MARK.radius+MARK.rim/2)/MARK.box,gap:MARK.ringGap+MARK.ringWidth+CARD_TAIL.ringGap,reviewGap:CARD_TAIL.reviewGap};
   const expression=id=>'('+originMeasure.toString()+')('+JSON.stringify(id)+','+JSON.stringify(constants)+')';
   let failed=false;
   for(const[w,h]of originSizes){

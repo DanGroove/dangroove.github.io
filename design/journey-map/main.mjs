@@ -133,6 +133,7 @@ window.addEventListener('keydown', e => { if (e.key === 'Escape' && !e.defaultPr
 
 function resize() {
   const w = window.innerWidth, h = window.innerHeight, phone = w <= CAMERA.phoneMax;
+  $('stage').style.height = h + 'px';
   const stepMode = !RM;
   const room = stepMode ? (phone ? STEPS.nav.bar : STEPS.nav.h + STEPS.nav.gap + 6) : 0;
   tripResize(w, h, RM ? 0 : (phone ? 44 : 56) + room);

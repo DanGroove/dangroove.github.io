@@ -31,10 +31,10 @@ console.log('ok: COMB-D body/stipple sea digest recorded; coast and fill unchang
 // and for polish round 1: the held breath's white cross and halo, the softer cloud deck, the traveller's size at the overview
 // and the gather ring's spread).
 // WHIRL2 adds only STARS.supply; DEPTH and NOVA remain unchanged.
-assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 1679857471); // COMB-O sky tuning.
+assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 3612511009); // COMB-P removes eclipse-only sky keys.
 // D10: restore only the moved cloud to verify all other sky data.
 const beforeD = structuredClone(DEPTH); beforeD.clouds.list[9][0] = 330; beforeD.dpr=2; beforeD.field.sprite=128;const beforeFStars=structuredClone(STARS);beforeFStars.dprCap=2;delete beforeFStars.fall;
-assert.equal(digest(JSON.stringify([beforeFStars,beforeD,NOVA])),52846238);
+assert.equal(digest(JSON.stringify([beforeFStars,beforeD,NOVA])),2324343636);
 console.log('ok: D10 cloud pin recorded; restoring that cloud verifies original STARS/DEPTH/NOVA');
 // D4 authorizes the pure rest-to-rest glide in trip. Depth remains protected.
 // Line endings are evened out so the numbers are the same on Windows and in the cloud.
@@ -46,10 +46,10 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // Part 8 cloud fixes: explore keeps the map promoted while its camera moves, and releases it at rest after a zoom (F10 lag).
 // Part 10b cloud fixes: the held base on whole device pixels with a margin (blur), and the find press fades on each name, not its group.
 // COMB-M2 (2026-11-26): N2 changes only the old longship line and ship kit keys; the M2 scope test pins the exact edits.
-assert.equal(sourceDigest('trip.mjs'), 1619105920, 'trip.mjs changed'); // COMB-O veil camera/promotion only.
+assert.equal(sourceDigest('trip.mjs'), 827667057, 'trip.mjs changed'); // COMB-P authorized changes.
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 1265104372, 'data.mjs changed'); // Preview 22 notes: FIND_PLAY.way.wordGap 9 -> 16 (Dan's pick).
-assert.equal(sourceDigest('depth.mjs'), 4289401171, 'depth.mjs changed'); // COMB-O eclipse, sky only.
+assert.equal(sourceDigest('data.mjs'), 4205275769, 'data.mjs changed'); // COMB-P authorized changes.
+assert.equal(sourceDigest('depth.mjs'), 1910741107, 'depth.mjs changed'); // COMB-P authorized changes.
 console.log('ok: COMB-D camera/labels/tripS digests recorded; depth source remains pinned');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
 const mapP = BEATS.find(b => b.id === 'map').P, stopP = BEATS.find(b => b.id === STOPS[2].id).P, leg = SEQ.find(q => q.kind === 'leg' && q.i === 2), legP = leg.a + leg.len / 2;

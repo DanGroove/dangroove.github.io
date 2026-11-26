@@ -52,17 +52,25 @@ const depthSkyObject = (name, markup) => {
   const object = { el, box: [b.x, b.y, b.width, b.height], scale: 0 };
   depthSkyWrite(el, 'visibility', 'hidden'); return object;
 };
-function depthSkyPlace(o, x, y, scale, angle, flip, alpha, hold = false) {
+function depthSkyPlace(o, x, y, scale, angle, flip, alpha, hold = false, st = null) {
   depthSkyWrite(o.el, 'visibility', alpha > 0 ? 'visible' : 'hidden');
   depthSkyWrite(o.el, 'willChange', alpha > 0 && FRAME_PERF.skyLayers ? 'transform' : '');
   depthSkyWrite(o.el, 'opacity', alpha); if (alpha <= 0) return;
-  const ratio = scale / o.scale;
-  if (!o.scale || !hold || hold !== 'fixed' && (ratio < FRAME_PERF.scaleMin || ratio > FRAME_PERF.scaleMax)) {
-    o.scale = scale; const [x0, y0, w, h] = o.box, pad = 2 / scale;
+  const moving = st && (st.exploring ? st.exploreMoving : st.gliding), ratio = scale / o.scale;
+  const lo = moving ? FRAME_PERF.skyMin : FRAME_PERF.scaleMin, hi = moving ? FRAME_PERF.skyMax : FRAME_PERF.scaleMax;
+  const budget = st?.focusK > 0 ? null : st?.rasterBudget;
+  const due = !o.scale || !hold || budget?.sky === o || (moving ? ratio < lo || ratio > hi : Math.abs(ratio-1) > 1e-6);
+  if (due && (!budget || !budget.used && (!budget.sky || budget.sky === o))) {
+    const rising = moving && o.lastScale && scale > o.lastScale;
+    o.scale = rising ? scale / FRAME_PERF.skyMin : scale;
+    const [x0, y0, w, h] = o.box, pad = 2 / o.scale;
     o.origin = [x0 - pad, y0 - pad];
     depthSkyWrite(o.el, 'viewBox', [x0-pad,y0-pad,w+2*pad,h+2*pad].join(' '), true);
-    depthSkyWrite(o.el, 'width', w*scale+4, true); depthSkyWrite(o.el, 'height', h*scale+4, true);
+    depthSkyWrite(o.el, 'width', w*o.scale+4, true); depthSkyWrite(o.el, 'height', h*o.scale+4, true);
+    if (budget) budget.used = true;
   }
+  o.lastScale = scale;
+  if (!o.scale) { depthSkyWrite(o.el, 'visibility', 'hidden'); return; }
   const k = scale / o.scale;
   depthSkyWrite(o.el, 'transform', 'translate('+x+'px,'+y+'px) rotate('+angle+'deg) scale('+(flip*k)+','+k+') translate('+(o.origin[0]*o.scale)+'px,'+(o.origin[1]*o.scale)+'px)');
 }
@@ -88,24 +96,20 @@ function depthConfigure() {
   const key = JSON.stringify([DEPTH.clouds.list.map(c => c[3]), DEPTH.drawings, DEPTH.field.sprite, DEPTH.field.spriteMid, DEPTH.field.spriteAlpha]);
   if (key !== DP.config) {
     DP.config = key;
-    DP.clouds.forEach(c => c.el.remove()); DP.birds.forEach(b => { b.el.remove(); b.lead.el.remove(); for (const o of [b.glow,b.dim,b.halo,b.motes,b.sparkles]) o?.el.remove(); });
+    DP.clouds.forEach(c => c.el.remove()); DP.birds.forEach(b => { b.el.remove(); b.lead.el.remove(); for (const o of [b.glow,b.motes]) o?.el.remove(); });
     DP.clouds = DEPTH.clouds.list.map((row, i) => depthSkyObject('cloud-'+i, depthCloudDrawing(DEPTH.drawings.clouds[row[3]-1])));
     DP.birds = ['skoll', 'hati'].map(name => {
       const d = DEPTH.drawings[name === 'skoll' ? 'sun' : 'moon'];
-      const R = DEPTH.wolves.sunR, colour = name === 'skoll' ? C.warm : C.paper, id = 'eclipse-'+name;
-      const markup = '<defs><clipPath id="'+id+'"><circle r="'+R+'"/></clipPath></defs>' + (name === 'skoll' ? '<g transform="scale('+R/8+')"><path fill="'+C.paper+'" d="'+d.disc+'"/><path fill="'+C.warm+'" d="'+d.rays+'"/></g>' : '<circle class="sky-ghost" r="'+R+'" fill="'+DEPTH.wolves.grey+'" fill-opacity="0" stroke="'+C.paper+'" stroke-opacity=".5" stroke-width=".7"/><path class="sky-crescent" transform="scale('+R/9+')" fill="'+C.paper+'" d="'+d.crescent+'"/>') + '<circle class="sky-bite" r="'+(.96*R)+'" cx="'+(2*R)+'" fill="'+C.shade+'" clip-path="url(#'+id+')"/>';
+      const R = DEPTH.wolves.sunR, colour = name === 'skoll' ? C.warm : C.paper;
+      const markup = name === 'skoll' ? '<g transform="scale('+R/8+')"><path fill="'+C.paper+'" d="'+d.disc+'"/><path fill="'+C.warm+'" d="'+d.rays+'"/></g>' : '<path class="sky-crescent" transform="scale('+R/9+')" fill="'+C.paper+'" d="'+d.crescent+'"/>';
       const lead = depthSkyObject(name === 'skoll' ? 'sun' : 'moon', markup), b = depthSkyObject(name, depthWolfDrawing(name));
       // Fixed bounds include every gallop pose and bob, without a per-frame bbox read.
       b.box = [-75, -50, 135, 100]; b.name = name; b.lead = lead; lead.box = [-40,-40,80,80];
       const element = (kind, background) => { const el = document.createElement('div'); el.className='sky-'+kind; el.dataset.sky=name+'-'+kind; el.style.background=background; DP.sky.appendChild(el); return {el}; };
-      b.dim = element('dim', 'radial-gradient(circle,transparent 0 '+(2*R)+'px,'+C.shade+'80 65%)');
       b.glow = element('glow', 'radial-gradient(circle,'+colour+(name==='skoll'?'4D':'29')+',transparent 70%)');
       b.glow.el.style.width=b.glow.el.style.height=(R*14)+'px';
-      DP.sky.insertBefore(b.dim.el, lead.el); DP.sky.insertBefore(b.glow.el, lead.el);
-      b.halo = depthSkyObject(name+'-halo','<defs><filter id="'+id+'-blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter></defs><circle r="'+(R+7)+'" fill="none" stroke="'+C.paper+'" stroke-width="3" filter="url(#'+id+'-blur)"/><circle r="'+(R+1.5)+'" fill="none" stroke="'+(name==='skoll'?DEPTH.wolves.corona:C.paper)+'" stroke-width="1.4"/>'); b.halo.box=[-40,-40,80,80];
-      b.sparkles = depthSkyObject(name+'-stars',Array.from({length:18},(_,i)=>{const a=i*2.399963,r=R*(2.5+(i%7)/6*3.5),x=Math.cos(a)*r,y=Math.sin(a)*r;return '<path fill="'+C.paper+'" d="M'+x+' '+(y-2.5)+'l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7Z"/>';}).join('')); b.sparkles.box=[-114,-114,228,228];
+      DP.sky.insertBefore(b.glow.el, lead.el);
       b.motes=depthSkyObject(name+'-motes',Array.from({length:10},(_,i)=>'<circle r="'+(i%3?1.1:1.7)+'" fill="'+(name==='skoll'?(i%2?C.warm:DEPTH.wolves.spark):C.paper)+'" opacity="0"/>').join('')); b.motes.box=[-30,-85,180,115]; b.particles=[...b.motes.el.children].map((el,i)=>({el,i,born:-Infinity})); b.emitted=-Infinity;
-      b.bite=lead.el.querySelector('.sky-bite'); b.ghost=lead.el.querySelector('.sky-ghost'); b.crescent=lead.el.querySelector('.sky-crescent'); b.fills=[...b.el.querySelectorAll('[fill]')].filter(el=>el.getAttribute('fill')!=='none').map(el=>({el,fill:el.getAttribute('fill')}));
       b.legs = [...b.el.querySelectorAll('.sky-leg')]; b.bob = b.el.querySelector('.sky-bob'); return b;
     });
     DP.force = true;
@@ -323,6 +327,25 @@ function depthAir(st, look, pointer, fine) {
   DP.airEmpty=v<=0&&!fields.length&&empty; c.globalAlpha=1;
 }
 function depthSky(st, look, time) {
+  // Plan the visible cloud scales before tripApply chooses the next frame's raster slot.
+  VIEW.skyPlan = next => {
+    const moving = next.exploring ? next.exploreMoving : next.gliding || DP.skyCam && (DP.skyCam.s !== next.cam.s || DP.skyCam.tx !== next.cam.tx || DP.skyCam.ty !== next.cam.ty);
+    const lo = moving ? FRAME_PERF.skyMin : FRAME_PERF.scaleMin, hi = moving ? FRAME_PERF.skyMax : FRAME_PERF.scaleMax;
+    return DP.clouds.flatMap((object,i) => {
+      const row = DEPTH.clouds.list[i]; if (!row) return [];
+      const alpha = DEPTH.clouds.on * smooth(...DEPTH.clouds.show,next.handoffT) * depthCloudPass(next,row[5]) * depthBlastFade(next) * next.dim;
+      if (!alpha) return [];
+      const scale = row[2] * depthPoint(next,row,row[5]).s, ratio = scale / object.scale;
+      // Spread a rising cohort before its common deadline: ten clouds cannot all consume the same frame.
+      const queuedRise = moving && object.lastScale && scale > object.lastScale && ratio > hi / Math.min(1.1,(scale/object.lastScale)**8);
+      const due = !object.scale || queuedRise || (moving ? ratio < lo || ratio > hi : Math.abs(ratio-1) > 1e-6);
+      return due ? [{ object, score: object.scale ? Math.max(lo/ratio,ratio/hi) : Infinity }] : [];
+    });
+  };
+  if (!st.rasterBudget) {
+    const chosen = VIEW.skyPlan(st).sort((a,b)=>b.score-a.score)[0];
+    st.rasterBudget = { used:false, sky:chosen?.object || null, baseForced:false };
+  }
   const Cld = DEPTH.clouds, wolves = DEPTH.wolves, r = rnd(DEPTH.seed), fade = depthBlastFade(st);
   const previous = DP.skyCam, still = previous && previous.s === st.cam.s && previous.tx === st.cam.tx && previous.ty === st.cam.ty; DP.skyCam = { ...st.cam };
   DP.cloudVisible = false;
@@ -332,7 +355,7 @@ function depthSky(st, look, time) {
     const [x,y,size,drawing,flip,a] = row, p = depthPoint(st, [x+sway*Math.sin(Math.PI*2*time/period+phase),y], a, look);
     const alpha = Cld.on * smooth(...Cld.show,st.handoffT) * depthCloudPass(st,a) * fade * st.dim;
     DP.cloudVisible ||= alpha > 0;
-    depthSkyPlace(c,p.x,p.y,size*p.s,0,flip,alpha,FRAME_PERF.skyLayers && !(still && c.scale !== size*p.s));
+    depthSkyPlace(c,p.x,p.y,size*p.s,0,flip,alpha,FRAME_PERF.skyLayers && !(still && c.scale !== size*p.s),st);
   });
   const delta = st.P - (DP.skyP ?? st.P); DP.skyP = st.P;
   if (delta > 1e-9) DP.skyForward = true;
@@ -354,24 +377,18 @@ function depthSky(st, look, time) {
     const L = Math.max(edge,VIEW.w-wolves.maxBand*VIEW.w), band = VIEW.w-L, blend = VIEW.phone ? 0 : smooth(wolves.minBand,wolves.minBand+wolves.bandBlend,band);
     const end = lerp(-m,L,blend), span = VIEW.w+m-end, height = Math.min(wolves.arcH[0]*VIEW.h,wolves.arcH[1]*span);
     const arc = u => [VIEW.w+m-span*u,wolves.yTop*VIEW.h+height*(1-Math.sin(Math.PI*u))];
-    const k = smooth(.28,.46,place)*(1-smooth(.6,.76,place)), release = 1+.15*smooth(.76,.85,place), lag = wolves.lag*ws*(1-.85*k)*release;
-    const u = place-lag/span, lead = arc(place), wolf = arc(u), tx = -span, ty = -height*Math.PI*Math.cos(Math.PI*u), R=wolves.sunR*s*(1+.5*k);
+    const lag = wolves.lag*ws;
+    const u = place-lag/span, lead = arc(place), wolf = arc(u), tx = -span, ty = -height*Math.PI*Math.cos(Math.PI*u), R=wolves.sunR*s;
     // Retire before any part of the disc or rotated wolf reaches the map labels.
     alpha *= lerp(1,smooth(L+R*2,L+R*4,lead[0]),blend);
     const angle = Math.atan2(-ty,-tx)*180/Math.PI;
-    depthSkyPlace(b.lead,...lead,s*(1+.5*k),0,1,alpha,true);
-    depthSkyPlace(b,...wolf,ws,angle,-1,alpha,true);
-    depthSkyPlace(b.halo,...lead,s*(1+.5*k),0,1,alpha*k,'fixed');
-    depthSkyPlace(b.sparkles,...lead,s,0,1,b.name==='hati'?alpha*k:0,'fixed');
+    depthSkyPlace(b.lead,...lead,s,0,1,alpha,true,st);
+    depthSkyPlace(b,...wolf,ws,angle,-1,alpha,true,st);
     const cssPlace = (o,scale,a) => { depthSkyWrite(o.el,'visibility',a>0?'visible':'hidden'); depthSkyWrite(o.el,'willChange',a>0?'transform':''); depthSkyWrite(o.el,'opacity',a); if(a>0)depthSkyWrite(o.el,'transform','translate('+lead[0]+'px,'+lead[1]+'px) scale('+scale+') translate(-50%,-50%)'); };
-    cssPlace(b.glow,s*(1+.5*k),alpha); cssPlace(b.dim,s*(1+.5*k),alpha*.5*k);
-    depthSkyPlace(b.motes,...wolf,ws,0,1,alpha,true);
-    b.eclipse={u:place,k,edge,L,blend,lead,wolf,R,alpha};
+    cssPlace(b.glow,s,alpha);
+    depthSkyPlace(b.motes,...wolf,ws,0,1,alpha,true,st);
+    b.chase={u:place,lead,wolf,R,alpha,gap:Math.hypot(wolf[0]-lead[0],wolf[1]-lead[1])};
     if (!alpha) { b.particles.forEach(p=>depthSkyWrite(p.el,'opacity',0,true)); return; }
-    depthSkyWrite(b.bite,'cx',(1-.55*k)*2*wolves.sunR,true);
-    if(b.ghost) { depthSkyWrite(b.ghost,'fill-opacity',k,true); depthSkyWrite(b.crescent,'opacity',1-k,true); }
-    const mix = (a,z,t) => '#'+[1,3,5].map(i=>Math.round(lerp(parseInt(a.slice(i,i+2),16),parseInt(z.slice(i,i+2),16),t)).toString(16).padStart(2,'0')).join('');
-    b.fills.forEach(p=>depthSkyWrite(p.el,'fill',mix(p.fill,C.shade,k),true));
     if(alpha>0 && DP.skyForward && place>=.08 && place<=.75 && time-b.emitted>=1/wolves.motes) { const p=b.particles.reduce((a,z)=>a.born<z.born?a:z);p.born=time;b.emitted=time; }
     b.particles.forEach(p=>{const age=time-p.born,life=.5+(p.i%4)*.1,q=clamp01(age/life);depthSkyWrite(p.el,'opacity',alpha && q<1?(b.name==='hati'?.7:1)*(1-q):0,true);if(q<1)depthSkyWrite(p.el,'transform','translate('+(25+age*(70+p.i*3))+' '+(-10-age*(12+p.i*2))+') scale('+(1-q)+')',true);});
     const ph = time*2*Math.PI*tune.gallop, g = .5-.5*Math.cos(ph), g2 = .5-.5*Math.cos(ph-.6);
@@ -399,7 +416,7 @@ export function depthFrame(st, time, dt, pointer, aim, moved) {
   }
   const on = !!VIEW.depth, active = on && !DP.rm, fade = depthSeaFade(st);
   DP.deep.style.opacity = on ? fade * st.dim : 0;
-  DP.air.style.opacity = active ? fade : 0; DP.sky.style.opacity = active ? st.dim : 0;
+  DP.air.style.opacity = active ? fade : 0; const skyOpacity = active ? st.dim : 0; DP.sky.style.opacity = skyOpacity; DP.sky.classList.toggle('sky-off', skyOpacity <= 0);
   const force = DP.force; DP.force = false;
   if (on && fade > 0 && (force || moved || aim.changed)) depthDeep(st, aim.look);
   if (!active) return;

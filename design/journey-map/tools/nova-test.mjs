@@ -32,7 +32,7 @@ function novaContext() {
 }
 function novaCanvas() { const cv = new NovaNode(), ctx = novaContext(); cv.getContext = () => ctx; cv.ctx = ctx; canvases.push(cv); return cv; }
 globalThis.window = { devicePixelRatio: 3, addEventListener() {} };
-globalThis.document = { createElement: tag => tag === 'canvas' ? novaCanvas() : new NovaNode() };
+globalThis.document = { getElementById: id => id === 'trail-pieces' ? new NovaNode() : null, createElement: tag => tag === 'canvas' ? novaCanvas() : new NovaNode() };
 globalThis.Image = class { constructor() { images.push(this); } set src(v) { this.source = v; } };
 
 // Build the footer with the independent name renderer disabled, then enable only the nova writer.

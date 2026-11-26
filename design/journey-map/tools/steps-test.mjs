@@ -162,13 +162,13 @@ for(const[w,h]of [[1440,900],[390,844]]){
   cardsList().forEach((c,i)=>{c.W=tripCardPlace(c.H).w;c.place=tripCardPlace(c.H);VIEW.cards[i]=c.place;});
   for(const direction of [1,-1])for(let ms=0;ms<=500;ms+=50){
     const state=tripState(stopP);state.cardK.fill(0);state.cardK[0]=direction>0?ms/500:1-ms/500;cardsOverride(tripState(stopP),.05,false);cardsFrame(state,[15,-15],[0,0]);
-    const c=cardsList()[0],m=c.tail.querySelector('path').getAttribute('d').match(/-?[\d.]+(?:e[+-]?\d+)?/g).map(Number),tip=[m[2],m[3]],size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*state.cam.s));
-    if(c.tail.style.opacity>0)stepAssert(Math.abs(Math.hypot(...tip)-size*(MARK.radius+MARK.rim/2)/MARK.box-CARD_TAIL.gap)<1e-7,'tail left rim during open/close/tilt');
+    const c=cardsList()[0],dot=c.tail.querySelector('.c-leader-dot'),tip=[+dot.getAttribute('cx'),+dot.getAttribute('cy')],size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*state.cam.s));
+    if(c.tail.style.opacity>0)stepAssert(Math.abs(Math.hypot(...tip)-size*(MARK.radius+MARK.rim/2)/MARK.box-MARK.ringGap-MARK.ringWidth-CARD_TAIL.ringGap)<1e-7,'leader left ring during open/close/tilt');
     stepAssert(c.btn.style.opacity===1,'opening must never fade the shield');stepAssert(!c.el.style.transform.includes('scale'),'article must not scale its shield');
   }
 }
 tripResize(1440,900,120);VIEW.cards=[];
-console.log('ok: ORIGIN 50 ms desktop/phone open and reverse-close recording: tail stays on rim through tilt; shield never scales with the face or fades; X is inside the header');
+console.log('ok: ORIGIN 50 ms desktop/phone open and reverse-close recording: leader stays 5 px outside traveller ring through tilt; shield never scales with the face or fades; X is inside the header');
 JOURNEY.next(); stepAssert(JOURNEY.moving, 'mid-move X fixture must be moving'); cardX.focus(); cardX.fire('click'); stepAssert(document.activeElement !== cardsList()[0].btn, 'mid-move X focused departed stop mark'); stepAssert(cardsClose(0) === false, 'X must be ignored mid-move');
 JOURNEY.set(stopP);
 // D3: model the browser's focus-on-pointerdown and loss when a face becomes inert.

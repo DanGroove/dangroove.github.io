@@ -12,12 +12,12 @@ for(const [w,h,H] of [[1440,900,432],[1024,600,325],[412,730,398],[390,844,398],
     for(const tilt of [false,true]) {
       const f={W:p.w,H,k,cx:(p.x-p.sx)*t,cy:(p.y-p.sy)*t,stonePx,rx:tilt?4:0,ryTilt:tilt?3:0,sx:tilt?1:0,sy:tilt?-1:0,lift:tilt,e,phone:w<=640};
       const r=cardsTailLayout(f),base=Math.hypot(...r.b0.map((v,j)=>v-r.b1[j]));
-      assert.ok(r.length<=Math.min((w<=640?CARD_TAIL.lenPhone:CARD_TAIL.len)-CARD_TAIL.gap,1.5*stonePx)*e+.001,'bounded tail');
-      assert.ok(base<=.8*stonePx+.001,'base relative to shield'); max=Math.max(max,r.length);frames++;
+      if(r.visible){assert.ok(Math.abs(Math.hypot(...r.tip)-r.ring-5)<.001,'leader starts outside traveller ring');assert.ok(Math.abs(Math.hypot(...r.end.map((v,j)=>v-r.mid[j]))-9)<.001,'leader stops short of card');if(w<=640)assert.ok(r.length>=16-.001,'phone minimum visible line');}
+      assert.ok(Math.abs(base-32)<.001,'32 px bar'); max=Math.max(max,r.length);frames++;
       if(e===0)assert.equal(r.visible,false,'inside shield hides tail');
     }
   }
-  console.log(w+'x'+h+': bounded tail max '+max.toFixed(3)+' px, proportional base, closed tail hidden');
+  console.log(w+'x'+h+': leader max '+max.toFixed(3)+' px, 32 px bar, closed tail hidden');
 }
 for(let i=0;i<360;i++)assert.ok(Number.isFinite(starsEmberReach(i*Math.PI/180))&&starsEmberReach(i*Math.PI/180)>0);
 console.log('ok: '+frames+' projected card samples; 360 ember/coast rays');

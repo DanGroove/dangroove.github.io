@@ -65,10 +65,18 @@ export function findsFrame(time, st) {
   Object.values(FD.list).forEach(o => {
     const f = FIND_BY[o.id], p = findPlace(o.id), rad = o.id === 'wayfinder' ? FIND_PLAY.focus.wide[2] * 2 : o.id === 'hoards' ? Math.max(...FIND_COPY.hoards.map(h => Math.hypot(h.x - f.x, h.y - f.y) + FIND_PLAY.hoard.rad)) : o.id === 'beacon' ? FIND_PLAY.beacon.rad : o.id === 'ravens' ? FIND_PLAY.raven.reach + f.view[2] : o.id === 'serpent' ? FIND_PLAY.serpent.near + f.view[2] : FIND_PLAY[o.id === 'longship' ? 'ship' : o.id]?.rad || f.view?.[2] || FIND_PLAY.kit.rad;
     const near = FIND_PLAY[o.id === 'wayfinder' ? 'way' : o.id === 'ravens' ? 'raven' : o.id === 'runestone' ? 'rune' : o.id === 'longship' ? 'ship' : o.id]?.near || rad;
-    findLife(o, ...p, o.id === 'horn' && ['sounding', 'echo'].includes(o.stage) ? FIND_PLAY.horn.soundRad : rad, near);
     const playing = ['flight', 'hear', 'landing', 'reel', 'chase', 'eating', 'waking', 'trace', 'opening', 'sheet', 'closing', 'sliding', 'reply', 'pebble', 'sounding', 'echo', 'pull', 'lifting'].includes(o.stage) || o.drag || o.busy || o.playing || o.hearing;
-    if (o.id === 'hoards' || o.onScreen || playing || FD.sheetOwner === o) o.tick?.(time, FD.rm ? 0 : FD.dt);
+    const active = o => ['rising','rattling','opening','bouncing','waiting'].includes(o.stage) || o.hold || o.queued || o.pending;
+    const paused = st.gliding && !playing && JOURNEY.focus !== o.id && FD.sheetOwner !== o && !(o.id === 'longship' && o.x !== undefined && (p[0] !== o.x || p[1] !== o.y));
+    if (paused && o.id !== 'hoards') { if (o.id === 'wayfinder' && o.onScreen && st.rasterRebased) o.compassFrame?.(); return; } // Keep sky-side pieces, including the beacon beam, at their last state.
+    findLife(o, ...p, o.id === 'horn' && ['sounding', 'echo'].includes(o.stage) ? FIND_PLAY.horn.soundRad : rad, near);
+    if (o.id === 'hoards' && st.gliding) {
+      o.items.forEach(h => { if (active(h) || JOURNEY.focus === h.id || FD.sheetOwner === h) h.tick(time, FD.rm ? 0 : FD.dt); });
+    } else if (o.id === 'hoards' || o.onScreen || playing || FD.sheetOwner === o) o.tick?.(time, FD.rm ? 0 : FD.dt);
     else if (o.id === 'beacon') depthBeam(null);
   });
-  findKitFrame(); FD.all.tick(time); if (JOURNEY.focus !== FD.focusId) findHint(JOURNEY.focus); FD.focusId = JOURNEY.focus;
+  const bits = FD.bits;
+  if (st.gliding) FD.bits = [];
+  try { findKitFrame(); } finally { FD.bits = bits; }
+  if (!st.gliding || FD.all.playing) FD.all.tick(time); if (JOURNEY.focus !== FD.focusId) findHint(JOURNEY.focus); FD.focusId = JOURNEY.focus;
 }
