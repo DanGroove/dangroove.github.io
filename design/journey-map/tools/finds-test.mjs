@@ -3,7 +3,7 @@ import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { bigMap, rubbingRunes, pieceIcon } from '../art.mjs';
 import { STARS, DEPTH, NOVA, FINDS, FIND_PLAY, FIND_COPY, STOPS, HAMMER, RAVEN_RIG, FOOT_NAME } from '../data.mjs';
-import { tripFocus, tripState, tripResize, tripBuild, tripApply, toScreen, VIEW, SEQ, WATER, pointAt } from '../trip.mjs';
+import { tripFocus, tripState, tripResize, tripBuild, tripApply, toScreen, VIEW, SEQ, WATER, pointAt, longshipPoint } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
 import { wayAllStops } from '../findhoards.mjs';
 import { mapDefs } from '../art.mjs';
@@ -44,9 +44,10 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // FRAMES: compositor camera writer and label recovery only; geometry/score remain pinned by the motion tests.
 // Part 8 cloud fixes: explore keeps the map promoted while its camera moves, and releases it at rest after a zoom (F10 lag).
 // Part 10b cloud fixes: the held base on whole device pixels with a margin (blur), and the find press fades on each name, not its group.
-assert.equal(sourceDigest('trip.mjs'), 1389662448, 'trip.mjs changed');
+// COMB-M2 (2026-11-26): N2 changes only the old longship line and ship kit keys; the M2 scope test pins the exact edits.
+assert.equal(sourceDigest('trip.mjs'), 1736880001, 'trip.mjs changed');
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 3496926102, 'data.mjs changed');
+assert.equal(sourceDigest('data.mjs'), 2350681080, 'data.mjs changed');
 assert.equal(sourceDigest('depth.mjs'), 324351587, 'depth.mjs changed');
 console.log('ok: COMB-D camera/labels/tripS digests recorded; depth source remains pinned');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
@@ -55,8 +56,8 @@ for (const [w, h] of [[1440, 900], [390, 664]]) {
   tripResize(w, h, h > 800 ? 120 : 96);
   let cases = 0;
   for (const P of [mapP, stopP, legP]) {
-    const base = tripState(P), chest = FIND_COPY.hoards[0], ship = pointAt(Math.max(WATER[0], Math.min(WATER[1], base.u))), F = FIND_PLAY.focus;
-    const views = [...FINDS.filter(f => f.view).map(f => f.view), [chest.x + F.chest[0], chest.y + F.chest[1], F.chest[2]], [ship[0] + F.ship[0], ship[1] + 5 + F.ship[1], F.ship[2]], F.wide];
+    const base = tripState(P), chest = FIND_COPY.hoards[0], ship = longshipPoint(base.u), F = FIND_PLAY.focus;
+    const views = [...FINDS.filter(f => f.view).map(f => f.view), [chest.x + F.chest[0], chest.y + F.chest[1], F.chest[2]], [ship[0] + F.ship[0], ship[1] + F.ship[1], F.ship[2]], F.wide];
     for (const view of views) {
       const zero = structuredClone(base); tripFocus(zero, view, 0); assert.deepEqual(zero, base);
       const least = view[3] ?? F.least, scale = Math.max(Math.max(VIEW.s0, least * VIEW.sT), Math.min((view.slice(0,3).every((v,i)=>v===FINDS.find(f=>f.id==='horn').view[i])?FINDS.find(f=>f.id==='horn').viewCap:F.most) * VIEW.sT, F.fill * Math.min(w, h) / (2 * view[2])));

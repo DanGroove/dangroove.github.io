@@ -51,7 +51,7 @@ const smoothCenter = u => { let x = 0, y = 0; const n = 4, w = CAMERA.smooth; fo
 export const WATER = (() => { let a = null, b = null; for (let u = STOP_U[4]; u < STOP_U[5]; u += 1) { const w = !onLand(pointAt(u)); if (w && a === null) a = u; if (!w && a !== null && b === null && u > a + 10) b = u; } return [a - 2, b + 2]; })();
 // A berth in the open-water lane south of the ring, shared by drawing, hit
 // target, focus view and popup. Only the ship is offset from the route.
-export const longshipPoint = u => { const p=pointAt(Math.max(WATER[0],Math.min(WATER[1],u)));return [p[0],FIND_PLAY.kit.shipWaterY]; };
+export const longshipPoint = u => { const B = FIND_PLAY.kit.shipBerth, p = pointAt(Math.max(WATER[0] + B[0], Math.min(WATER[1] - B[1], u))); return [p[0], p[1] + B[2]]; };
 // trail dots: one star per dot
 export const TRAIL_DOTS = (() => { const out = []; for (let u = 0; u <= X_U; u += MAP.dotGap) out.push(pointAt(u)); return out; })();
 

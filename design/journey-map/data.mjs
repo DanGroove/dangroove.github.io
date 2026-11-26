@@ -498,7 +498,7 @@ export const FIND_PLAY = {
     hop: { speed: [8, 8], dir: [-100, -80], g: 40, life: [0.4, 0.4] },
   },
   star: { time: 0.75, arc: 46, bump: 0.3, size: 14, peak: 1.3 },
-  kit: { margin: 40, rad: 70, shipY: 5, shipWaterY: 645, starZ: 7, dt: 0.05, popup: { anchorGap: 12, anchorMax: 16, scale: 0.6, over: 1.08, time: 0.22, edge: 8, tail: [10, 6], width: 240, radius: 10, pad: [10, 14], font: 13, line: 1.4, kicker: 9.5, gap: 4 }, slot: { font: 11, weight: 500, border: 1, pad: 6 }, target: 17, sheet: { from: 0.06, edge: 24, grow: 0.35, offset: 20 }, deg: 180, turn: 360 },
+  kit: { margin: 40, rad: 70, shipBerth: [40, 11, 0], starZ: 7, dt: 0.05, popup: { anchorGap: 12, anchorMax: 16, scale: 0.6, over: 1.08, time: 0.22, edge: 8, tail: [10, 6], width: 240, radius: 10, pad: [10, 14], font: 13, line: 1.4, kicker: 9.5, gap: 4 }, slot: { font: 11, weight: 500, border: 1, pad: 6 }, target: 17, sheet: { from: 0.06, edge: 24, grow: 0.35, offset: 20 }, deg: 180, turn: 360 },
   way: { stiff: 90, damp: 9, near: 70, line: 0.45, gap: 0.1, short: 9, ping: 0.5, runes: 0.6, spin: 0.8, timelineDim: 0.35, lineWidth: 1, wide: [300, 480, 250, 0],
     drift: [0.8, 4, 0.31, 2], dim: 0.55, armWidth: 2.2, pulse: [1.12, 0.25], dash: [2, 4], alpha: 0.6, solidAlpha: 0.9, pingR: [6, 14], pingAlpha: 0.7, tally: [22, 5.2, 1, 10.5, 9], ring: [4, 9, 1.6], allSpeed: 40, hub: 6,
   },

@@ -65,7 +65,7 @@ function stepsSetDepth(on) {
 }
 function stepsButtons() {
   if (!SC.go) return;
-  const top = SC.P <= 1e-6, end = (!JOURNEY.moving || SC.cut?.resume && SC.cut.placed) && Math.abs(SC.P - stepsEnd) < 1e-6;
+  const top = SC.P <= 1e-6, end = (!JOURNEY.moving || !!(SC.cut?.resume && SC.cut.placed)) && Math.abs(SC.P - stepsEnd) < 1e-6;
   const beatState = tripState(SC.P), blasting = beatState.kind === 'rush' ? !!SC.move || beatState.t > 0 : ['blast', 'settle'].includes(beatState.kind);
   if (blasting && !SC.go.hidden) { SC.returnFocus ||= SC.go.contains(document.activeElement); SC.shown = false; if (!SC.go.classList.contains('go-leaving')) SC.go.classList.add('go-leaving'); if (SC.returnFocus) { const nova = document.getElementById('nova-hit'); nova?.focus({ preventScroll: true }); } if (SC.say.textContent !== COMB.novaSay) SC.say.textContent = COMB.novaSay; }
   // Joined page: the bar waits for the map, so one Start shows at a time; focus follows (the bar at the map, the hero's Start above).

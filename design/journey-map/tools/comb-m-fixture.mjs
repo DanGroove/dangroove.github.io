@@ -3,7 +3,7 @@ import {spawn} from 'node:child_process';
 import {readFileSync,writeFileSync,mkdirSync,existsSync,rmSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
-export const gRoot='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-m';
+export const gRoot='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-m2';
 export const gWait=ms=>new Promise(r=>setTimeout(r,ms));
 export async function gBrowser(){
  mkdirSync(gRoot,{recursive:true});const profile=gRoot+'/profile-'+process.pid+'-'+Date.now();mkdirSync(profile+'/pages',{recursive:true});
