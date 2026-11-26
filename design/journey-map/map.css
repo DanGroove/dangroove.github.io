@@ -321,7 +321,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 @media (max-width: 640px) { .find-hint { bottom: 104px; white-space: normal; width: calc(100% - 32px); } }
 .jm-focus .mk { opacity: 0; }
 #b-detail text, #b-rest text { transition: opacity .4s; }
-#map-base { pointer-events: none; }
+#map-base { pointer-events: none; overflow: hidden; }
 .jm-focus #b-detail text, .jm-focus #b-rest text { opacity: .3; }
 .jm-focus.jm-way #b-detail text, .jm-focus.jm-way #b-rest text { opacity: 1; }
 .wf-arm.on .l { stroke-width: var(--find-arm); }

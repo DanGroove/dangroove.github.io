@@ -121,7 +121,7 @@ function resize() {
   const stepMode = !RM;
   const room = stepMode ? (phone ? STEPS.nav.bar : STEPS.nav.h + STEPS.nav.gap + 6) : 0;
   tripResize(w, h, RM ? 0 : (phone ? 44 : 56) + room);
-  for (const el of [SVG, $('map-base')]) { el.setAttribute('width', w); el.setAttribute('height', h); el.setAttribute('viewBox', `0 0 ${w} ${h}`); }
+  SVG.setAttribute('width', w); SVG.setAttribute('height', h); SVG.setAttribute('viewBox', `0 0 ${w} ${h}`);
   mainMarkerLayer.setAttribute('viewBox', `0 0 ${w} ${h}`);
   tripMeasureLabels(); starsResize(w, h);
   footerNovaResize(w, h);

@@ -113,6 +113,21 @@ export function tripResize(w, h, tlH) {
   VIEW.ox = (w - MAP.w * VIEW.s0) / 2; VIEW.oy = m + (availH - m - MAP.h * VIEW.s0) / 2;
   VIEW.sT = VIEW.s0 * (VIEW.phone ? CAMERA.pushScalePhone : CAMERA.pushScale);
   if (TRIP_EL.scrim) TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px';
+  if (TRIP_EL.base) tripBaseBox(w, h);
+}
+// The base's svg reaches FRAME_PERF.baseMargin screens past each edge, with its corner on a whole device pixel. Its layer
+// is hinted, and the compositor does not snap a hinted layer: with overflow visible the layer started at the drawing's
+// own corner, which mostly fell between device pixels and drew the whole base slightly soft at rest (cloud review of 10b).
+const NO_BOX = { ox: 0, oy: 0 };
+function tripBaseBox(w, h) {
+  const dpr = globalThis.devicePixelRatio || 1, edge = n => {
+    const want = Math.ceil(n * FRAME_PERF.baseMargin); let best = want, err = 1;
+    for (let m = want; m < want + 64 && err > 1e-6; m++) { const e = Math.abs(m * dpr - Math.round(m * dpr)); if (e < err) { best = m; err = e; } }
+    return best; };
+  const ox = edge(w), oy = edge(h), el = TRIP_EL.base;
+  VIEW.baseBox = { ox, oy };
+  el.setAttribute('width', w + 2 * ox); el.setAttribute('height', h + 2 * oy); el.setAttribute('viewBox', `${-ox} ${-oy} ${w + 2 * ox} ${h + 2 * oy}`);
+  Object.assign(el.style, { left: -ox + 'px', top: -oy + 'px', width: w + 2 * ox + 'px', height: h + 2 * oy + 'px', transformOrigin: `${ox}px ${oy}px` });
 }
 // A glide's path table is about 2,000 camera samples: at rest, build the glides either side of the beat, one per task (M5-1).
 let glideWarmTimer = null;
@@ -578,36 +593,36 @@ export function tripApply(st, focus = null) {
     tripWrite(E.svg, 'transform', 'none');
   }
   if (E.base) {
-    const B = E.baseRaster ??= { camera: null, last: null, w: VIEW.w, h: VIEW.h };
-    if (B.w !== VIEW.w || B.h !== VIEW.h) { B.camera = null; B.w = VIEW.w; B.h = VIEW.h; }
+    const box = VIEW.baseBox || NO_BOX, sx = Math.max(0, box.ox - 1), sy = Math.max(0, box.oy - 1);
+    const B = E.baseRaster ??= { camera: null, last: null, w: VIEW.w, h: VIEW.h, box };
+    if (B.w !== VIEW.w || B.h !== VIEW.h || B.box !== box) { B.camera = null; B.w = VIEW.w; B.h = VIEW.h; B.box = box; }
     const last = B.last, still = last && last.s === c.s && last.tx === c.tx && last.ty === c.ty;
     const rounded = p => ({ s: +p.s.toFixed(4), tx: +p.tx.toFixed(2), ty: +p.ty.toFixed(2) });
     const text = p => `matrix(${p.s.toFixed(4)} 0 0 ${p.s.toFixed(4)} ${p.tx.toFixed(2)} ${p.ty.toFixed(2)})`;
-    if (free) {
-      B.camera = rounded(r.base); B.held = false;
-      tripWrite(E.camBase, 'transform', text(r.base), true);
-      tripWrite(E.base, 'transform', E.svg.style.transform || 'none');
-    } else {
-      const canHold = !!B.camera && st.handoffT >= 1 && !st.reduced && !still;
-      const q = B.camera ? c.s / B.camera.s : 1;
-      if (!canHold || q < FRAME_PERF.baseMin || q > FRAME_PERF.baseMax) {
-        let k = 1;
-        if (canHold && q > FRAME_PERF.baseMax) {
-          const glide = GLIDES.find(g => st.P >= g.a && st.P < g.b);
-          let end = glide ? tripState(last && st.P < last.P ? glide.a : glide.b).cam.s : c.s;
-          if (focus && focus.k > (last?.focus || 0)) { const target = { ...st, cam: { ...c }, cardK: st.cardK.slice() }; tripFocus(target, focus.view, 1); end = target.cam.s; }
-          else if (focus) end = tripState(st.P).cam.s;
-          k = Math.min(FRAME_PERF.baseAhead, Math.max(1, end / c.s));
-        }
-        B.camera = rounded({ s: c.s * k, tx: VIEW.w / 2 - (VIEW.w / 2 - c.tx) * k, ty: VIEW.h / 2 - (VIEW.h / 2 - c.ty) * k });
-        tripWrite(E.camBase, 'transform', text(B.camera), true);
+    // The held raster moves on the compositor while the camera moves (in explore too, on its own clock), and is redrawn at
+    // the exact camera at rest, past the hold's zoom range, or before the screen would reach the edge of the base's box.
+    const shown = rounded(c), heldBy = cam => { const k = shown.s / cam.s; return { k, tx: shown.tx - cam.tx * k, ty: shown.ty - cam.ty * k }; };
+    const covers = m => -m.tx / m.k >= -sx - 1e-6 && (VIEW.w - m.tx) / m.k <= VIEW.w + sx + 1e-6 && -m.ty / m.k >= -sy - 1e-6 && (VIEW.h - m.ty) / m.k <= VIEW.h + sy + 1e-6;
+    const canHold = !!B.camera && !st.reduced && (free ? !!st.exploreMoving || !still : st.handoffT >= 1 && !still);
+    // Explore keeps svg#map's zoom range (F10), so a wheel or pinch redraws the base as often as part 10 redrew the map.
+    const lo = free ? FRAME_PERF.scaleMin : FRAME_PERF.baseMin, hi = free ? FRAME_PERF.scaleMax : FRAME_PERF.baseMax;
+    let held = canHold ? heldBy(B.camera) : null;
+    if (!held || held.k < lo || held.k > hi || !covers(held)) {
+      let k = 1;
+      // Raster ahead only while zooming in: past the top of the range, or at the box's edge with the scale rising.
+      if (held && (held.k > hi || held.k >= lo && last && c.s > last.s)) {
+        const glide = GLIDES.find(g => st.P >= g.a && st.P < g.b);
+        let end = glide ? tripState(last && st.P < last.P ? glide.a : glide.b).cam.s : c.s;
+        if (focus && focus.k > (last?.focus || 0)) { const target = { ...st, cam: { ...c }, cardK: st.cardK.slice() }; tripFocus(target, focus.view, 1); end = target.cam.s; }
+        else if (focus) end = tripState(st.P).cam.s;
+        k = Math.min(FRAME_PERF.baseAhead, Math.max(1, end / c.s));
       }
-      B.held = !!canHold;
-      if (B.held) {
-        const shown = rounded(c), k = shown.s / B.camera.s;
-        tripWrite(E.base, 'transform', `matrix(${k},0,0,${k},${shown.tx - B.camera.tx * k},${shown.ty - B.camera.ty * k})`);
-      } else tripWrite(E.base, 'transform', 'none');
+      B.camera = rounded({ s: c.s * k, tx: VIEW.w / 2 - (VIEW.w / 2 - c.tx) * k, ty: VIEW.h / 2 - (VIEW.h / 2 - c.ty) * k });
+      tripWrite(E.camBase, 'transform', text(B.camera), true);
+      if (held) held = heldBy(B.camera);
     }
+    B.held = !!held;
+    tripWrite(E.base, 'transform', held ? `matrix(${held.k},0,0,${held.k},${held.tx},${held.ty})` : 'none');
     B.last = { ...c, P: st.P, focus: focus?.k || 0 };
   }
   // Explore promotes the map while its camera moves, so the held raster above moves on the compositor instead of being
@@ -667,7 +682,7 @@ export function tripApply(st, focus = null) {
   tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
   tripWrite(E.svg, 'willChange', r.promo ? 'transform, opacity' : fade > 0 && fade < 1 ? 'opacity' : '');
   tripWrite(E.svg, 'overflow', free ? 'visible' : '');
-  if (E.base) { tripWrite(E.base, 'opacity', opacity); tripWrite(E.base, 'visibility', opacity === 0 ? 'hidden' : 'visible'); tripWrite(E.base, 'willChange', 'transform'); tripWrite(E.base, 'overflow', 'visible'); }
+  if (E.base) { tripWrite(E.base, 'opacity', opacity); tripWrite(E.base, 'visibility', opacity === 0 ? 'hidden' : 'visible'); tripWrite(E.base, 'willChange', 'transform'); }
   tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
   // the X fades in with the sea, so neither page shows it before the map exists
   if (E.x) tripWrite(E.x, 'opacity', h < 1 ? smooth(.2, .7, h).toFixed(3) : '');
