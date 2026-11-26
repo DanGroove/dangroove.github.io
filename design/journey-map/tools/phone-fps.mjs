@@ -231,7 +231,9 @@ async function oneRun(p, beat, run) {
     const spot = await evaluate(`(() => { const busy = e => !e || e.closest('.find, button, a, .go, .sheet, .pop, .c-card, #cards, .mini, .tl, .explore-hint, .ft'); for (const fy of [.5, .62, .38, .72, .28]) for (const fx of [.5, .65, .35, .78, .22]) { const x = innerWidth * fx, y = innerHeight * fy; if (!busy(document.elementFromPoint(x, y)) && !busy(document.elementFromPoint(x - 160, y - 120))) return [x, y]; } return [innerWidth / 2, innerHeight / 2]; })()`);
     const [x, y] = spot;
     // At the explore fit the whole map is on screen and bounded, so a drag only moves it once it is zoomed in.
-    const zoomIn = () => DESKTOP ? wheel([x, y], -100, 6) : fingers([[x - 40, y], [x + 40, y]], [[x - 150, y], [x + 150, y]], 500);
+    // On the real phone (phone-p23d) two DevTools touch points made no zoom, so there the pinch is Chrome's own synthetic
+    // pinch, which goes through the touch pipeline like real fingers. Desktop touch emulation (--touch) keeps the two fingers.
+    const zoomIn = () => DESKTOP ? wheel([x, y], -100, 6) : opt.noAdb ? fingers([[x - 40, y], [x + 40, y]], [[x - 150, y], [x + 150, y]], 500) : send('Input.synthesizePinchGesture', { x: Math.round(x), y: Math.round(y), scaleFactor: 3, relativeSpeed: 600, gestureSourceType: 'touch' });
     if (arg === 'pan') { await zoomIn(); await sleep(2500); }
     if (arg === 'zoom') await measure(beat, zoomIn, (b, a) => a.cam !== b.cam ? null : 'the map did not zoom');
     else await measure(beat, () => DESKTOP ? mouseDrag([x, y], [x - 160, y - 120], 600) : fingers([[x, y]], [[x - 160, y - 120]], 450), (b, a) => a.cam !== b.cam ? null : 'the map did not move');
