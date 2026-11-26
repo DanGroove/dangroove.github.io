@@ -284,7 +284,7 @@ export function bigMap() {
   const F = Object.fromEntries(FINDS.map(f => [f.id, f]));
   let fd = '';
   const at = (id, k, inner) => { const f = F[id]; return findWrap(id, f.label, grp(f.x, f.y, k, inner), f.x, f.y); };
-  fd += `<g id="wf-lines" pointer-events="none"></g>` + at('wayfinder', 1, wayfinder());
+  fd += at('wayfinder', 1, wayfinder());
   fd += `<g id="f-hoards" role="group" aria-label="${F.hoards.label}" data-x="${F.hoards.x}" data-y="${F.hoards.y}">` + FIND_COPY.hoards.map(h => `<g class="find hoard" id="f-${h.id}" role="button" tabindex="0" aria-label="${h.label}" data-x="${h.x}" data-y="${h.y}">${grp(h.x, h.y, FIND_PLAY.hoard.scale, hoard(h.id))}</g>`).join('') + `</g>`;
   fd += at('ravens', FIND_PLAY.raven.scale, ravens()) + at('serpent', FIND_PLAY.serpent.scale, serpent()) + at('beacon', FIND_PLAY.beacon.scale, beacon()) + at('runestone', FIND_PLAY.rune.scale, runestone());
   fd += at('hammer', HAMMER.map.scale, hammerMapArt()) + findWrap('mist', F.mist.label, mist(), F.mist.x, F.mist.y) + at('horn', FIND_PLAY.horn.scale, horn()) + at('well', 1, well());

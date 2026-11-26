@@ -39,6 +39,7 @@ console.log('ok: all 18 moves start/end correctly and never turn back; D4 glides
 
 // Recording nodes exercise controls, not rendered pixels. Any geometry read here fails.
 class StepNode {
+  get firstElementChild() { return this.children[0] || null; }
   constructor(tag = 'div') { this.tagName = tag; this.children = []; this.attrs = {}; this.dataset = {}; this.style = { setProperty(k, v) { this[k] = v; } }; this.listeners = {}; this.className = ''; this.classList = { contains: c => this.className.split(' ').includes(c), add: c => this.classList.toggle(c, true), remove: c => this.classList.toggle(c, false), toggle: (c, on) => { const set = new Set(this.className.split(' ').filter(Boolean)); on = on ?? !set.has(c); if (on) set.add(c); else set.delete(c); this.className = [...set].join(' '); } }; }
   setAttribute(k, v) { this.attrs[k] = String(v); if (k === 'class') this.className = v; }
   getAttribute(k) { return this.attrs[k]; }
@@ -59,7 +60,7 @@ class StepNode {
 }
 const stepWindow = new StepNode(), stepStage = new StepNode(), stepRoot = new StepNode(), stepBody = new StepNode();
 globalThis.window = Object.assign(stepWindow, { location: { search: '?mode=scroll' }, scrollY: 0, scrollTo() {}, dispatchEvent() {} });
-globalThis.document = { documentElement: stepRoot, body: stepBody, activeElement: null, createElement: tag => new StepNode(tag), getElementById: id => stepStage.children.find(n => n.id === id), querySelector: s => stepStage.querySelector(s) };
+globalThis.document = { documentElement: stepRoot, body: stepBody, activeElement: null, createElement: tag => new StepNode(tag), createElementNS: (ns,tag) => new StepNode(tag), getElementById: id => stepStage.children.find(n => n.id === id), querySelector: s => stepStage.querySelector(s) };
 globalThis.history = { scrollRestoration: 'auto' };
 let stepJoined = false;
 tripResize(1440, 900, 120); stepsBuild({ stage: stepStage, rm: false, resize() {}, joinedTop: () => stepJoined });

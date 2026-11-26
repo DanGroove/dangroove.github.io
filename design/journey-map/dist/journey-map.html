@@ -23,8 +23,17 @@ button { font-family: inherit; }
 #nova, #stars { pointer-events: none; }
 #deep, #air, #sky { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #sky { display: contents; }
-#sky[style*="opacity: 0;"] > svg { display: none; }
+#sky[style*="opacity: 0;"] > * { display: none; }
 #sky > svg { position: absolute; left: 0; top: 0; overflow: visible; transform-origin: 0 0; pointer-events: none; }
+/* One composited craft veil; the shared raster camera keeps its holes on the ink. */
+#map-veil { pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .3s; }
+.rm #map-veil { transition: none; }
+.rm .st-traveller { display: none; }
+.st-traveller { position: absolute; left: 0; top: 0; transform: translate(-50%,-50%); fill: none; stroke: var(--red); pointer-events: none; z-index: 3; opacity: 0; visibility: hidden; }
+#sky > .sky-glow, #sky > .sky-dim { position: absolute; left: 0; top: 0; pointer-events: none; visibility: hidden; opacity: 0; transform-origin: 0 0; }
+#sky > .sky-dim { width: 300vw; height: 300vh; z-index: 2; }
+#sky > .sky-glow { border-radius: 50%; z-index: 2; }
+.jm-steps #sky > svg { z-index: 2; }
 .map text { font-family: Outfit, system-ui, sans-serif; }
 /* On dense screens map text is set once and scaled with the map, not set again at every zoom step of a glide (about half
    the phone glide's frame cost; at rest it paints the same there). Low-density screens keep hinted text. */
@@ -976,7 +985,8 @@ const DEPTH = {
       [662, 120, 0.44, 1, -1, 0.6], [700, 270, 0.4, 2, 1, 0.4], [668, 420, 0.5, 3, -1, 0.7], [706, 570, 0.4, 2, -1, 0.5], [666, 730, 0.46, 1, 1, 0.6]] },
   dust: { on: 1, n: 240, nPhone: 120, tile: [800, 600], a: [-0.85, -0.2], r: [0.5, 1.1], alpha: [0.25, 0.75], show: [0.12, 0.4] },
   wolves: { on: 1, legs: [2, 4], from: 0.06, to: 0.94, ramp: 0.1, size: [1.05, 1.8, 860], margin: [0.06, 70], yTop: 0.16, arcH: [0.24, 0.16], lag: 64,
-    skoll: { k: 1, gallop: 2.4, swing: 24, bob: 0.5 }, hati: { k: 1.12, gallop: 1.7, swing: 20, bob: 1.3 } },
+    gap: 24, maxBand: .55, minBand: 360, bandBlend: 120, sunR: 18, glowR: 7, motes: 10, spark: '#FFE2A6', corona: '#FFF2D9', grey: '#5A5652',
+    skoll: { window: [.36,.98], k: 1, gallop: 2.4, swing: 24, bob: 0.5 }, hati: { window: [.02,.66], k: 1.12, gallop: 1.7, swing: 20, bob: 1.3 } },
   card: { tilt: 14, ptrTilt: [2.2, 1.6], shift: 8, shadow: 0.5, drop: 18, ease: 0.12,
     perspective: 1100, open: [0.1, 0.9], flat: 0.01, shadowShare: 3, blur: 28, spread: 10, radius: 14 },
   // Section 6 gives the sky one pointer gain. Both review names tune that same gain.
@@ -1129,7 +1139,7 @@ const FIND_PLAY = {
   way: { stiff: 90, damp: 9, near: 70, line: 0.45, gap: 0.1, short: 9, ping: 0.5, runes: 0.6, spin: 0.8, timelineDim: 0.35, lineWidth: 1, wide: [300, 480, 250, 0],
     drift: [0.8, 4, 0.31, 2], dim: 0.55, armWidth: 2.2, pulse: [1.12, 0.25], dash: [2, 4], alpha: 0.6, solidAlpha: 0.9, pingR: [6, 14], pingAlpha: 0.7, tally: [22, 5.2, 1, 10.5, 9], ring: [4, 9, 1.6], allSpeed: 40, hub: 6,
     // The craft words sit wordGap screen px off the ring (radius wordRing) at every zoom; wordCap is the caps' height per font size.
-    wordRing: 42, wordGap: 9, wordCap: 0.7,
+    wordRing: 42, wordGap: 9, wordCap: 0.7, veilZoom: .1, veilCore: .6, veilPad: 5,
   },
   hoard: { hole: [16, 28, 38], lift: [0.18, 0.24, 1], rise: [0.28, 0.28, 0.5], backEase: 0.8, over: 1.2, repeat: 0.3, rattle: 0.36, openHold: 0.3, near: 26, glint: [5, 8],
     scale: 0.3, travel: 64, holeRatio: 0.28, pile: [0.5, 0.75, 1], scratchWidth: 1.6, glintAt: [0, -4], glintSize: 5, glintTime: 0.5, glintTurn: 45, clods: 7, rattleAngle: 4, rattleCycles: 3,
@@ -1644,7 +1654,7 @@ const YGG = {
   }
 };
 // lift: how far a stop's shield stands off its trail point, as a share of half its size plus stand (0 = centred on the trail, Dan on preview 21; 1 = standing on it as before).
-const MARK = { k: 10, min: 14, max: 36, stand: 3, lift: 0, box: 400, centre: 200, radius: 176, rim: 20, boss: 54, bossLine: 16, highlight: [186,186,12,.55], shadow: [200,392,120,10,.35], planks: [-120,-72,-24,24,72,120], plankLine: 7, plankAlpha: .28, paintAlpha: .35, studs: 8, stud: 9, studLine: 5, quarters: 'M200 200L200 24A176 176 0 0 1 376 200ZM200 200L200 376A176 176 0 0 1 24 200Z', legend: [68,836,4.6,.9,1.2,.45] };
+const MARK = { k: 10, min: 14, max: 36, stand: 3, lift: 0, ringWidth: 1.2, ringGap: 2, box: 400, centre: 200, radius: 176, rim: 20, boss: 54, bossLine: 16, highlight: [186,186,12,.55], shadow: [200,392,120,10,.35], planks: [-120,-72,-24,24,72,120], plankLine: 7, plankAlpha: .28, paintAlpha: .35, studs: 8, stud: 9, studLine: 5, quarters: 'M200 200L200 24A176 176 0 0 1 376 200ZM200 200L200 376A176 176 0 0 1 24 200Z', legend: [68,836,4.6,.9,1.2,.45] };
 const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -8, hmcSubDY: -27.5, hmcAgainSubDX: 3, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [18,8], xSubAt: [18,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]],
   // cardDim: other stops' labels behind an open card (desktop, phone); underFade: the share of a label under the timeline or
   // step bar at which it has gone (sideFade: off the screen's side); bar: the bar's keep-out (half width, pad); hint: a find
@@ -1952,7 +1962,7 @@ function bigMap() {
   const F = Object.fromEntries(FINDS.map(f => [f.id, f]));
   let fd = '';
   const at = (id, k, inner) => { const f = F[id]; return findWrap(id, f.label, grp(f.x, f.y, k, inner), f.x, f.y); };
-  fd += `<g id="wf-lines" pointer-events="none"></g>` + at('wayfinder', 1, wayfinder());
+  fd += at('wayfinder', 1, wayfinder());
   fd += `<g id="f-hoards" role="group" aria-label="${F.hoards.label}" data-x="${F.hoards.x}" data-y="${F.hoards.y}">` + FIND_COPY.hoards.map(h => `<g class="find hoard" id="f-${h.id}" role="button" tabindex="0" aria-label="${h.label}" data-x="${h.x}" data-y="${h.y}">${grp(h.x, h.y, FIND_PLAY.hoard.scale, hoard(h.id))}</g>`).join('') + `</g>`;
   fd += at('ravens', FIND_PLAY.raven.scale, ravens()) + at('serpent', FIND_PLAY.serpent.scale, serpent()) + at('beacon', FIND_PLAY.beacon.scale, beacon()) + at('runestone', FIND_PLAY.rune.scale, runestone());
   fd += at('hammer', HAMMER.map.scale, hammerMapArt()) + findWrap('mist', F.mist.label, mist(), F.mist.x, F.mist.y) + at('horn', FIND_PLAY.horn.scale, horn()) + at('well', 1, well());
@@ -2616,6 +2626,7 @@ function tripLabels(st, t2Fade = 1) {
 }
 function tripApply(st, focus = null) {
   const E = TRIP_EL, c = st.cam;
+  const veil = E.veil ??= document.getElementById('map-veil'), camVeil = E.camVeil ??= document.getElementById('cam-veil');
   const free = !!st.exploring || st.exploreK > 0;
   const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
   if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
@@ -2630,10 +2641,13 @@ function tripApply(st, focus = null) {
     // Translation stays one layer; a zoom may carry at most 15% size error.
     const k = c.s / r.base.s;
     tripWrite(E.svg, 'transform', `matrix(${k},0,0,${k},${c.tx - r.base.tx * k},${c.ty - r.base.ty * k})`);
+    if (veil) tripWrite(veil, 'transform', E.svg.style.transform);
   } else {
     r.base = { ...c };
     tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true);
+    if (camVeil) tripWrite(camVeil, 'transform', E.cam.getAttribute('transform'), true);
     tripWrite(E.svg, 'transform', 'none');
+    if (veil) tripWrite(veil, 'transform', 'none');
   }
   if (E.base) {
     const box = VIEW.baseBox || NO_BOX, sx = Math.max(0, box.ox - 1), sy = Math.max(0, box.oy - 1);
@@ -2733,6 +2747,7 @@ function tripApply(st, focus = null) {
   tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
   tripWrite(E.svg, 'willChange', r.promo ? 'transform, opacity' : fade > 0 && fade < 1 ? 'opacity' : '');
   tripWrite(E.svg, 'overflow', free || glideHold ? 'visible' : '');
+  if (veil) { tripWrite(veil, 'overflow', E.svg.style.overflow); tripWrite(veil, 'willChange', E.svg.style.willChange || (veil.style.visibility === 'visible' ? 'opacity' : '')); }
   if (E.base) { tripWrite(E.base, 'opacity', opacity); tripWrite(E.base, 'visibility', opacity === 0 ? 'hidden' : 'visible'); tripWrite(E.base, 'willChange', 'transform'); }
   tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
   // the X fades in with the sea, so neither page shows it before the map exists
@@ -2825,7 +2840,7 @@ function depthSkyPlace(o, x, y, scale, angle, flip, alpha, hold = false) {
   depthSkyWrite(o.el, 'willChange', alpha > 0 && FRAME_PERF.skyLayers ? 'transform' : '');
   depthSkyWrite(o.el, 'opacity', alpha); if (alpha <= 0) return;
   const ratio = scale / o.scale;
-  if (!o.scale || !hold || ratio < FRAME_PERF.scaleMin || ratio > FRAME_PERF.scaleMax) {
+  if (!o.scale || !hold || hold !== 'fixed' && (ratio < FRAME_PERF.scaleMin || ratio > FRAME_PERF.scaleMax)) {
     o.scale = scale; const [x0, y0, w, h] = o.box, pad = 2 / scale;
     o.origin = [x0 - pad, y0 - pad];
     depthSkyWrite(o.el, 'viewBox', [x0-pad,y0-pad,w+2*pad,h+2*pad].join(' '), true);
@@ -2856,14 +2871,24 @@ function depthConfigure() {
   const key = JSON.stringify([DEPTH.clouds.list.map(c => c[3]), DEPTH.drawings, DEPTH.field.sprite, DEPTH.field.spriteMid, DEPTH.field.spriteAlpha]);
   if (key !== DP.config) {
     DP.config = key;
-    DP.clouds.forEach(c => c.el.remove()); DP.birds.forEach(b => { b.el.remove(); b.lead.el.remove(); });
+    DP.clouds.forEach(c => c.el.remove()); DP.birds.forEach(b => { b.el.remove(); b.lead.el.remove(); for (const o of [b.glow,b.dim,b.halo,b.motes,b.sparkles]) o?.el.remove(); });
     DP.clouds = DEPTH.clouds.list.map((row, i) => depthSkyObject('cloud-'+i, depthCloudDrawing(DEPTH.drawings.clouds[row[3]-1])));
     DP.birds = ['skoll', 'hati'].map(name => {
       const d = DEPTH.drawings[name === 'skoll' ? 'sun' : 'moon'];
-      const markup = name === 'skoll' ? '<path fill="'+C.paper+'" d="'+d.disc+'"/><path fill="'+C.warm+'" d="'+d.rays+'"/>' : '<path fill="none" stroke="'+C.paper+'" stroke-opacity=".5" stroke-width=".7" vector-effect="non-scaling-stroke" d="'+d.ghost+'"/><path fill="'+C.paper+'" d="'+d.crescent+'"/>';
+      const R = DEPTH.wolves.sunR, colour = name === 'skoll' ? C.warm : C.paper, id = 'eclipse-'+name;
+      const markup = '<defs><clipPath id="'+id+'"><circle r="'+R+'"/></clipPath></defs>' + (name === 'skoll' ? '<g transform="scale('+R/8+')"><path fill="'+C.paper+'" d="'+d.disc+'"/><path fill="'+C.warm+'" d="'+d.rays+'"/></g>' : '<circle class="sky-ghost" r="'+R+'" fill="'+DEPTH.wolves.grey+'" fill-opacity="0" stroke="'+C.paper+'" stroke-opacity=".5" stroke-width=".7"/><path class="sky-crescent" transform="scale('+R/9+')" fill="'+C.paper+'" d="'+d.crescent+'"/>') + '<circle class="sky-bite" r="'+(.96*R)+'" cx="'+(2*R)+'" fill="'+C.shade+'" clip-path="url(#'+id+')"/>';
       const lead = depthSkyObject(name === 'skoll' ? 'sun' : 'moon', markup), b = depthSkyObject(name, depthWolfDrawing(name));
       // Fixed bounds include every gallop pose and bob, without a per-frame bbox read.
-      b.box = [-75, -50, 135, 100]; b.name = name; b.lead = lead;
+      b.box = [-75, -50, 135, 100]; b.name = name; b.lead = lead; lead.box = [-40,-40,80,80];
+      const element = (kind, background) => { const el = document.createElement('div'); el.className='sky-'+kind; el.dataset.sky=name+'-'+kind; el.style.background=background; DP.sky.appendChild(el); return {el}; };
+      b.dim = element('dim', 'radial-gradient(circle,transparent 0 '+(2*R)+'px,'+C.shade+'80 65%)');
+      b.glow = element('glow', 'radial-gradient(circle,'+colour+(name==='skoll'?'4D':'29')+',transparent 70%)');
+      b.glow.el.style.width=b.glow.el.style.height=(R*14)+'px';
+      DP.sky.insertBefore(b.dim.el, lead.el); DP.sky.insertBefore(b.glow.el, lead.el);
+      b.halo = depthSkyObject(name+'-halo','<defs><filter id="'+id+'-blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter></defs><circle r="'+(R+7)+'" fill="none" stroke="'+C.paper+'" stroke-width="3" filter="url(#'+id+'-blur)"/><circle r="'+(R+1.5)+'" fill="none" stroke="'+(name==='skoll'?DEPTH.wolves.corona:C.paper)+'" stroke-width="1.4"/>'); b.halo.box=[-40,-40,80,80];
+      b.sparkles = depthSkyObject(name+'-stars',Array.from({length:18},(_,i)=>{const a=i*2.399963,r=R*(2.5+(i%7)/6*3.5),x=Math.cos(a)*r,y=Math.sin(a)*r;return '<path fill="'+C.paper+'" d="M'+x+' '+(y-2.5)+'l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7Z"/>';}).join('')); b.sparkles.box=[-114,-114,228,228];
+      b.motes=depthSkyObject(name+'-motes',Array.from({length:10},(_,i)=>'<circle r="'+(i%3?1.1:1.7)+'" fill="'+(name==='skoll'?(i%2?C.warm:DEPTH.wolves.spark):C.paper)+'" opacity="0"/>').join('')); b.motes.box=[-30,-85,180,115]; b.particles=[...b.motes.el.children].map((el,i)=>({el,i,born:-Infinity})); b.emitted=-Infinity;
+      b.bite=lead.el.querySelector('.sky-bite'); b.ghost=lead.el.querySelector('.sky-ghost'); b.crescent=lead.el.querySelector('.sky-crescent'); b.fills=[...b.el.querySelectorAll('[fill]')].filter(el=>el.getAttribute('fill')!=='none').map(el=>({el,fill:el.getAttribute('fill')}));
       b.legs = [...b.el.querySelectorAll('.sky-leg')]; b.bob = b.el.querySelector('.sky-bob'); return b;
     });
     DP.force = true;
@@ -3097,9 +3122,10 @@ function depthSky(st, look, time) {
   else if (delta < -1e-9) DP.skyForward = false;
   const leg = wolves.legs.find(L => st.P > GLIDES[L+1].a && st.P < GLIDES[L+1].b);
   const glide = leg === undefined ? null : GLIDES[leg+1];
-  const f = glide ? clamp01(((st.P-glide.a)/(glide.b-glide.a)-wolves.from)/(wolves.to-wolves.from)) : 0;
   DP.birds.forEach(b => {
     const tune = wolves[b.name], active = wolves.on && !st.exploring && !st.exploreK && glide && (b.name === 'skoll' ? leg === 2 : leg === 4);
+    const window = VIEW.phone ? [wolves.from,wolves.to] : tune.window;
+    const f = glide ? clamp01(((st.P-glide.a)/(glide.b-glide.a)-window[0])/(window[1]-window[0])) : 0;
     let alpha = active && DP.skyForward ? smooth(0,wolves.ramp,f)*(1-smooth(1-wolves.ramp,1,f)) : 0;
     let place = f;
     if (alpha > 0) { b.flight = { f, alpha, time }; b.turn = null; }
@@ -3107,13 +3133,30 @@ function depthSky(st, look, time) {
     else { b.flight = null; b.turn = null; }
     alpha *= depthSeaFade(st)*(1-(st.focusK||0))*st.dim;
     const s = Math.max(wolves.size[0],Math.min(wolves.size[1],VIEW.w/wolves.size[2])), ws = s*tune.k;
-    const m = wolves.margin[0]*VIEW.w+wolves.margin[1]*s, span = VIEW.w+2*m, height = Math.min(wolves.arcH[0]*VIEW.h,wolves.arcH[1]*span);
+    const m = wolves.margin[0]*VIEW.w+wolves.margin[1]*s, edge = DEPTH.frame.outer[2]*st.cam.s+st.cam.tx+wolves.gap;
+    const L = Math.max(edge,VIEW.w-wolves.maxBand*VIEW.w), band = VIEW.w-L, blend = VIEW.phone ? 0 : smooth(wolves.minBand,wolves.minBand+wolves.bandBlend,band);
+    const end = lerp(-m,L,blend), span = VIEW.w+m-end, height = Math.min(wolves.arcH[0]*VIEW.h,wolves.arcH[1]*span);
     const arc = u => [VIEW.w+m-span*u,wolves.yTop*VIEW.h+height*(1-Math.sin(Math.PI*u))];
-    const u = place-wolves.lag*ws/span, lead = arc(place), wolf = arc(u), tx = -span, ty = -height*Math.PI*Math.cos(Math.PI*u);
+    const k = smooth(.28,.46,place)*(1-smooth(.6,.76,place)), release = 1+.15*smooth(.76,.85,place), lag = wolves.lag*ws*(1-.85*k)*release;
+    const u = place-lag/span, lead = arc(place), wolf = arc(u), tx = -span, ty = -height*Math.PI*Math.cos(Math.PI*u), R=wolves.sunR*s*(1+.5*k);
+    // Retire before any part of the disc or rotated wolf reaches the map labels.
+    alpha *= lerp(1,smooth(L+R*2,L+R*4,lead[0]),blend);
     const angle = Math.atan2(-ty,-tx)*180/Math.PI;
-    depthSkyPlace(b.lead,...lead,s,b.name==='skoll'?place*40:-24,1,alpha,true);
+    depthSkyPlace(b.lead,...lead,s*(1+.5*k),0,1,alpha,true);
     depthSkyPlace(b,...wolf,ws,angle,-1,alpha,true);
-    if (!alpha) return;
+    depthSkyPlace(b.halo,...lead,s*(1+.5*k),0,1,alpha*k,'fixed');
+    depthSkyPlace(b.sparkles,...lead,s,0,1,b.name==='hati'?alpha*k:0,'fixed');
+    const cssPlace = (o,scale,a) => { depthSkyWrite(o.el,'visibility',a>0?'visible':'hidden'); depthSkyWrite(o.el,'willChange',a>0?'transform':''); depthSkyWrite(o.el,'opacity',a); if(a>0)depthSkyWrite(o.el,'transform','translate('+lead[0]+'px,'+lead[1]+'px) scale('+scale+') translate(-50%,-50%)'); };
+    cssPlace(b.glow,s*(1+.5*k),alpha); cssPlace(b.dim,s*(1+.5*k),alpha*.5*k);
+    depthSkyPlace(b.motes,...wolf,ws,0,1,alpha,true);
+    b.eclipse={u:place,k,edge,L,blend,lead,wolf,R,alpha};
+    if (!alpha) { b.particles.forEach(p=>depthSkyWrite(p.el,'opacity',0,true)); return; }
+    depthSkyWrite(b.bite,'cx',(1-.55*k)*2*wolves.sunR,true);
+    if(b.ghost) { depthSkyWrite(b.ghost,'fill-opacity',k,true); depthSkyWrite(b.crescent,'opacity',1-k,true); }
+    const mix = (a,z,t) => '#'+[1,3,5].map(i=>Math.round(lerp(parseInt(a.slice(i,i+2),16),parseInt(z.slice(i,i+2),16),t)).toString(16).padStart(2,'0')).join('');
+    b.fills.forEach(p=>depthSkyWrite(p.el,'fill',mix(p.fill,C.shade,k),true));
+    if(alpha>0 && DP.skyForward && place>=.08 && place<=.75 && time-b.emitted>=1/wolves.motes) { const p=b.particles.reduce((a,z)=>a.born<z.born?a:z);p.born=time;b.emitted=time; }
+    b.particles.forEach(p=>{const age=time-p.born,life=.5+(p.i%4)*.1,q=clamp01(age/life);depthSkyWrite(p.el,'opacity',alpha && q<1?(b.name==='hati'?.7:1)*(1-q):0,true);if(q<1)depthSkyWrite(p.el,'transform','translate('+(25+age*(70+p.i*3))+' '+(-10-age*(12+p.i*2))+') scale('+(1-q)+')',true);});
     const ph = time*2*Math.PI*tune.gallop, g = .5-.5*Math.cos(ph), g2 = .5-.5*Math.cos(ph-.6);
     depthSkyWrite(b.bob,'transform','translate(0 '+(-tune.bob*Math.sin(ph))+')',true);
     b.legs.forEach(el => depthSkyWrite(el,'transform',el.classList.contains('front')?'rotate('+(tune.swing*g2)+' 12.6 -2.6)':'rotate('+(-tune.swing*g)+' -19.4 -3.2)',true));
@@ -3896,7 +3939,7 @@ function findLife(o, x, y, rad, reach = rad) {
   if (o.el) {
     attr(o.el, 'aria-hidden', !seen || covered >= .95);
     // Through --jm-find (map.css): an opacity fade would give the find a layer of its own.
-    findStyle(o.el, '--jm-find', (1 - covered) * (FD.list.wayfinder?.mask && o.id !== 'wayfinder' && !o.craftLit ? FIND_PLAY.way.dim : 1));
+    findStyle(o.el, '--jm-find', 1 - covered);
     if (o.cover !== covered) { o.cover = covered; findStyle(o.el, 'visibility', covered >= .995 ? 'hidden' : ''); }
     if (o.hit) { attr(o.hit, 'cx', x); attr(o.hit, 'cy', y); }
     if (o.focusRing) { attr(o.focusRing, 'cx', x); attr(o.focusRing, 'cy', y); attr(o.focusRing, 'r', Math.min(rad, 50)); }
@@ -4943,9 +4986,10 @@ function cardsBuild(container, onGo, rm = false) {
     });
     a.querySelector('.face').inert = !rm;
     a.querySelector('.c-close')?.addEventListener('click', () => cardsClose(i));
+    const travellerRing = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); travellerRing.setAttribute('class', 'st-traveller'); travellerRing.setAttribute('aria-hidden', 'true'); travellerRing.innerHTML='<circle/>'; a.appendChild(travellerRing);
     container.appendChild(a);
     const tail = a.querySelector('.c-tail');
-    CD.list.push({ el: a, card: a.querySelector('.c-card'), shadowBox: a.querySelector('.c-shadow'), tail, face: a.querySelector('.face'), shadow: a.querySelector('.c-sh'), inn: a.querySelector('.c-in'), btn: a.querySelector('.st-btn'), fill: a.querySelector('.st-fill'), boss: a.querySelector('.st-boss-paint'), glow: a.querySelector('.st-glow'), mini: document.getElementById('mini')?.querySelectorAll('.mm-stop')[i], stop: s, state: '', paint: 0, tilt: [0, 0, 0, 0] });
+    CD.list.push({ el: a, travellerRing, card: a.querySelector('.c-card'), shadowBox: a.querySelector('.c-shadow'), tail, face: a.querySelector('.face'), shadow: a.querySelector('.c-sh'), inn: a.querySelector('.c-in'), btn: a.querySelector('.st-btn'), fill: a.querySelector('.st-fill'), boss: a.querySelector('.st-boss-paint'), glow: a.querySelector('.st-glow'), mini: document.getElementById('mini')?.querySelectorAll('.mm-stop')[i], stop: s, state: '', paint: 0, tilt: [0, 0, 0, 0] });
   });
 }
 function cardsResize(steps = false) {
@@ -5013,6 +5057,12 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     // Position completes its return before the face disappears into the boss.
     const travel = smooth(.12, 1, e); let cx = lerp(p[0], oc.x, travel), cy = lerp(py, oc.y, travel);
     cardsStyle(c.el, 'transform', `translate(${p[0]}px,${py}px)`);
+    const radius = stonePx * (MARK.radius + MARK.rim/2) / MARK.box, ringRadius = radius + MARK.ringGap + MARK.ringWidth;
+    const traveller = st.trav && toScreen(st, st.trav), distance = traveller ? Math.hypot(traveller[0]-p[0], traveller[1]-py) : Infinity;
+    const ringAlpha = CD.steps && !CD.rm && st.handoffT >= 1 && !st.exploring && !st.exploreK && st.kind !== 'end' ? (1-smooth(.2,.7,st.rushT))*(1-smooth(.8*radius,1.2*radius,distance)) : 0;
+    cardsStyle(c.travellerRing, 'width', ringRadius*2+'px'); cardsStyle(c.travellerRing, 'height', ringRadius*2+'px');
+    const ringCircle=c.travellerRing.firstElementChild; for(const [key,value] of Object.entries({cx:ringRadius,cy:ringRadius,r:ringRadius-MARK.ringWidth/2,'stroke-width':MARK.ringWidth})) if(ringCircle.getAttribute(key)!==String(value))ringCircle.setAttribute(key,value);
+    cardsStyle(c.travellerRing, 'opacity', ringAlpha); cardsStyle(c.travellerRing, 'visibility', ringAlpha > 0 ? 'visible' : 'hidden');
     cardsStyle(c.btn, 'transform', 'translate(-50%,-50%)');
     // The visible disk owns its box; invisible squares covered nearby finds in landscape.
     const hitPx = VIEW.h <= 440 && VIEW.w > 640 ? stonePx : Math.max(COMB.target, stonePx);
@@ -5577,7 +5627,7 @@ const wayAllStops = () => STOPS.map(s => CRAFTS.every(c => s.crafts.includes(c))
 function findWay(svg) {
   const f = FIND_BY.wayfinder, el = svg.querySelector('#f-wayfinder'), needle = el.querySelector('.wf-needle'), words = [...el.querySelectorAll('.wf-word')], arms = [...el.querySelectorAll('.wf-arm')], runes = el.querySelector('.wf-runes'), tally = el.querySelector('.wf-tally'), ring = el.querySelector('.wf-all');
   const o = { id: f.id, el, craft: -1, angle: 0, speed: 0, runesAngle: 0, drag: false, picked: [], mask: null, kept: false, stage: 'rest', lines: [], lineTs: 0, hearTs: -Infinity };
-  const group = svg.querySelector('#wf-lines');
+  const group = document.getElementById('wf-lines');
   STOPS.forEach(s => {
     const target = MAP.waypoints[s.w], dx = target[0] - f.x, dy = target[1] - f.y, distance = Math.hypot(dx, dy), length = Math.max(0, distance - FIND_PLAY.way.short);
     const g = findSvg('g', { transform: `translate(${f.x} ${f.y}) rotate(${Math.atan2(dy, dx) * FIND_PLAY.kit.deg / Math.PI})` }), line = findSvg('path', { d: `M0 0H${length}`, fill: 'none', stroke: C.paper, 'stroke-width': FIND_PLAY.way.lineWidth, 'stroke-dasharray': FIND_PLAY.way.dash.join(' '), 'vector-effect': 'non-scaling-stroke', transform: 'scale(0 1)' });
@@ -5586,9 +5636,47 @@ function findWay(svg) {
   });
   const applyMask = mask => {
     o.mask = mask; cardsSetCraft(mask); tlSetCraft(mask);
-    FD.base.style.opacity = mask ? FIND_PLAY.way.dim : 1;
-    svg.querySelectorAll('#finds > .find, #bc-notes').forEach(g => { if (g === el) return; const v = mask ? FIND_PLAY.way.dim : 1; if (g.id === 'bc-notes') g.style.opacity = v; else findStyle(g, '--jm-find', v); });
-    FD.list.hoards?.items.forEach(h => { const i = STOPS.findIndex(s => s.id === h.d.stop); h.setCraftLit(!!mask?.[i]); h.el.style.opacity = mask && !mask[i] ? FIND_PLAY.way.dim : 1; });
+    FD.list.hoards?.items.forEach(h => { const i = STOPS.findIndex(s => s.id === h.d.stop); h.setCraftLit(!!mask?.[i]); });
+    const veil = document.getElementById('map-veil');
+    if (!veil) return;
+    if (!o.veilUpdate) {
+      const frame = DEPTH.frame.outer, holes = document.getElementById('veil-holes');
+      for (const rect of [document.getElementById('veil-fill'), document.getElementById('veil-mask-frame'), document.getElementById('veil-mask'), document.getElementById('veil-lines-frame'), document.getElementById('veil-lines-mask')])
+        for (const [key, value] of Object.entries({ x: frame[0], y: frame[1], width: frame[2]-frame[0], height: frame[3]-frame[1] })) attr(rect, key, value);
+      o.veilUpdate = force => {
+        const s = FD.st?.cam.s || VIEW.s0;
+        if (!o.mask || !force && o.veilScale && Math.abs(s/o.veilScale-1) <= FIND_PLAY.way.veilZoom) return;
+        o.veilScale = s; holes.replaceChildren();
+        const cuts=document.getElementById('veil-line-cuts'); cuts.replaceChildren(findSvg('circle',{cx:f.x,cy:f.y,r:FIND_PLAY.way.wordRing+1/s}));
+        let compassRadius=FIND_PLAY.way.wordRing+2/s;
+        for(const word of [...words,tally]){const b=word.getBoundingClientRect(),a=toMap([b.left-3,b.top-3]),z=toMap([b.right+3,b.bottom+3]);if(b.width){cuts.appendChild(findSvg('rect',{x:a[0],y:a[1],width:z[0]-a[0],height:z[1]-a[1]}));for(const x of[a[0],z[0]])for(const y of[a[1],z[1]])compassRadius=Math.max(compassRadius,Math.hypot(x-f.x,y-f.y));}}
+        const hole = (x,y,r) => holes.appendChild(findSvg('circle', { cx:x, cy:y, r, fill:'url(#veil-soft)' }));
+        // The clear core contains the entire instrument, including screen-sized words and title.
+        const W = FIND_PLAY.way;
+        hole(f.x, f.y, compassRadius / W.veilCore);
+        STOPS.forEach((stop,i) => {
+          if (!o.mask[i]) return;
+          const p = MAP.waypoints[stop.w], boxes = [[p[0]-8,p[1]-8,p[0]+8,p[1]+8]];
+          const h = FIND_COPY.hoards.find(h => h.stop === stop.id);
+          if (h) boxes.push([h.x-22,h.y-30,h.x+22,h.y+12]);
+          // Labels use their actual displayed geometry, converted back through the shared camera.
+          for (const row of mapLabelRows()) if (row.stop === stop.id) {
+            const b = svg.querySelector('.label-anchor[data-row="'+row.i+'"]').getBoundingClientRect(), a = toMap([b.left,b.top]), z = toMap([b.right,b.bottom]); boxes.push([...a,...z]);
+          }
+          const x0=Math.min(...boxes.map(b=>b[0])),y0=Math.min(...boxes.map(b=>b[1])),x1=Math.max(...boxes.map(b=>b[2])),y1=Math.max(...boxes.map(b=>b[3]));
+          hole((x0+x1)/2,(y0+y1)/2,(Math.hypot(x1-x0,y1-y0)/2 + W.veilPad/s)/W.veilCore);
+        });
+      };
+      const observer = new MutationObserver(() => o.veilUpdate(false));
+      observer.observe(document.getElementById('cam'), { attributes:true, attributeFilter:['transform'] });
+      observer.observe(svg, { attributes:true, attributeFilter:['style'] });
+      veil.addEventListener('transitionend', e => { if (e.propertyName === 'opacity' && !o.mask) { veil.style.visibility='hidden'; veil.style.willChange=svg.style.willChange; } });
+    }
+    o.veilUpdate(true);
+    if (mask) { veil.style.visibility='visible'; veil.style.willChange = svg.style.willChange || 'opacity'; }
+    veil.style.opacity = mask ? 1-FIND_PLAY.way.dim : 0;
+    if (FD.rm && !mask) { veil.style.visibility='hidden'; veil.style.willChange=svg.style.willChange; }
+    queueMicrotask(()=>o.veilUpdate(true));
   };
   const wayResultView = mask => { const points = [[f.x - 70, f.y - 60], [f.x + 70, f.y + 105], ...STOPS.filter((s,i) => mask[i]).map(s => MAP.waypoints[s.w])], xs = points.map(p=>p[0]), ys = points.map(p=>p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys); return [(x0+x1)/2, (y0+y1)/2, Math.max(x1-x0,y1-y0)/2+40, 0]; };
   const startLines = () => { o.lineTs = FD.now; o.linePhase = 'grow'; o.lines.forEach((l, i) => { l.lit = !!o.mask?.[i]; l.arrived = false; attr(l.line, 'stroke-dasharray', o.craft === CRAFTS.length ? 'none' : FIND_PLAY.way.dash.join(' ')); }); };
@@ -5603,7 +5691,7 @@ function findWay(svg) {
     applyMask(mask);
     // With a craft chosen the lines have to be seen arriving, so on a wide screen the camera pulls back for them.
     document.documentElement.classList.toggle('jm-way', i >= 0);
-    if (JOURNEY.focus === o.id) stepsFocus(o.id, i < 0 ? f.view : wayResultView(mask));
+    if (JOURNEY.focus === o.id) stepsFocus(o.id, i < 0 ? findView(o.id) : wayResultView(mask));
     if (FD.say) FD.say.textContent = i < 0 ? f.label : findFormat(COMB.waySay, { craft: FIND_COPY.crafts[i] || FIND_COPY.wayAll.split(':')[0], names: STOPS.filter((s,j) => mask?.[j]).map(s => s.short).join(', ') });
     tally.textContent = i < 0 ? '' : i === CRAFTS.length ? findFormat(FIND_COPY.wayAll, { names: STOPS.filter((s, j) => mask[j]).map(s => s.short + ', ' + s.dates).join('; ') }) : findFormat(FIND_COPY.wayTally, { craft: FIND_COPY.crafts[i], n: mask.filter(Boolean).length, t: STOPS.length });
     if (FD.hint) FD.hint.textContent = i < 0 ? FIND_COPY.hints.wayfinder : FIND_COPY.wayPickedHint;
@@ -7076,6 +7164,7 @@ const M = bigMap();
 MAIN.innerHTML = `<h1 class="sr">${COPY.title}</h1><section class="trip" id="trip" aria-label="${COPY.srMap}"><div class="stage" id="stage">
 <canvas id="deep" aria-hidden="true"></canvas>
 <svg id="map" class="map" role="group" aria-label="${COPY.srMap}">${mapDefs()}<g id="cam"><g id="b-all"><g id="b-sea">${M.sea}</g><g id="b-fill">${M.fill}</g><g id="b-coast">${M.coast}</g><g id="b-detail">${M.detail}</g></g><path id="trail-done" class="done" d="${pathD(TRAIL)}"/><g id="trail-pieces">${DONE_PIECES.map(q => `<path class="done-p" data-u0="${q.u0}" data-u1="${q.u1}" d="M${q.pts.map(p => p.join(' ')).join('L')}"/>`).join('')}</g><g id="finds">${M.finds}</g><g id="fxg" transform="translate(${MAP.x[0]} ${MAP.x[1]})"></g></g></svg>
+<svg id="map-veil" class="map" aria-hidden="true" pointer-events="none"><defs><radialGradient id="veil-soft"><stop offset=".6" stop-color="black"/><stop offset="1" stop-color="black" stop-opacity="0"/></radialGradient><mask id="veil-mask" maskUnits="userSpaceOnUse"><rect id="veil-mask-frame" fill="white"/><g id="veil-holes"></g></mask><mask id="veil-lines-mask" maskUnits="userSpaceOnUse"><rect id="veil-lines-frame" fill="white"/><g id="veil-line-cuts" fill="black"></g></mask></defs><g id="cam-veil"><rect id="veil-fill" fill="${C.shade}" mask="url(#veil-mask)"/><g id="wf-lines" mask="url(#veil-lines-mask)" pointer-events="none"></g></g></svg>
 <canvas id="nova" aria-hidden="true"></canvas><canvas id="stars" aria-hidden="true"></canvas>
 <canvas id="air" aria-hidden="true"></canvas><div id="sky" aria-hidden="true"></div>
 <button type="button" class="fx-hit" id="nova-hit" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true"></button>

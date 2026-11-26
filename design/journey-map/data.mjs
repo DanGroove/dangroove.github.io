@@ -353,7 +353,8 @@ export const DEPTH = {
       [662, 120, 0.44, 1, -1, 0.6], [700, 270, 0.4, 2, 1, 0.4], [668, 420, 0.5, 3, -1, 0.7], [706, 570, 0.4, 2, -1, 0.5], [666, 730, 0.46, 1, 1, 0.6]] },
   dust: { on: 1, n: 240, nPhone: 120, tile: [800, 600], a: [-0.85, -0.2], r: [0.5, 1.1], alpha: [0.25, 0.75], show: [0.12, 0.4] },
   wolves: { on: 1, legs: [2, 4], from: 0.06, to: 0.94, ramp: 0.1, size: [1.05, 1.8, 860], margin: [0.06, 70], yTop: 0.16, arcH: [0.24, 0.16], lag: 64,
-    skoll: { k: 1, gallop: 2.4, swing: 24, bob: 0.5 }, hati: { k: 1.12, gallop: 1.7, swing: 20, bob: 1.3 } },
+    gap: 24, maxBand: .55, minBand: 360, bandBlend: 120, sunR: 18, glowR: 7, motes: 10, spark: '#FFE2A6', corona: '#FFF2D9', grey: '#5A5652',
+    skoll: { window: [.36,.98], k: 1, gallop: 2.4, swing: 24, bob: 0.5 }, hati: { window: [.02,.66], k: 1.12, gallop: 1.7, swing: 20, bob: 1.3 } },
   card: { tilt: 14, ptrTilt: [2.2, 1.6], shift: 8, shadow: 0.5, drop: 18, ease: 0.12,
     perspective: 1100, open: [0.1, 0.9], flat: 0.01, shadowShare: 3, blur: 28, spread: 10, radius: 14 },
   // Section 6 gives the sky one pointer gain. Both review names tune that same gain.
@@ -506,7 +507,7 @@ export const FIND_PLAY = {
   way: { stiff: 90, damp: 9, near: 70, line: 0.45, gap: 0.1, short: 9, ping: 0.5, runes: 0.6, spin: 0.8, timelineDim: 0.35, lineWidth: 1, wide: [300, 480, 250, 0],
     drift: [0.8, 4, 0.31, 2], dim: 0.55, armWidth: 2.2, pulse: [1.12, 0.25], dash: [2, 4], alpha: 0.6, solidAlpha: 0.9, pingR: [6, 14], pingAlpha: 0.7, tally: [22, 5.2, 1, 10.5, 9], ring: [4, 9, 1.6], allSpeed: 40, hub: 6,
     // The craft words sit wordGap screen px off the ring (radius wordRing) at every zoom; wordCap is the caps' height per font size.
-    wordRing: 42, wordGap: 9, wordCap: 0.7,
+    wordRing: 42, wordGap: 9, wordCap: 0.7, veilZoom: .1, veilCore: .6, veilPad: 5,
   },
   hoard: { hole: [16, 28, 38], lift: [0.18, 0.24, 1], rise: [0.28, 0.28, 0.5], backEase: 0.8, over: 1.2, repeat: 0.3, rattle: 0.36, openHold: 0.3, near: 26, glint: [5, 8],
     scale: 0.3, travel: 64, holeRatio: 0.28, pile: [0.5, 0.75, 1], scratchWidth: 1.6, glintAt: [0, -4], glintSize: 5, glintTime: 0.5, glintTurn: 45, clods: 7, rattleAngle: 4, rattleCycles: 3,
@@ -1021,7 +1022,7 @@ export const YGG = {
   }
 };
 // lift: how far a stop's shield stands off its trail point, as a share of half its size plus stand (0 = centred on the trail, Dan on preview 21; 1 = standing on it as before).
-export const MARK = { k: 10, min: 14, max: 36, stand: 3, lift: 0, box: 400, centre: 200, radius: 176, rim: 20, boss: 54, bossLine: 16, highlight: [186,186,12,.55], shadow: [200,392,120,10,.35], planks: [-120,-72,-24,24,72,120], plankLine: 7, plankAlpha: .28, paintAlpha: .35, studs: 8, stud: 9, studLine: 5, quarters: 'M200 200L200 24A176 176 0 0 1 376 200ZM200 200L200 376A176 176 0 0 1 24 200Z', legend: [68,836,4.6,.9,1.2,.45] };
+export const MARK = { k: 10, min: 14, max: 36, stand: 3, lift: 0, ringWidth: 1.2, ringGap: 2, box: 400, centre: 200, radius: 176, rim: 20, boss: 54, bossLine: 16, highlight: [186,186,12,.55], shadow: [200,392,120,10,.35], planks: [-120,-72,-24,24,72,120], plankLine: 7, plankAlpha: .28, paintAlpha: .35, studs: 8, stud: 9, studLine: 5, quarters: 'M200 200L200 24A176 176 0 0 1 376 200ZM200 200L200 376A176 176 0 0 1 24 200Z', legend: [68,836,4.6,.9,1.2,.45] };
 export const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -8, hmcSubDY: -27.5, hmcAgainSubDX: 3, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [18,8], xSubAt: [18,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]],
   // cardDim: other stops' labels behind an open card (desktop, phone); underFade: the share of a label under the timeline or
   // step bar at which it has gone (sideFade: off the screen's side); bar: the bar's keep-out (half width, pad); hint: a find

@@ -586,6 +586,7 @@ function tripLabels(st, t2Fade = 1) {
 }
 export function tripApply(st, focus = null) {
   const E = TRIP_EL, c = st.cam;
+  const veil = E.veil ??= document.getElementById('map-veil'), camVeil = E.camVeil ??= document.getElementById('cam-veil');
   const free = !!st.exploring || st.exploreK > 0;
   const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
   if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
@@ -600,10 +601,13 @@ export function tripApply(st, focus = null) {
     // Translation stays one layer; a zoom may carry at most 15% size error.
     const k = c.s / r.base.s;
     tripWrite(E.svg, 'transform', `matrix(${k},0,0,${k},${c.tx - r.base.tx * k},${c.ty - r.base.ty * k})`);
+    if (veil) tripWrite(veil, 'transform', E.svg.style.transform);
   } else {
     r.base = { ...c };
     tripWrite(E.cam, 'transform', `matrix(${c.s.toFixed(4)} 0 0 ${c.s.toFixed(4)} ${c.tx.toFixed(2)} ${c.ty.toFixed(2)})`, true);
+    if (camVeil) tripWrite(camVeil, 'transform', E.cam.getAttribute('transform'), true);
     tripWrite(E.svg, 'transform', 'none');
+    if (veil) tripWrite(veil, 'transform', 'none');
   }
   if (E.base) {
     const box = VIEW.baseBox || NO_BOX, sx = Math.max(0, box.ox - 1), sy = Math.max(0, box.oy - 1);
@@ -703,6 +707,7 @@ export function tripApply(st, focus = null) {
   tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
   tripWrite(E.svg, 'willChange', r.promo ? 'transform, opacity' : fade > 0 && fade < 1 ? 'opacity' : '');
   tripWrite(E.svg, 'overflow', free || glideHold ? 'visible' : '');
+  if (veil) { tripWrite(veil, 'overflow', E.svg.style.overflow); tripWrite(veil, 'willChange', E.svg.style.willChange || (veil.style.visibility === 'visible' ? 'opacity' : '')); }
   if (E.base) { tripWrite(E.base, 'opacity', opacity); tripWrite(E.base, 'visibility', opacity === 0 ? 'hidden' : 'visible'); tripWrite(E.base, 'willChange', 'transform'); }
   tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
   // the X fades in with the sea, so neither page shows it before the map exists

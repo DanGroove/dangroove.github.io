@@ -106,7 +106,7 @@ export function findLife(o, x, y, rad, reach = rad) {
   if (o.el) {
     attr(o.el, 'aria-hidden', !seen || covered >= .95);
     // Through --jm-find (map.css): an opacity fade would give the find a layer of its own.
-    findStyle(o.el, '--jm-find', (1 - covered) * (FD.list.wayfinder?.mask && o.id !== 'wayfinder' && !o.craftLit ? FIND_PLAY.way.dim : 1));
+    findStyle(o.el, '--jm-find', 1 - covered);
     if (o.cover !== covered) { o.cover = covered; findStyle(o.el, 'visibility', covered >= .995 ? 'hidden' : ''); }
     if (o.hit) { attr(o.hit, 'cx', x); attr(o.hit, 'cy', y); }
     if (o.focusRing) { attr(o.focusRing, 'cx', x); attr(o.focusRing, 'cy', y); attr(o.focusRing, 'r', Math.min(rad, 50)); }

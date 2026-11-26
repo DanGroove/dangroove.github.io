@@ -1,17 +1,17 @@
 // Part A: the instrument and the five persistent, hand-dug chests.
-import { C, COPY, CRAFTS, STOPS, MAP, FIND_COPY, FIND_PLAY, PALETTES, COMB, EXPLORE } from './data.mjs';
+import { C, COPY, CRAFTS, STOPS, MAP, FIND_COPY, FIND_PLAY, PALETTES, COMB, EXPLORE, DEPTH } from './data.mjs';
 import { clamp01, lerp, VIEW } from './trip.mjs';
-import { pieceIcon, hoardInside } from './art.mjs';
+import { pieceIcon, hoardInside, mapLabelRows } from './art.mjs';
 import { cardsSetCraft, arrowSvg } from './cards.mjs';
 import { tlSetCraft } from './timeline.mjs';
 import { JOURNEY, stepsFocus } from './steps.mjs';
-import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, attend, findBits, findSvg, findFormat, findRange, findLife, findAngleDelta, findReady, findHint, findStyle } from './findkit.mjs';
+import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, attend, findBits, findSvg, findFormat, findRange, findLife, findAngleDelta, findReady, findHint, findStyle, findView } from './findkit.mjs';
 
 export const wayAllStops = () => STOPS.map(s => CRAFTS.every(c => s.crafts.includes(c)));
 export function findWay(svg) {
   const f = FIND_BY.wayfinder, el = svg.querySelector('#f-wayfinder'), needle = el.querySelector('.wf-needle'), words = [...el.querySelectorAll('.wf-word')], arms = [...el.querySelectorAll('.wf-arm')], runes = el.querySelector('.wf-runes'), tally = el.querySelector('.wf-tally'), ring = el.querySelector('.wf-all');
   const o = { id: f.id, el, craft: -1, angle: 0, speed: 0, runesAngle: 0, drag: false, picked: [], mask: null, kept: false, stage: 'rest', lines: [], lineTs: 0, hearTs: -Infinity };
-  const group = svg.querySelector('#wf-lines');
+  const group = document.getElementById('wf-lines');
   STOPS.forEach(s => {
     const target = MAP.waypoints[s.w], dx = target[0] - f.x, dy = target[1] - f.y, distance = Math.hypot(dx, dy), length = Math.max(0, distance - FIND_PLAY.way.short);
     const g = findSvg('g', { transform: `translate(${f.x} ${f.y}) rotate(${Math.atan2(dy, dx) * FIND_PLAY.kit.deg / Math.PI})` }), line = findSvg('path', { d: `M0 0H${length}`, fill: 'none', stroke: C.paper, 'stroke-width': FIND_PLAY.way.lineWidth, 'stroke-dasharray': FIND_PLAY.way.dash.join(' '), 'vector-effect': 'non-scaling-stroke', transform: 'scale(0 1)' });
@@ -20,9 +20,47 @@ export function findWay(svg) {
   });
   const applyMask = mask => {
     o.mask = mask; cardsSetCraft(mask); tlSetCraft(mask);
-    FD.base.style.opacity = mask ? FIND_PLAY.way.dim : 1;
-    svg.querySelectorAll('#finds > .find, #bc-notes').forEach(g => { if (g === el) return; const v = mask ? FIND_PLAY.way.dim : 1; if (g.id === 'bc-notes') g.style.opacity = v; else findStyle(g, '--jm-find', v); });
-    FD.list.hoards?.items.forEach(h => { const i = STOPS.findIndex(s => s.id === h.d.stop); h.setCraftLit(!!mask?.[i]); h.el.style.opacity = mask && !mask[i] ? FIND_PLAY.way.dim : 1; });
+    FD.list.hoards?.items.forEach(h => { const i = STOPS.findIndex(s => s.id === h.d.stop); h.setCraftLit(!!mask?.[i]); });
+    const veil = document.getElementById('map-veil');
+    if (!veil) return;
+    if (!o.veilUpdate) {
+      const frame = DEPTH.frame.outer, holes = document.getElementById('veil-holes');
+      for (const rect of [document.getElementById('veil-fill'), document.getElementById('veil-mask-frame'), document.getElementById('veil-mask'), document.getElementById('veil-lines-frame'), document.getElementById('veil-lines-mask')])
+        for (const [key, value] of Object.entries({ x: frame[0], y: frame[1], width: frame[2]-frame[0], height: frame[3]-frame[1] })) attr(rect, key, value);
+      o.veilUpdate = force => {
+        const s = FD.st?.cam.s || VIEW.s0;
+        if (!o.mask || !force && o.veilScale && Math.abs(s/o.veilScale-1) <= FIND_PLAY.way.veilZoom) return;
+        o.veilScale = s; holes.replaceChildren();
+        const cuts=document.getElementById('veil-line-cuts'); cuts.replaceChildren(findSvg('circle',{cx:f.x,cy:f.y,r:FIND_PLAY.way.wordRing+1/s}));
+        let compassRadius=FIND_PLAY.way.wordRing+2/s;
+        for(const word of [...words,tally]){const b=word.getBoundingClientRect(),a=toMap([b.left-3,b.top-3]),z=toMap([b.right+3,b.bottom+3]);if(b.width){cuts.appendChild(findSvg('rect',{x:a[0],y:a[1],width:z[0]-a[0],height:z[1]-a[1]}));for(const x of[a[0],z[0]])for(const y of[a[1],z[1]])compassRadius=Math.max(compassRadius,Math.hypot(x-f.x,y-f.y));}}
+        const hole = (x,y,r) => holes.appendChild(findSvg('circle', { cx:x, cy:y, r, fill:'url(#veil-soft)' }));
+        // The clear core contains the entire instrument, including screen-sized words and title.
+        const W = FIND_PLAY.way;
+        hole(f.x, f.y, compassRadius / W.veilCore);
+        STOPS.forEach((stop,i) => {
+          if (!o.mask[i]) return;
+          const p = MAP.waypoints[stop.w], boxes = [[p[0]-8,p[1]-8,p[0]+8,p[1]+8]];
+          const h = FIND_COPY.hoards.find(h => h.stop === stop.id);
+          if (h) boxes.push([h.x-22,h.y-30,h.x+22,h.y+12]);
+          // Labels use their actual displayed geometry, converted back through the shared camera.
+          for (const row of mapLabelRows()) if (row.stop === stop.id) {
+            const b = svg.querySelector('.label-anchor[data-row="'+row.i+'"]').getBoundingClientRect(), a = toMap([b.left,b.top]), z = toMap([b.right,b.bottom]); boxes.push([...a,...z]);
+          }
+          const x0=Math.min(...boxes.map(b=>b[0])),y0=Math.min(...boxes.map(b=>b[1])),x1=Math.max(...boxes.map(b=>b[2])),y1=Math.max(...boxes.map(b=>b[3]));
+          hole((x0+x1)/2,(y0+y1)/2,(Math.hypot(x1-x0,y1-y0)/2 + W.veilPad/s)/W.veilCore);
+        });
+      };
+      const observer = new MutationObserver(() => o.veilUpdate(false));
+      observer.observe(document.getElementById('cam'), { attributes:true, attributeFilter:['transform'] });
+      observer.observe(svg, { attributes:true, attributeFilter:['style'] });
+      veil.addEventListener('transitionend', e => { if (e.propertyName === 'opacity' && !o.mask) { veil.style.visibility='hidden'; veil.style.willChange=svg.style.willChange; } });
+    }
+    o.veilUpdate(true);
+    if (mask) { veil.style.visibility='visible'; veil.style.willChange = svg.style.willChange || 'opacity'; }
+    veil.style.opacity = mask ? 1-FIND_PLAY.way.dim : 0;
+    if (FD.rm && !mask) { veil.style.visibility='hidden'; veil.style.willChange=svg.style.willChange; }
+    queueMicrotask(()=>o.veilUpdate(true));
   };
   const wayResultView = mask => { const points = [[f.x - 70, f.y - 60], [f.x + 70, f.y + 105], ...STOPS.filter((s,i) => mask[i]).map(s => MAP.waypoints[s.w])], xs = points.map(p=>p[0]), ys = points.map(p=>p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys); return [(x0+x1)/2, (y0+y1)/2, Math.max(x1-x0,y1-y0)/2+40, 0]; };
   const startLines = () => { o.lineTs = FD.now; o.linePhase = 'grow'; o.lines.forEach((l, i) => { l.lit = !!o.mask?.[i]; l.arrived = false; attr(l.line, 'stroke-dasharray', o.craft === CRAFTS.length ? 'none' : FIND_PLAY.way.dash.join(' ')); }); };
@@ -37,7 +75,7 @@ export function findWay(svg) {
     applyMask(mask);
     // With a craft chosen the lines have to be seen arriving, so on a wide screen the camera pulls back for them.
     document.documentElement.classList.toggle('jm-way', i >= 0);
-    if (JOURNEY.focus === o.id) stepsFocus(o.id, i < 0 ? f.view : wayResultView(mask));
+    if (JOURNEY.focus === o.id) stepsFocus(o.id, i < 0 ? findView(o.id) : wayResultView(mask));
     if (FD.say) FD.say.textContent = i < 0 ? f.label : findFormat(COMB.waySay, { craft: FIND_COPY.crafts[i] || FIND_COPY.wayAll.split(':')[0], names: STOPS.filter((s,j) => mask?.[j]).map(s => s.short).join(', ') });
     tally.textContent = i < 0 ? '' : i === CRAFTS.length ? findFormat(FIND_COPY.wayAll, { names: STOPS.filter((s, j) => mask[j]).map(s => s.short + ', ' + s.dates).join('; ') }) : findFormat(FIND_COPY.wayTally, { craft: FIND_COPY.crafts[i], n: mask.filter(Boolean).length, t: STOPS.length });
     if (FD.hint) FD.hint.textContent = i < 0 ? FIND_COPY.hints.wayfinder : FIND_COPY.wayPickedHint;

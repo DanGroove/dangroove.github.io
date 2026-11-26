@@ -53,9 +53,10 @@ export function cardsBuild(container, onGo, rm = false) {
     });
     a.querySelector('.face').inert = !rm;
     a.querySelector('.c-close')?.addEventListener('click', () => cardsClose(i));
+    const travellerRing = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); travellerRing.setAttribute('class', 'st-traveller'); travellerRing.setAttribute('aria-hidden', 'true'); travellerRing.innerHTML='<circle/>'; a.appendChild(travellerRing);
     container.appendChild(a);
     const tail = a.querySelector('.c-tail');
-    CD.list.push({ el: a, card: a.querySelector('.c-card'), shadowBox: a.querySelector('.c-shadow'), tail, face: a.querySelector('.face'), shadow: a.querySelector('.c-sh'), inn: a.querySelector('.c-in'), btn: a.querySelector('.st-btn'), fill: a.querySelector('.st-fill'), boss: a.querySelector('.st-boss-paint'), glow: a.querySelector('.st-glow'), mini: document.getElementById('mini')?.querySelectorAll('.mm-stop')[i], stop: s, state: '', paint: 0, tilt: [0, 0, 0, 0] });
+    CD.list.push({ el: a, travellerRing, card: a.querySelector('.c-card'), shadowBox: a.querySelector('.c-shadow'), tail, face: a.querySelector('.face'), shadow: a.querySelector('.c-sh'), inn: a.querySelector('.c-in'), btn: a.querySelector('.st-btn'), fill: a.querySelector('.st-fill'), boss: a.querySelector('.st-boss-paint'), glow: a.querySelector('.st-glow'), mini: document.getElementById('mini')?.querySelectorAll('.mm-stop')[i], stop: s, state: '', paint: 0, tilt: [0, 0, 0, 0] });
   });
 }
 export function cardsResize(steps = false) {
@@ -123,6 +124,12 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     // Position completes its return before the face disappears into the boss.
     const travel = smooth(.12, 1, e); let cx = lerp(p[0], oc.x, travel), cy = lerp(py, oc.y, travel);
     cardsStyle(c.el, 'transform', `translate(${p[0]}px,${py}px)`);
+    const radius = stonePx * (MARK.radius + MARK.rim/2) / MARK.box, ringRadius = radius + MARK.ringGap + MARK.ringWidth;
+    const traveller = st.trav && toScreen(st, st.trav), distance = traveller ? Math.hypot(traveller[0]-p[0], traveller[1]-py) : Infinity;
+    const ringAlpha = CD.steps && !CD.rm && st.handoffT >= 1 && !st.exploring && !st.exploreK && st.kind !== 'end' ? (1-smooth(.2,.7,st.rushT))*(1-smooth(.8*radius,1.2*radius,distance)) : 0;
+    cardsStyle(c.travellerRing, 'width', ringRadius*2+'px'); cardsStyle(c.travellerRing, 'height', ringRadius*2+'px');
+    const ringCircle=c.travellerRing.firstElementChild; for(const [key,value] of Object.entries({cx:ringRadius,cy:ringRadius,r:ringRadius-MARK.ringWidth/2,'stroke-width':MARK.ringWidth})) if(ringCircle.getAttribute(key)!==String(value))ringCircle.setAttribute(key,value);
+    cardsStyle(c.travellerRing, 'opacity', ringAlpha); cardsStyle(c.travellerRing, 'visibility', ringAlpha > 0 ? 'visible' : 'hidden');
     cardsStyle(c.btn, 'transform', 'translate(-50%,-50%)');
     // The visible disk owns its box; invisible squares covered nearby finds in landscape.
     const hitPx = VIEW.h <= 440 && VIEW.w > 640 ? stonePx : Math.max(COMB.target, stonePx);

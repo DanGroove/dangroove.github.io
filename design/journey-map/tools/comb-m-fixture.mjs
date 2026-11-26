@@ -33,7 +33,7 @@ export async function gBrowser(){
    try{await send('Browser.close',{},null);}catch{}ws.close();
    if(child.exitCode===null&&child.signalCode===null)child.kill();await exited;
    const absolute=resolve(profile),allowed=resolve(gRoot);if(!absolute.startsWith(allowed+'/')&&!absolute.startsWith(allowed+'\\'))throw Error('Profile outside run folder');
-   rmSync(absolute,{recursive:true,force:true,maxRetries:30,retryDelay:100});
+   for(let attempt=0;attempt<50;attempt++){try{rmSync(absolute,{recursive:true,force:true,maxRetries:2,retryDelay:100});break;}catch(error){if(!existsSync(absolute))break;if(attempt===49)throw error;await gWait(100);}}
   }
  };return b;
 }

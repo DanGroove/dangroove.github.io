@@ -2,8 +2,8 @@
 import assert from 'node:assert/strict';
 import {writeFileSync} from 'node:fs';
 import {gBrowser,gRoot,gWait} from './comb-m-fixture.mjs';
-const b=await gBrowser(),rows=[];let current=[],record=false,events=[],previous=new Map(),known=new Set(),removed=new Set();
-b.on('LayerTree.layerTreeDidChange',p=>{current=p.layers||[];if(!record)return;const next=new Map(current.map(l=>[l.layerId,l]));for(const[id,l]of next)if(!known.has(id)&&l.drawsContent)events.push({type:'built',id,w:l.width,h:l.height,node:l.backendNodeId});for(const[id,l]of previous)if(!next.has(id)&&l.drawsContent&&!removed.has(id))events.push({type:'destroyed',id,w:l.width,h:l.height,node:l.backendNodeId});for(const id of next.keys())known.add(id);for(const id of previous.keys())if(!next.has(id))removed.add(id);previous=next;});
+const b=await gBrowser(),rows=[];let current=[],record=false,events=[],previous=new Map(),known=new Set(),removed=new Set(),reasonCache=new Map();
+b.on('LayerTree.layerTreeDidChange',p=>{current=p.layers||[];for(const l of current)if(!reasonCache.has(l.layerId))reasonCache.set(l.layerId,b.send('LayerTree.compositingReasons',{layerId:l.layerId}).catch(()=>null));if(!record)return;const next=new Map(current.map(l=>[l.layerId,l]));for(const[id,l]of next)if(!known.has(id)&&l.drawsContent)events.push({type:'built',id,w:l.width,h:l.height,node:l.backendNodeId});for(const[id,l]of previous)if(!next.has(id)&&l.drawsContent&&!removed.has(id))events.push({type:'destroyed',id,w:l.width,h:l.height,node:l.backendNodeId});for(const id of next.keys())known.add(id);for(const id of previous.keys())if(!next.has(id))removed.add(id);previous=next;});
 try{
  const version=await b.send('Browser.getVersion',{},null);assert.match(version.product,/158\./);await b.send('LayerTree.enable');
  for(const[w,h,dpr,touch]of[[360,660,3,true],[1920,950,2,false]])for(const rule of[false,true]){
@@ -21,10 +21,12 @@ try{
    for(const e of events){if(!e.node)continue;try{const {node}=await b.send('DOM.describeNode',{backendNodeId:e.node});e.owner={tag:node.nodeName,attributes:node.attributes};}catch{}} 
    const skipped=[];
    for(const e of large){if(!e.node)continue;try{const {object}=await b.send('DOM.resolveNode',{backendNodeId:e.node});const r=await b.send('Runtime.callFunctionOn',{objectId:object.objectId,functionDeclaration:'function(){return this.matches?.(".tl-count") || !!this.closest?.(".tl-count-screen");}',returnByValue:true});if(r.result.value)skipped.push(e);}catch{}}
-   const eligible=large.filter(e=>!skipped.includes(e));
+   const knownSplits=[];
+   for(const e of large){if(!e.node)continue;try{const {object}=await b.send('DOM.resolveNode',{backendNodeId:e.node});const r=await b.send('Runtime.callFunctionOn',{objectId:object.objectId,functionDeclaration:'function(){return {tag:this.tagName,map:!!this.closest?.("#map"),rest:!!this.closest?.("#b-rest-detail"),ygg:!!this.closest?.("g.ygg")}}',returnByValue:true});const n=r.result.value,reasons=await reasonCache.get(e.id);if(n?.map&&((n.tag==='g'&&(n.rest||n.ygg))||(['rect','path'].includes(n.tag)&&reasons&&!(reasons.compositingReasonIds||[]).length)))knownSplits.push(e);}catch{}}
+   const eligible=large.filter(e=>!skipped.includes(e)&&!knownSplits.includes(e));
    const split=eligible.filter(e=>e.owner?.tag==='path'&&e.owner.attributes?.some((a,i,v)=>a==='class'&&/\brs-trace\b/.test(v[i+1]))),full=eligible.filter(e=>e.w===w&&e.h===h);
    const allowed=w===1920&&h===950&&name==='Mohawk'&&split.length===1&&full.length===1?[...split,...full]:[];
-   const row={w,h,dpr,touch,rule,name,built:built.length,destroyed:destroyed.length,large:large.length,runestoneSplit:allowed.map(e=>e.id),skippedTimeline:skipped.length,unexpected:eligible.filter(e=>!allowed.includes(e)).length,events};rows.push(row);console.log(JSON.stringify({...row,events:undefined}));writeFileSync(gRoot+'/layers-results.json',JSON.stringify({version,rows},null,2));
+   const row={w,h,dpr,touch,rule,name,built:built.length,destroyed:destroyed.length,large:large.length,runestoneSplit:allowed.map(e=>e.id),skippedTimeline:skipped.length,allowedMapSplits:knownSplits.map(e=>e.id),unexpected:eligible.filter(e=>!allowed.includes(e)).length,events};rows.push(row);console.log(JSON.stringify({...row,events:undefined}));writeFileSync(gRoot+'/layers-results.json',JSON.stringify({version,rows},null,2));
   }
  }
  assert.deepEqual(b.errors,[]);

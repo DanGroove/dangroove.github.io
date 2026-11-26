@@ -239,7 +239,7 @@ function realFresh(){
   Object.assign(globalThis,{document:doc,window:win,matchMedia:win.matchMedia,localStorage:{getItem:()=>null},Path2D:class {constructor(path){this.path=path;}}});window.__jm={};
   const liveStatus=new ExploreNode();liveStatus.id='go-say';body.appendChild(liveStatus);realStage=new ExploreNode();realSvg=new ExploreNode('svg');const pop=new ExploreNode(),sheet=new ExploreNode(),timeline=new ExploreNode();body.appendChild(realStage);realStage.append(realSvg,pop,sheet,timeline);
   realStage.setPointerCapture=id=>captures.add(id);realStage.releasePointerCapture=id=>captures.delete(id);realStage.hasPointerCapture=id=>captures.has(id);captures.clear();
-  realSvg.innerHTML=mapDefs()+'<g id="b-all">'+realChart.detail+'</g><g id="finds">'+realChart.finds+'</g>';
+  realSvg.innerHTML='<g id="wf-lines"></g>'+mapDefs()+'<g id="b-all">'+realChart.detail+'</g><g id="finds">'+realChart.finds+'</g>';
   FD.found=new Set();FD.list={};FD.bits=[];FD.flights=[];FD.flight=null;FD.landed=0;FD.popOwner=FD.sheetOwner=null;
   tlBuild(timeline,{jump(){},scrub(){}},false);findsBuild(realSvg,pop,sheet,realSvg.querySelector('#b-all'),false);
   tripResize(390,844,96);realJourney={P:endP,moving:false,beats:BEATS};exploreBuild({stage:realStage,world:new ExploreNode(),journey:realJourney,rm:false});exploreResize();assert.equal(exploreStart(),true);realFrame(EXPLORE.in);

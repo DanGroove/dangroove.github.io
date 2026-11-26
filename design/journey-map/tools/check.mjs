@@ -253,7 +253,7 @@ ok(!/#[0-9A-Fa-f]{3,6}\b(?![\w-]*\))/.test(readFileSync(join(ROOT, 'map.css'), '
 // Compressed delivery budgets include all top-level runtime modules and CSS, never hero-copy. The combined budget was
 // raised from 160 to 185 KB on 2026-11-24, after part 4's 32 fixes took it to 171 KB; the packed pages' budgets below,
 // which are what a visitor downloads, are unchanged.
-const RUNTIME_KB = 193.8; // 2026-11-26: COMB-N local sky SVGs, wolves, held glides and trail pieces; 193.75 KB.
+const RUNTIME_KB = 198.0; // 2026-11-26: COMB-O camera-matched veil, traveller ring and local eclipse elements; 197.85 KB.
 const gzipKB = content => gzipSync(content).length / 1024;
 const runtimeSources = [...mods, 'map.css'].map(f => { const src = readFileSync(join(ROOT, f)); ok(gzipKB(src) <= 160, `${f}: exceeds 160 KB gzip`); return src; });
 const runtimeKB = gzipKB(Buffer.concat(runtimeSources)); ok(runtimeKB <= RUNTIME_KB, `combined map modules/CSS exceed ${RUNTIME_KB} KB gzip`);
