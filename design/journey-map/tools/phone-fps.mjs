@@ -131,7 +131,9 @@ async function oneRun(p, beat, run) {
     if (CLICK === 'mouse') { for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type, x: xy[0], y: xy[1], button: 'left', buttons: type === 'mousePressed' ? 1 : 0, clickCount: type === 'mouseMoved' ? 0 : 1 }); return; }
     await evaluate(`(() => { const e = (${find})(); e.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, detail: 1, button: 0, clientX: ${xy[0]}, clientY: ${xy[1]} })); return true; })()`);
   };
-  const press = async (find, what) => { const xy = await centre(find); if (!xy) throw new Error(what + ' is not on screen'); await click(find, xy); };
+  // When a button is not on screen the row says why: its box, hidden and style flags, the viewport and the journey's state.
+  const why = find => evaluate(`(() => { const e = (${find})(); if (!e) return 'no such element'; const b = x => (r => [r.left, r.top, r.width, r.height].map(Math.round))(x.getBoundingClientRect()), s = getComputedStyle(e), J = window.__jm, go = document.getElementById('go'); return JSON.stringify({ box: b(e), hidden: e.hidden, display: s.display, visibility: s.visibility, opacity: s.opacity, view: [innerWidth, innerHeight, visualViewport ? Math.round(visualViewport.height) : null], P: J ? +J.P.toFixed(2) : null, moving: J ? J.moving : null, mode: J ? J.mode : null, go: go ? { box: b(go), hidden: go.hidden, inert: go.inert, cls: go.className } : null, cls: document.documentElement.className }); })()`);
+  const press = async (find, what) => { const xy = await centre(find); if (!xy) throw new Error(what + ' is not on screen: ' + await why(find)); await click(find, xy); };
   const sel = q => `() => document.querySelector(${JSON.stringify(q)})`;
   const findWord = `() => [...document.querySelectorAll('.wf-word')].find(w => w.textContent.trim().toLowerCase().startsWith(${JSON.stringify(arg)}))`;
   const findEl = id => sel(id === 'hoards' ? '#f-hoard-hmc2' : '#f-' + id), findOpen = id => `() => document.querySelector('#mk-${id}') || (${findEl(id)})()`;
