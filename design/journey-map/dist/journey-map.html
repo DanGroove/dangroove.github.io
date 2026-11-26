@@ -2207,7 +2207,9 @@ function tripXCamera(frameGroup = true) {
     const fitted = Math.min(base.s,(VIEW.w/2-CAMERA.xMargin)/half,room/(group[3]-group[1]));
     const oldPhone = Math.min(base.s,(VIEW.w-2*CAMERA.xMargin)/(group[2]-group[0]),room/(group[3]-group[1]));
     const s = frameGroup ? Math.max(VIEW.phone ? CAMERA.xPhoneFloor*oldPhone : 0,fitted) : base.s;
-    return { ...base, cx:MAP.x[0], cy:MAP.x[1], ax:VIEW.w/2, ay:base.ay+(MAP.x[1]-base.cy)*s, s };
+    // Phones: the X stays centred unless that would cut the city; then it moves left just enough to show the whole skyline.
+    const ax = VIEW.phone && frameGroup ? Math.max(CAMERA.xMargin+(MAP.x[0]-group[0])*s, Math.min(VIEW.w/2, VIEW.w-CAMERA.xMargin-(group[2]-MAP.x[0])*s)) : VIEW.w/2;
+    return { ...base, cx:MAP.x[0], cy:MAP.x[1], ax, ay:base.ay+(MAP.x[1]-base.cy)*s, s };
   };
   if (VIEW.phone) {
     const g = CAMERA.xGroupPhone, h = VIEW.h - STEPS.nav.bar, s = Math.min(VIEW.sT, (VIEW.w - 2 * CAMERA.xMargin) / (g[1] - g[0]));
