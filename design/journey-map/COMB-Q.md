@@ -89,6 +89,7 @@ New tests go in `tools/`:
   - anything outside `design/journey-map/`.
 - Never run git, never install anything, and never use the network (a local headless Edge or Chrome on 127.0.0.1 is not the network). Never start reviewer agents or other agents.
 - No timing measurements: tests check behaviour, state, counts and pixels, never time.
+- rtk is not installed on this PC: run local commands (node, PowerShell) directly, without the rtk prefix, as in earlier runs; this is not getting round a rule.
 - If a rule stops you from doing something this brief asks, leave it out and say so in your report. Do not work around a rule.
 - Use plain ASCII punctuation in `COMB-Q-BUILD.md`, and write Jormungandr and Yggdrasil there.
 

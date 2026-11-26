@@ -78,11 +78,11 @@ New tests go in `tools/`:
 3. `comb-p-quiet-test.mjs`: at 1920x950 with real presses: Set out, Next at Laurier and Next at HMC. Number a MutationObserver's records by rAF frame. Then:
    - during the glide, no element inside `svg#map` is written except those P5b step 1 allows (list them in the test);
    - `.mk-size`, the ticks, the label scales and the compass texts change only in frames where `#cam` changes;
-   - in no frame do two of `#cam`, `#cam-base` and the sky objects' `viewBox` change;
-   - one Set out rebases `svg#map` at most 7 times and each cloud at most 5 times.
-4. `comb-p-chase-test.mjs`: at 1440x900 and 1920x950 mouse and 412x915 touch, do a real Next from Mohawk and from Interkom. Per frame, the wolf's distance to the lead stays within 3% of its median while both are fully visible. No element for the bite, halo, dim or sparkles exists, and the wolf's fills never change.
+   - in no frame do two of `#cam`, `#cam-base` and the sky objects' `viewBox` change, except a frame where the base had to rebase because its raster no longer covered the screen (expose that on a test hook);
+   - in the same test on the base build and on yours, one Set out rebases `svg#map` at most 0.6 times as often in yours, and each cloud at most 0.4 times as often.
+4. `comb-p-chase-test.mjs`: at 1440x900 and 1920x950 mouse and 412x915 touch, do a real Next from Mohawk and from Interkom. In every frame while both are visible, the horizontal distance between the hook's `wolf` and `lead` equals `DEPTH.wolves.lag x ws` within 1 px (the straight-line distance changes with the arc's slope, so do not test that). No element for the bite, halo, dim or sparkles exists, and the wolf's fills never change.
 5. `comb-p-x-test.mjs`: at 1920x950, 1440x900 and 412x915, do a real Next at Lennard and record the traveller's screen point every frame.
-   - It moves smoothly: no frame step over 1.5 times the median step after the start.
+   - It moves smoothly: each frame's step is at most 1.6 times the previous frame's step plus 2 px.
    - It ends within 2 px of the screen's horizontal centre at rest.
    - At the PC sizes the whole Toronto skyline is on screen at the X.
    - A Next at the X then shows no sideways slide of the traveller.
@@ -113,6 +113,7 @@ New tests go in `tools/`:
   - anything outside `design/journey-map/`.
 - Never run git, never install anything, and never use the network (a local headless Edge or Chrome on 127.0.0.1 is not the network). Never start reviewer agents or other agents.
 - No timing measurements: tests check behaviour, state, counts and pixels, never time.
+- rtk is not installed on this PC: run local commands (node, PowerShell) directly, without the rtk prefix, as in earlier runs; this is not getting round a rule.
 - If a rule stops you from doing something this brief asks, leave it out and say so in your report. Do not work around a rule.
 - Use plain ASCII punctuation in `COMB-P-BUILD.md`, and write Skoll there.
 
