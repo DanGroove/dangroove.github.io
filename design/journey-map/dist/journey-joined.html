@@ -1811,8 +1811,8 @@ const FIND_PLAY = {
   kit: { margin: 40, rad: 70, shipBerth: [40, 11, 0], starZ: 7, dt: 0.05, popup: { anchorGap: 12, anchorMax: 16, scale: 0.6, over: 1.08, time: 0.22, edge: 8, tail: [10, 6], width: 240, radius: 10, pad: [10, 14], font: 13, line: 1.4, kicker: 9.5, gap: 4 }, slot: { font: 11, weight: 500, border: 1, pad: 6 }, target: 17, sheet: { from: 0.06, edge: 24, grow: 0.35, offset: 20 }, deg: 180, turn: 360 },
   way: { stiff: 90, damp: 9, near: 70, line: 0.45, gap: 0.1, short: 9, ping: 0.5, runes: 0.6, spin: 0.8, timelineDim: 0.35, lineWidth: 1, wide: [300, 480, 250, 0],
     drift: [0.8, 4, 0.31, 2], dim: 0.55, armWidth: 2.2, pulse: [1.12, 0.25], dash: [2, 4], alpha: 0.6, solidAlpha: 0.9, pingR: [6, 14], pingAlpha: 0.7, tally: [22, 5.2, 1, 10.5, 9], ring: [4, 9, 1.6], allSpeed: 40, hub: 6,
-    // The craft words sit wordGap screen px off the ring (radius wordRing) at every zoom; wordCap is the caps' height per font size.
-    wordRing: 42, wordGap: 9, wordCap: 0.7, veilZoom: .1, veilCore: .6, veilPad: 5,
+    // The craft words sit wordGap screen px off the ring (radius wordRing) at every zoom (16: Dan's pick on preview 22, 9 sat too close); wordCap is the caps' height per font size.
+    wordRing: 42, wordGap: 16, wordCap: 0.7, veilZoom: .1, veilCore: .6, veilPad: 5,
   },
   hoard: { hole: [16, 28, 38], lift: [0.18, 0.24, 1], rise: [0.28, 0.28, 0.5], backEase: 0.8, over: 1.2, repeat: 0.3, rattle: 0.36, openHold: 0.3, near: 26, glint: [5, 8],
     scale: 0.3, travel: 64, holeRatio: 0.28, pile: [0.5, 0.75, 1], scratchWidth: 1.6, glintAt: [0, -4], glintSize: 5, glintTime: 0.5, glintTurn: 45, clods: 7, rattleAngle: 4, rattleCycles: 3,
@@ -6314,6 +6314,8 @@ function findWay(svg) {
     if (!veil) return;
     if (!o.veilUpdate) {
       const frame = DEPTH.frame.outer, holes = document.getElementById('veil-holes');
+      // The dim lives in the fill's own alpha, so the veil shows at opacity 1 and the lines inside it keep their full strength.
+      attr(document.getElementById('veil-fill'), 'fill-opacity', 1 - FIND_PLAY.way.dim);
       for (const rect of [document.getElementById('veil-fill'), document.getElementById('veil-mask-frame'), document.getElementById('veil-mask'), document.getElementById('veil-lines-frame'), document.getElementById('veil-lines-mask')])
         for (const [key, value] of Object.entries({ x: frame[0], y: frame[1], width: frame[2]-frame[0], height: frame[3]-frame[1] })) attr(rect, key, value);
       o.veilUpdate = force => {
@@ -6347,7 +6349,7 @@ function findWay(svg) {
     }
     o.veilUpdate(true);
     if (mask) { veil.style.visibility='visible'; veil.style.willChange = svg.style.willChange || 'opacity'; }
-    veil.style.opacity = mask ? 1-FIND_PLAY.way.dim : 0;
+    veil.style.opacity = mask ? 1 : 0;
     if (FD.rm && !mask) { veil.style.visibility='hidden'; veil.style.willChange=svg.style.willChange; }
     queueMicrotask(()=>o.veilUpdate(true));
   };

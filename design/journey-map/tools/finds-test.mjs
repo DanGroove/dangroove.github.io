@@ -48,7 +48,7 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // COMB-M2 (2026-11-26): N2 changes only the old longship line and ship kit keys; the M2 scope test pins the exact edits.
 assert.equal(sourceDigest('trip.mjs'), 1619105920, 'trip.mjs changed'); // COMB-O veil camera/promotion only.
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 1313054202, 'data.mjs changed');
+assert.equal(sourceDigest('data.mjs'), 1265104372, 'data.mjs changed'); // Preview 22 notes: FIND_PLAY.way.wordGap 9 -> 16 (Dan's pick).
 assert.equal(sourceDigest('depth.mjs'), 4289401171, 'depth.mjs changed'); // COMB-O eclipse, sky only.
 console.log('ok: COMB-D camera/labels/tripS digests recorded; depth source remains pinned');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];

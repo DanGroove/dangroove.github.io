@@ -25,6 +25,8 @@ export function findWay(svg) {
     if (!veil) return;
     if (!o.veilUpdate) {
       const frame = DEPTH.frame.outer, holes = document.getElementById('veil-holes');
+      // The dim lives in the fill's own alpha, so the veil shows at opacity 1 and the lines inside it keep their full strength.
+      attr(document.getElementById('veil-fill'), 'fill-opacity', 1 - FIND_PLAY.way.dim);
       for (const rect of [document.getElementById('veil-fill'), document.getElementById('veil-mask-frame'), document.getElementById('veil-mask'), document.getElementById('veil-lines-frame'), document.getElementById('veil-lines-mask')])
         for (const [key, value] of Object.entries({ x: frame[0], y: frame[1], width: frame[2]-frame[0], height: frame[3]-frame[1] })) attr(rect, key, value);
       o.veilUpdate = force => {
@@ -58,7 +60,7 @@ export function findWay(svg) {
     }
     o.veilUpdate(true);
     if (mask) { veil.style.visibility='visible'; veil.style.willChange = svg.style.willChange || 'opacity'; }
-    veil.style.opacity = mask ? 1-FIND_PLAY.way.dim : 0;
+    veil.style.opacity = mask ? 1 : 0;
     if (FD.rm && !mask) { veil.style.visibility='hidden'; veil.style.willChange=svg.style.willChange; }
     queueMicrotask(()=>o.veilUpdate(true));
   };
