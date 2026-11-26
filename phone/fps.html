@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Phone check</title>
+<style>html,body{margin:0;height:100%;background:#111;color:#f4f1ea;font:600 18px system-ui,sans-serif}main{display:grid;place-items:center;height:100%;text-align:center}#f{font-size:96px;line-height:1}#bar{position:fixed;left:0;bottom:0;height:10px;width:20%;background:#e4572e;will-change:transform}</style>
+<main><div><div id="f">--</div><div>frames per second</div><p>Opened by Claude from your PC</p></div></main><div id="bar"></div>
+<script>
+const o=window.__fps={times:[],taps:[]};let n=0,t0=performance.now();const el=document.getElementById('f'),bar=document.getElementById('bar');
+function f(t){o.times.push(t);if(o.times.length>3000)o.times.shift();n++;if(t-t0>=500){el.textContent=Math.round(n*1000/(t-t0));n=0;t0=t;}bar.style.transform='translateX('+((t/5)%400)+'%)';requestAnimationFrame(f);}
+requestAnimationFrame(f);
+addEventListener('pointerdown',e=>o.taps.push({x:e.clientX,y:e.clientY,sx:e.screenX,sy:e.screenY,type:e.pointerType}));
+</script>
