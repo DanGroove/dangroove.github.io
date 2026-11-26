@@ -12,9 +12,18 @@ function measure(){
   for(const y of[r[1],r[3]]){const t=(y-a[1])/dy,x=a[0]+t*dx;if(t>=0&&t<=1&&x>=r[0]&&x<=r[2])return 0;}
   return best;
  };
+
+ // Flatten the approved ash's long compound curves once, at subpixel accuracy.
+ const treeSegments=(d,m)=>{
+  const tokens=d.match(/[a-zA-Z]|-?(?:\d*\.)?\d+(?:e[-+]?\d+)?/g)||[],out=[];let i=0,cmd='',at=[0,0],home=[0,0];
+  const screen=p=>[m.a*p[0]+m.c*p[1]+m.e,m.b*p[0]+m.d*p[1]+m.f],line=(a,b)=>out.push([screen(a),screen(b)]),middle=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2];
+  const flat=P=>{const a=P[0],b=P.at(-1),dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy)||1;return Math.max(...P.slice(1,-1).map(p=>Math.abs(dy*(p[0]-a[0])-dx*(p[1]-a[1]))/L));};
+  const curve=(P,depth=0)=>{if(flat(P)<.12||depth>12){out.push([P[0],P.at(-1)]);return;}let row=P,left=[row[0]],right=[row.at(-1)];while(row.length>1){row=row.slice(1).map((p,i)=>middle(row[i],p));left.push(row[0]);right.push(row.at(-1));}curve(left,depth+1);curve(right.reverse(),depth+1);};
+  while(i<tokens.length){if(/[a-zA-Z]/.test(tokens[i]))cmd=tokens[i++];const op=cmd.toUpperCase(),rel=cmd!==op,point=()=>{const p=[+tokens[i++],+tokens[i++]];return rel?p.map((v,k)=>v+at[k]):p;};if(op==='M'){at=point();home=at.slice();cmd=rel?'l':'L';}else if(op==='L'){const p=point();line(at,p);at=p;}else if(op==='H'){const p=[+tokens[i++]+(rel?at[0]:0),at[1]];line(at,p);at=p;}else if(op==='V'){const p=[at[0],+tokens[i++]+(rel?at[1]:0)];line(at,p);at=p;}else if(op==='Q'){const c=point(),p=point();curve([at,c,p].map(screen));at=p;}else if(op==='C'){const a=point(),b=point(),p=point();curve([at,a,b,p].map(screen));at=p;}else if(op==='Z'){line(at,home);at=home.slice();cmd='';}else return null;}return out;
+ };
  const labels=[...document.querySelectorAll('#b-detail text,#b-detail .rn-dim,#bc-notes text')].filter(e=>visible(e)&&!e.closest('.lg')).map(e=>({b:box(e),text:e.textContent||'region runes'}));
  const result=[];
- for(const[id,selector]of Object.entries({...Object.fromEntries(['laurier','hmc1','hmc2','interkom','lennard'].map(id=>['dig-'+id,'#f-hoard-'+id+' .hd-scratch'])),serpent:'.jg-ring > path,.jg-head path,.jg-tail path,.jg-pad path,.jg-pad rect,.jg-pad circle',horn:'.hn-horn path',hammer:'#f-hammer .g',ygg:'.ygg path',well:'.wl-rip ellipse,.wl-bank',mist:'#f-mist path.g',beacon:'#f-beacon .g,#f-beacon .o,#f-beacon .l,#f-beacon .t,#f-beacon .bc-flame'})){
+ for(const[id,selector]of Object.entries({...Object.fromEntries(['laurier','hmc1','hmc2','interkom','lennard'].map(id=>['dig-'+id,'#f-hoard-'+id+' .hd-scratch'])),serpent:'.jg-ring path,.jg-head path,.jg-tail path,.jg-pad path,.jg-pad rect,.jg-pad circle',horn:'.hn-horn path',hammer:'#f-hammer .g',ygg:'.ygg path',well:'.wl-rip ellipse,.wl-bank',mist:'#f-mist path.g',beacon:'#f-beacon .g,#f-beacon .o,#f-beacon .l,#f-beacon .t,#f-beacon .bc-flame'})){
   let min=Infinity,near='';
   for(const e of document.querySelectorAll(selector)){
    if(!visible(e))continue;const screen=e.getBoundingClientRect();if(screen.right < -4||screen.left>innerWidth+4||screen.bottom < -4||screen.top>innerHeight+4)continue;const m=e.getScreenCTM(),s=getComputedStyle(e),L=e.getTotalLength?.();if(!L)continue;
@@ -22,6 +31,11 @@ function measure(){
    // F3 restores long polyline bands. Check their segments exactly instead of
    // thousands of native whole-path length queries at every close view.
    const d=e.getAttribute('d');
+   if(e.closest('.ygg')){const lines=treeSegments(d,m);if(lines){for(const[a,b]of lines)for(const l of labels){const v=segmentRect(a,b,l.b)-half;if(v<min){min=v;near=l.text;}}continue;}}
+
+   // COMB-Q's studs are circles encoded in one path; test each actual circle without repeated whole-path sampling.
+   if(e.matches('.jo-studs')){for(const q of d.matchAll(/M(-?[\d.]+) (-?[\d.]+)/g)){const x=m.a*(+q[1]+.55)+m.c*+q[2]+m.e,y=m.b*(+q[1]+.55)+m.d*+q[2]+m.f;for(const l of labels){const v=gap(l.b,[x,y,x,y])-.55*scale;if(v<min){min=v;near=l.text;}}}continue;}
+
    if(e.closest('.jg-ring')&&d&&!/[CQAHVSTcqahvst]/.test(d)){
     let last,home;for(const q of d.matchAll(/([MLZ])(?:(-?[\d.]+) (-?[\d.]+))?/g)){const p=q[1]==='Z'?home:[m.a*+q[2]+m.c*+q[3]+m.e,m.b*+q[2]+m.d*+q[3]+m.f];if(q[1]==='M')home=p;else if(last&&p)for(const l of labels){const v=segmentRect(last,p,l.b)-half;if(v<min){min=v;near=l.text;}}last=p;}continue;
    }

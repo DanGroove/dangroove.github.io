@@ -616,3 +616,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 
 /* Keep markers and the bar composited as glide opacities reach one. */
 .marker-layer, .marker-layer .mk, #go { will-change: opacity; }
+
+/* COMB-Q: carved detail is readable only as the camera approaches the serpent. */
+.jo-body .jd, .jo-head .jd { opacity: var(--jo-detail, 0); }
+.jf, .jf-name { pointer-events: none; }

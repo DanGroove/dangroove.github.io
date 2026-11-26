@@ -79,7 +79,7 @@ export function findWell(svg) {
     o.pebbleFrom = e.type === 'keydown' || !e.detail ? [W.water[0] + W.pebbleFrom[0], W.water[1] + W.pebbleFrom[1]] : toMap([e.clientX, e.clientY]); o.ts = FD.now; o.stage = 'pebble';
     if (FD.rm) land(); else attr(pebble, 'opacity', 1);
   });
-  const eagle = svg.querySelector('.yg-eagle'), wings = svg.querySelector('.yg-wings'), rat = svg.querySelector('.yg-rat'), tail = svg.querySelector('.yg-tail'), nid = svg.querySelector('.yg-nid-head');
+  const eagle = svg.querySelector('.yg-eagle'), wings = svg.querySelector('.yg-wings'), rat = svg.querySelector('.yg-rat'), tail = svg.querySelector('.yg-tail');
   const treeRandom = rnd(YGG.life.seed), treeInterval = pair => lerp(pair[0], pair[1], treeRandom());
   o.ratAt = FD.now + treeInterval(YGG.life.ratEvery); o.eagleAt = FD.now + treeInterval(YGG.life.eagleEvery); o.ratTs = o.eagleTs = o.flightTs = -Infinity;
   o.reduce = keep => { if (['pebble','landing'].includes(o.stage)) { if (keep) opened(o); land(); } o.playing = false; };
@@ -105,8 +105,6 @@ export function findWell(svg) {
       ey += dy; wingY = lerp(...L.flapY, (1 + Math.sin(Math.PI * 2 * L.flap * flightAge)) / 2);
     } else if (!FD.rm) wingY = lerp(...L.wingY, Math.sin(Math.PI * clamp01((t - o.eagleTs) / L.stretch)));
     attr(eagle, 'transform', 'translate(' + ex + ' ' + ey + ')'); attr(wings, 'transform', 'scale(' + L.wingX + ' ' + wingY + ')');
-    const gnawAge = t % L.gnawEvery, gnaw = FD.rm ? 0 : L.gnaw * Math.sin(Math.PI * clamp01(gnawAge / (L.gnawTime * 2)));
-    attr(nid, 'transform', 'translate(' + gnaw + ' 0)');
     if (!FD.rm && o.onScreen && t >= o.dripAt && o.dripLand === null && o.stage !== 'pebble') { findBits('drop', ...W.root, 1, { speed: [(W.water[1] - W.root[1]) / W.dripTime, (W.water[1] - W.root[1]) / W.dripTime], dir: [FIND_PLAY.kit.deg / 2, FIND_PLAY.kit.deg / 2], life: [W.dripTime, W.dripTime] }); o.dripLand = t + W.dripTime; o.dripAt = t + findRange(W.drip); }
     if (o.dripLand !== null && t >= o.dripLand) { o.dripLand = null; ring(1); }
     if (o.stage === 'pebble') {

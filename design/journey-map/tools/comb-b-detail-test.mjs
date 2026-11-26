@@ -17,7 +17,7 @@ try{
     }
     await b.evaluate('window.__jm.go("map",{instant:true})');await combBWait(1700);
     await b.evaluate(`document.getElementById('f-well').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}))`);await combBWait(2000);
-    await b.evaluate(`(()=>{document.querySelectorAll('.ygg .t,.yg-edge,.yg-hatch').forEach(e=>e.style.visibility='hidden');const e=document.querySelector('.yg-canopy');e.setAttribute('d',e.getAttribute('d').split('ZM')[0]+'Z');})()`);await b.shot(tag+'-crown-silhouette-wide');
+    await b.evaluate(`(()=>{document.querySelectorAll('.ygg .t,.yg-crown .l').forEach(e=>e.style.visibility='hidden');})()`);await b.shot(tag+'-crown-silhouette-wide');
     // Reload after the temporary silhouette study. The actual page is never saved with this treatment.
     await b.page('dist/journey-map.html');await b.evaluate('window.__jm.go("end",{instant:true})');await combBWait(1700);await b.evaluate('document.querySelector(".go-next").click()');await combBWait(2400);
     for(const[name,x,y]of[['north-grove',367,162],['east-grove',402,354],['south-grove',234,750]]){

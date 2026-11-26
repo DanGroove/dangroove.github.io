@@ -1,6 +1,6 @@
 // Part A: thought and memory return; deadlines become a three-poke chase.
 import { STOPS, MAP, FIND_COPY, FIND_PLAY, FIND_TIMING, RAVEN_RIG, COPY } from './data.mjs';
-import { JORM, jormPoint, ravenPose, ravenPoseTransforms } from './art.mjs';
+import { JORM, jormPoint, jormSegment, jormSubTail, ravenPose, ravenPoseTransforms } from './art.mjs';
 import { clamp01, lerp, VIEW } from './trip.mjs';
 import { FD, FIND_BY, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, closeSheet, attend, findBits, findFormat, findRange, findSheet, findSlot, findReady, findStyle, findSheetFrame } from './findkit.mjs';
 
@@ -180,90 +180,84 @@ export function findRavens(svg) {
   return o;
 }
 export function findSerpent(svg) {
-  const f = FIND_BY.serpent, el = svg.querySelector('#f-serpent'), head = el.querySelector('.jg-head'), jaw = el.querySelector('.jg-jaw'), tail = el.querySelector('.jg-tail'), pad = el.querySelector('.jg-pad'), eye = el.querySelector('.jg-eye'), shut = el.querySelector('.jg-shut'), tongue = el.querySelector('.jg-tongue'), joint = head.parentElement;
-  const leaves = [...el.querySelectorAll('.jg-leaf')].sort((a, b) => +a.dataset.i - +b.dataset.i);
-  const swells = [...(document.getElementById('b-sea') || svg).querySelectorAll('.jg-swell')].map(g => ({ g, gulp: g.querySelector('.jg-gulp'), hearPath: g.querySelector('.jg-hear'), live: false }));
-  const o = { id: f.id, el, stage: 'ready', pokes: 0, round: 0, kept: false, ts: -Infinity, headAngle: 0, headTurn: 0, jawAngle: 0, tailOut: 0, queued: false, held: false, hearTs: -Infinity, padTs: -Infinity, swells };
+  const f = FIND_BY.serpent, S = FIND_PLAY.serpent, el = svg.querySelector('#f-serpent'), head = el.querySelector('.jg-head'), jaw = el.querySelector('.jg-jaw'), eye = el.querySelector('.jg-eye'), shut = el.querySelector('.jg-shut');
+  const file = el.querySelector('.jg-file'), name = el.querySelector('.jf-name'), base = name.querySelector('.jf-base'), added = name.querySelector('.jf-added'), ext = name.querySelector('.jf-ext'), stamp = file.querySelector('.jf-stamp');
+  const body = (document.getElementById('b-sea') || svg).querySelector('.jo-body'), segments = [...body.querySelectorAll('.jo-surface')], ripple = body.querySelector('.jo-release-ripple');
+  const swells = [...body.querySelectorAll('.jg-swell')].map(g => ({ g, gulp: g.querySelector('.jg-gulp'), lines: g.querySelector('.jg-file-lines'), hearPath: g.querySelector('.jg-hear'), live: false, u: 0 }));
+  const o = { id: f.id, el, stage: 'ready', pokes: 0, round: 0, kept: false, ts: -Infinity, headAngle: 0, headTurn: 0, jawAngle: 0, tailOut: 0, queued: 0, held: false, hearTs: -Infinity, openAmount: 0, stamped: false, fileName: '', version: 0, swells };
+  let dirty = new Set(), tailPose = 0;
   o.place = () => [f.x, f.y];
-  const remaining = () => leaves.forEach((leaf, i) => { if (i >= o.pokes) { attr(leaf, 'opacity', 1); const offset = (i - o.pokes) * FIND_PLAY.serpent.leafOffset; attr(leaf, 'transform', 'translate(' + offset + ' ' + offset + ')'); } });
-  const reward = () => { o.stage = 'asleep'; o.kept = true; o.held = false; o.tailOut = 0; o.jawAngle = 0; attr(tail, 'transform', 'translate(0 0)'); attr(eye, 'opacity', 0); attr(shut, 'opacity', 1); queueMicrotask(() => showPop(o, [f.x + FIND_PLAY.serpent.popup[0], f.y + FIND_PLAY.serpent.popup[1]], '<p class="pop-k">' + fEsc(FIND_COPY.serpentFed) + '</p>' + findSlot(FIND_COPY.serpentLines[o.round % FIND_COPY.serpentLines.length]), '', 'above')); };
-  const swell = (duration, horn = false) => { if (FD.rm) return; const slot = swells.find(s => !s.live); if (slot) Object.assign(slot, { live: true, ts: FD.now, duration, horn, last: !horn && o.pokes === leaves.length }); };
-  const start = () => {
-    if (o.stage === 'step') { o.queued = true; return; }
-    if (o.stage === 'waking' || o.stage === 'closing') return;
-    if (o.stage === 'asleep') {
-      o.round++; o.pokes = 0; o.kept = false; o.queued = false; o.ts = o.padTs = FD.now; o.stage = FD.rm ? 'ready' : 'waking'; closePop(); opened(o);
-      leaves.slice().reverse().forEach(leaf => pad.appendChild(leaf)); remaining();
-      if (!FD.rm) findBits('ring', f.x + FIND_PLAY.serpent.pad[0], f.y + FIND_PLAY.serpent.pad[1], 1, FIND_PLAY.bits.wake);
-      attr(eye, 'opacity', 1); attr(shut, 'opacity', 0); return;
-    }
-    if (o.pokes >= leaves.length) return;
-    closePop(); found(o.id); opened(o); o.pokes++; o.ts = FD.now; o.stepPart = -1; o.stage = 'step'; o.bitten = false; o.gulped = false; o.leaf = leaves[o.pokes - 1];
-    if (FD.rm) { attr(o.leaf, 'opacity', 0); remaining(); o.tailOut = o.pokes === leaves.length ? 0 : 1; o.jawAngle = o.pokes === leaves.length ? 0 : FIND_PLAY.serpent.hungryJaw; o.stage = 'hungry'; if (o.pokes === leaves.length) { attr(pad, 'opacity', 0); reward(); } }
-    o.playing = !FD.rm;
+  const rename = (version, q = 1) => {
+    const a = version === 2 ? 'final_v2' : 'final', suffix = version === 2 ? '_FINAL' : version === 1 ? '_v2' : '', part = suffix.slice(0, Math.floor(suffix.length * clamp01(q))), extension = '.' + S.files[o.round % S.files.length];
+    if (base.textContent !== a) base.textContent = a; if (added.textContent !== part) added.textContent = part; if (ext.textContent !== extension) ext.textContent = extension;
+    o.fileName = a + part + extension; if (q === 1) o.version = version;
   };
-  press(el, start); remaining(); attr(pad, 'transform', 'translate(' + FIND_PLAY.serpent.pad.join(' ') + ')');
+  const caption = () => { const text = o.stage === 'asleep' ? FIND_COPY.serpentShippedHint : FIND_COPY.hints.serpent; if (FD.hint && FD.focusId === o.id && FD.hint.textContent !== text) FD.hint.textContent = text; };
+  const reward = () => {
+    o.stage = 'asleep'; o.kept = true; o.openAmount = o.tailOut = 1; o.stamped = true; o.shippedAt = FD.now; o.held = false; o.playing = false; caption();
+    queueMicrotask(() => showPop(o, [f.x + S.popup[0], f.y + S.popup[1]], '<p class="pop-k">' + fEsc(FIND_COPY.serpentFed) + '</p>' + findSlot(FIND_COPY.serpentLines[o.round % FIND_COPY.serpentLines.length]), '', 'above'));
+  };
+  const swell = (duration, horn = false) => { const slot = swells.find(s => !s.live); if (slot && !FD.rm) Object.assign(slot, { live: true, ts: FD.now, duration, horn, u: 0 }); };
+  const consumeQueue = () => { if (!o.queued) return; o.queued--; queueMicrotask(start); };
+  const start = () => {
+    // The capture listener brings him into view. This press never also feeds him.
+    if (!findReady(o.id)) return;
+    if (FD.rm && !o.rmFocused) { o.rmFocused = true; return; }
+    if (['bite','lap','spit','typing','opening','waking'].includes(o.stage)) { o.queued++; return; }
+    closePop(); opened(o);
+    if (o.stage === 'asleep') {
+      o.round++; o.pokes = 0; o.kept = false; o.stamped = false; o.ts = FD.now; o.stage = FD.rm ? 'ready' : 'waking'; rename(0); if (FD.rm) o.openAmount = o.tailOut = 0; o.playing = !FD.rm; return;
+    }
+    found(o.id); o.pokes++; o.ts = FD.now; o.held = o.pokes < 3; o.playing = !FD.rm;
+    if (o.pokes === 3) { o.stage = 'opening'; if (FD.rm) reward(); }
+    else { o.stage = FD.rm ? 'ready' : 'bite'; if (FD.rm) rename(o.pokes); }
+  };
+  press(el, start); rename(0);
   o.undo = () => { if (FD.popOwner === o) closePop(); };
   o.reduce = keep => {
-    swells.forEach(s => s.live = false); o.playing = false; o.queued = false;
-    if (o.stage === 'waking') { o.stage = 'ready'; return; }
-    if (!['step','closing'].includes(o.stage)) return;
-    o.held = false; if (o.leaf) attr(o.leaf,'opacity',0); remaining();
-    o.stage = 'hungry'; o.tailOut = o.pokes === leaves.length ? 0 : 1; o.jawAngle = o.pokes === leaves.length ? 0 : FIND_PLAY.serpent.hungryJaw;
-    if (o.pokes === leaves.length) { o.gulped = true; o.padTs = -Infinity; if (keep) opened(o); reward(); }
+    swells.forEach(s => s.live = false); o.queued = 0; o.held = false; o.playing = false;
+    if (o.stage === 'opening') { if (keep) opened(o); reward(); }
+    else if (o.stage === 'waking') { o.stage = 'ready'; o.openAmount = o.tailOut = 0; rename(0); }
+    else if (['bite','lap','spit','typing'].includes(o.stage)) { o.stage = 'ready'; o.openAmount = o.tailOut = 0; rename(o.pokes); }
   };
-  o.hear = () => { if (!FD.rm) { o.hearTs = FD.now; swell(FIND_PLAY.serpent.hear[2], true); o.playing = true; } };
+  o.hear = () => { if (!FD.rm) { o.hearTs = FD.now; swell(S.hear[2], true); o.playing = true; } };
+  const lapPlace = q => {
+    const X = S.lapStops, Y = S.lapPlaces, M = S.lapSlopes; let i = 0; while (i < X.length - 2 && q > X[i + 1]) i++;
+    const width = X[i + 1] - X[i], t = (q - X[i]) / width;
+    return (2*t**3-3*t*t+1)*Y[i] + (t**3-2*t*t+t)*width*M[i] + (-2*t**3+3*t*t)*Y[i+1] + (t**3-t*t)*width*M[i+1];
+  };
+  const updateBody = lumps => {
+    const next = new Set(); for (const p of lumps) MAP.jorm.surf.forEach(([a, b], i) => { if (p.u >= a - .015 && p.u <= b + .015) next.add(i); });
+    if (o.openAmount !== tailPose) { next.add(4); const p = jormSubTail(o.openAmount); attr(body.querySelector('.jo-sub-fill.jo-tail-sub'), 'd', p.fill); attr(body.querySelector('.jo-sub-edge.jo-tail-sub'), 'd', p.edge); }
+    for (const i of new Set([...dirty, ...next])) { const p = jormSegment(i, i === 4 ? o.openAmount : 0, lumps); for (const [selector, key] of [['.jo-outline','outer'],['.jo-inner','inner'],['.jo-bands','bands'],['.jo-studs','studs']]) attr(segments[i].querySelector(selector), 'd', p[key]); }
+    dirty = next; tailPose = o.openAmount;
+  };
   o.tick = (t, dt) => {
-    const S = FIND_PLAY.serpent, J = MAP.jorm, e = t - o.ts, asleep = o.stage === 'asleep', here = { x: f.x + S.head[0], y: f.y + S.head[1] }, target = attend(here, S.attend);
-    let aim = target ? Math.atan2(-(target[1] - here.y), -(target[0] - here.x)) * FIND_PLAY.kit.deg / Math.PI : 0; aim = Math.max(-S.headLimit, Math.min(S.headLimit, aim));
-    o.headAngle = FD.rm ? 0 : lerp(o.headAngle, aim, Math.min(1, dt * S.headEase));
-    let angle = asleep ? S.restAngle + (FD.rm ? 0 : S.breathe[0] * Math.sin(Math.PI * 2 * t / S.breathe[1])) : o.headAngle;
-    let jawTurn = o.stage === 'hungry' ? S.hungryJaw : 0, tailK = o.stage === 'hungry' ? 1 : 0, padK = o.pokes === leaves.length && o.gulped ? clamp01((t - o.padTs) / S.padTime) : 0;
-    if (o.stage === 'step') {
-      let part = 0, age = e; while (part < S.steps.length - 1 && age >= S.steps[part]) { age -= S.steps[part]; part++; }
-      const q = clamp01(age / S.steps[part]); o.stepPart = part;
-      const turn = S.lunge;
-      if (part === 0) { jawTurn = lerp(o.pokes > 1 ? S.hungryJaw : 0, S.jaw, ease(q)); tailK = lerp(o.pokes > 1 ? 1 : 0, 1, ease(q)); }
-      if (part === 1) { const back = S.overEase, z = q - 1; angle = turn * (1 + (back + 1) * z ** 3 + back * z ** 2); jawTurn = S.jaw; tailK = 1; }
-      if (part >= 2 && !o.bitten) { o.bitten = true; o.held = true; joint.appendChild(o.leaf); remaining(); findBits('drop', f.x + S.pad[0], f.y + S.pad[1], S.drops, FIND_PLAY.bits.drops); }
-      if (part === 2) { angle = turn; jawTurn = S.jaw * (1 - ease(q)); tailK = 1; }
-      if (part === 3) { angle = turn * (1 - ease(q)); tailK = 1; }
-      if (part === 4) {
-        angle = S.swallow * Math.sin(Math.PI * q); tailK = 1;
-        if (!o.gulped) { o.gulped = true; swell(S.swell[o.pokes - 1]); if (o.pokes === leaves.length) { o.padTs = t; findBits('ring', f.x + S.pad[0], f.y + S.pad[1], 1, FIND_PLAY.bits.wake); } }
-        padK = o.pokes === leaves.length ? clamp01((t - o.padTs) / S.padTime) : 0;
-      }
-      if (o.held) {
-        const shrink = part === 4 ? 1 - ease(q) : 1, flutter = S.flutter[0] * Math.sin(Math.PI * 2 * S.flutter[1] * t), at = part === 4 ? S.mouth.map((v, i) => lerp(v, S.corner[i], ease(q))) : S.mouth;
-        attr(o.leaf, 'transform', 'rotate(' + angle + ') translate(' + at.join(' ') + ') rotate(' + flutter + ') scale(' + shrink + ')'); attr(o.leaf, 'opacity', shrink > 0 ? 1 : 0); o.leafTurn = angle;
-      }
-      if (e >= S.steps.reduce((sum, v) => sum + v, 0)) { attr(o.leaf, 'opacity', 0); o.held = false; o.stage = 'hungry'; if (o.queued && o.pokes < leaves.length) { o.queued = false; start(); } else o.queued = false; }
-    }
-    if (o.stage === 'waking') { const q = clamp01(e / S.padTime); padK = 1 - q; if (e >= S.wake) attr(eye, 'opacity', 1); if (q === 1) o.stage = 'ready'; }
-    swells.forEach(s => {
-      if (!s.live) { attr(s.g, 'opacity', 0); return; }
-      const q = clamp01((t - s.ts) / s.duration), u = JORM.L * ease(q), p = jormPoint(u), fade = Math.min(1, u / J.swellRamp, (JORM.L - u) / J.swellRamp);
-      const surface = Math.max(0, ...J.surf.map(([a, b]) => Math.max(0, Math.min(1, (u - a * JORM.L) / J.swellRamp, (b * JORM.L - u) / J.swellRamp))));
-      attr(s.g, 'transform', 'translate(' + p.x + ' ' + p.y + ') rotate(' + p.angle + ')'); attr(s.g, 'opacity', fade * lerp(J.swellSub, 1, surface)); attr(s.gulp, 'opacity', s.horn ? 0 : 1); attr(s.hearPath, 'opacity', s.horn ? 1 : 0);
-      if (q === 1) { s.live = false; if (!s.horn) o.twitchTs = t; if (s.last) { o.stage = 'closing'; o.ts = t; } }
+    const e = t - o.ts, target = attend({x:f.x+S.head[0],y:f.y+S.head[1]}, S.attend), here = [f.x+S.head[0],f.y+S.head[1]];
+    let aim = target ? Math.atan2(-(target[1]-here[1]),-(target[0]-here[0]))*180/Math.PI : 0; aim = Math.max(-S.headLimit,Math.min(S.headLimit,aim));
+    o.headAngle = FD.rm ? 0 : lerp(o.headAngle,aim,Math.min(1,dt*S.headEase));
+    let angle = o.stage === 'asleep' ? (FD.rm ? 0 : S.breathe[0]*Math.sin(Math.PI*2*t/S.breathe[1])) : o.headAngle, jawTurn = o.stage === 'asleep' ? S.shippedJaw : 0, at = S.fileAt.slice(), rotation = 0, scale = 1, alpha = 1, nameAlpha = 1;
+    if (o.stage === 'bite') { const q = clamp01(e/S.bite); jawTurn = S.jaw*Math.sin(Math.PI*q); at = S.fileAt.map((v,i)=>lerp(v,[-40,5][i],ease(q))); scale = 1-ease(q); rotation = -8*q; nameAlpha = 1-q; if(q===1){o.stage='lap';o.ts=t;o.held=false;swell(S.lap);} }
+    if (o.stage === 'lap') { alpha = nameAlpha = 0; jawTurn = 2; }
+    if (o.stage === 'spit') { const q = clamp01(e/S.spit); at = [-38,5].map((v,i)=>lerp(v,S.returnAt[i],out3(q))); rotation = -8*Math.sin(Math.PI*q); jawTurn = 8*Math.sin(Math.PI*q); nameAlpha = q; if(q===1){o.stage='typing';o.ts=t;} }
+    if (o.stage === 'typing') { at = S.returnAt.map((v,i)=>lerp(v,S.fileAt[i],ease(e/S.type))); rename(o.pokes,clamp01(e/S.type)); if(e>=S.type){rename(o.pokes);o.stage='ready';consumeQueue();} }
+    if (o.stage === 'opening') { const q = FD.rm ? 1 : ease(e/S.open); o.openAmount=o.tailOut=q; at=S.fileAt.map((v,i)=>lerp(v,S.shipAt[i],q));jawTurn=S.shippedJaw*q;if(q===1)reward(); }
+    if (o.stage === 'asleep') { at=S.shipAt.slice();jawTurn=S.shippedJaw; }
+    if (o.stage === 'waking') { const q=clamp01(e/S.wake);o.openAmount=o.tailOut=1-ease(q);at=S.enterAt.map((v,i)=>lerp(v,S.fileAt[i],out3(q)));alpha=q;nameAlpha=q;jawTurn=S.shippedJaw*(1-ease(q));if(q===1){o.stage='ready';consumeQueue();} }
+    const lumps=[];
+    swells.forEach(s=>{
+      if(!s.live){attr(s.g,'opacity',0);return;}
+      const q=clamp01((t-s.ts)/s.duration),u=s.horn?ease(q):lapPlace(q),p=jormPoint(u*JORM.L),surface=Math.max(0,...MAP.jorm.surf.map(([a,b])=>Math.max(0,Math.min(1,(u-a)*JORM.L/MAP.jorm.swellRamp,(b-u)*JORM.L/MAP.jorm.swellRamp))));s.u=u;lumps.push({u,horn:s.horn});
+      attr(s.g,'transform','translate('+p.x+' '+p.y+') rotate('+p.angle+')');attr(s.g,'data-u',u);attr(s.g,'opacity',Math.min(1,u*JORM.L/3,(1-u)*JORM.L/3)*lerp(MAP.jorm.swellSub,1,surface));attr(s.gulp,'opacity',s.horn?0:1);attr(s.lines,'opacity',s.horn?0:1);attr(s.hearPath,'opacity',s.horn?1:0);
+      if(q===1){s.live=false;if(!s.horn){o.stage='spit';o.ts=t;rename(o.pokes,0);} }
     });
-    if (o.stage === 'closing') {
-      const age = t - o.ts, A = S.close, q = age < A[0] ? age / A[0] : age < A[0] + A[1] ? (age - A[0]) / A[1] : (age - A[0] - A[1]) / A[2];
-      jawTurn = age < A[0] ? lerp(S.hungryJaw, S.jaw, ease(q)) : age < A[0] + A[1] ? S.jaw : S.jaw * (1 - ease(q)); tailK = age < A[0] ? 1 : 1 - ease((age - A[0]) / A[1]); angle = 0;
-      if (age >= A.reduce((sum, v) => sum + v, 0)) reward();
-    }
-    const heard = FD.rm ? 1 : clamp01((t - o.hearTs) / S.hear[1]); angle += S.hear[0] * Math.sin(Math.PI * heard);
-    if (o.stage === 'asleep') { jawTurn = 0; tailK = 0; }
-    o.headTurn = angle; o.jawAngle = jawTurn; o.tailOut = tailK;
-    attr(head, 'transform', 'rotate(' + angle + ')'); attr(jaw, 'transform', 'rotate(' + (-jawTurn) + ' ' + S.jawPivot.join(' ') + ')');
-    const twitch = FD.rm ? 0 : S.tailTwitch[0] * Math.sin(Math.PI * clamp01((t - (o.twitchTs ?? -Infinity)) / S.tailTwitch[1]));
-    attr(tail, 'transform', 'translate(' + (tailK * S.tailOut[0]) + ' ' + (tailK * S.tailOut[1] + twitch) + ')');
-    const sleeping = o.stage === 'asleep'; attr(eye, 'opacity', sleeping ? 0 : 1); attr(shut, 'opacity', sleeping ? 1 : 0);
-    const pointer = FD.hover && FD.now - FD.pointerT <= FIND_PLAY.fresh ? toMap(FD.pointer) : null, near = pointer && Math.hypot(pointer[0] - here.x, pointer[1] - here.y) <= S.near, ta = t % S.tongue[1], flick = !FD.rm && !sleeping && near && ta < S.tongue[0] ? Math.sin(Math.PI * ta / S.tongue[0]) : 0;
-    attr(tongue, 'opacity', flick > 0 ? 1 : 0); attr(tongue, 'transform', 'translate(' + S.snout.join(' ') + ') scale(' + flick + ' 1) translate(' + S.snout.map(v => -v).join(' ') + ')');
-    const bob = FD.rm || sleeping || o.stage === 'waking' ? 0 : Math.sin(Math.PI * 2 * t / S.bob[2]);
-    attr(pad, 'transform', 'translate(' + S.pad[0] + ' ' + (S.pad[1] + S.padSink * padK + S.bob[1] * bob) + ') rotate(' + S.bob[0] * bob + ')'); attr(pad, 'opacity', 1 - padK);
-    o.playing = ['step', 'waking', 'closing'].includes(o.stage) || swells.some(s => s.live) || t - (o.twitchTs ?? -Infinity) < S.tailTwitch[1];
+    updateBody(lumps);attr(ripple,'opacity',FD.rm||o.openAmount===0?0:.55*Math.sin(Math.PI*o.openAmount));
+    const heard=FD.rm?1:clamp01((t-o.hearTs)/S.hear[1]);angle+=S.hear[0]*Math.sin(Math.PI*heard);
+    const sleeping=o.stage==='asleep';o.headTurn=angle;o.jawAngle=jawTurn;attr(head,'transform','rotate('+angle+')');attr(jaw,'transform','rotate('+(-jawTurn)+' '+S.jawPivot.join(' ')+')');attr(eye,'opacity',sleeping?0:1);attr(shut,'opacity',sleeping?1:0);
+    const bob=FD.rm||!['ready','typing'].includes(o.stage)?0:Math.sin(Math.PI*2*t/S.bob[2]);at[1]+=S.bob[1]*bob;rotation+=S.bob[0]*bob;const phoneScale=VIEW.phone?Math.min(1,S.filePhone/(15*FD.st.cam.s)):1;
+    attr(file,'transform','translate('+at.join(' ')+') rotate('+rotation+') scale('+(scale*phoneScale)+')');attr(file,'opacity',alpha);attr(stamp,'opacity',o.stamped?1:0);attr(stamp,'transform','translate(.5 1.2) rotate(-14) scale('+(1/phoneScale)+')');attr(name,'x',at[0]+S.shipName[0]*o.openAmount);attr(name,'y',at[1]+S.nameDy+S.shipName[1]*o.openAmount);attr(name,'font-size',lerp(S.nameSize,S.shipName[2],o.openAmount));attr(name,'opacity',nameAlpha);
+    const F=FIND_PLAY.focus,close=Math.max(Math.max(VIEW.s0,F.least*VIEW.sT),Math.min(F.most*VIEW.sT,F.fill*Math.min(VIEW.w,VIEW.h)/(2*f.view[2]))),detail=clamp01((FD.st.cam.s-VIEW.s0)/(close-VIEW.s0||1));findStyle(body,'--jo-detail',detail);findStyle(head,'--jo-detail',detail);
+    attr(el,'data-revision-state',o.stage);attr(el,'data-loop-open',o.openAmount);attr(el,'data-file',o.fileName);caption();if(o.stage==='asleep'&&o.queued&&t-o.shippedAt>=S.queueRest)consumeQueue();o.playing=['bite','lap','spit','typing','opening','waking'].includes(o.stage)||swells.some(s=>s.live)||o.stage==='asleep'&&o.queued>0;
   };
   return o;
 }

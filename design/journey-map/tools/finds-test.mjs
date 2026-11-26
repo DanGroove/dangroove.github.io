@@ -24,7 +24,7 @@ const chart = bigMap();
 assert.ok(!/undefined|\{\{/.test(chart.finds), 'all live drawing tokens must resolve');
 // COMB-B records the surfaced serpent drawing; fill and coasts retain their earlier baselines.
 // COMB-N (2026-11-26): sky wolves/local SVGs and held map/trail writer re-record their source/data pins.
-const original = { sea: [75564, 3132355843], fill: [12999, 2682309966], coast: [4401, 2408021381] };
+const original = { sea: [92983, 2278239991], fill: [12999, 2682309966], coast: [4401, 2408021381] };
 for (const [key, [length, hash]] of Object.entries(original)) { assert.equal(chart[key].length, length); assert.equal(digest(chart[key]), hash); }
 console.log('ok: COMB-D body/stipple sea digest recorded; coast and fill unchanged');
 // D3 adds NOVA.build; the full data digest is re-recorded for that authorized table (and again for the continuous pull, 2026-11-23,
@@ -48,7 +48,7 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // COMB-M2 (2026-11-26): N2 changes only the old longship line and ship kit keys; the M2 scope test pins the exact edits.
 assert.equal(sourceDigest('trip.mjs'), 906771568, 'trip.mjs changed'); // COMB-P authorized changes and the part 13 review fixes (2026-11-26).
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 256099212, 'data.mjs changed'); // COMB-P authorized changes and the part 13 review fixes (2026-11-26).
+assert.equal(sourceDigest('data.mjs'), 2000277628, 'data.mjs changed'); // COMB-P authorized changes and the part 13 review fixes (2026-11-26).
 assert.equal(sourceDigest('depth.mjs'), 2916876570, 'depth.mjs changed'); // COMB-P authorized changes and the part 13 review fixes (2026-11-26).
 console.log('ok: COMB-D camera/labels/tripS digests recorded; depth source remains pinned');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
@@ -219,23 +219,16 @@ assert.equal(window.__jm.finds.state('hoard-laurier').digs, 3); assert.equal(win
 key('ravens'); await tick(4.1); assert.equal(window.__jm.finds.state('ravens').tally, 1);
 key('ravens'); await tick(4.1); assert.equal(window.__jm.finds.state('ravens').stage, 'reel'); await tick(5.9); assert.equal(window.__jm.finds.state('ravens').stage, 'rest');
 const serpentState = () => window.__jm.finds.state('serpent');
-const serpentLeaf = i => testSvg.querySelector('.jg-leaf[data-i="'+i+'"]');
-assert.equal(serpentState().stage,'ready'); assert.equal(serpentState().pokes,0);
-for(let i=0;i<5;i++){key('serpent');await tick(.05);}
-assert.equal(serpentState().pokes,1); assert.equal(serpentState().queued,true);
-await tick(.25);assert.equal(serpentState().held,true);
-assert.ok(serpentLeaf(0).getAttribute('transform').startsWith('rotate('+serpentState().headTurn+')'),'held leaf follows the current head rotation');
-assert.deepEqual(FIND_COPY.serpentLeaves[0],['FRI','5 PM']);
-await tick(.7);assert.equal(serpentState().pokes,2);assert.equal(serpentState().queued,false);
-await tick(3.2);assert.equal(serpentState().stage,'hungry');assert.deepEqual(FIND_COPY.serpentLeaves[1],['TODAY','EOD']);
-assert.equal(serpentLeaf(1).getAttribute('opacity'),'0');assert.equal(serpentLeaf(2).getAttribute('opacity'),'1');
-key('serpent');await tick(1.2);for(let i=0;i<5;i++)key('serpent');assert.equal(serpentState().pokes,3);await tick(2.1);assert.equal(serpentState().stage,'asleep');assert.deepEqual(FIND_COPY.serpentLeaves[2],['NOW','ASAP']);
-assert.equal(serpentState().tailOut,0);assert.equal(testSvg.querySelector('.jg-eye').getAttribute('opacity'),'0');assert.equal(testSvg.querySelector('.jg-shut').getAttribute('opacity'),'1');assert.ok(testPop.querySelector('.pop-k'));assert.equal(FD.popOwner.id,'serpent');assert.ok(testPop.recordedHTML.includes('Deadline met'));
+// COMB-Q: the first press focuses, two revisions return a named file, the third ships.
+assert.equal(serpentState().stage,'ready'); key('serpent'); await tick(2); assert.equal(serpentState().pokes,0);
+for (const filename of ['final_v2.pdf','final_v2_FINAL.pdf']) { key('serpent'); await tick(4.5); assert.equal(serpentState().fileName,filename); assert.equal(serpentState().stage,'ready'); }
+key('serpent'); await tick(1); assert.equal(serpentState().stage,'asleep'); assert.equal(serpentState().openAmount,1); assert.equal(serpentState().stamped,true);
+assert.equal(testSvg.querySelector('.jg-eye').getAttribute('opacity'),'0'); assert.equal(testSvg.querySelector('.jg-shut').getAttribute('opacity'),'1'); assert.ok(testPop.recordedHTML.includes('Shipped')&&testPop.recordedHTML.includes('A shipped story goes here.')); assert.equal(FD.popOwner.id,'serpent');
 assert.equal([...FD.found].filter(id=>id==='serpent').length,1);
-key('serpent');assert.equal(serpentState().stage,'waking');await tick(.7);assert.equal(serpentState().stage,'ready');assert.equal(serpentState().round,1);assert.equal(serpentLeaf(0).getAttribute('opacity'),'1');
-for(let i=0;i<3;i++){key('serpent');await tick(3.3);}await tick(.5);assert.equal(serpentState().stage,'asleep');
+key('serpent'); await tick(1); assert.equal(serpentState().stage,'ready'); assert.equal(serpentState().round,1); assert.equal(serpentState().fileName,'final.mp4'); assert.equal(serpentState().openAmount,0);
+for(let i=0;i<3;i++){key('serpent');await tick(4.5);}assert.equal(serpentState().stage,'asleep');
 const eagle=testSvg.querySelector('.yg-eagle'), eagleRest=eagle.getAttribute('transform'); FD.list.well.hear();await tick(1);assert.notEqual(eagle.getAttribute('transform'),eagleRest);assert.equal(FD.list.well.playing,true);await tick(1.8);assert.equal(eagle.getAttribute('transform'),eagleRest);
-console.log('ok: Jormungandr three leaves, five rapid pokes queue once, held leaf follows head, swells/closing/sleep/wake, one found count; eagle circle returns to perch');
+console.log('ok: revision names, shipped slot, open loop, next file and one found count; eagle returns to perch');
 for (let i = 0; i < 4; i++) { key('beacon'); await tick(1.9); }
 assert.equal(window.__jm.finds.state('beacon').fire, 4);
 key('runestone'); await tick(5);
@@ -479,11 +472,11 @@ assert.equal(window.__jm.finds.state('hoard-hmc1').open, true);
 rmKey('ravens'); await rmTick(); assert.equal(window.__jm.finds.state('ravens').tally, 1);
 rmKey('ravens'); await rmTick(); await rmTick(0.1); assert.equal(window.__jm.finds.state('ravens').stage, 'reel'); await rmTick(5.1); assert.equal(window.__jm.finds.state('ravens').stage, 'rest');
 { const b = FD.list.ravens.birds[0], before = b.g.getAttribute('transform'); FD.pointer = [(ravenFind.x + rig.PERCHES[0][0] * FIND_PLAY.raven.scale + 2) * rmCamera.s + rmCamera.tx, (ravenFind.y + rig.PERCHES[0][1] * FIND_PLAY.raven.scale) * rmCamera.s + rmCamera.ty]; for (let i = 0; i < 8; i++) { FD.pointerT = testClock; await rmTick(0.05); } assert.ok(FD.list.ravens.awake, 'pointer reaches Huginn'); assert.equal(b.shy, 0, 'no shy hop under reduced motion'); assert.equal(b.g.getAttribute('transform'), before); FD.pointer = [-Infinity, -Infinity]; }
-for (let i = 0; i < 3; i++) { rmKey('serpent'); await rmTick(); }
+for (let i = 0; i < 4; i++) { rmKey('serpent'); await rmTick(); }
 assert.equal(window.__jm.finds.state('serpent').stage, 'asleep');
-assert.ok(FD.list.serpent.swells.every(s=>!s.live));assert.equal(rmSvg.querySelector('.jg-eye').getAttribute('opacity'),'0');assert.equal(FD.list.serpent.tailOut,0);
-const rmActors=['.yg-eagle','.yg-wings','.yg-rat','.yg-tail','.yg-nid-head'].map(s=>rmSvg.querySelector(s)), rmTransforms=rmActors.map(n=>n.getAttribute('transform'));FD.list.well.hear();await rmTick(3);assert.deepEqual(rmActors.map(n=>n.getAttribute('transform')),rmTransforms);
-console.log('ok: reduced-motion serpent consumes leaves immediately with no swell; no shy hop; all tree actors stay still on hear');
+assert.ok(FD.list.serpent.swells.every(s=>!s.live));assert.equal(rmSvg.querySelector('.jg-eye').getAttribute('opacity'),'0');assert.equal(FD.list.serpent.tailOut,1);
+const rmActors=['.yg-eagle','.yg-wings','.yg-rat','.yg-tail'].map(s=>rmSvg.querySelector(s)), rmTransforms=rmActors.map(n=>n.getAttribute('transform'));FD.list.well.hear();await rmTick(3);assert.deepEqual(rmActors.map(n=>n.getAttribute('transform')),rmTransforms);
+console.log('ok: reduced-motion serpent swaps names and ships with no swell; no shy hop; all tree actors stay still on hear');
 for (let i = 0; i < 4; i++) { rmKey('beacon'); await rmTick(); }
 assert.equal(window.__jm.finds.state('beacon').fire, 4);
 rmKey('runestone'); await rmTick(); assert.equal(window.__jm.finds.state('runestone').read, true);

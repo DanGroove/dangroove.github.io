@@ -123,12 +123,8 @@ const shore = (P, seed) => {
 
 // ---- Norse landmarks ----
 export function yggdrasil(x, y) {
-  const Y = YGG;
-  // One silhouette with overlapping boughs indicated only by open, nested edges.
-  // Windows are real holes in the foliage; the fork behind them never crosses an edge.
-  const crown = '<path class="g yg-canopy" fill-rule="evenodd" d="' + Y.canopy + Y.windows + '"/><path class="l yg-edge" d="' + Y.boughs + '"/><path class="t yg-hatch" d="' + Y.hatch + '"/>';
-  const actor = (cls, p, body) => '<g class="' + cls + '" transform="translate(' + p.join(' ') + ')">' + body + '</g>';
-  return '<g class="ygg" transform="translate(' + x + ' ' + y + ')">' + Y.roots.map(row => '<path class="g" d="' + tube(...row) + '"/>').join('') + Y.rootlets + Y.trunk + crown + actor('yg-eagle', Y.eagleAt, Y.eagle) + actor('yg-rat', Y.ratAt, '<g transform="scale(2.6)">'+Y.rat+'</g>') + actor('yg-nid', Y.nidAt, '<g transform="scale(1.7)">'+Y.nid+'</g>') + '</g>';
+  const Y = YGG, actor = (cls, p, body) => '<g class="' + cls + '" transform="translate(' + p.join(' ') + ')">' + body + '</g>';
+  return '<g class="ygg" transform="translate(' + x + ' ' + y + ')">' + Y.drawing + actor('yg-eagle', Y.eagleAt, Y.eagle) + actor('yg-rat', Y.ratAt, '<g transform="scale(2.6)">'+Y.rat+'</g>') + '</g>';
 }
 // interlace knot, about 22 units: a rounded square and a diamond woven over and under by quadrant
 export const knot = (cx, cy) => {
@@ -324,12 +320,12 @@ export function rubbingSvg() {
 export const segmentGap = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1))); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
 export const outlineGap = (p, poly, closed = true) => Math.min(...poly.slice(closed ? 0 : 1).map((v, i) => segmentGap(p, closed ? poly[(i + poly.length - 1) % poly.length] : poly[i], v)));
 export const inWorldBox = (p, b, pad = 0) => p[0] >= b[0] - pad && p[0] <= b[2] + pad && p[1] >= b[1] - pad && p[1] <= b[3] + pad;
-export const YGG_CROWN = (() => { const r = rnd(YGG.crownSeed), P = YGG.crown, out = []; P.forEach((a, i) => { const b = P[(i + 1) % P.length], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), bump = L * (YGG.crownBump[0] + r() * YGG.crownBump[1]), c = [(a[0] + b[0]) / 2 + dy / L * bump, (a[1] + b[1]) / 2 - dx / L * bump]; for (let j = 0; j < YGG.tube.seg; j++) { const t = j / YGG.tube.seg; out.push([0, 1].map(k => MAP.ygg[k] + (1 - t) ** 2 * a[k] + 2 * t * (1 - t) * c[k] + t * t * b[k])); } }); return out; })();
-export const YGG_ROOTS = YGG.roots.map(row => spline(row[0], false, YGG.tube.seg).map(p => p.map((v, i) => v + MAP.ygg[i])));
-export const YGG_TRUNK = [[MAP.ygg[0], MAP.ygg[1]], YGG.fork];
-export const yggClear = (p, gap) => !insidePoly(p, YGG_CROWN) && outlineGap(p, YGG_CROWN) >= gap && outlineGap(p, YGG_TRUNK, false) >= gap + YGG.roots[0][1] && YGG_ROOTS.every((P, i) => outlineGap(p, P, false) >= gap + YGG.roots[i][1] / 2);
+export const YGG_CROWN = YGG.crown.map(p => p.map((v, i) => v + MAP.ygg[i]));
+export const YGG_ROOTS = YGG.roots.map(row => { const P = spline(row[0], false, YGG.tube.seg).map(p => p.map((v, i) => v + MAP.ygg[i])); P.widths = spline(row[2].map((w, i) => [i, w]), false, YGG.tube.seg).map(p => p[1]); return P; });
+export const YGG_TRUNK = YGG.trunkLine.map(p => p.map((v, i) => v + MAP.ygg[i]));
+export const yggClear = (p, gap) => !insidePoly(p, YGG_CROWN) && outlineGap(p, YGG_CROWN) >= gap && outlineGap(p, YGG_TRUNK, false) >= gap + 14 && YGG_ROOTS.every(P => P.slice(1).every((b, i) => segmentGap(p, P[i], b) >= gap + Math.max(P.widths[i], P.widths[i + 1]) / 2));
 export const GROVE = [];
-export const JORM = (() => { const S = spline(MAP.jorm.ring, false, MAP.jorm.seg), cum = [0]; for (let i = 1; i < S.length; i++) cum.push(cum[i - 1] + Math.hypot(S[i][0] - S[i - 1][0], S[i][1] - S[i - 1][1])); return { S, cum, L: cum.at(-1) }; })();
+export const JORM = (() => { const S = spline([...MAP.jorm.lead, ...MAP.jorm.ring.slice(3, -1), ...MAP.jorm.tailEnd], false, MAP.jorm.seg), cum = [0]; for (let i = 1; i < S.length; i++) cum.push(cum[i - 1] + Math.hypot(S[i][0] - S[i - 1][0], S[i][1] - S[i - 1][1])); return { S, cum, L: cum.at(-1) }; })();
 export function jormPoint(u) {
   const at = Math.max(0, Math.min(JORM.L, u)); let i = 1; while (i < JORM.cum.length - 1 && JORM.cum[i] < at) i++;
   const a = JORM.S[i - 1], b = JORM.S[i], q = (at - JORM.cum[i - 1]) / (JORM.cum[i] - JORM.cum[i - 1] || 1);
@@ -340,12 +336,48 @@ export function jormEdges(a, b, taper = 0) {
   shares.forEach(t => { const p = jormPoint(t * JORM.L), angle = p.angle * Math.PI / FIND_PLAY.kit.deg, u = taper ? Math.min(1, (t - a) / taper, b >= 1 ? 1 : (b - t) / taper) : 1, w = J.w * (t < J.taper[0] ? 1 : 1 - (t - J.taper[0]) / J.taper[1] * J.taper[2]) / 2 * (taper ? J.edgeNarrow[0] + J.edgeNarrow[1] * Math.sin(Math.PI / 2 * Math.max(0, u)) : 1); left.push([p.x - Math.sin(angle) * w, p.y + Math.cos(angle) * w]); right.push([p.x + Math.sin(angle) * w, p.y - Math.cos(angle) * w]); mid.push([p.x, p.y]); });
   return { left, right, mid };
 }
-export function jormungandr() {
-  const J = MAP.jorm, end = 1 - J.tail / JORM.L, all = jormEdges(0, end);
-  let s = '<g class="jg-ring"><path d="' + pathD([...all.left, ...all.right.slice().reverse()], true) + '" fill="' + C.ink + '" opacity="' + J.subAlpha + '"/><path d="' + pathD(all.left) + pathD(all.right) + '" fill="none" stroke="' + C.paper + '" stroke-opacity="' + J.edgeAlpha + '" stroke-width="' + J.edgeWidth + '" stroke-dasharray="' + J.dash + '" vector-effect="non-scaling-stroke"/>';
-  J.surf.forEach(([a, b]) => { const e = jormEdges(a, Math.min(b, end), a === 0 ? 0 : J.surfaceTaper); s += '<path class="o" d="' + pathD([...e.left, ...e.right.slice().reverse()], true) + '"/>'; let sc = ''; for (let i = J.scaleStep; i < e.mid.length - J.scaleStep; i += J.scaleStep) { const p = e.left[i], q = e.right[i], m = e.mid[i], n = e.mid[i + 1], dx = n[0] - m[0], dy = n[1] - m[1], L = Math.hypot(dx, dy) || 1, f = J.chevron; sc += 'M' + n1(p[0] + dx / L * f[0]) + ' ' + n1(p[1] + dy / L * f[0]) + 'L' + n1(m[0] - dx / L * f[1]) + ' ' + n1(m[1] - dy / L * f[1]) + 'L' + n1(q[0] + dx / L * f[0]) + ' ' + n1(q[1] + dy / L * f[0]); } s += '<path class="t" d="' + sc + '"/>'; [e.mid[0], e.mid.at(-1)].forEach(m => s += '<path class="t" stroke-opacity="' + J.waterAlpha + '" d="M' + n1(m[0] + J.waterAt[0]) + ' ' + n1(m[1] + J.waterAt[1]) + J.water + '"/>'); });
-  return s + Array.from({ length: FIND_PLAY.serpent.swell.length + 1 }, () => '<g class="jg-swell" opacity="0"><path class="o jg-gulp" d="' + J.swellPath + '"/><path class="o jg-hear" d="' + J.hornPath + '" opacity="0"/></g>').join('') + '</g>';
+// Option A's ribbon kit. The interior ring is unchanged; the approved lead and tail join its ends.
+const joTracks = new Map();
+function joTrack(open = 0) {
+  if (joTracks.has(open)) return joTracks.get(open);
+  const J = MAP.jorm, end = [J.ring.at(-2), ...J.tailEnd].map((p, i) => p.map((v, k) => v + (J.tailOpen[i][k] - v) * open));
+  const S = spline([...J.lead, ...J.ring.slice(3, -2), ...end], false, J.seg), cum = [0];
+  for (let i = 1; i < S.length; i++) cum.push(cum[i - 1] + Math.hypot(S[i][0] - S[i - 1][0], S[i][1] - S[i - 1][1]));
+  const L = cum.at(-1), at = u => { u = Math.max(0, Math.min(L, u)); let i = 1; while (i < cum.length - 1 && cum[i] < u) i++; const a = S[i - 1], b = S[i], q = (u - cum[i - 1]) / (cum[i] - cum[i - 1] || 1), dx = b[0] - a[0], dy = b[1] - a[1], length = Math.hypot(dx, dy) || 1; return { x: a[0] + dx * q, y: a[1] + dy * q, tx: dx / length, ty: dy / length }; };
+  const T = { L, at }; if (open === 0 || open === 1) joTracks.set(open, T); return T;
 }
+function joRibbon(T, a, b, width, step = 2.5) {
+  const left = [], right = [], mid = [], n = Math.max(2, Math.ceil((b - a) / step));
+  for (let i = 0; i <= n; i++) { const u = a + (b - a) * i / n, p = T.at(u), w = width(u) / 2; left.push([p.x - p.ty * w, p.y + p.tx * w]); right.push([p.x + p.ty * w, p.y - p.tx * w]); mid.push([p.x, p.y, p.tx, p.ty, w]); }
+  return { left, right, mid };
+}
+const joWidth = (T, u, lumps = []) => { const J = MAP.jorm, t = u / T.L; return J.w * (t < .9 ? 1 : 1 - (t - .9) / .1 * .8) * (1 + J.neck * Math.exp(-u / 30)) + lumps.reduce((sum, p) => sum + (p.horn ? J.hornExtra : J.swellExtra) * Math.exp(-((u - p.u * T.L) ** 2) / 70), 0); };
+export function jormSegment(index, open = 0, lumps = []) {
+  const T = joTrack(open), J = MAP.jorm, [a, b] = J.surf[index], u0 = a * joTrack().L, u1 = index === J.surf.length - 1 ? T.L : b * joTrack().L;
+  const e = joRibbon(T, u0, u1, u => { const d = Math.min(index === 0 ? 1e9 : u - u0, index === J.surf.length - 1 ? 1e9 : u1 - u); return joWidth(T, u, lumps) * (.35 + .65 * Math.sin(Math.PI / 2 * Math.min(1, d / 22))); });
+  const inner = k => e.mid.map(m => [m[0] - m[3] * m[4] * k, m[1] + m[2] * m[4] * k]); let bands = '', studs = '';
+  e.mid.forEach((m, i) => {
+    if (i % 2 === 1 && m[4] > 2.2) studs += 'M' + n1(m[0] - .55) + ' ' + n1(m[1]) + 'a.55 .55 0 1 0 1.1 0a.55 .55 0 1 0 -1.1 0';
+    if (i % 18 === 14 && m[4] > 2.5) for (const o of [-1.3, 1.3]) { const x = m[0] + m[2] * o, y = m[1] + m[3] * o; bands += 'M' + n1(x - m[3] * m[4]) + ' ' + n1(y + m[2] * m[4]) + 'L' + n1(x + m[3] * m[4]) + ' ' + n1(y - m[2] * m[4]); }
+  });
+  return { outer: pathD([...e.left, ...e.right.slice().reverse()], true), inner: pathD(inner(.5)) + pathD(inner(-.5)), bands, studs };
+}
+export function jormSubTail(open = 0) {
+  const T = joTrack(open), e = joRibbon(T, MAP.jorm.surf.at(-1)[0] * joTrack().L, T.L - 4, u => joWidth(T, u) * .75, 4);
+  return { fill: pathD([...e.left, ...e.right.slice().reverse()], true), edge: pathD(e.left) + pathD(e.right) };
+}
+export function jormungandr() {
+  const J = MAP.jorm, T = joTrack(), e = joRibbon(T, 0, J.surf.at(-1)[0] * T.L, u => joWidth(T, u) * .75, 4), tail = jormSubTail(), shadow = (fill, edge, cls = '') => '<path class="jo-sub-fill ' + cls + '" d="' + fill + '" fill="' + C.ink + '" opacity=".55"/><path class="jo-sub-edge ' + cls + '" d="' + edge + '" fill="none" stroke="' + C.paper + '" stroke-opacity=".22" stroke-width=".8" stroke-dasharray="3 2.2" vector-effect="non-scaling-stroke"/>';
+  let s = '<g class="jo-body jg-ring">' + shadow(pathD([...e.left, ...e.right.slice().reverse()], true), pathD(e.left) + pathD(e.right)) + shadow(tail.fill, tail.edge, 'jo-tail-sub');
+  J.surf.forEach(([a, b], i) => {
+    const p = jormSegment(i); s += '<g class="jo-surface" data-i="' + i + '"><path class="o jo-outline" d="' + p.outer + '"/><path class="t jo-inner" d="' + p.inner + '"/><g class="jd"><path class="pf jo-studs" stroke="none" d="' + p.studs + '"/></g><path class="l jo-bands" d="' + p.bands + '"/></g>';
+    for (const u of [i ? a * T.L : null, i < J.surf.length - 1 ? b * T.L : null]) if (u !== null) { const p = T.at(u); s += '<path class="t" d="M' + n1(p.x - 7) + ' ' + n1(p.y + 1) + 'q2.4 -2 4.8 0t4.8 0"/><g class="jd"><path class="t" d="M' + n1(p.x - 4) + ' ' + n1(p.y + 4.5) + 'q1.7 -2 3.4 0t3.4 0"/></g>'; }
+  });
+  s += '<path class="t jo-release-ripple" d="M433 129q4 -2 8 0t8 0" opacity="0"/>';
+  s += Array.from({ length: 4 }, () => '<g class="jg-swell" opacity="0"><path class="o jg-gulp" d="M-3.6 -4.6H1.4L3.6 -2.4V4.6H-3.6Z" transform="rotate(90)"/><path class="t jg-file-lines" d="M-2 -1.6V1.6M0 -1.6V1.6"/><path class="o jg-hear" d="' + J.hornPath + '" opacity="0"/></g>').join('');
+  return s + '</g>';
+}
+
 
 export function mapLabelRows() {
   const rows = []; STOPS.forEach(st => { const L = st.label; rows.push({ kind: 'name', unit: LABELS.name.unit, text: L.t, x: L.x, y: L.y + LABELS.nameDY, anchor: L.a, name: true, ls: L.tracking, stop: st.id }); });
