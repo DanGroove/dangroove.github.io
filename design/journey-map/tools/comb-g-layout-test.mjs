@@ -6,7 +6,7 @@ const hammer=async()=>{await b.tabTo('#f-hammer');await b.key('Enter');await b.u
 try{
  for(const [w,h] of [[844,390],[730,412],[360,640],[412,730],[1440,900]]){
   await b.size(w,h);await b.page(false,'map',before);await hammer();await b.shot(tag+'-G1-'+w+'x'+h);
-  const r=await b.box('.hm-panel'),bar=await b.box('.go'),review=await b.box('.jm-review');records.push({item:'G1',w,h,r,bar,review});check(r.y>=review.y+review.h-1&&r.y+r.h<=bar.y+1,'G1 bounds '+w);
+  const r=await b.box('.hm-panel'),bar=await b.box('.go'),review=await b.box('.jm-review');records.push({item:'G1',w,h,r,bar,review});check(r.y>=review.y+review.h-1&&r.y+r.h<=(h<=440&&w>640?h:bar.y)+1,'G1 bounds '+w);
   await b.click('.hm-start');await gWait(200);const p=await b.read('__g.SC.P');for(const sel of ['.hm-auto','.hm-pause']){if(await b.box(sel))await b.click(sel);await gWait(100);check(await b.read('__g.SC.P')===p,'G1 navigation '+sel+' '+w);}check(await b.read('__g.FD.list.hammer.game?.paused'),'G1 pause '+w);if(await b.box('.hm-close'))await b.click('.hm-close');else await b.key('Escape');await gWait(500);check(await b.read('!__g.FD.sheetOwner'),'G1 close '+w);
  }
  await b.size(412,730);await b.page(false,'map',before);await hammer();for(const [w,h] of [[844,390],[412,730],[844,390],[412,730],[1440,900],[1100,700]]){await b.size(w,h);await gWait(300);const r=await b.box('.hm-panel');await b.shot(tag+'-G2-'+w+'x'+h);await b.click('.hm-close');await gWait(550);await hammer();const fresh=await b.box('.hm-panel');records.push({item:'G2',w,h,r,fresh});check(['x','y','w','h'].every(k=>Math.abs(r[k]-fresh[k])<1),'G2 stale '+w+'x'+h);}

@@ -205,6 +205,10 @@ export function placePop() {
   findStyle(FD.popTail,'clipPath',side==='right'?'polygon(100% 0,100% 100%,0 50%)':side==='left'?'polygon(0 0,100% 50%,0 100%)':below?'polygon(0 100%,50% 0,100% 100%)':'polygon(0 0,100% 0,50% 100%)');
   findStyle(FD.popTail, 'transform', `translate(${tx}px,${ty}px)`);
 }
+function findSheetBars() {
+  const tl = document.getElementById('tl');
+  if (tl) tl.inert = !!FD.sheetOwner && VIEW.h <= 440 && VIEW.w > 640;
+}
 export function findSheet(owner, cls, html, anchor) {
   if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return false;
   if (findSheetReopen(owner)) return true;
@@ -216,7 +220,7 @@ export function findSheet(owner, cls, html, anchor) {
   // The first frame grows from the find, never the last sheet's full size (a one-frame flash on Dan's phone, 2026-11-24)
   if (!FD.rm) FD.sheet.style.transform = `translate(${FD.sheetFrom[0]}px,${FD.sheetFrom[1]}px) scale(${FIND_PLAY.kit.sheet.from})`;
   FD.sheet.className = 'sheet on ' + cls; FD.sheet.innerHTML = html; FD.sheet.inert = !FD.rm;
-  document.documentElement.classList.add('jm-sheet-open');
+  document.documentElement.classList.add('jm-sheet-open'); findSheetBars();
   FD.dismiss.hidden = false; FD.dismiss.setAttribute('aria-label', COPY.close + ': ' + FIND_BY[owner.id].label.split('. ')[0]);
   FD.sheet.setAttribute('aria-owns', 'sheet-dismiss');
   FD.sheet.setAttribute('aria-label', FIND_BY[owner.id].label); FD.sheet.tabIndex = -1;
@@ -238,7 +242,7 @@ function findSheetDone(o) {
   const active=document.activeElement, restore=active===document.body || active===FD.dismiss || FD.sheet.contains?.(active);
   FD.sheetOwner = null; FD.sheet.className = 'sheet'; FD.sheet.innerHTML = '';
   FD.dismiss.hidden = true;
-  document.documentElement.classList.remove('jm-sheet-open');
+  document.documentElement.classList.remove('jm-sheet-open'); findSheetBars();
   if (o.onSheetClose) o.onSheetClose(); if (restore) findReturnFocus(o);
 }
 export function findSheetFrame(owner, fit, y = VIEW.h / 2, iris = null, irisIn = null) {
@@ -273,7 +277,7 @@ export function findKitBuild(svg, pop, sheet, base, rm) {
   FD.star = document.createElement('div'); FD.star.className = 'find-star'; FD.star.setAttribute('aria-hidden', 'true');
   FD.star.innerHTML = `<svg viewBox="-1 -1 2 2"><path d="${starPath(0, 0, 1)}"/></svg>`; pop.parentElement.appendChild(FD.star);
   FD.dismiss = document.createElement('button'); FD.dismiss.id = 'sheet-dismiss'; FD.dismiss.className = 'sheet-dismiss'; FD.dismiss.type = 'button'; FD.dismiss.textContent = COPY.close; FD.dismiss.hidden = true; sheet.after?.(FD.dismiss); FD.dismiss.addEventListener('click', () => closeSheet());
-  findKitStyle();
+  findKitStyle(); window.addEventListener('resize', () => requestAnimationFrame(findSheetBars));
   // an open sheet keeps Tab and Shift+Tab inside it (B-4)
   sheet.addEventListener('keydown', e => {
     if (e.key === 'Tab' && FD.sheetOwner) { const f = [...sheet.querySelectorAll('button:not([hidden]):not([disabled]),[tabindex="0"]'), FD.dismiss], i = f.indexOf(document.activeElement); if (!f.length || (e.shiftKey ? i <= 0 : i === f.length - 1)) { e.preventDefault(); f.at(e.shiftKey ? -1 : 0)?.focus(); } return; }
@@ -323,13 +327,26 @@ export function findKitFrame() {
 }
 // The hint line keeps its words while it fades out, so it changes only when a find takes the camera.
 export function findHint(id) { if (FD.hint && id) FD.hint.textContent = id === 'horn' ? COMB.hornHints[FD.list.horn?.stage === 'raised' ? 1 : ['sounding','echo'].includes(FD.list.horn?.stage) ? 2 : 0] : FD.list.hoards?.items.find(h => h.id === id)?.hintLine || FIND_COPY.hints[id.startsWith('hoard') ? 'hoards' : id] || ''; }
+let findPress = null;
 export function findCapture(e) {
-  if (FD.rm || JOURNEY.mode !== 'steps' || !FD.st) return;
+  if (findPress && e.type === 'touchmove') { e.preventDefault(); e.stopImmediatePropagation(); return; }
+  if (findPress && ['pointermove','pointerup','pointercancel'].includes(e.type)) {
+    const p = findPress; if (e.pointerId !== p.id) return;
+    if (Math.hypot(e.clientX-p.x,e.clientY-p.y) > 6 || e.type === 'pointercancel') p.el._focusBlocked = true;
+    e.stopImmediatePropagation(); if (e.type !== 'pointermove') findPress = null; return;
+  }
+  if (FD.rm || JOURNEY.mode !== 'steps' || !FD.st || ['pointermove','pointerup','pointercancel'].includes(e.type)) return;
   if (e.type === 'keydown' && !['Enter', ' '].includes(e.key)) return;
   const el = e.target.closest?.('.find'); if (!el) return;
-  if (JOURNEY.moving) { FD.pendingPress = el; e.preventDefault(); e.stopImmediatePropagation(); return; }
+  const key = el.id.slice(2);
+  if (e.type === 'pointerdown') el._focusBlocked = false;
+  if (e.type === 'pointerdown' && (JOURNEY.moving || JOURNEY.focus !== key)) {
+    el._dragged = false;
+    findPress = { el, id: e.pointerId, x: e.clientX, y: e.clientY }; e.stopImmediatePropagation(); return;
+  }
   if (e.type === 'click' && el._focusBlocked) { el._focusBlocked = false; e.preventDefault(); e.stopImmediatePropagation(); return; }
-  const id = el.id.slice(2), key = id === 'hoards' ? FIND_COPY.hoards[0].id : id;
+  if (JOURNEY.moving) { FD.pendingPress = el; e.preventDefault(); e.stopImmediatePropagation(); return; }
+
   if (FD.sheetOwner?.id === key && FD.sheetClosing) { if (!FD.rm && JOURNEY.focus !== key) stepsFocus(key,findView(key)); FD.sheetOwner.overlayEpoch = FD.overlayEpoch; if (findSheetReopen(FD.sheetOwner)) return; }
   if (JOURNEY.focus === key) return;
   if (!stepsFocus(key, findView(key))) { if (e.type === 'pointerdown') el._focusBlocked = true; e.preventDefault(); e.stopImmediatePropagation(); }

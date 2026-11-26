@@ -43,6 +43,7 @@ export function findsBuild(svg, pop, sheet, base, rm) {
   // Builders add non-interactive decorations. The one reusable bit pool remains last.
   const pool = svg.querySelector('#f-bits'); svg.querySelector('#finds').appendChild(pool);
   const capture = e => { if (FD.st?.exploring) { const el = e.target.closest?.('.find'); if (el) el._focusBlocked = false; return; } findCapture(e); };
+  for (const type of ['pointermove','pointerup','pointercancel','touchmove']) window.addEventListener(type, capture, {capture:true,passive:false});
   svg.addEventListener('click', capture, true); svg.addEventListener('keydown', capture, true); svg.addEventListener('pointerdown', capture, true);
   window.addEventListener('jm-find-release', findsCloseAll);
   window.addEventListener('jm-destination', () => { FD.pendingPress = null; });

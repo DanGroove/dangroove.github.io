@@ -65,10 +65,11 @@ export function findHammer(svg) {
   const measure = () => {
     if (FD.sheetOwner !== o || !o.canvas) return;
     const U = HAMMER.ui, edge = FIND_PLAY.kit.sheet.edge;
-    const review = document.querySelector('[data-review]')?.getBoundingClientRect(), bar = document.querySelector('.go:not([hidden])')?.getBoundingClientRect();
+    const wide = VIEW.h <= 440 && VIEW.w > 640;
+    const review = document.querySelector('[data-review]')?.getBoundingClientRect(), bar = !wide && document.querySelector('.go:not([hidden])')?.getBoundingClientRect();
     const top = Math.max(edge, (review?.bottom || 0) + edge, bar && bar.top < VIEW.h / 2 ? bar.bottom + edge : 0), bottom = Math.min(VIEW.h - edge, bar && bar.top > VIEW.h / 2 ? bar.top - edge : VIEW.h - edge);
-    o.fit = Math.min(1, (VIEW.w - edge * 2) / U.w, (bottom - top - COMB.target) / (U.h - U.buttons));
-    o.sheetY = (top + bottom) / 2;
+    o.fit = wide ? Math.min(1, (VIEW.w - edge * 2) / (U.w + 210), (VIEW.h - 40) / (U.fieldH + 30)) : Math.min(1, (VIEW.w - edge * 2) / U.w, (bottom - top - COMB.target) / (U.h - U.buttons));
+    o.sheetY = wide ? VIEW.h / 2 + 12 : (top + bottom) / 2;
     FD.sheet.style.setProperty('--hm-h', (U.h - U.buttons + COMB.target / o.fit) + 'px');
     FD.sheet.style.setProperty('--hm-buttons', COMB.target / o.fit + 'px');
     const scale = Math.min(HAMMER.field.dpr, window.devicePixelRatio || 1) * o.fit;

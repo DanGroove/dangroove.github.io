@@ -11,5 +11,5 @@ try {
   await combWait(600);const state=await b.evaluate(`({open:document.querySelector('#sheet').classList.contains('on'),time:document.querySelector('#sheet .tc')?.textContent,found:window.__jm.finds.found().length})`);
   check(turned.turned&&state.open&&/00:0[01]/.test(state.time),'natural reel exit reverses and remains open', {turned,state});
   check(b.errors.length===0,'no browser exceptions',b.errors);
-}catch(e){check(false,'unexpected error',e.stack);}finally{await b.close();appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2/inherited-tests.log','\n## Natural reel exit reopening\n\n```text\n'+lines.join('\n').replace(/[^\x00-\x7F]/g,'?')+'\n```\n');}
+}catch(e){check(false,'unexpected error',e.stack);}finally{await b.close();appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g3/inherited-tests.log','\n## Natural reel exit reopening\n\n```text\n'+lines.join('\n').replace(/[^\x00-\x7F]/g,'?')+'\n```\n');}
 process.exitCode=failed?1:0;

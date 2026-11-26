@@ -276,8 +276,9 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .go-top { background: none; border: 0; padding: 8px 0; color: var(--note); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
 .go.go-end { left: 28px; top: 20px; bottom: auto; transform: none; }
 .go-reveal { animation: goReveal var(--go-reveal) both; }
-.go-next, .go-back { position: relative; overflow: visible; }
-.go-fill { border-radius: inherit; }
+.go-back { position: relative; overflow: visible; }
+.go-next { anchor-name: --go-next; }
+.go-next .go-light { position: fixed; position-anchor: --go-next; inset: auto; left: anchor(left); top: anchor(top); width: anchor-size(width); height: anchor-size(height); }
 .go-light { position: absolute; inset: 0; z-index: 2; overflow: hidden; border-radius: inherit; pointer-events: none; opacity: 0; box-shadow: 0 0 var(--go-shine-glow) var(--paper), inset 0 0 var(--go-shine-glow) var(--paper); }
 .go-light::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, var(--paper), transparent); mix-blend-mode: screen; opacity: var(--go-shine-alpha); transform: translateX(-100%); }
 .go-shining .go-light { animation: goGlow var(--go-shine-time) ease-in-out both; }
@@ -285,7 +286,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .go-back.go-shining .go-light::after { animation-direction: reverse; }
 @keyframes goGlow { 0%, 100% { opacity: 0; } 40%, 60% { opacity: var(--go-shine-alpha); } }
 @keyframes goSweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
-@media (max-width: 640px) { .go:not(.go-end) { overflow: hidden; } }
+@media (max-width: 640px) { .go:not(.go-end) { overflow: hidden; contain: layout; } .go:not(.go-end) :is(.go-back,.go-next):focus-visible { outline-offset: -4px; } .go:not(.go-end) .go-next:focus-visible { outline-color: var(--ink); } }
 @media (prefers-reduced-motion: reduce) { .go-shining .go-light { animation-duration: var(--go-shine-reduced) !important; } .go-shining .go-light::after { animation: none; opacity: 0; } }
 @keyframes goReveal { from { opacity: 0; } to { opacity: 1; } }
 .jm-review { position: fixed; left: 50%; top: 5px; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: var(--ink); color: var(--dim); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
@@ -577,3 +578,15 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .tl-tip { max-width: calc(100vw - 16px); white-space: normal; }
 .map, .marker-layer { visibility: hidden; }
 .rm, .rm body { overflow-anchor: none; }
+
+@media (max-height: 440px) and (min-width: 641px) {
+  .jm-sheet-open :is(.go,.tl,.tl-count-screen) { opacity: 0 !important; visibility: hidden; pointer-events: none; transition: opacity .18s, visibility 0s .18s; }
+  .hammer-sheet .hm-panel { font-size: 14px; width: 540px; height: 430px; left: -270px; top: -215px; grid-template-columns: 300px 180px; grid-template-rows: 90px 1fr 180px; gap: 8px 28px; }
+  .hammer-sheet .hm-field { grid-column: 1; grid-row: 1 / 4; }
+  .hammer-sheet .hm-header { grid-column: 2; flex-direction: column; align-items: start; justify-content: start; font-size: 14px; line-height: 20px; }
+  .hammer-sheet .hm-wave { max-width: none; }
+  .hammer-sheet .hm-vitals { align-items: start; }
+  .hammer-sheet .hm-status { grid-column: 2; font-size: 14px; }
+  .hammer-sheet .hm-buttons { grid-column: 2; flex-direction: column; }
+  .hammer-sheet .hm-rune span span, .hammer-sheet .hm-card .pop-k, .hammer-sheet .hm-card p, .hammer-sheet .hm-card .find-slot p { font-size: 14px; line-height: 18px; }
+}

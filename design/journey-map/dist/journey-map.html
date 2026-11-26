@@ -284,8 +284,9 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .go-top { background: none; border: 0; padding: 8px 0; color: var(--note); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
 .go.go-end { left: 28px; top: 20px; bottom: auto; transform: none; }
 .go-reveal { animation: goReveal var(--go-reveal) both; }
-.go-next, .go-back { position: relative; overflow: visible; }
-.go-fill { border-radius: inherit; }
+.go-back { position: relative; overflow: visible; }
+.go-next { anchor-name: --go-next; }
+.go-next .go-light { position: fixed; position-anchor: --go-next; inset: auto; left: anchor(left); top: anchor(top); width: anchor-size(width); height: anchor-size(height); }
 .go-light { position: absolute; inset: 0; z-index: 2; overflow: hidden; border-radius: inherit; pointer-events: none; opacity: 0; box-shadow: 0 0 var(--go-shine-glow) var(--paper), inset 0 0 var(--go-shine-glow) var(--paper); }
 .go-light::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, var(--paper), transparent); mix-blend-mode: screen; opacity: var(--go-shine-alpha); transform: translateX(-100%); }
 .go-shining .go-light { animation: goGlow var(--go-shine-time) ease-in-out both; }
@@ -293,7 +294,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .go-back.go-shining .go-light::after { animation-direction: reverse; }
 @keyframes goGlow { 0%, 100% { opacity: 0; } 40%, 60% { opacity: var(--go-shine-alpha); } }
 @keyframes goSweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
-@media (max-width: 640px) { .go:not(.go-end) { overflow: hidden; } }
+@media (max-width: 640px) { .go:not(.go-end) { overflow: hidden; contain: layout; } .go:not(.go-end) :is(.go-back,.go-next):focus-visible { outline-offset: -4px; } .go:not(.go-end) .go-next:focus-visible { outline-color: var(--ink); } }
 @media (prefers-reduced-motion: reduce) { .go-shining .go-light { animation-duration: var(--go-shine-reduced) !important; } .go-shining .go-light::after { animation: none; opacity: 0; } }
 @keyframes goReveal { from { opacity: 0; } to { opacity: 1; } }
 .jm-review { position: fixed; left: 50%; top: 5px; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: var(--ink); color: var(--dim); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; }
@@ -585,6 +586,18 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .tl-tip { max-width: calc(100vw - 16px); white-space: normal; }
 .map, .marker-layer { visibility: hidden; }
 .rm, .rm body { overflow-anchor: none; }
+
+@media (max-height: 440px) and (min-width: 641px) {
+  .jm-sheet-open :is(.go,.tl,.tl-count-screen) { opacity: 0 !important; visibility: hidden; pointer-events: none; transition: opacity .18s, visibility 0s .18s; }
+  .hammer-sheet .hm-panel { font-size: 14px; width: 540px; height: 430px; left: -270px; top: -215px; grid-template-columns: 300px 180px; grid-template-rows: 90px 1fr 180px; gap: 8px 28px; }
+  .hammer-sheet .hm-field { grid-column: 1; grid-row: 1 / 4; }
+  .hammer-sheet .hm-header { grid-column: 2; flex-direction: column; align-items: start; justify-content: start; font-size: 14px; line-height: 20px; }
+  .hammer-sheet .hm-wave { max-width: none; }
+  .hammer-sheet .hm-vitals { align-items: start; }
+  .hammer-sheet .hm-status { grid-column: 2; font-size: 14px; }
+  .hammer-sheet .hm-buttons { grid-column: 2; flex-direction: column; }
+  .hammer-sheet .hm-rune span span, .hammer-sheet .hm-card .pop-k, .hammer-sheet .hm-card p, .hammer-sheet .hm-card .find-slot p { font-size: 14px; line-height: 18px; }
+}
 
 </style>
 </head>
@@ -3775,6 +3788,10 @@ function placePop() {
   findStyle(FD.popTail,'clipPath',side==='right'?'polygon(100% 0,100% 100%,0 50%)':side==='left'?'polygon(0 0,100% 50%,0 100%)':below?'polygon(0 100%,50% 0,100% 100%)':'polygon(0 0,100% 0,50% 100%)');
   findStyle(FD.popTail, 'transform', `translate(${tx}px,${ty}px)`);
 }
+function findSheetBars() {
+  const tl = document.getElementById('tl');
+  if (tl) tl.inert = !!FD.sheetOwner && VIEW.h <= 440 && VIEW.w > 640;
+}
 function findSheet(owner, cls, html, anchor) {
   if (owner.overlayEpoch !== undefined && owner.overlayEpoch !== FD.overlayEpoch) return false;
   if (findSheetReopen(owner)) return true;
@@ -3786,7 +3803,7 @@ function findSheet(owner, cls, html, anchor) {
   // The first frame grows from the find, never the last sheet's full size (a one-frame flash on Dan's phone, 2026-11-24)
   if (!FD.rm) FD.sheet.style.transform = `translate(${FD.sheetFrom[0]}px,${FD.sheetFrom[1]}px) scale(${FIND_PLAY.kit.sheet.from})`;
   FD.sheet.className = 'sheet on ' + cls; FD.sheet.innerHTML = html; FD.sheet.inert = !FD.rm;
-  document.documentElement.classList.add('jm-sheet-open');
+  document.documentElement.classList.add('jm-sheet-open'); findSheetBars();
   FD.dismiss.hidden = false; FD.dismiss.setAttribute('aria-label', COPY.close + ': ' + FIND_BY[owner.id].label.split('. ')[0]);
   FD.sheet.setAttribute('aria-owns', 'sheet-dismiss');
   FD.sheet.setAttribute('aria-label', FIND_BY[owner.id].label); FD.sheet.tabIndex = -1;
@@ -3808,7 +3825,7 @@ function findSheetDone(o) {
   const active=document.activeElement, restore=active===document.body || active===FD.dismiss || FD.sheet.contains?.(active);
   FD.sheetOwner = null; FD.sheet.className = 'sheet'; FD.sheet.innerHTML = '';
   FD.dismiss.hidden = true;
-  document.documentElement.classList.remove('jm-sheet-open');
+  document.documentElement.classList.remove('jm-sheet-open'); findSheetBars();
   if (o.onSheetClose) o.onSheetClose(); if (restore) findReturnFocus(o);
 }
 function findSheetFrame(owner, fit, y = VIEW.h / 2, iris = null, irisIn = null) {
@@ -3843,7 +3860,7 @@ function findKitBuild(svg, pop, sheet, base, rm) {
   FD.star = document.createElement('div'); FD.star.className = 'find-star'; FD.star.setAttribute('aria-hidden', 'true');
   FD.star.innerHTML = `<svg viewBox="-1 -1 2 2"><path d="${starPath(0, 0, 1)}"/></svg>`; pop.parentElement.appendChild(FD.star);
   FD.dismiss = document.createElement('button'); FD.dismiss.id = 'sheet-dismiss'; FD.dismiss.className = 'sheet-dismiss'; FD.dismiss.type = 'button'; FD.dismiss.textContent = COPY.close; FD.dismiss.hidden = true; sheet.after?.(FD.dismiss); FD.dismiss.addEventListener('click', () => closeSheet());
-  findKitStyle();
+  findKitStyle(); window.addEventListener('resize', () => requestAnimationFrame(findSheetBars));
   // an open sheet keeps Tab and Shift+Tab inside it (B-4)
   sheet.addEventListener('keydown', e => {
     if (e.key === 'Tab' && FD.sheetOwner) { const f = [...sheet.querySelectorAll('button:not([hidden]):not([disabled]),[tabindex="0"]'), FD.dismiss], i = f.indexOf(document.activeElement); if (!f.length || (e.shiftKey ? i <= 0 : i === f.length - 1)) { e.preventDefault(); f.at(e.shiftKey ? -1 : 0)?.focus(); } return; }
@@ -3893,13 +3910,26 @@ function findKitFrame() {
 }
 // The hint line keeps its words while it fades out, so it changes only when a find takes the camera.
 function findHint(id) { if (FD.hint && id) FD.hint.textContent = id === 'horn' ? COMB.hornHints[FD.list.horn?.stage === 'raised' ? 1 : ['sounding','echo'].includes(FD.list.horn?.stage) ? 2 : 0] : FD.list.hoards?.items.find(h => h.id === id)?.hintLine || FIND_COPY.hints[id.startsWith('hoard') ? 'hoards' : id] || ''; }
+let findPress = null;
 function findCapture(e) {
-  if (FD.rm || JOURNEY.mode !== 'steps' || !FD.st) return;
+  if (findPress && e.type === 'touchmove') { e.preventDefault(); e.stopImmediatePropagation(); return; }
+  if (findPress && ['pointermove','pointerup','pointercancel'].includes(e.type)) {
+    const p = findPress; if (e.pointerId !== p.id) return;
+    if (Math.hypot(e.clientX-p.x,e.clientY-p.y) > 6 || e.type === 'pointercancel') p.el._focusBlocked = true;
+    e.stopImmediatePropagation(); if (e.type !== 'pointermove') findPress = null; return;
+  }
+  if (FD.rm || JOURNEY.mode !== 'steps' || !FD.st || ['pointermove','pointerup','pointercancel'].includes(e.type)) return;
   if (e.type === 'keydown' && !['Enter', ' '].includes(e.key)) return;
   const el = e.target.closest?.('.find'); if (!el) return;
-  if (JOURNEY.moving) { FD.pendingPress = el; e.preventDefault(); e.stopImmediatePropagation(); return; }
+  const key = el.id.slice(2);
+  if (e.type === 'pointerdown') el._focusBlocked = false;
+  if (e.type === 'pointerdown' && (JOURNEY.moving || JOURNEY.focus !== key)) {
+    el._dragged = false;
+    findPress = { el, id: e.pointerId, x: e.clientX, y: e.clientY }; e.stopImmediatePropagation(); return;
+  }
   if (e.type === 'click' && el._focusBlocked) { el._focusBlocked = false; e.preventDefault(); e.stopImmediatePropagation(); return; }
-  const id = el.id.slice(2), key = id === 'hoards' ? FIND_COPY.hoards[0].id : id;
+  if (JOURNEY.moving) { FD.pendingPress = el; e.preventDefault(); e.stopImmediatePropagation(); return; }
+
   if (FD.sheetOwner?.id === key && FD.sheetClosing) { if (!FD.rm && JOURNEY.focus !== key) stepsFocus(key,findView(key)); FD.sheetOwner.overlayEpoch = FD.overlayEpoch; if (findSheetReopen(FD.sheetOwner)) return; }
   if (JOURNEY.focus === key) return;
   if (!stepsFocus(key, findView(key))) { if (e.type === 'pointerdown') el._focusBlocked = true; e.preventDefault(); e.stopImmediatePropagation(); }
@@ -4216,14 +4246,17 @@ function stepsButtons() {
   const hero = SC.joinedTop() && SC.P < stepsMap - 1e-6, wasHidden = SC.go.hidden;
   if (hero && !wasHidden && SC.go.contains(document.activeElement)) SC.heroFocus = true;
   const hidden = !SC.ready || SC.mode !== 'steps' || hero || blasting;
-  if (SC.go.inert !== hidden) SC.go.inert = hidden;
+  const aside = VIEW.h <= 440 && VIEW.w > 640 && SC.root.classList.contains('jm-sheet-open');
+  if (SC.go.inert !== (hidden || aside)) SC.go.inert = hidden || aside;
   if (!blasting) SC.go.classList.remove('go-leaving');
   const faded = blasting && SC.go.classList.contains('go-leaving');
   if (faded && !SC.goFade) { SC.goFade = true; setTimeout(() => { SC.goFade = false; if (SC.go.classList.contains('go-leaving')) SC.go.hidden = true; }, 180); }
   if (!faded && SC.go.hidden !== hidden) SC.go.hidden = hidden;
   const lost = !document.activeElement || document.activeElement === document.body || !!document.activeElement.closest?.('[data-hero]');
   if (SC.heroFocus && top && !JOURNEY.moving) { SC.heroFocus = false; const start = document.querySelector?.('.jm-start'); if (start && lost) start.focus({ preventScroll: true }); }
-  if (SC.joinedTop() && !SC.go.hidden && !hero && !blasting && lost && !JOURNEY.moving && Math.abs(SC.P - stepsMap) < 1e-6) SC.go.querySelector('.go-next').focus({ preventScroll: true });
+  const landed = !JOURNEY.moving && Math.abs(SC.P - stepsMap) < 1e-6;
+  if (landed && !SC.mapLanded && SC.joinedTop() && !SC.go.hidden && lost) SC.go.querySelector('.go-next').focus({ preventScroll: true });
+  SC.mapLanded = landed;
   if (!hero) SC.heroFocus = false;
   if (SC.go.classList.contains('go-end') !== end) SC.go.classList.toggle('go-end', end);
   const back = SC.go.querySelector('.go-back'), next = SC.go.querySelector('.go-next'), home = SC.go.querySelector('.go-top');
@@ -4469,15 +4502,24 @@ function stepsFirstShine() {
   if (SC.shineSeen || SC.P !== stepsMap || JOURNEY.moving || SC.go.hidden || SC.go.classList.contains('go-reveal')) return;
   SC.shineSeen = true; stepsShine(true);
 }
+function stepsCardScroll(pixels, target) {
+  if (!target?.closest('.c-card')) return false;
+  for (let el = target; el?.closest('.c-card'); el = el.parentElement) {
+    if (/auto|scroll/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight + 1 && (pixels > 0 ? el.scrollTop + el.clientHeight < el.scrollHeight - 1 : el.scrollTop > 1)) return el;
+  }
+  return false;
+}
 function stepsNudge(pixels, stamp, target) {
   const same = SC.shineStamp !== undefined && stamp - SC.shineStamp < STEPS.scroll.gesture;
   SC.shineStamp = stamp;
-  if (same || !pixels || SC.P < stepsMap || JOURNEY.moving || SC.go.hidden || SC.go.inert || stepsHeld() || exploreBusy() || SC.root.classList.contains('jm-sheet-open') || document.querySelector('.pop.on') || target?.closest('.c-card, .sheet')) return;
+  if (same || !pixels || SC.P < stepsMap || JOURNEY.moving || SC.go.hidden || SC.go.inert || stepsHeld() || exploreBusy() || SC.root.classList.contains('jm-sheet-open') || document.querySelector('.pop.on') || target?.closest('.sheet') || stepsCardScroll(pixels, target)) return;
   stepsShine(pixels > 0);
 }
 function stepsBlockWheel(e) {
   if (SC.rm || e.ctrlKey || exploreActive() || e.defaultPrevented) return;
   const target = stepsTarget(e);
+  const card = stepsCardScroll(e.deltaY, target);
+  if (card) { card.scrollTop += e.deltaY; SC.shineStamp = e.timeStamp; e.preventDefault(); return; }
   if (target?.closest('.sheet.on')) { e.preventDefault(); return; }
   e.preventDefault();
   if (stepsHeld()) { SC.scroll = { stamp: e.timeStamp }; return; }
@@ -4516,6 +4558,8 @@ function stepsTouchMove(e) {
   // honoured; it only counts as a swipe from STEPS.scroll.swipe on (F1), and only a swipe swallows the tap.
   if (!touch.held && Math.abs(dy) <= STEPS.scroll.slop) return;
   if (!touch.held && Math.abs(dx) >= Math.abs(dy)) { SC.touch = null; return; }
+  const card = touch.card || (!touch.held && stepsCardScroll(-dy, stepsTarget(e)));
+  if (card) { touch.card = card; card.scrollTop -= p.clientY - touch.last; touch.last = p.clientY; SC.swallow = true; if (e.cancelable) e.preventDefault(); return; }
   touch.held = true; if (e.cancelable) e.preventDefault();
   if (!touch.dragged && Math.abs(dy) < STEPS.scroll.swipe) return;
   const first = !touch.dragged;
@@ -6273,10 +6317,11 @@ function findHammer(svg) {
   const measure = () => {
     if (FD.sheetOwner !== o || !o.canvas) return;
     const U = HAMMER.ui, edge = FIND_PLAY.kit.sheet.edge;
-    const review = document.querySelector('[data-review]')?.getBoundingClientRect(), bar = document.querySelector('.go:not([hidden])')?.getBoundingClientRect();
+    const wide = VIEW.h <= 440 && VIEW.w > 640;
+    const review = document.querySelector('[data-review]')?.getBoundingClientRect(), bar = !wide && document.querySelector('.go:not([hidden])')?.getBoundingClientRect();
     const top = Math.max(edge, (review?.bottom || 0) + edge, bar && bar.top < VIEW.h / 2 ? bar.bottom + edge : 0), bottom = Math.min(VIEW.h - edge, bar && bar.top > VIEW.h / 2 ? bar.top - edge : VIEW.h - edge);
-    o.fit = Math.min(1, (VIEW.w - edge * 2) / U.w, (bottom - top - COMB.target) / (U.h - U.buttons));
-    o.sheetY = (top + bottom) / 2;
+    o.fit = wide ? Math.min(1, (VIEW.w - edge * 2) / (U.w + 210), (VIEW.h - 40) / (U.fieldH + 30)) : Math.min(1, (VIEW.w - edge * 2) / U.w, (bottom - top - COMB.target) / (U.h - U.buttons));
+    o.sheetY = wide ? VIEW.h / 2 + 12 : (top + bottom) / 2;
     FD.sheet.style.setProperty('--hm-h', (U.h - U.buttons + COMB.target / o.fit) + 'px');
     FD.sheet.style.setProperty('--hm-buttons', COMB.target / o.fit + 'px');
     const scale = Math.min(HAMMER.field.dpr, window.devicePixelRatio || 1) * o.fit;
@@ -6709,6 +6754,7 @@ function findsBuild(svg, pop, sheet, base, rm) {
   // Builders add non-interactive decorations. The one reusable bit pool remains last.
   const pool = svg.querySelector('#f-bits'); svg.querySelector('#finds').appendChild(pool);
   const capture = e => { if (FD.st?.exploring) { const el = e.target.closest?.('.find'); if (el) el._focusBlocked = false; return; } findCapture(e); };
+  for (const type of ['pointermove','pointerup','pointercancel','touchmove']) window.addEventListener(type, capture, {capture:true,passive:false});
   svg.addEventListener('click', capture, true); svg.addEventListener('keydown', capture, true); svg.addEventListener('pointerdown', capture, true);
   window.addEventListener('jm-find-release', findsCloseAll);
   window.addEventListener('jm-destination', () => { FD.pendingPress = null; });
@@ -6818,6 +6864,7 @@ window.addEventListener('pointerdown', e => {
   if (!e.isTrusted || e.pointerType !== 'touch') return;
   mainTouchPick = null;
   if (RM || JOURNEY.moving || FD.sheetOwner || !FD.st || FD.st.exploring || e.target.closest?.('.pop,.go,.tl,.tl-count,[data-review]')) return;
+  if (e.target.closest?.('.find') && !e.target.closest('.hit')) return;
   const candidates = [...Object.values(FD.list), ...FD.list.hoards.items].filter(o => o.id !== 'hoards' && o.el.tabIndex === 0).map(o => ({ el: o.el, p: toScreen(FD.st, [o.x, o.y]) }));
   if ($('nova-hit').getAttribute('aria-disabled') !== 'true') candidates.push({el:$('nova-hit'),p:toScreen(FD.st,MAP.x)});
   cardsList().filter(c => !c.btn.inert && c.btn.tabIndex === 0).forEach(c => { const p = toScreen(FD.st, MAP.waypoints[c.stop.w]), stone = Math.max(14, Math.min(36, 10 * FD.st.cam.s)); candidates.push({ el: c.btn, p: [p[0], p[1] - stone / 2 - 3] }); });

@@ -1,7 +1,7 @@
 // Generate the allowed short report, then verify its evidence links and ASCII.
 import {readFileSync,writeFileSync,existsSync,readdirSync,appendFileSync} from 'node:fs';
 import {strict as assert} from 'node:assert';
-const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2',file='COMB-E-BUILD.md';
+const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g3',file='COMB-E-BUILD.md';
 const link=(name,label)=>'['+(label||name)+']('+root+'/'+name+')';
 const pair=(name)=>link('before-'+name+'.png','before')+' / '+link('after-'+name+'.png','after');
 if(process.argv.includes('--write')){

@@ -1,7 +1,7 @@
 // Load/hero/first-glide renderer trace, separate from the deferred cost pass.
 import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
 import {writeFileSync} from 'node:fs';
-const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2',b=await combBBrowser(),fail=[];
+const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g3',b=await combBBrowser(),fail=[];
 let trace=[],done=false;
 b.on('Tracing.dataCollected',p=>trace.push(...p.value));b.on('Tracing.tracingComplete',()=>done=true);
 try{
@@ -22,7 +22,7 @@ try{
   await b.evaluate('window.__jm.go("end",{instant:true});window.dispatchEvent(new Event("resize"));document.querySelector(".go-next").click()');
   await combBWait(1800);const a=await b.evaluate('[...document.querySelectorAll(".label-anchor text")].map(e=>e.innerHTML)');await combBWait(2000);const c=await b.evaluate('[...document.querySelectorAll(".label-anchor text")].map(e=>e.innerHTML)');
   if(JSON.stringify(a)!==JSON.stringify(c))fail.push(page+' '+w+' early Explore label changed');
-  await b.send('Tracing.end',{},null);for(let n=0;n<100&&!done;n++)await combBWait(50);
+  await b.send('Tracing.end',{},null);for(let n=0;n<600&&!done;n++)await combBWait(50);
   writeFileSync(root+'/warm-'+page+'-'+w+'.json',JSON.stringify({traceEvents:trace}));
   const threads=new Set(trace.filter(e=>e.name==='thread_name'&&e.args?.name==='CrRendererMain').map(e=>e.pid+':'+e.tid));
   const tasks=trace.filter(e=>e.ph==='X'&&/RunTask/.test(e.name)&&threads.has(e.pid+':'+e.tid));

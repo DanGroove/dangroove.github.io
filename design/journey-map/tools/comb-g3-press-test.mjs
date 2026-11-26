@@ -1,0 +1,13 @@
+import {gBrowser,gRoot,gWait} from './comb-g3-browser-test.mjs';import {writeFileSync} from 'node:fs';
+const b=await gBrowser(),fail=[],rows=[];const check=(ok,name,detail)=>{rows.push({name,ok,detail});if(!ok)fail.push(name);};
+function ink(id){const e=document.getElementById('f-'+id);for(const p of e.querySelectorAll('path')){const st=getComputedStyle(p);if(p.closest('defs')||st.visibility==='hidden'||st.stroke==='transparent')continue;const m=p.getScreenCTM(),L=p.getTotalLength();for(let d=0;d<=L;d+=1){const v=p.getPointAtLength(d),q=new DOMPoint(v.x,v.y).matrixTransform(m),hit=document.elementFromPoint(q.x,q.y);if(q.x>4&&q.x<innerWidth-4&&q.y>48&&q.y<innerHeight-100&&hit?.closest('.find')===e&&!hit.closest('.hit'))return[q.x,q.y];}}return null;}
+async function drag(x,y,dy,touch){if(touch){await b.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});for(let i=1;i<=8;i++){await gWait(18);await b.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y+dy*i/8,id:1}]});}await b.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}else{await b.send('Input.dispatchMouseEvent',{type:'mousePressed',x,y,button:'left',buttons:1,clickCount:1});for(let i=1;i<=8;i++){await gWait(18);await b.send('Input.dispatchMouseEvent',{type:'mouseMoved',x,y:y+dy*i/8,button:'left',buttons:1});}await b.send('Input.dispatchMouseEvent',{type:'mouseReleased',x,y:y+dy,button:'left',buttons:0,clickCount:1});}}
+const wheel=(dy,x,y)=>b.send('Input.dispatchMouseEvent',{type:'mouseWheel',x,y,deltaY:dy,deltaX:0});
+try{
+ for(const[w,h,touch]of[[412,730,true],[844,390,true],[1440,900,false]]){await b.size(w,h,touch);for(const beat of ['map'])for(const id of ['longship','ravens','hoard-laurier','horn']){
+  await b.page(false,beat);if(beat==='laurier'){await b.click('#stop-laurier .c-close',touch);await gWait(500);}const p=await b.read('('+ink.toString()+')('+JSON.stringify(id)+')');if(!p){rows.push({name:'H7 off screen '+w+' '+beat+' '+id,skipped:true});continue;}
+  const P=await b.read('__g.SC.P'),digs=await b.read('__g.FD.list.hoards.items[0].digs');await drag(...p,p[1]<h/2?160:-160,touch);await gWait(800);check(await b.read('!__g.SC.focus&&!__g.FD.pendingPress&&!__g.FD.popOwner&&!__g.FD.sheetOwner&&__g.SC.P==='+P+'&&__g.FD.list.hoards.items[0].digs==='+digs),'H7 gesture '+w+' '+beat+' '+id,p);
+  await b.tap(...p,touch);await gWait(1500);check(await b.read('__g.SC.focus?.id==='+JSON.stringify(id)),'H7 tap '+w+' '+beat+' '+id);
+ }}
+ check(!b.errors.length,'runtime',b.errors);
+}catch(e){fail.push(e.stack);}finally{await b.close();writeFileSync(gRoot+'/press-results.json',JSON.stringify({fail,rows},null,2));}console.log('Press failures '+JSON.stringify(fail));process.exitCode=fail.length?1:0;

@@ -8,6 +8,6 @@ try {
     const child=spawn(process.execPath,args,{stdio:['ignore','pipe','pipe']});
     for(const stream of [child.stdout,child.stderr])stream.on('data',chunk=>{output+=chunk;process.stdout.write(chunk);});
     const status=await new Promise(ok=>child.on('close',ok));
-    appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2/inherited-tests.log','\n## '+tool+' '+options.join(' ')+' (exit '+status+')\n\n```text\n'+output.replace(/[^\x00-\x7F]/g,'?')+'```\n');
+    appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g3/inherited-tests.log','\n## '+tool+' '+options.join(' ')+' (exit '+status+')\n\n```text\n'+output.replace(/[^\x00-\x7F]/g,'?')+'```\n');
   }
 } finally { await browser.close(); }

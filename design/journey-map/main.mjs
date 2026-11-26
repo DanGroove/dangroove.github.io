@@ -78,6 +78,7 @@ window.addEventListener('pointerdown', e => {
   if (!e.isTrusted || e.pointerType !== 'touch') return;
   mainTouchPick = null;
   if (RM || JOURNEY.moving || FD.sheetOwner || !FD.st || FD.st.exploring || e.target.closest?.('.pop,.go,.tl,.tl-count,[data-review]')) return;
+  if (e.target.closest?.('.find') && !e.target.closest('.hit')) return;
   const candidates = [...Object.values(FD.list), ...FD.list.hoards.items].filter(o => o.id !== 'hoards' && o.el.tabIndex === 0).map(o => ({ el: o.el, p: toScreen(FD.st, [o.x, o.y]) }));
   if ($('nova-hit').getAttribute('aria-disabled') !== 'true') candidates.push({el:$('nova-hit'),p:toScreen(FD.st,MAP.x)});
   cardsList().filter(c => !c.btn.inert && c.btn.tabIndex === 0).forEach(c => { const p = toScreen(FD.st, MAP.waypoints[c.stop.w]), stone = Math.max(14, Math.min(36, 10 * FD.st.cam.s)); candidates.push({ el: c.btn, p: [p[0], p[1] - stone / 2 - 3] }); });

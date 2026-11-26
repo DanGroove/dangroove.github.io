@@ -29,4 +29,4 @@ try{
   }
   if(b.errors.length)throw Error(JSON.stringify(b.errors));
 }catch(e){output.push('FAIL '+e.stack);process.exitCode=1;}
-finally{await b.close();for(const line of output)console.log(line);appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2/inherited-tests.log','\n## node tools/comb-b-detail-test.mjs '+process.argv.slice(2).join(' ')+' (exit '+(process.exitCode||0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
+finally{await b.close();for(const line of output)console.log(line);appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g3/inherited-tests.log','\n## node tools/comb-b-detail-test.mjs '+process.argv.slice(2).join(' ')+' (exit '+(process.exitCode||0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}

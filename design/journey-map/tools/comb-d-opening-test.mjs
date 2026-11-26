@@ -16,5 +16,5 @@ try{
   if(process.argv.includes('--diagnose'))for(const t of tasks.filter(e=>e.dur>16000))log('slow task detail '+JSON.stringify(trace.filter(e=>e.ph==='X'&&e.pid===t.pid&&e.tid===t.tid&&e.ts>=t.ts&&e.ts+(e.dur||0)<=t.ts+t.dur&&e!==t).sort((a,b)=>(b.dur||0)-(a.dur||0)).slice(0,12).map(e=>({name:e.name,ms:e.dur/1000,data:e.args?.data}))));
   if(!tasks.length||max>16)failures.push(page+' '+w+' task max '+max.toFixed(3)+' ms, '+tasks.length+' slices');
  }
-}catch(e){failures.push(e.stack);}finally{await b.close();log('Failures: '+JSON.stringify(failures));appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2/inherited-tests.log','\n## node tools/comb-d-opening-test.mjs '+process.argv.slice(2).join(' ')+' (exit '+(failures.length?1:0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
+}catch(e){failures.push(e.stack);}finally{await b.close();log('Failures: '+JSON.stringify(failures));appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g3/inherited-tests.log','\n## node tools/comb-d-opening-test.mjs '+process.argv.slice(2).join(' ')+' (exit '+(failures.length?1:0)+')\n\n```text\n'+output.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');}
 process.exitCode=failures.length?1:0;

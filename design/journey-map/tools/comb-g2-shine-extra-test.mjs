@@ -16,7 +16,7 @@ try{
   }
  }
  await b.page(false,'end');await gWait(2700);let n=await b.read('__g.shines.length');await wheel(100);await gWait(80);check(await b.read('__g.shines.length')===n+1,'end Next shines');
- await b.page(false,'laurier');await gWait(2700);n=await b.read('__g.shines.length');const card=await b.box('#stop-laurier .c-card');await swipe(-60,206,Math.max(200,card.y+card.h/2));await gWait(1000);check(await b.read('__g.shines.length')===n,'inside card swipe no shine');
+ await b.page(false,'laurier');await gWait(2700);n=await b.read('__g.shines.length');const card=await b.box('#stop-laurier .c-card');await swipe(-60,206,Math.max(200,card.y+card.h/2));await gWait(1000);check(await b.read('__g.shines.length')===n+1,'H6 non-scrolling card swipe shines Next');
  await b.page();await b.tabTo('#f-longship');await b.key('Enter');await gWait(2700);n=await b.read('__g.shines.length');await wheel(100);await swipe(-60);await gWait(900);check(await b.read('__g.shines.length')===n,'open popup no shine');
  await b.page(false,'end');await b.click('.go-next',true);await gWait(1900);await b.click('.go-back',true);n=await b.read('__g.shines.length');check(await b.read('!__g.EX.active&&__g.EX.k>0'),'Explore closing interval reached');await wheel(-100);await gWait(100);check(await b.read('__g.shines.length')===n,'Explore closing camera suppresses shine');
  await b.page();await gWait(2700);await wheel(100);await gWait(100);await b.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});await gWait(50);

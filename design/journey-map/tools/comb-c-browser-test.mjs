@@ -75,7 +75,7 @@ try {
   }
   log('no browser exceptions',b.errors.length===0,b.errors);
 } catch(e){log('browser run exception',false,e.stack);} finally {
-  appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2/inherited-tests.log','\n## comb-c-browser-test '+process.argv.slice(2).join(' ')+'\n\n```text\n'+lines.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');
+  appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g3/inherited-tests.log','\n## comb-c-browser-test '+process.argv.slice(2).join(' ')+'\n\n```text\n'+lines.join('\n').replace(/[^\x00-\x7f]/g,'?')+'\n```\n');
   if(film){const path=join(combRoot,'captures.json'),prior=existsSync(path)?JSON.parse(readFileSync(path,'utf8')):[];writeFileSync(path,JSON.stringify([...new Set([...prior,...captures])].sort(),null,2));}await b.close();
 }
 process.exitCode=failed?1:0;

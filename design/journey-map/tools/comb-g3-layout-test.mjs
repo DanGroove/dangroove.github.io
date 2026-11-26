@@ -1,0 +1,23 @@
+import {gBrowser,gRoot,gWait} from './comb-g3-browser-test.mjs';import {writeFileSync} from 'node:fs';
+const b=await gBrowser(),fail=[],rows=[],before=process.argv.includes('--before'),tag=before?'before':'after';
+const check=(v,m)=>{if(!v)fail.push(m);};
+const state=()=>b.read('({focus:__g.SC.focus?.id,P:__g.SC.P,sheet:__g.FD.sheetOwner?.id,active:document.activeElement?.id,fit:__g.FD.list.hammer.fit,bar:document.querySelector(".go").inert,tl:document.querySelector(".tl").inert})');
+try{
+ for(const [w,h]of [[844,390],[730,412]]){
+  await b.size(w,h,true);await b.page(false,'map',before);await b.tabTo('#f-hammer');await b.key('Enter');await b.until('__g.FD.sheetOwner?.id==="hammer"');await gWait(900);const start=await state();
+  const measure=await b.read(`(()=>{const e=document.querySelector('.hm-panel'),m=e.getBoundingClientRect().width/e.offsetWidth;return {scale:m,words:[...e.querySelectorAll('p,h2,button,.hm-wave,.hm-silver,.pop-k')].filter(e=>e.getClientRects().length).map(e=>({text:e.textContent,font:parseFloat(getComputedStyle(e).fontSize)*m})),buttons:[...e.querySelectorAll('button')].filter(e=>e.getClientRects().length).map(e=>{const r=e.getBoundingClientRect();return{text:e.textContent,w:r.width,h:r.height,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===e}})}})()`);
+  rows.push({item:'H2',w,h,start,measure});check(measure.scale>=.75,'H2 fit '+w);for(const r of measure.words)check(r.font>=10,'H2 font '+w+' '+r.text);for(const r of measure.buttons)check(r.w>=43.8&&r.h>=43.8&&r.hit,'H2 button '+w+' '+r.text);check(start.bar&&start.tl,'H2 bars inert '+w);
+  await b.shot(tag+'-H2-start-'+w);await b.click('.hm-start',true);await gWait(200);const game=await b.box('.hm-canvas');await b.tap(game.x+game.w*.7,game.y+game.h*.8,true);await gWait(150);await b.shot(tag+'-H2-play-'+w);await b.click('.hm-pause',true);await gWait(350);check(await b.read('__g.FD.list.hammer.game.paused'),'H2 pause '+w);await b.click('.hm-resume',true);await gWait(350);check(await b.read('!__g.FD.list.hammer.game.paused'),'H2 resume '+w);await b.click('.hm-close',true);await gWait(650);check(await b.read('!__g.FD.sheetOwner&&!document.querySelector(".go").inert&&!document.querySelector(".tl").inert'),'H2 restored '+w);
+  await b.click('#f-hammer',true);await gWait(1300);await b.click('#sheet-dismiss',true);await gWait(600);check(await b.read('!__g.FD.sheetOwner'),'H2 outside close '+w);
+  await b.page(false,'map',before);await b.tabTo('#f-runestone');await b.key('Enter');await b.until('__g.FD.sheetOwner?.id==="runestone"');await gWait(1000);await b.shot(tag+'-H2-poster-'+w);const r=await b.box('.pz');check(r.y>=0&&r.y+r.h<=h,'H2 poster bounds '+w);await b.click('#sheet-dismiss',true);await gWait(600);await b.click('.go-next',true);await b.rest();check(await b.read('document.documentElement.dataset.beat==="laurier"'),'H2 bar works '+w);
+ }
+ for(const [w,h,touch]of [[1440,900,false],[412,730,true]]){
+  await b.size(w,h,touch);await b.page(true,'map',before);
+  for(const id of ['hammer','runestone']){await b.tabTo('#f-'+id);if(touch)await b.click('#f-'+id,true);else await b.key('Enter');await b.until('__g.FD.sheetOwner?.id==='+JSON.stringify(id));await gWait(900);if(id==='runestone')await b.key('Tab');if(touch)await b.click('#sheet-dismiss',true);else await b.key('Escape');await gWait(650);const s=await state();rows.push({item:'H1',w,id,s});check(s.active==='f-'+id,'H1 returned '+w+' '+id);if(!touch){await b.key('Enter');await b.until('__g.FD.sheetOwner?.id==='+JSON.stringify(id));await gWait(500);await b.key('Escape');await gWait(550); } await b.key('Escape'); await gWait(900); }
+ }
+ for(const[w,h]of[[640,360],[667,375],[730,412],[844,390],[915,412],[360,640]]){
+  await b.size(w,h,w!==915);await b.page(true,'top',before);const r=await b.read(`(()=>{const sels=['.hero-nav','.hero-name','.hero-crafts button','.jm-start','.hero-pause','.hero-box'];return sels.flatMap(s=>[...document.querySelectorAll(s)].map(e=>{const r=e.getBoundingClientRect();return{s,text:e.textContent,x:r.x,y:r.y,w:r.width,h:r.height,nowrap:getComputedStyle(e).whiteSpace}}))})()`);rows.push({item:'H3',w,h,r});for(const q of r)check(q.x>=-1&&q.y>=-1&&q.x+q.w<=w+1&&q.y+q.h<=h+1,'H3 bounds '+w+' '+q.s);if(w>h)for(const q of r.filter(x=>x.s==='.hero-crafts button'))check(q.nowrap==='nowrap','H3 wrap '+w);if([667,730,844].includes(w))await b.shot(tag+'-H3-'+w);
+ }
+ check(!b.errors.length,'runtime '+b.errors.join(';'));
+}catch(e){fail.push(e.stack);}finally{await b.close();writeFileSync(gRoot+'/'+tag+'-g3-layout.json',JSON.stringify({fail,rows},null,2));}
+console.log(tag+' layout failures '+JSON.stringify(fail));process.exitCode=before?0:fail.length?1:0;

@@ -34,5 +34,5 @@ try {
   const end=await b.evaluate(`({footerTop:document.querySelector('#ft').getBoundingClientRect().top,nova:getComputedStyle(document.querySelector('#nova')).display,hit:getComputedStyle(document.querySelector('#nova-hit')).display})`);
   check(end.footerTop<365&&end.nova==='none'&&end.hit==='none','live reduced switch keeps the footer and hides the animated nova',end);
   check(b.errors.length===0,'no browser exceptions',b.errors);
-}catch(e){check(false,'unexpected error',e.stack);}finally{await b.close();appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2/inherited-tests.log','\n## Reduced-motion edge checks\n\n```text\n'+lines.join('\n').replace(/[^\x00-\x7F]/g,'?')+'\n```\n');}
+}catch(e){check(false,'unexpected error',e.stack);}finally{await b.close();appendFileSync('C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g3/inherited-tests.log','\n## Reduced-motion edge checks\n\n```text\n'+lines.join('\n').replace(/[^\x00-\x7F]/g,'?')+'\n```\n');}
 process.exitCode=failed?1:0;

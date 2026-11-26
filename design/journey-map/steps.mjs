@@ -72,14 +72,17 @@ function stepsButtons() {
   const hero = SC.joinedTop() && SC.P < stepsMap - 1e-6, wasHidden = SC.go.hidden;
   if (hero && !wasHidden && SC.go.contains(document.activeElement)) SC.heroFocus = true;
   const hidden = !SC.ready || SC.mode !== 'steps' || hero || blasting;
-  if (SC.go.inert !== hidden) SC.go.inert = hidden;
+  const aside = VIEW.h <= 440 && VIEW.w > 640 && SC.root.classList.contains('jm-sheet-open');
+  if (SC.go.inert !== (hidden || aside)) SC.go.inert = hidden || aside;
   if (!blasting) SC.go.classList.remove('go-leaving');
   const faded = blasting && SC.go.classList.contains('go-leaving');
   if (faded && !SC.goFade) { SC.goFade = true; setTimeout(() => { SC.goFade = false; if (SC.go.classList.contains('go-leaving')) SC.go.hidden = true; }, 180); }
   if (!faded && SC.go.hidden !== hidden) SC.go.hidden = hidden;
   const lost = !document.activeElement || document.activeElement === document.body || !!document.activeElement.closest?.('[data-hero]');
   if (SC.heroFocus && top && !JOURNEY.moving) { SC.heroFocus = false; const start = document.querySelector?.('.jm-start'); if (start && lost) start.focus({ preventScroll: true }); }
-  if (SC.joinedTop() && !SC.go.hidden && !hero && !blasting && lost && !JOURNEY.moving && Math.abs(SC.P - stepsMap) < 1e-6) SC.go.querySelector('.go-next').focus({ preventScroll: true });
+  const landed = !JOURNEY.moving && Math.abs(SC.P - stepsMap) < 1e-6;
+  if (landed && !SC.mapLanded && SC.joinedTop() && !SC.go.hidden && lost) SC.go.querySelector('.go-next').focus({ preventScroll: true });
+  SC.mapLanded = landed;
   if (!hero) SC.heroFocus = false;
   if (SC.go.classList.contains('go-end') !== end) SC.go.classList.toggle('go-end', end);
   const back = SC.go.querySelector('.go-back'), next = SC.go.querySelector('.go-next'), home = SC.go.querySelector('.go-top');
@@ -325,15 +328,24 @@ function stepsFirstShine() {
   if (SC.shineSeen || SC.P !== stepsMap || JOURNEY.moving || SC.go.hidden || SC.go.classList.contains('go-reveal')) return;
   SC.shineSeen = true; stepsShine(true);
 }
+function stepsCardScroll(pixels, target) {
+  if (!target?.closest('.c-card')) return false;
+  for (let el = target; el?.closest('.c-card'); el = el.parentElement) {
+    if (/auto|scroll/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight + 1 && (pixels > 0 ? el.scrollTop + el.clientHeight < el.scrollHeight - 1 : el.scrollTop > 1)) return el;
+  }
+  return false;
+}
 function stepsNudge(pixels, stamp, target) {
   const same = SC.shineStamp !== undefined && stamp - SC.shineStamp < STEPS.scroll.gesture;
   SC.shineStamp = stamp;
-  if (same || !pixels || SC.P < stepsMap || JOURNEY.moving || SC.go.hidden || SC.go.inert || stepsHeld() || exploreBusy() || SC.root.classList.contains('jm-sheet-open') || document.querySelector('.pop.on') || target?.closest('.c-card, .sheet')) return;
+  if (same || !pixels || SC.P < stepsMap || JOURNEY.moving || SC.go.hidden || SC.go.inert || stepsHeld() || exploreBusy() || SC.root.classList.contains('jm-sheet-open') || document.querySelector('.pop.on') || target?.closest('.sheet') || stepsCardScroll(pixels, target)) return;
   stepsShine(pixels > 0);
 }
 function stepsBlockWheel(e) {
   if (SC.rm || e.ctrlKey || exploreActive() || e.defaultPrevented) return;
   const target = stepsTarget(e);
+  const card = stepsCardScroll(e.deltaY, target);
+  if (card) { card.scrollTop += e.deltaY; SC.shineStamp = e.timeStamp; e.preventDefault(); return; }
   if (target?.closest('.sheet.on')) { e.preventDefault(); return; }
   e.preventDefault();
   if (stepsHeld()) { SC.scroll = { stamp: e.timeStamp }; return; }
@@ -372,6 +384,8 @@ function stepsTouchMove(e) {
   // honoured; it only counts as a swipe from STEPS.scroll.swipe on (F1), and only a swipe swallows the tap.
   if (!touch.held && Math.abs(dy) <= STEPS.scroll.slop) return;
   if (!touch.held && Math.abs(dx) >= Math.abs(dy)) { SC.touch = null; return; }
+  const card = touch.card || (!touch.held && stepsCardScroll(-dy, stepsTarget(e)));
+  if (card) { touch.card = card; card.scrollTop -= p.clientY - touch.last; touch.last = p.clientY; SC.swallow = true; if (e.cancelable) e.preventDefault(); return; }
   touch.held = true; if (e.cancelable) e.preventDefault();
   if (!touch.dragged && Math.abs(dy) < STEPS.scroll.swipe) return;
   const first = !touch.dragged;

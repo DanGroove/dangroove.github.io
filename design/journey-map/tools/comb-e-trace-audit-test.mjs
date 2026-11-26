@@ -1,6 +1,6 @@
 // Audit the saved load traces without rerunning the deferred cost machinery.
 import {readFileSync} from 'node:fs';
-const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g2';
+const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-g3';
 let failed=0;
 for(const page of ['journey-map','journey-joined'])for(const w of[412,1440]){
  const trace=JSON.parse(readFileSync(root+'/warm-'+page+'-'+w+'.json','utf8')).traceEvents;

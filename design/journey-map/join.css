@@ -37,17 +37,19 @@
 .jm-joined.rm .marker-layer, .jm-joined.rm .tl { opacity: var(--joined-map-alpha, 0) !important; } .jm-joined.rm:not(.jm-rm-map) .tl { visibility: hidden; }
 
 /* The joined hero keeps its content inside a short stage; the standalone hero is untouched. */
-@media (max-height: 679px) and (max-width: 719px) {
+@media (max-height: 679px) and (orientation: portrait) and (max-width: 719px) {
   .jm-joined .hero .hero-box { min-height: 100px; margin-top: 56px; }
 }
-@media (max-height: 679px) and (min-width: 720px) {
+@media (max-height: 679px) and (orientation: landscape) {
   .jm-joined .hero .hero-nav { top: 16px; }
   .jm-joined .hero .hero-mark { height: 32px; }
-  .jm-joined .hero .hero-say { top: 68px; transform: none; width: 45%; }
+  .jm-joined .hero { --stacked: 0; --pad: 24px; }
+  .jm-joined .hero .hero-say { position: absolute; left: var(--gl); top: 68px; transform: none; width: 46%; margin: 0; padding: 0; }
   .jm-joined .hero .hero-name { font-size: 36px; }
   .jm-joined .hero .hero-lede { margin-top: 12px; font-size: 14px; line-height: 1.3; }
-  .jm-joined .hero .hero-crafts { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; }
-  .jm-joined .hero .hero-crafts button { padding: 9px 0; }
-  .jm-joined .hero .hero-box { left: 52%; top: 68px; height: calc(100% - 144px); }
-  .jm-joined .hero .hero-foot { bottom: 12px; }
+  .jm-joined .hero .hero-crafts { margin-top: 12px; display: grid; grid-template-columns: 1.35fr 1fr; column-gap: 12px; }
+  .jm-joined .hero .hero-crafts button { padding: 9px 0; gap: 8px; font-size: 12px; white-space: nowrap; }
+  .jm-joined .hero .hero-crafts .n { flex-shrink: 0; }
+  .jm-joined .hero .hero-box { position: absolute; left: 52%; top: 68px; width: calc(48% - var(--gr)); height: calc(100% - 144px); min-height: 0; max-height: none; margin: 0; }
+  .jm-joined .hero .hero-foot { position: absolute; left: var(--gl); right: var(--gr); bottom: 12px; margin: 0; padding: 0; }
 }
