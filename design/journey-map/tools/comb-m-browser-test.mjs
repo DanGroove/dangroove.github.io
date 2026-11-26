@@ -1,0 +1,37 @@
+// Behaviour only: all page control uses trusted CDP Input commands.
+import assert from 'node:assert/strict';
+import {writeFileSync} from 'node:fs';
+import {gBrowser,gRoot,gWait} from './comb-m-fixture.mjs';
+import {exploreClamp} from '../explore.mjs';
+const b=await gBrowser(),rows=[],fail=[];
+const state=()=>b.read(`({active:__g.EX.active,cam:__g.FD.st.cam,dim:__g.FD.st.dim,opacity:getComputedStyle(document.querySelector('#map')).opacity,cards:__g.FD.st.cardK,back:document.querySelector('.go-back').textContent,next:document.querySelector('.go-next').hidden,origin:__g.SC.exploreStop,beat:document.documentElement.dataset.beat,focus:document.activeElement?.className,say:document.querySelector('#go-say').textContent,hint:document.querySelector('.explore-hint').className,reveal:document.querySelector('#go').classList.contains('go-reveal')})`);
+async function check(name,fn){try{await fn();rows.push({name,ok:true});console.log('PASS',name);}catch(e){fail.push(name);rows.push({name,ok:false,error:e.stack,state:await state().catch(()=>null)});console.log('FAIL',name,e.message);}}
+async function openEnd(touch=false,fromTop=false){await b.page(true,fromTop?'top':'end');if(fromTop){await b.click('.jm-start',touch);await b.rest();for(let i=0;i<8;i++){await b.click('.go-next',touch);await b.rest();}}await b.click('.go-next',touch);await b.until('__g.EX.active&&!__g.EX.motion&&!__g.FD.st.exploreMoving');}
+async function stop(id='laurier',touch=false){await b.click('#stop-'+id+' .st-btn',touch);await b.rest();await b.until(`document.querySelector('#stop-${id}').dataset.state==='open'`);}
+async function drag(touch=false){const x=110,y=320,dx=60,dy=60;if(touch)await b.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});else await b.send('Input.dispatchMouseEvent',{type:'mousePressed',x,y,button:'left',buttons:1,clickCount:1});for(let i=1;i<=8;i++){await gWait(22);if(touch)await b.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:x+dx*i/8,y:y+dy*i/8,id:1}]});else await b.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:x+dx*i/8,y:y+dy*i/8,buttons:1});}if(touch)await b.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});else await b.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:x+dx,y:y+dy,button:'left',buttons:0,clickCount:1});await b.until('!__g.FD.st.exploreMoving');}
+async function wheel(){await b.send('Input.dispatchMouseEvent',{type:'mouseWheel',x:200,y:320,deltaY:160,deltaX:0});await b.until('!__g.FD.st.exploreMoving');}
+async function pinch(){await b.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:110,y:330,id:1},{x:250,y:330,id:2}]});for(let i=1;i<=8;i++){await b.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:110+i*4,y:330,id:1},{x:250-i*4,y:330,id:2}]});await gWait(22);}await b.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await b.until('!__g.FD.st.exploreMoving');}
+async function close(path='x',touch=false,id='laurier',repeat=false){
+ const before=await state(),bounds=await b.read('({bounds:__g.EX.bounds,view:__g.EX.view,fit:__g.EX.fit,top:__g.EX.top,keep:__g.EX.keep})');
+ const expected=exploreClamp(before.cam,bounds.bounds,bounds.view,bounds.fit,bounds.top,bounds.keep),box=await b.box('#stop-'+id+' .c-close');
+ await b.shot(`${touch?'phone':'desktop'}-${path}-card`);
+ if(path==='escape'){await b.tabTo('#stop-'+id+' .c-close');await b.key('Escape');}else await b.click('#stop-'+id+(path==='shield'?' .st-btn':' .c-close'),touch);
+ if(repeat){await b.tap(box.x+box.w/2,box.y+box.h/2,touch);await b.until('__g.SC.cut?.placed');await b.tap(box.x+box.w/2,box.y+box.h/2,touch);}
+ await b.rest();const after=await state();rows.push({name:'camera '+path,before:before.cam,expected,after});assert(after.active);assert(Math.abs(after.cam.s/expected.s-1)<=.005);assert(Math.abs(after.cam.tx-expected.tx)<=1);assert(Math.abs(after.cam.ty-expected.ty)<=1);assert.equal(after.dim,1);assert.equal(Number(after.opacity),1);assert(after.cards.every(k=>k===0));assert.equal(after.back.trim(),'Back to the end');assert(after.next);assert(!after.reveal);assert(!after.hint.includes('on'));assert.equal(after.say,await b.read('__g.COPY.explore.say'));assert.equal(after.origin,null);if(!repeat)assert.equal(after.focus,'st-btn');
+ await b.shot(`${touch?'phone':'desktop'}-${path}-resumed`);
+}
+try{
+ const version=await b.send('Browser.getVersion',{},null);rows.push({version});assert.match(version.product,/158\./);
+ await b.size(1920,950,false,2);
+ for(const path of ['x','escape','shield'])await check('desktop '+path,async()=>{await openEnd(false,path==='x');await drag();await wheel();await stop();await close(path);const a=await state();await drag();const c=await state();assert(Math.hypot(a.cam.tx-c.cam.tx,a.cam.ty-c.cam.ty)>1);await wheel();assert(Math.abs((await state()).cam.s/c.cam.s-1)>.01);await b.key('-');await b.until('!__g.FD.st.exploreMoving');assert(Math.abs((await state()).cam.s/c.cam.s-1)>.01);});
+ await check('A then B shield retains origin',async()=>{await openEnd();await stop();await stop('hmc1');await close('x',false,'hmc1');});
+ await check('Next forgets origin and guided dim reverses',async()=>{await openEnd();await stop();await b.click('.go-next');await b.rest();const id=await b.read('document.documentElement.dataset.beat');await b.click('#stop-'+id+' .c-close');await gWait(550);let s=await state();assert(!s.active);assert.equal(s.dim,1);await b.click('#stop-'+id+' .st-btn');await gWait(550);assert((await state()).dim<.99);await b.click('.go-back');await b.rest();assert.equal((await state()).beat,'laurier');await b.click('.go-next');await b.rest();assert.equal((await state()).beat,id);});
+ await check('guided from top dims and reopens',async()=>{await b.page(true,'top');await b.click('.jm-start');await b.rest();await b.click('.go-next');await b.rest();await b.click('#stop-laurier .c-close');await gWait(550);assert.equal((await state()).dim,1);assert(!(await state()).active);await b.click('#stop-laurier .st-btn');await gWait(550);assert((await state()).dim<1);});
+ await check('find take/release and resize preserve origin',async()=>{await openEnd();await stop();await b.tabTo('#f-ravens');await b.key('Enter');await b.until('__g.SC.focus?.held');await b.key('Escape');await b.until('!__g.SC.focus');await b.size(1910,940,false,2);await close();});
+ await check('repeated X has one covered return',async()=>{await openEnd();await stop();await close('x',false,'laurier',true);assert.deepEqual(b.errors,[]);});
+ await b.size(412,915,true,3);
+ await check('phone touch close, drag and pinch',async()=>{await openEnd(true);await drag(true);await pinch();await stop('laurier',true);await close('x',true);const a=await state();await drag(true);const c=await state();assert(Math.hypot(a.cam.tx-c.cam.tx,a.cam.ty-c.cam.ty)>1);await pinch();assert(Math.abs((await state()).cam.s/c.cam.s-1)>.01);});
+ await check('reduced motion unchanged',async()=>{await b.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});await b.page(true,'top');assert(await b.read('window.__jm.mode==="scroll"&&!__g.EX.active&&[...document.querySelectorAll(".c-close")].every(e=>!e.getClientRects().length)&&document.querySelector("#go").hidden'));await b.shot('reduced-phone');});
+ await check('no console errors',async()=>assert.deepEqual(b.errors,[]));
+}finally{writeFileSync(gRoot+'/browser-results.json',JSON.stringify({fail,rows},null,2));await b.close();}
+process.exitCode=fail.length?1:0;

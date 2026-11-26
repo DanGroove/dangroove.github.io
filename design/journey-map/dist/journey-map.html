@@ -608,6 +608,9 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
   .hammer-sheet .hm-rune span span, .hammer-sheet .hm-card .pop-k, .hammer-sheet .hm-card p, .hammer-sheet .hm-card .find-slot p { font-size: 14px; line-height: 18px; }
 }
 
+/* Keep markers and the bar composited as glide opacities reach one. */
+.marker-layer, .marker-layer .mk, #go { will-change: opacity; }
+
 </style>
 </head>
 <body>
@@ -4113,7 +4116,7 @@ function exploreGlide(cam, velocity, dt, bounds, view, fit, top, keep) {
 
 const EX = { active: false, k: 0, cam: null, target: null, end: null, bounds: null, keep: null, view: null, fit: 1, top: 1,
   motion: null, velocity: [0, 0], pointers: new Map(), gesture: null, samples: [], layer: { c: 1, dx: 0, dy: 0 },
-  stage: null, world: null, journey: null, rm: true, hint: null, hintUsed: false, hintLeft: 0, changed: false, suppress: false, suppressTimer: null, owners: new Set(), footer: 1, departing: false };
+  stage: null, world: null, journey: null, rm: true, hint: null, hintUsed: false, hintLeft: 0, changed: false, suppress: false, suppressTimer: null, owners: new Set(), footer: 1, departing: false, arriving: false };
 const exploreActive = () => EX.active;
 const exploreBusy = () => EX.active || EX.k > 0;
 const exploreTransform = () => EX.layer;
@@ -4133,7 +4136,7 @@ function exploreClearPointers() {
 function exploreReset() {
   exploreSuppressClear();
   if (!EX.active && !EX.k && !EX.departing) return;
-  EX.active = false; EX.k = 0; EX.departing = false; EX.motion = null; EX.velocity = [0, 0]; EX.cam = EX.end && { ...EX.end }; EX.target = EX.cam && { ...EX.cam };
+  EX.active = false; EX.k = 0; EX.departing = false; EX.arriving = false; EX.motion = null; EX.velocity = [0, 0]; EX.cam = EX.end && { ...EX.end }; EX.target = EX.cam && { ...EX.cam };
   exploreClearPointers(); exploreHintOff(); EX.layer = { c: 1, dx: 0, dy: 0 };
   EX.footer = 1; exploreWorldStyle('transform', 'none'); explorePromote();
   document.documentElement.classList.remove('jm-explore'); exploreNotify();
@@ -4151,6 +4154,16 @@ function exploreStart() {
   EX.motion = { from: { ...EX.cam }, to: { ...EX.target }, k0: 0, k1: 1, elapsed: 0, duration: EXPLORE.in };
   document.documentElement.classList.add('jm-explore');
   if (!EX.hintUsed) { EX.hintUsed = true; EX.hintLeft = EXPLORE.hintTime; EX.hint.textContent = EX.touchInput || window.matchMedia('(pointer: coarse)').matches ? COPY.explore.hintPhone : COPY.explore.hint; EX.hintWait = COMB.hintDelay; }
+  document.getElementById('go-say').textContent = COPY.explore.say;
+  explorePromote(); exploreNotify(); return true;
+}
+// Covered arrival keeps the cut's single clock while input owns the resumed camera.
+function exploreResume(cam) {
+  if (EX.rm || !EX.end) return false;
+  exploreSuppressClear(); exploreClearPointers(); exploreHintOff(); EX.hintWait = 0;
+  EX.active = true; EX.arriving = true; EX.departing = false; EX.k = 1; EX.footer = 0;
+  EX.cam = exploreBound(cam); EX.target = { ...EX.cam }; EX.motion = null; EX.velocity = [0, 0];
+  document.documentElement.classList.add('jm-explore');
   document.getElementById('go-say').textContent = COPY.explore.say;
   explorePromote(); exploreNotify(); return true;
 }
@@ -4196,7 +4209,9 @@ function exploreApply(st, dt) {
   delete st.coverRects;
   if (EX.rm) return false;
   const coveredDeparture = EX.departing && EX.journey.moving && EX.journey.P === EX.journey.beats.at(-1).P;
-  if (exploreBusy() && !exploreAllowed() && !coveredDeparture) exploreReset();
+  const coveredArrival = EX.arriving && EX.journey.moving && EX.journey.P === EX.journey.beats.at(-1).P;
+  if (!EX.journey.moving) EX.arriving = false;
+  if (exploreBusy() && !exploreAllowed() && !coveredDeparture && !coveredArrival) exploreReset();
   const before = [EX.cam.s, EX.cam.tx, EX.cam.ty, EX.k, EX.footer], motion = EX.motion;
   if (EX.active) EX.footer = Math.max(0, EX.footer - dt / EXPLORE.footerFade);
   if (motion) {
@@ -4320,7 +4335,7 @@ function exploreReduced(on) { if (on) exploreReset(); EX.rm = on; }
 
 
 const SC = {
-  mode: 'steps', P: 0, rm: false, move: null, cut: null, lastTs: null, fill: 0, focus: null,
+  mode: 'steps', P: 0, rm: false, exploreStop: null, move: null, cut: null, lastTs: null, fill: 0, focus: null,
   root: null, go: null, cover: null, say: null, review: null, joinedTop: null,
   restoreP: null, announced: null, shown: false, ready: false, endShown: false,
   scrollLive: true, scroll: null, touch: null, pointerOwned: false, swallow: false, holdTop: null,
@@ -4379,7 +4394,7 @@ function stepsSetDepth(on) {
 }
 function stepsButtons() {
   if (!SC.go) return;
-  const top = SC.P <= 1e-6, end = !JOURNEY.moving && Math.abs(SC.P - stepsEnd) < 1e-6;
+  const top = SC.P <= 1e-6, end = (!JOURNEY.moving || SC.cut?.resume && SC.cut.placed) && Math.abs(SC.P - stepsEnd) < 1e-6;
   const beatState = tripState(SC.P), blasting = beatState.kind === 'rush' ? !!SC.move || beatState.t > 0 : ['blast', 'settle'].includes(beatState.kind);
   if (blasting && !SC.go.hidden) { SC.returnFocus ||= SC.go.contains(document.activeElement); SC.shown = false; if (!SC.go.classList.contains('go-leaving')) SC.go.classList.add('go-leaving'); if (SC.returnFocus) { const nova = document.getElementById('nova-hit'); nova?.focus({ preventScroll: true }); } if (SC.say.textContent !== COMB.novaSay) SC.say.textContent = COMB.novaSay; }
   // Joined page: the bar waits for the map, so one Start shows at a time; focus follows (the bar at the map, the hero's Start above).
@@ -4533,14 +4548,22 @@ function stepsCarry(old, target, hurry) {
   // Keep the current curve if no bounded candidate satisfies all constraints.
   return old;
 }
-function stepsJump(target, after) {
+function stepsJump(target, after, resume = null) {
   if (target !== stepsEnd) exploreDepart();
-  stepsCancel(); SC.cut = { target: stepsClamp(target), elapsed: 0, placed: false, after };
+  stepsCancel(); SC.cut = { target: stepsClamp(target), elapsed: 0, placed: false, after, resume };
   SC.cover.hidden = false; SC.cover.style.opacity = 0; SC.root.dataset.beat = ''; stepsButtons();
   if (target === BEATS.find(b => b.id === 'x').P) {
     SC.say.textContent = COPY.steps.say.x; SC.go.querySelector('.go-t').textContent = COPY.steps.dig;
     SC.go.querySelector('.go-next').focus({ preventScroll: true });
   }
+}
+// The card supplies its last painted camera before its fold changes anything.
+function stepsReturnFromExplore(index, cam) {
+  if (SC.rm || JOURNEY.moving || SC.exploreStop !== STOPS[index]?.id) return false;
+  SC.exploreStop = null;
+  stepsDestination(); stepsRelease();
+  stepsJump(stepsEnd, null, { s: cam.s, tx: cam.tx, ty: cam.ty });
+  return true;
 }
 function stepsNavigate(target, opts = {}) {
   if (SC.cut) return;
@@ -4559,6 +4582,7 @@ function stepsGo(id, opts = {}) {
   const beat = BEATS.find(b => b.id === id); if (!beat) return;
   // A shield pressed during its own arrival keeps the current landing clock.
   if (!opts.instant && STOPS.some(s => s.id === id) && SC.move && SC.move.P1 === beat.P) return;
+  SC.exploreStop = STOPS.some(s => s.id === id) && (exploreActive() || SC.exploreStop) ? id : null;
   stepsRelease(); if (SC.rm && SC.reducedGo) { SC.reducedGo(id); stepsReadScroll(); return; } stepsNavigate(beat.P, { ...opts, start: id === 'map' });
 }
 function stepsNext() {
@@ -4567,12 +4591,13 @@ function stepsNext() {
   // Dig-to-end has one clock. Repeated Next must never replace it with a hurry.
   const x = BEATS.find(b => b.id === 'x').P;
   if (SC.move && SC.P >= x && SC.P < stepsEnd) return;
-  SC.direction = 'next'; stepsRelease(); const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true, start: true, next: true });
+  SC.exploreStop = null; SC.direction = 'next'; stepsRelease(); const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true, start: true, next: true });
   stepsButtons();
 }
 function stepsBack() {
   stepsDestination();
   if (SC.cut) return;
+  SC.exploreStop = null;
   if (exploreEnd()) { stepsButtons(); return; }
   if (stepsRelease(true)) return;
   SC.direction = 'back'; const x = BEATS.find(b => b.id === 'x');
@@ -4580,6 +4605,7 @@ function stepsBack() {
 }
 function stepsSet(P) {
   stepsDestination();
+  SC.exploreStop = null;
   if (SC.cut) return;
   stepsRelease();
   SC.scroll = null; SC.touch = null; if (P > stepsMap) SC.scrollLive = false;
@@ -4620,7 +4646,13 @@ function stepsFrame(ts) {
   } else if (cut) {
     cut.elapsed += dt;
     if (cut.elapsed < STEPS.cut[0]) SC.cover.style.opacity = cut.elapsed / STEPS.cut[0];
-    else if (!cut.placed) { cut.placed = true; SC.P = cut.target; SC.cover.style.opacity = 1; stepsLabel(); }
+    else if (!cut.placed) {
+      cut.placed = true; SC.P = cut.target; SC.cover.style.opacity = 1;
+      if (cut.resume) {
+        SC.focus = null; SC.root.classList.remove('jm-focus'); SC.endShown = true;
+        stepsArrive(); exploreResume(cut.resume);
+      } else stepsLabel();
+    }
     else SC.cover.style.opacity = Math.max(0, 1 - (cut.elapsed - STEPS.cut[0]) / STEPS.cut[1]);
     if (cut.placed && cut.elapsed >= STEPS.cut[0] + STEPS.cut[1]) {
       SC.cut = null; SC.cover.hidden = true; stepsArrive(); if (cut.after) cut.after();
@@ -4674,7 +4706,7 @@ function stepsScrollBy(pixels, stamp) {
   const target = pixels > 0 ? stepsMap : 0;
   if (SC.move?.P1 === target || !SC.move && Math.abs(SC.P - target) < 1e-6) return;
   stepsDestination();
-  SC.direction = pixels > 0 ? 'next' : 'back'; stepsPlay(target);
+  SC.exploreStop = null; SC.direction = pixels > 0 ? 'next' : 'back'; stepsPlay(target);
 }
 const stepsTouchExcluded = target => target?.closest('.sheet.on, .sheet-dismiss, .pop button, .pop a, .tl, input, textarea, select, [data-review]');
 function stepsTouchOwned(target) {
@@ -4780,7 +4812,7 @@ function stepsBuild({ stage, rm, joinedTop, reducedGo = null }) {
 }
 
 function stepsReduced(on, i = 0) {
-  stepsCancel(); SC.focus = null; SC.root.classList.remove('jm-focus'); SC.rm = on; SC.mode = on ? 'scroll' : 'steps';
+  SC.exploreStop = null; stepsCancel(); SC.focus = null; SC.root.classList.remove('jm-focus'); SC.rm = on; SC.mode = on ? 'scroll' : 'steps';
   SC.root.classList.toggle('jm-steps', !on); SC.go.hidden = on;
   if (!on) { SC.P = i < -1 ? 0 : i >= STOPS.length ? stepsEnd : BEATS[Math.max(1, i + 2)].P; window.scrollTo({ top: 0, behavior: 'instant' }); stepsArrive(); }
 }
@@ -4872,6 +4904,7 @@ function cardsClose(index = CD.last?.i) {
   if (CD.rm || JOURNEY.moving || !st || st.kind !== 'hold' || st.cardK[index] <= 0 || (CD.closed?.to === 0)) return false;
   CD.closed = { i: index, P: st.P, k: st.cardK[index], from: st.cardK[index], to: 0, elapsed: 0 };
   if (CD.list[index].el.contains(document.activeElement)) CD.list[index].btn.focus({ preventScroll: true });
+  stepsReturnFromExplore(index, st.cam);
   return true;
 }
 function cardsOverride(st, dt, moving) {
@@ -4884,6 +4917,7 @@ function cardsOverride(st, dt, moving) {
       if (moving || st.P !== closed.P) closed.leaving = true;
       const before = closed.k;
       closed.elapsed = Math.min(CARD_CLOSE.time, closed.elapsed + dt); closed.k = lerp(closed.from, closed.to, easeIO(closed.elapsed / CARD_CLOSE.time));
+      st.dim = lerp(1, st.dim, closed.k);
       st.cardK[closed.i] *= closed.k; st.cardOpen = Math.max(...st.cardK); changed = before !== closed.k;
       if (closed.to === 1 && closed.elapsed === CARD_CLOSE.time) CD.closed = null;
     }

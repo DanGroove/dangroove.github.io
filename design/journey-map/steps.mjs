@@ -3,10 +3,10 @@ import { STEPS, COPY, STOPS, DEPTH, NOVA, FIND_PLAY, EXPLORE, WORLD, PHONE_LAYOU
 import { VIEW, TOTAL_P, tripState, easeIO, lerp, glideMove, GLIDES, glideSeconds, tripWarmGlides } from './trip.mjs';
 import { BEATS, PACE_PARTS, paceMove, paceAt, paceEase } from './pace.mjs';
 import { arrowSvg } from './cards.mjs';
-import { exploreActive, exploreBusy, exploreStart, exploreEnd, exploreReset, exploreDepart } from './explore.mjs';
+import { exploreActive, exploreBusy, exploreStart, exploreEnd, exploreReset, exploreDepart, exploreResume } from './explore.mjs';
 
 const SC = {
-  mode: 'steps', P: 0, rm: false, move: null, cut: null, lastTs: null, fill: 0, focus: null,
+  mode: 'steps', P: 0, rm: false, exploreStop: null, move: null, cut: null, lastTs: null, fill: 0, focus: null,
   root: null, go: null, cover: null, say: null, review: null, joinedTop: null,
   restoreP: null, announced: null, shown: false, ready: false, endShown: false,
   scrollLive: true, scroll: null, touch: null, pointerOwned: false, swallow: false, holdTop: null,
@@ -65,7 +65,7 @@ function stepsSetDepth(on) {
 }
 function stepsButtons() {
   if (!SC.go) return;
-  const top = SC.P <= 1e-6, end = !JOURNEY.moving && Math.abs(SC.P - stepsEnd) < 1e-6;
+  const top = SC.P <= 1e-6, end = (!JOURNEY.moving || SC.cut?.resume && SC.cut.placed) && Math.abs(SC.P - stepsEnd) < 1e-6;
   const beatState = tripState(SC.P), blasting = beatState.kind === 'rush' ? !!SC.move || beatState.t > 0 : ['blast', 'settle'].includes(beatState.kind);
   if (blasting && !SC.go.hidden) { SC.returnFocus ||= SC.go.contains(document.activeElement); SC.shown = false; if (!SC.go.classList.contains('go-leaving')) SC.go.classList.add('go-leaving'); if (SC.returnFocus) { const nova = document.getElementById('nova-hit'); nova?.focus({ preventScroll: true }); } if (SC.say.textContent !== COMB.novaSay) SC.say.textContent = COMB.novaSay; }
   // Joined page: the bar waits for the map, so one Start shows at a time; focus follows (the bar at the map, the hero's Start above).
@@ -219,14 +219,22 @@ function stepsCarry(old, target, hurry) {
   // Keep the current curve if no bounded candidate satisfies all constraints.
   return old;
 }
-function stepsJump(target, after) {
+function stepsJump(target, after, resume = null) {
   if (target !== stepsEnd) exploreDepart();
-  stepsCancel(); SC.cut = { target: stepsClamp(target), elapsed: 0, placed: false, after };
+  stepsCancel(); SC.cut = { target: stepsClamp(target), elapsed: 0, placed: false, after, resume };
   SC.cover.hidden = false; SC.cover.style.opacity = 0; SC.root.dataset.beat = ''; stepsButtons();
   if (target === BEATS.find(b => b.id === 'x').P) {
     SC.say.textContent = COPY.steps.say.x; SC.go.querySelector('.go-t').textContent = COPY.steps.dig;
     SC.go.querySelector('.go-next').focus({ preventScroll: true });
   }
+}
+// The card supplies its last painted camera before its fold changes anything.
+export function stepsReturnFromExplore(index, cam) {
+  if (SC.rm || JOURNEY.moving || SC.exploreStop !== STOPS[index]?.id) return false;
+  SC.exploreStop = null;
+  stepsDestination(); stepsRelease();
+  stepsJump(stepsEnd, null, { s: cam.s, tx: cam.tx, ty: cam.ty });
+  return true;
 }
 function stepsNavigate(target, opts = {}) {
   if (SC.cut) return;
@@ -245,6 +253,7 @@ function stepsGo(id, opts = {}) {
   const beat = BEATS.find(b => b.id === id); if (!beat) return;
   // A shield pressed during its own arrival keeps the current landing clock.
   if (!opts.instant && STOPS.some(s => s.id === id) && SC.move && SC.move.P1 === beat.P) return;
+  SC.exploreStop = STOPS.some(s => s.id === id) && (exploreActive() || SC.exploreStop) ? id : null;
   stepsRelease(); if (SC.rm && SC.reducedGo) { SC.reducedGo(id); stepsReadScroll(); return; } stepsNavigate(beat.P, { ...opts, start: id === 'map' });
 }
 function stepsNext() {
@@ -253,12 +262,13 @@ function stepsNext() {
   // Dig-to-end has one clock. Repeated Next must never replace it with a hurry.
   const x = BEATS.find(b => b.id === 'x').P;
   if (SC.move && SC.P >= x && SC.P < stepsEnd) return;
-  SC.direction = 'next'; stepsRelease(); const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true, start: true, next: true });
+  SC.exploreStop = null; SC.direction = 'next'; stepsRelease(); const beat = stepsNextBeat(); if (beat) stepsNavigate(beat.P, { move: true, start: true, next: true });
   stepsButtons();
 }
 function stepsBack() {
   stepsDestination();
   if (SC.cut) return;
+  SC.exploreStop = null;
   if (exploreEnd()) { stepsButtons(); return; }
   if (stepsRelease(true)) return;
   SC.direction = 'back'; const x = BEATS.find(b => b.id === 'x');
@@ -266,6 +276,7 @@ function stepsBack() {
 }
 function stepsSet(P) {
   stepsDestination();
+  SC.exploreStop = null;
   if (SC.cut) return;
   stepsRelease();
   SC.scroll = null; SC.touch = null; if (P > stepsMap) SC.scrollLive = false;
@@ -306,7 +317,13 @@ export function stepsFrame(ts) {
   } else if (cut) {
     cut.elapsed += dt;
     if (cut.elapsed < STEPS.cut[0]) SC.cover.style.opacity = cut.elapsed / STEPS.cut[0];
-    else if (!cut.placed) { cut.placed = true; SC.P = cut.target; SC.cover.style.opacity = 1; stepsLabel(); }
+    else if (!cut.placed) {
+      cut.placed = true; SC.P = cut.target; SC.cover.style.opacity = 1;
+      if (cut.resume) {
+        SC.focus = null; SC.root.classList.remove('jm-focus'); SC.endShown = true;
+        stepsArrive(); exploreResume(cut.resume);
+      } else stepsLabel();
+    }
     else SC.cover.style.opacity = Math.max(0, 1 - (cut.elapsed - STEPS.cut[0]) / STEPS.cut[1]);
     if (cut.placed && cut.elapsed >= STEPS.cut[0] + STEPS.cut[1]) {
       SC.cut = null; SC.cover.hidden = true; stepsArrive(); if (cut.after) cut.after();
@@ -360,7 +377,7 @@ function stepsScrollBy(pixels, stamp) {
   const target = pixels > 0 ? stepsMap : 0;
   if (SC.move?.P1 === target || !SC.move && Math.abs(SC.P - target) < 1e-6) return;
   stepsDestination();
-  SC.direction = pixels > 0 ? 'next' : 'back'; stepsPlay(target);
+  SC.exploreStop = null; SC.direction = pixels > 0 ? 'next' : 'back'; stepsPlay(target);
 }
 const stepsTouchExcluded = target => target?.closest('.sheet.on, .sheet-dismiss, .pop button, .pop a, .tl, input, textarea, select, [data-review]');
 function stepsTouchOwned(target) {
@@ -466,7 +483,7 @@ export function stepsBuild({ stage, rm, joinedTop, reducedGo = null }) {
 }
 
 export function stepsReduced(on, i = 0) {
-  stepsCancel(); SC.focus = null; SC.root.classList.remove('jm-focus'); SC.rm = on; SC.mode = on ? 'scroll' : 'steps';
+  SC.exploreStop = null; stepsCancel(); SC.focus = null; SC.root.classList.remove('jm-focus'); SC.rm = on; SC.mode = on ? 'scroll' : 'steps';
   SC.root.classList.toggle('jm-steps', !on); SC.go.hidden = on;
   if (!on) { SC.P = i < -1 ? 0 : i >= STOPS.length ? stepsEnd : BEATS[Math.max(1, i + 2)].P; window.scrollTo({ top: 0, behavior: 'instant' }); stepsArrive(); }
 }

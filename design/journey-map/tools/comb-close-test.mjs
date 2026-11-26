@@ -2,7 +2,7 @@
 import { strict as assert } from 'node:assert';
 import { FD, closeSheet, findSheet, findSheetFrame } from '../findkit.mjs';
 import { VIEW } from '../trip.mjs';
-globalThis.document = { documentElement: { classList: { remove() {} } } };
+globalThis.document = { getElementById() { return null; }, documentElement: { classList: { remove() {} } } };
 Object.assign(VIEW, { w: 1000, h: 800 });
 const style = () => ({ setProperty(k,v) { this[k] = v; } });
 let cases = 0;

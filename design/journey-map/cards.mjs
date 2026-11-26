@@ -2,7 +2,7 @@
 import { STOPS, PALETTES, COPY, CRAFTS, MAP, DEPTH, CARD_CLOSE, CARD_GROW, CARD_TAIL, MARK, WORLD, COMB } from './data.mjs';
 import { shieldSvg, cardTailSvg } from './art.mjs';
 import { VIEW, STOP_U, tripCardPlace, toScreen, smooth, easeIO, lerp, tripVisible, tripCardCover } from './trip.mjs';
-import { JOURNEY } from './steps.mjs';
+import { JOURNEY, stepsReturnFromExplore } from './steps.mjs';
 
 const CD = { list: [], W: 640, craft: null, onGo: null, rm: false, closed: null, last: null, dt: 0 };
 const cardsWrites = new WeakMap();
@@ -85,6 +85,7 @@ export function cardsClose(index = CD.last?.i) {
   if (CD.rm || JOURNEY.moving || !st || st.kind !== 'hold' || st.cardK[index] <= 0 || (CD.closed?.to === 0)) return false;
   CD.closed = { i: index, P: st.P, k: st.cardK[index], from: st.cardK[index], to: 0, elapsed: 0 };
   if (CD.list[index].el.contains(document.activeElement)) CD.list[index].btn.focus({ preventScroll: true });
+  stepsReturnFromExplore(index, st.cam);
   return true;
 }
 export function cardsOverride(st, dt, moving) {
@@ -97,6 +98,7 @@ export function cardsOverride(st, dt, moving) {
       if (moving || st.P !== closed.P) closed.leaving = true;
       const before = closed.k;
       closed.elapsed = Math.min(CARD_CLOSE.time, closed.elapsed + dt); closed.k = lerp(closed.from, closed.to, easeIO(closed.elapsed / CARD_CLOSE.time));
+      st.dim = lerp(1, st.dim, closed.k);
       st.cardK[closed.i] *= closed.k; st.cardOpen = Math.max(...st.cardK); changed = before !== closed.k;
       if (closed.to === 1 && closed.elapsed === CARD_CLOSE.time) CD.closed = null;
     }

@@ -599,3 +599,6 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
   .hammer-sheet .hm-buttons { grid-column: 2; flex-direction: column; }
   .hammer-sheet .hm-rune span span, .hammer-sheet .hm-card .pop-k, .hammer-sheet .hm-card p, .hammer-sheet .hm-card .find-slot p { font-size: 14px; line-height: 18px; }
 }
+
+/* Keep markers and the bar composited as glide opacities reach one. */
+.marker-layer, .marker-layer .mk, #go { will-change: opacity; }

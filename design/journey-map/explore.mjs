@@ -34,7 +34,7 @@ export function exploreGlide(cam, velocity, dt, bounds, view, fit, top, keep) {
 
 const EX = { active: false, k: 0, cam: null, target: null, end: null, bounds: null, keep: null, view: null, fit: 1, top: 1,
   motion: null, velocity: [0, 0], pointers: new Map(), gesture: null, samples: [], layer: { c: 1, dx: 0, dy: 0 },
-  stage: null, world: null, journey: null, rm: true, hint: null, hintUsed: false, hintLeft: 0, changed: false, suppress: false, suppressTimer: null, owners: new Set(), footer: 1, departing: false };
+  stage: null, world: null, journey: null, rm: true, hint: null, hintUsed: false, hintLeft: 0, changed: false, suppress: false, suppressTimer: null, owners: new Set(), footer: 1, departing: false, arriving: false };
 export const exploreActive = () => EX.active;
 export const exploreBusy = () => EX.active || EX.k > 0;
 export const exploreTransform = () => EX.layer;
@@ -54,7 +54,7 @@ function exploreClearPointers() {
 export function exploreReset() {
   exploreSuppressClear();
   if (!EX.active && !EX.k && !EX.departing) return;
-  EX.active = false; EX.k = 0; EX.departing = false; EX.motion = null; EX.velocity = [0, 0]; EX.cam = EX.end && { ...EX.end }; EX.target = EX.cam && { ...EX.cam };
+  EX.active = false; EX.k = 0; EX.departing = false; EX.arriving = false; EX.motion = null; EX.velocity = [0, 0]; EX.cam = EX.end && { ...EX.end }; EX.target = EX.cam && { ...EX.cam };
   exploreClearPointers(); exploreHintOff(); EX.layer = { c: 1, dx: 0, dy: 0 };
   EX.footer = 1; exploreWorldStyle('transform', 'none'); explorePromote();
   document.documentElement.classList.remove('jm-explore'); exploreNotify();
@@ -72,6 +72,16 @@ export function exploreStart() {
   EX.motion = { from: { ...EX.cam }, to: { ...EX.target }, k0: 0, k1: 1, elapsed: 0, duration: EXPLORE.in };
   document.documentElement.classList.add('jm-explore');
   if (!EX.hintUsed) { EX.hintUsed = true; EX.hintLeft = EXPLORE.hintTime; EX.hint.textContent = EX.touchInput || window.matchMedia('(pointer: coarse)').matches ? COPY.explore.hintPhone : COPY.explore.hint; EX.hintWait = COMB.hintDelay; }
+  document.getElementById('go-say').textContent = COPY.explore.say;
+  explorePromote(); exploreNotify(); return true;
+}
+// Covered arrival keeps the cut's single clock while input owns the resumed camera.
+export function exploreResume(cam) {
+  if (EX.rm || !EX.end) return false;
+  exploreSuppressClear(); exploreClearPointers(); exploreHintOff(); EX.hintWait = 0;
+  EX.active = true; EX.arriving = true; EX.departing = false; EX.k = 1; EX.footer = 0;
+  EX.cam = exploreBound(cam); EX.target = { ...EX.cam }; EX.motion = null; EX.velocity = [0, 0];
+  document.documentElement.classList.add('jm-explore');
   document.getElementById('go-say').textContent = COPY.explore.say;
   explorePromote(); exploreNotify(); return true;
 }
@@ -117,7 +127,9 @@ export function exploreApply(st, dt) {
   delete st.coverRects;
   if (EX.rm) return false;
   const coveredDeparture = EX.departing && EX.journey.moving && EX.journey.P === EX.journey.beats.at(-1).P;
-  if (exploreBusy() && !exploreAllowed() && !coveredDeparture) exploreReset();
+  const coveredArrival = EX.arriving && EX.journey.moving && EX.journey.P === EX.journey.beats.at(-1).P;
+  if (!EX.journey.moving) EX.arriving = false;
+  if (exploreBusy() && !exploreAllowed() && !coveredDeparture && !coveredArrival) exploreReset();
   const before = [EX.cam.s, EX.cam.tx, EX.cam.ty, EX.k, EX.footer], motion = EX.motion;
   if (EX.active) EX.footer = Math.max(0, EX.footer - dt / EXPLORE.footerFade);
   if (motion) {
