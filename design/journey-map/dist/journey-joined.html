@@ -625,6 +625,10 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 /* Keep markers and the bar composited as glide opacities reach one. */
 .marker-layer, .marker-layer .mk, #go { will-change: opacity; }
 
+/* COMB-Q: carved detail is readable only as the camera approaches the serpent. */
+.jo-body .jd, .jo-head .jd { opacity: var(--jo-detail, 0); }
+.jf, .jf-name { pointer-events: none; }
+
 </style>
 <style>
 @font-face {
@@ -1367,7 +1371,7 @@ const MAP = {
   well: [302, 392],
   ygg: [304, 374],
   treeNudges: [[5,-8,0],[41,0,-5],[59,0,-5],[55,-134,-28],[56,-134,-28],[57,-155,-30],[58,-134,-28],[59,-134,-28]],
-  jorm: {"ring":[[500,101],[524,106],[546,122],[558,150],[563,190],[562,240],[560,290],[563,340],[563,390],[562,440],[563,490],[563,535],[552,572],[524,604],[484,622],[440,626],[396,622],[350,614],[300,618],[252,624],[204,618],[160,600],[124,572],[98,532],[80,490],[62,446],[56,400],[56,350],[56,300],[62,252],[76,206],[98,166],[128,132],[168,116],[214,112],[262,116],[312,120],[362,113],[410,108],[444,105],[468,102.5]],"surf":[[0,0.085],[0.235,0.29],[0.43,0.5],[0.655,0.715],[0.885,1]],"w":6.4,"seg":10,"tail":9,"taper":[0.9,0.1,0.7],"subAlpha":0.55,"edgeAlpha":0.22,"edgeWidth":0.8,"dash":"3 2.2","surfaceTaper":0.012,"edgeNarrow":[0.45,0.55],"scaleStep":2,"chevron":[1.8,0.6],"water":"q2.4 -2 4.8 0t4.8 0t4.8 0","waterAt":[-7,1],"waterAlpha":0.8,"swellPath":"M-7 -3.2Q0 -6.2 7 -3.2L7 3.2Q0 6.2 -7 3.2Z","hornPath":"M-7 -3.2Q0 -4.7 7 -3.2L7 3.2Q0 4.7 -7 3.2Z","swellLength":14,"swellExtra":3,"hornExtra":1.5,"swellSub":0.45,"swellRamp":3},
+  jorm: {"ring":[[500,101],[524,106],[546,122],[558,150],[563,190],[562,240],[560,290],[563,340],[563,390],[562,440],[563,490],[563,535],[552,572],[524,604],[484,622],[440,626],[396,622],[350,614],[300,618],[252,624],[204,618],[160,600],[124,572],[98,532],[80,490],[62,446],[56,400],[56,350],[56,300],[62,252],[76,206],[98,166],[128,132],[168,116],[214,112],[262,116],[312,120],[362,113],[410,108],[444,105],[468,102.5]],"surf":[[0,0.085],[0.235,0.29],[0.43,0.5],[0.655,0.715],[0.885,1]],"w":9,"seg":10,"tail":9,"taper":[0.9,0.1,0.8],"subAlpha":0.55,"edgeAlpha":0.22,"edgeWidth":0.8,"dash":"3 2.2","surfaceTaper":0.012,"edgeNarrow":[0.45,0.55],"water":"q2.4 -2 4.8 0t4.8 0t4.8 0","waterAt":[-7,1],"waterAlpha":0.8,"swellPath":"M-7 -3.2Q0 -6.2 7 -3.2L7 3.2Q0 6.2 -7 3.2Z","hornPath":"M-7 -3.2Q0 -4.7 7 -3.2L7 3.2Q0 4.7 -7 3.2Z","swellLength":14,"swellExtra":9,"hornExtra":1.5,"swellSub":0.45,"swellRamp":3,"neck":1.25,"lead":[[510,101],[530,101.4],[545,108],[554,126]],"tailEnd":[[462,103.6],[482,104.4]],"tailOpen":[[434,107.5],[443,116],[442,129]]},
   toronto: {"at":[358,752],"k":0.105,"facts":{"cn":553.3,"cnMain":346,"cnSky":447,"cnMastFoot":457,"rogers":86,"fcp":298,"scotia":275,"cibc":241,"ccw":239,"td":223,"bac":218,"brookfield":207,"rbp":180},"box":[352,688,484,758],"width":114.4,"back":[[18.5,4,15],[30.5,4,18],[33.6,3.4,13.5],[40.5,4.2,23],[52,3.6,26.5],[60.5,4,21],[77,3.6,24],[86,4.2,20],[101,4,17.5],[111,3.6,14]],"buildings":[["rogers",0,20],["cn",26,8.4],["rbp",36,6.4],["brookfield",43.6,6],["td",50.8,7],["fcp",59,6.4],["ccw",66.6,6],["scotia",73.8,7.2],["bac",82.2,6],["cibc",89.4,6.4]],"east":[[97,4.2,12],[102.4,4.6,16],[108.2,5,10]],"drawing":"<path class=\"t\" d=\"M18.5 0V-15H22.5V0M30.5 0V-18H34.5V0M33.6 0V-13.5H37V0M40.5 0V-23H44.7V0M52 0V-26.5H55.6V0M60.5 0V-21H64.5V0M77 0V-24H80.6V0M86 0V-20H90.2V0M101 0V-17.5H105V0M111 0V-14H114.6V0\"/><path class=\"g\" d=\"M0 0V-4.6Q10 -13.4 20 -4.6V0Z\"/><path class=\"t\" d=\"M0 -4.6H20M3.4 -7Q10 -10.6 16.6 -7\"/><path class=\"g\" d=\"M21.8 0C23.4 -6 24.5 -16 24.8 -34.3H27.2C27.5 -16 28.6 -6 30.2 0Z\"/><path class=\"t\" d=\"M26 -1V-33.9\"/><path class=\"g\" d=\"M22.2 -35.099999999999994Q21.4 -36.9 23 -37.9H29Q30.6 -36.9 29.8 -35.099999999999994Z\"/><path class=\"t\" d=\"M21.9 -36.3H30.1\"/><path class=\"g\" d=\"M25.1 -37.9V-46.1H26.9V-37.9\"/><path class=\"g\" d=\"M24.3 -46.1H27.7V-47.9H24.3Z\"/><path class=\"l\" d=\"M26 -47.9V-48\"/><path class=\"l\" d=\"M26 -48V-58.1\" stroke-opacity=\".8\"/><path class=\"g\" d=\"M36 0V-18.3L37.6 -18.9L39.2 -18.3L40.8 -18.9L42.4 -18.3V0\"/><path class=\"t\" d=\"M37.6 -1V-18.9M40.8 -1V-18.9\"/><path class=\"g\" d=\"M43.6 0V-19.7H44.6V-21.7H48.6V-19.7H49.6V0\"/><path class=\"t\" d=\"M44.6 -2.4H48.6M44.6 -4.8H48.6M44.6 -7.2H48.6M44.6 -9.6H48.6M44.6 -12.0H48.6M44.6 -14.4H48.6M44.6 -16.8H48.6\"/><path class=\"o\" d=\"M50.800000000000004 0V-23.4H57.800000000000004V0\"/><path class=\"t\" d=\"M52.2 -1V-22.4M53.6 -1V-22.4M55.0 -1V-22.4M56.4 -1V-22.4\"/><path class=\"t\" d=\"M51.300000000000004 -1.8H57.3M51.300000000000004 -3.6H57.3M51.300000000000004 -5.4H57.3M51.300000000000004 -7.2H57.3M51.300000000000004 -9.0H57.3M51.300000000000004 -10.8H57.3M51.300000000000004 -12.6H57.3M51.300000000000004 -14.4H57.3M51.300000000000004 -16.2H57.3M51.300000000000004 -18.0H57.3M51.300000000000004 -19.8H57.3M51.300000000000004 -21.6H57.3\"/><path class=\"g\" d=\"M59 0V-30.5L59.8 -31.3H64.6L65.4 -30.5V0\"/><path class=\"t\" d=\"M59.8 -1V-31.3M64.6 -1V-31.3\"/><path class=\"g\" d=\"M66.6 0V-25.1H72.6V0\"/><path class=\"t\" d=\"M66.6 -23.5H72.6M66.6 -22.900000000000002H72.6\"/><path class=\"t\" d=\"M68.1 -1V-21.7M69.6 -1V-21.7M71.1 -1V-21.7\"/><path class=\"g\" d=\"M73.8 0V-25.9L75.2 -27.5V-28.9L77.39999999999999 -26.5L79.6 -28.9V-27.5L81 -25.9V0\"/><path class=\"t\" d=\"M76.2 -1V-24.9M78.6 -1V-24.9\"/><path class=\"g\" d=\"M82.2 0V-21.5H83V-22.9H87.4V-21.5H88.2V0\"/><path class=\"t\" d=\"M83.2 -2.2H87.2M83.2 -4.4H87.2M83.2 -6.6H87.2M83.2 -8.8H87.2M83.2 -11.0H87.2M83.2 -13.2H87.2M83.2 -15.4H87.2M83.2 -17.6H87.2M83.2 -19.8H87.2\"/><path class=\"g\" d=\"M89.4 0V-25.3H95.80000000000001V0\"/><path class=\"t\" d=\"M89.4 -2L95.80000000000001 -8M89.4 -9L95.80000000000001 -15M89.4 -16L95.80000000000001 -22\"/><path class=\"g\" d=\"M97 0V-12H101.2V0\"/><path class=\"t\" d=\"M97.6 -1.6H100.6M97.6 -3.2H100.6M97.6 -4.8H100.6M97.6 -6.4H100.6M97.6 -8.0H100.6M97.6 -9.6H100.6\"/><path class=\"g\" d=\"M102.4 0V-16H107V0\"/><path class=\"t\" d=\"M103 -1.6H106.4M103 -3.2H106.4M103 -4.8H106.4M103 -6.4H106.4M103 -8.0H106.4M103 -9.6H106.4M103 -11.2H106.4M103 -12.8H106.4M103 -14.4H106.4\"/><path class=\"g\" d=\"M108.2 0V-10H113.2V0\"/><path class=\"t\" d=\"M108.8 -1.6H112.6M108.8 -3.2H112.6M108.8 -4.8H112.6M108.8 -6.4H112.6M108.8 -8.0H112.6\"/><path class=\"l\" d=\"M-4 0H118.4\"/><path class=\"t\" d=\"M2 2.6q2.4 -1.8 4.8 0t4.8 0M94.4 2.6q2.4 -1.8 4.8 0t4.8 0t4.8 0\"/>"},
 };
 
@@ -1390,7 +1394,7 @@ const COPY = {
     { t: 'THE MARGINS', x: 172, y: 540 },
     { t: 'KERNING NARROWS', x: 300, y: 636, i: 1 },
     { t: 'LENNARDGARD', x: 412, y: 768, rune: 'lennardgard' },
-    { t: 'HERE BE REVISIONS', x: 486, y: 132 },
+    { t: 'HERE BE REVISIONS', x: 486, y: 118 },
   ],
   notes: [
     { t: 'the diploma climb', x: 238, y: 356, s: 6.5 },
@@ -1437,9 +1441,9 @@ const COPY = {
 // Finds. n is the number on the Red marker (main finds only). x, y are map units.
 const FINDS = [
   { id: 'wayfinder', n: 1, x: 102, y: 716, view: [250, 660, 150], viewPhone: [118, 716, 75, 0], mark: [148, 672], label: 'The wayfinder. Pick a craft to light up the stops that used it. Arrow keys turn it, Enter on the centre clears it.' },
-  { id: 'hoards', n: 2, x: 366, y: 354, mark: [382, 346], label: 'Hoards. Five buried chests, each near a stop.' },
+  { id: 'hoards', n: 2, x: 366, y: 354, mark: [393, 347], label: 'Hoards. Five buried chests, each near a stop.' },
   { id: 'ravens', n: 3, x: 440.5, y: 201.5, view: [442.5, 181.5, 42], mark: [462.5, 193.5], label: 'Huginn and Muninn, two ravens in a bare tree. Press to send the next raven for a thought or memory.' },
-  { id: 'serpent', n: 4, x: 500, y: 101, view: [478, 96, 50], mark: [550, 74], label: 'Jörmungandr, the world serpent. Poke it three times to feed it a deadline.' },
+  { id: 'serpent', n: 4, x: 500, y: 101, view: [478, 96, 50], mark: [555, 71], label: 'J\u00f6rmungandr, the revision loop. Poke him.' },
   { id: 'beacon', n: 5, x: 516.4, y: 425.5, view: [474, 456, 100], mark: [545, 440], label: 'The beacon. Drag or arrows aim; Enter finds the next unread note.' },
   { id: 'runestone', n: 6, x: 250, y: 516, view: [250, 500, 40], mark: [270, 492], label: 'The rune stone. Press, rub, read, then flip the sheet.' },
   { id: 'hammer', n: 0, x: 102, y: 222, view: [108, 224, 34], label: 'Mjölnir on a stone near Laurier. Press it to hold the bridge.' },
@@ -1518,16 +1522,16 @@ const FIND_COPY = {
   hoardHints: ['Dig three times, then open it.', 'Dig twice more.', 'Dig once more.', 'Open it.', 'Press it to see the piece again.'],
   huginn: 'Huginn, thought', muninn: 'Muninn, memory', ravenFrom: 'Brought back from {name}',
   reelToCome: { t: 'Reel to come', todo: 1 }, reelLabel: 'Memory reel, piece to come', rubHint: 'Rub to reveal', rubDo: 'Rub it for me',
-  serpentLeaves: [['FRI', '5 PM'], ['TODAY', 'EOD'], ['NOW', 'ASAP']], serpentFed: 'Deadline met',
+  serpentLeaves: [['FRI', '5 PM'], ['TODAY', 'EOD'], ['NOW', 'ASAP']], serpentFed: 'Shipped', serpentShippedHint: 'Shipped. Poke him to start the next one.',
   hoards: [
     { id: 'hoard-laurier', kind: 'bundle', stop: 'laurier', x: 208, y: 282, title: 'Piece to come', image: null, label: 'A scratch in the ground near Laurier. Dig three times, then open it.' },
     { id: 'hoard-hmc1', kind: 'screen', stop: 'hmc1', x: 404, y: 288, title: 'SafetyDrivesUs logo and website', image: null, label: 'A scratch in the ground near HMC Connections. Dig three times, then open it.' },
-    { id: 'hoard-hmc2', kind: 'book', stop: 'hmc2', x: 372, y: 368, title: '2020/2021 annual report', image: PIECE_IMAGE, label: 'A scratch in the ground near HMC, again. Dig three times, then open it.' },
+    { id: 'hoard-hmc2', kind: 'book', stop: 'hmc2', x: 371, y: 365, title: '2020/2021 annual report', image: PIECE_IMAGE, label: 'A scratch in the ground near HMC, again. Dig three times, then open it.' },
     { id: 'hoard-interkom', kind: 'book', stop: 'interkom', x: 452, y: 558, title: 'Melanoma Canada booklet', image: null, label: 'A scratch in the ground near Interkom. Dig three times, then open it.' },
     { id: 'hoard-lennard', kind: 'sheet', stop: 'lennard', x: 228, y: 728, title: '1 King Street W flyer', image: null, label: 'A scratch in the ground near Lennard. Dig three times, then open it.' },
   ],
   ravenTime: ['00:00', '00:05'],
-  serpentLines: [{ t: 'A deadline story goes here.', todo: 1 }, { t: 'A deadline story goes here.', todo: 1 }, { t: 'A deadline story goes here.', todo: 1 }],
+  serpentLines: [{ t: 'A shipped story goes here.', todo: 1 }, { t: 'A shipped story goes here.', todo: 1 }, { t: 'A shipped story goes here.', todo: 1 }],
   serpentLeaf: ['FRI', '5 PM'],
   beaconNotes: [
     { x: 442, y: 418, rune: 'note one', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
@@ -1573,7 +1577,7 @@ const FIND_COPY = {
   // One short line of what to do, shown above the step buttons while a find has the camera. Draft copy.
   wayPickedHint: 'Pick another craft, or press the centre to clear.',
   hints: { wayfinder: 'Pick a craft to light the stops that used it.', hoards: 'Dig three times, then open it.', ravens: 'Press to send a raven out.',
-    serpent: 'Jörmungandr, the world serpent. Poke it.', beacon: 'Press the tower for the next note, or drag to aim the beam.', runestone: 'Rub the stone to lift its carving.',
+    serpent: 'J\u00f6rmungandr, the revision loop. Poke him.', beacon: 'Press the tower for the next note, or drag to aim the beam.', runestone: 'Rub the stone to lift its carving.',
     hammer: 'Press it to hold the bridge.', mist: 'Press or wipe to clear it.', horn: 'Press to raise it, press again to sound it.',
     well: 'Drop a pebble in. The Norns answer.', longship: 'Pull three times to fly its pennant.' },
   shipLog: 'The 2023 crossing', longship: { t: '2023: Dan to write this line.', todo: 1 },
@@ -1834,7 +1838,7 @@ const FIND_PLAY = {
     tally: ['M6 -6V0', 'M8.5 -6V0', 'M11 -6V0', 'M13.5 -6V0', 'M6 -1L14 -5', 'M20 -6V0'],
     reel: { ringSvg: '<svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16"/><circle class="ring-p" cx="20" cy="20" r="16" pathLength="100" stroke-dasharray="100 100"/></svg>', timeJoin: ' / ', iris: 440, width: 360, ratio: [16, 11], motion: [1.3, 0.4, 2, 60, 1.1, 0.3, 22, 40], ring: 100, tc: '00:0{n} / {end}', labelTop: 12, slotBottom: 36 },
   },
-  serpent: {"near":34,"tongue":[0.25,0.7],"scale":1,"bounds":[-50,-30,12,12],"head":[-18,-4],"attend":140,"headLimit":10,"headEase":5,"bob":[2.5,0.5,3.4],"steps":[0.14,0.2,0.08,0.35,0.3],"jaw":20,"hungryJaw":6,"jawPivot":[-14,1.6],"lunge":24,"over":3,"overEase":1.94335,"tailOut":[3,1],"tailTwitch":[1.5,0.3],"flutter":[6,3],"mouth":[-32,1.5],"corner":[-24,-0.6],"pad":[-50,-7],"leafSize":[11,13],"leafOffset":0.6,"swallow":10,"swell":[2.4,2.1,1.8],"close":[0.1,0.25,0.08],"restAngle":-3,"breathe":[1,4.8],"wake":0.2,"padTime":0.6,"padSink":4,"hear":[8,0.8,4],"popup":[-65,-34],"drops":2,"tonguePath":"M-37 -1l-6 0m0 0l-3 -2m3 2l-3 2","shutPath":"M-22.6 -4.6Q-18 -1.8 -12 -4.2","snout":[-37,-1],"tailPath":"M-40.8 3.5L-39.3 3.3L-37 3.1L-35 2.8L-33.3 2.6L-31.9 2.5L-32.1 0.5L-33.5 0.7L-35.2 0.8L-37.2 1L-39.5 1.2L-41.1 1.4Z","padBoard":"M-6 -7H6V7H-6Z M-3.5 -7V-9M3.5 -7V-9","leafPath":"M-5.5 -6.5H5.5V6.5H-5.5Z","padWave":"M-60 5q3 -2 6 0m5 0q3 -2 6 0","binding":[-5.5,-6.5,11,1.6],"rings":[-3,3,-5.7,0.45],"dayY":-0.5,"timeY":4,"daySize":3,"timeSize":3.6,"weight":700,"hit":[-50,-30,62,42]},
+  serpent: {"near":34,"scale":1,"bounds":[-70,-34,34,38],"head":[-17.6,-8.2],"attend":140,"headLimit":4,"headEase":5,"bob":[2.5,0.5,3.4],"jaw":20,"jawPivot":[8,8],"swell":[2.4,2.4,2.4],"restAngle":0,"breathe":[0.6,4.8],"hear":[8,0.8,4],"popup":[-65,-34],"hit":[-50,-30,62,42],"bite":0.4,"lap":2.4,"spit":0.28,"type":0.48,"open":0.6,"wake":0.6,"fileAt":[-66,-11],"returnAt":[-69,-11],"shipAt":[-70,-19],"enterAt":[-80,-5],"filePhone":13,"nameDy":-11.5,"nameSize":5,"shipName":[2,-1,4.6],"shippedJaw":15,"queueRest":0.4,"files":["pdf","mp4","aep","fig"],"lapStops":[0,0.3,0.7,1],"lapPlaces":[0,0.09,0.91,1],"lapSlopes":[0.14,0.65,0.65,0.14]},
   beacon: { rad: 200, read: 1.2, flame: [1, 1.1, 1.2, 1.3, 1.4], leap: [3, 0.3], embers: 1.5, turn: 0, reach: 1, idle: 0.7, snap: 0.4,
     scale: 0.6, origin: [0, -34], flameFoot: [0, -31], glowR: 8, glowAlpha: 0.15, flicker: [0.08, 11, 0.05, 17.3, 0.12, 13.1], baseAngle: 196, sweep: 0.5, baseReach: 230, manual: 6, arrow: 6, slop: 6, notePhone: 1.7, soft: 4, wedgeSteps: 32, rest: 0.55, sparkN: 6, burstN: 14, noteScale: 1.12, flash: 0.3, hear: [0.6, 0.3, 1.3, 0.3], englishEase: 5, noteEase: 6, noteFont: 4.6, todoFont: 3.4, runeY: -7, lineY: 7, todoY: 1, runeSize: 4.2,
   },
@@ -1845,7 +1849,7 @@ const FIND_PLAY = {
   },
   drawings: {
     wayfinder: `<circle class="hit" r="58"/><circle class="o" r="42"/><circle class="t" r="34.4"/><g class="wf-runes"><path class="rn" transform="rotate(8) translate(-0.7 -40.5)" d="M0 0L0 4.6M0 0L1.4 1.2M1.4 1.2L0.8 1.7M0 4.6L1.4 3.5M1.4 3.5L0.8 2.9"/><path class="rn" transform="rotate(24.4) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(40.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(57.1) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(73.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(89.8) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3"/><path class="rn" transform="rotate(106.2) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(122.5) translate(-0.7 -40.5)" d="M0 0L0 4.6L1.4 0L1.4 4.6L0 0"/><path class="rn" transform="rotate(138.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(155.3) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(171.6) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.7M1.4 4.6L1.4 0L0 1.7"/><path class="rn" transform="rotate(188) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(204.4) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(220.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(237.1) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(253.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(269.8) translate(-0.7 -40.5)" d="M1.4 0L0 1.7L1.4 2.9L0 4.6"/><path class="rn" transform="rotate(286.2) translate(-0.6 -40.5)" d="M1.3 0L0 1.2L1.3 2.3"/><path class="rn" transform="rotate(302.5) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(318.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(335.3) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(351.6) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/></g><g class="wf-arm" data-i="0" transform="rotate(0)"><path class="l" d="M0 0V-31.08M0 -31.08l-4 -4M0 -31.08l4 -4M0 -31.08v-5"/></g><g class="wf-arm" data-i="1" transform="rotate(90)"><path class="l" d="M0 0V-31.08M0 -34.08m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/></g><g class="wf-arm" data-i="2" transform="rotate(180)"><path class="l" d="M0 0V-31.08M-4 -27.08L0 -33.08L4 -27.08"/></g><g class="wf-arm" data-i="3" transform="rotate(270)"><path class="l" d="M0 0V-31.08M-5 -31.08H5M-3 -35.08H3"/></g><g transform="rotate(45)"><path class="l" d="M0 0V-17.64M0 -17.64l-3 -3"/></g><g transform="rotate(135)"><path class="l" d="M0 0V-17.64M0 -17.64l3 -3"/></g><g transform="rotate(225)"><path class="l" d="M0 0V-17.64M-3 -17.64H3"/></g><g transform="rotate(315)"><path class="l" d="M0 0V-17.64M0 -17.64m-1.5 -2a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0"/></g><text x="0" y="-66" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[0]}</text><text x="60" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="start" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[1]}</text><text x="0" y="90" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[2]}</text><text x="-60" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="end" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[3]}</text><g class="wf-needle"><path class="pf" d="M0 -26L3 0L-3 0Z"/><path class="o" d="M0 26L3 0L-3 0Z"/></g><circle class="o wf-hub" r="3.4"/><circle class="t wf-all" r="{{way.ring.0}}" opacity="0"/><text x="0" y="-112" font-size="{{way.tally.1}}" fill="${C.note}" font-weight="500" text-anchor="middle" letter-spacing="{{way.tally.2}}" class="wf-tally h"></text>`,
-    serpent: `<g class="jg-tail"><path class="o" d="{{serpent.tailPath}}"/></g><g class="jg-head"><g class="jg-skull"><path fill="${C.ink}" stroke="none" d="M0 -3.2C-3 -6.4 -7 -8.8 -12 -9.4C-16 -9.8 -20 -9.6 -23 -8.4C-26 -7.2 -29 -6.4 -32 -6.6C-34 -6.8 -35.6 -8 -36.6 -7.6C-37.8 -7 -37.6 -5 -36.2 -3.8C-35 -2.8 -33.4 -2.4 -32 -2.4L-24 -.6L4 1.6L4 -3.2Z"/><path class="l" d="M0 -3.2C-3 -6.4 -7 -8.8 -12 -9.4C-16 -9.8 -20 -9.6 -23 -8.4C-26 -7.2 -29 -6.4 -32 -6.6C-34 -6.8 -35.6 -8 -36.6 -7.6C-37.8 -7 -37.6 -5 -36.2 -3.8C-35 -2.8 -33.4 -2.4 -32 -2.4L-24 -.6"/><path class="l" d="M-7 -8.4C-4 -12.6 1 -15.4 7 -15C11 -14.6 13 -11.8 11.6 -9.4C10.4 -7.6 7.8 -7.8 7.4 -9.6C7.2 -10.8 8.6 -11.4 9.4 -10.6"/><g class="jg-eye"><path class="l" d="M-22.6 -4.6C-21 -6.4 -17.6 -6.6 -15.6 -5.2C-14.6 -4.6 -13.4 -4.2 -12 -4.2C-13.6 -3 -15.4 -2.6 -17.2 -2.8C-19.4 -3 -21.4 -3.6 -22.6 -4.6Z"/><circle class="pf" cx="-18.6" cy="-4.4" r="1"/></g><path class="l jg-shut" d="{{serpent.shutPath}}" opacity="0"/><path class="l" d="M-24 -.6C-20 1.6 -15 2.2 -11 1C-8.6 .2 -8 -2.2 -9.8 -2.8C-11.2 -3.2 -12 -1.8 -11 -1.2M-33.6 -6.6C-33 -5.6 -32.2 -5.2 -31.4 -5.4"/><path class="pf" d="M-30.6 -2.2L-29.6 .2L-28.8 -1.9ZM-27 -1.4L-26.2 .4L-25.4 -1.1Z"/><path class="t" d="M-6 -6.6C-4 -4.2 -2.6 -1.6 -2 1.2M-10 -8.6C-8 -6 -6.8 -3 -6.4 0"/></g><g class="jg-jaw"><path fill="${C.ink}" stroke="none" d="M-24 -.6L-33.6 1.8C-35 2.2 -35.6 3.4 -35 4.4C-33.6 6.4 -29.6 7.4 -25 7.6C-20 7.8 -14 8 -9 7C-5 6.2 -2 5 0 3.2L4 3.2L4 -.6Z"/><path class="l" d="M-24 -.6L-33.6 1.8C-35 2.2 -35.6 3.4 -35 4.4C-33.6 6.4 -29.6 7.4 -25 7.6C-20 7.8 -14 8 -9 7C-5 6.2 -2 5 0 3.2"/><path class="pf" d="M-31.6 1.6L-30.8 -.6L-29.9 1.3Z"/></g><path class="l jg-tongue" d="{{serpent.tonguePath}}" opacity="0"/></g><g class="jg-pad"><path class="g" d="{{serpent.padBoard}}"/><g class="jg-leaf" data-i="2"><path class="o" d="{{serpent.leafPath}}"/><rect class="pf" x="{{serpent.binding.0}}" y="{{serpent.binding.1}}" width="{{serpent.binding.2}}" height="{{serpent.binding.3}}"/><circle class="o" cx="{{serpent.rings.0}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><circle class="o" cx="{{serpent.rings.1}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><text text-anchor="middle" y="{{serpent.dayY}}" font-size="{{serpent.daySize}}" font-weight="{{serpent.weight}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[2][0]}</text><text text-anchor="middle" y="{{serpent.timeY}}" font-size="{{serpent.timeSize}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[2][1]}</text></g><g class="jg-leaf" data-i="1"><path class="o" d="{{serpent.leafPath}}"/><rect class="pf" x="{{serpent.binding.0}}" y="{{serpent.binding.1}}" width="{{serpent.binding.2}}" height="{{serpent.binding.3}}"/><circle class="o" cx="{{serpent.rings.0}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><circle class="o" cx="{{serpent.rings.1}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><text text-anchor="middle" y="{{serpent.dayY}}" font-size="{{serpent.daySize}}" font-weight="{{serpent.weight}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[1][0]}</text><text text-anchor="middle" y="{{serpent.timeY}}" font-size="{{serpent.timeSize}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[1][1]}</text></g><g class="jg-leaf" data-i="0"><path class="o" d="{{serpent.leafPath}}"/><rect class="pf" x="{{serpent.binding.0}}" y="{{serpent.binding.1}}" width="{{serpent.binding.2}}" height="{{serpent.binding.3}}"/><circle class="o" cx="{{serpent.rings.0}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><circle class="o" cx="{{serpent.rings.1}}" cy="{{serpent.rings.2}}" r="{{serpent.rings.3}}"/><text text-anchor="middle" y="{{serpent.dayY}}" font-size="{{serpent.daySize}}" font-weight="{{serpent.weight}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[0][0]}</text><text text-anchor="middle" y="{{serpent.timeY}}" font-size="{{serpent.timeSize}}" fill="${C.paper}">${FIND_COPY.serpentLeaves[0][1]}</text></g></g><path class="t" d="{{serpent.padWave}}"/><rect class="hit" x="{{serpent.hit.0}}" y="{{serpent.hit.1}}" width="{{serpent.hit.2}}" height="{{serpent.hit.3}}"/>`,
+    serpent: "<g class=\"jo-head jg-head\">\n<g class=\"jo-jaw jg-jaw\" transform=\"rotate(0 8 8)\"><path fill=\"#151314\" d=\"M-12 2.5L-40 6C-43.6 6.4 -45.4 8 -44.6 9.8C-43 12.2 -37 12.8 -31 12.6C-21 12.4 -10 12 0 10.6C10 9.4 20 8.6 32 8L32 0Z\"/><path class=\"l\" d=\"M-12 2.5L-40 6C-43.6 6.4 -45.4 8 -44.6 9.8C-43 12.2 -37 12.8 -31 12.6C-21 12.4 -10 12 0 10.6C6 9.9 11 9.4 16 9\"/><path class=\"l\" d=\"M-43 11C-46 13 -47.6 16.6 -45 18.4C-43 19.8 -40.4 18 -41.4 16.2C-42.2 15 -43.8 15.6 -43.4 16.8\"/><path class=\"pf\" d=\"M-38.6 5.7L-37.4 1.8L-36 5.4Z\"/><g class=\"jd\"><path class=\"t\" d=\"M-36 9.6C-28 10.4 -16 10 -4 8.2\"/></g></g>\n<path fill=\"#151314\" d=\"M33 -8C25 -14.6 13 -18.4 1 -17.8C-9 -17.2 -17 -13.6 -25 -10.2C-33 -7 -41 -7.6 -47 -8.8C-51 -9.6 -54.6 -7.2 -54 -3.8C-53.6 -1.2 -51 .4 -48 .2L-40 -.2C-32 -.8 -22 .4 -12 2.5L33 8Z\"/>\n<path class=\"l\" d=\"M33 -8C25 -14.6 13 -18.4 1 -17.8C-9 -17.2 -17 -13.6 -25 -10.2C-33 -7 -41 -7.6 -47 -8.8C-51 -9.6 -54.6 -7.2 -54 -3.8C-53.6 -1.2 -51 .4 -48 .2L-40 -.2C-32 -.8 -22 .4 -12 2.5\"/>\n<path class=\"l\" d=\"M-46.4 -8.7C-50.6 -10.4 -55.6 -13.4 -54.6 -18C-53.8 -21.2 -49 -21 -49 -17.6C-49 -15.6 -51.6 -15.4 -51.8 -17.2\"/>\n<path class=\"pf\" d=\"M-47.6 0L-46 5.6L-44 -.1ZM-41 -.2L-39.9 3.4L-38.6 -.3ZM-34.6 -.5L-33.7 2.4L-32.6 -.3Z\"/>\n<g class=\"jg-eye\"><path class=\"l\" d=\"M-28.5 -7.2C-24 -12.2 -15 -12.8 -9.6 -8C-14 -4.2 -23 -3.8 -28.5 -7.2Z\"/><circle class=\"pf\" cx=\"-17.6\" cy=\"-8.2\" r=\"1.7\"/></g><path class=\"l jg-shut\" d=\"M-28.5 -7.2Q-19 -2.5 -9.6 -8\" opacity=\"0\"/>\n<path class=\"l\" d=\"M-31 -9.4C-25 -15.4 -12 -16.2 -5 -10.4\"/>\n<path class=\"l\" d=\"M-12 2.5C-6 5.2 1 4.4 2.2 0C3 -3.4 -1.6 -5 -3.4 -2.4C-4.6 -.6 -2.8 1 -1.6 .2\"/>\n<path fill=\"#151314\" d=\"M-7 -16.6C0 -28 13 -35 25 -33C32 -31.8 34.6 -25.6 31 -22.6C24.6 -27.6 14 -24 9 -16Z\"/><path class=\"l\" d=\"M-7 -16.6C0 -28 13 -35 25 -33C32 -31.8 34.6 -25.6 31 -22.6C28.4 -20.6 25 -22.6 26.2 -25.4C27 -27.2 29.6 -26.8 29.2 -25M9 -16.4C13 -22.6 19 -26.6 25.6 -27.2\"/>\n<path class=\"l\" d=\"M14 -15.2C19 -20 25 -21.4 30.6 -19.2C33.4 -18 33.2 -14.6 30.8 -14.4\"/>\n<path class=\"l\" d=\"M16 9C22 8.6 28 8.2 33 8\"/><path class=\"l\" d=\"M19 -13.4C23 -5 23 3 20 9.6M25.4 -11.2C28.6 -4 28.6 2 26 8.8\"/>\n<g class=\"jd\"><circle class=\"pf\" cx=\"23.6\" cy=\"-6\" r=\".7\"/><circle class=\"pf\" cx=\"24.6\" cy=\"-1\" r=\".7\"/><circle class=\"pf\" cx=\"24\" cy=\"4\" r=\".7\"/><path class=\"t\" d=\"M-44 -5.4C-36 -4 -30 -4.6 -24 -7M2 -14.6C8 -13.6 13 -11 17 -7.6M3 -24C8 -28 14 -30 21 -30\"/><path class=\"t\" d=\"M-50.4 -5.6C-49.6 -4.6 -48.6 -4.4 -47.8 -4.8\"/></g></g><g class=\"jf jg-file\" transform=\"translate(-66 -11)\"><path class=\"o\" d=\"M-6 -7.5H2.5L6 -4V7.5H-6Z\"/><path class=\"l\" d=\"M2.5 -7.5V-4H6\"/><path class=\"t\" d=\"M-3.4 -2H3.4M-3.4 .8H3.4M-3.4 3.6H1\"/><g class=\"jf-stamp\" opacity=\"0\" transform=\"translate(.5 1.2) rotate(-14)\"><rect x=\"-13\" y=\"-3.4\" width=\"26\" height=\"6.8\" rx=\"1\" fill=\"#F7F6F3\" stroke=\"#151314\" stroke-width=\".7\"/><rect x=\"-12.1\" y=\"-2.5\" width=\"24.2\" height=\"5\" rx=\".5\" fill=\"none\" stroke=\"#151314\" stroke-width=\".25\"/><text text-anchor=\"middle\" y=\"1.55\" font-size=\"4.1\" font-weight=\"800\" letter-spacing=\".55\" fill=\"#151314\">SHIPPED</text></g></g><text class=\"jf-name\" x=\"-66\" y=\"-22.5\" text-anchor=\"middle\" font-size=\"5\" fill=\"#F7F6F3\" font-weight=\"500\"><tspan class=\"jf-base\">final</tspan><tspan class=\"jf-added\" font-weight=\"800\" text-decoration=\"underline\"></tspan><tspan class=\"jf-ext\">.pdf</tspan></text><rect class=\"hit\" x=\"-50\" y=\"-30\" width=\"62\" height=\"42\"/>",
     beacon: `<circle class="bc-glow" cx="{{beacon.flameFoot.0}}" cy="{{beacon.flameFoot.1}}" r="{{beacon.glowR}}" fill="url(#glow)" opacity="0"/><g class="bc-light" clip-path="url(#beacon-frame)"><g class="bc-beam" transform="translate(0 -34) rotate(0)"><path d="M0 0L-230 -44.7L-230 44.7Z" fill="url(#beam)"/></g></g><rect class="hit" x="-26" y="-66" width="52" height="70"/><path class="g" d="M-5.8 0L-4 -3L-1 -2L1 -4L3 -2L5.8 0Z"/><path class="g" d="M-5.6 -3L-4.2 -24H4.2L5.6 -3Z"/><path class="t" d="M-5.1 -9H5.1M-4.6 -17H4.6M-1 -3V-9M2 -9V-17M-2 -17V-24"/><rect class="o" x="-1.3" y="-9" width="2.6" height="6"/><path class="l" d="M-6 -24H6M-3 -24L-4 -30M3 -24L4 -30"/><path class="o" d="M-5.5 -31L-4 -26H4L5.5 -31Z"/><path class="pf bc-flame" d="M-2 -31Q-2.5 -34 0 -37Q.7 -34 1.7 -33Q2.5 -32 2 -31Z"/>`,
     runestone: `<rect class="hit" x="-20" y="-66" width="40" height="70"/><path class="g" d="M-14 0L-16 -40Q-12 -60 0 -62Q13 -60 15 -38L13 0Z"/><path d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3" fill="none" stroke="${C.paper}" stroke-width="4" stroke-linecap="round"/><path d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3" fill="none" stroke="${C.land}" stroke-width="2.2" stroke-linecap="round"/><path class="l rs-trace" d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3"/><circle class="pf" cx="5" cy="-3" r="1"/><g transform="translate(2.2 -9) rotate(-90)"><path class="rn" d="M0 0L0 3.4M0 1.4L1.1 0.4M0 2.3L1.1 1.4M2.2 0L2.2 3.4M3.2 3.4L3.2 0L4.3 0.8L3.2 1.7L4.3 3.4M6.5 0L5.4 1.3L6.5 2.1L5.4 3.4M8.1 0L8.1 3.4M7.5 0.8L8.1 0L8.6 0.8M13.1 0L12.1 1.3L13.1 2.1L12.1 3.4M15.2 0L14.2 0.8L15.2 1.7M16.2 3.4L16.2 0L16.8 0.8L17.3 0L17.3 3.4M18.9 0L18.9 3.4M18.4 0.8L18.9 0L19.5 0.8M21.5 0L20.5 0.8L21.5 1.7M22.6 0L22.6 3.4M23.6 0L23.6 3.4M22.6 1.3L23.6 2.1M27.1 0L27.1 3.4M27.1 1.4L28.2 0.4M27.1 2.3L28.2 1.4M29.2 0L29.2 3.4M30.9 0L30.9 3.4M30.3 1.3L31.4 2.1M32.5 0L32.5 3.4M32.5 0L33.5 0.8M32.5 1.1L33.5 2M34.6 3.4L34.6 0L35.7 0.8M40.1 0L39.2 0.8L40.1 1.7M41.2 3.4L41.2 0L42.3 1.1L42.3 3.4M43.9 0L43.9 3.4M43.3 0.8L43.9 0L44.4 0.8"/></g><path class="t" d="M-20 0H20"/>`,
   },
@@ -1872,9 +1876,9 @@ const FIND_PLAY = {
     pebbleR: 1.2, pebbleFrom: [-30, -34], pebbleTime: 0.45, arc: 16, anchor: [0, 26],
     rings: 3, ringR: [30, 15], ringTime: 0.9, ringGap: 0.18, ringScale: [0.2, 1.25], ringAlpha: 0.9,
     drops: 6, splash: { speed: [22, 22], dir: [-120, -60], g: 80, life: [0.45, 0.6] },
-    trunk: [[304, 373], [304, 323]], trunkTime: 0.4, starSize: 2.4, starTime: 0.3, starGap: 0.06, starOver: 1.3,
+    trunk: [[297, 373], [297, 323]], trunkTime: 0.4, starSize: 2.4, starTime: 0.3, starGap: 0.06, starOver: 1.3,
     twinkle: [0.6, 1], twinkleTime: [3.1, 4.7, 5.3, 3.9, 6.1],
-    stars: [[[-44,-46],[-24,-60],[-2,-64],[23,-61],[50,-48]],[[-48,-39],[-30,-53],[-10,-56],[29,-52],[58,-40]],[[-39,-57],[-17,-69],[8,-69],[37,-63],[43,-40]]],
+    stars: [[[-45,-50],[-28,-62],[-7,-67],[25,-64],[53,-54]],[[-54,-40],[-27,-45],[0,-55],[29,-45],[62,-49]],[[-36,-59],[-15,-66],[5,-54],[37,-63],[49,-40]]],
   },
   ship: { near: 34, rad: 38, scale: 0.55, anchor: [0, -34], rock: [2.2, 1.3, 0.8, 1.9], breathe: [0.04, 1.7],
     pull: [-18, 14, 0.35, 0.5], rail: [0, -5], surge: 3, pulls: 3, window: 4, pennantTime: 0.4, ripple: [6, 2.5],
@@ -1888,394 +1892,1033 @@ const FIND_PLAY = {
 };
 
 // Round 7 C1: ported reference paths and independent layout/motion tuning.
+// COMB-Q, 2026-11-26: approved old ash; geometry follows its foliage and tapered roots.
 const YGG = {
-  canopy: 'M-58 -32Q-66 -33 -64 -40L-66 -42Q-66 -49 -59 -51L-61 -54Q-59 -62 -51 -60Q-51 -68 -42 -66L-40 -69Q-34 -72 -29 -69Q-27 -77 -19 -74L-17 -77Q-12 -82 -5 -77Q2 -84 10 -77L13 -79Q20 -78 23 -72Q31 -78 37 -71L41 -73Q48 -70 48 -64Q55 -68 60 -60L58 -57Q66 -58 65 -50L68 -48Q72 -42 66 -39L69 -35Q66 -30 62 -33L59 -34Q58 -30 54 -32Q50 -29 47 -32L43 -34Q40 -31 37 -34Q34 -32 31 -36L27 -36Q25 -33 23 -38L19 -39Q16 -36 13 -41L9 -42Q6 -39 3 -43Q0 -40 -3 -43L-7 -44Q-10 -39 -13 -42Q-16 -40 -18 -41L-22 -38Q-25 -36 -28 -38L-32 -35Q-35 -32 -38 -35Q-41 -30 -45 -33L-48 -33Q-52 -28 -55 -32L-58 -32Z',
-  windows: '',
-  boughs: 'M-54 -46Q-46 -52 -36 -48Q-33 -44 -28 -45M-43 -60Q-31 -65 -22 -58M-14 -69Q-5 -73 4 -67Q10 -62 18 -64M29 -62Q39 -58 42 -50M34 -43Q43 -48 54 -41',
-  hatch: 'M-54 -39l3 -4M-49 -38l3 -4M-45 -54l3 -4M-40 -54l3 -4M-29 -64l3 -4M-24 -63l3 -4M-7 -57l3 -4M-2 -56l3 -4M8 -71l3 -4M13 -70l3 -4M30 -54l3 -4M35 -53l3 -4M48 -47l3 -4M53 -46l3 -4',
-  masses: [
-    [[-60,-37],[-63,-42],[-60,-47],[-55,-49],[-51,-46],[-47,-50],[-42,-48],[-38,-50],[-34,-47],[-35,-42],[-32,-39],[-37,-35],[-38,-31],[-45,-32],[-49,-29],[-54,-32],[-59,-32]],
-    [[-53,-55],[-52,-61],[-47,-62],[-45,-67],[-39,-65],[-35,-70],[-29,-68],[-27,-71],[-23,-67],[-23,-62],[-20,-59],[-24,-56],[-25,-52],[-31,-51],[-35,-55],[-40,-53],[-43,-56],[-49,-53]],
-    [[-19,-71],[-19,-75],[-13,-76],[-9,-80],[-4,-78],[1,-81],[7,-78],[11,-79],[15,-75],[16,-74],[15,-69],[17,-66],[14,-64],[14,-60],[8,-61],[5,-57],[-1,-59],[-5,-55],[-11,-53],[-15,-57],[-14,-63],[-18,-66]],
-    [[19,-60],[22,-66],[27,-64],[30,-67],[33,-63],[38,-65],[40,-61],[38,-57],[41,-54],[37,-51],[37,-47],[32,-46],[28,-48],[24,-45],[19,-48],[16,-47],[15,-52],[18,-55]],
-    [[43,-58],[48,-61],[52,-58],[57,-59],[60,-54],[64,-53],[65,-48],[69,-45],[66,-41],[68,-37],[63,-34],[62,-30],[57,-31],[53,-28],[49,-31],[44,-30],[42,-35],[39,-37],[41,-42],[40,-47],[44,-50]],
-  ],
-  massBump: [.16, .28],
-  massFrom: [[-23,-43],[-22,-46],[-2,-51],[24,-46],[24,-45]],
-  branches: 'M-23 -43Q-34 -43 -43 -49M-22 -46Q-32 -51 -36 -57M-2 -51Q-8 -58 -9 -68M2 -51Q9 -59 17 -67M24 -45Q39 -43 52 -49M24 -46Q34 -55 43 -61M-10 -37Q-22 -36 -33 -39M10 -36Q22 -34 36 -38',
-  ashHatch: 'M-53 -43l8 -9m-6 1l-4 -1m6 -1l-1 -4M-42 -39l9 -10m-7 7l-4 -1m7 -2l-1 -4M-49 -57l7 -3m-4 2l-2 -3M-13 -61l7 -10m-5 7l-4 -1m7 -3l-1 -4M-3 -56l8 -10m-6 7l-3 -1m6 -3l-1 -4M13 -54l10 -7m-7 5l-3 -2m6 -1v-4M6 -72l6 -3M43 -59l8 -6m-6 5l-3 -2m6 -1l1 -3M48 -40l8 -9m-6 6l-3 -1m6 -1v-4M59 -37l6 -8m-4 5l-3 -1M54 -53l8 -3',
   "crown": [
     [
-      -50,
-      -31
-    ],
-    [
-      -59,
-      -36
-    ],
-    [
-      -64,
-      -45
-    ],
-    [
-      -61,
-      -55
-    ],
-    [
-      -53,
-      -63
-    ],
-    [
-      -43,
-      -70
-    ],
-    [
-      -31,
-      -73
-    ],
-    [
-      -17,
-      -77
-    ],
-    [
-      -2,
-      -79
-    ],
-    [
-      13,
+      -12,
       -78
     ],
     [
-      27,
+      -9,
+      -78
+    ],
+    [
+      -7.5,
+      -76.5
+    ],
+    [
+      -5.5,
+      -78
+    ],
+    [
+      -3.5,
+      -78
+    ],
+    [
+      -2.5,
+      -77
+    ],
+    [
+      -0.5,
+      -78
+    ],
+    [
+      2.5,
+      -78
+    ],
+    [
+      5,
+      -75.5
+    ],
+    [
+      10,
+      -75.5
+    ],
+    [
+      11,
+      -73.5
+    ],
+    [
+      14.5,
+      -74
+    ],
+    [
+      16,
       -76
     ],
     [
-      41,
-      -71
+      18.5,
+      -75.5
     ],
     [
-      54,
-      -66
+      20,
+      -77
     ],
     [
-      65,
-      -57
+      23,
+      -77
     ],
     [
-      71,
-      -47
+      25,
+      -76
     ],
     [
-      71,
-      -38
+      26.5,
+      -78
     ],
     [
-      63,
-      -31
+      30.5,
+      -78
     ],
     [
-      50,
-      -28
+      32,
+      -76
+    ],
+    [
+      33.5,
+      -76
+    ],
+    [
+      34,
+      -77
     ],
     [
       37,
-      -31
+      -77
     ],
     [
-      24,
-      -34
+      39,
+      -75.5
     ],
     [
-      12,
+      39,
+      -74.5
+    ],
+    [
+      43,
+      -75
+    ],
+    [
+      46,
+      -72.5
+    ],
+    [
+      48,
+      -72.5
+    ],
+    [
+      50,
+      -71
+    ],
+    [
+      50.5,
+      -68.5
+    ],
+    [
+      52,
+      -67.5
+    ],
+    [
+      53.5,
+      -64
+    ],
+    [
+      55,
+      -63.5
+    ],
+    [
+      56,
+      -65
+    ],
+    [
+      58,
+      -65
+    ],
+    [
+      59.5,
+      -63
+    ],
+    [
+      61.5,
+      -64
+    ],
+    [
+      66,
+      -63.5
+    ],
+    [
+      67.5,
+      -62
+    ],
+    [
+      68,
+      -60
+    ],
+    [
+      71,
+      -58.5
+    ],
+    [
+      71,
+      -55
+    ],
+    [
+      72,
+      -53
+    ],
+    [
+      73.5,
+      -53
+    ],
+    [
+      74.5,
+      -52
+    ],
+    [
+      75.5,
+      -49.5
+    ],
+    [
+      75.5,
+      -45.5
+    ],
+    [
+      73.5,
+      -43
+    ],
+    [
+      72,
+      -42.5
+    ],
+    [
+      71.5,
+      -40.5
+    ],
+    [
+      68,
+      -40.5
+    ],
+    [
+      65.5,
+      -38.5
+    ],
+    [
+      62.5,
+      -39.5
+    ],
+    [
+      58.5,
       -39
     ],
     [
-      0,
-      -41
+      57,
+      -35.5
     ],
     [
-      -12,
-      -38
-    ],
-    [
-      -24,
+      52.5,
       -34
     ],
     [
+      51.5,
+      -32
+    ],
+    [
+      49,
+      -31.5
+    ],
+    [
+      47,
+      -33.5
+    ],
+    [
+      43,
+      -33
+    ],
+    [
+      41.5,
+      -34
+    ],
+    [
+      40.5,
+      -40.5
+    ],
+    [
+      38.5,
+      -37.5
+    ],
+    [
+      36.5,
+      -36.5
+    ],
+    [
+      33.5,
+      -36.5
+    ],
+    [
+      31.5,
+      -35
+    ],
+    [
+      28,
+      -35
+    ],
+    [
+      25,
+      -37.5
+    ],
+    [
+      22,
+      -37
+    ],
+    [
+      20.5,
+      -39.5
+    ],
+    [
+      17.5,
+      -41.5
+    ],
+    [
+      17,
+      -46.5
+    ],
+    [
+      19.5,
+      -50
+    ],
+    [
+      22.5,
+      -50.5
+    ],
+    [
+      23,
+      -52
+    ],
+    [
+      21.5,
+      -51
+    ],
+    [
+      19,
+      -51
+    ],
+    [
+      17.5,
+      -52.5
+    ],
+    [
+      17.5,
+      -51.5
+    ],
+    [
+      16.5,
+      -50.5
+    ],
+    [
+      15,
+      -50.5
+    ],
+    [
+      12,
+      -47
+    ],
+    [
+      8.5,
+      -47
+    ],
+    [
+      6.5,
+      -45
+    ],
+    [
+      3.5,
+      -46
+    ],
+    [
+      2.5,
+      -44.5
+    ],
+    [
+      -0.5,
+      -44.5
+    ],
+    [
+      -2,
+      -45.5
+    ],
+    [
+      -2,
+      -46.5
+    ],
+    [
+      -3.5,
+      -46.5
+    ],
+    [
+      -4.5,
+      -45.5
+    ],
+    [
+      -8.5,
+      -45.5
+    ],
+    [
+      -11,
+      -48
+    ],
+    [
+      -11,
+      -49
+    ],
+    [
+      -14.5,
+      -49
+    ],
+    [
+      -16,
+      -50.5
+    ],
+    [
+      -16.5,
+      -53
+    ],
+    [
+      -19,
+      -52.5
+    ],
+    [
+      -22.5,
+      -53.5
+    ],
+    [
+      -23,
+      -52.5
+    ],
+    [
+      -22,
+      -51.5
+    ],
+    [
+      -20,
+      -52
+    ],
+    [
+      -17.5,
+      -49.5
+    ],
+    [
+      -16,
+      -49.5
+    ],
+    [
+      -14.5,
+      -48
+    ],
+    [
+      -14,
+      -41.5
+    ],
+    [
+      -16,
+      -40.5
+    ],
+    [
+      -19,
+      -37
+    ],
+    [
+      -22.5,
+      -38.5
+    ],
+    [
+      -23,
+      -37.5
+    ],
+    [
+      -27,
+      -38
+    ],
+    [
+      -29,
+      -36
+    ],
+    [
+      -31.5,
+      -36
+    ],
+    [
+      -34,
+      -38
+    ],
+    [
+      -34.5,
+      -39.5
+    ],
+    [
+      -36.5,
+      -39.5
+    ],
+    [
+      -39,
+      -41.5
+    ],
+    [
+      -39.5,
+      -45
+    ],
+    [
+      -42,
+      -45
+    ],
+    [
+      -43,
+      -43
+    ],
+    [
+      -45.5,
+      -42.5
+    ],
+    [
+      -45,
+      -38
+    ],
+    [
+      -48,
+      -34
+    ],
+    [
+      -50.5,
+      -34
+    ],
+    [
+      -52,
+      -32
+    ],
+    [
+      -56,
+      -33
+    ],
+    [
+      -58,
+      -31.5
+    ],
+    [
+      -60.5,
+      -31.5
+    ],
+    [
+      -63,
+      -33.5
+    ],
+    [
+      -63.5,
+      -35.5
+    ],
+    [
+      -65.5,
+      -37
+    ],
+    [
+      -65.5,
+      -40
+    ],
+    [
+      -64,
+      -41
+    ],
+    [
+      -64,
+      -44.5
+    ],
+    [
+      -62.5,
+      -46
+    ],
+    [
+      -64.5,
+      -48.5
+    ],
+    [
+      -65.5,
+      -55
+    ],
+    [
+      -64.5,
+      -56.5
+    ],
+    [
+      -62.5,
+      -57
+    ],
+    [
+      -61,
+      -60
+    ],
+    [
+      -57.5,
+      -60.5
+    ],
+    [
+      -54.5,
+      -63.5
+    ],
+    [
+      -51.5,
+      -63.5
+    ],
+    [
+      -49.5,
+      -62
+    ],
+    [
+      -49,
+      -65
+    ],
+    [
+      -46,
+      -66
+    ],
+    [
+      -45.5,
+      -70
+    ],
+    [
+      -43.5,
+      -72
+    ],
+    [
+      -40.5,
+      -72.5
+    ],
+    [
+      -40.5,
+      -73.5
+    ],
+    [
+      -38.5,
+      -75
+    ],
+    [
       -37,
-      -30
+      -75
+    ],
+    [
+      -35.5,
+      -73.5
+    ],
+    [
+      -33,
+      -75
+    ],
+    [
+      -31,
+      -75
+    ],
+    [
+      -28,
+      -72.5
+    ],
+    [
+      -26,
+      -74
+    ],
+    [
+      -20,
+      -73.5
+    ],
+    [
+      -19,
+      -75
+    ],
+    [
+      -16.5,
+      -76
+    ],
+    [
+      -13.5,
+      -75.5
+    ],
+    [
+      -13.5,
+      -76.5
+    ],
+    [
+      -12,
+      -77.5
     ]
   ],
-  "layers": [
-    [
-      [
-        -55,
-        -48
-      ],
-      [
-        -42,
-        -55
-      ],
-      [
-        -28,
-        -58
-      ],
-      [
-        -14,
-        -60
-      ],
-      [
-        -2,
-        -63
-      ]
-    ],
-    [
-      [
-        6,
-        -66
-      ],
-      [
-        20,
-        -68
-      ],
-      [
-        34,
-        -65
-      ],
-      [
-        48,
-        -59
-      ],
-      [
-        60,
-        -51
-      ]
-    ],
-    [
-      [
-        -48,
-        -38
-      ],
-      [
-        -34,
-        -44
-      ],
-      [
-        -20,
-        -46
-      ],
-      [
-        -6,
-        -49
-      ],
-      [
-        8,
-        -50
-      ],
-      [
-        22,
-        -48
-      ],
-      [
-        36,
-        -45
-      ],
-      [
-        50,
-        -42
-      ],
-      [
-        62,
-        -40
-      ]
-    ],
-    [
-      [
-        -30,
-        -64
-      ],
-      [
-        -18,
-        -68
-      ],
-      [
-        -4,
-        -70
-      ],
-      [
-        10,
-        -70
-      ],
-      [
-        24,
-        -67
-      ]
-    ]
-  ],
+  "windows": "",
   "roots": [
     [
       [
         [
-          -5,
+          -16,
           -7
-        ],
-        [
-          -14,
-          -4
-        ],
-        [
-          -24,
-          -1
         ],
         [
           -32,
+          -2
+        ],
+        [
+          -48,
           3
         ],
         [
-          -41,
-          5
-        ]
-      ],
-      7,
-      0.6,
-      0.25,
-      3
-    ],
-    [
-      [
-        [
-          5,
-          -7
-        ],
-        [
-          15,
-          -4
-        ],
-        [
-          27,
-          0
-        ],
-        [
-          38,
+          -60,
           4
         ],
         [
-          49,
-          5
-        ]
-      ],
-      7,
-      0.6,
-      0.25,
-      4
-    ],
-    [
-      [
-        [
-          -1,
-          -2
-        ],
-        [
-          -2,
-          5
-        ],
-        [
-          0,
-          11
-        ],
-        [
-          -1,
-          17
-        ]
-      ],
-      6,
-      0.8,
-      0.2,
-      5
-    ],
-    [
-      [
-        [
-          -4,
-          -2
-        ],
-        [
-          -10,
-          3
-        ],
-        [
-          -16,
+          -71,
           8
         ],
         [
-          -20,
-          11
+          -80,
+          8
         ]
       ],
-      4,
-      0.5,
-      0.2,
-      6
+      12,
+      [
+        12,
+        8,
+        5.5,
+        3.6,
+        2,
+        0.8
+      ]
     ],
     [
       [
         [
-          4,
+          2,
+          -6
+        ],
+        [
+          22,
           -2
         ],
         [
-          9,
+          40,
           3
         ],
         [
-          14,
+          55,
+          3
+        ],
+        [
+          66,
+          6
+        ],
+        [
+          76,
+          6
+        ]
+      ],
+      12,
+      [
+        12,
+        8.5,
+        5.5,
+        3.4,
+        2,
+        0.8
+      ]
+    ],
+    [
+      [
+        [
+          -36,
+          0
+        ],
+        [
+          -45,
           7
         ],
         [
-          18,
+          -54,
           9
+        ],
+        [
+          -61,
+          13
         ]
       ],
-      4,
-      0.5,
-      0.2,
-      7
+      5,
+      [
+        5,
+        3.4,
+        2.2,
+        0.8
+      ]
+    ],
+    [
+      [
+        [
+          36,
+          2
+        ],
+        [
+          46,
+          8
+        ],
+        [
+          55,
+          9
+        ],
+        [
+          63,
+          12
+        ]
+      ],
+      5,
+      [
+        5,
+        3,
+        2,
+        0.8
+      ]
+    ],
+    [
+      [
+        [
+          -14,
+          -5
+        ],
+        [
+          -26,
+          3
+        ],
+        [
+          -36,
+          9
+        ],
+        [
+          -44,
+          12
+        ],
+        [
+          -51,
+          12
+        ],
+        [
+          -57,
+          15
+        ]
+      ],
+      12,
+      [
+        12,
+        8,
+        5.5,
+        3.6,
+        2,
+        0.8
+      ]
+    ],
+    [
+      [
+        [
+          0,
+          -5
+        ],
+        [
+          16,
+          3
+        ],
+        [
+          28,
+          8
+        ],
+        [
+          36,
+          16
+        ],
+        [
+          40,
+          25
+        ],
+        [
+          40,
+          33
+        ],
+        [
+          37,
+          40
+        ]
+      ],
+      12,
+      [
+        12,
+        9,
+        6.5,
+        4.6,
+        3,
+        1.8,
+        0.8
+      ]
+    ],
+    [
+      [
+        [
+          -13,
+          -14
+        ],
+        [
+          -14,
+          -3
+        ],
+        [
+          -17,
+          6
+        ],
+        [
+          -23,
+          12
+        ],
+        [
+          -25,
+          19
+        ],
+        [
+          -29,
+          25
+        ]
+      ],
+      9,
+      [
+        9,
+        8.5,
+        6.5,
+        4.4,
+        2.8,
+        0.8
+      ]
+    ],
+    [
+      [
+        [
+          -7,
+          -14
+        ],
+        [
+          -6,
+          -3
+        ],
+        [
+          -4,
+          7
+        ],
+        [
+          -7,
+          15
+        ],
+        [
+          -3,
+          22
+        ],
+        [
+          -5,
+          29
+        ]
+      ],
+      10,
+      [
+        10,
+        9.5,
+        7,
+        4.6,
+        2.8,
+        0.8
+      ]
+    ],
+    [
+      [
+        [
+          -1,
+          -14
+        ],
+        [
+          1,
+          -3
+        ],
+        [
+          7,
+          6
+        ],
+        [
+          14,
+          10
+        ],
+        [
+          18,
+          17
+        ],
+        [
+          23,
+          21
+        ]
+      ],
+      9,
+      [
+        9,
+        8.5,
+        6,
+        4,
+        2.4,
+        0.8
+      ]
     ]
   ],
-  "rootlets": "<path class=\"t\" d=\"M-1 17C-2 20 -1 23 1 25M0 16C2 19 4 21 7 22M-1 14C-4 16 -6 18 -7 21M-20 11C-22 13 -22 15 -21 17M18 9C20 11 21 13 21 15\"/>",
-  trunk: "<path class=\"g\" d=\"M-41 5Q-24 1 -9 -9Q-5 -19 -11 -29Q-22 -43 -46 -53L-43 -57Q-20 -47 -7 -34Q-4 -34 -5 -43L-11 -65L-7 -66Q1 -49 2 -36Q4 -31 9 -38L23 -59L27 -57Q20 -41 13 -31Q10 -27 14 -27L48 -47L51 -43Q31 -29 14 -24Q6 -18 7 -10Q23 -2 47 4Q52 6 48 7Q40 7 34 4Q20 1 6 -4Q3 0 -1 6Q-9 12 -20 11Q-13 7 -9 3Q-8 -1 -9 -2Q-22 6 -41 5Z\"/><path class=\"t\" d=\"M-3 -5Q0 -17 -4 -27M2 -7Q4 -17 2 -26M-18 0Q-11 -3 -6 -9M15 -4Q22 -1 30 1\"/>",
-  "leaves": "<path class=\"t\" d=\"M9.4 -47.5q1.8 1.5 3.6 0M17.9 -79.3q1.8 1.5 3.6 0M-3.3 -44q1.8 1.5 3.6 0M-25.3 -53.9q1.8 1.5 3.6 0M-18.5 -44.4q1.8 1.5 3.6 0M-30.1 -43.9q1.8 1.5 3.6 0M46.6 -52.4q1.8 1.5 3.6 0M11.7 -74.4q1.8 1.5 3.6 0M-48 -67.9q1.8 1.5 3.6 0M44.5 -69.8q1.8 1.5 3.6 0M31.3 -55.2q1.8 1.5 3.6 0M10.1 -52.7q1.8 1.5 3.6 0M43.8 -50.4q1.8 1.5 3.6 0M-6.4 -50q1.8 1.5 3.6 0M49.2 -49.3q1.8 1.5 3.6 0M-14.2 -40.5q1.8 1.5 3.6 0M45.6 -55.9q1.8 1.5 3.6 0M11.9 -74.3q1.8 1.5 3.6 0M-8 -69.7q1.8 1.5 3.6 0M5.4 -43.1q1.8 1.5 3.6 0M-38.9 -39.8q1.8 1.5 3.6 0M16.5 -40.9q1.8 1.5 3.6 0M-10.6 -67.5q1.8 1.5 3.6 0M-47.3 -63.6q1.8 1.5 3.6 0M-49.1 -52.1q1.8 1.5 3.6 0M2.8 -67.9q1.8 1.5 3.6 0M-6.3 -45.4q1.8 1.5 3.6 0M33.2 -41.5q1.8 1.5 3.6 0M33.7 -45.8q1.8 1.5 3.6 0M-50.6 -55.3q1.8 1.5 3.6 0M38.6 -42.9q1.8 1.5 3.6 0M26.9 -47.3q1.8 1.5 3.6 0M-13.6 -37.8q1.8 1.5 3.6 0M-32 -59q1.8 1.5 3.6 0M-50.3 -56.8q1.8 1.5 3.6 0M-0.3 -43q1.8 1.5 3.6 0M-11.4 -57.6q1.8 1.5 3.6 0M-7.3 -58.4q1.8 1.5 3.6 0\"/>",
+  "trunkLine": [
+    [
+      -7,
+      -1
+    ],
+    [
+      -7,
+      -10
+    ],
+    [
+      -8,
+      -20
+    ],
+    [
+      -8,
+      -29
+    ],
+    [
+      -7,
+      -36
+    ],
+    [
+      -6,
+      -42
+    ]
+  ],
   "eagle": "<g class=\"yg-wings\" transform=\"scale(1.1 .78)\"><path class=\"g\" d=\"M-1.3 -7.6C-3.4 -9.6 -6.2 -12.4 -9.4 -15C-9.2 -13.8 -8.8 -13.2 -8.3 -12.8L-9.8 -12.6C-9.2 -11.6 -8.6 -11.2 -7.9 -11L-9.4 -10.4C-8.4 -9.6 -7.4 -9.3 -6.4 -9.2L-7.4 -8.4C-5.4 -7.8 -3.4 -6.8 -1.6 -5.6Z\"/><path class=\"g\" d=\"M1.2 -7.6C3.4 -9.8 6.4 -12.6 9.8 -15.2C9.6 -14 9.2 -13.4 8.7 -13L10.2 -12.8C9.6 -11.8 9 -11.4 8.3 -11.2L9.8 -10.6C8.8 -9.8 7.8 -9.5 6.8 -9.4L7.8 -8.6C5.8 -8 3.6 -6.9 1.6 -5.6Z\"/></g><path class=\"g\" d=\"M-1.4 0L1.4 0L1.8 -3C2.2 -5 1.9 -7 1.1 -8.4C1.6 -9.3 1.5 -10.6 .5 -11.3C-.6 -12 -2 -11.6 -2.6 -10.8C-3.4 -11 -4.4 -10.7 -4.7 -9.7C-4.3 -10 -3.7 -9.9 -3.2 -9.4C-2.7 -9 -2.1 -8.7 -1.5 -8.6C-2.1 -7 -2.2 -5 -1.9 -3Z\"/><circle class=\"pf\" cx=\"-1.3\" cy=\"-10.4\" r=\".35\"/><path class=\"t\" d=\"M-2 -1.5L-2.6 .8M2 -1.5L2.6 .8\"/>",
   "rat": "<g class=\"yg-tail\"><path class=\"g\" d=\"M.6 -.6C2.4 -.4 3.4 -1.8 3.2 -3.6C3 -5.2 3.8 -6.6 5 -6.6C4.4 -5.6 4.4 -4.6 4.6 -3.4C4.9 -1.4 3.2 .6 .8 .4Z\"/></g><path class=\"g\" d=\"M-.8 0C-1.4 -1.4 -1.4 -3 -.9 -4.2C-.6 -5 -.6 -5.6 -1 -6.2C-1.2 -6.8 -.9 -7.4 -.3 -7.5C.3 -7.6 .8 -7.2 .9 -6.6C1.4 -6.2 1.4 -5.4 1 -4.8C1.4 -3.6 1.4 -1.6 .8 0Z\"/><path class=\"l\" d=\"M.3 -7.4L.5 -8.2M-1 -3.4L-1.8 -2.8\"/><circle class=\"pf\" cx=\"-.2\" cy=\"-6.7\" r=\".25\"/>",
-  "nid": "<path class=\"g\" d=\"M-9.3 -0.4L-9.5 -0.2L-9.7 0L-10.1 0.2L-10.5 0.5L-10.9 0.8L-11.3 1.1L-11.7 1.5L-12.1 1.9L-12.3 2.4L-12.5 2.8L-12.7 3.2L-12.8 3.7L-12.9 4.2L-12.9 4.6L-12.9 5.1L-12.9 5.5L-12.7 6L-12.5 6.4L-12.3 6.8L-12 7.2L-11.7 7.5L-11.4 7.8L-11 8L-10.7 8.2L-10.2 8.3L-9.8 8.3L-9.4 8.3L-9 8.2L-8.6 8.1L-8.3 7.9L-8 7.8L-7.7 7.6L-7.5 7.3L-7.3 7L-7.3 6.7L-7.3 6.4L-7.3 6.2L-7.3 5.9L-7.3 5.8L-7.3 5.6L-7.9 5.6L-7.9 5.7L-8 5.9L-8 6.1L-8 6.3L-8.1 6.5L-8.2 6.7L-8.2 6.8L-8.3 6.8L-8.4 6.9L-8.7 7L-8.9 7L-9.2 7.1L-9.5 7.1L-9.8 7.1L-10 7L-10.1 7L-10.3 6.9L-10.4 6.7L-10.6 6.5L-10.8 6.2L-10.9 6L-11 5.7L-11.1 5.5L-11.1 5.3L-11.1 5.1L-11.1 4.8L-11 4.5L-10.9 4.2L-10.8 4L-10.6 3.7L-10.5 3.5L-10.3 3.3L-10.2 3.1L-9.9 3L-9.6 2.8L-9.2 2.6L-8.8 2.4L-8.5 2.2L-8.1 2.1L-7.9 2Z\"/><g class=\"yg-nid-head\"><path class=\"g\" d=\"M1 -1.4C-.6 -2.6 -2.6 -3.4 -4.6 -3.4C-6.4 -3.4 -7.8 -2.8 -8.8 -1.8C-9.6 -1 -9.8 .2 -9.2 1.2C-8.6 2.2 -7.2 2.6 -5.6 2.4C-3.8 2.2 -1.6 1.6 .6 .8L-2.4 .2L.8 -.6Z\"/><path class=\"l\" d=\"M-6.8 -3L-8.6 -5.6M-5 -3.4L-5.8 -6.2M-.4 -.9L-.9 -.2L-1.4 -.8M-.4 .6L-.9 0L-1.4 .5\"/><circle class=\"pf\" cx=\"-5.2\" cy=\"-1.4\" r=\".45\"/></g>",
   "eagleAt": [
-    -4,
-    -77
+    -7,
+    -76
   ],
-  "ratAt": [-4, -11],
-  "nidAt": [
-    -40.5,
-    5
+  "ratAt": [
+    -4,
+    -17
   ],
   "fork": [
-    304,
+    297,
     336
   ],
-  "label": [318, 361],
-  "labelBox": [318, 355, 359, 363],
-  "crownSeed": 7,
-  "layerSeed": 20,
-  "leafSeed": 33,
-  "leafCount": 46,
-  "crownBump": [
-    0.42,
-    0.16
+  "label": [
+    318.1,
+    361
   ],
-  "layerBump": [
-    0.38,
-    0.15
+  "labelBox": [
+    318.1,
+    355,
+    359.1,
+    363
   ],
-  "layerAlpha": 0.75,
   "clearance": 6,
   "groveReach": 13,
   "labelGap": 2,
@@ -2312,11 +2955,13 @@ const YGG = {
       0.78,
       0.95
     ],
-    "gnawEvery": 2.5,
-    "gnawTime": 0.3,
-    "gnaw": 0.5,
     "flight": 2.6,
-    "flightStops": [.1,.2,.8,.9],
+    "flightStops": [
+      0.1,
+      0.2,
+      0.8,
+      0.9
+    ],
     "rise": 6,
     "radius": 16,
     "centre": 14,
@@ -2325,8 +2970,112 @@ const YGG = {
       0.6,
       1
     ]
-  }
+  },
+  drawing: (() => {
+    // Small drawing kit for the Yggdrasil sketches. Units: map units, origin at the tree's foot, y down.
+    const rnd = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    const n1 = v => Math.round(v * 10) / 10;
+    const LAND = '#1F1C1D', INK = '#151314', PAPER = '#F7F6F3';
+    // Catmull-Rom through points
+    function spline(P, closed = false, seg = 8) {
+      const n = P.length, out = [], g = i => closed ? P[(i + n) % n] : P[Math.max(0, Math.min(n - 1, i))];
+      for (let i = 0; i < (closed ? n : n - 1); i++) { const a = g(i - 1), b = g(i), c = g(i + 1), d = g(i + 2);
+        for (let j = 0; j < seg; j++) { const t = j / seg, t2 = t * t, t3 = t2 * t; out.push([0, 1].map(k => .5 * (2 * b[k] + (c[k] - a[k]) * t + (2 * a[k] - 5 * b[k] + 4 * c[k] - d[k]) * t2 + (3 * b[k] - a[k] - 3 * c[k] + d[k]) * t3))); } }
+      if (!closed) out.push(P[n - 1]); return out;
+    }
+    // smooth path through points using midpoint quadratics
+    function smooth(P, closed = false) {
+      const m = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], f = p => n1(p[0]) + ' ' + n1(p[1]);
+      if (closed) { let d = 'M' + f(m(P[P.length - 1], P[0])); P.forEach((p, i) => { d += 'Q' + f(p) + ' ' + f(m(p, P[(i + 1) % P.length])); }); return d + 'Z'; }
+      if (P.length < 3) return 'M' + P.map(f).join('L');
+      let d = 'M' + f(P[0]); for (let i = 1; i < P.length - 1; i++) d += 'Q' + f(P[i]) + ' ' + f(i === P.length - 2 ? P[i + 1] : m(P[i], P[i + 1])); return d;
+    }
+    const area = P => P.reduce((s, p, i) => { const q = P[(i + 1) % P.length]; return s + p[0] * q[1] - q[0] * p[1]; }, 0);
+    // tapered limb: centre points [x,y,width]; returns polygon (consistent winding)
+    function limb(C, { seg = 6, wob = 0, r = Math.random, tip = true } = {}) {
+      const S = spline(C.map(c => [c[0], c[1]]), false, seg), W = spline(C.map((c, i) => [i, c[2]]), false, seg).map(p => p[1]);
+      const L = [], R = [];
+      S.forEach((p, i) => { const a = S[Math.max(0, i - 1)], b = S[Math.min(S.length - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1, w = Math.max(.15, W[i] / 2 * (1 + wob * (r() - .5)));
+        L.push([p[0] + dy / l * w, p[1] - dx / l * w]); R.push([p[0] - dy / l * w, p[1] + dx / l * w]); });
+      const P = [...L, ...R.reverse()]; return area(P) < 0 ? P.reverse() : P;
+    }
+    const centre = (C, seg = 6) => spline(C.map(c => [c[0], c[1]]), false, seg);
+    // union look: one outline round a set of overlapping shapes
+    function union(polys, { fill = LAND, cls = 'g', w = 2.3 } = {}) {
+      const d = polys.map(P => smooth(P, true)).join('');
+      return `<path class="${cls}" style="stroke-width:${w}" d="${d}"/><path d="${d}" fill="${fill}" stroke="none"/>`;
+    }
+    // scalloped closed outline round a loop of points
+    function scallop(P, r, { step = 6, bump = [.3, .25], jit = .35 } = {}) {
+      const S = spline(P, true, 10), pts = []; let acc = 0, next = 0;
+      S.forEach((p, i) => { const q = S[(i + 1) % S.length]; acc += Math.hypot(q[0] - p[0], q[1] - p[1]); if (acc >= next) { pts.push(p); next = acc + step * (1 - jit / 2 + r() * jit); } });
+      const cw = area(pts) > 0 ? 1 : -1, f = p => n1(p[0]) + ' ' + n1(p[1]); let d = 'M' + f(pts[0]);
+      pts.forEach((a, i) => { const b = pts[(i + 1) % pts.length], dx = b[0] - a[0], dy = b[1] - a[1], k = (bump[0] + r() * bump[1]) * cw;
+        d += 'Q' + f([(a[0] + b[0]) / 2 + dy * k * 2, (a[1] + b[1]) / 2 - dx * k * 2]) + ' ' + f(b); });
+      return { d: d + 'Z', pts };
+    }
+    const inside = (p, P) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > p[1]) !== (P[j][1] > p[1]) && p[0] < (P[j][0] - P[i][0]) * (p[1] - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; return c; };
+    const blob = (cx, cy, rx, ry, r, n = 9, j = .18) => Array.from({ length: n }, (_, i) => { const a = i / n * Math.PI * 2, k = 1 + (r() - .5) * 2 * j; return [cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]; });
+    
+    // Option A, "The old ash": a colossal bole, tiered foliage, roots that grip the well.
+    const r = rnd(11);
+    const f = p => n1(p[0]) + ' ' + n1(p[1]);
+    const back = [
+      [[-16,-7,12],[-32,-2,8],[-48,3,5.5],[-60,4,3.6],[-71,8,2],[-80,8,.8]],
+      [[2,-6,12],[22,-2,8.5],[40,3,5.5],[55,3,3.4],[66,6,2],[76,6,.8]],
+      [[-36,0,5],[-45,7,3.4],[-54,9,2.2],[-61,13,.8]],
+      [[36,2,5],[46,8,3],[55,9,2],[63,12,.8]],
+    ];
+    const arms = [
+      [[-14,-5,12],[-26,3,8],[-36,9,5.5],[-44,12,3.6],[-51,12,2],[-57,15,.8]],
+      [[0,-5,12],[16,3,9],[28,8,6.5],[36,16,4.6],[40,25,3],[40,33,1.8],[37,40,.8]],
+    ];
+    const front = [
+      [[-13,-14,9],[-14,-3,8.5],[-17,6,6.5],[-23,12,4.4],[-25,19,2.8],[-29,25,.8]],
+      [[-7,-14,10],[-6,-3,9.5],[-4,7,7],[-7,15,4.6],[-3,22,2.8],[-5,29,.8]],
+      [[-1,-14,9],[1,-3,8.5],[7,6,6],[14,10,4],[18,17,2.4],[23,21,.8]],
+    ];
+    const twigs = [[[-71,8],[-75,12],[-81,13]],[[-60,4],[-65,1],[-71,1]],[[66,6],[70,10],[76,11]],[[55,3],[60,0],[66,1]],[[-51,12],[-54,8],[-59,8]],[[40,33],[44,36],[45,40]],[[-44,12],[-46,17],[-44,21]],[[-25,19],[-21,23],[-22,27]],[[-3,22],[0,26],[-1,31]],[[18,17],[16,22],[19,26]]];
+    const L = (rows, o) => rows.map(c => limb(c, { wob: .1, r, ...o }));
+    const trunk = [[-7,-1,19],[-7,-10,23],[-8,-20,22],[-8,-29,22],[-7,-36,25],[-6,-42,28]];
+    const boughs = [
+      [[-15,-33,9],[-28,-39,7],[-42,-41,5.5],[-54,-44,3.5]],
+      [[-13,-38,9],[-20,-49,6.5],[-29,-57,5],[-36,-63,3]],
+      [[-7,-38,10],[-6,-50,7],[-5,-60,5],[-6,-68,3]],
+      [[-1,-38,9],[12,-47,6.5],[26,-55,5],[38,-61,3]],
+      [[1,-33,9],[20,-36,7],[42,-40,5.5],[56,-46,4],[62,-49,2.5]],
+    ];
+    // foliage [cx,cy,rx,ry,marks], back to front: a few big masses, smaller ones at the bough ends
+    const clumps = [
+      [-7,-67,21,10,0],[-30,-63,19,11,1],[27,-64,22,11.5,1],
+      [-50,-52,15,10,0],[52,-55,18,10,0],[2,-55,17,9.5,1],
+      [62,-49,13,8.5,1],[-55,-40,10.5,7.5,1],[-26,-45,13,8,1],[30,-45,14,8,1],[50,-39,9,5.5,0],
+    ];
+    let fol = '';
+    clumps.forEach(([cx, cy, rx, ry, marks]) => {
+      const B = blob(cx, cy, rx, ry, r, 9, .14), s = scallop(B, r, { step: 6.2, bump: [.16, .2], jit: .9 });
+      fol += `<path class="g" d="${s.d}"/>`;
+      if (marks) { const I = spline(B.map(p => [cx + (p[0] - cx) * .52 + rx * .1, cy + (p[1] - cy) * .46 + ry * .14]), true, 6), n = I.length, a0 = Math.floor(n * (.5 + r() * .08)), run = I.slice(a0, a0 + Math.floor(n * (.2 + r() * .12)));
+        let d = 'M' + f(run[0]); for (let k = 3; k < run.length; k += 3) { const a = run[k - 3], b = run[k], dx = b[0] - a[0], dy = b[1] - a[1]; d += 'Q' + f([(a[0] + b[0]) / 2 + dy * .5, (a[1] + b[1]) / 2 - dx * .5]) + ' ' + f(b); }
+        fol += `<path class="l" d="${d}"/>`; }
+      let h = ''; const m = 2 + Math.floor(r() * 3); for (let k = 0; k < m; k++) { const x = cx + rx * (.05 + .16 * k + r() * .05), y = cy + ry * (.55 - .06 * k); h += `M${n1(x)} ${n1(y)}l${n1(1.6 + r())} ${n1(-3 - r() * 1.5)}`; }
+      fol += `<path class="t" d="${h}"/>`;
+    });
+    const bark = 'M-15 -8Q-13 -18 -15 -28Q-16 -33 -20 -37M-10 -6Q-8 -16 -10 -26Q-11 -32 -10 -39M-3 -8Q-1 -17 -3 -26Q-3 -32 1 -36M1 -9Q2 -14 1 -19M-25 -1Q-35 1 -44 5M12 0Q24 2 34 5M-16 2Q-18 7 -22 11M-5 1Q-4 8 -6 13M20 6Q27 9 32 15';
+    const hollow = '<path class="o" d="M-13 -19Q-14.5 -23.5 -12 -26Q-9 -24 -10 -20Q-11 -17.5 -13 -19Z"/>';
+    const ripples = '<path class="t" d="M-34 26q5 -2.5 10 0M-10 30q5 -2.5 10 0M18 22q5 -2.5 10 0"/>';
+    const twig = `<path class="l" d="${twigs.map(t => smooth(spline(t, false, 4))).join('')}"/>`;
+    const svg = `<!--META{"eagle":[-3,1],"rat":[0,-6]}-->
+<g class="ygg-a">
+<g class="yg-roots">${twig}${union(L(back))}${union(L(arms))}</g>
+<g class="yg-trunk">${union([...L(boughs), limb(trunk, { wob: .05, r }), ...L(front)])}<path class="t" d="${bark}"/>${hollow}${ripples}</g>
+<g class="yg-crown">${fol}</g>
+</g>`;
+    return svg;
+  })().replace(/\n/g, '\r\n')
 };
+YGG.canopy = 'M' + YGG.crown.map(p => p.join(' ')).join('L') + 'Z';
+YGG.trunk = YGG.drawing.split('<g class="yg-trunk">')[1].split('</g>')[0];
 // lift: how far a stop's shield stands off its trail point, as a share of half its size plus stand (0 = centred on the trail, Dan on preview 21; 1 = standing on it as before).
 const MARK = { k: 10, min: 14, max: 36, stand: 3, lift: 0, ringWidth: 1.2, ringGap: 2, box: 400, centre: 200, radius: 176, rim: 20, boss: 54, bossLine: 16, highlight: [186,186,12,.55], shadow: [200,392,120,10,.35], planks: [-120,-72,-24,24,72,120], plankLine: 7, plankAlpha: .28, paintAlpha: .35, studs: 8, stud: 9, studLine: 5, quarters: 'M200 200L200 24A176 176 0 0 1 376 200ZM200 200L200 376A176 176 0 0 1 24 200Z', legend: [68,836,4.6,.9,1.2,.45] };
 const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -8, hmcSubDY: -27.5, hmcAgainSubDX: 3, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [18,8], xSubAt: [18,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]],
@@ -2475,12 +3224,8 @@ const shore = (P, seed) => {
 
 // ---- Norse landmarks ----
 function yggdrasil(x, y) {
-  const Y = YGG;
-  // One silhouette with overlapping boughs indicated only by open, nested edges.
-  // Windows are real holes in the foliage; the fork behind them never crosses an edge.
-  const crown = '<path class="g yg-canopy" fill-rule="evenodd" d="' + Y.canopy + Y.windows + '"/><path class="l yg-edge" d="' + Y.boughs + '"/><path class="t yg-hatch" d="' + Y.hatch + '"/>';
-  const actor = (cls, p, body) => '<g class="' + cls + '" transform="translate(' + p.join(' ') + ')">' + body + '</g>';
-  return '<g class="ygg" transform="translate(' + x + ' ' + y + ')">' + Y.roots.map(row => '<path class="g" d="' + tube(...row) + '"/>').join('') + Y.rootlets + Y.trunk + crown + actor('yg-eagle', Y.eagleAt, Y.eagle) + actor('yg-rat', Y.ratAt, '<g transform="scale(2.6)">'+Y.rat+'</g>') + actor('yg-nid', Y.nidAt, '<g transform="scale(1.7)">'+Y.nid+'</g>') + '</g>';
+  const Y = YGG, actor = (cls, p, body) => '<g class="' + cls + '" transform="translate(' + p.join(' ') + ')">' + body + '</g>';
+  return '<g class="ygg" transform="translate(' + x + ' ' + y + ')">' + Y.drawing + actor('yg-eagle', Y.eagleAt, Y.eagle) + actor('yg-rat', Y.ratAt, '<g transform="scale(2.6)">'+Y.rat+'</g>') + '</g>';
 }
 // interlace knot, about 22 units: a rounded square and a diamond woven over and under by quadrant
 const knot = (cx, cy) => {
@@ -2676,12 +3421,12 @@ function rubbingSvg() {
 const segmentGap = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1))); return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy); };
 const outlineGap = (p, poly, closed = true) => Math.min(...poly.slice(closed ? 0 : 1).map((v, i) => segmentGap(p, closed ? poly[(i + poly.length - 1) % poly.length] : poly[i], v)));
 const inWorldBox = (p, b, pad = 0) => p[0] >= b[0] - pad && p[0] <= b[2] + pad && p[1] >= b[1] - pad && p[1] <= b[3] + pad;
-const YGG_CROWN = (() => { const r = rnd(YGG.crownSeed), P = YGG.crown, out = []; P.forEach((a, i) => { const b = P[(i + 1) % P.length], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), bump = L * (YGG.crownBump[0] + r() * YGG.crownBump[1]), c = [(a[0] + b[0]) / 2 + dy / L * bump, (a[1] + b[1]) / 2 - dx / L * bump]; for (let j = 0; j < YGG.tube.seg; j++) { const t = j / YGG.tube.seg; out.push([0, 1].map(k => MAP.ygg[k] + (1 - t) ** 2 * a[k] + 2 * t * (1 - t) * c[k] + t * t * b[k])); } }); return out; })();
-const YGG_ROOTS = YGG.roots.map(row => spline(row[0], false, YGG.tube.seg).map(p => p.map((v, i) => v + MAP.ygg[i])));
-const YGG_TRUNK = [[MAP.ygg[0], MAP.ygg[1]], YGG.fork];
-const yggClear = (p, gap) => !insidePoly(p, YGG_CROWN) && outlineGap(p, YGG_CROWN) >= gap && outlineGap(p, YGG_TRUNK, false) >= gap + YGG.roots[0][1] && YGG_ROOTS.every((P, i) => outlineGap(p, P, false) >= gap + YGG.roots[i][1] / 2);
+const YGG_CROWN = YGG.crown.map(p => p.map((v, i) => v + MAP.ygg[i]));
+const YGG_ROOTS = YGG.roots.map(row => { const P = spline(row[0], false, YGG.tube.seg).map(p => p.map((v, i) => v + MAP.ygg[i])); P.widths = spline(row[2].map((w, i) => [i, w]), false, YGG.tube.seg).map(p => p[1]); return P; });
+const YGG_TRUNK = YGG.trunkLine.map(p => p.map((v, i) => v + MAP.ygg[i]));
+const yggClear = (p, gap) => !insidePoly(p, YGG_CROWN) && outlineGap(p, YGG_CROWN) >= gap && outlineGap(p, YGG_TRUNK, false) >= gap + 14 && YGG_ROOTS.every(P => P.slice(1).every((b, i) => segmentGap(p, P[i], b) >= gap + Math.max(P.widths[i], P.widths[i + 1]) / 2));
 const GROVE = [];
-const JORM = (() => { const S = spline(MAP.jorm.ring, false, MAP.jorm.seg), cum = [0]; for (let i = 1; i < S.length; i++) cum.push(cum[i - 1] + Math.hypot(S[i][0] - S[i - 1][0], S[i][1] - S[i - 1][1])); return { S, cum, L: cum.at(-1) }; })();
+const JORM = (() => { const S = spline([...MAP.jorm.lead, ...MAP.jorm.ring.slice(3, -1), ...MAP.jorm.tailEnd], false, MAP.jorm.seg), cum = [0]; for (let i = 1; i < S.length; i++) cum.push(cum[i - 1] + Math.hypot(S[i][0] - S[i - 1][0], S[i][1] - S[i - 1][1])); return { S, cum, L: cum.at(-1) }; })();
 function jormPoint(u) {
   const at = Math.max(0, Math.min(JORM.L, u)); let i = 1; while (i < JORM.cum.length - 1 && JORM.cum[i] < at) i++;
   const a = JORM.S[i - 1], b = JORM.S[i], q = (at - JORM.cum[i - 1]) / (JORM.cum[i] - JORM.cum[i - 1] || 1);
@@ -2692,12 +3437,48 @@ function jormEdges(a, b, taper = 0) {
   shares.forEach(t => { const p = jormPoint(t * JORM.L), angle = p.angle * Math.PI / FIND_PLAY.kit.deg, u = taper ? Math.min(1, (t - a) / taper, b >= 1 ? 1 : (b - t) / taper) : 1, w = J.w * (t < J.taper[0] ? 1 : 1 - (t - J.taper[0]) / J.taper[1] * J.taper[2]) / 2 * (taper ? J.edgeNarrow[0] + J.edgeNarrow[1] * Math.sin(Math.PI / 2 * Math.max(0, u)) : 1); left.push([p.x - Math.sin(angle) * w, p.y + Math.cos(angle) * w]); right.push([p.x + Math.sin(angle) * w, p.y - Math.cos(angle) * w]); mid.push([p.x, p.y]); });
   return { left, right, mid };
 }
-function jormungandr() {
-  const J = MAP.jorm, end = 1 - J.tail / JORM.L, all = jormEdges(0, end);
-  let s = '<g class="jg-ring"><path d="' + pathD([...all.left, ...all.right.slice().reverse()], true) + '" fill="' + C.ink + '" opacity="' + J.subAlpha + '"/><path d="' + pathD(all.left) + pathD(all.right) + '" fill="none" stroke="' + C.paper + '" stroke-opacity="' + J.edgeAlpha + '" stroke-width="' + J.edgeWidth + '" stroke-dasharray="' + J.dash + '" vector-effect="non-scaling-stroke"/>';
-  J.surf.forEach(([a, b]) => { const e = jormEdges(a, Math.min(b, end), a === 0 ? 0 : J.surfaceTaper); s += '<path class="o" d="' + pathD([...e.left, ...e.right.slice().reverse()], true) + '"/>'; let sc = ''; for (let i = J.scaleStep; i < e.mid.length - J.scaleStep; i += J.scaleStep) { const p = e.left[i], q = e.right[i], m = e.mid[i], n = e.mid[i + 1], dx = n[0] - m[0], dy = n[1] - m[1], L = Math.hypot(dx, dy) || 1, f = J.chevron; sc += 'M' + n1(p[0] + dx / L * f[0]) + ' ' + n1(p[1] + dy / L * f[0]) + 'L' + n1(m[0] - dx / L * f[1]) + ' ' + n1(m[1] - dy / L * f[1]) + 'L' + n1(q[0] + dx / L * f[0]) + ' ' + n1(q[1] + dy / L * f[0]); } s += '<path class="t" d="' + sc + '"/>'; [e.mid[0], e.mid.at(-1)].forEach(m => s += '<path class="t" stroke-opacity="' + J.waterAlpha + '" d="M' + n1(m[0] + J.waterAt[0]) + ' ' + n1(m[1] + J.waterAt[1]) + J.water + '"/>'); });
-  return s + Array.from({ length: FIND_PLAY.serpent.swell.length + 1 }, () => '<g class="jg-swell" opacity="0"><path class="o jg-gulp" d="' + J.swellPath + '"/><path class="o jg-hear" d="' + J.hornPath + '" opacity="0"/></g>').join('') + '</g>';
+// Option A's ribbon kit. The interior ring is unchanged; the approved lead and tail join its ends.
+const joTracks = new Map();
+function joTrack(open = 0) {
+  if (joTracks.has(open)) return joTracks.get(open);
+  const J = MAP.jorm, end = [J.ring.at(-2), ...J.tailEnd].map((p, i) => p.map((v, k) => v + (J.tailOpen[i][k] - v) * open));
+  const S = spline([...J.lead, ...J.ring.slice(3, -2), ...end], false, J.seg), cum = [0];
+  for (let i = 1; i < S.length; i++) cum.push(cum[i - 1] + Math.hypot(S[i][0] - S[i - 1][0], S[i][1] - S[i - 1][1]));
+  const L = cum.at(-1), at = u => { u = Math.max(0, Math.min(L, u)); let i = 1; while (i < cum.length - 1 && cum[i] < u) i++; const a = S[i - 1], b = S[i], q = (u - cum[i - 1]) / (cum[i] - cum[i - 1] || 1), dx = b[0] - a[0], dy = b[1] - a[1], length = Math.hypot(dx, dy) || 1; return { x: a[0] + dx * q, y: a[1] + dy * q, tx: dx / length, ty: dy / length }; };
+  const T = { L, at }; if (open === 0 || open === 1) joTracks.set(open, T); return T;
 }
+function joRibbon(T, a, b, width, step = 2.5) {
+  const left = [], right = [], mid = [], n = Math.max(2, Math.ceil((b - a) / step));
+  for (let i = 0; i <= n; i++) { const u = a + (b - a) * i / n, p = T.at(u), w = width(u) / 2; left.push([p.x - p.ty * w, p.y + p.tx * w]); right.push([p.x + p.ty * w, p.y - p.tx * w]); mid.push([p.x, p.y, p.tx, p.ty, w]); }
+  return { left, right, mid };
+}
+const joWidth = (T, u, lumps = []) => { const J = MAP.jorm, t = u / T.L; return J.w * (t < .9 ? 1 : 1 - (t - .9) / .1 * .8) * (1 + J.neck * Math.exp(-u / 30)) + lumps.reduce((sum, p) => sum + (p.horn ? J.hornExtra : J.swellExtra) * Math.exp(-((u - p.u * T.L) ** 2) / 70), 0); };
+function jormSegment(index, open = 0, lumps = []) {
+  const T = joTrack(open), J = MAP.jorm, [a, b] = J.surf[index], u0 = a * joTrack().L, u1 = index === J.surf.length - 1 ? T.L : b * joTrack().L;
+  const e = joRibbon(T, u0, u1, u => { const d = Math.min(index === 0 ? 1e9 : u - u0, index === J.surf.length - 1 ? 1e9 : u1 - u); return joWidth(T, u, lumps) * (.35 + .65 * Math.sin(Math.PI / 2 * Math.min(1, d / 22))); });
+  const inner = k => e.mid.map(m => [m[0] - m[3] * m[4] * k, m[1] + m[2] * m[4] * k]); let bands = '', studs = '';
+  e.mid.forEach((m, i) => {
+    if (i % 2 === 1 && m[4] > 2.2) studs += 'M' + n1(m[0] - .55) + ' ' + n1(m[1]) + 'a.55 .55 0 1 0 1.1 0a.55 .55 0 1 0 -1.1 0';
+    if (i % 18 === 14 && m[4] > 2.5) for (const o of [-1.3, 1.3]) { const x = m[0] + m[2] * o, y = m[1] + m[3] * o; bands += 'M' + n1(x - m[3] * m[4]) + ' ' + n1(y + m[2] * m[4]) + 'L' + n1(x + m[3] * m[4]) + ' ' + n1(y - m[2] * m[4]); }
+  });
+  return { outer: pathD([...e.left, ...e.right.slice().reverse()], true), inner: pathD(inner(.5)) + pathD(inner(-.5)), bands, studs };
+}
+function jormSubTail(open = 0) {
+  const T = joTrack(open), e = joRibbon(T, MAP.jorm.surf.at(-1)[0] * joTrack().L, T.L - 4, u => joWidth(T, u) * .75, 4);
+  return { fill: pathD([...e.left, ...e.right.slice().reverse()], true), edge: pathD(e.left) + pathD(e.right) };
+}
+function jormungandr() {
+  const J = MAP.jorm, T = joTrack(), e = joRibbon(T, 0, J.surf.at(-1)[0] * T.L, u => joWidth(T, u) * .75, 4), tail = jormSubTail(), shadow = (fill, edge, cls = '') => '<path class="jo-sub-fill ' + cls + '" d="' + fill + '" fill="' + C.ink + '" opacity=".55"/><path class="jo-sub-edge ' + cls + '" d="' + edge + '" fill="none" stroke="' + C.paper + '" stroke-opacity=".22" stroke-width=".8" stroke-dasharray="3 2.2" vector-effect="non-scaling-stroke"/>';
+  let s = '<g class="jo-body jg-ring">' + shadow(pathD([...e.left, ...e.right.slice().reverse()], true), pathD(e.left) + pathD(e.right)) + shadow(tail.fill, tail.edge, 'jo-tail-sub');
+  J.surf.forEach(([a, b], i) => {
+    const p = jormSegment(i); s += '<g class="jo-surface" data-i="' + i + '"><path class="o jo-outline" d="' + p.outer + '"/><path class="t jo-inner" d="' + p.inner + '"/><g class="jd"><path class="pf jo-studs" stroke="none" d="' + p.studs + '"/></g><path class="l jo-bands" d="' + p.bands + '"/></g>';
+    for (const u of [i ? a * T.L : null, i < J.surf.length - 1 ? b * T.L : null]) if (u !== null) { const p = T.at(u); s += '<path class="t" d="M' + n1(p.x - 7) + ' ' + n1(p.y + 1) + 'q2.4 -2 4.8 0t4.8 0"/><g class="jd"><path class="t" d="M' + n1(p.x - 4) + ' ' + n1(p.y + 4.5) + 'q1.7 -2 3.4 0t3.4 0"/></g>'; }
+  });
+  s += '<path class="t jo-release-ripple" d="M433 129q4 -2 8 0t8 0" opacity="0"/>';
+  s += Array.from({ length: 4 }, () => '<g class="jg-swell" opacity="0"><path class="o jg-gulp" d="M-3.6 -4.6H1.4L3.6 -2.4V4.6H-3.6Z" transform="rotate(90)"/><path class="t jg-file-lines" d="M-2 -1.6V1.6M0 -1.6V1.6"/><path class="o jg-hear" d="' + J.hornPath + '" opacity="0"/></g>').join('');
+  return s + '</g>';
+}
+
 
 function mapLabelRows() {
   const rows = []; STOPS.forEach(st => { const L = st.label; rows.push({ kind: 'name', unit: LABELS.name.unit, text: L.t, x: L.x, y: L.y + LABELS.nameDY, anchor: L.a, name: true, ls: L.tracking, stop: st.id }); });
@@ -6801,90 +7582,84 @@ function findRavens(svg) {
   return o;
 }
 function findSerpent(svg) {
-  const f = FIND_BY.serpent, el = svg.querySelector('#f-serpent'), head = el.querySelector('.jg-head'), jaw = el.querySelector('.jg-jaw'), tail = el.querySelector('.jg-tail'), pad = el.querySelector('.jg-pad'), eye = el.querySelector('.jg-eye'), shut = el.querySelector('.jg-shut'), tongue = el.querySelector('.jg-tongue'), joint = head.parentElement;
-  const leaves = [...el.querySelectorAll('.jg-leaf')].sort((a, b) => +a.dataset.i - +b.dataset.i);
-  const swells = [...(document.getElementById('b-sea') || svg).querySelectorAll('.jg-swell')].map(g => ({ g, gulp: g.querySelector('.jg-gulp'), hearPath: g.querySelector('.jg-hear'), live: false }));
-  const o = { id: f.id, el, stage: 'ready', pokes: 0, round: 0, kept: false, ts: -Infinity, headAngle: 0, headTurn: 0, jawAngle: 0, tailOut: 0, queued: false, held: false, hearTs: -Infinity, padTs: -Infinity, swells };
+  const f = FIND_BY.serpent, S = FIND_PLAY.serpent, el = svg.querySelector('#f-serpent'), head = el.querySelector('.jg-head'), jaw = el.querySelector('.jg-jaw'), eye = el.querySelector('.jg-eye'), shut = el.querySelector('.jg-shut');
+  const file = el.querySelector('.jg-file'), name = el.querySelector('.jf-name'), base = name.querySelector('.jf-base'), added = name.querySelector('.jf-added'), ext = name.querySelector('.jf-ext'), stamp = file.querySelector('.jf-stamp');
+  const body = (document.getElementById('b-sea') || svg).querySelector('.jo-body'), segments = [...body.querySelectorAll('.jo-surface')], ripple = body.querySelector('.jo-release-ripple');
+  const swells = [...body.querySelectorAll('.jg-swell')].map(g => ({ g, gulp: g.querySelector('.jg-gulp'), lines: g.querySelector('.jg-file-lines'), hearPath: g.querySelector('.jg-hear'), live: false, u: 0 }));
+  const o = { id: f.id, el, stage: 'ready', pokes: 0, round: 0, kept: false, ts: -Infinity, headAngle: 0, headTurn: 0, jawAngle: 0, tailOut: 0, queued: 0, held: false, hearTs: -Infinity, openAmount: 0, stamped: false, fileName: '', version: 0, swells };
+  let dirty = new Set(), tailPose = 0;
   o.place = () => [f.x, f.y];
-  const remaining = () => leaves.forEach((leaf, i) => { if (i >= o.pokes) { attr(leaf, 'opacity', 1); const offset = (i - o.pokes) * FIND_PLAY.serpent.leafOffset; attr(leaf, 'transform', 'translate(' + offset + ' ' + offset + ')'); } });
-  const reward = () => { o.stage = 'asleep'; o.kept = true; o.held = false; o.tailOut = 0; o.jawAngle = 0; attr(tail, 'transform', 'translate(0 0)'); attr(eye, 'opacity', 0); attr(shut, 'opacity', 1); queueMicrotask(() => showPop(o, [f.x + FIND_PLAY.serpent.popup[0], f.y + FIND_PLAY.serpent.popup[1]], '<p class="pop-k">' + fEsc(FIND_COPY.serpentFed) + '</p>' + findSlot(FIND_COPY.serpentLines[o.round % FIND_COPY.serpentLines.length]), '', 'above')); };
-  const swell = (duration, horn = false) => { if (FD.rm) return; const slot = swells.find(s => !s.live); if (slot) Object.assign(slot, { live: true, ts: FD.now, duration, horn, last: !horn && o.pokes === leaves.length }); };
-  const start = () => {
-    if (o.stage === 'step') { o.queued = true; return; }
-    if (o.stage === 'waking' || o.stage === 'closing') return;
-    if (o.stage === 'asleep') {
-      o.round++; o.pokes = 0; o.kept = false; o.queued = false; o.ts = o.padTs = FD.now; o.stage = FD.rm ? 'ready' : 'waking'; closePop(); opened(o);
-      leaves.slice().reverse().forEach(leaf => pad.appendChild(leaf)); remaining();
-      if (!FD.rm) findBits('ring', f.x + FIND_PLAY.serpent.pad[0], f.y + FIND_PLAY.serpent.pad[1], 1, FIND_PLAY.bits.wake);
-      attr(eye, 'opacity', 1); attr(shut, 'opacity', 0); return;
-    }
-    if (o.pokes >= leaves.length) return;
-    closePop(); found(o.id); opened(o); o.pokes++; o.ts = FD.now; o.stepPart = -1; o.stage = 'step'; o.bitten = false; o.gulped = false; o.leaf = leaves[o.pokes - 1];
-    if (FD.rm) { attr(o.leaf, 'opacity', 0); remaining(); o.tailOut = o.pokes === leaves.length ? 0 : 1; o.jawAngle = o.pokes === leaves.length ? 0 : FIND_PLAY.serpent.hungryJaw; o.stage = 'hungry'; if (o.pokes === leaves.length) { attr(pad, 'opacity', 0); reward(); } }
-    o.playing = !FD.rm;
+  const rename = (version, q = 1) => {
+    const a = version === 2 ? 'final_v2' : 'final', suffix = version === 2 ? '_FINAL' : version === 1 ? '_v2' : '', part = suffix.slice(0, Math.floor(suffix.length * clamp01(q))), extension = '.' + S.files[o.round % S.files.length];
+    if (base.textContent !== a) base.textContent = a; if (added.textContent !== part) added.textContent = part; if (ext.textContent !== extension) ext.textContent = extension;
+    o.fileName = a + part + extension; if (q === 1) o.version = version;
   };
-  press(el, start); remaining(); attr(pad, 'transform', 'translate(' + FIND_PLAY.serpent.pad.join(' ') + ')');
+  const caption = () => { const text = o.stage === 'asleep' ? FIND_COPY.serpentShippedHint : FIND_COPY.hints.serpent; if (FD.hint && FD.focusId === o.id && FD.hint.textContent !== text) FD.hint.textContent = text; };
+  const reward = () => {
+    o.stage = 'asleep'; o.kept = true; o.openAmount = o.tailOut = 1; o.stamped = true; o.shippedAt = FD.now; o.held = false; o.playing = false; caption();
+    queueMicrotask(() => showPop(o, [f.x + S.popup[0], f.y + S.popup[1]], '<p class="pop-k">' + fEsc(FIND_COPY.serpentFed) + '</p>' + findSlot(FIND_COPY.serpentLines[o.round % FIND_COPY.serpentLines.length]), '', 'above'));
+  };
+  const swell = (duration, horn = false) => { const slot = swells.find(s => !s.live); if (slot && !FD.rm) Object.assign(slot, { live: true, ts: FD.now, duration, horn, u: 0 }); };
+  const consumeQueue = () => { if (!o.queued) return; o.queued--; queueMicrotask(start); };
+  const start = () => {
+    // The capture listener brings him into view. This press never also feeds him.
+    if (!findReady(o.id)) return;
+    if (FD.rm && !o.rmFocused) { o.rmFocused = true; return; }
+    if (['bite','lap','spit','typing','opening','waking'].includes(o.stage)) { o.queued++; return; }
+    closePop(); opened(o);
+    if (o.stage === 'asleep') {
+      o.round++; o.pokes = 0; o.kept = false; o.stamped = false; o.ts = FD.now; o.stage = FD.rm ? 'ready' : 'waking'; rename(0); if (FD.rm) o.openAmount = o.tailOut = 0; o.playing = !FD.rm; return;
+    }
+    found(o.id); o.pokes++; o.ts = FD.now; o.held = o.pokes < 3; o.playing = !FD.rm;
+    if (o.pokes === 3) { o.stage = 'opening'; if (FD.rm) reward(); }
+    else { o.stage = FD.rm ? 'ready' : 'bite'; if (FD.rm) rename(o.pokes); }
+  };
+  press(el, start); rename(0);
   o.undo = () => { if (FD.popOwner === o) closePop(); };
   o.reduce = keep => {
-    swells.forEach(s => s.live = false); o.playing = false; o.queued = false;
-    if (o.stage === 'waking') { o.stage = 'ready'; return; }
-    if (!['step','closing'].includes(o.stage)) return;
-    o.held = false; if (o.leaf) attr(o.leaf,'opacity',0); remaining();
-    o.stage = 'hungry'; o.tailOut = o.pokes === leaves.length ? 0 : 1; o.jawAngle = o.pokes === leaves.length ? 0 : FIND_PLAY.serpent.hungryJaw;
-    if (o.pokes === leaves.length) { o.gulped = true; o.padTs = -Infinity; if (keep) opened(o); reward(); }
+    swells.forEach(s => s.live = false); o.queued = 0; o.held = false; o.playing = false;
+    if (o.stage === 'opening') { if (keep) opened(o); reward(); }
+    else if (o.stage === 'waking') { o.stage = 'ready'; o.openAmount = o.tailOut = 0; rename(0); }
+    else if (['bite','lap','spit','typing'].includes(o.stage)) { o.stage = 'ready'; o.openAmount = o.tailOut = 0; rename(o.pokes); }
   };
-  o.hear = () => { if (!FD.rm) { o.hearTs = FD.now; swell(FIND_PLAY.serpent.hear[2], true); o.playing = true; } };
+  o.hear = () => { if (!FD.rm) { o.hearTs = FD.now; swell(S.hear[2], true); o.playing = true; } };
+  const lapPlace = q => {
+    const X = S.lapStops, Y = S.lapPlaces, M = S.lapSlopes; let i = 0; while (i < X.length - 2 && q > X[i + 1]) i++;
+    const width = X[i + 1] - X[i], t = (q - X[i]) / width;
+    return (2*t**3-3*t*t+1)*Y[i] + (t**3-2*t*t+t)*width*M[i] + (-2*t**3+3*t*t)*Y[i+1] + (t**3-t*t)*width*M[i+1];
+  };
+  const updateBody = lumps => {
+    const next = new Set(); for (const p of lumps) MAP.jorm.surf.forEach(([a, b], i) => { if (p.u >= a - .015 && p.u <= b + .015) next.add(i); });
+    if (o.openAmount !== tailPose) { next.add(4); const p = jormSubTail(o.openAmount); attr(body.querySelector('.jo-sub-fill.jo-tail-sub'), 'd', p.fill); attr(body.querySelector('.jo-sub-edge.jo-tail-sub'), 'd', p.edge); }
+    for (const i of new Set([...dirty, ...next])) { const p = jormSegment(i, i === 4 ? o.openAmount : 0, lumps); for (const [selector, key] of [['.jo-outline','outer'],['.jo-inner','inner'],['.jo-bands','bands'],['.jo-studs','studs']]) attr(segments[i].querySelector(selector), 'd', p[key]); }
+    dirty = next; tailPose = o.openAmount;
+  };
   o.tick = (t, dt) => {
-    const S = FIND_PLAY.serpent, J = MAP.jorm, e = t - o.ts, asleep = o.stage === 'asleep', here = { x: f.x + S.head[0], y: f.y + S.head[1] }, target = attend(here, S.attend);
-    let aim = target ? Math.atan2(-(target[1] - here.y), -(target[0] - here.x)) * FIND_PLAY.kit.deg / Math.PI : 0; aim = Math.max(-S.headLimit, Math.min(S.headLimit, aim));
-    o.headAngle = FD.rm ? 0 : lerp(o.headAngle, aim, Math.min(1, dt * S.headEase));
-    let angle = asleep ? S.restAngle + (FD.rm ? 0 : S.breathe[0] * Math.sin(Math.PI * 2 * t / S.breathe[1])) : o.headAngle;
-    let jawTurn = o.stage === 'hungry' ? S.hungryJaw : 0, tailK = o.stage === 'hungry' ? 1 : 0, padK = o.pokes === leaves.length && o.gulped ? clamp01((t - o.padTs) / S.padTime) : 0;
-    if (o.stage === 'step') {
-      let part = 0, age = e; while (part < S.steps.length - 1 && age >= S.steps[part]) { age -= S.steps[part]; part++; }
-      const q = clamp01(age / S.steps[part]); o.stepPart = part;
-      const turn = S.lunge;
-      if (part === 0) { jawTurn = lerp(o.pokes > 1 ? S.hungryJaw : 0, S.jaw, ease(q)); tailK = lerp(o.pokes > 1 ? 1 : 0, 1, ease(q)); }
-      if (part === 1) { const back = S.overEase, z = q - 1; angle = turn * (1 + (back + 1) * z ** 3 + back * z ** 2); jawTurn = S.jaw; tailK = 1; }
-      if (part >= 2 && !o.bitten) { o.bitten = true; o.held = true; joint.appendChild(o.leaf); remaining(); findBits('drop', f.x + S.pad[0], f.y + S.pad[1], S.drops, FIND_PLAY.bits.drops); }
-      if (part === 2) { angle = turn; jawTurn = S.jaw * (1 - ease(q)); tailK = 1; }
-      if (part === 3) { angle = turn * (1 - ease(q)); tailK = 1; }
-      if (part === 4) {
-        angle = S.swallow * Math.sin(Math.PI * q); tailK = 1;
-        if (!o.gulped) { o.gulped = true; swell(S.swell[o.pokes - 1]); if (o.pokes === leaves.length) { o.padTs = t; findBits('ring', f.x + S.pad[0], f.y + S.pad[1], 1, FIND_PLAY.bits.wake); } }
-        padK = o.pokes === leaves.length ? clamp01((t - o.padTs) / S.padTime) : 0;
-      }
-      if (o.held) {
-        const shrink = part === 4 ? 1 - ease(q) : 1, flutter = S.flutter[0] * Math.sin(Math.PI * 2 * S.flutter[1] * t), at = part === 4 ? S.mouth.map((v, i) => lerp(v, S.corner[i], ease(q))) : S.mouth;
-        attr(o.leaf, 'transform', 'rotate(' + angle + ') translate(' + at.join(' ') + ') rotate(' + flutter + ') scale(' + shrink + ')'); attr(o.leaf, 'opacity', shrink > 0 ? 1 : 0); o.leafTurn = angle;
-      }
-      if (e >= S.steps.reduce((sum, v) => sum + v, 0)) { attr(o.leaf, 'opacity', 0); o.held = false; o.stage = 'hungry'; if (o.queued && o.pokes < leaves.length) { o.queued = false; start(); } else o.queued = false; }
-    }
-    if (o.stage === 'waking') { const q = clamp01(e / S.padTime); padK = 1 - q; if (e >= S.wake) attr(eye, 'opacity', 1); if (q === 1) o.stage = 'ready'; }
-    swells.forEach(s => {
-      if (!s.live) { attr(s.g, 'opacity', 0); return; }
-      const q = clamp01((t - s.ts) / s.duration), u = JORM.L * ease(q), p = jormPoint(u), fade = Math.min(1, u / J.swellRamp, (JORM.L - u) / J.swellRamp);
-      const surface = Math.max(0, ...J.surf.map(([a, b]) => Math.max(0, Math.min(1, (u - a * JORM.L) / J.swellRamp, (b * JORM.L - u) / J.swellRamp))));
-      attr(s.g, 'transform', 'translate(' + p.x + ' ' + p.y + ') rotate(' + p.angle + ')'); attr(s.g, 'opacity', fade * lerp(J.swellSub, 1, surface)); attr(s.gulp, 'opacity', s.horn ? 0 : 1); attr(s.hearPath, 'opacity', s.horn ? 1 : 0);
-      if (q === 1) { s.live = false; if (!s.horn) o.twitchTs = t; if (s.last) { o.stage = 'closing'; o.ts = t; } }
+    const e = t - o.ts, target = attend({x:f.x+S.head[0],y:f.y+S.head[1]}, S.attend), here = [f.x+S.head[0],f.y+S.head[1]];
+    let aim = target ? Math.atan2(-(target[1]-here[1]),-(target[0]-here[0]))*180/Math.PI : 0; aim = Math.max(-S.headLimit,Math.min(S.headLimit,aim));
+    o.headAngle = FD.rm ? 0 : lerp(o.headAngle,aim,Math.min(1,dt*S.headEase));
+    let angle = o.stage === 'asleep' ? (FD.rm ? 0 : S.breathe[0]*Math.sin(Math.PI*2*t/S.breathe[1])) : o.headAngle, jawTurn = o.stage === 'asleep' ? S.shippedJaw : 0, at = S.fileAt.slice(), rotation = 0, scale = 1, alpha = 1, nameAlpha = 1;
+    if (o.stage === 'bite') { const q = clamp01(e/S.bite); jawTurn = S.jaw*Math.sin(Math.PI*q); at = S.fileAt.map((v,i)=>lerp(v,[-40,5][i],ease(q))); scale = 1-ease(q); rotation = -8*q; nameAlpha = 1-q; if(q===1){o.stage='lap';o.ts=t;o.held=false;swell(S.lap);} }
+    if (o.stage === 'lap') { alpha = nameAlpha = 0; jawTurn = 2; }
+    if (o.stage === 'spit') { const q = clamp01(e/S.spit); at = [-38,5].map((v,i)=>lerp(v,S.returnAt[i],out3(q))); rotation = -8*Math.sin(Math.PI*q); jawTurn = 8*Math.sin(Math.PI*q); nameAlpha = q; if(q===1){o.stage='typing';o.ts=t;} }
+    if (o.stage === 'typing') { at = S.returnAt.map((v,i)=>lerp(v,S.fileAt[i],ease(e/S.type))); rename(o.pokes,clamp01(e/S.type)); if(e>=S.type){rename(o.pokes);o.stage='ready';consumeQueue();} }
+    if (o.stage === 'opening') { const q = FD.rm ? 1 : ease(e/S.open); o.openAmount=o.tailOut=q; at=S.fileAt.map((v,i)=>lerp(v,S.shipAt[i],q));jawTurn=S.shippedJaw*q;if(q===1)reward(); }
+    if (o.stage === 'asleep') { at=S.shipAt.slice();jawTurn=S.shippedJaw; }
+    if (o.stage === 'waking') { const q=clamp01(e/S.wake);o.openAmount=o.tailOut=1-ease(q);at=S.enterAt.map((v,i)=>lerp(v,S.fileAt[i],out3(q)));alpha=q;nameAlpha=q;jawTurn=S.shippedJaw*(1-ease(q));if(q===1){o.stage='ready';consumeQueue();} }
+    const lumps=[];
+    swells.forEach(s=>{
+      if(!s.live){attr(s.g,'opacity',0);return;}
+      const q=clamp01((t-s.ts)/s.duration),u=s.horn?ease(q):lapPlace(q),p=jormPoint(u*JORM.L),surface=Math.max(0,...MAP.jorm.surf.map(([a,b])=>Math.max(0,Math.min(1,(u-a)*JORM.L/MAP.jorm.swellRamp,(b-u)*JORM.L/MAP.jorm.swellRamp))));s.u=u;lumps.push({u,horn:s.horn});
+      attr(s.g,'transform','translate('+p.x+' '+p.y+') rotate('+p.angle+')');attr(s.g,'data-u',u);attr(s.g,'opacity',Math.min(1,u*JORM.L/3,(1-u)*JORM.L/3)*lerp(MAP.jorm.swellSub,1,surface));attr(s.gulp,'opacity',s.horn?0:1);attr(s.lines,'opacity',s.horn?0:1);attr(s.hearPath,'opacity',s.horn?1:0);
+      if(q===1){s.live=false;if(!s.horn){o.stage='spit';o.ts=t;rename(o.pokes,0);} }
     });
-    if (o.stage === 'closing') {
-      const age = t - o.ts, A = S.close, q = age < A[0] ? age / A[0] : age < A[0] + A[1] ? (age - A[0]) / A[1] : (age - A[0] - A[1]) / A[2];
-      jawTurn = age < A[0] ? lerp(S.hungryJaw, S.jaw, ease(q)) : age < A[0] + A[1] ? S.jaw : S.jaw * (1 - ease(q)); tailK = age < A[0] ? 1 : 1 - ease((age - A[0]) / A[1]); angle = 0;
-      if (age >= A.reduce((sum, v) => sum + v, 0)) reward();
-    }
-    const heard = FD.rm ? 1 : clamp01((t - o.hearTs) / S.hear[1]); angle += S.hear[0] * Math.sin(Math.PI * heard);
-    if (o.stage === 'asleep') { jawTurn = 0; tailK = 0; }
-    o.headTurn = angle; o.jawAngle = jawTurn; o.tailOut = tailK;
-    attr(head, 'transform', 'rotate(' + angle + ')'); attr(jaw, 'transform', 'rotate(' + (-jawTurn) + ' ' + S.jawPivot.join(' ') + ')');
-    const twitch = FD.rm ? 0 : S.tailTwitch[0] * Math.sin(Math.PI * clamp01((t - (o.twitchTs ?? -Infinity)) / S.tailTwitch[1]));
-    attr(tail, 'transform', 'translate(' + (tailK * S.tailOut[0]) + ' ' + (tailK * S.tailOut[1] + twitch) + ')');
-    const sleeping = o.stage === 'asleep'; attr(eye, 'opacity', sleeping ? 0 : 1); attr(shut, 'opacity', sleeping ? 1 : 0);
-    const pointer = FD.hover && FD.now - FD.pointerT <= FIND_PLAY.fresh ? toMap(FD.pointer) : null, near = pointer && Math.hypot(pointer[0] - here.x, pointer[1] - here.y) <= S.near, ta = t % S.tongue[1], flick = !FD.rm && !sleeping && near && ta < S.tongue[0] ? Math.sin(Math.PI * ta / S.tongue[0]) : 0;
-    attr(tongue, 'opacity', flick > 0 ? 1 : 0); attr(tongue, 'transform', 'translate(' + S.snout.join(' ') + ') scale(' + flick + ' 1) translate(' + S.snout.map(v => -v).join(' ') + ')');
-    const bob = FD.rm || sleeping || o.stage === 'waking' ? 0 : Math.sin(Math.PI * 2 * t / S.bob[2]);
-    attr(pad, 'transform', 'translate(' + S.pad[0] + ' ' + (S.pad[1] + S.padSink * padK + S.bob[1] * bob) + ') rotate(' + S.bob[0] * bob + ')'); attr(pad, 'opacity', 1 - padK);
-    o.playing = ['step', 'waking', 'closing'].includes(o.stage) || swells.some(s => s.live) || t - (o.twitchTs ?? -Infinity) < S.tailTwitch[1];
+    updateBody(lumps);attr(ripple,'opacity',FD.rm||o.openAmount===0?0:.55*Math.sin(Math.PI*o.openAmount));
+    const heard=FD.rm?1:clamp01((t-o.hearTs)/S.hear[1]);angle+=S.hear[0]*Math.sin(Math.PI*heard);
+    const sleeping=o.stage==='asleep';o.headTurn=angle;o.jawAngle=jawTurn;attr(head,'transform','rotate('+angle+')');attr(jaw,'transform','rotate('+(-jawTurn)+' '+S.jawPivot.join(' ')+')');attr(eye,'opacity',sleeping?0:1);attr(shut,'opacity',sleeping?1:0);
+    const bob=FD.rm||!['ready','typing'].includes(o.stage)?0:Math.sin(Math.PI*2*t/S.bob[2]);at[1]+=S.bob[1]*bob;rotation+=S.bob[0]*bob;const phoneScale=VIEW.phone?Math.min(1,S.filePhone/(15*FD.st.cam.s)):1;
+    attr(file,'transform','translate('+at.join(' ')+') rotate('+rotation+') scale('+(scale*phoneScale)+')');attr(file,'opacity',alpha);attr(stamp,'opacity',o.stamped?1:0);attr(stamp,'transform','translate(.5 1.2) rotate(-14) scale('+(1/phoneScale)+')');attr(name,'x',at[0]+S.shipName[0]*o.openAmount);attr(name,'y',at[1]+S.nameDy+S.shipName[1]*o.openAmount);attr(name,'font-size',lerp(S.nameSize,S.shipName[2],o.openAmount));attr(name,'opacity',nameAlpha);
+    const F=FIND_PLAY.focus,close=Math.max(Math.max(VIEW.s0,F.least*VIEW.sT),Math.min(F.most*VIEW.sT,F.fill*Math.min(VIEW.w,VIEW.h)/(2*f.view[2]))),detail=clamp01((FD.st.cam.s-VIEW.s0)/(close-VIEW.s0||1));findStyle(body,'--jo-detail',detail);findStyle(head,'--jo-detail',detail);
+    attr(el,'data-revision-state',o.stage);attr(el,'data-loop-open',o.openAmount);attr(el,'data-file',o.fileName);caption();if(o.stage==='asleep'&&o.queued&&t-o.shippedAt>=S.queueRest)consumeQueue();o.playing=['bite','lap','spit','typing','opening','waking'].includes(o.stage)||swells.some(s=>s.live)||o.stage==='asleep'&&o.queued>0;
   };
   return o;
 }
@@ -7612,7 +8387,7 @@ function findWell(svg) {
     o.pebbleFrom = e.type === 'keydown' || !e.detail ? [W.water[0] + W.pebbleFrom[0], W.water[1] + W.pebbleFrom[1]] : toMap([e.clientX, e.clientY]); o.ts = FD.now; o.stage = 'pebble';
     if (FD.rm) land(); else attr(pebble, 'opacity', 1);
   });
-  const eagle = svg.querySelector('.yg-eagle'), wings = svg.querySelector('.yg-wings'), rat = svg.querySelector('.yg-rat'), tail = svg.querySelector('.yg-tail'), nid = svg.querySelector('.yg-nid-head');
+  const eagle = svg.querySelector('.yg-eagle'), wings = svg.querySelector('.yg-wings'), rat = svg.querySelector('.yg-rat'), tail = svg.querySelector('.yg-tail');
   const treeRandom = rnd(YGG.life.seed), treeInterval = pair => lerp(pair[0], pair[1], treeRandom());
   o.ratAt = FD.now + treeInterval(YGG.life.ratEvery); o.eagleAt = FD.now + treeInterval(YGG.life.eagleEvery); o.ratTs = o.eagleTs = o.flightTs = -Infinity;
   o.reduce = keep => { if (['pebble','landing'].includes(o.stage)) { if (keep) opened(o); land(); } o.playing = false; };
@@ -7638,8 +8413,6 @@ function findWell(svg) {
       ey += dy; wingY = lerp(...L.flapY, (1 + Math.sin(Math.PI * 2 * L.flap * flightAge)) / 2);
     } else if (!FD.rm) wingY = lerp(...L.wingY, Math.sin(Math.PI * clamp01((t - o.eagleTs) / L.stretch)));
     attr(eagle, 'transform', 'translate(' + ex + ' ' + ey + ')'); attr(wings, 'transform', 'scale(' + L.wingX + ' ' + wingY + ')');
-    const gnawAge = t % L.gnawEvery, gnaw = FD.rm ? 0 : L.gnaw * Math.sin(Math.PI * clamp01(gnawAge / (L.gnawTime * 2)));
-    attr(nid, 'transform', 'translate(' + gnaw + ' 0)');
     if (!FD.rm && o.onScreen && t >= o.dripAt && o.dripLand === null && o.stage !== 'pebble') { findBits('drop', ...W.root, 1, { speed: [(W.water[1] - W.root[1]) / W.dripTime, (W.water[1] - W.root[1]) / W.dripTime], dir: [FIND_PLAY.kit.deg / 2, FIND_PLAY.kit.deg / 2], life: [W.dripTime, W.dripTime] }); o.dripLand = t + W.dripTime; o.dripAt = t + findRange(W.drip); }
     if (o.dripLand !== null && t >= o.dripLand) { o.dripLand = null; ring(1); }
     if (o.stage === 'pebble') {

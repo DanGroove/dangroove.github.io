@@ -118,20 +118,24 @@ for (const [w, h] of [[1440, 900], [390, 664]]) {
 // Round 7 C1 acceptance gates. Text boxes use conservative analytic metrics, not browser measurements.
 const c1map = bigMap();
 const crownMasses = [skylineSamples(YGG.canopy).map(p=>p.map((v,k)=>v+MAP.ygg[k]))];
-ok((c1map.detail.match(/class="g yg-canopy"/g)||[]).length===1,'B1 one closed connected ash canopy');
+// Part 13b (2026-11-26): the old ash (tools/ygg-old-ash) replaces the hatched canopy. The map draws the approved drawing verbatim.
+const yggBody=String(YGG.drawing).replace(/<!--[\s\S]*?-->/g,'').trim();
+ok(c1map.detail.includes(yggBody)&&(c1map.detail.match(/class="yg-crown"/g)||[]).length===1,'B1 one closed connected ash canopy (the approved old ash, drawn verbatim)');
 const massPoints=crownMasses.flat(),crownWidth=Math.max(...massPoints.map(p=>p[0]))-Math.min(...massPoints.map(p=>p[0])),crownHeight=Math.max(...massPoints.map(p=>p[1]))-Math.min(...massPoints.map(p=>p[1]));
 ok(crownWidth>crownHeight,'B1 broad ash crown');
-const yggStart=c1map.detail.indexOf('<g class="ygg"'),firstMass=c1map.detail.indexOf('class="g yg-canopy"',yggStart);
-ok(c1map.detail.indexOf(YGG.trunk,yggStart)<firstMass,'B1 clean forks are occluded by the foliage');
+const yggStart=c1map.detail.indexOf('<g class="ygg"'),yggParts=['yg-roots','yg-trunk','yg-crown'].map(k=>c1map.detail.indexOf('class="'+k+'"',yggStart));
+ok(yggStart>=0&&yggParts.every((v,i)=>v>yggStart&&(!i||v>yggParts[i-1])),'B1 clean forks are occluded by the foliage (roots, then trunk, then crown)');
 ok((!YGG.windows||YGG.windows.endsWith('Z'))&&YGG.canopy.endsWith('Z'),'D6 closed silhouette; optional true canopy windows');
-ok((c1map.detail.match(/class="l yg-edge"/g)||[]).length===1&&(c1map.detail.match(/class="t yg-hatch"/g)||[]).length===1,'B1 one family of nested bough edges and one-way hatch');
+ok(!/yg-nid|yg-canopy|yg-edge|yg-hatch/.test(c1map.detail),'B1 only the old ash: no root creature, old canopy, bough edges or hatch');
 GROVE.forEach((tree, i) => ok(yggClear(tree, YGG.clearance + YGG.groveReach), 'grove ' + i + ': crown/trunk/root clearance'));
 const labelBoxPoints = []; for (let x = YGG.labelBox[0]; x <= YGG.labelBox[2]; x++) for (let y = YGG.labelBox[1]; y <= YGG.labelBox[3]; y++) labelBoxPoints.push([x,y]);
 labelBoxPoints.forEach(p => { ok(!insidePoly(p, YGG_CROWN) && outlineGap(p, YGG_CROWN) >= YGG.labelGap, 'Yggdrasil label crown clearance'); ok(YGG_ROOTS.every(P => outlineGap(p, P, false) >= YGG.labelGap), 'Yggdrasil label root clearance'); ok(Math.abs(p[0] - MAP.ygg[0]) >= YGG.labelGap + YGG.roots[0][1], 'Yggdrasil label trunk/Ratatoskr clearance'); const h = FIND_COPY.hoards.find(h => h.id === 'hoard-hmc2'); ok(Math.hypot(p[0] - h.x, p[1] - h.y) >= YGG.labelGap + FIND_PLAY.hoard.scale * 27, 'Yggdrasil label scratch clearance'); });
 const allStars = FIND_PLAY.well.stars.flatMap((row, batch) => row.map(p => ({ batch, p: p.map((v,i) => v + MAP.ygg[i]) })));
 allStars.forEach((star, i) => { ok(insidePoly(star.p,YGG_CROWN) && outlineGap(star.p,YGG_CROWN) >= YGG.starInset, 'well star crown inset'); ok(Math.hypot(...star.p.map((v,k) => v - MAP.ygg[k] - YGG.eagleAt[k])) >= YGG.eagleClear, 'well star eagle clearance'); allStars.slice(0,i).forEach(other => ok(Math.hypot(...star.p.map((v,k) => v - other.p[k])) >= (star.batch === other.batch ? YGG.starSame : YGG.starOther), 'well star spacing')); });
 allStars.forEach(star=>ok(crownMasses.some(P=>insidePoly(star.p,P)),'well star inside actual ash foliage: '+star.p));
-JORM.S.forEach(p => { ok(p[0] >= 22.5 && p[0] <= 577.5 && p[1] >= 22.5 && p[1] <= 877.5, 'ring sample outside inner frame'); [COAST_A, COAST_B].forEach(coast => ok(outlineGap(p,coast) >= MAP.jorm.w / 2 + 6, 'ring coast clearance')); });
+// Part 13b (2026-11-26): the carved serpent's approved ribbon is wider (w 9, was 6.4). Where he surfaces, 6 units of water stay between his body and the coast; the faint dashed edges of the submerged stretches keep 5.
+const jormSurfaced=u=>MAP.jorm.surf.some(([a,b])=>u>=a&&u<=b);
+JORM.S.forEach((p, i) => { ok(p[0] >= 22.5 && p[0] <= 577.5 && p[1] >= 22.5 && p[1] <= 877.5, 'ring sample outside inner frame'); [COAST_A, COAST_B].forEach(coast => ok(outlineGap(p,coast) >= MAP.jorm.w / 2 + (jormSurfaced(JORM.cum[i] / JORM.L) ? 6 : 5), 'ring coast clearance')); });
 const cross2 = (a,b,c) => (b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
 const pointBoxGap=(p,b)=>Math.hypot(Math.max(b[0]-p[0],0,p[0]-b[2]),Math.max(b[1]-p[1],0,p[1]-b[3]));
 const boxCoastGap=(b,P)=>{
@@ -253,7 +257,7 @@ ok(!/#[0-9A-Fa-f]{3,6}\b(?![\w-]*\))/.test(readFileSync(join(ROOT, 'map.css'), '
 // Compressed delivery budgets include all top-level runtime modules and CSS, never hero-copy. The combined budget was
 // raised from 160 to 185 KB on 2026-11-24, after part 4's 32 fixes took it to 171 KB; the packed pages' budgets below,
 // which are what a visitor downloads, are unchanged.
-const RUNTIME_KB = 202.7; // 2026-11-26: COMB-Q old ash and revision loop add 3.40 KB; baseline 199.74 KB already exceeded 199.2 KB.
+const RUNTIME_KB = 203.4; // 2026-11-26: part 13 review fixes (+0.6 KB) and COMB-Q, the old ash and revision loop (+3.4 KB); 203.14 KB measured on the PC (CRLF sources), 202.19 KB with LF.
 const gzipKB = content => gzipSync(content).length / 1024;
 const runtimeSources = [...mods, 'map.css'].map(f => { const src = readFileSync(join(ROOT, f)); ok(gzipKB(src) <= 160, `${f}: exceeds 160 KB gzip`); return src; });
 const runtimeKB = gzipKB(Buffer.concat(runtimeSources)); ok(runtimeKB <= RUNTIME_KB, `combined map modules/CSS exceed ${RUNTIME_KB} KB gzip`);

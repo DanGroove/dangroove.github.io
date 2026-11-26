@@ -131,9 +131,9 @@ export const COPY = {
 // Finds. n is the number on the Red marker (main finds only). x, y are map units.
 export const FINDS = [
   { id: 'wayfinder', n: 1, x: 102, y: 716, view: [250, 660, 150], viewPhone: [118, 716, 75, 0], mark: [148, 672], label: 'The wayfinder. Pick a craft to light up the stops that used it. Arrow keys turn it, Enter on the centre clears it.' },
-  { id: 'hoards', n: 2, x: 366, y: 354, mark: [382, 346], label: 'Hoards. Five buried chests, each near a stop.' },
+  { id: 'hoards', n: 2, x: 366, y: 354, mark: [393, 347], label: 'Hoards. Five buried chests, each near a stop.' },
   { id: 'ravens', n: 3, x: 440.5, y: 201.5, view: [442.5, 181.5, 42], mark: [462.5, 193.5], label: 'Huginn and Muninn, two ravens in a bare tree. Press to send the next raven for a thought or memory.' },
-  { id: 'serpent', n: 4, x: 500, y: 101, view: [478, 96, 50], mark: [550, 74], label: 'J\u00f6rmungandr, the revision loop. Poke him.' },
+  { id: 'serpent', n: 4, x: 500, y: 101, view: [478, 96, 50], mark: [555, 71], label: 'J\u00f6rmungandr, the revision loop. Poke him.' },
   { id: 'beacon', n: 5, x: 516.4, y: 425.5, view: [474, 456, 100], mark: [545, 440], label: 'The beacon. Drag or arrows aim; Enter finds the next unread note.' },
   { id: 'runestone', n: 6, x: 250, y: 516, view: [250, 500, 40], mark: [270, 492], label: 'The rune stone. Press, rub, read, then flip the sheet.' },
   { id: 'hammer', n: 0, x: 102, y: 222, view: [108, 224, 34], label: 'Mjölnir on a stone near Laurier. Press it to hold the bridge.' },
@@ -216,7 +216,7 @@ export const FIND_COPY = {
   hoards: [
     { id: 'hoard-laurier', kind: 'bundle', stop: 'laurier', x: 208, y: 282, title: 'Piece to come', image: null, label: 'A scratch in the ground near Laurier. Dig three times, then open it.' },
     { id: 'hoard-hmc1', kind: 'screen', stop: 'hmc1', x: 404, y: 288, title: 'SafetyDrivesUs logo and website', image: null, label: 'A scratch in the ground near HMC Connections. Dig three times, then open it.' },
-    { id: 'hoard-hmc2', kind: 'book', stop: 'hmc2', x: 372, y: 368, title: '2020/2021 annual report', image: PIECE_IMAGE, label: 'A scratch in the ground near HMC, again. Dig three times, then open it.' },
+    { id: 'hoard-hmc2', kind: 'book', stop: 'hmc2', x: 371, y: 365, title: '2020/2021 annual report', image: PIECE_IMAGE, label: 'A scratch in the ground near HMC, again. Dig three times, then open it.' },
     { id: 'hoard-interkom', kind: 'book', stop: 'interkom', x: 452, y: 558, title: 'Melanoma Canada booklet', image: null, label: 'A scratch in the ground near Interkom. Dig three times, then open it.' },
     { id: 'hoard-lennard', kind: 'sheet', stop: 'lennard', x: 228, y: 728, title: '1 King Street W flyer', image: null, label: 'A scratch in the ground near Lennard. Dig three times, then open it.' },
   ],

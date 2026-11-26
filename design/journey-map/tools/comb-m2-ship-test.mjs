@@ -7,10 +7,15 @@ import {FIND_PLAY,MAP} from '../data.mjs';
 import {COAST_A,COAST_B,onLand,outlineGap,JORM,jormEdges} from '../art.mjs';
 const points=[[-26,-6],[-20,1],[-10,5],[0,5],[12,5],[20,1],[26,-6],[-29,-20],[-33,-13],[-25,-25],[28,-15],[31,-11]];
 const berths=[longshipPoint(-Infinity),longshipPoint(Infinity)],ringEdges=jormEdges(0,1-MAP.jorm.tail/JORM.L),report={berths,clearances:[],holds:[],crossings:[],labels:[]};
+// Part 13b (2026-11-26): the carved serpent's approved ribbon is wider (w 9, was 6.4). The hull keeps 9.5 units from his body where he surfaces, and 8.5 from the faint dashed edges of the submerged stretches.
+const ringEnd=1-MAP.jorm.tail/JORM.L,ringCuts=[...new Set([0,...MAP.jorm.surf.flat().filter(t=>t>0&&t<ringEnd),ringEnd])].sort((a,b)=>a-b);
+const ringRuns=ringCuts.slice(1).map((b,i)=>({a:ringCuts[i],b,surfaced:MAP.jorm.surf.some(([s,e])=>ringCuts[i]>=s-1e-9&&b<=e+1e-9),edges:jormEdges(ringCuts[i],b)})).filter(r=>r.b>r.a);
+const runGap=(q,surfaced)=>Math.min(Infinity,...ringRuns.filter(r=>r.surfaced===surfaced).map(r=>Math.min(outlineGap(q,r.edges.left,false),outlineGap(q,r.edges.right,false))));
 for(const [i,p] of berths.entries()) {
  const hull=points.map(q=>q.map((v,j)=>p[j]+v*.55));
  const coast=Math.min(...hull.map(q=>Math.min(outlineGap(q,COAST_A),outlineGap(q,COAST_B)))),ringCentre=Math.min(...hull.map(q=>outlineGap(q,JORM.S,false))),ring=Math.min(...hull.map(q=>Math.min(outlineGap(q,ringEdges.left,false),outlineGap(q,ringEdges.right,false))));
- report.clearances.push({berth:i,coast,ringCentre,ring});assert(hull.every(q=>!onLand(q)));assert(coast>=3);
+ const ringSurfaced=Math.min(...hull.map(q=>runGap(q,true))),ringSubmerged=Math.min(...hull.map(q=>runGap(q,false)));
+ report.clearances.push({berth:i,coast,ringCentre,ring,ringSurfaced,ringSubmerged});assert(hull.every(q=>!onLand(q)));assert(coast>=3);
 }
 const b=await gBrowser();
 const place=()=>b.read(`(()=>{const s=document.querySelector('.ls-ship').getAttribute('transform'),m=s.match(/translate\\(([-\\d.]+)[ ,]+([-\\d.]+)/);return {place:[+m[1],+m[2]],transform:s,u:__g.FD.st.u};})()`);
@@ -37,5 +42,5 @@ try {
  }
  for(const [w,h] of [[412,730],[1440,900]]) {await b.size(w,h,w<641,2);await b.page(false,'map',true);await b.shot('ship-'+w+'-before-map');}
  assert.deepEqual(b.errors,[]);console.log(JSON.stringify({berths,clearances:report.clearances,crossings:report.crossings.map(({observations,...r})=>r)},null,2));
- assert(report.clearances.every(r=>r.ring>=9.5),'hull is less than 9.5 map units from the serpent ring edge: '+JSON.stringify(report.clearances));
+ assert(report.clearances.every(r=>r.ringSurfaced>=9.5&&r.ringSubmerged>=8.5),'hull is less than 9.5 map units from the surfaced serpent or 8.5 from its submerged edges: '+JSON.stringify(report.clearances));
 } finally {writeFileSync(gRoot+'/ship-results.json',JSON.stringify(report,null,2));await b.close();}
