@@ -11,17 +11,21 @@
 // --no-adb skips adb (for a desktop Chrome started with --remote-debugging-port=9222).
 // --click script|mouse picks how a press is made: script (a click event on the element, the phone's default) or mouse
 // (a DevTools mouse click, the default with --no-adb).
+// --trace also records a Chrome trace of each row's window (trace-<build>-<beat>-<run>.json.gz, opens in DevTools'
+// Performance panel or ui.perfetto.dev) and adds a summary to the row's file: main-thread tasks over 8 ms with what
+// fills them, and the busiest work on each thread (main, compositor, raster, GPU, Viz).
 // A beat written press:<craft> (for example press:screen) measures a compass press instead of a glide: it opens ?beat=map,
 // clicks the compass marker, waits for the compass to open, then records while it clicks that craft's word.
 import { spawn, spawnSync } from 'node:child_process';
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 
 const args = process.argv.slice(2), opt = { page: [] };
 for (let i = 0; i < args.length; i++) {
   const k = args[i].replace(/^--/, '');
-  if (k === 'no-adb') opt.noAdb = true; else if (k === 'touch') opt.touch = true; else if (k === 'unthrottled') opt.unthrottled = true; else if (k === 'page') opt.page.push(args[++i]); else opt[k] = args[++i];
+  if (k === 'no-adb') opt.noAdb = true; else if (k === 'touch') opt.touch = true; else if (k === 'unthrottled') opt.unthrottled = true; else if (k === 'trace') opt.trace = true; else if (k === 'page') opt.page.push(args[++i]); else opt[k] = args[++i];
 }
 if (opt.launch) opt.noAdb = true;
 const ADB = opt.adb, SERIAL = opt.serial, PORT = +(opt.port || 8765), DEV = +(opt.devtools || 9222);
@@ -112,6 +116,39 @@ async function mouseDrag(from, to, ms) {
 }
 async function wheel([x, y], deltaY, n) { for (let k = 0; k < n; k++) { await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: Math.round(x), y: Math.round(y), deltaX: 0, deltaY }); await sleep(50); } }
 
+// Tracing for --trace: events arrive as Tracing.dataCollected while the window records.
+const TRACE_CATS = ['toplevel', 'devtools.timeline', 'disabled-by-default-devtools.timeline', 'disabled-by-default-devtools.timeline.frame', 'blink', 'cc', 'gpu', 'viz', 'v8.execute', 'blink.rendering', 'benchmark'];
+async function traceStart() { for (let i = events.length - 1; i >= 0; i--) if (/^Tracing\./.test(events[i].method)) events.splice(i, 1); await send('Tracing.start', { traceConfig: { includedCategories: TRACE_CATS, recordMode: 'recordAsMuchAsPossible' }, transferMode: 'ReportEvents' }); }
+async function traceEnd() {
+  await send('Tracing.end'); await waitEvent('Tracing.tracingComplete', 120000);
+  const out = []; for (let i = 0; i < events.length; i++) if (events[i].method === 'Tracing.dataCollected') out.push(...events[i].params.value);
+  for (let i = events.length - 1; i >= 0; i--) if (/^Tracing\./.test(events[i].method)) events.splice(i, 1);
+  return out;
+}
+// Summary of a trace from the press on: main-thread tasks over 8 ms and self time by event on each thread group.
+function traceSummary(ev, windowMs) {
+  const names = {}, procs = {}; for (const e of ev) if (e.ph === 'M') { if (e.name === 'thread_name') names[e.pid + ':' + e.tid] = e.args.name; if (e.name === 'process_name') procs[e.pid] = e.args.name; }
+  const press = ev.filter(e => e.name === 'EventDispatch' && e.args?.data?.type === 'click').sort((a, b) => a.ts - b.ts)[0];
+  const mains = Object.keys(names).filter(k => names[k] === 'CrRendererMain'), count = k => ev.reduce((n, e) => n + (e.pid + ':' + e.tid === k ? 1 : 0), 0);
+  const main = press ? press.pid + ':' + press.tid : mains.sort((a, b) => count(b) - count(a))[0];
+  const t0 = press ? press.ts : Math.min(...ev.filter(e => e.ts > 0).map(e => e.ts)), t1 = t0 + windowMs * 1e3;
+  const spans = ev.filter(e => e.ph === 'X' && e.dur != null && e.ts >= t0 && e.ts + e.dur <= t1);
+  const group = k => k === main ? 'main' : /^Compositor$/.test(names[k]) && k.split(':')[0] === main.split(':')[0] ? 'compositor' : /CompositorTileWorker|RasterWorker/.test(names[k] || '') ? 'raster' : names[k] === 'CrGpuMain' ? 'gpu' : names[k] === 'VizCompositorThread' ? 'viz' : null;
+  const self = {}, byThread = {}; for (const e of spans) { const k = e.pid + ':' + e.tid; (byThread[k] ||= []).push(e); }
+  for (const [k, list] of Object.entries(byThread)) { const g = group(k); if (!g) continue; list.sort((a, b) => a.ts - b.ts || b.dur - a.dur); const st = [];
+    for (const e of list) { while (st.length && st[st.length - 1].ts + st[st.length - 1].dur <= e.ts) st.pop(); if (st.length) st[st.length - 1].child = (st[st.length - 1].child || 0) + e.dur; st.push(e); }
+    const o = self[g] ||= {}; for (const e of list) o[e.name] = (o[e.name] || 0) + e.dur - (e.child || 0); }
+  const top = (o, n) => Object.entries(o || {}).sort((a, b) => b[1] - a[1]).slice(0, n).map(([k, v]) => [k, +(v / 1000).toFixed(1)]);
+  const threads = {}; for (const g of ['main', 'compositor', 'raster', 'gpu', 'viz']) if (self[g]) threads[g] = { total: +(Object.values(self[g]).reduce((a, b) => a + b, 0) / 1000).toFixed(0), top: top(self[g], 8) };
+  const mainSpans = byThread[main] || [], wrap = /^(ThreadControllerImpl::RunTask|RunTask|ThreadPool_RunTask|SequenceManager.*)$/;
+  const tasks = mainSpans.filter(e => (e.name === 'ThreadControllerImpl::RunTask' || e.name === 'RunTask') && e.dur > 8e3).filter((e, i, a) => !a.some(o => o !== e && o.ts <= e.ts && o.ts + o.dur >= e.ts + e.dur && o.dur > e.dur))
+    .map(t => { const inner = {}; for (const e of mainSpans) if (e !== t && e.ts >= t.ts && e.ts + e.dur <= t.ts + t.dur && !wrap.test(e.name)) inner[e.name] = Math.max(inner[e.name] || 0, e.dur); return { at: +((t.ts - t0) / 1000).toFixed(0), ms: +(t.dur / 1000).toFixed(1), inner: top(inner, 5) }; });
+  // What repaints: Blink's Paint events by node (devtools.timeline), with their clip size in CSS px.
+  const paints = {}; for (const e of mainSpans) if (e.name === 'Paint' && e.args?.data) { const d = e.args.data, q = d.clip || [], w = q.length >= 8 ? Math.round(Math.max(q[0], q[2], q[4], q[6]) - Math.min(q[0], q[2], q[4], q[6])) : 0, h = q.length >= 8 ? Math.round(Math.max(q[1], q[3], q[5], q[7]) - Math.min(q[1], q[3], q[5], q[7])) : 0, k = (d.nodeId ?? '?') + ' ' + w + 'x' + h; const o = paints[k] ||= { n: 0, ms: 0 }; o.n++; o.ms += e.dur / 1000; }
+  const paintTop = Object.entries(paints).sort((a, b) => b[1].ms - a[1].ms).slice(0, 8).map(([k, v]) => [k, v.n, +v.ms.toFixed(1)]);
+  return { pressFound: !!press, mainTasksOver8: tasks.length, longest: tasks.slice().sort((a, b) => b.ms - a.ms).slice(0, 12), threads, paints: paintTop };
+}
+
 async function oneRun(p, beat, run) {
   events.length = 0;
   const colon = beat.indexOf(':'), kind = colon < 0 ? (beat === 'hero' ? 'hero' : 'next') : beat.slice(0, colon), arg = (colon < 0 ? beat : beat.slice(colon + 1)).toLowerCase();
@@ -144,6 +181,7 @@ async function oneRun(p, beat, run) {
   const measure = async (label, act, check) => {
     await evaluate(`(() => { const tok = (window.__pfTok || 0) + 1, t = []; window.__pfTok = tok; window.__pf = t; const f = n => { if (window.__pfTok !== tok) return; t.push(n); if (t.length < 4000) requestAnimationFrame(f); }; requestAnimationFrame(f); return true; })()`);
     await sleep(400);
+    if (opt.trace) await traceStart();
     const before = await state(), t0 = await evaluate('performance.now()');
     let why = null;
     try { await act(); } catch (e) { why = e.message; }
@@ -152,13 +190,18 @@ async function oneRun(p, beat, run) {
     if (!why && check) early = check(before, await state());
     await sleep(WINDOW - 100);
     const r = await evaluate(`(() => { const t0 = ${t0}, t = window.__pf.filter(x => x > t0 && x < t0 + ${WINDOW}); return { t, s: ${STATE} }; })()`);
+    let trace = null;
+    if (opt.trace) { const ev = await traceEnd(), base = `trace-${p.name}-${label.replace(/[:>]/g, '-')}-${run}`; fs.writeFileSync(path.join(OUT, base + '.json.gz'), zlib.gzipSync(JSON.stringify({ traceEvents: ev }))); trace = traceSummary(ev, WINDOW); trace.file = base + '.json.gz';
+      // Name the repainted nodes (tag#id.class) while the page is still open.
+      for (const row of trace.paints) { const id = +row[0].split(' ')[0]; if (!Number.isFinite(id)) continue; try { const { node } = await send('DOM.describeNode', { backendNodeId: id }); const a = node.attributes || [], at = k => { const i = a.indexOf(k); return i >= 0 ? a[i + 1] : ''; }; row[0] = (node.localName || node.nodeName) + (at('id') ? '#' + at('id') : '') + (at('class') ? '.' + at('class').trim().split(/\s+/).slice(0, 2).join('.') : '') + ' ' + row[0].split(' ')[1]; } catch (e) {} } }
     // A check passes if it holds 400 ms after the press (a move under way) or at the end of the window (a late camera).
     if (!why && early) why = check(before, r.s);
     const d = r.t.slice(1).map((x, i) => x - r.t[i]).sort((a, b) => a - b), q = k => d.length ? +d[Math.min(d.length - 1, Math.floor(d.length * k))].toFixed(1) : null;
     const med = q(0.5) || 16.7, row = { build: p.name, beat: label, run, ok: !why, why, frames: r.t.length, fps: +(r.t.length / (WINDOW / 1000)).toFixed(1), p50: med, p90: q(0.9), p99: q(0.99), max: d.length ? +d.at(-1).toFixed(1) : null,
       over25: d.filter(x => x > 25).length, overMed: d.filter(x => x > 1.5 * med).length, Pbefore: before.P, Pafter: r.s.P, changed: r.s.cam !== before.cam || r.s.cls !== before.cls || r.s.P !== before.P || r.s.ui !== before.ui, dpr: env.dpr, w: env.w, h: env.h };
-    fs.writeFileSync(path.join(OUT, `${p.name}-${label.replace(/[:>]/g, '-')}-${run}.json`), JSON.stringify({ row, frames: r.t }, null, 0));
+    fs.writeFileSync(path.join(OUT, `${p.name}-${label.replace(/[:>]/g, '-')}-${run}.json`), JSON.stringify({ row, frames: r.t, trace }, null, 0));
     note(JSON.stringify(row)); rows.push(row);
+    if (trace) note('trace ' + JSON.stringify({ build: p.name, beat: label, run, tasksOver8: trace.mainTasksOver8, longest: trace.longest.slice(0, 4), threads: Object.fromEntries(Object.entries(trace.threads).map(([g, v]) => [g, [v.total, v.top.slice(0, 4)]])), paints: trace.paints.slice(0, 4) }));
   };
   const moved = (b, a) => a.moving || a.P !== b.P ? null : `no move (P still ${a.P})`;
   const anything = (b, a) => a.moving || a.P !== b.P || a.y !== b.y || a.cam !== b.cam || a.cls !== b.cls || a.ui !== b.ui ? null : 'nothing moved';
