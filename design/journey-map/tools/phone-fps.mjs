@@ -50,12 +50,13 @@ async function connect() {
   for (let i = 0; i < 20 && !list; i++) { try { list = await (await fetch(`http://127.0.0.1:${DEV}/json/list`)).json(); } catch (e) { await sleep(500); } }
   if (!list) throw new Error('no DevTools at 127.0.0.1:' + DEV + ' (is Chrome open on the phone?)');
   // Never drive a tab the person has open: open a tab of our own (closed again at the end).
-  const blank = `http://localhost:${PORT}/blank`; let page = null;
-  try { const r = await fetch(`http://127.0.0.1:${DEV}/json/new?${blank}`, { method: 'PUT' }); if (r.ok) page = await r.json(); } catch (e) {}
-  if (!page && !opt.noAdb) {
+  const blank = `http://localhost:${PORT}/blank?t=${Date.now()}`; let page = null;
+  // On the phone the tab is opened with a VIEW intent, which brings Chrome to the front with it. A tab made through
+  // /json/new stays behind whatever app is showing (phone-p23: the home screen), where requestAnimationFrame never runs.
+  if (!opt.noAdb) {
     adb('shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', blank, 'com.android.chrome');
-    for (let i = 0; i < 20 && !page; i++) { await sleep(500); try { page = (await (await fetch(`http://127.0.0.1:${DEV}/json/list`)).json()).find(t => t.type === 'page' && t.url.startsWith(blank)) || null; } catch (e) {} }
-  }
+    for (let i = 0; i < 20 && !page; i++) { await sleep(500); try { page = (await (await fetch(`http://127.0.0.1:${DEV}/json/list`)).json()).find(t => t.type === 'page' && t.url === blank) || null; } catch (e) {} }
+  } else { try { const r = await fetch(`http://127.0.0.1:${DEV}/json/new?${blank}`, { method: 'PUT' }); if (r.ok) page = await r.json(); } catch (e) {} }
   if (!page?.webSocketDebuggerUrl) throw new Error('could not open a tab of our own');
   ownTab = page.id;
   try { await fetch(`http://127.0.0.1:${DEV}/json/activate/${page.id}`); } catch (e) {}
@@ -65,6 +66,10 @@ async function connect() {
   cdp.onmessage = m => { const d = JSON.parse(typeof m.data === 'string' ? m.data : m.data.toString()); if (d.id && waiters.has(d.id)) { const w = waiters.get(d.id); waiters.delete(d.id); d.error ? w.reject(new Error(d.error.message)) : w.resolve(d.result); } else if (d.method) events.push(d); };
   await send('Page.enable'); await send('Runtime.enable');
   try { await send('Page.bringToFront'); } catch (e) {}
+  await sleep(1000);
+  const vis = await evaluate('document.visibilityState');
+  if (vis !== 'visible') throw new Error('our tab is not on screen (visibilityState ' + vis + '): is the phone unlocked with the screen on?');
+  note('our tab is on screen');
 }
 
 async function oneRun(p, beat, run) {
