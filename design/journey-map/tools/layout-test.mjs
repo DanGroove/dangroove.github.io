@@ -76,7 +76,7 @@ for(const[w,h]of [[1440,900],[1280,720],[1024,600],[820,1180],[390,844],[412,730
   STOPS.forEach((stop,i)=>{
     const pair=VIEW.cards[i],p=toScreen(tripState(progressForStop(i)),MAP.waypoints[stop.w]);
     assert.ok(Math.abs(p[0]-pair.sx)<1e-7&&Math.abs(p[1]-(stone/2+MARK.stand)*MARK.lift-pair.sy)<1e-7,'held camera must pin the shield centre exactly on the trail');
-    if(w<=640){assert.ok(Math.abs(pair.y-heights[i]/2-pair.sy-rim-CARD_TAIL.lenPhone)<1e-7);assert.ok(pair.sy-stone/2>=40,'phone fixture clears review switch');}
+    if(w<=640){assert.ok(Math.abs(pair.y-heights[i]/2-pair.sy-rim-(MARK.ringGap+MARK.ringWidth+CARD_TAIL.ringGap+CARD_TAIL.minLine+CARD_TAIL.edgeGap))<1e-7);assert.ok(pair.sy-stone/2>=40,'phone fixture clears review switch');}
     else{const left=pair.sx-stone/2,right=pair.x+pair.w/2;assert.ok(Math.abs(left-(w-right))<1e-7,'pair centred across screen');assert.ok(left>=WORLD.card.edge);assert.ok(Math.abs(pair.x-pair.w/2-pair.sx-rim-CARD_TAIL.len)<1e-7);}
   });
 }

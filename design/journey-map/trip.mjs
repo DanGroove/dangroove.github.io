@@ -82,12 +82,16 @@ export const progressForDate = d => { for (const q of PIECES) { const lo = Math.
 export const VIEW = { w: 1, h: 1, phone: false, s0: 1, ox: 0, oy: 0, sT: 1, unit: 1, depth: 1, footerY: null, cards: [], stageTop: 0, mapReady: true };
 export function tripCardPlace(height, steps = true, reviewFloor = WORLD.card.gap) {
   const Q = WORLD.card, stone = Math.max(MARK.min, Math.min(MARK.max, MARK.k * VIEW.sT * CAMERA.holdZoom)), rim = stone * (MARK.radius + MARK.rim / 2) / MARK.box;
-  const width = VIEW.phone ? VIEW.w : Math.min(Q.w + (VIEW.h <= 440 ? 96 : 0), VIEW.w - 2 * Q.edge - stone / 2 - rim - CARD_TAIL.len);
+  // Short landscape screens keep the shorter link, so the card keeps its width and still fits above the buttons.
+  const len = VIEW.h <= 440 ? CARD_TAIL.lenShort : CARD_TAIL.len;
+  const width = VIEW.phone ? VIEW.w : Math.min(Q.w + (VIEW.h <= 440 ? 96 : 0), VIEW.w - 2 * Q.edge - stone / 2 - rim - len);
   const floor = VIEW.phone ? VIEW.h - Q.phoneBottom - (steps ? STEPS.nav.bar : 0) : steps ? VIEW.h - 56 - STEPS.nav.gap - STEPS.nav.h - Q.gap : VIEW.h - Q.gap;
-  const left = VIEW.phone ? 0 : (VIEW.w - (stone / 2 + rim + CARD_TAIL.len + width)) / 2;
+  const left = VIEW.phone ? 0 : (VIEW.w - (stone / 2 + rim + len + width)) / 2;
   const top = VIEW.phone ? floor - height : Math.max(reviewFloor, Math.min(VIEW.h / 2 - Q.gap - height / 2, floor - height));
-  const sx = VIEW.phone ? VIEW.w / 2 : left + stone / 2, sy = VIEW.phone ? top - CARD_TAIL.lenPhone - rim : top + height / 2;
-  return { w: width, h: height, x: VIEW.phone ? VIEW.w / 2 : sx + rim + CARD_TAIL.len + width / 2, y: top + height / 2, sx, sy };
+  // Phones: the shield sits high enough over the docked card for the whole leader (ring gap, the shortest line, edge gap).
+  const lead = MARK.ringGap + MARK.ringWidth + CARD_TAIL.ringGap + CARD_TAIL.minLine + CARD_TAIL.edgeGap;
+  const sx = VIEW.phone ? VIEW.w / 2 : left + stone / 2, sy = VIEW.phone ? top - lead - rim : top + height / 2;
+  return { w: width, h: height, x: VIEW.phone ? VIEW.w / 2 : sx + rim + len + width / 2, y: top + height / 2, sx, sy };
 }
 export function tripVisible(st, box) {
   if (st.reduced && !VIEW.mapReady || st.handoffT < 1 || st.blastT > 0 && !st.exploreK) return false;
@@ -393,7 +397,7 @@ export function tripMeasureLabels() {
   E.t2?.forEach(t => {
     const words = t.el.textContent;
     if (words.includes(COPY.ygg) || words.includes(COPY.well) || words.includes(COPY.wellSub)) t.el.classList.add('well-name');
-    if (words.includes('HERE BE DEADLINES')) t.el.setAttribute('transform', 'translate(-46 -58)');
+    if (words.includes('HERE BE REVISIONS')) t.el.setAttribute('transform', 'translate(-46 -58)');
     if (words.includes('the diploma climb')) t.el.setAttribute('transform', 'translate(220 348) rotate(-75) translate(-238 -356)');
     if (words.includes('MOHAWKFJELL')) t.el.setAttribute('transform', 'translate(0 16)');
     if (t.el.getBBox && typeof DOMPoint !== 'undefined') { const b = t.el.getBBox(), m = t.el.transform.baseVal.consolidate()?.matrix, corners = [[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]].map(([x,y]) => m ? new DOMPoint(x,y).matrixTransform(m) : {x,y}); t.b = [Math.min(...corners.map(p=>p.x))-2, Math.min(...corners.map(p=>p.y))-2, Math.max(...corners.map(p=>p.x))+2, Math.max(...corners.map(p=>p.y))+2]; }
@@ -615,10 +619,15 @@ export function tripApply(st, focus = null) {
   const rebase = !r.base || ratio < FRAME_PERF.scaleMin || ratio > FRAME_PERF.scaleMax;
   const score = (k, lo, hi) => Math.max(lo / k, k / hi);
   const focusMove = !!focus && focus.k > 0;
-  // The protected focus score can cross several cloud hold ranges before a single-slot queue drains.
-  // Keep its existing bounded rasters; serialization is limited to journey moves.
-  const requests = (focusMove ? [] : VIEW.skyPlan?.(st) || []).map(q => ({ ...q, kind: 'sky' }));
-  if (!r.base || (!moving ? ratio !== 1 || c.tx !== r.base.tx || c.ty !== r.base.ty : rebase)) requests.push({ kind: 'map', score: r.base ? score(ratio, FRAME_PERF.scaleMin, FRAME_PERF.scaleMax) : Infinity });
+  // Journey moves share one big raster per frame: svg#map, svg#map-base or one sky object, the biggest overshoot first.
+  // Explore, its scripted opening, rest and find focus moves redraw each layer as soon as it is due, as before part 13.
+  // A waiting layer never runs more than FRAME_PERF.slack past its hold range, and the base never stops covering the screen.
+  const slot = r.gliding && !focusMove, slack = FRAME_PERF.slack;
+  const requests = (slot ? VIEW.skyPlan?.(st) || [] : []).map(q => ({ ...q, kind: 'sky' }));
+  const mapDue = !r.base || (!moving ? ratio !== 1 || c.tx !== r.base.tx || c.ty !== r.base.ty : rebase);
+  const mapForced = mapDue && (!slot || !r.base || ratio < FRAME_PERF.scaleMin / slack || ratio > FRAME_PERF.scaleMax * slack);
+  if (mapDue) requests.push({ kind: 'map', score: r.base ? score(ratio, FRAME_PERF.scaleMin, FRAME_PERF.scaleMax) : Infinity });
+  let baseForced = false;
   let B, held, coversNow = true, baseLast;
   const rounded = p => ({ s: +p.s.toFixed(4), tx: +p.tx.toFixed(2), ty: +p.ty.toFixed(2) });
   const text = p => 'matrix('+p.s.toFixed(4)+' 0 0 '+p.s.toFixed(4)+' '+p.tx.toFixed(2)+' '+p.ty.toFixed(2)+')';
@@ -633,11 +642,15 @@ export function tripApply(st, focus = null) {
     held = B.camera ? heldBy(B.camera) : null;
     coversNow = !!held && -held.tx / held.k >= -sx - 1e-6 && (VIEW.w - held.tx) / held.k <= VIEW.w + sx + 1e-6 && -held.ty / held.k >= -sy - 1e-6 && (VIEW.h - held.ty) / held.k <= VIEW.h + sy + 1e-6;
     const lo = free ? FRAME_PERF.scaleMin : FRAME_PERF.baseMin, hi = free ? FRAME_PERF.scaleMax : FRAME_PERF.baseMax;
-    if (!held || !coversNow || held.k < lo || held.k > hi || !canHold && (held.k !== 1 || held.tx !== 0 || held.ty !== 0)) requests.push({ kind: 'base', score: !coversNow ? Infinity : score(held.k,lo,hi) });
+    if (!held || !coversNow || held.k < lo || held.k > hi || !canHold && (held.k !== 1 || held.tx !== 0 || held.ty !== 0)) {
+      requests.push({ kind: 'base', score: !coversNow ? Infinity : score(held.k,lo,hi) });
+      baseForced = !slot || !coversNow || held.k < lo / slack || held.k > hi * slack;
+    }
   }
-  // All large rasters share this frame's single slot. Coverage of the base wins unconditionally.
-  const chosen = !coversNow ? requests.find(q => q.kind === 'base') : requests.sort((a,b) => b.score-a.score)[0];
-  st.rasterBudget = { used: false, sky: chosen?.kind === 'sky' ? chosen.object : null, baseForced: !coversNow };
+  // Forced redraws take the frame; otherwise the slot goes to the biggest overshoot. Sky objects read the slot in depthSky.
+  const forced = mapForced || baseForced;
+  const chosen = slot && !forced ? requests.sort((a,b) => b.score-a.score)[0] || null : null;
+  st.rasterBudget = slot ? { used: forced, sky: chosen?.kind === 'sky' ? chosen.object : null, baseForced } : false;
   E.rasterFrame = st.rasterBudget;
   const endScale = previous => {
     const glide = GLIDES.find(g => st.P >= g.a && st.P < g.b);
@@ -646,13 +659,13 @@ export function tripApply(st, focus = null) {
     else if (focus) end = tripState(st.P).cam.s;
     return end;
   };
-  st.rasterRebased = chosen?.kind === 'map' || !r.base || focusMove && rebase;
+  st.rasterRebased = mapForced || chosen?.kind === 'map';
   if (st.rasterRebased) {
     const ahead = moving && glideHold && lastCam && c.s > lastCam.s ? Math.min(c.s / FRAME_PERF.scaleMin, Math.max(c.s,endScale(lastCam))) / c.s : 1;
     r.base = { ...c, s: c.s * ahead, tx: c.ax - (c.ax-c.tx)*ahead, ty: c.ay - (c.ay-c.ty)*ahead };
     tripWrite(E.cam, 'transform', text(r.base), true);
     if (camVeil) tripWrite(camVeil, 'transform', E.cam.getAttribute('transform'), true);
-    st.rasterBudget.used = true;
+    if (st.rasterBudget) st.rasterBudget.used = true;
   }
   const paintK = c.s / r.base.s;
   const mapTransform = paintK === 1 && c.tx === r.base.tx && c.ty === r.base.ty ? 'none' : 'matrix('+paintK+',0,0,'+paintK+','+(c.tx-r.base.tx*paintK)+','+(c.ty-r.base.ty*paintK)+')';
@@ -660,11 +673,11 @@ export function tripApply(st, focus = null) {
   if (veil) tripWrite(veil, 'transform', mapTransform);
   st.rasterS = r.base.s; st.gliding = tripGliding();
   if (B) {
-    if (chosen?.kind === 'base' || focusMove && requests.some(q => q.kind === 'base')) {
+    if (baseForced || chosen?.kind === 'base') {
       let k = 1;
       if (held && camMoved && baseLast && c.s > baseLast.s) k = Math.min(FRAME_PERF.baseAhead, Math.max(1,endScale(baseLast)/c.s));
       B.camera = rounded({ s: c.s*k, tx: VIEW.w/2-(VIEW.w/2-c.tx)*k, ty: VIEW.h/2-(VIEW.h/2-c.ty)*k });
-      tripWrite(E.camBase, 'transform', text(B.camera), true); held = heldBy(B.camera); st.rasterBudget.used = true;
+      tripWrite(E.camBase, 'transform', text(B.camera), true); held = heldBy(B.camera); if (st.rasterBudget) st.rasterBudget.used = true;
     }
     B.held = !!held && (held.k !== 1 || held.tx !== 0 || held.ty !== 0);
     tripWrite(E.base, 'transform', B.held ? 'matrix('+held.k+',0,0,'+held.k+','+held.tx+','+held.ty+')' : 'none');
@@ -750,7 +763,7 @@ export function tripApply(st, focus = null) {
     tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
     const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
-  return (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.baseRaster?.held || requests.length > (chosen ? 1 : 0);
+  return (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.baseRaster?.held || requests.length > (mapForced ? 1 : 0) + (baseForced ? 1 : 0) + (chosen ? 1 : 0);
 }
 const n2 = v => v.toFixed(2);
 export function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }

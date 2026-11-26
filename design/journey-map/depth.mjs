@@ -58,9 +58,12 @@ function depthSkyPlace(o, x, y, scale, angle, flip, alpha, hold = false, st = nu
   depthSkyWrite(o.el, 'opacity', alpha); if (alpha <= 0) return;
   const moving = st && (st.exploring ? st.exploreMoving : st.gliding), ratio = scale / o.scale;
   const lo = moving ? FRAME_PERF.skyMin : FRAME_PERF.scaleMin, hi = moving ? FRAME_PERF.skyMax : FRAME_PERF.scaleMax;
-  const budget = st?.focusK > 0 ? null : st?.rasterBudget;
+  const budget = st?.focusK > 0 ? null : st?.rasterBudget || null;
   const due = !o.scale || !hold || budget?.sky === o || (moving ? ratio < lo || ratio > hi : Math.abs(ratio-1) > 1e-6);
-  if (due && (!budget || !budget.used && (!budget.sky || budget.sky === o))) {
+  // A sky object waiting for the shared slot never runs more than FRAME_PERF.slack past its hold range.
+  // One never drawn yet stays hidden until its turn (below).
+  const forced = due && moving && !!o.scale && (ratio < lo / FRAME_PERF.slack || ratio > hi * FRAME_PERF.slack);
+  if (due && (forced || !budget || !budget.used && (!budget.sky || budget.sky === o))) {
     const rising = moving && o.lastScale && scale > o.lastScale;
     o.scale = rising ? scale / FRAME_PERF.skyMin : scale;
     const [x0, y0, w, h] = o.box, pad = 2 / o.scale;
@@ -342,7 +345,8 @@ function depthSky(st, look, time) {
       return due ? [{ object, score: object.scale ? Math.max(lo/ratio,ratio/hi) : Infinity }] : [];
     });
   };
-  if (!st.rasterBudget) {
+  // tripApply sets the slot (or false outside journey moves); a frame it skipped still redraws one sky object at most.
+  if (st.rasterBudget === undefined) {
     const chosen = VIEW.skyPlan(st).sort((a,b)=>b.score-a.score)[0];
     st.rasterBudget = { used:false, sky:chosen?.object || null, baseForced:false };
   }

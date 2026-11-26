@@ -84,7 +84,7 @@ export const COPY = {
     { t: 'THE MARGINS', x: 172, y: 540 },
     { t: 'KERNING NARROWS', x: 300, y: 636, i: 1 },
     { t: 'LENNARDGARD', x: 412, y: 768, rune: 'lennardgard' },
-    { t: 'HERE BE DEADLINES', x: 486, y: 132 },
+    { t: 'HERE BE REVISIONS', x: 486, y: 132 },
   ],
   notes: [
     { t: 'the diploma climb', x: 238, y: 356, s: 6.5 },
@@ -93,7 +93,7 @@ export const COPY = {
     { t: 'the 2023 crossing', x: 470, y: 613, s: 6.3 },
     { t: 'the road not taken: game dev', x: 268, y: 172, s: 6 },
   ],
-  sea: 'SEA OF REVISIONS',
+  sea: 'SEA OF FEEDBACK',
   xLabel: 'X marks the work', xSub: 'case studies and everything else',
   ygg: 'YGGDRASIL', well: "URD'S WELL", wellSub: 'was, is, shall be',
   legend: { stop: 'a stop', work: 'the work', find: 'something to play with', trail: 'the trail' },
@@ -314,7 +314,7 @@ export const EXPLORE = { in: 1.6, out: 0.9, most: 3, margin: 24, marginPhone: 12
 // A growing card's scale (1 = open) at which the stone mark hands over to the card's face, and at which its words come in.
 export const CARD_GROW = { face: [0, 0.002], words: [0.16, 0.42] };
 export const CARD_CLOSE = { time: 0.45, hit: 44, inset: 0, icon: 12, stroke: 1.6 };
-export const CARD_TAIL = { base: 28, basePhone: 24, gap: 2, len: 84, lenPhone: 16, ringGap: 5, edgeGap: 9, minLine: 16, dot: 2.8, bar: 32, barGap: 1, reviewGap: 8, paintTime: 0.4 };
+export const CARD_TAIL = { base: 28, basePhone: 24, gap: 2, len: 84, lenShort: 40, ringGap: 5, edgeGap: 9, minLine: 16, dot: 2.8, bar: 32, barGap: 1, reviewGap: 8, paintTime: 0.4 };
 // Copied from the hero's NAME table, entrance name renderer and EASE curves.
 export const FOOT_NAME = { radius: 0.95, near: 1.2, hop: 0.16, rise: 0.07, feel: 1.3, wave: 55, open: 9,
   spring: 240, damp: 12, kick: 26, red: C.red, dy: 1.4, far: -1e5, fallbackEm: 16,
@@ -375,7 +375,7 @@ export const DEPTH = {
 
 export const NOVA_CANVAS = { dpr: 3, glowSprite: 512 };
 // Performance only: label recovery after a composited gesture (seconds), raster guard (CSS px).
-export const FRAME_PERF = { baseMin: .5, baseMax: 1.15, baseAhead: 1.15, baseMargin: 2, labelSettle: 0.25, rasterPad: 2, scaleMin: .87, scaleMax: 1.15, skyMin: .8, skyMax: 1.3, positionEnd: .1, scaleEnd: .001, sharpStep: .5, flingEnd: 6, starPaths: true, outerGeometry: true, rayBands: true, ringPieces: true, airEmpty: true, ringBox: 160, skyLayers: true, glideHold: true, trailPieces: true };
+export const FRAME_PERF = { baseMin: .5, baseMax: 1.15, baseAhead: 1.15, baseMargin: 2, labelSettle: 0.25, rasterPad: 2, scaleMin: .87, scaleMax: 1.15, skyMin: .8, skyMax: 1.3, slack: 1.1, positionEnd: .1, scaleEnd: .001, sharpStep: .5, flingEnd: 6, starPaths: true, outerGeometry: true, rayBands: true, ringPieces: true, airEmpty: true, ringBox: 160, skyLayers: true, glideHold: true, trailPieces: true };
 export const NOVA = {
   build: { kindle: 0.2, draw: 0.76, hold: 1, throbs: [0.26, 0.45, 0.60, 0.72], rise: 0.12, fall: 0.32, pull: 1.8,
     push: 0.08, pushPhone: 0.06, recoil: 0.4, veil: 0.65, veilPhone: 0.45, veilOut: 0.25, hole: [0.6, 0.18], holeBreath: 0.04,

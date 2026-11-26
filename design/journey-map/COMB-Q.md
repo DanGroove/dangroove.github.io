@@ -23,7 +23,7 @@ Priority if time runs short: Q1, then Q2. Finish within about 100 minutes.
 - **The YGGDRASIL label** (`YGG.label`, `labelBox`): keep it if it is 2 units clear of every tree line at the well close-up. Otherwise move it the least distance that clears it, and say where.
 - **Check at three views:** the well close-up (`?beat=map`, press `#f-well`), the map overview, and 412x915. In each, the tree must stay 4 units clear of the trail line (the loop above the crown), the Urd's Well labels, marker 2's bubble and every other find.
 
-**Q2. The carved serpent and the revision loop (`findcreatures.mjs` the serpent only, `art.mjs` `jormungandr` and the serpent's body and lumps, `data.mjs` `MAP.jorm` drawing keys, `FIND_PLAY.serpent`, `FIND_ART.serpent` and the serpent's `FIND_COPY` and caption, the `HERE BE DEADLINES` label only, `map.css` serpent rules).**
+**Q2. The carved serpent and the revision loop (`findcreatures.mjs` the serpent only, `art.mjs` `jormungandr` and the serpent's body and lumps, `data.mjs` `MAP.jorm` drawing keys, `FIND_PLAY.serpent`, `FIND_ART.serpent` and the serpent's `FIND_COPY` and caption, the `HERE BE REVISIONS` label only, `map.css` serpent rules).**
 
 *The drawing*
 - The approved drawing is `tools/jorm-carved/jormungandr-A.svg`. It is in map coordinates: `.jo-body` belongs in `#b-sea`, `.jo-head` (with `.jo-jaw`, the moving jaw) in `#finds`, and every `g.jd` is close-up-only detail.
@@ -33,7 +33,7 @@ Priority if time runs short: Q1, then Q2. Finish within about 100 minutes.
 - Replace today's head, jaw, eye, crest, tail stub, the calendar pad and its leaves (`FIND_ART.serpent`) with A's head. Keep the hooks the behaviour needs, giving the new parts the old roles: the head turns, the jaw opens about its hinge, and the eye shuts when he dozes.
 - Replace the body `art.mjs` draws today (`jormungandr()`, the double line, chevrons and humps) with A's banded ribbon along the same ring, surfacing where it surfaces now. Keep `jormPoint` on that ring, so anything that rides the body still follows it.
 - `g.jd` detail shows only at the serpent's close-up zoom and above. Fade it with the camera scale between the map beat's scale and the close-up's.
-- `HERE BE DEADLINES` moves up 14 map units, to clear the file and its name.
+- `HERE BE REVISIONS` (Dan renamed it from HERE BE DEADLINES on 2026-11-26) moves up 14 map units, to clear the file and its name.
 
 *The behaviour (Dan's pick of 2026-11-25: "please think it very thoroughly as this needs to be understandable instantly")*
 1. **The first press** on the serpent, while the camera is not on him, only brings the camera in, as his marker does. Caption: "Jörmungandr, the revision loop. Poke him." (replaces "Jörmungandr, the world serpent. Poke it." and the find's label).

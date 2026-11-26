@@ -195,7 +195,8 @@ function frame(ts) {
   const focusKey = JSON.stringify(f), tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || explored || folded || mainMapPending || P !== lastP || tuning !== mainTuning || focusKey !== mainFocus;
   mainFocus = focusKey;
   const aim = depthLook(dt, PTR);
-  if (moved) { const xp = toScreen(st, MAP.x); if (st.rushT === 0 && xp[0] >= 0 && xp[0] <= VIEW.w && xp[1] >= 0 && xp[1] <= VIEW.h) { const weight = String(3.6 * Math.min(1, tripXCamera().s / st.cam.s)); mainXStrokes.forEach(el => { if (el.getAttribute('stroke-width') !== weight) el.setAttribute('stroke-width', weight); }); } mainMapPending = tripApply(st, f); tlFrame(st); footerFrame(st); if (!JOIN.frame && CANVAS.style.opacity !== String(st.dim)) CANVAS.style.opacity = st.dim; lastP = P; mainTuning = tuning; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
+  // The X's stroke follows the map's raster scale (st.rasterS, set by tripApply), so a move rewrites it only at a rebase.
+  if (moved) { mainMapPending = tripApply(st, f); const xp = toScreen(st, MAP.x); if (st.rushT === 0 && xp[0] >= 0 && xp[0] <= VIEW.w && xp[1] >= 0 && xp[1] <= VIEW.h) { const weight = String(3.6 * Math.min(1, tripXCamera().s / (st.rasterS || st.cam.s))); mainXStrokes.forEach(el => { if (el.getAttribute('stroke-width') !== weight) el.setAttribute('stroke-width', weight); }); } tlFrame(st); footerFrame(st); if (!JOIN.frame && CANVAS.style.opacity !== String(st.dim)) CANVAS.style.opacity = st.dim; lastP = P; mainTuning = tuning; dirty = false; const v = st.visited.join(); if (v !== lastVisited) { lastVisited = v; tripMiniVisited(st); } }
   if (moved) mainPlaceMarkers(st);
   const jo = JOIN.frame ? JOIN.frame(st, moved, P) : undefined;
   depthFrame(st, time, dt, PTR, aim, moved);
