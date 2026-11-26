@@ -23,6 +23,17 @@ Nothing here is part of the site. Results and screenshots stay on the PC under `
 - Screenshots: `adb shell screencap -p /data/local/tmp/x.png` then `adb pull` (PowerShell `>` corrupts binary output).
 - Displayed frames: `adb shell dumpsys SurfaceFlinger --timestats -clear -enable`, run the gesture, `-dump`, `-disable`.
 
+## What the first runs showed (2026-11-26, Chrome 158, Android 17, Adaptive motion smoothness)
+- Viewport: DPR 2.625, CSS 411x750 with Chrome's toolbar showing (screen 412x892). Device px = CSS screen px x 2.625,
+  and clientY = screenY - 92.95 CSS px (244 device px of status bar plus toolbar). Calibrate again if the toolbar hides.
+- With no finger on the screen, Chrome runs pages at 60 Hz (rAF 60.1 fps; SurfaceFlinger 16 ms gaps). A single tap
+  does not lift it (62.7 fps after a tap). A finger drag does: 120 Hz, Chrome about 105 fps over the window.
+  So glides started by a tap top out at 60 fps in Chrome, while drags and pinches can reach 120. Dan views previews
+  in the Claude app (Android WebView), which ran at 120 fps at rest in his recording.
+- `dumpsys SurfaceFlinger --timestats` works without root. Chrome's layer is `com.android.chrome/ChromeChildSurface#N`,
+  split into blocks by displayRefreshRate; the global presentToPresent histogram shows 8 ms (120 Hz) vs 16 ms (60 Hz).
+- A tap on text opens Chrome's Touch to Search sheet; tap empty areas, or set user-select: none on test pages.
+
 ## Rules
 - One session drives the phone at a time (two would fight over Chrome and skew timings).
 - The phone must be unlocked with Chrome in front; Dan keeps it on the charger with Stay awake on during runs.
