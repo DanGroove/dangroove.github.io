@@ -1,7 +1,7 @@
 // The one layer model, plus its three render surfaces. Importing this module needs no DOM.
 import { C, MAP, DEPTH, NOVA, STOPS, STEPS, FRAME_PERF } from './data.mjs';
-import { rnd, COAST_A, COAST_B, depthCloudDrawing, depthRavenDrawing } from './art.mjs';
-import { VIEW, toScreen, smooth, lerp, clamp01 } from './trip.mjs';
+import { rnd, COAST_A, COAST_B, depthCloudDrawing } from './art.mjs';
+import { VIEW, toScreen, smooth, lerp, clamp01, GLIDES } from './trip.mjs';
 
 export const depthLift = st => Math.max(0, DEPTH.base + DEPTH.gain * (st.cam.s - VIEW.s0) / (VIEW.sT - VIEW.s0));
 export const depthFactor = (st, a) => Math.max(DEPTH.minK, 1 + a * depthLift(st));
@@ -44,7 +44,35 @@ const DP = { deep: null, air: null, sky: null, dc: null, ac: null, dpr: 1, rm: f
 const depthCentres = [COAST_A, COAST_B].map(coast => coast.reduce((a, p) => [a[0] + p[0] / coast.length, a[1] + p[1] / coast.length], [0, 0]));
 const depthRange = (range, u) => lerp(range[0], range[1], u);
 const depthSamples = (list, n, seed) => { if (list.length >= n && list.seed === seed) return; const r = rnd(seed); list.length = 0; list.seed = seed; for (let i = 0; i < n; i++) list.push(Array.from({ length: 8 }, () => r())); };
-const depthSvgGroup = () => { const el = document.createElementNS('http://www.w3.org/2000/svg', 'g'); el.style.opacity = 0; return el; };
+// Each sky drawing owns a tight SVG viewport. Only its outer CSS transform moves.
+const depthSkyWrite = (el, key, value, attribute = false) => { const text = String(value); if (attribute) { if (el.getAttribute(key) !== text) el.setAttribute(key, text); } else if (el.style[key] !== text) el.style[key] = text; };
+const depthSkyObject = (name, markup) => {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); el.dataset.sky = name; el.innerHTML = markup;
+  DP.sky.appendChild(el); const b = el.getBBox();
+  const object = { el, box: [b.x, b.y, b.width, b.height], scale: 0 };
+  depthSkyWrite(el, 'visibility', 'hidden'); return object;
+};
+function depthSkyPlace(o, x, y, scale, angle, flip, alpha, hold = false) {
+  depthSkyWrite(o.el, 'visibility', alpha > 0 ? 'visible' : 'hidden');
+  depthSkyWrite(o.el, 'willChange', alpha > 0 && FRAME_PERF.skyLayers ? 'transform' : '');
+  depthSkyWrite(o.el, 'opacity', alpha); if (alpha <= 0) return;
+  const ratio = scale / o.scale;
+  if (!o.scale || !hold || ratio < FRAME_PERF.scaleMin || ratio > FRAME_PERF.scaleMax) {
+    o.scale = scale; const [x0, y0, w, h] = o.box, pad = 2 / scale;
+    o.origin = [x0 - pad, y0 - pad];
+    depthSkyWrite(o.el, 'viewBox', [x0-pad,y0-pad,w+2*pad,h+2*pad].join(' '), true);
+    depthSkyWrite(o.el, 'width', w*scale+4, true); depthSkyWrite(o.el, 'height', h*scale+4, true);
+  }
+  const k = scale / o.scale;
+  depthSkyWrite(o.el, 'transform', 'translate('+x+'px,'+y+'px) rotate('+angle+'deg) scale('+(flip*k)+','+k+') translate('+(o.origin[0]*o.scale)+'px,'+(o.origin[1]*o.scale)+'px)');
+}
+function depthWolfDrawing(name) {
+  const w = DEPTH.drawings[name], colour = name === 'skoll' ? C.warm : C.paper, fill = name === 'skoll' ? C.ink : C.mid;
+  const outline = 'fill="'+fill+'" stroke="'+colour+'" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"';
+  const leg = (kind, far) => '<g class="sky-leg '+kind+'"><path '+outline+(far?' transform="'+w[far]+'"':'')+' d="'+w[kind]+'"/></g>';
+  const line = (d, width, opacity) => '<path fill="none" stroke="'+colour+'" stroke-width="'+width+'" stroke-opacity="'+opacity+'" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" d="'+d+'"/>';
+  return '<g class="sky-bob">'+leg('front','farFront')+leg('hind','farHind')+'<path '+outline+' d="'+w.body+'"/>'+leg('hind')+leg('front')+w.lines.map(d=>line(d,.7,.5)).join('')+w.marks.map(d=>line(d,name==='skoll'?1.1:.9,name==='skoll'?1:.85)).join('')+'<path fill="'+colour+'" d="'+w.eye+'"/></g>';
+}
 
 export function depthBuild(deep, air, sky, rm) {
   Object.assign(DP, { deep, air, sky, rm, dc: deep.getContext('2d'), ac: air.getContext('2d') });
@@ -60,18 +88,15 @@ function depthConfigure() {
   const key = JSON.stringify([DEPTH.clouds.list.map(c => c[3]), DEPTH.drawings, DEPTH.field.sprite, DEPTH.field.spriteMid, DEPTH.field.spriteAlpha]);
   if (key !== DP.config) {
     DP.config = key;
-    while (DP.clouds.length < DEPTH.clouds.list.length) { const el = depthSvgGroup(); DP.sky.insertBefore(el, DP.birds[0]?.el || null); DP.clouds.push({ el }); }
-    DP.clouds.forEach((c, i) => {
-      const row = DEPTH.clouds.list[i]; if (!row) return;
-      const paths = DEPTH.drawings.clouds[row[3] - 1];
-      if (!c.paths) { c.el.innerHTML = depthCloudDrawing(paths); c.paths = [...c.el.querySelectorAll('path')]; }
-      else c.paths.forEach((path, j) => path.setAttribute('d', paths[j]));
-    });
-    if (!DP.birds.length) for (let i = 0; i < 2; i++) { const el = depthSvgGroup(); DP.sky.appendChild(el); DP.birds.push({ el }); }
-    DP.birds.forEach(b => {
-      const paths = DEPTH.drawings.raven;
-      if (!b.wings) { b.el.innerHTML = depthRavenDrawing(paths); b.wings = [...b.el.querySelectorAll('.sky-wing')]; b.paths = [...b.el.querySelectorAll('path')]; }
-      else [paths.wing, paths.wing, paths.tail, paths.body, paths.beak].forEach((d, i) => b.paths[i].setAttribute('d', d));
+    DP.clouds.forEach(c => c.el.remove()); DP.birds.forEach(b => { b.el.remove(); b.lead.el.remove(); });
+    DP.clouds = DEPTH.clouds.list.map((row, i) => depthSkyObject('cloud-'+i, depthCloudDrawing(DEPTH.drawings.clouds[row[3]-1])));
+    DP.birds = ['skoll', 'hati'].map(name => {
+      const d = DEPTH.drawings[name === 'skoll' ? 'sun' : 'moon'];
+      const markup = name === 'skoll' ? '<path fill="'+C.paper+'" d="'+d.disc+'"/><path fill="'+C.warm+'" d="'+d.rays+'"/>' : '<path fill="none" stroke="'+C.paper+'" stroke-opacity=".5" stroke-width=".7" vector-effect="non-scaling-stroke" d="'+d.ghost+'"/><path fill="'+C.paper+'" d="'+d.crescent+'"/>';
+      const lead = depthSkyObject(name === 'skoll' ? 'sun' : 'moon', markup), b = depthSkyObject(name, depthWolfDrawing(name));
+      // Fixed bounds include every gallop pose and bob, without a per-frame bbox read.
+      b.box = [-75, -50, 135, 100]; b.name = name; b.lead = lead;
+      b.legs = [...b.el.querySelectorAll('.sky-leg')]; b.bob = b.el.querySelector('.sky-bob'); return b;
     });
     DP.force = true;
   }
@@ -88,7 +113,7 @@ export function depthResize(w, h) {
   DP.dpr = Math.min(DEPTH.dpr, window.devicePixelRatio || 1);
   DP.deep.width = Math.round(w * DP.dpr); DP.deep.height = Math.round(h * DP.dpr);
   DP.air.width = w; DP.air.height = h;
-  DP.sky.setAttribute('width', w); DP.sky.setAttribute('height', h); DP.sky.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  DP.clouds.forEach(c => { c.scale = 0; }); DP.birds.forEach(b => { b.scale = b.lead.scale = 0; });
   DP.force = true;
 }
 export function depthLook(dt, pointer) {
@@ -288,29 +313,45 @@ function depthAir(st, look, pointer, fine) {
   DP.airEmpty=v<=0&&!fields.length&&empty; c.globalAlpha=1;
 }
 function depthSky(st, look, time) {
-  const Cld = DEPTH.clouds, Rv = DEPTH.ravens, r = rnd(DEPTH.seed), fade = depthBlastFade(st);
+  const Cld = DEPTH.clouds, wolves = DEPTH.wolves, r = rnd(DEPTH.seed), fade = depthBlastFade(st);
+  const previous = DP.skyCam, still = previous && previous.s === st.cam.s && previous.tx === st.cam.tx && previous.ty === st.cam.ty; DP.skyCam = { ...st.cam };
   DP.cloudVisible = false;
   DP.clouds.forEach((c, i) => {
     const row = Cld.list[i], sway = depthRange(Cld.sway, r()), period = depthRange(Cld.period, r()), phase = r() * Math.PI * 2;
-    if (!row) { c.el.style.opacity = 0; return; }
-    const [x, y, size, drawing, flip, a] = row, p = depthPoint(st, [x + sway * Math.sin(Math.PI * 2 * time / period + phase), y], a, look);
-    const alpha = Cld.on * smooth(...Cld.show, st.handoffT) * depthCloudPass(st, a) * fade;
-    c.el.style.opacity = alpha;
-    if (alpha > 0) DP.cloudVisible = true;
-    if (alpha > 0) c.el.setAttribute('transform', `translate(${p.x} ${p.y}) scale(${flip * size * p.s} ${size * p.s})`);
+    if (!row) { depthSkyWrite(c.el, 'visibility', 'hidden'); return; }
+    const [x,y,size,drawing,flip,a] = row, p = depthPoint(st, [x+sway*Math.sin(Math.PI*2*time/period+phase),y], a, look);
+    const alpha = Cld.on * smooth(...Cld.show,st.handoffT) * depthCloudPass(st,a) * fade * st.dim;
+    DP.cloudVisible ||= alpha > 0;
+    depthSkyPlace(c,p.x,p.y,size*p.s,0,flip,alpha,FRAME_PERF.skyLayers && !(still && c.scale !== size*p.s));
   });
-  const flight = Rv.on && st.kind === 'leg' && Rv.legs.includes(st.i) ? clamp01((st.t - Rv.from) / (Rv.to - Rv.from)) : 0;
-  DP.birds.forEach((bird, i) => {
-    const alpha = smooth(0, Rv.ramp, flight) * (1 - smooth(1 - Rv.ramp, 1, flight)) * depthSeaFade(st) * (1 - (st.focusK || 0));
-    bird.el.style.opacity = alpha; if (!alpha) return;
-    const A = MAP.waypoints[STOPS[st.i].w], B = MAP.waypoints[STOPS[st.i + 1].w], dx = B[0] - A[0], dy = B[1] - A[1], len = Math.hypot(dx, dy), d = [dx / len, dy / len], normal = [-d[1], d[0]];
-    const start = [A[0] + normal[0] * Rv.side, A[1] + normal[1] * Rv.side], end = [B[0] - normal[0] * Rv.side, B[1] - normal[1] * Rv.side];
-    const p = depthPoint(st, [lerp(start[0], end[0], flight) - i * Rv.gap * (d[0] - normal[0]), lerp(start[1], end[1], flight) - i * Rv.gap * (d[1] - normal[1])], Rv.a, look);
-    const angle = Math.atan2(end[1] - start[1], end[0] - start[0]) * 180 / Math.PI + 90, wing = lerp(Rv.fold, 1, 0.5 + 0.5 * Math.sin(st.P * Rv.flap));
-    bird.el.setAttribute('transform', `translate(${p.x} ${p.y}) rotate(${angle}) scale(${Rv.size * p.s})`);
-    bird.wings.forEach((wingEl, j) => wingEl.setAttribute('transform', `scale(${j ? -wing : wing} 1)`));
+  const delta = st.P - (DP.skyP ?? st.P); DP.skyP = st.P;
+  if (delta > 1e-9) DP.skyForward = true;
+  else if (delta < -1e-9) DP.skyForward = false;
+  const leg = wolves.legs.find(L => st.P > GLIDES[L+1].a && st.P < GLIDES[L+1].b);
+  const glide = leg === undefined ? null : GLIDES[leg+1];
+  const f = glide ? clamp01(((st.P-glide.a)/(glide.b-glide.a)-wolves.from)/(wolves.to-wolves.from)) : 0;
+  DP.birds.forEach(b => {
+    const tune = wolves[b.name], active = wolves.on && !st.exploring && !st.exploreK && glide && (b.name === 'skoll' ? leg === 2 : leg === 4);
+    let alpha = active && DP.skyForward ? smooth(0,wolves.ramp,f)*(1-smooth(1-wolves.ramp,1,f)) : 0;
+    let place = f;
+    if (alpha > 0) { b.flight = { f, alpha, time }; b.turn = null; }
+    else if (active && !DP.skyForward && b.flight) { b.turn ??= time; place = b.flight.f; alpha = b.flight.alpha * (1-smooth(0,1/3,time-b.turn)); }
+    else { b.flight = null; b.turn = null; }
+    alpha *= depthSeaFade(st)*(1-(st.focusK||0))*st.dim;
+    const s = Math.max(wolves.size[0],Math.min(wolves.size[1],VIEW.w/wolves.size[2])), ws = s*tune.k;
+    const m = wolves.margin[0]*VIEW.w+wolves.margin[1]*s, span = VIEW.w+2*m, height = Math.min(wolves.arcH[0]*VIEW.h,wolves.arcH[1]*span);
+    const arc = u => [VIEW.w+m-span*u,wolves.yTop*VIEW.h+height*(1-Math.sin(Math.PI*u))];
+    const u = place-wolves.lag*ws/span, lead = arc(place), wolf = arc(u), tx = -span, ty = -height*Math.PI*Math.cos(Math.PI*u);
+    const angle = Math.atan2(-ty,-tx)*180/Math.PI;
+    depthSkyPlace(b.lead,...lead,s,b.name==='skoll'?place*40:-24,1,alpha,true);
+    depthSkyPlace(b,...wolf,ws,angle,-1,alpha,true);
+    if (!alpha) return;
+    const ph = time*2*Math.PI*tune.gallop, g = .5-.5*Math.cos(ph), g2 = .5-.5*Math.cos(ph-.6);
+    depthSkyWrite(b.bob,'transform','translate(0 '+(-tune.bob*Math.sin(ph))+')',true);
+    b.legs.forEach(el => depthSkyWrite(el,'transform',el.classList.contains('front')?'rotate('+(tune.swing*g2)+' 12.6 -2.6)':'rotate('+(-tune.swing*g)+' -19.4 -3.2)',true));
   });
 }
+
 function depthMistEntering(st, look) {
   const m = DEPTH.mist, area = DEPTH.field.area, width = area[2] - area[0], n = VIEW.phone ? m.nPhone : m.n;
   return DP.mist.some((u, i) => {

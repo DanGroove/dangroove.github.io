@@ -23,6 +23,7 @@ const close = (a, b, label, tolerance = 0.000001) => assert.ok(Math.abs(a - b) <
 const chart = bigMap();
 assert.ok(!/undefined|\{\{/.test(chart.finds), 'all live drawing tokens must resolve');
 // COMB-B records the surfaced serpent drawing; fill and coasts retain their earlier baselines.
+// COMB-N (2026-11-26): sky wolves/local SVGs and held map/trail writer re-record their source/data pins.
 const original = { sea: [75564, 3132355843], fill: [12999, 2682309966], coast: [4401, 2408021381] };
 for (const [key, [length, hash]] of Object.entries(original)) { assert.equal(chart[key].length, length); assert.equal(digest(chart[key]), hash); }
 console.log('ok: COMB-D body/stipple sea digest recorded; coast and fill unchanged');
@@ -30,10 +31,10 @@ console.log('ok: COMB-D body/stipple sea digest recorded; coast and fill unchang
 // and for polish round 1: the held breath's white cross and halo, the softer cloud deck, the traveller's size at the overview
 // and the gather ring's spread).
 // WHIRL2 adds only STARS.supply; DEPTH and NOVA remain unchanged.
-assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 4233329790);
+assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 1181893617);
 // D10: restore only the moved cloud to verify all other sky data.
 const beforeD = structuredClone(DEPTH); beforeD.clouds.list[9][0] = 330; beforeD.dpr=2; beforeD.field.sprite=128;const beforeFStars=structuredClone(STARS);beforeFStars.dprCap=2;delete beforeFStars.fall;
-assert.equal(digest(JSON.stringify([beforeFStars,beforeD,NOVA])),1102335767);
+assert.equal(digest(JSON.stringify([beforeFStars,beforeD,NOVA])),3599686650);
 console.log('ok: D10 cloud pin recorded; restoring that cloud verifies original STARS/DEPTH/NOVA');
 // D4 authorizes the pure rest-to-rest glide in trip. Depth remains protected.
 // Line endings are evened out so the numbers are the same on Windows and in the cloud.
@@ -45,10 +46,10 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // Part 8 cloud fixes: explore keeps the map promoted while its camera moves, and releases it at rest after a zoom (F10 lag).
 // Part 10b cloud fixes: the held base on whole device pixels with a margin (blur), and the find press fades on each name, not its group.
 // COMB-M2 (2026-11-26): N2 changes only the old longship line and ship kit keys; the M2 scope test pins the exact edits.
-assert.equal(sourceDigest('trip.mjs'), 1736880001, 'trip.mjs changed');
+assert.equal(sourceDigest('trip.mjs'), 3558315610, 'trip.mjs changed');
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 2350681080, 'data.mjs changed');
-assert.equal(sourceDigest('depth.mjs'), 324351587, 'depth.mjs changed');
+assert.equal(sourceDigest('data.mjs'), 1822055363, 'data.mjs changed');
+assert.equal(sourceDigest('depth.mjs'), 2264159053, 'depth.mjs changed');
 console.log('ok: COMB-D camera/labels/tripS digests recorded; depth source remains pinned');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
 const mapP = BEATS.find(b => b.id === 'map').P, stopP = BEATS.find(b => b.id === STOPS[2].id).P, leg = SEQ.find(q => q.kind === 'leg' && q.i === 2), legP = leg.a + leg.len / 2;
@@ -182,7 +183,7 @@ Object.assign(globalThis, { window: testWindow, document: testDocument, history:
 async function testPlays() {
 const testStage = new TestNode('div'), testSvg = new TestNode('svg'), testBase = new TestNode('g'), testPop = new TestNode('div'), testSheet = new TestNode('div'), testTl = new TestNode('div');
 bodyNode.appendChild(testStage); testStage.append(testSvg, testPop, testSheet, testTl); testBase.id = 'b-all';
-testSvg.innerHTML = mapDefs() + '<g id="b-sea">' + chart.sea + '</g><g id="b-all">' + chart.detail + '</g><g id="finds">' + chart.finds + '</g>';
+testSvg.innerHTML = '<g id="trail-pieces"></g>' + mapDefs() + '<g id="b-sea">' + chart.sea + '</g><g id="b-all">' + chart.detail + '</g><g id="finds">' + chart.finds + '</g>';
 stepsBuild({ stage: testStage, rm: false, resize() {}, joinedTop: () => false });
 tlBuild(testTl, { jump() {}, scrub() {} }, false);
 findsBuild(testSvg, testPop, testSheet, testSvg.querySelector('#b-all'), false);

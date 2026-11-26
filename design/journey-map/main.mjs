@@ -12,6 +12,20 @@ import { JOURNEY, stepsBuild, stepsFrame, stepsResize, stepsProgress, stepsPause
 import { depthBuild, depthResize, depthFrame, depthLook, depthInvalidate, novaPress } from './depth.mjs';
 import { exploreBuild, exploreResize, exploreApply, exploreActive, exploreReduced } from './explore.mjs';
 
+// The walked trail is built once; only its current short piece is dashed.
+const DONE_PIECES = (() => {
+  const length = 40, out = []; let pts = [TRAIL[0]], acc = 0, u0 = 0;
+  for (let i = 1; i < TRAIL.length; i++) {
+    const a = TRAIL[i-1], b = TRAIL[i], seg = Math.hypot(b[0]-a[0],b[1]-a[1]); let t0 = 0;
+    while (seg > 0 && acc+seg*(1-t0) >= length) {
+      const t = t0+(length-acc)/seg, q = [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+      pts.push(q); out.push({pts,u0,u1:u0+length}); u0+=length; pts=[q]; acc=0; t0=t;
+    }
+    acc+=seg*(1-t0); pts.push(b);
+  }
+  if (pts.length>1) out.push({pts,u0,u1:u0+acc}); return out;
+})();
+
 let RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Set by join.mjs on the joined page only (the real hero in the stage): frame(st, moved, P) returns false to leave the star
 // canvas alone, options for starsFrame, or nothing for the map's own rule; resize(w, h) follows the map's resize.
@@ -25,9 +39,9 @@ const MAIN = document.getElementById('jm');
 const M = bigMap();
 MAIN.innerHTML = `<h1 class="sr">${COPY.title}</h1><section class="trip" id="trip" aria-label="${COPY.srMap}"><div class="stage" id="stage">
 <canvas id="deep" aria-hidden="true"></canvas>
-<svg id="map" class="map" role="group" aria-label="${COPY.srMap}">${mapDefs()}<g id="cam"><g id="b-all"><g id="b-sea">${M.sea}</g><g id="b-fill">${M.fill}</g><g id="b-coast">${M.coast}</g><g id="b-detail">${M.detail}</g></g><path id="trail-done" class="done" d="${pathD(TRAIL)}"/><g id="finds">${M.finds}</g><g id="fxg" transform="translate(${MAP.x[0]} ${MAP.x[1]})"></g></g></svg>
+<svg id="map" class="map" role="group" aria-label="${COPY.srMap}">${mapDefs()}<g id="cam"><g id="b-all"><g id="b-sea">${M.sea}</g><g id="b-fill">${M.fill}</g><g id="b-coast">${M.coast}</g><g id="b-detail">${M.detail}</g></g><path id="trail-done" class="done" d="${pathD(TRAIL)}"/><g id="trail-pieces">${DONE_PIECES.map(q => `<path class="done-p" data-u0="${q.u0}" data-u1="${q.u1}" d="M${q.pts.map(p => p.join(' ')).join('L')}"/>`).join('')}</g><g id="finds">${M.finds}</g><g id="fxg" transform="translate(${MAP.x[0]} ${MAP.x[1]})"></g></g></svg>
 <canvas id="nova" aria-hidden="true"></canvas><canvas id="stars" aria-hidden="true"></canvas>
-<canvas id="air" aria-hidden="true"></canvas><svg id="sky" aria-hidden="true"></svg>
+<canvas id="air" aria-hidden="true"></canvas><div id="sky" aria-hidden="true"></div>
 <button type="button" class="fx-hit" id="nova-hit" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true"></button>
 <div class="ov">${stoneDefs()}<p class="caption">${COPY.heroCaption}</p><p class="cue">${COPY.cue}</p><div class="cards" id="cards" inert></div><div class="mini" id="mini" role="navigation" aria-label="${COPY.miniMap}"></div><div class="pop" id="pop" role="status"></div><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div><footer class="ft" id="ft"></footer></div>
 </div></section><div class="rm-cards" id="rmcards"></div><div class="tl" id="tl"></div>`;

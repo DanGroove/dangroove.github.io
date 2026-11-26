@@ -591,7 +591,10 @@ export function tripApply(st, focus = null) {
   if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
   const ratio = r.base ? c.s / r.base.s : 1;
   const zooming = r.base && Math.abs(c.s / r.base.s - 1) > 1e-6;
-  const moving = free && !!st.exploreMoving && !st.exploreScripted && !(zooming && st.exploreSharp);
+  const camMoved = !!r.lastCam && (r.lastCam.s !== c.s || r.lastCam.tx !== c.tx || r.lastCam.ty !== c.ty);
+  r.lastCam = { s: c.s, tx: c.tx, ty: c.ty };
+  const glideHold = FRAME_PERF.glideHold && !free && !st.reduced && st.handoffT >= 1;
+  const moving = free && !!st.exploreMoving && !st.exploreScripted && !(zooming && st.exploreSharp) || glideHold && camMoved;
   const rebase = !r.base || ratio < FRAME_PERF.scaleMin || ratio > FRAME_PERF.scaleMax;
   if (moving && !rebase) {
     // Translation stays one layer; a zoom may carry at most 15% size error.
@@ -638,7 +641,7 @@ export function tripApply(st, focus = null) {
   // Explore promotes the map while its camera moves, so the held raster above moves on the compositor instead of being
   // re-rastered every frame. A pan keeps the layer's raster scale, so the promotion stays for the next gesture. Once a
   // held frame has been scaled (wheel, pinch, keys), rest releases it, so the map re-rasters sharp at the new zoom (F10).
-  if (!free) r.promo = r.soft = false;
+  if (!free) { r.promo = glideHold; r.soft = false; }
   else {
     if (st.exploreMoving) r.promo = true;
     if (moving && !rebase && zooming) r.soft = true;
@@ -680,14 +683,26 @@ export function tripApply(st, focus = null) {
   const dr = coastDrawn(h);
   E.coasts.forEach((p, i) => { if (dr >= 1) { tripWrite(p, 'strokeDasharray', 'none'); return; } const L = E.coastLen[i] * c.s; tripWrite(p, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(p, 'strokeDashoffset', (L * (1 - dr)).toFixed(1)); });
   // solid trail behind the traveller (dash in screen units because the stroke does not scale)
-  const L = TRAIL_LEN * paint.s; tripWrite(E.done, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(E.done, 'strokeDashoffset', (st.exploreK ? 0 : (TRAIL_LEN - st.u) * paint.s).toFixed(1));
-  tripWrite(E.done, 'opacity', st.inTrip ? 1 : 0);
+  if (!FRAME_PERF.trailPieces) {
+    const L = TRAIL_LEN * paint.s; tripWrite(E.done, 'strokeDasharray', L.toFixed(1)+' '+L.toFixed(1)); tripWrite(E.done, 'strokeDashoffset', (st.exploreK ? 0 : (TRAIL_LEN-st.u)*paint.s).toFixed(1));
+    tripWrite(E.done, 'opacity', st.inTrip ? 1 : 0);
+  } else {
+    tripWrite(E.done, 'opacity', 0);
+    const group = E.pieceG ??= document.getElementById('trail-pieces');
+    const pieces = E.pieceList ??= [...group.querySelectorAll('.done-p')].map(el => ({ el, u0: +el.dataset.u0, u1: +el.dataset.u1 }));
+    tripWrite(group, 'opacity', st.inTrip ? 1 : 0);
+    for (const q of pieces) {
+      const full = st.exploreK || st.u >= q.u1, hidden = !full && st.u <= q.u0;
+      tripWrite(q.el, 'opacity', hidden ? '0' : '');
+      tripWrite(q.el, 'strokeDasharray', full || hidden ? 'none' : ((st.u-q.u0)*paint.s).toFixed(1)+' '+((q.u1-q.u0)*paint.s+20).toFixed(1));
+    }
+  }
   // the longship rides the crossing
   const sp = longshipPoint(st.u); tripWrite(E.ship, 'transform', `translate(${n2(sp[0])} ${n2(sp[1])}) scale(.55)`, true);
   const opacity = st.dim * fade;
   tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
   tripWrite(E.svg, 'willChange', r.promo ? 'transform, opacity' : fade > 0 && fade < 1 ? 'opacity' : '');
-  tripWrite(E.svg, 'overflow', free ? 'visible' : '');
+  tripWrite(E.svg, 'overflow', free || glideHold ? 'visible' : '');
   if (E.base) { tripWrite(E.base, 'opacity', opacity); tripWrite(E.base, 'visibility', opacity === 0 ? 'hidden' : 'visible'); tripWrite(E.base, 'willChange', 'transform'); }
   tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
   // the X fades in with the sea, so neither page shows it before the map exists

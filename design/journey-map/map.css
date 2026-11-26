@@ -14,6 +14,9 @@ button { font-family: inherit; }
 .map { display: block; transform-origin: 0 0; }
 #nova, #stars { pointer-events: none; }
 #deep, #air, #sky { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#sky { display: contents; }
+#sky[style*="opacity: 0;"] > svg { display: none; }
+#sky > svg { position: absolute; left: 0; top: 0; overflow: visible; transform-origin: 0 0; pointer-events: none; }
 .map text { font-family: Outfit, system-ui, sans-serif; }
 /* On dense screens map text is set once and scaled with the map, not set again at every zoom step of a glide (about half
    the phone glide's frame cost; at rest it paints the same there). Low-density screens keep hinted text. */
@@ -28,7 +31,8 @@ button { font-family: inherit; }
 .h { paint-order: stroke; stroke: var(--halo); stroke-width: 3px; stroke-linejoin: round; }
 .rn { fill: none; stroke: var(--paper); stroke-width: .9; stroke-opacity: .85; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .rn-dim { stroke-opacity: .5; stroke-width: .7; }
-.done { fill: none; stroke: var(--paper); stroke-width: 1.3; stroke-linecap: round; vector-effect: non-scaling-stroke; opacity: 0; }
+.done, .done-p { fill: none; stroke: var(--paper); stroke-width: 1.3; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.done, #trail-pieces { opacity: 0; }
 .find { cursor: pointer; outline: none; }
 .find-focus-ring { stroke: none; }
 .find:focus-visible > .find-focus-ring { stroke: var(--paper); stroke-width: 2; vector-effect: non-scaling-stroke; }
@@ -259,7 +263,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-steps .caption { bottom: max(12vh, calc(56px + var(--go-gap) + var(--go-h) + 28px)); }
 @media (max-width: 640px) { .jm-steps .caption { bottom: max(12vh, calc(var(--go-bar) + 28px)); } }
 .jm-steps #stars { z-index: 2; }
-.jm-steps #air, .jm-steps #sky { z-index: 2; }
+.jm-steps #air, .jm-steps #sky > svg { z-index: 2; }
 .jm-steps .ov { z-index: 3; }
 .jm-cut { position: absolute; inset: 0; z-index: 4; background: var(--ink); opacity: 0; pointer-events: auto; }
 .jm-cut[hidden], .go[hidden], .go button[hidden] { display: none; }

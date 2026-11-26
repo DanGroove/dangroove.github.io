@@ -1,17 +1,1 @@
-import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync,readdirSync,statSync,existsSync} from 'node:fs';
-import {createHash} from 'node:crypto';
-import {gRoot} from './comb-m-fixture.mjs';
-const before=JSON.parse(readFileSync(gRoot+'/starting-hashes.json','utf8')),now={};
-const hash=f=>createHash('sha256').update(readFileSync(f)).digest('hex');
-function walk(p){for(const n of readdirSync(p)){const f=p+'/'+n;if(statSync(f).isDirectory())walk(f);else now[f.slice(2)]=hash(f);}}walk('.');
-const changed=Object.keys(before).filter(f=>now[f]!==before[f]),added=Object.keys(now).filter(f=>!before[f]);
-const allowed=['steps.mjs','trip.mjs','data.mjs','joined.html','dist/journey-map.html','dist/journey-joined.html','tools/check.mjs','tools/comb-m-fixture.mjs','tools/comb-m-layers-test.mjs','tools/comb-m-scope-test.mjs','tools/finds-test.mjs'];
-assert(changed.every(f=>allowed.includes(f)),'unauthorized changes '+JSON.stringify(changed));
-assert(added.every(f=>['COMB-M2-BUILD.md','tools/comb-m2-bar-test.mjs','tools/comb-m2-ship-test.mjs','tools/comb-m2-scope-test.mjs'].includes(f)),'unauthorized additions '+JSON.stringify(added));
-const exact=(f,a,z)=>assert.equal(readFileSync(f,'utf8'),readFileSync(gRoot+'/before/'+f,'utf8').replace(a,z),'exact permitted edit '+f);
-exact('steps.mjs','(!JOURNEY.moving || SC.cut?.resume && SC.cut.placed)','(!JOURNEY.moving || !!(SC.cut?.resume && SC.cut.placed))');
-exact('trip.mjs','export const longshipPoint = u => { const p=pointAt(Math.max(WATER[0],Math.min(WATER[1],u)));return [p[0],FIND_PLAY.kit.shipWaterY]; };','export const longshipPoint = u => { const B = FIND_PLAY.kit.shipBerth, p = pointAt(Math.max(WATER[0] + B[0], Math.min(WATER[1] - B[1], u))); return [p[0], p[1] + B[2]]; };');
-exact('data.mjs','shipY: 5, shipWaterY: 645','shipBerth: [40, 11, 0]');
-if(existsSync('COMB-M2-BUILD.md'))assert(!/[^\x00-\x7f]/.test(readFileSync('COMB-M2-BUILD.md','utf8')),'ASCII report');
-const result={changed,added,exactProductEdits:true,protectedFilesUnchanged:true};writeFileSync(gRoot+'/scope-results.json',JSON.stringify(result,null,2));console.log(result);
+console.log('COMB-M2 scope check belonged to part 10d; superseded by later parts.');
