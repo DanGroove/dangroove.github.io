@@ -305,6 +305,8 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .fx-hit[aria-disabled="true"] { pointer-events: none; }
 .fx-hit:focus-visible { outline: 2px solid var(--paper); outline-offset: 0; }
 .jm-nova-flashed .fx-hit:focus-visible { outline: none; }
+/* No ring round the X after a tap or click; keyboard focus keeps it. */
+.jm-pointer-focus .fx-hit:focus-visible { outline: none; }
 @media (max-width: 640px) {
   .jm-steps .tl { bottom: var(--go-bar); }
   .go { left: 0; right: 0; bottom: 0; transform: none; height: var(--go-bar); background: var(--ink); gap: 0; }
