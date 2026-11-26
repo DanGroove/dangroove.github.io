@@ -4,7 +4,7 @@
 //     --page be=<path to be25990's journey-map.html> --page new=dist/journey-map.html --beats hmc1,mohawk --runs 4 --out <folder>
 // What it does: serves the pages from 127.0.0.1:<port> (adb reverse, so the phone opens http://localhost:<port>/...),
 // forwards Chrome's DevTools socket to tcp:9222, and for each run (builds alternate) opens ?beat=<stop>, waits for the
-// page to settle, records requestAnimationFrame times, presses Next with a DevTools touch at the button's centre, and
+// page to settle, records requestAnimationFrame times, presses Next (a DevTools mouse click at the button's centre), and
 // keeps recording for --window ms. It works in a Chrome tab of its own (never one of the person's tabs) and closes it,
 // then removes the forward and the reverse at the end, also after an error. On Dan's Samsung in Adaptive mode Chrome
 // runs at 60 Hz with no finger down (a tap does not lift it), so a Next-tap glide tops out at 60 fps there.
@@ -63,7 +63,6 @@ async function connect() {
   cdp.onmessage = m => { const d = JSON.parse(typeof m.data === 'string' ? m.data : m.data.toString()); if (d.id && waiters.has(d.id)) { const w = waiters.get(d.id); waiters.delete(d.id); d.error ? w.reject(new Error(d.error.message)) : w.resolve(d.result); } else if (d.method) events.push(d); };
   await send('Page.enable'); await send('Runtime.enable');
   try { await send('Page.bringToFront'); } catch (e) {}
-  if (opt.noAdb) await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
 }
 
 async function oneRun(p, beat, run) {
@@ -77,14 +76,19 @@ async function oneRun(p, beat, run) {
   await evaluate(`(() => { const t = []; window.__pf = t; const f = n => { t.push(n); if (t.length < 4000) requestAnimationFrame(f); }; requestAnimationFrame(f); return true; })()`);
   await sleep(400);
   const t0 = await evaluate('performance.now()');
-  await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: box[0], y: box[1] }] });
-  await sleep(60);
-  await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-  await sleep(WINDOW + 300);
+  // Next is pressed by a DevTools mouse click at its centre. Raw DevTools touch events never made a click on the phone
+  // (phone-p21: every run ended at its start stop) and a synthesized tap gesture makes none on desktop either; a click
+  // is enough here because Chrome keeps a page at 60 Hz after a tap anyway. A run that does not start moving stops here.
+  for (const type of ['mouseMoved', 'mousePressed', 'mouseReleased']) await send('Input.dispatchMouseEvent', { type, x: box[0], y: box[1], button: 'left', buttons: type === 'mousePressed' ? 1 : 0, clickCount: type === 'mouseMoved' ? 0 : 1 });
+  await sleep(400);
+  const go = await evaluate(`({ moving: !!window.__jm.moving, P: +window.__jm.P.toFixed(1) })`);
+  if (!go.moving && go.P === env.P) throw new Error(`the tap on Next did not start a move at ${beat} (P still ${go.P})`);
+  await sleep(WINDOW - 100);
   const r = await evaluate(`(() => { const t0 = ${t0}, t = window.__pf.filter(x => x > t0 && x < t0 + ${WINDOW}); return { t, P: +window.__jm.P.toFixed(1), moving: window.__jm.moving }; })()`);
   const d = r.t.slice(1).map((x, i) => x - r.t[i]).sort((a, b) => a - b), q = k => d.length ? +d[Math.min(d.length - 1, Math.floor(d.length * k))].toFixed(1) : null;
   const med = q(0.5) || 16.7, row = { build: p.name, beat, run, frames: r.t.length, fps: +(r.t.length / (WINDOW / 1000)).toFixed(1), p50: med, p90: q(0.9), p99: q(0.99), max: d.length ? +d.at(-1).toFixed(1) : null,
-    over25: d.filter(x => x > 25).length, overMed: d.filter(x => x > 1.5 * med).length, Pafter: r.P, dpr: env.dpr, w: env.w, h: env.h };
+    over25: d.filter(x => x > 25).length, overMed: d.filter(x => x > 1.5 * med).length, Pbefore: env.P, Pafter: r.P, dpr: env.dpr, w: env.w, h: env.h };
+  if (r.P === env.P) throw new Error(`no move recorded at ${beat}: P is still ${r.P}`);
   fs.writeFileSync(path.join(OUT, `${p.name}-${beat}-${run}.json`), JSON.stringify({ row, frames: r.t }, null, 0));
   note(JSON.stringify(row));
   return row;
