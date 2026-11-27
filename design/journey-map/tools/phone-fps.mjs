@@ -98,7 +98,9 @@ async function connect() {
 //   explore:pinch     enters explore, then pinches in and out eight times (centre, near the corners, slow and fast) over
 //                     a 14 s window: Chrome's own synthetic pinch on the phone, a trackpad pinch (Ctrl + wheel) on a desktop
 //   explore:wheel     enters explore, then wheels in and out four times (desktop)
-//   pinch:<stop>      the same eight pinches at a stop of the journey, where the page lets the browser zoom (phone only)
+//   pinch:<stop>      eight pinches in and out on the map at a stop of the journey, where the page lets the browser zoom
+//                     (phone only); the fingers start on the open map above the card, below nothing else
+//   pinchcard:<stop>  the same eight pinches with the fingers starting on the stop's card (phone only)
 // A press or gesture that does not take effect no longer stops the run: its row says ok false and why, and the summary
 // lists it. Fingers are DevTools touch events, which make pointer and touch events but no click on the phone (phone-p21).
 const STOP_IDS = ['laurier', 'hmc1', 'mohawk', 'hmc2', 'interkom', 'lennard'];
@@ -124,14 +126,34 @@ async function wheel([x, y], deltaY, n) { for (let k = 0; k < n; k++) { await se
 // where they started (the scales multiply to 1).
 const PINCHES = [[.5, .45, 2.5, 800], [.5, .45, .4, 800], [.3, .3, 2, 1400], [.3, .3, .5, 1400], [.7, .62, 2, 400], [.7, .62, .5, 400], [.5, .45, 3, 2000], [.5, .45, 1 / 3, 2000]];
 async function pinch(x, y, scale, speed) {
-  if (!DESKTOP) return send('Input.synthesizePinchGesture', { x: Math.round(x), y: Math.round(y), scaleFactor: scale, relativeSpeed: speed, gestureSourceType: 'touch' });
+  // x and y are screen points. DevTools multiplies the anchor by the browser zoom before it checks it is on screen
+  // (phone-p24-pinch: "Position out of bounds" at a stop once the page had zoomed), so they are divided by it first.
+  if (!DESKTOP) { const z = +(await evaluate('window.visualViewport ? visualViewport.scale : 1')) || 1; return send('Input.synthesizePinchGesture', { x: Math.round(x / z), y: Math.round(y / z), scaleFactor: scale, relativeSpeed: speed, gestureSourceType: 'touch' }); }
   const n = Math.max(3, Math.round(Math.abs(Math.log(scale)) / 0.05)), deltaY = scale > 1 ? -10 : 10;
   for (let k = 0; k < n; k++) { await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: Math.round(x), y: Math.round(y), deltaX: 0, deltaY, modifiers: 2 }); await sleep(Math.round(16 * 800 / speed)); }
 }
-async function pinches(W, H) {
+async function pinches(W, H, list = PINCHES.map(([fx, fy, s, sp]) => [W * fx, H * fy, s, sp])) {
   await evaluate(`(() => { window.__vvmax = 1; if (window.visualViewport && !window.__vvOn) { window.__vvOn = true; visualViewport.addEventListener('resize', () => { window.__vvmax = Math.max(window.__vvmax || 1, visualViewport.scale); }); } return true; })()`);
-  for (const [fx, fy, s, sp] of PINCHES) { await pinch(W * fx, H * fy, s, sp); await sleep(250); }
+  for (const [x, y, s, sp] of list) { await pinch(x, y, s, sp); await sleep(250); }
 }
+// Stop pinches (Dan: "on the map, not the cards", then "also the cards ... my point is just to be thorough"). Chrome's
+// synthetic pinch puts both fingers on a vertical line through the anchor: a pinch in starts them about PINCH_REACH px
+// each side of it (Android's smallest scaling span), a pinch out about PINCH_REACH / scale + PINCH_SLOP px each side.
+// Each pair zooms in and back out at one anchor, so the next pair starts unzoomed; the pinch out is as wide as the box allows.
+const PINCH_REACH = 90, PINCH_SLOP = 8;
+function boxPinches([l, t, r, b]) {
+  const half = (b - t) / 2 - 12, cy = (t + b) / 2, out = Math.max(.5, Math.min(.8, PINCH_REACH / Math.max(1, half - PINCH_SLOP)));
+  return [[.5, 800], [.3, 1400], [.7, 400], [.5, 2000]].flatMap(([fx, sp]) => { const x = l + (r - l) * fx; return [[x, cy, +(1 / out).toFixed(3), sp], [x, cy, +out.toFixed(3), sp]]; });
+}
+// The box the fingers start in: the open map between the review strip and the stop's card (or the bar when there is no
+// card), or the card.
+const PINCH_BOX = where => `(() => { const R = e => e && e.getBoundingClientRect(), id = ${JSON.stringify(where.stop)}, card = R(document.getElementById('stop-' + id)?.querySelector('.c-card')), tl = R(document.querySelector('.tl')), go = R(document.getElementById('go')), rv = R(document.querySelector('.jm-review'));
+  const bar = Math.min(tl ? tl.top : innerHeight, go ? go.top : innerHeight), open = card && card.height > 0 && card.top < bar, top = rv && rv.height && rv.bottom < bar / 2 ? rv.bottom : 0;
+  const box = ${where.card ? 'open ? [card.left, card.top, card.right, Math.min(card.bottom, bar)] : null' : '[0, top, innerWidth, open ? Math.min(card.top, bar) : bar]'};
+  if (!box) return null;
+  const at = (x, y) => { const e = document.elementFromPoint(x, y); return !e ? 'nothing' : e.closest('.c-card') ? 'card' : e.closest('.tl,#go') ? 'bar' : e.closest('.jm-review') ? 'review bar' : e.closest('#map,#map-base,.stage') ? 'map' : e.tagName.toLowerCase(); };
+  const cy = (box[1] + box[3]) / 2, half = (box[3] - box[1]) / 2 - 12, out = Math.max(.5, Math.min(.8, ${PINCH_REACH} / Math.max(1, half - ${PINCH_SLOP}))), d = ${PINCH_REACH} / out + ${PINCH_SLOP};
+  return { box: box.map(Math.round), fingersOut: [at(innerWidth / 2, cy - d), at(innerWidth / 2, cy + d)], fingersIn: [at(innerWidth / 2, cy - ${PINCH_REACH}), at(innerWidth / 2, cy + ${PINCH_REACH})] }; })()`;
 
 // Tracing for --trace: events arrive as Tracing.dataCollected while the window records.
 const TRACE_CATS = ['toplevel', 'devtools.timeline', 'disabled-by-default-devtools.timeline', 'disabled-by-default-devtools.timeline.frame', 'blink', 'cc', 'gpu', 'viz', 'v8.execute', 'blink.rendering', 'benchmark'];
@@ -169,7 +191,7 @@ function traceSummary(ev, windowMs) {
 async function oneRun(p, beat, run) {
   events.length = 0;
   const colon = beat.indexOf(':'), kind = colon < 0 ? (beat === 'hero' ? 'hero' : 'next') : beat.slice(0, colon), arg = (colon < 0 ? beat : beat.slice(colon + 1)).toLowerCase();
-  const start = { next: arg, back: arg, press: 'map', find: 'map', explore: 'end', swipe: arg, hero: null, jump: arg.split('-')[0], pinch: arg }[kind];
+  const start = { next: arg, back: arg, press: 'map', find: 'map', explore: 'end', swipe: arg, hero: null, jump: arg.split('-')[0], pinch: arg, pinchcard: arg }[kind];
   if (start === undefined) throw new Error('unknown beat ' + beat);
   if (kind === 'hero' && !p.joined) { note(`skipped hero for ${p.name}: no --page ${p.name}-joined=<file>`); return []; }
   await send('Page.navigate', { url: kind === 'hero' ? `http://localhost:${PORT}/${p.joined}.html` : `http://localhost:${PORT}/${p.name}.html?beat=${start}` });
@@ -239,9 +261,12 @@ async function oneRun(p, beat, run) {
       await wait('!window.__jm.moving', 5000); await sleep(1200);
       await measure('use:' + arg, () => press(findEl(arg), 'find ' + arg), null);
     }
-  } else if (kind === 'pinch') {
-    if (DESKTOP) return fail(beat, 'pinch:<stop> is for the phone (a desktop Ctrl + wheel would change the browser zoom of later rows)');
-    await measure(beat, () => pinches(W, H), (b, a) => a.vv > 1.2 ? null : `the page did not zoom (largest browser zoom ${a.vv})`, 14000);
+  } else if (kind === 'pinch' || kind === 'pinchcard') {
+    if (DESKTOP) return fail(beat, kind + ':<stop> is for the phone (a desktop Ctrl + wheel would change the browser zoom of later rows)');
+    const aim = await evaluate(PINCH_BOX({ stop: arg, card: kind === 'pinchcard' }));
+    if (!aim) return fail(beat, 'no open card at ' + arg);
+    note('aim ' + JSON.stringify({ beat, run, ...aim }));
+    await measure(beat, () => pinches(W, H, boxPinches(aim.box)), (b, a) => a.vv > 1.2 ? null : `the page did not zoom (largest browser zoom ${a.vv})`, 14000);
   } else if (kind === 'swipe' || kind === 'hero') await measure(beat, () => DESKTOP ? wheel([W / 2, H / 2], 120, 5) : fingers([[W / 2, H * .72]], [[W / 2, H * .3]], 300), anything);
   else if (kind === 'explore') {
     try { await press(sel('.go-next'), 'Next at end'); } catch (e) { return fail(beat, e.message); }
