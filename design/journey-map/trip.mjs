@@ -583,6 +583,15 @@ function tripEdge(r, target, dt) {
   if (r.edge !== target) TRIP_EL.edgeFading = true;
   return r.edge;
 }
+// The same clock for a zoom-led fade: o[key] moves toward target at no more than 1 / LABELS.edgeFade a second.
+function tripClock(o, key, target, dt) {
+  const v = o[key];
+  if (v === undefined || !(dt > 0)) { o[key] = target; return target; }
+  const step = dt / LABELS.edgeFade, d = target - v;
+  o[key] = Math.abs(d) <= step ? target : v + Math.sign(d) * step;
+  if (o[key] !== target) TRIP_EL.clockFading = true;
+  return o[key];
+}
 function tripLabels(st, t2Fade = 1) {
   const E = TRIP_EL, c = st.cam, phone = VIEW.phone, L = LABELS, open = Math.max(0, ...st.cardK), dim = 1 - L.cardDim[phone ? 1 : 0], group = E.groupFade ?? 1;
   const dt = st.reduced ? 0 : st.frameDt || 0; E.edgeFading = false;
@@ -617,7 +626,7 @@ function tripLabels(st, t2Fade = 1) {
 }
 export function tripGliding() { return !!TRIP_EL.raster?.gliding; }
 export function tripApply(st, focus = null) {
-  const E = TRIP_EL, c = st.cam;
+  const E = TRIP_EL, c = st.cam; E.clockFading = false;
   const veil = E.veil ??= document.getElementById('map-veil'), camVeil = E.camVeil ??= document.getElementById('cam-veil');
   const free = !!st.exploring || st.exploreK > 0;
   const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
@@ -629,7 +638,11 @@ export function tripApply(st, focus = null) {
   const glideHold = FRAME_PERF.glideHold && !free && !st.reduced && st.handoffT >= 1;
   const moving = free && !!st.exploreMoving && !st.exploreScripted && !(zooming && st.exploreSharp) || glideHold && camMoved;
   r.gliding = !!(glideHold && camMoved);
-  const rebase = !r.base || ratio < FRAME_PERF.scaleMin || ratio > FRAME_PERF.scaleMax;
+  // A moving explore camera holds svg#map and its base across FRAME_PERF.exploreMin to exploreMax and draws them ahead when it
+  // zooms in, so a pinch or a wheel redraws them every 25 % of zoom instead of every 15 % (each redraw was a 50-340 ms frame
+  // in the phone and PC pinch passes, 2026-11-27). Rest still redraws them sharp at the true scale.
+  const zoomHold = free && moving, mapLo = zoomHold ? FRAME_PERF.exploreMin : FRAME_PERF.scaleMin, mapHi = zoomHold ? FRAME_PERF.exploreMax : FRAME_PERF.scaleMax;
+  const rebase = !r.base || ratio < mapLo || ratio > mapHi;
   const score = (k, lo, hi) => Math.max(lo / k, k / hi);
   const focusMove = !!focus && focus.k > 0;
   // Journey moves share one big raster per frame: svg#map, svg#map-base or one sky object, the biggest overshoot first.
@@ -639,7 +652,7 @@ export function tripApply(st, focus = null) {
   const requests = (slot ? VIEW.skyPlan?.(st) || [] : []).map(q => ({ ...q, kind: 'sky' }));
   const mapDue = !r.base || (!moving ? ratio !== 1 || c.tx !== r.base.tx || c.ty !== r.base.ty : rebase);
   const mapForced = mapDue && (!slot || !r.base || ratio < FRAME_PERF.scaleMin / slack || ratio > FRAME_PERF.scaleMax * slack);
-  if (mapDue) requests.push({ kind: 'map', score: r.base ? score(ratio, FRAME_PERF.scaleMin, FRAME_PERF.scaleMax) : Infinity });
+  if (mapDue) requests.push({ kind: 'map', score: r.base ? score(ratio, mapLo, mapHi) : Infinity });
   let baseForced = false;
   let B, held, coversNow = true, baseLast;
   const rounded = p => ({ s: +p.s.toFixed(4), tx: +p.tx.toFixed(2), ty: +p.ty.toFixed(2) });
@@ -654,7 +667,7 @@ export function tripApply(st, focus = null) {
     const canHold = !!B.camera && !st.reduced && (free ? !!st.exploreMoving || !still : st.handoffT >= 1 && !still);
     held = B.camera ? heldBy(B.camera) : null;
     coversNow = !!held && -held.tx / held.k >= -sx - 1e-6 && (VIEW.w - held.tx) / held.k <= VIEW.w + sx + 1e-6 && -held.ty / held.k >= -sy - 1e-6 && (VIEW.h - held.ty) / held.k <= VIEW.h + sy + 1e-6;
-    const lo = free ? FRAME_PERF.scaleMin : FRAME_PERF.baseMin, hi = free ? FRAME_PERF.scaleMax : FRAME_PERF.baseMax;
+    const lo = free ? mapLo : FRAME_PERF.baseMin, hi = free ? mapHi : FRAME_PERF.baseMax;
     if (!held || !coversNow || held.k < lo || held.k > hi || !canHold && (held.k !== 1 || held.tx !== 0 || held.ty !== 0)) {
       requests.push({ kind: 'base', score: !coversNow ? Infinity : score(held.k,lo,hi) });
       baseForced = !slot || !coversNow || held.k < lo / slack || held.k > hi * slack;
@@ -674,7 +687,7 @@ export function tripApply(st, focus = null) {
   };
   st.rasterRebased = mapForced || chosen?.kind === 'map';
   if (st.rasterRebased) {
-    const ahead = moving && glideHold && lastCam && c.s > lastCam.s ? Math.min(c.s / FRAME_PERF.scaleMin, Math.max(c.s,endScale(lastCam))) / c.s : 1;
+    const ahead = moving && glideHold && lastCam && c.s > lastCam.s ? Math.min(c.s / FRAME_PERF.scaleMin, Math.max(c.s,endScale(lastCam))) / c.s : zoomHold && lastCam && c.s > lastCam.s ? mapHi : 1;
     r.base = { ...c, s: c.s * ahead, tx: c.ax - (c.ax-c.tx)*ahead, ty: c.ay - (c.ay-c.ty)*ahead };
     tripWrite(E.cam, 'transform', text(r.base), true);
     if (camVeil) tripWrite(camVeil, 'transform', E.cam.getAttribute('transform'), true);
@@ -688,7 +701,7 @@ export function tripApply(st, focus = null) {
   if (B) {
     if (baseForced || chosen?.kind === 'base') {
       let k = 1;
-      if (held && camMoved && baseLast && c.s > baseLast.s) k = Math.min(FRAME_PERF.baseAhead, Math.max(1,endScale(baseLast)/c.s));
+      if (held && camMoved && baseLast && c.s > baseLast.s) k = zoomHold ? mapHi : Math.min(FRAME_PERF.baseAhead, Math.max(1,endScale(baseLast)/c.s));
       B.camera = rounded({ s: c.s*k, tx: VIEW.w/2-(VIEW.w/2-c.tx)*k, ty: VIEW.h/2-(VIEW.h/2-c.ty)*k });
       tripWrite(E.camBase, 'transform', text(B.camera), true); held = heldBy(B.camera); if (st.rasterBudget) st.rasterBudget.used = true;
     }
@@ -713,7 +726,9 @@ export function tripApply(st, focus = null) {
   if (!r.settleLeft || Math.abs(r.scale / c.s - 1) < .0001) r.scale = c.s;
   r.moving = moving;
   const paint = r.base, labelS = free ? r.scale : c.s;
-  const labelFade = smooth(...LABELS.fade, labelS / VIEW.s0);
+  // The zoom-led fade of the small words and the bottom scrim runs on the clock too: a fast pinch or a find's move crossed
+  // its whole zoom range in a frame or two, so words popped in and the scrim dropped over the map (phone film scans, 2026-11-27).
+  const labelFade = tripClock(E, 'labelFadeK', smooth(...LABELS.fade, labelS / VIEW.s0), st.reduced ? 0 : st.frameDt || 0);
   tripFocusFade(st);
   if (E.rows) tripLabels(st, labelFade);
   E.labels.forEach(label => {
@@ -776,7 +791,7 @@ export function tripApply(st, focus = null) {
     tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
     const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
-  return (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.baseRaster?.held || requests.length > (mapForced ? 1 : 0) + (baseForced ? 1 : 0) + (chosen ? 1 : 0);
+  return (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.clockFading || !!E.baseRaster?.held || requests.length > (mapForced ? 1 : 0) + (baseForced ? 1 : 0) + (chosen ? 1 : 0);
 }
 const n2 = v => v.toFixed(2);
 export function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }

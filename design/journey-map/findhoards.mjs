@@ -129,7 +129,7 @@ export function findWay(svg) {
     // the compass's title, one word gap above Print, with its own halo over any line behind it.
     attr(tally, 'font-size', Math.max(W.tally[1], W.tally[3] / (FD.st.rasterS || FD.st.cam.s))); attr(tally, 'x', W.tally[2] / 2); attr(tally, 'y', -(out + cap + W.wordGap / (FD.st.rasterS || FD.st.cam.s)));
     };
-    if (o.onScreen && (!FD.st.gliding || FD.st.rasterRebased)) o.compassFrame();
+    if (o.onScreen && (!(FD.st.gliding || FD.st.exploreMoving) || FD.st.rasterRebased)) o.compassFrame();
     attr(ring, 'opacity', o.unlocked ? 1 : 0);
     if (o.unlocked && !FD.rm) attr(ring, 'transform', `scale(${lerp(W.ring[0], W.ring[1], (1 - Math.cos(t * Math.PI * 2 / W.ring[2])) / 2) / W.ring[0]})`);
     if (o.linePhase === 'retract') { const q = FD.rm ? 1 : clamp01((t - o.lineTs) / W.line); o.lines.forEach((l, i) => l.v = o.retract[i] * (1 - ease(q))); if (q === 1) queueMicrotask(startLines); }

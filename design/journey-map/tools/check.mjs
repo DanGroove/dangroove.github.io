@@ -257,18 +257,21 @@ ok(!/#[0-9A-Fa-f]{3,6}\b(?![\w-]*\))/.test(readFileSync(join(ROOT, 'map.css'), '
 // Compressed delivery budgets include all top-level runtime modules and CSS, never hero-copy. The combined budget was
 // raised from 160 to 185 KB on 2026-11-24, after part 4's 32 fixes took it to 171 KB; the packed pages' budgets below,
 // which are what a visitor downloads, are unchanged.
-const RUNTIME_KB = 204.0; // 2026-11-26: part 13 review fixes (+0.6 KB) and COMB-Q, the old ash and revision loop (+3.4 KB); 2026-11-27: edge fades on the clock, still timeline and Next fill (+0.8 KB): 202.97 KB with LF, about 0.95 KB more on the PC (CRLF sources).
+const RUNTIME_KB = 205.2; // 2026-11-26: part 13 review fixes (+0.6 KB) and COMB-Q, the old ash and revision loop (+3.4 KB); 2026-11-27: edge fades on the clock, still timeline and Next fill (+0.8 KB); the pinch recheck's fixes (finds quiet while explore moves, the explore hold band, word and scrim fades on the clock, the hint and count pill fades: +1.1 KB): 204.06 KB, read with LF on every machine.
 const gzipKB = content => gzipSync(content).length / 1024;
-const runtimeSources = [...mods, 'map.css'].map(f => { const src = readFileSync(join(ROOT, f)); ok(gzipKB(src) <= 160, `${f}: exceeds 160 KB gzip`); return src; });
+// Line endings are evened out (2026-11-27) so a checkout with CRLF on the PC reads the same sizes as the cloud.
+const readLF = f => Buffer.from(readFileSync(join(ROOT, f), 'utf8').replace(/\r\n/g, '\n'));
+const runtimeSources = [...mods, 'map.css'].map(f => { const src = readLF(f); ok(gzipKB(src) <= 160, `${f}: exceeds 160 KB gzip`); return src; });
 const runtimeKB = gzipKB(Buffer.concat(runtimeSources)); ok(runtimeKB <= RUNTIME_KB, `combined map modules/CSS exceed ${RUNTIME_KB} KB gzip`);
 const hammerKB = gzipKB(readFileSync(join(ROOT, 'hammer.mjs'), 'utf8') + readFileSync(join(ROOT, 'findhammer.mjs'), 'utf8') + JSON.stringify([HAMMER, FIND_COPY.hammer, FIND_COPY.hammerFact, FIND_COPY.hints.hammer]) + readFileSync(join(ROOT, 'art.mjs'), 'utf8').match(/const hammerMapArt[^\n]+/)[0]);
 ok(hammerKB < 30, 'hammer rules/find/data/drawings exceed 30 KB gzip');
 console.log(`gzip: hammer ${hammerKB.toFixed(2)} KB / 30; all map modules + CSS ${runtimeKB.toFixed(2)} KB / ${RUNTIME_KB}`);
 // The joined page's budget rose from 540 to 567 KB on 2026-11-24 with the hero copy's refresh to v44 (5d2347b), which added
 // 26.5 KB of the hero's own code (its loader and round 19); the map's headroom inside it stays what it was at bfc6a94.
-for (const [file, budget] of [['dist/journey-map.html', 320], ['dist/journey-joined.html', 567]]) {
+// The map page's budget rose from 320 to 321 KB on 2026-11-27 with the pinch recheck's fixes (320.36 KB).
+for (const [file, budget] of [['dist/journey-map.html', 321], ['dist/journey-joined.html', 567]]) {
   if (!existsSync(join(ROOT, file))) continue;
-  const kb = gzipKB(readFileSync(join(ROOT, file))); ok(kb <= budget, `${file}: exceeds ${budget} KB gzip`); console.log(`gzip: ${file} ${kb.toFixed(2)} KB / ${budget}`);
+  const kb = gzipKB(readLF(file)); ok(kb <= budget, `${file}: exceeds ${budget} KB gzip`); console.log(`gzip: ${file} ${kb.toFixed(2)} KB / ${budget}`);
 }
 
 if (errs.length) { console.error('FAIL\n' + errs.map(e => ' - ' + e).join('\n')); process.exit(1); }

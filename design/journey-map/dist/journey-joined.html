@@ -594,7 +594,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 
 .marker-layer { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; overflow: visible; pointer-events: none; } .marker-layer .mk { pointer-events: auto; } .jm-focus .marker-layer .mk { pointer-events: none; }
 
-.find-hint:empty { display: none; } .jm-focus[data-find="all-found"] .label-anchor text { opacity: 1 !important; }
+.find-hint:empty { visibility: hidden !important; opacity: 0 !important; } .jm-focus[data-find="all-found"] .label-anchor text { opacity: 1 !important; }
 .jm-sheet-open.jm-focus .find-hint, .jm-sheet-open.jm-explore .find-hint { opacity: 0; visibility: hidden; }
 @media (max-height: 440px) { .hm-card { gap: 4px; padding: 8px; } .hm-card p { line-height: 14px; } .hm-card h2 { font-size: 21px; } .hm-card .find-slot { padding: 4px; } .hm-end-close { display: none; } }
 .tl-count-space { flex: none; width: 110px; } .tl-count-screen { position: absolute; z-index: 5; top: 0; right: 28px; bottom: auto; padding: 5px 8px; line-height: 1; border-radius: 12px; background: var(--ink); pointer-events: auto; translate: 0 calc(100vh - 39px); transition: translate .3s, opacity .3s; }  .rm .tl-count-space { display: none; } @media (max-width: 640px) { .tl-count-space { width: 92px; } .tl-count-screen { right: 16px; translate: 0 calc(100vh - var(--go-bar) - 35px); }  .jm-explore[data-beat="end"] .tl-count-screen { translate: 0 calc(100vh - var(--go-bar) - 35px); } }
@@ -630,6 +630,21 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 /* COMB-Q: carved detail is readable only as the camera approaches the serpent. */
 .jo-body .jd, .jo-head .jd { opacity: var(--jo-detail, 0); }
 .jf, .jf-name { pointer-events: none; }
+
+/* Preview 25 (Dan, 2026-11-27: "Still a ton of flashing"; the phone film scans).
+   The first hint after a load used to arrive from display: none, which skips its fade: its box came up in one frame over
+   the map above the bar. An empty hint is now only hidden (above), so every hint fades in.
+   On a phone the found-count pill trades places as a card opens and closes (the bottom at the overview, the top over a
+   card). It slid across the map twice on every move between stops; now it dips out, moves while out of sight, and comes
+   back, and stays at the top through a move. */
+@keyframes jm-pill-dip-a { 0%, 100% { filter: opacity(1); } 35%, 65% { filter: opacity(0); } }
+@keyframes jm-pill-dip-b { 0%, 100% { filter: opacity(1); } 35%, 65% { filter: opacity(0); } }
+@media (max-width: 640px) {
+  .tl-count-screen { transition: translate .2s steps(1, end), opacity .3s; animation: jm-pill-dip-a .4s linear; }
+  html:has(.stop[data-state="open"], .stop[data-state="moving"]) .tl-count-screen { animation-name: jm-pill-dip-b; }
+  /* A move keeps it at the top, so a glide from one card to the next does not send it down and back up. */
+  html.jm-moving .tl-count-screen { translate: 0 48px; animation-name: jm-pill-dip-b; }
+}
 
 </style>
 <style>
@@ -1687,7 +1702,7 @@ const DEPTH = {
 
 const NOVA_CANVAS = { dpr: 3, glowSprite: 512 };
 // Performance only: label recovery after a composited gesture (seconds), raster guard (CSS px).
-const FRAME_PERF = { baseMin: .5, baseMax: 1.15, baseAhead: 1.15, baseMargin: 2, labelSettle: 0.25, rasterPad: 2, scaleMin: .87, scaleMax: 1.15, skyMin: .8, skyMax: 1.3, slack: 1.1, positionEnd: .1, scaleEnd: .001, sharpStep: .5, flingEnd: 6, starPaths: true, outerGeometry: true, rayBands: true, ringPieces: true, airEmpty: true, ringBox: 160, skyLayers: true, glideHold: true, trailPieces: true };
+const FRAME_PERF = { baseMin: .5, baseMax: 1.15, baseAhead: 1.15, baseMargin: 2, labelSettle: 0.25, rasterPad: 2, scaleMin: .87, scaleMax: 1.15, exploreMin: .8, exploreMax: 1.25, skyMin: .8, skyMax: 1.3, slack: 1.1, positionEnd: .1, scaleEnd: .001, sharpStep: .5, flingEnd: 6, starPaths: true, outerGeometry: true, rayBands: true, ringPieces: true, airEmpty: true, ringBox: 160, skyLayers: true, glideHold: true, trailPieces: true };
 const NOVA = {
   build: { kindle: 0.2, draw: 0.76, hold: 1, throbs: [0.26, 0.45, 0.60, 0.72], rise: 0.12, fall: 0.32, pull: 1.8,
     push: 0.08, pushPhone: 0.06, recoil: 0.4, veil: 0.65, veilPhone: 0.45, veilOut: 0.25, hole: [0.6, 0.18], holeBreath: 0.04,
@@ -4082,6 +4097,15 @@ function tripEdge(r, target, dt) {
   if (r.edge !== target) TRIP_EL.edgeFading = true;
   return r.edge;
 }
+// The same clock for a zoom-led fade: o[key] moves toward target at no more than 1 / LABELS.edgeFade a second.
+function tripClock(o, key, target, dt) {
+  const v = o[key];
+  if (v === undefined || !(dt > 0)) { o[key] = target; return target; }
+  const step = dt / LABELS.edgeFade, d = target - v;
+  o[key] = Math.abs(d) <= step ? target : v + Math.sign(d) * step;
+  if (o[key] !== target) TRIP_EL.clockFading = true;
+  return o[key];
+}
 function tripLabels(st, t2Fade = 1) {
   const E = TRIP_EL, c = st.cam, phone = VIEW.phone, L = LABELS, open = Math.max(0, ...st.cardK), dim = 1 - L.cardDim[phone ? 1 : 0], group = E.groupFade ?? 1;
   const dt = st.reduced ? 0 : st.frameDt || 0; E.edgeFading = false;
@@ -4116,7 +4140,7 @@ function tripLabels(st, t2Fade = 1) {
 }
 function tripGliding() { return !!TRIP_EL.raster?.gliding; }
 function tripApply(st, focus = null) {
-  const E = TRIP_EL, c = st.cam;
+  const E = TRIP_EL, c = st.cam; E.clockFading = false;
   const veil = E.veil ??= document.getElementById('map-veil'), camVeil = E.camVeil ??= document.getElementById('cam-veil');
   const free = !!st.exploring || st.exploreK > 0;
   const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
@@ -4128,7 +4152,11 @@ function tripApply(st, focus = null) {
   const glideHold = FRAME_PERF.glideHold && !free && !st.reduced && st.handoffT >= 1;
   const moving = free && !!st.exploreMoving && !st.exploreScripted && !(zooming && st.exploreSharp) || glideHold && camMoved;
   r.gliding = !!(glideHold && camMoved);
-  const rebase = !r.base || ratio < FRAME_PERF.scaleMin || ratio > FRAME_PERF.scaleMax;
+  // A moving explore camera holds svg#map and its base across FRAME_PERF.exploreMin to exploreMax and draws them ahead when it
+  // zooms in, so a pinch or a wheel redraws them every 25 % of zoom instead of every 15 % (each redraw was a 50-340 ms frame
+  // in the phone and PC pinch passes, 2026-11-27). Rest still redraws them sharp at the true scale.
+  const zoomHold = free && moving, mapLo = zoomHold ? FRAME_PERF.exploreMin : FRAME_PERF.scaleMin, mapHi = zoomHold ? FRAME_PERF.exploreMax : FRAME_PERF.scaleMax;
+  const rebase = !r.base || ratio < mapLo || ratio > mapHi;
   const score = (k, lo, hi) => Math.max(lo / k, k / hi);
   const focusMove = !!focus && focus.k > 0;
   // Journey moves share one big raster per frame: svg#map, svg#map-base or one sky object, the biggest overshoot first.
@@ -4138,7 +4166,7 @@ function tripApply(st, focus = null) {
   const requests = (slot ? VIEW.skyPlan?.(st) || [] : []).map(q => ({ ...q, kind: 'sky' }));
   const mapDue = !r.base || (!moving ? ratio !== 1 || c.tx !== r.base.tx || c.ty !== r.base.ty : rebase);
   const mapForced = mapDue && (!slot || !r.base || ratio < FRAME_PERF.scaleMin / slack || ratio > FRAME_PERF.scaleMax * slack);
-  if (mapDue) requests.push({ kind: 'map', score: r.base ? score(ratio, FRAME_PERF.scaleMin, FRAME_PERF.scaleMax) : Infinity });
+  if (mapDue) requests.push({ kind: 'map', score: r.base ? score(ratio, mapLo, mapHi) : Infinity });
   let baseForced = false;
   let B, held, coversNow = true, baseLast;
   const rounded = p => ({ s: +p.s.toFixed(4), tx: +p.tx.toFixed(2), ty: +p.ty.toFixed(2) });
@@ -4153,7 +4181,7 @@ function tripApply(st, focus = null) {
     const canHold = !!B.camera && !st.reduced && (free ? !!st.exploreMoving || !still : st.handoffT >= 1 && !still);
     held = B.camera ? heldBy(B.camera) : null;
     coversNow = !!held && -held.tx / held.k >= -sx - 1e-6 && (VIEW.w - held.tx) / held.k <= VIEW.w + sx + 1e-6 && -held.ty / held.k >= -sy - 1e-6 && (VIEW.h - held.ty) / held.k <= VIEW.h + sy + 1e-6;
-    const lo = free ? FRAME_PERF.scaleMin : FRAME_PERF.baseMin, hi = free ? FRAME_PERF.scaleMax : FRAME_PERF.baseMax;
+    const lo = free ? mapLo : FRAME_PERF.baseMin, hi = free ? mapHi : FRAME_PERF.baseMax;
     if (!held || !coversNow || held.k < lo || held.k > hi || !canHold && (held.k !== 1 || held.tx !== 0 || held.ty !== 0)) {
       requests.push({ kind: 'base', score: !coversNow ? Infinity : score(held.k,lo,hi) });
       baseForced = !slot || !coversNow || held.k < lo / slack || held.k > hi * slack;
@@ -4173,7 +4201,7 @@ function tripApply(st, focus = null) {
   };
   st.rasterRebased = mapForced || chosen?.kind === 'map';
   if (st.rasterRebased) {
-    const ahead = moving && glideHold && lastCam && c.s > lastCam.s ? Math.min(c.s / FRAME_PERF.scaleMin, Math.max(c.s,endScale(lastCam))) / c.s : 1;
+    const ahead = moving && glideHold && lastCam && c.s > lastCam.s ? Math.min(c.s / FRAME_PERF.scaleMin, Math.max(c.s,endScale(lastCam))) / c.s : zoomHold && lastCam && c.s > lastCam.s ? mapHi : 1;
     r.base = { ...c, s: c.s * ahead, tx: c.ax - (c.ax-c.tx)*ahead, ty: c.ay - (c.ay-c.ty)*ahead };
     tripWrite(E.cam, 'transform', text(r.base), true);
     if (camVeil) tripWrite(camVeil, 'transform', E.cam.getAttribute('transform'), true);
@@ -4187,7 +4215,7 @@ function tripApply(st, focus = null) {
   if (B) {
     if (baseForced || chosen?.kind === 'base') {
       let k = 1;
-      if (held && camMoved && baseLast && c.s > baseLast.s) k = Math.min(FRAME_PERF.baseAhead, Math.max(1,endScale(baseLast)/c.s));
+      if (held && camMoved && baseLast && c.s > baseLast.s) k = zoomHold ? mapHi : Math.min(FRAME_PERF.baseAhead, Math.max(1,endScale(baseLast)/c.s));
       B.camera = rounded({ s: c.s*k, tx: VIEW.w/2-(VIEW.w/2-c.tx)*k, ty: VIEW.h/2-(VIEW.h/2-c.ty)*k });
       tripWrite(E.camBase, 'transform', text(B.camera), true); held = heldBy(B.camera); if (st.rasterBudget) st.rasterBudget.used = true;
     }
@@ -4212,7 +4240,9 @@ function tripApply(st, focus = null) {
   if (!r.settleLeft || Math.abs(r.scale / c.s - 1) < .0001) r.scale = c.s;
   r.moving = moving;
   const paint = r.base, labelS = free ? r.scale : c.s;
-  const labelFade = smooth(...LABELS.fade, labelS / VIEW.s0);
+  // The zoom-led fade of the small words and the bottom scrim runs on the clock too: a fast pinch or a find's move crossed
+  // its whole zoom range in a frame or two, so words popped in and the scrim dropped over the map (phone film scans, 2026-11-27).
+  const labelFade = tripClock(E, 'labelFadeK', smooth(...LABELS.fade, labelS / VIEW.s0), st.reduced ? 0 : st.frameDt || 0);
   tripFocusFade(st);
   if (E.rows) tripLabels(st, labelFade);
   E.labels.forEach(label => {
@@ -4275,7 +4305,7 @@ function tripApply(st, focus = null) {
     tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
     const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
-  return (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.baseRaster?.held || requests.length > (mapForced ? 1 : 0) + (baseForced ? 1 : 0) + (chosen ? 1 : 0);
+  return (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.clockFading || !!E.baseRaster?.held || requests.length > (mapForced ? 1 : 0) + (baseForced ? 1 : 0) + (chosen ? 1 : 0);
 }
 const n2 = v => v.toFixed(2);
 function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }
@@ -7286,7 +7316,7 @@ function findWay(svg) {
     // the compass's title, one word gap above Print, with its own halo over any line behind it.
     attr(tally, 'font-size', Math.max(W.tally[1], W.tally[3] / (FD.st.rasterS || FD.st.cam.s))); attr(tally, 'x', W.tally[2] / 2); attr(tally, 'y', -(out + cap + W.wordGap / (FD.st.rasterS || FD.st.cam.s)));
     };
-    if (o.onScreen && (!FD.st.gliding || FD.st.rasterRebased)) o.compassFrame();
+    if (o.onScreen && (!(FD.st.gliding || FD.st.exploreMoving) || FD.st.rasterRebased)) o.compassFrame();
     attr(ring, 'opacity', o.unlocked ? 1 : 0);
     if (o.unlocked && !FD.rm) attr(ring, 'transform', `scale(${lerp(W.ring[0], W.ring[1], (1 - Math.cos(t * Math.PI * 2 / W.ring[2])) / 2) / W.ring[0]})`);
     if (o.linePhase === 'retract') { const q = FD.rm ? 1 : clamp01((t - o.lineTs) / W.line); o.lines.forEach((l, i) => l.v = o.retract[i] * (1 - ease(q))); if (q === 1) queueMicrotask(startLines); }
@@ -7676,9 +7706,12 @@ function findSerpent(svg) {
     const sleeping=o.stage==='asleep';o.headTurn=angle;o.jawAngle=jawTurn;attr(head,'transform','rotate('+angle+')');attr(jaw,'transform','rotate('+(-jawTurn)+' '+S.jawPivot.join(' ')+')');attr(eye,'opacity',sleeping?0:1);attr(shut,'opacity',sleeping?1:0);
     const bob=FD.rm||!['ready','typing'].includes(o.stage)?0:Math.sin(Math.PI*2*t/S.bob[2]);at[1]+=S.bob[1]*bob;rotation+=S.bob[0]*bob;const phoneScale=VIEW.phone?Math.min(1,S.filePhone/(15*FD.st.cam.s)):1;
     attr(file,'transform','translate('+at.join(' ')+') rotate('+rotation+') scale('+(scale*phoneScale)+')');attr(file,'opacity',alpha);attr(stamp,'opacity',o.stamped?1:0);attr(stamp,'transform','translate(.5 1.2) rotate(-14) scale('+(1/phoneScale)+')');attr(name,'x',at[0]+S.shipName[0]*o.openAmount);attr(name,'y',at[1]+S.nameDy+S.shipName[1]*o.openAmount);attr(name,'font-size',lerp(S.nameSize,S.shipName[2],o.openAmount));attr(name,'opacity',nameAlpha);
-    const F=FIND_PLAY.focus,close=Math.max(Math.max(VIEW.s0,F.least*VIEW.sT),Math.min(F.most*VIEW.sT,F.fill*Math.min(VIEW.w,VIEW.h)/(2*f.view[2]))),detail=clamp01((FD.st.cam.s-VIEW.s0)/(close-VIEW.s0||1));findStyle(body,'--jo-detail',detail);findStyle(head,'--jo-detail',detail);
+    o.zoomFrame();
     attr(el,'data-revision-state',o.stage);attr(el,'data-loop-open',o.openAmount);attr(el,'data-file',o.fileName);caption();if(o.stage==='asleep'&&o.queued&&t-o.shippedAt>=S.queueRest)consumeQueue();o.playing=['bite','lap','spit','typing','opening','waking'].includes(o.stage)||swells.some(s=>s.live)||o.stage==='asleep'&&o.queued>0;
   };
+  // The carved detail follows the zoom. While a moving camera quiets the finds (finds.mjs), it is redrawn only with the map's
+  // own redraws, so it never adds one.
+  o.zoomFrame = () => { const F=FIND_PLAY.focus,close=Math.max(Math.max(VIEW.s0,F.least*VIEW.sT),Math.min(F.most*VIEW.sT,F.fill*Math.min(VIEW.w,VIEW.h)/(2*f.view[2]))),detail=clamp01((FD.st.cam.s-VIEW.s0)/(close-VIEW.s0||1));findStyle(body,'--jo-detail',detail);findStyle(head,'--jo-detail',detail); };
   return o;
 }
 
@@ -8650,6 +8683,9 @@ function findsPointer(x, y) { FD.pointer = [x, y]; FD.pointerT = FD.now; }
 function findsFrame(time, st) {
   if (!st) return;
   FD.dt = Math.max(0, Math.min(FIND_PLAY.kit.dt, FD.now ? time - FD.now : 0)); FD.now = time; FD.st = st;
+  // A moving camera quiets the finds' idle life inside svg#map, in a glide and in explore alike: each idle write there
+  // redrew the held map on every frame of a pinch, a drag or a wheel (phone and PC pinch passes, 2026-11-27).
+  const quiet = st.gliding || !!st.exploreMoving;
   const tuning = JSON.stringify(FIND_PLAY);
   if (tuning !== FD.styleKey) { FD.styleKey = tuning; queueMicrotask(findKitStyle); }
   Object.values(FD.list).forEach(o => {
@@ -8657,18 +8693,18 @@ function findsFrame(time, st) {
     const near = FIND_PLAY[o.id === 'wayfinder' ? 'way' : o.id === 'ravens' ? 'raven' : o.id === 'runestone' ? 'rune' : o.id === 'longship' ? 'ship' : o.id]?.near || rad;
     const playing = ['flight', 'hear', 'landing', 'reel', 'chase', 'eating', 'waking', 'trace', 'opening', 'sheet', 'closing', 'sliding', 'reply', 'pebble', 'sounding', 'echo', 'pull', 'lifting'].includes(o.stage) || o.drag || o.busy || o.playing || o.hearing;
     const active = o => ['rising','rattling','opening','bouncing','waiting'].includes(o.stage) || o.hold || o.queued || o.pending;
-    const paused = st.gliding && !playing && JOURNEY.focus !== o.id && FD.sheetOwner !== o && !(o.id === 'longship' && o.x !== undefined && (p[0] !== o.x || p[1] !== o.y));
-    if (paused && o.id !== 'hoards') { if (o.id === 'wayfinder' && o.onScreen && st.rasterRebased) o.compassFrame?.(); return; } // Keep sky-side pieces, including the beacon beam, at their last state.
+    const paused = quiet && !playing && JOURNEY.focus !== o.id && FD.sheetOwner !== o && !(o.id === 'longship' && o.x !== undefined && (p[0] !== o.x || p[1] !== o.y));
+    if (paused && o.id !== 'hoards') { if (o.onScreen && st.rasterRebased) { if (o.id === 'wayfinder') o.compassFrame?.(); o.zoomFrame?.(); } return; } // Keep sky-side pieces, including the beacon beam, at their last state; zoom-led detail follows the map's redraws.
     findLife(o, ...p, o.id === 'horn' && ['sounding', 'echo'].includes(o.stage) ? FIND_PLAY.horn.soundRad : rad, near);
-    if (o.id === 'hoards' && st.gliding) {
+    if (o.id === 'hoards' && quiet) {
       o.items.forEach(h => { if (active(h) || JOURNEY.focus === h.id || FD.sheetOwner === h) h.tick(time, FD.rm ? 0 : FD.dt); });
     } else if (o.id === 'hoards' || o.onScreen || playing || FD.sheetOwner === o) o.tick?.(time, FD.rm ? 0 : FD.dt);
     else if (o.id === 'beacon') depthBeam(null);
   });
   const bits = FD.bits;
-  if (st.gliding) FD.bits = [];
+  if (quiet) FD.bits = [];
   try { findKitFrame(); } finally { FD.bits = bits; }
-  if (!st.gliding || FD.all.playing) FD.all.tick(time); if (JOURNEY.focus !== FD.focusId) findHint(JOURNEY.focus); FD.focusId = JOURNEY.focus;
+  if (!quiet || FD.all.playing) FD.all.tick(time); if (JOURNEY.focus !== FD.focusId) findHint(JOURNEY.focus); FD.focusId = JOURNEY.focus;
 }
 
 // ---- main.mjs ----

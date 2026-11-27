@@ -586,7 +586,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 
 .marker-layer { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; overflow: visible; pointer-events: none; } .marker-layer .mk { pointer-events: auto; } .jm-focus .marker-layer .mk { pointer-events: none; }
 
-.find-hint:empty { display: none; } .jm-focus[data-find="all-found"] .label-anchor text { opacity: 1 !important; }
+.find-hint:empty { visibility: hidden !important; opacity: 0 !important; } .jm-focus[data-find="all-found"] .label-anchor text { opacity: 1 !important; }
 .jm-sheet-open.jm-focus .find-hint, .jm-sheet-open.jm-explore .find-hint { opacity: 0; visibility: hidden; }
 @media (max-height: 440px) { .hm-card { gap: 4px; padding: 8px; } .hm-card p { line-height: 14px; } .hm-card h2 { font-size: 21px; } .hm-card .find-slot { padding: 4px; } .hm-end-close { display: none; } }
 .tl-count-space { flex: none; width: 110px; } .tl-count-screen { position: absolute; z-index: 5; top: 0; right: 28px; bottom: auto; padding: 5px 8px; line-height: 1; border-radius: 12px; background: var(--ink); pointer-events: auto; translate: 0 calc(100vh - 39px); transition: translate .3s, opacity .3s; }  .rm .tl-count-space { display: none; } @media (max-width: 640px) { .tl-count-space { width: 92px; } .tl-count-screen { right: 16px; translate: 0 calc(100vh - var(--go-bar) - 35px); }  .jm-explore[data-beat="end"] .tl-count-screen { translate: 0 calc(100vh - var(--go-bar) - 35px); } }
@@ -622,3 +622,18 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 /* COMB-Q: carved detail is readable only as the camera approaches the serpent. */
 .jo-body .jd, .jo-head .jd { opacity: var(--jo-detail, 0); }
 .jf, .jf-name { pointer-events: none; }
+
+/* Preview 25 (Dan, 2026-11-27: "Still a ton of flashing"; the phone film scans).
+   The first hint after a load used to arrive from display: none, which skips its fade: its box came up in one frame over
+   the map above the bar. An empty hint is now only hidden (above), so every hint fades in.
+   On a phone the found-count pill trades places as a card opens and closes (the bottom at the overview, the top over a
+   card). It slid across the map twice on every move between stops; now it dips out, moves while out of sight, and comes
+   back, and stays at the top through a move. */
+@keyframes jm-pill-dip-a { 0%, 100% { filter: opacity(1); } 35%, 65% { filter: opacity(0); } }
+@keyframes jm-pill-dip-b { 0%, 100% { filter: opacity(1); } 35%, 65% { filter: opacity(0); } }
+@media (max-width: 640px) {
+  .tl-count-screen { transition: translate .2s steps(1, end), opacity .3s; animation: jm-pill-dip-a .4s linear; }
+  html:has(.stop[data-state="open"], .stop[data-state="moving"]) .tl-count-screen { animation-name: jm-pill-dip-b; }
+  /* A move keeps it at the top, so a glide from one card to the next does not send it down and back up. */
+  html.jm-moving .tl-count-screen { translate: 0 48px; animation-name: jm-pill-dip-b; }
+}
