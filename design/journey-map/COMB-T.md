@@ -174,7 +174,7 @@ The well stops being a find and the tree becomes one, with a numbered marker.
   - `depth.mjs`: the wolves' lag line and the beacon light's layer only.
   - `tools/phone-fps.mjs`: the new beat kinds, and saving a trace too big for one string in pieces (for example, streaming its events into the gzip). COMB-S's S6 lost the new build's `explore:pinch` twice to "Invalid string length" where the whole trace is stringified before gzipping.
   - The tests in `tools/` as T8 says, and `tools/check.mjs` (`RUNTIME_KB`, the page budgets and the find lists, changed only as this part needs, with a dated note).
-  - `dist/journey-map.html` and `dist/journey-joined.html`, only through `node tools/pack.mjs` and `node tools/pack-joined.mjs`.
+  - `dist/journey-map.html`, `dist/journey-joined.html` and `joined.html`, only through `node tools/pack.mjs` and `node tools/pack-joined.mjs` (pack-joined writes `joined.html` too; run it, since COMB-S left the joined page stale).
   - Your report, `COMB-T-BUILD.md`.
 - **The run folder:** browser profiles, captures, traces and full logs go only in `journey-map-runs\comb-t` (env `COMB_RUN=comb-t`).
 - **Never touch:**
