@@ -192,7 +192,7 @@ button { font-family: inherit; }
 .tl { position: absolute; left: 0; right: 0; bottom: 0; height: 56px; padding: 0 28px; display: flex; align-items: stretch; gap: 20px; pointer-events: auto; touch-action: none; z-index: 3; opacity: 0; cursor: pointer; }
 .tl-bg { position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: linear-gradient(to top, var(--ink) 62%, transparent); pointer-events: none; }
 .tl-view { position: relative; flex: 1; overflow: clip; }
-.tl-track { position: absolute; left: 0; top: 0; height: 100%; width: 100%; }
+.tl-track { position: absolute; left: 0; top: 0; height: 100%; width: 100%; will-change: transform; }
 .tl-rows { position: absolute; left: 0; right: 0; top: 10px; transform-origin: 0 100%; }
 .tl-row { position: relative; height: 6px; margin-bottom: 3px; }
 .tl-blk { position: absolute; top: 0; height: 100%; background: var(--mid); border-radius: 2px; }
@@ -200,7 +200,7 @@ button { font-family: inherit; }
 .tl-tick { position: absolute; top: 28px; width: 1px; height: 6px; background: var(--dim); }
 .tl-tick b { position: absolute; top: 9px; left: 2px; font-size: 9.5px; font-weight: 500; color: var(--dim); }
 .tl-base { position: absolute; left: 28px; right: 158px; top: 31px; height: 1px; background: var(--mid); pointer-events: none; }
-.tl-head { position: absolute; left: -7px; top: 24px; width: 14px; height: 14px; z-index: 1; }
+.tl-head { position: absolute; left: -7px; top: 24px; width: 14px; height: 14px; z-index: 1; will-change: transform; }
 .tl-head svg { display: block; width: 100%; height: 100%; fill: var(--red); }
 .tl-count { align-self: center; width: 110px; text-align: right; font-size: 11px; color: var(--dim); white-space: nowrap; }
 .tl-tip { position: absolute; left: 0; bottom: 56px; background: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; }
@@ -290,7 +290,9 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .go-next { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 16px; min-width: 230px; height: var(--go-h); padding: 0 44px; border: 0; border-radius: 999px; background: var(--paper); color: var(--ink); font-size: 14px; font-weight: 700; }
 .go-next .arr { position: absolute; right: 20px; transition: transform var(--go-reveal); }
 .go-t { position: relative; }
-.go-fill { position: absolute; inset: 0; background: var(--ink); opacity: .14; transform: scaleX(0); transform-origin: 0 50%; pointer-events: none; }
+/* The timeline's track and head and the Next button's fill move on every frame of a move: each is its own layer, moved
+   without a raster (before 2026-11-27 they redrew the timeline and the step bar on every frame). */
+.go-fill { position: absolute; inset: 0; background: var(--ink); opacity: .14; transform: scaleX(0); transform-origin: 0 50%; pointer-events: none; will-change: transform; }
 .go-next:hover .arr { transform: translateX(2px); }
 .go-next:active { transform: scale(.97); }
 .go-top { background: none; border: 0; padding: 8px 0; color: var(--note); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
@@ -3081,8 +3083,10 @@ const MARK = { k: 10, min: 14, max: 36, stand: 3, lift: 0, ringWidth: 1.2, ringG
 const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -8, hmcSubDY: -27.5, hmcAgainSubDX: 3, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [18,8], xSubAt: [18,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]],
   // cardDim: other stops' labels behind an open card (desktop, phone); underFade: the share of a label under the timeline or
   // step bar at which it has gone (sideFade: off the screen's side); bar: the bar's keep-out (half width, pad); hint: a find
-  // view's lift of it, for the hint (px)
-  cardDim: [0.35, 0.12], underFade: 0.4, sideFade: 0.1, bar: [190, 6], hint: 44 };
+  // view's lift of it, for the hint (px); edgeFade: the seconds a label takes to fade fully out or in at those edges, however
+  // fast the camera carries it there (a moving label crossed the old share-based fades in one or two frames: Dan's phone
+  // "popping in and out around the edges", 2026-11-27)
+  cardDim: [0.35, 0.12], underFade: 0.4, sideFade: 0.1, bar: [190, 6], hint: 44, edgeFade: 0.3 };
 // titleOut: the push-in share over which the map's title and kicker fade out (back in at the overview and in explore).
 // coastDraw: the share of the fall over which the coasts draw, from its first moments
 const WORLD = { scrim: [150,190,.85], titleOut: [.3, .8], titleZoom: [1.15, 1.6], coastDraw: [.1891891891891892, .72], card: { w:640, edge:32, phoneBottom:0, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };
@@ -4068,8 +4072,19 @@ function tripFocusFade(st) {
 }
 // Labels give way (polish round 1): a stop's label fades as its card opens (L-6) and the map's other words dim (L-8); all of
 // them fade under the timeline, the step bar and a find's hint, and off the screen's sides (K-2, L-17). Explore frees them.
+// The edge fade runs on the clock: its share-based target is reached at no more than 1 / LABELS.edgeFade a second, so a label
+// the camera sweeps past an edge fades over edgeFade instead of in a frame or two. Calls without a frame time (the reduced
+// still, a resize) and the first call for a label take the target at once.
+function tripEdge(r, target, dt) {
+  if (r.edge === undefined || !(dt > 0)) { r.edge = target; return target; }
+  const step = dt / LABELS.edgeFade, d = target - r.edge;
+  r.edge = Math.abs(d) <= step ? target : r.edge + Math.sign(d) * step;
+  if (r.edge !== target) TRIP_EL.edgeFading = true;
+  return r.edge;
+}
 function tripLabels(st, t2Fade = 1) {
   const E = TRIP_EL, c = st.cam, phone = VIEW.phone, L = LABELS, open = Math.max(0, ...st.cardK), dim = 1 - L.cardDim[phone ? 1 : 0], group = E.groupFade ?? 1;
+  const dt = st.reduced ? 0 : st.frameDt || 0; E.edgeFading = false;
   const free = !!st.exploring || st.exploreK > 0, lift = st.focusK > 0 ? L.hint : 0, timeline = VIEW.h - (phone ? STEPS.nav.bar : 0) - CAMERA.timeline;
   const floor = phone ? timeline - lift : timeline, bar = phone ? null : [VIEW.w / 2 - L.bar[0], timeline - STEPS.nav.gap - STEPS.nav.h - L.bar[1] - lift, VIEW.w / 2 + L.bar[0]];
   const gone = b => { const x0 = b[0] * c.s + c.tx, x1 = b[2] * c.s + c.tx, y0 = b[1] * c.s + c.ty, y1 = b[3] * c.s + c.ty, tall = Math.max(1, y1 - y0);
@@ -4090,14 +4105,14 @@ function tripLabels(st, t2Fade = 1) {
       const target=c.s>=r.exploreFrom?1:0,dt=st.exploreDt||0;r.subOpacity ??= 0;
       r.subOpacity+=Math.sign(target-r.subOpacity)*Math.min(Math.abs(target-r.subOpacity),dt/.2);o*=r.subOpacity;E.subFading ||= r.subOpacity!==target;
     }
-    if (!free && o > 0) o *= gone(box);
+    o *= tripEdge(r, free ? 1 : gone(box), dt);
     put(r, o * group);
   });
   const u = L.legend.unit * labelScale('legend', c.s), back = 1 - dim * open;
-  (E.t2 || []).forEach(t => put(t, (free ? 1 : back * gone(t.b)) * (1 - tripCardCover(st, t.b)) * t2Fade));
+  (E.t2 || []).forEach(t => put(t, (free ? 1 : back) * tripEdge(t, free ? 1 : gone(t.b), dt) * (1 - tripCardCover(st, t.b)) * t2Fade));
   const xQuiet = st.legXT * (1 - (st.exploreK || 0));
   E.symbols?.forEach(s => tripWrite(s.el, 'opacity', 1 - .85 * xQuiet));
-  (E.legend || []).forEach(g => { const k = labelScale('legend', c.s), b = g.box, box = b ? [g.p[0]+b.x*k,g.p[1]+b.y*k,g.p[0]+(b.x+b.width)*k,g.p[1]+(b.y+b.height)*k] : [g.p[0],g.p[1]-u*L.ascent,g.p[0]+g.n*u*L.width,g.p[1]+u*L.descent]; put(g, (free ? 1 : back * gone(box)) * (1-tripCardCover(st,box)) * (1-.85*xQuiet) * group); });
+  (E.legend || []).forEach(g => { const k = labelScale('legend', c.s), b = g.box, box = b ? [g.p[0]+b.x*k,g.p[1]+b.y*k,g.p[0]+(b.x+b.width)*k,g.p[1]+(b.y+b.height)*k] : [g.p[0],g.p[1]-u*L.ascent,g.p[0]+g.n*u*L.width,g.p[1]+u*L.descent]; put(g, (free ? 1 : back) * tripEdge(g, free ? 1 : gone(box), dt) * (1-tripCardCover(st,box)) * (1-.85*xQuiet) * group); });
 }
 function tripGliding() { return !!TRIP_EL.raster?.gliding; }
 function tripApply(st, focus = null) {
@@ -4260,7 +4275,7 @@ function tripApply(st, focus = null) {
     tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
     const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
-  return (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.baseRaster?.held || requests.length > (mapForced ? 1 : 0) + (baseForced ? 1 : 0) + (chosen ? 1 : 0);
+  return (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.baseRaster?.held || requests.length > (mapForced ? 1 : 0) + (baseForced ? 1 : 0) + (chosen ? 1 : 0);
 }
 const n2 = v => v.toFixed(2);
 function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }
@@ -5327,8 +5342,11 @@ function tlFrame(st) {
   TL.fades.forEach(f => tlStyle(f, 'opacity', f === TL.count ? count : fade));
   tlStyle(TL.base, 'opacity', st.exploreK > 0 ? st.exploreFooter ?? 1 - st.exploreK : st.rushT === 0 ? 1 : Math.max(fade, m));
   tlStyle(TL.rows, 'transform', `scaleY(${(1 - st.cardOpen * .85).toFixed(3)})`);
-  const hx = xOf(st.date) * TL.trackW; TL.headX = hx;
-  TL.off = VIEW.phone ? Math.max(TL.viewW - TL.trackW, Math.min(0, TL.viewW / 2 - hx)) : 0;
+  // The track and the head are layers of their own (map.css), drawn once and moved: their moves snap to device pixels, so
+  // the years and the head never come to rest half a pixel off and resampled soft.
+  const dpr = devicePixelRatio || 1, snap = v => Math.round(v * dpr) / dpr;
+  const hx = snap(xOf(st.date) * TL.trackW); TL.headX = hx;
+  TL.off = VIEW.phone ? snap(Math.max(TL.viewW - TL.trackW, Math.min(0, TL.viewW / 2 - hx))) : 0;
   tlStyle(TL.track, 'transform', `translateX(${TL.off.toFixed(2)}px)`);
   TL.headX = hx + TL.off;
   tlStyle(TL.head, 'transform', `translateX(${hx.toFixed(2)}px) scaleX(${(1 / sx).toFixed(4)})`);
@@ -8369,7 +8387,9 @@ function findWell(svg) {
     const stream = findSvg('circle', { class: 'pf', r: FIND_PLAY.well.pebbleR, opacity: 0 }); crown.appendChild(stream);
     const stars = row.map(p => { const g = findSvg('g', { transform: `translate(${MAP.ygg[0] + p[0]} ${MAP.ygg[1] + p[1]})` }), star = findSvg('path', { class: 'pf', d: starPath(0, 0, FIND_PLAY.well.starSize), opacity: 0 }); star.style.stroke = 'none'; g.appendChild(star); crown.appendChild(g); return star; }); return { stream, stars };
   });
-  const ring = count => { o.ringTs = FD.now; o.ringCount = count; };
+  // idle: a root drip's ring. It is idle life like the rat's climb and the eagle's stretch, so it never keeps the well playing
+  // (finds.mjs pauses idle life while the camera glides; the drip, its ring and the tree's creatures carry on at arrival).
+  const ring = (count, idle = false) => { o.ringTs = FD.now; o.ringCount = count; o.ringIdle = idle; };
   const answer = () => {
     const names = FIND_COPY.norns[o.norn], index = o.cur + o.norn - 1, stop = STOPS[index];
     const line = o.norn === 0 && index < 0 ? FIND_COPY.wellNone : o.norn === 1 && o.cur < 0 ? FIND_COPY.wellMap : o.norn === 2 && index >= STOPS.length ? FIND_COPY.wellNext : stop ? findFormat(FIND_COPY.wellStop, { name: stop.short, dates: stop.dates }) : FIND_COPY.wellNone;
@@ -8414,7 +8434,7 @@ function findWell(svg) {
     } else if (!FD.rm) wingY = lerp(...L.wingY, Math.sin(Math.PI * clamp01((t - o.eagleTs) / L.stretch)));
     attr(eagle, 'transform', 'translate(' + ex + ' ' + ey + ')'); attr(wings, 'transform', 'scale(' + L.wingX + ' ' + wingY + ')');
     if (!FD.rm && o.onScreen && t >= o.dripAt && o.dripLand === null && o.stage !== 'pebble') { findBits('drop', ...W.root, 1, { speed: [(W.water[1] - W.root[1]) / W.dripTime, (W.water[1] - W.root[1]) / W.dripTime], dir: [FIND_PLAY.kit.deg / 2, FIND_PLAY.kit.deg / 2], life: [W.dripTime, W.dripTime] }); o.dripLand = t + W.dripTime; o.dripAt = t + findRange(W.drip); }
-    if (o.dripLand !== null && t >= o.dripLand) { o.dripLand = null; ring(1); }
+    if (o.dripLand !== null && t >= o.dripLand) { o.dripLand = null; ring(1, true); }
     if (o.stage === 'pebble') {
       const q = clamp01((t - o.ts) / W.pebbleTime), p = [lerp(o.pebbleFrom[0], W.water[0], q), lerp(o.pebbleFrom[1], W.water[1], q) - W.arc * Math.sin(Math.PI * q)];
       attr(pebble, 'transform', `translate(${p[0] - f.x} ${p[1] - f.y})`);
@@ -8427,7 +8447,7 @@ function findWell(svg) {
       attr(batch.stream, 'transform', `translate(${lerp(p[0][0], p[1][0], ease(q))} ${lerp(p[0][1], p[1][1], ease(q))})`); attr(batch.stream, 'opacity', !FD.rm && q < 1 ? 1 : 0);
       batch.stars.forEach((s, j) => { const k = FD.rm ? 1 : clamp01((age - W.trunkTime - j * W.starGap) / W.starTime), scale = k < 0.5 ? lerp(0, W.starOver, ease(k * 2)) : lerp(W.starOver, 1, ease((k - 0.5) * 2)); attr(s, 'transform', `scale(${scale})`); attr(s, 'opacity', k === 0 ? 0 : FD.rm ? 1 : lerp(W.twinkle[0], W.twinkle[1], (1 + Math.sin(Math.PI * 2 * t / W.twinkleTime[(i + j) % W.twinkleTime.length] + i + j)) / 2)); });
     });
-    const last = o.starBatches[o.starBatches.length - 1]; o.playing = flying || o.stage === 'pebble' || o.stage === 'landing' || o.dripLand !== null || t - o.ringTs < W.ringTime + (o.ringCount - 1) * W.ringGap || last !== undefined && t - last < W.trunkTime + W.starGap * (W.stars[0].length - 1) + W.starTime;
+    const last = o.starBatches[o.starBatches.length - 1]; o.playing = flying || o.stage === 'pebble' || o.stage === 'landing' || !o.ringIdle && t - o.ringTs < W.ringTime + (o.ringCount - 1) * W.ringGap || last !== undefined && t - last < W.trunkTime + W.starGap * (W.stars[0].length - 1) + W.starTime;
   };
   return o;
 }
@@ -8822,7 +8842,7 @@ function frame(ts) {
   P = stepsFrame(ts);
   if (JOIN.leave) JOIN.leave(P);
   if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], { ...jr, still: true }); raf = requestAnimationFrame(frame); return; }
-  const st = tripState(P);
+  const st = tripState(P); st.frameDt = dt;
   // Under the opaque hero the map's frame is skipped (F2), but only once a full frame has put every map layer in its hero
   // state (shields, cards, footer, mini-map, timeline, explore): after a load or a resize, and after a cut or a glide back
   // to the top, where the map's last frame would otherwise stay drawn over the hero.

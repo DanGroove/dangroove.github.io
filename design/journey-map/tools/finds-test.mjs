@@ -46,9 +46,9 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // Part 8 cloud fixes: explore keeps the map promoted while its camera moves, and releases it at rest after a zoom (F10 lag).
 // Part 10b cloud fixes: the held base on whole device pixels with a margin (blur), and the find press fades on each name, not its group.
 // COMB-M2 (2026-11-26): N2 changes only the old longship line and ship kit keys; the M2 scope test pins the exact edits.
-assert.equal(sourceDigest('trip.mjs'), 906771568, 'trip.mjs changed'); // COMB-P authorized changes and the part 13 review fixes (2026-11-26).
+assert.equal(sourceDigest('trip.mjs'), 4113473103, 'trip.mjs changed'); // COMB-P, the part 13 review fixes (2026-11-26) and the edge fades on the clock (2026-11-27).
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 3032780281, 'data.mjs changed'); // COMB-Q authorized changes and the part 13b review's marker moves (2026-11-26).
+assert.equal(sourceDigest('data.mjs'), 2915498979, 'data.mjs changed'); // COMB-Q, the part 13b review's marker moves (2026-11-26) and LABELS.edgeFade (2026-11-27).
 assert.equal(sourceDigest('depth.mjs'), 2916876570, 'depth.mjs changed'); // COMB-P authorized changes and the part 13 review fixes (2026-11-26).
 console.log('ok: COMB-D camera/labels/tripS digests recorded; depth source remains pinned');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];

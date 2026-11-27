@@ -257,7 +257,7 @@ ok(!/#[0-9A-Fa-f]{3,6}\b(?![\w-]*\))/.test(readFileSync(join(ROOT, 'map.css'), '
 // Compressed delivery budgets include all top-level runtime modules and CSS, never hero-copy. The combined budget was
 // raised from 160 to 185 KB on 2026-11-24, after part 4's 32 fixes took it to 171 KB; the packed pages' budgets below,
 // which are what a visitor downloads, are unchanged.
-const RUNTIME_KB = 203.4; // 2026-11-26: part 13 review fixes (+0.6 KB) and COMB-Q, the old ash and revision loop (+3.4 KB); 203.14 KB measured on the PC (CRLF sources), 202.19 KB with LF.
+const RUNTIME_KB = 204.0; // 2026-11-26: part 13 review fixes (+0.6 KB) and COMB-Q, the old ash and revision loop (+3.4 KB); 2026-11-27: edge fades on the clock, still timeline and Next fill (+0.8 KB): 202.97 KB with LF, about 0.95 KB more on the PC (CRLF sources).
 const gzipKB = content => gzipSync(content).length / 1024;
 const runtimeSources = [...mods, 'map.css'].map(f => { const src = readFileSync(join(ROOT, f)); ok(gzipKB(src) <= 160, `${f}: exceeds 160 KB gzip`); return src; });
 const runtimeKB = gzipKB(Buffer.concat(runtimeSources)); ok(runtimeKB <= RUNTIME_KB, `combined map modules/CSS exceed ${RUNTIME_KB} KB gzip`);

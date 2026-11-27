@@ -169,7 +169,7 @@ function frame(ts) {
   P = stepsFrame(ts);
   if (JOIN.leave) JOIN.leave(P);
   if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], { ...jr, still: true }); raf = requestAnimationFrame(frame); return; }
-  const st = tripState(P);
+  const st = tripState(P); st.frameDt = dt;
   // Under the opaque hero the map's frame is skipped (F2), but only once a full frame has put every map layer in its hero
   // state (shields, cards, footer, mini-map, timeline, explore): after a load or a resize, and after a cut or a glide back
   // to the top, where the map's last frame would otherwise stay drawn over the hero.

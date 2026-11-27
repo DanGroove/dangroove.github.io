@@ -61,7 +61,9 @@ export function findWell(svg) {
     const stream = findSvg('circle', { class: 'pf', r: FIND_PLAY.well.pebbleR, opacity: 0 }); crown.appendChild(stream);
     const stars = row.map(p => { const g = findSvg('g', { transform: `translate(${MAP.ygg[0] + p[0]} ${MAP.ygg[1] + p[1]})` }), star = findSvg('path', { class: 'pf', d: starPath(0, 0, FIND_PLAY.well.starSize), opacity: 0 }); star.style.stroke = 'none'; g.appendChild(star); crown.appendChild(g); return star; }); return { stream, stars };
   });
-  const ring = count => { o.ringTs = FD.now; o.ringCount = count; };
+  // idle: a root drip's ring. It is idle life like the rat's climb and the eagle's stretch, so it never keeps the well playing
+  // (finds.mjs pauses idle life while the camera glides; the drip, its ring and the tree's creatures carry on at arrival).
+  const ring = (count, idle = false) => { o.ringTs = FD.now; o.ringCount = count; o.ringIdle = idle; };
   const answer = () => {
     const names = FIND_COPY.norns[o.norn], index = o.cur + o.norn - 1, stop = STOPS[index];
     const line = o.norn === 0 && index < 0 ? FIND_COPY.wellNone : o.norn === 1 && o.cur < 0 ? FIND_COPY.wellMap : o.norn === 2 && index >= STOPS.length ? FIND_COPY.wellNext : stop ? findFormat(FIND_COPY.wellStop, { name: stop.short, dates: stop.dates }) : FIND_COPY.wellNone;
@@ -106,7 +108,7 @@ export function findWell(svg) {
     } else if (!FD.rm) wingY = lerp(...L.wingY, Math.sin(Math.PI * clamp01((t - o.eagleTs) / L.stretch)));
     attr(eagle, 'transform', 'translate(' + ex + ' ' + ey + ')'); attr(wings, 'transform', 'scale(' + L.wingX + ' ' + wingY + ')');
     if (!FD.rm && o.onScreen && t >= o.dripAt && o.dripLand === null && o.stage !== 'pebble') { findBits('drop', ...W.root, 1, { speed: [(W.water[1] - W.root[1]) / W.dripTime, (W.water[1] - W.root[1]) / W.dripTime], dir: [FIND_PLAY.kit.deg / 2, FIND_PLAY.kit.deg / 2], life: [W.dripTime, W.dripTime] }); o.dripLand = t + W.dripTime; o.dripAt = t + findRange(W.drip); }
-    if (o.dripLand !== null && t >= o.dripLand) { o.dripLand = null; ring(1); }
+    if (o.dripLand !== null && t >= o.dripLand) { o.dripLand = null; ring(1, true); }
     if (o.stage === 'pebble') {
       const q = clamp01((t - o.ts) / W.pebbleTime), p = [lerp(o.pebbleFrom[0], W.water[0], q), lerp(o.pebbleFrom[1], W.water[1], q) - W.arc * Math.sin(Math.PI * q)];
       attr(pebble, 'transform', `translate(${p[0] - f.x} ${p[1] - f.y})`);
@@ -119,7 +121,7 @@ export function findWell(svg) {
       attr(batch.stream, 'transform', `translate(${lerp(p[0][0], p[1][0], ease(q))} ${lerp(p[0][1], p[1][1], ease(q))})`); attr(batch.stream, 'opacity', !FD.rm && q < 1 ? 1 : 0);
       batch.stars.forEach((s, j) => { const k = FD.rm ? 1 : clamp01((age - W.trunkTime - j * W.starGap) / W.starTime), scale = k < 0.5 ? lerp(0, W.starOver, ease(k * 2)) : lerp(W.starOver, 1, ease((k - 0.5) * 2)); attr(s, 'transform', `scale(${scale})`); attr(s, 'opacity', k === 0 ? 0 : FD.rm ? 1 : lerp(W.twinkle[0], W.twinkle[1], (1 + Math.sin(Math.PI * 2 * t / W.twinkleTime[(i + j) % W.twinkleTime.length] + i + j)) / 2)); });
     });
-    const last = o.starBatches[o.starBatches.length - 1]; o.playing = flying || o.stage === 'pebble' || o.stage === 'landing' || o.dripLand !== null || t - o.ringTs < W.ringTime + (o.ringCount - 1) * W.ringGap || last !== undefined && t - last < W.trunkTime + W.starGap * (W.stars[0].length - 1) + W.starTime;
+    const last = o.starBatches[o.starBatches.length - 1]; o.playing = flying || o.stage === 'pebble' || o.stage === 'landing' || !o.ringIdle && t - o.ringTs < W.ringTime + (o.ringCount - 1) * W.ringGap || last !== undefined && t - last < W.trunkTime + W.starGap * (W.stars[0].length - 1) + W.starTime;
   };
   return o;
 }

@@ -184,7 +184,7 @@ button { font-family: inherit; }
 .tl { position: absolute; left: 0; right: 0; bottom: 0; height: 56px; padding: 0 28px; display: flex; align-items: stretch; gap: 20px; pointer-events: auto; touch-action: none; z-index: 3; opacity: 0; cursor: pointer; }
 .tl-bg { position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: linear-gradient(to top, var(--ink) 62%, transparent); pointer-events: none; }
 .tl-view { position: relative; flex: 1; overflow: clip; }
-.tl-track { position: absolute; left: 0; top: 0; height: 100%; width: 100%; }
+.tl-track { position: absolute; left: 0; top: 0; height: 100%; width: 100%; will-change: transform; }
 .tl-rows { position: absolute; left: 0; right: 0; top: 10px; transform-origin: 0 100%; }
 .tl-row { position: relative; height: 6px; margin-bottom: 3px; }
 .tl-blk { position: absolute; top: 0; height: 100%; background: var(--mid); border-radius: 2px; }
@@ -192,7 +192,7 @@ button { font-family: inherit; }
 .tl-tick { position: absolute; top: 28px; width: 1px; height: 6px; background: var(--dim); }
 .tl-tick b { position: absolute; top: 9px; left: 2px; font-size: 9.5px; font-weight: 500; color: var(--dim); }
 .tl-base { position: absolute; left: 28px; right: 158px; top: 31px; height: 1px; background: var(--mid); pointer-events: none; }
-.tl-head { position: absolute; left: -7px; top: 24px; width: 14px; height: 14px; z-index: 1; }
+.tl-head { position: absolute; left: -7px; top: 24px; width: 14px; height: 14px; z-index: 1; will-change: transform; }
 .tl-head svg { display: block; width: 100%; height: 100%; fill: var(--red); }
 .tl-count { align-self: center; width: 110px; text-align: right; font-size: 11px; color: var(--dim); white-space: nowrap; }
 .tl-tip { position: absolute; left: 0; bottom: 56px; background: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; }
@@ -282,7 +282,9 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .go-next { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 16px; min-width: 230px; height: var(--go-h); padding: 0 44px; border: 0; border-radius: 999px; background: var(--paper); color: var(--ink); font-size: 14px; font-weight: 700; }
 .go-next .arr { position: absolute; right: 20px; transition: transform var(--go-reveal); }
 .go-t { position: relative; }
-.go-fill { position: absolute; inset: 0; background: var(--ink); opacity: .14; transform: scaleX(0); transform-origin: 0 50%; pointer-events: none; }
+/* The timeline's track and head and the Next button's fill move on every frame of a move: each is its own layer, moved
+   without a raster (before 2026-11-27 they redrew the timeline and the step bar on every frame). */
+.go-fill { position: absolute; inset: 0; background: var(--ink); opacity: .14; transform: scaleX(0); transform-origin: 0 50%; pointer-events: none; will-change: transform; }
 .go-next:hover .arr { transform: translateX(2px); }
 .go-next:active { transform: scale(.97); }
 .go-top { background: none; border: 0; padding: 8px 0; color: var(--note); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }

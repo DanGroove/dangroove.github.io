@@ -573,8 +573,19 @@ function tripFocusFade(st) {
 }
 // Labels give way (polish round 1): a stop's label fades as its card opens (L-6) and the map's other words dim (L-8); all of
 // them fade under the timeline, the step bar and a find's hint, and off the screen's sides (K-2, L-17). Explore frees them.
+// The edge fade runs on the clock: its share-based target is reached at no more than 1 / LABELS.edgeFade a second, so a label
+// the camera sweeps past an edge fades over edgeFade instead of in a frame or two. Calls without a frame time (the reduced
+// still, a resize) and the first call for a label take the target at once.
+function tripEdge(r, target, dt) {
+  if (r.edge === undefined || !(dt > 0)) { r.edge = target; return target; }
+  const step = dt / LABELS.edgeFade, d = target - r.edge;
+  r.edge = Math.abs(d) <= step ? target : r.edge + Math.sign(d) * step;
+  if (r.edge !== target) TRIP_EL.edgeFading = true;
+  return r.edge;
+}
 function tripLabels(st, t2Fade = 1) {
   const E = TRIP_EL, c = st.cam, phone = VIEW.phone, L = LABELS, open = Math.max(0, ...st.cardK), dim = 1 - L.cardDim[phone ? 1 : 0], group = E.groupFade ?? 1;
+  const dt = st.reduced ? 0 : st.frameDt || 0; E.edgeFading = false;
   const free = !!st.exploring || st.exploreK > 0, lift = st.focusK > 0 ? L.hint : 0, timeline = VIEW.h - (phone ? STEPS.nav.bar : 0) - CAMERA.timeline;
   const floor = phone ? timeline - lift : timeline, bar = phone ? null : [VIEW.w / 2 - L.bar[0], timeline - STEPS.nav.gap - STEPS.nav.h - L.bar[1] - lift, VIEW.w / 2 + L.bar[0]];
   const gone = b => { const x0 = b[0] * c.s + c.tx, x1 = b[2] * c.s + c.tx, y0 = b[1] * c.s + c.ty, y1 = b[3] * c.s + c.ty, tall = Math.max(1, y1 - y0);
@@ -595,14 +606,14 @@ function tripLabels(st, t2Fade = 1) {
       const target=c.s>=r.exploreFrom?1:0,dt=st.exploreDt||0;r.subOpacity ??= 0;
       r.subOpacity+=Math.sign(target-r.subOpacity)*Math.min(Math.abs(target-r.subOpacity),dt/.2);o*=r.subOpacity;E.subFading ||= r.subOpacity!==target;
     }
-    if (!free && o > 0) o *= gone(box);
+    o *= tripEdge(r, free ? 1 : gone(box), dt);
     put(r, o * group);
   });
   const u = L.legend.unit * labelScale('legend', c.s), back = 1 - dim * open;
-  (E.t2 || []).forEach(t => put(t, (free ? 1 : back * gone(t.b)) * (1 - tripCardCover(st, t.b)) * t2Fade));
+  (E.t2 || []).forEach(t => put(t, (free ? 1 : back) * tripEdge(t, free ? 1 : gone(t.b), dt) * (1 - tripCardCover(st, t.b)) * t2Fade));
   const xQuiet = st.legXT * (1 - (st.exploreK || 0));
   E.symbols?.forEach(s => tripWrite(s.el, 'opacity', 1 - .85 * xQuiet));
-  (E.legend || []).forEach(g => { const k = labelScale('legend', c.s), b = g.box, box = b ? [g.p[0]+b.x*k,g.p[1]+b.y*k,g.p[0]+(b.x+b.width)*k,g.p[1]+(b.y+b.height)*k] : [g.p[0],g.p[1]-u*L.ascent,g.p[0]+g.n*u*L.width,g.p[1]+u*L.descent]; put(g, (free ? 1 : back * gone(box)) * (1-tripCardCover(st,box)) * (1-.85*xQuiet) * group); });
+  (E.legend || []).forEach(g => { const k = labelScale('legend', c.s), b = g.box, box = b ? [g.p[0]+b.x*k,g.p[1]+b.y*k,g.p[0]+(b.x+b.width)*k,g.p[1]+(b.y+b.height)*k] : [g.p[0],g.p[1]-u*L.ascent,g.p[0]+g.n*u*L.width,g.p[1]+u*L.descent]; put(g, (free ? 1 : back) * tripEdge(g, free ? 1 : gone(box), dt) * (1-tripCardCover(st,box)) * (1-.85*xQuiet) * group); });
 }
 export function tripGliding() { return !!TRIP_EL.raster?.gliding; }
 export function tripApply(st, focus = null) {
@@ -765,7 +776,7 @@ export function tripApply(st, focus = null) {
     tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
     const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
-  return (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.baseRaster?.held || requests.length > (mapForced ? 1 : 0) + (baseForced ? 1 : 0) + (chosen ? 1 : 0);
+  return (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.baseRaster?.held || requests.length > (mapForced ? 1 : 0) + (baseForced ? 1 : 0) + (chosen ? 1 : 0);
 }
 const n2 = v => v.toFixed(2);
 export function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }

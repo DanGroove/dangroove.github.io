@@ -1771,8 +1771,10 @@ export const MARK = { k: 10, min: 14, max: 36, stand: 3, lift: 0, ringWidth: 1.2
 export const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -8, hmcSubDY: -27.5, hmcAgainSubDX: 3, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [18,8], xSubAt: [18,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]],
   // cardDim: other stops' labels behind an open card (desktop, phone); underFade: the share of a label under the timeline or
   // step bar at which it has gone (sideFade: off the screen's side); bar: the bar's keep-out (half width, pad); hint: a find
-  // view's lift of it, for the hint (px)
-  cardDim: [0.35, 0.12], underFade: 0.4, sideFade: 0.1, bar: [190, 6], hint: 44 };
+  // view's lift of it, for the hint (px); edgeFade: the seconds a label takes to fade fully out or in at those edges, however
+  // fast the camera carries it there (a moving label crossed the old share-based fades in one or two frames: Dan's phone
+  // "popping in and out around the edges", 2026-11-27)
+  cardDim: [0.35, 0.12], underFade: 0.4, sideFade: 0.1, bar: [190, 6], hint: 44, edgeFade: 0.3 };
 // titleOut: the push-in share over which the map's title and kicker fade out (back in at the overview and in explore).
 // coastDraw: the share of the fall over which the coasts draw, from its first moments
 export const WORLD = { scrim: [150,190,.85], titleOut: [.3, .8], titleZoom: [1.15, 1.6], coastDraw: [.1891891891891892, .72], card: { w:640, edge:32, phoneBottom:0, gap:12, panelRadius:10, panelPad:16, crafts:340, title:26, titleWeight:800, titleGap:14, footGap:16, footMargin:18, topPad:8, topPadX:14 } };

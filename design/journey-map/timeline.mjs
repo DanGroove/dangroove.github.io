@@ -93,8 +93,11 @@ export function tlFrame(st) {
   TL.fades.forEach(f => tlStyle(f, 'opacity', f === TL.count ? count : fade));
   tlStyle(TL.base, 'opacity', st.exploreK > 0 ? st.exploreFooter ?? 1 - st.exploreK : st.rushT === 0 ? 1 : Math.max(fade, m));
   tlStyle(TL.rows, 'transform', `scaleY(${(1 - st.cardOpen * .85).toFixed(3)})`);
-  const hx = xOf(st.date) * TL.trackW; TL.headX = hx;
-  TL.off = VIEW.phone ? Math.max(TL.viewW - TL.trackW, Math.min(0, TL.viewW / 2 - hx)) : 0;
+  // The track and the head are layers of their own (map.css), drawn once and moved: their moves snap to device pixels, so
+  // the years and the head never come to rest half a pixel off and resampled soft.
+  const dpr = devicePixelRatio || 1, snap = v => Math.round(v * dpr) / dpr;
+  const hx = snap(xOf(st.date) * TL.trackW); TL.headX = hx;
+  TL.off = VIEW.phone ? snap(Math.max(TL.viewW - TL.trackW, Math.min(0, TL.viewW / 2 - hx))) : 0;
   tlStyle(TL.track, 'transform', `translateX(${TL.off.toFixed(2)}px)`);
   TL.headX = hx + TL.off;
   tlStyle(TL.head, 'transform', `translateX(${hx.toFixed(2)}px) scaleX(${(1 / sx).toFixed(4)})`);
