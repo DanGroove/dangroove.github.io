@@ -368,7 +368,8 @@ function depthSky(st, look, time) {
   const glide = leg === undefined ? null : GLIDES[leg+1];
   DP.birds.forEach(b => {
     const tune = wolves[b.name], active = wolves.on && !st.exploring && !st.exploreK && glide && (b.name === 'skoll' ? leg === 2 : leg === 4);
-    const window = VIEW.phone ? [wolves.from,wolves.to] : tune.window;
+    // Full-width chase at every size (Dan, 2026-11-27).
+    const window = [wolves.from,wolves.to];
     const f = glide ? clamp01(((st.P-glide.a)/(glide.b-glide.a)-window[0])/(window[1]-window[0])) : 0;
     let alpha = active && DP.skyForward ? smooth(0,wolves.ramp,f)*(1-smooth(1-wolves.ramp,1,f)) : 0;
     let place = f;
@@ -378,7 +379,7 @@ function depthSky(st, look, time) {
     alpha *= depthSeaFade(st)*(1-(st.focusK||0))*st.dim;
     const s = Math.max(wolves.size[0],Math.min(wolves.size[1],VIEW.w/wolves.size[2])), ws = s*tune.k;
     const m = wolves.margin[0]*VIEW.w+wolves.margin[1]*s, edge = DEPTH.frame.outer[2]*st.cam.s+st.cam.tx+wolves.gap;
-    const L = Math.max(edge,VIEW.w-wolves.maxBand*VIEW.w), band = VIEW.w-L, blend = VIEW.phone ? 0 : smooth(wolves.minBand,wolves.minBand+wolves.bandBlend,band);
+    const L = Math.max(edge,VIEW.w-wolves.maxBand*VIEW.w), blend = 0;
     const end = lerp(-m,L,blend), span = VIEW.w+m-end, height = Math.min(wolves.arcH[0]*VIEW.h,wolves.arcH[1]*span);
     const arc = u => [VIEW.w+m-span*u,wolves.yTop*VIEW.h+height*(1-Math.sin(Math.PI*u))];
     const lag = wolves.lag*ws;

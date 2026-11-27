@@ -52,8 +52,8 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // COMB-M2 (2026-11-26): N2 changes only the old longship line and ship kit keys; the M2 scope test pins the exact edits.
 assert.equal(sourceDigest('trip.mjs'), 3175914073, 'trip.mjs changed'); // COMB-P, the part 13 review fixes (2026-11-26), the edge fades on the clock and the pinch recheck's explore hold band and word fade clock (2026-11-27), then its held opening (labels eased through it) and no raster ahead in explore zoom holds; then the label warm-up's own path walk (pathWalk, the same points as the native calls, 2026-11-27).; L5 (2026-11-27): the names, trail and finds ride svg#map's raster camera in their own svgs, faded together in div#map-stack
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 1362104105, 'data.mjs changed'); // COMB-Q, the part 13b review's marker moves (2026-11-26), LABELS.edgeFade and FRAME_PERF.exploreMin/exploreMax (2026-11-27).
-assert.equal(sourceDigest('depth.mjs'), 2916876570, 'depth.mjs changed'); // COMB-P authorized changes and the part 13 review fixes (2026-11-26).
+assert.equal(sourceDigest('data.mjs'), 915893174, 'data.mjs changed'); // COMB-Q, the part 13b review's marker moves (2026-11-26), LABELS.edgeFade and FRAME_PERF.exploreMin/exploreMax (2026-11-27); Preview 28 notes: THE MARGINS moved, the crossing renamed, treeDrops and the pine off the skal (2026-11-27).
+assert.equal(sourceDigest('depth.mjs'), 1852138132, 'depth.mjs changed'); // COMB-P authorized changes and the part 13 review fixes (2026-11-26); Preview 28: Skoll and Hati chase across the full width at every size again (2026-11-27).
 console.log('ok: COMB-D camera/labels/tripS digests recorded; depth source remains pinned');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
 const mapP = BEATS.find(b => b.id === 'map').P, stopP = BEATS.find(b => b.id === STOPS[2].id).P, leg = SEQ.find(q => q.kind === 'leg' && q.i === 2), legP = leg.a + leg.len / 2;

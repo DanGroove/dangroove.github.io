@@ -23,7 +23,8 @@ export function findMist(svg) {
     centres().forEach((c, i) => { if (Math.hypot(c[0] - p[0], c[1] - p[1]) <= Q.cellR) o.cleared[i] = true; });
     const dir = previous ? Math.atan2(p[1] - previous[1], p[0] - previous[0]) * FIND_PLAY.kit.deg / Math.PI : Q.east[0];
     o.wipes = (o.wipes || 0) + 1; if (o.wipes % Q.wisps[0] === 0) findBits('wisp', ...p, 1, { ...Q.puff, dir: [dir - Q.wisps[1], dir + Q.wisps[1]] });
-    if (o.cleared.filter(Boolean).length / o.cleared.length >= Q.done) lift();
+    // Only hands lift the whole bank; the traveller clears its path (Dan, 2026-11-27).
+    if (manual && o.cleared.filter(Boolean).length / o.cleared.length >= Q.done) lift();
   };
   const pointer = (e, r) => {
     if (!FD.st) return;
@@ -39,9 +40,13 @@ export function findMist(svg) {
   press(el, e => { if (e.type === 'keydown' || !e.detail) third(); else { o.lastW = null; pointer(e, FIND_PLAY.mist.press); } });
   o.hear = () => { if (!FD.rm) { o.hearTs = FD.now; o.hearing = true; } };
   o.onEscape = () => o.down = false;
-  o.tick = t => {
-    const Q = FIND_PLAY.mist, b = Q.box, p = FD.st.trav;
+  // Every frame from findsFrame, even while a moving camera pauses the finds.
+  o.travel = () => {
+    const Q = FIND_PLAY.mist, b = Q.box, p = FD.st?.trav;
     if (!o.lifted && p && p[0] >= b[0] - Q.travellerEdge && p[0] <= b[0] + b[2] + Q.travellerEdge && p[1] >= b[1] - Q.travellerEdge && p[1] <= b[1] + b[3] + Q.travellerEdge && (!o.travellerLast || Math.hypot(p[0] - o.travellerLast[0], p[1] - o.travellerLast[1]) >= Q.traveller * Q.step)) { const previous = o.travellerLast; o.travellerLast = p.slice(); queueMicrotask(() => wipe(p, Q.traveller, false, previous)); }
+  };
+  o.tick = t => {
+    const Q = FIND_PLAY.mist;
     const q = FD.rm ? 1 : clamp01((t - o.hearTs) / Q.hear[1]); attr(drift, 'transform', `translate(${Q.hear[0] * Math.sin(Math.PI * q)} 0)`); if (q === 1) o.hearing = false;
     if (o.lifted) {
       const age = t - o.liftTs, fade = FD.rm ? 1 : clamp01(age / Q.lift); attr(cloud, 'opacity', Q.alpha * (1 - fade));

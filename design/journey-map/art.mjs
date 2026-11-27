@@ -244,16 +244,17 @@ export function bigMap() {
   s += riv(pathD(spline([[214, 392], [236, 399], [252, 393], [268, 395]]))) + riv(pathD(spline([[306, 410], [311, 440], [320, 470], [322, 520], [333, 556], [337, 582]])));
   s += `<path class="wl-bank" d="${pathD(spline([[266, 392], [280, 377], [306, 372], [330, 380], [338, 396], [322, 410], [296, 412], [274, 406]], 1), 1)}" fill="${C.ink}" stroke="${C.paper}" stroke-width="1" vector-effect="non-scaling-stroke"/><path class="t" d="M276 386q4 -3 8 0t8 0M314 404q4 -3 8 0t8 0"/>`;
   s += `<path d="M196 296Q216 330 207 366Q203 384 214 404" fill="none" stroke="${C.paper}" stroke-opacity=".45" stroke-width="7" stroke-dasharray=".8 2.6"/><path class="l" d="M208 374v13M212 372v17M216 374v13"/><path class="t" d="M203 393q9 5 18 0"/>`;
-  [[96, 306, 13], [126, 292, 17], [160, 300, 14], [186, 314, 11], [100, 340, 11], [112, 334, 15], [146, 336, 12], [112, 374, 10]].sort((a, b) => a[1] - b[1]).forEach(p => s += peak(p[0], p[1], p[2]));
-  [[140, 516, 11], [206, 522, 9], [158, 562, 10], [222, 574, 8], [408, 478, 9], [404, 548, 9], [230, 700, 8]].forEach(p => s += hill(p[0], p[1], p[2]));
+  [[96, 306, 13], [126, 292, 17], [160, 300, 14], [186, 314, 11], [100, 340, 11], [112, 334, 15], [146, 336, 12]].sort((a, b) => a[1] - b[1]).forEach(p => s += peak(p[0], p[1], p[2]));
+  [[206, 522, 9], [158, 562, 10], [222, 574, 8], [408, 478, 9], [404, 548, 9], [230, 700, 8]].forEach(p => s += hill(p[0], p[1], p[2]));
 
   // trees
   const near = (x, y, P, d) => P.some(p => Math.hypot(p[0] - x, p[1] - y) < d), SP = spline([[214, 212], [240, 196], [262, 176]], 0, 6);
-  const KEEP = [[300, 392, 46], [370, 330, 26], [372, 368, 16], [404, 300, 16], [250, 506, 22], [208, 262, 14], [452, 556, 14], [456, 184, 26], [256, 768, 16], [228, 724, 14], [134, 200, 26], [470, 520, 70], ...FIND_COPY.beaconNotes.map(n => [n.x, n.y, 16])], tr = [];
+  const KEEP = [[300, 392, 46], [370, 330, 26], [372, 368, 16], [404, 300, 16], [250, 506, 22], [208, 262, 14], [452, 556, 14], [456, 184, 26], [256, 768, 16], [228, 724, 14], [134, 200, 26], [470, 520, 70], [442, 418, 16], [413, 454, 16], [410, 495, 16], [432, 533, 16]], tr = []; // last four: the old beacon notes, kept so the groves (and treeNudges' indices) never reseed
   const grove = (cx, cy, rx, ry, n) => { for (let i = 0, k = 0; i < 500 && k < n; i++) { const a = r() * 6.283, d = Math.sqrt(r()), x = cx + Math.cos(a) * d * rx, y = cy + Math.sin(a) * d * ry; if (![[x, y], [x - 8, y], [x + 8, y], [x, y - 15], [x, y + 6]].every(onLand)) continue; if (near(x, y - 5, TRAIL, 11) || near(x, y - 5, SP, 9)) continue; if (LB.some(b => x > b[0] - 5 && x < b[2] + 5 && y > b[1] - 2 && y < b[3] + 13)) continue; if (!yggClear([x, y], YGG.clearance + YGG.groveReach) || inWorldBox([x, y], MAP.toronto.box, YGG.groveReach)) continue; if (KEEP.some(c => Math.hypot(c[0] - x, c[1] - y) < c[2])) continue; if (tr.some(t => Math.hypot(t[0] - x, t[1] - y) < 9)) continue; tr.push([x, y, 3 + r() * 1.6, r() < .45]); k++; } };
   grove(318, 186, 90, 38, 36); grove(392, 372, 36, 46, 10); grove(424, 536, 56, 28, 9); grove(352, 782, 46, 13, 6); grove(190, 498, 36, 16, 5);
   // Move only the three audited pines, preserving the seeded inventory and density.
   for (const [i, dx, dy] of MAP.treeNudges) { tr[i][0] += dx; tr[i][1] += dy; }
+  for (const i of [...MAP.treeDrops].sort((a, b) => b - a)) tr.splice(i, 1);
   GROVE.push(...tr); tr.sort((a, b) => a[1] - b[1]).forEach(t => s += t[3] ? pine(n1(t[0]), n1(t[1]), n1(t[2])) : tree(n1(t[0]), n1(t[1]), n1(t[2])));
   s += yggdrasil(gx, gy);
 
