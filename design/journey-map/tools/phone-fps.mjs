@@ -95,10 +95,14 @@ async function connect() {
 //   hero              a one-finger swipe up on the joined page's hero (needs --page <name>-joined=<file> for each build)
 //   explore:pan       enters explore (Next at end), then a one-finger drag
 //   explore:zoom      enters explore, then a two-finger pinch out
+//   explore:pinch     enters explore, then pinches in and out eight times (centre, near the corners, slow and fast) over
+//                     a 14 s window: Chrome's own synthetic pinch on the phone, a trackpad pinch (Ctrl + wheel) on a desktop
+//   explore:wheel     enters explore, then wheels in and out four times (desktop)
+//   pinch:<stop>      the same eight pinches at a stop of the journey, where the page lets the browser zoom (phone only)
 // A press or gesture that does not take effect no longer stops the run: its row says ok false and why, and the summary
 // lists it. Fingers are DevTools touch events, which make pointer and touch events but no click on the phone (phone-p21).
 const STOP_IDS = ['laurier', 'hmc1', 'mohawk', 'hmc2', 'interkom', 'lennard'];
-const STATE = `(() => { const m = document.getElementById('map'), c = document.getElementById('cam'); return { P: +window.__jm.P.toFixed(1), moving: !!window.__jm.moving, focus: window.__jm.focus, cls: document.documentElement.className, cam: (c && c.getAttribute('transform') || '') + '|' + (m ? getComputedStyle(m).transform : ''), ui: (document.querySelector('.sheet.on') ? 'sheet ' : '') + (document.querySelector('.pop.on') ? 'pop' : ''), y: Math.round(scrollY) }; })()`;
+const STATE = `(() => { const m = document.getElementById('map'), c = document.getElementById('cam'); return { P: +window.__jm.P.toFixed(1), moving: !!window.__jm.moving, focus: window.__jm.focus, cls: document.documentElement.className, cam: (c && c.getAttribute('transform') || '') + '|' + (m ? getComputedStyle(m).transform : ''), ui: (document.querySelector('.sheet.on') ? 'sheet ' : '') + (document.querySelector('.pop.on') ? 'pop' : ''), y: Math.round(scrollY), vv: +(window.__vvmax || 1).toFixed(2) }; })()`;
 const touch = (type, pts) => send('Input.dispatchTouchEvent', { type, touchPoints: pts.map(([x, y], i) => ({ x: Math.round(x), y: Math.round(y), id: i + 1, radiusX: 3, radiusY: 3, force: 1 })) });
 async function fingers(from, to, ms) {
   const n = Math.max(3, Math.round(ms / 16));
@@ -115,6 +119,19 @@ async function mouseDrag(from, to, ms) {
   await mouse('mouseReleased', to);
 }
 async function wheel([x, y], deltaY, n) { for (let k = 0; k < n; k++) { await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: Math.round(x), y: Math.round(y), deltaX: 0, deltaY }); await sleep(50); } }
+// Pinches (Dan, 2026-11-27: "make sure you are zooming in and out with pinches, that's where i saw the most flashing and
+// lag"): [x share, y share, scale, finger speed px/s]. In and out at the centre, near two corners, then fast; they end
+// where they started (the scales multiply to 1).
+const PINCHES = [[.5, .45, 2.5, 800], [.5, .45, .4, 800], [.3, .3, 2, 1400], [.3, .3, .5, 1400], [.7, .62, 2, 400], [.7, .62, .5, 400], [.5, .45, 3, 2000], [.5, .45, 1 / 3, 2000]];
+async function pinch(x, y, scale, speed) {
+  if (!DESKTOP) return send('Input.synthesizePinchGesture', { x: Math.round(x), y: Math.round(y), scaleFactor: scale, relativeSpeed: speed, gestureSourceType: 'touch' });
+  const n = Math.max(3, Math.round(Math.abs(Math.log(scale)) / 0.05)), deltaY = scale > 1 ? -10 : 10;
+  for (let k = 0; k < n; k++) { await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: Math.round(x), y: Math.round(y), deltaX: 0, deltaY, modifiers: 2 }); await sleep(Math.round(16 * 800 / speed)); }
+}
+async function pinches(W, H) {
+  await evaluate(`(() => { window.__vvmax = 1; if (window.visualViewport && !window.__vvOn) { window.__vvOn = true; visualViewport.addEventListener('resize', () => { window.__vvmax = Math.max(window.__vvmax || 1, visualViewport.scale); }); } return true; })()`);
+  for (const [fx, fy, s, sp] of PINCHES) { await pinch(W * fx, H * fy, s, sp); await sleep(250); }
+}
 
 // Tracing for --trace: events arrive as Tracing.dataCollected while the window records.
 const TRACE_CATS = ['toplevel', 'devtools.timeline', 'disabled-by-default-devtools.timeline', 'disabled-by-default-devtools.timeline.frame', 'blink', 'cc', 'gpu', 'viz', 'v8.execute', 'blink.rendering', 'benchmark'];
@@ -152,7 +169,7 @@ function traceSummary(ev, windowMs) {
 async function oneRun(p, beat, run) {
   events.length = 0;
   const colon = beat.indexOf(':'), kind = colon < 0 ? (beat === 'hero' ? 'hero' : 'next') : beat.slice(0, colon), arg = (colon < 0 ? beat : beat.slice(colon + 1)).toLowerCase();
-  const start = { next: arg, back: arg, press: 'map', find: 'map', explore: 'end', swipe: arg, hero: null, jump: arg.split('-')[0] }[kind];
+  const start = { next: arg, back: arg, press: 'map', find: 'map', explore: 'end', swipe: arg, hero: null, jump: arg.split('-')[0], pinch: arg }[kind];
   if (start === undefined) throw new Error('unknown beat ' + beat);
   if (kind === 'hero' && !p.joined) { note(`skipped hero for ${p.name}: no --page ${p.name}-joined=<file>`); return []; }
   await send('Page.navigate', { url: kind === 'hero' ? `http://localhost:${PORT}/${p.joined}.html` : `http://localhost:${PORT}/${p.name}.html?beat=${start}` });
@@ -178,7 +195,7 @@ async function oneRun(p, beat, run) {
   const rows = [];
   const fail = (label, why) => { const row = { build: p.name, beat: label, run, ok: false, why, frames: 0, fps: null, p50: null, p90: null, p99: null, max: null, over25: null, overMed: null, Pbefore: env.P, Pafter: null, dpr: env.dpr, w: env.w, h: env.h }; note(JSON.stringify(row)); rows.push(row); return rows; };
   const wait = async (test, ms) => { const t = Date.now(); while (Date.now() - t < ms) { if (await evaluate(test)) return true; await sleep(150); } return false; };
-  const measure = async (label, act, check) => {
+  const measure = async (label, act, check, win = WINDOW) => {
     await evaluate(`(() => { const tok = (window.__pfTok || 0) + 1, t = []; window.__pfTok = tok; window.__pf = t; const f = n => { if (window.__pfTok !== tok) return; t.push(n); if (t.length < 4000) requestAnimationFrame(f); }; requestAnimationFrame(f); return true; })()`);
     await sleep(400);
     if (opt.trace) await traceStart();
@@ -188,16 +205,16 @@ async function oneRun(p, beat, run) {
     await sleep(400);
     let early = null;
     if (!why && check) early = check(before, await state());
-    await sleep(WINDOW - 100);
-    const r = await evaluate(`(() => { const t0 = ${t0}, t = window.__pf.filter(x => x > t0 && x < t0 + ${WINDOW}); return { t, s: ${STATE} }; })()`);
+    await sleep(Math.max(300, win - 100 - (await evaluate('performance.now()') - t0)));
+    const r = await evaluate(`(() => { const t0 = ${t0}, t = window.__pf.filter(x => x > t0 && x < t0 + ${win}); return { t, s: ${STATE} }; })()`);
     let trace = null;
-    if (opt.trace) { const ev = await traceEnd(), base = `trace-${p.name}-${label.replace(/[:>]/g, '-')}-${run}`; fs.writeFileSync(path.join(OUT, base + '.json.gz'), zlib.gzipSync(JSON.stringify({ traceEvents: ev }))); trace = traceSummary(ev, WINDOW); trace.file = base + '.json.gz';
+    if (opt.trace) { const ev = await traceEnd(), base = `trace-${p.name}-${label.replace(/[:>]/g, '-')}-${run}`; fs.writeFileSync(path.join(OUT, base + '.json.gz'), zlib.gzipSync(JSON.stringify({ traceEvents: ev }))); trace = traceSummary(ev, win); trace.file = base + '.json.gz';
       // Name the repainted nodes (tag#id.class) while the page is still open.
       for (const row of trace.paints) { const id = +row[0].split(' ')[0]; if (!Number.isFinite(id)) continue; try { const { node } = await send('DOM.describeNode', { backendNodeId: id }); const a = node.attributes || [], at = k => { const i = a.indexOf(k); return i >= 0 ? a[i + 1] : ''; }; row[0] = (node.localName || node.nodeName) + (at('id') ? '#' + at('id') : '') + (at('class') ? '.' + at('class').trim().split(/\s+/).slice(0, 2).join('.') : '') + ' ' + row[0].split(' ')[1]; } catch (e) {} } }
     // A check passes if it holds 400 ms after the press (a move under way) or at the end of the window (a late camera).
     if (!why && early) why = check(before, r.s);
     const d = r.t.slice(1).map((x, i) => x - r.t[i]).sort((a, b) => a - b), q = k => d.length ? +d[Math.min(d.length - 1, Math.floor(d.length * k))].toFixed(1) : null;
-    const med = q(0.5) || 16.7, row = { build: p.name, beat: label, run, ok: !why, why, frames: r.t.length, fps: +(r.t.length / (WINDOW / 1000)).toFixed(1), p50: med, p90: q(0.9), p99: q(0.99), max: d.length ? +d.at(-1).toFixed(1) : null,
+    const med = q(0.5) || 16.7, row = { build: p.name, beat: label, run, ok: !why, why, frames: r.t.length, fps: +(r.t.length / (win / 1000)).toFixed(1), window: win, p50: med, p90: q(0.9), p99: q(0.99), max: d.length ? +d.at(-1).toFixed(1) : null,
       over25: d.filter(x => x > 25).length, overMed: d.filter(x => x > 1.5 * med).length, Pbefore: before.P, Pafter: r.s.P, changed: r.s.cam !== before.cam || r.s.cls !== before.cls || r.s.P !== before.P || r.s.ui !== before.ui, dpr: env.dpr, w: env.w, h: env.h };
     fs.writeFileSync(path.join(OUT, `${p.name}-${label.replace(/[:>]/g, '-')}-${run}.json`), JSON.stringify({ row, frames: r.t, trace }, null, 0));
     note(JSON.stringify(row)); rows.push(row);
@@ -222,6 +239,9 @@ async function oneRun(p, beat, run) {
       await wait('!window.__jm.moving', 5000); await sleep(1200);
       await measure('use:' + arg, () => press(findEl(arg), 'find ' + arg), null);
     }
+  } else if (kind === 'pinch') {
+    if (DESKTOP) return fail(beat, 'pinch:<stop> is for the phone (a desktop Ctrl + wheel would change the browser zoom of later rows)');
+    await measure(beat, () => pinches(W, H), (b, a) => a.vv > 1.2 ? null : `the page did not zoom (largest browser zoom ${a.vv})`, 14000);
   } else if (kind === 'swipe' || kind === 'hero') await measure(beat, () => DESKTOP ? wheel([W / 2, H / 2], 120, 5) : fingers([[W / 2, H * .72]], [[W / 2, H * .3]], 300), anything);
   else if (kind === 'explore') {
     try { await press(sel('.go-next'), 'Next at end'); } catch (e) { return fail(beat, e.message); }
@@ -235,7 +255,9 @@ async function oneRun(p, beat, run) {
     // pinch, which goes through the touch pipeline like real fingers. Desktop touch emulation (--touch) keeps the two fingers.
     const zoomIn = () => DESKTOP ? wheel([x, y], -100, 6) : opt.noAdb ? fingers([[x - 40, y], [x + 40, y]], [[x - 150, y], [x + 150, y]], 500) : send('Input.synthesizePinchGesture', { x: Math.round(x), y: Math.round(y), scaleFactor: 3, relativeSpeed: 600, gestureSourceType: 'touch' });
     if (arg === 'pan') { await zoomIn(); await sleep(2500); }
-    if (arg === 'zoom') await measure(beat, zoomIn, (b, a) => a.cam !== b.cam ? null : 'the map did not zoom');
+    if (arg === 'pinch') await measure(beat, () => pinches(W, H), (b, a) => a.cam !== b.cam ? null : 'the map did not zoom', 14000);
+    else if (arg === 'wheel') await measure(beat, async () => { for (const d of [-100, 100, -100, 100, -100, 100, -100, 100]) { await wheel([x, y], d, 6); await sleep(300); } }, (b, a) => a.cam !== b.cam ? null : 'the map did not zoom', 12000);
+    else if (arg === 'zoom') await measure(beat, zoomIn, (b, a) => a.cam !== b.cam ? null : 'the map did not zoom');
     else await measure(beat, () => DESKTOP ? mouseDrag([x, y], [x - 160, y - 120], 600) : fingers([[x, y]], [[x - 160, y - 120]], 450), (b, a) => a.cam !== b.cam ? null : 'the map did not move');
   }
   return rows;
