@@ -188,7 +188,11 @@ function traceSummary(ev, windowMs) {
   const press = ev.filter(e => e.name === 'EventDispatch' && e.args?.data?.type === 'click').sort((a, b) => a.ts - b.ts)[0];
   const mains = Object.keys(names).filter(k => names[k] === 'CrRendererMain'), count = k => ev.reduce((n, e) => n + (e.pid + ':' + e.tid === k ? 1 : 0), 0);
   const main = press ? press.pid + ':' + press.tid : mains.sort((a, b) => count(b) - count(a))[0];
-  const t0 = press ? press.ts : Math.min(...ev.filter(e => e.ts > 0).map(e => e.ts)), t1 = t0 + windowMs * 1e3;
+  // A gesture beat has no click: its window starts at the first animation frame on the main thread, as in trace-hitches.
+  // A loop, not Math.min(...all), since a 25 MB trace has too many events to spread (Maximum call stack size exceeded).
+  let first = Infinity, firstRaf = Infinity; if (!press) for (const e of ev) { if (e.ts > 0 && e.ts < first) first = e.ts;
+    if (e.name === 'FireAnimationFrame' && e.pid + ':' + e.tid === main && e.ts < firstRaf) firstRaf = e.ts; }
+  const t0 = press ? press.ts : firstRaf < Infinity ? firstRaf : first, t1 = t0 + windowMs * 1e3;
   const spans = ev.filter(e => e.ph === 'X' && e.dur != null && e.ts >= t0 && e.ts + e.dur <= t1);
   const group = k => k === main ? 'main' : /^Compositor$/.test(names[k]) && k.split(':')[0] === main.split(':')[0] ? 'compositor' : /CompositorTileWorker|RasterWorker/.test(names[k] || '') ? 'raster' : names[k] === 'CrGpuMain' ? 'gpu' : names[k] === 'VizCompositorThread' ? 'viz' : null;
   const self = {}, byThread = {}; for (const e of spans) { const k = e.pid + ':' + e.tid; (byThread[k] ||= []).push(e); }
