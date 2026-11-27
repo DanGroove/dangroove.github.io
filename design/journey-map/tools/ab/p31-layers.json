@@ -1,0 +1,14 @@
+{
+ "nobase": [
+  [
+   "#map-stack { visibility: hidden; } #map-stack > .map { visibility: inherit; }",
+   "#map-stack { visibility: hidden; } #map-stack > .map { visibility: inherit; } #map-base { visibility: hidden !important; }"
+  ]
+ ],
+ "nomap": [
+  [
+   "#map-stack { visibility: hidden; } #map-stack > .map { visibility: inherit; }",
+   "#map-stack { visibility: hidden; } #map-stack > .map { visibility: inherit; } #map-stack { display: none !important; }"
+  ]
+ ]
+}
