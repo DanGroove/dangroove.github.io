@@ -161,6 +161,7 @@ The well stops being a find and the tree becomes one, with a numbered marker.
   - Base is Preview 29, the copy COMB-S made at `journey-map-runs\comb-s\base\journey-map.html`.
   - New is this build.
 - **Rows:** `map`, `hmc1`, `visit:laurier`, `press:print`, `press:screen`, `press:ash`, `rest:map`, with `--runs 2 --trace`. Say how long it takes.
+- **Recordings:** unlike COMB-S's staged script, record in 60 s chunks named `/sdcard/Download/jm-comb-t-<time>-<n>.mp4`, and delete each chunk from the phone right after it is pulled (only the files this script made). When the rows end, stop the recording within 60 s, so the phone is free again quickly.
 - Never run it, never use adb yourself, never unlock the phone or touch its settings, and never use any of Dan's own Chrome tabs.
 
 ## Rules
