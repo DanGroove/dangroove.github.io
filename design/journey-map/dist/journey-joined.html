@@ -3246,7 +3246,10 @@ const shore = (P, seed) => {
   // The alpha is the stroke's, not the path's opacity (pinch recheck, 2026-11-27): opacity made each of the ~200 batches its own
   // offscreen layer in every tile, about 80 % of the sea and land layer's redraw cost while zooming. With one stroke and no fill
   // the two draw the same pixels, since the dots of a batch never touch.
-  return batches.map(b=>'<path class="sea-stipple" d="'+b.points.map(p=>'M'+p[0]+' '+p[1]+'h.01').join('')+'" fill="none" stroke="'+C.paper+'" stroke-width="'+b.width+'" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-opacity="'+b.alpha+'"/>').join('');
+  // Each dot is its own path, in the batches' order (Set out recheck, 2026-11-27): a batch's dots lie far apart along the whole
+  // coast, so every GPU tile drew every batch, and Set out's redraws at each zoom step were 50-220 ms frames on the PC (pc-p29:
+  // 10-12 such frames, then 1-2 of at most 63 ms). The same dots draw the same pixels (0 differing in the cloud screenshots).
+  return batches.flatMap(b=>b.points.map(p=>'<path class="sea-stipple" d="M'+p[0]+' '+p[1]+'h.01" fill="none" stroke="'+C.paper+'" stroke-width="'+b.width+'" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-opacity="'+b.alpha+'"/>')).join('');
 };
 
 // ---- Norse landmarks ----
@@ -3495,7 +3498,7 @@ function jormSubTail(open = 0) {
   return { fill: pathD([...e.left, ...e.right.slice().reverse()], true), edge: pathD(e.left) + pathD(e.right) };
 }
 function jormungandr() {
-  const J = MAP.jorm, T = joTrack(), e = joRibbon(T, 0, J.surf.at(-1)[0] * T.L, u => joWidth(T, u) * .75, 4), tail = jormSubTail(), shadow = (fill, edge, cls = '') => '<path class="jo-sub-fill ' + cls + '" d="' + fill + '" fill="' + C.ink + '" opacity=".55"/><path class="jo-sub-edge ' + cls + '" d="' + edge + '" fill="none" stroke="' + C.paper + '" stroke-opacity=".22" stroke-width=".8" stroke-dasharray="3 2.2" vector-effect="non-scaling-stroke"/>';
+  const J = MAP.jorm, T = joTrack(), e = joRibbon(T, 0, J.surf.at(-1)[0] * T.L, u => joWidth(T, u) * .75, 4), tail = jormSubTail(), shadow = (fill, edge, cls = '') => '<path class="jo-sub-fill ' + cls + '" d="' + fill + '" fill="' + C.ink + '" fill-opacity=".55"/><path class="jo-sub-edge ' + cls + '" d="' + edge + '" fill="none" stroke="' + C.paper + '" stroke-opacity=".22" stroke-width=".8" stroke-dasharray="3 2.2" vector-effect="non-scaling-stroke"/>';
   let s = '<g class="jo-body jg-ring">' + shadow(pathD([...e.left, ...e.right.slice().reverse()], true), pathD(e.left) + pathD(e.right)) + shadow(tail.fill, tail.edge, 'jo-tail-sub');
   J.surf.forEach(([a, b], i) => {
     const p = jormSegment(i); s += '<g class="jo-surface" data-i="' + i + '"><path class="o jo-outline" d="' + p.outer + '"/><path class="t jo-inner" d="' + p.inner + '"/><g class="jd"><path class="pf jo-studs" stroke="none" d="' + p.studs + '"/></g><path class="l jo-bands" d="' + p.bands + '"/></g>';
@@ -3931,6 +3934,48 @@ function tripMeasureLabels() {
   // Resize rebuilt the normal text while Explore is already open. Publish its fresh seed immediately.
   if (E.exploreOn) for (const r of E.rows) { if (r.exploreMarkup) r.el.querySelector('text').innerHTML = r.exploreMarkup; if (r.row.stop === 'x' && r.row.stopSub) r.exploreFrom = 0; }
 }
+// Chrome's point-at-length walk (svg_path_query.cc) in floats, once per path: walk(u) for rising u. Native calls re-walked the
+// path each time: 2 of 3.2 ms of JS per frame at rest for a minute after load (2026-11-27). Same points to 0.0004; arcs stay native.
+function pathWalk(d) {
+  const F=Math.fround,tk=d.match(/[a-zA-Z]|[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?/g)||[],st=[];
+  const len=(a,b,c,e)=>{const x=F(c-a),y=F(e-b);return F(Math.sqrt(x*x+y*y));},mid=(a,b)=>F(F(a+b)/2);
+  let i=0,cmd='',x=0,y=0,sx=0,sy=0,cx=0,cy=0,prev='',T=0,part=0,mag=0,cur=null;
+  const num=()=>F(+tk[i++]);
+  const next=()=>{
+    if(st.length){
+      // halve a cubic until its control polygon is within 1e-8 of its chord (CurveLength)
+      const [a0,b0,a1,b1,a2,b2,a3,b3,k]=st.pop(),l=F(F(len(a0,b0,a1,b1)+len(a1,b1,a2,b2))+len(a2,b2,a3,b3)),q=F(l-len(a0,b0,a3,b3));
+      if(q*q/mag>1e-16&&k<20){
+        const mx=mid(a1,a2),my=mid(b1,b2),l1x=mid(a0,a1),l1y=mid(b0,b1),r2x=mid(a2,a3),r2y=mid(b2,b3),l2x=mid(l1x,mx),l2y=mid(l1y,my),r1x=mid(r2x,mx),r1y=mid(r2y,my),ex=mid(l2x,r1x),ey=mid(l2y,r1y);
+        st.push([ex,ey,r1x,r1y,r2x,r2y,a3,b3,k+1],[a0,b0,l1x,l1y,l2x,l2y,ex,ey,k+1]);return next();
+      }
+      part=F(part+l);cur=[a0,b0,a3,b3,F(T+part),1];if(!st.length)T=F(T+part);return true;
+    }
+    if(i>=tk.length)return false;
+    if(/[a-zA-Z]/.test(tk[i]))cmd=tk[i++];else if(cmd==='M')cmd='L';else if(cmd==='m')cmd='l';
+    const r=cmd>'Z',C=cmd.toUpperCase(),A=(o,v)=>r?F(o+v):v;
+    const line=(nx,ny)=>{T=F(T+len(x,y,nx,ny));cur=[x,y,nx,ny,T,0];x=nx;y=ny;prev='L';return true;};
+    const cubic=(a1,b1,a2,b2,nx,ny)=>{mag=(x*x+y*y+a1*a1+b1*b1+a2*a2+b2*b2+nx*nx+ny*ny)/16;if(mag>=1e-16){part=0;st.push([x,y,a1,b1,a2,b2,nx,ny,0]);}x=nx;y=ny;return next();};
+    if(C==='Z'){line(sx,sy);prev='Z';return true;}
+    if(C==='M'){x=A(x,num());y=A(y,num());sx=x;sy=y;cur=[x,y,x,y,T,2];prev='M';return true;}
+    if(C==='L'){const nx=A(x,num());return line(nx,A(y,num()));}
+    if(C==='H')return line(A(x,num()),y);
+    if(C==='V')return line(x,A(y,num()));
+    if(C==='Q'||C==='T'){let qx,qy;if(C==='Q'){qx=A(x,num());qy=A(y,num());}else{qx=prev==='Q'?2*x-cx:x;qy=prev==='Q'?2*y-cy:y;}
+      const nx=A(x,num()),ny=A(y,num()),b=(p,c)=>F(F(p+F(2*c))/3),ox=x,oy=y;cx=qx;cy=qy;prev='Q';return cubic(b(ox,qx),b(oy,qy),b(nx,qx),b(ny,qy),nx,ny);}
+    if(C==='C'||C==='S'){let ax,ay;if(C==='C'){ax=A(x,num());ay=A(y,num());}else{ax=prev==='C'?2*x-cx:x;ay=prev==='C'?2*y-cy:y;}
+      const bx=A(x,num()),by=A(y,num()),nx=A(x,num()),ny=A(y,num());cx=bx;cy=by;prev='C';return cubic(ax,ay,bx,by,nx,ny);}
+    i++;return next();
+  };
+  // the first piece whose running total reaches u (a cubic's passes it), stepped back along that piece
+  return u=>{
+    const fu=F(u);
+    while(!cur||!(cur[5]===1?cur[4]>fu:cur[4]>=fu))if(!next())break;
+    if(!cur)return{x:0,y:0};if(cur[5]===2)return{x:cur[0],y:cur[1]};
+    const back=cur[4]-fu,dx=cur[2]-cur[0],dy=cur[3]-cur[1],l=Math.hypot(dx,dy);
+    return back<=0||!l?{x:cur[2],y:cur[3]}:{x:cur[2]-back*dx/l,y:cur[3]-back*dy/l};
+  };
+}
 // Short idle tasks warm real ink, not empty drawing boxes, before Explore.
 // Placement is fixed in map space; the existing frame writer is unchanged.
 function tripMeasureExploreLabels() {
@@ -3986,7 +4031,8 @@ function tripMeasureExploreLabels() {
         continue;
       }
       const L=el.getTotalLength?.();yield;if(!L||L>6000)continue;
-      for(let u=0;u<=L;u+=Math.min(1,.75/Math.max(.1,scale))){const p=el.getPointAtLength(u);add(matrix.a*p.x+matrix.c*p.y+matrix.e,matrix.b*p.x+matrix.d*p.y+matrix.f,half,fixed);yield;}
+      const d=el.tagName==='path'&&el.getAttribute('d'),walk=d&&!/[Aa]/.test(d)?pathWalk(d):null;
+      for(let u=0;u<=L;u+=Math.min(1,.75/Math.max(.1,scale))){const p=walk?walk(u):el.getPointAtLength(u);add(matrix.a*p.x+matrix.c*p.y+matrix.e,matrix.b*p.x+matrix.d*p.y+matrix.f,half,fixed);yield;}
     }
     for(const P of [COAST_A,COAST_B,TRAIL])for(let j=1;j<P.length;j++){
       const a=P[j-1],b=P[j],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy),n=[-dy/L,dx/L];

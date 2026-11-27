@@ -25,8 +25,10 @@ assert.ok(!/undefined|\{\{/.test(chart.finds), 'all live drawing tokens must res
 // COMB-B records the surfaced serpent drawing; fill and coasts retain their earlier baselines.
 // COMB-N (2026-11-26): sky wolves/local SVGs and held map/trail writer re-record their source/data pins.
 // The pinch recheck (2026-11-27) moves the sea speckles' alpha from opacity to stroke-opacity (206 x 'stroke-', the same
-// pixels without an offscreen layer per batch); the sea pin is re-recorded for it (was 92983, 2278239991).
-const original = { sea: [94425, 1214623963], fill: [12999, 2682309966], coast: [4401, 2408021381] };
+// pixels without an offscreen layer per batch); the sea pin is re-recorded for it (was 92983, 2278239991). The Set out recheck
+// (2026-11-27) draws each speckle as its own path, in the batches' order, and the serpent's underwater fill with fill-opacity:
+// every GPU tile drew every batch, which made Set out's zoom steps 50-220 ms frames on the PC (was 94425, 1214623963).
+const original = { sea: [231869, 2926490185], fill: [12999, 2682309966], coast: [4401, 2408021381] };
 for (const [key, [length, hash]] of Object.entries(original)) { assert.equal(chart[key].length, length); assert.equal(digest(chart[key]), hash); }
 console.log('ok: COMB-D body/stipple sea digest recorded; coast and fill unchanged');
 // D3 adds NOVA.build; the full data digest is re-recorded for that authorized table (and again for the continuous pull, 2026-11-23,
@@ -48,7 +50,7 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // Part 8 cloud fixes: explore keeps the map promoted while its camera moves, and releases it at rest after a zoom (F10 lag).
 // Part 10b cloud fixes: the held base on whole device pixels with a margin (blur), and the find press fades on each name, not its group.
 // COMB-M2 (2026-11-26): N2 changes only the old longship line and ship kit keys; the M2 scope test pins the exact edits.
-assert.equal(sourceDigest('trip.mjs'), 4146267167, 'trip.mjs changed'); // COMB-P, the part 13 review fixes (2026-11-26), the edge fades on the clock and the pinch recheck's explore hold band and word fade clock (2026-11-27), then its held opening (labels eased through it) and no raster ahead in explore zoom holds.
+assert.equal(sourceDigest('trip.mjs'), 3084895122, 'trip.mjs changed'); // COMB-P, the part 13 review fixes (2026-11-26), the edge fades on the clock and the pinch recheck's explore hold band and word fade clock (2026-11-27), then its held opening (labels eased through it) and no raster ahead in explore zoom holds; then the label warm-up's own path walk (pathWalk, the same points as the native calls, 2026-11-27).
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
 assert.equal(sourceDigest('data.mjs'), 1362104105, 'data.mjs changed'); // COMB-Q, the part 13b review's marker moves (2026-11-26), LABELS.edgeFade and FRAME_PERF.exploreMin/exploreMax (2026-11-27).
 assert.equal(sourceDigest('depth.mjs'), 2916876570, 'depth.mjs changed'); // COMB-P authorized changes and the part 13 review fixes (2026-11-26).

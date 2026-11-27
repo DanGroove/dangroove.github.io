@@ -121,7 +121,10 @@ const shore = (P, seed) => {
   // The alpha is the stroke's, not the path's opacity (pinch recheck, 2026-11-27): opacity made each of the ~200 batches its own
   // offscreen layer in every tile, about 80 % of the sea and land layer's redraw cost while zooming. With one stroke and no fill
   // the two draw the same pixels, since the dots of a batch never touch.
-  return batches.map(b=>'<path class="sea-stipple" d="'+b.points.map(p=>'M'+p[0]+' '+p[1]+'h.01').join('')+'" fill="none" stroke="'+C.paper+'" stroke-width="'+b.width+'" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-opacity="'+b.alpha+'"/>').join('');
+  // Each dot is its own path, in the batches' order (Set out recheck, 2026-11-27): a batch's dots lie far apart along the whole
+  // coast, so every GPU tile drew every batch, and Set out's redraws at each zoom step were 50-220 ms frames on the PC (pc-p29:
+  // 10-12 such frames, then 1-2 of at most 63 ms). The same dots draw the same pixels (0 differing in the cloud screenshots).
+  return batches.flatMap(b=>b.points.map(p=>'<path class="sea-stipple" d="M'+p[0]+' '+p[1]+'h.01" fill="none" stroke="'+C.paper+'" stroke-width="'+b.width+'" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-opacity="'+b.alpha+'"/>')).join('');
 };
 
 // ---- Norse landmarks ----
@@ -370,7 +373,7 @@ export function jormSubTail(open = 0) {
   return { fill: pathD([...e.left, ...e.right.slice().reverse()], true), edge: pathD(e.left) + pathD(e.right) };
 }
 export function jormungandr() {
-  const J = MAP.jorm, T = joTrack(), e = joRibbon(T, 0, J.surf.at(-1)[0] * T.L, u => joWidth(T, u) * .75, 4), tail = jormSubTail(), shadow = (fill, edge, cls = '') => '<path class="jo-sub-fill ' + cls + '" d="' + fill + '" fill="' + C.ink + '" opacity=".55"/><path class="jo-sub-edge ' + cls + '" d="' + edge + '" fill="none" stroke="' + C.paper + '" stroke-opacity=".22" stroke-width=".8" stroke-dasharray="3 2.2" vector-effect="non-scaling-stroke"/>';
+  const J = MAP.jorm, T = joTrack(), e = joRibbon(T, 0, J.surf.at(-1)[0] * T.L, u => joWidth(T, u) * .75, 4), tail = jormSubTail(), shadow = (fill, edge, cls = '') => '<path class="jo-sub-fill ' + cls + '" d="' + fill + '" fill="' + C.ink + '" fill-opacity=".55"/><path class="jo-sub-edge ' + cls + '" d="' + edge + '" fill="none" stroke="' + C.paper + '" stroke-opacity=".22" stroke-width=".8" stroke-dasharray="3 2.2" vector-effect="non-scaling-stroke"/>';
   let s = '<g class="jo-body jg-ring">' + shadow(pathD([...e.left, ...e.right.slice().reverse()], true), pathD(e.left) + pathD(e.right)) + shadow(tail.fill, tail.edge, 'jo-tail-sub');
   J.surf.forEach(([a, b], i) => {
     const p = jormSegment(i); s += '<g class="jo-surface" data-i="' + i + '"><path class="o jo-outline" d="' + p.outer + '"/><path class="t jo-inner" d="' + p.inner + '"/><g class="jd"><path class="pf jo-studs" stroke="none" d="' + p.studs + '"/></g><path class="l jo-bands" d="' + p.bands + '"/></g>';

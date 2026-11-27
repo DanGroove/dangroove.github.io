@@ -257,7 +257,7 @@ ok(!/#[0-9A-Fa-f]{3,6}\b(?![\w-]*\))/.test(readFileSync(join(ROOT, 'map.css'), '
 // Compressed delivery budgets include all top-level runtime modules and CSS, never hero-copy. The combined budget was
 // raised from 160 to 185 KB on 2026-11-24, after part 4's 32 fixes took it to 171 KB; the packed pages' budgets below,
 // which are what a visitor downloads, are unchanged.
-const RUNTIME_KB = 205.2; // 2026-11-26: part 13 review fixes (+0.6 KB) and COMB-Q, the old ash and revision loop (+3.4 KB); 2026-11-27: edge fades on the clock, still timeline and Next fill (+0.8 KB); the pinch recheck's fixes (finds quiet while explore moves, the explore hold band, word and scrim fades on the clock, the hint and count pill fades: +1.1 KB): 204.06 KB, read with LF on every machine.
+const RUNTIME_KB = 206.6; // 2026-11-26: part 13 review fixes (+0.6 KB) and COMB-Q, the old ash and revision loop (+3.4 KB); 2026-11-27: edge fades on the clock, still timeline and Next fill (+0.8 KB); the pinch recheck's fixes (finds quiet while explore moves, the explore hold band, word and scrim fades on the clock, the hint and count pill fades: +1.1 KB): 204.06 KB, read with LF on every machine; the label warm-up's own path walk (pathWalk, +1.3 KB) and the sea dots drawn one path each (+0.2 KB): 206.54 KB.
 const gzipKB = content => gzipSync(content).length / 1024;
 // Line endings are evened out (2026-11-27) so a checkout with CRLF on the PC reads the same sizes as the cloud.
 const readLF = f => Buffer.from(readFileSync(join(ROOT, f), 'utf8').replace(/\r\n/g, '\n'));
@@ -271,7 +271,9 @@ console.log(`gzip: hammer ${hammerKB.toFixed(2)} KB / 30; all map modules + CSS 
 // The map page's budget rose from 320 to 321 KB and the joined page's from 567 to 568 KB on 2026-11-27 with the pinch
 // recheck's fixes and the stops hidden until placed (320.50 and 567.03 KB). The map page's rose to 322 KB the same day with the
 // one-layer map (the cover under svg#map, the Next fill redrawn in place and the legend marker without a fade): 321.27 KB.
-for (const [file, budget] of [['dist/journey-map.html', 322], ['dist/journey-joined.html', 568]]) {
+// Both rose again the same day with the label warm-up's own path walk (pathWalk) and the sea dots drawn one path each: 322.86 and
+// 569.37 KB.
+for (const [file, budget] of [['dist/journey-map.html', 323], ['dist/journey-joined.html', 569.5]]) {
   if (!existsSync(join(ROOT, file))) continue;
   const kb = gzipKB(readLF(file)); ok(kb <= budget, `${file}: exceeds ${budget} KB gzip`); console.log(`gzip: ${file} ${kb.toFixed(2)} KB / ${budget}`);
 }
