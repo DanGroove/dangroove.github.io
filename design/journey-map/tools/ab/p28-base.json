@@ -1,0 +1,62 @@
+{
+ "nobase": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base { visibility: hidden !important; }"
+  ]
+ ],
+ "noticks": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base .coast-ticks { display: none !important; }"
+  ]
+ ],
+ "solidticks": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base .coast-ticks { stroke-dasharray: none !important; }"
+  ]
+ ],
+ "noedge": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base #b-fill path[clip-path] { display: none !important; }"
+  ]
+ ],
+ "nosubedge": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base .jo-sub-edge { display: none !important; }"
+  ]
+ ],
+ "noserpent": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base .jo-body { display: none !important; }"
+  ]
+ ],
+ "nosea": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base #b-sea { display: none !important; }"
+  ]
+ ],
+ "nodetail": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base #b-detail { display: none !important; }"
+  ]
+ ],
+ "nocoast": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base #b-coast { display: none !important; }"
+  ]
+ ],
+ "noland": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base #b-fill { display: none !important; }"
+  ]
+ ]
+}
