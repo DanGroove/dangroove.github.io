@@ -63,8 +63,17 @@ const $ = id => document.getElementById(id);
   const cover = document.createElementNS(NS, 'rect'), pad = MAP.w;
   Object.entries({ id: 'map-cover', x: -pad, y: -pad / 2, width: MAP.w + 2 * pad, height: MAP.h + pad, fill: C.black, 'fill-opacity': 0, 'pointer-events': 'none' }).forEach(([k, v]) => cover.setAttribute(k, v));
   $('cam').prepend(cover);
+  // L5 (2026-11-27): the names and trail, then the finds and the X, get svgs of their own over svg#map in div#map-stack, so
+  // their writes on every frame of a move no longer redraw the map (phone-p27: it repainted nearly every frame of Set out).
+  // The stack takes the fade (faded one by one, the trail showed through the longship); each keeps a cover to stay one layer.
+  const stack = document.createElement('div'); stack.id = 'map-stack'; $('map').before(stack); stack.appendChild($('map'));
+  for (const id of ['live', 'finds']) {
+    const svg = document.createElementNS(NS, 'svg'), cam = document.createElementNS(NS, 'g'), inner = cover.cloneNode();
+    svg.id = 'map-' + id; svg.setAttribute('class', 'map'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('pointer-events', 'none');
+    cam.id = 'cam-' + id; inner.id = 'map-' + id + '-cover'; cam.appendChild(inner); svg.appendChild(cam); stack.appendChild(svg);
+  }
 }
-const SVG = $('map'), CANVAS = $('stars'), TLEL = $('tl');
+const SVG = $('map'), CANVAS = $('stars'), TLEL = $('tl'), MAP_STACK = $('map-stack'), MAP_SVGS = [SVG, $('map-live'), $('map-finds')];
 // timeline sits in the stage overlay so it can become the footer rule; in reduced motion it is a sticky jump menu
 const FTWORLD = document.createElement('div'); FTWORLD.id = 'ft-world'; $('stage').querySelector('.ov').appendChild(FTWORLD); FTWORLD.append($('ft'), TLEL);
 
@@ -89,16 +98,24 @@ footerBuild($('ft'), false); footerBuildX($('fxg'), false, $('nova'), $('nova-hi
 const mainXStrokes = [...SVG.querySelectorAll('.fx-red')];
 
 stepsBuild({ stage: $('stage'), rm: false, resize, joinedTop: () => JOIN.heroStart, reducedGo: id => { if (id === 'top') window.scrollTo({top:0,behavior:'instant'}); else goStop(id === 'map' ? -1 : id === 'end' ? STOPS.length : STOPS.findIndex(s=>s.id===id)); } });
-findsBuild(SVG, $('pop'), $('sheet'), { style: { set opacity(v) { $('b-all').style.opacity = v; $('b-rest').style.opacity = v; } } }, RM);
+findsBuild(SVG, $('pop'), $('sheet'), { style: { set opacity(v) { $('b-all').style.opacity = v; $('b-rest').style.opacity = v; const live = $('live-rest'); if (live) live.style.opacity = v; } } }, RM);
 // The same six markers move in screen space, so their type never needs to be
 // resized and rasterized on every camera frame. No marker is copied.
 const mainMarkerLayer = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); mainMarkerLayer.classList.add('marker-layer');
 $('stage').querySelector('.ov').appendChild(mainMarkerLayer);
 const mainMarkers = FINDS.filter(f => f.n).map(f => { const el = $('mk-' + f.id), place = document.createElementNS('http://www.w3.org/2000/svg', 'g'); el.dataset.screen = 'true'; place.appendChild(el); mainMarkerLayer.appendChild(place); return { el, place, at: f.mark }; });
+// L5's moves follow the builds above, which look inside svg#map. The names keep their order (tier 2, tier 1, the subs).
+{
+  const NS = 'http://www.w3.org/2000/svg', rest = document.createElementNS(NS, 'g'), detail = document.createElementNS(NS, 'g');
+  rest.id = 'live-rest'; detail.id = 'live-detail'; rest.appendChild(detail);
+  detail.append(...[...$('b-rest-detail').children].filter(el => el.matches('.map-tier2, .map-tier1, .map-subs')));
+  $('cam-live').append(rest, $('trail-done'), $('trail-pieces'));
+  $('cam-finds').append($('finds'), $('fxg')); $('cam-finds').setAttribute('pointer-events', 'visiblePainted');
+}
 function mainPlaceMarkers(st) {
   mainMarkers.forEach(m => { const p = toScreen(st, m.at), transform = `translate(${p[0]-m.at[0]} ${p[1]-m.at[1]})`; if (m.place.getAttribute('transform') !== transform) m.place.setAttribute('transform', transform); });
-  const opacity = String(smooth(.5, 1, st.handoffT) * Number(SVG.style.opacity || 1)); if (mainMarkerLayer.style.opacity !== opacity) mainMarkerLayer.style.opacity = opacity;
-  const visible=Number(opacity)>0&&SVG.style.visibility!=='hidden'?'visible':'hidden'; if (mainMarkerLayer.style.visibility!==visible) mainMarkerLayer.style.visibility=visible;
+  const opacity = String(smooth(.5, 1, st.handoffT) * Number(MAP_STACK.style.opacity || 1)); if (mainMarkerLayer.style.opacity !== opacity) mainMarkerLayer.style.opacity = opacity;
+  const visible=Number(opacity)>0&&MAP_STACK.style.visibility!=='hidden'?'visible':'hidden'; if (mainMarkerLayer.style.visibility!==visible) mainMarkerLayer.style.visibility=visible;
 }
 exploreBuild({ stage: $('stage'), world: FTWORLD, journey: JOURNEY, rm: false });
 
@@ -143,7 +160,7 @@ function resize() {
   const stepMode = !RM;
   const room = stepMode ? (phone ? STEPS.nav.bar : STEPS.nav.h + STEPS.nav.gap + 6) : 0;
   tripResize(w, h, RM ? 0 : (phone ? 44 : 56) + room);
-  SVG.setAttribute('width', w); SVG.setAttribute('height', h); SVG.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  MAP_SVGS.forEach(svg => { svg.setAttribute('width', w); svg.setAttribute('height', h); svg.setAttribute('viewBox', `0 0 ${w} ${h}`); });
   mainMarkerLayer.setAttribute('viewBox', `0 0 ${w} ${h}`);
   tripMeasureLabels(); starsResize(w, h);
   footerNovaResize(w, h);

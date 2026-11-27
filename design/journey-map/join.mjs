@@ -13,7 +13,7 @@ const JN = {
   rm: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
 if (JN.rm) VIEW.mapReady = false;
-JN.base = document.getElementById('map-base'); JN.svg = document.getElementById('map'); JN.hit = document.getElementById('nova-hit'); JN.ov = JN.stage.querySelector('.ov');
+JN.base = document.getElementById('map-base'); JN.svg = document.getElementById('map-stack') || document.getElementById('map'); JN.hit = document.getElementById('nova-hit'); JN.ov = JN.stage.querySelector('.ov');
 // vh of scroll: the leave ends at the end of the hero act; the canvas fades in over its last JOIN_OVERLAP vh
 const LEAVE_END = ACTS.hero, JOIN_OVERLAP = COMB.handoverOverlap;
 

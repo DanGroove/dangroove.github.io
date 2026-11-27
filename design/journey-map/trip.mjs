@@ -322,7 +322,7 @@ export function tripBuild(els) {
   TRIP_EL.secondary = [...els.svg.querySelectorAll('.map-tier2')]; if (!TRIP_EL.secondary.length) TRIP_EL.secondary = [TRIP_EL.tier2];
   TRIP_EL.secondaryText = TRIP_EL.secondary.filter(g => g !== TRIP_EL.tier2).flatMap(g => [...g.querySelectorAll('text')].map(el => ({ el, group: g, fill: Number(el.getAttribute('fill-opacity') ?? 1), stroke: Number(el.getAttribute('stroke-opacity') ?? 1) })));
   TRIP_EL.focusFade = null;
-  TRIP_EL.scrim = document.createElement('div'); TRIP_EL.scrim.className = 'stage-scrim'; TRIP_EL.scrim.setAttribute('aria-hidden', 'true'); TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px'; TRIP_EL.scrim.style.background = 'linear-gradient(to bottom, transparent, color-mix(in srgb, var(--ink) ' + WORLD.scrim[2] * 100 + '%, transparent))'; els.svg.parentElement.appendChild(TRIP_EL.scrim);
+  TRIP_EL.scrim = document.createElement('div'); TRIP_EL.scrim.className = 'stage-scrim'; TRIP_EL.scrim.setAttribute('aria-hidden', 'true'); TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px'; TRIP_EL.scrim.style.background = 'linear-gradient(to bottom, transparent, color-mix(in srgb, var(--ink) ' + WORLD.scrim[2] * 100 + '%, transparent))'; (els.svg.closest?.('.stage') || els.svg.parentElement).appendChild(TRIP_EL.scrim);
   const both = sel => [...(els.base ? els.base.querySelectorAll(sel) : []), ...els.svg.querySelectorAll(sel)];
   TRIP_EL.coasts = both('.coast');
   TRIP_EL.coastLen = [polyLen(COAST_A, 1), polyLen(COAST_B, 1)];
@@ -483,7 +483,7 @@ function tripMeasureExploreLabels() {
   const fit=Math.min((VIEW.w-2*m)/(bounds[2]-bounds[0]),(VIEW.h-(VIEW.phone?STEPS.nav.bar:STEPS.nav.h+STEPS.nav.gap)-2*m)/(bounds[3]-bounds[1]));
   const top=Math.max(fit,Math.max(EXPLORE.most,CAMERA.holdZoom)*VIEW.sT),grid=new Map(),cell=12;
   const add=(x,y,half=0,fixed=false,offset=null)=>{if(x<10||x>590||y<120||y>820)return;const key=Math.floor(x/cell)+','+Math.floor(y/cell);if(!grid.has(key))grid.set(key,[]);grid.get(key).push([x,y,half,fixed,offset]);};
-  const elements=[...(E.base?E.base.querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-sea path,#b-sea circle'):[]),...E.svg.querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-rest path,#b-rest circle,#b-rest ellipse,#b-rest rect,#b-rest line,#b-sea path,#b-sea circle,#finds path,#finds circle,#finds ellipse,#finds rect')];
+  const elements=[...(E.base?E.base.querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-sea path,#b-sea circle'):[]),...(document.getElementById('map-stack') || E.svg).querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-rest path,#b-rest circle,#b-rest ellipse,#b-rest rect,#b-rest line,#b-sea path,#b-sea circle,#finds path,#finds circle,#finds ellipse,#finds rect')];
   function* sample(){
     for(const el of elements){
       yield;
@@ -671,6 +671,8 @@ export function tripGliding() { return !!TRIP_EL.raster?.gliding; }
 export function tripApply(st, focus = null) {
   const E = TRIP_EL, c = st.cam; E.clockFading = false;
   const veil = E.veil ??= document.getElementById('map-veil'), camVeil = E.camVeil ??= document.getElementById('cam-veil');
+  // L5: the names-and-trail and finds svgs ride svg#map's raster camera; div#map-stack takes the fade.
+  const layers = E.layers ??= ['live', 'finds'].map(id => [document.getElementById('map-' + id), document.getElementById('cam-' + id)]).filter(([svg, cam]) => svg && cam), stack = E.stack ??= document.getElementById('map-stack');
   const free = !!st.exploring || st.exploreK > 0;
   const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
   if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
@@ -737,12 +739,14 @@ export function tripApply(st, focus = null) {
     r.base = { ...c, s: c.s * ahead, tx: c.ax - (c.ax-c.tx)*ahead, ty: c.ay - (c.ay-c.ty)*ahead };
     tripWrite(E.cam, 'transform', text(r.base), true);
     if (camVeil) tripWrite(camVeil, 'transform', E.cam.getAttribute('transform'), true);
+    for (const [, cam] of layers) tripWrite(cam, 'transform', E.cam.getAttribute('transform'), true);
     if (st.rasterBudget) st.rasterBudget.used = true;
   }
   const paintK = c.s / r.base.s;
   const mapTransform = paintK === 1 && c.tx === r.base.tx && c.ty === r.base.ty ? 'none' : 'matrix('+paintK+',0,0,'+paintK+','+(c.tx-r.base.tx*paintK)+','+(c.ty-r.base.ty*paintK)+')';
   tripWrite(E.svg, 'transform', mapTransform);
   if (veil) tripWrite(veil, 'transform', mapTransform);
+  for (const [svg] of layers) tripWrite(svg, 'transform', mapTransform);
   st.rasterS = r.base.s; st.gliding = tripGliding();
   if (B) {
     if (baseForced || chosen?.kind === 'base') {
@@ -799,7 +803,8 @@ export function tripApply(st, focus = null) {
   tripWrite(E.scrim, 'opacity', labelFade);
   const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
   tripWrite(E.sea, 'opacity', smooth(...DEPTH.fade.sea, h)); tripWrite(E.fill, 'opacity', smooth(.25, .75, h));
-  tripWrite(E.detail, 'opacity', smooth(.45, .95, h)); if (E.rest) tripWrite(E.rest, 'opacity', smooth(.45, .95, h)); tripWrite(E.finds, 'opacity', smooth(.5, 1, h));
+  tripWrite(E.detail, 'opacity', smooth(.45, .95, h)); if (E.rest) tripWrite(E.rest, 'opacity', smooth(.45, .95, h));
+  const liveDetail = E.liveDetail ??= document.getElementById('live-detail'); if (liveDetail) tripWrite(liveDetail, 'opacity', smooth(.45, .95, h)); tripWrite(E.finds, 'opacity', smooth(.5, 1, h));
   tripWrite(E.coastG, 'opacity', 1);
   const dr = coastDrawn(h);
   E.coasts.forEach((p, i) => { if (dr >= 1) { tripWrite(p, 'strokeDasharray', 'none'); return; } const L = E.coastLen[i] * c.s; tripWrite(p, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(p, 'strokeDashoffset', (L * (1 - dr)).toFixed(1)); });
@@ -821,9 +826,13 @@ export function tripApply(st, focus = null) {
   // the longship rides the crossing
   const sp = longshipPoint(st.u); tripWrite(E.ship, 'transform', `translate(${n2(sp[0])} ${n2(sp[1])}) scale(.55)`, true);
   const opacity = st.dim * fade;
-  tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
+  const fadeEl = stack || E.svg;
+  tripWrite(fadeEl, 'opacity', opacity); tripWrite(fadeEl, 'visibility', opacity === 0 ? 'hidden' : 'visible');
   tripWrite(E.svg, 'willChange', r.promo ? 'transform, opacity' : fade > 0 && fade < 1 ? 'opacity' : '');
   tripWrite(E.svg, 'overflow', free || glideHold ? 'visible' : '');
+  for (const [svg] of layers) { tripWrite(svg, 'willChange', E.svg.style.willChange); tripWrite(svg, 'overflow', E.svg.style.overflow); }
+  // The stack's own will-change only for a fade: over three layers it costs a full-screen surface each frame.
+  if (stack) tripWrite(stack, 'willChange', !r.promo && fade > 0 && fade < 1 ? 'opacity' : '');
   if (veil) { tripWrite(veil, 'overflow', E.svg.style.overflow); tripWrite(veil, 'willChange', E.svg.style.willChange || (veil.style.visibility === 'visible' ? 'opacity' : '')); }
   if (E.base) { tripWrite(E.base, 'opacity', opacity); tripWrite(E.base, 'visibility', opacity === 0 ? 'hidden' : 'visible'); tripWrite(E.base, 'willChange', 'transform'); }
   tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));

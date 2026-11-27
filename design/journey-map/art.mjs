@@ -123,7 +123,7 @@ const shore = (P, seed) => {
   // the two draw the same pixels, since the dots of a batch never touch.
   // Each dot is its own path, in the batches' order (Set out recheck, 2026-11-27): a batch's dots lie far apart along the whole
   // coast, so every GPU tile drew every batch, and Set out's redraws at each zoom step were 50-220 ms frames on the PC (pc-p29:
-  // 10-12 such frames, then 1-2 of at most 63 ms). The same dots draw the same pixels (0 differing in the cloud screenshots).
+  // 10-12 such frames, then 1-2 of at most 63 ms). The same dots draw nearly the same pixels (cloud screenshots: 0-3 pixels at most 4/255 apart at the phone size, dot edges at most 8/255 at the PC size).
   return batches.flatMap(b=>b.points.map(p=>'<path class="sea-stipple" d="M'+p[0]+' '+p[1]+'h.01" fill="none" stroke="'+C.paper+'" stroke-width="'+b.width+'" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-opacity="'+b.alpha+'"/>')).join('');
 };
 

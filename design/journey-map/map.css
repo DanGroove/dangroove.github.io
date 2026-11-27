@@ -12,6 +12,7 @@ button { font-family: inherit; }
 .stage { position: sticky; top: 0; height: 100vh; overflow: clip; }
 .map, #nova, #stars { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
 .map { display: block; transform-origin: 0 0; }
+#map-stack { position: absolute; inset: 0; }
 #nova, #stars { pointer-events: none; }
 #deep, #air, #sky { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #sky { display: contents; }
@@ -342,10 +343,10 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
    the moving map into full-screen layers redrawn on every frame of a find press. */
 @property --jm-word { syntax: '<number>'; inherits: true; initial-value: 1; }
 @property --jm-find { syntax: '<number>'; inherits: false; initial-value: 1; }
-#b-detail text, #b-rest text { opacity: var(--jm-word); }
+#b-detail text, #b-rest text, #live-rest text { opacity: var(--jm-word); }
 #map-base { pointer-events: none; overflow: hidden; }
-.jm-focus #b-detail, .jm-focus #b-rest { --jm-word: .3; }
-.jm-focus.jm-way #b-detail, .jm-focus.jm-way #b-rest { --jm-word: 1; }
+.jm-focus #b-detail, .jm-focus #b-rest, .jm-focus #live-rest { --jm-word: .3; }
+.jm-focus.jm-way #b-detail, .jm-focus.jm-way #b-rest, .jm-focus.jm-way #live-rest { --jm-word: 1; }
 .wf-arm.on .l { stroke-width: var(--find-arm); }
 .tl-blk.craft-lit { outline: var(--find-slot-rule) solid var(--paper); }
 .pop-in { position: relative; transform: none; max-width: min(var(--find-pop-w), calc(100vw - var(--find-pop-edge) * 2)); width: max-content; border-radius: var(--find-pop-r); padding: var(--find-pop-pad); font-size: var(--find-pop-font); line-height: var(--find-pop-line); transform-origin: center bottom; }
@@ -422,7 +423,8 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 #hn-rings, #wl-crown, .wl-rip, .wl-pebble, .mist-drift, .mist-glint, .ls-lamp { pointer-events: none; }
 
 /* Round 7 C1 layout, using the existing map and card surfaces. */
-.stage-scrim { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; pointer-events: none; opacity: 0; }
+/* L5: its own layer, so the fade that follows the names no longer repaints it. */
+.stage-scrim { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; pointer-events: none; opacity: 0; will-change: opacity; }
 .c-h { font-size: var(--card-title); font-weight: var(--card-title-weight); margin-bottom: var(--card-title-gap); }
 .c-panel { min-width: 0; }
 .c-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--card-foot-gap); margin-top: var(--card-foot-margin); }
@@ -517,7 +519,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-sheet-open .find-hint { opacity: 0; visibility: hidden; }
 .jm-focus[data-find="well"] .well-name, .jm-focus[data-find="well"] .well-name text { opacity: 1 !important; }
 #b-all, #bc-notes, .find.hoard { transition: opacity .3s; }
-#b-detail { transition: --jm-word .4s; } #b-rest { transition: --jm-word .4s; }
+#b-detail { transition: --jm-word .4s; } #b-rest { transition: --jm-word .4s; } #live-rest { transition: --jm-word .4s; }
 #finds > .find { opacity: var(--jm-find); transition: --jm-find .3s; }
 .reading-halo text, .reading-halo path { paint-order: stroke; stroke: var(--ink); stroke-width: 2px; stroke-linejoin: round; }
 .reading-halo path { stroke: var(--paper); }
@@ -604,6 +606,8 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-pointer-focus .hero .jm-start:focus { outline: none; }
 .tl-tip { max-width: calc(100vw - 16px); white-space: normal; }
 .map, .marker-layer { visibility: hidden; }
+/* L5: the three map svgs take the stack's visibility (hidden until placed). */
+#map-stack { visibility: hidden; } #map-stack > .map { visibility: inherit; }
 .rm, .rm body { overflow-anchor: none; }
 
 @media (max-height: 440px) and (min-width: 641px) {

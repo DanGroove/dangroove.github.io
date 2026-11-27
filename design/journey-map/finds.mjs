@@ -44,7 +44,9 @@ export function findsBuild(svg, pop, sheet, base, rm) {
   const pool = svg.querySelector('#f-bits'); svg.querySelector('#finds').appendChild(pool);
   const capture = e => { if (FD.st?.exploring) { const el = e.target.closest?.('.find'); if (el) el._focusBlocked = false; return; } findCapture(e); };
   for (const type of ['pointermove','pointerup','pointercancel','touchmove']) window.addEventListener(type, capture, {capture:true,passive:false});
-  svg.addEventListener('click', capture, true); svg.addEventListener('keydown', capture, true); svg.addEventListener('pointerdown', capture, true);
+  // L5: the finds have their own svg in div#map-stack, so the press capture listens on the stack.
+  const root = svg.closest?.('#map-stack') || svg;
+  root.addEventListener('click', capture, true); root.addEventListener('keydown', capture, true); root.addEventListener('pointerdown', capture, true);
   window.addEventListener('jm-find-release', findsCloseAll);
   window.addEventListener('jm-destination', () => { FD.pendingPress = null; });
   window.addEventListener('jm-explore', () => { if (!FD.st?.exploring || !document.documentElement.classList.contains('jm-explore')) findsCloseAll(); });

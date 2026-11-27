@@ -47,7 +47,7 @@ export function findWay(svg) {
           if (h) boxes.push([h.x-22,h.y-30,h.x+22,h.y+12]);
           // Labels use their actual displayed geometry, converted back through the shared camera.
           for (const row of mapLabelRows()) if (row.stop === stop.id) {
-            const b = svg.querySelector('.label-anchor[data-row="'+row.i+'"]').getBoundingClientRect(), a = toMap([b.left,b.top]), z = toMap([b.right,b.bottom]); boxes.push([...a,...z]);
+            const b = document.querySelector('.label-anchor[data-row="'+row.i+'"]').getBoundingClientRect(), a = toMap([b.left,b.top]), z = toMap([b.right,b.bottom]); boxes.push([...a,...z]);
           }
           const x0=Math.min(...boxes.map(b=>b[0])),y0=Math.min(...boxes.map(b=>b[1])),x1=Math.max(...boxes.map(b=>b[2])),y1=Math.max(...boxes.map(b=>b[3]));
           hole((x0+x1)/2,(y0+y1)/2,(Math.hypot(x1-x0,y1-y0)/2 + W.veilPad/s)/W.veilCore);

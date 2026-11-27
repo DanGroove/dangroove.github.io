@@ -20,6 +20,7 @@ button { font-family: inherit; }
 .stage { position: sticky; top: 0; height: 100vh; overflow: clip; }
 .map, #nova, #stars { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
 .map { display: block; transform-origin: 0 0; }
+#map-stack { position: absolute; inset: 0; }
 #nova, #stars { pointer-events: none; }
 #deep, #air, #sky { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 #sky { display: contents; }
@@ -350,10 +351,10 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
    the moving map into full-screen layers redrawn on every frame of a find press. */
 @property --jm-word { syntax: '<number>'; inherits: true; initial-value: 1; }
 @property --jm-find { syntax: '<number>'; inherits: false; initial-value: 1; }
-#b-detail text, #b-rest text { opacity: var(--jm-word); }
+#b-detail text, #b-rest text, #live-rest text { opacity: var(--jm-word); }
 #map-base { pointer-events: none; overflow: hidden; }
-.jm-focus #b-detail, .jm-focus #b-rest { --jm-word: .3; }
-.jm-focus.jm-way #b-detail, .jm-focus.jm-way #b-rest { --jm-word: 1; }
+.jm-focus #b-detail, .jm-focus #b-rest, .jm-focus #live-rest { --jm-word: .3; }
+.jm-focus.jm-way #b-detail, .jm-focus.jm-way #b-rest, .jm-focus.jm-way #live-rest { --jm-word: 1; }
 .wf-arm.on .l { stroke-width: var(--find-arm); }
 .tl-blk.craft-lit { outline: var(--find-slot-rule) solid var(--paper); }
 .pop-in { position: relative; transform: none; max-width: min(var(--find-pop-w), calc(100vw - var(--find-pop-edge) * 2)); width: max-content; border-radius: var(--find-pop-r); padding: var(--find-pop-pad); font-size: var(--find-pop-font); line-height: var(--find-pop-line); transform-origin: center bottom; }
@@ -430,7 +431,8 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 #hn-rings, #wl-crown, .wl-rip, .wl-pebble, .mist-drift, .mist-glint, .ls-lamp { pointer-events: none; }
 
 /* Round 7 C1 layout, using the existing map and card surfaces. */
-.stage-scrim { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; pointer-events: none; opacity: 0; }
+/* L5: its own layer, so the fade that follows the names no longer repaints it. */
+.stage-scrim { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; pointer-events: none; opacity: 0; will-change: opacity; }
 .c-h { font-size: var(--card-title); font-weight: var(--card-title-weight); margin-bottom: var(--card-title-gap); }
 .c-panel { min-width: 0; }
 .c-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--card-foot-gap); margin-top: var(--card-foot-margin); }
@@ -525,7 +527,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-sheet-open .find-hint { opacity: 0; visibility: hidden; }
 .jm-focus[data-find="well"] .well-name, .jm-focus[data-find="well"] .well-name text { opacity: 1 !important; }
 #b-all, #bc-notes, .find.hoard { transition: opacity .3s; }
-#b-detail { transition: --jm-word .4s; } #b-rest { transition: --jm-word .4s; }
+#b-detail { transition: --jm-word .4s; } #b-rest { transition: --jm-word .4s; } #live-rest { transition: --jm-word .4s; }
 #finds > .find { opacity: var(--jm-find); transition: --jm-find .3s; }
 .reading-halo text, .reading-halo path { paint-order: stroke; stroke: var(--ink); stroke-width: 2px; stroke-linejoin: round; }
 .reading-halo path { stroke: var(--paper); }
@@ -612,6 +614,8 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-pointer-focus .hero .jm-start:focus { outline: none; }
 .tl-tip { max-width: calc(100vw - 16px); white-space: normal; }
 .map, .marker-layer { visibility: hidden; }
+/* L5: the three map svgs take the stack's visibility (hidden until placed). */
+#map-stack { visibility: hidden; } #map-stack > .map { visibility: inherit; }
 .rm, .rm body { overflow-anchor: none; }
 
 @media (max-height: 440px) and (min-width: 641px) {
@@ -3248,7 +3252,7 @@ const shore = (P, seed) => {
   // the two draw the same pixels, since the dots of a batch never touch.
   // Each dot is its own path, in the batches' order (Set out recheck, 2026-11-27): a batch's dots lie far apart along the whole
   // coast, so every GPU tile drew every batch, and Set out's redraws at each zoom step were 50-220 ms frames on the PC (pc-p29:
-  // 10-12 such frames, then 1-2 of at most 63 ms). The same dots draw the same pixels (0 differing in the cloud screenshots).
+  // 10-12 such frames, then 1-2 of at most 63 ms). The same dots draw nearly the same pixels (cloud screenshots: 0-3 pixels at most 4/255 apart at the phone size, dot edges at most 8/255 at the PC size).
   return batches.flatMap(b=>b.points.map(p=>'<path class="sea-stipple" d="M'+p[0]+' '+p[1]+'h.01" fill="none" stroke="'+C.paper+'" stroke-width="'+b.width+'" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-opacity="'+b.alpha+'"/>')).join('');
 };
 
@@ -3847,7 +3851,7 @@ function tripBuild(els) {
   TRIP_EL.secondary = [...els.svg.querySelectorAll('.map-tier2')]; if (!TRIP_EL.secondary.length) TRIP_EL.secondary = [TRIP_EL.tier2];
   TRIP_EL.secondaryText = TRIP_EL.secondary.filter(g => g !== TRIP_EL.tier2).flatMap(g => [...g.querySelectorAll('text')].map(el => ({ el, group: g, fill: Number(el.getAttribute('fill-opacity') ?? 1), stroke: Number(el.getAttribute('stroke-opacity') ?? 1) })));
   TRIP_EL.focusFade = null;
-  TRIP_EL.scrim = document.createElement('div'); TRIP_EL.scrim.className = 'stage-scrim'; TRIP_EL.scrim.setAttribute('aria-hidden', 'true'); TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px'; TRIP_EL.scrim.style.background = 'linear-gradient(to bottom, transparent, color-mix(in srgb, var(--ink) ' + WORLD.scrim[2] * 100 + '%, transparent))'; els.svg.parentElement.appendChild(TRIP_EL.scrim);
+  TRIP_EL.scrim = document.createElement('div'); TRIP_EL.scrim.className = 'stage-scrim'; TRIP_EL.scrim.setAttribute('aria-hidden', 'true'); TRIP_EL.scrim.style.height = WORLD.scrim[VIEW.phone ? 1 : 0] + 'px'; TRIP_EL.scrim.style.background = 'linear-gradient(to bottom, transparent, color-mix(in srgb, var(--ink) ' + WORLD.scrim[2] * 100 + '%, transparent))'; (els.svg.closest?.('.stage') || els.svg.parentElement).appendChild(TRIP_EL.scrim);
   const both = sel => [...(els.base ? els.base.querySelectorAll(sel) : []), ...els.svg.querySelectorAll(sel)];
   TRIP_EL.coasts = both('.coast');
   TRIP_EL.coastLen = [polyLen(COAST_A, 1), polyLen(COAST_B, 1)];
@@ -4008,7 +4012,7 @@ function tripMeasureExploreLabels() {
   const fit=Math.min((VIEW.w-2*m)/(bounds[2]-bounds[0]),(VIEW.h-(VIEW.phone?STEPS.nav.bar:STEPS.nav.h+STEPS.nav.gap)-2*m)/(bounds[3]-bounds[1]));
   const top=Math.max(fit,Math.max(EXPLORE.most,CAMERA.holdZoom)*VIEW.sT),grid=new Map(),cell=12;
   const add=(x,y,half=0,fixed=false,offset=null)=>{if(x<10||x>590||y<120||y>820)return;const key=Math.floor(x/cell)+','+Math.floor(y/cell);if(!grid.has(key))grid.set(key,[]);grid.get(key).push([x,y,half,fixed,offset]);};
-  const elements=[...(E.base?E.base.querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-sea path,#b-sea circle'):[]),...E.svg.querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-rest path,#b-rest circle,#b-rest ellipse,#b-rest rect,#b-rest line,#b-sea path,#b-sea circle,#finds path,#finds circle,#finds ellipse,#finds rect')];
+  const elements=[...(E.base?E.base.querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-sea path,#b-sea circle'):[]),...(document.getElementById('map-stack') || E.svg).querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-rest path,#b-rest circle,#b-rest ellipse,#b-rest rect,#b-rest line,#b-sea path,#b-sea circle,#finds path,#finds circle,#finds ellipse,#finds rect')];
   function* sample(){
     for(const el of elements){
       yield;
@@ -4196,6 +4200,8 @@ function tripGliding() { return !!TRIP_EL.raster?.gliding; }
 function tripApply(st, focus = null) {
   const E = TRIP_EL, c = st.cam; E.clockFading = false;
   const veil = E.veil ??= document.getElementById('map-veil'), camVeil = E.camVeil ??= document.getElementById('cam-veil');
+  // L5: the names-and-trail and finds svgs ride svg#map's raster camera; div#map-stack takes the fade.
+  const layers = E.layers ??= ['live', 'finds'].map(id => [document.getElementById('map-' + id), document.getElementById('cam-' + id)]).filter(([svg, cam]) => svg && cam), stack = E.stack ??= document.getElementById('map-stack');
   const free = !!st.exploring || st.exploreK > 0;
   const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
   if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
@@ -4262,12 +4268,14 @@ function tripApply(st, focus = null) {
     r.base = { ...c, s: c.s * ahead, tx: c.ax - (c.ax-c.tx)*ahead, ty: c.ay - (c.ay-c.ty)*ahead };
     tripWrite(E.cam, 'transform', text(r.base), true);
     if (camVeil) tripWrite(camVeil, 'transform', E.cam.getAttribute('transform'), true);
+    for (const [, cam] of layers) tripWrite(cam, 'transform', E.cam.getAttribute('transform'), true);
     if (st.rasterBudget) st.rasterBudget.used = true;
   }
   const paintK = c.s / r.base.s;
   const mapTransform = paintK === 1 && c.tx === r.base.tx && c.ty === r.base.ty ? 'none' : 'matrix('+paintK+',0,0,'+paintK+','+(c.tx-r.base.tx*paintK)+','+(c.ty-r.base.ty*paintK)+')';
   tripWrite(E.svg, 'transform', mapTransform);
   if (veil) tripWrite(veil, 'transform', mapTransform);
+  for (const [svg] of layers) tripWrite(svg, 'transform', mapTransform);
   st.rasterS = r.base.s; st.gliding = tripGliding();
   if (B) {
     if (baseForced || chosen?.kind === 'base') {
@@ -4324,7 +4332,8 @@ function tripApply(st, focus = null) {
   tripWrite(E.scrim, 'opacity', labelFade);
   const h = st.handoffT, fade = 1 - smooth(...DEPTH.fade.blast, st.blastT) * (1 - (st.exploreK || 0));
   tripWrite(E.sea, 'opacity', smooth(...DEPTH.fade.sea, h)); tripWrite(E.fill, 'opacity', smooth(.25, .75, h));
-  tripWrite(E.detail, 'opacity', smooth(.45, .95, h)); if (E.rest) tripWrite(E.rest, 'opacity', smooth(.45, .95, h)); tripWrite(E.finds, 'opacity', smooth(.5, 1, h));
+  tripWrite(E.detail, 'opacity', smooth(.45, .95, h)); if (E.rest) tripWrite(E.rest, 'opacity', smooth(.45, .95, h));
+  const liveDetail = E.liveDetail ??= document.getElementById('live-detail'); if (liveDetail) tripWrite(liveDetail, 'opacity', smooth(.45, .95, h)); tripWrite(E.finds, 'opacity', smooth(.5, 1, h));
   tripWrite(E.coastG, 'opacity', 1);
   const dr = coastDrawn(h);
   E.coasts.forEach((p, i) => { if (dr >= 1) { tripWrite(p, 'strokeDasharray', 'none'); return; } const L = E.coastLen[i] * c.s; tripWrite(p, 'strokeDasharray', `${L.toFixed(1)} ${L.toFixed(1)}`); tripWrite(p, 'strokeDashoffset', (L * (1 - dr)).toFixed(1)); });
@@ -4346,9 +4355,13 @@ function tripApply(st, focus = null) {
   // the longship rides the crossing
   const sp = longshipPoint(st.u); tripWrite(E.ship, 'transform', `translate(${n2(sp[0])} ${n2(sp[1])}) scale(.55)`, true);
   const opacity = st.dim * fade;
-  tripWrite(E.svg, 'opacity', opacity); tripWrite(E.svg, 'visibility', opacity === 0 ? 'hidden' : 'visible');
+  const fadeEl = stack || E.svg;
+  tripWrite(fadeEl, 'opacity', opacity); tripWrite(fadeEl, 'visibility', opacity === 0 ? 'hidden' : 'visible');
   tripWrite(E.svg, 'willChange', r.promo ? 'transform, opacity' : fade > 0 && fade < 1 ? 'opacity' : '');
   tripWrite(E.svg, 'overflow', free || glideHold ? 'visible' : '');
+  for (const [svg] of layers) { tripWrite(svg, 'willChange', E.svg.style.willChange); tripWrite(svg, 'overflow', E.svg.style.overflow); }
+  // The stack's own will-change only for a fade: over three layers it costs a full-screen surface each frame.
+  if (stack) tripWrite(stack, 'willChange', !r.promo && fade > 0 && fade < 1 ? 'opacity' : '');
   if (veil) { tripWrite(veil, 'overflow', E.svg.style.overflow); tripWrite(veil, 'willChange', E.svg.style.willChange || (veil.style.visibility === 'visible' ? 'opacity' : '')); }
   if (E.base) { tripWrite(E.base, 'opacity', opacity); tripWrite(E.base, 'visibility', opacity === 0 ? 'hidden' : 'visible'); tripWrite(E.base, 'willChange', 'transform'); }
   tripWrite(E.caption, 'opacity', 1 - smooth(0, .3, h));
@@ -7293,7 +7306,7 @@ function findWay(svg) {
           if (h) boxes.push([h.x-22,h.y-30,h.x+22,h.y+12]);
           // Labels use their actual displayed geometry, converted back through the shared camera.
           for (const row of mapLabelRows()) if (row.stop === stop.id) {
-            const b = svg.querySelector('.label-anchor[data-row="'+row.i+'"]').getBoundingClientRect(), a = toMap([b.left,b.top]), z = toMap([b.right,b.bottom]); boxes.push([...a,...z]);
+            const b = document.querySelector('.label-anchor[data-row="'+row.i+'"]').getBoundingClientRect(), a = toMap([b.left,b.top]), z = toMap([b.right,b.bottom]); boxes.push([...a,...z]);
           }
           const x0=Math.min(...boxes.map(b=>b[0])),y0=Math.min(...boxes.map(b=>b[1])),x1=Math.max(...boxes.map(b=>b[2])),y1=Math.max(...boxes.map(b=>b[3]));
           hole((x0+x1)/2,(y0+y1)/2,(Math.hypot(x1-x0,y1-y0)/2 + W.veilPad/s)/W.veilCore);
@@ -8726,7 +8739,9 @@ function findsBuild(svg, pop, sheet, base, rm) {
   const pool = svg.querySelector('#f-bits'); svg.querySelector('#finds').appendChild(pool);
   const capture = e => { if (FD.st?.exploring) { const el = e.target.closest?.('.find'); if (el) el._focusBlocked = false; return; } findCapture(e); };
   for (const type of ['pointermove','pointerup','pointercancel','touchmove']) window.addEventListener(type, capture, {capture:true,passive:false});
-  svg.addEventListener('click', capture, true); svg.addEventListener('keydown', capture, true); svg.addEventListener('pointerdown', capture, true);
+  // L5: the finds have their own svg in div#map-stack, so the press capture listens on the stack.
+  const root = svg.closest?.('#map-stack') || svg;
+  root.addEventListener('click', capture, true); root.addEventListener('keydown', capture, true); root.addEventListener('pointerdown', capture, true);
   window.addEventListener('jm-find-release', findsCloseAll);
   window.addEventListener('jm-destination', () => { FD.pendingPress = null; });
   window.addEventListener('jm-explore', () => { if (!FD.st?.exploring || !document.documentElement.classList.contains('jm-explore')) findsCloseAll(); });
@@ -8831,8 +8846,17 @@ const $ = id => document.getElementById(id);
   const cover = document.createElementNS(NS, 'rect'), pad = MAP.w;
   Object.entries({ id: 'map-cover', x: -pad, y: -pad / 2, width: MAP.w + 2 * pad, height: MAP.h + pad, fill: C.black, 'fill-opacity': 0, 'pointer-events': 'none' }).forEach(([k, v]) => cover.setAttribute(k, v));
   $('cam').prepend(cover);
+  // L5 (2026-11-27): the names and trail, then the finds and the X, get svgs of their own over svg#map in div#map-stack, so
+  // their writes on every frame of a move no longer redraw the map (phone-p27: it repainted nearly every frame of Set out).
+  // The stack takes the fade (faded one by one, the trail showed through the longship); each keeps a cover to stay one layer.
+  const stack = document.createElement('div'); stack.id = 'map-stack'; $('map').before(stack); stack.appendChild($('map'));
+  for (const id of ['live', 'finds']) {
+    const svg = document.createElementNS(NS, 'svg'), cam = document.createElementNS(NS, 'g'), inner = cover.cloneNode();
+    svg.id = 'map-' + id; svg.setAttribute('class', 'map'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('pointer-events', 'none');
+    cam.id = 'cam-' + id; inner.id = 'map-' + id + '-cover'; cam.appendChild(inner); svg.appendChild(cam); stack.appendChild(svg);
+  }
 }
-const SVG = $('map'), CANVAS = $('stars'), TLEL = $('tl');
+const SVG = $('map'), CANVAS = $('stars'), TLEL = $('tl'), MAP_STACK = $('map-stack'), MAP_SVGS = [SVG, $('map-live'), $('map-finds')];
 // timeline sits in the stage overlay so it can become the footer rule; in reduced motion it is a sticky jump menu
 const FTWORLD = document.createElement('div'); FTWORLD.id = 'ft-world'; $('stage').querySelector('.ov').appendChild(FTWORLD); FTWORLD.append($('ft'), TLEL);
 
@@ -8857,16 +8881,24 @@ footerBuild($('ft'), false); footerBuildX($('fxg'), false, $('nova'), $('nova-hi
 const mainXStrokes = [...SVG.querySelectorAll('.fx-red')];
 
 stepsBuild({ stage: $('stage'), rm: false, resize, joinedTop: () => JOIN.heroStart, reducedGo: id => { if (id === 'top') window.scrollTo({top:0,behavior:'instant'}); else goStop(id === 'map' ? -1 : id === 'end' ? STOPS.length : STOPS.findIndex(s=>s.id===id)); } });
-findsBuild(SVG, $('pop'), $('sheet'), { style: { set opacity(v) { $('b-all').style.opacity = v; $('b-rest').style.opacity = v; } } }, RM);
+findsBuild(SVG, $('pop'), $('sheet'), { style: { set opacity(v) { $('b-all').style.opacity = v; $('b-rest').style.opacity = v; const live = $('live-rest'); if (live) live.style.opacity = v; } } }, RM);
 // The same six markers move in screen space, so their type never needs to be
 // resized and rasterized on every camera frame. No marker is copied.
 const mainMarkerLayer = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); mainMarkerLayer.classList.add('marker-layer');
 $('stage').querySelector('.ov').appendChild(mainMarkerLayer);
 const mainMarkers = FINDS.filter(f => f.n).map(f => { const el = $('mk-' + f.id), place = document.createElementNS('http://www.w3.org/2000/svg', 'g'); el.dataset.screen = 'true'; place.appendChild(el); mainMarkerLayer.appendChild(place); return { el, place, at: f.mark }; });
+// L5's moves follow the builds above, which look inside svg#map. The names keep their order (tier 2, tier 1, the subs).
+{
+  const NS = 'http://www.w3.org/2000/svg', rest = document.createElementNS(NS, 'g'), detail = document.createElementNS(NS, 'g');
+  rest.id = 'live-rest'; detail.id = 'live-detail'; rest.appendChild(detail);
+  detail.append(...[...$('b-rest-detail').children].filter(el => el.matches('.map-tier2, .map-tier1, .map-subs')));
+  $('cam-live').append(rest, $('trail-done'), $('trail-pieces'));
+  $('cam-finds').append($('finds'), $('fxg')); $('cam-finds').setAttribute('pointer-events', 'visiblePainted');
+}
 function mainPlaceMarkers(st) {
   mainMarkers.forEach(m => { const p = toScreen(st, m.at), transform = `translate(${p[0]-m.at[0]} ${p[1]-m.at[1]})`; if (m.place.getAttribute('transform') !== transform) m.place.setAttribute('transform', transform); });
-  const opacity = String(smooth(.5, 1, st.handoffT) * Number(SVG.style.opacity || 1)); if (mainMarkerLayer.style.opacity !== opacity) mainMarkerLayer.style.opacity = opacity;
-  const visible=Number(opacity)>0&&SVG.style.visibility!=='hidden'?'visible':'hidden'; if (mainMarkerLayer.style.visibility!==visible) mainMarkerLayer.style.visibility=visible;
+  const opacity = String(smooth(.5, 1, st.handoffT) * Number(MAP_STACK.style.opacity || 1)); if (mainMarkerLayer.style.opacity !== opacity) mainMarkerLayer.style.opacity = opacity;
+  const visible=Number(opacity)>0&&MAP_STACK.style.visibility!=='hidden'?'visible':'hidden'; if (mainMarkerLayer.style.visibility!==visible) mainMarkerLayer.style.visibility=visible;
 }
 exploreBuild({ stage: $('stage'), world: FTWORLD, journey: JOURNEY, rm: false });
 
@@ -8911,7 +8943,7 @@ function resize() {
   const stepMode = !RM;
   const room = stepMode ? (phone ? STEPS.nav.bar : STEPS.nav.h + STEPS.nav.gap + 6) : 0;
   tripResize(w, h, RM ? 0 : (phone ? 44 : 56) + room);
-  SVG.setAttribute('width', w); SVG.setAttribute('height', h); SVG.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  MAP_SVGS.forEach(svg => { svg.setAttribute('width', w); svg.setAttribute('height', h); svg.setAttribute('viewBox', `0 0 ${w} ${h}`); });
   mainMarkerLayer.setAttribute('viewBox', `0 0 ${w} ${h}`);
   tripMeasureLabels(); starsResize(w, h);
   footerNovaResize(w, h);
@@ -9031,7 +9063,7 @@ const JN = {
   rm: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
 if (JN.rm) VIEW.mapReady = false;
-JN.base = document.getElementById('map-base'); JN.svg = document.getElementById('map'); JN.hit = document.getElementById('nova-hit'); JN.ov = JN.stage.querySelector('.ov');
+JN.base = document.getElementById('map-base'); JN.svg = document.getElementById('map-stack') || document.getElementById('map'); JN.hit = document.getElementById('nova-hit'); JN.ov = JN.stage.querySelector('.ov');
 // vh of scroll: the leave ends at the end of the hero act; the canvas fades in over its last JOIN_OVERLAP vh
 const LEAVE_END = ACTS.hero, JOIN_OVERLAP = COMB.handoverOverlap;
 
