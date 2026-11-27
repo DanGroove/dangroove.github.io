@@ -1,0 +1,78 @@
+{
+ "norings": [
+  [
+   "rings: { on: 1,",
+   "rings: { on: 0,"
+  ]
+ ],
+ "noouter": [
+  [
+   "outer: { on: 1,",
+   "outer: { on: 0,"
+  ]
+ ],
+ "nodust": [
+  [
+   "dust: { on: 1,",
+   "dust: { on: 0,"
+  ]
+ ],
+ "nomist": [
+  [
+   "mist: { on: 1, n: 120",
+   "mist: { on: 0, n: 120"
+  ]
+ ],
+ "noclouds": [
+  [
+   "clouds: { on: 1, show",
+   "clouds: { on: 0, show"
+  ]
+ ],
+ "nowolves": [
+  [
+   "wolves: { on: 1,",
+   "wolves: { on: 0,"
+  ]
+ ],
+ "nodeep": [
+  [
+   "rings: { on: 1,",
+   "rings: { on: 0,"
+  ],
+  [
+   "outer: { on: 1,",
+   "outer: { on: 0,"
+  ],
+  [
+   "dust: { on: 1,",
+   "dust: { on: 0,"
+  ]
+ ],
+ "nosky": [
+  [
+   "rings: { on: 1,",
+   "rings: { on: 0,"
+  ],
+  [
+   "outer: { on: 1,",
+   "outer: { on: 0,"
+  ],
+  [
+   "dust: { on: 1,",
+   "dust: { on: 0,"
+  ],
+  [
+   "mist: { on: 1, n: 120",
+   "mist: { on: 0, n: 120"
+  ],
+  [
+   "clouds: { on: 1, show",
+   "clouds: { on: 0, show"
+  ],
+  [
+   "wolves: { on: 1,",
+   "wolves: { on: 0,"
+  ]
+ ]
+}
