@@ -12,7 +12,8 @@ for(const[a,b]of[[5,19],[40,41],[56,59]]){
 const crown=t=>{const[x,y,s,p]=t;return p?[[x-s,y-.5*s],[x,y-2.7*s],[x+s,y-.5*s]]:Array.from({length:64},(_,i)=>[x+Math.cos(i*Math.PI/32)*s,y-1.7*s+Math.sin(i*Math.PI/32)*s]);};
 const crownGap=(a,b)=>a.some(p=>insidePoly(p,b))||b.some(p=>insidePoly(p,a))?0:Math.min(...a.map(p=>outlineGap(p,b)),...b.map(p=>outlineGap(p,a)));
 // COMB-R, 2026-11-27: the two audited pines are named by their seeded, nudged positions.
-for(const [x,y] of [[357.8,158.1],[403,351.4]]){
+// COMB-R review, 2026-11-27: the second pine moves up 3.5 units, clear of the round tree below it (it touched at the 360 fit).
+for(const [x,y] of [[357.8,158.1],[403,347.9]]){
   const i=GROVE.findIndex(t=>n1(t[0])===x&&n1(t[1])===y);assert.ok(i>=0,'audited seeded pine is present');
   const minimum=Math.min(...GROVE.map((t,j)=>i===j?Infinity:crownGap(crown(GROVE[i]),crown(t))));
   assert.ok(minimum*.576-1.1>=1,'moving a named pine must not create a new tangent with any neighbour');

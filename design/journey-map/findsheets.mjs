@@ -12,13 +12,18 @@ export function findBeacon(svg) {
   const o={id:f.id,el,stage:'idle',head:FIND_PLAY.beacon.baseAngle,manualTs:-Infinity,fire:0,level:0,read:notes.map(()=>false),kept:false,drag:false,ember:0,litTs:-Infinity,hearTs:-Infinity,embers:[],beamTurns:0,finalDone:false,stepTs:-Infinity};
   const origin=()=>[f.x+FIND_PLAY.beacon.origin[0]*FIND_PLAY.beacon.scale,f.y+FIND_PLAY.beacon.origin[1]*FIND_PLAY.beacon.scale],pool=svg.querySelector('#f-bits'),ring=findSvg('circle',{class:'l bc-finale-ring',r:0,opacity:0,'pointer-events':'none'});pool.appendChild(ring);
   const wrap=()=>{
-    const B=FIND_PLAY.beacon,key=[VIEW.phone,B.noteFont,B.noteScale,B.notePhone,B.noteWidths,B.noteGuard].join('/');if(o.wrapKey===key)return;o.wrapKey=key;
+    const B=FIND_PLAY.beacon,key=[VIEW.phone,B.noteFont,B.noteScale,B.notePhone,B.noteWidths,B.noteGuard,B.noteGap].join('/');if(o.wrapKey===key)return;o.wrapKey=key;
     for(const[n,i]of notes.map((n,i)=>[n,i])){
       if(!n.copy)continue;const max=(B.noteWidths[i]-B.noteGuard)/((VIEW.phone?B.notePhone:1)*B.noteScale);
       const linesFor=(text,font,italic)=>{const words=text.split(/\s+/),candidates=new Map(),scratch=findSvg('g',{opacity:0,'pointer-events':'none'});for(let a=0;a<words.length;a++)for(let b=a+1;b<=words.length;b++){const text=words.slice(a,b).join(' '),e=findSvg('text',{'font-size':font,'font-style':italic?'italic':'normal','font-weight':500,'text-rendering':'geometricPrecision'});e.textContent=text;scratch.appendChild(e);candidates.set(text,e);}n.inner.appendChild(scratch);const widths=new Map([...candidates].map(([text,e])=>[text,e.getBBox?.().width??e.getComputedTextLength?.()??text.length*font*.55]));scratch.remove?.();const lines=[];let line='';for(const word of words){const next=line?line+' '+word:word;if(line&&widths.get(next)>max){lines.push(line);line=word;}else line=next;}if(line)lines.push(line);return lines;};
       const caption=n.todo?linesFor(COPY.todo,B.todoFont,false):[],lines=linesFor(n.d.t.t,B.noteFont,true),copyY=B.lineY+Math.max(0,caption.length-1)*B.todoFont*B.noteLine;
       const put=(text,lines,y,step)=>{if(!text)return;text.replaceChildren();lines.forEach((line,i)=>{const t=findSvg('tspan',{x:0,y:y+i*step});t.textContent=line;text.appendChild(t);});};put(n.todo,caption,B.todoY,B.todoFont*B.noteLine);put(n.copy,lines,copyY,B.noteFont*B.noteLine);
+      n.bottom=copyY+(lines.length-1)*B.noteFont*B.noteLine+B.noteFont*.25;
     }
+    // Phones draw the notes 1.7 times larger than their spots are apart, so the second land note moves down until it clears the
+    // first at their flash size, its reading spot with it (COMB-R review, 2026-11-27: notes one and two touched on phones).
+    const peak=i=>(VIEW.phone?B.notePhone:1)*(VIEW.phone&&i===2?B.seaPhoneFlash:B.noteScale),[a,b]=notes,[,ay]=COMB.readings[0],[,by]=COMB.readings[1];
+    b.d.y=by+Math.max(0,ay+(a.bottom??B.lineY)*peak(0)+B.noteGap-(by+B.runeY*peak(1)));b.d.y=+b.d.y.toFixed(2);attr(b.g,'transform','translate('+b.d.x+' '+b.d.y+')');
   };
   const arrived=(level,t)=>{o.level=Math.max(o.level,level);o.stepTs=t;if(level===notes.length){o.litTs=t+FIND_PLAY.beacon.swellTime;o.finaleFrom=Math.atan2(notes.at(-1).d.y-origin()[1],notes.at(-1).d.x-origin()[0])*180/Math.PI;notes.forEach(n=>n.finalFlash=false);}};
   const read=(n,i)=>{

@@ -257,7 +257,7 @@ ok(!/#[0-9A-Fa-f]{3,6}\b(?![\w-]*\))/.test(readFileSync(join(ROOT, 'map.css'), '
 // Compressed delivery budgets include all top-level runtime modules and CSS, never hero-copy. The combined budget was
 // raised from 160 to 185 KB on 2026-11-24, after part 4's 32 fixes took it to 171 KB; the packed pages' budgets below,
 // which are what a visitor downloads, are unchanged.
-const RUNTIME_KB = 216.3; // COMB-R, 2026-11-27: requested layers, visits, tankards, pyre, neck and legend add 8.41 KB.
+const RUNTIME_KB = 216.6; // COMB-R, 2026-11-27: requested layers, visits, tankards, pyre, neck and legend add 8.41 KB; its review's foam drips and phone note gap 0.37 KB more.
 // // 2026-11-26: part 13 review fixes (+0.6 KB) and COMB-Q, the old ash and revision loop (+3.4 KB); 2026-11-27: edge fades on the clock, still timeline and Next fill (+0.8 KB); the pinch recheck's fixes (finds quiet while explore moves, the explore hold band, word and scrim fades on the clock, the hint and count pill fades: +1.1 KB): 204.06 KB, read with LF on every machine; the label warm-up's own path walk (pathWalk, +1.3 KB) and the sea dots drawn one path each (+0.2 KB): 206.54 KB. L5, the names, trail and finds in svgs of their own over svg#map (+1 KB): 207.51 KB. Preview 28 notes (wolves full width, the traveller clears only its path, margins and crossing labels, three art removals: +0.2 KB): 207.72 KB.
 const gzipKB = content => gzipSync(content).length / 1024;
 // Line endings are evened out (2026-11-27) so a checkout with CRLF on the PC reads the same sizes as the cloud.
@@ -275,7 +275,8 @@ console.log(`gzip: hammer ${hammerKB.toFixed(2)} KB / 30; all map modules + CSS 
 // Both rose again the same day with the label warm-up's own path walk (pathWalk) and the sea dots drawn one path each: 322.86 and
 // 569.37 KB. Both rose again with L5 (the names, trail and finds in svgs of their own over svg#map): 323.87 and 570.39 KB.
 // 2026-11-27: the joined page repacked with COMB-R in the cloud (Codex left it, since pack-joined also writes joined.html): 578.89 KB.
-for (const [file, budget] of [['dist/journey-map.html', 332.6], ['dist/journey-joined.html', 579.0]]) {
+// 2026-11-27, COMB-R review: the tankards' foam drips and the phone note gap add about 0.2 KB to each page.
+for (const [file, budget] of [['dist/journey-map.html', 332.9], ['dist/journey-joined.html', 579.4]]) {
   if (!existsSync(join(ROOT, file))) continue;
   const kb = gzipKB(readLF(file)); ok(kb <= budget, `${file}: exceeds ${budget} KB gzip`); console.log(`gzip: ${file} ${kb.toFixed(2)} KB / ${budget}`);
 }

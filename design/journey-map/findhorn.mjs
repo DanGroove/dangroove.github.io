@@ -8,6 +8,7 @@ import { findPointer, FD, FIND_BY, ease, attr, fEsc, found, opened, press, showP
 export function findHorn(svg) {
   const f = FIND_BY.horn, el = svg.querySelector('#f-horn'), horn = el.querySelector('.hn-horn'), left=el.querySelector('.hn-cup-left'), right=el.querySelector('.hn-cup-right'), splash=el.querySelector('.hn-splash');
   const o = { id: f.id, el, stage: 'rest', kept: false, up: 0, v: 0, hold: false, sounded: 0, ts: -Infinity, heard: [], hearTs: -Infinity, glints: [] };
+  const drips = [...el.querySelectorAll('.hn-kept')], spill = () => drips.forEach(d => attr(d, 'opacity', 1)); // the foam spills as the rims touch
   const ringsGroup = findSvg('g', { id: 'hn-rings', 'pointer-events': 'none' }); svg.querySelector('#finds').appendChild(ringsGroup);
   const rings = Array.from({ length: FIND_PLAY.horn.rings }, () => { const c = findSvg('circle', { class: 'hn-ring', r: 1, opacity: 0 }); ringsGroup.appendChild(c); return c; });
   const glints = FINDS.map(d => { const g = findSvg('g'), star = findSvg('path', { class: 'pf', d: starPath(0, 0, FIND_PLAY.horn.glint[0]), opacity: 0 }); star.style.stroke = 'none'; g.appendChild(star); ringsGroup.appendChild(g); return { id: d.id, g, star, ts: -Infinity }; });
@@ -19,7 +20,7 @@ export function findHorn(svg) {
   const sound = () => {
     if (o.stage === 'sounding' || o.stage === 'echo') return;
     const H = FIND_PLAY.horn; opened(o); o.stage = 'sounding'; o.ts = FD.now; o.sounded++; o.hold = false; o.heard = []; o.glints = []; o.up = 1; o.contact=false; o.clinkPoint=[f.x+H.bell[0],f.y+H.bell[1]];
-    o.kept = true; attr(el.querySelector('.hn-kept'), 'opacity', 1);
+    o.kept = true; if (FD.rm) spill();
     TRIP_EL.focusAim={id:o.id,view:FIND_PLAY.focus.wide,serial:(TRIP_EL.focusAim?.serial||0)+1};
     o.wide = stepsFocus(o.id, FIND_PLAY.focus.wide); if (FD.popOwner === o) closePop();
     if (FD.rm) { FINDS.forEach(d => deliver(d.id)); o.up = o.v = 0; o.reducedPose=2; o.stage = 'rest'; if (FD.popOwner === o) closePop(); }
@@ -50,7 +51,7 @@ export function findHorn(svg) {
     const [,tilt,lift,gap]=pose,a=tilt*Math.PI/180,[px,py]=H.rim,rx=px*Math.cos(a)-py*Math.sin(a),ry=px*Math.sin(a)+py*Math.cos(a),at={x:-rx-gap/2,y:4+lift,a:tilt,rimY:4+lift+ry},transform='translate('+at.x.toFixed(2)+' '+at.y+') rotate('+at.a+')';
     attr(left,'transform',transform);attr(right,'transform',transform);attr(horn,'transform','rotate('+(tip+hear)+')');o.pose=[tilt,lift,gap];
     const contact=H.poses[2],ca=contact[1]*Math.PI/180,cy=4+contact[2]+px*Math.sin(ca)+py*Math.cos(ca);
-    if(age>=0&&!o.contact&&o.stage==='sounding'){const a=(tip+hear)*Math.PI/180;o.contact=true;o.clinkPoint=[f.x-cy*Math.sin(a)*H.scale,f.y+cy*Math.cos(a)*H.scale];}
+    if(age>=0&&!o.contact&&o.stage==='sounding'){const a=(tip+hear)*Math.PI/180;o.contact=true;spill();o.clinkPoint=[f.x-cy*Math.sin(a)*H.scale,f.y+cy*Math.cos(a)*H.scale];}
     attr(splash,'d','M-1.4 '+(cy-2)+'l-1.5 -2.2M0 '+(cy-2.6)+'v-2.6M1.4 '+(cy-2)+'l1.5 -2.2');attr(splash,'opacity',!FD.rm&&o.stage==='sounding'&&age>=0&&age<H.splash?Math.sin(Math.PI*age/H.splash):0);
     rings.forEach((r,i)=>{const a=age-i*H.gap,radius=H.radius+H.speed*Math.max(0,Math.min(H.life,a)),point=o.clinkPoint||[f.x+H.bell[0],f.y+H.bell[1]];attr(r,'transform','translate('+point.join(' ')+') scale('+radius+')');attr(r,'opacity',!FD.rm&&a>=0&&a<H.life&&o.stage==='sounding'?H.alpha*(1-a/H.life)**H.power:0);});
     if (['sounding', 'echo'].includes(o.stage)) {
