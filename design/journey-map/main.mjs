@@ -7,7 +7,7 @@ import { cardsBuild, cardsResize, cardsFrame, cardsList, cardsOverride, cardsClo
 import { tlBuild, tlResize, tlFrame, tlReduced, tlCurrent, tlSetCount } from './timeline.mjs';
 import { footerBuild, footerBuildX, footerResize, footerNovaResize, footerFrame, footerMotion } from './footer.mjs';
 import { findsBuild, findsFrame, findsPointer, findsCloseAll } from './finds.mjs';
-import { FD } from './findkit.mjs';
+import { FD, findIdleBox } from './findkit.mjs';
 import { JOURNEY, stepsBuild, stepsFrame, stepsResize, stepsProgress, stepsPause, stepsFocusNow, stepsReduced } from './steps.mjs';
 import { depthBuild, depthResize, depthFrame, depthLook, depthInvalidate, novaPress } from './depth.mjs';
 import { exploreBuild, exploreResize, exploreApply, exploreActive, exploreReduced } from './explore.mjs';
@@ -147,7 +147,7 @@ for(const type of ['pointerdown','pointermove','pointerup','pointercancel','clic
       const ancestors=[];for(let p=node.parentElement;p&&p.id!=='cam-anim';p=p.parentElement)ancestors.unshift(p);
       let owner=[...ancestors,node].map(p=>p.dataset.animSource).filter(Boolean).at(-1)?.replace(/^f-/,'');
       if(node.matches('.yg-rat,.yg-eagle,.ash-crown-surface,.ash-effects,.wl-rip'))owner='ash';if(node.id==='bc-notes')owner='beacon';
-      const box=node.getBBox(),pad=node.matches('.jf-name')?64:8;
+      const box=findIdleBox(node),pad=node.matches('.jf-name')?64:8;
       const el=document.createElementNS(NS,'svg'),cam=document.createElementNS(NS,'g');el.id='idle-'+i;el.setAttribute('class','map idle-layer');el.setAttribute('data-idle',owner||'bits');el.setAttribute('aria-hidden','true');el.setAttribute('pointer-events','none');el.appendChild(cam);
       const chain=[];let parent=cam;
       for(const source of ancestors){const clone=document.createElementNS(NS,'g');for(const a of source.attributes)if(a.name!=='id')clone.setAttribute(a.name,a.value);parent.appendChild(clone);FD.animCopies.push({source,clone});parent=clone;chain.push(clone);}

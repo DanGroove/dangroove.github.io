@@ -13,20 +13,31 @@ export const fEsc = s => String(typeof s === 'object' ? s.t : s).replace(/&/g, '
 export const attr = (el, k, v) => { const layer=FD.idleOnly&&findIdleLayer(el);if(layer&&el!==layer.el&&!layer.visible)return;const text = String(v); if (el.getAttribute(k) !== text) el.setAttribute(k, text); };
 // COMB-S: bounded SVGs own idle ink and its paused clocks.
 const findIdleLayer = el => el?.__jmIdle || el?.closest?.('svg[data-idle]')?.__jmIdle;
+// An idle layer clips its ink to this box. The beacon's beam turns about its lamp, so its box holds the whole turn
+// (2026-11-27 review: in explore the beam's upper edge was cut flat by a box measured at its first pose).
+export const findIdleBox = node => {
+  const beam = node.matches?.('.bc-light') && node.querySelector('.bc-beam');
+  if (!beam) return node.getBBox();
+  const m = beam.transform.baseVal.consolidate()?.matrix, b = beam.getBBox(), cx = m ? m.e : 0, cy = m ? m.f : 0;
+  const r = Math.max(...[[b.x, b.y], [b.x + b.width, b.y], [b.x, b.y + b.height], [b.x + b.width, b.y + b.height]].map(([x, y]) => Math.hypot(x, y)));
+  return { x: cx - r, y: cy - r, width: 2 * r, height: 2 * r };
+};
 export const findIdleTime = el => { const layer=findIdleLayer(el); return layer ? layer.time : FD.now; };
 export const findIdleDelta = el => findIdleLayer(el)?.dt ?? FD.dt;
 export const findIdleVisible = el => findIdleLayer(el)?.visible ?? true;
 export function findIdleFrame(st,advance=true) {
   const moving=!!(st.gliding||st.exploreMoving),c=st.cam,dpr=globalThis.devicePixelRatio||1;
   for(const q of FD.idleLayers||[]){
-    const actor=q.actor,active=actor&&(actor.playing||actor.drag||actor.busy||actor.hearing||FD.sheetOwner===actor||['flight','hear','landing','reel','chase','eating','waking','trace','opening','sheet','closing','sliding','reply','pebble','sounding','echo','pull','lifting','rising','rattling','bouncing'].includes(actor.stage)||q.owner==='wayfinder'&&FD.focusId===q.owner);
+    // The particle layer has no actor: it is active while any particle is live or it is still shown, or it stayed hidden
+    // at rest once its first burst ended (2026-11-27 review: sparks, drops and feathers showed only while the camera moved).
+    const actor=q.actor,active=q.bits?q.visible||FD.bits.some(b=>b.live):actor&&(actor.playing||actor.drag||actor.busy||actor.hearing||FD.sheetOwner===actor||['flight','hear','landing','reel','chase','eating','waking','trace','opening','sheet','closing','sliding','reply','pebble','sounding','echo','pull','lifting','rising','rattling','bouncing'].includes(actor.stage)||q.owner==='wayfinder'&&FD.focusId===q.owner);
     if(q.placed&&!st.smallMoved){
       if(advance){const run=q.visible&&!moving;q.dt=q.loop&&run&&q.running?FD.dt:0;q.time+=q.dt;q.running=run;continue;}
       if(!q.loop&&!active||!q.visible&&!active)continue;
     }
     q.placed=true;
     const contentKey=q.node.childElementCount+'/'+q.node.textContent;
-    if(contentKey!==q.contentKey&&!q.bits){q.contentKey=contentKey;const b=q.node.getBBox();q.box=[b.x-q.pad,b.y-q.pad,b.x+b.width+q.pad,b.y+b.height+q.pad];}
+    if(contentKey!==q.contentKey&&!q.bits){q.contentKey=contentKey;const b=findIdleBox(q.node);q.box=[b.x-q.pad,b.y-q.pad,b.x+b.width+q.pad,b.y+b.height+q.pad];}
     let b=q.box;
     if(q.bits){
       const live=FD.bits.filter(b=>b.live);const extra=[...q.node.children].some(e=>!FD.bits.some(b=>b.el===e)&&+(e.getAttribute('opacity')||1)>0);
@@ -41,7 +52,10 @@ export function findIdleFrame(st,advance=true) {
       b=[Math.min(...corners.map(p=>p.x)),Math.min(...corners.map(p=>p.y)),Math.max(...corners.map(p=>p.x)),Math.max(...corners.map(p=>p.y))];q.boundsKey=chainKey;q.boundsBox=q.box;q.worldBox=b;}
     }
     const raw=[b[0]*c.s+c.tx,b[1]*c.s+c.ty,b[2]*c.s+c.tx,b[3]*c.s+c.ty];
-    const visible=raw[2]>-8&&raw[0]<VIEW.w+8&&raw[3]>-8&&raw[1]<VIEW.h+8;
+    const rect=active?[0,0,VIEW.w,VIEW.h]:[Math.max(0,Math.floor(raw[0]*dpr)/dpr),Math.max(0,Math.floor(raw[1]*dpr)/dpr),Math.min(VIEW.w,Math.ceil(raw[2]*dpr)/dpr),Math.min(VIEW.h,Math.ceil(raw[3]*dpr)/dpr)];
+    // Shown only while some of its box is on screen: a layer left visible with nothing on screen kept its old pixels at the
+    // edge for a frame or more of a move (2026-11-27 review: beacon and flame afterimages up to 400 px off in Next to hmc1).
+    const visible=raw[2]>0&&raw[0]<VIEW.w&&raw[3]>0&&raw[1]<VIEW.h&&rect[2]>rect[0]&&rect[3]>rect[1];
     q.visible=visible;
     if(advance){const run=visible&&!moving;q.dt=run&&q.running?FD.dt:0;q.time+=q.dt;q.running=run;}
     const shown=String(visible);if(q.el.dataset.idleVisible!==shown)q.el.dataset.idleVisible=shown;
@@ -51,8 +65,6 @@ export function findIdleFrame(st,advance=true) {
     if(!visible)continue;
 
 
-    const rect=active?[0,0,VIEW.w,VIEW.h]:[Math.max(0,Math.floor(raw[0]*dpr)/dpr),Math.max(0,Math.floor(raw[1]*dpr)/dpr),Math.min(VIEW.w,Math.ceil(raw[2]*dpr)/dpr),Math.min(VIEW.h,Math.ceil(raw[3]*dpr)/dpr)];
-    if(rect[2]<=rect[0]||rect[3]<=rect[1])continue;
     const p=q.camera,k=p?c.s/p.s:1,tx=p?c.tx-p.tx*k+q.origin[0]*k:0,ty=p?c.ty-p.ty*k+q.origin[1]*k:0;
     const covers=p&&rect[0]>=tx-.01&&rect[1]>=ty-.01&&rect[2]<=tx+q.width*k+.01&&rect[3]<=ty+q.height*k+.01;
     if(!p||!moving||!covers||k<.8||k>1.25){
