@@ -1,6 +1,6 @@
 // Part A: the instrument and the five persistent, hand-dug chests.
 import { C, COPY, CRAFTS, STOPS, MAP, FIND_COPY, FIND_PLAY, PALETTES, COMB, EXPLORE, DEPTH } from './data.mjs';
-import { clamp01, lerp, VIEW } from './trip.mjs';
+import { clamp01, lerp, VIEW, TRIP_EL, labelScale } from './trip.mjs';
 import { pieceIcon, hoardInside, mapLabelRows } from './art.mjs';
 import { cardsSetCraft, arrowSvg } from './cards.mjs';
 import { tlSetCraft } from './timeline.mjs';
@@ -29,16 +29,22 @@ export function findWay(svg) {
       attr(document.getElementById('veil-fill'), 'fill-opacity', 1 - FIND_PLAY.way.dim);
       for (const rect of [document.getElementById('veil-fill'), document.getElementById('veil-mask-frame'), document.getElementById('veil-mask'), document.getElementById('veil-lines-frame'), document.getElementById('veil-lines-mask')])
         for (const [key, value] of Object.entries({ x: frame[0], y: frame[1], width: frame[2]-frame[0], height: frame[3]-frame[1] })) attr(rect, key, value);
-      o.veilUpdate = force => {
-        const s = FD.st?.cam.s || VIEW.s0;
-        if (!o.mask || !force && o.veilScale && Math.abs(s/o.veilScale-1) <= FIND_PLAY.way.veilZoom) return;
+      o.veilUpdate = destination => {
+        const s = destination?.s || FD.st?.cam.s || VIEW.s0;
+        if (!o.mask) return;
         o.veilScale = s; holes.replaceChildren();
         const cuts=document.getElementById('veil-line-cuts'); cuts.replaceChildren(findSvg('circle',{cx:f.x,cy:f.y,r:FIND_PLAY.way.wordRing+1/s}));
+        const W = FIND_PLAY.way;
         let compassRadius=FIND_PLAY.way.wordRing+2/s;
-        for(const word of [...words,tally]){const b=word.getBoundingClientRect(),a=toMap([b.left-3,b.top-3]),z=toMap([b.right+3,b.bottom+3]);if(b.width){cuts.appendChild(findSvg('rect',{x:a[0],y:a[1],width:z[0]-a[0],height:z[1]-a[1]}));for(const x of[a[0],z[0]])for(const y of[a[1],z[1]])compassRadius=Math.max(compassRadius,Math.hypot(x-f.x,y-f.y));}}
+        for(const [i,word] of [...words,tally].entries()) { let a,z,width;
+          if (destination) {
+            const b=word.getBBox(), old=+word.getAttribute('font-size')||1, size=i<words.length?COMB.wordPx/s:Math.max(W.tally[1],W.tally[3]/s), k=size/old, out=W.wordRing+W.wordGap/s, cap=COMB.wordPx/s*W.wordCap, ls=+word.getAttribute('letter-spacing')||0;
+            const x=i<words.length?[ls/2,out,ls/2,ls-out][i]:W.tally[2]/2, y=i<words.length?[-out,cap/2,out+cap,cap/2][i]:-(out+cap+W.wordGap/s);
+            a=[f.x+x+(b.x-(+word.getAttribute('x')||0))*k-3/s,f.y+y+(b.y-(+word.getAttribute('y')||0))*k-3/s]; z=[a[0]+b.width*k+6/s,a[1]+b.height*k+6/s]; width=b.width;
+          } else { const b=word.getBoundingClientRect();a=toMap([b.left-3,b.top-3]);z=toMap([b.right+3,b.bottom+3]);width=b.width; }
+          if(width){cuts.appendChild(findSvg('rect',{x:a[0],y:a[1],width:z[0]-a[0],height:z[1]-a[1]}));for(const x of[a[0],z[0]])for(const y of[a[1],z[1]])compassRadius=Math.max(compassRadius,Math.hypot(x-f.x,y-f.y));}}
         const hole = (x,y,r) => holes.appendChild(findSvg('circle', { cx:x, cy:y, r, fill:'url(#veil-soft)' }));
         // The clear core contains the entire instrument, including screen-sized words and title.
-        const W = FIND_PLAY.way;
         hole(f.x, f.y, compassRadius / W.veilCore);
         STOPS.forEach((stop,i) => {
           if (!o.mask[i]) return;
@@ -47,22 +53,22 @@ export function findWay(svg) {
           if (h) boxes.push([h.x-22,h.y-30,h.x+22,h.y+12]);
           // Labels use their actual displayed geometry, converted back through the shared camera.
           for (const row of mapLabelRows()) if (row.stop === stop.id) {
-            const b = document.querySelector('.label-anchor[data-row="'+row.i+'"]').getBoundingClientRect(), a = toMap([b.left,b.top]), z = toMap([b.right,b.bottom]); boxes.push([...a,...z]);
+            if (destination) {
+              const r=TRIP_EL.rows?.find(r=>r.row.i===row.i), b=r?.box, k=labelScale(row.kind,s), q=Math.max(0,Math.min(1,(s/VIEW.s0-1.05)/.65)), blend=1-q*q*(3-2*q), at=r?.base?r.base.map((v,i)=>lerp(v,r.overview[i],blend)):[row.x,row.y];
+              if(b)boxes.push([at[0]+b.x*k,at[1]+b.y*k,at[0]+(b.x+b.width)*k,at[1]+(b.y+b.height)*k]);
+            } else { const b = document.querySelector('.label-anchor[data-row="'+row.i+'"]').getBoundingClientRect(), a = toMap([b.left,b.top]), z = toMap([b.right,b.bottom]); boxes.push([...a,...z]); }
           }
           const x0=Math.min(...boxes.map(b=>b[0])),y0=Math.min(...boxes.map(b=>b[1])),x1=Math.max(...boxes.map(b=>b[2])),y1=Math.max(...boxes.map(b=>b[3]));
           hole((x0+x1)/2,(y0+y1)/2,(Math.hypot(x1-x0,y1-y0)/2 + W.veilPad/s)/W.veilCore);
         });
       };
-      const observer = new MutationObserver(() => o.veilUpdate(false));
-      observer.observe(document.getElementById('cam'), { attributes:true, attributeFilter:['transform'] });
-      observer.observe(svg, { attributes:true, attributeFilter:['style'] });
-      veil.addEventListener('transitionend', e => { if (e.propertyName === 'opacity' && !o.mask) { veil.style.visibility='hidden'; veil.style.willChange=svg.style.willChange; } });
+      veil.addEventListener('transitionend', e => { if (e.propertyName === 'opacity' && !o.mask) { veil.style.visibility='hidden'; veil.style.willChange=svg.style.willChange; const lines=document.getElementById('map-lines');if(lines)lines.style.visibility='hidden'; } });
     }
-    o.veilUpdate(true);
+    o.veilDirty = true;
     if (mask) { veil.style.visibility='visible'; veil.style.willChange = svg.style.willChange || 'opacity'; }
     veil.style.opacity = mask ? 1 : 0;
     if (FD.rm && !mask) { veil.style.visibility='hidden'; veil.style.willChange=svg.style.willChange; }
-    queueMicrotask(()=>o.veilUpdate(true));
+    const lines = document.getElementById('map-lines'); if (lines) { lines.style.opacity = mask ? 1 : 0; if (mask) lines.style.visibility = 'visible'; else if (FD.rm) lines.style.visibility = 'hidden'; }
   };
   const wayResultView = mask => { const points = [[f.x - 70, f.y - 60], [f.x + 70, f.y + 105], ...STOPS.filter((s,i) => mask[i]).map(s => MAP.waypoints[s.w])], xs = points.map(p=>p[0]), ys = points.map(p=>p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys); return [(x0+x1)/2, (y0+y1)/2, Math.max(x1-x0,y1-y0)/2+40, 0]; };
   const startLines = () => { o.lineTs = FD.now; o.linePhase = 'grow'; o.lines.forEach((l, i) => { l.lit = !!o.mask?.[i]; l.arrived = false; attr(l.line, 'stroke-dasharray', o.craft === CRAFTS.length ? 'none' : FIND_PLAY.way.dash.join(' ')); }); };
@@ -73,11 +79,11 @@ export function findWay(svg) {
     words.forEach((w, j) => w.classList.toggle('on', j === i || i === CRAFTS.length));
     arms.forEach((a, j) => a.classList.toggle('on', j === i || i === CRAFTS.length));
     const mask = i < 0 ? null : i === CRAFTS.length ? wayAllStops() : STOPS.map(s => s.crafts.includes(CRAFTS[i]));
-    if (i >= 0) { o.kept = true; if (i < CRAFTS.length && !o.picked.includes(i)) o.picked.push(i); o.unlocked = o.picked.length === CRAFTS.length && wayAllStops().some(Boolean); found(o.id); opened(o); }
+    if (i >= 0) { o.kept = true; if (i < CRAFTS.length && !o.picked.includes(i)) o.picked.push(i); const unlocked = o.picked.length === CRAFTS.length && wayAllStops().some(Boolean); if(unlocked&&!o.unlocked)o.ringTs=FD.now; o.unlocked=unlocked; found(o.id); opened(o); }
     applyMask(mask);
     // With a craft chosen the lines have to be seen arriving, so on a wide screen the camera pulls back for them.
     document.documentElement.classList.toggle('jm-way', i >= 0);
-    if (JOURNEY.focus === o.id) stepsFocus(o.id, i < 0 ? findView(o.id) : wayResultView(mask));
+    if (JOURNEY.focus === o.id) { const view=i<0?findView(o.id):wayResultView(mask); TRIP_EL.focusAim={id:o.id,view,serial:(TRIP_EL.focusAim?.serial||0)+1}; stepsFocus(o.id,view); }
     if (FD.say) FD.say.textContent = i < 0 ? f.label : findFormat(COMB.waySay, { craft: FIND_COPY.crafts[i] || FIND_COPY.wayAll.split(':')[0], names: STOPS.filter((s,j) => mask?.[j]).map(s => s.short).join(', ') });
     tally.textContent = i < 0 ? '' : i === CRAFTS.length ? findFormat(FIND_COPY.wayAll, { names: STOPS.filter((s, j) => mask[j]).map(s => s.short + ', ' + s.dates).join('; ') }) : findFormat(FIND_COPY.wayTally, { craft: FIND_COPY.crafts[i], n: mask.filter(Boolean).length, t: STOPS.length });
     if (FD.hint) FD.hint.textContent = i < 0 ? FIND_COPY.hints.wayfinder : FIND_COPY.wayPickedHint;
@@ -110,15 +116,15 @@ export function findWay(svg) {
   o.hear = () => { o.hearTs = FD.now; o.hearAngle = o.angle; };
   o.tick = (t, dt) => {
     const W = FIND_PLAY.way, p = attend(o, W.near);
-    let target = o.craft >= 0 && o.craft < CRAFTS.length ? o.craft * FIND_PLAY.kit.turn / CRAFTS.length : o.craft === CRAFTS.length ? o.angle + W.allSpeed * dt : p && o.awake ? Math.atan2(p[0] - f.x, f.y - p[1]) * FIND_PLAY.kit.deg / Math.PI : FD.rm ? 0 : Math.sin(t * W.drift[0]) * W.drift[1] + Math.sin(t * W.drift[2]) * W.drift[3];
+    let target = o.craft >= 0 && o.craft < CRAFTS.length ? o.craft * FIND_PLAY.kit.turn / CRAFTS.length : o.craft === CRAFTS.length ? o.angle + W.allSpeed * dt : p && o.awake ? Math.atan2(p[0] - f.x, f.y - p[1]) * FIND_PLAY.kit.deg / Math.PI : 0;
     const hearing = t - o.hearTs < W.spin;
     if (hearing && !FD.rm) { o.angle = o.hearAngle + FIND_PLAY.kit.turn * ease((t - o.hearTs) / W.spin); o.speed = 0; }
     else if (o.craft === CRAFTS.length && !FD.rm) { o.angle += W.allSpeed * dt; o.speed = W.allSpeed; }
-    else if (!o.drag) { const diff = findAngleDelta(o.angle, target); if (FD.rm) o.angle = target; else { o.speed += (W.stiff * diff - W.damp * o.speed) * dt; o.angle += o.speed * dt; } }
-    attr(needle, 'transform', `rotate(${o.angle})`);
+    else if (!o.drag) { const diff = findAngleDelta(o.angle, target); if (FD.rm) o.angle = target; else { o.speed += (W.stiff * diff - W.damp * o.speed) * dt; o.angle += o.speed * dt; if(Math.abs(findAngleDelta(o.angle,target))<.05&&Math.abs(o.speed)<.5){o.angle+=findAngleDelta(o.angle,target);o.speed=0;} } }
+    attr(needle, 'transform', `rotate(${+(Math.round(o.angle/.05)*.05).toFixed(2)})`);
     const pulse = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - (o.pickTs ?? -Infinity)) / W.pulse[1]));
     arms.forEach((arm, i) => attr(arm, 'transform', `rotate(${i * FIND_PLAY.kit.turn / CRAFTS.length}) scale(${1 + (W.pulse[0] - 1) * pulse * (o.craft === i || o.craft === CRAFTS.length ? 1 : 0)})`));
-    if (o.kept && !FD.rm) { o.runesAngle += W.runes * dt; attr(runes, 'transform', `rotate(${o.runesAngle})`); }
+    // The rune ring retains its angle, with no idle clock.
     o.compassFrame ??= () => {
       const W = FIND_PLAY.way;
     // The words keep one screen size and one screen gap off the ring at every zoom (Dan on preview 21: they sat far out).
@@ -130,8 +136,9 @@ export function findWay(svg) {
     attr(tally, 'font-size', Math.max(W.tally[1], W.tally[3] / (FD.st.rasterS || FD.st.cam.s))); attr(tally, 'x', W.tally[2] / 2); attr(tally, 'y', -(out + cap + W.wordGap / (FD.st.rasterS || FD.st.cam.s)));
     };
     if (o.onScreen && (!(FD.st.gliding || FD.st.exploreMoving) || FD.st.rasterRebased)) o.compassFrame();
+    if (o.mask && o.veilUpdate && (FD.st.rasterDestination || FD.st.veilRestCommit || o.veilDirty && !FD.st.gliding && !FD.st.exploreMoving)) { o.veilUpdate(FD.st.rasterDestination || null); o.veilDirty=false; }
     attr(ring, 'opacity', o.unlocked ? 1 : 0);
-    if (o.unlocked && !FD.rm) attr(ring, 'transform', `scale(${lerp(W.ring[0], W.ring[1], (1 - Math.cos(t * Math.PI * 2 / W.ring[2])) / 2) / W.ring[0]})`);
+    if (o.unlocked && !FD.rm) attr(ring, 'transform', `scale(${lerp(W.ring[0], W.ring[1], Math.sin(Math.PI*clamp01((t-(o.ringTs??-Infinity))/W.ring[2]))) / W.ring[0]})`);
     if (o.linePhase === 'retract') { const q = FD.rm ? 1 : clamp01((t - o.lineTs) / W.line); o.lines.forEach((l, i) => l.v = o.retract[i] * (1 - ease(q))); if (q === 1) queueMicrotask(startLines); }
     let order = 0;
     o.lines.forEach(l => {

@@ -67,13 +67,16 @@ const $ = id => document.getElementById(id);
   // their writes on every frame of a move no longer redraw the map (phone-p27: it repainted nearly every frame of Set out).
   // The stack takes the fade (faded one by one, the trail showed through the longship); each keeps a cover to stay one layer.
   const stack = document.createElement('div'); stack.id = 'map-stack'; $('map').before(stack); stack.appendChild($('map'));
-  for (const id of ['live', 'finds']) {
+  for (const id of ['live', 'finds', 'anim']) {
     const svg = document.createElementNS(NS, 'svg'), cam = document.createElementNS(NS, 'g'), inner = cover.cloneNode();
     svg.id = 'map-' + id; svg.setAttribute('class', 'map'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('pointer-events', 'none');
     cam.id = 'cam-' + id; inner.id = 'map-' + id + '-cover'; cam.appendChild(inner); svg.appendChild(cam); stack.appendChild(svg);
   }
+  const lines = document.createElementNS(NS, 'svg'), lineCam = document.createElementNS(NS, 'g');
+  lines.id = 'map-lines'; lines.setAttribute('class', 'map'); lines.setAttribute('aria-hidden', 'true'); lines.setAttribute('pointer-events', 'none');
+  lineCam.id = 'cam-lines'; lineCam.appendChild($('wf-lines')); lines.appendChild(lineCam); $('map-veil').after(lines);
 }
-const SVG = $('map'), CANVAS = $('stars'), TLEL = $('tl'), MAP_STACK = $('map-stack'), MAP_SVGS = [SVG, $('map-live'), $('map-finds')];
+const SVG = $('map'), CANVAS = $('stars'), TLEL = $('tl'), MAP_STACK = $('map-stack'), MAP_SVGS = [SVG, $('map-live'), $('map-finds'), $('map-anim'), $('map-lines')];
 // timeline sits in the stage overlay so it can become the footer rule; in reduced motion it is a sticky jump menu
 const FTWORLD = document.createElement('div'); FTWORLD.id = 'ft-world'; $('stage').querySelector('.ov').appendChild(FTWORLD); FTWORLD.append($('ft'), TLEL);
 
@@ -111,6 +114,22 @@ const mainMarkers = FINDS.filter(f => f.n).map(f => { const el = $('mk-' + f.id)
   detail.append(...[...$('b-rest-detail').children].filter(el => el.matches('.map-tier2, .map-tier1, .map-subs')));
   $('cam-live').append(rest, $('trail-done'), $('trail-pieces'));
   $('cam-finds').append($('finds'), $('fxg')); $('cam-finds').setAttribute('pointer-events', 'visiblePainted');
+}
+// COMB-R: retain live objects and original hit groups; only their ink moves to the idle raster.
+{
+  const NS = 'http://www.w3.org/2000/svg', copies = new Map(), destination = $('cam-anim'); FD.animCopies = [];
+  const parent = source => {
+    if (!source || /^cam(?:-|$)/.test(source.id)) return destination;
+    if (copies.has(source)) return copies.get(source);
+    const clone = document.createElementNS(NS, 'g');
+    for (const key of ['transform','opacity','style','clip-path','mask']) if (source.hasAttribute(key)) clone.setAttribute(key, source.getAttribute(key));
+    const cls = source.getAttribute('class'); if (cls) clone.setAttribute('class', cls.replace(/\bfind\b/g, 'anim-find'));
+    if (source.id.startsWith('f-')) clone.dataset.animSource = source.id;
+    parent(source.parentElement).appendChild(clone); copies.set(source, clone); FD.animCopies.push({ source, clone }); return clone;
+  };
+  const rock = document.querySelector('.ls-rock'); rock?.parentElement.append(...rock.querySelectorAll('.hit'));
+  const ink = '.bc-glow,.bc-light,.bc-flame,#f-beacon > g > path,#f-beacon > g > rect:not(.hit),.ls-rock,.hd-glint,#f-bits,.yg-rat,.yg-eagle,.rv-a,.rv-b,.rv-gifts,.jg-head,.jg-file,.jf-name,.rs-trace,.wl-rip,.wl-pebble,#wl-crown,#hn-rings,#bc-notes,.hm-lift,.hm-spark,.wf-needle,.wf-runes,.wf-arm,.wf-all,.wf-hub';
+  for (const node of document.querySelectorAll(ink)) { if (node.closest('#map-anim')) continue; parent(node.parentElement).appendChild(node); }
 }
 function mainPlaceMarkers(st) {
   mainMarkers.forEach(m => { const p = toScreen(st, m.at), transform = `translate(${p[0]-m.at[0]} ${p[1]-m.at[1]})`; if (m.place.getAttribute('transform') !== transform) m.place.setAttribute('transform', transform); });

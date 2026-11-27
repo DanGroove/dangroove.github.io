@@ -655,6 +655,13 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
    before that every stop's shield drew at full size in the page's top-left corner for two or three frames of each load. */
 html:not(.rm) .stop:not([data-state]) { visibility: hidden; }
 
+/* COMB-R: idle ink shares the stack fade; growing way lines have an independent masked raster. */
+#map-anim { pointer-events: none; visibility: inherit; }
+#map-anim .anim-find { opacity: var(--jm-find); }
+#map-anim .anim-find.hoard { transition: opacity .3s; }
+#map-lines { pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .3s; }
+.rm #map-lines { transition: none; }
+
 </style>
 </head>
 <body>
@@ -801,7 +808,7 @@ const FINDS = [
   { id: 'runestone', n: 6, x: 250, y: 516, view: [250, 500, 40], mark: [270, 492], label: 'The rune stone. Press, rub, read, then flip the sheet.' },
   { id: 'hammer', n: 0, x: 102, y: 222, view: [108, 224, 34], label: 'Mjölnir on a stone near Laurier. Press it to hold the bridge.' },
   { id: 'mist', n: 0, x: 156, y: 438, view: [154, 436, 62], label: 'The mist of 2020. Press or wipe to clear it.' },
-  { id: 'horn', n: 0, x: 144, y: 520, view: [144, 502, 42], viewCap: 12, label: 'A horn on the shore. Press to raise it, press again to sound it.' },
+  { id: 'horn', n: 0, x: 144, y: 520, view: [144, 502, 42], viewCap: 12, label: 'Two tankards on the shore. Press to raise them, press again to clink them.' },
   { id: 'well', n: 0, x: 302, y: 392, view: [306, 350, 72], label: "Urd's Well. Drop a pebble in. The Norns answer." },
   { id: 'longship', n: 0, x: 452, y: 622, label: 'The longship. Pull three times to fly its pennant.' },
 ];
@@ -884,13 +891,13 @@ const FIND_COPY = {
     { id: 'hoard-lennard', kind: 'sheet', stop: 'lennard', x: 228, y: 728, title: '1 King Street W flyer', image: null, label: 'A scratch in the ground near Lennard. Dig three times, then open it.' },
   ],
   ravenTime: ['00:00', '00:05'],
+  serpentNames: ["final","final_v2","final_v2_FINAL","final_v3_FINAL","final_v3_FINAL_real"],
   serpentLines: [{ t: 'A shipped story goes here.', todo: 1 }, { t: 'A shipped story goes here.', todo: 1 }, { t: 'A shipped story goes here.', todo: 1 }],
   serpentLeaf: ['FRI', '5 PM'],
   beaconNotes: [
-    { x: 442, y: 418, rune: 'note one', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
-    { x: 413, y: 454, rune: 'note two', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
-    { x: 410, y: 495, rune: 'note three', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
-    { x: 432, y: 533, rune: 'note four', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
+    { x: 442, y: 412, rune: 'note one', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
+    { x: 455, y: 458, rune: 'note two', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
+    { x: 552, y: 372, rune: 'note three', t: { t: 'A note in invisible ink goes here.', todo: 1 } },
   ],
   runestoneRunes: 'first sketch final cut',
   poster: { head: 'WANTED', who: 'ONE DESIGNER', line1: 'who sees a job through, from', line2: 'first sketch to final cut', reward: 'REWARD: THE WORK', stamp: 'PRINT', back: ['Stock: to come', 'The brief: to come'], foot: { t: 'Stock: to come. The brief: to come.', todo: 1 } },
@@ -931,7 +938,7 @@ const FIND_COPY = {
   wayPickedHint: 'Pick another craft, or press the centre to clear.',
   hints: { wayfinder: 'Pick a craft to light the stops that used it.', hoards: 'Dig three times, then open it.', ravens: 'Press to send a raven out.',
     serpent: 'J\u00f6rmungandr, the revision loop. Poke him.', beacon: 'Press the tower for the next note, or drag to aim the beam.', runestone: 'Rub the stone to lift its carving.',
-    hammer: 'Press it to hold the bridge.', mist: 'Press or wipe to clear it.', horn: 'Press to raise it, press again to sound it.',
+    hammer: 'Press it to hold the bridge.', mist: 'Press or wipe to clear it.', horn: 'Press to raise them, press again to clink them.',
     well: 'Drop a pebble in. The Norns answer.', longship: 'Pull three times to fly its pennant.' },
   shipLog: 'The crossing of uncertainty', longship: { t: '2023: Dan to write this line.', todo: 1 },
 };
@@ -1191,9 +1198,9 @@ const FIND_PLAY = {
     tally: ['M6 -6V0', 'M8.5 -6V0', 'M11 -6V0', 'M13.5 -6V0', 'M6 -1L14 -5', 'M20 -6V0'],
     reel: { ringSvg: '<svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16"/><circle class="ring-p" cx="20" cy="20" r="16" pathLength="100" stroke-dasharray="100 100"/></svg>', timeJoin: ' / ', iris: 440, width: 360, ratio: [16, 11], motion: [1.3, 0.4, 2, 60, 1.1, 0.3, 22, 40], ring: 100, tc: '00:0{n} / {end}', labelTop: 12, slotBottom: 36 },
   },
-  serpent: {"near":34,"scale":1,"bounds":[-70,-34,34,38],"head":[-17.6,-8.2],"attend":140,"headLimit":4,"headEase":5,"bob":[2.5,0.5,3.4],"jaw":20,"jawPivot":[8,8],"swell":[2.4,2.4,2.4],"restAngle":0,"breathe":[0.6,4.8],"hear":[8,0.8,4],"popup":[-65,-34],"hit":[-50,-30,62,42],"bite":0.4,"lap":2.4,"spit":0.28,"type":0.48,"open":0.6,"wake":0.6,"fileAt":[-66,-11],"returnAt":[-69,-11],"shipAt":[-70,-19],"enterAt":[-80,-5],"filePhone":13,"nameDy":-11.5,"nameSize":5,"shipName":[2,-1,4.6],"shippedJaw":15,"queueRest":0.4,"files":["pdf","mp4","aep","fig"],"lapStops":[0,0.3,0.7,1],"lapPlaces":[0,0.09,0.91,1],"lapSlopes":[0.14,0.65,0.65,0.14]},
-  beacon: { rad: 200, read: 1.2, flame: [1, 1.1, 1.2, 1.3, 1.4], leap: [3, 0.3], embers: 1.5, turn: 0, reach: 1, idle: 0.7, snap: 0.4,
-    scale: 0.6, origin: [0, -34], flameFoot: [0, -31], glowR: 8, glowAlpha: 0.15, flicker: [0.08, 11, 0.05, 17.3, 0.12, 13.1], baseAngle: 196, sweep: 0.5, baseReach: 230, manual: 6, arrow: 6, slop: 6, notePhone: 1.7, soft: 4, wedgeSteps: 32, rest: 0.55, sparkN: 6, burstN: 14, noteScale: 1.12, flash: 0.3, hear: [0.6, 0.3, 1.3, 0.3], englishEase: 5, noteEase: 6, noteFont: 4.6, todoFont: 3.4, runeY: -7, lineY: 7, todoY: 1, runeSize: 4.2,
+  serpent: {"near":34,"scale":1,"bounds":[-70,-34,34,38],"head":[-17.6,-8.2],"attend":140,"headLimit":4,"headEase":5,"bob":[2.5,0.5,3.4],"jaw":20,"jawPivot":[8,8],"swell":[2.4,2.4,2.4],"restAngle":0,"breathe":[0.6,4.8],"hear":[8,0.8,4],"popup":[-65,-34],"hit":[-50,-30,62,42],"bite":0.4,"lap":2.4,"spit":0.28,"type":0.48,"open":0.6,"wake":0.6,"fileAt":[-66,-11],"returnAt":[-69,-11],"shipAt":[-70,-19],"enterAt":[-80,-5],"filePhone":13,"nameDy":-11.5,"nameSize":5,"namePhone":0.85,"shipName":[2,-1,4.6],"shippedJaw":15,"queueRest":0.4,"files":["pdf","mp4","aep","fig"],"lapStops":[0,0.3,0.7,1],"lapPlaces":[0,0.09,0.91,1],"lapSlopes":[0.14,0.65,0.65,0.14]},
+  beacon: { rad: 200, read: 1.2, flame: [1, 1.35, 1.75, 2.2], leap: [3, 0.3], embers: 1.5, turn: 0, reach: 1, idle: 0.7, snap: 0.4,
+    scale: 0.6, origin: [0, -34], flameFoot: [0, -31], glowR: 8, glowAlpha: 0.15, flicker: [0.08, 11, 0.05, 17.3, 0.12, 13.1], baseAngle: 196, sweep: 0.5, baseReach: 230, manual: 6, arrow: 6, slop: 6, notePhone: 1.7, noteWidths: [44,44,40], noteGuard: .2, seaPhoneFlash: 1.1, noteLine: 1.1, emberTime: .6, emberArc: 22, swellTime: .25, overshoot: .15, glowLevels: [0,.3,.55,.85], glowRadii: [1,1.3,1.65,2.1], finaleFlame: [2.2,3.4,2.4], finaleTime: .9, finaleFlash: .2, finaleRing: [150,1.4], finaleTurn: 1.8, finaleReach: 1.25, litHint: "The beacon is lit.", soft: 4, wedgeSteps: 32, rest: 0.55, sparkN: 6, burstN: 14, noteScale: 1.12, flash: 0.3, hear: [0.6, 0.3, 1.3, 0.3], englishEase: 5, noteEase: 6, noteFont: 4.6, todoFont: 3.4, runeY: -7, lineY: 7, todoY: 1, runeSize: 4.2,
   },
   rune: { hintDelay: 4, carving: 0.6, grow: 0.4, r: 34, step: 12, grid: [5, 7], done: 0.8, auto: [1.2, 1.6, 7], fill: 0.25,
     letter: [0.05, 0.18], stamp: [0.45, 0.12, 2.4], shake: [3, 0.16], tilt: 5, close: 0.3,
@@ -1202,7 +1209,7 @@ const FIND_PLAY = {
   },
   drawings: {
     wayfinder: `<circle class="hit" r="58"/><circle class="o" r="42"/><circle class="t" r="34.4"/><g class="wf-runes"><path class="rn" transform="rotate(8) translate(-0.7 -40.5)" d="M0 0L0 4.6M0 0L1.4 1.2M1.4 1.2L0.8 1.7M0 4.6L1.4 3.5M1.4 3.5L0.8 2.9"/><path class="rn" transform="rotate(24.4) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(40.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(57.1) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(73.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(89.8) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3"/><path class="rn" transform="rotate(106.2) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(122.5) translate(-0.7 -40.5)" d="M0 0L0 4.6L1.4 0L1.4 4.6L0 0"/><path class="rn" transform="rotate(138.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(155.3) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(171.6) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.7M1.4 4.6L1.4 0L0 1.7"/><path class="rn" transform="rotate(188) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(204.4) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.2L0.7 0L1.4 1.2"/><path class="rn" transform="rotate(220.7) translate(0 -40.5)" d="M0 0L0 4.6"/><path class="rn" transform="rotate(237.1) translate(-0.7 -40.5)" d="M0 4.6L1.4 2.3L0.7 0.9L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(253.5) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/><path class="rn" transform="rotate(269.8) translate(-0.7 -40.5)" d="M1.4 0L0 1.7L1.4 2.9L0 4.6"/><path class="rn" transform="rotate(286.2) translate(-0.6 -40.5)" d="M1.3 0L0 1.2L1.3 2.3"/><path class="rn" transform="rotate(302.5) translate(-0.7 -40.5)" d="M0 4.6L0 0L1.4 1.2L0 2.3L1.4 4.6"/><path class="rn" transform="rotate(318.9) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(335.3) translate(-0.7 -40.5)" d="M0 4.6L0 0L0.7 1.2L1.4 0L1.4 4.6"/><path class="rn" transform="rotate(351.6) translate(-0.7 -40.5)" d="M0.7 0L0.7 4.6M0 1.7L1.4 2.9"/></g><g class="wf-arm" data-i="0" transform="rotate(0)"><path class="l" d="M0 0V-31.08M0 -31.08l-4 -4M0 -31.08l4 -4M0 -31.08v-5"/></g><g class="wf-arm" data-i="1" transform="rotate(90)"><path class="l" d="M0 0V-31.08M0 -34.08m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/></g><g class="wf-arm" data-i="2" transform="rotate(180)"><path class="l" d="M0 0V-31.08M-4 -27.08L0 -33.08L4 -27.08"/></g><g class="wf-arm" data-i="3" transform="rotate(270)"><path class="l" d="M0 0V-31.08M-5 -31.08H5M-3 -35.08H3"/></g><g transform="rotate(45)"><path class="l" d="M0 0V-17.64M0 -17.64l-3 -3"/></g><g transform="rotate(135)"><path class="l" d="M0 0V-17.64M0 -17.64l3 -3"/></g><g transform="rotate(225)"><path class="l" d="M0 0V-17.64M-3 -17.64H3"/></g><g transform="rotate(315)"><path class="l" d="M0 0V-17.64M0 -17.64m-1.5 -2a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0 -3 0"/></g><text x="0" y="-66" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[0]}</text><text x="60" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="start" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[1]}</text><text x="0" y="90" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="middle" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[2]}</text><text x="-60" y="2.5" font-size="6.5" fill="${C.paper}" font-weight="700" text-anchor="end" letter-spacing="1.2" class="wf-word h">${FIND_COPY.crafts[3]}</text><g class="wf-needle"><path class="pf" d="M0 -26L3 0L-3 0Z"/><path class="o" d="M0 26L3 0L-3 0Z"/></g><circle class="o wf-hub" r="3.4"/><circle class="t wf-all" r="{{way.ring.0}}" opacity="0"/><text x="0" y="-112" font-size="{{way.tally.1}}" fill="${C.note}" font-weight="500" text-anchor="middle" letter-spacing="{{way.tally.2}}" class="wf-tally h"></text>`,
-    serpent: "<g class=\"jo-head jg-head\">\n<g class=\"jo-jaw jg-jaw\" transform=\"rotate(0 8 8)\"><path fill=\"#151314\" d=\"M-12 2.5L-40 6C-43.6 6.4 -45.4 8 -44.6 9.8C-43 12.2 -37 12.8 -31 12.6C-21 12.4 -10 12 0 10.6C10 9.4 20 8.6 32 8L32 0Z\"/><path class=\"l\" d=\"M-12 2.5L-40 6C-43.6 6.4 -45.4 8 -44.6 9.8C-43 12.2 -37 12.8 -31 12.6C-21 12.4 -10 12 0 10.6C6 9.9 11 9.4 16 9\"/><path class=\"l\" d=\"M-43 11C-46 13 -47.6 16.6 -45 18.4C-43 19.8 -40.4 18 -41.4 16.2C-42.2 15 -43.8 15.6 -43.4 16.8\"/><path class=\"pf\" d=\"M-38.6 5.7L-37.4 1.8L-36 5.4Z\"/><g class=\"jd\"><path class=\"t\" d=\"M-36 9.6C-28 10.4 -16 10 -4 8.2\"/></g></g>\n<path fill=\"#151314\" d=\"M33 -8C25 -14.6 13 -18.4 1 -17.8C-9 -17.2 -17 -13.6 -25 -10.2C-33 -7 -41 -7.6 -47 -8.8C-51 -9.6 -54.6 -7.2 -54 -3.8C-53.6 -1.2 -51 .4 -48 .2L-40 -.2C-32 -.8 -22 .4 -12 2.5L33 8Z\"/>\n<path class=\"l\" d=\"M33 -8C25 -14.6 13 -18.4 1 -17.8C-9 -17.2 -17 -13.6 -25 -10.2C-33 -7 -41 -7.6 -47 -8.8C-51 -9.6 -54.6 -7.2 -54 -3.8C-53.6 -1.2 -51 .4 -48 .2L-40 -.2C-32 -.8 -22 .4 -12 2.5\"/>\n<path class=\"l\" d=\"M-46.4 -8.7C-50.6 -10.4 -55.6 -13.4 -54.6 -18C-53.8 -21.2 -49 -21 -49 -17.6C-49 -15.6 -51.6 -15.4 -51.8 -17.2\"/>\n<path class=\"pf\" d=\"M-47.6 0L-46 5.6L-44 -.1ZM-41 -.2L-39.9 3.4L-38.6 -.3ZM-34.6 -.5L-33.7 2.4L-32.6 -.3Z\"/>\n<g class=\"jg-eye\"><path class=\"l\" d=\"M-28.5 -7.2C-24 -12.2 -15 -12.8 -9.6 -8C-14 -4.2 -23 -3.8 -28.5 -7.2Z\"/><circle class=\"pf\" cx=\"-17.6\" cy=\"-8.2\" r=\"1.7\"/></g><path class=\"l jg-shut\" d=\"M-28.5 -7.2Q-19 -2.5 -9.6 -8\" opacity=\"0\"/>\n<path class=\"l\" d=\"M-31 -9.4C-25 -15.4 -12 -16.2 -5 -10.4\"/>\n<path class=\"l\" d=\"M-12 2.5C-6 5.2 1 4.4 2.2 0C3 -3.4 -1.6 -5 -3.4 -2.4C-4.6 -.6 -2.8 1 -1.6 .2\"/>\n<path fill=\"#151314\" d=\"M-7 -16.6C0 -28 13 -35 25 -33C32 -31.8 34.6 -25.6 31 -22.6C24.6 -27.6 14 -24 9 -16Z\"/><path class=\"l\" d=\"M-7 -16.6C0 -28 13 -35 25 -33C32 -31.8 34.6 -25.6 31 -22.6C28.4 -20.6 25 -22.6 26.2 -25.4C27 -27.2 29.6 -26.8 29.2 -25M9 -16.4C13 -22.6 19 -26.6 25.6 -27.2\"/>\n<path class=\"l\" d=\"M14 -15.2C19 -20 25 -21.4 30.6 -19.2C33.4 -18 33.2 -14.6 30.8 -14.4\"/>\n<path class=\"l\" d=\"M16 9C22 8.6 28 8.2 33 8\"/><path class=\"l\" d=\"M19 -13.4C23 -5 23 3 20 9.6M25.4 -11.2C28.6 -4 28.6 2 26 8.8\"/>\n<g class=\"jd\"><circle class=\"pf\" cx=\"23.6\" cy=\"-6\" r=\".7\"/><circle class=\"pf\" cx=\"24.6\" cy=\"-1\" r=\".7\"/><circle class=\"pf\" cx=\"24\" cy=\"4\" r=\".7\"/><path class=\"t\" d=\"M-44 -5.4C-36 -4 -30 -4.6 -24 -7M2 -14.6C8 -13.6 13 -11 17 -7.6M3 -24C8 -28 14 -30 21 -30\"/><path class=\"t\" d=\"M-50.4 -5.6C-49.6 -4.6 -48.6 -4.4 -47.8 -4.8\"/></g></g><g class=\"jf jg-file\" transform=\"translate(-66 -11)\"><path class=\"o\" d=\"M-6 -7.5H2.5L6 -4V7.5H-6Z\"/><path class=\"l\" d=\"M2.5 -7.5V-4H6\"/><path class=\"t\" d=\"M-3.4 -2H3.4M-3.4 .8H3.4M-3.4 3.6H1\"/><g class=\"jf-stamp\" opacity=\"0\" transform=\"translate(.5 1.2) rotate(-14)\"><rect x=\"-13\" y=\"-3.4\" width=\"26\" height=\"6.8\" rx=\"1\" fill=\"#F7F6F3\" stroke=\"#151314\" stroke-width=\".7\"/><rect x=\"-12.1\" y=\"-2.5\" width=\"24.2\" height=\"5\" rx=\".5\" fill=\"none\" stroke=\"#151314\" stroke-width=\".25\"/><text text-anchor=\"middle\" y=\"1.55\" font-size=\"4.1\" font-weight=\"800\" letter-spacing=\".55\" fill=\"#151314\">SHIPPED</text></g></g><text class=\"jf-name\" x=\"-66\" y=\"-22.5\" text-anchor=\"middle\" font-size=\"5\" fill=\"#F7F6F3\" font-weight=\"500\"><tspan class=\"jf-base\">final</tspan><tspan class=\"jf-added\" font-weight=\"800\" text-decoration=\"underline\"></tspan><tspan class=\"jf-ext\">.pdf</tspan></text><rect class=\"hit\" x=\"-50\" y=\"-30\" width=\"62\" height=\"42\"/>",
+    serpent: "<g class=\"jo-head jg-head\">\n<g class=\"jo-jaw jg-jaw\" transform=\"rotate(0 8 8)\"><path fill=\"#151314\" d=\"M-12 2.5L-40 6C-43.6 6.4 -45.4 8 -44.6 9.8C-43 12.2 -37 12.8 -31 12.6C-21 12.4 -10 12 0 10.6C10 9.4 20 8.6 32 8L32 0Z\"/><path class=\"l\" d=\"M-12 2.5L-40 6C-43.6 6.4 -45.4 8 -44.6 9.8C-43 12.2 -37 12.8 -31 12.6C-21 12.4 -10 12 0 10.6C6 9.9 11 9.4 16 9\"/><path class=\"l\" d=\"M-43 11C-46 13 -47.6 16.6 -45 18.4C-43 19.8 -40.4 18 -41.4 16.2C-42.2 15 -43.8 15.6 -43.4 16.8\"/><path class=\"pf\" d=\"M-38.6 5.7L-37.4 1.8L-36 5.4Z\"/><g class=\"jd\"><path class=\"t\" d=\"M-36 9.6C-28 10.4 -16 10 -4 8.2\"/></g></g>\n<path class=\"jg-skin\" fill=\"#151314\" d=\"M33 -8C25 -14.6 13 -18.4 1 -17.8C-9 -17.2 -17 -13.6 -25 -10.2C-33 -7 -41 -7.6 -47 -8.8C-51 -9.6 -54.6 -7.2 -54 -3.8C-53.6 -1.2 -51 .4 -48 .2L-40 -.2C-32 -.8 -22 .4 -12 2.5L33 8Z\"/>\n<path class=\"l jg-crown\" d=\"M33 -8C25 -14.6 13 -18.4 1 -17.8C-9 -17.2 -17 -13.6 -25 -10.2C-33 -7 -41 -7.6 -47 -8.8C-51 -9.6 -54.6 -7.2 -54 -3.8C-53.6 -1.2 -51 .4 -48 .2L-40 -.2C-32 -.8 -22 .4 -12 2.5\"/>\n<path class=\"l\" d=\"M-46.4 -8.7C-50.6 -10.4 -55.6 -13.4 -54.6 -18C-53.8 -21.2 -49 -21 -49 -17.6C-49 -15.6 -51.6 -15.4 -51.8 -17.2\"/>\n<path class=\"pf\" d=\"M-47.6 0L-46 5.6L-44 -.1ZM-41 -.2L-39.9 3.4L-38.6 -.3ZM-34.6 -.5L-33.7 2.4L-32.6 -.3Z\"/>\n<g class=\"jg-eye\"><path class=\"l\" d=\"M-28.5 -7.2C-24 -12.2 -15 -12.8 -9.6 -8C-14 -4.2 -23 -3.8 -28.5 -7.2Z\"/><circle class=\"pf\" cx=\"-17.6\" cy=\"-8.2\" r=\"1.7\"/></g><path class=\"l jg-shut\" d=\"M-28.5 -7.2Q-19 -2.5 -9.6 -8\" opacity=\"0\"/>\n<path class=\"l\" d=\"M-31 -9.4C-25 -15.4 -12 -16.2 -5 -10.4\"/>\n<path class=\"l\" d=\"M-12 2.5C-6 5.2 1 4.4 2.2 0C3 -3.4 -1.6 -5 -3.4 -2.4C-4.6 -.6 -2.8 1 -1.6 .2\"/>\n<path fill=\"#151314\" d=\"M-7 -16.6C0 -28 13 -35 25 -33C32 -31.8 34.6 -25.6 31 -22.6C24.6 -27.6 14 -24 9 -16Z\"/><path class=\"l\" d=\"M-7 -16.6C0 -28 13 -35 25 -33C32 -31.8 34.6 -25.6 31 -22.6C28.4 -20.6 25 -22.6 26.2 -25.4C27 -27.2 29.6 -26.8 29.2 -25M9 -16.4C13 -22.6 19 -26.6 25.6 -27.2\"/>\n<path class=\"l\" d=\"M14 -15.2C19 -20 25 -21.4 30.6 -19.2C33.4 -18 33.2 -14.6 30.8 -14.4\"/>\n<path class=\"l jg-neck-edge\" d=\"M16 9C22 8.6 28 8.2 33 8\"/><path class=\"l\" d=\"M19 -13.4C23 -5 23 3 20 9.6M25.4 -11.2C28.6 -4 28.6 2 26 8.8\"/>\n<g class=\"jd\"><circle class=\"pf\" cx=\"23.6\" cy=\"-6\" r=\".7\"/><circle class=\"pf\" cx=\"24.6\" cy=\"-1\" r=\".7\"/><circle class=\"pf\" cx=\"24\" cy=\"4\" r=\".7\"/><path class=\"t\" d=\"M-44 -5.4C-36 -4 -30 -4.6 -24 -7M2 -14.6C8 -13.6 13 -11 17 -7.6M3 -24C8 -28 14 -30 21 -30\"/><path class=\"t\" d=\"M-50.4 -5.6C-49.6 -4.6 -48.6 -4.4 -47.8 -4.8\"/></g><g class=\"jd jg-neck-detail\"><path class=\"t jg-neck-stripes\"/><circle class=\"pf jg-neck-stud\" r=\".55\"/></g></g><g class=\"jf jg-file\" transform=\"translate(-66 -11)\"><path class=\"o\" d=\"M-6 -7.5H2.5L6 -4V7.5H-6Z\"/><path class=\"l\" d=\"M2.5 -7.5V-4H6\"/><path class=\"t\" d=\"M-3.4 -2H3.4M-3.4 .8H3.4M-3.4 3.6H1\"/><g class=\"jf-stamp\" opacity=\"0\" transform=\"translate(.5 1.2) rotate(-14)\"><rect x=\"-13\" y=\"-3.4\" width=\"26\" height=\"6.8\" rx=\"1\" fill=\"#F7F6F3\" stroke=\"#151314\" stroke-width=\".7\"/><rect x=\"-12.1\" y=\"-2.5\" width=\"24.2\" height=\"5\" rx=\".5\" fill=\"none\" stroke=\"#151314\" stroke-width=\".25\"/><text text-anchor=\"middle\" y=\"1.55\" font-size=\"4.1\" font-weight=\"800\" letter-spacing=\".55\" fill=\"#151314\">SHIPPED</text></g></g><text class=\"jf-name\" x=\"-66\" y=\"-22.5\" text-anchor=\"middle\" font-size=\"5\" fill=\"#F7F6F3\" font-weight=\"500\"><tspan class=\"jf-base\">final</tspan><tspan class=\"jf-added\" font-weight=\"800\" text-decoration=\"underline\"></tspan><tspan class=\"jf-ext\">.pdf</tspan></text><rect class=\"hit\" x=\"-50\" y=\"-30\" width=\"62\" height=\"42\"/>",
     beacon: `<circle class="bc-glow" cx="{{beacon.flameFoot.0}}" cy="{{beacon.flameFoot.1}}" r="{{beacon.glowR}}" fill="url(#glow)" opacity="0"/><g class="bc-light" clip-path="url(#beacon-frame)"><g class="bc-beam" transform="translate(0 -34) rotate(0)"><path d="M0 0L-230 -44.7L-230 44.7Z" fill="url(#beam)"/></g></g><rect class="hit" x="-26" y="-66" width="52" height="70"/><path class="g" d="M-5.8 0L-4 -3L-1 -2L1 -4L3 -2L5.8 0Z"/><path class="g" d="M-5.6 -3L-4.2 -24H4.2L5.6 -3Z"/><path class="t" d="M-5.1 -9H5.1M-4.6 -17H4.6M-1 -3V-9M2 -9V-17M-2 -17V-24"/><rect class="o" x="-1.3" y="-9" width="2.6" height="6"/><path class="l" d="M-6 -24H6M-3 -24L-4 -30M3 -24L4 -30"/><path class="o" d="M-5.5 -31L-4 -26H4L5.5 -31Z"/><path class="pf bc-flame" d="M-2 -31Q-2.5 -34 0 -37Q.7 -34 1.7 -33Q2.5 -32 2 -31Z"/>`,
     runestone: `<rect class="hit" x="-20" y="-66" width="40" height="70"/><path class="g" d="M-14 0L-16 -40Q-12 -60 0 -62Q13 -60 15 -38L13 0Z"/><path d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3" fill="none" stroke="${C.paper}" stroke-width="4" stroke-linecap="round"/><path d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3" fill="none" stroke="${C.land}" stroke-width="2.2" stroke-linecap="round"/><path class="l rs-trace" d="M-10 -2L-11.5 -38Q-9 -53 0 -55Q10 -53 11 -36L9.5 -6Q9 -1 5 -3"/><circle class="pf" cx="5" cy="-3" r="1"/><g transform="translate(2.2 -9) rotate(-90)"><path class="rn" d="M0 0L0 3.4M0 1.4L1.1 0.4M0 2.3L1.1 1.4M2.2 0L2.2 3.4M3.2 3.4L3.2 0L4.3 0.8L3.2 1.7L4.3 3.4M6.5 0L5.4 1.3L6.5 2.1L5.4 3.4M8.1 0L8.1 3.4M7.5 0.8L8.1 0L8.6 0.8M13.1 0L12.1 1.3L13.1 2.1L12.1 3.4M15.2 0L14.2 0.8L15.2 1.7M16.2 3.4L16.2 0L16.8 0.8L17.3 0L17.3 3.4M18.9 0L18.9 3.4M18.4 0.8L18.9 0L19.5 0.8M21.5 0L20.5 0.8L21.5 1.7M22.6 0L22.6 3.4M23.6 0L23.6 3.4M22.6 1.3L23.6 2.1M27.1 0L27.1 3.4M27.1 1.4L28.2 0.4M27.1 2.3L28.2 1.4M29.2 0L29.2 3.4M30.9 0L30.9 3.4M30.3 1.3L31.4 2.1M32.5 0L32.5 3.4M32.5 0L33.5 0.8M32.5 1.1L33.5 2M34.6 3.4L34.6 0L35.7 0.8M40.1 0L39.2 0.8L40.1 1.7M41.2 3.4L41.2 0L42.3 1.1L42.3 3.4M43.9 0L43.9 3.4M43.3 0.8L43.9 0L44.4 0.8"/></g><path class="t" d="M-20 0H20"/>`,
   },
@@ -1221,9 +1228,9 @@ const FIND_PLAY = {
     puffs: 8, puff: { speed: [6, 12], life: [0.8, 0.8], size: [0.6, 1.3], alpha: 0.3 }, east: [0, 0], wisps: [3, 35],
   },
   horn: { near: 24, scale: 1.15, rad: 40, soundRad: 700, tip: 6, raise: 0.35, lift: [3, -7], turn: -30, pivot: [-8, -4], anchor: [0, -42],
-    hold: 0.45, swell: [1.12, 6, 0.9], bell: [19.8, -23.1], rings: 4, gap: 0.18, radius: 4, speed: 300, life: 2.2, alpha: 0.8, power: 0.7,
-    glint: [11, 0.6, 90], hit: [-18, -30, 34, 38],
-    paths: ['M-14 -24C0 -24 16 -17 16 -7C16 1 8 2 8 -3Q8 -5 10 -5Q8 -1 11 -2C15 -5 7 -14 -14 -12Z', 'M-5 -22.6L-7 -13.2M3 -20L0 -12.7', 'M-14 -24C-19 -24 -19 -12 -14 -12C-9 -12 -9 -24 -14 -24Z', 'M-14 4H17'], kept: 'M3 -18L.8 -14.5M5 -17L2.8 -13.5',
+    hold: 0.45, swell: [1.12, 6, 0.9], bell: [0, -18.52367214638378], rings: 4, gap: 0.18, radius: 4, speed: 300, life: 2.2, alpha: 0.8, power: 0.7,
+    glint: [11, 0.6, 90], hit: [-24, -36, 48, 44], clink: .12, bounce: .3, splash: .25, rim: [5,-14], poses: [["rest",0,0,4.4],["first press: raised",12,-6,3],["second press: the clink",22,-9,0],["after: back to raised",12,-6,3]], ground: "M-18 4H18",
+    paths: ["M-5.2 -12.2C-12.2 -12.2 -12.2 -2.2 -5.5 -2.2L-5.45 -5.2C-8.7 -5.2 -8.7 -9.2 -5.3 -9.2Z","M-5.6 0L-5 -14L5 -14L5.6 0Z","M-5.45 -3.6H5.45M-5.15 -10.6H5.15M-1.7 -14V0M1.8 -14V0","M-5.5 -14Q-5.6 -16.8 -3 -16.3Q-1.6 -18.6 1 -16.9Q3.4 -18.4 5.3 -15.8Q6.1 -14.3 5 -14Z"], kept: 'M3 -18L.8 -14.5M5 -17L2.8 -13.5',
   },
   well: { near: 38, rad: 116, hit: [38, 22], water: [300, 390], root: [303, 389], drip: [4, 7], dripTime: 0.35,
     pebbleR: 1.2, pebbleFrom: [-30, -34], pebbleTime: 0.45, arc: 16, anchor: [0, 26],
@@ -2430,8 +2437,8 @@ const YGG = {
 YGG.canopy = 'M' + YGG.crown.map(p => p.join(' ')).join('L') + 'Z';
 YGG.trunk = YGG.drawing.split('<g class="yg-trunk">')[1].split('</g>')[0];
 // lift: how far a stop's shield stands off its trail point, as a share of half its size plus stand (0 = centred on the trail, Dan on preview 21; 1 = standing on it as before).
-const MARK = { k: 10, min: 14, max: 36, stand: 3, lift: 0, ringWidth: 1.2, ringGap: 2, box: 400, centre: 200, radius: 176, rim: 20, boss: 54, bossLine: 16, highlight: [186,186,12,.55], shadow: [200,392,120,10,.35], planks: [-120,-72,-24,24,72,120], plankLine: 7, plankAlpha: .28, paintAlpha: .35, studs: 8, stud: 9, studLine: 5, quarters: 'M200 200L200 24A176 176 0 0 1 376 200ZM200 200L200 376A176 176 0 0 1 24 200Z', legend: [68,836,4.6,.9,1.2,.45] };
-const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -8, hmcSubDY: -27.5, hmcAgainSubDX: 3, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [18,8], xSubAt: [18,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[80,840.5],[80,859.5],[151,840.5],[151,859.5]],
+const MARK = { k: 10, min: 14, max: 36, stand: 3, lift: 0, ringWidth: 1.2, ringGap: 2, box: 400, centre: 200, radius: 176, rim: 20, boss: 54, bossLine: 16, highlight: [186,186,12,.55], shadow: [200,392,120,10,.35], planks: [-120,-72,-24,24,72,120], plankLine: 7, plankAlpha: .28, paintAlpha: .35, studs: 8, stud: 9, studLine: 5, quarters: 'M200 200L200 24A176 176 0 0 1 376 200ZM200 200L200 376A176 176 0 0 1 24 200Z', legend: [68,864,4.6,.9,1.2,.45] };
+const LABELS = { name: { unit: 9.5, floor: 10, phone: 9 }, x: { unit: 8.5, floor: 10, phone: 9 }, sub: { unit: 6.3, floor: 7.6, phone: 7.6 }, small: { unit: 6.5, floor: 9, phone: 9 }, legend: { unit: 6.5, floor: 9, phone: 9 }, marker: { unit: 7.5, floor: 6, phone: 6 }, fade: [1.3,1.5], epsilon: .005, width: .56, line: 1.2, xBreak: ' the ', ascent: .8, descent: .2, halo: 1.5, nameDY: -4, subDY: 4, xSubDY: 9.5, hmcSubDX: -8, hmcSubDY: -27.5, hmcAgainSubDX: 3, hmcAgainTracking: -0.15, subOffset: 9.5, xAt: [18,8], xSubAt: [18,17.5], kicker: [45,101], plate: [-3,-5.8,204,8], rule: [0,8,196], legendAt: [[78,866],[155,866],[255,866],[485,866]],
   // cardDim: other stops' labels behind an open card (desktop, phone); underFade: the share of a label under the timeline or
   // step bar at which it has gone (sideFade: off the screen's side); bar: the bar's keep-out (half width, pad); hint: a find
   // view's lift of it, for the hint (px); edgeFade: the seconds a label takes to fade fully out or in at those edges, however
@@ -2448,8 +2455,8 @@ const COMB = { target: 44, popClose: .16, sheetClose: .2, panelFade: .14, wayFad
   markerPx: 17, wordPx: 10, hintDelay: .5, handoverOverlap: 28, mapFindsIn: .5,
   labels: { laurier: [166,240], hmc1: [478,277], hmc2: [494,351] },
   exploreSides: { laurier: 'below', hmc1: 'left', mohawk: 'right', hmc2: 'left', interkom: 'left', lennard: 'left', x: 'right' },
-  readings: [[440,419],[427,453],[452,488],[455,525]],
-  hornHints: ['Press to raise it.', 'Press again to sound it.', 'Listen as the other finds answer.'],
+  readings: [[442,412],[455,458],[552,372]],
+  hornHints: ['Press to raise them.', 'Press again to clink them.', 'Listen as the other finds answer.'],
   craftLit: '{craft}: used here', craftUnlit: '{craft}: not used here',
   waySay: '{craft}. Matching stops: {names}.', novaSay: 'The supernova is building. Press to add a flare.',
 };
@@ -2642,7 +2649,11 @@ const beacon = () => {
 };
 const runestone = () => findDrawing('runestone');
 const hammerMapArt = () => { const M = HAMMER.map, h = M.hit; return `<rect class="hit" x="${h[0]}" y="${h[1]}" width="${h[2]}" height="${h[3]}"/><path class="g" d="${M.stone}"/><path class="t hm-kept" d="${M.kept}" opacity="0"/><g class="hm-lift"><path class="g" d="${M.hammer}"/><path class="l hm-spark" d="${M.spark}" opacity="0" pointer-events="none"/></g>`; };
-const horn = () => { const H = FIND_PLAY.horn, [x, y, w, h] = H.hit; return `<g transform="scale(-1 1)"><rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="hn-horn"><path class="g" d="${H.paths[0]}"/><path class="t" d="${H.paths[1]}"/><path class="o" d="${H.paths[2]}"/><path class="t hn-kept" d="${H.kept}" opacity="0"/></g><path class="t" d="${H.paths[3]}"/></g>`; };
+const horn = () => {
+  const H=FIND_PLAY.horn,[x,y,w,h]=H.hit, cup=H.paths.map((d,i)=>'<path class="'+(i===2?'t':'g')+'" d="'+d+'"/>').join('');
+  const [,tilt,lift,gap]=H.poses[0],a=tilt*Math.PI/180,rx=H.rim[0]*Math.cos(a)-H.rim[1]*Math.sin(a),pose='translate('+(-rx-gap/2).toFixed(2)+' '+(4+lift)+') rotate('+tilt+')',clink=H.poses[2],ca=clink[1]*Math.PI/180,cy=4+clink[2]+H.rim[0]*Math.sin(ca)+H.rim[1]*Math.cos(ca),drops='M-1.4 '+(cy-2)+'l-1.5 -2.2M0 '+(cy-2.6)+'v-2.6M1.4 '+(cy-2)+'l1.5 -2.2';
+  return '<rect class="hit" x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'"/><path class="l hn-ground" d="'+H.ground+'"/><g class="hn-horn"><g class="hn-cup-left" transform="'+pose+'">'+cup+'</g><g transform="scale(-1 1)"><g class="hn-cup-right" transform="'+pose+'">'+cup+'</g></g><path class="l hn-splash" d="'+drops+'" opacity="0"/><path class="t hn-kept" d="'+H.kept+'" opacity="0"/></g>';
+};
 const mist = () => { const M = FIND_PLAY.mist, [x, y, w, h] = M.box; return `<defs><radialGradient id="find-mist-wipe"><stop offset="${M.soft[1]}" stop-color="${C.black}"/><stop offset="1" stop-color="${C.black}" stop-opacity="0"/></radialGradient></defs>` + M.cairns.map(p => `<g transform="translate(${p[0]} ${p[1]}) scale(${M.cairnScale})">${M.cairn}<path class="pf mist-glint" pointer-events="none" d="${starPath(...M.glintAt, M.glintSize)}" opacity="0"/></g>`).join('') + `<rect class="hit" x="${x}" y="${y}" width="${w}" height="${h}"/><g class="mist-drift" pointer-events="none"><g mask="url(#mistMask)"><g class="mist-cloud" opacity="${M.alpha}"><path d="${M.fill}" fill="${C.paper}" fill-opacity=".07"/>${M.strokes.map(d => `<path class="l" d="${d}"/>`).join('')}</g></g></g>`; };
 const well = () => { const W = FIND_PLAY.well; return `<ellipse class="hit" rx="${W.hit[0]}" ry="${W.hit[1]}"/><g class="wl-rip" pointer-events="none">${Array.from({ length: W.rings }, () => `<ellipse class="t" rx="${W.ringR[0]}" ry="${W.ringR[1]}" opacity="0"/>`).join('')}</g><circle class="pf wl-pebble" r="${W.pebbleR}" opacity="0" pointer-events="none"/>`; };
 const longship = () => {
@@ -2729,10 +2740,10 @@ function bigMap() {
   top += '<g class="map-title">' + svgText(44, 78, COPY.title, { s: 30, w: 800, c: C.paper, ls: -.6 });
   const K = LABELS.kicker, P = LABELS.plate, rule = LABELS.rule;
   top += '<g transform="translate(' + K.join(' ') + ')"><g class="label-scale" data-label="small" data-unit="' + LABELS.small.unit + '"><rect x="' + P[0] + '" y="' + P[1] + '" width="' + P[2] + '" height="' + P[3] + '" fill="' + C.ink + '" class="kick-r"/>' + svgText(0, 0, COPY.kicker, { s: LABELS.small.unit, ls: 1.8, cls: 'kick' }) + '<path class="t kick-r" d="M' + rule[0] + ' ' + rule[1] + 'h' + rule[2] + '"/></g></g></g>';
-  s += `<rect x="23" y="822" width="554" height="55" fill="${C.ink}"/><line x1="23" y1="822.5" x2="577" y2="822.5" stroke="${C.paper}" stroke-opacity=".3"/>`;
+  s += `<rect x="23" y="851" width="554" height="26" fill="${C.ink}"/><line x1="23" y1="851.5" x2="577" y2="851.5" stroke="${C.paper}" stroke-opacity=".3"/>`;
   const M = MARK.legend, [sx, sy, sr, sw, sb, sa] = M;
-  s += '<g class="legend-symbol" data-i="0" data-x="68" data-y="836" transform="translate(' + sx + ' ' + sy + ')"><circle class="o" r="' + sr + '"/><path d="M0 0V-' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 ' + sr + ' 0ZM0 0V' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 -' + sr + ' 0Z" fill="' + C.note + '" opacity="' + sa + '"/><circle class="l" r="' + sr + '" stroke-width="' + sw + '"/><circle class="pf" r="' + sb + '"/></g>';
-  s += '<path class="legend-symbol" data-i="1" data-x="68" data-y="857" d="M64 853l8 8m0 -8l-8 8" stroke="' + C.red + '" stroke-width="2" stroke-linecap="round"/>' + marker(140, 838, 1).replace('class="mk"', 'class="mk legend-symbol" data-i="2" data-x="140" data-y="838"') + '<path class="legend-symbol" data-i="3" data-x="140" data-y="857" d="M133 857h14" stroke="' + C.paper + '" stroke-width="2.3" stroke-linecap="round" stroke-dasharray=".1 4.5"/>';
+  s += '<g class="legend-symbol" data-i="0" data-x="68" data-y="864" transform="translate(' + sx + ' ' + sy + ')"><circle class="o" r="' + sr + '"/><path d="M0 0V-' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 ' + sr + ' 0ZM0 0V' + sr + 'A' + sr + ' ' + sr + ' 0 0 1 -' + sr + ' 0Z" fill="' + C.note + '" opacity="' + sa + '"/><circle class="l" r="' + sr + '" stroke-width="' + sw + '"/><circle class="pf" r="' + sb + '"/></g>';
+  s += '<path class="legend-symbol" data-i="1" data-x="68" data-y="864" d="M64 860l8 8m0 -8l-8 8" stroke="' + C.red + '" stroke-width="2" stroke-linecap="round"/>' + marker(140, 864, 1).replace('class="mk"', 'class="mk legend-symbol" data-i="2" data-x="140" data-y="864"') + '<path class="legend-symbol" data-i="3" data-x="140" data-y="864" d="M133 864h14" stroke="' + C.paper + '" stroke-width="2.3" stroke-linecap="round" stroke-dasharray=".1 4.5"/>';
   top += Object.values(COPY.legend).map((text, i) => { const p = LABELS.legendAt[i]; return '<g class="lg" transform="translate(' + p.join(' ') + ')"><g class="label-scale" data-label="legend" data-unit="' + LABELS.legend.unit + '">' + svgText(0, 0, text, { s: LABELS.legend.unit, c: C.note }) + '</g></g>'; }).join('');
   s += '<g class="map-tier1">' + top + '</g>';
 
@@ -2747,7 +2758,7 @@ function bigMap() {
   fd += `<g id="f-hoards" role="group" aria-label="${F.hoards.label}" data-x="${F.hoards.x}" data-y="${F.hoards.y}">` + FIND_COPY.hoards.map(h => `<g class="find hoard" id="f-${h.id}" role="button" tabindex="0" aria-label="${h.label}" data-x="${h.x}" data-y="${h.y}">${grp(h.x, h.y, FIND_PLAY.hoard.scale, hoard(h.id))}</g>`).join('') + `</g>`;
   fd += at('ravens', FIND_PLAY.raven.scale, ravens()) + at('serpent', FIND_PLAY.serpent.scale, serpent()) + at('beacon', FIND_PLAY.beacon.scale, beacon()) + at('runestone', FIND_PLAY.rune.scale, runestone());
   fd += at('hammer', HAMMER.map.scale, hammerMapArt()) + findWrap('mist', F.mist.label, mist(), F.mist.x, F.mist.y) + at('horn', FIND_PLAY.horn.scale, horn()) + at('well', 1, well());
-  fd += `<g id="bc-notes">` + FIND_COPY.beaconNotes.map(n => { const B = FIND_PLAY.beacon; return `<g class="bc-note" opacity="0" transform="translate(${n.x} ${n.y})"><g class="bc-note-in">${runeSvg(n.rune, B.runeSize, 0, B.runeY, 'middle', 'rn rn-note')}<g class="bc-en" opacity="0">${n.t.todo ? svgText(0, B.todoY, COPY.todo, { s: B.todoFont, c: C.dim, a: 'middle' }) : ''}${svgText(0, B.lineY, typeof n.t === 'object' ? n.t.t : n.t, { s: B.noteFont, c: C.paper, a: 'middle', i: 1 })}</g></g></g>`; }).join('') + `</g>`;
+  fd += `<g id="bc-notes">` + FIND_COPY.beaconNotes.map(n => { const B = FIND_PLAY.beacon; return `<g class="bc-note" opacity="0" transform="translate(${n.x} ${n.y})"><g class="bc-note-in">${runeSvg(n.rune, B.runeSize, 0, B.runeY, 'middle', 'rn rn-note')}<g class="bc-en" opacity="0">${n.t.todo ? svgText(0, B.todoY, COPY.todo, { s: B.todoFont, c: C.dim, a: 'middle', cls: 'bc-note-todo' }).replace('<text','<text text-rendering="geometricPrecision"') : ''}${svgText(0, B.lineY, typeof n.t === 'object' ? n.t.t : n.t, { s: B.noteFont, c: C.paper, a: 'middle', i: 1, cls: 'bc-note-copy' }).replace('<text','<text text-rendering="geometricPrecision"')}</g></g></g>`; }).join('') + `</g>`;
   fd += findWrap('longship', F.longship.label, `<g class="ls-ship" transform="translate(${F.longship.x} ${F.longship.y}) scale(${FIND_PLAY.ship.scale})">${longship()}</g>`, F.longship.x, F.longship.y);
 
   return { sea, fill, coast, detail: s, finds: fd };
@@ -2823,7 +2834,10 @@ function jormSegment(index, open = 0, lumps = []) {
     if (i % 2 === 1 && m[4] > 2.2) studs += 'M' + n1(m[0] - .55) + ' ' + n1(m[1]) + 'a.55 .55 0 1 0 1.1 0a.55 .55 0 1 0 -1.1 0';
     if (i % 18 === 14 && m[4] > 2.5) for (const o of [-1.3, 1.3]) { const x = m[0] + m[2] * o, y = m[1] + m[3] * o; bands += 'M' + n1(x - m[3] * m[4]) + ' ' + n1(y + m[2] * m[4]) + 'L' + n1(x + m[3] * m[4]) + ' ' + n1(y - m[2] * m[4]); }
   });
-  return { outer: pathD([...e.left, ...e.right.slice().reverse()], true), inner: pathD(inner(.5)) + pathD(inner(-.5)), bands, studs };
+  // Only the head seam is sampled here; the ribbon, stripes, studs and every later surface retain their points.
+  let neck;
+  if(index===0){const f=FINDS.find(f=>f.id==='serpent'),x=f.x+33,edge=P=>{let i=1;while(i<P.length-1&&P[i][0]<x)i++;const a=P[i-1],b=P[i],q=(x-a[0])/(b[0]-a[0]||1),dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy);return[x-f.x,a[1]+(b[1]-a[1])*q-f.y,dx/L,dy/L];};neck={upper:edge(e.right),lower:edge(e.left),stripeUpper:edge(inner(-.5)),stripeLower:edge(inner(.5))};}
+  return { outer: pathD([...e.left, ...e.right.slice().reverse()], true), inner: pathD(inner(.5)) + pathD(inner(-.5)), bands, studs, neck };
 }
 function jormSubTail(open = 0) {
   const T = joTrack(open), e = joRibbon(T, MAP.jorm.surf.at(-1)[0] * joTrack().L, T.L - 4, u => joWidth(T, u) * .75, 4);
@@ -3245,6 +3259,7 @@ function tripMeasureLabels() {
     E.title.setAttribute('transform', short ? `translate(${(24 - VIEW.ox) / VIEW.s0 - 44} ${(55 - VIEW.oy) / VIEW.s0 - 78})` : '');
     kicker?.closest('.label-scale')?.parentElement.setAttribute('transform', `translate(45 ${short || VIEW.h <= 720 || VIEW.phone ? 78 + 19 / VIEW.s0 : 101})`);
   }
+  if(short){
   E.legend?.forEach((g,i) => {
     const col = i > 1, line = i % 2;
     g.place = short ? [(VIEW.w * .78 - VIEW.ox) / VIEW.s0, (269 + i * 17 - VIEW.oy) / VIEW.s0] : [80 + (col ? 66 / VIEW.s0 : 0), 840.5 + line * 18 / VIEW.s0];
@@ -3253,6 +3268,23 @@ function tripMeasureLabels() {
     const text = g.el.querySelector('text'); g.box = text?.getBBox?.();
   });
   E.symbols?.forEach(s => { const p = E.legend[+s.el.dataset.i].place; s.el.setAttribute('transform', `translate(${p[0] - 16 / VIEW.s0 - +s.el.dataset.x} ${p[1] - 3 / VIEW.s0 - +s.el.dataset.y}) ${s.base}`); });
+  } else if(E.legend?.length&&E.symbols?.length&&typeof E.legend[0].el.querySelector('text')?.getBBox==='function'){
+    const k=labelScale('legend',VIEW.s0),symbols=E.symbols.slice().sort((a,b)=>+a.el.dataset.i-+b.el.dataset.i),texts=E.legend.map(g=>g.el.querySelector('text'));
+    symbols.forEach(s=>s.el.querySelector('.mk-size')?.setAttribute('transform','scale(1)'));
+    texts.forEach(t=>{t.setAttribute('font-size',LABELS.legend.unit);t.parentElement.setAttribute('transform','scale('+k+')');});
+    const measure=()=>texts.map(t=>t.getBBox()),sym=symbols.map(s=>{const b=s.el.getBBox(),shapes=s.el.matches('path,circle')?[s.el]:[...s.el.querySelectorAll('path,circle')];let pad=0;for(const e of shapes){const st=getComputedStyle(e);if(st.stroke!=='none')pad=Math.max(pad,parseFloat(st.strokeWidth)/2*(st.vectorEffect==='non-scaling-stroke'?1/VIEW.s0:1));}return{b,pad:0,width:b.width};});
+    let boxes=measure(),gap=16,inside=8,wordPx=9,total=()=>boxes.reduce((v,b,i)=>v+b.width*k*VIEW.s0+sym[i].width*VIEW.s0+inside,0)+3*gap,available=506*VIEW.s0-1.1-14;
+    if(total()>available){gap=inside=4;}
+    if(total()>available&&VIEW.phone){wordPx=8.5;texts.forEach(t=>t.setAttribute('font-size',LABELS.legend.unit*8.5/9));boxes=measure();}
+    const inkContext=document.createElement('canvas').getContext('2d');
+    let x=300-total()/(2*VIEW.s0);
+    E.legend.forEach((g,i)=>{const t=texts[i],b=boxes[i],symbol=symbols[i],sg=sym[i],font=getComputedStyle(t);inkContext.font=font.fontStyle+' '+font.fontWeight+' '+(parseFloat(font.fontSize)*k*VIEW.s0)+'px '+font.fontFamily;const ink=inkContext.measureText('x');
+      const centre=x+sg.width/2,baseline=864+(ink.actualBoundingBoxAscent-ink.actualBoundingBoxDescent)/(2*VIEW.s0);
+      symbol.el.setAttribute('transform','translate('+(centre-+symbol.el.dataset.x)+' '+(864-+symbol.el.dataset.y)+') '+symbol.base);
+      g.place=[x+sg.width+inside/VIEW.s0-b.x*k,baseline];g.el.setAttribute('transform','translate('+g.place.join(' ')+')');g.p=g.place;g.box=b;g.wordPx=wordPx;
+      x+=sg.width+(inside+b.width*k*VIEW.s0+gap)/VIEW.s0;
+    });
+  }
   E.t2?.forEach(t => {
     const words = t.el.textContent;
     if (words.includes(COPY.ygg) || words.includes(COPY.well) || words.includes(COPY.wellSub)) t.el.classList.add('well-name');
@@ -3525,14 +3557,42 @@ function tripLabels(st, t2Fade = 1) {
   (E.legend || []).forEach(g => { const k = labelScale('legend', c.s), b = g.box, box = b ? [g.p[0]+b.x*k,g.p[1]+b.y*k,g.p[0]+(b.x+b.width)*k,g.p[1]+(b.y+b.height)*k] : [g.p[0],g.p[1]-u*L.ascent,g.p[0]+g.n*u*L.width,g.p[1]+u*L.descent]; put(g, (free ? 1 : back) * tripEdge(g, free ? 1 : gone(box), dt) * (1-tripCardCover(st,box)) * (1-.85*xQuiet) * group); });
 }
 function tripGliding() { return !!TRIP_EL.raster?.gliding; }
+// COMB-R: each focus raster has its own commit. The moving view only changes CSS matrices.
+function tripFocusRasters(E, r, st, focus, layers, veil, camVeil, camMoved) {
+  const c=st.cam, ids=['map','base','live','finds','anim','veil'], equal=(a,b)=>a&&b&&['s','tx','ty'].every(k=>Math.abs(a[k]-b[k])<1e-10);
+  if (focus && focus.k>(r.focusK??0)) r.focusRelease=false;
+  else if (!focus || focus.k<(r.focusK??0)) r.focusRelease=true;
+  const hint=E.focusAim?.id===focus?.id?E.focusAim:null, key=JSON.stringify([focus?.id||'',hint?.serial||0,!!r.focusRelease]);
+  let run=r.focusRun;
+  if (!run || run.key!==key) {
+    const target=tripState(st.P); if (focus&&!r.focusRelease) tripFocus(target,hint?.view||focus.view,1);
+    const start=r.base||c; r.layerCams ||= Object.fromEntries(ids.map(id=>[id,{...(id==='base'?E.baseRaster?.camera:id==='veil'?E.veilRaster:null)||start}]));
+    run=r.focusRun={key,destination:{...target.cam},queue:(!r.base||target.cam.s<start.s)?ids.slice():[],settled:false,pending:true};
+    st.rasterDestination={...target.cam};
+  }
+  const moving=!!focus&&(focus.k<1||!focus.swapped)||camMoved;
+  if (!moving&&!run.settled) { run.settled=true;run.queue=ids.filter(id=>!equal(r.layerCams[id],c));run.restHoles=true; }
+  const job=run.queue.shift(), camera=run.settled?c:run.destination;
+  const matrix=p=>'matrix('+p.s.toFixed(4)+' 0 0 '+p.s.toFixed(4)+' '+p.tx.toFixed(2)+' '+p.ty.toFixed(2)+')';
+  if(job){r.layerCams[job]={...camera};const cam=job==='map'?E.cam:job==='base'?E.camBase:job==='veil'?camVeil:layers.find(([svg])=>svg.id==='map-'+job)?.[1];if(cam)tripWrite(cam,'transform',matrix(camera),true);if(job==='anim'){const line=layers.find(([svg])=>svg.id==='map-lines');if(line)tripWrite(line[1],'transform',matrix(camera),true);}}
+  r.base=r.layerCams.map; E.veilRaster=r.layerCams.veil;
+  const hold=(svg,p)=>{if(!svg||!p)return;const k=c.s/p.s;tripWrite(svg,'transform',equal(c,p)?'none':'matrix('+k+',0,0,'+k+','+(c.tx-p.tx*k)+','+(c.ty-p.ty*k)+')');};
+  hold(E.svg,r.base);hold(veil,r.layerCams.veil);for(const[svg]of layers)hold(svg,r.layerCams[svg.id.slice(4)]||r.layerCams.anim);
+  if(E.base){const B=E.baseRaster??={};B.camera=r.layerCams.base;B.last={...c,P:st.P,focus:focus?.k||0};B.held=!equal(c,B.camera);hold(E.base,B.camera);}
+  if(run.restHoles&&(job==='veil'||!run.queue.length)){st.veilRestCommit=true;run.restHoles=false;}
+  const holding=moving||run.queue.length>0;st.rasterLayer=job;
+  r.gliding=holding;r.moving=holding;r.promo=true;r.soft=false;r.focusK=focus?.k||0;
+  st.gliding=holding;st.rasterS=r.layerCams.finds?.s||r.base.s;st.rasterRebased=job==='finds'||job==='map';
+  st.rasterBudget=false;E.rasterFrame=false;run.pending=moving||run.queue.length>0;return run.pending;
+}
 function tripApply(st, focus = null) {
   const E = TRIP_EL, c = st.cam; E.clockFading = false;
   const veil = E.veil ??= document.getElementById('map-veil'), camVeil = E.camVeil ??= document.getElementById('cam-veil');
   // L5: the names-and-trail and finds svgs ride svg#map's raster camera; div#map-stack takes the fade.
-  const layers = E.layers ??= ['live', 'finds'].map(id => [document.getElementById('map-' + id), document.getElementById('cam-' + id)]).filter(([svg, cam]) => svg && cam), stack = E.stack ??= document.getElementById('map-stack');
+  const layers = E.layers ??= ['live', 'finds', 'anim', 'lines'].map(id => [document.getElementById('map-' + id), document.getElementById('cam-' + id)]).filter(([svg, cam]) => svg && cam), stack = E.stack ??= document.getElementById('map-stack');
   const free = !!st.exploring || st.exploreK > 0;
   const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
-  if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
+  if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.layerCams = null; r.focusRun = null; E.veilRaster = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
   const ratio = r.base ? c.s / r.base.s : 1;
   const zooming = r.base && Math.abs(ratio - 1) > 1e-6;
   const lastCam = r.lastCam, camMoved = !!lastCam && (lastCam.s !== c.s || lastCam.tx !== c.tx || lastCam.ty !== c.ty);
@@ -3553,13 +3613,15 @@ function tripApply(st, focus = null) {
   // Journey moves share one big raster per frame: svg#map, svg#map-base or one sky object, the biggest overshoot first.
   // Explore, its scripted opening, rest and find focus moves redraw each layer as soon as it is due, as before part 13.
   // A waiting layer never runs more than FRAME_PERF.slack past its hold range, and the base never stops covering the screen.
+  let requests=[],mapForced=false,baseForced=false,B,held,coversNow=true,baseLast,focusPending=false,chosen=null;
+  const focusRaster=!free&&!st.reduced&&(focusMove||r.focusRun?.pending);
+  if(focusRaster) focusPending=tripFocusRasters(E,r,st,focus,layers,veil,camVeil,camMoved);
+  else { r.focusRun=null;r.focusK=0;r.focusRelease=false;
   const slot = r.gliding && !focusMove, slack = FRAME_PERF.slack;
-  const requests = (slot ? VIEW.skyPlan?.(st) || [] : []).map(q => ({ ...q, kind: 'sky' }));
+  requests = (slot ? VIEW.skyPlan?.(st) || [] : []).map(q => ({ ...q, kind: 'sky' }));
   const mapDue = !r.base || (!moving ? ratio !== 1 || c.tx !== r.base.tx || c.ty !== r.base.ty : rebase);
-  const mapForced = mapDue && (!slot || !r.base || ratio < FRAME_PERF.scaleMin / slack || ratio > FRAME_PERF.scaleMax * slack);
+  mapForced = mapDue && (!slot || !r.base || ratio < FRAME_PERF.scaleMin / slack || ratio > FRAME_PERF.scaleMax * slack);
   if (mapDue) requests.push({ kind: 'map', score: r.base ? score(ratio, mapLo, mapHi) : Infinity });
-  let baseForced = false;
-  let B, held, coversNow = true, baseLast;
   const rounded = p => ({ s: +p.s.toFixed(4), tx: +p.tx.toFixed(2), ty: +p.ty.toFixed(2) });
   const text = p => 'matrix('+p.s.toFixed(4)+' 0 0 '+p.s.toFixed(4)+' '+p.tx.toFixed(2)+' '+p.ty.toFixed(2)+')';
   const shown = rounded(c), heldBy = cam => { const k = shown.s / cam.s; return { k, tx: shown.tx - cam.tx * k, ty: shown.ty - cam.ty * k }; };
@@ -3580,7 +3642,7 @@ function tripApply(st, focus = null) {
   }
   // Forced redraws take the frame; otherwise the slot goes to the biggest overshoot. Sky objects read the slot in depthSky.
   const forced = mapForced || baseForced;
-  const chosen = slot && !forced ? requests.sort((a,b) => b.score-a.score)[0] || null : null;
+  chosen = slot && !forced ? requests.sort((a,b) => b.score-a.score)[0] || null : null;
   st.rasterBudget = slot ? { used: forced, sky: chosen?.kind === 'sky' ? chosen.object : null, baseForced } : false;
   E.rasterFrame = st.rasterBudget;
   const endScale = previous => {
@@ -3595,14 +3657,20 @@ function tripApply(st, focus = null) {
     const ahead = moving && glideHold && lastCam && c.s > lastCam.s ? Math.min(c.s / FRAME_PERF.scaleMin, Math.max(c.s,endScale(lastCam))) / c.s : 1;
     r.base = { ...c, s: c.s * ahead, tx: c.ax - (c.ax-c.tx)*ahead, ty: c.ay - (c.ay-c.ty)*ahead };
     tripWrite(E.cam, 'transform', text(r.base), true);
-    if (camVeil) tripWrite(camVeil, 'transform', E.cam.getAttribute('transform'), true);
+    r.layerCams = null;
     for (const [, cam] of layers) tripWrite(cam, 'transform', E.cam.getAttribute('transform'), true);
     if (st.rasterBudget) st.rasterBudget.used = true;
   }
   const paintK = c.s / r.base.s;
   const mapTransform = paintK === 1 && c.tx === r.base.tx && c.ty === r.base.ty ? 'none' : 'matrix('+paintK+',0,0,'+paintK+','+(c.tx-r.base.tx*paintK)+','+(c.ty-r.base.ty*paintK)+')';
   tripWrite(E.svg, 'transform', mapTransform);
-  if (veil) tripWrite(veil, 'transform', mapTransform);
+  if (veil) {
+    let destination=null;
+    if(moving&&!r.veilMoving){const glide=GLIDES.find(g=>st.P>=g.a&&st.P<g.b);destination=glide?tripState(lastCam&&st.P<lastCam.P?glide.a:glide.b).cam:st.exploreDestination||c;st.rasterDestination={...destination};}
+    if(!E.veilRaster||destination||!moving&&['s','tx','ty'].some(k=>E.veilRaster[k]!==c[k])){E.veilRaster={...(destination||c)};if(camVeil)tripWrite(camVeil,'transform',text(E.veilRaster),true);if(!moving)st.veilRestCommit=true;}
+    if(!moving&&r.veilMoving)st.veilRestCommit=true;r.veilMoving=moving;
+    const v=E.veilRaster,k=c.s/v.s;tripWrite(veil,'transform',k===1&&c.tx===v.tx&&c.ty===v.ty?'none':'matrix('+k+',0,0,'+k+','+(c.tx-v.tx*k)+','+(c.ty-v.ty*k)+')');
+  }
   for (const [svg] of layers) tripWrite(svg, 'transform', mapTransform);
   st.rasterS = r.base.s; st.gliding = tripGliding();
   if (B) {
@@ -3625,6 +3693,7 @@ function tripApply(st, focus = null) {
     if (moving && !rebase && zooming) r.soft = true;
     if (!st.exploreMoving && r.soft) r.promo = r.soft = false;
   }
+  }
   // Keep the displayed label state across camera commits. Its own size and tier
   // clock eases continuously, including across interrupted gestures/rebases.
   const settle = free ? 1 - Math.exp(-(st.exploreDt || 0) / (FRAME_PERF.labelSettle / 3)) : 1;
@@ -3639,7 +3708,8 @@ function tripApply(st, focus = null) {
   tripFocusFade(st);
   if (E.rows) tripLabels(st, labelFade);
   E.labels.forEach(label => {
-    const ideal = labelScale(label.kind,paint.s);
+    const raster= r.layerCams?.[(label.el.closest?.('svg')?.id||'map').replace(/^map-?/,'')||'map'] || paint;
+    const ideal = labelScale(label.kind,raster.s);
     // Follow the old epsilon rule in memory even while the visible label is held.
     // The held opening eases them too (pinch recheck, 2026-11-27): it no longer redraws every frame, so without the ease its
     // redraws and its landing popped the names by 10-15 % in one frame (cloud landing probe).
@@ -3653,7 +3723,7 @@ function tripApply(st, focus = null) {
     const k = free ? Math.max(trueSize * FRAME_PERF.scaleMin, Math.min(trueSize * FRAME_PERF.scaleMax, eased)) : eased;
     if (label.k !== k) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; }
   });
-  E.markers?.forEach(el => { tripWrite(el, 'transform', `scale(${COMB.markerPx / (12.4 * (el.parentElement?.parentElement?.dataset.screen ? 1 : paint.s))})`, true); const mk = el.parentElement?.parentElement, f = FINDS.find(f=>mk?.id === 'mk-'+f.id); if (f) { const half = COMB.markerPx / (2*c.s), cover = tripCardCover(st,[f.mark[0]-half,f.mark[1]-half,f.mark[0]+half,f.mark[1]+half]); tripWrite(mk,'opacity',(1-cover)*(1-(st.focusK||0))); tripWrite(mk,'visibility',cover>=.995||st.focusK>=1?'hidden':''); } });
+  E.markers?.forEach(el => { tripWrite(el, 'transform', el.closest?.('.legend-symbol')&&!(VIEW.h<=440&&VIEW.w>640)?'scale(1)':`scale(${COMB.markerPx / (12.4 * (el.parentElement?.parentElement?.dataset.screen ? 1 : paint.s))})`, true); const mk = el.parentElement?.parentElement, f = FINDS.find(f=>mk?.id === 'mk-'+f.id); if (f) { const half = COMB.markerPx / (2*c.s), cover = tripCardCover(st,[f.mark[0]-half,f.mark[1]-half,f.mark[0]+half,f.mark[1]+half]); tripWrite(mk,'opacity',(1-cover)*(1-(st.focusK||0))); tripWrite(mk,'visibility',cover>=.995||st.focusK>=1?'hidden':''); } });
   E.ticks?.forEach(el => tripWrite(el, 'stroke-width', Math.min(+el.dataset.weight * paint.s, +el.dataset.weight * VIEW.s0), true));
   E.secondary.forEach(group => { tripWrite(group, 'opacity', ''); tripWrite(group, 'visibility', labelFade === 0 ? 'hidden' : 'visible'); });
   E.secondaryText?.forEach(t => { const fade = t.group.classList.contains('wf-result') && document.documentElement.classList.contains('jm-way') ? 1 : labelFade; tripWrite(t.el, 'fillOpacity', t.fill * fade); tripWrite(t.el, 'strokeOpacity', t.stroke * fade); });
@@ -3705,7 +3775,7 @@ function tripApply(st, focus = null) {
     tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
     const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
-  return (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.clockFading || !!E.baseRaster?.held || requests.length > (mapForced ? 1 : 0) + (baseForced ? 1 : 0) + (chosen ? 1 : 0);
+  return focusPending || (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.clockFading || !!E.baseRaster?.held || requests.length > (mapForced ? 1 : 0) + (baseForced ? 1 : 0) + (chosen ? 1 : 0);
 }
 const n2 = v => v.toFixed(2);
 function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }
@@ -4941,14 +5011,16 @@ function showPop(owner, anchor, html, cls = '', side = 'auto') {
   const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height];
   // Measure drawing ink once at open. Project its map-space box through the
   // existing camera each frame; never read layout during a pan or zoom.
-  const ink = owner.el?.querySelector('.hd-chest,.hn-horn,.jg-head,.rv-tree,.ls-rock') || owner.el;
+  const inkSelector='.hd-chest,.hn-horn,.jg-head,.rv-tree,.ls-rock';
+  const ink=owner.el?.querySelector(inkSelector)||[...document.querySelectorAll('[data-anim-source="'+owner.el?.id+'"]')].map(g=>g.querySelector(inkSelector)).find(Boolean)||owner.el;
+  const inkCam=ink?.closest?.('svg')?.querySelector('[id^="cam"]')||FD.svg.querySelector('#cam');
   FD.popBox = null;FD.popShape=null;
   if (ink?.getBBox && ink.getCTM?.()) {
-    const b = ink.getBBox(), matrix = FD.svg.querySelector('#cam').getCTM().inverse().multiply(ink.getCTM());
+    const b = ink.getBBox(), matrix = inkCam.getCTM().inverse().multiply(ink.getCTM());
     const points = [[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]].map(([x,y])=>[matrix.a*x+matrix.c*y+matrix.e,matrix.b*x+matrix.d*y+matrix.f]);
     FD.popBox = [Math.min(...points.map(p=>p[0])),Math.min(...points.map(p=>p[1])),Math.max(...points.map(p=>p[0])),Math.max(...points.map(p=>p[1]))];
     // The raised horn turns, so the corners of its box reach far past the drawing: sample its outline once here instead.
-    if(owner.id==='horn'){const pts=[];ink.querySelectorAll('path').forEach(p=>{const L=p.getTotalLength?.()||0,n=Math.max(8,Math.ceil(L));if(L>0)for(let i=0;i<=n;i++){const q=p.getPointAtLength(L*i/n);pts.push([q.x,q.y]);}});FD.popShape={b,pts,matrix:FD.svg.querySelector('#cam').getCTM().inverse().multiply(ink.parentElement.getCTM())};}
+    if(owner.id==='horn'){const pts=[];ink.querySelectorAll('path').forEach(p=>{const L=p.getTotalLength?.()||0,n=Math.max(8,Math.ceil(L));if(L>0)for(let i=0;i<=n;i++){const q=p.getPointAtLength(L*i/n);pts.push([q.x,q.y]);}});FD.popShape={b,pts,matrix:inkCam.getCTM().inverse().multiply(ink.parentElement.getCTM())};}
   }
   // A popup stays clear of the step buttons and the timeline: their boxes are read once here, when it opens, never in the
   // frame loop. A bar in the bottom half is a floor; a bar in the top half (the end and explore bar on a computer) is a ceiling.
@@ -5163,6 +5235,7 @@ function findCapture(e) {
 
 
 
+
 const exploreLayer = (cam, end) => { const c = cam.s / end.s; return { c, dx: cam.tx - end.tx * c, dy: cam.ty - end.ty * c }; };
 const exploreLayerPoint = (p, layer) => [p[0] * layer.c + layer.dx, p[1] * layer.c + layer.dy];
 const exploreLayerInverse = (p, layer) => [(p[0] - layer.dx) / layer.c, (p[1] - layer.dy) / layer.c];
@@ -5193,7 +5266,7 @@ function exploreGlide(cam, velocity, dt, bounds, view, fit, top, keep) {
 }
 
 const EX = { active: false, k: 0, cam: null, target: null, end: null, bounds: null, keep: null, view: null, fit: 1, top: 1,
-  motion: null, velocity: [0, 0], pointers: new Map(), gesture: null, samples: [], layer: { c: 1, dx: 0, dy: 0 },
+  visit: null, visitSerial: 0, motion: null, velocity: [0, 0], pointers: new Map(), gesture: null, samples: [], layer: { c: 1, dx: 0, dy: 0 },
   stage: null, world: null, journey: null, rm: true, hint: null, hintUsed: false, hintLeft: 0, changed: false, suppress: false, suppressTimer: null, owners: new Set(), footer: 1, departing: false, arriving: false };
 const exploreActive = () => EX.active;
 const exploreBusy = () => EX.active || EX.k > 0;
@@ -5212,6 +5285,7 @@ function exploreClearPointers() {
   EX.pointers.clear(); EX.owners.clear(); EX.gesture = null; EX.samples = []; EX.stage?.classList.remove('is-dragging');
 }
 function exploreReset() {
+  EX.visit = null;
   exploreSuppressClear();
   if (!EX.active && !EX.k && !EX.departing) return;
   EX.active = false; EX.k = 0; EX.departing = false; EX.arriving = false; EX.motion = null; EX.velocity = [0, 0]; EX.cam = EX.end && { ...EX.end }; EX.target = EX.cam && { ...EX.cam };
@@ -5221,6 +5295,7 @@ function exploreReset() {
 }
 // A cut ends input immediately, retaining the painted view only until its cover is opaque and P changes.
 function exploreDepart() {
+  EX.visit = null;
   exploreSuppressClear();
   if (!exploreBusy()) return;
   EX.active = false; EX.departing = true; EX.motion = null; EX.velocity = [0, 0];
@@ -5246,6 +5321,7 @@ function exploreResume(cam) {
   explorePromote(); exploreNotify(); return true;
 }
 function exploreEnd() {
+  if(EX.active)cardsClose(); EX.visit=null;
   exploreSuppressClear();
   if (!EX.active) return false;
   if (document.activeElement?.closest?.('.find,.pop')) document.getElementById('go')?.querySelector('.go-back')?.focus({preventScroll:true});
@@ -5280,12 +5356,28 @@ function exploreResize() {
   EX.changed = true;
 }
 function exploreTakeover() {
+  if(EX.visit) { cardsClose(EX.visit.i); EX.visit.closed=true; }
   if (EX.motion?.from) {
     // cam is the last painted blend: input takes over exactly there, while the map reveal finishes.
     EX.motion = EX.k < 1 ? { from: null, to: null, k0: EX.k, k1: 1, elapsed: 0, duration: EXPLORE.in * (1 - EX.k) } : null;
     EX.target = { ...EX.cam };
   }
   EX.velocity = [0, 0]; exploreHintOff();
+}
+// Shield visits retain explore's camera owner and end progress throughout the arrival.
+function exploreVisit(i, target) {
+  if(!EX.active)return false;
+  cardsClose();exploreSuppressClear();exploreClearPointers();exploreHintOff();EX.velocity=[0,0];
+  const from={...EX.cam},world=c=>[(VIEW.w/2-c.tx)/c.s,(VIEW.h/2-c.ty)/c.s],a=world(from),b=world(target),screens=Math.hypot(b[0]-a[0],b[1]-a[1])*from.s/VIEW.w,duration=Math.min(2.2,1.2+.25*screens);
+  const instant=EX.rm||window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  EX.target={s:target.s,tx:target.tx,ty:target.ty};
+  const motion={from,to:{...EX.target},k0:1,k1:1,elapsed:instant?duration:0,duration,visit:++EX.visitSerial};
+  EX.visit={i,token:motion.visit,motion,closed:false};EX.motion=instant?null:motion;if(instant)EX.cam={...EX.target};
+  EX.k=1;EX.changed=true;explorePromote();return true;
+}
+function exploreCloseVisit(i) {
+  if(!EX.visit||EX.visit.i!==i)return false;
+  EX.visit.closed=true;if(EX.motion?.visit){EX.motion=null;EX.target={...EX.cam};}EX.changed=true;return true;
 }
 function exploreApply(st, dt) {
   delete st.coverRects;
@@ -5306,7 +5398,7 @@ function exploreApply(st, dt) {
   }
   if (EX.active && !EX.motion?.from && !EX.gesture?.dragged) {
     if (EX.velocity.some(Boolean)) { const glide = exploreGlide(EX.cam, EX.velocity, dt, EX.bounds, EX.view, EX.fit, EX.top, EX.keep); EX.cam = glide.cam; EX.target = { ...EX.cam }; EX.velocity = glide.velocity; }
-    else {
+    else if (['s','tx','ty'].some(key=>EX.cam[key]!==EX.target[key])) {
       const q = 1 - Math.exp(-dt / EXPLORE.ease);
       EX.cam = exploreBound({ s: lerp(EX.cam.s, EX.target.s, q), tx: lerp(EX.cam.tx, EX.target.tx, q), ty: lerp(EX.cam.ty, EX.target.ty, q) });
       if (Math.abs(EX.cam.s / EX.target.s - 1) < FRAME_PERF.scaleEnd && Math.abs(EX.cam.tx - EX.target.tx) < FRAME_PERF.positionEnd && Math.abs(EX.cam.ty - EX.target.ty) < FRAME_PERF.positionEnd) EX.cam = { ...EX.target };
@@ -5323,6 +5415,7 @@ function exploreApply(st, dt) {
   if (EX.k > 0 || EX.active) {
     st.cam = { ...EX.cam, ax: VIEW.w / 2, ay: VIEW.h / 2 };
     st.cardK = st.cardK.map(() => 0); st.cardOpen = 0;
+    if(EX.visit){const v=EX.visit;st.visitI=v.i;st.visitToken=v.token;st.exploreDestination=v.motion.to;st.cardK[v.i]=v.closed?0:smooth(0,.5,v.motion.elapsed-v.motion.duration+.5);st.cardOpen=st.cardK[v.i];st.dim=lerp(1,CAMERA.holdDim,st.cardOpen);}
     EX.layer = exploreLayer(st.cam, EX.end);
   } else EX.layer = { c: 1, dx: 0, dy: 0 };
   exploreWorldStyle('transform', EX.k > 0 || EX.active ? `translate(${EX.layer.dx}px,${EX.layer.dy}px) scale(${EX.layer.c})` : 'none'); explorePromote();
@@ -5352,7 +5445,7 @@ function exploreBuild({ stage, world, journey, rm }) {
   window.addEventListener('wheel', e => {
     if (!EX.active || e.defaultPrevented) return;
     if (e.target?.closest?.('.sheet.on')) { e.preventDefault(); return; }
-    if (e.target?.closest?.('.face')) return;
+    if (e.target?.closest?.('.face')&&!EX.visit) return;
     e.preventDefault(); exploreTakeover();
     const dy = Math.max(-EXPLORE.wheelMax, Math.min(EXPLORE.wheelMax, e.deltaY * (e.deltaMode === 1 ? EXPLORE.linePx : e.deltaMode === 2 ? VIEW.h : 1)));
     const factor = Math.exp(-dy * (e.ctrlKey ? EXPLORE.pinchWheel : EXPLORE.wheel));
@@ -5397,6 +5490,7 @@ function exploreBuild({ stage, world, journey, rm }) {
   window.addEventListener('keydown', exploreSuppressClear, true);
   window.addEventListener('keydown', e => {
     if (!EX.active || e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if(e.key==='Escape'&&cardsClose()){e.preventDefault();return;}
     if (e.key === 'Escape' || e.key === '0') { e.preventDefault(); exploreEnd(); return; }
     if (e.target?.closest?.('.sheet.on, input, textarea, select')) return;
     const arrows = { ArrowLeft: [1, 0], ArrowRight: [-1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
@@ -5641,11 +5735,8 @@ function stepsJump(target, after, resume = null) {
 }
 // The card supplies its last painted camera before its fold changes anything.
 function stepsReturnFromExplore(index, cam) {
-  if (SC.rm || JOURNEY.moving || SC.exploreStop !== STOPS[index]?.id) return false;
-  SC.exploreStop = null;
-  stepsDestination(); stepsRelease();
-  stepsJump(stepsEnd, null, { s: cam.s, tx: cam.tx, ty: cam.ty });
-  return true;
+  if(!exploreActive()||SC.exploreStop!==STOPS[index]?.id)return false;
+  SC.exploreStop=null;return exploreCloseVisit(index);
 }
 function stepsNavigate(target, opts = {}) {
   if (SC.cut) return;
@@ -5664,6 +5755,7 @@ function stepsGo(id, opts = {}) {
   const beat = BEATS.find(b => b.id === id); if (!beat) return;
   // A shield pressed during its own arrival keeps the current landing clock.
   if (!opts.instant && STOPS.some(s => s.id === id) && SC.move && SC.move.P1 === beat.P) return;
+  if(exploreActive()&&STOPS.some(s=>s.id===id)&&!opts.instant){SC.exploreStop=id;stepsRelease();exploreVisit(STOPS.findIndex(s=>s.id===id),tripState(beat.P).cam);return;}
   SC.exploreStop = STOPS.some(s => s.id === id) && (exploreActive() || SC.exploreStop) ? id : null;
   stepsRelease(); if (SC.rm && SC.reducedGo) { SC.reducedGo(id); stepsReadScroll(); return; } stepsNavigate(beat.P, { ...opts, start: id === 'map' });
 }
@@ -5907,6 +5999,7 @@ function stepsReduced(on, i = 0) {
 
 const CD = { list: [], W: 640, craft: null, onGo: null, rm: false, closed: null, last: null, dt: 0 };
 const cardsWrites = new WeakMap();
+const clampCard = v=>Math.max(0,Math.min(1,v));
 function cardsStyle(el, key, value) {
   const text = String(value), cache = cardsWrites.get(el) || {}, old = cache[key];
   if (old?.text === text && el.style[key] === old.value) return;
@@ -5944,6 +6037,7 @@ function cardsBuild(container, onGo, rm = false) {
 <button class="c-btn" type="button" aria-label="${esc(COPY.caseStudy + ': ' + s.name)}">${COPY.caseStudy}${arrowSvg}</button></div></div></div></div></div>`;
     a.querySelectorAll('.c-crafts li').forEach((li, j) => { li.setAttribute('aria-label', (s.crafts.includes(CRAFTS[j]) ? COMB.craftLit : COMB.craftUnlit).replace('{craft}', CRAFTS[j])); li.classList.toggle('craft-used', s.crafts.includes(CRAFTS[j])); });
     a.querySelector('.st-btn').addEventListener('click', e => {
+      if(CD.last?.exploring&&CD.last.cardK[i]>0&&!(CD.closed?.i===i&&CD.closed.to===0)){cardsClose(i);return;}
       if (CD.last?.kind === 'hold' && CD.last.i === i && !JOURNEY.moving) {
         if (CD.closed?.i === i && CD.closed.to === 0) { CD.closed = { ...CD.closed, from: CD.closed.k, to: 1, elapsed: 0 }; CD.list[i].reopenFocus = e.detail !== 1; }
         else cardsClose(i);
@@ -5982,10 +6076,10 @@ function cardsDepthConfig(c) {
 }
 const cardsSetCraft = mask => { CD.craft = mask; CD.list.forEach(c => c.el.style.transition = 'opacity .3s'); };
 
-function cardsClose(index = CD.last?.i) {
+function cardsClose(index = CD.last?.cardK.findIndex(k=>k>0)) {
   const st = CD.last;
-  if (CD.rm || JOURNEY.moving || !st || st.kind !== 'hold' || st.cardK[index] <= 0 || (CD.closed?.to === 0)) return false;
-  CD.closed = { i: index, P: st.P, k: st.cardK[index], from: st.cardK[index], to: 0, elapsed: 0 };
+  if (CD.rm || JOURNEY.moving || !st || !st.exploring&&st.kind !== 'hold' || !(st.cardK[index]>0) || CD.closed?.to===0&&CD.closed.i===index) return false;
+  CD.closed = { i: index, P: st.P, k: st.cardK[index], from: st.cardK[index], to: 0, elapsed: 0, explore:!!st.exploring, visitToken:st.visitToken };
   if (CD.list[index].el.contains(document.activeElement)) CD.list[index].btn.focus({ preventScroll: true });
   stepsReturnFromExplore(index, st.cam);
   return true;
@@ -5995,16 +6089,17 @@ function cardsOverride(st, dt, moving) {
   CD.dt = dt;
   const closed = CD.closed; let changed = false;
   if (closed) {
-    if (st.kind !== 'hold' || st.i !== closed.i || (closed.leaving && !moving && st.P === closed.P)) { CD.closed = null; changed = true; }
+    if (closed.explore ? !st.exploring || st.visitI===closed.i&&st.visitToken!==closed.visitToken : st.kind !== 'hold' || st.i !== closed.i || (closed.leaving && !moving && st.P === closed.P)) { CD.closed = null; changed = true; }
     else {
       if (moving || st.P !== closed.P) closed.leaving = true;
       const before = closed.k;
-      closed.elapsed = Math.min(CARD_CLOSE.time, closed.elapsed + dt); closed.k = lerp(closed.from, closed.to, easeIO(closed.elapsed / CARD_CLOSE.time));
+      closed.elapsed = Math.min(.5, closed.elapsed + dt); closed.k = lerp(closed.from, closed.to, smooth(0,.5,closed.elapsed));
       st.dim = lerp(1, st.dim, closed.k);
-      st.cardK[closed.i] *= closed.k; st.cardOpen = Math.max(...st.cardK); changed = before !== closed.k;
-      if (closed.to === 1 && closed.elapsed === CARD_CLOSE.time) CD.closed = null;
+      if(closed.explore)st.cardK[closed.i]=closed.k;else st.cardK[closed.i] *= closed.k; st.cardOpen = Math.max(...st.cardK); changed = before !== closed.k;
+      if (closed.to === 1 && closed.elapsed === .5) CD.closed = null;
     }
   }
+  if(st.exploring){st.cardOpen=Math.max(...st.cardK);st.dim=lerp(1,CAMERA.holdDim,st.cardOpen);}
   CD.last = st; return changed;
 }
 
@@ -6016,7 +6111,7 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     if (JOURNEY.moving && c.face.contains(document.activeElement)) document.querySelector(JOURNEY.direction === 'back' ? '.go-back' : '.go-next')?.focus({ preventScroll: true });
     if (close) {
       if (JOURNEY.moving && document.activeElement === close) document.getElementById('go')?.querySelector('.go-next')?.focus({ preventScroll: true });
-      const inert = JOURNEY.moving || st.cardK[i] < .96 || st.exploring || st.exploreK > 0;
+      const inert = JOURNEY.moving || st.cardK[i] < (st.exploring?1:.96);
       if (close.inert !== inert) close.inert = inert;
     }
     const W = c.W || CD.W, H = c.H, oc = c.place || { x: VIEW.w / 2, y: VIEW.h / 2 };
@@ -6051,6 +6146,10 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const target = [cfg.tilt * (1 - smooth(...cfg.open, e)) - ly * cfg.ptrTilt[1] * plate, lx * cfg.ptrTilt[0] * plate, -lx * cfg.shift * plate, -ly * cfg.shift * plate];
     const nextTilt = c.tilt.map((v, j) => lift ? v + (target[j] - v) * cfg.ease : 0);
     c.tilt = lift && nextTilt.every((v,j) => Math.abs(v-target[j]) < cfg.flat) ? target : nextTilt;
+    const folding=CD.closed?.i===i;
+    if(folding&&c.openPoses?.length){const poses=c.openPoses;let j=poses.findIndex(p=>p.k>=e);if(j<0)j=poses.length-1;const a=poses[Math.max(0,j-1)],b=poses[j],q=b.k===a.k?1:(e-a.k)/(b.k-a.k);c.tilt=a.tilt.map((v,i)=>lerp(v,b.tilt[i],clampCard(q)));}
+    else if(e>(c.lastK??0)){if(!c.lastK)c.openPoses=[];(c.openPoses||=[]).push({k:e,tilt:c.tilt.slice()});}
+    c.lastK=e;
     const [rx, ryTilt, sx, sy] = c.tilt;
     const join = e > 0 ? cardsTailLayout({ W,H,k,cx:cx-p[0],cy:cy-py,stonePx,rx,ryTilt,sx,sy,lift,e,phone:VIEW.phone }) : { cx:cx-p[0],cy:cy-py,visible:false };
     cx = join.cx + p[0]; cy = join.cy + py;
@@ -6071,7 +6170,7 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     if (c.tail) cardsTailFrame(c, join);
     const state = e > .96 ? 'open' : e < .02 ? 'rest' : 'moving';
     if (state !== c.state) { c.state = state; c.el.dataset.state = state; }
-    const faceInert = state !== 'open' || JOURNEY.moving || st.exploring || st.exploreK > 0;
+    const faceInert = state !== 'open' || JOURNEY.moving || st.exploring&&st.cardK[i]<1;
     if (c.face.inert !== faceInert) c.face.inert = faceInert;
     // A stone mark is in the tab order only at rest and on screen (the keyboard never lands on a stop it cannot see).
     const at = MAP.waypoints[c.stop.w], half = COMB.target / (2 * st.cam.s), visible = tripVisible(st, [at[0]-half, at[1]-half, at[0]+half, at[1]+half]);
@@ -6084,7 +6183,7 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     if (c.btn.inert !== !visible) { if (!visible && document.activeElement === c.btn) document.querySelector('.go-next')?.focus({ preventScroll: true }); c.btn.inert = !visible; c.btn.setAttribute('aria-hidden', !visible); }
     if (c.reopenFocus && (JOURNEY.moving || st.kind !== 'hold' || st.i !== i)) c.reopenFocus = false;
     if (c.reopenFocus && state === 'open') { c.reopenFocus = false; c.el.querySelector('.c-close').focus({ preventScroll: true }); }
-    if (c.keyboardOpen && state === 'open' && !JOURNEY.moving) { c.keyboardOpen = false; close?.focus({ preventScroll: true }); }
+    if (c.keyboardOpen && state === 'open' && !JOURNEY.moving && !close?.inert) { c.keyboardOpen = false; close?.focus({ preventScroll: true }); }
   });
   CD.previousP = JOURNEY.P;
 }
@@ -6617,16 +6716,22 @@ function findWay(svg) {
       attr(document.getElementById('veil-fill'), 'fill-opacity', 1 - FIND_PLAY.way.dim);
       for (const rect of [document.getElementById('veil-fill'), document.getElementById('veil-mask-frame'), document.getElementById('veil-mask'), document.getElementById('veil-lines-frame'), document.getElementById('veil-lines-mask')])
         for (const [key, value] of Object.entries({ x: frame[0], y: frame[1], width: frame[2]-frame[0], height: frame[3]-frame[1] })) attr(rect, key, value);
-      o.veilUpdate = force => {
-        const s = FD.st?.cam.s || VIEW.s0;
-        if (!o.mask || !force && o.veilScale && Math.abs(s/o.veilScale-1) <= FIND_PLAY.way.veilZoom) return;
+      o.veilUpdate = destination => {
+        const s = destination?.s || FD.st?.cam.s || VIEW.s0;
+        if (!o.mask) return;
         o.veilScale = s; holes.replaceChildren();
         const cuts=document.getElementById('veil-line-cuts'); cuts.replaceChildren(findSvg('circle',{cx:f.x,cy:f.y,r:FIND_PLAY.way.wordRing+1/s}));
+        const W = FIND_PLAY.way;
         let compassRadius=FIND_PLAY.way.wordRing+2/s;
-        for(const word of [...words,tally]){const b=word.getBoundingClientRect(),a=toMap([b.left-3,b.top-3]),z=toMap([b.right+3,b.bottom+3]);if(b.width){cuts.appendChild(findSvg('rect',{x:a[0],y:a[1],width:z[0]-a[0],height:z[1]-a[1]}));for(const x of[a[0],z[0]])for(const y of[a[1],z[1]])compassRadius=Math.max(compassRadius,Math.hypot(x-f.x,y-f.y));}}
+        for(const [i,word] of [...words,tally].entries()) { let a,z,width;
+          if (destination) {
+            const b=word.getBBox(), old=+word.getAttribute('font-size')||1, size=i<words.length?COMB.wordPx/s:Math.max(W.tally[1],W.tally[3]/s), k=size/old, out=W.wordRing+W.wordGap/s, cap=COMB.wordPx/s*W.wordCap, ls=+word.getAttribute('letter-spacing')||0;
+            const x=i<words.length?[ls/2,out,ls/2,ls-out][i]:W.tally[2]/2, y=i<words.length?[-out,cap/2,out+cap,cap/2][i]:-(out+cap+W.wordGap/s);
+            a=[f.x+x+(b.x-(+word.getAttribute('x')||0))*k-3/s,f.y+y+(b.y-(+word.getAttribute('y')||0))*k-3/s]; z=[a[0]+b.width*k+6/s,a[1]+b.height*k+6/s]; width=b.width;
+          } else { const b=word.getBoundingClientRect();a=toMap([b.left-3,b.top-3]);z=toMap([b.right+3,b.bottom+3]);width=b.width; }
+          if(width){cuts.appendChild(findSvg('rect',{x:a[0],y:a[1],width:z[0]-a[0],height:z[1]-a[1]}));for(const x of[a[0],z[0]])for(const y of[a[1],z[1]])compassRadius=Math.max(compassRadius,Math.hypot(x-f.x,y-f.y));}}
         const hole = (x,y,r) => holes.appendChild(findSvg('circle', { cx:x, cy:y, r, fill:'url(#veil-soft)' }));
         // The clear core contains the entire instrument, including screen-sized words and title.
-        const W = FIND_PLAY.way;
         hole(f.x, f.y, compassRadius / W.veilCore);
         STOPS.forEach((stop,i) => {
           if (!o.mask[i]) return;
@@ -6635,22 +6740,22 @@ function findWay(svg) {
           if (h) boxes.push([h.x-22,h.y-30,h.x+22,h.y+12]);
           // Labels use their actual displayed geometry, converted back through the shared camera.
           for (const row of mapLabelRows()) if (row.stop === stop.id) {
-            const b = document.querySelector('.label-anchor[data-row="'+row.i+'"]').getBoundingClientRect(), a = toMap([b.left,b.top]), z = toMap([b.right,b.bottom]); boxes.push([...a,...z]);
+            if (destination) {
+              const r=TRIP_EL.rows?.find(r=>r.row.i===row.i), b=r?.box, k=labelScale(row.kind,s), q=Math.max(0,Math.min(1,(s/VIEW.s0-1.05)/.65)), blend=1-q*q*(3-2*q), at=r?.base?r.base.map((v,i)=>lerp(v,r.overview[i],blend)):[row.x,row.y];
+              if(b)boxes.push([at[0]+b.x*k,at[1]+b.y*k,at[0]+(b.x+b.width)*k,at[1]+(b.y+b.height)*k]);
+            } else { const b = document.querySelector('.label-anchor[data-row="'+row.i+'"]').getBoundingClientRect(), a = toMap([b.left,b.top]), z = toMap([b.right,b.bottom]); boxes.push([...a,...z]); }
           }
           const x0=Math.min(...boxes.map(b=>b[0])),y0=Math.min(...boxes.map(b=>b[1])),x1=Math.max(...boxes.map(b=>b[2])),y1=Math.max(...boxes.map(b=>b[3]));
           hole((x0+x1)/2,(y0+y1)/2,(Math.hypot(x1-x0,y1-y0)/2 + W.veilPad/s)/W.veilCore);
         });
       };
-      const observer = new MutationObserver(() => o.veilUpdate(false));
-      observer.observe(document.getElementById('cam'), { attributes:true, attributeFilter:['transform'] });
-      observer.observe(svg, { attributes:true, attributeFilter:['style'] });
-      veil.addEventListener('transitionend', e => { if (e.propertyName === 'opacity' && !o.mask) { veil.style.visibility='hidden'; veil.style.willChange=svg.style.willChange; } });
+      veil.addEventListener('transitionend', e => { if (e.propertyName === 'opacity' && !o.mask) { veil.style.visibility='hidden'; veil.style.willChange=svg.style.willChange; const lines=document.getElementById('map-lines');if(lines)lines.style.visibility='hidden'; } });
     }
-    o.veilUpdate(true);
+    o.veilDirty = true;
     if (mask) { veil.style.visibility='visible'; veil.style.willChange = svg.style.willChange || 'opacity'; }
     veil.style.opacity = mask ? 1 : 0;
     if (FD.rm && !mask) { veil.style.visibility='hidden'; veil.style.willChange=svg.style.willChange; }
-    queueMicrotask(()=>o.veilUpdate(true));
+    const lines = document.getElementById('map-lines'); if (lines) { lines.style.opacity = mask ? 1 : 0; if (mask) lines.style.visibility = 'visible'; else if (FD.rm) lines.style.visibility = 'hidden'; }
   };
   const wayResultView = mask => { const points = [[f.x - 70, f.y - 60], [f.x + 70, f.y + 105], ...STOPS.filter((s,i) => mask[i]).map(s => MAP.waypoints[s.w])], xs = points.map(p=>p[0]), ys = points.map(p=>p[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys); return [(x0+x1)/2, (y0+y1)/2, Math.max(x1-x0,y1-y0)/2+40, 0]; };
   const startLines = () => { o.lineTs = FD.now; o.linePhase = 'grow'; o.lines.forEach((l, i) => { l.lit = !!o.mask?.[i]; l.arrived = false; attr(l.line, 'stroke-dasharray', o.craft === CRAFTS.length ? 'none' : FIND_PLAY.way.dash.join(' ')); }); };
@@ -6661,11 +6766,11 @@ function findWay(svg) {
     words.forEach((w, j) => w.classList.toggle('on', j === i || i === CRAFTS.length));
     arms.forEach((a, j) => a.classList.toggle('on', j === i || i === CRAFTS.length));
     const mask = i < 0 ? null : i === CRAFTS.length ? wayAllStops() : STOPS.map(s => s.crafts.includes(CRAFTS[i]));
-    if (i >= 0) { o.kept = true; if (i < CRAFTS.length && !o.picked.includes(i)) o.picked.push(i); o.unlocked = o.picked.length === CRAFTS.length && wayAllStops().some(Boolean); found(o.id); opened(o); }
+    if (i >= 0) { o.kept = true; if (i < CRAFTS.length && !o.picked.includes(i)) o.picked.push(i); const unlocked = o.picked.length === CRAFTS.length && wayAllStops().some(Boolean); if(unlocked&&!o.unlocked)o.ringTs=FD.now; o.unlocked=unlocked; found(o.id); opened(o); }
     applyMask(mask);
     // With a craft chosen the lines have to be seen arriving, so on a wide screen the camera pulls back for them.
     document.documentElement.classList.toggle('jm-way', i >= 0);
-    if (JOURNEY.focus === o.id) stepsFocus(o.id, i < 0 ? findView(o.id) : wayResultView(mask));
+    if (JOURNEY.focus === o.id) { const view=i<0?findView(o.id):wayResultView(mask); TRIP_EL.focusAim={id:o.id,view,serial:(TRIP_EL.focusAim?.serial||0)+1}; stepsFocus(o.id,view); }
     if (FD.say) FD.say.textContent = i < 0 ? f.label : findFormat(COMB.waySay, { craft: FIND_COPY.crafts[i] || FIND_COPY.wayAll.split(':')[0], names: STOPS.filter((s,j) => mask?.[j]).map(s => s.short).join(', ') });
     tally.textContent = i < 0 ? '' : i === CRAFTS.length ? findFormat(FIND_COPY.wayAll, { names: STOPS.filter((s, j) => mask[j]).map(s => s.short + ', ' + s.dates).join('; ') }) : findFormat(FIND_COPY.wayTally, { craft: FIND_COPY.crafts[i], n: mask.filter(Boolean).length, t: STOPS.length });
     if (FD.hint) FD.hint.textContent = i < 0 ? FIND_COPY.hints.wayfinder : FIND_COPY.wayPickedHint;
@@ -6698,15 +6803,15 @@ function findWay(svg) {
   o.hear = () => { o.hearTs = FD.now; o.hearAngle = o.angle; };
   o.tick = (t, dt) => {
     const W = FIND_PLAY.way, p = attend(o, W.near);
-    let target = o.craft >= 0 && o.craft < CRAFTS.length ? o.craft * FIND_PLAY.kit.turn / CRAFTS.length : o.craft === CRAFTS.length ? o.angle + W.allSpeed * dt : p && o.awake ? Math.atan2(p[0] - f.x, f.y - p[1]) * FIND_PLAY.kit.deg / Math.PI : FD.rm ? 0 : Math.sin(t * W.drift[0]) * W.drift[1] + Math.sin(t * W.drift[2]) * W.drift[3];
+    let target = o.craft >= 0 && o.craft < CRAFTS.length ? o.craft * FIND_PLAY.kit.turn / CRAFTS.length : o.craft === CRAFTS.length ? o.angle + W.allSpeed * dt : p && o.awake ? Math.atan2(p[0] - f.x, f.y - p[1]) * FIND_PLAY.kit.deg / Math.PI : 0;
     const hearing = t - o.hearTs < W.spin;
     if (hearing && !FD.rm) { o.angle = o.hearAngle + FIND_PLAY.kit.turn * ease((t - o.hearTs) / W.spin); o.speed = 0; }
     else if (o.craft === CRAFTS.length && !FD.rm) { o.angle += W.allSpeed * dt; o.speed = W.allSpeed; }
-    else if (!o.drag) { const diff = findAngleDelta(o.angle, target); if (FD.rm) o.angle = target; else { o.speed += (W.stiff * diff - W.damp * o.speed) * dt; o.angle += o.speed * dt; } }
-    attr(needle, 'transform', `rotate(${o.angle})`);
+    else if (!o.drag) { const diff = findAngleDelta(o.angle, target); if (FD.rm) o.angle = target; else { o.speed += (W.stiff * diff - W.damp * o.speed) * dt; o.angle += o.speed * dt; if(Math.abs(findAngleDelta(o.angle,target))<.05&&Math.abs(o.speed)<.5){o.angle+=findAngleDelta(o.angle,target);o.speed=0;} } }
+    attr(needle, 'transform', `rotate(${+(Math.round(o.angle/.05)*.05).toFixed(2)})`);
     const pulse = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - (o.pickTs ?? -Infinity)) / W.pulse[1]));
     arms.forEach((arm, i) => attr(arm, 'transform', `rotate(${i * FIND_PLAY.kit.turn / CRAFTS.length}) scale(${1 + (W.pulse[0] - 1) * pulse * (o.craft === i || o.craft === CRAFTS.length ? 1 : 0)})`));
-    if (o.kept && !FD.rm) { o.runesAngle += W.runes * dt; attr(runes, 'transform', `rotate(${o.runesAngle})`); }
+    // The rune ring retains its angle, with no idle clock.
     o.compassFrame ??= () => {
       const W = FIND_PLAY.way;
     // The words keep one screen size and one screen gap off the ring at every zoom (Dan on preview 21: they sat far out).
@@ -6718,8 +6823,9 @@ function findWay(svg) {
     attr(tally, 'font-size', Math.max(W.tally[1], W.tally[3] / (FD.st.rasterS || FD.st.cam.s))); attr(tally, 'x', W.tally[2] / 2); attr(tally, 'y', -(out + cap + W.wordGap / (FD.st.rasterS || FD.st.cam.s)));
     };
     if (o.onScreen && (!(FD.st.gliding || FD.st.exploreMoving) || FD.st.rasterRebased)) o.compassFrame();
+    if (o.mask && o.veilUpdate && (FD.st.rasterDestination || FD.st.veilRestCommit || o.veilDirty && !FD.st.gliding && !FD.st.exploreMoving)) { o.veilUpdate(FD.st.rasterDestination || null); o.veilDirty=false; }
     attr(ring, 'opacity', o.unlocked ? 1 : 0);
-    if (o.unlocked && !FD.rm) attr(ring, 'transform', `scale(${lerp(W.ring[0], W.ring[1], (1 - Math.cos(t * Math.PI * 2 / W.ring[2])) / 2) / W.ring[0]})`);
+    if (o.unlocked && !FD.rm) attr(ring, 'transform', `scale(${lerp(W.ring[0], W.ring[1], Math.sin(Math.PI*clamp01((t-(o.ringTs??-Infinity))/W.ring[2]))) / W.ring[0]})`);
     if (o.linePhase === 'retract') { const q = FD.rm ? 1 : clamp01((t - o.lineTs) / W.line); o.lines.forEach((l, i) => l.v = o.retract[i] * (1 - ease(q))); if (q === 1) queueMicrotask(startLines); }
     let order = 0;
     o.lines.forEach(l => {
@@ -7036,12 +7142,19 @@ function findSerpent(svg) {
   const body = (document.getElementById('b-sea') || svg).querySelector('.jo-body'), segments = [...body.querySelectorAll('.jo-surface')], ripple = body.querySelector('.jo-release-ripple');
   const swells = [...body.querySelectorAll('.jg-swell')].map(g => ({ g, gulp: g.querySelector('.jg-gulp'), lines: g.querySelector('.jg-file-lines'), hearPath: g.querySelector('.jg-hear'), live: false, u: 0 }));
   const o = { id: f.id, el, stage: 'ready', pokes: 0, round: 0, kept: false, ts: -Infinity, headAngle: 0, headTurn: 0, jawAngle: 0, tailOut: 0, queued: 0, held: false, hearTs: -Infinity, openAmount: 0, stamped: false, fileName: '', version: 0, swells };
+  let neck=jormSegment(0).neck;const skin=head.querySelector('.jg-skin'),crown=head.querySelector('.jg-crown'),neckEdge=head.querySelector('.jg-neck-edge'),stripes=head.querySelector('.jg-neck-stripes'),stud=head.querySelector('.jg-neck-stud'),skinD=skin.getAttribute('d'),crownD=crown.getAttribute('d');
+  const joinNeck=angle=>{const a=-angle*Math.PI/180,c=Math.cos(a),s=Math.sin(a),rotate=p=>[p[0]*c-p[1]*s,p[0]*s+p[1]*c],point=p=>p.map(v=>+v.toFixed(4)).join(' '),edge=p=>({p:rotate(p),v:rotate(p.slice(2))}),top=edge(neck.upper),bottom=edge(neck.lower),control=e=>e.p.map((v,i)=>v-e.v[i]*3.5),upper=rotate(neck.stripeUpper),lower=rotate(neck.stripeLower);
+    attr(skin,'d',skinD.replace('M33 -8C25 -14.6','M'+point(top.p)+'C'+point(control(top))).replace('L33 8Z','L'+point(bottom.p)+'Z'));
+    attr(crown,'d',crownD.replace('M33 -8C25 -14.6','M'+point(top.p)+'C'+point(control(top))));
+    attr(neckEdge,'d','M16 9C22 8.6 '+point(control(bottom))+' '+point(bottom.p));
+    attr(stripes,'d','M28.5 -3.1Q30 -3.1 '+point(upper)+'M28.1 3.7Q30 3.7 '+point(lower));const middle=upper.map((v,i)=>(v+lower[i])/2),at=middle.map((v,i)=>lerp([28.5,.3][i],v,.55));attr(stud,'cx',at[0]);attr(stud,'cy',at[1]);
+  };
   let dirty = new Set(), tailPose = 0;
   o.place = () => [f.x, f.y];
   const rename = (version, q = 1) => {
-    const a = version === 2 ? 'final_v2' : 'final', suffix = version === 2 ? '_FINAL' : version === 1 ? '_v2' : '', part = suffix.slice(0, Math.floor(suffix.length * clamp01(q))), extension = '.' + S.files[o.round % S.files.length];
-    if (base.textContent !== a) base.textContent = a; if (added.textContent !== part) added.textContent = part; if (ext.textContent !== extension) ext.textContent = extension;
-    o.fileName = a + part + extension; if (q === 1) o.version = version;
+    const names=FIND_COPY.serpentNames,target=names[Math.min(version,names.length-1)],old=names[Math.max(0,version-1)];let common=0;while(common<old.length&&common<target.length&&old[common]===target[common])common++;
+    const a=version?target.slice(0,common):target,suffix=version?target.slice(common):'',part=suffix.slice(0,Math.floor(suffix.length*clamp01(q))),extension='.'+S.files[o.round%S.files.length];
+    if(base.textContent!==a)base.textContent=a;if(added.textContent!==part)added.textContent=part;if(ext.textContent!==extension)ext.textContent=extension;o.fileName=a+part+extension;if(q===1)o.version=version;
   };
   const caption = () => { const text = o.stage === 'asleep' ? FIND_COPY.serpentShippedHint : FIND_COPY.hints.serpent; if (FD.hint && FD.focusId === o.id && FD.hint.textContent !== text) FD.hint.textContent = text; };
   const reward = () => {
@@ -7059,8 +7172,8 @@ function findSerpent(svg) {
     if (o.stage === 'asleep') {
       o.round++; o.pokes = 0; o.kept = false; o.stamped = false; o.ts = FD.now; o.stage = FD.rm ? 'ready' : 'waking'; rename(0); if (FD.rm) o.openAmount = o.tailOut = 0; o.playing = !FD.rm; return;
     }
-    found(o.id); o.pokes++; o.ts = FD.now; o.held = o.pokes < 3; o.playing = !FD.rm;
-    if (o.pokes === 3) { o.stage = 'opening'; if (FD.rm) reward(); }
+    found(o.id); o.pokes++; o.ts = FD.now; o.held = o.pokes < FIND_COPY.serpentNames.length; o.playing = !FD.rm;
+    if (o.pokes === FIND_COPY.serpentNames.length) { o.stage = 'opening'; if (FD.rm) reward(); }
     else { o.stage = FD.rm ? 'ready' : 'bite'; if (FD.rm) rename(o.pokes); }
   };
   press(el, start); rename(0);
@@ -7080,7 +7193,7 @@ function findSerpent(svg) {
   const updateBody = lumps => {
     const next = new Set(); for (const p of lumps) MAP.jorm.surf.forEach(([a, b], i) => { if (p.u >= a - .015 && p.u <= b + .015) next.add(i); });
     if (o.openAmount !== tailPose) { next.add(4); const p = jormSubTail(o.openAmount); attr(body.querySelector('.jo-sub-fill.jo-tail-sub'), 'd', p.fill); attr(body.querySelector('.jo-sub-edge.jo-tail-sub'), 'd', p.edge); }
-    for (const i of new Set([...dirty, ...next])) { const p = jormSegment(i, i === 4 ? o.openAmount : 0, lumps); for (const [selector, key] of [['.jo-outline','outer'],['.jo-inner','inner'],['.jo-bands','bands'],['.jo-studs','studs']]) attr(segments[i].querySelector(selector), 'd', p[key]); }
+    for (const i of new Set([...dirty, ...next])) { const p = jormSegment(i, i === 4 ? o.openAmount : 0, lumps); if(i===0)neck=p.neck; for (const [selector, key] of [['.jo-outline','outer'],['.jo-inner','inner'],['.jo-bands','bands'],['.jo-studs','studs']]) attr(segments[i].querySelector(selector), 'd', p[key]); }
     dirty = next; tailPose = o.openAmount;
   };
   o.tick = (t, dt) => {
@@ -7104,15 +7217,15 @@ function findSerpent(svg) {
     });
     updateBody(lumps);attr(ripple,'opacity',FD.rm||o.openAmount===0?0:.55*Math.sin(Math.PI*o.openAmount));
     const heard=FD.rm?1:clamp01((t-o.hearTs)/S.hear[1]);angle+=S.hear[0]*Math.sin(Math.PI*heard);
-    const sleeping=o.stage==='asleep';o.headTurn=angle;o.jawAngle=jawTurn;attr(head,'transform','rotate('+angle+')');attr(jaw,'transform','rotate('+(-jawTurn)+' '+S.jawPivot.join(' ')+')');attr(eye,'opacity',sleeping?0:1);attr(shut,'opacity',sleeping?1:0);
+    const sleeping=o.stage==='asleep';o.headTurn=angle;o.jawAngle=jawTurn;attr(head,'transform','rotate('+angle+')');joinNeck(angle);attr(jaw,'transform','rotate('+(-jawTurn)+' '+S.jawPivot.join(' ')+')');attr(eye,'opacity',sleeping?0:1);attr(shut,'opacity',sleeping?1:0);
     const bob=FD.rm||!['ready','typing'].includes(o.stage)?0:Math.sin(Math.PI*2*t/S.bob[2]);at[1]+=S.bob[1]*bob;rotation+=S.bob[0]*bob;const phoneScale=VIEW.phone?Math.min(1,S.filePhone/(15*FD.st.cam.s)):1;
-    attr(file,'transform','translate('+at.join(' ')+') rotate('+rotation+') scale('+(scale*phoneScale)+')');attr(file,'opacity',alpha);attr(stamp,'opacity',o.stamped?1:0);attr(stamp,'transform','translate(.5 1.2) rotate(-14) scale('+(1/phoneScale)+')');attr(name,'x',at[0]+S.shipName[0]*o.openAmount);attr(name,'y',at[1]+S.nameDy+S.shipName[1]*o.openAmount);attr(name,'font-size',lerp(S.nameSize,S.shipName[2],o.openAmount));attr(name,'opacity',nameAlpha);
+    attr(file,'transform','translate('+at.join(' ')+') rotate('+rotation+') scale('+(scale*phoneScale)+')');attr(file,'opacity',alpha);attr(stamp,'opacity',o.stamped?1:0);attr(stamp,'transform','translate(.5 1.2) rotate(-14) scale('+(1/phoneScale)+')');attr(name,'x',at[0]+S.shipName[0]*o.openAmount);attr(name,'y',at[1]+S.nameDy+S.shipName[1]*o.openAmount);attr(name,'font-size',lerp(S.nameSize,S.shipName[2],o.openAmount)*(VIEW.phone&&(o.version>=4||o.pokes>=4&&['spit','typing'].includes(o.stage))?S.namePhone:1));attr(name,'opacity',nameAlpha);
     o.zoomFrame();
     attr(el,'data-revision-state',o.stage);attr(el,'data-loop-open',o.openAmount);attr(el,'data-file',o.fileName);caption();if(o.stage==='asleep'&&o.queued&&t-o.shippedAt>=S.queueRest)consumeQueue();o.playing=['bite','lap','spit','typing','opening','waking'].includes(o.stage)||swells.some(s=>s.live)||o.stage==='asleep'&&o.queued>0;
   };
   // The carved detail follows the zoom. While a moving camera quiets the finds (finds.mjs), it is redrawn only with the map's
   // own redraws, so it never adds one.
-  o.zoomFrame = () => { const F=FIND_PLAY.focus,close=Math.max(Math.max(VIEW.s0,F.least*VIEW.sT),Math.min(F.most*VIEW.sT,F.fill*Math.min(VIEW.w,VIEW.h)/(2*f.view[2]))),detail=clamp01((FD.st.cam.s-VIEW.s0)/(close-VIEW.s0||1));findStyle(body,'--jo-detail',detail);findStyle(head,'--jo-detail',detail); };
+  o.zoomFrame = part => { const F=FIND_PLAY.focus,close=Math.max(Math.max(VIEW.s0,F.least*VIEW.sT),Math.min(F.most*VIEW.sT,F.fill*Math.min(VIEW.w,VIEW.h)/(2*f.view[2]))),detail=clamp01((FD.st.cam.s-VIEW.s0)/(close-VIEW.s0||1));if(part!=='head')findStyle(body,'--jo-detail',detail);if(part!=='body')findStyle(head,'--jo-detail',detail); };
   return o;
 }
 
@@ -7124,61 +7237,62 @@ function findSerpent(svg) {
 
 
 function findBeacon(svg) {
-  const f = FIND_BY.beacon, el = svg.querySelector('#f-beacon'), beam = el.querySelector('.bc-beam'), flame = el.querySelector('.bc-flame'), glow = el.querySelector('.bc-glow');
-  const notes = [...svg.querySelectorAll('.bc-note')].map((g, i) => ({ g, inner: g.querySelector('.bc-note-in'), en: g.querySelector('.bc-en'), d: { ...FIND_COPY.beaconNotes[i], x: COMB.readings[i][0], y: COMB.readings[i][1] }, time: 0, read: false, v: 0, ev: 0, flash: -Infinity }));
-  notes.forEach(n => { attr(n.g, 'transform', `translate(${n.d.x} ${n.d.y})`); n.g.classList.add('reading-halo'); });
-  const o = { id: f.id, el, stage: 'idle', head: FIND_PLAY.beacon.baseAngle, manualTs: -Infinity, fire: 0, read: notes.map(() => false), kept: false, drag: false, ember: 0, litTs: -Infinity, hearTs: -Infinity };
-  const origin = () => [f.x + FIND_PLAY.beacon.origin[0] * FIND_PLAY.beacon.scale, f.y + FIND_PLAY.beacon.origin[1] * FIND_PLAY.beacon.scale];
-  const aimAt = e => { const p = toMap([e.clientX, e.clientY]), O = origin(); o.head = Math.atan2(p[1] - O[1], p[0] - O[0]) * FIND_PLAY.kit.deg / Math.PI; o.snap = null; o.manualTs = FD.now; found(o.id); opened(o); };
-  const read = (n, i) => {
-    if (n.read) return; const B = FIND_PLAY.beacon; n.read = true; n.flash = FD.now; o.read[i] = true; o.fire++; o.kept = true;
-    findBits('spark', n.d.x, n.d.y, B.sparkN, FIND_PLAY.bits.sparks);
-    if (o.fire === notes.length) { o.litTs = FD.now; findBits('spark', ...origin(), B.burstN, FIND_PLAY.bits.sparks); }
+  const f=FIND_BY.beacon,el=svg.querySelector('#f-beacon'),beam=el.querySelector('.bc-beam'),flame=el.querySelector('.bc-flame'),glow=el.querySelector('.bc-glow');
+  const notes=[...svg.querySelectorAll('.bc-note')].map((g,i)=>({g,inner:g.querySelector('.bc-note-in'),en:g.querySelector('.bc-en'),copy:g.querySelector('.bc-note-copy'),todo:g.querySelector('.bc-note-todo'),d:{...FIND_COPY.beaconNotes[i],x:COMB.readings[i][0],y:COMB.readings[i][1]},time:0,read:false,v:0,ev:0,flash:-Infinity}));
+  notes.forEach(n=>{attr(n.g,'transform','translate('+n.d.x+' '+n.d.y+')');n.g.classList.add('reading-halo');});
+  const o={id:f.id,el,stage:'idle',head:FIND_PLAY.beacon.baseAngle,manualTs:-Infinity,fire:0,level:0,read:notes.map(()=>false),kept:false,drag:false,ember:0,litTs:-Infinity,hearTs:-Infinity,embers:[],beamTurns:0,finalDone:false,stepTs:-Infinity};
+  const origin=()=>[f.x+FIND_PLAY.beacon.origin[0]*FIND_PLAY.beacon.scale,f.y+FIND_PLAY.beacon.origin[1]*FIND_PLAY.beacon.scale],pool=svg.querySelector('#f-bits'),ring=findSvg('circle',{class:'l bc-finale-ring',r:0,opacity:0,'pointer-events':'none'});pool.appendChild(ring);
+  const wrap=()=>{
+    const B=FIND_PLAY.beacon,key=[VIEW.phone,B.noteFont,B.noteScale,B.notePhone,B.noteWidths,B.noteGuard].join('/');if(o.wrapKey===key)return;o.wrapKey=key;
+    for(const[n,i]of notes.map((n,i)=>[n,i])){
+      if(!n.copy)continue;const max=(B.noteWidths[i]-B.noteGuard)/((VIEW.phone?B.notePhone:1)*B.noteScale);
+      const linesFor=(text,font,italic)=>{const words=text.split(/\s+/),candidates=new Map(),scratch=findSvg('g',{opacity:0,'pointer-events':'none'});for(let a=0;a<words.length;a++)for(let b=a+1;b<=words.length;b++){const text=words.slice(a,b).join(' '),e=findSvg('text',{'font-size':font,'font-style':italic?'italic':'normal','font-weight':500,'text-rendering':'geometricPrecision'});e.textContent=text;scratch.appendChild(e);candidates.set(text,e);}n.inner.appendChild(scratch);const widths=new Map([...candidates].map(([text,e])=>[text,e.getBBox?.().width??e.getComputedTextLength?.()??text.length*font*.55]));scratch.remove?.();const lines=[];let line='';for(const word of words){const next=line?line+' '+word:word;if(line&&widths.get(next)>max){lines.push(line);line=word;}else line=next;}if(line)lines.push(line);return lines;};
+      const caption=n.todo?linesFor(COPY.todo,B.todoFont,false):[],lines=linesFor(n.d.t.t,B.noteFont,true),copyY=B.lineY+Math.max(0,caption.length-1)*B.todoFont*B.noteLine;
+      const put=(text,lines,y,step)=>{if(!text)return;text.replaceChildren();lines.forEach((line,i)=>{const t=findSvg('tspan',{x:0,y:y+i*step});t.textContent=line;text.appendChild(t);});};put(n.todo,caption,B.todoY,B.todoFont*B.noteLine);put(n.copy,lines,copyY,B.noteFont*B.noteLine);
+    }
   };
-  const snapNext = () => {
-    const i = notes.findIndex(n => !n.read), n = notes[i >= 0 ? i : 0], O = origin(), angle = Math.atan2(n.d.y - O[1], n.d.x - O[0]) * FIND_PLAY.kit.deg / Math.PI;
-    o.snap = { from: o.head, to: o.head + findAngleDelta(o.head, angle), ts: FD.now };
-    o.manualTs = FD.now; found(o.id); opened(o);
-    if (FD.rm && i >= 0) { o.head = angle; read(n, i); o.snap = null; }
+  const arrived=(level,t)=>{o.level=Math.max(o.level,level);o.stepTs=t;if(level===notes.length){o.litTs=t+FIND_PLAY.beacon.swellTime;o.finaleFrom=Math.atan2(notes.at(-1).d.y-origin()[1],notes.at(-1).d.x-origin()[0])*180/Math.PI;notes.forEach(n=>n.finalFlash=false);}};
+  const read=(n,i)=>{
+    if(n.read)return;const B=FIND_PLAY.beacon;n.read=true;n.flash=FD.now;o.read[i]=true;o.fire++;o.kept=true;
+    findBits('spark',n.d.x,n.d.y,B.sparkN,FIND_PLAY.bits.sparks);
+    if(FD.rm){o.level=o.fire;if(o.fire===notes.length){o.finalDone=true;o.beamTurns=1;o.head=B.baseAngle;}return;}
+    const ember=findSvg('circle',{class:'pf bc-ember',r:.9,opacity:1,'pointer-events':'none'});pool.appendChild(ember);o.embers.push({el:ember,from:[n.d.x,n.d.y],ts:FD.now,level:o.fire,done:false});
   };
-  // A drag aims the beam. A plain press or tap (the pointer has not travelled beacon.slop px) turns it to the next unread note, as Enter does.
-  findPointer(el, e => { o.drag = true; o.downAt = [e.clientX, e.clientY]; o.dragged = false; el.setPointerCapture(e.pointerId); }, { drag: true, tap: () => snapNext(), cancel: () => o.drag = false });
-  el.addEventListener('pointermove', e => { if (!o.drag || !o.dragged && Math.hypot(e.clientX - o.downAt[0], e.clientY - o.downAt[1]) < FIND_PLAY.beacon.slop) return; o.dragged = el._dragged = true; aimAt(e); });
-  el.addEventListener('pointerup', () => o.drag = false); el.addEventListener('pointercancel', () => o.drag = false);
-  press(el, () => snapNext());
-  el.addEventListener('keydown', e => { if (!['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(e.key)) return; e.preventDefault(); o.head += FIND_PLAY.beacon.arrow * (['ArrowLeft', 'ArrowUp'].includes(e.key) ? -1 : 1); o.snap = null; o.manualTs = FD.now; found(o.id); opened(o); });
-  o.reduce = () => {
-    const manual = o.drag || FD.now-o.manualTs < FIND_PLAY.beacon.manual;
-    if (o.snap) { o.head = o.snap.to; o.snap = null; }
-    if (!manual) return;
-    const at = origin(), reach = FIND_PLAY.beacon.baseReach * FIND_PLAY.beacon.scale;
-    notes.forEach((n,i) => { const dx=n.d.x-at[0],dy=n.d.y-at[1],angle=Math.atan2(dy,dx)*FIND_PLAY.kit.deg/Math.PI; if (Math.abs(findAngleDelta(o.head,angle)) < FIND_TIMING.beamCone/2 && Math.hypot(dx,dy)<reach) read(n,i); });
-  };
-  o.undo = () => { o.manualTs = -Infinity; o.drag = false; }; o.hear = () => o.hearTs = FD.now;
-  o.tick = (t, dt) => {
-    const B = FIND_PLAY.beacon, manual = o.drag || t - o.manualTs < B.manual, lit = o.fire === notes.length;
-    if (o.snap) { const q = FD.rm ? 1 : ease((t - o.snap.ts) / B.snap); o.head = lerp(o.snap.from, o.snap.to, q); if (q === 1) o.snap = null; }
-    else if (!manual && !FD.rm) o.head = B.baseAngle + B.sweep * Math.sin(t * FIND_TIMING.beamSweep);
-    const reach = B.baseReach * B.scale * (lit && !manual ? B.reach : 1), half = FIND_TIMING.beamCone / 2, O = origin();
-    attr(beam, 'transform', `translate(${B.origin[0]} ${B.origin[1]}) rotate(${o.head - FIND_PLAY.kit.deg}) scale(${lit && !manual ? B.reach : 1})`); attr(beam, 'opacity', manual ? 1 : B.idle);
-    notes.forEach((n, i) => {
-      const dx = n.d.x - O[0], dy = n.d.y - O[1], angle = Math.atan2(dy, dx) * FIND_PLAY.kit.deg / Math.PI, diff = Math.abs(((angle - o.head + FIND_PLAY.kit.turn * 1.5) % FIND_PLAY.kit.turn) - FIND_PLAY.kit.deg), inside = diff < half && Math.hypot(dx, dy) < reach;
-      if (inside && !o.snap && manual) n.time += dt; // only a beam somebody aims reads a note; the idle sweep just shows it
-      if (!n.read && n.time >= B.read) read(n, i);
-      n.v = FD.rm ? n.read || inside ? 1 : 0 : lerp(n.v, inside ? 1 : n.read ? B.rest : 0, Math.min(1, dt * B.noteEase));
-      n.ev = FD.rm ? n.read || inside ? 1 : 0 : lerp(n.ev, n.read || inside && n.time >= FIND_TIMING.noteDelay ? 1 : 0, Math.min(1, dt * B.englishEase));
-      attr(n.g, 'opacity', n.v); attr(n.en, 'opacity', n.ev);
-      const flash = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - n.flash) / B.flash)); attr(n.inner, 'transform', `scale(${(1 + (B.noteScale - 1) * flash) * (VIEW.phone ? B.notePhone : 1)})`);
+  const snapNext=()=>{const i=notes.findIndex(n=>!n.read),n=notes[i<0?0:i],O=origin(),angle=Math.atan2(n.d.y-O[1],n.d.x-O[0])*180/Math.PI;o.snap={from:o.head,to:o.head+findAngleDelta(o.head,angle),ts:FD.now};o.manualTs=FD.now;found(o.id);opened(o);if(FD.rm&&i>=0){o.head=angle;read(n,i);o.snap=null;}};
+  const aimAt=e=>{const p=toMap([e.clientX,e.clientY]),O=origin();o.head=Math.atan2(p[1]-O[1],p[0]-O[0])*180/Math.PI;o.snap=null;o.manualTs=FD.now;found(o.id);opened(o);};
+  findPointer(el,e=>{o.drag=true;o.downAt=[e.clientX,e.clientY];o.dragged=false;el.setPointerCapture(e.pointerId);},{drag:true,tap:snapNext,cancel:()=>o.drag=false});
+  el.addEventListener('pointermove',e=>{if(!o.drag||!o.dragged&&Math.hypot(e.clientX-o.downAt[0],e.clientY-o.downAt[1])<FIND_PLAY.beacon.slop)return;o.dragged=el._dragged=true;aimAt(e);});
+  el.addEventListener('pointerup',()=>o.drag=false);el.addEventListener('pointercancel',()=>o.drag=false);press(el,snapNext);
+  el.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowUp','ArrowRight','ArrowDown'].includes(e.key))return;e.preventDefault();o.head+=FIND_PLAY.beacon.arrow*(['ArrowLeft','ArrowUp'].includes(e.key)?-1:1);o.snap=null;o.manualTs=FD.now;found(o.id);opened(o);});
+  o.reduce=()=>{const B=FIND_PLAY.beacon;if(o.snap){o.head=o.snap.to;o.snap=null;}const O=origin();if(o.drag||FD.now-o.manualTs<B.manual)notes.forEach((n,i)=>{const angle=Math.atan2(n.d.y-O[1],n.d.x-O[0])*180/Math.PI;if(Math.abs(findAngleDelta(o.head,angle))<FIND_TIMING.beamCone/2)read(n,i);});o.level=o.fire;o.embers.forEach(e=>{e.done=true;attr(e.el,'opacity',0);});if(o.fire===notes.length){o.finalDone=true;o.beamTurns=1;o.head=B.baseAngle;}attr(ring,'opacity',0);};
+  o.undo=()=>{o.manualTs=-Infinity;o.drag=false;};o.hear=()=>o.hearTs=FD.now;
+  o.tick=(t,dt)=>{
+    const B=FIND_PLAY.beacon,O=origin();wrap();
+    o.embers.forEach(e=>{if(e.done)return;const q=clamp01((t-e.ts)/B.emberTime);attr(e.el,'transform','translate('+lerp(e.from[0],O[0],q)+' '+(lerp(e.from[1],O[1],q)-B.emberArc*Math.sin(Math.PI*q))+')');if(q===1){e.done=true;attr(e.el,'opacity',0);arrived(e.level,t);}});
+    let manual=o.drag||t-o.manualTs<B.manual,lit=o.fire===notes.length,finalAge=t-o.litTs,finale=lit&&o.level===notes.length&&!FD.rm&&!o.finalDone&&Number.isFinite(o.litTs)&&finalAge>=0;
+    if(finale){const q=clamp01(finalAge/B.finaleTurn);o.head=o.finaleFrom+360*q;o.snap=null;notes.forEach(n=>{const angle=Math.atan2(n.d.y-O[1],n.d.x-O[0])*180/Math.PI,share=((angle-o.finaleFrom+360)%360)/360;if(!n.finalFlash&&q>=share){n.finalFlash=true;n.flash=t;}});if(q===1){o.beamTurns=1;const settle=clamp01((finalAge-B.finaleTurn)/B.snap);o.head+=findAngleDelta(o.head,B.baseAngle)*ease(settle);if(settle===1){o.finalDone=true;o.head=B.baseAngle;o.manualTs=-Infinity;manual=false;}}}
+    else if(o.snap){const q=FD.rm?1:ease((t-o.snap.ts)/B.snap);o.head=lerp(o.snap.from,o.snap.to,q);if(q===1)o.snap=null;}
+    else if(!manual&&!FD.rm&&!lit)o.head=B.baseAngle+B.sweep*Math.sin(t*FIND_TIMING.beamSweep);
+    const strength=lit&&o.finalDone&&!manual?B.finaleReach:1,reach=B.baseReach*B.scale*strength,half=FIND_TIMING.beamCone/2;
+    attr(beam,'transform','translate('+B.origin.join(' ')+') rotate('+(o.head-180)+') scale('+strength+')');attr(beam,'opacity',manual||finale?1:Math.min(1,B.idle*strength));
+    const approach=(a,b,k)=>Math.abs(a-b)<.0001?b:lerp(a,b,Math.min(1,k));
+    notes.forEach((n,i)=>{const dx=n.d.x-O[0],dy=n.d.y-O[1],angle=Math.atan2(dy,dx)*180/Math.PI,inside=Math.abs(findAngleDelta(o.head,angle))<half&&Math.hypot(dx,dy)<reach;
+      if(inside&&!o.snap&&manual&&!finale)n.time+=dt;if(!n.read&&n.time>=B.read)read(n,i);
+      const target=lit&&n.read?1:inside?1:n.read?B.rest:0;n.v=FD.rm?target:approach(n.v,target,dt*B.noteEase);n.ev=FD.rm?(n.read||inside?1:0):approach(n.ev,n.read||inside&&n.time>=FIND_TIMING.noteDelay?1:0,dt*B.englishEase);
+      attr(n.g,'opacity',n.v);attr(n.en,'opacity',n.ev);const flash=FD.rm?0:Math.sin(Math.PI*clamp01((t-n.flash)/B.flash)),peak=VIEW.phone&&i===2?B.seaPhoneFlash:B.noteScale;attr(n.inner,'transform','scale('+((1+(peak-1)*flash)*(VIEW.phone?B.notePhone:1))+')');
     });
-    const F = B.flicker, foot = B.flameFoot, burst = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - o.litTs) / B.leap[1]));
-    const hearAge = t - o.hearTs, hear = FD.rm ? 1 : hearAge < B.hear[1] ? lerp(B.hear[0], 1, clamp01(hearAge / B.hear[1])) : 1 + (B.hear[2] - 1) * Math.sin(Math.PI * clamp01((hearAge - B.hear[1]) / B.hear[3]));
-    const size = lerp(B.flame[o.fire], B.leap[0], burst) * hear, sx = FD.rm ? size : size * (1 + F[0] * Math.sin(F[1] * t) + F[2] * Math.sin(F[3] * t)), sy = FD.rm ? size : size * (1 + F[4] * Math.sin(F[5] * t));
-    attr(flame, 'transform', `translate(${foot[0]} ${foot[1]}) scale(${sx} ${sy}) translate(${-foot[0]} ${-foot[1]})`); attr(glow, 'opacity', B.glowAlpha * o.fire);
-    if (o.onScreen && !FD.rm) { o.ember += o.fire * B.embers * dt; const n = Math.floor(o.ember); o.ember -= n; if (n) findBits('spark', ...O, n, FIND_PLAY.bits.sparks); }
-    o.stage = lit ? 'lit' : manual ? 'aiming' : 'idle';
-    depthBeam(!FD.rm && o.onScreen && VIEW.depth && FD.st.pushT > 0 && FD.st.rushT === 0 ? { x: O[0], y: O[1], angle: o.head, half, reach, soft: B.soft, steps: B.wedgeSteps } : null, FD.st);
-  };
-  return o;
+    let size=B.flame[o.level],glowAlpha=B.glowLevels[o.level],radius=B.glowRadii[o.level];const step=clamp01((t-o.stepTs)/B.swellTime);
+    if(!FD.rm&&step<1){const before=B.flame[Math.max(0,o.level-1)],over=size*(1+B.overshoot);size=step<.65?lerp(before,over,out3(step/.65)):lerp(over,size,ease((step-.65)/.35));}
+    if(lit&&(o.finalDone||Number.isFinite(o.litTs)&&finalAge>=0)){const q=FD.rm?1:clamp01(finalAge/B.finaleTime);size=q<.45?lerp(B.finaleFlame[0],B.finaleFlame[1],out3(q/.45)):lerp(B.finaleFlame[1],B.finaleFlame[2],ease((q-.45)/.55));if(FD.rm)size=B.finaleFlame[2];glowAlpha=Math.max(glowAlpha,!FD.rm&&finalAge<B.finaleFlash?1-clamp01(finalAge/B.finaleFlash):0);}
+    const hearAge=t-o.hearTs,hear=FD.rm?1:hearAge<B.hear[1]?lerp(B.hear[0],1,clamp01(hearAge/B.hear[1])):1+(B.hear[2]-1)*Math.sin(Math.PI*clamp01((hearAge-B.hear[1])/B.hear[3])),F=B.flicker,foot=B.flameFoot;
+    o.flameSize=size;o.glowStrength=glowAlpha;o.glowRadius=radius;
+    const sx=FD.rm?size:size*(1+F[0]*Math.sin(F[1]*t)+F[2]*Math.sin(F[3]*t)),sy=FD.rm?size:size*(1+F[4]*Math.sin(F[5]*t));attr(flame,'transform','translate('+foot.join(' ')+') scale('+(sx*hear)+' '+(sy*hear)+') translate('+(-foot[0])+' '+(-foot[1])+')');attr(glow,'opacity',glowAlpha);attr(glow,'r',B.glowR*radius);
+    const ringQ=FD.rm?1:clamp01(finalAge/B.finaleRing[1]);attr(ring,'cx',O[0]);attr(ring,'cy',O[1]);attr(ring,'r',B.finaleRing[0]*out3(ringQ));attr(ring,'opacity',finale&&ringQ<1?.8*(1-ringQ):0);
+    if(o.onScreen&&!FD.rm){o.ember+=o.fire*B.embers*dt;const n=Math.floor(o.ember);o.ember-=n;if(n)findBits('spark',...O,n,FIND_PLAY.bits.sparks);}
+    o.playing=!FD.rm&&(!!o.snap||o.embers.some(e=>!e.done)||t-o.stepTs<B.swellTime||lit&&!o.finalDone||manual&&notes.some(n=>!n.read&&n.time>0));
+    o.stage=lit?'lit':manual?'aiming':'idle';if(lit&&FD.focusId===o.id&&FD.hint?.textContent!==B.litHint)FD.hint.textContent=B.litHint;
+    depthBeam(!FD.rm&&o.onScreen&&VIEW.depth&&FD.st.pushT>0&&FD.st.rushT===0?{x:O[0],y:O[1],angle:o.head,half,reach,soft:B.soft,steps:B.wedgeSteps}:null,FD.st);
+  };return o;
 }
 const beaconLit = () => FD.list.beacon?.fire === FIND_COPY.beaconNotes.length;
 
@@ -7937,7 +8051,7 @@ function findShip(svg) {
 
 
 function findHorn(svg) {
-  const f = FIND_BY.horn, el = svg.querySelector('#f-horn'), horn = el.querySelector('.hn-horn');
+  const f = FIND_BY.horn, el = svg.querySelector('#f-horn'), horn = el.querySelector('.hn-horn'), left=el.querySelector('.hn-cup-left'), right=el.querySelector('.hn-cup-right'), splash=el.querySelector('.hn-splash');
   const o = { id: f.id, el, stage: 'rest', kept: false, up: 0, v: 0, hold: false, sounded: 0, ts: -Infinity, heard: [], hearTs: -Infinity, glints: [] };
   const ringsGroup = findSvg('g', { id: 'hn-rings', 'pointer-events': 'none' }); svg.querySelector('#finds').appendChild(ringsGroup);
   const rings = Array.from({ length: FIND_PLAY.horn.rings }, () => { const c = findSvg('circle', { class: 'hn-ring', r: 1, opacity: 0 }); ringsGroup.appendChild(c); return c; });
@@ -7949,15 +8063,16 @@ function findHorn(svg) {
   };
   const sound = () => {
     if (o.stage === 'sounding' || o.stage === 'echo') return;
-    const H = FIND_PLAY.horn; opened(o); o.stage = 'sounding'; o.ts = FD.now; o.sounded++; o.hold = false; o.heard = []; o.glints = []; o.up = 1;
+    const H = FIND_PLAY.horn; opened(o); o.stage = 'sounding'; o.ts = FD.now; o.sounded++; o.hold = false; o.heard = []; o.glints = []; o.up = 1; o.contact=false; o.clinkPoint=[f.x+H.bell[0],f.y+H.bell[1]];
     o.kept = true; attr(el.querySelector('.hn-kept'), 'opacity', 1);
+    TRIP_EL.focusAim={id:o.id,view:FIND_PLAY.focus.wide,serial:(TRIP_EL.focusAim?.serial||0)+1};
     o.wide = stepsFocus(o.id, FIND_PLAY.focus.wide); if (FD.popOwner === o) closePop();
-    if (FD.rm) { FINDS.forEach(d => deliver(d.id)); o.up = o.v = 0; o.stage = 'rest'; if (FD.popOwner === o) closePop(); }
+    if (FD.rm) { FINDS.forEach(d => deliver(d.id)); o.up = o.v = 0; o.reducedPose=2; o.stage = 'rest'; if (FD.popOwner === o) closePop(); }
   };
   const raise = () => {
     if (o.stage === 'sounding' || o.stage === 'echo') return;
     if (o.up) { sound(); return; }
-    o.up = 1; o.stage = 'raised'; o.raiseTs = FD.now; opened(o); found(o.id);
+    o.up = 1; o.reducedPose=null; o.stage = 'raised'; o.raiseTs = FD.now; opened(o); found(o.id);
     showPop(o, [f.x + 60, f.y + 65], `<p class="pop-t pop-big">${fEsc(FIND_COPY.horn[0])}</p>${findSlot(FIND_COPY.horn[1])}`);
   };
   findPointer(el, e => { el.setPointerCapture(e.pointerId); raise(); o.hold = o.stage === 'raised'; o.holdTs = FD.now; el._dragged = true; }, { tap: raise, cancel: () => o.hold = false });
@@ -7972,17 +8087,22 @@ function findHorn(svg) {
     o.hearing = !FD.rm && t - o.hearTs < H.raise;
     if (o.hold && t - o.holdTs >= H.hold) { o.hold = false; queueMicrotask(sound); }
     o.v = FD.rm ? o.up : o.v + Math.sign(o.up - o.v) * Math.min(Math.abs(o.up - o.v), dt / H.raise);
-    const p = attend(o, H.near), tip = o.awake && p ? H.tip * Math.max(-1, Math.min(1, (p[0] - f.x) / H.near)) : 0, q = ease(o.v), age = t - o.ts;
-    const swell = !FD.rm && o.stage === 'sounding' && age < H.swell[2] ? (H.swell[0] - 1) * (1 - Math.cos(Math.PI * 2 * H.swell[1] * age)) / 2 : 0;
-    const hear = FD.rm ? 0 : H.tip * Math.sin(Math.PI * clamp01((t - o.hearTs) / H.raise));
-    o.popPose=[H.lift[0]*q,H.lift[1]*q,H.turn*q+tip*(1-q)+hear,1+swell];
-    attr(horn, 'transform', `translate(${H.lift[0] * q} ${H.lift[1] * q}) rotate(${H.turn * q + tip * (1 - q) + hear} ${H.pivot[0]} ${H.pivot[1]}) scale(${1 + swell})`);
-    rings.forEach((r, i) => { const a = age - i * H.gap, radius = H.radius + H.speed * Math.max(0, Math.min(H.life, a)); attr(r, 'transform', `translate(${f.x + H.bell[0]} ${f.y + H.bell[1]}) scale(${radius})`); attr(r, 'opacity', !FD.rm && a >= 0 && a < H.life && o.stage === 'sounding' ? H.alpha * (1 - a / H.life) ** H.power : 0); });
+    const p=attend(o,H.near),tip=o.awake&&p?H.tip*Math.max(-1,Math.min(1,(p[0]-f.x)/H.near)):0,age=t-o.ts-H.clink,hear=FD.rm?0:H.tip*Math.sin(Math.PI*clamp01((t-o.hearTs)/H.raise));
+    const mix=(a,b,k)=>a.map((v,i)=>i?lerp(v,b[i],k):a[0]);let pose=H.poses[0];
+    if(FD.rm&&o.reducedPose===2)pose=H.poses[2];
+    else if(o.stage==='sounding'){if(age<0)pose=mix(H.poses[1],H.poses[2],clamp01((age+H.clink)/H.clink)**2);else pose=mix(H.poses[2],H.poses[3],1-(1-clamp01(age/H.bounce))**3);}
+    else pose=mix(H.poses[0],H.poses[1],ease(o.v));
+    const [,tilt,lift,gap]=pose,a=tilt*Math.PI/180,[px,py]=H.rim,rx=px*Math.cos(a)-py*Math.sin(a),ry=px*Math.sin(a)+py*Math.cos(a),at={x:-rx-gap/2,y:4+lift,a:tilt,rimY:4+lift+ry},transform='translate('+at.x.toFixed(2)+' '+at.y+') rotate('+at.a+')';
+    attr(left,'transform',transform);attr(right,'transform',transform);attr(horn,'transform','rotate('+(tip+hear)+')');o.pose=[tilt,lift,gap];
+    const contact=H.poses[2],ca=contact[1]*Math.PI/180,cy=4+contact[2]+px*Math.sin(ca)+py*Math.cos(ca);
+    if(age>=0&&!o.contact&&o.stage==='sounding'){const a=(tip+hear)*Math.PI/180;o.contact=true;o.clinkPoint=[f.x-cy*Math.sin(a)*H.scale,f.y+cy*Math.cos(a)*H.scale];}
+    attr(splash,'d','M-1.4 '+(cy-2)+'l-1.5 -2.2M0 '+(cy-2.6)+'v-2.6M1.4 '+(cy-2)+'l1.5 -2.2');attr(splash,'opacity',!FD.rm&&o.stage==='sounding'&&age>=0&&age<H.splash?Math.sin(Math.PI*age/H.splash):0);
+    rings.forEach((r,i)=>{const a=age-i*H.gap,radius=H.radius+H.speed*Math.max(0,Math.min(H.life,a)),point=o.clinkPoint||[f.x+H.bell[0],f.y+H.bell[1]];attr(r,'transform','translate('+point.join(' ')+') scale('+radius+')');attr(r,'opacity',!FD.rm&&a>=0&&a<H.life&&o.stage==='sounding'?H.alpha*(1-a/H.life)**H.power:0);});
     if (['sounding', 'echo'].includes(o.stage)) {
       FINDS.forEach(d => { if (o.heard.includes(d.id)) return; const p = findPlace(d.id); if (age >= Math.hypot(p[0] - f.x - H.bell[0], p[1] - f.y - H.bell[1]) / H.speed) { o.heard.push(d.id); queueMicrotask(() => { o.heard = o.heard.filter(id => id !== d.id); deliver(d.id); }); } });
       if (o.stage === 'sounding' && age >= H.life + (H.rings - 1) * H.gap) {
         o.stage = 'echo'; o.up = 0;
-        queueMicrotask(() => { if (FD.popOwner === o) closePop(); if (o.wide && JOURNEY.focus === o.id) stepsFocus(o.id, findView(o.id)); });
+        queueMicrotask(() => { if (FD.popOwner === o) closePop(); if (o.wide && JOURNEY.focus === o.id) { const view=findView(o.id);TRIP_EL.focusAim={id:o.id,view,serial:(TRIP_EL.focusAim?.serial||0)+1};stepsFocus(o.id,view); } });
       }
       if (o.stage === 'echo' && o.heard.length === FINDS.length && glints.every(g => t - g.ts >= H.glint[1])) o.stage = 'rest';
     }
@@ -8102,14 +8222,20 @@ function findsFrame(time, st) {
     const playing = ['flight', 'hear', 'landing', 'reel', 'chase', 'eating', 'waking', 'trace', 'opening', 'sheet', 'closing', 'sliding', 'reply', 'pebble', 'sounding', 'echo', 'pull', 'lifting'].includes(o.stage) || o.drag || o.busy || o.playing || o.hearing;
     const active = o => ['rising','rattling','opening','bouncing','waiting'].includes(o.stage) || o.hold || o.queued || o.pending;
     o.travel?.();
+    if(o.id==='serpent'&&['base','anim'].includes(st.rasterLayer))o.zoomFrame?.(st.rasterLayer==='base'?'body':'head');
     const paused = quiet && !playing && JOURNEY.focus !== o.id && FD.sheetOwner !== o && !(o.id === 'longship' && o.x !== undefined && (p[0] !== o.x || p[1] !== o.y));
-    if (paused && o.id !== 'hoards') { if (o.onScreen && st.rasterRebased) { if (o.id === 'wayfinder') o.compassFrame?.(); o.zoomFrame?.(); } return; } // Keep sky-side pieces, including the beacon beam, at their last state; zoom-led detail follows the map's redraws.
+    if (paused && o.id !== 'hoards') { if (o.onScreen && st.rasterRebased) { if (o.id === 'wayfinder') o.compassFrame?.(); if(!st.rasterLayer)o.zoomFrame?.(); } return; } // Keep sky-side pieces, including the beacon beam, at their last state; zoom-led detail follows the map's redraws.
     findLife(o, ...p, o.id === 'horn' && ['sounding', 'echo'].includes(o.stage) ? FIND_PLAY.horn.soundRad : rad, near);
     if (o.id === 'hoards' && quiet) {
       o.items.forEach(h => { if (active(h) || JOURNEY.focus === h.id || FD.sheetOwner === h) h.tick(time, FD.rm ? 0 : FD.dt); });
     } else if (o.id === 'hoards' || o.onScreen || playing || FD.sheetOwner === o) o.tick?.(time, FD.rm ? 0 : FD.dt);
     else if (o.id === 'beacon') depthBeam(null);
   });
+  // These shells retain the drawn part's inherited camera, scale and find visibility without duplicate hits or ids.
+  for (const { source, clone } of FD.animCopies || []) for (const key of ['transform','opacity','style','visibility']) {
+    const value = source.getAttribute(key); if (value === null) { if (clone.hasAttribute(key)) clone.removeAttribute(key); }
+    else attr(clone, key, value);
+  }
   const bits = FD.bits;
   if (quiet) FD.bits = [];
   try { findKitFrame(); } finally { FD.bits = bits; }
@@ -8185,13 +8311,16 @@ const $ = id => document.getElementById(id);
   // their writes on every frame of a move no longer redraw the map (phone-p27: it repainted nearly every frame of Set out).
   // The stack takes the fade (faded one by one, the trail showed through the longship); each keeps a cover to stay one layer.
   const stack = document.createElement('div'); stack.id = 'map-stack'; $('map').before(stack); stack.appendChild($('map'));
-  for (const id of ['live', 'finds']) {
+  for (const id of ['live', 'finds', 'anim']) {
     const svg = document.createElementNS(NS, 'svg'), cam = document.createElementNS(NS, 'g'), inner = cover.cloneNode();
     svg.id = 'map-' + id; svg.setAttribute('class', 'map'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('pointer-events', 'none');
     cam.id = 'cam-' + id; inner.id = 'map-' + id + '-cover'; cam.appendChild(inner); svg.appendChild(cam); stack.appendChild(svg);
   }
+  const lines = document.createElementNS(NS, 'svg'), lineCam = document.createElementNS(NS, 'g');
+  lines.id = 'map-lines'; lines.setAttribute('class', 'map'); lines.setAttribute('aria-hidden', 'true'); lines.setAttribute('pointer-events', 'none');
+  lineCam.id = 'cam-lines'; lineCam.appendChild($('wf-lines')); lines.appendChild(lineCam); $('map-veil').after(lines);
 }
-const SVG = $('map'), CANVAS = $('stars'), TLEL = $('tl'), MAP_STACK = $('map-stack'), MAP_SVGS = [SVG, $('map-live'), $('map-finds')];
+const SVG = $('map'), CANVAS = $('stars'), TLEL = $('tl'), MAP_STACK = $('map-stack'), MAP_SVGS = [SVG, $('map-live'), $('map-finds'), $('map-anim'), $('map-lines')];
 // timeline sits in the stage overlay so it can become the footer rule; in reduced motion it is a sticky jump menu
 const FTWORLD = document.createElement('div'); FTWORLD.id = 'ft-world'; $('stage').querySelector('.ov').appendChild(FTWORLD); FTWORLD.append($('ft'), TLEL);
 
@@ -8229,6 +8358,22 @@ const mainMarkers = FINDS.filter(f => f.n).map(f => { const el = $('mk-' + f.id)
   detail.append(...[...$('b-rest-detail').children].filter(el => el.matches('.map-tier2, .map-tier1, .map-subs')));
   $('cam-live').append(rest, $('trail-done'), $('trail-pieces'));
   $('cam-finds').append($('finds'), $('fxg')); $('cam-finds').setAttribute('pointer-events', 'visiblePainted');
+}
+// COMB-R: retain live objects and original hit groups; only their ink moves to the idle raster.
+{
+  const NS = 'http://www.w3.org/2000/svg', copies = new Map(), destination = $('cam-anim'); FD.animCopies = [];
+  const parent = source => {
+    if (!source || /^cam(?:-|$)/.test(source.id)) return destination;
+    if (copies.has(source)) return copies.get(source);
+    const clone = document.createElementNS(NS, 'g');
+    for (const key of ['transform','opacity','style','clip-path','mask']) if (source.hasAttribute(key)) clone.setAttribute(key, source.getAttribute(key));
+    const cls = source.getAttribute('class'); if (cls) clone.setAttribute('class', cls.replace(/\bfind\b/g, 'anim-find'));
+    if (source.id.startsWith('f-')) clone.dataset.animSource = source.id;
+    parent(source.parentElement).appendChild(clone); copies.set(source, clone); FD.animCopies.push({ source, clone }); return clone;
+  };
+  const rock = document.querySelector('.ls-rock'); rock?.parentElement.append(...rock.querySelectorAll('.hit'));
+  const ink = '.bc-glow,.bc-light,.bc-flame,#f-beacon > g > path,#f-beacon > g > rect:not(.hit),.ls-rock,.hd-glint,#f-bits,.yg-rat,.yg-eagle,.rv-a,.rv-b,.rv-gifts,.jg-head,.jg-file,.jf-name,.rs-trace,.wl-rip,.wl-pebble,#wl-crown,#hn-rings,#bc-notes,.hm-lift,.hm-spark,.wf-needle,.wf-runes,.wf-arm,.wf-all,.wf-hub';
+  for (const node of document.querySelectorAll(ink)) { if (node.closest('#map-anim')) continue; parent(node.parentElement).appendChild(node); }
 }
 function mainPlaceMarkers(st) {
   mainMarkers.forEach(m => { const p = toScreen(st, m.at), transform = `translate(${p[0]-m.at[0]} ${p[1]-m.at[1]})`; if (m.place.getAttribute('transform') !== transform) m.place.setAttribute('transform', transform); });

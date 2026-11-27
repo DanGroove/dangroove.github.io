@@ -1,12 +1,12 @@
 // Sound is represented by travelling rings and timed calls to the existing hear() kit.
 import { FIND_PLAY, FIND_COPY, FINDS } from './data.mjs';
-import { clamp01 } from './trip.mjs';
+import { clamp01, lerp, TRIP_EL } from './trip.mjs';
 import { starPath } from './art.mjs';
 import { JOURNEY, stepsFocus } from './steps.mjs';
 import { findPointer, FD, FIND_BY, ease, attr, fEsc, found, opened, press, showPop, closePop, attend, findSlot, findPlace, findView, findSvg, findHint } from './findkit.mjs';
 
 export function findHorn(svg) {
-  const f = FIND_BY.horn, el = svg.querySelector('#f-horn'), horn = el.querySelector('.hn-horn');
+  const f = FIND_BY.horn, el = svg.querySelector('#f-horn'), horn = el.querySelector('.hn-horn'), left=el.querySelector('.hn-cup-left'), right=el.querySelector('.hn-cup-right'), splash=el.querySelector('.hn-splash');
   const o = { id: f.id, el, stage: 'rest', kept: false, up: 0, v: 0, hold: false, sounded: 0, ts: -Infinity, heard: [], hearTs: -Infinity, glints: [] };
   const ringsGroup = findSvg('g', { id: 'hn-rings', 'pointer-events': 'none' }); svg.querySelector('#finds').appendChild(ringsGroup);
   const rings = Array.from({ length: FIND_PLAY.horn.rings }, () => { const c = findSvg('circle', { class: 'hn-ring', r: 1, opacity: 0 }); ringsGroup.appendChild(c); return c; });
@@ -18,15 +18,16 @@ export function findHorn(svg) {
   };
   const sound = () => {
     if (o.stage === 'sounding' || o.stage === 'echo') return;
-    const H = FIND_PLAY.horn; opened(o); o.stage = 'sounding'; o.ts = FD.now; o.sounded++; o.hold = false; o.heard = []; o.glints = []; o.up = 1;
+    const H = FIND_PLAY.horn; opened(o); o.stage = 'sounding'; o.ts = FD.now; o.sounded++; o.hold = false; o.heard = []; o.glints = []; o.up = 1; o.contact=false; o.clinkPoint=[f.x+H.bell[0],f.y+H.bell[1]];
     o.kept = true; attr(el.querySelector('.hn-kept'), 'opacity', 1);
+    TRIP_EL.focusAim={id:o.id,view:FIND_PLAY.focus.wide,serial:(TRIP_EL.focusAim?.serial||0)+1};
     o.wide = stepsFocus(o.id, FIND_PLAY.focus.wide); if (FD.popOwner === o) closePop();
-    if (FD.rm) { FINDS.forEach(d => deliver(d.id)); o.up = o.v = 0; o.stage = 'rest'; if (FD.popOwner === o) closePop(); }
+    if (FD.rm) { FINDS.forEach(d => deliver(d.id)); o.up = o.v = 0; o.reducedPose=2; o.stage = 'rest'; if (FD.popOwner === o) closePop(); }
   };
   const raise = () => {
     if (o.stage === 'sounding' || o.stage === 'echo') return;
     if (o.up) { sound(); return; }
-    o.up = 1; o.stage = 'raised'; o.raiseTs = FD.now; opened(o); found(o.id);
+    o.up = 1; o.reducedPose=null; o.stage = 'raised'; o.raiseTs = FD.now; opened(o); found(o.id);
     showPop(o, [f.x + 60, f.y + 65], `<p class="pop-t pop-big">${fEsc(FIND_COPY.horn[0])}</p>${findSlot(FIND_COPY.horn[1])}`);
   };
   findPointer(el, e => { el.setPointerCapture(e.pointerId); raise(); o.hold = o.stage === 'raised'; o.holdTs = FD.now; el._dragged = true; }, { tap: raise, cancel: () => o.hold = false });
@@ -41,17 +42,22 @@ export function findHorn(svg) {
     o.hearing = !FD.rm && t - o.hearTs < H.raise;
     if (o.hold && t - o.holdTs >= H.hold) { o.hold = false; queueMicrotask(sound); }
     o.v = FD.rm ? o.up : o.v + Math.sign(o.up - o.v) * Math.min(Math.abs(o.up - o.v), dt / H.raise);
-    const p = attend(o, H.near), tip = o.awake && p ? H.tip * Math.max(-1, Math.min(1, (p[0] - f.x) / H.near)) : 0, q = ease(o.v), age = t - o.ts;
-    const swell = !FD.rm && o.stage === 'sounding' && age < H.swell[2] ? (H.swell[0] - 1) * (1 - Math.cos(Math.PI * 2 * H.swell[1] * age)) / 2 : 0;
-    const hear = FD.rm ? 0 : H.tip * Math.sin(Math.PI * clamp01((t - o.hearTs) / H.raise));
-    o.popPose=[H.lift[0]*q,H.lift[1]*q,H.turn*q+tip*(1-q)+hear,1+swell];
-    attr(horn, 'transform', `translate(${H.lift[0] * q} ${H.lift[1] * q}) rotate(${H.turn * q + tip * (1 - q) + hear} ${H.pivot[0]} ${H.pivot[1]}) scale(${1 + swell})`);
-    rings.forEach((r, i) => { const a = age - i * H.gap, radius = H.radius + H.speed * Math.max(0, Math.min(H.life, a)); attr(r, 'transform', `translate(${f.x + H.bell[0]} ${f.y + H.bell[1]}) scale(${radius})`); attr(r, 'opacity', !FD.rm && a >= 0 && a < H.life && o.stage === 'sounding' ? H.alpha * (1 - a / H.life) ** H.power : 0); });
+    const p=attend(o,H.near),tip=o.awake&&p?H.tip*Math.max(-1,Math.min(1,(p[0]-f.x)/H.near)):0,age=t-o.ts-H.clink,hear=FD.rm?0:H.tip*Math.sin(Math.PI*clamp01((t-o.hearTs)/H.raise));
+    const mix=(a,b,k)=>a.map((v,i)=>i?lerp(v,b[i],k):a[0]);let pose=H.poses[0];
+    if(FD.rm&&o.reducedPose===2)pose=H.poses[2];
+    else if(o.stage==='sounding'){if(age<0)pose=mix(H.poses[1],H.poses[2],clamp01((age+H.clink)/H.clink)**2);else pose=mix(H.poses[2],H.poses[3],1-(1-clamp01(age/H.bounce))**3);}
+    else pose=mix(H.poses[0],H.poses[1],ease(o.v));
+    const [,tilt,lift,gap]=pose,a=tilt*Math.PI/180,[px,py]=H.rim,rx=px*Math.cos(a)-py*Math.sin(a),ry=px*Math.sin(a)+py*Math.cos(a),at={x:-rx-gap/2,y:4+lift,a:tilt,rimY:4+lift+ry},transform='translate('+at.x.toFixed(2)+' '+at.y+') rotate('+at.a+')';
+    attr(left,'transform',transform);attr(right,'transform',transform);attr(horn,'transform','rotate('+(tip+hear)+')');o.pose=[tilt,lift,gap];
+    const contact=H.poses[2],ca=contact[1]*Math.PI/180,cy=4+contact[2]+px*Math.sin(ca)+py*Math.cos(ca);
+    if(age>=0&&!o.contact&&o.stage==='sounding'){const a=(tip+hear)*Math.PI/180;o.contact=true;o.clinkPoint=[f.x-cy*Math.sin(a)*H.scale,f.y+cy*Math.cos(a)*H.scale];}
+    attr(splash,'d','M-1.4 '+(cy-2)+'l-1.5 -2.2M0 '+(cy-2.6)+'v-2.6M1.4 '+(cy-2)+'l1.5 -2.2');attr(splash,'opacity',!FD.rm&&o.stage==='sounding'&&age>=0&&age<H.splash?Math.sin(Math.PI*age/H.splash):0);
+    rings.forEach((r,i)=>{const a=age-i*H.gap,radius=H.radius+H.speed*Math.max(0,Math.min(H.life,a)),point=o.clinkPoint||[f.x+H.bell[0],f.y+H.bell[1]];attr(r,'transform','translate('+point.join(' ')+') scale('+radius+')');attr(r,'opacity',!FD.rm&&a>=0&&a<H.life&&o.stage==='sounding'?H.alpha*(1-a/H.life)**H.power:0);});
     if (['sounding', 'echo'].includes(o.stage)) {
       FINDS.forEach(d => { if (o.heard.includes(d.id)) return; const p = findPlace(d.id); if (age >= Math.hypot(p[0] - f.x - H.bell[0], p[1] - f.y - H.bell[1]) / H.speed) { o.heard.push(d.id); queueMicrotask(() => { o.heard = o.heard.filter(id => id !== d.id); deliver(d.id); }); } });
       if (o.stage === 'sounding' && age >= H.life + (H.rings - 1) * H.gap) {
         o.stage = 'echo'; o.up = 0;
-        queueMicrotask(() => { if (FD.popOwner === o) closePop(); if (o.wide && JOURNEY.focus === o.id) stepsFocus(o.id, findView(o.id)); });
+        queueMicrotask(() => { if (FD.popOwner === o) closePop(); if (o.wide && JOURNEY.focus === o.id) { const view=findView(o.id);TRIP_EL.focusAim={id:o.id,view,serial:(TRIP_EL.focusAim?.serial||0)+1};stepsFocus(o.id,view); } });
       }
       if (o.stage === 'echo' && o.heard.length === FINDS.length && glints.every(g => t - g.ts >= H.glint[1])) o.stage = 'rest';
     }

@@ -6,61 +6,62 @@ import { depthBeam } from './depth.mjs';
 import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, closeSheet, findBits, findSvg, findSheet, findSlot, findAngleDelta, findStyle, findSheetFrame } from './findkit.mjs';
 
 export function findBeacon(svg) {
-  const f = FIND_BY.beacon, el = svg.querySelector('#f-beacon'), beam = el.querySelector('.bc-beam'), flame = el.querySelector('.bc-flame'), glow = el.querySelector('.bc-glow');
-  const notes = [...svg.querySelectorAll('.bc-note')].map((g, i) => ({ g, inner: g.querySelector('.bc-note-in'), en: g.querySelector('.bc-en'), d: { ...FIND_COPY.beaconNotes[i], x: COMB.readings[i][0], y: COMB.readings[i][1] }, time: 0, read: false, v: 0, ev: 0, flash: -Infinity }));
-  notes.forEach(n => { attr(n.g, 'transform', `translate(${n.d.x} ${n.d.y})`); n.g.classList.add('reading-halo'); });
-  const o = { id: f.id, el, stage: 'idle', head: FIND_PLAY.beacon.baseAngle, manualTs: -Infinity, fire: 0, read: notes.map(() => false), kept: false, drag: false, ember: 0, litTs: -Infinity, hearTs: -Infinity };
-  const origin = () => [f.x + FIND_PLAY.beacon.origin[0] * FIND_PLAY.beacon.scale, f.y + FIND_PLAY.beacon.origin[1] * FIND_PLAY.beacon.scale];
-  const aimAt = e => { const p = toMap([e.clientX, e.clientY]), O = origin(); o.head = Math.atan2(p[1] - O[1], p[0] - O[0]) * FIND_PLAY.kit.deg / Math.PI; o.snap = null; o.manualTs = FD.now; found(o.id); opened(o); };
-  const read = (n, i) => {
-    if (n.read) return; const B = FIND_PLAY.beacon; n.read = true; n.flash = FD.now; o.read[i] = true; o.fire++; o.kept = true;
-    findBits('spark', n.d.x, n.d.y, B.sparkN, FIND_PLAY.bits.sparks);
-    if (o.fire === notes.length) { o.litTs = FD.now; findBits('spark', ...origin(), B.burstN, FIND_PLAY.bits.sparks); }
+  const f=FIND_BY.beacon,el=svg.querySelector('#f-beacon'),beam=el.querySelector('.bc-beam'),flame=el.querySelector('.bc-flame'),glow=el.querySelector('.bc-glow');
+  const notes=[...svg.querySelectorAll('.bc-note')].map((g,i)=>({g,inner:g.querySelector('.bc-note-in'),en:g.querySelector('.bc-en'),copy:g.querySelector('.bc-note-copy'),todo:g.querySelector('.bc-note-todo'),d:{...FIND_COPY.beaconNotes[i],x:COMB.readings[i][0],y:COMB.readings[i][1]},time:0,read:false,v:0,ev:0,flash:-Infinity}));
+  notes.forEach(n=>{attr(n.g,'transform','translate('+n.d.x+' '+n.d.y+')');n.g.classList.add('reading-halo');});
+  const o={id:f.id,el,stage:'idle',head:FIND_PLAY.beacon.baseAngle,manualTs:-Infinity,fire:0,level:0,read:notes.map(()=>false),kept:false,drag:false,ember:0,litTs:-Infinity,hearTs:-Infinity,embers:[],beamTurns:0,finalDone:false,stepTs:-Infinity};
+  const origin=()=>[f.x+FIND_PLAY.beacon.origin[0]*FIND_PLAY.beacon.scale,f.y+FIND_PLAY.beacon.origin[1]*FIND_PLAY.beacon.scale],pool=svg.querySelector('#f-bits'),ring=findSvg('circle',{class:'l bc-finale-ring',r:0,opacity:0,'pointer-events':'none'});pool.appendChild(ring);
+  const wrap=()=>{
+    const B=FIND_PLAY.beacon,key=[VIEW.phone,B.noteFont,B.noteScale,B.notePhone,B.noteWidths,B.noteGuard].join('/');if(o.wrapKey===key)return;o.wrapKey=key;
+    for(const[n,i]of notes.map((n,i)=>[n,i])){
+      if(!n.copy)continue;const max=(B.noteWidths[i]-B.noteGuard)/((VIEW.phone?B.notePhone:1)*B.noteScale);
+      const linesFor=(text,font,italic)=>{const words=text.split(/\s+/),candidates=new Map(),scratch=findSvg('g',{opacity:0,'pointer-events':'none'});for(let a=0;a<words.length;a++)for(let b=a+1;b<=words.length;b++){const text=words.slice(a,b).join(' '),e=findSvg('text',{'font-size':font,'font-style':italic?'italic':'normal','font-weight':500,'text-rendering':'geometricPrecision'});e.textContent=text;scratch.appendChild(e);candidates.set(text,e);}n.inner.appendChild(scratch);const widths=new Map([...candidates].map(([text,e])=>[text,e.getBBox?.().width??e.getComputedTextLength?.()??text.length*font*.55]));scratch.remove?.();const lines=[];let line='';for(const word of words){const next=line?line+' '+word:word;if(line&&widths.get(next)>max){lines.push(line);line=word;}else line=next;}if(line)lines.push(line);return lines;};
+      const caption=n.todo?linesFor(COPY.todo,B.todoFont,false):[],lines=linesFor(n.d.t.t,B.noteFont,true),copyY=B.lineY+Math.max(0,caption.length-1)*B.todoFont*B.noteLine;
+      const put=(text,lines,y,step)=>{if(!text)return;text.replaceChildren();lines.forEach((line,i)=>{const t=findSvg('tspan',{x:0,y:y+i*step});t.textContent=line;text.appendChild(t);});};put(n.todo,caption,B.todoY,B.todoFont*B.noteLine);put(n.copy,lines,copyY,B.noteFont*B.noteLine);
+    }
   };
-  const snapNext = () => {
-    const i = notes.findIndex(n => !n.read), n = notes[i >= 0 ? i : 0], O = origin(), angle = Math.atan2(n.d.y - O[1], n.d.x - O[0]) * FIND_PLAY.kit.deg / Math.PI;
-    o.snap = { from: o.head, to: o.head + findAngleDelta(o.head, angle), ts: FD.now };
-    o.manualTs = FD.now; found(o.id); opened(o);
-    if (FD.rm && i >= 0) { o.head = angle; read(n, i); o.snap = null; }
+  const arrived=(level,t)=>{o.level=Math.max(o.level,level);o.stepTs=t;if(level===notes.length){o.litTs=t+FIND_PLAY.beacon.swellTime;o.finaleFrom=Math.atan2(notes.at(-1).d.y-origin()[1],notes.at(-1).d.x-origin()[0])*180/Math.PI;notes.forEach(n=>n.finalFlash=false);}};
+  const read=(n,i)=>{
+    if(n.read)return;const B=FIND_PLAY.beacon;n.read=true;n.flash=FD.now;o.read[i]=true;o.fire++;o.kept=true;
+    findBits('spark',n.d.x,n.d.y,B.sparkN,FIND_PLAY.bits.sparks);
+    if(FD.rm){o.level=o.fire;if(o.fire===notes.length){o.finalDone=true;o.beamTurns=1;o.head=B.baseAngle;}return;}
+    const ember=findSvg('circle',{class:'pf bc-ember',r:.9,opacity:1,'pointer-events':'none'});pool.appendChild(ember);o.embers.push({el:ember,from:[n.d.x,n.d.y],ts:FD.now,level:o.fire,done:false});
   };
-  // A drag aims the beam. A plain press or tap (the pointer has not travelled beacon.slop px) turns it to the next unread note, as Enter does.
-  findPointer(el, e => { o.drag = true; o.downAt = [e.clientX, e.clientY]; o.dragged = false; el.setPointerCapture(e.pointerId); }, { drag: true, tap: () => snapNext(), cancel: () => o.drag = false });
-  el.addEventListener('pointermove', e => { if (!o.drag || !o.dragged && Math.hypot(e.clientX - o.downAt[0], e.clientY - o.downAt[1]) < FIND_PLAY.beacon.slop) return; o.dragged = el._dragged = true; aimAt(e); });
-  el.addEventListener('pointerup', () => o.drag = false); el.addEventListener('pointercancel', () => o.drag = false);
-  press(el, () => snapNext());
-  el.addEventListener('keydown', e => { if (!['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown'].includes(e.key)) return; e.preventDefault(); o.head += FIND_PLAY.beacon.arrow * (['ArrowLeft', 'ArrowUp'].includes(e.key) ? -1 : 1); o.snap = null; o.manualTs = FD.now; found(o.id); opened(o); });
-  o.reduce = () => {
-    const manual = o.drag || FD.now-o.manualTs < FIND_PLAY.beacon.manual;
-    if (o.snap) { o.head = o.snap.to; o.snap = null; }
-    if (!manual) return;
-    const at = origin(), reach = FIND_PLAY.beacon.baseReach * FIND_PLAY.beacon.scale;
-    notes.forEach((n,i) => { const dx=n.d.x-at[0],dy=n.d.y-at[1],angle=Math.atan2(dy,dx)*FIND_PLAY.kit.deg/Math.PI; if (Math.abs(findAngleDelta(o.head,angle)) < FIND_TIMING.beamCone/2 && Math.hypot(dx,dy)<reach) read(n,i); });
-  };
-  o.undo = () => { o.manualTs = -Infinity; o.drag = false; }; o.hear = () => o.hearTs = FD.now;
-  o.tick = (t, dt) => {
-    const B = FIND_PLAY.beacon, manual = o.drag || t - o.manualTs < B.manual, lit = o.fire === notes.length;
-    if (o.snap) { const q = FD.rm ? 1 : ease((t - o.snap.ts) / B.snap); o.head = lerp(o.snap.from, o.snap.to, q); if (q === 1) o.snap = null; }
-    else if (!manual && !FD.rm) o.head = B.baseAngle + B.sweep * Math.sin(t * FIND_TIMING.beamSweep);
-    const reach = B.baseReach * B.scale * (lit && !manual ? B.reach : 1), half = FIND_TIMING.beamCone / 2, O = origin();
-    attr(beam, 'transform', `translate(${B.origin[0]} ${B.origin[1]}) rotate(${o.head - FIND_PLAY.kit.deg}) scale(${lit && !manual ? B.reach : 1})`); attr(beam, 'opacity', manual ? 1 : B.idle);
-    notes.forEach((n, i) => {
-      const dx = n.d.x - O[0], dy = n.d.y - O[1], angle = Math.atan2(dy, dx) * FIND_PLAY.kit.deg / Math.PI, diff = Math.abs(((angle - o.head + FIND_PLAY.kit.turn * 1.5) % FIND_PLAY.kit.turn) - FIND_PLAY.kit.deg), inside = diff < half && Math.hypot(dx, dy) < reach;
-      if (inside && !o.snap && manual) n.time += dt; // only a beam somebody aims reads a note; the idle sweep just shows it
-      if (!n.read && n.time >= B.read) read(n, i);
-      n.v = FD.rm ? n.read || inside ? 1 : 0 : lerp(n.v, inside ? 1 : n.read ? B.rest : 0, Math.min(1, dt * B.noteEase));
-      n.ev = FD.rm ? n.read || inside ? 1 : 0 : lerp(n.ev, n.read || inside && n.time >= FIND_TIMING.noteDelay ? 1 : 0, Math.min(1, dt * B.englishEase));
-      attr(n.g, 'opacity', n.v); attr(n.en, 'opacity', n.ev);
-      const flash = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - n.flash) / B.flash)); attr(n.inner, 'transform', `scale(${(1 + (B.noteScale - 1) * flash) * (VIEW.phone ? B.notePhone : 1)})`);
+  const snapNext=()=>{const i=notes.findIndex(n=>!n.read),n=notes[i<0?0:i],O=origin(),angle=Math.atan2(n.d.y-O[1],n.d.x-O[0])*180/Math.PI;o.snap={from:o.head,to:o.head+findAngleDelta(o.head,angle),ts:FD.now};o.manualTs=FD.now;found(o.id);opened(o);if(FD.rm&&i>=0){o.head=angle;read(n,i);o.snap=null;}};
+  const aimAt=e=>{const p=toMap([e.clientX,e.clientY]),O=origin();o.head=Math.atan2(p[1]-O[1],p[0]-O[0])*180/Math.PI;o.snap=null;o.manualTs=FD.now;found(o.id);opened(o);};
+  findPointer(el,e=>{o.drag=true;o.downAt=[e.clientX,e.clientY];o.dragged=false;el.setPointerCapture(e.pointerId);},{drag:true,tap:snapNext,cancel:()=>o.drag=false});
+  el.addEventListener('pointermove',e=>{if(!o.drag||!o.dragged&&Math.hypot(e.clientX-o.downAt[0],e.clientY-o.downAt[1])<FIND_PLAY.beacon.slop)return;o.dragged=el._dragged=true;aimAt(e);});
+  el.addEventListener('pointerup',()=>o.drag=false);el.addEventListener('pointercancel',()=>o.drag=false);press(el,snapNext);
+  el.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowUp','ArrowRight','ArrowDown'].includes(e.key))return;e.preventDefault();o.head+=FIND_PLAY.beacon.arrow*(['ArrowLeft','ArrowUp'].includes(e.key)?-1:1);o.snap=null;o.manualTs=FD.now;found(o.id);opened(o);});
+  o.reduce=()=>{const B=FIND_PLAY.beacon;if(o.snap){o.head=o.snap.to;o.snap=null;}const O=origin();if(o.drag||FD.now-o.manualTs<B.manual)notes.forEach((n,i)=>{const angle=Math.atan2(n.d.y-O[1],n.d.x-O[0])*180/Math.PI;if(Math.abs(findAngleDelta(o.head,angle))<FIND_TIMING.beamCone/2)read(n,i);});o.level=o.fire;o.embers.forEach(e=>{e.done=true;attr(e.el,'opacity',0);});if(o.fire===notes.length){o.finalDone=true;o.beamTurns=1;o.head=B.baseAngle;}attr(ring,'opacity',0);};
+  o.undo=()=>{o.manualTs=-Infinity;o.drag=false;};o.hear=()=>o.hearTs=FD.now;
+  o.tick=(t,dt)=>{
+    const B=FIND_PLAY.beacon,O=origin();wrap();
+    o.embers.forEach(e=>{if(e.done)return;const q=clamp01((t-e.ts)/B.emberTime);attr(e.el,'transform','translate('+lerp(e.from[0],O[0],q)+' '+(lerp(e.from[1],O[1],q)-B.emberArc*Math.sin(Math.PI*q))+')');if(q===1){e.done=true;attr(e.el,'opacity',0);arrived(e.level,t);}});
+    let manual=o.drag||t-o.manualTs<B.manual,lit=o.fire===notes.length,finalAge=t-o.litTs,finale=lit&&o.level===notes.length&&!FD.rm&&!o.finalDone&&Number.isFinite(o.litTs)&&finalAge>=0;
+    if(finale){const q=clamp01(finalAge/B.finaleTurn);o.head=o.finaleFrom+360*q;o.snap=null;notes.forEach(n=>{const angle=Math.atan2(n.d.y-O[1],n.d.x-O[0])*180/Math.PI,share=((angle-o.finaleFrom+360)%360)/360;if(!n.finalFlash&&q>=share){n.finalFlash=true;n.flash=t;}});if(q===1){o.beamTurns=1;const settle=clamp01((finalAge-B.finaleTurn)/B.snap);o.head+=findAngleDelta(o.head,B.baseAngle)*ease(settle);if(settle===1){o.finalDone=true;o.head=B.baseAngle;o.manualTs=-Infinity;manual=false;}}}
+    else if(o.snap){const q=FD.rm?1:ease((t-o.snap.ts)/B.snap);o.head=lerp(o.snap.from,o.snap.to,q);if(q===1)o.snap=null;}
+    else if(!manual&&!FD.rm&&!lit)o.head=B.baseAngle+B.sweep*Math.sin(t*FIND_TIMING.beamSweep);
+    const strength=lit&&o.finalDone&&!manual?B.finaleReach:1,reach=B.baseReach*B.scale*strength,half=FIND_TIMING.beamCone/2;
+    attr(beam,'transform','translate('+B.origin.join(' ')+') rotate('+(o.head-180)+') scale('+strength+')');attr(beam,'opacity',manual||finale?1:Math.min(1,B.idle*strength));
+    const approach=(a,b,k)=>Math.abs(a-b)<.0001?b:lerp(a,b,Math.min(1,k));
+    notes.forEach((n,i)=>{const dx=n.d.x-O[0],dy=n.d.y-O[1],angle=Math.atan2(dy,dx)*180/Math.PI,inside=Math.abs(findAngleDelta(o.head,angle))<half&&Math.hypot(dx,dy)<reach;
+      if(inside&&!o.snap&&manual&&!finale)n.time+=dt;if(!n.read&&n.time>=B.read)read(n,i);
+      const target=lit&&n.read?1:inside?1:n.read?B.rest:0;n.v=FD.rm?target:approach(n.v,target,dt*B.noteEase);n.ev=FD.rm?(n.read||inside?1:0):approach(n.ev,n.read||inside&&n.time>=FIND_TIMING.noteDelay?1:0,dt*B.englishEase);
+      attr(n.g,'opacity',n.v);attr(n.en,'opacity',n.ev);const flash=FD.rm?0:Math.sin(Math.PI*clamp01((t-n.flash)/B.flash)),peak=VIEW.phone&&i===2?B.seaPhoneFlash:B.noteScale;attr(n.inner,'transform','scale('+((1+(peak-1)*flash)*(VIEW.phone?B.notePhone:1))+')');
     });
-    const F = B.flicker, foot = B.flameFoot, burst = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - o.litTs) / B.leap[1]));
-    const hearAge = t - o.hearTs, hear = FD.rm ? 1 : hearAge < B.hear[1] ? lerp(B.hear[0], 1, clamp01(hearAge / B.hear[1])) : 1 + (B.hear[2] - 1) * Math.sin(Math.PI * clamp01((hearAge - B.hear[1]) / B.hear[3]));
-    const size = lerp(B.flame[o.fire], B.leap[0], burst) * hear, sx = FD.rm ? size : size * (1 + F[0] * Math.sin(F[1] * t) + F[2] * Math.sin(F[3] * t)), sy = FD.rm ? size : size * (1 + F[4] * Math.sin(F[5] * t));
-    attr(flame, 'transform', `translate(${foot[0]} ${foot[1]}) scale(${sx} ${sy}) translate(${-foot[0]} ${-foot[1]})`); attr(glow, 'opacity', B.glowAlpha * o.fire);
-    if (o.onScreen && !FD.rm) { o.ember += o.fire * B.embers * dt; const n = Math.floor(o.ember); o.ember -= n; if (n) findBits('spark', ...O, n, FIND_PLAY.bits.sparks); }
-    o.stage = lit ? 'lit' : manual ? 'aiming' : 'idle';
-    depthBeam(!FD.rm && o.onScreen && VIEW.depth && FD.st.pushT > 0 && FD.st.rushT === 0 ? { x: O[0], y: O[1], angle: o.head, half, reach, soft: B.soft, steps: B.wedgeSteps } : null, FD.st);
-  };
-  return o;
+    let size=B.flame[o.level],glowAlpha=B.glowLevels[o.level],radius=B.glowRadii[o.level];const step=clamp01((t-o.stepTs)/B.swellTime);
+    if(!FD.rm&&step<1){const before=B.flame[Math.max(0,o.level-1)],over=size*(1+B.overshoot);size=step<.65?lerp(before,over,out3(step/.65)):lerp(over,size,ease((step-.65)/.35));}
+    if(lit&&(o.finalDone||Number.isFinite(o.litTs)&&finalAge>=0)){const q=FD.rm?1:clamp01(finalAge/B.finaleTime);size=q<.45?lerp(B.finaleFlame[0],B.finaleFlame[1],out3(q/.45)):lerp(B.finaleFlame[1],B.finaleFlame[2],ease((q-.45)/.55));if(FD.rm)size=B.finaleFlame[2];glowAlpha=Math.max(glowAlpha,!FD.rm&&finalAge<B.finaleFlash?1-clamp01(finalAge/B.finaleFlash):0);}
+    const hearAge=t-o.hearTs,hear=FD.rm?1:hearAge<B.hear[1]?lerp(B.hear[0],1,clamp01(hearAge/B.hear[1])):1+(B.hear[2]-1)*Math.sin(Math.PI*clamp01((hearAge-B.hear[1])/B.hear[3])),F=B.flicker,foot=B.flameFoot;
+    o.flameSize=size;o.glowStrength=glowAlpha;o.glowRadius=radius;
+    const sx=FD.rm?size:size*(1+F[0]*Math.sin(F[1]*t)+F[2]*Math.sin(F[3]*t)),sy=FD.rm?size:size*(1+F[4]*Math.sin(F[5]*t));attr(flame,'transform','translate('+foot.join(' ')+') scale('+(sx*hear)+' '+(sy*hear)+') translate('+(-foot[0])+' '+(-foot[1])+')');attr(glow,'opacity',glowAlpha);attr(glow,'r',B.glowR*radius);
+    const ringQ=FD.rm?1:clamp01(finalAge/B.finaleRing[1]);attr(ring,'cx',O[0]);attr(ring,'cy',O[1]);attr(ring,'r',B.finaleRing[0]*out3(ringQ));attr(ring,'opacity',finale&&ringQ<1?.8*(1-ringQ):0);
+    if(o.onScreen&&!FD.rm){o.ember+=o.fire*B.embers*dt;const n=Math.floor(o.ember);o.ember-=n;if(n)findBits('spark',...O,n,FIND_PLAY.bits.sparks);}
+    o.playing=!FD.rm&&(!!o.snap||o.embers.some(e=>!e.done)||t-o.stepTs<B.swellTime||lit&&!o.finalDone||manual&&notes.some(n=>!n.read&&n.time>0));
+    o.stage=lit?'lit':manual?'aiming':'idle';if(lit&&FD.focusId===o.id&&FD.hint?.textContent!==B.litHint)FD.hint.textContent=B.litHint;
+    depthBeam(!FD.rm&&o.onScreen&&VIEW.depth&&FD.st.pushT>0&&FD.st.rushT===0?{x:O[0],y:O[1],angle:o.head,half,reach,soft:B.soft,steps:B.wedgeSteps}:null,FD.st);
+  };return o;
 }
 export const beaconLit = () => FD.list.beacon?.fire === FIND_COPY.beaconNotes.length;
 

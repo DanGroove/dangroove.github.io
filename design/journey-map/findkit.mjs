@@ -140,14 +140,16 @@ export function showPop(owner, anchor, html, cls = '', side = 'auto') {
   const box = FD.popInner.getBoundingClientRect(); FD.popSize = [box.width, box.height];
   // Measure drawing ink once at open. Project its map-space box through the
   // existing camera each frame; never read layout during a pan or zoom.
-  const ink = owner.el?.querySelector('.hd-chest,.hn-horn,.jg-head,.rv-tree,.ls-rock') || owner.el;
+  const inkSelector='.hd-chest,.hn-horn,.jg-head,.rv-tree,.ls-rock';
+  const ink=owner.el?.querySelector(inkSelector)||[...document.querySelectorAll('[data-anim-source="'+owner.el?.id+'"]')].map(g=>g.querySelector(inkSelector)).find(Boolean)||owner.el;
+  const inkCam=ink?.closest?.('svg')?.querySelector('[id^="cam"]')||FD.svg.querySelector('#cam');
   FD.popBox = null;FD.popShape=null;
   if (ink?.getBBox && ink.getCTM?.()) {
-    const b = ink.getBBox(), matrix = FD.svg.querySelector('#cam').getCTM().inverse().multiply(ink.getCTM());
+    const b = ink.getBBox(), matrix = inkCam.getCTM().inverse().multiply(ink.getCTM());
     const points = [[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]].map(([x,y])=>[matrix.a*x+matrix.c*y+matrix.e,matrix.b*x+matrix.d*y+matrix.f]);
     FD.popBox = [Math.min(...points.map(p=>p[0])),Math.min(...points.map(p=>p[1])),Math.max(...points.map(p=>p[0])),Math.max(...points.map(p=>p[1]))];
     // The raised horn turns, so the corners of its box reach far past the drawing: sample its outline once here instead.
-    if(owner.id==='horn'){const pts=[];ink.querySelectorAll('path').forEach(p=>{const L=p.getTotalLength?.()||0,n=Math.max(8,Math.ceil(L));if(L>0)for(let i=0;i<=n;i++){const q=p.getPointAtLength(L*i/n);pts.push([q.x,q.y]);}});FD.popShape={b,pts,matrix:FD.svg.querySelector('#cam').getCTM().inverse().multiply(ink.parentElement.getCTM())};}
+    if(owner.id==='horn'){const pts=[];ink.querySelectorAll('path').forEach(p=>{const L=p.getTotalLength?.()||0,n=Math.max(8,Math.ceil(L));if(L>0)for(let i=0;i<=n;i++){const q=p.getPointAtLength(L*i/n);pts.push([q.x,q.y]);}});FD.popShape={b,pts,matrix:inkCam.getCTM().inverse().multiply(ink.parentElement.getCTM())};}
   }
   // A popup stays clear of the step buttons and the timeline: their boxes are read once here, when it opens, never in the
   // frame loop. A bar in the bottom half is a floor; a bar in the top half (the end and explore bar on a computer) is a ceiling.

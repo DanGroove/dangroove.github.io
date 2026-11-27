@@ -3,7 +3,7 @@ import { STEPS, COPY, STOPS, DEPTH, NOVA, FIND_PLAY, EXPLORE, WORLD, PHONE_LAYOU
 import { VIEW, TOTAL_P, tripState, easeIO, lerp, glideMove, GLIDES, glideSeconds, tripWarmGlides } from './trip.mjs';
 import { BEATS, PACE_PARTS, paceMove, paceAt, paceEase } from './pace.mjs';
 import { arrowSvg } from './cards.mjs';
-import { exploreActive, exploreBusy, exploreStart, exploreEnd, exploreReset, exploreDepart, exploreResume } from './explore.mjs';
+import { exploreActive, exploreBusy, exploreStart, exploreEnd, exploreReset, exploreDepart, exploreResume, exploreVisit, exploreCloseVisit } from './explore.mjs';
 
 const SC = {
   mode: 'steps', P: 0, rm: false, exploreStop: null, move: null, cut: null, lastTs: null, fill: 0, focus: null,
@@ -230,11 +230,8 @@ function stepsJump(target, after, resume = null) {
 }
 // The card supplies its last painted camera before its fold changes anything.
 export function stepsReturnFromExplore(index, cam) {
-  if (SC.rm || JOURNEY.moving || SC.exploreStop !== STOPS[index]?.id) return false;
-  SC.exploreStop = null;
-  stepsDestination(); stepsRelease();
-  stepsJump(stepsEnd, null, { s: cam.s, tx: cam.tx, ty: cam.ty });
-  return true;
+  if(!exploreActive()||SC.exploreStop!==STOPS[index]?.id)return false;
+  SC.exploreStop=null;return exploreCloseVisit(index);
 }
 function stepsNavigate(target, opts = {}) {
   if (SC.cut) return;
@@ -253,6 +250,7 @@ function stepsGo(id, opts = {}) {
   const beat = BEATS.find(b => b.id === id); if (!beat) return;
   // A shield pressed during its own arrival keeps the current landing clock.
   if (!opts.instant && STOPS.some(s => s.id === id) && SC.move && SC.move.P1 === beat.P) return;
+  if(exploreActive()&&STOPS.some(s=>s.id===id)&&!opts.instant){SC.exploreStop=id;stepsRelease();exploreVisit(STOPS.findIndex(s=>s.id===id),tripState(beat.P).cam);return;}
   SC.exploreStop = STOPS.some(s => s.id === id) && (exploreActive() || SC.exploreStop) ? id : null;
   stepsRelease(); if (SC.rm && SC.reducedGo) { SC.reducedGo(id); stepsReadScroll(); return; } stepsNavigate(beat.P, { ...opts, start: id === 'map' });
 }

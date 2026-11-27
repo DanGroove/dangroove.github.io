@@ -213,7 +213,7 @@ function traceSummary(ev, windowMs) {
 async function oneRun(p, beat, run) {
   events.length = 0;
   const colon = beat.indexOf(':'), kind = colon < 0 ? (beat === 'hero' ? 'hero' : 'next') : beat.slice(0, colon), arg = (colon < 0 ? beat : beat.slice(colon + 1)).toLowerCase();
-  const start = { next: arg, back: arg, press: 'map', find: 'map', explore: 'end', swipe: arg, hero: null, jump: arg.split('-')[0], pinch: arg, pinchcard: arg }[kind];
+  const start = { next: arg, back: arg, press: 'map', find: 'map', explore: 'end', visit: 'end', swipe: arg, hero: null, jump: arg.split('-')[0], pinch: arg, pinchcard: arg }[kind];
   if (start === undefined) throw new Error('unknown beat ' + beat);
   if (kind === 'hero' && !p.joined) { note(`skipped hero for ${p.name}: no --page ${p.name}-joined=<file>`); return []; }
   await send('Page.navigate', { url: kind === 'hero' ? `http://localhost:${PORT}/${p.joined}.html` : `http://localhost:${PORT}/${p.name}.html?beat=${start}` });
@@ -277,6 +277,12 @@ async function oneRun(p, beat, run) {
     if (!await wait('window.__jm.focus === "wayfinder"', 5000)) return fail(beat, 'the compass did not open');
     await sleep(800);
     await measure(beat, () => press(findWord, 'the compass word ' + arg), (b, a) => a.cls.includes('jm-way') ? null : `${arg} was not picked`);
+  } else if (kind === 'visit') {
+    const i=STOP_IDS.indexOf(arg);if(i<0)throw new Error('unknown stop in '+beat);
+    try{await press(sel('.go-next'),'Next at end');}catch(e){return fail(beat,e.message);}
+    if(!await wait("document.documentElement.classList.contains('jm-explore')",4000))return fail(beat,'explore did not start');
+    await sleep(6000);
+    await measure(beat,()=>press(sel('#stop-'+arg+' .st-btn'),'visit '+arg),(b,a)=>a.cam!==b.cam||a.ui!==b.ui?null:'the shield visit did not open');
   } else if (kind === 'find') {
     await measure(beat, () => press(findOpen(arg), 'find ' + arg), (b, a) => a.moving || a.focus || a.cam !== b.cam ? null : 'the camera did not go to it');
     if (arg !== 'wayfinder' && rows.at(-1).ok) {

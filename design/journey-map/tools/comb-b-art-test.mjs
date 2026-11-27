@@ -11,12 +11,14 @@ for(const[a,b]of[[5,19],[40,41],[56,59]]){
 }
 const crown=t=>{const[x,y,s,p]=t;return p?[[x-s,y-.5*s],[x,y-2.7*s],[x+s,y-.5*s]]:Array.from({length:64},(_,i)=>[x+Math.cos(i*Math.PI/32)*s,y-1.7*s+Math.sin(i*Math.PI/32)*s]);};
 const crownGap=(a,b)=>a.some(p=>insidePoly(p,b))||b.some(p=>insidePoly(p,a))?0:Math.min(...a.map(p=>outlineGap(p,b)),...b.map(p=>outlineGap(p,a)));
-for(const i of[5,41,59]){
+// COMB-R, 2026-11-27: the two audited pines are named by their seeded, nudged positions.
+for(const [x,y] of [[357.8,158.1],[403,351.4]]){
+  const i=GROVE.findIndex(t=>n1(t[0])===x&&n1(t[1])===y);assert.ok(i>=0,'audited seeded pine is present');
   const minimum=Math.min(...GROVE.map((t,j)=>i===j?Infinity:crownGap(crown(GROVE[i]),crown(t))));
   assert.ok(minimum*.576-1.1>=1,'moving a named pine must not create a new tangent with any neighbour');
   console.log('T'+(i+1)+': all-neighbour ink gap >= '+(minimum*.576-1.1).toFixed(2)+' CSS px at 360 fit');
 }
-assert.deepEqual(HAMMER.map.hit,[-6,-6,34,34]);assert.deepEqual(FIND_PLAY.horn.hit,[-18,-30,34,38]);
+assert.deepEqual(HAMMER.map.hit,[-6,-6,34,34]);assert.deepEqual(FIND_PLAY.horn.hit,[-24,-36,48,44]);
 assert.deepEqual(FIND_PLAY.mist.box,[102,410,104,50]);assert.deepEqual(FIND_PLAY.serpent.hit,[-50,-30,62,42]);
 assert.ok(!/find-mist-soft|filter=/.test(map.finds.match(/id="f-mist"[^]*?(?=<g class="find" id="f-horn")/)?.[0]||''));
 assert.ok(YGG.rat.includes('yg-tail')&&YGG.rat.includes('<path')&&!Object.hasOwn(YGG,'nid')&&!map.detail.includes('yg-nid'),'Q1 keeps the squirrel hook and removes the root creature');

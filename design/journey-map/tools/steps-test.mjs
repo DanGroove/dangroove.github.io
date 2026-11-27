@@ -152,10 +152,11 @@ for (const c of cardsList()) {
   stepAssert(c.face.contains(x) && top.children.at(-1) === x, 'X must be the last control in the face header');
   stepAssert(c.card.contains(c.face) && !c.card.contains(c.btn) && !c.card.contains(c.tail), 'shield and tail must stay outside the growing/tilting face');
 }
+// COMB-R, 2026-11-27: the specified reverse fold is now 0.5 s.
 const stopP = BEATS[2].P; JOURNEY.set(stopP); cardsList().forEach(c => c.H = 420); let cardState = tripState(stopP); cardsOverride(cardState, 0, false); cardsFrame(cardState); stepAssert(cardsClose(), 'card did not close');
-cardState = tripState(stopP); cardsOverride(cardState, CARD_CLOSE.time / 2, false); stepAssert(cardState.cardK[0] > 0 && cardState.cardK[0] < 1 && cardState.P === stopP, 'card halfway fold');
-cardState = tripState(stopP); cardsOverride(cardState, CARD_CLOSE.time / 2, false); stepAssert(cardState.cardK[0] === 0 && cardState.P === stopP, 'card fold changed P or failed');
-cardsFrame(cardState); cardsList()[0].btn.focus(); cardsList()[0].btn.fire('click'); cardState = tripState(stopP); cardsOverride(cardState, CARD_CLOSE.time, false); cardsFrame(cardState); stepAssert(cardState.cardK[0] === 1 && navigations === 0, 'closed stop mark must reopen locally');
+cardState = tripState(stopP); cardsOverride(cardState, .5 / 2, false); stepAssert(cardState.cardK[0] > 0 && cardState.cardK[0] < 1 && cardState.P === stopP, 'card halfway fold');
+cardState = tripState(stopP); cardsOverride(cardState, .5 / 2, false); stepAssert(cardState.cardK[0] === 0 && cardState.P === stopP, 'card fold changed P or failed');
+cardsFrame(cardState); cardsList()[0].btn.focus(); cardsList()[0].btn.fire('click'); cardState = tripState(stopP); cardsOverride(cardState, .5, false); cardsFrame(cardState); stepAssert(cardState.cardK[0] === 1 && navigations === 0, 'closed stop mark must reopen locally');
 const cardX = cardsList()[0].el.querySelector('.c-close'); stepAssert(document.activeElement === cardX && cardX.focusOptions.preventScroll === true, 'reopened card must focus its X without scrolling');
 for(const[w,h]of [[1440,900],[390,844]]){
   tripResize(w,h,w<=640?96:120);

@@ -16,8 +16,8 @@ try{
    return {outside,lit,clip:!!light.closest('[clip-path]'),rect:clip.querySelector('rect').outerHTML};
   })()`);
   console.log(w+' beam at 12 aim angles: '+JSON.stringify(r));if(r.outside||!r.lit||!r.clip)fail.push(w+' clip raster failed');
-  for(let i=0;i<4;i++){await b.evaluate('document.getElementById("f-beacon").dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}))');await combBWait(2100);}
-  const s=await b.evaluate('window.__jm.finds.state("beacon")');console.log(w+' read '+JSON.stringify(s.read));if(s.fire!==4||s.read.some(v=>!v))fail.push(w+' readings failed');
+  for(let i=0;i<3;i++){await b.evaluate('document.getElementById("f-beacon").dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}))');await combBWait(2100);}
+  const s=await b.evaluate('window.__jm.finds.state("beacon")');console.log(w+' read '+JSON.stringify(s.read));if(s.fire!==3||s.read.some(v=>!v))fail.push(w+' readings failed');
  }
  if(b.errors.length)fail.push(...b.errors);
 }finally{await b.close();}

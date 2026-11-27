@@ -310,7 +310,7 @@ export function tripState(P) {
 export const toScreen = (st, p) => [p[0] * st.cam.s + st.cam.tx, p[1] * st.cam.s + st.cam.ty];
 
 // ---- DOM ----
-const TRIP_EL = {};
+export const TRIP_EL = {};
 export function tripBuild(els) {
   Object.assign(TRIP_EL, els);
   TRIP_EL.labels = [...els.svg.querySelectorAll('.label-scale')].map(el => ({ el, kind: el.dataset.label, stopSub: el.dataset.stopSub === 'true', k: null }));
@@ -388,6 +388,7 @@ export function tripMeasureLabels() {
     E.title.setAttribute('transform', short ? `translate(${(24 - VIEW.ox) / VIEW.s0 - 44} ${(55 - VIEW.oy) / VIEW.s0 - 78})` : '');
     kicker?.closest('.label-scale')?.parentElement.setAttribute('transform', `translate(45 ${short || VIEW.h <= 720 || VIEW.phone ? 78 + 19 / VIEW.s0 : 101})`);
   }
+  if(short){
   E.legend?.forEach((g,i) => {
     const col = i > 1, line = i % 2;
     g.place = short ? [(VIEW.w * .78 - VIEW.ox) / VIEW.s0, (269 + i * 17 - VIEW.oy) / VIEW.s0] : [80 + (col ? 66 / VIEW.s0 : 0), 840.5 + line * 18 / VIEW.s0];
@@ -396,6 +397,23 @@ export function tripMeasureLabels() {
     const text = g.el.querySelector('text'); g.box = text?.getBBox?.();
   });
   E.symbols?.forEach(s => { const p = E.legend[+s.el.dataset.i].place; s.el.setAttribute('transform', `translate(${p[0] - 16 / VIEW.s0 - +s.el.dataset.x} ${p[1] - 3 / VIEW.s0 - +s.el.dataset.y}) ${s.base}`); });
+  } else if(E.legend?.length&&E.symbols?.length&&typeof E.legend[0].el.querySelector('text')?.getBBox==='function'){
+    const k=labelScale('legend',VIEW.s0),symbols=E.symbols.slice().sort((a,b)=>+a.el.dataset.i-+b.el.dataset.i),texts=E.legend.map(g=>g.el.querySelector('text'));
+    symbols.forEach(s=>s.el.querySelector('.mk-size')?.setAttribute('transform','scale(1)'));
+    texts.forEach(t=>{t.setAttribute('font-size',LABELS.legend.unit);t.parentElement.setAttribute('transform','scale('+k+')');});
+    const measure=()=>texts.map(t=>t.getBBox()),sym=symbols.map(s=>{const b=s.el.getBBox(),shapes=s.el.matches('path,circle')?[s.el]:[...s.el.querySelectorAll('path,circle')];let pad=0;for(const e of shapes){const st=getComputedStyle(e);if(st.stroke!=='none')pad=Math.max(pad,parseFloat(st.strokeWidth)/2*(st.vectorEffect==='non-scaling-stroke'?1/VIEW.s0:1));}return{b,pad:0,width:b.width};});
+    let boxes=measure(),gap=16,inside=8,wordPx=9,total=()=>boxes.reduce((v,b,i)=>v+b.width*k*VIEW.s0+sym[i].width*VIEW.s0+inside,0)+3*gap,available=506*VIEW.s0-1.1-14;
+    if(total()>available){gap=inside=4;}
+    if(total()>available&&VIEW.phone){wordPx=8.5;texts.forEach(t=>t.setAttribute('font-size',LABELS.legend.unit*8.5/9));boxes=measure();}
+    const inkContext=document.createElement('canvas').getContext('2d');
+    let x=300-total()/(2*VIEW.s0);
+    E.legend.forEach((g,i)=>{const t=texts[i],b=boxes[i],symbol=symbols[i],sg=sym[i],font=getComputedStyle(t);inkContext.font=font.fontStyle+' '+font.fontWeight+' '+(parseFloat(font.fontSize)*k*VIEW.s0)+'px '+font.fontFamily;const ink=inkContext.measureText('x');
+      const centre=x+sg.width/2,baseline=864+(ink.actualBoundingBoxAscent-ink.actualBoundingBoxDescent)/(2*VIEW.s0);
+      symbol.el.setAttribute('transform','translate('+(centre-+symbol.el.dataset.x)+' '+(864-+symbol.el.dataset.y)+') '+symbol.base);
+      g.place=[x+sg.width+inside/VIEW.s0-b.x*k,baseline];g.el.setAttribute('transform','translate('+g.place.join(' ')+')');g.p=g.place;g.box=b;g.wordPx=wordPx;
+      x+=sg.width+(inside+b.width*k*VIEW.s0+gap)/VIEW.s0;
+    });
+  }
   E.t2?.forEach(t => {
     const words = t.el.textContent;
     if (words.includes(COPY.ygg) || words.includes(COPY.well) || words.includes(COPY.wellSub)) t.el.classList.add('well-name');
@@ -668,14 +686,42 @@ function tripLabels(st, t2Fade = 1) {
   (E.legend || []).forEach(g => { const k = labelScale('legend', c.s), b = g.box, box = b ? [g.p[0]+b.x*k,g.p[1]+b.y*k,g.p[0]+(b.x+b.width)*k,g.p[1]+(b.y+b.height)*k] : [g.p[0],g.p[1]-u*L.ascent,g.p[0]+g.n*u*L.width,g.p[1]+u*L.descent]; put(g, (free ? 1 : back) * tripEdge(g, free ? 1 : gone(box), dt) * (1-tripCardCover(st,box)) * (1-.85*xQuiet) * group); });
 }
 export function tripGliding() { return !!TRIP_EL.raster?.gliding; }
+// COMB-R: each focus raster has its own commit. The moving view only changes CSS matrices.
+function tripFocusRasters(E, r, st, focus, layers, veil, camVeil, camMoved) {
+  const c=st.cam, ids=['map','base','live','finds','anim','veil'], equal=(a,b)=>a&&b&&['s','tx','ty'].every(k=>Math.abs(a[k]-b[k])<1e-10);
+  if (focus && focus.k>(r.focusK??0)) r.focusRelease=false;
+  else if (!focus || focus.k<(r.focusK??0)) r.focusRelease=true;
+  const hint=E.focusAim?.id===focus?.id?E.focusAim:null, key=JSON.stringify([focus?.id||'',hint?.serial||0,!!r.focusRelease]);
+  let run=r.focusRun;
+  if (!run || run.key!==key) {
+    const target=tripState(st.P); if (focus&&!r.focusRelease) tripFocus(target,hint?.view||focus.view,1);
+    const start=r.base||c; r.layerCams ||= Object.fromEntries(ids.map(id=>[id,{...(id==='base'?E.baseRaster?.camera:id==='veil'?E.veilRaster:null)||start}]));
+    run=r.focusRun={key,destination:{...target.cam},queue:(!r.base||target.cam.s<start.s)?ids.slice():[],settled:false,pending:true};
+    st.rasterDestination={...target.cam};
+  }
+  const moving=!!focus&&(focus.k<1||!focus.swapped)||camMoved;
+  if (!moving&&!run.settled) { run.settled=true;run.queue=ids.filter(id=>!equal(r.layerCams[id],c));run.restHoles=true; }
+  const job=run.queue.shift(), camera=run.settled?c:run.destination;
+  const matrix=p=>'matrix('+p.s.toFixed(4)+' 0 0 '+p.s.toFixed(4)+' '+p.tx.toFixed(2)+' '+p.ty.toFixed(2)+')';
+  if(job){r.layerCams[job]={...camera};const cam=job==='map'?E.cam:job==='base'?E.camBase:job==='veil'?camVeil:layers.find(([svg])=>svg.id==='map-'+job)?.[1];if(cam)tripWrite(cam,'transform',matrix(camera),true);if(job==='anim'){const line=layers.find(([svg])=>svg.id==='map-lines');if(line)tripWrite(line[1],'transform',matrix(camera),true);}}
+  r.base=r.layerCams.map; E.veilRaster=r.layerCams.veil;
+  const hold=(svg,p)=>{if(!svg||!p)return;const k=c.s/p.s;tripWrite(svg,'transform',equal(c,p)?'none':'matrix('+k+',0,0,'+k+','+(c.tx-p.tx*k)+','+(c.ty-p.ty*k)+')');};
+  hold(E.svg,r.base);hold(veil,r.layerCams.veil);for(const[svg]of layers)hold(svg,r.layerCams[svg.id.slice(4)]||r.layerCams.anim);
+  if(E.base){const B=E.baseRaster??={};B.camera=r.layerCams.base;B.last={...c,P:st.P,focus:focus?.k||0};B.held=!equal(c,B.camera);hold(E.base,B.camera);}
+  if(run.restHoles&&(job==='veil'||!run.queue.length)){st.veilRestCommit=true;run.restHoles=false;}
+  const holding=moving||run.queue.length>0;st.rasterLayer=job;
+  r.gliding=holding;r.moving=holding;r.promo=true;r.soft=false;r.focusK=focus?.k||0;
+  st.gliding=holding;st.rasterS=r.layerCams.finds?.s||r.base.s;st.rasterRebased=job==='finds'||job==='map';
+  st.rasterBudget=false;E.rasterFrame=false;run.pending=moving||run.queue.length>0;return run.pending;
+}
 export function tripApply(st, focus = null) {
   const E = TRIP_EL, c = st.cam; E.clockFading = false;
   const veil = E.veil ??= document.getElementById('map-veil'), camVeil = E.camVeil ??= document.getElementById('cam-veil');
   // L5: the names-and-trail and finds svgs ride svg#map's raster camera; div#map-stack takes the fade.
-  const layers = E.layers ??= ['live', 'finds'].map(id => [document.getElementById('map-' + id), document.getElementById('cam-' + id)]).filter(([svg, cam]) => svg && cam), stack = E.stack ??= document.getElementById('map-stack');
+  const layers = E.layers ??= ['live', 'finds', 'anim', 'lines'].map(id => [document.getElementById('map-' + id), document.getElementById('cam-' + id)]).filter(([svg, cam]) => svg && cam), stack = E.stack ??= document.getElementById('map-stack');
   const free = !!st.exploring || st.exploreK > 0;
   const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
-  if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
+  if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.layerCams = null; r.focusRun = null; E.veilRaster = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
   const ratio = r.base ? c.s / r.base.s : 1;
   const zooming = r.base && Math.abs(ratio - 1) > 1e-6;
   const lastCam = r.lastCam, camMoved = !!lastCam && (lastCam.s !== c.s || lastCam.tx !== c.tx || lastCam.ty !== c.ty);
@@ -696,13 +742,15 @@ export function tripApply(st, focus = null) {
   // Journey moves share one big raster per frame: svg#map, svg#map-base or one sky object, the biggest overshoot first.
   // Explore, its scripted opening, rest and find focus moves redraw each layer as soon as it is due, as before part 13.
   // A waiting layer never runs more than FRAME_PERF.slack past its hold range, and the base never stops covering the screen.
+  let requests=[],mapForced=false,baseForced=false,B,held,coversNow=true,baseLast,focusPending=false,chosen=null;
+  const focusRaster=!free&&!st.reduced&&(focusMove||r.focusRun?.pending);
+  if(focusRaster) focusPending=tripFocusRasters(E,r,st,focus,layers,veil,camVeil,camMoved);
+  else { r.focusRun=null;r.focusK=0;r.focusRelease=false;
   const slot = r.gliding && !focusMove, slack = FRAME_PERF.slack;
-  const requests = (slot ? VIEW.skyPlan?.(st) || [] : []).map(q => ({ ...q, kind: 'sky' }));
+  requests = (slot ? VIEW.skyPlan?.(st) || [] : []).map(q => ({ ...q, kind: 'sky' }));
   const mapDue = !r.base || (!moving ? ratio !== 1 || c.tx !== r.base.tx || c.ty !== r.base.ty : rebase);
-  const mapForced = mapDue && (!slot || !r.base || ratio < FRAME_PERF.scaleMin / slack || ratio > FRAME_PERF.scaleMax * slack);
+  mapForced = mapDue && (!slot || !r.base || ratio < FRAME_PERF.scaleMin / slack || ratio > FRAME_PERF.scaleMax * slack);
   if (mapDue) requests.push({ kind: 'map', score: r.base ? score(ratio, mapLo, mapHi) : Infinity });
-  let baseForced = false;
-  let B, held, coversNow = true, baseLast;
   const rounded = p => ({ s: +p.s.toFixed(4), tx: +p.tx.toFixed(2), ty: +p.ty.toFixed(2) });
   const text = p => 'matrix('+p.s.toFixed(4)+' 0 0 '+p.s.toFixed(4)+' '+p.tx.toFixed(2)+' '+p.ty.toFixed(2)+')';
   const shown = rounded(c), heldBy = cam => { const k = shown.s / cam.s; return { k, tx: shown.tx - cam.tx * k, ty: shown.ty - cam.ty * k }; };
@@ -723,7 +771,7 @@ export function tripApply(st, focus = null) {
   }
   // Forced redraws take the frame; otherwise the slot goes to the biggest overshoot. Sky objects read the slot in depthSky.
   const forced = mapForced || baseForced;
-  const chosen = slot && !forced ? requests.sort((a,b) => b.score-a.score)[0] || null : null;
+  chosen = slot && !forced ? requests.sort((a,b) => b.score-a.score)[0] || null : null;
   st.rasterBudget = slot ? { used: forced, sky: chosen?.kind === 'sky' ? chosen.object : null, baseForced } : false;
   E.rasterFrame = st.rasterBudget;
   const endScale = previous => {
@@ -738,14 +786,20 @@ export function tripApply(st, focus = null) {
     const ahead = moving && glideHold && lastCam && c.s > lastCam.s ? Math.min(c.s / FRAME_PERF.scaleMin, Math.max(c.s,endScale(lastCam))) / c.s : 1;
     r.base = { ...c, s: c.s * ahead, tx: c.ax - (c.ax-c.tx)*ahead, ty: c.ay - (c.ay-c.ty)*ahead };
     tripWrite(E.cam, 'transform', text(r.base), true);
-    if (camVeil) tripWrite(camVeil, 'transform', E.cam.getAttribute('transform'), true);
+    r.layerCams = null;
     for (const [, cam] of layers) tripWrite(cam, 'transform', E.cam.getAttribute('transform'), true);
     if (st.rasterBudget) st.rasterBudget.used = true;
   }
   const paintK = c.s / r.base.s;
   const mapTransform = paintK === 1 && c.tx === r.base.tx && c.ty === r.base.ty ? 'none' : 'matrix('+paintK+',0,0,'+paintK+','+(c.tx-r.base.tx*paintK)+','+(c.ty-r.base.ty*paintK)+')';
   tripWrite(E.svg, 'transform', mapTransform);
-  if (veil) tripWrite(veil, 'transform', mapTransform);
+  if (veil) {
+    let destination=null;
+    if(moving&&!r.veilMoving){const glide=GLIDES.find(g=>st.P>=g.a&&st.P<g.b);destination=glide?tripState(lastCam&&st.P<lastCam.P?glide.a:glide.b).cam:st.exploreDestination||c;st.rasterDestination={...destination};}
+    if(!E.veilRaster||destination||!moving&&['s','tx','ty'].some(k=>E.veilRaster[k]!==c[k])){E.veilRaster={...(destination||c)};if(camVeil)tripWrite(camVeil,'transform',text(E.veilRaster),true);if(!moving)st.veilRestCommit=true;}
+    if(!moving&&r.veilMoving)st.veilRestCommit=true;r.veilMoving=moving;
+    const v=E.veilRaster,k=c.s/v.s;tripWrite(veil,'transform',k===1&&c.tx===v.tx&&c.ty===v.ty?'none':'matrix('+k+',0,0,'+k+','+(c.tx-v.tx*k)+','+(c.ty-v.ty*k)+')');
+  }
   for (const [svg] of layers) tripWrite(svg, 'transform', mapTransform);
   st.rasterS = r.base.s; st.gliding = tripGliding();
   if (B) {
@@ -768,6 +822,7 @@ export function tripApply(st, focus = null) {
     if (moving && !rebase && zooming) r.soft = true;
     if (!st.exploreMoving && r.soft) r.promo = r.soft = false;
   }
+  }
   // Keep the displayed label state across camera commits. Its own size and tier
   // clock eases continuously, including across interrupted gestures/rebases.
   const settle = free ? 1 - Math.exp(-(st.exploreDt || 0) / (FRAME_PERF.labelSettle / 3)) : 1;
@@ -782,7 +837,8 @@ export function tripApply(st, focus = null) {
   tripFocusFade(st);
   if (E.rows) tripLabels(st, labelFade);
   E.labels.forEach(label => {
-    const ideal = labelScale(label.kind,paint.s);
+    const raster= r.layerCams?.[(label.el.closest?.('svg')?.id||'map').replace(/^map-?/,'')||'map'] || paint;
+    const ideal = labelScale(label.kind,raster.s);
     // Follow the old epsilon rule in memory even while the visible label is held.
     // The held opening eases them too (pinch recheck, 2026-11-27): it no longer redraws every frame, so without the ease its
     // redraws and its landing popped the names by 10-15 % in one frame (cloud landing probe).
@@ -796,7 +852,7 @@ export function tripApply(st, focus = null) {
     const k = free ? Math.max(trueSize * FRAME_PERF.scaleMin, Math.min(trueSize * FRAME_PERF.scaleMax, eased)) : eased;
     if (label.k !== k) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; }
   });
-  E.markers?.forEach(el => { tripWrite(el, 'transform', `scale(${COMB.markerPx / (12.4 * (el.parentElement?.parentElement?.dataset.screen ? 1 : paint.s))})`, true); const mk = el.parentElement?.parentElement, f = FINDS.find(f=>mk?.id === 'mk-'+f.id); if (f) { const half = COMB.markerPx / (2*c.s), cover = tripCardCover(st,[f.mark[0]-half,f.mark[1]-half,f.mark[0]+half,f.mark[1]+half]); tripWrite(mk,'opacity',(1-cover)*(1-(st.focusK||0))); tripWrite(mk,'visibility',cover>=.995||st.focusK>=1?'hidden':''); } });
+  E.markers?.forEach(el => { tripWrite(el, 'transform', el.closest?.('.legend-symbol')&&!(VIEW.h<=440&&VIEW.w>640)?'scale(1)':`scale(${COMB.markerPx / (12.4 * (el.parentElement?.parentElement?.dataset.screen ? 1 : paint.s))})`, true); const mk = el.parentElement?.parentElement, f = FINDS.find(f=>mk?.id === 'mk-'+f.id); if (f) { const half = COMB.markerPx / (2*c.s), cover = tripCardCover(st,[f.mark[0]-half,f.mark[1]-half,f.mark[0]+half,f.mark[1]+half]); tripWrite(mk,'opacity',(1-cover)*(1-(st.focusK||0))); tripWrite(mk,'visibility',cover>=.995||st.focusK>=1?'hidden':''); } });
   E.ticks?.forEach(el => tripWrite(el, 'stroke-width', Math.min(+el.dataset.weight * paint.s, +el.dataset.weight * VIEW.s0), true));
   E.secondary.forEach(group => { tripWrite(group, 'opacity', ''); tripWrite(group, 'visibility', labelFade === 0 ? 'hidden' : 'visible'); });
   E.secondaryText?.forEach(t => { const fade = t.group.classList.contains('wf-result') && document.documentElement.classList.contains('jm-way') ? 1 : labelFade; tripWrite(t.el, 'fillOpacity', t.fill * fade); tripWrite(t.el, 'strokeOpacity', t.stroke * fade); });
@@ -848,7 +904,7 @@ export function tripApply(st, focus = null) {
     tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
     const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
-  return (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.clockFading || !!E.baseRaster?.held || requests.length > (mapForced ? 1 : 0) + (baseForced ? 1 : 0) + (chosen ? 1 : 0);
+  return focusPending || (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.clockFading || !!E.baseRaster?.held || requests.length > (mapForced ? 1 : 0) + (baseForced ? 1 : 0) + (chosen ? 1 : 0);
 }
 const n2 = v => v.toFixed(2);
 export function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }

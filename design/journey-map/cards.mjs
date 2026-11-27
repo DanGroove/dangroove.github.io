@@ -1,11 +1,12 @@
 // The fixed map shield, its growing callout and the join are one article throughout.
-import { STOPS, PALETTES, COPY, CRAFTS, MAP, DEPTH, CARD_CLOSE, CARD_GROW, CARD_TAIL, MARK, WORLD, COMB } from './data.mjs';
+import { STOPS, PALETTES, COPY, CRAFTS, MAP, DEPTH, CARD_CLOSE, CARD_GROW, CARD_TAIL, MARK, WORLD, COMB, CAMERA } from './data.mjs';
 import { shieldSvg, cardTailSvg } from './art.mjs';
 import { VIEW, STOP_U, tripCardPlace, toScreen, smooth, easeIO, lerp, tripVisible, tripCardCover } from './trip.mjs';
 import { JOURNEY, stepsReturnFromExplore } from './steps.mjs';
 
 const CD = { list: [], W: 640, craft: null, onGo: null, rm: false, closed: null, last: null, dt: 0 };
 const cardsWrites = new WeakMap();
+const clampCard = v=>Math.max(0,Math.min(1,v));
 function cardsStyle(el, key, value) {
   const text = String(value), cache = cardsWrites.get(el) || {}, old = cache[key];
   if (old?.text === text && el.style[key] === old.value) return;
@@ -43,6 +44,7 @@ export function cardsBuild(container, onGo, rm = false) {
 <button class="c-btn" type="button" aria-label="${esc(COPY.caseStudy + ': ' + s.name)}">${COPY.caseStudy}${arrowSvg}</button></div></div></div></div></div>`;
     a.querySelectorAll('.c-crafts li').forEach((li, j) => { li.setAttribute('aria-label', (s.crafts.includes(CRAFTS[j]) ? COMB.craftLit : COMB.craftUnlit).replace('{craft}', CRAFTS[j])); li.classList.toggle('craft-used', s.crafts.includes(CRAFTS[j])); });
     a.querySelector('.st-btn').addEventListener('click', e => {
+      if(CD.last?.exploring&&CD.last.cardK[i]>0&&!(CD.closed?.i===i&&CD.closed.to===0)){cardsClose(i);return;}
       if (CD.last?.kind === 'hold' && CD.last.i === i && !JOURNEY.moving) {
         if (CD.closed?.i === i && CD.closed.to === 0) { CD.closed = { ...CD.closed, from: CD.closed.k, to: 1, elapsed: 0 }; CD.list[i].reopenFocus = e.detail !== 1; }
         else cardsClose(i);
@@ -81,10 +83,10 @@ function cardsDepthConfig(c) {
 }
 export const cardsSetCraft = mask => { CD.craft = mask; CD.list.forEach(c => c.el.style.transition = 'opacity .3s'); };
 
-export function cardsClose(index = CD.last?.i) {
+export function cardsClose(index = CD.last?.cardK.findIndex(k=>k>0)) {
   const st = CD.last;
-  if (CD.rm || JOURNEY.moving || !st || st.kind !== 'hold' || st.cardK[index] <= 0 || (CD.closed?.to === 0)) return false;
-  CD.closed = { i: index, P: st.P, k: st.cardK[index], from: st.cardK[index], to: 0, elapsed: 0 };
+  if (CD.rm || JOURNEY.moving || !st || !st.exploring&&st.kind !== 'hold' || !(st.cardK[index]>0) || CD.closed?.to===0&&CD.closed.i===index) return false;
+  CD.closed = { i: index, P: st.P, k: st.cardK[index], from: st.cardK[index], to: 0, elapsed: 0, explore:!!st.exploring, visitToken:st.visitToken };
   if (CD.list[index].el.contains(document.activeElement)) CD.list[index].btn.focus({ preventScroll: true });
   stepsReturnFromExplore(index, st.cam);
   return true;
@@ -94,16 +96,17 @@ export function cardsOverride(st, dt, moving) {
   CD.dt = dt;
   const closed = CD.closed; let changed = false;
   if (closed) {
-    if (st.kind !== 'hold' || st.i !== closed.i || (closed.leaving && !moving && st.P === closed.P)) { CD.closed = null; changed = true; }
+    if (closed.explore ? !st.exploring || st.visitI===closed.i&&st.visitToken!==closed.visitToken : st.kind !== 'hold' || st.i !== closed.i || (closed.leaving && !moving && st.P === closed.P)) { CD.closed = null; changed = true; }
     else {
       if (moving || st.P !== closed.P) closed.leaving = true;
       const before = closed.k;
-      closed.elapsed = Math.min(CARD_CLOSE.time, closed.elapsed + dt); closed.k = lerp(closed.from, closed.to, easeIO(closed.elapsed / CARD_CLOSE.time));
+      closed.elapsed = Math.min(.5, closed.elapsed + dt); closed.k = lerp(closed.from, closed.to, smooth(0,.5,closed.elapsed));
       st.dim = lerp(1, st.dim, closed.k);
-      st.cardK[closed.i] *= closed.k; st.cardOpen = Math.max(...st.cardK); changed = before !== closed.k;
-      if (closed.to === 1 && closed.elapsed === CARD_CLOSE.time) CD.closed = null;
+      if(closed.explore)st.cardK[closed.i]=closed.k;else st.cardK[closed.i] *= closed.k; st.cardOpen = Math.max(...st.cardK); changed = before !== closed.k;
+      if (closed.to === 1 && closed.elapsed === .5) CD.closed = null;
     }
   }
+  if(st.exploring){st.cardOpen=Math.max(...st.cardK);st.dim=lerp(1,CAMERA.holdDim,st.cardOpen);}
   CD.last = st; return changed;
 }
 
@@ -115,7 +118,7 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     if (JOURNEY.moving && c.face.contains(document.activeElement)) document.querySelector(JOURNEY.direction === 'back' ? '.go-back' : '.go-next')?.focus({ preventScroll: true });
     if (close) {
       if (JOURNEY.moving && document.activeElement === close) document.getElementById('go')?.querySelector('.go-next')?.focus({ preventScroll: true });
-      const inert = JOURNEY.moving || st.cardK[i] < .96 || st.exploring || st.exploreK > 0;
+      const inert = JOURNEY.moving || st.cardK[i] < (st.exploring?1:.96);
       if (close.inert !== inert) close.inert = inert;
     }
     const W = c.W || CD.W, H = c.H, oc = c.place || { x: VIEW.w / 2, y: VIEW.h / 2 };
@@ -150,6 +153,10 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const target = [cfg.tilt * (1 - smooth(...cfg.open, e)) - ly * cfg.ptrTilt[1] * plate, lx * cfg.ptrTilt[0] * plate, -lx * cfg.shift * plate, -ly * cfg.shift * plate];
     const nextTilt = c.tilt.map((v, j) => lift ? v + (target[j] - v) * cfg.ease : 0);
     c.tilt = lift && nextTilt.every((v,j) => Math.abs(v-target[j]) < cfg.flat) ? target : nextTilt;
+    const folding=CD.closed?.i===i;
+    if(folding&&c.openPoses?.length){const poses=c.openPoses;let j=poses.findIndex(p=>p.k>=e);if(j<0)j=poses.length-1;const a=poses[Math.max(0,j-1)],b=poses[j],q=b.k===a.k?1:(e-a.k)/(b.k-a.k);c.tilt=a.tilt.map((v,i)=>lerp(v,b.tilt[i],clampCard(q)));}
+    else if(e>(c.lastK??0)){if(!c.lastK)c.openPoses=[];(c.openPoses||=[]).push({k:e,tilt:c.tilt.slice()});}
+    c.lastK=e;
     const [rx, ryTilt, sx, sy] = c.tilt;
     const join = e > 0 ? cardsTailLayout({ W,H,k,cx:cx-p[0],cy:cy-py,stonePx,rx,ryTilt,sx,sy,lift,e,phone:VIEW.phone }) : { cx:cx-p[0],cy:cy-py,visible:false };
     cx = join.cx + p[0]; cy = join.cy + py;
@@ -170,7 +177,7 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     if (c.tail) cardsTailFrame(c, join);
     const state = e > .96 ? 'open' : e < .02 ? 'rest' : 'moving';
     if (state !== c.state) { c.state = state; c.el.dataset.state = state; }
-    const faceInert = state !== 'open' || JOURNEY.moving || st.exploring || st.exploreK > 0;
+    const faceInert = state !== 'open' || JOURNEY.moving || st.exploring&&st.cardK[i]<1;
     if (c.face.inert !== faceInert) c.face.inert = faceInert;
     // A stone mark is in the tab order only at rest and on screen (the keyboard never lands on a stop it cannot see).
     const at = MAP.waypoints[c.stop.w], half = COMB.target / (2 * st.cam.s), visible = tripVisible(st, [at[0]-half, at[1]-half, at[0]+half, at[1]+half]);
@@ -183,7 +190,7 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     if (c.btn.inert !== !visible) { if (!visible && document.activeElement === c.btn) document.querySelector('.go-next')?.focus({ preventScroll: true }); c.btn.inert = !visible; c.btn.setAttribute('aria-hidden', !visible); }
     if (c.reopenFocus && (JOURNEY.moving || st.kind !== 'hold' || st.i !== i)) c.reopenFocus = false;
     if (c.reopenFocus && state === 'open') { c.reopenFocus = false; c.el.querySelector('.c-close').focus({ preventScroll: true }); }
-    if (c.keyboardOpen && state === 'open' && !JOURNEY.moving) { c.keyboardOpen = false; close?.focus({ preventScroll: true }); }
+    if (c.keyboardOpen && state === 'open' && !JOURNEY.moving && !close?.inert) { c.keyboardOpen = false; close?.focus({ preventScroll: true }); }
   });
   CD.previousP = JOURNEY.P;
 }

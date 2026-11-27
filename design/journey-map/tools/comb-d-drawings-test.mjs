@@ -23,7 +23,7 @@ function measure(){
  };
  const labels=[...document.querySelectorAll('#b-detail text,#b-detail .rn-dim,#bc-notes text')].filter(e=>visible(e)&&!e.closest('.lg')).map(e=>({b:box(e),text:e.textContent||'region runes'}));
  const result=[];
- for(const[id,selector]of Object.entries({...Object.fromEntries(['laurier','hmc1','hmc2','interkom','lennard'].map(id=>['dig-'+id,'#f-hoard-'+id+' .hd-scratch'])),serpent:'.jg-ring path,.jg-head path,.jg-tail path,.jg-pad path,.jg-pad rect,.jg-pad circle',horn:'.hn-horn path',hammer:'#f-hammer .g',ygg:'.ygg path',well:'.wl-rip ellipse,.wl-bank',mist:'#f-mist path.g',beacon:'#f-beacon .g,#f-beacon .o,#f-beacon .l,#f-beacon .t,#f-beacon .bc-flame'})){
+ for(const[id,selector]of Object.entries({...Object.fromEntries(['laurier','hmc1','hmc2','interkom','lennard'].map(id=>['dig-'+id,'#f-hoard-'+id+' .hd-scratch'])),serpent:'.jg-ring path,.jg-head path,.jg-tail path,.jg-pad path,.jg-pad rect,.jg-pad circle',horn:'.hn-horn path',hammer:'#f-hammer .g',ygg:'.ygg path',well:'.wl-rip ellipse,.wl-bank',mist:'#f-mist path.g',beacon:':is(#f-beacon,[data-anim-source="f-beacon"]) .g,:is(#f-beacon,[data-anim-source="f-beacon"]) .o,:is(#f-beacon,[data-anim-source="f-beacon"]) .l,:is(#f-beacon,[data-anim-source="f-beacon"]) .t,:is(#f-beacon,[data-anim-source="f-beacon"]) .bc-flame'})){
   let min=Infinity,near='';
   for(const e of document.querySelectorAll(selector)){
    if(!visible(e))continue;const screen=e.getBoundingClientRect();if(screen.right < -4||screen.left>innerWidth+4||screen.bottom < -4||screen.top>innerHeight+4)continue;const m=e.getScreenCTM(),s=getComputedStyle(e),L=e.getTotalLength?.();if(!L)continue;
@@ -42,7 +42,7 @@ function measure(){
    for(let u=0;u<=L;u+=.5/Math.max(.1,scale)){const p=e.getPointAtLength(u),x=m.a*p.x+m.c*p.y+m.e,y=m.b*p.x+m.d*p.y+m.f;for(const l of labels){const d=gap(l.b,[x,y,x,y])-half;if(d<min){min=d;near=l.text;}}}
   }result.push({id,gap:Number.isFinite(min)?+min.toFixed(2):null,near});
  }
- const article=document.querySelector('.stop[data-state="open"]'),beacon=[...document.querySelectorAll('#f-beacon .g,#f-beacon .bc-flame')].map(box),union=[Math.min(...beacon.map(b=>b[0])),Math.min(...beacon.map(b=>b[1])),Math.max(...beacon.map(b=>b[2])),Math.max(...beacon.map(b=>b[3]))];
+ const article=document.querySelector('.stop[data-state="open"]'),beacon=[...document.querySelectorAll(':is(#f-beacon,[data-anim-source="f-beacon"]) .g,:is(#f-beacon,[data-anim-source="f-beacon"]) .bc-flame')].map(box),union=[Math.min(...beacon.map(b=>b[0])),Math.min(...beacon.map(b=>b[1])),Math.max(...beacon.map(b=>b[2])),Math.max(...beacon.map(b=>b[3]))];
  const blockers=article?['.face','.stone','.c-tail'].map(s=>({name:s,gap:+gap(union,box(article.querySelector(s))).toFixed(2)})):[];
  const card=article&&box(article.querySelector('.face')),bar=box(document.getElementById('go')),face=article?.querySelector('.face');
  const beam=document.querySelector('.bc-beam path'),inverse=beam.getScreenCTM().inverse(),beamHits=[];

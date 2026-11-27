@@ -1,6 +1,7 @@
 // End-only camera. The geometry helpers are pure and can be imported by Node.
 import { EXPLORE, DEPTH, COPY, STEPS, CAMERA, COMB, FRAME_PERF } from './data.mjs';
-import { VIEW, tripState, lerp, clamp01, easeIO } from './trip.mjs';
+import { VIEW, tripState, lerp, clamp01, easeIO, smooth } from './trip.mjs';
+import { cardsClose } from './cards.mjs';
 import { findPointerCancel, findPointerMove } from './findkit.mjs';
 
 export const exploreLayer = (cam, end) => { const c = cam.s / end.s; return { c, dx: cam.tx - end.tx * c, dy: cam.ty - end.ty * c }; };
@@ -33,7 +34,7 @@ export function exploreGlide(cam, velocity, dt, bounds, view, fit, top, keep) {
 }
 
 const EX = { active: false, k: 0, cam: null, target: null, end: null, bounds: null, keep: null, view: null, fit: 1, top: 1,
-  motion: null, velocity: [0, 0], pointers: new Map(), gesture: null, samples: [], layer: { c: 1, dx: 0, dy: 0 },
+  visit: null, visitSerial: 0, motion: null, velocity: [0, 0], pointers: new Map(), gesture: null, samples: [], layer: { c: 1, dx: 0, dy: 0 },
   stage: null, world: null, journey: null, rm: true, hint: null, hintUsed: false, hintLeft: 0, changed: false, suppress: false, suppressTimer: null, owners: new Set(), footer: 1, departing: false, arriving: false };
 export const exploreActive = () => EX.active;
 export const exploreBusy = () => EX.active || EX.k > 0;
@@ -52,6 +53,7 @@ function exploreClearPointers() {
   EX.pointers.clear(); EX.owners.clear(); EX.gesture = null; EX.samples = []; EX.stage?.classList.remove('is-dragging');
 }
 export function exploreReset() {
+  EX.visit = null;
   exploreSuppressClear();
   if (!EX.active && !EX.k && !EX.departing) return;
   EX.active = false; EX.k = 0; EX.departing = false; EX.arriving = false; EX.motion = null; EX.velocity = [0, 0]; EX.cam = EX.end && { ...EX.end }; EX.target = EX.cam && { ...EX.cam };
@@ -61,6 +63,7 @@ export function exploreReset() {
 }
 // A cut ends input immediately, retaining the painted view only until its cover is opaque and P changes.
 export function exploreDepart() {
+  EX.visit = null;
   exploreSuppressClear();
   if (!exploreBusy()) return;
   EX.active = false; EX.departing = true; EX.motion = null; EX.velocity = [0, 0];
@@ -86,6 +89,7 @@ export function exploreResume(cam) {
   explorePromote(); exploreNotify(); return true;
 }
 export function exploreEnd() {
+  if(EX.active)cardsClose(); EX.visit=null;
   exploreSuppressClear();
   if (!EX.active) return false;
   if (document.activeElement?.closest?.('.find,.pop')) document.getElementById('go')?.querySelector('.go-back')?.focus({preventScroll:true});
@@ -120,12 +124,28 @@ export function exploreResize() {
   EX.changed = true;
 }
 function exploreTakeover() {
+  if(EX.visit) { cardsClose(EX.visit.i); EX.visit.closed=true; }
   if (EX.motion?.from) {
     // cam is the last painted blend: input takes over exactly there, while the map reveal finishes.
     EX.motion = EX.k < 1 ? { from: null, to: null, k0: EX.k, k1: 1, elapsed: 0, duration: EXPLORE.in * (1 - EX.k) } : null;
     EX.target = { ...EX.cam };
   }
   EX.velocity = [0, 0]; exploreHintOff();
+}
+// Shield visits retain explore's camera owner and end progress throughout the arrival.
+export function exploreVisit(i, target) {
+  if(!EX.active)return false;
+  cardsClose();exploreSuppressClear();exploreClearPointers();exploreHintOff();EX.velocity=[0,0];
+  const from={...EX.cam},world=c=>[(VIEW.w/2-c.tx)/c.s,(VIEW.h/2-c.ty)/c.s],a=world(from),b=world(target),screens=Math.hypot(b[0]-a[0],b[1]-a[1])*from.s/VIEW.w,duration=Math.min(2.2,1.2+.25*screens);
+  const instant=EX.rm||window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  EX.target={s:target.s,tx:target.tx,ty:target.ty};
+  const motion={from,to:{...EX.target},k0:1,k1:1,elapsed:instant?duration:0,duration,visit:++EX.visitSerial};
+  EX.visit={i,token:motion.visit,motion,closed:false};EX.motion=instant?null:motion;if(instant)EX.cam={...EX.target};
+  EX.k=1;EX.changed=true;explorePromote();return true;
+}
+export function exploreCloseVisit(i) {
+  if(!EX.visit||EX.visit.i!==i)return false;
+  EX.visit.closed=true;if(EX.motion?.visit){EX.motion=null;EX.target={...EX.cam};}EX.changed=true;return true;
 }
 export function exploreApply(st, dt) {
   delete st.coverRects;
@@ -146,7 +166,7 @@ export function exploreApply(st, dt) {
   }
   if (EX.active && !EX.motion?.from && !EX.gesture?.dragged) {
     if (EX.velocity.some(Boolean)) { const glide = exploreGlide(EX.cam, EX.velocity, dt, EX.bounds, EX.view, EX.fit, EX.top, EX.keep); EX.cam = glide.cam; EX.target = { ...EX.cam }; EX.velocity = glide.velocity; }
-    else {
+    else if (['s','tx','ty'].some(key=>EX.cam[key]!==EX.target[key])) {
       const q = 1 - Math.exp(-dt / EXPLORE.ease);
       EX.cam = exploreBound({ s: lerp(EX.cam.s, EX.target.s, q), tx: lerp(EX.cam.tx, EX.target.tx, q), ty: lerp(EX.cam.ty, EX.target.ty, q) });
       if (Math.abs(EX.cam.s / EX.target.s - 1) < FRAME_PERF.scaleEnd && Math.abs(EX.cam.tx - EX.target.tx) < FRAME_PERF.positionEnd && Math.abs(EX.cam.ty - EX.target.ty) < FRAME_PERF.positionEnd) EX.cam = { ...EX.target };
@@ -163,6 +183,7 @@ export function exploreApply(st, dt) {
   if (EX.k > 0 || EX.active) {
     st.cam = { ...EX.cam, ax: VIEW.w / 2, ay: VIEW.h / 2 };
     st.cardK = st.cardK.map(() => 0); st.cardOpen = 0;
+    if(EX.visit){const v=EX.visit;st.visitI=v.i;st.visitToken=v.token;st.exploreDestination=v.motion.to;st.cardK[v.i]=v.closed?0:smooth(0,.5,v.motion.elapsed-v.motion.duration+.5);st.cardOpen=st.cardK[v.i];st.dim=lerp(1,CAMERA.holdDim,st.cardOpen);}
     EX.layer = exploreLayer(st.cam, EX.end);
   } else EX.layer = { c: 1, dx: 0, dy: 0 };
   exploreWorldStyle('transform', EX.k > 0 || EX.active ? `translate(${EX.layer.dx}px,${EX.layer.dy}px) scale(${EX.layer.c})` : 'none'); explorePromote();
@@ -192,7 +213,7 @@ export function exploreBuild({ stage, world, journey, rm }) {
   window.addEventListener('wheel', e => {
     if (!EX.active || e.defaultPrevented) return;
     if (e.target?.closest?.('.sheet.on')) { e.preventDefault(); return; }
-    if (e.target?.closest?.('.face')) return;
+    if (e.target?.closest?.('.face')&&!EX.visit) return;
     e.preventDefault(); exploreTakeover();
     const dy = Math.max(-EXPLORE.wheelMax, Math.min(EXPLORE.wheelMax, e.deltaY * (e.deltaMode === 1 ? EXPLORE.linePx : e.deltaMode === 2 ? VIEW.h : 1)));
     const factor = Math.exp(-dy * (e.ctrlKey ? EXPLORE.pinchWheel : EXPLORE.wheel));
@@ -237,6 +258,7 @@ export function exploreBuild({ stage, world, journey, rm }) {
   window.addEventListener('keydown', exploreSuppressClear, true);
   window.addEventListener('keydown', e => {
     if (!EX.active || e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if(e.key==='Escape'&&cardsClose()){e.preventDefault();return;}
     if (e.key === 'Escape' || e.key === '0') { e.preventDefault(); exploreEnd(); return; }
     if (e.target?.closest?.('.sheet.on, input, textarea, select')) return;
     const arrows = { ArrowLeft: [1, 0], ArrowRight: [-1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };

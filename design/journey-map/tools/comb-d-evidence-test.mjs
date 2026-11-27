@@ -25,8 +25,8 @@ try{
     await b.evaluate(`document.getElementById('f-hammer').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}))`);await combBWait(900);await b.evaluate('document.querySelector(".hm-start").click()');await combBWait(120);await b.key('Escape');await combBWait(600);await b.evaluate(`window.__dFocus('hammer',${JSON.stringify(views.hammer)})`);await combBWait(900);await b.shot(tag+'-hammer-found');
    }
    if(id==='beacon'){
-    for(let i=0;i<4;i++){await b.evaluate(`document.getElementById('f-beacon').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}))`);await combBWait(2100);}
-    const state=await b.evaluate('window.__jm.finds.state("beacon")');log(w+' beacon read state '+JSON.stringify({fire:state.fire,read:state.read}));if(state.fire!==4)failures.push(w+' beacon readings unreachable');await b.shot(tag+'-beacon-read');
+    for(let i=0;i<3;i++){await b.evaluate(`document.getElementById('f-beacon').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}))`);await combBWait(2100);}
+    const state=await b.evaluate('window.__jm.finds.state("beacon")');log(w+' beacon read state '+JSON.stringify({fire:state.fire,read:state.read}));if(state.fire!==3)failures.push(w+' beacon readings unreachable');await b.shot(tag+'-beacon-read');
    }
   }
   await go('map');await b.evaluate(`document.getElementById('f-hoard-hmc1').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}))`);await combBWait(1800);await b.shot(tag+'-dig-close');

@@ -73,14 +73,20 @@ export function findsFrame(time, st) {
     const playing = ['flight', 'hear', 'landing', 'reel', 'chase', 'eating', 'waking', 'trace', 'opening', 'sheet', 'closing', 'sliding', 'reply', 'pebble', 'sounding', 'echo', 'pull', 'lifting'].includes(o.stage) || o.drag || o.busy || o.playing || o.hearing;
     const active = o => ['rising','rattling','opening','bouncing','waiting'].includes(o.stage) || o.hold || o.queued || o.pending;
     o.travel?.();
+    if(o.id==='serpent'&&['base','anim'].includes(st.rasterLayer))o.zoomFrame?.(st.rasterLayer==='base'?'body':'head');
     const paused = quiet && !playing && JOURNEY.focus !== o.id && FD.sheetOwner !== o && !(o.id === 'longship' && o.x !== undefined && (p[0] !== o.x || p[1] !== o.y));
-    if (paused && o.id !== 'hoards') { if (o.onScreen && st.rasterRebased) { if (o.id === 'wayfinder') o.compassFrame?.(); o.zoomFrame?.(); } return; } // Keep sky-side pieces, including the beacon beam, at their last state; zoom-led detail follows the map's redraws.
+    if (paused && o.id !== 'hoards') { if (o.onScreen && st.rasterRebased) { if (o.id === 'wayfinder') o.compassFrame?.(); if(!st.rasterLayer)o.zoomFrame?.(); } return; } // Keep sky-side pieces, including the beacon beam, at their last state; zoom-led detail follows the map's redraws.
     findLife(o, ...p, o.id === 'horn' && ['sounding', 'echo'].includes(o.stage) ? FIND_PLAY.horn.soundRad : rad, near);
     if (o.id === 'hoards' && quiet) {
       o.items.forEach(h => { if (active(h) || JOURNEY.focus === h.id || FD.sheetOwner === h) h.tick(time, FD.rm ? 0 : FD.dt); });
     } else if (o.id === 'hoards' || o.onScreen || playing || FD.sheetOwner === o) o.tick?.(time, FD.rm ? 0 : FD.dt);
     else if (o.id === 'beacon') depthBeam(null);
   });
+  // These shells retain the drawn part's inherited camera, scale and find visibility without duplicate hits or ids.
+  for (const { source, clone } of FD.animCopies || []) for (const key of ['transform','opacity','style','visibility']) {
+    const value = source.getAttribute(key); if (value === null) { if (clone.hasAttribute(key)) clone.removeAttribute(key); }
+    else attr(clone, key, value);
+  }
   const bits = FD.bits;
   if (quiet) FD.bits = [];
   try { findKitFrame(); } finally { FD.bits = bits; }

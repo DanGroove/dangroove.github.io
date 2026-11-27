@@ -166,6 +166,7 @@ class ExploreNode {
   after() {}
   appendChild(node) { if (node.parentElement) node.parentElement.children = node.parentElement.children.filter(c => c !== node); this.children.push(node); node.parentElement = this; return node; }
   append(...nodes) { nodes.forEach(n => this.appendChild(n)); }
+  replaceChildren(...nodes) { this.children.forEach(n=>n.parentElement=null);this.children=[];this.append(...nodes); }
   remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(c => c !== this); this.parentElement = null; }
   prepend(...nodes) { nodes.reverse().forEach(n => { this.children.unshift(n); n.parentElement = this; }); }
   set innerHTML(html) {

@@ -42,6 +42,7 @@ assert.equal(digest(JSON.stringify([beforeFStars,beforeD,NOVA])),2324343636);
 console.log('ok: D10 cloud pin recorded; restoring that cloud verifies original STARS/DEPTH/NOVA');
 // D4 authorizes the pure rest-to-rest glide in trip. Depth remains protected.
 // Line endings are evened out so the numbers are the same on Windows and in the cloud.
+// COMB-R, 2026-11-27: raster/legend source and the requested find data only.
 const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.meta.url), 'utf8').replace(/\r\n/g, '\n'));
 // Polish round 1 (2026-11-23) re-records both: trip.mjs for the X view on phones and portrait tablets and the map title's fade,
 // depth.mjs for the lantern's darkness the nova canvas holds through the rush; its second batch re-records trip.mjs for the
@@ -50,9 +51,9 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // Part 8 cloud fixes: explore keeps the map promoted while its camera moves, and releases it at rest after a zoom (F10 lag).
 // Part 10b cloud fixes: the held base on whole device pixels with a margin (blur), and the find press fades on each name, not its group.
 // COMB-M2 (2026-11-26): N2 changes only the old longship line and ship kit keys; the M2 scope test pins the exact edits.
-assert.equal(sourceDigest('trip.mjs'), 3175914073, 'trip.mjs changed'); // COMB-P, the part 13 review fixes (2026-11-26), the edge fades on the clock and the pinch recheck's explore hold band and word fade clock (2026-11-27), then its held opening (labels eased through it) and no raster ahead in explore zoom holds; then the label warm-up's own path walk (pathWalk, the same points as the native calls, 2026-11-27).; L5 (2026-11-27): the names, trail and finds ride svg#map's raster camera in their own svgs, faded together in div#map-stack
+assert.equal(sourceDigest('trip.mjs'), 1558679317, 'trip.mjs changed'); // COMB-P, the part 13 review fixes (2026-11-26), the edge fades on the clock and the pinch recheck's explore hold band and word fade clock (2026-11-27), then its held opening (labels eased through it) and no raster ahead in explore zoom holds; then the label warm-up's own path walk (pathWalk, the same points as the native calls, 2026-11-27).; L5 (2026-11-27): the names, trail and finds ride svg#map's raster camera in their own svgs, faded together in div#map-stack
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 915893174, 'data.mjs changed'); // COMB-Q, the part 13b review's marker moves (2026-11-26), LABELS.edgeFade and FRAME_PERF.exploreMin/exploreMax (2026-11-27); Preview 28 notes: THE MARGINS moved, the crossing renamed, treeDrops and the pine off the skal (2026-11-27).
+assert.equal(sourceDigest('data.mjs'), 23324406, 'data.mjs changed'); // COMB-Q, the part 13b review's marker moves (2026-11-26), LABELS.edgeFade and FRAME_PERF.exploreMin/exploreMax (2026-11-27); Preview 28 notes: THE MARGINS moved, the crossing renamed, treeDrops and the pine off the skal (2026-11-27).
 assert.equal(sourceDigest('depth.mjs'), 1852138132, 'depth.mjs changed'); // COMB-P authorized changes and the part 13 review fixes (2026-11-26); Preview 28: Skoll and Hati chase across the full width at every size again (2026-11-27).
 console.log('ok: COMB-D camera/labels/tripS digests recorded; depth source remains pinned');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
@@ -120,6 +121,7 @@ class TestNode {
   getAttribute(k) { return this.attrs[k] ?? null; }
   appendChild(node) { if (node.parentElement) node.parentElement.children = node.parentElement.children.filter(c => c !== node); this.children.push(node); node.parentElement = this; return node; }
   append(...nodes) { nodes.forEach(n => this.appendChild(n)); }
+  replaceChildren(...nodes) { this.children.forEach(n=>n.parentElement=null);this.children=[];this.append(...nodes); }
   remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(c => c !== this); this.parentElement = null; }
   prepend(...nodes) { nodes.reverse().forEach(n => { this.children.unshift(n); n.parentElement = this; }); }
   set innerHTML(html) {
@@ -223,18 +225,18 @@ assert.equal(window.__jm.finds.state('hoard-laurier').digs, 3); assert.equal(win
 key('ravens'); await tick(4.1); assert.equal(window.__jm.finds.state('ravens').tally, 1);
 key('ravens'); await tick(4.1); assert.equal(window.__jm.finds.state('ravens').stage, 'reel'); await tick(5.9); assert.equal(window.__jm.finds.state('ravens').stage, 'rest');
 const serpentState = () => window.__jm.finds.state('serpent');
-// COMB-Q: the first press focuses, two revisions return a named file, the third ships.
+// COMB-Q: the first press focuses, four revisions return a named file, the fifth ships (COMB-R, 2026-11-27).
 assert.equal(serpentState().stage,'ready'); key('serpent'); await tick(2); assert.equal(serpentState().pokes,0);
-for (const filename of ['final_v2.pdf','final_v2_FINAL.pdf']) { key('serpent'); await tick(4.5); assert.equal(serpentState().fileName,filename); assert.equal(serpentState().stage,'ready'); }
+for (const filename of ['final_v2.pdf','final_v2_FINAL.pdf','final_v3_FINAL.pdf','final_v3_FINAL_real.pdf']) { key('serpent'); await tick(4.5); assert.equal(serpentState().fileName,filename); assert.equal(serpentState().stage,'ready'); }
 key('serpent'); await tick(1); assert.equal(serpentState().stage,'asleep'); assert.equal(serpentState().openAmount,1); assert.equal(serpentState().stamped,true);
 assert.equal(testSvg.querySelector('.jg-eye').getAttribute('opacity'),'0'); assert.equal(testSvg.querySelector('.jg-shut').getAttribute('opacity'),'1'); assert.ok(testPop.recordedHTML.includes('Shipped')&&testPop.recordedHTML.includes('A shipped story goes here.')); assert.equal(FD.popOwner.id,'serpent');
 assert.equal([...FD.found].filter(id=>id==='serpent').length,1);
 key('serpent'); await tick(1); assert.equal(serpentState().stage,'ready'); assert.equal(serpentState().round,1); assert.equal(serpentState().fileName,'final.mp4'); assert.equal(serpentState().openAmount,0);
-for(let i=0;i<3;i++){key('serpent');await tick(4.5);}assert.equal(serpentState().stage,'asleep');
+for(let i=0;i<5;i++){key('serpent');await tick(4.5);}assert.equal(serpentState().stage,'asleep');
 const eagle=testSvg.querySelector('.yg-eagle'), eagleRest=eagle.getAttribute('transform'); FD.list.well.hear();await tick(1);assert.notEqual(eagle.getAttribute('transform'),eagleRest);assert.equal(FD.list.well.playing,true);await tick(1.8);assert.equal(eagle.getAttribute('transform'),eagleRest);
 console.log('ok: revision names, shipped slot, open loop, next file and one found count; eagle returns to perch');
-for (let i = 0; i < 4; i++) { key('beacon'); await tick(1.9); }
-assert.equal(window.__jm.finds.state('beacon').fire, 4);
+for (let i = 0; i < 3; i++) { key('beacon'); await tick(1.9); }
+assert.equal(window.__jm.finds.state('beacon').fire, 3);
 key('runestone'); await tick(5);
 assert.equal(window.__jm.finds.state('runestone').read, true); assert.equal(window.__jm.finds.state('runestone').controls, true);
 assert.equal(JOURNEY.P, fixedP); assert.equal(JOURNEY.focus, 'runestone');
@@ -245,7 +247,7 @@ assert.equal(window.__jm.finds.found().length, 6);
 JOURNEY.set(mapP); await tick(0.1); key('ravens'); await tick(0.9); JOURNEY.back(); await tick(3.5); assert.equal(FD.popOwner, null); assert.equal(window.__jm.finds.state('ravens').tally, 1);
 JOURNEY.set(0); assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), false); JOURNEY.set(mapP);
 JOURNEY.go('lennard'); assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), false); await tick(0.7); JOURNEY.set(mapP);
-console.log('ok: recording DOM runs six Part A plays, kept state, all-four unlock, reel, chase, four notes, rubbing, copied review state and Back focus rules; no NaN attributes or frame layout reads');
+console.log('ok: recording DOM runs six Part A plays, kept state, all-four unlock, reel, chase, three notes, rubbing, copied review state and Back focus rules; no NaN attributes or frame layout reads');
 JOURNEY.set(mapP); await tick(0.1);
 assert.equal(FD.found.has('hammer'), false); key('hammer'); await tick(1.2);
 assert.equal(FD.sheetOwner.id, 'hammer'); assert.equal(FD.found.has('hammer'), true);
@@ -476,13 +478,13 @@ assert.equal(window.__jm.finds.state('hoard-hmc1').open, true);
 rmKey('ravens'); await rmTick(); assert.equal(window.__jm.finds.state('ravens').tally, 1);
 rmKey('ravens'); await rmTick(); await rmTick(0.1); assert.equal(window.__jm.finds.state('ravens').stage, 'reel'); await rmTick(5.1); assert.equal(window.__jm.finds.state('ravens').stage, 'rest');
 { const b = FD.list.ravens.birds[0], before = b.g.getAttribute('transform'); FD.pointer = [(ravenFind.x + rig.PERCHES[0][0] * FIND_PLAY.raven.scale + 2) * rmCamera.s + rmCamera.tx, (ravenFind.y + rig.PERCHES[0][1] * FIND_PLAY.raven.scale) * rmCamera.s + rmCamera.ty]; for (let i = 0; i < 8; i++) { FD.pointerT = testClock; await rmTick(0.05); } assert.ok(FD.list.ravens.awake, 'pointer reaches Huginn'); assert.equal(b.shy, 0, 'no shy hop under reduced motion'); assert.equal(b.g.getAttribute('transform'), before); FD.pointer = [-Infinity, -Infinity]; }
-for (let i = 0; i < 4; i++) { rmKey('serpent'); await rmTick(); }
+for (let i = 0; i < 6; i++) { rmKey('serpent'); await rmTick(); }
 assert.equal(window.__jm.finds.state('serpent').stage, 'asleep');
 assert.ok(FD.list.serpent.swells.every(s=>!s.live));assert.equal(rmSvg.querySelector('.jg-eye').getAttribute('opacity'),'0');assert.equal(FD.list.serpent.tailOut,1);
 const rmActors=['.yg-eagle','.yg-wings','.yg-rat','.yg-tail'].map(s=>rmSvg.querySelector(s)), rmTransforms=rmActors.map(n=>n.getAttribute('transform'));FD.list.well.hear();await rmTick(3);assert.deepEqual(rmActors.map(n=>n.getAttribute('transform')),rmTransforms);
 console.log('ok: reduced-motion serpent swaps names and ships with no swell; no shy hop; all tree actors stay still on hear');
-for (let i = 0; i < 4; i++) { rmKey('beacon'); await rmTick(); }
-assert.equal(window.__jm.finds.state('beacon').fire, 4);
+for (let i = 0; i < 3; i++) { rmKey('beacon'); await rmTick(); }
+assert.equal(window.__jm.finds.state('beacon').fire, 3);
 rmKey('runestone'); await rmTick(); assert.equal(window.__jm.finds.state('runestone').read, true);
 assert.ok(FD.bits.every(b => !b.live)); assert.equal(FD.flight, null); assert.equal(stepsFocus('horn', FIND_PLAY.focus.wide), false);
 console.log('ok: reduced-motion Part A plays land immediately, memory remains readable for five seconds, no live bits/flights/focus, camera unchanged');

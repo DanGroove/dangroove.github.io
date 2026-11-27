@@ -185,12 +185,19 @@ export function findSerpent(svg) {
   const body = (document.getElementById('b-sea') || svg).querySelector('.jo-body'), segments = [...body.querySelectorAll('.jo-surface')], ripple = body.querySelector('.jo-release-ripple');
   const swells = [...body.querySelectorAll('.jg-swell')].map(g => ({ g, gulp: g.querySelector('.jg-gulp'), lines: g.querySelector('.jg-file-lines'), hearPath: g.querySelector('.jg-hear'), live: false, u: 0 }));
   const o = { id: f.id, el, stage: 'ready', pokes: 0, round: 0, kept: false, ts: -Infinity, headAngle: 0, headTurn: 0, jawAngle: 0, tailOut: 0, queued: 0, held: false, hearTs: -Infinity, openAmount: 0, stamped: false, fileName: '', version: 0, swells };
+  let neck=jormSegment(0).neck;const skin=head.querySelector('.jg-skin'),crown=head.querySelector('.jg-crown'),neckEdge=head.querySelector('.jg-neck-edge'),stripes=head.querySelector('.jg-neck-stripes'),stud=head.querySelector('.jg-neck-stud'),skinD=skin.getAttribute('d'),crownD=crown.getAttribute('d');
+  const joinNeck=angle=>{const a=-angle*Math.PI/180,c=Math.cos(a),s=Math.sin(a),rotate=p=>[p[0]*c-p[1]*s,p[0]*s+p[1]*c],point=p=>p.map(v=>+v.toFixed(4)).join(' '),edge=p=>({p:rotate(p),v:rotate(p.slice(2))}),top=edge(neck.upper),bottom=edge(neck.lower),control=e=>e.p.map((v,i)=>v-e.v[i]*3.5),upper=rotate(neck.stripeUpper),lower=rotate(neck.stripeLower);
+    attr(skin,'d',skinD.replace('M33 -8C25 -14.6','M'+point(top.p)+'C'+point(control(top))).replace('L33 8Z','L'+point(bottom.p)+'Z'));
+    attr(crown,'d',crownD.replace('M33 -8C25 -14.6','M'+point(top.p)+'C'+point(control(top))));
+    attr(neckEdge,'d','M16 9C22 8.6 '+point(control(bottom))+' '+point(bottom.p));
+    attr(stripes,'d','M28.5 -3.1Q30 -3.1 '+point(upper)+'M28.1 3.7Q30 3.7 '+point(lower));const middle=upper.map((v,i)=>(v+lower[i])/2),at=middle.map((v,i)=>lerp([28.5,.3][i],v,.55));attr(stud,'cx',at[0]);attr(stud,'cy',at[1]);
+  };
   let dirty = new Set(), tailPose = 0;
   o.place = () => [f.x, f.y];
   const rename = (version, q = 1) => {
-    const a = version === 2 ? 'final_v2' : 'final', suffix = version === 2 ? '_FINAL' : version === 1 ? '_v2' : '', part = suffix.slice(0, Math.floor(suffix.length * clamp01(q))), extension = '.' + S.files[o.round % S.files.length];
-    if (base.textContent !== a) base.textContent = a; if (added.textContent !== part) added.textContent = part; if (ext.textContent !== extension) ext.textContent = extension;
-    o.fileName = a + part + extension; if (q === 1) o.version = version;
+    const names=FIND_COPY.serpentNames,target=names[Math.min(version,names.length-1)],old=names[Math.max(0,version-1)];let common=0;while(common<old.length&&common<target.length&&old[common]===target[common])common++;
+    const a=version?target.slice(0,common):target,suffix=version?target.slice(common):'',part=suffix.slice(0,Math.floor(suffix.length*clamp01(q))),extension='.'+S.files[o.round%S.files.length];
+    if(base.textContent!==a)base.textContent=a;if(added.textContent!==part)added.textContent=part;if(ext.textContent!==extension)ext.textContent=extension;o.fileName=a+part+extension;if(q===1)o.version=version;
   };
   const caption = () => { const text = o.stage === 'asleep' ? FIND_COPY.serpentShippedHint : FIND_COPY.hints.serpent; if (FD.hint && FD.focusId === o.id && FD.hint.textContent !== text) FD.hint.textContent = text; };
   const reward = () => {
@@ -208,8 +215,8 @@ export function findSerpent(svg) {
     if (o.stage === 'asleep') {
       o.round++; o.pokes = 0; o.kept = false; o.stamped = false; o.ts = FD.now; o.stage = FD.rm ? 'ready' : 'waking'; rename(0); if (FD.rm) o.openAmount = o.tailOut = 0; o.playing = !FD.rm; return;
     }
-    found(o.id); o.pokes++; o.ts = FD.now; o.held = o.pokes < 3; o.playing = !FD.rm;
-    if (o.pokes === 3) { o.stage = 'opening'; if (FD.rm) reward(); }
+    found(o.id); o.pokes++; o.ts = FD.now; o.held = o.pokes < FIND_COPY.serpentNames.length; o.playing = !FD.rm;
+    if (o.pokes === FIND_COPY.serpentNames.length) { o.stage = 'opening'; if (FD.rm) reward(); }
     else { o.stage = FD.rm ? 'ready' : 'bite'; if (FD.rm) rename(o.pokes); }
   };
   press(el, start); rename(0);
@@ -229,7 +236,7 @@ export function findSerpent(svg) {
   const updateBody = lumps => {
     const next = new Set(); for (const p of lumps) MAP.jorm.surf.forEach(([a, b], i) => { if (p.u >= a - .015 && p.u <= b + .015) next.add(i); });
     if (o.openAmount !== tailPose) { next.add(4); const p = jormSubTail(o.openAmount); attr(body.querySelector('.jo-sub-fill.jo-tail-sub'), 'd', p.fill); attr(body.querySelector('.jo-sub-edge.jo-tail-sub'), 'd', p.edge); }
-    for (const i of new Set([...dirty, ...next])) { const p = jormSegment(i, i === 4 ? o.openAmount : 0, lumps); for (const [selector, key] of [['.jo-outline','outer'],['.jo-inner','inner'],['.jo-bands','bands'],['.jo-studs','studs']]) attr(segments[i].querySelector(selector), 'd', p[key]); }
+    for (const i of new Set([...dirty, ...next])) { const p = jormSegment(i, i === 4 ? o.openAmount : 0, lumps); if(i===0)neck=p.neck; for (const [selector, key] of [['.jo-outline','outer'],['.jo-inner','inner'],['.jo-bands','bands'],['.jo-studs','studs']]) attr(segments[i].querySelector(selector), 'd', p[key]); }
     dirty = next; tailPose = o.openAmount;
   };
   o.tick = (t, dt) => {
@@ -253,14 +260,14 @@ export function findSerpent(svg) {
     });
     updateBody(lumps);attr(ripple,'opacity',FD.rm||o.openAmount===0?0:.55*Math.sin(Math.PI*o.openAmount));
     const heard=FD.rm?1:clamp01((t-o.hearTs)/S.hear[1]);angle+=S.hear[0]*Math.sin(Math.PI*heard);
-    const sleeping=o.stage==='asleep';o.headTurn=angle;o.jawAngle=jawTurn;attr(head,'transform','rotate('+angle+')');attr(jaw,'transform','rotate('+(-jawTurn)+' '+S.jawPivot.join(' ')+')');attr(eye,'opacity',sleeping?0:1);attr(shut,'opacity',sleeping?1:0);
+    const sleeping=o.stage==='asleep';o.headTurn=angle;o.jawAngle=jawTurn;attr(head,'transform','rotate('+angle+')');joinNeck(angle);attr(jaw,'transform','rotate('+(-jawTurn)+' '+S.jawPivot.join(' ')+')');attr(eye,'opacity',sleeping?0:1);attr(shut,'opacity',sleeping?1:0);
     const bob=FD.rm||!['ready','typing'].includes(o.stage)?0:Math.sin(Math.PI*2*t/S.bob[2]);at[1]+=S.bob[1]*bob;rotation+=S.bob[0]*bob;const phoneScale=VIEW.phone?Math.min(1,S.filePhone/(15*FD.st.cam.s)):1;
-    attr(file,'transform','translate('+at.join(' ')+') rotate('+rotation+') scale('+(scale*phoneScale)+')');attr(file,'opacity',alpha);attr(stamp,'opacity',o.stamped?1:0);attr(stamp,'transform','translate(.5 1.2) rotate(-14) scale('+(1/phoneScale)+')');attr(name,'x',at[0]+S.shipName[0]*o.openAmount);attr(name,'y',at[1]+S.nameDy+S.shipName[1]*o.openAmount);attr(name,'font-size',lerp(S.nameSize,S.shipName[2],o.openAmount));attr(name,'opacity',nameAlpha);
+    attr(file,'transform','translate('+at.join(' ')+') rotate('+rotation+') scale('+(scale*phoneScale)+')');attr(file,'opacity',alpha);attr(stamp,'opacity',o.stamped?1:0);attr(stamp,'transform','translate(.5 1.2) rotate(-14) scale('+(1/phoneScale)+')');attr(name,'x',at[0]+S.shipName[0]*o.openAmount);attr(name,'y',at[1]+S.nameDy+S.shipName[1]*o.openAmount);attr(name,'font-size',lerp(S.nameSize,S.shipName[2],o.openAmount)*(VIEW.phone&&(o.version>=4||o.pokes>=4&&['spit','typing'].includes(o.stage))?S.namePhone:1));attr(name,'opacity',nameAlpha);
     o.zoomFrame();
     attr(el,'data-revision-state',o.stage);attr(el,'data-loop-open',o.openAmount);attr(el,'data-file',o.fileName);caption();if(o.stage==='asleep'&&o.queued&&t-o.shippedAt>=S.queueRest)consumeQueue();o.playing=['bite','lap','spit','typing','opening','waking'].includes(o.stage)||swells.some(s=>s.live)||o.stage==='asleep'&&o.queued>0;
   };
   // The carved detail follows the zoom. While a moving camera quiets the finds (finds.mjs), it is redrawn only with the map's
   // own redraws, so it never adds one.
-  o.zoomFrame = () => { const F=FIND_PLAY.focus,close=Math.max(Math.max(VIEW.s0,F.least*VIEW.sT),Math.min(F.most*VIEW.sT,F.fill*Math.min(VIEW.w,VIEW.h)/(2*f.view[2]))),detail=clamp01((FD.st.cam.s-VIEW.s0)/(close-VIEW.s0||1));findStyle(body,'--jo-detail',detail);findStyle(head,'--jo-detail',detail); };
+  o.zoomFrame = part => { const F=FIND_PLAY.focus,close=Math.max(Math.max(VIEW.s0,F.least*VIEW.sT),Math.min(F.most*VIEW.sT,F.fill*Math.min(VIEW.w,VIEW.h)/(2*f.view[2]))),detail=clamp01((FD.st.cam.s-VIEW.s0)/(close-VIEW.s0||1));if(part!=='head')findStyle(body,'--jo-detail',detail);if(part!=='body')findStyle(head,'--jo-detail',detail); };
   return o;
 }

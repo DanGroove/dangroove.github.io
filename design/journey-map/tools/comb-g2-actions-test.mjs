@@ -19,7 +19,7 @@ try{
   const initial=await b.read('__g.FD.list.longship.pullTs');
   check(await b.read('!__g.FD.list.longship.pennant&&__g.FD.list.longship.stage==="rest"'),'G16b single pull '+w);
   const starts=[];
-  for(let i=0;i<3;i++){await b.click('#f-longship .ls-sail',touch);starts.push(await b.read('__g.FD.list.longship.pullTs'));if(i<2)await gWait(touch?115:150);}
+  for(let i=0;i<3;i++){await b.click('.ls-sail',touch);starts.push(await b.read('__g.FD.list.longship.pullTs'));if(i<2)await gWait(touch?115:150);}
   const q=await b.read('__g.FD.list.longship.queued.length');
   for(let i=0;i<55;i++){starts.push(await b.read('__g.FD.list.longship.pullTs'));await gWait(55);}
   const unique=[...new Set(starts)].filter(t=>t!==initial);

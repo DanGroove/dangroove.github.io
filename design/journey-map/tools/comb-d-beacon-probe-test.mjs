@@ -4,7 +4,7 @@ import {appendFileSync} from 'node:fs';
 const b=await combBBrowser(),output=[],failures=[];
 function check(){
  const box=e=>{const r=e.getBoundingClientRect();return[r.left,r.top,r.right,r.bottom];},gap=(a,b)=>Math.hypot(Math.max(a[0]-b[2],b[0]-a[2],0),Math.max(a[1]-b[3],b[1]-a[3],0));
- const ink=[...document.querySelectorAll('#f-beacon .g,#f-beacon .o,#f-beacon .l,#f-beacon .t,#f-beacon .bc-flame')],boxes=ink.map(box),q=[Math.min(...boxes.map(b=>b[0])),Math.min(...boxes.map(b=>b[1])),Math.max(...boxes.map(b=>b[2])),Math.max(...boxes.map(b=>b[3]))],card=document.querySelector('#stop-interkom');
+ const ink=[...document.querySelectorAll(':is(#f-beacon,[data-anim-source="f-beacon"]) .g,:is(#f-beacon,[data-anim-source="f-beacon"]) .o,:is(#f-beacon,[data-anim-source="f-beacon"]) .l,:is(#f-beacon,[data-anim-source="f-beacon"]) .t,:is(#f-beacon,[data-anim-source="f-beacon"]) .bc-flame')],boxes=ink.map(box),q=[Math.min(...boxes.map(b=>b[0])),Math.min(...boxes.map(b=>b[1])),Math.max(...boxes.map(b=>b[2])),Math.max(...boxes.map(b=>b[3]))],card=document.querySelector('#stop-interkom');
  const blockers=['.face','.stone','.c-tail'].map(s=>({name:s,gap:gap(q,box(card.querySelector(s)))}));
  const path=document.getElementById('trail-done'),matrix=path.getScreenCTM(),L=path.getTotalLength(),trail=[];
  for(let u=0;u<=L;u+=.25){const p=path.getPointAtLength(u);trail.push(new DOMPoint(p.x,p.y).matrixTransform(matrix));}

@@ -646,3 +646,10 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 /* A stop is hidden until its first frame places it (Dan's phone films, 2026-11-27): the frames wait for the fonts, and
    before that every stop's shield drew at full size in the page's top-left corner for two or three frames of each load. */
 html:not(.rm) .stop:not([data-state]) { visibility: hidden; }
+
+/* COMB-R: idle ink shares the stack fade; growing way lines have an independent masked raster. */
+#map-anim { pointer-events: none; visibility: inherit; }
+#map-anim .anim-find { opacity: var(--jm-find); }
+#map-anim .anim-find.hoard { transition: opacity .3s; }
+#map-lines { pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .3s; }
+.rm #map-lines { transition: none; }
