@@ -9,6 +9,7 @@
 // then removes the forward and the reverse at the end, also after an error. On Dan's Samsung in Adaptive mode Chrome
 // runs at 60 Hz with no finger down (a tap does not lift it), so a Next-tap glide tops out at 60 fps there.
 // --no-adb skips adb (for a desktop Chrome started with --remote-debugging-port=9222).
+// --variants <file.json> serves named pages with small text swaps applied (see VARIANTS below), for A/B tests on one build.
 // --click script|mouse picks how a press is made: script (a click event on the element, the phone's default) or mouse
 // (a DevTools mouse click, the default with --no-adb).
 // --trace also records a Chrome trace of each row's window (trace-<build>-<beat>-<run>.json.gz, opens in DevTools'
@@ -41,13 +42,30 @@ const note = s => { const line = new Date().toISOString().slice(11, 19) + 'Z ' +
 const adb = (...a) => { const r = spawnSync(ADB, ['-s', SERIAL, ...a], { encoding: 'utf8', timeout: 20000 }); if (r.status !== 0) throw new Error('adb ' + a.join(' ') + ': ' + (r.stderr || r.stdout || r.error)); return r.stdout.trim(); };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+// --variants <file.json>: {"<page name>": [["exact old text", "new text"], ...]}. That page is served with each swap applied, so
+// small source changes can be A/B tested on one packed build without new files; each old text must occur exactly once in
+// the page's file, or the run stops before it starts.
+const VARIANTS = opt.variants ? JSON.parse(fs.readFileSync(opt.variants, 'utf8')) : {};
+const VARIANT_TEXT = new Map();
+for (const [name, swaps] of Object.entries(VARIANTS)) {
+  const p = SERVED.find(q => q.name === name);
+  if (!p) { console.error(`--variants names page ${name}, which no --page gives`); process.exit(2); }
+  let text = fs.readFileSync(p.file, 'utf8');
+  for (const [from, to] of swaps) {
+    const n = text.split(from).length - 1;
+    if (n !== 1) { console.error(`--variants ${name}: ${JSON.stringify(from.slice(0, 80))} occurs ${n} times in ${p.file}, not once`); process.exit(2); }
+    text = text.replace(from, () => to);
+  }
+  VARIANT_TEXT.set(name, text);
+}
 // Static server for the pages only (127.0.0.1, read-only, the listed files and nothing else).
 const server = http.createServer((req, res) => {
   const name = decodeURIComponent((req.url || '/').split('?')[0]).replace(/^\/+/, '').replace(/\.html$/, '');
   if (name === 'blank') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); res.end('<!doctype html><title>phone-fps</title>'); return; }
   const p = SERVED.find(q => q.name === name);
   if (!p) { res.writeHead(404); res.end(); return; }
-  res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }); fs.createReadStream(p.file).pipe(res);
+  res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+  if (VARIANT_TEXT.has(name)) res.end(VARIANT_TEXT.get(name)); else fs.createReadStream(p.file).pipe(res);
 });
 
 let cdp = null, id = 0, ownTab = null, browser = null, profile = null; const waiters = new Map(), events = [];
@@ -291,6 +309,7 @@ async function oneRun(p, beat, run) {
 let ok = false;
 try {
   await new Promise(r => server.listen(PORT, '127.0.0.1', r)); note(`serving ${PAGES.map(p => p.name).join(', ')} on 127.0.0.1:${PORT}`);
+  for (const [name, swaps] of Object.entries(VARIANTS)) note(`variant ${name}: ${swaps.map(([a, b]) => JSON.stringify(a) + ' -> ' + JSON.stringify(b)).join('; ')}`);
   if (!opt.noAdb) {
     note('adb devices: ' + spawnSync(ADB, ['devices'], { encoding: 'utf8' }).stdout.replace(/\s+/g, ' '));
     adb('reverse', `tcp:${PORT}`, `tcp:${PORT}`); adb('forward', `tcp:${DEV}`, 'localabstract:chrome_devtools_remote');

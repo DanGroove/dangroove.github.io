@@ -1,0 +1,19 @@
+{
+  "noahead": [
+    ["zoomHold && lastCam && c.s > lastCam.s ? mapHi : 1", "1"],
+    ["k = zoomHold ? mapHi : Math.min(FRAME_PERF.baseAhead", "k = zoomHold ? 1 : Math.min(FRAME_PERF.baseAhead"]
+  ],
+  "wide": [
+    ["zoomHold && lastCam && c.s > lastCam.s ? mapHi : 1", "1"],
+    ["k = zoomHold ? mapHi : Math.min(FRAME_PERF.baseAhead", "k = zoomHold ? 1 : Math.min(FRAME_PERF.baseAhead"],
+    ["exploreMin: .8, exploreMax: 1.25", "exploreMin: .6, exploreMax: 1.6"]
+  ],
+  "wideup": [
+    ["zoomHold && lastCam && c.s > lastCam.s ? mapHi : 1", "1"],
+    ["k = zoomHold ? mapHi : Math.min(FRAME_PERF.baseAhead", "k = zoomHold ? 1 : Math.min(FRAME_PERF.baseAhead"],
+    ["exploreMin: .8, exploreMax: 1.25", "exploreMin: .8, exploreMax: 1.6"]
+  ],
+  "zoomquiet": [
+    ["const quiet = st.gliding || !!st.exploreMoving;", "const quiet = st.gliding || !!st.exploreMoving || (globalThis.visualViewport?.scale || 1) > 1.01;"]
+  ]
+}
