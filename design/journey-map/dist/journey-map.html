@@ -3584,12 +3584,14 @@ function tripApply(st, focus = null) {
   E.labels.forEach(label => {
     const ideal = labelScale(label.kind,paint.s);
     // Follow the old epsilon rule in memory even while the visible label is held.
+    // The held opening eases them too (pinch recheck, 2026-11-27): it no longer redraws every frame, so without the ease its
+    // redraws and its landing popped the names by 10-15 % in one frame (cloud landing probe).
     // The final text size therefore equals the old writer's at the same camera.
     label.target ??= label.k;
     if (label.target === null || Math.abs(ideal / label.target - 1) > LABELS.epsilon) label.target = ideal;
     const from = label.k ?? label.target;
     const remaining = Math.abs(from / label.target - 1);
-    const eased = free && !st.exploreScripted && r.settleLeft && remaining > .0001 ? from * (label.target / from) ** Math.min(settle, .09 / Math.max(.09, Math.abs(Math.log(label.target / from)))) : label.target;
+    const eased = free && r.settleLeft && remaining > .0001 ? from * (label.target / from) ** Math.min(settle, .09 / Math.max(.09, Math.abs(Math.log(label.target / from)))) : label.target;
     const trueSize = labelScale(label.kind,c.s);
     const k = free ? Math.max(trueSize * FRAME_PERF.scaleMin, Math.min(trueSize * FRAME_PERF.scaleMax, eased)) : eased;
     if (label.k !== k) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; }
