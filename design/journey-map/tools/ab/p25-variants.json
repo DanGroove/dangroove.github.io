@@ -15,5 +15,8 @@
   ],
   "zoomquiet": [
     ["const quiet = st.gliding || !!st.exploreMoving;", "const quiet = st.gliding || !!st.exploreMoving || (globalThis.visualViewport?.scale || 1) > 1.01;"]
+  ],
+  "openhold": [
+    ["const moving = free && !!st.exploreMoving && !st.exploreScripted && ", "const moving = free && !!st.exploreMoving && "]
   ]
 }
