@@ -1,0 +1,60 @@
+{
+ "nostipple": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base .sea-stipple { display: none !important; }"
+  ]
+ ],
+ "norhumb": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base #b-sea > g > path[stroke-opacity=\".07\"] { display: none !important; }"
+  ]
+ ],
+ "nowaves": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base #b-sea > g > path.t { display: none !important; }"
+  ]
+ ],
+ "nosubfill": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base .jo-sub-fill { display: none !important; }"
+  ]
+ ],
+ "nosurface": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base .jo-surface { display: none !important; }"
+  ]
+ ],
+ "nohidden": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base .jo-body [opacity=\"0\"], #map-base .jo-body .jd, #map-base .jo-body .jg-swell { display: none !important; }"
+  ]
+ ],
+ "fixdots": [
+  [
+   "return batches.map(b=>'<path class=\"sea-stipple\" d=\"'+b.points.map(p=>'M'+p[0]+' '+p[1]+'h.01').join('')+'\"",
+   "return batches.flatMap(b=>b.points.map(p=>({...b,points:[p]}))).map(b=>'<path class=\"sea-stipple\" d=\"'+b.points.map(p=>'M'+p[0]+' '+p[1]+'h.01').join('')+'\""
+  ]
+ ],
+ "fixsubfill": [
+  [
+   "'\" opacity=\".55\"/><path class=\"jo-sub-edge '",
+   "'\" fill-opacity=\".55\"/><path class=\"jo-sub-edge '"
+  ]
+ ],
+ "fixboth": [
+  [
+   "return batches.map(b=>'<path class=\"sea-stipple\" d=\"'+b.points.map(p=>'M'+p[0]+' '+p[1]+'h.01').join('')+'\"",
+   "return batches.flatMap(b=>b.points.map(p=>({...b,points:[p]}))).map(b=>'<path class=\"sea-stipple\" d=\"'+b.points.map(p=>'M'+p[0]+' '+p[1]+'h.01').join('')+'\""
+  ],
+  [
+   "'\" opacity=\".55\"/><path class=\"jo-sub-edge '",
+   "'\" fill-opacity=\".55\"/><path class=\"jo-sub-edge '"
+  ]
+ ]
+}
