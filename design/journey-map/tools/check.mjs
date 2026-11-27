@@ -268,8 +268,9 @@ ok(hammerKB < 30, 'hammer rules/find/data/drawings exceed 30 KB gzip');
 console.log(`gzip: hammer ${hammerKB.toFixed(2)} KB / 30; all map modules + CSS ${runtimeKB.toFixed(2)} KB / ${RUNTIME_KB}`);
 // The joined page's budget rose from 540 to 567 KB on 2026-11-24 with the hero copy's refresh to v44 (5d2347b), which added
 // 26.5 KB of the hero's own code (its loader and round 19); the map's headroom inside it stays what it was at bfc6a94.
-// The map page's budget rose from 320 to 321 KB on 2026-11-27 with the pinch recheck's fixes (320.36 KB).
-for (const [file, budget] of [['dist/journey-map.html', 321], ['dist/journey-joined.html', 567]]) {
+// The map page's budget rose from 320 to 321 KB and the joined page's from 567 to 568 KB on 2026-11-27 with the pinch
+// recheck's fixes and the stops hidden until placed (320.50 and 567.03 KB).
+for (const [file, budget] of [['dist/journey-map.html', 321], ['dist/journey-joined.html', 568]]) {
   if (!existsSync(join(ROOT, file))) continue;
   const kb = gzipKB(readLF(file)); ok(kb <= budget, `${file}: exceeds ${budget} KB gzip`); console.log(`gzip: ${file} ${kb.toFixed(2)} KB / ${budget}`);
 }

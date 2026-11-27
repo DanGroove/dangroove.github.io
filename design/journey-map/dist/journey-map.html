@@ -645,6 +645,9 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
   /* A move keeps it at the top, so a glide from one card to the next does not send it down and back up. */
   html.jm-moving .tl-count-screen { translate: 0 48px; animation-name: jm-pill-dip-b; }
 }
+/* A stop is hidden until its first frame places it (Dan's phone films, 2026-11-27): the frames wait for the fonts, and
+   before that every stop's shield drew at full size in the page's top-left corner for two or three frames of each load. */
+html:not(.rm) .stop:not([data-state]) { visibility: hidden; }
 
 </style>
 </head>
