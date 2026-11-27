@@ -151,6 +151,7 @@ The well stops being a find and the tree becomes one, with a numbered marker.
   - `press:` rows: at least 230 fps, GPU main p90 at most 4 ms, at most one frame over 25 ms, none over 50, and no late paint of a layer bigger than the screen.
   - `x`, `end` and `explore:pinch`: no worse than the base in frames over 25 or 50 ms, in either run.
   - If a bar is missed, say by how much and what costs the time, from the traces.
+- **The pinch trace:** for both builds' `explore:pinch`, report the trace's size, its 10 most frequent event names with their counts, and the layer count per frame. COMB-S's new build made a trace too big to save, so say what makes it bigger than the base's.
 - **Traces:** keep raw traces only for this pass.
 
 ## T10. Stage the phone pass, do not run it
@@ -171,7 +172,8 @@ The well stops being a find and the tree becomes one, with a numbered marker.
   - `main.mjs`, `map.css` and `index.html`: the screen-space word layer, the marker layer and the new pieces' styles.
   - `findkit.mjs`, `finds.mjs`, `findall.mjs`, `findhoards.mjs` (the compass words and the hmc1 chest), `findsheets.mjs` (the beacon) and `findwater.mjs` (the well becomes the ash).
   - `depth.mjs`: the wolves' lag line and the beacon light's layer only.
-  - `tools/phone-fps.mjs` (the new beat kinds only), the tests in `tools/` as T8 says, and `tools/check.mjs` (`RUNTIME_KB`, the page budgets and the find lists, changed only as this part needs, with a dated note).
+  - `tools/phone-fps.mjs`: the new beat kinds, and saving a trace too big for one string in pieces (for example, streaming its events into the gzip). COMB-S's S6 lost the new build's `explore:pinch` twice to "Invalid string length" where the whole trace is stringified before gzipping.
+  - The tests in `tools/` as T8 says, and `tools/check.mjs` (`RUNTIME_KB`, the page budgets and the find lists, changed only as this part needs, with a dated note).
   - `dist/journey-map.html` and `dist/journey-joined.html`, only through `node tools/pack.mjs` and `node tools/pack-joined.mjs`.
   - Your report, `COMB-T-BUILD.md`.
 - **The run folder:** browser profiles, captures, traces and full logs go only in `journey-map-runs\comb-t` (env `COMB_RUN=comb-t`).
