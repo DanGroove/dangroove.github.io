@@ -1,4 +1,5 @@
-// Where the long frames of a phone-fps --trace window go. For each rAF gap over --over ms (default 25) after the press it
+// Where the long frames of a phone-fps --trace window go. For each rAF gap over --over ms (default 25) after the press (or,
+// for a gesture beat with no press, after the first animation frame) it
 // prints what each thread did inside the gap, the longest frame-pipeline stage overlapping it (Chrome's PipelineReporter:
 // a long EndCommitToActivation is a commit waiting for raster, a long SendBeginMainFrameToCommit is the main thread, a long
 // SubmitCompositorFrameToPresentationCompositorFrame is the GPU process), and the repaints just before it (by clip size,
@@ -17,8 +18,17 @@ for (const file of files) {
   const raw = fs.readFileSync(file), text = /\.gz$/.test(file) ? zlib.gunzipSync(raw).toString() : raw.toString(), parsed = JSON.parse(text);
   const ev = Array.isArray(parsed) ? parsed : parsed.traceEvents;
   const names = {}; for (const e of ev) if (e.ph === 'M' && e.name === 'thread_name') names[e.pid + ':' + e.tid] = e.args.name;
-  const press = ev.filter(e => e.name === 'EventDispatch' && e.args?.data?.type === 'click').sort((a, b) => a.ts - b.ts)[0];
-  if (!press) { console.log(path.basename(file) + ': no click in the trace'); continue; }
+  let press = ev.filter(e => e.name === 'EventDispatch' && e.args?.data?.type === 'click').sort((a, b) => a.ts - b.ts)[0];
+  if (!press) {
+    // A gesture beat (explore pinch, wheel, drag) has no click: the window starts at the page's first animation frame,
+    // on the thread that runs the most of them.
+    const fires = ev.filter(e => e.name === 'FireAnimationFrame' && e.ph === 'X'), count = {};
+    for (const e of fires) count[e.pid + ':' + e.tid] = (count[e.pid + ':' + e.tid] || 0) + 1;
+    const top = Object.entries(count).sort((x, y) => y[1] - x[1])[0]?.[0];
+    press = top ? fires.filter(e => e.pid + ':' + e.tid === top).sort((a, b) => a.ts - b.ts)[0] : null;
+    if (!press) { console.log(path.basename(file) + ': no click and no animation frames in the trace'); continue; }
+    console.log(path.basename(file) + ': no click, so the window starts at the first animation frame');
+  }
   const pid = press.pid, main = pid + ':' + press.tid, t0 = press.ts, t1 = t0 + opt.window * 1e3, ms = t => r1((t - t0) / 1e3);
   const key = e => e.pid + ':' + e.tid;
   const comp = Object.keys(names).find(k => names[k] === 'Compositor' && +k.split(':')[0] === pid);
