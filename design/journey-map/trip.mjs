@@ -686,33 +686,63 @@ function tripLabels(st, t2Fade = 1) {
   (E.legend || []).forEach(g => { const k = labelScale('legend', c.s), b = g.box, box = b ? [g.p[0]+b.x*k,g.p[1]+b.y*k,g.p[0]+(b.x+b.width)*k,g.p[1]+(b.y+b.height)*k] : [g.p[0],g.p[1]-u*L.ascent,g.p[0]+g.n*u*L.width,g.p[1]+u*L.descent]; put(g, (free ? 1 : back) * tripEdge(g, free ? 1 : gone(box), dt) * (1-tripCardCover(st,box)) * (1-.85*xQuiet) * group); });
 }
 export function tripGliding() { return !!TRIP_EL.raster?.gliding; }
-// COMB-R: each focus raster has its own commit. The moving view only changes CSS matrices.
-function tripFocusRasters(E, r, st, focus, layers, veil, camVeil, camMoved) {
-  const c=st.cam, ids=['map','base','live','finds','anim','veil'], equal=(a,b)=>a&&b&&['s','tx','ty'].every(k=>Math.abs(a[k]-b[k])<1e-10);
-  if (focus && focus.k>(r.focusK??0)) r.focusRelease=false;
-  else if (!focus || focus.k<(r.focusK??0)) r.focusRelease=true;
-  const hint=E.focusAim?.id===focus?.id?E.focusAim:null, key=JSON.stringify([focus?.id||'',hint?.serial||0,!!r.focusRelease]);
-  let run=r.focusRun;
-  if (!run || run.key!==key) {
-    const target=tripState(st.P); if (focus&&!r.focusRelease) tripFocus(target,hint?.view||focus.view,1);
-    const start=r.base||c; r.layerCams ||= Object.fromEntries(ids.map(id=>[id,{...(id==='base'?E.baseRaster?.camera:id==='veil'?E.veilRaster:null)||start}]));
-    run=r.focusRun={key,destination:{...target.cam},queue:(!r.base||target.cam.s<start.s)?ids.slice():[],settled:false,pending:true};
-    st.rasterDestination={...target.cam};
-  }
-  const moving=!!focus&&(focus.k<1||!focus.swapped)||camMoved;
-  if (!moving&&!run.settled) { run.settled=true;run.queue=ids.filter(id=>!equal(r.layerCams[id],c));run.restHoles=true; }
-  const job=run.queue.shift(), camera=run.settled?c:run.destination;
+// COMB-S: every camera owner uses the same slot, including focus and rest.
+function tripRasters(E,r,st,focus,layers,veil,camVeil,moving,camMoved,lastCam) {
+  const c=st.cam, equal=(a,b)=>a&&b&&['s','tx','ty'].every(k=>Math.abs(a[k]-b[k])<1e-10);
   const matrix=p=>'matrix('+p.s.toFixed(4)+' 0 0 '+p.s.toFixed(4)+' '+p.tx.toFixed(2)+' '+p.ty.toFixed(2)+')';
-  if(job){r.layerCams[job]={...camera};const cam=job==='map'?E.cam:job==='base'?E.camBase:job==='veil'?camVeil:layers.find(([svg])=>svg.id==='map-'+job)?.[1];if(cam)tripWrite(cam,'transform',matrix(camera),true);if(job==='anim'){const line=layers.find(([svg])=>svg.id==='map-lines');if(line)tripWrite(line[1],'transform',matrix(camera),true);}}
-  r.base=r.layerCams.map; E.veilRaster=r.layerCams.veil;
-  const hold=(svg,p)=>{if(!svg||!p)return;const k=c.s/p.s;tripWrite(svg,'transform',equal(c,p)?'none':'matrix('+k+',0,0,'+k+','+(c.tx-p.tx*k)+','+(c.ty-p.ty*k)+')');};
-  hold(E.svg,r.base);hold(veil,r.layerCams.veil);for(const[svg]of layers)hold(svg,r.layerCams[svg.id.slice(4)]||r.layerCams.anim);
-  if(E.base){const B=E.baseRaster??={};B.camera=r.layerCams.base;B.last={...c,P:st.P,focus:focus?.k||0};B.held=!equal(c,B.camera);hold(E.base,B.camera);}
-  if(run.restHoles&&(job==='veil'||!run.queue.length)){st.veilRestCommit=true;run.restHoles=false;}
-  const holding=moving||run.queue.length>0;st.rasterLayer=job;
-  r.gliding=holding;r.moving=holding;r.promo=true;r.soft=false;r.focusK=focus?.k||0;
-  st.gliding=holding;st.rasterS=r.layerCams.finds?.s||r.base.s;st.rasterRebased=job==='finds'||job==='map';
-  st.rasterBudget=false;E.rasterFrame=false;run.pending=moving||run.queue.length>0;return run.pending;
+  const records=[['map',E.svg,E.cam],['base',E.base,E.camBase],...layers.map(([svg,cam])=>[svg.id.slice(4),svg,cam]),['veil',veil,camVeil]].filter(([,svg,cam])=>svg&&cam);
+  r.layerCams ||= {};
+  const slack=FRAME_PERF.slack, free=!!st.exploring||st.exploreK>0;
+  const change=lastCam?Math.max(c.s/lastCam.s,lastCam.s/c.s):1;
+  // Queue the cohort before its common deadline, but always raster at the shown camera.
+  const lead=moving?Math.min(1.4,change**(records.length+1)):1;
+  st.gliding=moving;
+  const requests=(VIEW.skyPlan?.(st)||[]).map(q=>({...q,kind:'sky'})),forced=[];
+  for(const[id,svg,cam]of records){
+    const p=r.layerCams[id],k=p?c.s/p.s:1;
+    const lo=free?FRAME_PERF.exploreMin:id==='base'?FRAME_PERF.baseMin:FRAME_PERF.scaleMin;
+    const hi=free?FRAME_PERF.exploreMax:id==='base'?FRAME_PERF.baseMax:FRAME_PERF.scaleMax;
+    let covers=true;
+    if(id==='base'&&p){
+      const box=VIEW.baseBox||NO_BOX,sx=Math.max(0,box.ox-1),sy=Math.max(0,box.oy-1);
+      const tx=c.tx-p.tx*k,ty=c.ty-p.ty*k;
+      covers=-tx/k>=-sx&&(VIEW.w-tx)/k<=VIEW.w+sx&&-ty/k>=-sy&&(VIEW.h-ty)/k<=VIEW.h+sy;
+    }
+    const due=!p||!covers||(moving?k<lo*lead||k>hi/lead:!equal(c,p));
+    if(!due)continue;
+    const q={kind:id,svg,cam,score:!p||!covers?Infinity:Math.max(lo/k,k/hi)};
+    requests.push(q);
+    if(!p||!covers||moving&&(k<lo/slack||k>hi*slack))forced.push({...q,reason:!p?'initial':!covers?'base coverage':'slack'});
+  }
+  const chosen=forced.length?null:requests.sort((a,b)=>b.score-a.score)[0]||null;
+  const jobs=forced.length?forced:chosen&&chosen.kind!=='sky'?[chosen]:[];
+  for(const q of jobs){r.layerCams[q.kind]={...c};tripWrite(q.cam,'transform',matrix(c),true);}
+  r.base=r.layerCams.map||{...c};E.veilRaster=r.layerCams.veil||{...c};
+  for(const[id,svg]of records){
+    const p=r.layerCams[id];if(!p)continue;const k=c.s/p.s;
+    tripWrite(svg,'transform',equal(c,p)?'none':'matrix('+k+',0,0,'+k+','+(c.tx-p.tx*k)+','+(c.ty-p.ty*k)+')');
+  }
+  if(E.base){const B=E.baseRaster??={};B.camera=r.layerCams.base;B.last={...c,P:st.P,focus:focus?.k||0};B.held=!equal(c,B.camera);B.w=VIEW.w;B.h=VIEW.h;B.box=VIEW.baseBox||NO_BOX;}
+  const pending=!moving&&records.some(([id])=>!equal(r.layerCams[id],c));
+  st.rasterForced=forced.map(q=>q.kind);st.rasterReasons=forced.map(q=>({layer:q.kind,reason:q.reason}));
+  st.rasterLayers=jobs.map(q=>q.kind);st.rasterLayer=st.rasterLayers[0]||null;
+  st.rasterRebased=jobs.some(q=>q.kind==='finds');
+  st.rasterS=(r.layerCams.finds||r.base).s;
+  st.rasterBudget={used:!!jobs.length,sky:chosen?.kind==='sky'?chosen.object:null,baseForced:forced.some(q=>q.kind==='base')};
+  E.rasterFrame=st.rasterBudget;
+  if(focus&&focus.k<(r.focusK??0))r.focusRelease=true;
+  else if(focus&&focus.k>(r.focusK??0))r.focusRelease=false;
+  const key=JSON.stringify([focus?.id||'',E.focusAim?.serial||0,!!r.focusRelease]);
+  if(moving&&(!r.wasMoving||key!==r.moveKey)){
+    const glide=GLIDES.find(g=>st.P>=g.a&&st.P<g.b);
+    const target=tripState(st.P);if(focus&&!r.focusRelease)tripFocus(target,E.focusAim?.view||focus.view,1);
+    st.rasterDestination={...(focus?target.cam:st.exploreDestination|| (glide?tripState(lastCam&&st.P<lastCam.P?glide.a:glide.b).cam:c))};
+  }
+  if(!moving&&jobs.some(q=>q.kind==='veil'))st.veilRestCommit=true;
+  r.wasMoving=moving;r.moveKey=key;r.focusK=focus?.k||0;
+  r.gliding=moving||pending;r.promo=!st.reduced&&(st.handoffT>=1||moving);r.soft=false;
+  st.gliding=r.gliding;
+  return {pending:moving||pending};
 }
 export function tripApply(st, focus = null) {
   const E = TRIP_EL, c = st.cam; E.clockFading = false;
@@ -722,107 +752,11 @@ export function tripApply(st, focus = null) {
   const free = !!st.exploring || st.exploreK > 0;
   const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
   if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.layerCams = null; r.focusRun = null; E.veilRaster = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
-  const ratio = r.base ? c.s / r.base.s : 1;
-  const zooming = r.base && Math.abs(ratio - 1) > 1e-6;
-  const lastCam = r.lastCam, camMoved = !!lastCam && (lastCam.s !== c.s || lastCam.tx !== c.tx || lastCam.ty !== c.ty);
-  r.lastCam = { ...c, P: st.P, focus: focus?.k || 0 };
-  const glideHold = FRAME_PERF.glideHold && !free && !st.reduced && st.handoffT >= 1;
-  // Explore's scripted opening holds the map like a gesture (phone-p25o, 2026-11-27: redrawn through the camera every frame it
-  // ran 43 fps with 40 slow frames on Dan's phone, held 54 fps with 16; the PC 92 to 117 fps). Rest redraws it sharp.
-  const moving = free && !!st.exploreMoving && !(zooming && st.exploreSharp) || glideHold && camMoved;
-  r.gliding = !!(glideHold && camMoved);
-  // A moving explore camera holds svg#map and its base across FRAME_PERF.exploreMin to exploreMax, so a pinch or a wheel redraws
-  // them every 25 % of zoom instead of every 15 % (each redraw was a 50-340 ms frame in the phone and PC pinch passes,
-  // 2026-11-27). They are drawn at the true scale, not ahead: the bigger raster ahead let parts of svg#map drop out for a frame
-  // or two on the phone (the runestone and the ring line under the ash, phone-p25v films). Rest still redraws them sharp.
-  const zoomHold = free && moving, mapLo = zoomHold ? FRAME_PERF.exploreMin : FRAME_PERF.scaleMin, mapHi = zoomHold ? FRAME_PERF.exploreMax : FRAME_PERF.scaleMax;
-  const rebase = !r.base || ratio < mapLo || ratio > mapHi;
-  const score = (k, lo, hi) => Math.max(lo / k, k / hi);
-  const focusMove = !!focus && focus.k > 0;
-  // Journey moves share one big raster per frame: svg#map, svg#map-base or one sky object, the biggest overshoot first.
-  // Explore, its scripted opening, rest and find focus moves redraw each layer as soon as it is due, as before part 13.
-  // A waiting layer never runs more than FRAME_PERF.slack past its hold range, and the base never stops covering the screen.
-  let requests=[],mapForced=false,baseForced=false,B,held,coversNow=true,baseLast,focusPending=false,chosen=null;
-  const focusRaster=!free&&!st.reduced&&(focusMove||r.focusRun?.pending);
-  if(focusRaster) focusPending=tripFocusRasters(E,r,st,focus,layers,veil,camVeil,camMoved);
-  else { r.focusRun=null;r.focusK=0;r.focusRelease=false;
-  const slot = r.gliding && !focusMove, slack = FRAME_PERF.slack;
-  requests = (slot ? VIEW.skyPlan?.(st) || [] : []).map(q => ({ ...q, kind: 'sky' }));
-  const mapDue = !r.base || (!moving ? ratio !== 1 || c.tx !== r.base.tx || c.ty !== r.base.ty : rebase);
-  mapForced = mapDue && (!slot || !r.base || ratio < FRAME_PERF.scaleMin / slack || ratio > FRAME_PERF.scaleMax * slack);
-  if (mapDue) requests.push({ kind: 'map', score: r.base ? score(ratio, mapLo, mapHi) : Infinity });
-  const rounded = p => ({ s: +p.s.toFixed(4), tx: +p.tx.toFixed(2), ty: +p.ty.toFixed(2) });
-  const text = p => 'matrix('+p.s.toFixed(4)+' 0 0 '+p.s.toFixed(4)+' '+p.tx.toFixed(2)+' '+p.ty.toFixed(2)+')';
-  const shown = rounded(c), heldBy = cam => { const k = shown.s / cam.s; return { k, tx: shown.tx - cam.tx * k, ty: shown.ty - cam.ty * k }; };
-  if (E.base) {
-    const box = VIEW.baseBox || NO_BOX, sx = Math.max(0, box.ox - 1), sy = Math.max(0, box.oy - 1);
-    B = E.baseRaster ??= { camera: null, last: null, w: VIEW.w, h: VIEW.h, box };
-    if (B.w !== VIEW.w || B.h !== VIEW.h || B.box !== box) { B.camera = null; B.w = VIEW.w; B.h = VIEW.h; B.box = box; }
-    baseLast = B.last;
-    const still = baseLast && baseLast.s === c.s && baseLast.tx === c.tx && baseLast.ty === c.ty;
-    const canHold = !!B.camera && !st.reduced && (free ? !!st.exploreMoving || !still : st.handoffT >= 1 && !still);
-    held = B.camera ? heldBy(B.camera) : null;
-    coversNow = !!held && -held.tx / held.k >= -sx - 1e-6 && (VIEW.w - held.tx) / held.k <= VIEW.w + sx + 1e-6 && -held.ty / held.k >= -sy - 1e-6 && (VIEW.h - held.ty) / held.k <= VIEW.h + sy + 1e-6;
-    const lo = free ? mapLo : FRAME_PERF.baseMin, hi = free ? mapHi : FRAME_PERF.baseMax;
-    if (!held || !coversNow || held.k < lo || held.k > hi || !canHold && (held.k !== 1 || held.tx !== 0 || held.ty !== 0)) {
-      requests.push({ kind: 'base', score: !coversNow ? Infinity : score(held.k,lo,hi) });
-      baseForced = !slot || !coversNow || held.k < lo / slack || held.k > hi * slack;
-    }
-  }
-  // Forced redraws take the frame; otherwise the slot goes to the biggest overshoot. Sky objects read the slot in depthSky.
-  const forced = mapForced || baseForced;
-  chosen = slot && !forced ? requests.sort((a,b) => b.score-a.score)[0] || null : null;
-  st.rasterBudget = slot ? { used: forced, sky: chosen?.kind === 'sky' ? chosen.object : null, baseForced } : false;
-  E.rasterFrame = st.rasterBudget;
-  const endScale = previous => {
-    const glide = GLIDES.find(g => st.P >= g.a && st.P < g.b);
-    let end = glide ? tripState(previous && st.P < previous.P ? glide.a : glide.b).cam.s : c.s;
-    if (focus && focus.k > (previous?.focus || 0)) { const target = { ...st, cam: { ...c }, cardK: st.cardK.slice() }; tripFocus(target, focus.view, 1); end = target.cam.s; }
-    else if (focus) end = tripState(st.P).cam.s;
-    return end;
-  };
-  st.rasterRebased = mapForced || chosen?.kind === 'map';
-  if (st.rasterRebased) {
-    const ahead = moving && glideHold && lastCam && c.s > lastCam.s ? Math.min(c.s / FRAME_PERF.scaleMin, Math.max(c.s,endScale(lastCam))) / c.s : 1;
-    r.base = { ...c, s: c.s * ahead, tx: c.ax - (c.ax-c.tx)*ahead, ty: c.ay - (c.ay-c.ty)*ahead };
-    tripWrite(E.cam, 'transform', text(r.base), true);
-    r.layerCams = null;
-    for (const [, cam] of layers) tripWrite(cam, 'transform', E.cam.getAttribute('transform'), true);
-    if (st.rasterBudget) st.rasterBudget.used = true;
-  }
-  const paintK = c.s / r.base.s;
-  const mapTransform = paintK === 1 && c.tx === r.base.tx && c.ty === r.base.ty ? 'none' : 'matrix('+paintK+',0,0,'+paintK+','+(c.tx-r.base.tx*paintK)+','+(c.ty-r.base.ty*paintK)+')';
-  tripWrite(E.svg, 'transform', mapTransform);
-  if (veil) {
-    let destination=null;
-    if(moving&&!r.veilMoving){const glide=GLIDES.find(g=>st.P>=g.a&&st.P<g.b);destination=glide?tripState(lastCam&&st.P<lastCam.P?glide.a:glide.b).cam:st.exploreDestination||c;st.rasterDestination={...destination};}
-    if(!E.veilRaster||destination||!moving&&['s','tx','ty'].some(k=>E.veilRaster[k]!==c[k])){E.veilRaster={...(destination||c)};if(camVeil)tripWrite(camVeil,'transform',text(E.veilRaster),true);if(!moving)st.veilRestCommit=true;}
-    if(!moving&&r.veilMoving)st.veilRestCommit=true;r.veilMoving=moving;
-    const v=E.veilRaster,k=c.s/v.s;tripWrite(veil,'transform',k===1&&c.tx===v.tx&&c.ty===v.ty?'none':'matrix('+k+',0,0,'+k+','+(c.tx-v.tx*k)+','+(c.ty-v.ty*k)+')');
-  }
-  for (const [svg] of layers) tripWrite(svg, 'transform', mapTransform);
-  st.rasterS = r.base.s; st.gliding = tripGliding();
-  if (B) {
-    if (baseForced || chosen?.kind === 'base') {
-      let k = 1;
-      if (held && camMoved && baseLast && c.s > baseLast.s) k = zoomHold ? 1 : Math.min(FRAME_PERF.baseAhead, Math.max(1,endScale(baseLast)/c.s));
-      B.camera = rounded({ s: c.s*k, tx: VIEW.w/2-(VIEW.w/2-c.tx)*k, ty: VIEW.h/2-(VIEW.h/2-c.ty)*k });
-      tripWrite(E.camBase, 'transform', text(B.camera), true); held = heldBy(B.camera); if (st.rasterBudget) st.rasterBudget.used = true;
-    }
-    B.held = !!held && (held.k !== 1 || held.tx !== 0 || held.ty !== 0);
-    tripWrite(E.base, 'transform', B.held ? 'matrix('+held.k+',0,0,'+held.k+','+held.tx+','+held.ty+')' : 'none');
-    B.last = { ...c, P: st.P, focus: focus?.k || 0 };
-  }
-  // Explore promotes the map while its camera moves, so the held raster above moves on the compositor instead of being
-  // re-rastered every frame. A pan keeps the layer's raster scale, so the promotion stays for the next gesture. Once a
-  // held frame has been scaled (wheel, pinch, keys), rest releases it, so the map re-rasters sharp at the new zoom (F10).
-  if (!free) { r.promo = glideHold; r.soft = false; }
-  else {
-    if (st.exploreMoving) r.promo = true;
-    if (moving && !rebase && zooming) r.soft = true;
-    if (!st.exploreMoving && r.soft) r.promo = r.soft = false;
-  }
-  }
+  const lastCam=r.lastCam,camMoved=!!lastCam&&['s','tx','ty'].some(k=>lastCam[k]!==c[k]);
+  r.lastCam={...c,P:st.P,focus:focus?.k||0};
+  const glideHold=FRAME_PERF.glideHold&&!free&&!st.reduced&&st.handoffT>=1;
+  const moving=!st.reduced&&(camMoved||!!st.exploreMoving||!!focus&&(focus.k<1||!focus.swapped));
+  const raster=tripRasters(E,r,st,focus,layers,veil,camVeil,moving,camMoved,lastCam);
   // Keep the displayed label state across camera commits. Its own size and tier
   // clock eases continuously, including across interrupted gestures/rebases.
   const settle = free ? 1 - Math.exp(-(st.exploreDt || 0) / (FRAME_PERF.labelSettle / 3)) : 1;
@@ -874,6 +808,7 @@ export function tripApply(st, focus = null) {
     const pieces = E.pieceList ??= [...group.querySelectorAll('.done-p')].map(el => ({ el, u0: +el.dataset.u0, u1: +el.dataset.u1 }));
     tripWrite(group, 'opacity', st.inTrip ? 1 : 0);
     for (const q of pieces) {
+      if(q.el.__jmTrail)continue;
       const full = st.exploreK || st.u >= q.u1, hidden = !full && st.u <= q.u0;
       tripWrite(q.el, 'opacity', hidden ? '0' : '');
       tripWrite(q.el, 'strokeDasharray', full || hidden ? 'none' : ((st.u-q.u0)*paint.s).toFixed(1)+' '+((q.u1-q.u0)*paint.s+20).toFixed(1));
@@ -904,7 +839,7 @@ export function tripApply(st, focus = null) {
     tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
     const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
-  return focusPending || (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.clockFading || !!E.baseRaster?.held || requests.length > (mapForced ? 1 : 0) + (baseForced ? 1 : 0) + (chosen ? 1 : 0);
+  return raster.pending || (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.clockFading || !!E.baseRaster?.held;
 }
 const n2 = v => v.toFixed(2);
 export function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }

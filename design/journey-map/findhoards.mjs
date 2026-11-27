@@ -5,7 +5,7 @@ import { pieceIcon, hoardInside, mapLabelRows } from './art.mjs';
 import { cardsSetCraft, arrowSvg } from './cards.mjs';
 import { tlSetCraft } from './timeline.mjs';
 import { JOURNEY, stepsFocus } from './steps.mjs';
-import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, attend, findBits, findSvg, findFormat, findRange, findLife, findAngleDelta, findReady, findHint, findStyle, findView } from './findkit.mjs';
+import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, attend, findBits, findSvg, findFormat, findRange, findLife, findAngleDelta, findReady, findHint, findStyle, findView, findIdleTime } from './findkit.mjs';
 
 export const wayAllStops = () => STOPS.map(s => CRAFTS.every(c => s.crafts.includes(c)));
 export function findWay(svg) {
@@ -226,13 +226,15 @@ export function findHoards(svg) {
     h.undo = () => { if (FD.popOwner === h) closePop(); };
     h.hear = () => { if (!h.open) h.glintTs = h.hearTs = FD.now; };
     h.tick = (t, dt) => {
+      const idle=findIdleTime(h.glint);
+      FD.idleOnly=!(['rising','rattling','opening','bouncing','waiting'].includes(h.stage)||h.hold||h.queued||h.pending||FD.sheetOwner===h);
       findLife(h, d.x, d.y, H.rad, H.near);
       if (!h.onScreen && !h.hold && !h.queued && !['rising', 'rattling', 'opening', 'bouncing'].includes(h.stage)) return;
       if (h.hold && t >= h.nextHold) { queueMicrotask(request); h.nextHold = t + (h.digs < H.hole.length ? H.repeat : H.openHold); if (h.open) h.hold = false; }
       if (h.awake !== h.wasAwake) { const awake = h.awake; queueMicrotask(() => { h.scratch.style.strokeWidth = awake || h.craftLit ? H.scratchWidth : ''; }); }
       h.wasAwake = h.awake;
-      if (!FD.rm && t >= h.glintAt && !h.digs) { h.glintTs = t; h.glintAt = t + findRange(H.glint); }
-      const glint = FD.rm ? 1 : clamp01((t - h.glintTs) / H.glintTime);
+      if (!FD.rm && idle >= h.glintAt && !h.digs) { h.idleGlintTs = idle; h.glintAt = idle + findRange(H.glint); }
+      const glint = FD.rm ? 1 : clamp01(Math.min((t-h.glintTs)/H.glintTime,(idle-(h.idleGlintTs??-Infinity))/H.glintTime));
       attr(h.glint, 'opacity', Math.sin(Math.PI * glint)); attr(h.glint, 'transform', 'translate(0 ' + -H.scratchHop * Math.sin(Math.PI * glint) + ') rotate(' + H.glintTurn * glint + ') scale(' + Math.sin(Math.PI * glint) + ')');
       const heard = FD.rm ? 1 : clamp01((t - (h.hearTs ?? -Infinity)) / H.glintTime); attr(h.scratch, 'transform', 'translate(0 ' + -H.scratchHop * Math.sin(Math.PI * heard) + ')');
       h.clods.forEach(b => {

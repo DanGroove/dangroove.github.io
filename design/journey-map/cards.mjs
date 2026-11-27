@@ -167,7 +167,7 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     if (e > 0 && lift) cardsStyle(c.shadowBox, 'transform', transform);
     cardsStyle(c.face, 'transform', lift ? `${sx || sy ? `translate(${sx}px,${sy}px) ` : ''}${rx ? `rotateX(${rx}deg) ` : ''}${ryTilt ? `rotateY(${ryTilt}deg)` : ''}`.trim() : '');
     cardsStyle(c.shadow, 'opacity', lift ? cfg.shadow * e : 0);
-    cardsStyle(c.shadow, 'transform', `translate(${-sx / cfg.shadowShare}px,${cfg.drop * e - sy / cfg.shadowShare}px)`);
+    if(lift&&e>0)cardsStyle(c.shadow, 'transform', `translate(${-sx / cfg.shadowShare}px,${cfg.drop * e - sy / cfg.shadowShare}px)`);
     cardsStyle(c.inn, 'opacity', smooth(...CARD_GROW.words, k));
     const paint = st.visited[i] && (e > 0 || st.u >= STOP_U[i]) || lit ? 1 : 0, step = CD.dt / CARD_TAIL.paintTime;
     c.paint = Math.max(0, Math.min(1, c.paint + Math.sign(paint - c.paint) * Math.min(step, Math.abs(paint - c.paint))));

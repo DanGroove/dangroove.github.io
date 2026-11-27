@@ -662,6 +662,24 @@ html:not(.rm) .stop:not([data-state]) { visibility: hidden; }
 #map-lines { pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .3s; }
 .rm #map-lines { transition: none; }
 
+/* COMB-S: tightly bounded idle ink keeps the stack fade and original SVG order. */
+.idle-layer { overflow: hidden; contain: paint; pointer-events: none; will-change: transform; }
+.idle-layer .anim-find { opacity: var(--jm-find); }
+.idle-layer .anim-find.hoard { transition: opacity .3s; }
+
+/* COMB-S S4: stop ink has a persistent, hit-sized backing through L5 raster commits. */
+html:not(.rm) .st-btn { will-change: transform, opacity; }
+
+/* COMB-S S3: bounded cached shadow paint, and the head's own 14 px paint clip. */
+html:not(.rm) .c-shadow, html:not(.rm) .c-sh { will-change: transform, opacity; }
+.tl-head { contain: layout paint; }
+
+/* Keep all raster children in map order when the common fade reaches opacity one. */
+#map-stack { z-index: 0; }
+
+/* COMB-S measured marker clips reached 19841x17901; retain a local paint clip, including the 4 px keyboard outline. */
+html:not(.rm) .st-btn { contain: layout paint; overflow-clip-margin: 4px; }
+
 </style>
 </head>
 <body>
@@ -3558,33 +3576,63 @@ function tripLabels(st, t2Fade = 1) {
   (E.legend || []).forEach(g => { const k = labelScale('legend', c.s), b = g.box, box = b ? [g.p[0]+b.x*k,g.p[1]+b.y*k,g.p[0]+(b.x+b.width)*k,g.p[1]+(b.y+b.height)*k] : [g.p[0],g.p[1]-u*L.ascent,g.p[0]+g.n*u*L.width,g.p[1]+u*L.descent]; put(g, (free ? 1 : back) * tripEdge(g, free ? 1 : gone(box), dt) * (1-tripCardCover(st,box)) * (1-.85*xQuiet) * group); });
 }
 function tripGliding() { return !!TRIP_EL.raster?.gliding; }
-// COMB-R: each focus raster has its own commit. The moving view only changes CSS matrices.
-function tripFocusRasters(E, r, st, focus, layers, veil, camVeil, camMoved) {
-  const c=st.cam, ids=['map','base','live','finds','anim','veil'], equal=(a,b)=>a&&b&&['s','tx','ty'].every(k=>Math.abs(a[k]-b[k])<1e-10);
-  if (focus && focus.k>(r.focusK??0)) r.focusRelease=false;
-  else if (!focus || focus.k<(r.focusK??0)) r.focusRelease=true;
-  const hint=E.focusAim?.id===focus?.id?E.focusAim:null, key=JSON.stringify([focus?.id||'',hint?.serial||0,!!r.focusRelease]);
-  let run=r.focusRun;
-  if (!run || run.key!==key) {
-    const target=tripState(st.P); if (focus&&!r.focusRelease) tripFocus(target,hint?.view||focus.view,1);
-    const start=r.base||c; r.layerCams ||= Object.fromEntries(ids.map(id=>[id,{...(id==='base'?E.baseRaster?.camera:id==='veil'?E.veilRaster:null)||start}]));
-    run=r.focusRun={key,destination:{...target.cam},queue:(!r.base||target.cam.s<start.s)?ids.slice():[],settled:false,pending:true};
-    st.rasterDestination={...target.cam};
-  }
-  const moving=!!focus&&(focus.k<1||!focus.swapped)||camMoved;
-  if (!moving&&!run.settled) { run.settled=true;run.queue=ids.filter(id=>!equal(r.layerCams[id],c));run.restHoles=true; }
-  const job=run.queue.shift(), camera=run.settled?c:run.destination;
+// COMB-S: every camera owner uses the same slot, including focus and rest.
+function tripRasters(E,r,st,focus,layers,veil,camVeil,moving,camMoved,lastCam) {
+  const c=st.cam, equal=(a,b)=>a&&b&&['s','tx','ty'].every(k=>Math.abs(a[k]-b[k])<1e-10);
   const matrix=p=>'matrix('+p.s.toFixed(4)+' 0 0 '+p.s.toFixed(4)+' '+p.tx.toFixed(2)+' '+p.ty.toFixed(2)+')';
-  if(job){r.layerCams[job]={...camera};const cam=job==='map'?E.cam:job==='base'?E.camBase:job==='veil'?camVeil:layers.find(([svg])=>svg.id==='map-'+job)?.[1];if(cam)tripWrite(cam,'transform',matrix(camera),true);if(job==='anim'){const line=layers.find(([svg])=>svg.id==='map-lines');if(line)tripWrite(line[1],'transform',matrix(camera),true);}}
-  r.base=r.layerCams.map; E.veilRaster=r.layerCams.veil;
-  const hold=(svg,p)=>{if(!svg||!p)return;const k=c.s/p.s;tripWrite(svg,'transform',equal(c,p)?'none':'matrix('+k+',0,0,'+k+','+(c.tx-p.tx*k)+','+(c.ty-p.ty*k)+')');};
-  hold(E.svg,r.base);hold(veil,r.layerCams.veil);for(const[svg]of layers)hold(svg,r.layerCams[svg.id.slice(4)]||r.layerCams.anim);
-  if(E.base){const B=E.baseRaster??={};B.camera=r.layerCams.base;B.last={...c,P:st.P,focus:focus?.k||0};B.held=!equal(c,B.camera);hold(E.base,B.camera);}
-  if(run.restHoles&&(job==='veil'||!run.queue.length)){st.veilRestCommit=true;run.restHoles=false;}
-  const holding=moving||run.queue.length>0;st.rasterLayer=job;
-  r.gliding=holding;r.moving=holding;r.promo=true;r.soft=false;r.focusK=focus?.k||0;
-  st.gliding=holding;st.rasterS=r.layerCams.finds?.s||r.base.s;st.rasterRebased=job==='finds'||job==='map';
-  st.rasterBudget=false;E.rasterFrame=false;run.pending=moving||run.queue.length>0;return run.pending;
+  const records=[['map',E.svg,E.cam],['base',E.base,E.camBase],...layers.map(([svg,cam])=>[svg.id.slice(4),svg,cam]),['veil',veil,camVeil]].filter(([,svg,cam])=>svg&&cam);
+  r.layerCams ||= {};
+  const slack=FRAME_PERF.slack, free=!!st.exploring||st.exploreK>0;
+  const change=lastCam?Math.max(c.s/lastCam.s,lastCam.s/c.s):1;
+  // Queue the cohort before its common deadline, but always raster at the shown camera.
+  const lead=moving?Math.min(1.4,change**(records.length+1)):1;
+  st.gliding=moving;
+  const requests=(VIEW.skyPlan?.(st)||[]).map(q=>({...q,kind:'sky'})),forced=[];
+  for(const[id,svg,cam]of records){
+    const p=r.layerCams[id],k=p?c.s/p.s:1;
+    const lo=free?FRAME_PERF.exploreMin:id==='base'?FRAME_PERF.baseMin:FRAME_PERF.scaleMin;
+    const hi=free?FRAME_PERF.exploreMax:id==='base'?FRAME_PERF.baseMax:FRAME_PERF.scaleMax;
+    let covers=true;
+    if(id==='base'&&p){
+      const box=VIEW.baseBox||NO_BOX,sx=Math.max(0,box.ox-1),sy=Math.max(0,box.oy-1);
+      const tx=c.tx-p.tx*k,ty=c.ty-p.ty*k;
+      covers=-tx/k>=-sx&&(VIEW.w-tx)/k<=VIEW.w+sx&&-ty/k>=-sy&&(VIEW.h-ty)/k<=VIEW.h+sy;
+    }
+    const due=!p||!covers||(moving?k<lo*lead||k>hi/lead:!equal(c,p));
+    if(!due)continue;
+    const q={kind:id,svg,cam,score:!p||!covers?Infinity:Math.max(lo/k,k/hi)};
+    requests.push(q);
+    if(!p||!covers||moving&&(k<lo/slack||k>hi*slack))forced.push({...q,reason:!p?'initial':!covers?'base coverage':'slack'});
+  }
+  const chosen=forced.length?null:requests.sort((a,b)=>b.score-a.score)[0]||null;
+  const jobs=forced.length?forced:chosen&&chosen.kind!=='sky'?[chosen]:[];
+  for(const q of jobs){r.layerCams[q.kind]={...c};tripWrite(q.cam,'transform',matrix(c),true);}
+  r.base=r.layerCams.map||{...c};E.veilRaster=r.layerCams.veil||{...c};
+  for(const[id,svg]of records){
+    const p=r.layerCams[id];if(!p)continue;const k=c.s/p.s;
+    tripWrite(svg,'transform',equal(c,p)?'none':'matrix('+k+',0,0,'+k+','+(c.tx-p.tx*k)+','+(c.ty-p.ty*k)+')');
+  }
+  if(E.base){const B=E.baseRaster??={};B.camera=r.layerCams.base;B.last={...c,P:st.P,focus:focus?.k||0};B.held=!equal(c,B.camera);B.w=VIEW.w;B.h=VIEW.h;B.box=VIEW.baseBox||NO_BOX;}
+  const pending=!moving&&records.some(([id])=>!equal(r.layerCams[id],c));
+  st.rasterForced=forced.map(q=>q.kind);st.rasterReasons=forced.map(q=>({layer:q.kind,reason:q.reason}));
+  st.rasterLayers=jobs.map(q=>q.kind);st.rasterLayer=st.rasterLayers[0]||null;
+  st.rasterRebased=jobs.some(q=>q.kind==='finds');
+  st.rasterS=(r.layerCams.finds||r.base).s;
+  st.rasterBudget={used:!!jobs.length,sky:chosen?.kind==='sky'?chosen.object:null,baseForced:forced.some(q=>q.kind==='base')};
+  E.rasterFrame=st.rasterBudget;
+  if(focus&&focus.k<(r.focusK??0))r.focusRelease=true;
+  else if(focus&&focus.k>(r.focusK??0))r.focusRelease=false;
+  const key=JSON.stringify([focus?.id||'',E.focusAim?.serial||0,!!r.focusRelease]);
+  if(moving&&(!r.wasMoving||key!==r.moveKey)){
+    const glide=GLIDES.find(g=>st.P>=g.a&&st.P<g.b);
+    const target=tripState(st.P);if(focus&&!r.focusRelease)tripFocus(target,E.focusAim?.view||focus.view,1);
+    st.rasterDestination={...(focus?target.cam:st.exploreDestination|| (glide?tripState(lastCam&&st.P<lastCam.P?glide.a:glide.b).cam:c))};
+  }
+  if(!moving&&jobs.some(q=>q.kind==='veil'))st.veilRestCommit=true;
+  r.wasMoving=moving;r.moveKey=key;r.focusK=focus?.k||0;
+  r.gliding=moving||pending;r.promo=!st.reduced&&(st.handoffT>=1||moving);r.soft=false;
+  st.gliding=r.gliding;
+  return {pending:moving||pending};
 }
 function tripApply(st, focus = null) {
   const E = TRIP_EL, c = st.cam; E.clockFading = false;
@@ -3594,107 +3642,11 @@ function tripApply(st, focus = null) {
   const free = !!st.exploring || st.exploreK > 0;
   const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
   if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.layerCams = null; r.focusRun = null; E.veilRaster = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
-  const ratio = r.base ? c.s / r.base.s : 1;
-  const zooming = r.base && Math.abs(ratio - 1) > 1e-6;
-  const lastCam = r.lastCam, camMoved = !!lastCam && (lastCam.s !== c.s || lastCam.tx !== c.tx || lastCam.ty !== c.ty);
-  r.lastCam = { ...c, P: st.P, focus: focus?.k || 0 };
-  const glideHold = FRAME_PERF.glideHold && !free && !st.reduced && st.handoffT >= 1;
-  // Explore's scripted opening holds the map like a gesture (phone-p25o, 2026-11-27: redrawn through the camera every frame it
-  // ran 43 fps with 40 slow frames on Dan's phone, held 54 fps with 16; the PC 92 to 117 fps). Rest redraws it sharp.
-  const moving = free && !!st.exploreMoving && !(zooming && st.exploreSharp) || glideHold && camMoved;
-  r.gliding = !!(glideHold && camMoved);
-  // A moving explore camera holds svg#map and its base across FRAME_PERF.exploreMin to exploreMax, so a pinch or a wheel redraws
-  // them every 25 % of zoom instead of every 15 % (each redraw was a 50-340 ms frame in the phone and PC pinch passes,
-  // 2026-11-27). They are drawn at the true scale, not ahead: the bigger raster ahead let parts of svg#map drop out for a frame
-  // or two on the phone (the runestone and the ring line under the ash, phone-p25v films). Rest still redraws them sharp.
-  const zoomHold = free && moving, mapLo = zoomHold ? FRAME_PERF.exploreMin : FRAME_PERF.scaleMin, mapHi = zoomHold ? FRAME_PERF.exploreMax : FRAME_PERF.scaleMax;
-  const rebase = !r.base || ratio < mapLo || ratio > mapHi;
-  const score = (k, lo, hi) => Math.max(lo / k, k / hi);
-  const focusMove = !!focus && focus.k > 0;
-  // Journey moves share one big raster per frame: svg#map, svg#map-base or one sky object, the biggest overshoot first.
-  // Explore, its scripted opening, rest and find focus moves redraw each layer as soon as it is due, as before part 13.
-  // A waiting layer never runs more than FRAME_PERF.slack past its hold range, and the base never stops covering the screen.
-  let requests=[],mapForced=false,baseForced=false,B,held,coversNow=true,baseLast,focusPending=false,chosen=null;
-  const focusRaster=!free&&!st.reduced&&(focusMove||r.focusRun?.pending);
-  if(focusRaster) focusPending=tripFocusRasters(E,r,st,focus,layers,veil,camVeil,camMoved);
-  else { r.focusRun=null;r.focusK=0;r.focusRelease=false;
-  const slot = r.gliding && !focusMove, slack = FRAME_PERF.slack;
-  requests = (slot ? VIEW.skyPlan?.(st) || [] : []).map(q => ({ ...q, kind: 'sky' }));
-  const mapDue = !r.base || (!moving ? ratio !== 1 || c.tx !== r.base.tx || c.ty !== r.base.ty : rebase);
-  mapForced = mapDue && (!slot || !r.base || ratio < FRAME_PERF.scaleMin / slack || ratio > FRAME_PERF.scaleMax * slack);
-  if (mapDue) requests.push({ kind: 'map', score: r.base ? score(ratio, mapLo, mapHi) : Infinity });
-  const rounded = p => ({ s: +p.s.toFixed(4), tx: +p.tx.toFixed(2), ty: +p.ty.toFixed(2) });
-  const text = p => 'matrix('+p.s.toFixed(4)+' 0 0 '+p.s.toFixed(4)+' '+p.tx.toFixed(2)+' '+p.ty.toFixed(2)+')';
-  const shown = rounded(c), heldBy = cam => { const k = shown.s / cam.s; return { k, tx: shown.tx - cam.tx * k, ty: shown.ty - cam.ty * k }; };
-  if (E.base) {
-    const box = VIEW.baseBox || NO_BOX, sx = Math.max(0, box.ox - 1), sy = Math.max(0, box.oy - 1);
-    B = E.baseRaster ??= { camera: null, last: null, w: VIEW.w, h: VIEW.h, box };
-    if (B.w !== VIEW.w || B.h !== VIEW.h || B.box !== box) { B.camera = null; B.w = VIEW.w; B.h = VIEW.h; B.box = box; }
-    baseLast = B.last;
-    const still = baseLast && baseLast.s === c.s && baseLast.tx === c.tx && baseLast.ty === c.ty;
-    const canHold = !!B.camera && !st.reduced && (free ? !!st.exploreMoving || !still : st.handoffT >= 1 && !still);
-    held = B.camera ? heldBy(B.camera) : null;
-    coversNow = !!held && -held.tx / held.k >= -sx - 1e-6 && (VIEW.w - held.tx) / held.k <= VIEW.w + sx + 1e-6 && -held.ty / held.k >= -sy - 1e-6 && (VIEW.h - held.ty) / held.k <= VIEW.h + sy + 1e-6;
-    const lo = free ? mapLo : FRAME_PERF.baseMin, hi = free ? mapHi : FRAME_PERF.baseMax;
-    if (!held || !coversNow || held.k < lo || held.k > hi || !canHold && (held.k !== 1 || held.tx !== 0 || held.ty !== 0)) {
-      requests.push({ kind: 'base', score: !coversNow ? Infinity : score(held.k,lo,hi) });
-      baseForced = !slot || !coversNow || held.k < lo / slack || held.k > hi * slack;
-    }
-  }
-  // Forced redraws take the frame; otherwise the slot goes to the biggest overshoot. Sky objects read the slot in depthSky.
-  const forced = mapForced || baseForced;
-  chosen = slot && !forced ? requests.sort((a,b) => b.score-a.score)[0] || null : null;
-  st.rasterBudget = slot ? { used: forced, sky: chosen?.kind === 'sky' ? chosen.object : null, baseForced } : false;
-  E.rasterFrame = st.rasterBudget;
-  const endScale = previous => {
-    const glide = GLIDES.find(g => st.P >= g.a && st.P < g.b);
-    let end = glide ? tripState(previous && st.P < previous.P ? glide.a : glide.b).cam.s : c.s;
-    if (focus && focus.k > (previous?.focus || 0)) { const target = { ...st, cam: { ...c }, cardK: st.cardK.slice() }; tripFocus(target, focus.view, 1); end = target.cam.s; }
-    else if (focus) end = tripState(st.P).cam.s;
-    return end;
-  };
-  st.rasterRebased = mapForced || chosen?.kind === 'map';
-  if (st.rasterRebased) {
-    const ahead = moving && glideHold && lastCam && c.s > lastCam.s ? Math.min(c.s / FRAME_PERF.scaleMin, Math.max(c.s,endScale(lastCam))) / c.s : 1;
-    r.base = { ...c, s: c.s * ahead, tx: c.ax - (c.ax-c.tx)*ahead, ty: c.ay - (c.ay-c.ty)*ahead };
-    tripWrite(E.cam, 'transform', text(r.base), true);
-    r.layerCams = null;
-    for (const [, cam] of layers) tripWrite(cam, 'transform', E.cam.getAttribute('transform'), true);
-    if (st.rasterBudget) st.rasterBudget.used = true;
-  }
-  const paintK = c.s / r.base.s;
-  const mapTransform = paintK === 1 && c.tx === r.base.tx && c.ty === r.base.ty ? 'none' : 'matrix('+paintK+',0,0,'+paintK+','+(c.tx-r.base.tx*paintK)+','+(c.ty-r.base.ty*paintK)+')';
-  tripWrite(E.svg, 'transform', mapTransform);
-  if (veil) {
-    let destination=null;
-    if(moving&&!r.veilMoving){const glide=GLIDES.find(g=>st.P>=g.a&&st.P<g.b);destination=glide?tripState(lastCam&&st.P<lastCam.P?glide.a:glide.b).cam:st.exploreDestination||c;st.rasterDestination={...destination};}
-    if(!E.veilRaster||destination||!moving&&['s','tx','ty'].some(k=>E.veilRaster[k]!==c[k])){E.veilRaster={...(destination||c)};if(camVeil)tripWrite(camVeil,'transform',text(E.veilRaster),true);if(!moving)st.veilRestCommit=true;}
-    if(!moving&&r.veilMoving)st.veilRestCommit=true;r.veilMoving=moving;
-    const v=E.veilRaster,k=c.s/v.s;tripWrite(veil,'transform',k===1&&c.tx===v.tx&&c.ty===v.ty?'none':'matrix('+k+',0,0,'+k+','+(c.tx-v.tx*k)+','+(c.ty-v.ty*k)+')');
-  }
-  for (const [svg] of layers) tripWrite(svg, 'transform', mapTransform);
-  st.rasterS = r.base.s; st.gliding = tripGliding();
-  if (B) {
-    if (baseForced || chosen?.kind === 'base') {
-      let k = 1;
-      if (held && camMoved && baseLast && c.s > baseLast.s) k = zoomHold ? 1 : Math.min(FRAME_PERF.baseAhead, Math.max(1,endScale(baseLast)/c.s));
-      B.camera = rounded({ s: c.s*k, tx: VIEW.w/2-(VIEW.w/2-c.tx)*k, ty: VIEW.h/2-(VIEW.h/2-c.ty)*k });
-      tripWrite(E.camBase, 'transform', text(B.camera), true); held = heldBy(B.camera); if (st.rasterBudget) st.rasterBudget.used = true;
-    }
-    B.held = !!held && (held.k !== 1 || held.tx !== 0 || held.ty !== 0);
-    tripWrite(E.base, 'transform', B.held ? 'matrix('+held.k+',0,0,'+held.k+','+held.tx+','+held.ty+')' : 'none');
-    B.last = { ...c, P: st.P, focus: focus?.k || 0 };
-  }
-  // Explore promotes the map while its camera moves, so the held raster above moves on the compositor instead of being
-  // re-rastered every frame. A pan keeps the layer's raster scale, so the promotion stays for the next gesture. Once a
-  // held frame has been scaled (wheel, pinch, keys), rest releases it, so the map re-rasters sharp at the new zoom (F10).
-  if (!free) { r.promo = glideHold; r.soft = false; }
-  else {
-    if (st.exploreMoving) r.promo = true;
-    if (moving && !rebase && zooming) r.soft = true;
-    if (!st.exploreMoving && r.soft) r.promo = r.soft = false;
-  }
-  }
+  const lastCam=r.lastCam,camMoved=!!lastCam&&['s','tx','ty'].some(k=>lastCam[k]!==c[k]);
+  r.lastCam={...c,P:st.P,focus:focus?.k||0};
+  const glideHold=FRAME_PERF.glideHold&&!free&&!st.reduced&&st.handoffT>=1;
+  const moving=!st.reduced&&(camMoved||!!st.exploreMoving||!!focus&&(focus.k<1||!focus.swapped));
+  const raster=tripRasters(E,r,st,focus,layers,veil,camVeil,moving,camMoved,lastCam);
   // Keep the displayed label state across camera commits. Its own size and tier
   // clock eases continuously, including across interrupted gestures/rebases.
   const settle = free ? 1 - Math.exp(-(st.exploreDt || 0) / (FRAME_PERF.labelSettle / 3)) : 1;
@@ -3746,6 +3698,7 @@ function tripApply(st, focus = null) {
     const pieces = E.pieceList ??= [...group.querySelectorAll('.done-p')].map(el => ({ el, u0: +el.dataset.u0, u1: +el.dataset.u1 }));
     tripWrite(group, 'opacity', st.inTrip ? 1 : 0);
     for (const q of pieces) {
+      if(q.el.__jmTrail)continue;
       const full = st.exploreK || st.u >= q.u1, hidden = !full && st.u <= q.u0;
       tripWrite(q.el, 'opacity', hidden ? '0' : '');
       tripWrite(q.el, 'strokeDasharray', full || hidden ? 'none' : ((st.u-q.u0)*paint.s).toFixed(1)+' '+((q.u1-q.u0)*paint.s+20).toFixed(1));
@@ -3776,7 +3729,7 @@ function tripApply(st, focus = null) {
     tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
     const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
   }
-  return focusPending || (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.clockFading || !!E.baseRaster?.held || requests.length > (mapForced ? 1 : 0) + (baseForced ? 1 : 0) + (chosen ? 1 : 0);
+  return raster.pending || (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.clockFading || !!E.baseRaster?.held;
 }
 const n2 = v => v.toFixed(2);
 function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }
@@ -4882,9 +4835,68 @@ const D = s => FD.rm ? Number.EPSILON : s;
 const ease = t => easeIO(clamp01(t));
 const out3 = t => 1 - (1 - clamp01(t)) ** 3;
 const fEsc = s => String(typeof s === 'object' ? s.t : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-const attr = (el, k, v) => { const text = String(v); if (el.getAttribute(k) !== text) el.setAttribute(k, text); };
+const attr = (el, k, v) => { const layer=FD.idleOnly&&findIdleLayer(el);if(layer&&el!==layer.el&&!layer.visible)return;const text = String(v); if (el.getAttribute(k) !== text) el.setAttribute(k, text); };
+// COMB-S: bounded SVGs own idle ink and its paused clocks.
+const findIdleLayer = el => el?.__jmIdle || el?.closest?.('svg[data-idle]')?.__jmIdle;
+const findIdleTime = el => { const layer=findIdleLayer(el); return layer ? layer.time : FD.now; };
+const findIdleDelta = el => findIdleLayer(el)?.dt ?? FD.dt;
+const findIdleVisible = el => findIdleLayer(el)?.visible ?? true;
+function findIdleFrame(st,advance=true) {
+  const moving=!!(st.gliding||st.exploreMoving),c=st.cam,dpr=globalThis.devicePixelRatio||1;
+  for(const q of FD.idleLayers||[]){
+    const actor=q.actor,active=actor&&(actor.playing||actor.drag||actor.busy||actor.hearing||FD.sheetOwner===actor||['flight','hear','landing','reel','chase','eating','waking','trace','opening','sheet','closing','sliding','reply','pebble','sounding','echo','pull','lifting','rising','rattling','bouncing'].includes(actor.stage)||q.owner==='wayfinder'&&FD.focusId===q.owner);
+    if(q.placed&&!st.smallMoved){
+      if(advance){const run=q.visible&&!moving;q.dt=q.loop&&run&&q.running?FD.dt:0;q.time+=q.dt;q.running=run;continue;}
+      if(!q.loop&&!active||!q.visible&&!active)continue;
+    }
+    q.placed=true;
+    const contentKey=q.node.childElementCount+'/'+q.node.textContent;
+    if(contentKey!==q.contentKey&&!q.bits){q.contentKey=contentKey;const b=q.node.getBBox();q.box=[b.x-q.pad,b.y-q.pad,b.x+b.width+q.pad,b.y+b.height+q.pad];}
+    let b=q.box;
+    if(q.bits){
+      const live=FD.bits.filter(b=>b.live);const extra=[...q.node.children].some(e=>!FD.bits.some(b=>b.el===e)&&+(e.getAttribute('opacity')||1)>0);
+      if(!live.length&&!extra){q.visible=false;q.running=false;q.dt=0;findStyle(q.el,'visibility','hidden');findStyle(q.el,'opacity',0);continue;}
+      b=extra?[-c.tx/c.s,-c.ty/c.s,(VIEW.w-c.tx)/c.s,(VIEW.h-c.ty)/c.s]:[Math.min(...live.map(b=>b.x))-20,Math.min(...live.map(b=>b.y))-20,Math.max(...live.map(b=>b.x))+20,Math.max(...live.map(b=>b.y))+20];
+    }else{
+      const chainKey=q.chain.map(e=>e.getAttribute('transform')).join('/');
+      if(q.boundsKey===chainKey&&q.boundsBox===q.box)b=q.worldBox;
+      else {let m=new DOMMatrix();
+      for(const e of q.chain){const t=e.transform?.baseVal;if(t)for(let i=0;i<t.numberOfItems;i++)m=m.multiply(t.getItem(i).matrix);}
+      const corners=[[b[0],b[1]],[b[2],b[1]],[b[0],b[3]],[b[2],b[3]]].map(([x,y])=>new DOMPoint(x,y).matrixTransform(m));
+      b=[Math.min(...corners.map(p=>p.x)),Math.min(...corners.map(p=>p.y)),Math.max(...corners.map(p=>p.x)),Math.max(...corners.map(p=>p.y))];q.boundsKey=chainKey;q.boundsBox=q.box;q.worldBox=b;}
+    }
+    const raw=[b[0]*c.s+c.tx,b[1]*c.s+c.ty,b[2]*c.s+c.tx,b[3]*c.s+c.ty];
+    const visible=raw[2]>-8&&raw[0]<VIEW.w+8&&raw[3]>-8&&raw[1]<VIEW.h+8;
+    q.visible=visible;
+    if(advance){const run=visible&&!moving;q.dt=run&&q.running?FD.dt:0;q.time+=q.dt;q.running=run;}
+    const shown=String(visible);if(q.el.dataset.idleVisible!==shown)q.el.dataset.idleVisible=shown;
+    findStyle(q.el,'visibility',visible?'inherit':'hidden');findStyle(q.el,'opacity',visible?(q.opacity??''):0);
+    // An idle CSS stroke animation has the same visibility/movement clock.
+    const run=visible&&!moving;if(q.animationRun!==run){q.animationRun=run;for(const a of q.node.getAnimations?.({subtree:true})||[])if(a.id==='jm-idle'){if(run)a.play();else a.pause();}}
+    if(!visible)continue;
+
+
+    const rect=active?[0,0,VIEW.w,VIEW.h]:[Math.max(0,Math.floor(raw[0]*dpr)/dpr),Math.max(0,Math.floor(raw[1]*dpr)/dpr),Math.min(VIEW.w,Math.ceil(raw[2]*dpr)/dpr),Math.min(VIEW.h,Math.ceil(raw[3]*dpr)/dpr)];
+    if(rect[2]<=rect[0]||rect[3]<=rect[1])continue;
+    const p=q.camera,k=p?c.s/p.s:1,tx=p?c.tx-p.tx*k+q.origin[0]*k:0,ty=p?c.ty-p.ty*k+q.origin[1]*k:0;
+    const covers=p&&rect[0]>=tx-.01&&rect[1]>=ty-.01&&rect[2]<=tx+q.width*k+.01&&rect[3]<=ty+q.height*k+.01;
+    if(!p||!moving||!covers||k<.8||k>1.25){
+      const key=[c.s,c.tx,c.ty,...rect].join('/');
+      if(key!==q.key){
+        q.key=key;q.camera={...c};q.origin=rect.slice(0,2);q.width=rect[2]-rect[0];q.height=rect[3]-rect[1];
+        attr(q.el,'width',q.width);attr(q.el,'height',q.height);findStyle(q.el,'width',q.width+'px');findStyle(q.el,'height',q.height+'px');
+        attr(q.cam,'transform','matrix('+c.s.toFixed(4)+' 0 0 '+c.s.toFixed(4)+' '+(+c.tx.toFixed(2)-rect[0])+' '+(+c.ty.toFixed(2)-rect[1])+')');
+      }
+    }
+    const v=q.camera,scale=c.s/v.s;
+    findStyle(q.el,'transform','matrix('+scale+',0,0,'+scale+','+(c.tx-v.tx*scale+q.origin[0]*scale)+','+(c.ty-v.ty*scale+q.origin[1]*scale)+')');
+    if(q.trailGroup)for(const p of q.pieces){const full=st.exploreK||st.u>=p.u1,hidden=!full&&st.u<=p.u0,s=q.camera.s;findStyle(p.node,'opacity',hidden?'0':'');findStyle(p.node,'strokeDasharray',full||hidden?'none':((st.u-p.u0)*s).toFixed(1)+' '+((p.u1-p.u0)*s+20).toFixed(1));}
+    q.screenBox=[...q.origin,q.width,q.height];
+  }
+}
 const findStyleWrites = new WeakMap();
 function findStyle(el, key, value) {
+  const layer=FD.idleOnly&&findIdleLayer(el);if(layer&&el!==layer.el&&!layer.visible)return;
   const text = String(value), cache = findStyleWrites.get(el) || {}, old = cache[key];
   // A --name property goes through setProperty and getPropertyValue.
   const custom = key.startsWith('--'), read = () => custom ? el.style.getPropertyValue?.(key) ?? el.style[key] : el.style[key];
@@ -5142,7 +5154,7 @@ function findBits(kind, x, y, n, options = {}) {
     const bit = FD.bits.find(b => !b.live) || FD.bits.reduce((a, b) => a.serial < b.serial ? a : b);
     const [path, cls] = kind === 'star' ? [starPath(0, 0, B.starSize), 'pf'] : B.kinds[kind];
     const angle = findRange(v.dir) * Math.PI / FIND_PLAY.kit.deg, speed = findRange(v.speed);
-    Object.assign(bit, { live: true, serial: FD.serial++, x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, age: 0, life: findRange(v.life), spin: v.spin, g: v.g, drag: v.drag, size: v.size, alpha: kind === 'puff' ? Math.min(B.puffAlpha, v.alpha) : v.alpha, kind });
+    Object.assign(bit, { live: true, idle: !!FD.idleOnly, owner: FD.currentFind, serial: FD.serial++, x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, age: 0, life: findRange(v.life), spin: v.spin, g: v.g, drag: v.drag, size: v.size, alpha: kind === 'puff' ? Math.min(B.puffAlpha, v.alpha) : v.alpha, kind });
     attr(bit.el, 'd', path); attr(bit.el, 'class', cls); bit.el.style.display = ''; if (['star', 'drop', 'puff', 'wisp'].includes(kind)) bit.el.style.stroke = 'none'; else bit.el.style.stroke = '';
     attr(bit.el, 'transform', `translate(${x} ${y}) scale(${v.size[0]})`); attr(bit.el, 'opacity', bit.alpha);
   }
@@ -5180,7 +5192,9 @@ function findKitFrame() {
   const dt = FD.dt;
 
   FD.bits.forEach(b => {
-    if (!b.live) return; b.age += dt;
+    if (!b.live) return;
+    if(b.idle){const c=FD.st.cam,x=b.x*c.s+c.tx,y=b.y*c.s+c.ty;if(FD.st.gliding||FD.st.exploreMoving||x < -8||x > VIEW.w+8||y < -8||y > VIEW.h+8)return;}
+    b.age += dt;
     if (b.age >= b.life) { b.live = false; attr(b.el, 'opacity', 0); queueMicrotask(() => { if (!b.live) b.el.style.display = 'none'; }); return; }
     b.vy += b.g * dt; b.vx *= Math.max(0, 1 - b.drag * dt); b.vy *= Math.max(0, 1 - b.drag * dt); b.x += b.vx * dt; b.y += b.vy * dt;
     const q = b.age / b.life;
@@ -6161,7 +6175,7 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     if (e > 0 && lift) cardsStyle(c.shadowBox, 'transform', transform);
     cardsStyle(c.face, 'transform', lift ? `${sx || sy ? `translate(${sx}px,${sy}px) ` : ''}${rx ? `rotateX(${rx}deg) ` : ''}${ryTilt ? `rotateY(${ryTilt}deg)` : ''}`.trim() : '');
     cardsStyle(c.shadow, 'opacity', lift ? cfg.shadow * e : 0);
-    cardsStyle(c.shadow, 'transform', `translate(${-sx / cfg.shadowShare}px,${cfg.drop * e - sy / cfg.shadowShare}px)`);
+    if(lift&&e>0)cardsStyle(c.shadow, 'transform', `translate(${-sx / cfg.shadowShare}px,${cfg.drop * e - sy / cfg.shadowShare}px)`);
     cardsStyle(c.inn, 'opacity', smooth(...CARD_GROW.words, k));
     const paint = st.visited[i] && (e > 0 || st.u >= STOP_U[i]) || lit ? 1 : 0, step = CD.dt / CARD_TAIL.paintTime;
     c.paint = Math.max(0, Math.min(1, c.paint + Math.sign(paint - c.paint) * Math.min(step, Math.abs(paint - c.paint))));
@@ -6914,13 +6928,15 @@ function findHoards(svg) {
     h.undo = () => { if (FD.popOwner === h) closePop(); };
     h.hear = () => { if (!h.open) h.glintTs = h.hearTs = FD.now; };
     h.tick = (t, dt) => {
+      const idle=findIdleTime(h.glint);
+      FD.idleOnly=!(['rising','rattling','opening','bouncing','waiting'].includes(h.stage)||h.hold||h.queued||h.pending||FD.sheetOwner===h);
       findLife(h, d.x, d.y, H.rad, H.near);
       if (!h.onScreen && !h.hold && !h.queued && !['rising', 'rattling', 'opening', 'bouncing'].includes(h.stage)) return;
       if (h.hold && t >= h.nextHold) { queueMicrotask(request); h.nextHold = t + (h.digs < H.hole.length ? H.repeat : H.openHold); if (h.open) h.hold = false; }
       if (h.awake !== h.wasAwake) { const awake = h.awake; queueMicrotask(() => { h.scratch.style.strokeWidth = awake || h.craftLit ? H.scratchWidth : ''; }); }
       h.wasAwake = h.awake;
-      if (!FD.rm && t >= h.glintAt && !h.digs) { h.glintTs = t; h.glintAt = t + findRange(H.glint); }
-      const glint = FD.rm ? 1 : clamp01((t - h.glintTs) / H.glintTime);
+      if (!FD.rm && idle >= h.glintAt && !h.digs) { h.idleGlintTs = idle; h.glintAt = idle + findRange(H.glint); }
+      const glint = FD.rm ? 1 : clamp01(Math.min((t-h.glintTs)/H.glintTime,(idle-(h.idleGlintTs??-Infinity))/H.glintTime));
       attr(h.glint, 'opacity', Math.sin(Math.PI * glint)); attr(h.glint, 'transform', 'translate(0 ' + -H.scratchHop * Math.sin(Math.PI * glint) + ') rotate(' + H.glintTurn * glint + ') scale(' + Math.sin(Math.PI * glint) + ')');
       const heard = FD.rm ? 1 : clamp01((t - (h.hearTs ?? -Infinity)) / H.glintTime); attr(h.scratch, 'transform', 'translate(0 ' + -H.scratchHop * Math.sin(Math.PI * heard) + ')');
       h.clods.forEach(b => {
@@ -7035,10 +7051,13 @@ function findRavens(svg) {
     return { p: [0, 1].map(k => (1-q)**3*pts[0][k]+3*(1-q)**2*q*pts[1][k]+3*(1-q)*q*q*pts[2][k]+q**3*pts[3][k]), v: [0, 1].map(k => 3*(1-q)**2*(pts[1][k]-pts[0][k])+6*(1-q)*q*(pts[2][k]-pts[1][k])+3*q*q*(pts[3][k]-pts[2][k])) };
   };
   o.tick = (t, dt) => {
+    const idle=findIdleTime(birds[0].g);
     const p = attend(o, R.attend), flying = o.stage === 'flight', hearing = o.stage === 'hear';
     if (o.awake && !o.wasAwake) o.ruffleTs = t; o.wasAwake = o.awake;
-    if (!FD.rm && t >= o.preenAt && (o.stage === 'rest' || o.stage === 'reel')) { o.preenTs = t; o.preenBird = 1 - o.preenBird; o.preenAt = t + findRange(R.preen); }
+    if (!FD.rm && idle >= o.preenAt && (o.stage === 'rest' || o.stage === 'reel')) { o.preenTs = idle; o.preenBird = 1 - o.preenBird; o.preenAt = idle + findRange(R.preen); }
     birds.forEach(b => {
+      if(FD.idleOnly&&!findIdleVisible(b.g))return;
+      const idle=findIdleTime(b.g),idleDt=findIdleDelta(b.g);
       const active = hearing || flying && b.i === o.activeBird, age = t - b.startTs, duration = hearing ? G.loopTakeoff + G.loopTime : G.crouch + R.out + R.away + R.back;
       let xy = active ? b.flightBase.slice() : (flying || hearing || o.stage === 'reel') && b.lockedXY ? b.lockedXY.slice() : baseAt(b), q = ravenPose('sit', 'sit', 0), rotate = 0, headMove = [0, 0], mode = 'sit';
       if (active && age >= 0 && !b.done) {
@@ -7096,12 +7115,12 @@ function findRavens(svg) {
           if (shy !== b.shyTo) { b.shyFrom = b.shy; b.shyTo = shy; b.shyTs = t; }
           const u = clamp01((t - b.shyTs) / G.shyTime); b.shy = lerp(b.shyFrom, b.shyTo, ease(u)); xy = baseAt(b); xy[1] -= Math.abs(b.shyTo - b.shyFrom) / R.shy * G.hopHeight * Math.sin(Math.PI * u);
         }
-        let angle = p ? Math.atan2(p[1] - f.y - xy[1] * R.scale, (p[0] - f.x - xy[0] * R.scale) * b.side) * FIND_PLAY.kit.deg / Math.PI : Math.sin(t * R.idle[0] + b.i) * R.headLimit * R.idle[1];
+        let angle = p ? Math.atan2(p[1] - f.y - xy[1] * R.scale, (p[0] - f.x - xy[0] * R.scale) * b.side) * FIND_PLAY.kit.deg / Math.PI : Math.sin(idle * R.idle[0] + b.i) * R.headLimit * R.idle[1];
         angle = Math.max(-R.headLimit, Math.min(R.headLimit, angle));
-        b.angle = FD.rm ? 0 : lerp(b.angle, angle, Math.min(1, dt * R.headEase));
-        const tuck = b.i === o.preenBird && !FD.rm ? Math.sin(Math.PI * clamp01((t - o.preenTs) / R.preenTime)) : 0;
+        b.angle = FD.rm ? 0 : lerp(b.angle, angle, Math.min(1, (FD.idleOnly?idleDt:dt) * R.headEase));
+        const tuck = b.i === o.preenBird && !FD.rm ? Math.sin(Math.PI * clamp01((idle - o.preenTs) / R.preenTime)) : 0;
         q.head = lerp(b.angle, R.preenAngle, tuck); headMove = G.preenMove.map(v => v * tuck);
-        const ruffle = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - o.ruffleTs) / R.ruffle[1])), breathe = FD.rm ? 0 : G.breathe[0] * Math.sin(t * Math.PI * 2 / G.breathe[1] + b.i);
+        const ruffle = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - o.ruffleTs) / R.ruffle[1])), breathe = FD.rm ? 0 : G.breathe[0] * Math.sin(idle * Math.PI * 2 / G.breathe[1] + b.i);
         q.sq = q.sq.map(v => v * (1 + (R.ruffle[0] - 1) * ruffle + breathe));
       }
       if (b.giftDown && !active) {
@@ -7198,10 +7217,11 @@ function findSerpent(svg) {
     dirty = next; tailPose = o.openAmount;
   };
   o.tick = (t, dt) => {
+    const idle=findIdleTime(file),headIdle=findIdleTime(head);
     const e = t - o.ts, target = attend({x:f.x+S.head[0],y:f.y+S.head[1]}, S.attend), here = [f.x+S.head[0],f.y+S.head[1]];
     let aim = target ? Math.atan2(-(target[1]-here[1]),-(target[0]-here[0]))*180/Math.PI : 0; aim = Math.max(-S.headLimit,Math.min(S.headLimit,aim));
-    o.headAngle = FD.rm ? 0 : lerp(o.headAngle,aim,Math.min(1,dt*S.headEase));
-    let angle = o.stage === 'asleep' ? (FD.rm ? 0 : S.breathe[0]*Math.sin(Math.PI*2*t/S.breathe[1])) : o.headAngle, jawTurn = o.stage === 'asleep' ? S.shippedJaw : 0, at = S.fileAt.slice(), rotation = 0, scale = 1, alpha = 1, nameAlpha = 1;
+    o.headAngle = FD.rm ? 0 : lerp(o.headAngle,aim,Math.min(1,(FD.idleOnly?findIdleDelta(head):dt)*S.headEase));
+    let angle = o.stage === 'asleep' ? (FD.rm ? 0 : S.breathe[0]*Math.sin(Math.PI*2*headIdle/S.breathe[1])) : o.headAngle, jawTurn = o.stage === 'asleep' ? S.shippedJaw : 0, at = S.fileAt.slice(), rotation = 0, scale = 1, alpha = 1, nameAlpha = 1;
     if (o.stage === 'bite') { const q = clamp01(e/S.bite); jawTurn = S.jaw*Math.sin(Math.PI*q); at = S.fileAt.map((v,i)=>lerp(v,[-40,5][i],ease(q))); scale = 1-ease(q); rotation = -8*q; nameAlpha = 1-q; if(q===1){o.stage='lap';o.ts=t;o.held=false;swell(S.lap);} }
     if (o.stage === 'lap') { alpha = nameAlpha = 0; jawTurn = 2; }
     if (o.stage === 'spit') { const q = clamp01(e/S.spit); at = [-38,5].map((v,i)=>lerp(v,S.returnAt[i],out3(q))); rotation = -8*Math.sin(Math.PI*q); jawTurn = 8*Math.sin(Math.PI*q); nameAlpha = q; if(q===1){o.stage='typing';o.ts=t;} }
@@ -7219,7 +7239,7 @@ function findSerpent(svg) {
     updateBody(lumps);attr(ripple,'opacity',FD.rm||o.openAmount===0?0:.55*Math.sin(Math.PI*o.openAmount));
     const heard=FD.rm?1:clamp01((t-o.hearTs)/S.hear[1]);angle+=S.hear[0]*Math.sin(Math.PI*heard);
     const sleeping=o.stage==='asleep';o.headTurn=angle;o.jawAngle=jawTurn;attr(head,'transform','rotate('+angle+')');joinNeck(angle);attr(jaw,'transform','rotate('+(-jawTurn)+' '+S.jawPivot.join(' ')+')');attr(eye,'opacity',sleeping?0:1);attr(shut,'opacity',sleeping?1:0);
-    const bob=FD.rm||!['ready','typing'].includes(o.stage)?0:Math.sin(Math.PI*2*t/S.bob[2]);at[1]+=S.bob[1]*bob;rotation+=S.bob[0]*bob;const phoneScale=VIEW.phone?Math.min(1,S.filePhone/(15*FD.st.cam.s)):1;
+    const bob=FD.rm||!['ready','typing'].includes(o.stage)?0:Math.sin(Math.PI*2*idle/S.bob[2]);at[1]+=S.bob[1]*bob;rotation+=S.bob[0]*bob;const phoneScale=VIEW.phone?Math.min(1,S.filePhone/(15*FD.st.cam.s)):1;
     attr(file,'transform','translate('+at.join(' ')+') rotate('+rotation+') scale('+(scale*phoneScale)+')');attr(file,'opacity',alpha);attr(stamp,'opacity',o.stamped?1:0);attr(stamp,'transform','translate(.5 1.2) rotate(-14) scale('+(1/phoneScale)+')');attr(name,'x',at[0]+S.shipName[0]*o.openAmount);attr(name,'y',at[1]+S.nameDy+S.shipName[1]*o.openAmount);attr(name,'font-size',lerp(S.nameSize,S.shipName[2],o.openAmount)*(VIEW.phone&&(o.version>=4||o.pokes>=4&&['spit','typing'].includes(o.stage))?S.namePhone:1));attr(name,'opacity',nameAlpha);
     o.zoomFrame();
     attr(el,'data-revision-state',o.stage);attr(el,'data-loop-open',o.openAmount);attr(el,'data-file',o.fileName);caption();if(o.stage==='asleep'&&o.queued&&t-o.shippedAt>=S.queueRest)consumeQueue();o.playing=['bite','lap','spit','typing','opening','waking'].includes(o.stage)||swells.some(s=>s.live)||o.stage==='asleep'&&o.queued>0;
@@ -7273,12 +7293,12 @@ function findBeacon(svg) {
   o.reduce=()=>{const B=FIND_PLAY.beacon;if(o.snap){o.head=o.snap.to;o.snap=null;}const O=origin();if(o.drag||FD.now-o.manualTs<B.manual)notes.forEach((n,i)=>{const angle=Math.atan2(n.d.y-O[1],n.d.x-O[0])*180/Math.PI;if(Math.abs(findAngleDelta(o.head,angle))<FIND_TIMING.beamCone/2)read(n,i);});o.level=o.fire;o.embers.forEach(e=>{e.done=true;attr(e.el,'opacity',0);});if(o.fire===notes.length){o.finalDone=true;o.beamTurns=1;o.head=B.baseAngle;}attr(ring,'opacity',0);};
   o.undo=()=>{o.manualTs=-Infinity;o.drag=false;};o.hear=()=>o.hearTs=FD.now;
   o.tick=(t,dt)=>{
-    const B=FIND_PLAY.beacon,O=origin();wrap();
+    const B=FIND_PLAY.beacon,O=origin(),idleBeam=findIdleTime(beam),idleFlame=findIdleTime(flame);wrap();
     o.embers.forEach(e=>{if(e.done)return;const q=clamp01((t-e.ts)/B.emberTime);attr(e.el,'transform','translate('+lerp(e.from[0],O[0],q)+' '+(lerp(e.from[1],O[1],q)-B.emberArc*Math.sin(Math.PI*q))+')');if(q===1){e.done=true;attr(e.el,'opacity',0);arrived(e.level,t);}});
     let manual=o.drag||t-o.manualTs<B.manual,lit=o.fire===notes.length,finalAge=t-o.litTs,finale=lit&&o.level===notes.length&&!FD.rm&&!o.finalDone&&Number.isFinite(o.litTs)&&finalAge>=0;
     if(finale){const q=clamp01(finalAge/B.finaleTurn);o.head=o.finaleFrom+360*q;o.snap=null;notes.forEach(n=>{const angle=Math.atan2(n.d.y-O[1],n.d.x-O[0])*180/Math.PI,share=((angle-o.finaleFrom+360)%360)/360;if(!n.finalFlash&&q>=share){n.finalFlash=true;n.flash=t;}});if(q===1){o.beamTurns=1;const settle=clamp01((finalAge-B.finaleTurn)/B.snap);o.head+=findAngleDelta(o.head,B.baseAngle)*ease(settle);if(settle===1){o.finalDone=true;o.head=B.baseAngle;o.manualTs=-Infinity;manual=false;}}}
     else if(o.snap){const q=FD.rm?1:ease((t-o.snap.ts)/B.snap);o.head=lerp(o.snap.from,o.snap.to,q);if(q===1)o.snap=null;}
-    else if(!manual&&!FD.rm&&!lit)o.head=B.baseAngle+B.sweep*Math.sin(t*FIND_TIMING.beamSweep);
+    else if(!manual&&!FD.rm&&!lit)o.head=B.baseAngle+B.sweep*Math.sin(idleBeam*FIND_TIMING.beamSweep);
     const strength=lit&&o.finalDone&&!manual?B.finaleReach:1,reach=B.baseReach*B.scale*strength,half=FIND_TIMING.beamCone/2;
     attr(beam,'transform','translate('+B.origin.join(' ')+') rotate('+(o.head-180)+') scale('+strength+')');attr(beam,'opacity',manual||finale?1:Math.min(1,B.idle*strength));
     const approach=(a,b,k)=>Math.abs(a-b)<.0001?b:lerp(a,b,Math.min(1,k));
@@ -7292,9 +7312,9 @@ function findBeacon(svg) {
     if(lit&&(o.finalDone||Number.isFinite(o.litTs)&&finalAge>=0)){const q=FD.rm?1:clamp01(finalAge/B.finaleTime);size=q<.45?lerp(B.finaleFlame[0],B.finaleFlame[1],out3(q/.45)):lerp(B.finaleFlame[1],B.finaleFlame[2],ease((q-.45)/.55));if(FD.rm)size=B.finaleFlame[2];glowAlpha=Math.max(glowAlpha,!FD.rm&&finalAge<B.finaleFlash?1-clamp01(finalAge/B.finaleFlash):0);}
     const hearAge=t-o.hearTs,hear=FD.rm?1:hearAge<B.hear[1]?lerp(B.hear[0],1,clamp01(hearAge/B.hear[1])):1+(B.hear[2]-1)*Math.sin(Math.PI*clamp01((hearAge-B.hear[1])/B.hear[3])),F=B.flicker,foot=B.flameFoot;
     o.flameSize=size;o.glowStrength=glowAlpha;o.glowRadius=radius;
-    const sx=FD.rm?size:size*(1+F[0]*Math.sin(F[1]*t)+F[2]*Math.sin(F[3]*t)),sy=FD.rm?size:size*(1+F[4]*Math.sin(F[5]*t));attr(flame,'transform','translate('+foot.join(' ')+') scale('+(sx*hear)+' '+(sy*hear)+') translate('+(-foot[0])+' '+(-foot[1])+')');attr(glow,'opacity',glowAlpha);attr(glow,'r',B.glowR*radius);
+    const sx=FD.rm?size:size*(1+F[0]*Math.sin(F[1]*idleFlame)+F[2]*Math.sin(F[3]*idleFlame)),sy=FD.rm?size:size*(1+F[4]*Math.sin(F[5]*idleFlame));attr(flame,'transform','translate('+foot.join(' ')+') scale('+(sx*hear)+' '+(sy*hear)+') translate('+(-foot[0])+' '+(-foot[1])+')');attr(glow,'opacity',glowAlpha);attr(glow,'r',B.glowR*radius);
     const ringQ=FD.rm?1:clamp01(finalAge/B.finaleRing[1]);attr(ring,'cx',O[0]);attr(ring,'cy',O[1]);attr(ring,'r',B.finaleRing[0]*out3(ringQ));attr(ring,'opacity',finale&&ringQ<1?.8*(1-ringQ):0);
-    if(o.onScreen&&!FD.rm){o.ember+=o.fire*B.embers*dt;const n=Math.floor(o.ember);o.ember-=n;if(n)findBits('spark',...O,n,FIND_PLAY.bits.sparks);}
+    if(o.onScreen&&!FD.rm&&o.playing){o.ember+=o.fire*B.embers*dt;const n=Math.floor(o.ember);o.ember-=n;if(n)findBits('spark',...O,n,FIND_PLAY.bits.sparks);}
     o.playing=!FD.rm&&(!!o.snap||o.embers.some(e=>!e.done)||t-o.stepTs<B.swellTime||lit&&!o.finalDone||manual&&notes.some(n=>!n.read&&n.time>0));
     o.stage=lit?'lit':manual?'aiming':'idle';if(lit&&FD.focusId===o.id&&FD.hint?.textContent!==B.litHint)FD.hint.textContent=B.litHint;
     depthBeam(!FD.rm&&o.onScreen&&VIEW.depth&&FD.st.pushT>0&&FD.st.rushT===0?{x:O[0],y:O[1],angle:o.head,half,reach,soft:B.soft,steps:B.wedgeSteps}:null,FD.st);
@@ -7309,7 +7329,7 @@ function findRune(svg) {
     const R = FIND_PLAY.rune; trace.classList.toggle('red', red); trace.style.stroke = red ? '' : C.paper; trace.style.opacity = red ? 1 : 0; trace.style.strokeDasharray = red ? 'none' : R.dash.join(' ');
     trace.getAnimations().forEach(a => a.cancel());
     if (red) trace.style.strokeDasharray = R.dash[1] + ' ' + R.dash[1];
-    if (!FD.rm) trace.animate(red ? [{ strokeDashoffset: R.dash[1], opacity: 1 }, { strokeDashoffset: 0, opacity: 1 }] : [{ strokeDashoffset: 0, opacity: 0 }, { strokeDashoffset: -R.dash[1] / 2, opacity: 1 }, { strokeDashoffset: -R.dash[1], opacity: 0 }], { duration: (red ? R.carving : R.dashTime) * 1000, fill: red ? 'forwards' : 'none' });
+    if (!FD.rm) trace.animate(red ? [{ strokeDashoffset: R.dash[1], opacity: 1 }, { strokeDashoffset: 0, opacity: 1 }] : [{ strokeDashoffset: 0, opacity: 0 }, { strokeDashoffset: -R.dash[1] / 2, opacity: 1 }, { strokeDashoffset: -R.dash[1], opacity: 0 }], { duration: (red ? R.carving : R.dashTime) * 1000, fill: red ? 'forwards' : 'none' }).id = red ? '' : 'jm-idle';
   };
   const autoStart = () => { if (o.read) return; o.autoTs = FD.now; o.autoLast = null; };
   const rub = (x, y) => {
@@ -7358,8 +7378,8 @@ function findRune(svg) {
   o.undo = () => { if (FD.sheetOwner === o) closeSheet(); };
   o.onEscape = () => { if (o.stage === 'trace') { o.stage = 'rest'; trace.classList.remove('red'); } };
   o.tick = t => {
-    const R = FIND_PLAY.rune;
-    if (o.stage === 'rest' && o.awake && !FD.rm && t - o.dashTs >= R.dashTime) { o.dashTs = t; queueMicrotask(() => dash(false)); }
+    const R = FIND_PLAY.rune, idle=findIdleTime(trace);
+    if (o.stage === 'rest' && o.awake && !FD.rm && idle - (o.idleDashTs??-Infinity) >= R.dashTime) { o.idleDashTs = idle; queueMicrotask(() => dash(false)); }
     if (o.stage === 'trace' && t - o.ts >= D(R.carving)) { o.stage = 'opening'; queueMicrotask(sheet); return; }
     if (!['sheet', 'closing'].includes(o.stage) || FD.sheetOwner !== o) return;
     const closing = FD.sheetClosing;
@@ -7948,7 +7968,7 @@ function findWell(svg) {
   });
   // idle: a root drip's ring. It is idle life like the rat's climb and the eagle's stretch, so it never keeps the well playing
   // (finds.mjs pauses idle life while the camera glides; the drip, its ring and the tree's creatures carry on at arrival).
-  const ring = (count, idle = false) => { o.ringTs = FD.now; o.ringCount = count; o.ringIdle = idle; };
+  const ring = (count, idle = false) => { o.ringTs = idle ? findIdleTime(rings[0]) : FD.now; o.ringCount = count; o.ringIdle = idle; };
   const answer = () => {
     const names = FIND_COPY.norns[o.norn], index = o.cur + o.norn - 1, stop = STOPS[index];
     const line = o.norn === 0 && index < 0 ? FIND_COPY.wellNone : o.norn === 1 && o.cur < 0 ? FIND_COPY.wellMap : o.norn === 2 && index >= STOPS.length ? FIND_COPY.wellNext : stop ? findFormat(FIND_COPY.wellStop, { name: stop.short, dates: stop.dates }) : FIND_COPY.wellNone;
@@ -7972,10 +7992,10 @@ function findWell(svg) {
   o.reduce = keep => { if (['pebble','landing'].includes(o.stage)) { if (keep) opened(o); land(); } o.playing = false; };
   o.hear = () => { if (FD.rm) return; ring(1); o.flightTs = FD.now; o.playing = true; };
   o.tick = t => {
-    const W = FIND_PLAY.well, Y = YGG, L = Y.life;
-    if (!FD.rm && t >= o.ratAt) { o.ratTs = t; o.ratAt = t + treeInterval(L.ratEvery); }
-    if (!FD.rm && t >= o.eagleAt) { o.eagleTs = t; o.eagleAt = t + treeInterval(L.eagleEvery); }
-    const ratAge = t - o.ratTs, run = FD.rm ? 0 : ratAge < L.climb ? ease(ratAge / L.climb) : ratAge < L.climb + L.pause ? 1 : 1 - ease((ratAge - L.climb - L.pause) / L.climb);
+    const W = FIND_PLAY.well, Y = YGG, L = Y.life, idleRat=findIdleTime(rat),idleEagle=findIdleTime(eagle),idleWell=findIdleTime(rings[0]),idleCrown=findIdleTime(crown);
+    if (!FD.rm && idleRat >= o.ratAt) { o.ratTs = idleRat; o.ratAt = idleRat + treeInterval(L.ratEvery); }
+    if (!FD.rm && idleEagle >= o.eagleAt) { o.eagleTs = idleEagle; o.eagleAt = idleEagle + treeInterval(L.eagleEvery); }
+    const ratAge = idleRat - o.ratTs, run = FD.rm ? 0 : ratAge < L.climb ? ease(ratAge / L.climb) : ratAge < L.climb + L.pause ? 1 : 1 - ease((ratAge - L.climb - L.pause) / L.climb);
     const restRat = Y.ratAt, fork = Y.fork.map((v, i) => v - MAP.ygg[i]);
     attr(rat, 'transform', 'translate(' + lerp(restRat[0], fork[0], run) + ' ' + lerp(restRat[1], fork[1], run) + ')');
     const flick = FD.rm || ratAge < L.climb || ratAge > L.climb + L.pause ? 0 : L.tail * Math.sin(Math.PI * 2 * (ratAge - L.climb) / L.pause) ** 2;
@@ -7990,21 +8010,21 @@ function findWell(svg) {
       else if (q < F[3]) dy = lerp(-L.centre - L.radius, -L.rise, ease((q - F[2]) / (F[3] - F[2])));
       else dy = -L.rise * (1 - ease((q - F[3]) / (1 - F[3])));
       ey += dy; wingY = lerp(...L.flapY, (1 + Math.sin(Math.PI * 2 * L.flap * flightAge)) / 2);
-    } else if (!FD.rm) wingY = lerp(...L.wingY, Math.sin(Math.PI * clamp01((t - o.eagleTs) / L.stretch)));
+    } else if (!FD.rm) wingY = lerp(...L.wingY, Math.sin(Math.PI * clamp01((idleEagle - o.eagleTs) / L.stretch)));
     attr(eagle, 'transform', 'translate(' + ex + ' ' + ey + ')'); attr(wings, 'transform', 'scale(' + L.wingX + ' ' + wingY + ')');
-    if (!FD.rm && o.onScreen && t >= o.dripAt && o.dripLand === null && o.stage !== 'pebble') { findBits('drop', ...W.root, 1, { speed: [(W.water[1] - W.root[1]) / W.dripTime, (W.water[1] - W.root[1]) / W.dripTime], dir: [FIND_PLAY.kit.deg / 2, FIND_PLAY.kit.deg / 2], life: [W.dripTime, W.dripTime] }); o.dripLand = t + W.dripTime; o.dripAt = t + findRange(W.drip); }
-    if (o.dripLand !== null && t >= o.dripLand) { o.dripLand = null; ring(1, true); }
+    if (!FD.rm && o.onScreen && findIdleVisible(rings[0]) && idleWell >= o.dripAt && o.dripLand === null && o.stage !== 'pebble') { findBits('drop', ...W.root, 1, { speed: [(W.water[1] - W.root[1]) / W.dripTime, (W.water[1] - W.root[1]) / W.dripTime], dir: [FIND_PLAY.kit.deg / 2, FIND_PLAY.kit.deg / 2], life: [W.dripTime, W.dripTime] }); o.dripLand = idleWell + W.dripTime; o.dripAt = idleWell + findRange(W.drip); }
+    if (o.dripLand !== null && idleWell >= o.dripLand) { o.dripLand = null; ring(1, true); }
     if (o.stage === 'pebble') {
       const q = clamp01((t - o.ts) / W.pebbleTime), p = [lerp(o.pebbleFrom[0], W.water[0], q), lerp(o.pebbleFrom[1], W.water[1], q) - W.arc * Math.sin(Math.PI * q)];
       attr(pebble, 'transform', `translate(${p[0] - f.x} ${p[1] - f.y})`);
       if (q === 1) { o.stage = 'landing'; queueMicrotask(land); }
     }
-    rings.forEach((r, i) => { const age = t - o.ringTs - i * W.ringGap, q = FD.rm ? 1 : clamp01(age / W.ringTime); attr(r, 'transform', `scale(${lerp(W.ringScale[0], W.ringScale[1], q)})`); attr(r, 'opacity', i < o.ringCount && age >= 0 ? W.ringAlpha * (1 - q) : 0); });
+    rings.forEach((r, i) => { const age = (o.ringIdle?idleWell:t) - o.ringTs - i * W.ringGap, q = FD.rm ? 1 : clamp01(age / W.ringTime); attr(r, 'transform', `scale(${lerp(W.ringScale[0], W.ringScale[1], q)})`); attr(r, 'opacity', i < o.ringCount && age >= 0 ? W.ringAlpha * (1 - q) : 0); });
     batches.forEach((batch, i) => {
       if (o.starBatches[i] === undefined) return;
       const age = t - o.starBatches[i], q = FD.rm ? 1 : clamp01(age / W.trunkTime), p = W.trunk;
       attr(batch.stream, 'transform', `translate(${lerp(p[0][0], p[1][0], ease(q))} ${lerp(p[0][1], p[1][1], ease(q))})`); attr(batch.stream, 'opacity', !FD.rm && q < 1 ? 1 : 0);
-      batch.stars.forEach((s, j) => { const k = FD.rm ? 1 : clamp01((age - W.trunkTime - j * W.starGap) / W.starTime), scale = k < 0.5 ? lerp(0, W.starOver, ease(k * 2)) : lerp(W.starOver, 1, ease((k - 0.5) * 2)); attr(s, 'transform', `scale(${scale})`); attr(s, 'opacity', k === 0 ? 0 : FD.rm ? 1 : lerp(W.twinkle[0], W.twinkle[1], (1 + Math.sin(Math.PI * 2 * t / W.twinkleTime[(i + j) % W.twinkleTime.length] + i + j)) / 2)); });
+      batch.stars.forEach((s, j) => { const k = FD.rm ? 1 : clamp01((age - W.trunkTime - j * W.starGap) / W.starTime), scale = k < 0.5 ? lerp(0, W.starOver, ease(k * 2)) : lerp(W.starOver, 1, ease((k - 0.5) * 2)); attr(s, 'transform', `scale(${scale})`); attr(s, 'opacity', k === 0 ? 0 : FD.rm ? 1 : lerp(W.twinkle[0], W.twinkle[1], (1 + Math.sin(Math.PI * 2 * idleCrown / W.twinkleTime[(i + j) % W.twinkleTime.length] + i + j)) / 2)); });
     });
     const last = o.starBatches[o.starBatches.length - 1]; o.playing = flying || o.stage === 'pebble' || o.stage === 'landing' || !o.ringIdle && t - o.ringTs < W.ringTime + (o.ringCount - 1) * W.ringGap || last !== undefined && t - last < W.trunkTime + W.starGap * (W.stars[0].length - 1) + W.starTime;
   };
@@ -8029,6 +8049,7 @@ function findShip(svg) {
   });
   o.hear = () => { if (!FD.rm) { o.hearTs = FD.now; o.hearing = true; } };
   o.tick = t => {
+    const idle=findIdleTime(rock);
     const S = FIND_PLAY.ship, total = S.pull[2] + S.pull[3], hearing = !FD.rm && t - o.hearTs < S.hear[3]; o.hearing = hearing;
     while (o.stage === 'pull' && (FD.rm || t - o.pullTs >= total)) {
       if (o.queued.length) startPull(o.queued.shift(), FD.rm ? t : o.pullTs + total);
@@ -8037,13 +8058,13 @@ function findShip(svg) {
     const age = t - o.pullTs;
     const pull = o.stage === 'pull' && !FD.rm ? age < S.pull[2] ? ease(age / S.pull[2]) : 1 - ease((age - S.pull[2]) / S.pull[3]) : 0;
     attr(oars, 'opacity', o.stage === 'pull' && !FD.rm ? 1 : 0); attr(oars, 'transform', `rotate(${lerp(S.pull[0], S.pull[1], pull)} ${S.rail[0]} ${S.rail[1]})`);
-    attr(rock, 'transform', `translate(${S.surge * pull} ${FD.rm ? 0 : S.rock[2] * Math.sin(S.rock[3] * t)}) rotate(${FD.rm ? 0 : S.rock[0] * Math.sin(S.rock[1] * t) * (hearing ? S.hear[2] : 1)})`);
+    attr(rock, 'transform', `translate(${S.surge * pull} ${FD.rm ? 0 : S.rock[2] * Math.sin(S.rock[3] * idle)}) rotate(${FD.rm ? 0 : S.rock[0] * Math.sin(S.rock[1] * idle) * (hearing ? S.hear[2] : 1)})`);
     const fill = FD.rm ? 1 : t - o.hearTs < S.hear[1] ? 1 + (S.hear[0] - 1) * Math.sin(Math.PI * clamp01((t - o.hearTs) / S.hear[1])) : 1;
-    attr(sail, 'transform', `translate(${S.sailPivot[0]} ${S.sailPivot[1]}) scale(${fill * (FD.rm ? 1 : 1 + S.breathe[0] * Math.sin(S.breathe[1] * t))} 1) translate(${-S.sailPivot[0]} ${-S.sailPivot[1]})`);
+    attr(sail, 'transform', `translate(${S.sailPivot[0]} ${S.sailPivot[1]}) scale(${fill * (FD.rm ? 1 : 1 + S.breathe[0] * Math.sin(S.breathe[1] * idle))} 1) translate(${-S.sailPivot[0]} ${-S.sailPivot[1]})`);
     shields.forEach((s, i) => { const lit = !!FD.st.visited[i]; if (lit !== o.shieldMask[i]) { o.shieldMask[i] = lit; queueMicrotask(() => s.style.fill = lit ? C.paper : C.ink); } });
     if (beaconLit()) o.lamp = o.kept = true;
-    attr(lamp, 'opacity', o.lamp ? FD.rm ? 1 : lerp(S.twinkle[0], S.twinkle[1], (1 + Math.sin(S.twinkle[2] * t)) / 2) : 0);
-    attr(pennant, 'opacity', o.pennant ? 1 : 0); attr(pennant, 'transform', `scale(${o.pennant ? FD.rm ? 1 : out3((t - o.pennantTs) / S.pennantTime) : 0} 1) skewY(${o.pennant && !FD.rm ? S.ripple[0] * Math.sin(Math.PI * 2 * S.ripple[1] * t) : 0})`);
+    attr(lamp, 'opacity', o.lamp ? FD.rm ? 1 : lerp(S.twinkle[0], S.twinkle[1], (1 + Math.sin(S.twinkle[2] * idle)) / 2) : 0);
+    attr(pennant, 'opacity', o.pennant ? 1 : 0); attr(pennant, 'transform', `scale(${o.pennant ? FD.rm ? 1 : out3((t - o.pennantTs) / S.pennantTime) : 0} 1) skewY(${o.pennant && !FD.rm ? S.ripple[0] * Math.sin(Math.PI * 2 * S.ripple[1] * idle) : 0})`);
     o.playing = o.stage === 'pull' || hearing || o.pennant && t - o.pennantTs < S.pennantTime;
   };
   return o;
@@ -8218,6 +8239,7 @@ function findsPointer(x, y) { FD.pointer = [x, y]; FD.pointerT = FD.now; }
 function findsFrame(time, st) {
   if (!st) return;
   FD.dt = Math.max(0, Math.min(FIND_PLAY.kit.dt, FD.now ? time - FD.now : 0)); FD.now = time; FD.st = st;
+  findIdleFrame(st);
   // A moving camera quiets the finds' idle life inside svg#map, in a glide and in explore alike: each idle write there
   // redrew the held map on every frame of a pinch, a drag or a wheel (phone and PC pinch passes, 2026-11-27).
   const quiet = st.gliding || !!st.exploreMoving;
@@ -8226,17 +8248,20 @@ function findsFrame(time, st) {
   Object.values(FD.list).forEach(o => {
     const f = FIND_BY[o.id], p = findPlace(o.id), rad = o.id === 'wayfinder' ? FIND_PLAY.focus.wide[2] * 2 : o.id === 'hoards' ? Math.max(...FIND_COPY.hoards.map(h => Math.hypot(h.x - f.x, h.y - f.y) + FIND_PLAY.hoard.rad)) : o.id === 'beacon' ? FIND_PLAY.beacon.rad : o.id === 'ravens' ? FIND_PLAY.raven.reach + f.view[2] : o.id === 'serpent' ? FIND_PLAY.serpent.near + f.view[2] : FIND_PLAY[o.id === 'longship' ? 'ship' : o.id]?.rad || f.view?.[2] || FIND_PLAY.kit.rad;
     const near = FIND_PLAY[o.id === 'wayfinder' ? 'way' : o.id === 'ravens' ? 'raven' : o.id === 'runestone' ? 'rune' : o.id === 'longship' ? 'ship' : o.id]?.near || rad;
-    const playing = ['flight', 'hear', 'landing', 'reel', 'chase', 'eating', 'waking', 'trace', 'opening', 'sheet', 'closing', 'sliding', 'reply', 'pebble', 'sounding', 'echo', 'pull', 'lifting'].includes(o.stage) || o.drag || o.busy || o.playing || o.hearing;
+    const playing = ['flight', 'hear', 'landing', 'reel', 'chase', 'eating', 'waking', 'trace', 'opening', 'sheet', 'closing', 'sliding', 'reply', 'pebble', 'sounding', 'echo', 'pull', 'lifting'].includes(o.stage) || o.drag || o.busy || o.playing || o.hearing || o.id === 'wayfinder' && (JOURNEY.focus === o.id || Math.abs(o.speed || 0) > .5 || time-o.hearTs < FIND_PLAY.way.spin);
     const active = o => ['rising','rattling','opening','bouncing','waiting'].includes(o.stage) || o.hold || o.queued || o.pending;
     o.travel?.();
     if(o.id==='serpent'&&['base','anim'].includes(st.rasterLayer))o.zoomFrame?.(st.rasterLayer==='base'?'body':'head');
-    const paused = quiet && !playing && JOURNEY.focus !== o.id && FD.sheetOwner !== o && !(o.id === 'longship' && o.x !== undefined && (p[0] !== o.x || p[1] !== o.y));
+    const ownLayers=(FD.idleLayers||[]).filter(q=>q.owner===o.id);
+    const paused = !playing && FD.sheetOwner !== o && (quiet || ownLayers.length > 0 && !ownLayers.some(q=>q.visible));
     if (paused && o.id !== 'hoards') { if (o.onScreen && st.rasterRebased) { if (o.id === 'wayfinder') o.compassFrame?.(); if(!st.rasterLayer)o.zoomFrame?.(); } return; } // Keep sky-side pieces, including the beacon beam, at their last state; zoom-led detail follows the map's redraws.
     findLife(o, ...p, o.id === 'horn' && ['sounding', 'echo'].includes(o.stage) ? FIND_PLAY.horn.soundRad : rad, near);
+    FD.idleOnly=!playing; FD.currentFind=o.id;
     if (o.id === 'hoards' && quiet) {
       o.items.forEach(h => { if (active(h) || JOURNEY.focus === h.id || FD.sheetOwner === h) h.tick(time, FD.rm ? 0 : FD.dt); });
     } else if (o.id === 'hoards' || o.onScreen || playing || FD.sheetOwner === o) o.tick?.(time, FD.rm ? 0 : FD.dt);
     else if (o.id === 'beacon') depthBeam(null);
+    FD.idleOnly=false; FD.currentFind=null;
   });
   // These shells retain the drawn part's inherited camera, scale and find visibility without duplicate hits or ids.
   for (const { source, clone } of FD.animCopies || []) for (const key of ['transform','opacity','style','visibility']) {
@@ -8247,6 +8272,8 @@ function findsFrame(time, st) {
   if (quiet) FD.bits = [];
   try { findKitFrame(); } finally { FD.bits = bits; }
   if (!quiet || FD.all.playing) FD.all.tick(time); if (JOURNEY.focus !== FD.focusId) findHint(JOURNEY.focus); FD.focusId = JOURNEY.focus;
+  if(!FD.idleLayers)FD.buildIdleLayers?.();
+  findIdleFrame(st,false);
 }
 
 // ---- main.mjs ----
@@ -8382,6 +8409,38 @@ const mainMarkers = FINDS.filter(f => f.n).map(f => { const el = $('mk-' + f.id)
   const ink = '.bc-glow,.bc-light,.bc-flame,#f-beacon > g > path,#f-beacon > g > rect:not(.hit),.ls-rock,.hd-glint,#f-bits,.yg-rat,.yg-eagle,.rv-a,.rv-b,.rv-gifts,.jg-head,.jg-file,.jf-name,.rs-trace,.wl-rip,.wl-pebble,#wl-crown,#hn-rings,#bc-notes,.hm-lift,.hm-spark,.wf-needle,.wf-runes,.wf-arm,.wf-all,.wf-hub';
   for (const node of document.querySelectorAll(ink)) { if (node.closest('#map-anim')) continue; parent(node.parentElement).appendChild(node); }
 }
+// COMB-S: split the looping ink after its first pose has been placed.
+{
+  FD.buildIdleLayers=()=>{
+    const NS='http://www.w3.org/2000/svg';FD.idleLayers=[];
+    const selected=[...document.querySelectorAll('#map-anim .rv-a,#map-anim .rv-b,#map-anim .jg-head,#map-anim .jg-file,#map-anim .jf-name,#map-anim .bc-light,#map-anim .bc-flame,#map-anim .bc-glow,#map-anim .ls-rock,#map-anim .hd-glint,#map-anim .yg-rat,#map-anim .yg-eagle,#map-anim .wl-rip,#map-anim .wl-pebble,#map-anim #wl-crown,#map-anim .rs-trace,#map-anim #bc-notes,#map-anim #f-bits')];
+    const picked=new Set(selected),roots=[];
+    const partition=n=>{if(n.id==='map-anim-cover')return;if(picked.has(n)||!selected.some(s=>n.contains(s)))roots.push(n);else for(const child of [...n.children])partition(child);};
+    for(const child of [...$('cam-anim').children])partition(child);
+    let previous=$('map-anim');
+    for(const[node,i]of roots.map((n,i)=>[n,i])){
+      const ancestors=[];for(let p=node.parentElement;p&&p.id!=='cam-anim';p=p.parentElement)ancestors.unshift(p);
+      let owner=[...ancestors,node].map(p=>p.dataset.animSource).filter(Boolean).at(-1)?.replace(/^f-/,'');
+      if(node.matches('.yg-rat,.yg-eagle,#wl-crown'))owner='well';if(node.id==='bc-notes')owner='beacon';
+      const box=node.getBBox(),pad=node.matches('.jf-name')?64:8;
+      const el=document.createElementNS(NS,'svg'),cam=document.createElementNS(NS,'g');el.id='idle-'+i;el.setAttribute('class','map idle-layer');el.setAttribute('data-idle',owner||'bits');el.setAttribute('aria-hidden','true');el.setAttribute('pointer-events','none');el.appendChild(cam);
+      const chain=[];let parent=cam;
+      for(const source of ancestors){const clone=document.createElementNS(NS,'g');for(const a of source.attributes)if(a.name!=='id')clone.setAttribute(a.name,a.value);parent.appendChild(clone);FD.animCopies.push({source,clone});parent=clone;chain.push(clone);}
+      parent.appendChild(node);chain.push(node);previous.after(el);previous=el;
+      const q={el,cam,node,owner,actor:FD.list[owner]||FD.list.hoards?.items.find(o=>o.id===owner),chain,box:[box.x-pad,box.y-pad,box.x+box.width+pad,box.y+box.height+pad],time:FD.now,dt:0,running:false,visible:true,bits:node.id==='f-bits',loop:picked.has(node),pad,contentKey:node.childElementCount+'/'+node.textContent};
+      el.__jmIdle=q;if(q.trail)node.__jmTrail=q;for(const e of[node,...node.querySelectorAll('*')])e.__jmIdle=q;FD.idleLayers.push(q);
+    }
+    // S3: one clipped trail SVG avoids a composited surface for every short segment.
+    {
+      const node=$('trail-pieces'),el=document.createElementNS(NS,'svg'),cam=document.createElementNS(NS,'g');
+      el.id='live-piece-0';el.setAttribute('class','map idle-layer live-piece');el.setAttribute('data-idle','trail');el.setAttribute('aria-hidden','true');el.setAttribute('pointer-events','none');el.appendChild(cam);cam.appendChild(node);$('map-live').after(el);
+      const box=node.getBBox(),pad=8,pieces=[...node.querySelectorAll('.done-p')].map(node=>({node,u0:+node.dataset.u0,u1:+node.dataset.u1}));
+      const q={el,cam,node,chain:[node],box:[box.x-pad,box.y-pad,box.x+box.width+pad,box.y+box.height+pad],time:FD.now,dt:0,running:false,visible:true,loop:false,trailGroup:true,pieces,pad,contentKey:node.childElementCount+'/'+node.textContent};
+      el.__jmIdle=q;node.__jmIdle=q;for(const p of pieces){p.node.__jmIdle=q;p.node.__jmTrail=q;}FD.idleLayers.push(q);
+    }
+    FD.buildIdleLayers=null;
+  };
+}
 function mainPlaceMarkers(st) {
   mainMarkers.forEach(m => { const p = toScreen(st, m.at), transform = `translate(${p[0]-m.at[0]} ${p[1]-m.at[1]})`; if (m.place.getAttribute('transform') !== transform) m.place.setAttribute('transform', transform); });
   const opacity = String(smooth(.5, 1, st.handoffT) * Number(MAP_STACK.style.opacity || 1)); if (mainMarkerLayer.style.opacity !== opacity) mainMarkerLayer.style.opacity = opacity;
@@ -8502,7 +8561,7 @@ function frame(ts) {
   if (st.rushT > 0 && st.settleT < 1 && !RM) { const hit = $('nova-hit'), tab = st.blastT > 0 ? -1 : 0; if (hit.tabIndex !== tab) hit.tabIndex = tab; if (hit.getAttribute('aria-disabled') !== 'false') hit.setAttribute('aria-disabled', 'false'); if (hit.getAttribute('aria-label') !== COMB.novaSay) hit.setAttribute('aria-label', COMB.novaSay); }
   const shown=st.handoffT>=COMB.mapFindsIn,cardVisibility=shown?'':'hidden';
   if($('cards').style.visibility!==cardVisibility)$('cards').style.visibility=cardVisibility;
-  if(shown){cardsFrame(st, aim.look, PTR);findsFrame(time, st);}
+  if(shown){st.smallMoved=moved;cardsFrame(st, aim.look, PTR);findsFrame(time, st);}
   mainHeroTidy = !!JOIN.heroStart && P < mainHeroEnd && !mainMapPending;
   raf = requestAnimationFrame(frame);
 }

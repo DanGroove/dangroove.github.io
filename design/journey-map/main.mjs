@@ -131,6 +131,38 @@ const mainMarkers = FINDS.filter(f => f.n).map(f => { const el = $('mk-' + f.id)
   const ink = '.bc-glow,.bc-light,.bc-flame,#f-beacon > g > path,#f-beacon > g > rect:not(.hit),.ls-rock,.hd-glint,#f-bits,.yg-rat,.yg-eagle,.rv-a,.rv-b,.rv-gifts,.jg-head,.jg-file,.jf-name,.rs-trace,.wl-rip,.wl-pebble,#wl-crown,#hn-rings,#bc-notes,.hm-lift,.hm-spark,.wf-needle,.wf-runes,.wf-arm,.wf-all,.wf-hub';
   for (const node of document.querySelectorAll(ink)) { if (node.closest('#map-anim')) continue; parent(node.parentElement).appendChild(node); }
 }
+// COMB-S: split the looping ink after its first pose has been placed.
+{
+  FD.buildIdleLayers=()=>{
+    const NS='http://www.w3.org/2000/svg';FD.idleLayers=[];
+    const selected=[...document.querySelectorAll('#map-anim .rv-a,#map-anim .rv-b,#map-anim .jg-head,#map-anim .jg-file,#map-anim .jf-name,#map-anim .bc-light,#map-anim .bc-flame,#map-anim .bc-glow,#map-anim .ls-rock,#map-anim .hd-glint,#map-anim .yg-rat,#map-anim .yg-eagle,#map-anim .wl-rip,#map-anim .wl-pebble,#map-anim #wl-crown,#map-anim .rs-trace,#map-anim #bc-notes,#map-anim #f-bits')];
+    const picked=new Set(selected),roots=[];
+    const partition=n=>{if(n.id==='map-anim-cover')return;if(picked.has(n)||!selected.some(s=>n.contains(s)))roots.push(n);else for(const child of [...n.children])partition(child);};
+    for(const child of [...$('cam-anim').children])partition(child);
+    let previous=$('map-anim');
+    for(const[node,i]of roots.map((n,i)=>[n,i])){
+      const ancestors=[];for(let p=node.parentElement;p&&p.id!=='cam-anim';p=p.parentElement)ancestors.unshift(p);
+      let owner=[...ancestors,node].map(p=>p.dataset.animSource).filter(Boolean).at(-1)?.replace(/^f-/,'');
+      if(node.matches('.yg-rat,.yg-eagle,#wl-crown'))owner='well';if(node.id==='bc-notes')owner='beacon';
+      const box=node.getBBox(),pad=node.matches('.jf-name')?64:8;
+      const el=document.createElementNS(NS,'svg'),cam=document.createElementNS(NS,'g');el.id='idle-'+i;el.setAttribute('class','map idle-layer');el.setAttribute('data-idle',owner||'bits');el.setAttribute('aria-hidden','true');el.setAttribute('pointer-events','none');el.appendChild(cam);
+      const chain=[];let parent=cam;
+      for(const source of ancestors){const clone=document.createElementNS(NS,'g');for(const a of source.attributes)if(a.name!=='id')clone.setAttribute(a.name,a.value);parent.appendChild(clone);FD.animCopies.push({source,clone});parent=clone;chain.push(clone);}
+      parent.appendChild(node);chain.push(node);previous.after(el);previous=el;
+      const q={el,cam,node,owner,actor:FD.list[owner]||FD.list.hoards?.items.find(o=>o.id===owner),chain,box:[box.x-pad,box.y-pad,box.x+box.width+pad,box.y+box.height+pad],time:FD.now,dt:0,running:false,visible:true,bits:node.id==='f-bits',loop:picked.has(node),pad,contentKey:node.childElementCount+'/'+node.textContent};
+      el.__jmIdle=q;if(q.trail)node.__jmTrail=q;for(const e of[node,...node.querySelectorAll('*')])e.__jmIdle=q;FD.idleLayers.push(q);
+    }
+    // S3: one clipped trail SVG avoids a composited surface for every short segment.
+    {
+      const node=$('trail-pieces'),el=document.createElementNS(NS,'svg'),cam=document.createElementNS(NS,'g');
+      el.id='live-piece-0';el.setAttribute('class','map idle-layer live-piece');el.setAttribute('data-idle','trail');el.setAttribute('aria-hidden','true');el.setAttribute('pointer-events','none');el.appendChild(cam);cam.appendChild(node);$('map-live').after(el);
+      const box=node.getBBox(),pad=8,pieces=[...node.querySelectorAll('.done-p')].map(node=>({node,u0:+node.dataset.u0,u1:+node.dataset.u1}));
+      const q={el,cam,node,chain:[node],box:[box.x-pad,box.y-pad,box.x+box.width+pad,box.y+box.height+pad],time:FD.now,dt:0,running:false,visible:true,loop:false,trailGroup:true,pieces,pad,contentKey:node.childElementCount+'/'+node.textContent};
+      el.__jmIdle=q;node.__jmIdle=q;for(const p of pieces){p.node.__jmIdle=q;p.node.__jmTrail=q;}FD.idleLayers.push(q);
+    }
+    FD.buildIdleLayers=null;
+  };
+}
 function mainPlaceMarkers(st) {
   mainMarkers.forEach(m => { const p = toScreen(st, m.at), transform = `translate(${p[0]-m.at[0]} ${p[1]-m.at[1]})`; if (m.place.getAttribute('transform') !== transform) m.place.setAttribute('transform', transform); });
   const opacity = String(smooth(.5, 1, st.handoffT) * Number(MAP_STACK.style.opacity || 1)); if (mainMarkerLayer.style.opacity !== opacity) mainMarkerLayer.style.opacity = opacity;
@@ -251,7 +283,7 @@ function frame(ts) {
   if (st.rushT > 0 && st.settleT < 1 && !RM) { const hit = $('nova-hit'), tab = st.blastT > 0 ? -1 : 0; if (hit.tabIndex !== tab) hit.tabIndex = tab; if (hit.getAttribute('aria-disabled') !== 'false') hit.setAttribute('aria-disabled', 'false'); if (hit.getAttribute('aria-label') !== COMB.novaSay) hit.setAttribute('aria-label', COMB.novaSay); }
   const shown=st.handoffT>=COMB.mapFindsIn,cardVisibility=shown?'':'hidden';
   if($('cards').style.visibility!==cardVisibility)$('cards').style.visibility=cardVisibility;
-  if(shown){cardsFrame(st, aim.look, PTR);findsFrame(time, st);}
+  if(shown){st.smallMoved=moved;cardsFrame(st, aim.look, PTR);findsFrame(time, st);}
   mainHeroTidy = !!JOIN.heroStart && P < mainHeroEnd && !mainMapPending;
   raf = requestAnimationFrame(frame);
 }
