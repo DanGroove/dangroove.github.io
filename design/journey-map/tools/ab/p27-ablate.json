@@ -1,0 +1,44 @@
+{
+ "nofx": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map #fxg { display: none !important; }"
+  ]
+ ],
+ "nomist": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map [mask] { display: none !important; }"
+  ]
+ ],
+ "noclip": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map [clip-path] { display: none !important; }"
+  ]
+ ],
+ "nofinds": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map #finds { display: none !important; }"
+  ]
+ ],
+ "norest": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map #b-rest { display: none !important; }"
+  ]
+ ],
+ "notrail": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map #trail-pieces, #map #trail-done { display: none !important; }"
+  ]
+ ],
+ "nobase": [
+  [
+   ".mk.legend-symbol { transition: none; }",
+   ".mk.legend-symbol { transition: none; } #map-base { visibility: hidden !important; }"
+  ]
+ ]
+}
