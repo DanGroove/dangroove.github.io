@@ -1,3 +1,4 @@
+// COMB-T, 2026-11-27: the ash replaces the well find and is the tree zoom anchor.
 // COMB-B local Edge fixture and drawing evidence. No external HTTP requests.
 import { spawn } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, existsSync, appendFileSync } from 'node:fs';
@@ -36,7 +37,7 @@ export async function combBCapture(phase) {
       await b.size(w,h);await b.page('dist/journey-map.html');
       const go=async id=>{await b.evaluate(`window.__jm.go(${JSON.stringify(id)},{instant:true})`);await combBWait(1800);};
       await go('map');await b.shot(tag+'-overview');
-      for(const id of ['well','mist','horn','serpent','ravens','hoard-hmc1','hammer']){
+      for(const id of ['ash','mist','horn','serpent','ravens','hoard-hmc1','hammer']){
         await go('map');await b.evaluate(`document.getElementById('f-${id}').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}))`);await combBWait(id==='ravens'?4200:2400);await b.shot(tag+'-'+id);
         if(id==='ravens'){await b.evaluate(`document.getElementById('f-ravens').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}))`);await combBWait(3700);await b.shot(tag+'-raven-gift');}
         if(id==='hammer'){await b.evaluate(`document.querySelector('.hm-start')?.click()`);await combBWait(180);await b.shot(tag+'-shield-wall');}
@@ -46,7 +47,7 @@ export async function combBCapture(phase) {
       await go('end');await b.shot(tag+'-end');await b.evaluate(`document.querySelector('.go-next').click()`);await combBWait(2600);await b.shot(tag+'-explore');
       // Reach maximum explore zoom through its public control, anchored on the tree.
       await b.evaluate(`(()=>{window.__combBChanges=[];window.__combBObserver=new MutationObserver(r=>window.__combBChanges.push(...r.map(x=>({name:x.attributeName,type:x.type,anchor:x.target.classList?.contains('label-anchor')}))));document.querySelectorAll('.label-anchor').forEach(e=>window.__combBObserver.observe(e,{attributes:true,childList:true,subtree:true}));})()`);
-      await b.evaluate(`(()=>{const p=window.__jm.finds.place('well'),q=window.__jm.finds.place('hammer'),s=(p[0]-q[0])/192;for(let i=0;i<18;i++)document.getElementById('stage').dispatchEvent(new WheelEvent('wheel',{clientX:p[0]+2*s,clientY:p[1]-50*s,deltaY:-120,ctrlKey:true,bubbles:true,cancelable:true}));})()`);
+      await b.evaluate(`(()=>{const p=window.__jm.finds.place('ash'),q=window.__jm.finds.place('hammer'),s=(p[0]-q[0])/192;for(let i=0;i<18;i++)document.getElementById('stage').dispatchEvent(new WheelEvent('wheel',{clientX:p[0]+2*s,clientY:p[1]-50*s,deltaY:-120,ctrlKey:true,bubbles:true,cancelable:true}));})()`);
       await combBWait(2000);await b.shot(tag+'-deep');
       const changes=await b.evaluate(`(()=>{window.__combBObserver.disconnect();return {anchorTransforms:window.__combBChanges.filter(r=>r.anchor&&r.name==='transform').length,markup:window.__combBChanges.filter(r=>r.type==='childList').length,visibilityChanges:window.__combBChanges.filter(r=>r.anchor&&r.name==='style').length};})()`);
       if(changes.anchorTransforms||changes.markup)throw Error('new per-frame explore placement/markup writes: '+JSON.stringify(changes));console.log(tag+' cached explore label zoom writes: '+JSON.stringify(changes));

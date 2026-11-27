@@ -7,7 +7,7 @@ import { findWay, findHoards } from './findhoards.mjs';
 import { findRavens, findSerpent } from './findcreatures.mjs';
 import { findBeacon, findRune } from './findsheets.mjs';
 import { findHammer } from './findhammer.mjs';
-import { findMist, findWell, findShip } from './findwater.mjs';
+import { findMist, findAsh, findShip } from './findwater.mjs';
 import { findHorn } from './findhorn.mjs';
 import { findAll } from './findall.mjs';
 
@@ -26,11 +26,11 @@ function findPlain(value, seen = new Set()) {
 }
 export function findsBuild(svg, pop, sheet, base, rm) {
   findKitBuild(svg, pop, sheet, base, rm);
-  const builders = { wayfinder: findWay, hoards: findHoards, ravens: findRavens, serpent: findSerpent, beacon: findBeacon, runestone: findRune, hammer: findHammer, mist: findMist, horn: findHorn, well: findWell, longship: findShip };
+  const builders = { wayfinder: findWay, hoards: findHoards, ravens: findRavens, serpent: findSerpent, beacon: findBeacon, runestone: findRune, hammer: findHammer, mist: findMist, horn: findHorn, ash: findAsh, longship: findShip };
   Object.entries(builders).forEach(([id, build]) => { const o = build(svg); o.el ??= svg.querySelector('#f-' + id); o.stage ??= 'rest'; o.kept ??= false; FD.list[id] = o; });
   for (const o of [...Object.values(FD.list), ...FD.list.hoards.items]) {
     if (o.id === 'hoards') continue; o.el.tabIndex=-1; attr(o.el,'aria-hidden',true);
-    o.hit = findSvg('circle', { class: 'hit touch-hit', r: .01 }); o.el.insertBefore ? o.el.insertBefore(o.hit, o.el.firstChild) : o.el.appendChild(o.hit);
+    o.hit = findSvg('circle', { class: 'hit touch-hit', r: .01 }); o.el.insertBefore ? o.el.insertBefore(o.hit, o.el.firstChild) : o.el.appendChild(o.hit); if(o.id==='ash')attr(o.hit,'pointer-events','none');
     o.focusRing = findSvg('circle', { class: 'find-focus-ring', fill: 'none', 'pointer-events': 'none' }); o.el.appendChild(o.focusRing);
   }
   FD.markerHits = [];
@@ -63,6 +63,7 @@ export function findsFrame(time, st) {
   if (!st) return;
   FD.dt = Math.max(0, Math.min(FIND_PLAY.kit.dt, FD.now ? time - FD.now : 0)); FD.now = time; FD.st = st;
   findIdleFrame(st);
+  FD.list.beacon?.beamFrame?.();
   // A moving camera quiets the finds' idle life inside svg#map, in a glide and in explore alike: each idle write there
   // redrew the held map on every frame of a pinch, a drag or a wheel (phone and PC pinch passes, 2026-11-27).
   const quiet = st.gliding || !!st.exploreMoving;
@@ -96,5 +97,6 @@ export function findsFrame(time, st) {
   try { findKitFrame(); } finally { FD.bits = bits; }
   if (!quiet || FD.all.playing) FD.all.tick(time); if (JOURNEY.focus !== FD.focusId) findHint(JOURNEY.focus); FD.focusId = JOURNEY.focus;
   if(!FD.idleLayers)FD.buildIdleLayers?.();
+  FD.list.wayfinder?.compassFrame?.();
   findIdleFrame(st,false);
 }

@@ -1,3 +1,4 @@
+// COMB-T, 2026-11-27: the ash replaces the well find and is the tree zoom anchor.
 import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
 import {combDInk} from './comb-d-ink-test.mjs';
 import {FINDS,MAP,STOPS,MARK,NOVA,EXPLORE} from '../data.mjs';
@@ -38,7 +39,7 @@ try{
   require(!idle.length,page+' '+w+' new idle label writes '+JSON.stringify(idle));
   log(page+' '+w+' opening anchors: max drift '+jump.toFixed(2)+' px; idle label writes '+idle.length);
   for(let z=0;z<4;z++){
-   if(z){await b.evaluate(`(()=>{const p=window.__jm.finds.place('well');for(let i=0;i<${z===3?18:3};i++)document.getElementById('stage').dispatchEvent(new WheelEvent('wheel',{clientX:p[0],clientY:p[1]-30,deltaY:-120,ctrlKey:${z===3},bubbles:true,cancelable:true}));})()`);await combBWait(1300);}
+   if(z){await b.evaluate(`(()=>{const p=window.__jm.finds.place('ash');for(let i=0;i<${z===3?18:3};i++)document.getElementById('stage').dispatchEvent(new WheelEvent('wheel',{clientX:p[0],clientY:p[1]-30,deltaY:-120,ctrlKey:${z===3},bubbles:true,cancelable:true}));})()`);await combBWait(1300);}
    const g=await b.evaluate('('+geometry.toString()+')('+JSON.stringify(constants)+')'),ink=await b.evaluate('('+combDInk.toString()+')()');
    for(const r of g.rows){require(r.frame,page+' '+w+' z'+z+' outside frame '+r.text);if(!z)require(r.screen,page+' '+w+' rest clipped '+r.text);require(r.distance<=r.height+.6,page+' '+w+' z'+z+' rim gap '+r.text+' '+r.distance.toFixed(2)+' > '+r.height.toFixed(2));require(r.lines<=1,page+' '+w+' wrapped '+r.text);}
    for(const s of g.subs){if(z===3)require(Number.isFinite(s.from),page+' '+w+' sub-line never fits '+s.text);if(s.opacity>.02)require(s.box[1]>=g.rows[s.name].box[3]-.5,page+' '+w+' sub-line above its name '+s.text);}

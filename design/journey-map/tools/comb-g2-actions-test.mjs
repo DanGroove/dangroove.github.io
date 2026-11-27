@@ -36,3 +36,6 @@ try{
  check(!b.errors.length,'no runtime errors',b.errors);
 }catch(e){fail.push(e.stack);}finally{await b.close();writeFileSync(gRoot+'/actions-results.json',JSON.stringify({fail,rows},null,2));}
 console.log(JSON.stringify({fail,rows},null,2));process.exitCode=fail.length?1:0;
+
+// COMB-T, 2026-11-27: moved HMC chest and note boxes, with real focus/dig/navigation input.
+if(!fail.length){const{tSpatial}=await import('./comb-t-spatial-test.mjs');await tSpatial(['hoard','notes']);}

@@ -1,0 +1,21 @@
+// COMB-T, 2026-11-27: compare against the two base artifacts saved before editing, without git.
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import * as data from '../data.mjs';
+const root='C:/Users/Admin/Documents/Portfolio/journey-map-runs/comb-t',read=p=>fs.readFileSync(p,'utf8').replaceAll('\r\n','\n'),base=read(root+'/base/journey-map.html'),next=read('dist/journey-map.html'),fail=[],rows=[];
+const chunks=html=>Object.fromEntries([...html.matchAll(/\/\/ ---- ([\w-]+\.mjs) ----\n([^]*?)(?=\n\/\/ ---- |\n<\/script>)/g)].map(m=>[m[1],m[2]])),a=chunks(base),z=chunks(next),check=(v,m)=>{rows.push({check:m,pass:v});if(!v)fail.push(m);};
+for(const f of 'stars.mjs footer.mjs footname.mjs pace.mjs hammer.mjs findhammer.mjs findcreatures.mjs findhorn.mjs cards.mjs timeline.mjs steps.mjs explore.mjs'.split(' '))check(a[f]===z[f],f+' protected packed bytes');
+const suffix=(s,mark)=>s.slice(s.indexOf(mark));
+check(suffix(a['findhoards.mjs'],'function findHoards')===suffix(z['findhoards.mjs'],'function findHoards'),'other chests unchanged');
+check(suffix(a['findsheets.mjs'],'function findRune')===suffix(z['findsheets.mjs'],'function findRune'),'rune unchanged');
+check(suffix(a['findwater.mjs'],'function findShip')===suffix(z['findwater.mjs'],'function findShip'),'ship unchanged');
+const mist=s=>s.slice(s.indexOf('function findMist'),s.indexOf('function findWell')<0?s.indexOf('function findAsh'):s.indexOf('function findWell'));
+check(mist(a['findwater.mjs'])===mist(z['findwater.mjs']),'mist unchanged');
+check(a['depth.mjs'].replace('const lag = wolves.lag*ws;','<lag>')===z['depth.mjs'].replace('const lag = tune.lag*ws;','<lag>'),'depth only own-wolf lag line');
+const art=s=>s.split('\n').map(l=>/^const well =|^  fd \+= at\('hammer'/.test(l)?'<T3-well-and-tree-hits>':l).join('\n');
+check(art(a['art.mjs'])===art(z['art.mjs']),'art outside well/tree hit markup unchanged');
+const names=Object.keys(data),plain=s=>JSON.parse(vm.runInNewContext(s+'\nJSON.stringify({'+names.join(',')+'})',{}, {timeout:10000}));
+const strip=d=>{delete d.FINDS;delete d.COPY.legend;delete d.FIND_COPY;for(const k of['well','ash','beacon','way'])delete d.FIND_PLAY[k];delete d.COMB.readings;delete d.COMB.exploreSides;delete d.COMB.wordTrack;delete d.DEPTH.wolves.lag;delete d.DEPTH.wolves.skoll.lag;delete d.DEPTH.wolves.hati.lag;return d;};
+check(JSON.stringify(strip(plain(a['data.mjs'])))===JSON.stringify(strip(plain(z['data.mjs']))),'all unlisted data unchanged');
+fs.writeFileSync(root+'/t-scope-results.json',JSON.stringify({rows,fail},null,2));console.log(JSON.stringify({rows,fail}));assert.deepEqual(fail,[]);

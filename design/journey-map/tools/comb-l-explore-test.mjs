@@ -8,3 +8,6 @@ try{for(const [w,h,dpr]of [[1440,900,1],[1920,950,2],[412,730,2.625],[844,390,3]
  await b.shot(tag+'-'+w+'-explore');
  }assert.deepEqual(b.errors,[]);console.log(tag,'explore rest/key cases',rows.length);
 }finally{lSave(tag+'-explore',rows);await b.close();}
+
+// COMB-T, 2026-11-27: seed and idle name boxes at all 13 scales and the three required sizes.
+if(!historical){const{tSpatial}=await import('./comb-t-spatial-test.mjs');await tSpatial(['explore']);}

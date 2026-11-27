@@ -1,3 +1,4 @@
+// COMB-T, 2026-11-27: the ash replaces the well find and is the tree zoom anchor.
 // DPR 2 product captures. The in-memory copy exposes only the existing focus API
 // so the map drawing can be studied in its own view before the game sheet opens.
 import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
@@ -13,7 +14,7 @@ try{
   await b.size(w,h);await b.send('Page.navigate',{url:'data:text/html;base64,'+Buffer.from(html).toString('base64')});await combBWait(1800);await b.evaluate('document.fonts.ready.then(()=>true)');
   const tag='final-'+w+'x'+h;
   await go('map');await b.shot(tag+'-overview');
-  for(const id of ['serpent','well','mist','beacon','hammer','horn']){
+  for(const id of ['serpent','ash','mist','beacon','hammer','horn']){
    await focus(id);await b.shot(tag+'-'+id+'-rest');
    if(id==='horn'){
     const rest=await b.evaluate(`(()=>{const r=document.querySelector('.hn-horn').getBoundingClientRect();return {width:r.width,share:r.width/innerWidth};})()`);log(w+'x'+h+' horn unfound view: '+JSON.stringify(rest));if(rest.share<.2)failures.push('unfound horn too small '+w);
@@ -36,7 +37,7 @@ try{
   await go('end');const start=Date.now();await b.evaluate('document.querySelector(".go-next").click()');
   if(w===412)for(let i=0;i<=16;i++){await combBWait(Math.max(0,start+i*100-Date.now()));const actual=Date.now()-start;await b.shot(tag+'-opening-'+String(i*100).padStart(4,'0'));log('opening capture nominal '+i*100+' ms; actual '+actual+' ms');}
   await combBWait(2000);await b.shot(tag+'-explore-0');
-  for(let z=1;z<=3;z++){await b.evaluate(`(()=>{const p=window.__jm.finds.place('well');for(let i=0;i<${z===3?18:3};i++)document.getElementById('stage').dispatchEvent(new WheelEvent('wheel',{clientX:p[0],clientY:p[1]-30,deltaY:-120,ctrlKey:${z===3},bubbles:true,cancelable:true}));})()`);await combBWait(1300);await b.shot(tag+'-explore-'+z);}
+  for(let z=1;z<=3;z++){await b.evaluate(`(()=>{const p=window.__jm.finds.place('ash');for(let i=0;i<${z===3?18:3};i++)document.getElementById('stage').dispatchEvent(new WheelEvent('wheel',{clientX:p[0],clientY:p[1]-30,deltaY:-120,ctrlKey:${z===3},bubbles:true,cancelable:true}));})()`);await combBWait(1300);await b.shot(tag+'-explore-'+z);}
   log(tag+' DPR 2 overview, close/rest/found drawings, phone/card seam, beacon notes and four explore zooms captured');
  }
  if(b.errors.length)failures.push(...b.errors);

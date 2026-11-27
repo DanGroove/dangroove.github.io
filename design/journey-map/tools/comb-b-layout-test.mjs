@@ -1,3 +1,4 @@
+// COMB-T, 2026-11-27: the ash replaces the well find and is the tree zoom anchor.
 // Real-font, real-render B10-B13 checks using only the local Edge fixture.
 import { combBBrowser, combBWait } from './comb-b-browser-test.mjs';
 import {combDInk} from './comb-d-ink-test.mjs';
@@ -10,7 +11,7 @@ try{
   if(!process.argv.includes('--behaviour')) for(const[w,h]of[[412,730],[390,844],[360,640],[1440,900]]){
     await b.size(w,h);await b.page('dist/journey-map.html');await b.evaluate('window.__jm.go("end",{instant:true})');await combBWait(1600);await b.evaluate('document.querySelector(".go-next").click()');await combBWait(2600);
     for(let zoom=0;zoom<3;zoom++){
-      if(zoom) {await b.evaluate(`(()=>{const p=window.__jm.finds.place('well');for(let i=0;i<${zoom===1?3:18};i++)document.getElementById('stage').dispatchEvent(new WheelEvent('wheel',{clientX:p[0],clientY:p[1]-30,deltaY:-120,ctrlKey:${zoom===1?'false':'true'},bubbles:true,cancelable:true}));})()`);await combBWait(1800);}
+      if(zoom) {await b.evaluate(`(()=>{const p=window.__jm.finds.place('ash');for(let i=0;i<${zoom===1?3:18};i++)document.getElementById('stage').dispatchEvent(new WheelEvent('wheel',{clientX:p[0],clientY:p[1]-30,deltaY:-120,ctrlKey:${zoom===1?'false':'true'},bubbles:true,cancelable:true}));})()`);await combBWait(1800);}
       const rows=await b.evaluate('('+labelMeasure.toString()+')()');log(w+'x'+h+' zoom '+zoom+': '+JSON.stringify(rows));
       require(rows.length>=7,w+' zoom '+zoom+' missing names');for(const r of rows)require(r.gap>=1.9,w+' zoom '+zoom+' '+r.text+' gap '+r.gap+' to '+r.who);
       await b.shot('final-'+w+'x'+h+'-explore-'+zoom);

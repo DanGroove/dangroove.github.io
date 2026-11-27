@@ -382,7 +382,7 @@ function depthSky(st, look, time) {
     const L = Math.max(edge,VIEW.w-wolves.maxBand*VIEW.w), blend = 0;
     const end = lerp(-m,L,blend), span = VIEW.w+m-end, height = Math.min(wolves.arcH[0]*VIEW.h,wolves.arcH[1]*span);
     const arc = u => [VIEW.w+m-span*u,wolves.yTop*VIEW.h+height*(1-Math.sin(Math.PI*u))];
-    const lag = wolves.lag*ws;
+    const lag = tune.lag*ws;
     const u = place-lag/span, lead = arc(place), wolf = arc(u), tx = -span, ty = -height*Math.PI*Math.cos(Math.PI*u), R=wolves.sunR*s;
     // Retire before any part of the disc or rotated wolf reaches the map labels.
     alpha *= lerp(1,smooth(L+R*2,L+R*4,lead[0]),blend);

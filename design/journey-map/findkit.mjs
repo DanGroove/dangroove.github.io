@@ -185,7 +185,7 @@ function findStartFlight() {
   const next = FD.flights.shift(), box = FD.count.getBoundingClientRect();
   FD.flight = { ...next, from: toScreen(FD.st, findPlace(next.id)), to: [box.left + box.width / 2, box.top + box.height / 2], ts: FD.now };
 }
-export function opened(o) { o.overlayEpoch = FD.overlayEpoch; if (o.id !== 'well') FD.last = o; }
+export function opened(o) { o.overlayEpoch = FD.overlayEpoch; FD.last = o; }
 export const press = (el, fn) => {
   el.addEventListener('click', e => { if (el._dragged) { el._dragged = false; return; } fn(e); });
   el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e); } });
@@ -329,8 +329,8 @@ export function findBits(kind, x, y, n, options = {}) {
     const bit = FD.bits.find(b => !b.live) || FD.bits.reduce((a, b) => a.serial < b.serial ? a : b);
     const [path, cls] = kind === 'star' ? [starPath(0, 0, B.starSize), 'pf'] : B.kinds[kind];
     const angle = findRange(v.dir) * Math.PI / FIND_PLAY.kit.deg, speed = findRange(v.speed);
-    Object.assign(bit, { live: true, idle: !!FD.idleOnly, owner: FD.currentFind, serial: FD.serial++, x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, age: 0, life: findRange(v.life), spin: v.spin, g: v.g, drag: v.drag, size: v.size, alpha: kind === 'puff' ? Math.min(B.puffAlpha, v.alpha) : v.alpha, kind });
-    attr(bit.el, 'd', path); attr(bit.el, 'class', cls); bit.el.style.display = ''; if (['star', 'drop', 'puff', 'wisp'].includes(kind)) bit.el.style.stroke = 'none'; else bit.el.style.stroke = '';
+    Object.assign(bit, { live: true, idle: !!FD.idleOnly, owner: v.owner || FD.currentFind, serial: FD.serial++, x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, age: 0, life: findRange(v.life), spin: v.spin, g: v.g, drag: v.drag, size: v.size, alpha: kind === 'puff' ? Math.min(B.puffAlpha, v.alpha) : v.alpha, kind });
+    bit.el.style.fill=v.fill||'';bit.el.style.stroke=v.stroke||'';attr(bit.el, 'd', path); attr(bit.el, 'class', cls); bit.el.style.display = ''; if (['star', 'drop', 'puff', 'wisp'].includes(kind)) bit.el.style.stroke = 'none'; else bit.el.style.stroke = v.stroke||'';
     attr(bit.el, 'transform', `translate(${x} ${y}) scale(${v.size[0]})`); attr(bit.el, 'opacity', bit.alpha);
   }
 }
@@ -393,7 +393,7 @@ export function findKitFrame() {
   if (FD.allPending && !FD.popOwner && !FD.sheetOwner && !JOURNEY.focus && !JOURNEY.moving && (FD.rm || !Object.values(FD.list).some(o => o.playing))) { FD.allPending = false; FD.all?.start(); }
 }
 // The hint line keeps its words while it fades out, so it changes only when a find takes the camera.
-export function findHint(id) { if (FD.hint && id) FD.hint.textContent = id === 'horn' ? COMB.hornHints[FD.list.horn?.stage === 'raised' ? 1 : ['sounding','echo'].includes(FD.list.horn?.stage) ? 2 : 0] : FD.list.hoards?.items.find(h => h.id === id)?.hintLine || FIND_COPY.hints[id.startsWith('hoard') ? 'hoards' : id] || ''; }
+export function findHint(id) { if (FD.hint && id) FD.hint.textContent = id === 'horn' ? COMB.hornHints[FD.list.horn?.stage === 'raised' ? 1 : ['sounding','echo'].includes(FD.list.horn?.stage) ? 2 : 0] : (id==='ash'&&FD.list.ash?.fallen===6?FIND_PLAY.ash.doneHint:null) || FD.list.hoards?.items.find(h => h.id === id)?.hintLine || FIND_COPY.hints[id.startsWith('hoard') ? 'hoards' : id] || ''; }
 let findPress = null;
 export function findCapture(e) {
   if (findPress && e.type === 'touchmove') { e.preventDefault(); e.stopImmediatePropagation(); return; }
@@ -404,7 +404,7 @@ export function findCapture(e) {
   }
   if (FD.rm || JOURNEY.mode !== 'steps' || !FD.st || ['pointermove','pointerup','pointercancel'].includes(e.type)) return;
   if (e.type === 'keydown' && !['Enter', ' '].includes(e.key)) return;
-  const el = e.target.closest?.('.find'); if (!el) return;
+  const proxy=e.target.closest?.('[data-find-proxy]'); const el = proxy ? FD.list[proxy.dataset.findProxy]?.el : e.target.closest?.('.find'); if (!el) return;
   const key = el.id.slice(2);
   if (e.type === 'pointerdown') el._focusBlocked = false;
   if (e.type === 'pointerdown' && (JOURNEY.moving || JOURNEY.focus !== key)) {

@@ -22,6 +22,8 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import {Readable} from 'node:stream';
+import {pipeline} from 'node:stream/promises';
 
 const args = process.argv.slice(2), opt = { page: [] };
 for (let i = 0; i < args.length; i++) {
@@ -182,6 +184,11 @@ async function traceEnd() {
   for (let i = events.length - 1; i >= 0; i--) if (/^Tracing\./.test(events[i].method)) events.splice(i, 1);
   return out;
 }
+// COMB-T, 2026-11-27: bound each serialized piece; pinch traces may exceed V8's one-string limit.
+async function saveTrace(file,ev){
+  async function* pieces(){yield '{"traceEvents":[\n';for(let at=0;at<ev.length;at+=1000){yield (at?',\n':'')+ev.slice(at,at+1000).map(e=>JSON.stringify(e)).join(',\n');}yield '\n]}';}
+  await pipeline(Readable.from(pieces()),zlib.createGzip(),fs.createWriteStream(file));
+}
 // Summary of a trace from the press on: main-thread tasks over 8 ms and self time by event on each thread group.
 function traceSummary(ev, windowMs) {
   const names = {}, procs = {}; for (const e of ev) if (e.ph === 'M') { if (e.name === 'thread_name') names[e.pid + ':' + e.tid] = e.args.name; if (e.name === 'process_name') procs[e.pid] = e.args.name; }
@@ -213,7 +220,7 @@ function traceSummary(ev, windowMs) {
 async function oneRun(p, beat, run) {
   events.length = 0;
   const colon = beat.indexOf(':'), kind = colon < 0 ? (beat === 'hero' ? 'hero' : 'next') : beat.slice(0, colon), arg = (colon < 0 ? beat : beat.slice(colon + 1)).toLowerCase();
-  const start = { next: arg, back: arg, press: 'map', rest: 'map', find: 'map', explore: 'end', visit: 'end', swipe: arg, hero: null, jump: arg.split('-')[0], pinch: arg, pinchcard: arg }[kind];
+  const start = (kind==='rest'&&arg==='beacon'||kind==='press'&&arg==='pyre')?'interkom':{ next: arg, back: arg, press: 'map', rest: 'map', find: 'map', explore: 'end', visit: 'end', swipe: arg, hero: null, jump: arg.split('-')[0], pinch: arg, pinchcard: arg }[kind];
   if (start === undefined) throw new Error('unknown beat ' + beat);
   if (kind === 'hero' && !p.joined) { note(`skipped hero for ${p.name}: no --page ${p.name}-joined=<file>`); return []; }
   await send('Page.navigate', { url: kind === 'hero' ? `http://localhost:${PORT}/${p.joined}.html` : `http://localhost:${PORT}/${p.name}.html?beat=${start}` });
@@ -252,7 +259,7 @@ async function oneRun(p, beat, run) {
     await sleep(Math.max(300, win - 100 - (await evaluate('performance.now()') - t0)));
     const r = await evaluate(`(() => { const t0 = ${t0}, t = window.__pf.filter(x => x > t0 && x < t0 + ${win}); return { t, s: ${STATE} }; })()`);
     let trace = null;
-    if (opt.trace) { const ev = await traceEnd(), base = `trace-${p.name}-${label.replace(/[:>]/g, '-')}-${run}`; fs.writeFileSync(path.join(OUT, base + '.json.gz'), zlib.gzipSync(JSON.stringify({ traceEvents: ev }))); trace = traceSummary(ev, win); trace.file = base + '.json.gz';
+    if (opt.trace) { const ev = await traceEnd(), base = `trace-${p.name}-${label.replace(/[:>]/g, '-')}-${run}`; await saveTrace(path.join(OUT, base + '.json.gz'),ev); trace = traceSummary(ev, win); trace.file = base + '.json.gz';
       // Name the repainted nodes (tag#id.class) while the page is still open.
       for (const row of trace.paints) { const id = +row[0].split(' ')[0]; if (!Number.isFinite(id)) continue; try { const { node } = await send('DOM.describeNode', { backendNodeId: id }); const a = node.attributes || [], at = k => { const i = a.indexOf(k); return i >= 0 ? a[i + 1] : ''; }; row[0] = (node.localName || node.nodeName) + (at('id') ? '#' + at('id') : '') + (at('class') ? '.' + at('class').trim().split(/\s+/).slice(0, 2).join('.') : '') + ' ' + row[0].split(' ')[1]; } catch (e) {} } }
     // A check passes if it holds 400 ms after the press (a move under way) or at the end of the window (a late camera).
@@ -267,9 +274,11 @@ async function oneRun(p, beat, run) {
   const moved = (b, a) => a.moving || a.P !== b.P ? null : `no move (P still ${a.P})`;
   const anything = (b, a) => a.moving || a.P !== b.P || a.y !== b.y || a.cam !== b.cam || a.cls !== b.cls || a.ui !== b.ui ? null : 'nothing moved';
   const W = env.w, H = env.h;
+  const setupBeacon=async()=>{for(let i=0;i<3;i++){await press(sel('#f-beacon .hit:not(.touch-hit)'),'the beacon');await sleep(1600);}await sleep(4000);return evaluate('window.__jm.finds.state("beacon").fire');};
   // COMB-S rest beats record a settled view with no input in the window.
   if(kind==='rest'){
     if(arg==='compass'){try{await press(findOpen('wayfinder'),'the compass marker');}catch(e){return fail(beat,e.message);}if(!await wait('window.__jm.focus === "wayfinder"',5000))return fail(beat,'the compass did not open');await sleep(3000);}
+    else if(arg==='beacon'){const count=await setupBeacon();note('beacon setup '+p.name+' notes '+count+'/3');}
     else if(arg!=='map')throw new Error('unknown rest beat '+beat);
     await measure(beat,async()=>{},null);
   } else if (kind === 'next') await measure(beat, () => press(sel('.go-next'), 'Next'), arg === 'end' ? (b, a) => a.cls.includes('jm-explore') ? null : 'explore did not start' : moved);

@@ -1,5 +1,5 @@
 // Part A: persistent beacon reading and a rub/read/flip sheet.
-import { C, COPY, FIND_COPY, FIND_PLAY, FIND_TIMING, COMB } from './data.mjs';
+import { C, COPY, FIND_COPY, FIND_PLAY, FIND_TIMING, COMB, DEPTH } from './data.mjs';
 import { VIEW, clamp01, lerp } from './trip.mjs';
 import { rubbingSvg } from './art.mjs';
 import { depthBeam } from './depth.mjs';
@@ -11,6 +11,27 @@ export function findBeacon(svg) {
   notes.forEach(n=>{attr(n.g,'transform','translate('+n.d.x+' '+n.d.y+')');n.g.classList.add('reading-halo');});
   const o={id:f.id,el,stage:'idle',head:FIND_PLAY.beacon.baseAngle,manualTs:-Infinity,fire:0,level:0,read:notes.map(()=>false),kept:false,drag:false,ember:0,litTs:-Infinity,hearTs:-Infinity,embers:[],beamTurns:0,finalDone:false,stepTs:-Infinity};
   const origin=()=>[f.x+FIND_PLAY.beacon.origin[0]*FIND_PLAY.beacon.scale,f.y+FIND_PLAY.beacon.origin[1]*FIND_PLAY.beacon.scale],pool=svg.querySelector('#f-bits'),ring=findSvg('circle',{class:'l bc-finale-ring',r:0,opacity:0,'pointer-events':'none'});pool.appendChild(ring);
+  // The endless turn has one bounded wedge backing, rotated by its HTML compositor layer.
+  const spinClip=document.createElement('div'),spinPosition=document.createElement('div'),spinTurn=document.createElement('div');
+  spinClip.className='bc-spin-clip';spinPosition.className='bc-spin-position';spinTurn.className='bc-spin-turn';
+  const spinSvg=findSvg('svg',{viewBox:'-230 -44.7 230 89.4',width:230,height:89.4,class:'bc-spin-beam','aria-hidden':'true'});
+  spinSvg.appendChild(beam.firstElementChild.cloneNode(true));spinTurn.appendChild(spinSvg);spinPosition.appendChild(spinTurn);spinClip.appendChild(spinPosition);document.getElementById('map-anim').before(spinClip);
+  o.beamFrame=(advance=true)=>{
+    if(!FD.st)return;const B=FIND_PLAY.beacon,c=FD.st.cam,O=origin(),on=o.finalDone&&o.fire===notes.length&&!FD.rm;
+    const R=B.baseReach*B.scale*B.finaleReach*c.s,p=[O[0]*c.s+c.tx,O[1]*c.s+c.ty],a=o.head*Math.PI/180,dx=R*Math.cos(a),dy=R*Math.sin(a),cross=44.7/230,pts=[p,[p[0]+dx-dy*cross,p[1]+dy+dx*cross],[p[0]+dx+dy*cross,p[1]+dy-dx*cross]],visible=Math.max(...pts.map(p=>p[0]))>0&&Math.min(...pts.map(p=>p[0]))<VIEW.w&&Math.max(...pts.map(p=>p[1]))>0&&Math.min(...pts.map(p=>p[1]))<VIEW.h;
+    findStyle(spinClip,'visibility',on&&visible?'inherit':'hidden');
+    if(!on||!visible)return;
+    const x=Math.max(0,23*c.s+c.tx),y=Math.max(0,23*c.s+c.ty),right=Math.min(VIEW.w,577*c.s+c.tx),bottom=Math.min(VIEW.h,877*c.s+c.ty);
+    findStyle(spinClip,'left',x+'px');findStyle(spinClip,'top',y+'px');findStyle(spinClip,'width',Math.max(0,right-x)+'px');findStyle(spinClip,'height',Math.max(0,bottom-y)+'px');
+    findStyle(spinClip,'opacity',1-(o.cover||0));findStyle(spinPosition,'transform','translate('+(p[0]-x)+'px,'+(p[1]-y)+'px) scale('+(B.scale*c.s*B.finaleReach)+')');
+    if(advance&&!FD.st.gliding&&!FD.st.exploreMoving){o.spinTime=(o.spinTime||0)+FD.dt;const q=Math.min(1,o.spinTime),v0=360/B.finaleTurn,v1=360/B.spin;o.head=o.spinFrom+v0*q+(v1-v0)*(q*q*q-.5*q*q*q*q)+v1*Math.max(0,o.spinTime-1);}findStyle(spinTurn,'transform','rotate('+(o.head-180)+'deg)');
+  };
+  const firePyre=()=>{
+    o.flareTs=FD.now;o.playing=true;found(o.id);opened(o);if(FD.rm)return;
+    const O=origin(),colour=getComputedStyle(flame).fill;for(const bit of FD.bits)if(bit.live&&bit.owner==='pyre'){bit.live=false;attr(bit.el,'opacity',0);}
+    findBits('spark',...O,16,{dir:[-110,-70],speed:[40,80],g:40,life:[.7,1.2],owner:'pyre',stroke:DEPTH.wolves.spark});
+    for(let i=0;i<5;i++)findBits('drop',O[0],O[1],1,{dir:[-90,-90],speed:[30,37.5],life:[.7,.8],owner:'pyre',size:[1.6,.4],fill:i%2?DEPTH.wolves.spark:colour});
+  };
   const wrap=()=>{
     const B=FIND_PLAY.beacon,key=[VIEW.phone,B.noteFont,B.noteScale,B.notePhone,B.noteWidths,B.noteGuard,B.noteGap].join('/');if(o.wrapKey===key)return;o.wrapKey=key;
     for(const[n,i]of notes.map((n,i)=>[n,i])){
@@ -32,23 +53,23 @@ export function findBeacon(svg) {
     if(FD.rm){o.level=o.fire;if(o.fire===notes.length){o.finalDone=true;o.beamTurns=1;o.head=B.baseAngle;}return;}
     const ember=findSvg('circle',{class:'pf bc-ember',r:.9,opacity:1,'pointer-events':'none'});pool.appendChild(ember);o.embers.push({el:ember,from:[n.d.x,n.d.y],ts:FD.now,level:o.fire,done:false});
   };
-  const snapNext=()=>{const i=notes.findIndex(n=>!n.read),n=notes[i<0?0:i],O=origin(),angle=Math.atan2(n.d.y-O[1],n.d.x-O[0])*180/Math.PI;o.snap={from:o.head,to:o.head+findAngleDelta(o.head,angle),ts:FD.now};o.manualTs=FD.now;found(o.id);opened(o);if(FD.rm&&i>=0){o.head=angle;read(n,i);o.snap=null;}};
-  const aimAt=e=>{const p=toMap([e.clientX,e.clientY]),O=origin();o.head=Math.atan2(p[1]-O[1],p[0]-O[0])*180/Math.PI;o.snap=null;o.manualTs=FD.now;found(o.id);opened(o);};
-  findPointer(el,e=>{o.drag=true;o.downAt=[e.clientX,e.clientY];o.dragged=false;el.setPointerCapture(e.pointerId);},{drag:true,tap:snapNext,cancel:()=>o.drag=false});
+  const snapNext=()=>{if(o.fire===notes.length){firePyre();return;}const i=notes.findIndex(n=>!n.read),n=notes[i<0?0:i],O=origin(),angle=Math.atan2(n.d.y-O[1],n.d.x-O[0])*180/Math.PI;o.snap={from:o.head,to:o.head+findAngleDelta(o.head,angle),ts:FD.now};o.manualTs=FD.now;o.playing=true;found(o.id);opened(o);if(FD.rm&&i>=0){o.head=angle;read(n,i);o.snap=null;}};
+  const aimAt=e=>{if(o.fire===notes.length)return;const p=toMap([e.clientX,e.clientY]),O=origin();o.head=Math.atan2(p[1]-O[1],p[0]-O[0])*180/Math.PI;o.snap=null;o.manualTs=FD.now;found(o.id);opened(o);};
+  findPointer(el,e=>{if(o.fire===notes.length)return;o.drag=true;o.downAt=[e.clientX,e.clientY];o.dragged=false;el.setPointerCapture(e.pointerId);},{drag:true,tap:snapNext,cancel:()=>o.drag=false});
   el.addEventListener('pointermove',e=>{if(!o.drag||!o.dragged&&Math.hypot(e.clientX-o.downAt[0],e.clientY-o.downAt[1])<FIND_PLAY.beacon.slop)return;o.dragged=el._dragged=true;aimAt(e);});
   el.addEventListener('pointerup',()=>o.drag=false);el.addEventListener('pointercancel',()=>o.drag=false);press(el,snapNext);
-  el.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowUp','ArrowRight','ArrowDown'].includes(e.key))return;e.preventDefault();o.head+=FIND_PLAY.beacon.arrow*(['ArrowLeft','ArrowUp'].includes(e.key)?-1:1);o.snap=null;o.manualTs=FD.now;found(o.id);opened(o);});
+  el.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowUp','ArrowRight','ArrowDown'].includes(e.key))return;e.preventDefault();if(o.fire===notes.length)return;o.head+=FIND_PLAY.beacon.arrow*(['ArrowLeft','ArrowUp'].includes(e.key)?-1:1);o.snap=null;o.manualTs=FD.now;found(o.id);opened(o);});
   o.reduce=()=>{const B=FIND_PLAY.beacon;if(o.snap){o.head=o.snap.to;o.snap=null;}const O=origin();if(o.drag||FD.now-o.manualTs<B.manual)notes.forEach((n,i)=>{const angle=Math.atan2(n.d.y-O[1],n.d.x-O[0])*180/Math.PI;if(Math.abs(findAngleDelta(o.head,angle))<FIND_TIMING.beamCone/2)read(n,i);});o.level=o.fire;o.embers.forEach(e=>{e.done=true;attr(e.el,'opacity',0);});if(o.fire===notes.length){o.finalDone=true;o.beamTurns=1;o.head=B.baseAngle;}attr(ring,'opacity',0);};
   o.undo=()=>{o.manualTs=-Infinity;o.drag=false;};o.hear=()=>o.hearTs=FD.now;
   o.tick=(t,dt)=>{
     const B=FIND_PLAY.beacon,O=origin(),idleBeam=findIdleTime(beam),idleFlame=findIdleTime(flame);wrap();
     o.embers.forEach(e=>{if(e.done)return;const q=clamp01((t-e.ts)/B.emberTime);attr(e.el,'transform','translate('+lerp(e.from[0],O[0],q)+' '+(lerp(e.from[1],O[1],q)-B.emberArc*Math.sin(Math.PI*q))+')');if(q===1){e.done=true;attr(e.el,'opacity',0);arrived(e.level,t);}});
     let manual=o.drag||t-o.manualTs<B.manual,lit=o.fire===notes.length,finalAge=t-o.litTs,finale=lit&&o.level===notes.length&&!FD.rm&&!o.finalDone&&Number.isFinite(o.litTs)&&finalAge>=0;
-    if(finale){const q=clamp01(finalAge/B.finaleTurn);o.head=o.finaleFrom+360*q;o.snap=null;notes.forEach(n=>{const angle=Math.atan2(n.d.y-O[1],n.d.x-O[0])*180/Math.PI,share=((angle-o.finaleFrom+360)%360)/360;if(!n.finalFlash&&q>=share){n.finalFlash=true;n.flash=t;}});if(q===1){o.beamTurns=1;const settle=clamp01((finalAge-B.finaleTurn)/B.snap);o.head+=findAngleDelta(o.head,B.baseAngle)*ease(settle);if(settle===1){o.finalDone=true;o.head=B.baseAngle;o.manualTs=-Infinity;manual=false;}}}
+    if(finale){const q=clamp01(finalAge/B.finaleTurn);o.head=o.finaleFrom+360*q;o.snap=null;notes.forEach(n=>{const angle=Math.atan2(n.d.y-O[1],n.d.x-O[0])*180/Math.PI,share=((angle-o.finaleFrom+360)%360)/360;if(!n.finalFlash&&q>=share){n.finalFlash=true;n.flash=t;}});if(q===1){o.beamTurns=1;o.finalDone=true;o.spinFrom=o.head;o.spinTime=0;o.manualTs=-Infinity;manual=false;o.beamFrame(false);}}
     else if(o.snap){const q=FD.rm?1:ease((t-o.snap.ts)/B.snap);o.head=lerp(o.snap.from,o.snap.to,q);if(q===1)o.snap=null;}
     else if(!manual&&!FD.rm&&!lit)o.head=B.baseAngle+B.sweep*Math.sin(idleBeam*FIND_TIMING.beamSweep);
     const strength=lit&&o.finalDone&&!manual?B.finaleReach:1,reach=B.baseReach*B.scale*strength,half=FIND_TIMING.beamCone/2;
-    attr(beam,'transform','translate('+B.origin.join(' ')+') rotate('+(o.head-180)+') scale('+strength+')');attr(beam,'opacity',manual||finale?1:Math.min(1,B.idle*strength));
+    if(!lit||!o.finalDone||FD.rm)attr(beam,'transform','translate('+B.origin.join(' ')+') rotate('+(o.head-180)+') scale('+strength+')');attr(beam,'opacity',lit&&o.finalDone&&!FD.rm?0:manual||finale?1:Math.min(1,B.idle*strength));
     const approach=(a,b,k)=>Math.abs(a-b)<.0001?b:lerp(a,b,Math.min(1,k));
     notes.forEach((n,i)=>{const dx=n.d.x-O[0],dy=n.d.y-O[1],angle=Math.atan2(dy,dx)*180/Math.PI,inside=Math.abs(findAngleDelta(o.head,angle))<half&&Math.hypot(dx,dy)<reach;
       if(inside&&!o.snap&&manual&&!finale)n.time+=dt;if(!n.read&&n.time>=B.read)read(n,i);
@@ -59,13 +80,15 @@ export function findBeacon(svg) {
     if(!FD.rm&&step<1){const before=B.flame[Math.max(0,o.level-1)],over=size*(1+B.overshoot);size=step<.65?lerp(before,over,out3(step/.65)):lerp(over,size,ease((step-.65)/.35));}
     if(lit&&(o.finalDone||Number.isFinite(o.litTs)&&finalAge>=0)){const q=FD.rm?1:clamp01(finalAge/B.finaleTime);size=q<.45?lerp(B.finaleFlame[0],B.finaleFlame[1],out3(q/.45)):lerp(B.finaleFlame[1],B.finaleFlame[2],ease((q-.45)/.55));if(FD.rm)size=B.finaleFlame[2];glowAlpha=Math.max(glowAlpha,!FD.rm&&finalAge<B.finaleFlash?1-clamp01(finalAge/B.finaleFlash):0);}
     const hearAge=t-o.hearTs,hear=FD.rm?1:hearAge<B.hear[1]?lerp(B.hear[0],1,clamp01(hearAge/B.hear[1])):1+(B.hear[2]-1)*Math.sin(Math.PI*clamp01((hearAge-B.hear[1])/B.hear[3])),F=B.flicker,foot=B.flameFoot;
+    const flareAge=t-(o.flareTs??-Infinity),flare=FD.rm?(flareAge<.4?B.flare[0]:1):flareAge<B.flare[1]?lerp(1,B.flare[0],out3(flareAge/B.flare[1])):lerp(B.flare[0],1,ease((flareAge-B.flare[1])/B.flare[2]));
+    size*=flare;glowAlpha=Math.min(1,glowAlpha*flare);radius*=1+(flare-1)*.3;
     o.flameSize=size;o.glowStrength=glowAlpha;o.glowRadius=radius;
     const sx=FD.rm?size:size*(1+F[0]*Math.sin(F[1]*idleFlame)+F[2]*Math.sin(F[3]*idleFlame)),sy=FD.rm?size:size*(1+F[4]*Math.sin(F[5]*idleFlame));attr(flame,'transform','translate('+foot.join(' ')+') scale('+(sx*hear)+' '+(sy*hear)+') translate('+(-foot[0])+' '+(-foot[1])+')');attr(glow,'opacity',glowAlpha);attr(glow,'r',B.glowR*radius);
     const ringQ=FD.rm?1:clamp01(finalAge/B.finaleRing[1]);attr(ring,'cx',O[0]);attr(ring,'cy',O[1]);attr(ring,'r',B.finaleRing[0]*out3(ringQ));attr(ring,'opacity',finale&&ringQ<1?.8*(1-ringQ):0);
     if(o.onScreen&&!FD.rm&&o.playing){o.ember+=o.fire*B.embers*dt;const n=Math.floor(o.ember);o.ember-=n;if(n)findBits('spark',...O,n,FIND_PLAY.bits.sparks);}
-    o.playing=!FD.rm&&(!!o.snap||o.embers.some(e=>!e.done)||t-o.stepTs<B.swellTime||lit&&!o.finalDone||manual&&notes.some(n=>!n.read&&n.time>0));
+    o.playing=flareAge<(FD.rm?.4:B.flare[1]+B.flare[2])||!FD.rm&&(!!o.snap||o.embers.some(e=>!e.done)||t-o.stepTs<B.swellTime||lit&&!o.finalDone||manual&&notes.some(n=>!n.read&&n.time>0));
     o.stage=lit?'lit':manual?'aiming':'idle';if(lit&&FD.focusId===o.id&&FD.hint?.textContent!==B.litHint)FD.hint.textContent=B.litHint;
-    depthBeam(!FD.rm&&o.onScreen&&VIEW.depth&&FD.st.pushT>0&&FD.st.rushT===0?{x:O[0],y:O[1],angle:o.head,half,reach,soft:B.soft,steps:B.wedgeSteps}:null,FD.st);
+    depthBeam(!(lit&&o.finalDone)&&!FD.rm&&o.onScreen&&VIEW.depth&&FD.st.pushT>0&&FD.st.rushT===0?{x:O[0],y:O[1],angle:o.head,half,reach,soft:B.soft,steps:B.wedgeSteps}:null,FD.st);
   };return o;
 }
 export const beaconLit = () => FD.list.beacon?.fire === FIND_COPY.beaconNotes.length;

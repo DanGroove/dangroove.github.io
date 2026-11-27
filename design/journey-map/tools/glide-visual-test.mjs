@@ -1,3 +1,4 @@
+// COMB-T, 2026-11-27: the ash replaces the well find and is the tree zoom anchor.
 // Deterministic rendered comparison. Only loopback CDP; captures only in the
 // explicitly authorized run directory. Does not launch or install a browser.
 import { createServer } from 'node:http';
@@ -65,7 +66,7 @@ async function capturePlan(url,tag){
  for(const id of ['laurier','hmc1','mohawk','hmc2','interkom','lennard']){await go(id);await evaluate(`document.querySelector('#stop-${id} .c-close').click()`);await advance(800);await shot(tag+'-closed-'+id);}
  await go('end');await evaluate('document.querySelector(".go-next").click()');await advance(3200);await shot(tag+'-explore');
  // Rest views and focused finds, through the same keyboard controls as a visitor.
- const finds=['wayfinder','hoard-laurier','hoard-hmc1','hoard-hmc2','hoard-interkom','hoard-lennard','ravens','serpent','beacon','runestone','hammer','mist','horn','well','longship'];
+ const finds=['wayfinder','hoard-laurier','hoard-hmc1','hoard-hmc2','hoard-interkom','hoard-lennard','ravens','serpent','beacon','runestone','hammer','mist','horn','ash','longship'];
  await key('Escape');await advance(2000);
  for(const id of finds){await go('map');await evaluate(`(()=>{const e=document.getElementById('f-'+${JSON.stringify(id)});if(!e)throw Error('missing find '+${JSON.stringify(id)});e.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}))})()`);await advance(2000);await shot(tag+'-find-'+id);await key('Escape');await advance(1800);}
  }

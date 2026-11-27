@@ -1,3 +1,4 @@
+// COMB-T, 2026-11-27: re-record full-source and wolf-lag pins; retain all unaffected art pins.
 // Node-only geometry and source-preservation gates for FINDS Part A.
 import { strict as assert } from 'node:assert';
 import { readFileSync } from 'node:fs';
@@ -35,10 +36,10 @@ console.log('ok: COMB-D body/stipple sea digest recorded; coast and fill unchang
 // and for polish round 1: the held breath's white cross and halo, the softer cloud deck, the traveller's size at the overview
 // and the gather ring's spread).
 // WHIRL2 adds only STARS.supply; DEPTH and NOVA remain unchanged.
-assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 3612511009); // COMB-P removes eclipse-only sky keys.
+assert.equal(digest(JSON.stringify([STARS, DEPTH, NOVA])), 3835301954); // COMB-P removes eclipse-only sky keys.
 // D10: restore only the moved cloud to verify all other sky data.
 const beforeD = structuredClone(DEPTH); beforeD.clouds.list[9][0] = 330; beforeD.dpr=2; beforeD.field.sprite=128;const beforeFStars=structuredClone(STARS);beforeFStars.dprCap=2;delete beforeFStars.fall;
-assert.equal(digest(JSON.stringify([beforeFStars,beforeD,NOVA])),2324343636);
+assert.equal(digest(JSON.stringify([beforeFStars,beforeD,NOVA])),3087500151);
 console.log('ok: D10 cloud pin recorded; restoring that cloud verifies original STARS/DEPTH/NOVA');
 // D4 authorizes the pure rest-to-rest glide in trip. Depth remains protected.
 // Line endings are evened out so the numbers are the same on Windows and in the cloud.
@@ -52,10 +53,10 @@ const sourceDigest = name => digest(readFileSync(new URL('../' + name, import.me
 // Part 10b cloud fixes: the held base on whole device pixels with a margin (blur), and the find press fades on each name, not its group.
 // COMB-M2 (2026-11-26): N2 changes only the old longship line and ship kit keys; the M2 scope test pins the exact edits.
 // COMB-S, 2026-11-27: the shared current-camera scheduler and bounded trail raster scales re-record this source pin.
-assert.equal(sourceDigest('trip.mjs'), 927753321, 'trip.mjs changed'); // COMB-P, the part 13 review fixes (2026-11-26), the edge fades on the clock and the pinch recheck's explore hold band and word fade clock (2026-11-27), then its held opening (labels eased through it) and no raster ahead in explore zoom holds; then the label warm-up's own path walk (pathWalk, the same points as the native calls, 2026-11-27).; L5 (2026-11-27): the names, trail and finds ride svg#map's raster camera in their own svgs, faded together in div#map-stack
+assert.equal(sourceDigest('trip.mjs'), 512637798, 'trip.mjs changed'); // COMB-P, the part 13 review fixes (2026-11-26), the edge fades on the clock and the pinch recheck's explore hold band and word fade clock (2026-11-27), then its held opening (labels eased through it) and no raster ahead in explore zoom holds; then the label warm-up's own path walk (pathWalk, the same points as the native calls, 2026-11-27).; L5 (2026-11-27): the names, trail and finds ride svg#map's raster camera in their own svgs, faded together in div#map-stack
 // COMB-B re-records only drawing/view data and explore label placement. Protected depth stays pinned.
-assert.equal(sourceDigest('data.mjs'), 3058251501, 'data.mjs changed'); // COMB-Q, the part 13b review's marker moves (2026-11-26), LABELS.edgeFade and FRAME_PERF.exploreMin/exploreMax (2026-11-27); Preview 28 notes: THE MARGINS moved, the crossing renamed, treeDrops and the pine off the skal (2026-11-27); COMB-R, then its review: the tankards' foam drip and the notes' phone gap (FIND_PLAY.horn.kept, FIND_PLAY.beacon.noteGap, 2026-11-27), and the pine that touched a round tree (MAP.treeNudges).
-assert.equal(sourceDigest('depth.mjs'), 1852138132, 'depth.mjs changed'); // COMB-P authorized changes and the part 13 review fixes (2026-11-26); Preview 28: Skoll and Hati chase across the full width at every size again (2026-11-27).
+assert.equal(sourceDigest('data.mjs'), 3271725352, 'data.mjs changed'); // COMB-Q, the part 13b review's marker moves (2026-11-26), LABELS.edgeFade and FRAME_PERF.exploreMin/exploreMax (2026-11-27); Preview 28 notes: THE MARGINS moved, the crossing renamed, treeDrops and the pine off the skal (2026-11-27); COMB-R, then its review: the tankards' foam drip and the notes' phone gap (FIND_PLAY.horn.kept, FIND_PLAY.beacon.noteGap, 2026-11-27), and the pine that touched a round tree (MAP.treeNudges).
+assert.equal(sourceDigest('depth.mjs'), 34338414, 'depth.mjs changed'); // COMB-P authorized changes and the part 13 review fixes (2026-11-26); Preview 28: Skoll and Hati chase across the full width at every size again (2026-11-27).
 console.log('ok: COMB-D camera/labels/tripS digests recorded; depth source remains pinned');
 const levels = [0, 0.1, 0.25, 0.5, 0.75, 1];
 const mapP = BEATS.find(b => b.id === 'map').P, stopP = BEATS.find(b => b.id === STOPS[2].id).P, leg = SEQ.find(q => q.kind === 'leg' && q.i === 2), legP = leg.a + leg.len / 2;
@@ -85,10 +86,10 @@ for (const f of FINDS) {
   assert.ok(tag, `${f.id}: group missing`);
   for (const required of [...(f.id === 'hoards' ? ['role="group"'] : ['role="button"', 'tabindex="0"']), 'aria-label="', 'data-x="', 'data-y="']) assert.ok(tag.includes(required), `${f.id}: ${required}`);
 }
-assert.equal((chart.detail.match(/id="mk-[^"]+"/g) || []).length, 6);
-assert.equal((chart.detail.match(/class="mk(?: legend-symbol)?"/g) || []).length, 7);
+assert.equal((chart.detail.match(/id="mk-[^"]+"/g) || []).length, 7);
+assert.equal((chart.detail.match(/class="mk(?: legend-symbol)?"/g) || []).length, 8);
 assert.ok(/class="mk legend-symbol"[^>]*data-x="140"/.test(chart.detail));
-console.log('ok: eleven accessible find groups, six marker ids and unnumbered legend id');
+console.log('ok: eleven accessible find groups, seven marker ids and unnumbered legend id');
 assert.deepEqual(STOPS.filter((s, i) => wayAllStops()[i]).map(s => s.id), ['lennard']);
 assert.equal(rubbingRunes().map(r => r.letter).join(''), 'FIRSTSKETCHFINALCUT');
 assert.equal(rubbingRunes().length, 19);
@@ -112,7 +113,7 @@ class TestMutationObserver {
   disconnect() { testObservers.delete(this); }
 }
 class TestNode {
-  constructor(tag = 'div') { this.tagName = tag; this.attrs = {}; this.children = []; this.listeners = {}; this.nodeType = 1; this.style = { setProperty(k, v) { this[k] = v; } }; this.dataset = {}; this.hidden = false; this.classList = { add: (...xs) => xs.forEach(x => this.toggleClass(x, true)), remove: (...xs) => xs.forEach(x => this.toggleClass(x, false)), toggle: (x, force) => this.toggleClass(x, force), contains: x => this.className.split(/\s+/).includes(x) }; }
+  constructor(tag = 'div') { this.tagName = tag; this.textContent=''; this.attrs = {}; this.children = []; this.listeners = {}; this.nodeType = 1; this.style = { setProperty(k, v) { this[k] = v; } }; this.dataset = {}; this.hidden = false; this.classList = { add: (...xs) => xs.forEach(x => this.toggleClass(x, true)), remove: (...xs) => xs.forEach(x => this.toggleClass(x, false)), toggle: (x, force) => this.toggleClass(x, force), contains: x => this.className.split(/\s+/).includes(x) }; }
   get id() { return this.attrs.id || ''; } set id(v) { this.attrs.id = v; }
   get className() { return this.attrs.class || ''; } set className(v) { this.attrs.class = v; }
   get firstElementChild() { return this.children[0]; } get firstChild() { return this.children[0]; }
@@ -172,6 +173,10 @@ class TestNode {
   }
   focus() { document.activeElement = this; }
   setPointerCapture() {}
+  // COMB-T fixtures for bounded screen text and the compositor beam surface.
+  getBBox(){const font=+this.getAttribute('font-size')||6.5;return{x:0,y:-font*.8,width:(this.textContent?.length||0)*font*.55,height:font};}
+  cloneNode(deep=false){const n=new TestNode(this.tagName);for(const[k,v]of Object.entries(this.attrs))n.setAttribute(k,v);if(deep)this.children.forEach(c=>n.appendChild(c.cloneNode(true)));return n;}
+  before(node){this.parentElement?.appendChild(node);}
   getAnimations() { return []; }
   animate() { return { cancel() {} }; }
   getBoundingClientRect() { assert.equal(testInFrame, false, 'layout read in frame callback'); const width = this.classList.contains('tl-count') ? 90 : 240, height = this.classList.contains('tl-count') ? 20 : 140; return { left: 30, top: 40, right: 30 + width, bottom: 40 + height, width, height }; }
@@ -189,7 +194,7 @@ let storageReads = 0, storageWrites = 0;
 Object.assign(globalThis, { window: testWindow, document: testDocument, history: { scrollRestoration: 'auto' }, sessionStorage: { getItem() { return null; }, setItem() {} }, localStorage: { getItem() { storageReads++; throw Error('storage blocked'); }, setItem() { storageWrites++; throw Error('storage blocked'); } }, Path2D: class { constructor(path) { assert.ok(typeof path === 'string'); this.path = path; } }, matchMedia: testWindow.matchMedia, innerWidth: 1440, innerHeight: 900, Event: TestEvent, KeyboardEvent: TestEvent });
 async function testPlays() {
 const testStage = new TestNode('div'), testSvg = new TestNode('svg'), testBase = new TestNode('g'), testPop = new TestNode('div'), testSheet = new TestNode('div'), testTl = new TestNode('div');
-bodyNode.appendChild(testStage); testStage.append(testSvg, testPop, testSheet, testTl); testBase.id = 'b-all';
+bodyNode.appendChild(testStage); testStage.append(testSvg, testPop, testSheet, testTl);const testAnim=new TestNode('svg');testAnim.id='map-anim';testStage.appendChild(testAnim); testBase.id = 'b-all';
 testSvg.innerHTML = '<g id="wf-lines"></g><g id="trail-pieces"></g>' + mapDefs() + '<g id="b-sea">' + chart.sea + '</g><g id="b-all">' + chart.detail + '</g><g id="finds">' + chart.finds + '</g>';
 stepsBuild({ stage: testStage, rm: false, resize() {}, joinedTop: () => false });
 tlBuild(testTl, { jump() {}, scrub() {} }, false);
@@ -234,7 +239,7 @@ assert.equal(testSvg.querySelector('.jg-eye').getAttribute('opacity'),'0'); asse
 assert.equal([...FD.found].filter(id=>id==='serpent').length,1);
 key('serpent'); await tick(1); assert.equal(serpentState().stage,'ready'); assert.equal(serpentState().round,1); assert.equal(serpentState().fileName,'final.mp4'); assert.equal(serpentState().openAmount,0);
 for(let i=0;i<5;i++){key('serpent');await tick(4.5);}assert.equal(serpentState().stage,'asleep');
-const eagle=testSvg.querySelector('.yg-eagle'), eagleRest=eagle.getAttribute('transform'); FD.list.well.hear();await tick(1);assert.notEqual(eagle.getAttribute('transform'),eagleRest);assert.equal(FD.list.well.playing,true);await tick(1.8);assert.equal(eagle.getAttribute('transform'),eagleRest);
+const eagle=testSvg.querySelector('.yg-eagle'), eagleRest=eagle.getAttribute('transform'); FD.list.ash.hear();await tick(1);assert.notEqual(eagle.getAttribute('transform'),eagleRest);assert.equal(FD.list.ash.playing,true);await tick(1.8);assert.equal(eagle.getAttribute('transform'),eagleRest);
 console.log('ok: revision names, shipped slot, open loop, next file and one found count; eagle returns to perch');
 for (let i = 0; i < 3; i++) { key('beacon'); await tick(1.9); }
 assert.equal(window.__jm.finds.state('beacon').fire, 3);
@@ -293,17 +298,17 @@ console.log('ok: hammer press/found/sheet; start/end fact; real button/rune focu
 const autoState = tripState(mapP); autoState.trav = [154, 436]; findsFrame(testClock + 0.01, autoState); await Promise.resolve(); assert.ok(!FD.found.has('mist'));
 key('mist'); key('mist'); key('mist'); await tick(2); assert.equal(window.__jm.finds.state('mist').lifted, true); assert.equal(window.__jm.finds.state('mist').stage, 'lifted');
 key('horn'); assert.equal(window.__jm.finds.state('horn').up, 1); key('horn'); await tick(5.5); assert.equal(window.__jm.finds.state('horn').heard.length, 11); assert.equal(window.__jm.finds.state('horn').up, 0);
-for (let i = 0; i < 3; i++) { key('well'); await tick(1.3); assert.equal(window.__jm.finds.state('well').norn, i); assert.equal(FD.popSide, 'below'); assert.ok(FD.popOrigin.every(Number.isFinite),'F8 selected side owns the popup origin'); }
-assert.equal(window.__jm.finds.state('well').watered, 3); assert.equal(window.__jm.finds.state('well').answer, FIND_COPY.wellStop.replace('{name}', STOPS[0].short).replace('{dates}', STOPS[0].dates));
-assert.ok(testSvg.querySelector('#wl-crown').children.every(g => !/NaN/.test(g.getAttribute('transform') || '')));
+// COMB-T, 2026-11-27: six place leaves replace the Norns and star batches.
+for(let i=0;i<6;i++){key('ash');await tick(2.4);assert.equal(window.__jm.finds.state('ash').presses,i+1);assert.ok(testPop.recordedHTML.includes(STOPS[i].label.t));}
+assert.equal(window.__jm.finds.state('ash').kept,true);
 const shipOuter = testSvg.querySelector('.ls-ship'), shipTransform = shipOuter.getAttribute('transform');
 for (let i = 0; i < 3; i++) { key('longship'); await tick(1); }
 assert.equal(window.__jm.finds.state('longship').pennant, true); assert.equal(window.__jm.finds.state('longship').lamp, true); assert.equal(shipOuter.getAttribute('transform'), shipTransform);
 await tick(8); assert.equal(window.__jm.finds.found().length, 11); assert.equal(FD.landed, 11); assert.equal(testTl.querySelector('.tl-count').textContent, 'All 11 found'); assert.equal(FD.all.done, false); stepsRelease(); closePop(); await tick(.3); assert.equal(FD.all.done, true);
-assert.equal(testSvg.querySelector('#finds').children.at(-1).id, 'f-bits'); assert.equal(testSvg.querySelector('#hn-rings').getAttribute('pointer-events'), 'none'); assert.equal(testSvg.querySelector('#wl-crown').getAttribute('pointer-events'), 'none');
+assert.equal(testSvg.querySelector('#finds').children.at(-1).id, 'f-bits'); assert.equal(testSvg.querySelector('#hn-rings').getAttribute('pointer-events'), 'none'); assert.equal(testSvg.querySelector('.ash-effects').getAttribute('pointer-events'), 'none');
 JOURNEY.set(mapP); await tick(0.2); key('horn'); key('horn'); await tick(0.7); assert.deepEqual(stepsFocusNow().view, FIND_PLAY.focus.wide); JOURNEY.back(); await tick(5); assert.equal(JOURNEY.focus, null);
 key('horn'); closePop(); testSvg.querySelector('#f-horn').dispatchEvent(new TestEvent('pointerdown', { pointerId: 1 })); await tick(0.6); assert.equal(window.__jm.finds.state('horn').stage, 'sounding'); testSvg.querySelector('#f-horn').dispatchEvent(new TestEvent('pointerup')); JOURNEY.back(); await tick(5);
-console.log('ok: traveller wipes without finding; three mist thirds; all eleven hear timed horn; hold sounds, wide view and release; three Norns/stars/below tail; ship pennant/lamp; all-eleven landing/count/frame; overlays do not take pointers');
+console.log('ok: traveller wipes without finding; three mist thirds; all eleven hear timed horn; hold sounds, wide view and release; six place leaves/pop; ship pennant/lamp; all-eleven landing/count/frame; overlays do not take pointers');
 
 // C2 uses the actual SVG path points and transforms, with a fake clock and no layout engine.
 const rig = RAVEN_RIG, ravenFind = FINDS.find(f => f.id === 'ravens'), savedRavens = FD.list.ravens, savedHoards = FD.list.hoards;
@@ -482,7 +487,7 @@ rmKey('ravens'); await rmTick(); await rmTick(0.1); assert.equal(window.__jm.fin
 for (let i = 0; i < 6; i++) { rmKey('serpent'); await rmTick(); }
 assert.equal(window.__jm.finds.state('serpent').stage, 'asleep');
 assert.ok(FD.list.serpent.swells.every(s=>!s.live));assert.equal(rmSvg.querySelector('.jg-eye').getAttribute('opacity'),'0');assert.equal(FD.list.serpent.tailOut,1);
-const rmActors=['.yg-eagle','.yg-wings','.yg-rat','.yg-tail'].map(s=>rmSvg.querySelector(s)), rmTransforms=rmActors.map(n=>n.getAttribute('transform'));FD.list.well.hear();await rmTick(3);assert.deepEqual(rmActors.map(n=>n.getAttribute('transform')),rmTransforms);
+const rmActors=['.yg-eagle','.yg-wings','.yg-rat','.yg-tail'].map(s=>rmSvg.querySelector(s)), rmTransforms=rmActors.map(n=>n.getAttribute('transform'));FD.list.ash.hear();await rmTick(3);assert.deepEqual(rmActors.map(n=>n.getAttribute('transform')),rmTransforms);
 console.log('ok: reduced-motion serpent swaps names and ships with no swell; no shy hop; all tree actors stay still on hear');
 for (let i = 0; i < 3; i++) { rmKey('beacon'); await rmTick(); }
 assert.equal(window.__jm.finds.state('beacon').fire, 3);
@@ -491,10 +496,10 @@ assert.ok(FD.bits.every(b => !b.live)); assert.equal(FD.flight, null); assert.eq
 console.log('ok: reduced-motion Part A plays land immediately, memory remains readable for five seconds, no live bits/flights/focus, camera unchanged');
 closeSheet(); rmKey('hammer'); rmSheet.querySelector('.hm-start').dispatchEvent(new TestEvent('click')); const rmHammer = FD.list.hammer; rmHammer.hear(); await rmTick(); assert.equal(rmHammer.game.reduced, true); assert.equal(rmSvg.querySelector('.hm-spark').getAttribute('opacity'), '0'); assert.equal(rmSvg.querySelector('.hm-lift').getAttribute('transform'), 'translate(0 0)'); assert.equal(rmHammer.game.sparks.some(p => p.live), false); closeSheet(); assert.equal(rmHammer.game.paused, true);
 for (let i = 0; i < 3; i++) rmKey('mist'); rmKey('horn'); rmKey('horn');
-for (let i = 0; i < 3; i++) { rmKey('well'); await rmTick(); rmKey('longship'); await rmTick(); }
-assert.equal(window.__jm.finds.state('mist').lifted, true); assert.equal(window.__jm.finds.state('well').watered, 3); assert.equal(window.__jm.finds.state('longship').pennant, true); assert.equal(window.__jm.finds.state('horn').heard.length, 11);
+for (let i = 0; i < 3; i++) { rmKey('ash'); await rmTick(); rmKey('longship'); await rmTick(); }
+assert.equal(window.__jm.finds.state('mist').lifted, true); assert.equal(window.__jm.finds.state('ash').presses, 3); assert.equal(window.__jm.finds.state('longship').pennant, true); assert.equal(window.__jm.finds.state('horn').heard.length, 11);
 assert.equal(FD.landed, 11); assert.equal(FD.allPending, true); closePop(); closeSheet(); await rmTick(); assert.equal(FD.all.done, true); assert.equal(rmTl.querySelector('.tl-count').textContent, 'All 11 found'); assert.ok(FD.bits.every(b => !b.live)); assert.equal(FD.flight, null);
-console.log('ok: reduced-motion hammer plays/pauses without map sparks/tremble/hop; mist, horn, Norns, stars, pennant and all-eleven feedback land immediately with no bits, flights or camera change');
+console.log('ok: reduced-motion hammer plays/pauses without map sparks/tremble/hop; mist, horn, ash leaves, pennant and all-eleven feedback land immediately with no bits, flights or camera change');
 // Count the name's actual layout reads over a complete reveal, idle, knock and explore visit.
 const nameLine = new TestNode('span'); nameLine.appendChild({ data: 'Danial Endrawes' });
 let nameReads = 0, nameReason = 'resize'; const nameCounts = {};

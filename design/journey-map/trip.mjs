@@ -153,6 +153,19 @@ const camMix = (a, b, t) => ({ cx: lerp(a.cx, b.cx, t), cy: lerp(a.cy, b.cy, t),
 const camFinal = c => ({ s: c.s, tx: c.ax - c.cx * c.s, ty: c.ay - c.cy * c.s, ax: c.ax, ay: c.ay });
 
 export const labelScale = (kind, s, phone = VIEW.phone) => { const L = LABELS[kind]; return Math.max(1, (phone ? L.phone : L.floor) / (L.unit * s)); };
+
+// COMB-T, 2026-11-27: reuse local boxes at the label writer's exact scale.
+function tripLegendLayout(k){
+  const E=TRIP_EL,L=E.legendLayout;if(!L||VIEW.h<=440&&VIEW.w>640)return;
+  const inside=8/VIEW.s0,gap=16/VIEW.s0,total=L.boxes.reduce((n,b,i)=>n+L.sym[i].width+inside+b.width*k,0)+3*gap;
+  let x=300-total/2;
+  E.legend.forEach((g,i)=>{const b=L.boxes[i],sg=L.sym[i],symbol=L.symbols[i];
+    tripWrite(symbol.el,'transform','translate('+(x-sg.x)+' '+(864-(sg.y+sg.height/2))+') '+symbol.base,true);
+    g.place=g.p=[x+sg.width+inside-b.x*k,864+L.mid*k];g.box=b;
+    tripWrite(g.el,'transform','translate('+g.p.join(' ')+')',true);
+    x+=sg.width+inside+b.width*k+gap;
+  });
+}
 // The X beat's view. Phones: the X and its label centred across the screen at the trip's scale, as low as lets the map's
 // bottom edge rest on the floor above the timeline (inside the xBand). Portrait tablets keep the desktop scale and the floor.
 export function tripXCamera(frameGroup = true) {
@@ -398,21 +411,17 @@ export function tripMeasureLabels() {
   });
   E.symbols?.forEach(s => { const p = E.legend[+s.el.dataset.i].place; s.el.setAttribute('transform', `translate(${p[0] - 16 / VIEW.s0 - +s.el.dataset.x} ${p[1] - 3 / VIEW.s0 - +s.el.dataset.y}) ${s.base}`); });
   } else if(E.legend?.length&&E.symbols?.length&&typeof E.legend[0].el.querySelector('text')?.getBBox==='function'){
-    const k=labelScale('legend',VIEW.s0),symbols=E.symbols.slice().sort((a,b)=>+a.el.dataset.i-+b.el.dataset.i),texts=E.legend.map(g=>g.el.querySelector('text'));
+    const symbols=E.symbols.slice().sort((a,b)=>+a.el.dataset.i-+b.el.dataset.i),texts=E.legend.map(g=>g.el.querySelector('text'));
     symbols.forEach(s=>s.el.querySelector('.mk-size')?.setAttribute('transform','scale(1)'));
-    texts.forEach(t=>{t.setAttribute('font-size',LABELS.legend.unit);t.parentElement.setAttribute('transform','scale('+k+')');});
-    const measure=()=>texts.map(t=>t.getBBox()),sym=symbols.map(s=>{const b=s.el.getBBox(),shapes=s.el.matches('path,circle')?[s.el]:[...s.el.querySelectorAll('path,circle')];let pad=0;for(const e of shapes){const st=getComputedStyle(e);if(st.stroke!=='none')pad=Math.max(pad,parseFloat(st.strokeWidth)/2*(st.vectorEffect==='non-scaling-stroke'?1/VIEW.s0:1));}return{b,pad:0,width:b.width};});
-    let boxes=measure(),gap=16,inside=8,wordPx=9,total=()=>boxes.reduce((v,b,i)=>v+b.width*k*VIEW.s0+sym[i].width*VIEW.s0+inside,0)+3*gap,available=506*VIEW.s0-1.1-14;
-    if(total()>available){gap=inside=4;}
-    if(total()>available&&VIEW.phone){wordPx=8.5;texts.forEach(t=>t.setAttribute('font-size',LABELS.legend.unit*8.5/9));boxes=measure();}
-    const inkContext=document.createElement('canvas').getContext('2d');
-    let x=300-total()/(2*VIEW.s0);
-    E.legend.forEach((g,i)=>{const t=texts[i],b=boxes[i],symbol=symbols[i],sg=sym[i],font=getComputedStyle(t);inkContext.font=font.fontStyle+' '+font.fontWeight+' '+(parseFloat(font.fontSize)*k*VIEW.s0)+'px '+font.fontFamily;const ink=inkContext.measureText('x');
-      const centre=x+sg.width/2,baseline=864+(ink.actualBoundingBoxAscent-ink.actualBoundingBoxDescent)/(2*VIEW.s0);
-      symbol.el.setAttribute('transform','translate('+(centre-+symbol.el.dataset.x)+' '+(864-+symbol.el.dataset.y)+') '+symbol.base);
-      g.place=[x+sg.width+inside/VIEW.s0-b.x*k,baseline];g.el.setAttribute('transform','translate('+g.place.join(' ')+')');g.p=g.place;g.box=b;g.wordPx=wordPx;
-      x+=sg.width+(inside+b.width*k*VIEW.s0+gap)/VIEW.s0;
-    });
+    texts.forEach(t=>{t.setAttribute('font-size',LABELS.legend.unit);t.setAttribute('text-rendering','geometricPrecision');});
+    E.legendLayout={symbols,sym:symbols.map(s=>{const b=s.el.getBBox(),m=/translate\(([-\d.]+)[ ,]+([-\d.]+)\)/.exec(s.base);return{x:b.x+(+m?.[1]||0),y:b.y+(+m?.[2]||0),width:b.width,height:b.height};}),boxes:texts.map(t=>t.getBBox())};
+    // Retain the overview's existing 8.5 px narrow-phone fallback, with T2's fixed gaps.
+    const L=E.legendLayout,k=labelScale('legend',VIEW.s0),width=L.boxes.reduce((n,b,i)=>n+L.sym[i].width+b.width*k+8/VIEW.s0,0)+48/VIEW.s0;
+    if(VIEW.phone&&width>506-15.1/VIEW.s0){const ratio=8.5/9;texts.forEach(t=>t.setAttribute('font-size',LABELS.legend.unit*ratio));L.boxes=L.boxes.map(b=>({x:b.x*ratio,y:b.y*ratio,width:b.width*ratio,height:b.height*ratio}));}
+    const font=getComputedStyle(texts[0]),ctx=document.createElement('canvas').getContext('2d');
+    ctx.font=font.fontStyle+' '+font.fontWeight+' '+font.fontSize+' '+font.fontFamily;
+    const ink=ctx.measureText('x');E.legendLayout.mid=(ink.actualBoundingBoxAscent-ink.actualBoundingBoxDescent)/2;
+    tripLegendLayout(labelScale('legend',VIEW.s0));
   }
   E.t2?.forEach(t => {
     const words = t.el.textContent;
@@ -500,12 +509,12 @@ function tripMeasureExploreLabels() {
   const bounds=[Math.min(f[0],-end.tx/end.s),Math.min(f[1],-end.ty/end.s),Math.max(f[2],(VIEW.w-end.tx)/end.s),Math.max(f[3],(VIEW.h-end.ty)/end.s)];
   const fit=Math.min((VIEW.w-2*m)/(bounds[2]-bounds[0]),(VIEW.h-(VIEW.phone?STEPS.nav.bar:STEPS.nav.h+STEPS.nav.gap)-2*m)/(bounds[3]-bounds[1]));
   const top=Math.max(fit,Math.max(EXPLORE.most,CAMERA.holdZoom)*VIEW.sT),grid=new Map(),cell=12;
-  const add=(x,y,half=0,fixed=false,offset=null)=>{if(x<10||x>590||y<120||y>820)return;const key=Math.floor(x/cell)+','+Math.floor(y/cell);if(!grid.has(key))grid.set(key,[]);grid.get(key).push([x,y,half,fixed,offset]);};
+  const add=(x,y,half=0,fixed=false,offset=null,trail=false)=>{if(x<10||x>590||y<120||y>820)return;const key=Math.floor(x/cell)+','+Math.floor(y/cell);if(!grid.has(key))grid.set(key,[]);grid.get(key).push([x,y,half,fixed,offset,trail]);};
   const elements=[...(E.base?E.base.querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-sea path,#b-sea circle'):[]),...(document.getElementById('map-stack') || E.svg).querySelectorAll('#b-detail path,#b-detail circle,#b-detail ellipse,#b-detail rect,#b-detail line,#b-rest path,#b-rest circle,#b-rest ellipse,#b-rest rect,#b-rest line,#b-sea path,#b-sea circle,#finds path,#finds circle,#finds ellipse,#finds rect')];
   function* sample(){
     for(const el of elements){
       yield;
-      if(el.closest('.label-anchor,.map-tier1,.map-tier2,.lg,.legend-symbol,.mk,defs,.bc-beam,.bc-glow,.hd-chest,.hd-stars,.hd-glow,.jg-swell,.wl-rip,.rv-gifts')||el.matches('.hit,.touch-hit,.find-focus-ring')||el.getAttribute('opacity')==='0')continue;
+      if(el.closest('.label-anchor,.map-tier1,.map-tier2,.lg,.legend-symbol,.mk,defs,.bc-beam,.bc-glow,#f-hoard-hmc1,.hd-chest,.hd-stars,.hd-glow,.jg-swell,.wl-rip,.rv-gifts')||el.matches('.hit,.touch-hit,.find-focus-ring')||el.getAttribute('opacity')==='0')continue;
       // Ignore hidden parts, while still warming the chart behind its global
       // hand-off fade. Those layer fades are not the drawing's occupied ink.
       let hidden=false;
@@ -530,15 +539,15 @@ function tripMeasureExploreLabels() {
     for(const P of [COAST_A,COAST_B,TRAIL])for(let j=1;j<P.length;j++){
       const a=P[j-1],b=P[j],dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy),n=[-dy/L,dx/L];
       if(P!==TRAIL&&onLand([(a[0]+b[0])/2+n[0],(a[1]+b[1])/2+n[1]])){n[0]*=-1;n[1]*=-1;}
-      for(let u=0;u<=L;u+=.6){const x=lerp(a[0],b[0],u/L),y=lerp(a[1],b[1],u/L);add(x,y,P===TRAIL?1.4:.6,true);if(P!==TRAIL)add(x,y,3*VIEW.s0,true,n.map(v=>v*3*VIEW.s0));yield;}
+      for(let u=0;u<=L;u+=.6){const x=lerp(a[0],b[0],u/L),y=lerp(a[1],b[1],u/L);add(x,y,P===TRAIL?1.4:.6,true,null,P===TRAIL);if(P!==TRAIL)add(x,y,3*VIEW.s0,true,n.map(v=>v*3*VIEW.s0));yield;}
     }
   }
   const gap=(a,b)=>Math.hypot(Math.max(a[0]-b[2],b[0]-a[2],0),Math.max(a[1]-b[3],b[1]-a[3],0)),placed=[];
   const box=(r,local,s)=>{const k=labelScale(r.row.kind,s);return[local[0]*k+r.explore[0],local[1]*k+r.explore[1],local[2]*k+r.explore[0],local[3]*k+r.explore[1]];};
-  const clear=(q,s)=>{
+  const clear=(q,s,trailPad=2.4)=>{
     if(q[0]<24||q[2]>576||q[1]<130||q[3]>816){return false;}
-    const pad=2.4/s,reach=pad+4;
-    for(let x=Math.floor((q[0]-reach)/cell);x<=Math.floor((q[2]+reach)/cell);x++)for(let y=Math.floor((q[1]-reach)/cell);y<=Math.floor((q[3]+reach)/cell);y++)for(const p of grid.get(x+','+y)||[])if(gap(q,[p[0]+(p[4]?.[0]||0)/s,p[1]+(p[4]?.[1]||0)/s,p[0]+(p[4]?.[0]||0)/s,p[1]+(p[4]?.[1]||0)/s])<pad+(p[3]?p[2]/s:p[2])){return false;}
+    const pad=2.4/s,reach=Math.max(pad,trailPad/s)+4;
+    for(let x=Math.floor((q[0]-reach)/cell);x<=Math.floor((q[2]+reach)/cell);x++)for(let y=Math.floor((q[1]-reach)/cell);y<=Math.floor((q[3]+reach)/cell);y++)for(const p of grid.get(x+','+y)||[])if(gap(q,[p[0]+(p[4]?.[0]||0)/s,p[1]+(p[4]?.[1]||0)/s,p[0]+(p[4]?.[0]||0)/s,p[1]+(p[4]?.[1]||0)/s])<(p[5]?trailPad/s:pad)+(p[3]?p[2]/s:p[2])){return false;}
     if(placed.some(p=>(!p.r.row.stopSub||s>=p.r.exploreFrom)&&gap(q,box(p.r,p.at,s))<pad)){return false;}
     if(FINDS.some(f=>f.mark&&gap(q,[...f.mark,...f.mark])<(COMB.markerPx/2+2.4)/s))return false;
     return !STOPS.some(st=>{const p=MAP.waypoints[st.w],size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*s)),rad=size*(MARK.radius+MARK.rim/2)/MARK.box/s,cy=p[1]-(size/2+MARK.stand)*MARK.lift/s;return gap(q,[p[0],cy,p[0],cy])<rad+pad;});
@@ -550,7 +559,7 @@ function tripMeasureExploreLabels() {
   for(const r of E.rows){
     const p=r.stop>=0?MAP.waypoints[STOPS[r.stop].w]:MAP.x,b=r.box,k=labelScale(r.row.kind,fit),px=1/(fit*k),side=COMB.exploreSides[r.row.stop],size=Math.max(MARK.min,Math.min(MARK.max,MARK.k*fit));
     const cy=-(size/2+MARK.stand)*MARK.lift*px,rad=size*(MARK.radius+MARK.rim/2)/MARK.box*px;
-    const x=Math.max((24-p[0])/k,Math.min((576-p[0])/k-b.width,side==='left'?-b.width-18*px:side==='below'?-b.width/2:18*px)),y=(side==='below'?cy+rad+5*px:cy-b.height/2)+(r.row.stopSub?22*px:0);
+    const x=Math.max((24-p[0])/k,Math.min((576-p[0])/k-b.width,side==='below-left'?-b.width-(rad+7*px)/Math.SQRT2:side==='left'?-b.width-18*px:side==='below'?-b.width/2:18*px)),y=(side==='below-left'?cy+(rad+7*px)/Math.SQRT2:side==='below'?cy+rad+5*px:cy-b.height/2)+(r.row.stopSub?22*px:0);
     const at=[x,y,x+b.width,y+b.height];r.explore=p.slice();r.exploreLocal=at;r.exploreBox={x,y,width:b.width,height:b.height};r.exploreFrom=r.row.stopSub?Infinity:0;r.exploreMarkup=markup(r,at);
   }
   function* place(r){
@@ -565,7 +574,8 @@ function tripMeasureExploreLabels() {
         yield;
         const q=[x,y,x+b.width,y+b.height],distance=gap(q,[0,cy,0,cy])-rad;
         if(distance<3*px||distance>b.height+4*px)continue;
-        const side=preference==='left'?q[2]<=0:preference==='below'?q[1]>=cy:q[0]>=0;
+        const side=preference==='below-left'?q[2]<0&&q[1]>cy:preference==='left'?q[2]<=0:preference==='below'?q[1]>=cy:q[0]>=0;
+        if(preference==='below-left'&&!side)continue;
         candidates.push(Object.assign(q,{score:(distance>b.height?100000:0)+(side?0:10000)+Math.abs(distance-7*px)*8+Math.abs(y+b.height/2-cy)}));
       }
       candidates.sort((a,b)=>a.score-b.score);
@@ -583,17 +593,17 @@ function tripMeasureExploreLabels() {
     if(sub){
       // Each candidate is tested once from close to far, not once per suffix.
       let best=scales.length;
-      for(const q of candidates){let i=scales.length-1;for(;i>=0;i--){const ok=clear(box(r,q,scales[i]),scales[i]);yield;if(!ok)break;}if(i+1<best){best=i+1;at=q;from=scales[best];}if(best===0)break;}
+      for(const q of candidates){let i=scales.length-1;for(;i>=0;i--){const ok=clear(box(r,q,scales[i]),scales[i],r.row.stop==='mohawk'?7.15:2.4);yield;if(!ok)break;}if(i+1<best){best=i+1;at=q;from=scales[best];}if(best===0)break;}
     }else{
-      for(const q of candidates){let ok=true;for(const s of scales){ok=clear(box(r,q,s),s);yield;if(!ok)break;}if(ok){at=q;break;}}
+      for(const q of candidates){let ok=true;for(const s of scales){ok=clear(box(r,q,s),s,r.row.stop==='mohawk'?7.15:2.4);yield;if(!ok)break;}if(ok){at=q;break;}}
       // Refine the first promising coarse neighbourhoods at half-pixel steps.
       if(!at)for(const q of candidates.slice(0,48)){
-        for(let dy=-1.5;dy<=1.5&&!at;dy+=.5)for(let dx=-1.5;dx<=1.5;dx+=.5){const v=q.map((n,i)=>n+(i%2?dy:dx)*px);let ok=inside(box(r,v,fit));for(const s of scales){if(!ok)break;ok=near(box(r,v,s),s)&&clear(box(r,v,s),s);yield;}if(ok){at=v;break;}}
+        for(let dy=-1.5;dy<=1.5&&!at;dy+=.5)for(let dx=-1.5;dx<=1.5;dx+=.5){const v=q.map((n,i)=>n+(i%2?dy:dx)*px);let ok=inside(box(r,v,fit));for(const s of scales){if(!ok)break;ok=near(box(r,v,s),s)&&clear(box(r,v,s),s,r.row.stop==='mohawk'?7.15:2.4);yield;}if(ok){at=v;break;}}
         if(at)break;
       }
     }
     const allClear=!!at;
-    at ||= candidates.find(p=>clear(box(r,p,fit),fit))||candidates.find(p=>inside(box(r,p,fit)))||candidates[0]||[b.x,b.y,b.x+b.width,b.y+b.height];
+    at ||= candidates.find(p=>clear(box(r,p,fit),fit,r.row.stop==='mohawk'?7.15:2.4))||candidates.find(p=>inside(box(r,p,fit)))||candidates[0]||[b.x,b.y,b.x+b.width,b.y+b.height];
     r.exploreLocal=at;r.exploreBox={x:at[0],y:at[1],width:b.width,height:b.height};r.exploreFrom=sub?(allClear?from:Infinity):0;
     r.exploreMarkup=markup(r,at);r.exploreClear=allClear;
     if(!sub||Number.isFinite(r.exploreFrom))placed.push({r,at});
@@ -784,7 +794,7 @@ export function tripApply(st, focus = null) {
     const eased = free && r.settleLeft && remaining > .0001 ? from * (label.target / from) ** Math.min(settle, .09 / Math.max(.09, Math.abs(Math.log(label.target / from)))) : label.target;
     const trueSize = labelScale(label.kind,c.s);
     const k = free ? Math.max(trueSize * FRAME_PERF.scaleMin, Math.min(trueSize * FRAME_PERF.scaleMax, eased)) : eased;
-    if (label.k !== k) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; }
+    if (label.k !== k) { label.el.setAttribute('transform', 'scale(' + k + ')'); label.k = k; if(label.kind==='legend')tripLegendLayout(k); }
   });
   E.markers?.forEach(el => { tripWrite(el, 'transform', el.closest?.('.legend-symbol')&&!(VIEW.h<=440&&VIEW.w>640)?'scale(1)':`scale(${COMB.markerPx / (12.4 * (el.parentElement?.parentElement?.dataset.screen ? 1 : paint.s))})`, true); const mk = el.parentElement?.parentElement, f = FINDS.find(f=>mk?.id === 'mk-'+f.id); if (f) { const half = COMB.markerPx / (2*c.s), cover = tripCardCover(st,[f.mark[0]-half,f.mark[1]-half,f.mark[0]+half,f.mark[1]+half]); tripWrite(mk,'opacity',(1-cover)*(1-(st.focusK||0))); tripWrite(mk,'visibility',cover>=.995||st.focusK>=1?'hidden':''); } });
   E.ticks?.forEach(el => tripWrite(el, 'stroke-width', Math.min(+el.dataset.weight * paint.s, +el.dataset.weight * VIEW.s0), true));

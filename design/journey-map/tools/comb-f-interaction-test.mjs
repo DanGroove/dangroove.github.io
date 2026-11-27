@@ -1,3 +1,4 @@
+// COMB-T, 2026-11-27: the ash replaces the well find and is the tree zoom anchor.
 import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
 import {combDClock,combDAdvance} from './comb-d-clock-test.mjs';
 import {readFileSync,writeFileSync} from 'node:fs';
@@ -8,7 +9,7 @@ try{
  await combDClock(b);
  for(const[w,h]of[[412,730],[360,640],[1440,900]]){
   await b.size(w,h);await b.send('Page.navigate',{url:'data:text/html;base64,'+Buffer.from(html).toString('base64')});await combBWait(600);await tick(2000);
-  for(const id of ['hoard-laurier','hoard-hmc1','hoard-hmc2','hoard-interkom','hoard-lennard','horn','serpent','ravens','well','longship']){
+  for(const id of ['hoard-laurier','hoard-hmc1','hoard-hmc2','hoard-interkom','hoard-lennard','horn','serpent','ravens','ash','longship']){
    await b.key('Escape');await tick(1000);await b.evaluate('__jm.go("map",{instant:true})');
    const exists=await b.evaluate('!!document.getElementById("f-'+id+'")');if(!exists){console.log('no popup owner '+id);continue;}
    await b.evaluate('__f.stepsFocus('+JSON.stringify(id)+',__f.findView('+JSON.stringify(id)+'))');await tick(1500);

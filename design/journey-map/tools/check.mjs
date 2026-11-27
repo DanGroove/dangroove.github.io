@@ -47,7 +47,7 @@ ok(!/#0F151E|#1A1A1A|#000000/i.test(JSON.stringify(PALETTES.lennard)), 'lennard 
 ok(FINDS.length === 11, 'there must be eleven finds');
 ok(new Set(FINDS.map(f => f.id)).size === 11, 'find ids must be unique');
 FINDS.forEach(f => ok(typeof f.label === 'string' && f.label.trim().length > 8, `find ${f.id}: no spoken label`));
-ok(FINDS.filter(f => f.n).map(f => f.n).join() === '1,2,3,4,5,6', 'six main finds numbered 1 to 6');
+ok(FINDS.filter(f => f.n).map(f => f.n).join() === '1,2,3,4,5,6,7', 'COMB-T, 2026-11-27: seven numbered finds including ash');
 ok(FIND_COPY.hoards.length === 5 && FIND_COPY.hoards.every(h => h.title && h.label), 'five hoards with titles and labels');
 ok(FIND_COPY.serpentLines.length === 3 && FIND_COPY.beaconNotes.length === 3, 'three serpent lines and three beacon notes');
 
@@ -87,11 +87,11 @@ const serpentFind = FINDS.find(f => f.id === 'serpent'), sb = FIND_PLAY.serpent.
 ok(FINDS.filter(f => f.view).length === 9, 'nine finds have fixed camera views');
 FINDS.forEach(f => ok(['hoards', 'longship'].includes(f.id) ? !f.view : f.view?.length === 3 && f.view.every(Number.isFinite) && f.view[2] > 0, `${f.id}: camera view`));
 ok(FINDS.filter(f=>f.viewCap!==undefined).length===1&&FINDS.find(f=>f.id==='horn').viewCap===12,'D4 only the horn owns an extra view cap');
-['mist', 'horn', 'well', 'ship', 'all'].forEach(k => ok(FIND_PLAY[k] && typeof FIND_PLAY[k] === 'object', `Part B needs FIND_PLAY.${k}`));
+['mist', 'horn', 'well', 'ash', 'ship', 'all'].forEach(k => ok(FIND_PLAY[k] && typeof FIND_PLAY[k] === 'object', `Part B needs FIND_PLAY.${k}`));
 ok(FIND_COPY.hammerFact.t && FIND_COPY.horn[1].t && FIND_COPY.longship.t, 'three Part B author lines have text');
-ok(FIND_COPY.norns.length === 3 && FIND_COPY.norns.every(row => row.length === 2 && row.every(t => typeof t === 'string' && t.trim())), 'three named Norns with meanings');
+ok(!FIND_COPY.norns && FIND_COPY.hints.ash && !FIND_COPY.hints.well, 'COMB-T, 2026-11-27: ash replaces the retired well answers');
 ok(FIND_PLAY.mist.strokes.length === 5 && FIND_PLAY.mist.fill.endsWith('Z') && FIND_PLAY.mist.cairns.length === 3 && FIND_PLAY.mist.grid.join() === '8,4', 'B2: five ink mist layers, closed faint fill, three cairns and unchanged 8x4 wipe coverage grid');
-ok(FIND_PLAY.well.stars.length === 3 && FIND_PLAY.well.stars.every(row => row.length === 5 && row.every(p => p.length === 2 && p.every(Number.isFinite))), 'fifteen crown stars in three batches');
+ok(FIND_PLAY.ash.leaves.length===6 && FIND_PLAY.ash.leaves.every(l=>l.at.length===2 && l.from.length===2 && Number.isFinite(l.angle)), 'COMB-T, 2026-11-27: six place leaves');
 ok(FIND_PLAY.ship.shields.length === STOPS.length, 'one longship shield per stop');
 checkDepthNumbers(HAMMER, 'HAMMER');
 ok(FINDS.some(f => f.id === 'hammer' && f.n === 0 && Math.hypot(f.x-112,f.y-222)<=10 && f.view.join() === '108,224,34'), 'F4 hammer place/view beside Laurier');
@@ -130,9 +130,7 @@ ok(!/yg-nid|yg-canopy|yg-edge|yg-hatch/.test(c1map.detail),'B1 only the old ash:
 GROVE.forEach((tree, i) => ok(yggClear(tree, YGG.clearance + YGG.groveReach), 'grove ' + i + ': crown/trunk/root clearance'));
 const labelBoxPoints = []; for (let x = YGG.labelBox[0]; x <= YGG.labelBox[2]; x++) for (let y = YGG.labelBox[1]; y <= YGG.labelBox[3]; y++) labelBoxPoints.push([x,y]);
 labelBoxPoints.forEach(p => { ok(!insidePoly(p, YGG_CROWN) && outlineGap(p, YGG_CROWN) >= YGG.labelGap, 'Yggdrasil label crown clearance'); ok(YGG_ROOTS.every(P => outlineGap(p, P, false) >= YGG.labelGap), 'Yggdrasil label root clearance'); ok(Math.abs(p[0] - MAP.ygg[0]) >= YGG.labelGap + YGG.roots[0][1], 'Yggdrasil label trunk/Ratatoskr clearance'); const h = FIND_COPY.hoards.find(h => h.id === 'hoard-hmc2'); ok(Math.hypot(p[0] - h.x, p[1] - h.y) >= YGG.labelGap + FIND_PLAY.hoard.scale * 27, 'Yggdrasil label scratch clearance'); });
-const allStars = FIND_PLAY.well.stars.flatMap((row, batch) => row.map(p => ({ batch, p: p.map((v,i) => v + MAP.ygg[i]) })));
-allStars.forEach((star, i) => { ok(insidePoly(star.p,YGG_CROWN) && outlineGap(star.p,YGG_CROWN) >= YGG.starInset, 'well star crown inset'); ok(Math.hypot(...star.p.map((v,k) => v - MAP.ygg[k] - YGG.eagleAt[k])) >= YGG.eagleClear, 'well star eagle clearance'); allStars.slice(0,i).forEach(other => ok(Math.hypot(...star.p.map((v,k) => v - other.p[k])) >= (star.batch === other.batch ? YGG.starSame : YGG.starOther), 'well star spacing')); });
-allStars.forEach(star=>ok(crownMasses.some(P=>insidePoly(star.p,P)),'well star inside actual ash foliage: '+star.p));
+// COMB-T, 2026-11-27: crown star batches are retired; leaf poses are verified by comb-t-ash-test.
 // Part 13b (2026-11-26): the carved serpent's approved ribbon is wider (w 9, was 6.4). Where he surfaces, 6 units of water stay between his body and the coast; the faint dashed edges of the submerged stretches keep 5.
 const jormSurfaced=u=>MAP.jorm.surf.some(([a,b])=>u>=a&&u<=b);
 JORM.S.forEach((p, i) => { ok(p[0] >= 22.5 && p[0] <= 577.5 && p[1] >= 22.5 && p[1] <= 877.5, 'ring sample outside inner frame'); [COAST_A, COAST_B].forEach(coast => ok(outlineGap(p,coast) >= MAP.jorm.w / 2 + (jormSurfaced(JORM.cum[i] / JORM.L) ? 6 : 5), 'ring coast clearance')); });
@@ -257,7 +255,7 @@ ok(!/#[0-9A-Fa-f]{3,6}\b(?![\w-]*\))/.test(readFileSync(join(ROOT, 'map.css'), '
 // Compressed delivery budgets include all top-level runtime modules and CSS, never hero-copy. The combined budget was
 // raised from 160 to 185 KB on 2026-11-24, after part 4's 32 fixes took it to 171 KB; the packed pages' budgets below,
 // which are what a visitor downloads, are unchanged.
-const RUNTIME_KB = 218.5; // COMB-S, 2026-11-27: runtime 218.28 KB and standalone 334.53 KB; both budgets rise by 1.9 KB for this part. // COMB-R, 2026-11-27: requested layers, visits, tankards, pyre, neck and legend add 8.41 KB; its review's foam drips and phone note gap 0.37 KB more.
+const RUNTIME_KB = 221.1; // COMB-T final, 2026-11-27: 220.91 KB runtime, 337.32 KB map, 583.96 KB joined, including the moved chest's bounded hit. // COMB-T, 2026-11-27: 220.41 KB runtime, 336.86 KB standalone and 583.50 KB repacked joined; allow the requested effects and S joined refresh. // COMB-S, 2026-11-27: runtime 218.28 KB and standalone 334.53 KB; both budgets rise by 1.9 KB for this part. // COMB-R, 2026-11-27: requested layers, visits, tankards, pyre, neck and legend add 8.41 KB; its review's foam drips and phone note gap 0.37 KB more.
 // // 2026-11-26: part 13 review fixes (+0.6 KB) and COMB-Q, the old ash and revision loop (+3.4 KB); 2026-11-27: edge fades on the clock, still timeline and Next fill (+0.8 KB); the pinch recheck's fixes (finds quiet while explore moves, the explore hold band, word and scrim fades on the clock, the hint and count pill fades: +1.1 KB): 204.06 KB, read with LF on every machine; the label warm-up's own path walk (pathWalk, +1.3 KB) and the sea dots drawn one path each (+0.2 KB): 206.54 KB. L5, the names, trail and finds in svgs of their own over svg#map (+1 KB): 207.51 KB. Preview 28 notes (wolves full width, the traveller clears only its path, margins and crossing labels, three art removals: +0.2 KB): 207.72 KB.
 const gzipKB = content => gzipSync(content).length / 1024;
 // Line endings are evened out (2026-11-27) so a checkout with CRLF on the PC reads the same sizes as the cloud.
@@ -276,10 +274,10 @@ console.log(`gzip: hammer ${hammerKB.toFixed(2)} KB / 30; all map modules + CSS 
 // 569.37 KB. Both rose again with L5 (the names, trail and finds in svgs of their own over svg#map): 323.87 and 570.39 KB.
 // 2026-11-27: the joined page repacked with COMB-R in the cloud (Codex left it, since pack-joined also writes joined.html): 578.89 KB.
 // 2026-11-27, COMB-R review: the tankards' foam drips and the phone note gap add about 0.2 KB to each page.
-for (const [file, budget] of [['dist/journey-map.html', 334.8], ['dist/journey-joined.html', 579.4]]) {
+for (const [file, budget] of [['dist/journey-map.html', 337.5], ['dist/journey-joined.html', 584.1]]) {
   if (!existsSync(join(ROOT, file))) continue;
   const kb = gzipKB(readLF(file)); ok(kb <= budget, `${file}: exceeds ${budget} KB gzip`); console.log(`gzip: ${file} ${kb.toFixed(2)} KB / ${budget}`);
 }
 
 if (errs.length) { console.error('FAIL\n' + errs.map(e => ' - ' + e).join('\n')); process.exit(1); }
-console.log(`ok: 6 stops, ${Object.keys(PALETTES).length} palettes (Lennard band verified), 11 finds, acts total ${TOTAL_P.toFixed(1)} vh, ${mods.length} modules with unique top-level names; STEPS numbers finite/positive; 10 strictly rising beats; X camera continuous at desktop/phone sizes; DEPTH/NOVA/STARS numbers finite; ${DEPTH.clouds.list.length} cloud rows valid; rings.colour in C; FIND_PLAY finite, slots have text, five known hoard kinds, one bounded world serpent/three leaves, nine fixed views; Part B tables, Norns, fog, crown stars, shields, hammer rows and approved runes valid`);
+console.log(`ok: 6 stops, ${Object.keys(PALETTES).length} palettes (Lennard band verified), 11 finds, acts total ${TOTAL_P.toFixed(1)} vh, ${mods.length} modules with unique top-level names; STEPS numbers finite/positive; 10 strictly rising beats; X camera continuous at desktop/phone sizes; DEPTH/NOVA/STARS numbers finite; ${DEPTH.clouds.list.length} cloud rows valid; rings.colour in C; FIND_PLAY finite, slots have text, five known hoard kinds, one bounded world serpent/three leaves, nine fixed views; Part B tables, ash leaves, fog, shields, hammer rows and approved runes valid`);

@@ -1,3 +1,4 @@
+// COMB-T, 2026-11-27: the tree is the reachable find; the well remains scenery.
 import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
 import {appendFileSync,readFileSync} from 'node:fs';
 import {FINDS,FIND_COPY,FIND_PLAY} from '../data.mjs';
@@ -66,8 +67,8 @@ try{
   }
   // All six phone cards retain their floor without an inner scroll.
   if(w<=640)for(const id of ['laurier','hmc1','mohawk','hmc2','lennard']){await b.evaluate(`window.__jm.go('${id}',{instant:true})`);await combBWait(1500);const r=await b.evaluate('('+measure.toString()+')()');if(r.phoneCard&&(Math.abs(r.phoneCard.gap)>.6||r.phoneCard.scroll))failures.push(w+' '+id+' card '+JSON.stringify(r.phoneCard));}
-  const closeViews=FINDS.filter(f=>['horn','hammer','well','mist','beacon','serpent'].includes(f.id)).map(f=>[f.id,f.view]).concat(FIND_COPY.hoards.map(h=>['hoards',[h.x+FIND_PLAY.focus.chest[0],h.y+FIND_PLAY.focus.chest[1],FIND_PLAY.focus.chest[2]],h.id]));
-  if(process.argv.includes('--final-small'))closeViews.splice(0,closeViews.length,...closeViews.filter(([id,view,tag])=>['hammer','well','beacon','serpent'].includes(id)||tag==='hoard-hmc2'));
+  const closeViews=FINDS.filter(f=>['horn','hammer','ash','mist','beacon','serpent'].includes(f.id)).map(f=>[f.id,f.view]).concat(FIND_COPY.hoards.map(h=>['hoards',[h.x+FIND_PLAY.focus.chest[0],h.y+FIND_PLAY.focus.chest[1],FIND_PLAY.focus.chest[2]],h.id]));
+  if(process.argv.includes('--final-small'))closeViews.splice(0,closeViews.length,...closeViews.filter(([id,view,tag])=>['hammer','ash','beacon','serpent'].includes(id)||tag==='hoard-hmc2'));
   for(const[id,view,tag=id]of closeViews){
    await b.key('Escape');await b.evaluate('window.__jm.go("map",{instant:true})');await combBWait(600);await b.evaluate(`window.__dFocus(${JSON.stringify(id)},${JSON.stringify(view)})`);await combBWait(900);
    const r=await b.evaluate('('+measure.toString()+')()');log(w+'x'+h+' closest '+tag+': '+JSON.stringify(r.result));

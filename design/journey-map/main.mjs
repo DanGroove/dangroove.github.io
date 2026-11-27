@@ -107,6 +107,9 @@ findsBuild(SVG, $('pop'), $('sheet'), { style: { set opacity(v) { $('b-all').sty
 const mainMarkerLayer = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); mainMarkerLayer.classList.add('marker-layer');
 $('stage').querySelector('.ov').appendChild(mainMarkerLayer);
 const mainMarkers = FINDS.filter(f => f.n).map(f => { const el = $('mk-' + f.id), place = document.createElementNS('http://www.w3.org/2000/svg', 'g'); el.dataset.screen = 'true'; place.appendChild(el); mainMarkerLayer.appendChild(place); return { el, place, at: f.mark }; });
+// COMB-T: the moved HMC chest's ink remains reachable where numbered marker padding overlaps it.
+const mainHmcHit=document.createElement('div');mainHmcHit.className='hmc1-screen-hit find hit';mainHmcHit.dataset.findProxy='hoard-hmc1';mainHmcHit.setAttribute('aria-hidden','true');$('stage').querySelector('.ov').appendChild(mainHmcHit);
+for(const type of ['pointerdown','pointermove','pointerup','pointercancel','click'])mainHmcHit.addEventListener(type,e=>{e.stopPropagation();const target=$('f-hoard-hmc1');if(type==='click')target.dispatchEvent(new MouseEvent(type,{bubbles:true,detail:e.detail,clientX:e.clientX,clientY:e.clientY}));else target.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerId:e.pointerId,pointerType:e.pointerType,clientX:e.clientX,clientY:e.clientY,button:e.button,buttons:e.buttons}));});
 // L5's moves follow the builds above, which look inside svg#map. The names keep their order (tier 2, tier 1, the subs).
 {
   const NS = 'http://www.w3.org/2000/svg', rest = document.createElementNS(NS, 'g'), detail = document.createElementNS(NS, 'g');
@@ -128,14 +131,14 @@ const mainMarkers = FINDS.filter(f => f.n).map(f => { const el = $('mk-' + f.id)
     parent(source.parentElement).appendChild(clone); copies.set(source, clone); FD.animCopies.push({ source, clone }); return clone;
   };
   const rock = document.querySelector('.ls-rock'); rock?.parentElement.append(...rock.querySelectorAll('.hit'));
-  const ink = '.bc-glow,.bc-light,.bc-flame,#f-beacon > g > path,#f-beacon > g > rect:not(.hit),.ls-rock,.hd-glint,#f-bits,.yg-rat,.yg-eagle,.rv-a,.rv-b,.rv-gifts,.jg-head,.jg-file,.jf-name,.rs-trace,.wl-rip,.wl-pebble,#wl-crown,#hn-rings,#bc-notes,.hm-lift,.hm-spark,.wf-needle,.wf-runes,.wf-arm,.wf-all,.wf-hub';
+  const ink = '.bc-glow,.bc-light,.bc-flame,#f-beacon > g > path,#f-beacon > g > rect:not(.hit),.ls-rock,.hd-glint,#f-bits,.yg-rat,.yg-eagle,.rv-a,.rv-b,.rv-gifts,.jg-head,.jg-file,.jf-name,.rs-trace,.wl-rip,.ash-crown-surface,.ash-effects,#hn-rings,#bc-notes,.hm-lift,.hm-spark,.wf-needle,.wf-runes,.wf-arm,.wf-all,.wf-hub';
   for (const node of document.querySelectorAll(ink)) { if (node.closest('#map-anim')) continue; parent(node.parentElement).appendChild(node); }
 }
 // COMB-S: split the looping ink after its first pose has been placed.
 {
   FD.buildIdleLayers=()=>{
     const NS='http://www.w3.org/2000/svg';FD.idleLayers=[];
-    const selected=[...document.querySelectorAll('#map-anim .rv-a,#map-anim .rv-b,#map-anim .jg-head,#map-anim .jg-file,#map-anim .jf-name,#map-anim .bc-light,#map-anim .bc-flame,#map-anim .bc-glow,#map-anim .ls-rock,#map-anim .hd-glint,#map-anim .yg-rat,#map-anim .yg-eagle,#map-anim .wl-rip,#map-anim .wl-pebble,#map-anim #wl-crown,#map-anim .rs-trace,#map-anim #bc-notes,#map-anim #f-bits')];
+    const selected=[...document.querySelectorAll('#map-anim .rv-a,#map-anim .rv-b,#map-anim .jg-head,#map-anim .jg-file,#map-anim .jf-name,#map-anim .bc-light,#map-anim .bc-flame,#map-anim .bc-glow,#map-anim .ls-rock,#map-anim .hd-glint,#map-anim .yg-rat,#map-anim .yg-eagle,#map-anim .wl-rip,#map-anim .ash-crown-surface,#map-anim .ash-effects,#map-anim .rs-trace,#map-anim #bc-notes,#map-anim #f-bits')];
     const picked=new Set(selected),roots=[];
     const partition=n=>{if(n.id==='map-anim-cover')return;if(picked.has(n)||!selected.some(s=>n.contains(s)))roots.push(n);else for(const child of [...n.children])partition(child);};
     for(const child of [...$('cam-anim').children])partition(child);
@@ -143,7 +146,7 @@ const mainMarkers = FINDS.filter(f => f.n).map(f => { const el = $('mk-' + f.id)
     for(const[node,i]of roots.map((n,i)=>[n,i])){
       const ancestors=[];for(let p=node.parentElement;p&&p.id!=='cam-anim';p=p.parentElement)ancestors.unshift(p);
       let owner=[...ancestors,node].map(p=>p.dataset.animSource).filter(Boolean).at(-1)?.replace(/^f-/,'');
-      if(node.matches('.yg-rat,.yg-eagle,#wl-crown'))owner='well';if(node.id==='bc-notes')owner='beacon';
+      if(node.matches('.yg-rat,.yg-eagle,.ash-crown-surface,.ash-effects,.wl-rip'))owner='ash';if(node.id==='bc-notes')owner='beacon';
       const box=node.getBBox(),pad=node.matches('.jf-name')?64:8;
       const el=document.createElementNS(NS,'svg'),cam=document.createElementNS(NS,'g');el.id='idle-'+i;el.setAttribute('class','map idle-layer');el.setAttribute('data-idle',owner||'bits');el.setAttribute('aria-hidden','true');el.setAttribute('pointer-events','none');el.appendChild(cam);
       const chain=[];let parent=cam;
@@ -163,7 +166,15 @@ const mainMarkers = FINDS.filter(f => f.n).map(f => { const el = $('mk-' + f.id)
     FD.buildIdleLayers=null;
   };
 }
+function mainPlaceChestHit(st) {
+  const h=FD.list.hoards.items.find(h=>h.id==='hoard-hmc1'),c=st.cam,place='translate('+((h.d.x-19)*c.s+c.tx)+'px,'+((h.d.y-20)*c.s+c.ty)+'px) scale('+c.s+')';
+  if(mainHmcHit.style.transform!==place)mainHmcHit.style.transform=place;
+  const hitVisible=h.el.tabIndex===0&&MAP_STACK.style.visibility!=='hidden'&&st.handoffT>=COMB.mapFindsIn;
+  if(mainHmcHit.hidden===hitVisible)mainHmcHit.hidden=!hitVisible;
+
+}
 function mainPlaceMarkers(st) {
+  mainPlaceChestHit(st);
   mainMarkers.forEach(m => { const p = toScreen(st, m.at), transform = `translate(${p[0]-m.at[0]} ${p[1]-m.at[1]})`; if (m.place.getAttribute('transform') !== transform) m.place.setAttribute('transform', transform); });
   const opacity = String(smooth(.5, 1, st.handoffT) * Number(MAP_STACK.style.opacity || 1)); if (mainMarkerLayer.style.opacity !== opacity) mainMarkerLayer.style.opacity = opacity;
   const visible=Number(opacity)>0&&MAP_STACK.style.visibility!=='hidden'?'visible':'hidden'; if (mainMarkerLayer.style.visibility!==visible) mainMarkerLayer.style.visibility=visible;
@@ -242,7 +253,7 @@ function frame(ts) {
   const dt = mainTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - mainTs) / 1000)); mainTs = ts;
   P = stepsFrame(ts);
   if (JOIN.leave) JOIN.leave(P);
-  if (RM) { findsFrame(time, FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], { ...jr, still: true }); raf = requestAnimationFrame(frame); return; }
+  if (RM) { findsFrame(time, FIXED);mainPlaceChestHit(FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], { ...jr, still: true }); raf = requestAnimationFrame(frame); return; }
   const st = tripState(P); st.frameDt = dt;
   // Under the opaque hero the map's frame is skipped (F2), but only once a full frame has put every map layer in its hero
   // state (shields, cards, footer, mini-map, timeline, explore): after a load or a resize, and after a cut or a glide back
@@ -283,7 +294,7 @@ function frame(ts) {
   if (st.rushT > 0 && st.settleT < 1 && !RM) { const hit = $('nova-hit'), tab = st.blastT > 0 ? -1 : 0; if (hit.tabIndex !== tab) hit.tabIndex = tab; if (hit.getAttribute('aria-disabled') !== 'false') hit.setAttribute('aria-disabled', 'false'); if (hit.getAttribute('aria-label') !== COMB.novaSay) hit.setAttribute('aria-label', COMB.novaSay); }
   const shown=st.handoffT>=COMB.mapFindsIn,cardVisibility=shown?'':'hidden';
   if($('cards').style.visibility!==cardVisibility)$('cards').style.visibility=cardVisibility;
-  if(shown){st.smallMoved=moved;cardsFrame(st, aim.look, PTR);findsFrame(time, st);}
+  if(shown){st.smallMoved=moved;cardsFrame(st, aim.look, PTR);findsFrame(time, st);mainPlaceChestHit(st);}
   mainHeroTidy = !!JOIN.heroStart && P < mainHeroEnd && !mainMapPending;
   raf = requestAnimationFrame(frame);
 }

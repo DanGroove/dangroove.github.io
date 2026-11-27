@@ -1,9 +1,9 @@
 // Fog reveals path markers; the well reads the existing journey; the ship keeps its own inner motion.
 import { C, STOPS, MAP, FIND_COPY, FIND_PLAY, YGG } from './data.mjs';
 import { clamp01, lerp } from './trip.mjs';
-import { starPath, rnd } from './art.mjs';
+import { rnd } from './art.mjs';
 import { beaconLit } from './findsheets.mjs';
-import { findPointer, FD, FIND_BY, ease, out3, attr, fEsc, found, opened, press, showPop, toMap, findBits, findSvg, findRange, findFormat, findSlot, findPlace, findIdleTime, findIdleVisible } from './findkit.mjs';
+import { findPointer, FD, FIND_BY, ease, out3, attr, fEsc, found, opened, press, showPop, closePop, toMap, findBits, findSvg, findRange, findFormat, findSlot, findPlace, findIdleTime, findIdleVisible } from './findkit.mjs';
 
 export function findMist(svg) {
   const el = svg.querySelector('#f-mist'), cloud = el.querySelector('.mist-cloud'), drift = el.querySelector('.mist-drift'), wipes = svg.querySelector('#mistWipes'), glints = [...el.querySelectorAll('.mist-glint')];
@@ -58,41 +58,32 @@ export function findMist(svg) {
   return o;
 }
 
-export function findWell(svg) {
-  const f = FIND_BY.well, el = svg.querySelector('#f-well'), pebble = el.querySelector('.wl-pebble'), rings = [...el.querySelectorAll('.wl-rip ellipse')];
-  const o = { id: f.id, el, stage: 'rest', kept: false, presses: 0, norn: -1, cur: -1, watered: 0, starBatches: [], ringTs: -Infinity, ringCount: 0, dripAt: FD.now + findRange(FIND_PLAY.well.drip), dripLand: null };
-  const crown = findSvg('g', { id: 'wl-crown', 'pointer-events': 'none' }); svg.querySelector('#finds').appendChild(crown);
-  const batches = FIND_PLAY.well.stars.map(row => {
-    const stream = findSvg('circle', { class: 'pf', r: FIND_PLAY.well.pebbleR, opacity: 0 }); crown.appendChild(stream);
-    const stars = row.map(p => { const g = findSvg('g', { transform: `translate(${MAP.ygg[0] + p[0]} ${MAP.ygg[1] + p[1]})` }), star = findSvg('path', { class: 'pf', d: starPath(0, 0, FIND_PLAY.well.starSize), opacity: 0 }); star.style.stroke = 'none'; g.appendChild(star); crown.appendChild(g); return star; }); return { stream, stars };
-  });
-  // idle: a root drip's ring. It is idle life like the rat's climb and the eagle's stretch, so it never keeps the well playing
-  // (finds.mjs pauses idle life while the camera glides; the drip, its ring and the tree's creatures carry on at arrival).
-  const ring = (count, idle = false) => { o.ringTs = idle ? findIdleTime(rings[0]) : FD.now; o.ringCount = count; o.ringIdle = idle; };
-  const answer = () => {
-    const names = FIND_COPY.norns[o.norn], index = o.cur + o.norn - 1, stop = STOPS[index];
-    const line = o.norn === 0 && index < 0 ? FIND_COPY.wellNone : o.norn === 1 && o.cur < 0 ? FIND_COPY.wellMap : o.norn === 2 && index >= STOPS.length ? FIND_COPY.wellNext : stop ? findFormat(FIND_COPY.wellStop, { name: stop.short, dates: stop.dates }) : FIND_COPY.wellNone;
-    o.answer = line;
-    showPop(o, [f.x + FIND_PLAY.well.anchor[0], f.y + FIND_PLAY.well.anchor[1]], `<p class="pop-k">${fEsc(findFormat(FIND_COPY.nornKicker, { name: names[0], time: names[1] }))}</p><p class="pop-t">${fEsc(line)}</p>`, '', 'below');
+export function findAsh(svg) {
+  const f=FIND_BY.ash,el=svg.querySelector('#f-ash'),crown=svg.querySelector('.yg-crown'),rings=[...svg.querySelectorAll('.wl-rip ellipse')];
+  const o={id:'ash',el,stage:'rest',kept:false,presses:0,leaves:[],shakeTs:-Infinity,ringTs:-Infinity,ringCount:0,dripAt:FD.now+findRange(FIND_PLAY.well.drip),dripLand:null};
+  const crownHome=crown.parentElement,crownSurface=findSvg('g',{class:'ash-crown-surface','pointer-events':'none'});crownHome.appendChild(crownSurface);
+  const fx=findSvg('g',{class:'ash-effects','pointer-events':'none'});svg.querySelector('.ygg').appendChild(fx);
+  // One fixed local bound contains every flutter and every resting leaf after the effect's full-screen window ends.
+  fx.appendChild(findSvg('rect',{x:-90,y:-72,width:180,height:104,fill:C.ink,'fill-opacity':0,stroke:'none'}));
+  const arc=findSvg('path',{class:'t ash-arcs',d:'M-72 -64q-5 6 0 12M-77 -65q-6 7 0 14M78 -64q5 6 0 12M83 -65q6 7 0 14',opacity:0});fx.appendChild(arc);
+  const leaves=FIND_PLAY.ash.leaves.map((d,i)=>{const g=findSvg('g',{class:'ash-leaf','data-stop':STOPS[i].id,opacity:0});g.appendChild(findSvg('path',{d:'M0 0Q-5.1 -4 0 -8Q5.1 -4 0 0Z',fill:d.body,stroke:C.ink,'stroke-width':.6}));g.appendChild(findSvg('path',{d:'M0 0L0 -3.36',fill:'none',stroke:d.rib,'stroke-width':.6}));fx.appendChild(g);return{el:g,d,landed:false};});
+  const ring=(count,idle=false)=>{o.ringTs=idle?findIdleTime(rings[0]):FD.now;o.ringCount=count;o.ringIdle=idle;};
+  const pose=(leaf,p,angle)=>attr(leaf.el,'transform','translate('+(p[0]-MAP.ygg[0])+' '+(p[1]-MAP.ygg[1])+') rotate('+angle+')');
+  const land=(leaf,i)=>{if(leaf.landed)return;leaf.landed=true;o.fallen=(o.fallen||0)+1;pose(leaf,leaf.d.at,leaf.d.angle);o.kept=true;
+    if(i===5&&!FD.rm)ring(FIND_PLAY.well.rings);
+    const label=STOPS[i].label,pop=()=>showPop(o,leaf.d.at,'<p class="pop-k">'+fEsc(label.t)+'</p><p class="pop-t">'+fEsc(label.sub)+'</p>');if(FD.rm)pop();else queueMicrotask(pop);o.popUntil=FD.now+6;
+    if(i===5&&FD.focusId===o.id&&FD.hint)FD.hint.textContent=FIND_PLAY.ash.doneHint;
   };
-  const land = () => {
-    const W = FIND_PLAY.well; o.stage = 'rest'; attr(pebble, 'opacity', 0); ring(W.rings); findBits('drop', ...W.water, W.drops, W.splash);
-    if (o.presses <= W.stars.length) { o.watered = o.presses; o.starBatches[o.presses - 1] = FD.now; o.kept = true; }
-    answer();
-  };
-  press(el, e => {
-    if (o.stage === 'pebble') return;
-    const W = FIND_PLAY.well; opened(o); found(o.id); o.presses++; o.norn = (o.presses - 1) % FIND_COPY.norns.length; o.cur = FD.st.visited.lastIndexOf(true);
-    o.pebbleFrom = e.type === 'keydown' || !e.detail ? [W.water[0] + W.pebbleFrom[0], W.water[1] + W.pebbleFrom[1]] : toMap([e.clientX, e.clientY]); o.ts = FD.now; o.stage = 'pebble';
-    if (FD.rm) land(); else attr(pebble, 'opacity', 1);
+  press(el,()=>{if(!FD.rm&&crown.parentElement!==crownSurface)crownSurface.appendChild(crown);opened(o);found(o.id);closePop();o.shakeTs=FD.now;o.playing=!FD.rm;
+    const leaf=leaves[o.presses];if(!leaf)return;const i=o.presses++;o.leaves.push({stop:STOPS[i].id,at:leaf.d.at});leaf.ts=FD.now;attr(leaf.el,'opacity',1);if(FD.rm)land(leaf,i);else pose(leaf,leaf.d.from,0);
   });
+  o.reduce=()=>{leaves.forEach((l,i)=>{if(l.ts!==undefined)land(l,i);});attr(crown,'transform','rotate(0 0 -30)');attr(arc,'opacity',0);if(crown.parentElement===crownSurface)crownHome.appendChild(crown);o.playing=false;};
   const eagle = svg.querySelector('.yg-eagle'), wings = svg.querySelector('.yg-wings'), rat = svg.querySelector('.yg-rat'), tail = svg.querySelector('.yg-tail');
   const treeRandom = rnd(YGG.life.seed), treeInterval = pair => lerp(pair[0], pair[1], treeRandom());
   o.ratAt = FD.now + treeInterval(YGG.life.ratEvery); o.eagleAt = FD.now + treeInterval(YGG.life.eagleEvery); o.ratTs = o.eagleTs = o.flightTs = -Infinity;
-  o.reduce = keep => { if (['pebble','landing'].includes(o.stage)) { if (keep) opened(o); land(); } o.playing = false; };
   o.hear = () => { if (FD.rm) return; ring(1); o.flightTs = FD.now; o.playing = true; };
   o.tick = t => {
-    const W = FIND_PLAY.well, Y = YGG, L = Y.life, idleRat=findIdleTime(rat),idleEagle=findIdleTime(eagle),idleWell=findIdleTime(rings[0]),idleCrown=findIdleTime(crown);
+    const W = FIND_PLAY.well, Y = YGG, L = Y.life, idleRat=findIdleTime(rat),idleEagle=findIdleTime(eagle),idleWell=findIdleTime(rings[0]);
     if (!FD.rm && idleRat >= o.ratAt) { o.ratTs = idleRat; o.ratAt = idleRat + treeInterval(L.ratEvery); }
     if (!FD.rm && idleEagle >= o.eagleAt) { o.eagleTs = idleEagle; o.eagleAt = idleEagle + treeInterval(L.eagleEvery); }
     const ratAge = idleRat - o.ratTs, run = FD.rm ? 0 : ratAge < L.climb ? ease(ratAge / L.climb) : ratAge < L.climb + L.pause ? 1 : 1 - ease((ratAge - L.climb - L.pause) / L.climb);
@@ -112,23 +103,17 @@ export function findWell(svg) {
       ey += dy; wingY = lerp(...L.flapY, (1 + Math.sin(Math.PI * 2 * L.flap * flightAge)) / 2);
     } else if (!FD.rm) wingY = lerp(...L.wingY, Math.sin(Math.PI * clamp01((idleEagle - o.eagleTs) / L.stretch)));
     attr(eagle, 'transform', 'translate(' + ex + ' ' + ey + ')'); attr(wings, 'transform', 'scale(' + L.wingX + ' ' + wingY + ')');
-    if (!FD.rm && o.onScreen && findIdleVisible(rings[0]) && idleWell >= o.dripAt && o.dripLand === null && o.stage !== 'pebble') { findBits('drop', ...W.root, 1, { speed: [(W.water[1] - W.root[1]) / W.dripTime, (W.water[1] - W.root[1]) / W.dripTime], dir: [FIND_PLAY.kit.deg / 2, FIND_PLAY.kit.deg / 2], life: [W.dripTime, W.dripTime] }); o.dripLand = idleWell + W.dripTime; o.dripAt = idleWell + findRange(W.drip); }
+    if (!FD.rm && o.onScreen && findIdleVisible(rings[0]) && idleWell >= o.dripAt && o.dripLand === null) { findBits('drop', ...W.root, 1, { speed: [(W.water[1] - W.root[1]) / W.dripTime, (W.water[1] - W.root[1]) / W.dripTime], dir: [FIND_PLAY.kit.deg / 2, FIND_PLAY.kit.deg / 2], life: [W.dripTime, W.dripTime] }); o.dripLand = idleWell + W.dripTime; o.dripAt = idleWell + findRange(W.drip); }
     if (o.dripLand !== null && idleWell >= o.dripLand) { o.dripLand = null; ring(1, true); }
-    if (o.stage === 'pebble') {
-      const q = clamp01((t - o.ts) / W.pebbleTime), p = [lerp(o.pebbleFrom[0], W.water[0], q), lerp(o.pebbleFrom[1], W.water[1], q) - W.arc * Math.sin(Math.PI * q)];
-      attr(pebble, 'transform', `translate(${p[0] - f.x} ${p[1] - f.y})`);
-      if (q === 1) { o.stage = 'landing'; queueMicrotask(land); }
-    }
-    rings.forEach((r, i) => { const age = (o.ringIdle?idleWell:t) - o.ringTs - i * W.ringGap, q = FD.rm ? 1 : clamp01(age / W.ringTime); attr(r, 'transform', `scale(${lerp(W.ringScale[0], W.ringScale[1], q)})`); attr(r, 'opacity', i < o.ringCount && age >= 0 ? W.ringAlpha * (1 - q) : 0); });
-    batches.forEach((batch, i) => {
-      if (o.starBatches[i] === undefined) return;
-      const age = t - o.starBatches[i], q = FD.rm ? 1 : clamp01(age / W.trunkTime), p = W.trunk;
-      attr(batch.stream, 'transform', `translate(${lerp(p[0][0], p[1][0], ease(q))} ${lerp(p[0][1], p[1][1], ease(q))})`); attr(batch.stream, 'opacity', !FD.rm && q < 1 ? 1 : 0);
-      batch.stars.forEach((s, j) => { const k = FD.rm ? 1 : clamp01((age - W.trunkTime - j * W.starGap) / W.starTime), scale = k < 0.5 ? lerp(0, W.starOver, ease(k * 2)) : lerp(W.starOver, 1, ease((k - 0.5) * 2)); attr(s, 'transform', `scale(${scale})`); attr(s, 'opacity', k === 0 ? 0 : FD.rm ? 1 : lerp(W.twinkle[0], W.twinkle[1], (1 + Math.sin(Math.PI * 2 * idleCrown / W.twinkleTime[(i + j) % W.twinkleTime.length] + i + j)) / 2)); });
-    });
-    const last = o.starBatches[o.starBatches.length - 1]; o.playing = flying || o.stage === 'pebble' || o.stage === 'landing' || !o.ringIdle && t - o.ringTs < W.ringTime + (o.ringCount - 1) * W.ringGap || last !== undefined && t - last < W.trunkTime + W.starGap * (W.stars[0].length - 1) + W.starTime;
-  };
-  return o;
+
+    const A=FIND_PLAY.ash,age=t-o.shakeTs,q=clamp01(age/A.shake);
+    if(o.shaking||q<1){const angle=FD.rm||q===1?0:A.amplitude*1.568*Math.sin(2*Math.PI*A.hz*age)*Math.exp(-7*q);attr(crown,'transform','rotate('+angle+' 0 -30)');o.shaking=q<1;if(q===1&&crown.parentElement===crownSurface)crownHome.appendChild(crown);}
+    attr(arc,'opacity',!FD.rm&&age<A.arcs?Math.sin(Math.PI*age/A.arcs):0);
+    leaves.forEach((leaf,i)=>{if(leaf.ts===undefined)return;const age=t-leaf.ts,q=FD.rm?1:clamp01(age/leaf.d.time);if(q<1){const p=[lerp(leaf.d.from[0],leaf.d.at[0],q)+4*Math.sin(q*5*Math.PI)*(1-q),lerp(leaf.d.from[1],leaf.d.at[1],q)];pose(leaf,p,leaf.d.angle*q+40*Math.sin(q*5*Math.PI)*(1-q));}else{land(leaf,i);if(i===5&&!leaf.bobDone){pose(leaf,[leaf.d.at[0],leaf.d.at[1]-1.2*Math.sin(Math.PI*clamp01((age-leaf.d.time)/.5))],leaf.d.angle);if(age>=leaf.d.time+.5||FD.rm)leaf.bobDone=true;}}});
+    rings.forEach((r,i)=>{const age=(o.ringIdle?idleWell:t)-o.ringTs-i*W.ringGap,q=FD.rm?1:clamp01(age/W.ringTime);attr(r,'transform','scale('+lerp(W.ringScale[0],W.ringScale[1],q)+')');attr(r,'opacity',i<o.ringCount&&age>=0?W.ringAlpha*(1-q):0);});
+    if(FD.popOwner===o&&t>=o.popUntil)closePop();
+    o.playing=flying||o.shaking||leaves.some(l=>l.ts!==undefined&&t-l.ts<l.d.time+(l===leaves[5]?.5:0))||!o.ringIdle&&t-o.ringTs<W.ringTime+(o.ringCount-1)*W.ringGap;
+  };return o;
 }
 
 export function findShip(svg) {

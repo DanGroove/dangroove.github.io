@@ -1,3 +1,4 @@
+// COMB-T, 2026-11-27: recording-DOM support for screen words and the bounded beam surface; interaction assertions unchanged.
 import { bigMap, mapDefs } from '../art.mjs';
 import { findsBuild, findsFrame } from '../finds.mjs';
 import { FD } from '../findkit.mjs';
@@ -5,7 +6,7 @@ import { tlBuild } from '../timeline.mjs';
 // Node geometry and state checks. This is a recording environment, not a visual browser check.
 import { strict as assert } from 'node:assert';
 import { EXPLORE, MAP, FOOT_NAME, FIND_PLAY } from '../data.mjs';
-import { tripResize, tripState, VIEW } from '../trip.mjs';
+import { tripResize, tripState, VIEW, TRIP_EL } from '../trip.mjs';
 import { BEATS } from '../pace.mjs';
 import { exploreClamp, exploreZoom, exploreWorld, exploreGlide, exploreLayer, exploreLayerPoint, exploreLayerInverse, exploreBuild, exploreResize, exploreStart, exploreApply, exploreEnd, exploreActive, exploreBusy, exploreReset, exploreDepart } from '../explore.mjs';
 import { footerBuild, footerFrame } from '../footer.mjs';
@@ -155,7 +156,7 @@ class ExploreContext {
   stroke(...args) { this.record(...args); } clip(...args) { this.record(...args); this.clipPaths.push(args[0].path); } fill(...args) { this.record(...args); } save() {} restore() {}
 }
 class ExploreNode {
-  constructor(tag = 'div') { this.tagName = tag; this.attrs = {}; this.children = []; this.listeners = {}; this.nodeType = 1; this.style = { setProperty(k, v) { this[k] = v; } }; this.dataset = {}; this.hidden = false; this.classList = { add: (...xs) => xs.forEach(x => this.toggleClass(x, true)), remove: (...xs) => xs.forEach(x => this.toggleClass(x, false)), toggle: (x, force) => this.toggleClass(x, force), contains: x => this.className.split(/\s+/).includes(x) }; }
+  constructor(tag = 'div') { this.tagName = tag; this.textContent=''; this.attrs = {}; this.children = []; this.listeners = {}; this.nodeType = 1; this.style = { setProperty(k, v) { this[k] = v; } }; this.dataset = {}; this.hidden = false; this.classList = { add: (...xs) => xs.forEach(x => this.toggleClass(x, true)), remove: (...xs) => xs.forEach(x => this.toggleClass(x, false)), toggle: (x, force) => this.toggleClass(x, force), contains: x => this.className.split(/\s+/).includes(x) }; }
   get id() { return this.attrs.id || ''; } set id(v) { this.attrs.id = v; }
   get className() { return this.attrs.class || ''; } set className(v) { this.attrs.class = v; }
   get firstElementChild() { return this.children[0]; } get firstChild() { return this.children[0]; }
@@ -216,6 +217,9 @@ class ExploreNode {
   }
   focus() { document.activeElement = this; }
   setPointerCapture() {}
+  getBBox(){const font=+this.getAttribute('font-size')||6.5;return{x:0,y:-font*.8,width:(this.textContent?.length||0)*font*.55,height:font};}
+  cloneNode(deep=false){const n=new ExploreNode(this.tagName);for(const[k,v]of Object.entries(this.attrs))n.setAttribute(k,v);if(deep)this.children.forEach(c=>n.appendChild(c.cloneNode(true)));return n;}
+  before(node){this.parentElement?.appendChild(node);}
   getAnimations() { return []; }
   animate() { return { cancel() {} }; }
   getBoundingClientRect() { assert.equal(exploreInFrame, false, 'layout read in frame callback'); return { left: 30, top: 40, width: this.classList.contains('tl-count') ? 90 : 240, height: this.classList.contains('tl-count') ? 20 : 140 }; }
@@ -238,10 +242,10 @@ function realFresh(){
   Object.assign(doc,{documentElement:html,body,activeElement:body,createElement:tag=>new ExploreNode(tag),createElementNS:(ns,tag)=>new ExploreNode(tag),getElementById:id=>html.querySelector('#'+id)});
   const win=new ExploreNode('window');Object.assign(win,{location:{search:''},matchMedia:()=>({matches:false,addEventListener(){}})});
   Object.assign(globalThis,{document:doc,window:win,matchMedia:win.matchMedia,localStorage:{getItem:()=>null},Path2D:class {constructor(path){this.path=path;}}});window.__jm={};
-  const liveStatus=new ExploreNode();liveStatus.id='go-say';body.appendChild(liveStatus);realStage=new ExploreNode();realSvg=new ExploreNode('svg');const pop=new ExploreNode(),sheet=new ExploreNode(),timeline=new ExploreNode();body.appendChild(realStage);realStage.append(realSvg,pop,sheet,timeline);
+  const liveStatus=new ExploreNode();liveStatus.id='go-say';body.appendChild(liveStatus);realStage=new ExploreNode();realSvg=new ExploreNode('svg');const pop=new ExploreNode(),sheet=new ExploreNode(),timeline=new ExploreNode();body.appendChild(realStage);realStage.append(realSvg,pop,sheet,timeline);const anim=new ExploreNode('svg');anim.id='map-anim';realStage.appendChild(anim);
   realStage.setPointerCapture=id=>captures.add(id);realStage.releasePointerCapture=id=>captures.delete(id);realStage.hasPointerCapture=id=>captures.has(id);captures.clear();
   realSvg.innerHTML='<g id="wf-lines"></g>'+mapDefs()+'<g id="b-sea">'+realChart.sea+'</g><g id="b-all">'+realChart.detail+'</g><g id="finds">'+realChart.finds+'</g>';
-  FD.found=new Set();FD.list={};FD.bits=[];FD.flights=[];FD.flight=null;FD.landed=0;FD.popOwner=FD.sheetOwner=null;
+  TRIP_EL.finds=realSvg.querySelector('#finds');FD.found=new Set();FD.list={};FD.bits=[];FD.flights=[];FD.flight=null;FD.landed=0;FD.popOwner=FD.sheetOwner=null;
   tlBuild(timeline,{jump(){},scrub(){}},false);findsBuild(realSvg,pop,sheet,realSvg.querySelector('#b-all'),false);
   tripResize(390,844,96);realJourney={P:endP,moving:false,beats:BEATS};exploreBuild({stage:realStage,world:new ExploreNode(),journey:realJourney,rm:false});exploreResize();assert.equal(exploreStart(),true);realFrame(EXPLORE.in);
 }

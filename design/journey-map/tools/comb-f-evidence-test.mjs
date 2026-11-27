@@ -1,3 +1,4 @@
+// COMB-T, 2026-11-27: the ash replaces the well find and is the tree zoom anchor.
 import {combBBrowser,combBWait} from './comb-d-browser-test.mjs';
 import {combDClock,combDAdvance} from './comb-d-clock-test.mjs';
 import {readFileSync,writeFileSync} from 'node:fs';
@@ -13,7 +14,7 @@ try{
    await b.send('Page.navigate',{url:'data:text/html;base64,'+Buffer.from(html).toString('base64')});await combBWait(700);await b.evaluate('document.fonts.ready.then(()=>true)');await combDAdvance(b,2000);
    const go=async id=>{await b.key('Escape');await combDAdvance(b,900);await b.evaluate(`window.__jm.go(${JSON.stringify(id)},{instant:true})`);await combDAdvance(b,2000);};
    await go('map');await b.shot(tag+'-'+w+'x'+h+'-overview');
-   if(w!==360)for(const id of (w===412?['serpent','well','beacon','horn','hoard-hmc1']:['serpent'])){
+   if(w!==360)for(const id of (w===412?['serpent','ash','beacon','horn','hoard-hmc1']:['serpent'])){
     await b.send('Page.navigate',{url:'data:text/html;base64,'+Buffer.from(html).toString('base64')});await combBWait(500);await combDAdvance(b,2000);
     await go('map');await b.evaluate(`window.__fFocus(${JSON.stringify(id)},window.__fView(${JSON.stringify(id)}))`);await combDAdvance(b,1600);
     const presses=id.startsWith('hoard')?4:['horn','beacon'].includes(id)?1:0;
@@ -21,7 +22,7 @@ try{
     await b.shot(tag+'-'+w+'x'+h+'-'+id);
    }
    await go('end');await b.evaluate('document.querySelector(".go-next").click()');await combDAdvance(b,2400);await b.shot(tag+'-'+w+'x'+h+'-explore');
-   if(w===1440){await b.evaluate(`(()=>{const p=window.__jm.finds.place('well');for(let i=0;i<9;i++)document.getElementById('stage').dispatchEvent(new WheelEvent('wheel',{clientX:p[0],clientY:p[1],deltaY:-120,bubbles:true,cancelable:true}));})()`);await b.shot(tag+'-1440-well-moving');await combDAdvance(b,1600);await b.shot(tag+'-1440-well-rest');}
+   if(w===1440){await b.evaluate(`(()=>{const p=window.__jm.finds.place('ash');for(let i=0;i<9;i++)document.getElementById('stage').dispatchEvent(new WheelEvent('wheel',{clientX:p[0],clientY:p[1],deltaY:-120,bubbles:true,cancelable:true}));})()`);await b.shot(tag+'-1440-well-moving');await combDAdvance(b,1600);await b.shot(tag+'-1440-well-rest');}
    if(w===412){await go('top');await b.evaluate('window.__jm.next()');for(let ms=0;ms<=4200;ms+=200){if(ms)await combDAdvance(b,200);await b.shot(tag+'-move-'+String(ms).padStart(4,'0'));}}
    console.log(tag+' captures '+w+'x'+h);
   }

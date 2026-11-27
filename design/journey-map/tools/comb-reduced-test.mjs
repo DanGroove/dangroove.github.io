@@ -1,3 +1,4 @@
+// COMB-T, 2026-11-27: the ash replaces the well find and is the tree zoom anchor.
 import { combBrowser, combWait } from './comb-browser.mjs';
 import { appendFileSync } from 'node:fs';
 const b=await combBrowser(),lines=[];let failed=0;
@@ -17,7 +18,7 @@ try {
   const sheet=await b.evaluate("({focus:document.documentElement.classList.contains('jm-focus'),open:document.querySelector('#sheet').classList.contains('on'),found:window.__jm.finds.found().length})");
   check(!sheet.focus&&!sheet.open&&sheet.found===found,'reduced switch closes an active sheet without stale focus or lost finds',sheet);
   await b.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]}); await combWait(500);
-  for (const id of ['ravens','serpent','hoard-hmc1','well','horn','beacon']) {
+  for (const id of ['ravens','serpent','hoard-hmc1','ash','horn','beacon']) {
     await b.evaluate('window.__jm.go("map",{instant:true})'); await combWait(600);
     const press=()=>b.evaluate(`(()=>{const e=document.querySelector('#f-${id}');e.focus({preventScroll:true});e.dispatchEvent(new MouseEvent('click',{bubbles:true}));})()`);
     await press(); await combWait(id==='ravens'?900:200); if(id==='horn'){await press();await combWait(200);}

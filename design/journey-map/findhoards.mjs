@@ -11,6 +11,32 @@ export const wayAllStops = () => STOPS.map(s => CRAFTS.every(c => s.crafts.inclu
 export function findWay(svg) {
   const f = FIND_BY.wayfinder, el = svg.querySelector('#f-wayfinder'), needle = el.querySelector('.wf-needle'), words = [...el.querySelectorAll('.wf-word')], arms = [...el.querySelectorAll('.wf-arm')], runes = el.querySelector('.wf-runes'), tally = el.querySelector('.wf-tally'), ring = el.querySelector('.wf-all');
   const o = { id: f.id, el, craft: -1, angle: 0, speed: 0, runesAngle: 0, drag: false, picked: [], mask: null, kept: false, stage: 'rest', lines: [], lineTs: 0, hearTs: -Infinity };
+  // COMB-T: the original text nodes retain their fade writers and input semantics.
+  const wordLayer=document.createElement('div');wordLayer.id='compass-words';svg.closest('#map-stack')?.appendChild(wordLayer);
+  const screenWords=[...words,tally].map((text,i)=>{
+    const shell=findSvg('svg',{class:'compass-word find','data-find-proxy':'wayfinder'}),group=text.parentElement;
+    attr(text,'font-size',i<4?COMB.wordPx:FIND_PLAY.way.tally[1]);attr(text,'letter-spacing',i<4?COMB.wordTrack:FIND_PLAY.way.tally[2]);attr(text,'x',i===0||i===2?COMB.wordTrack/2:i===3?COMB.wordTrack:0);attr(text,'y',0);
+    shell.appendChild(group);wordLayer.appendChild(shell);
+    if(i<4)for(const type of ['pointerdown','pointermove','pointerup','pointercancel','click','keydown'])shell.addEventListener(type,e=>{
+      e.stopPropagation();if(type==='click')el.dispatchEvent(new MouseEvent(type,{bubbles:true,detail:e.detail,clientX:e.clientX,clientY:e.clientY}));
+      else if(type==='keydown')el.dispatchEvent(new KeyboardEvent(type,{bubbles:true,key:e.key}));
+      else el.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerId:e.pointerId,pointerType:e.pointerType,clientX:e.clientX,clientY:e.clientY,button:e.button,buttons:e.buttons}));
+    });
+    return {text,shell};
+  });
+  o.compassFrame=()=>{
+    if(!FD.st)return;const W=FIND_PLAY.way,c=FD.st.cam,shown=TRIP_EL.raster?.layerCams?.finds||c;
+    // Match the ring's actual held raster and outer compositor camera.
+    const ringScale=c.s,centre=[f.x*c.s+c.tx,f.y*c.s+c.ty],out=W.wordRing*ringScale+W.wordGap,cap=COMB.wordPx*W.wordCap;
+    for(const [i,q] of screenWords.entries()){
+      if(q.copy!==q.text.textContent){q.copy=q.text.textContent;const b=q.text.getBBox();q.box=b;attr(q.shell,'viewBox',[b.x-4,b.y-4,b.width+8,b.height+8].join(' '));attr(q.shell,'width',b.width+8);attr(q.shell,'height',b.height+8);}
+      const k=i<4?1:Math.max(W.tally[1]*ringScale,W.tally[3])/W.tally[1],b=q.box;
+      const x=centre[0]+(i===1?out:i===3?-out:i===4?W.tally[2]*ringScale/2:0),y=centre[1]+(i===0?-out:i===2?out+cap:i===4?-(out+cap+W.wordGap):cap/2);
+      findStyle(q.shell,'transform','translate('+(x+(b.x-4)*k)+'px,'+(y+(b.y-4)*k)+'px) scale('+k+')');
+      findStyle(q.shell,'opacity',1-(o.cover||0));findStyle(q.shell,'visibility',o.el.style.visibility||'inherit');
+    }
+    findStyle(wordLayer,'opacity',TRIP_EL.finds.style.opacity||1);
+  };
   const group = document.getElementById('wf-lines');
   STOPS.forEach(s => {
     const target = MAP.waypoints[s.w], dx = target[0] - f.x, dy = target[1] - f.y, distance = Math.hypot(dx, dy), length = Math.max(0, distance - FIND_PLAY.way.short);
@@ -39,7 +65,7 @@ export function findWay(svg) {
         for(const [i,word] of [...words,tally].entries()) { let a,z,width;
           if (destination) {
             const b=word.getBBox(), old=+word.getAttribute('font-size')||1, size=i<words.length?COMB.wordPx/s:Math.max(W.tally[1],W.tally[3]/s), k=size/old, out=W.wordRing+W.wordGap/s, cap=COMB.wordPx/s*W.wordCap, ls=+word.getAttribute('letter-spacing')||0;
-            const x=i<words.length?[ls/2,out,ls/2,ls-out][i]:W.tally[2]/2, y=i<words.length?[-out,cap/2,out+cap,cap/2][i]:-(out+cap+W.wordGap/s);
+            const x=i<words.length?[ls/(2*s),out,ls/(2*s),ls/s-out][i]:W.tally[2]/2, y=i<words.length?[-out,cap/2,out+cap,cap/2][i]:-(out+cap+W.wordGap/s);
             a=[f.x+x+(b.x-(+word.getAttribute('x')||0))*k-3/s,f.y+y+(b.y-(+word.getAttribute('y')||0))*k-3/s]; z=[a[0]+b.width*k+6/s,a[1]+b.height*k+6/s]; width=b.width;
           } else { const b=word.getBoundingClientRect();a=toMap([b.left-3,b.top-3]);z=toMap([b.right+3,b.bottom+3]);width=b.width; }
           if(width){cuts.appendChild(findSvg('rect',{x:a[0],y:a[1],width:z[0]-a[0],height:z[1]-a[1]}));for(const x of[a[0],z[0]])for(const y of[a[1],z[1]])compassRadius=Math.max(compassRadius,Math.hypot(x-f.x,y-f.y));}}
@@ -125,17 +151,6 @@ export function findWay(svg) {
     const pulse = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - (o.pickTs ?? -Infinity)) / W.pulse[1]));
     arms.forEach((arm, i) => attr(arm, 'transform', `rotate(${i * FIND_PLAY.kit.turn / CRAFTS.length}) scale(${1 + (W.pulse[0] - 1) * pulse * (o.craft === i || o.craft === CRAFTS.length ? 1 : 0)})`));
     // The rune ring retains its angle, with no idle clock.
-    o.compassFrame ??= () => {
-      const W = FIND_PLAY.way;
-    // The words keep one screen size and one screen gap off the ring at every zoom (Dan on preview 21: they sat far out).
-    // Order: Print above, Video right (start), Motion below, Screen left (end); a word's trailing letter-spacing is left out.
-    const size = COMB.wordPx / (FD.st.rasterS || FD.st.cam.s), out = W.wordRing + W.wordGap / (FD.st.rasterS || FD.st.cam.s), cap = size * W.wordCap;
-    words.forEach((w, i) => { const ls = +w.getAttribute('letter-spacing') || 0; attr(w, 'font-size', size); attr(w, 'x', [ls / 2, out, ls / 2, ls - out][i]); attr(w, 'y', [-out, cap / 2, out + cap, cap / 2][i]); });
-    // The tally is read from far out as well: it never falls under tally[3] px on screen, up to tally[4] units. It reads as
-    // the compass's title, one word gap above Print, with its own halo over any line behind it.
-    attr(tally, 'font-size', Math.max(W.tally[1], W.tally[3] / (FD.st.rasterS || FD.st.cam.s))); attr(tally, 'x', W.tally[2] / 2); attr(tally, 'y', -(out + cap + W.wordGap / (FD.st.rasterS || FD.st.cam.s)));
-    };
-    if (o.onScreen && (!(FD.st.gliding || FD.st.exploreMoving) || FD.st.rasterRebased)) o.compassFrame();
     if (o.mask && o.veilUpdate && (FD.st.rasterDestination || FD.st.veilRestCommit || o.veilDirty && !FD.st.gliding && !FD.st.exploreMoving)) { o.veilUpdate(FD.st.rasterDestination || null); o.veilDirty=false; }
     attr(ring, 'opacity', o.unlocked ? 1 : 0);
     if (o.unlocked && !FD.rm) attr(ring, 'transform', `scale(${lerp(W.ring[0], W.ring[1], Math.sin(Math.PI*clamp01((t-(o.ringTs??-Infinity))/W.ring[2]))) / W.ring[0]})`);
