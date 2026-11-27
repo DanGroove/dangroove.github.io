@@ -9,7 +9,7 @@ const current=[],paths=[];
 for(const m of bigMap().sea.matchAll(/<path\b([^>]+)\/>/g)){
  const a=Object.fromEntries([...m[1].matchAll(/([\w-]+)="([^"]*)"/g)].map(x=>[x[1],x[2]]));
  if(!a.d?.includes('h.01'))continue;paths.push('<path '+m[1]+'/>');
- for(const p of a.d.matchAll(/M(-?[\d.]+) (-?[\d.]+)h\.01/g))current.push([+p[1],+p[2],+a['stroke-width'],+a.opacity]);
+ for(const p of a.d.matchAll(/M(-?[\d.]+) (-?[\d.]+)h\.01/g))current.push([+p[1],+p[2],+a['stroke-width'],+(a['stroke-opacity']??a.opacity)]);
 }
 assert.ok(before?.length,'golden before dots must be recorded before batching');
 const sort=rows=>rows.map(x=>x.join(',')).sort();assert.deepEqual(sort(current),sort(before),'stipple positions, widths and opacities must remain exact');

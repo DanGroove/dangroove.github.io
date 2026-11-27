@@ -118,7 +118,10 @@ const shore = (P, seed) => {
       if(!batch){batch={width,alpha,points:[]};batches.push(batch);}batch.points.push([px,py]);
     }
   }
-  return batches.map(b=>'<path class="sea-stipple" d="'+b.points.map(p=>'M'+p[0]+' '+p[1]+'h.01').join('')+'" fill="none" stroke="'+C.paper+'" stroke-width="'+b.width+'" stroke-linecap="round" vector-effect="non-scaling-stroke" opacity="'+b.alpha+'"/>').join('');
+  // The alpha is the stroke's, not the path's opacity (pinch recheck, 2026-11-27): opacity made each of the ~200 batches its own
+  // offscreen layer in every tile, about 80 % of the sea and land layer's redraw cost while zooming. With one stroke and no fill
+  // the two draw the same pixels, since the dots of a batch never touch.
+  return batches.map(b=>'<path class="sea-stipple" d="'+b.points.map(p=>'M'+p[0]+' '+p[1]+'h.01').join('')+'" fill="none" stroke="'+C.paper+'" stroke-width="'+b.width+'" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-opacity="'+b.alpha+'"/>').join('');
 };
 
 // ---- Norse landmarks ----

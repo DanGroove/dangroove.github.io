@@ -2568,7 +2568,10 @@ const shore = (P, seed) => {
       if(!batch){batch={width,alpha,points:[]};batches.push(batch);}batch.points.push([px,py]);
     }
   }
-  return batches.map(b=>'<path class="sea-stipple" d="'+b.points.map(p=>'M'+p[0]+' '+p[1]+'h.01').join('')+'" fill="none" stroke="'+C.paper+'" stroke-width="'+b.width+'" stroke-linecap="round" vector-effect="non-scaling-stroke" opacity="'+b.alpha+'"/>').join('');
+  // The alpha is the stroke's, not the path's opacity (pinch recheck, 2026-11-27): opacity made each of the ~200 batches its own
+  // offscreen layer in every tile, about 80 % of the sea and land layer's redraw cost while zooming. With one stroke and no fill
+  // the two draw the same pixels, since the dots of a batch never touch.
+  return batches.map(b=>'<path class="sea-stipple" d="'+b.points.map(p=>'M'+p[0]+' '+p[1]+'h.01').join('')+'" fill="none" stroke="'+C.paper+'" stroke-width="'+b.width+'" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-opacity="'+b.alpha+'"/>').join('');
 };
 
 // ---- Norse landmarks ----
@@ -3480,11 +3483,14 @@ function tripApply(st, focus = null) {
   const lastCam = r.lastCam, camMoved = !!lastCam && (lastCam.s !== c.s || lastCam.tx !== c.tx || lastCam.ty !== c.ty);
   r.lastCam = { ...c, P: st.P, focus: focus?.k || 0 };
   const glideHold = FRAME_PERF.glideHold && !free && !st.reduced && st.handoffT >= 1;
-  const moving = free && !!st.exploreMoving && !st.exploreScripted && !(zooming && st.exploreSharp) || glideHold && camMoved;
+  // Explore's scripted opening holds the map like a gesture (phone-p25o, 2026-11-27: redrawn through the camera every frame it
+  // ran 43 fps with 40 slow frames on Dan's phone, held 54 fps with 16; the PC 92 to 117 fps). Rest redraws it sharp.
+  const moving = free && !!st.exploreMoving && !(zooming && st.exploreSharp) || glideHold && camMoved;
   r.gliding = !!(glideHold && camMoved);
-  // A moving explore camera holds svg#map and its base across FRAME_PERF.exploreMin to exploreMax and draws them ahead when it
-  // zooms in, so a pinch or a wheel redraws them every 25 % of zoom instead of every 15 % (each redraw was a 50-340 ms frame
-  // in the phone and PC pinch passes, 2026-11-27). Rest still redraws them sharp at the true scale.
+  // A moving explore camera holds svg#map and its base across FRAME_PERF.exploreMin to exploreMax, so a pinch or a wheel redraws
+  // them every 25 % of zoom instead of every 15 % (each redraw was a 50-340 ms frame in the phone and PC pinch passes,
+  // 2026-11-27). They are drawn at the true scale, not ahead: the bigger raster ahead let parts of svg#map drop out for a frame
+  // or two on the phone (the runestone and the ring line under the ash, phone-p25v films). Rest still redraws them sharp.
   const zoomHold = free && moving, mapLo = zoomHold ? FRAME_PERF.exploreMin : FRAME_PERF.scaleMin, mapHi = zoomHold ? FRAME_PERF.exploreMax : FRAME_PERF.scaleMax;
   const rebase = !r.base || ratio < mapLo || ratio > mapHi;
   const score = (k, lo, hi) => Math.max(lo / k, k / hi);
@@ -3531,7 +3537,7 @@ function tripApply(st, focus = null) {
   };
   st.rasterRebased = mapForced || chosen?.kind === 'map';
   if (st.rasterRebased) {
-    const ahead = moving && glideHold && lastCam && c.s > lastCam.s ? Math.min(c.s / FRAME_PERF.scaleMin, Math.max(c.s,endScale(lastCam))) / c.s : zoomHold && lastCam && c.s > lastCam.s ? mapHi : 1;
+    const ahead = moving && glideHold && lastCam && c.s > lastCam.s ? Math.min(c.s / FRAME_PERF.scaleMin, Math.max(c.s,endScale(lastCam))) / c.s : 1;
     r.base = { ...c, s: c.s * ahead, tx: c.ax - (c.ax-c.tx)*ahead, ty: c.ay - (c.ay-c.ty)*ahead };
     tripWrite(E.cam, 'transform', text(r.base), true);
     if (camVeil) tripWrite(camVeil, 'transform', E.cam.getAttribute('transform'), true);
@@ -3545,7 +3551,7 @@ function tripApply(st, focus = null) {
   if (B) {
     if (baseForced || chosen?.kind === 'base') {
       let k = 1;
-      if (held && camMoved && baseLast && c.s > baseLast.s) k = zoomHold ? mapHi : Math.min(FRAME_PERF.baseAhead, Math.max(1,endScale(baseLast)/c.s));
+      if (held && camMoved && baseLast && c.s > baseLast.s) k = zoomHold ? 1 : Math.min(FRAME_PERF.baseAhead, Math.max(1,endScale(baseLast)/c.s));
       B.camera = rounded({ s: c.s*k, tx: VIEW.w/2-(VIEW.w/2-c.tx)*k, ty: VIEW.h/2-(VIEW.h/2-c.ty)*k });
       tripWrite(E.camBase, 'transform', text(B.camera), true); held = heldBy(B.camera); if (st.rasterBudget) st.rasterBudget.used = true;
     }
