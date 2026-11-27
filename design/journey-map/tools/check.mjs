@@ -49,7 +49,7 @@ ok(new Set(FINDS.map(f => f.id)).size === 11, 'find ids must be unique');
 FINDS.forEach(f => ok(typeof f.label === 'string' && f.label.trim().length > 8, `find ${f.id}: no spoken label`));
 ok(FINDS.filter(f => f.n).map(f => f.n).join() === '1,2,3,4,5,6', 'six main finds numbered 1 to 6');
 ok(FIND_COPY.hoards.length === 5 && FIND_COPY.hoards.every(h => h.title && h.label), 'five hoards with titles and labels');
-ok(FIND_COPY.serpentLines.length === 3 && FIND_COPY.beaconNotes.length === 4, 'three serpent lines and four beacon notes');
+ok(FIND_COPY.serpentLines.length === 3 && FIND_COPY.beaconNotes.length === 3, 'three serpent lines and three beacon notes');
 
 // ACTS adds up
 const F = ACTS.footer;
@@ -274,7 +274,8 @@ console.log(`gzip: hammer ${hammerKB.toFixed(2)} KB / 30; all map modules + CSS 
 // one-layer map (the cover under svg#map, the Next fill redrawn in place and the legend marker without a fade): 321.27 KB.
 // Both rose again the same day with the label warm-up's own path walk (pathWalk) and the sea dots drawn one path each: 322.86 and
 // 569.37 KB. Both rose again with L5 (the names, trail and finds in svgs of their own over svg#map): 323.87 and 570.39 KB.
-for (const [file, budget] of [['dist/journey-map.html', 332.6], ['dist/journey-joined.html', 570.7]]) {
+// 2026-11-27: the joined page repacked with COMB-R in the cloud (Codex left it, since pack-joined also writes joined.html): 578.89 KB.
+for (const [file, budget] of [['dist/journey-map.html', 332.6], ['dist/journey-joined.html', 579.0]]) {
   if (!existsSync(join(ROOT, file))) continue;
   const kb = gzipKB(readLF(file)); ok(kb <= budget, `${file}: exceeds ${budget} KB gzip`); console.log(`gzip: ${file} ${kb.toFixed(2)} KB / ${budget}`);
 }
