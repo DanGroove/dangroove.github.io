@@ -2,7 +2,7 @@
 import { STOPS, MAP, FIND_COPY, FIND_PLAY, FIND_TIMING, RAVEN_RIG, COPY } from './data.mjs';
 import { JORM, jormPoint, jormSegment, jormSubTail, ravenPose, ravenPoseTransforms } from './art.mjs';
 import { clamp01, lerp, VIEW } from './trip.mjs';
-import { FD, FIND_BY, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, closeSheet, attend, findBits, findFormat, findRange, findSheet, findSlot, findReady, findStyle, findSheetFrame } from './findkit.mjs';
+import { FD, FIND_BY, ease, out3, fEsc, attr, toMap, found, opened, press, showPop, closePop, closeSheet, attend, findBits, findFormat, findRange, findSheet, findSlot, findReady, findStyle, findSheetFrame, findIdleTime, findIdleDelta, findIdleVisible } from './findkit.mjs';
 
 export function findRavens(svg) {
   const R = FIND_PLAY.raven, G = RAVEN_RIG, f = FIND_BY.ravens, el = svg.querySelector('#f-ravens'), gifts = el.querySelector('.rv-gifts');
@@ -77,10 +77,13 @@ export function findRavens(svg) {
     return { p: [0, 1].map(k => (1-q)**3*pts[0][k]+3*(1-q)**2*q*pts[1][k]+3*(1-q)*q*q*pts[2][k]+q**3*pts[3][k]), v: [0, 1].map(k => 3*(1-q)**2*(pts[1][k]-pts[0][k])+6*(1-q)*q*(pts[2][k]-pts[1][k])+3*q*q*(pts[3][k]-pts[2][k])) };
   };
   o.tick = (t, dt) => {
+    const idle=findIdleTime(birds[0].g);
     const p = attend(o, R.attend), flying = o.stage === 'flight', hearing = o.stage === 'hear';
     if (o.awake && !o.wasAwake) o.ruffleTs = t; o.wasAwake = o.awake;
-    if (!FD.rm && t >= o.preenAt && (o.stage === 'rest' || o.stage === 'reel')) { o.preenTs = t; o.preenBird = 1 - o.preenBird; o.preenAt = t + findRange(R.preen); }
+    if (!FD.rm && idle >= o.preenAt && (o.stage === 'rest' || o.stage === 'reel')) { o.preenTs = idle; o.preenBird = 1 - o.preenBird; o.preenAt = idle + findRange(R.preen); }
     birds.forEach(b => {
+      if(FD.idleOnly&&!findIdleVisible(b.g))return;
+      const idle=findIdleTime(b.g),idleDt=findIdleDelta(b.g);
       const active = hearing || flying && b.i === o.activeBird, age = t - b.startTs, duration = hearing ? G.loopTakeoff + G.loopTime : G.crouch + R.out + R.away + R.back;
       let xy = active ? b.flightBase.slice() : (flying || hearing || o.stage === 'reel') && b.lockedXY ? b.lockedXY.slice() : baseAt(b), q = ravenPose('sit', 'sit', 0), rotate = 0, headMove = [0, 0], mode = 'sit';
       if (active && age >= 0 && !b.done) {
@@ -138,12 +141,12 @@ export function findRavens(svg) {
           if (shy !== b.shyTo) { b.shyFrom = b.shy; b.shyTo = shy; b.shyTs = t; }
           const u = clamp01((t - b.shyTs) / G.shyTime); b.shy = lerp(b.shyFrom, b.shyTo, ease(u)); xy = baseAt(b); xy[1] -= Math.abs(b.shyTo - b.shyFrom) / R.shy * G.hopHeight * Math.sin(Math.PI * u);
         }
-        let angle = p ? Math.atan2(p[1] - f.y - xy[1] * R.scale, (p[0] - f.x - xy[0] * R.scale) * b.side) * FIND_PLAY.kit.deg / Math.PI : Math.sin(t * R.idle[0] + b.i) * R.headLimit * R.idle[1];
+        let angle = p ? Math.atan2(p[1] - f.y - xy[1] * R.scale, (p[0] - f.x - xy[0] * R.scale) * b.side) * FIND_PLAY.kit.deg / Math.PI : Math.sin(idle * R.idle[0] + b.i) * R.headLimit * R.idle[1];
         angle = Math.max(-R.headLimit, Math.min(R.headLimit, angle));
-        b.angle = FD.rm ? 0 : lerp(b.angle, angle, Math.min(1, dt * R.headEase));
-        const tuck = b.i === o.preenBird && !FD.rm ? Math.sin(Math.PI * clamp01((t - o.preenTs) / R.preenTime)) : 0;
+        b.angle = FD.rm ? 0 : lerp(b.angle, angle, Math.min(1, (FD.idleOnly?idleDt:dt) * R.headEase));
+        const tuck = b.i === o.preenBird && !FD.rm ? Math.sin(Math.PI * clamp01((idle - o.preenTs) / R.preenTime)) : 0;
         q.head = lerp(b.angle, R.preenAngle, tuck); headMove = G.preenMove.map(v => v * tuck);
-        const ruffle = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - o.ruffleTs) / R.ruffle[1])), breathe = FD.rm ? 0 : G.breathe[0] * Math.sin(t * Math.PI * 2 / G.breathe[1] + b.i);
+        const ruffle = FD.rm ? 0 : Math.sin(Math.PI * clamp01((t - o.ruffleTs) / R.ruffle[1])), breathe = FD.rm ? 0 : G.breathe[0] * Math.sin(idle * Math.PI * 2 / G.breathe[1] + b.i);
         q.sq = q.sq.map(v => v * (1 + (R.ruffle[0] - 1) * ruffle + breathe));
       }
       if (b.giftDown && !active) {
@@ -240,10 +243,11 @@ export function findSerpent(svg) {
     dirty = next; tailPose = o.openAmount;
   };
   o.tick = (t, dt) => {
+    const idle=findIdleTime(file),headIdle=findIdleTime(head);
     const e = t - o.ts, target = attend({x:f.x+S.head[0],y:f.y+S.head[1]}, S.attend), here = [f.x+S.head[0],f.y+S.head[1]];
     let aim = target ? Math.atan2(-(target[1]-here[1]),-(target[0]-here[0]))*180/Math.PI : 0; aim = Math.max(-S.headLimit,Math.min(S.headLimit,aim));
-    o.headAngle = FD.rm ? 0 : lerp(o.headAngle,aim,Math.min(1,dt*S.headEase));
-    let angle = o.stage === 'asleep' ? (FD.rm ? 0 : S.breathe[0]*Math.sin(Math.PI*2*t/S.breathe[1])) : o.headAngle, jawTurn = o.stage === 'asleep' ? S.shippedJaw : 0, at = S.fileAt.slice(), rotation = 0, scale = 1, alpha = 1, nameAlpha = 1;
+    o.headAngle = FD.rm ? 0 : lerp(o.headAngle,aim,Math.min(1,(FD.idleOnly?findIdleDelta(head):dt)*S.headEase));
+    let angle = o.stage === 'asleep' ? (FD.rm ? 0 : S.breathe[0]*Math.sin(Math.PI*2*headIdle/S.breathe[1])) : o.headAngle, jawTurn = o.stage === 'asleep' ? S.shippedJaw : 0, at = S.fileAt.slice(), rotation = 0, scale = 1, alpha = 1, nameAlpha = 1;
     if (o.stage === 'bite') { const q = clamp01(e/S.bite); jawTurn = S.jaw*Math.sin(Math.PI*q); at = S.fileAt.map((v,i)=>lerp(v,[-40,5][i],ease(q))); scale = 1-ease(q); rotation = -8*q; nameAlpha = 1-q; if(q===1){o.stage='lap';o.ts=t;o.held=false;swell(S.lap);} }
     if (o.stage === 'lap') { alpha = nameAlpha = 0; jawTurn = 2; }
     if (o.stage === 'spit') { const q = clamp01(e/S.spit); at = [-38,5].map((v,i)=>lerp(v,S.returnAt[i],out3(q))); rotation = -8*Math.sin(Math.PI*q); jawTurn = 8*Math.sin(Math.PI*q); nameAlpha = q; if(q===1){o.stage='typing';o.ts=t;} }
@@ -261,7 +265,7 @@ export function findSerpent(svg) {
     updateBody(lumps);attr(ripple,'opacity',FD.rm||o.openAmount===0?0:.55*Math.sin(Math.PI*o.openAmount));
     const heard=FD.rm?1:clamp01((t-o.hearTs)/S.hear[1]);angle+=S.hear[0]*Math.sin(Math.PI*heard);
     const sleeping=o.stage==='asleep';o.headTurn=angle;o.jawAngle=jawTurn;attr(head,'transform','rotate('+angle+')');joinNeck(angle);attr(jaw,'transform','rotate('+(-jawTurn)+' '+S.jawPivot.join(' ')+')');attr(eye,'opacity',sleeping?0:1);attr(shut,'opacity',sleeping?1:0);
-    const bob=FD.rm||!['ready','typing'].includes(o.stage)?0:Math.sin(Math.PI*2*t/S.bob[2]);at[1]+=S.bob[1]*bob;rotation+=S.bob[0]*bob;const phoneScale=VIEW.phone?Math.min(1,S.filePhone/(15*FD.st.cam.s)):1;
+    const bob=FD.rm||!['ready','typing'].includes(o.stage)?0:Math.sin(Math.PI*2*idle/S.bob[2]);at[1]+=S.bob[1]*bob;rotation+=S.bob[0]*bob;const phoneScale=VIEW.phone?Math.min(1,S.filePhone/(15*FD.st.cam.s)):1;
     attr(file,'transform','translate('+at.join(' ')+') rotate('+rotation+') scale('+(scale*phoneScale)+')');attr(file,'opacity',alpha);attr(stamp,'opacity',o.stamped?1:0);attr(stamp,'transform','translate(.5 1.2) rotate(-14) scale('+(1/phoneScale)+')');attr(name,'x',at[0]+S.shipName[0]*o.openAmount);attr(name,'y',at[1]+S.nameDy+S.shipName[1]*o.openAmount);attr(name,'font-size',lerp(S.nameSize,S.shipName[2],o.openAmount)*(VIEW.phone&&(o.version>=4||o.pokes>=4&&['spit','typing'].includes(o.stage))?S.namePhone:1));attr(name,'opacity',nameAlpha);
     o.zoomFrame();
     attr(el,'data-revision-state',o.stage);attr(el,'data-loop-open',o.openAmount);attr(el,'data-file',o.fileName);caption();if(o.stage==='asleep'&&o.queued&&t-o.shippedAt>=S.queueRest)consumeQueue();o.playing=['bite','lap','spit','typing','opening','waking'].includes(o.stage)||swells.some(s=>s.live)||o.stage==='asleep'&&o.queued>0;

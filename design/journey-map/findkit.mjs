@@ -10,9 +10,68 @@ export const D = s => FD.rm ? Number.EPSILON : s;
 export const ease = t => easeIO(clamp01(t));
 export const out3 = t => 1 - (1 - clamp01(t)) ** 3;
 export const fEsc = s => String(typeof s === 'object' ? s.t : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-export const attr = (el, k, v) => { const text = String(v); if (el.getAttribute(k) !== text) el.setAttribute(k, text); };
+export const attr = (el, k, v) => { const layer=FD.idleOnly&&findIdleLayer(el);if(layer&&el!==layer.el&&!layer.visible)return;const text = String(v); if (el.getAttribute(k) !== text) el.setAttribute(k, text); };
+// COMB-S: bounded SVGs own idle ink and its paused clocks.
+const findIdleLayer = el => el?.__jmIdle || el?.closest?.('svg[data-idle]')?.__jmIdle;
+export const findIdleTime = el => { const layer=findIdleLayer(el); return layer ? layer.time : FD.now; };
+export const findIdleDelta = el => findIdleLayer(el)?.dt ?? FD.dt;
+export const findIdleVisible = el => findIdleLayer(el)?.visible ?? true;
+export function findIdleFrame(st,advance=true) {
+  const moving=!!(st.gliding||st.exploreMoving),c=st.cam,dpr=globalThis.devicePixelRatio||1;
+  for(const q of FD.idleLayers||[]){
+    const actor=q.actor,active=actor&&(actor.playing||actor.drag||actor.busy||actor.hearing||FD.sheetOwner===actor||['flight','hear','landing','reel','chase','eating','waking','trace','opening','sheet','closing','sliding','reply','pebble','sounding','echo','pull','lifting','rising','rattling','bouncing'].includes(actor.stage)||q.owner==='wayfinder'&&FD.focusId===q.owner);
+    if(q.placed&&!st.smallMoved){
+      if(advance){const run=q.visible&&!moving;q.dt=q.loop&&run&&q.running?FD.dt:0;q.time+=q.dt;q.running=run;continue;}
+      if(!q.loop&&!active||!q.visible&&!active)continue;
+    }
+    q.placed=true;
+    const contentKey=q.node.childElementCount+'/'+q.node.textContent;
+    if(contentKey!==q.contentKey&&!q.bits){q.contentKey=contentKey;const b=q.node.getBBox();q.box=[b.x-q.pad,b.y-q.pad,b.x+b.width+q.pad,b.y+b.height+q.pad];}
+    let b=q.box;
+    if(q.bits){
+      const live=FD.bits.filter(b=>b.live);const extra=[...q.node.children].some(e=>!FD.bits.some(b=>b.el===e)&&+(e.getAttribute('opacity')||1)>0);
+      if(!live.length&&!extra){q.visible=false;q.running=false;q.dt=0;findStyle(q.el,'visibility','hidden');findStyle(q.el,'opacity',0);continue;}
+      b=extra?[-c.tx/c.s,-c.ty/c.s,(VIEW.w-c.tx)/c.s,(VIEW.h-c.ty)/c.s]:[Math.min(...live.map(b=>b.x))-20,Math.min(...live.map(b=>b.y))-20,Math.max(...live.map(b=>b.x))+20,Math.max(...live.map(b=>b.y))+20];
+    }else{
+      const chainKey=q.chain.map(e=>e.getAttribute('transform')).join('/');
+      if(q.boundsKey===chainKey&&q.boundsBox===q.box)b=q.worldBox;
+      else {let m=new DOMMatrix();
+      for(const e of q.chain){const t=e.transform?.baseVal;if(t)for(let i=0;i<t.numberOfItems;i++)m=m.multiply(t.getItem(i).matrix);}
+      const corners=[[b[0],b[1]],[b[2],b[1]],[b[0],b[3]],[b[2],b[3]]].map(([x,y])=>new DOMPoint(x,y).matrixTransform(m));
+      b=[Math.min(...corners.map(p=>p.x)),Math.min(...corners.map(p=>p.y)),Math.max(...corners.map(p=>p.x)),Math.max(...corners.map(p=>p.y))];q.boundsKey=chainKey;q.boundsBox=q.box;q.worldBox=b;}
+    }
+    const raw=[b[0]*c.s+c.tx,b[1]*c.s+c.ty,b[2]*c.s+c.tx,b[3]*c.s+c.ty];
+    const visible=raw[2]>-8&&raw[0]<VIEW.w+8&&raw[3]>-8&&raw[1]<VIEW.h+8;
+    q.visible=visible;
+    if(advance){const run=visible&&!moving;q.dt=run&&q.running?FD.dt:0;q.time+=q.dt;q.running=run;}
+    const shown=String(visible);if(q.el.dataset.idleVisible!==shown)q.el.dataset.idleVisible=shown;
+    findStyle(q.el,'visibility',visible?'inherit':'hidden');findStyle(q.el,'opacity',visible?(q.opacity??''):0);
+    // An idle CSS stroke animation has the same visibility/movement clock.
+    const run=visible&&!moving;if(q.animationRun!==run){q.animationRun=run;for(const a of q.node.getAnimations?.({subtree:true})||[])if(a.id==='jm-idle'){if(run)a.play();else a.pause();}}
+    if(!visible)continue;
+
+
+    const rect=active?[0,0,VIEW.w,VIEW.h]:[Math.max(0,Math.floor(raw[0]*dpr)/dpr),Math.max(0,Math.floor(raw[1]*dpr)/dpr),Math.min(VIEW.w,Math.ceil(raw[2]*dpr)/dpr),Math.min(VIEW.h,Math.ceil(raw[3]*dpr)/dpr)];
+    if(rect[2]<=rect[0]||rect[3]<=rect[1])continue;
+    const p=q.camera,k=p?c.s/p.s:1,tx=p?c.tx-p.tx*k+q.origin[0]*k:0,ty=p?c.ty-p.ty*k+q.origin[1]*k:0;
+    const covers=p&&rect[0]>=tx-.01&&rect[1]>=ty-.01&&rect[2]<=tx+q.width*k+.01&&rect[3]<=ty+q.height*k+.01;
+    if(!p||!moving||!covers||k<.8||k>1.25){
+      const key=[c.s,c.tx,c.ty,...rect].join('/');
+      if(key!==q.key){
+        q.key=key;q.camera={...c};q.origin=rect.slice(0,2);q.width=rect[2]-rect[0];q.height=rect[3]-rect[1];
+        attr(q.el,'width',q.width);attr(q.el,'height',q.height);findStyle(q.el,'width',q.width+'px');findStyle(q.el,'height',q.height+'px');
+        attr(q.cam,'transform','matrix('+c.s.toFixed(4)+' 0 0 '+c.s.toFixed(4)+' '+(+c.tx.toFixed(2)-rect[0])+' '+(+c.ty.toFixed(2)-rect[1])+')');
+      }
+    }
+    const v=q.camera,scale=c.s/v.s;
+    findStyle(q.el,'transform','matrix('+scale+',0,0,'+scale+','+(c.tx-v.tx*scale+q.origin[0]*scale)+','+(c.ty-v.ty*scale+q.origin[1]*scale)+')');
+    if(q.trailGroup)for(const p of q.pieces){const full=st.exploreK||st.u>=p.u1,hidden=!full&&st.u<=p.u0,s=q.camera.s;findStyle(p.node,'opacity',hidden?'0':'');findStyle(p.node,'strokeDasharray',full||hidden?'none':((st.u-p.u0)*s).toFixed(1)+' '+((p.u1-p.u0)*s+20).toFixed(1));}
+    q.screenBox=[...q.origin,q.width,q.height];
+  }
+}
 const findStyleWrites = new WeakMap();
 export function findStyle(el, key, value) {
+  const layer=FD.idleOnly&&findIdleLayer(el);if(layer&&el!==layer.el&&!layer.visible)return;
   const text = String(value), cache = findStyleWrites.get(el) || {}, old = cache[key];
   // A --name property goes through setProperty and getPropertyValue.
   const custom = key.startsWith('--'), read = () => custom ? el.style.getPropertyValue?.(key) ?? el.style[key] : el.style[key];
@@ -270,7 +329,7 @@ export function findBits(kind, x, y, n, options = {}) {
     const bit = FD.bits.find(b => !b.live) || FD.bits.reduce((a, b) => a.serial < b.serial ? a : b);
     const [path, cls] = kind === 'star' ? [starPath(0, 0, B.starSize), 'pf'] : B.kinds[kind];
     const angle = findRange(v.dir) * Math.PI / FIND_PLAY.kit.deg, speed = findRange(v.speed);
-    Object.assign(bit, { live: true, serial: FD.serial++, x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, age: 0, life: findRange(v.life), spin: v.spin, g: v.g, drag: v.drag, size: v.size, alpha: kind === 'puff' ? Math.min(B.puffAlpha, v.alpha) : v.alpha, kind });
+    Object.assign(bit, { live: true, idle: !!FD.idleOnly, owner: FD.currentFind, serial: FD.serial++, x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, age: 0, life: findRange(v.life), spin: v.spin, g: v.g, drag: v.drag, size: v.size, alpha: kind === 'puff' ? Math.min(B.puffAlpha, v.alpha) : v.alpha, kind });
     attr(bit.el, 'd', path); attr(bit.el, 'class', cls); bit.el.style.display = ''; if (['star', 'drop', 'puff', 'wisp'].includes(kind)) bit.el.style.stroke = 'none'; else bit.el.style.stroke = '';
     attr(bit.el, 'transform', `translate(${x} ${y}) scale(${v.size[0]})`); attr(bit.el, 'opacity', bit.alpha);
   }
@@ -308,7 +367,9 @@ export function findKitFrame() {
   const dt = FD.dt;
 
   FD.bits.forEach(b => {
-    if (!b.live) return; b.age += dt;
+    if (!b.live) return;
+    if(b.idle){const c=FD.st.cam,x=b.x*c.s+c.tx,y=b.y*c.s+c.ty;if(FD.st.gliding||FD.st.exploreMoving||x < -8||x > VIEW.w+8||y < -8||y > VIEW.h+8)return;}
+    b.age += dt;
     if (b.age >= b.life) { b.live = false; attr(b.el, 'opacity', 0); queueMicrotask(() => { if (!b.live) b.el.style.display = 'none'; }); return; }
     b.vy += b.g * dt; b.vx *= Math.max(0, 1 - b.drag * dt); b.vy *= Math.max(0, 1 - b.drag * dt); b.x += b.vx * dt; b.y += b.vy * dt;
     const q = b.age / b.life;

@@ -653,3 +653,21 @@ html:not(.rm) .stop:not([data-state]) { visibility: hidden; }
 #map-anim .anim-find.hoard { transition: opacity .3s; }
 #map-lines { pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .3s; }
 .rm #map-lines { transition: none; }
+
+/* COMB-S: tightly bounded idle ink keeps the stack fade and original SVG order. */
+.idle-layer { overflow: hidden; contain: paint; pointer-events: none; will-change: transform; }
+.idle-layer .anim-find { opacity: var(--jm-find); }
+.idle-layer .anim-find.hoard { transition: opacity .3s; }
+
+/* COMB-S S4: stop ink has a persistent, hit-sized backing through L5 raster commits. */
+html:not(.rm) .st-btn { will-change: transform, opacity; }
+
+/* COMB-S S3: bounded cached shadow paint, and the head's own 14 px paint clip. */
+html:not(.rm) .c-shadow, html:not(.rm) .c-sh { will-change: transform, opacity; }
+.tl-head { contain: layout paint; }
+
+/* Keep all raster children in map order when the common fade reaches opacity one. */
+#map-stack { z-index: 0; }
+
+/* COMB-S measured marker clips reached 19841x17901; retain a local paint clip, including the 4 px keyboard outline. */
+html:not(.rm) .st-btn { contain: layout paint; overflow-clip-margin: 4px; }

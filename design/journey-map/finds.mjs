@@ -2,7 +2,7 @@
 import { FIND_COPY, FIND_PLAY, COMB } from './data.mjs';
 import { JOURNEY } from './steps.mjs';
 import { depthBeam } from './depth.mjs';
-import { FD, FIND_BY, findKitBuild, findKitFrame, findCapture, findPlace, findLife, closePop, closeSheet, findKitStyle, findHint, findSvg, attr, findScreen } from './findkit.mjs';
+import { FD, FIND_BY, findKitBuild, findKitFrame, findCapture, findPlace, findLife, closePop, closeSheet, findKitStyle, findHint, findSvg, attr, findScreen, findIdleFrame } from './findkit.mjs';
 import { findWay, findHoards } from './findhoards.mjs';
 import { findRavens, findSerpent } from './findcreatures.mjs';
 import { findBeacon, findRune } from './findsheets.mjs';
@@ -62,6 +62,7 @@ export function findsPointer(x, y) { FD.pointer = [x, y]; FD.pointerT = FD.now; 
 export function findsFrame(time, st) {
   if (!st) return;
   FD.dt = Math.max(0, Math.min(FIND_PLAY.kit.dt, FD.now ? time - FD.now : 0)); FD.now = time; FD.st = st;
+  findIdleFrame(st);
   // A moving camera quiets the finds' idle life inside svg#map, in a glide and in explore alike: each idle write there
   // redrew the held map on every frame of a pinch, a drag or a wheel (phone and PC pinch passes, 2026-11-27).
   const quiet = st.gliding || !!st.exploreMoving;
@@ -70,17 +71,20 @@ export function findsFrame(time, st) {
   Object.values(FD.list).forEach(o => {
     const f = FIND_BY[o.id], p = findPlace(o.id), rad = o.id === 'wayfinder' ? FIND_PLAY.focus.wide[2] * 2 : o.id === 'hoards' ? Math.max(...FIND_COPY.hoards.map(h => Math.hypot(h.x - f.x, h.y - f.y) + FIND_PLAY.hoard.rad)) : o.id === 'beacon' ? FIND_PLAY.beacon.rad : o.id === 'ravens' ? FIND_PLAY.raven.reach + f.view[2] : o.id === 'serpent' ? FIND_PLAY.serpent.near + f.view[2] : FIND_PLAY[o.id === 'longship' ? 'ship' : o.id]?.rad || f.view?.[2] || FIND_PLAY.kit.rad;
     const near = FIND_PLAY[o.id === 'wayfinder' ? 'way' : o.id === 'ravens' ? 'raven' : o.id === 'runestone' ? 'rune' : o.id === 'longship' ? 'ship' : o.id]?.near || rad;
-    const playing = ['flight', 'hear', 'landing', 'reel', 'chase', 'eating', 'waking', 'trace', 'opening', 'sheet', 'closing', 'sliding', 'reply', 'pebble', 'sounding', 'echo', 'pull', 'lifting'].includes(o.stage) || o.drag || o.busy || o.playing || o.hearing;
+    const playing = ['flight', 'hear', 'landing', 'reel', 'chase', 'eating', 'waking', 'trace', 'opening', 'sheet', 'closing', 'sliding', 'reply', 'pebble', 'sounding', 'echo', 'pull', 'lifting'].includes(o.stage) || o.drag || o.busy || o.playing || o.hearing || o.id === 'wayfinder' && (JOURNEY.focus === o.id || Math.abs(o.speed || 0) > .5 || time-o.hearTs < FIND_PLAY.way.spin);
     const active = o => ['rising','rattling','opening','bouncing','waiting'].includes(o.stage) || o.hold || o.queued || o.pending;
     o.travel?.();
     if(o.id==='serpent'&&['base','anim'].includes(st.rasterLayer))o.zoomFrame?.(st.rasterLayer==='base'?'body':'head');
-    const paused = quiet && !playing && JOURNEY.focus !== o.id && FD.sheetOwner !== o && !(o.id === 'longship' && o.x !== undefined && (p[0] !== o.x || p[1] !== o.y));
+    const ownLayers=(FD.idleLayers||[]).filter(q=>q.owner===o.id);
+    const paused = !playing && FD.sheetOwner !== o && (quiet || ownLayers.length > 0 && !ownLayers.some(q=>q.visible));
     if (paused && o.id !== 'hoards') { if (o.onScreen && st.rasterRebased) { if (o.id === 'wayfinder') o.compassFrame?.(); if(!st.rasterLayer)o.zoomFrame?.(); } return; } // Keep sky-side pieces, including the beacon beam, at their last state; zoom-led detail follows the map's redraws.
     findLife(o, ...p, o.id === 'horn' && ['sounding', 'echo'].includes(o.stage) ? FIND_PLAY.horn.soundRad : rad, near);
+    FD.idleOnly=!playing; FD.currentFind=o.id;
     if (o.id === 'hoards' && quiet) {
       o.items.forEach(h => { if (active(h) || JOURNEY.focus === h.id || FD.sheetOwner === h) h.tick(time, FD.rm ? 0 : FD.dt); });
     } else if (o.id === 'hoards' || o.onScreen || playing || FD.sheetOwner === o) o.tick?.(time, FD.rm ? 0 : FD.dt);
     else if (o.id === 'beacon') depthBeam(null);
+    FD.idleOnly=false; FD.currentFind=null;
   });
   // These shells retain the drawn part's inherited camera, scale and find visibility without duplicate hits or ids.
   for (const { source, clone } of FD.animCopies || []) for (const key of ['transform','opacity','style','visibility']) {
@@ -91,4 +95,6 @@ export function findsFrame(time, st) {
   if (quiet) FD.bits = [];
   try { findKitFrame(); } finally { FD.bits = bits; }
   if (!quiet || FD.all.playing) FD.all.tick(time); if (JOURNEY.focus !== FD.focusId) findHint(JOURNEY.focus); FD.focusId = JOURNEY.focus;
+  if(!FD.idleLayers)FD.buildIdleLayers?.();
+  findIdleFrame(st,false);
 }

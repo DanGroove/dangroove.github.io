@@ -3,7 +3,7 @@ import { C, COPY, FIND_COPY, FIND_PLAY, FIND_TIMING, COMB } from './data.mjs';
 import { VIEW, clamp01, lerp } from './trip.mjs';
 import { rubbingSvg } from './art.mjs';
 import { depthBeam } from './depth.mjs';
-import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, closeSheet, findBits, findSvg, findSheet, findSlot, findAngleDelta, findStyle, findSheetFrame } from './findkit.mjs';
+import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, closeSheet, findBits, findSvg, findSheet, findSlot, findAngleDelta, findStyle, findSheetFrame, findIdleTime } from './findkit.mjs';
 
 export function findBeacon(svg) {
   const f=FIND_BY.beacon,el=svg.querySelector('#f-beacon'),beam=el.querySelector('.bc-beam'),flame=el.querySelector('.bc-flame'),glow=el.querySelector('.bc-glow');
@@ -41,12 +41,12 @@ export function findBeacon(svg) {
   o.reduce=()=>{const B=FIND_PLAY.beacon;if(o.snap){o.head=o.snap.to;o.snap=null;}const O=origin();if(o.drag||FD.now-o.manualTs<B.manual)notes.forEach((n,i)=>{const angle=Math.atan2(n.d.y-O[1],n.d.x-O[0])*180/Math.PI;if(Math.abs(findAngleDelta(o.head,angle))<FIND_TIMING.beamCone/2)read(n,i);});o.level=o.fire;o.embers.forEach(e=>{e.done=true;attr(e.el,'opacity',0);});if(o.fire===notes.length){o.finalDone=true;o.beamTurns=1;o.head=B.baseAngle;}attr(ring,'opacity',0);};
   o.undo=()=>{o.manualTs=-Infinity;o.drag=false;};o.hear=()=>o.hearTs=FD.now;
   o.tick=(t,dt)=>{
-    const B=FIND_PLAY.beacon,O=origin();wrap();
+    const B=FIND_PLAY.beacon,O=origin(),idleBeam=findIdleTime(beam),idleFlame=findIdleTime(flame);wrap();
     o.embers.forEach(e=>{if(e.done)return;const q=clamp01((t-e.ts)/B.emberTime);attr(e.el,'transform','translate('+lerp(e.from[0],O[0],q)+' '+(lerp(e.from[1],O[1],q)-B.emberArc*Math.sin(Math.PI*q))+')');if(q===1){e.done=true;attr(e.el,'opacity',0);arrived(e.level,t);}});
     let manual=o.drag||t-o.manualTs<B.manual,lit=o.fire===notes.length,finalAge=t-o.litTs,finale=lit&&o.level===notes.length&&!FD.rm&&!o.finalDone&&Number.isFinite(o.litTs)&&finalAge>=0;
     if(finale){const q=clamp01(finalAge/B.finaleTurn);o.head=o.finaleFrom+360*q;o.snap=null;notes.forEach(n=>{const angle=Math.atan2(n.d.y-O[1],n.d.x-O[0])*180/Math.PI,share=((angle-o.finaleFrom+360)%360)/360;if(!n.finalFlash&&q>=share){n.finalFlash=true;n.flash=t;}});if(q===1){o.beamTurns=1;const settle=clamp01((finalAge-B.finaleTurn)/B.snap);o.head+=findAngleDelta(o.head,B.baseAngle)*ease(settle);if(settle===1){o.finalDone=true;o.head=B.baseAngle;o.manualTs=-Infinity;manual=false;}}}
     else if(o.snap){const q=FD.rm?1:ease((t-o.snap.ts)/B.snap);o.head=lerp(o.snap.from,o.snap.to,q);if(q===1)o.snap=null;}
-    else if(!manual&&!FD.rm&&!lit)o.head=B.baseAngle+B.sweep*Math.sin(t*FIND_TIMING.beamSweep);
+    else if(!manual&&!FD.rm&&!lit)o.head=B.baseAngle+B.sweep*Math.sin(idleBeam*FIND_TIMING.beamSweep);
     const strength=lit&&o.finalDone&&!manual?B.finaleReach:1,reach=B.baseReach*B.scale*strength,half=FIND_TIMING.beamCone/2;
     attr(beam,'transform','translate('+B.origin.join(' ')+') rotate('+(o.head-180)+') scale('+strength+')');attr(beam,'opacity',manual||finale?1:Math.min(1,B.idle*strength));
     const approach=(a,b,k)=>Math.abs(a-b)<.0001?b:lerp(a,b,Math.min(1,k));
@@ -60,9 +60,9 @@ export function findBeacon(svg) {
     if(lit&&(o.finalDone||Number.isFinite(o.litTs)&&finalAge>=0)){const q=FD.rm?1:clamp01(finalAge/B.finaleTime);size=q<.45?lerp(B.finaleFlame[0],B.finaleFlame[1],out3(q/.45)):lerp(B.finaleFlame[1],B.finaleFlame[2],ease((q-.45)/.55));if(FD.rm)size=B.finaleFlame[2];glowAlpha=Math.max(glowAlpha,!FD.rm&&finalAge<B.finaleFlash?1-clamp01(finalAge/B.finaleFlash):0);}
     const hearAge=t-o.hearTs,hear=FD.rm?1:hearAge<B.hear[1]?lerp(B.hear[0],1,clamp01(hearAge/B.hear[1])):1+(B.hear[2]-1)*Math.sin(Math.PI*clamp01((hearAge-B.hear[1])/B.hear[3])),F=B.flicker,foot=B.flameFoot;
     o.flameSize=size;o.glowStrength=glowAlpha;o.glowRadius=radius;
-    const sx=FD.rm?size:size*(1+F[0]*Math.sin(F[1]*t)+F[2]*Math.sin(F[3]*t)),sy=FD.rm?size:size*(1+F[4]*Math.sin(F[5]*t));attr(flame,'transform','translate('+foot.join(' ')+') scale('+(sx*hear)+' '+(sy*hear)+') translate('+(-foot[0])+' '+(-foot[1])+')');attr(glow,'opacity',glowAlpha);attr(glow,'r',B.glowR*radius);
+    const sx=FD.rm?size:size*(1+F[0]*Math.sin(F[1]*idleFlame)+F[2]*Math.sin(F[3]*idleFlame)),sy=FD.rm?size:size*(1+F[4]*Math.sin(F[5]*idleFlame));attr(flame,'transform','translate('+foot.join(' ')+') scale('+(sx*hear)+' '+(sy*hear)+') translate('+(-foot[0])+' '+(-foot[1])+')');attr(glow,'opacity',glowAlpha);attr(glow,'r',B.glowR*radius);
     const ringQ=FD.rm?1:clamp01(finalAge/B.finaleRing[1]);attr(ring,'cx',O[0]);attr(ring,'cy',O[1]);attr(ring,'r',B.finaleRing[0]*out3(ringQ));attr(ring,'opacity',finale&&ringQ<1?.8*(1-ringQ):0);
-    if(o.onScreen&&!FD.rm){o.ember+=o.fire*B.embers*dt;const n=Math.floor(o.ember);o.ember-=n;if(n)findBits('spark',...O,n,FIND_PLAY.bits.sparks);}
+    if(o.onScreen&&!FD.rm&&o.playing){o.ember+=o.fire*B.embers*dt;const n=Math.floor(o.ember);o.ember-=n;if(n)findBits('spark',...O,n,FIND_PLAY.bits.sparks);}
     o.playing=!FD.rm&&(!!o.snap||o.embers.some(e=>!e.done)||t-o.stepTs<B.swellTime||lit&&!o.finalDone||manual&&notes.some(n=>!n.read&&n.time>0));
     o.stage=lit?'lit':manual?'aiming':'idle';if(lit&&FD.focusId===o.id&&FD.hint?.textContent!==B.litHint)FD.hint.textContent=B.litHint;
     depthBeam(!FD.rm&&o.onScreen&&VIEW.depth&&FD.st.pushT>0&&FD.st.rushT===0?{x:O[0],y:O[1],angle:o.head,half,reach,soft:B.soft,steps:B.wedgeSteps}:null,FD.st);
@@ -77,7 +77,7 @@ export function findRune(svg) {
     const R = FIND_PLAY.rune; trace.classList.toggle('red', red); trace.style.stroke = red ? '' : C.paper; trace.style.opacity = red ? 1 : 0; trace.style.strokeDasharray = red ? 'none' : R.dash.join(' ');
     trace.getAnimations().forEach(a => a.cancel());
     if (red) trace.style.strokeDasharray = R.dash[1] + ' ' + R.dash[1];
-    if (!FD.rm) trace.animate(red ? [{ strokeDashoffset: R.dash[1], opacity: 1 }, { strokeDashoffset: 0, opacity: 1 }] : [{ strokeDashoffset: 0, opacity: 0 }, { strokeDashoffset: -R.dash[1] / 2, opacity: 1 }, { strokeDashoffset: -R.dash[1], opacity: 0 }], { duration: (red ? R.carving : R.dashTime) * 1000, fill: red ? 'forwards' : 'none' });
+    if (!FD.rm) trace.animate(red ? [{ strokeDashoffset: R.dash[1], opacity: 1 }, { strokeDashoffset: 0, opacity: 1 }] : [{ strokeDashoffset: 0, opacity: 0 }, { strokeDashoffset: -R.dash[1] / 2, opacity: 1 }, { strokeDashoffset: -R.dash[1], opacity: 0 }], { duration: (red ? R.carving : R.dashTime) * 1000, fill: red ? 'forwards' : 'none' }).id = red ? '' : 'jm-idle';
   };
   const autoStart = () => { if (o.read) return; o.autoTs = FD.now; o.autoLast = null; };
   const rub = (x, y) => {
@@ -126,8 +126,8 @@ export function findRune(svg) {
   o.undo = () => { if (FD.sheetOwner === o) closeSheet(); };
   o.onEscape = () => { if (o.stage === 'trace') { o.stage = 'rest'; trace.classList.remove('red'); } };
   o.tick = t => {
-    const R = FIND_PLAY.rune;
-    if (o.stage === 'rest' && o.awake && !FD.rm && t - o.dashTs >= R.dashTime) { o.dashTs = t; queueMicrotask(() => dash(false)); }
+    const R = FIND_PLAY.rune, idle=findIdleTime(trace);
+    if (o.stage === 'rest' && o.awake && !FD.rm && idle - (o.idleDashTs??-Infinity) >= R.dashTime) { o.idleDashTs = idle; queueMicrotask(() => dash(false)); }
     if (o.stage === 'trace' && t - o.ts >= D(R.carving)) { o.stage = 'opening'; queueMicrotask(sheet); return; }
     if (!['sheet', 'closing'].includes(o.stage) || FD.sheetOwner !== o) return;
     const closing = FD.sheetClosing;

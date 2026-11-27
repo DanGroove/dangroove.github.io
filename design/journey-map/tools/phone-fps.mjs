@@ -213,7 +213,7 @@ function traceSummary(ev, windowMs) {
 async function oneRun(p, beat, run) {
   events.length = 0;
   const colon = beat.indexOf(':'), kind = colon < 0 ? (beat === 'hero' ? 'hero' : 'next') : beat.slice(0, colon), arg = (colon < 0 ? beat : beat.slice(colon + 1)).toLowerCase();
-  const start = { next: arg, back: arg, press: 'map', find: 'map', explore: 'end', visit: 'end', swipe: arg, hero: null, jump: arg.split('-')[0], pinch: arg, pinchcard: arg }[kind];
+  const start = { next: arg, back: arg, press: 'map', rest: 'map', find: 'map', explore: 'end', visit: 'end', swipe: arg, hero: null, jump: arg.split('-')[0], pinch: arg, pinchcard: arg }[kind];
   if (start === undefined) throw new Error('unknown beat ' + beat);
   if (kind === 'hero' && !p.joined) { note(`skipped hero for ${p.name}: no --page ${p.name}-joined=<file>`); return []; }
   await send('Page.navigate', { url: kind === 'hero' ? `http://localhost:${PORT}/${p.joined}.html` : `http://localhost:${PORT}/${p.name}.html?beat=${start}` });
@@ -267,7 +267,12 @@ async function oneRun(p, beat, run) {
   const moved = (b, a) => a.moving || a.P !== b.P ? null : `no move (P still ${a.P})`;
   const anything = (b, a) => a.moving || a.P !== b.P || a.y !== b.y || a.cam !== b.cam || a.cls !== b.cls || a.ui !== b.ui ? null : 'nothing moved';
   const W = env.w, H = env.h;
-  if (kind === 'next') await measure(beat, () => press(sel('.go-next'), 'Next'), arg === 'end' ? (b, a) => a.cls.includes('jm-explore') ? null : 'explore did not start' : moved);
+  // COMB-S rest beats record a settled view with no input in the window.
+  if(kind==='rest'){
+    if(arg==='compass'){try{await press(findOpen('wayfinder'),'the compass marker');}catch(e){return fail(beat,e.message);}if(!await wait('window.__jm.focus === "wayfinder"',5000))return fail(beat,'the compass did not open');await sleep(3000);}
+    else if(arg!=='map')throw new Error('unknown rest beat '+beat);
+    await measure(beat,async()=>{},null);
+  } else if (kind === 'next') await measure(beat, () => press(sel('.go-next'), 'Next'), arg === 'end' ? (b, a) => a.cls.includes('jm-explore') ? null : 'explore did not start' : moved);
   else if (kind === 'back') await measure(beat, () => press(sel('.go-back'), 'Back'), moved);
   else if (kind === 'jump') {
     const to = STOP_IDS.indexOf(arg.split('-')[1]); if (to < 0) throw new Error('unknown stop in ' + beat);

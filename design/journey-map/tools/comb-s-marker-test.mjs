@@ -1,0 +1,18 @@
+// Arrival diagnostic: styles, stable backend nodes, compositor layer changes and native trace events.
+import {gBrowser,gRoot,gWait} from './comb-m-fixture.mjs';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {gzipSync} from 'node:zlib';
+const b=await gBrowser(),rows=[],choices=process.argv.slice(2);if(!choices.length)choices.push('base','new');
+let recording=false,layers=[];b.on('LayerTree.layerTreeDidChange',p=>{if(recording)layers.push({wall:Date.now(),layers:p.layers});});
+await b.send('DOM.enable');await b.send('LayerTree.enable');
+try{for(const build of choices){
+ const file=build==='new'?'dist/journey-map.html':build==='base'?gRoot+'/base/journey-map.html':'C:/Users/Admin/Documents/Portfolio/journey-map-runs/phone-p28/'+build+'.html';
+ const html=readFileSync(file,'utf8');b.patch=()=>{const end=html.indexOf('</script>',html.indexOf('// ---- main.mjs ----'));return html.slice(0,end)+`\nwindow.__g={FD,SC,EX,TRIP_EL,VIEW,DP,CD};window.__markerFrames=[];const sample=()=>{if(window.__markerRecording){const st=FD.st;__markerFrames.push({t:performance.now(),P:st?.P,kind:st?.kind,move:!!SC.move,cam:st?.cam,stops:[...document.querySelectorAll('.stop')].map(e=>{const a=e.querySelector('.st-btn'),r=a.getBoundingClientRect(),s=getComputedStyle(a);return{id:e.id,state:e.dataset.state,box:[r.x,r.y,r.width,r.height],opacity:s.opacity,visibility:s.visibility,display:s.display,willChange:s.willChange,parentWillChange:getComputedStyle(e).willChange}})});}requestAnimationFrame(sample);};requestAnimationFrame(sample);\n`+html.slice(end);};
+ await b.size(412,915,true,2.625);await b.page(false,'hmc1');await b.send('LayerTree.enable');await gWait(1500);
+ const nodes={};for(const q of['#stop-mohawk','#stop-mohawk .st-btn','#stop-hmc1','#stop-hmc1 .st-btn','#map-stack','#map-live','.c-shadow','.tl-head']){const{root}=await b.send('DOM.getDocument',{depth:0});const{nodeId}=await b.send('DOM.querySelector',{nodeId:root.nodeId,selector:q});if(nodeId){const{node}=await b.send('DOM.describeNode',{nodeId});nodes[q]=node.backendNodeId;}}
+ layers=[];recording=true;await b.read('window.__markerRecording=true');
+ const complete=new Promise(r=>b.on('Tracing.tracingComplete',r));await b.send('Tracing.start',{categories:'devtools.timeline,disabled-by-default-devtools.timeline,disabled-by-default-devtools.timeline.layers,blink,cc,gpu',transferMode:'ReturnAsStream'});
+ await b.click('.go-next',true);await gWait(5200);recording=false;const frames=await b.read('(window.__markerRecording=false,window.__markerFrames)');await b.send('Tracing.end');const{stream}=await complete;let trace='';for(;;){const r=await b.send('IO.read',{handle:stream,size:1048576});trace+=r.base64Encoded?Buffer.from(r.data,'base64').toString():r.data;if(r.eof)break;}await b.send('IO.close',{handle:stream});
+ const named={};for(const n of new Set(layers.flatMap(r=>(r.layers||[]).map(l=>l.backendNodeId)).filter(Boolean)))try{const{node}=await b.send('DOM.describeNode',{backendNodeId:n}),a=node.attributes||[],id=a.indexOf('id'),cls=a.indexOf('class');named[n]=node.nodeName+(id>=0?'#'+a[id+1]:cls>=0?'.'+a[cls+1]:'');}catch{}
+ const out={build,nodes,named,layers,frames};rows.push(out);writeFileSync(gRoot+'/s-marker-'+build+'.json',JSON.stringify(out));writeFileSync(gRoot+'/s-marker-trace-'+build+'.json.gz',gzipSync(trace));await b.shot('s-marker-'+build+'-arrival');console.log(build+': '+frames.length+' frame samples, '+layers.length+' layer tree events');
+ }}finally{await b.close();}writeFileSync(gRoot+'/s-marker-results.json',JSON.stringify({rows:rows.map(r=>({build:r.build,nodes:r.nodes,named:r.named,frames:r.frames.length,layerEvents:r.layers.length})),errors:b.errors},null,2));
