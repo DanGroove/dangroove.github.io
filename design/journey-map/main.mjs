@@ -57,6 +57,12 @@ const $ = id => document.getElementById(id);
   const detail = document.createElementNS(NS, 'g'); detail.id = 'b-rest-detail'; rest.appendChild(detail);
   if (yi >= 0) kids.slice(yi).forEach(k => detail.appendChild(k));
   camB.appendChild($('b-all')); $('cam').prepend(rest); $('map').before(base);
+  // One layer for the whole map (pinch recheck, 2026-11-27): Chrome split svg#map into layers by where its art sat and joined
+  // them mid-move, and each new layer was blank for a frame (the ash, stop names and finds dropping out in the phone films).
+  // An invisible rect under it all, as far as the art reaches, keeps it one layer at every camera.
+  const cover = document.createElementNS(NS, 'rect'), pad = MAP.w;
+  Object.entries({ id: 'map-cover', x: -pad, y: -pad / 2, width: MAP.w + 2 * pad, height: MAP.h + pad, fill: C.black, 'fill-opacity': 0, 'pointer-events': 'none' }).forEach(([k, v]) => cover.setAttribute(k, v));
+  $('cam').prepend(cover);
 }
 const SVG = $('map'), CANVAS = $('stars'), TLEL = $('tl');
 // timeline sits in the stage overlay so it can become the footer rule; in reduced motion it is a sticky jump menu

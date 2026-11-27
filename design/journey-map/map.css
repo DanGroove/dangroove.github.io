@@ -282,9 +282,10 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .go-next { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 16px; min-width: 230px; height: var(--go-h); padding: 0 44px; border: 0; border-radius: 999px; background: var(--paper); color: var(--ink); font-size: 14px; font-weight: 700; }
 .go-next .arr { position: absolute; right: 20px; transition: transform var(--go-reveal); }
 .go-t { position: relative; }
-/* The timeline's track and head and the Next button's fill move on every frame of a move: each is its own layer, moved
-   without a raster (before 2026-11-27 they redrew the timeline and the step bar on every frame). */
-.go-fill { position: absolute; inset: 0; background: var(--ink); opacity: .14; transform: scaleX(0); transform-origin: 0 50%; pointer-events: none; will-change: transform; }
+/* The timeline's track and head move on every frame of a move: each is its own layer, moved without a raster. The Next fill
+   redraws its small bar instead: as a layer of its own, the words and arrow got new layers the moment it grew under them
+   mid-move, blank for a frame ("Next: Mohawk" in the phone films, pinch recheck 2026-11-27). */
+.go-fill { position: absolute; inset: 0; background: var(--ink); opacity: .14; transform: scaleX(0); transform-origin: 0 50%; pointer-events: none; }
 .go-next:hover .arr { transform: translateX(2px); }
 .go-next:active { transform: scale(.97); }
 .go-top { background: none; border: 0; padding: 8px 0; color: var(--note); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; }
@@ -330,6 +331,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .mk.found circle { fill: var(--red); }
 .mk.found text { fill: var(--ink); }
 .mk { transition: opacity .3s; }
+.mk.legend-symbol { transition: none; } /* eased by the frame; a fade split the map into new layers */
 .find-hint { position: absolute; z-index: 5; left: 50%; bottom: 124px; transform: translateX(-50%); margin: 0; max-width: calc(100% - 32px); padding: 6px 12px; border-radius: 8px; background: var(--ink); text-align: center; white-space: nowrap; font-size: 12px; line-height: 1.4; letter-spacing: .02em; color: var(--dim); opacity: 0; transition: opacity .3s; pointer-events: none; }
 .jm-focus .find-hint:not(.explore-hint) { opacity: 1; }
 .jm-sheet-open .find-hint { opacity: 0; }
@@ -515,7 +517,7 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 .jm-sheet-open .find-hint { opacity: 0; visibility: hidden; }
 .jm-focus[data-find="well"] .well-name, .jm-focus[data-find="well"] .well-name text { opacity: 1 !important; }
 #b-all, #bc-notes, .find.hoard { transition: opacity .3s; }
-#b-detail { transition: --jm-word .4s; } #b-rest { transition: opacity .3s, --jm-word .4s; }
+#b-detail { transition: --jm-word .4s; } #b-rest { transition: --jm-word .4s; }
 #finds > .find { opacity: var(--jm-find); transition: --jm-find .3s; }
 .reading-halo text, .reading-halo path { paint-order: stroke; stroke: var(--ink); stroke-width: 2px; stroke-linejoin: round; }
 .reading-halo path { stroke: var(--paper); }
