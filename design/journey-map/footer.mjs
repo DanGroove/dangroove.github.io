@@ -102,8 +102,14 @@ export function footerFrame(st) {
     const s = st.exploreK ? st.sEnd : st.cam.s, short = VIEW.h <= 440 && VIEW.w > 640 && !FT.settled && st.rushT === 0;
     FT.hit.classList.toggle('fx-mark-hit', short);
     const radius = FT.settled ? NOVA.flare.hit * st.cam.s / s : short ? 10.8 * Math.min(st.cam.s, tripXCamera().s) : NOVA.base.digHit * st.cam.s;
-    footerStyle(FT.hit, 'width', (radius * 2).toFixed(2) + 'px'); footerStyle(FT.hit, 'height', (radius * 2).toFixed(2) + 'px');
-    footerStyle(FT.hit, 'transform', `translate(${(MAP.x[0] * st.cam.s + st.cam.tx).toFixed(2)}px,${(MAP.x[1] * st.cam.s + st.cam.ty).toFixed(2)}px) translate(-50%,-50%)`);
+    // Part 17b: off screen and already placed off screen, the hit stays (26 px: the 44 px minimum and outline).
+    const hx = MAP.x[0] * st.cam.s + st.cam.tx, hy = MAP.x[1] * st.cam.s + st.cam.ty, reach = Math.max(radius, 22) + 4;
+    const off = ([x, y, r]) => x + r < 0 || x - r > VIEW.w || y + r < 0 || y - r > VIEW.h;
+    if (!off([hx, hy, reach]) || !FT.hitAt || !off(FT.hitAt) || document.activeElement === FT.hit) {
+      FT.hitAt = [hx, hy, reach];
+      footerStyle(FT.hit, 'width', (radius * 2).toFixed(2) + 'px'); footerStyle(FT.hit, 'height', (radius * 2).toFixed(2) + 'px');
+      footerStyle(FT.hit, 'transform', `translate(${hx.toFixed(2)}px,${hy.toFixed(2)}px) translate(-50%,-50%)`);
+    }
   }
   // Progress owns the text's reveal. All X transforms and opacities have one writer, footerMotion.
   const b = NOVA.base;

@@ -743,6 +743,8 @@ function tripRasters(E,r,st,focus,layers,veil,camVeil,moving,camMoved,lastCam) {
   r.base=r.layerCams.map||{...c};E.veilRaster=r.layerCams.veil||{...c};
   for(const[id,svg]of records){
     const p=r.layerCams[id];if(!p)continue;const k=c.s/p.s;
+    // Part 17b: hidden ones wait for rest (one shown mid-move fades in from 0 and is placed the next frame).
+    if((id==='veil'||id==='lines')&&moving&&svg.style.visibility!=='visible')continue;
     tripWrite(svg,'transform',equal(c,p)?'none':'matrix('+k+',0,0,'+k+','+(c.tx-p.tx*k)+','+(c.ty-p.ty*k)+')');
   }
   if(E.base){const B=E.baseRaster??={};B.camera=r.layerCams.base;B.last={...c,P:st.P,focus:focus?.k||0};B.held=!equal(c,B.camera);B.w=VIEW.w;B.h=VIEW.h;B.box=VIEW.baseBox||NO_BOX;}

@@ -4319,6 +4319,8 @@ function tripRasters(E,r,st,focus,layers,veil,camVeil,moving,camMoved,lastCam) {
   r.base=r.layerCams.map||{...c};E.veilRaster=r.layerCams.veil||{...c};
   for(const[id,svg]of records){
     const p=r.layerCams[id];if(!p)continue;const k=c.s/p.s;
+    // Part 17b: hidden ones wait for rest (one shown mid-move fades in from 0 and is placed the next frame).
+    if((id==='veil'||id==='lines')&&moving&&svg.style.visibility!=='visible')continue;
     tripWrite(svg,'transform',equal(c,p)?'none':'matrix('+k+',0,0,'+k+','+(c.tx-p.tx*k)+','+(c.ty-p.ty*k)+')');
   }
   if(E.base){const B=E.baseRaster??={};B.camera=r.layerCams.base;B.last={...c,P:st.P,focus:focus?.k||0};B.held=!equal(c,B.camera);B.w=VIEW.w;B.h=VIEW.h;B.box=VIEW.baseBox||NO_BOX;}
@@ -4641,16 +4643,17 @@ function depthOutside(c, polygon, b) {
   const middle=depthCut(depthCut(polygon,0,b[0],1),0,b[2],-1);
   depthPolygon(c,depthCut(middle,1,b[1],-1)); depthPolygon(c,depthCut(middle,1,b[3],1));
 }
+// Part 17b: the same canvas calls, without arrays per point.
 function depthRing(c, points) {
-  const limit=FRAME_PERF.ringBox/DP.dpr; let last=points[0], box=[...last,...last], length=0;
-  c.beginPath(); c.moveTo(...last); c.lineDashOffset=0;
-  for (const end of [...points.slice(1),points[0]]) {
-    const n=Math.max(1,Math.ceil(Math.hypot(end[0]-last[0],end[1]-last[1])/(limit*.5))), from=last;
+  const limit=FRAME_PERF.ringBox/DP.dpr, N=points.length; let lx=points[0][0], ly=points[0][1], b0=lx, b1=ly, b2=lx, b3=ly, length=0;
+  c.beginPath(); c.moveTo(lx,ly); c.lineDashOffset=0;
+  for (let e=1;e<=N;e++) {
+    const end=points[e%N], ex=end[0], ey=end[1], n=Math.max(1,Math.ceil(Math.hypot(ex-lx,ey-ly)/(limit*.5))), fx=lx, fy=ly;
     for(let j=1;j<=n;j++) {
-      const p=from.map((v,i)=>v+(end[i]-v)*j/n), next=[Math.min(box[0],p[0]),Math.min(box[1],p[1]),Math.max(box[2],p[0]),Math.max(box[3],p[1])];
-      if(Math.max(next[2]-next[0],next[3]-next[1])>limit) { c.stroke(); c.beginPath(); c.lineDashOffset=length; c.moveTo(...last); box=[...last,...last]; }
-      c.lineTo(...p); length+=Math.hypot(p[0]-last[0],p[1]-last[1]); last=p;
-      box=[Math.min(box[0],p[0]),Math.min(box[1],p[1]),Math.max(box[2],p[0]),Math.max(box[3],p[1])];
+      const px=fx+(ex-fx)*j/n, py=fy+(ey-fy)*j/n;
+      if(Math.max(Math.max(b2,px)-Math.min(b0,px),Math.max(b3,py)-Math.min(b1,py))>limit) { c.stroke(); c.beginPath(); c.lineDashOffset=length; c.moveTo(lx,ly); b0=b2=lx; b1=b3=ly; }
+      c.lineTo(px,py); length+=Math.hypot(px-lx,py-ly); lx=px; ly=py;
+      b0=Math.min(b0,px); b1=Math.min(b1,py); b2=Math.max(b2,px); b3=Math.max(b3,py);
     }
   }
   c.stroke(); c.lineDashOffset=0;
@@ -4874,7 +4877,8 @@ function depthMistEntering(st, look) {
 function depthFrame(st, time, dt, pointer, aim, moved) {
   if (!DP.deep) return;
   DP.wind += dt * DEPTH.mist.wind;
-  const tuning = JSON.stringify(DEPTH);
+  // Part 17b: every 16th frame.
+  const tuning = (DP.tuneN = (DP.tuneN || 0) + 1) & 15 && DP.tuning ? DP.tuning : JSON.stringify(DEPTH);
   if (tuning !== DP.tuning) {
     DP.tuning = tuning; DP.force = true;
     if (!DP.pending) { DP.pending = true; queueMicrotask(() => { depthConfigure(); DP.pending = false; DP.force = true; }); }
@@ -5561,6 +5565,8 @@ const findIdleTime = el => { const layer=findIdleLayer(el); return layer ? layer
 const findIdleDelta = el => findIdleLayer(el)?.dt ?? FD.dt;
 const findIdleVisible = el => findIdleLayer(el)?.visible ?? true;
 const IDLE_MARGIN=128;
+// Part 17b: only this loop writes these, so unchanged values skip findStyle's read-back.
+const idleStyle=(q,key,value)=>{const text=String(value),w=q.writes||(q.writes={});if(w[key]===text)return;w[key]=text;findStyle(q.el,key,value);};
 function findIdleFrame(st,advance=true) {
   const moving=!!(st.gliding||st.exploreMoving),c=st.cam,dpr=globalThis.devicePixelRatio||1;
   for(const q of FD.idleLayers||[]){
@@ -5577,7 +5583,7 @@ function findIdleFrame(st,advance=true) {
     let b=q.box;
     if(q.bits){
       const live=FD.bits.filter(b=>b.live);const extra=[...q.node.children].some(e=>!FD.bits.some(b=>b.el===e)&&+(e.getAttribute('opacity')||1)>0);
-      if(!live.length&&!extra){q.visible=false;q.running=false;q.dt=0;findStyle(q.el,'visibility','hidden');findStyle(q.el,'opacity',0);continue;}
+      if(!live.length&&!extra){q.visible=false;q.running=false;q.dt=0;idleStyle(q,'visibility','hidden');idleStyle(q,'opacity',0);continue;}
       b=extra?[-c.tx/c.s,-c.ty/c.s,(VIEW.w-c.tx)/c.s,(VIEW.h-c.ty)/c.s]:[Math.min(...live.map(b=>b.x))-20,Math.min(...live.map(b=>b.y))-20,Math.max(...live.map(b=>b.x))+20,Math.max(...live.map(b=>b.y))+20];
     }else{
       const chainKey=q.chain.map(e=>e.getAttribute('transform')).join('/');
@@ -5594,8 +5600,8 @@ function findIdleFrame(st,advance=true) {
     const visible=raw[2]>0&&raw[0]<VIEW.w&&raw[3]>0&&raw[1]<VIEW.h&&rect[2]>rect[0]&&rect[3]>rect[1];
     q.visible=visible;
     if(advance){const run=visible&&!moving;q.dt=run&&q.running?FD.dt:0;q.time+=q.dt;q.running=run;}
-    const shown=String(visible);if(q.el.dataset.idleVisible!==shown)q.el.dataset.idleVisible=shown;
-    findStyle(q.el,'visibility',visible?'inherit':'hidden');findStyle(q.el,'opacity',visible?(q.opacity??''):0);
+    const shown=String(visible);if(q.shown!==shown){q.shown=shown;if(q.el.dataset.idleVisible!==shown)q.el.dataset.idleVisible=shown;}
+    idleStyle(q,'visibility',visible?'inherit':'hidden');idleStyle(q,'opacity',visible?(q.opacity??''):0);
     // An idle CSS stroke animation has the same visibility/movement clock.
     const run=visible&&!moving;if(q.animationRun!==run){q.animationRun=run;for(const a of q.node.getAnimations?.({subtree:true})||[])if(a.id==='jm-idle'){if(run)a.play();else a.pause();}}
     if(!visible)continue;
@@ -5612,13 +5618,13 @@ function findIdleFrame(st,advance=true) {
       const key=[c.s,c.tx,c.ty,...box].join('/');
       if(key!==q.key){
         q.key=key;q.camera={...c};q.origin=box.slice(0,2);q.width=box[2]-box[0];q.height=box[3]-box[1];
-        attr(q.el,'width',q.width);attr(q.el,'height',q.height);findStyle(q.el,'width',q.width+'px');findStyle(q.el,'height',q.height+'px');
+        attr(q.el,'width',q.width);attr(q.el,'height',q.height);idleStyle(q,'width',q.width+'px');idleStyle(q,'height',q.height+'px');
         attr(q.cam,'transform','matrix('+c.s.toFixed(4)+' 0 0 '+c.s.toFixed(4)+' '+(+c.tx.toFixed(2)-box[0])+' '+(+c.ty.toFixed(2)-box[1])+')');
       }
     }
     const v=q.camera,scale=c.s/v.s;
-    findStyle(q.el,'transform','matrix('+scale+',0,0,'+scale+','+(c.tx-v.tx*scale+q.origin[0]*scale)+','+(c.ty-v.ty*scale+q.origin[1]*scale)+')');
-    if(q.trailGroup)for(const p of q.pieces){const full=st.exploreK||st.u>=p.u1,hidden=!full&&st.u<=p.u0,s=q.camera.s;findStyle(p.node,'opacity',hidden?'0':'');findStyle(p.node,'strokeDasharray',full||hidden?'none':((st.u-p.u0)*s).toFixed(1)+' '+((p.u1-p.u0)*s+20).toFixed(1));}
+    idleStyle(q,'transform','matrix('+scale+',0,0,'+scale+','+(c.tx-v.tx*scale+q.origin[0]*scale)+','+(c.ty-v.ty*scale+q.origin[1]*scale)+')');
+    if(q.trailGroup)for(const p of q.pieces){const full=st.exploreK||st.u>=p.u1,hidden=!full&&st.u<=p.u0,s=q.camera.s,op=hidden?'0':'',dash=full||hidden?'none':((st.u-p.u0)*s).toFixed(1)+' '+((p.u1-p.u0)*s+20).toFixed(1);if(p.op!==op){p.op=op;findStyle(p.node,'opacity',op);}if(p.dash!==dash){p.dash=dash;findStyle(p.node,'strokeDasharray',dash);}}
     q.screenBox=[...q.origin,q.width,q.height];
   }
 }
@@ -6849,6 +6855,8 @@ function cardsOverride(st, dt, moving) {
 function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
   const op = smooth(.5, 1, st.handoffT) * (1 - smooth(0, .4, st.blastT) * (1 - (st.exploreK || 0)));
   const stonePx = Math.max(MARK.min, Math.min(MARK.max, MARK.k * st.cam.s));
+  // Part 17b: moving, the stone and ring snap to whole device pixels (redrawn when one is crossed); exact at rest.
+  const dpr = globalThis.devicePixelRatio || 1, markPx = st.gliding || st.exploreMoving ? Math.round(stonePx * dpr) / dpr : stonePx;
   CD.list.forEach((c, i) => {
     const close = c.el.querySelector('.c-close');
     if (JOURNEY.moving && c.face.contains(document.activeElement)) document.querySelector(JOURNEY.direction === 'back' ? '.go-back' : '.go-next')?.focus({ preventScroll: true });
@@ -6863,7 +6871,7 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     // Position completes its return before the face disappears into the boss.
     const travel = smooth(.12, 1, e); let cx = lerp(p[0], oc.x, travel), cy = lerp(py, oc.y, travel);
     cardsStyle(c.el, 'transform', `translate(${p[0]}px,${py}px)`);
-    const radius = stonePx * (MARK.radius + MARK.rim/2) / MARK.box, ringRadius = radius + MARK.ringGap + MARK.ringWidth;
+    const radius = markPx * (MARK.radius + MARK.rim/2) / MARK.box, ringRadius = radius + MARK.ringGap + MARK.ringWidth;
     const traveller = st.trav && toScreen(st, st.trav), distance = traveller ? Math.hypot(traveller[0]-p[0], traveller[1]-py) : Infinity;
     const ringAlpha = CD.steps && !CD.rm && st.handoffT >= 1 && !st.exploring && !st.exploreK && st.kind !== 'end' ? (1-smooth(.2,.7,st.rushT))*(1-smooth(.8*radius,1.2*radius,distance)) : 0;
     cardsStyle(c.travellerRing, 'width', ringRadius*2+'px'); cardsStyle(c.travellerRing, 'height', ringRadius*2+'px');
@@ -6871,9 +6879,9 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     cardsStyle(c.travellerRing, 'opacity', ringAlpha); cardsStyle(c.travellerRing, 'visibility', ringAlpha > 0 ? 'visible' : 'hidden');
     cardsStyle(c.btn, 'transform', 'translate(-50%,-50%)');
     // The visible disk owns its box; invisible squares covered nearby finds in landscape.
-    const hitPx = VIEW.h <= 440 && VIEW.w > 640 ? stonePx : Math.max(COMB.target, stonePx);
+    const hitPx = VIEW.h <= 440 && VIEW.w > 640 ? markPx : Math.max(COMB.target, markPx);
     cardsStyle(c.btn, 'width', hitPx + 'px'); cardsStyle(c.btn, 'height', hitPx + 'px');
-    const stone = c.btn.firstElementChild; if (stone) { cardsStyle(stone, 'width', stonePx + 'px'); cardsStyle(stone, 'height', stonePx + 'px'); }
+    const stone = c.btn.firstElementChild; if (stone) { cardsStyle(stone, 'width', markPx + 'px'); cardsStyle(stone, 'height', markPx + 'px'); }
     const lit = CD.craft ? CD.craft[i] : false;
     cardsStyle(c.el, 'opacity', op * (CD.craft && !lit ? .55 : 1));
     // The face answers at the shield on its first frame; words wait for reading room.
@@ -6899,6 +6907,8 @@ function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const transform = `translate(${cx - W*k/2 - p[0]}px,${cy - H*k/2 - py}px) scale(${k})`;
     // Closed faces and shadows paint nothing. Their first opening frame writes
     // both transforms before paint, without adding hidden layer writes to glides.
+    // Part 17b: and hide while closed (at opacity 0 they were still drawn every frame).
+    cardsStyle(c.card, 'visibility', e > 0 ? '' : 'hidden'); cardsStyle(c.shadowBox, 'visibility', e > 0 ? '' : 'hidden');
     if (e > 0) cardsStyle(c.card, 'transform', transform);
     if (e > 0 && lift) cardsStyle(c.shadowBox, 'transform', transform);
     cardsStyle(c.face, 'transform', lift ? `${sx || sy ? `translate(${sx}px,${sy}px) ` : ''}${rx ? `rotateX(${rx}deg) ` : ''}${ryTilt ? `rotateY(${ryTilt}deg)` : ''}`.trim() : '');
@@ -7180,8 +7190,14 @@ function footerFrame(st) {
     const s = st.exploreK ? st.sEnd : st.cam.s, short = VIEW.h <= 440 && VIEW.w > 640 && !FT.settled && st.rushT === 0;
     FT.hit.classList.toggle('fx-mark-hit', short);
     const radius = FT.settled ? NOVA.flare.hit * st.cam.s / s : short ? 10.8 * Math.min(st.cam.s, tripXCamera().s) : NOVA.base.digHit * st.cam.s;
-    footerStyle(FT.hit, 'width', (radius * 2).toFixed(2) + 'px'); footerStyle(FT.hit, 'height', (radius * 2).toFixed(2) + 'px');
-    footerStyle(FT.hit, 'transform', `translate(${(MAP.x[0] * st.cam.s + st.cam.tx).toFixed(2)}px,${(MAP.x[1] * st.cam.s + st.cam.ty).toFixed(2)}px) translate(-50%,-50%)`);
+    // Part 17b: off screen and already placed off screen, the hit stays (26 px: the 44 px minimum and outline).
+    const hx = MAP.x[0] * st.cam.s + st.cam.tx, hy = MAP.x[1] * st.cam.s + st.cam.ty, reach = Math.max(radius, 22) + 4;
+    const off = ([x, y, r]) => x + r < 0 || x - r > VIEW.w || y + r < 0 || y - r > VIEW.h;
+    if (!off([hx, hy, reach]) || !FT.hitAt || !off(FT.hitAt) || document.activeElement === FT.hit) {
+      FT.hitAt = [hx, hy, reach];
+      footerStyle(FT.hit, 'width', (radius * 2).toFixed(2) + 'px'); footerStyle(FT.hit, 'height', (radius * 2).toFixed(2) + 'px');
+      footerStyle(FT.hit, 'transform', `translate(${hx.toFixed(2)}px,${hy.toFixed(2)}px) translate(-50%,-50%)`);
+    }
   }
   // Progress owns the text's reveal. All X transforms and opacities have one writer, footerMotion.
   const b = NOVA.base;
@@ -8995,7 +9011,8 @@ function findsFrame(time, st) {
   // A moving camera quiets the finds' idle life inside svg#map, in a glide and in explore alike: each idle write there
   // redrew the held map on every frame of a pinch, a drag or a wheel (phone and PC pinch passes, 2026-11-27).
   const quiet = st.gliding || !!st.exploreMoving;
-  const tuning = JSON.stringify(FIND_PLAY);
+  // Part 17b: every 16th frame.
+  const tuning = (FD.tuneN = (FD.tuneN || 0) + 1) & 15 && FD.styleKey ? FD.styleKey : JSON.stringify(FIND_PLAY);
   if (tuning !== FD.styleKey) { FD.styleKey = tuning; queueMicrotask(findKitStyle); }
   Object.values(FD.list).forEach(o => {
     const f = FIND_BY[o.id], p = findPlace(o.id), rad = o.id === 'wayfinder' ? FIND_PLAY.focus.wide[2] * 2 : o.id === 'hoards' ? Math.max(...FIND_COPY.hoards.map(h => Math.hypot(h.x - f.x, h.y - f.y) + FIND_PLAY.hoard.rad)) : o.id === 'beacon' ? FIND_PLAY.beacon.rad : o.id === 'ravens' ? FIND_PLAY.raven.reach + f.view[2] : o.id === 'serpent' ? FIND_PLAY.serpent.near + f.view[2] : FIND_PLAY[o.id === 'longship' ? 'ship' : o.id]?.rad || f.view?.[2] || FIND_PLAY.kit.rad;
@@ -9278,7 +9295,7 @@ window.addEventListener('jm-depth', () => { dirty = true; mainHeroTidy = false; 
 const PTR = [.5, .5];
 window.addEventListener('pointermove', e => { PTR[0] = e.clientX / VIEW.w; PTR[1] = e.clientY / VIEW.h; findsPointer(e.clientX, e.clientY); }, { passive: true });
 
-let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainFocus = '', mainKeys = '', mainMapPending = false, mainHeroTidy = false;
+let raf = 0, lastP = -1, lastVisited = '', mainTs = null, mainSkyDraw = -Infinity, mainTuning = '', mainTuneN = 0, mainFocus = '', mainKeys = '', mainMapPending = false, mainHeroTidy = false;
 function frame(ts) {
   const time = ts / 1000;
   const dt = mainTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - mainTs) / 1000)); mainTs = ts;
@@ -9308,7 +9325,8 @@ function frame(ts) {
   const timelineKeys = mapKeys && st.rushT === 0 && !st.exploring && !(st.exploreK > 0);
   const keys = `${mapKeys}/${timelineKeys}`;
   if (keys !== mainKeys) { mainKeys = keys; $('cards').inert = !mapKeys; TLEL.inert = !timelineKeys; TLEL.tabIndex = timelineKeys ? 0 : -1; TLEL.setAttribute('aria-hidden', !timelineKeys); }
-  const focusKey = JSON.stringify(f), tuning = JSON.stringify([DEPTH, NOVA]), moved = dirty || explored || folded || mainMapPending || P !== lastP || tuning !== mainTuning || focusKey !== mainFocus;
+  // Part 17b: live DEPTH/NOVA edits are looked for every 16th frame.
+  const focusKey = JSON.stringify(f), tuning = (++mainTuneN & 15) && mainTuning ? mainTuning : JSON.stringify([DEPTH, NOVA]), moved = dirty || explored || folded || mainMapPending || P !== lastP || tuning !== mainTuning || focusKey !== mainFocus;
   mainFocus = focusKey;
   const aim = depthLook(dt, PTR);
   // The X's stroke follows the map's raster scale (st.rasterS, set by tripApply), so a move rewrites it only at a rebase.

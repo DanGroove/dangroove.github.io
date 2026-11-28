@@ -181,16 +181,17 @@ function depthOutside(c, polygon, b) {
   const middle=depthCut(depthCut(polygon,0,b[0],1),0,b[2],-1);
   depthPolygon(c,depthCut(middle,1,b[1],-1)); depthPolygon(c,depthCut(middle,1,b[3],1));
 }
+// Part 17b: the same canvas calls, without arrays per point.
 function depthRing(c, points) {
-  const limit=FRAME_PERF.ringBox/DP.dpr; let last=points[0], box=[...last,...last], length=0;
-  c.beginPath(); c.moveTo(...last); c.lineDashOffset=0;
-  for (const end of [...points.slice(1),points[0]]) {
-    const n=Math.max(1,Math.ceil(Math.hypot(end[0]-last[0],end[1]-last[1])/(limit*.5))), from=last;
+  const limit=FRAME_PERF.ringBox/DP.dpr, N=points.length; let lx=points[0][0], ly=points[0][1], b0=lx, b1=ly, b2=lx, b3=ly, length=0;
+  c.beginPath(); c.moveTo(lx,ly); c.lineDashOffset=0;
+  for (let e=1;e<=N;e++) {
+    const end=points[e%N], ex=end[0], ey=end[1], n=Math.max(1,Math.ceil(Math.hypot(ex-lx,ey-ly)/(limit*.5))), fx=lx, fy=ly;
     for(let j=1;j<=n;j++) {
-      const p=from.map((v,i)=>v+(end[i]-v)*j/n), next=[Math.min(box[0],p[0]),Math.min(box[1],p[1]),Math.max(box[2],p[0]),Math.max(box[3],p[1])];
-      if(Math.max(next[2]-next[0],next[3]-next[1])>limit) { c.stroke(); c.beginPath(); c.lineDashOffset=length; c.moveTo(...last); box=[...last,...last]; }
-      c.lineTo(...p); length+=Math.hypot(p[0]-last[0],p[1]-last[1]); last=p;
-      box=[Math.min(box[0],p[0]),Math.min(box[1],p[1]),Math.max(box[2],p[0]),Math.max(box[3],p[1])];
+      const px=fx+(ex-fx)*j/n, py=fy+(ey-fy)*j/n;
+      if(Math.max(Math.max(b2,px)-Math.min(b0,px),Math.max(b3,py)-Math.min(b1,py))>limit) { c.stroke(); c.beginPath(); c.lineDashOffset=length; c.moveTo(lx,ly); b0=b2=lx; b1=b3=ly; }
+      c.lineTo(px,py); length+=Math.hypot(px-lx,py-ly); lx=px; ly=py;
+      b0=Math.min(b0,px); b1=Math.min(b1,py); b2=Math.max(b2,px); b3=Math.max(b3,py);
     }
   }
   c.stroke(); c.lineDashOffset=0;
@@ -414,7 +415,8 @@ function depthMistEntering(st, look) {
 export function depthFrame(st, time, dt, pointer, aim, moved) {
   if (!DP.deep) return;
   DP.wind += dt * DEPTH.mist.wind;
-  const tuning = JSON.stringify(DEPTH);
+  // Part 17b: every 16th frame.
+  const tuning = (DP.tuneN = (DP.tuneN || 0) + 1) & 15 && DP.tuning ? DP.tuning : JSON.stringify(DEPTH);
   if (tuning !== DP.tuning) {
     DP.tuning = tuning; DP.force = true;
     if (!DP.pending) { DP.pending = true; queueMicrotask(() => { depthConfigure(); DP.pending = false; DP.force = true; }); }

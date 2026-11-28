@@ -26,6 +26,8 @@ export const findIdleTime = el => { const layer=findIdleLayer(el); return layer 
 export const findIdleDelta = el => findIdleLayer(el)?.dt ?? FD.dt;
 export const findIdleVisible = el => findIdleLayer(el)?.visible ?? true;
 const IDLE_MARGIN=128;
+// Part 17b: only this loop writes these, so unchanged values skip findStyle's read-back.
+const idleStyle=(q,key,value)=>{const text=String(value),w=q.writes||(q.writes={});if(w[key]===text)return;w[key]=text;findStyle(q.el,key,value);};
 export function findIdleFrame(st,advance=true) {
   const moving=!!(st.gliding||st.exploreMoving),c=st.cam,dpr=globalThis.devicePixelRatio||1;
   for(const q of FD.idleLayers||[]){
@@ -42,7 +44,7 @@ export function findIdleFrame(st,advance=true) {
     let b=q.box;
     if(q.bits){
       const live=FD.bits.filter(b=>b.live);const extra=[...q.node.children].some(e=>!FD.bits.some(b=>b.el===e)&&+(e.getAttribute('opacity')||1)>0);
-      if(!live.length&&!extra){q.visible=false;q.running=false;q.dt=0;findStyle(q.el,'visibility','hidden');findStyle(q.el,'opacity',0);continue;}
+      if(!live.length&&!extra){q.visible=false;q.running=false;q.dt=0;idleStyle(q,'visibility','hidden');idleStyle(q,'opacity',0);continue;}
       b=extra?[-c.tx/c.s,-c.ty/c.s,(VIEW.w-c.tx)/c.s,(VIEW.h-c.ty)/c.s]:[Math.min(...live.map(b=>b.x))-20,Math.min(...live.map(b=>b.y))-20,Math.max(...live.map(b=>b.x))+20,Math.max(...live.map(b=>b.y))+20];
     }else{
       const chainKey=q.chain.map(e=>e.getAttribute('transform')).join('/');
@@ -59,8 +61,8 @@ export function findIdleFrame(st,advance=true) {
     const visible=raw[2]>0&&raw[0]<VIEW.w&&raw[3]>0&&raw[1]<VIEW.h&&rect[2]>rect[0]&&rect[3]>rect[1];
     q.visible=visible;
     if(advance){const run=visible&&!moving;q.dt=run&&q.running?FD.dt:0;q.time+=q.dt;q.running=run;}
-    const shown=String(visible);if(q.el.dataset.idleVisible!==shown)q.el.dataset.idleVisible=shown;
-    findStyle(q.el,'visibility',visible?'inherit':'hidden');findStyle(q.el,'opacity',visible?(q.opacity??''):0);
+    const shown=String(visible);if(q.shown!==shown){q.shown=shown;if(q.el.dataset.idleVisible!==shown)q.el.dataset.idleVisible=shown;}
+    idleStyle(q,'visibility',visible?'inherit':'hidden');idleStyle(q,'opacity',visible?(q.opacity??''):0);
     // An idle CSS stroke animation has the same visibility/movement clock.
     const run=visible&&!moving;if(q.animationRun!==run){q.animationRun=run;for(const a of q.node.getAnimations?.({subtree:true})||[])if(a.id==='jm-idle'){if(run)a.play();else a.pause();}}
     if(!visible)continue;
@@ -77,13 +79,13 @@ export function findIdleFrame(st,advance=true) {
       const key=[c.s,c.tx,c.ty,...box].join('/');
       if(key!==q.key){
         q.key=key;q.camera={...c};q.origin=box.slice(0,2);q.width=box[2]-box[0];q.height=box[3]-box[1];
-        attr(q.el,'width',q.width);attr(q.el,'height',q.height);findStyle(q.el,'width',q.width+'px');findStyle(q.el,'height',q.height+'px');
+        attr(q.el,'width',q.width);attr(q.el,'height',q.height);idleStyle(q,'width',q.width+'px');idleStyle(q,'height',q.height+'px');
         attr(q.cam,'transform','matrix('+c.s.toFixed(4)+' 0 0 '+c.s.toFixed(4)+' '+(+c.tx.toFixed(2)-box[0])+' '+(+c.ty.toFixed(2)-box[1])+')');
       }
     }
     const v=q.camera,scale=c.s/v.s;
-    findStyle(q.el,'transform','matrix('+scale+',0,0,'+scale+','+(c.tx-v.tx*scale+q.origin[0]*scale)+','+(c.ty-v.ty*scale+q.origin[1]*scale)+')');
-    if(q.trailGroup)for(const p of q.pieces){const full=st.exploreK||st.u>=p.u1,hidden=!full&&st.u<=p.u0,s=q.camera.s;findStyle(p.node,'opacity',hidden?'0':'');findStyle(p.node,'strokeDasharray',full||hidden?'none':((st.u-p.u0)*s).toFixed(1)+' '+((p.u1-p.u0)*s+20).toFixed(1));}
+    idleStyle(q,'transform','matrix('+scale+',0,0,'+scale+','+(c.tx-v.tx*scale+q.origin[0]*scale)+','+(c.ty-v.ty*scale+q.origin[1]*scale)+')');
+    if(q.trailGroup)for(const p of q.pieces){const full=st.exploreK||st.u>=p.u1,hidden=!full&&st.u<=p.u0,s=q.camera.s,op=hidden?'0':'',dash=full||hidden?'none':((st.u-p.u0)*s).toFixed(1)+' '+((p.u1-p.u0)*s+20).toFixed(1);if(p.op!==op){p.op=op;findStyle(p.node,'opacity',op);}if(p.dash!==dash){p.dash=dash;findStyle(p.node,'strokeDasharray',dash);}}
     q.screenBox=[...q.origin,q.width,q.height];
   }
 }

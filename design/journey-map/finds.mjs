@@ -67,7 +67,8 @@ export function findsFrame(time, st) {
   // A moving camera quiets the finds' idle life inside svg#map, in a glide and in explore alike: each idle write there
   // redrew the held map on every frame of a pinch, a drag or a wheel (phone and PC pinch passes, 2026-11-27).
   const quiet = st.gliding || !!st.exploreMoving;
-  const tuning = JSON.stringify(FIND_PLAY);
+  // Part 17b: every 16th frame.
+  const tuning = (FD.tuneN = (FD.tuneN || 0) + 1) & 15 && FD.styleKey ? FD.styleKey : JSON.stringify(FIND_PLAY);
   if (tuning !== FD.styleKey) { FD.styleKey = tuning; queueMicrotask(findKitStyle); }
   Object.values(FD.list).forEach(o => {
     const f = FIND_BY[o.id], p = findPlace(o.id), rad = o.id === 'wayfinder' ? FIND_PLAY.focus.wide[2] * 2 : o.id === 'hoards' ? Math.max(...FIND_COPY.hoards.map(h => Math.hypot(h.x - f.x, h.y - f.y) + FIND_PLAY.hoard.rad)) : o.id === 'beacon' ? FIND_PLAY.beacon.rad : o.id === 'ravens' ? FIND_PLAY.raven.reach + f.view[2] : o.id === 'serpent' ? FIND_PLAY.serpent.near + f.view[2] : FIND_PLAY[o.id === 'longship' ? 'ship' : o.id]?.rad || f.view?.[2] || FIND_PLAY.kit.rad;

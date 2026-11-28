@@ -51,3 +51,53 @@ Nearly every frame still repaints: the stop markers (stone and traveller ring re
 six stop transforms that repaint the overlay), the find markers' layer, the minimap, the supernova hit button, the Next
 fill, and transform writes to the hidden lines and veil. The largest raster costs are the base, the cards, the faces
 and the timeline.
+
+## Part 17b: less work per frame (cloud, 28 Nov 2026)
+
+Also found and fixed in the cloud by Claude while the PC slept. Each change keeps the picture the same; the checks
+below compare against part 17 frame by frame.
+
+1. **Closed cards are hidden.** Six closed card faces and their shadows sat at opacity 0 but were still layers that got
+   painted and grouped every frame. `cardsFrame` (cards.mjs) sets them `visibility: hidden` while closed; the first
+   opening frame shows them with both transforms already written.
+2. **Stones resize only when a device pixel is crossed while moving.** The stone, its hit box and the traveller ring were
+   resized to the camera's scale every frame, so each stone repainted about 795 times in HMC1 to Mohawk. While the camera
+   moves, the size snaps to whole device pixels (about 33 repaints per stone); at rest it is exact, as before.
+3. **Live tuning is looked for every 16th frame.** `JSON.stringify` of DEPTH, NOVA and FIND_PLAY (about 31 KB) ran every
+   frame to notice edits from the tuning panel; it now runs every 16th frame (main.mjs, depth.mjs, finds.mjs).
+4. **The 33 looping layers skip unchanged writes.** `findIdleFrame` (findkit.mjs) remembers what it last wrote for each
+   layer and its trail pieces, so an unchanged value no longer reads the style back. Only this loop writes these.
+5. **Hidden compass veil and lines are left alone while moving** (trip.mjs). One shown mid-move fades in from 0 and is
+   placed the next frame, as the veil already was in part 17.
+6. **The supernova hit is left alone while off screen** (footer.mjs), unless it has focus.
+7. **The sea rings' path is built without arrays per point** (depth.mjs `depthRing`): the same canvas calls.
+
+### Results (cloud, HMC1 to Mohawk, 1920, two runs each, ms per frame)
+
+| | JS | style | layout | prepaint | paint | layerize | hit test | total |
+|---|---|---|---|---|---|---|---|---|
+| Part 17 | 4.46 | 0.69 | 0.55 | 0.34 | 0.51 | 1.45 | 0.52 | 8.52 |
+| Part 17b | 3.59 | 0.65 | 0.15 | 0.27 | 0.37 | 1.21 | 0.47 | 6.71 |
+
+Paint events fell from 10,528 to 5,006 and composited layers from 109 to 85.
+
+### Checks
+
+- Pass: comb-s-raster, comb-s-idle, comb-t-words, comb-t-legend, comb-t-ash, comb-t-beacon, comb-t-spatial, explore,
+  steps, finds (trip.mjs and depth.mjs pins re-recorded) and check (budgets +0.8 KB).
+- Part 17 against 17b with comb-t-picture's own poses: identical within 4/255 except the red traveller ring at the
+  overview, which is now drawn crisp where part 17 drew it slightly soft (the six closed shadow layers no longer sit
+  beside it, so it rasters in a different layer group). comb-t-picture and comb-s-picture fail against their older
+  bases as before; the 412 explore difference in this run is the X glow's real-time animation, and part 17 against
+  17b shows none.
+- Rest stills at every beat match part 17 on both sizes.
+- Real clicks and keys, part 17 against 17b at 1920 and 412: a card closing, reopening, closing by its button, Tab
+  and Enter, a glide, Lennard to the X and the X dig, a compass word and its veil. Every frame matches except stones a
+  fraction of a pixel different in size while the camera moves, and the same crisper ring at rest.
+- Every layer stays locked to the map in every move at 1920 and 412, with no afterimage, and no looping layer clips.
+
+### Next costs seen in HMC1 to Mohawk (part 17b build)
+
+Inline style writes every frame for off-screen compass words (16 a frame), stop transforms, labels and the HMC chest
+hit; the seven find markers (SVG transform attributes) and the minimap repaint and relayout every frame; the trail
+drawing in repaints by design. JS is led by `findsFrame` (1.0 ms in the cloud), `depthFrame` (0.8) and `starsFrame` (0.7).

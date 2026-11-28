@@ -113,6 +113,8 @@ export function cardsOverride(st, dt, moving) {
 export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
   const op = smooth(.5, 1, st.handoffT) * (1 - smooth(0, .4, st.blastT) * (1 - (st.exploreK || 0)));
   const stonePx = Math.max(MARK.min, Math.min(MARK.max, MARK.k * st.cam.s));
+  // Part 17b: moving, the stone and ring snap to whole device pixels (redrawn when one is crossed); exact at rest.
+  const dpr = globalThis.devicePixelRatio || 1, markPx = st.gliding || st.exploreMoving ? Math.round(stonePx * dpr) / dpr : stonePx;
   CD.list.forEach((c, i) => {
     const close = c.el.querySelector('.c-close');
     if (JOURNEY.moving && c.face.contains(document.activeElement)) document.querySelector(JOURNEY.direction === 'back' ? '.go-back' : '.go-next')?.focus({ preventScroll: true });
@@ -127,7 +129,7 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     // Position completes its return before the face disappears into the boss.
     const travel = smooth(.12, 1, e); let cx = lerp(p[0], oc.x, travel), cy = lerp(py, oc.y, travel);
     cardsStyle(c.el, 'transform', `translate(${p[0]}px,${py}px)`);
-    const radius = stonePx * (MARK.radius + MARK.rim/2) / MARK.box, ringRadius = radius + MARK.ringGap + MARK.ringWidth;
+    const radius = markPx * (MARK.radius + MARK.rim/2) / MARK.box, ringRadius = radius + MARK.ringGap + MARK.ringWidth;
     const traveller = st.trav && toScreen(st, st.trav), distance = traveller ? Math.hypot(traveller[0]-p[0], traveller[1]-py) : Infinity;
     const ringAlpha = CD.steps && !CD.rm && st.handoffT >= 1 && !st.exploring && !st.exploreK && st.kind !== 'end' ? (1-smooth(.2,.7,st.rushT))*(1-smooth(.8*radius,1.2*radius,distance)) : 0;
     cardsStyle(c.travellerRing, 'width', ringRadius*2+'px'); cardsStyle(c.travellerRing, 'height', ringRadius*2+'px');
@@ -135,9 +137,9 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     cardsStyle(c.travellerRing, 'opacity', ringAlpha); cardsStyle(c.travellerRing, 'visibility', ringAlpha > 0 ? 'visible' : 'hidden');
     cardsStyle(c.btn, 'transform', 'translate(-50%,-50%)');
     // The visible disk owns its box; invisible squares covered nearby finds in landscape.
-    const hitPx = VIEW.h <= 440 && VIEW.w > 640 ? stonePx : Math.max(COMB.target, stonePx);
+    const hitPx = VIEW.h <= 440 && VIEW.w > 640 ? markPx : Math.max(COMB.target, markPx);
     cardsStyle(c.btn, 'width', hitPx + 'px'); cardsStyle(c.btn, 'height', hitPx + 'px');
-    const stone = c.btn.firstElementChild; if (stone) { cardsStyle(stone, 'width', stonePx + 'px'); cardsStyle(stone, 'height', stonePx + 'px'); }
+    const stone = c.btn.firstElementChild; if (stone) { cardsStyle(stone, 'width', markPx + 'px'); cardsStyle(stone, 'height', markPx + 'px'); }
     const lit = CD.craft ? CD.craft[i] : false;
     cardsStyle(c.el, 'opacity', op * (CD.craft && !lit ? .55 : 1));
     // The face answers at the shield on its first frame; words wait for reading room.
@@ -163,6 +165,8 @@ export function cardsFrame(st, look = [0, 0], pointer = [0.5, 0.5]) {
     const transform = `translate(${cx - W*k/2 - p[0]}px,${cy - H*k/2 - py}px) scale(${k})`;
     // Closed faces and shadows paint nothing. Their first opening frame writes
     // both transforms before paint, without adding hidden layer writes to glides.
+    // Part 17b: and hide while closed (at opacity 0 they were still drawn every frame).
+    cardsStyle(c.card, 'visibility', e > 0 ? '' : 'hidden'); cardsStyle(c.shadowBox, 'visibility', e > 0 ? '' : 'hidden');
     if (e > 0) cardsStyle(c.card, 'transform', transform);
     if (e > 0 && lift) cardsStyle(c.shadowBox, 'transform', transform);
     cardsStyle(c.face, 'transform', lift ? `${sx || sy ? `translate(${sx}px,${sy}px) ` : ''}${rx ? `rotateX(${rx}deg) ` : ''}${ryTilt ? `rotateY(${ryTilt}deg)` : ''}`.trim() : '');
