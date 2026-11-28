@@ -18,8 +18,10 @@ button { font-family: inherit; }
 #sky { display: contents; }
 #sky.sky-off > * { display: none; }
 #sky > svg { position: absolute; left: 0; top: 0; overflow: visible; transform-origin: 0 0; pointer-events: none; }
-/* One composited craft veil; the shared raster camera keeps its holes on the ink. */
+/* One composited craft veil, a canvas drawn at the shown camera (part 17e), so its holes stay on the ink; its svg keeps
+   only the definitions (the holes, the line cuts). */
 #map-veil { pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .3s; }
+#map-veil-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 .rm #map-veil { transition: none; }
 .rm .st-traveller { display: none; }
 .st-traveller { position: absolute; left: 0; top: 0; transform: translate(-50%,-50%); fill: none; stroke: var(--red); pointer-events: none; z-index: 3; opacity: 0; visibility: hidden; }

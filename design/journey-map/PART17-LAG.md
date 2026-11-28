@@ -256,3 +256,82 @@ to 15 ms; in the presses the compass words' map-sized svg is repainted almost ev
 - Phone pass of 17d against 17c: the presses with the veil's mask and with the whole veil left out (to price them),
   and Set out and HMC1 to Mohawk with a 9 s window and script samples, for the 10 fps stretch after a glide.
 - Then the press-start tile memory (the veil, the lines and the pull-back's rebases) and the pinch's repaints.
+
+## Part 17e: the compass veil as a canvas (cloud and phone, 28 Nov 2026)
+
+Still for Dan's steer to remove the spikes first. Done by Claude in the cloud, with the phone measuring, keeping the
+picture the same.
+
+### What the phone showed (17c against 17d, Galaxy S24 Ultra, 13:44 to 13:58 UTC, two runs each)
+
+| Row | Build | fps | frames over 25 ms | over 50 ms | worst ms |
+| --- | --- | --- | --- | --- | --- |
+| Compass press, print | 17c | 54 / 55.6 | 12 / 10 | 3 / 2 | 100.2 / 83.3 |
+| | 17d | 55.1 / 54.2 | 12 / 9 | 0 / 4 | 50 / 116.7 |
+| | 17d, veil without its mask | 56.4 / 56.7 | 7 / 10 | 2 / 0 | 75 / 50 |
+| | 17d, no veil | 57.1 / 57.1 | 8 / 7 | 0 / 0 | 50 / 50 |
+| | 17d, no lines | 56.9 / 57.6 | 8 / 5 | 0 / 0 | 49.9 / 49.9 |
+| Compass press, screen | 17c | 51.3 / 54 | 20 / 12 | 2 / 3 | 91.6 / 83.1 |
+| | 17d | 57.3 / 56.2 | 7 / 7 | 3 / 2 | 66.6 / 66.6 |
+| | 17d, veil without its mask | 57.1 / 56.9 | 10 / 6 | 0 / 1 | 50 / 66.5 |
+| | 17d, no veil | 58.2 / 57.1 | 7 / 7 | 0 / 0 | 50 / 50 |
+| | 17d, no lines | 57.1 / 55.6 | 5 / 7 | 0 / 2 | 50 / 116.6 |
+| Set out (9 s) | 17c | 59.6 / 59.3 | 2 / 2 | 0 / 0 | 33.3 / 33.4 |
+| | 17d | 59.9 / 59.3 | 2 / 1 | 0 / 0 | 33.3 / 33.3 |
+| HMC1 to Mohawk (9 s) | 17c | 59.9 / 60 | 1 / 1 | 0 / 0 | 49.9 / 33.4 |
+| | 17d | 59.7 / 59.6 | 0 / 1 | 0 / 0 | 17.1 / 33.2 |
+
+The glides have no frame over 50 ms on either build. The presses still do, and every one of those gaps is the GPU
+process making new tile memory (`OnCreateSharedImage`) or flushing raster work. Only the press without the veil had none
+in all four runs. A press pulls the camera back about 3x in 0.4 s (at 412 px the scale goes from 1.98 to 0.63), so
+every map layer is drawn again at several scales, and the veil, a screen-sized svg whose shade is cut by a luminance
+mask of soft holes, was the dearest of them per tile: in the cloud 87 tiles on 9 frames took 171 ms of a press's 892 ms
+of raster, about 2 ms a tile against 0.3 ms for the names layer.
+
+The 10 fps stretch after a glide is not a stall. rAF keeps 60 fps and the GPU is idle; the screen changes every 98 to
+100 ms because the resting map's mist and sky (the depth layer) are redrawn at `DEPTH.idleFps` = 12, which at 60 Hz
+falls on every sixth frame. That is the designed idle redraw and stays as it is.
+
+### Fix
+
+**The veil is one canvas drawn at the shown camera.** `#map-veil` is now a screen-sized `<canvas>` in device pixels,
+drawn by `tripVeil` (trip.mjs) on each frame the veil is shown and its camera, holes or shade changed: the shade over
+the map frame at the fill's alpha, then each soft hole taken out with `destination-out`, which leaves the shade's alpha
+times the product of (1 - hole alpha) where holes overlap, as the luminance mask did. A zero-size svg, `#map-veil-defs`,
+keeps the definitions that findhoards.mjs writes (the holes, the lines' cut, the fill's frame and alpha), so the compass
+code is unchanged. The canvas has no raster camera of its own, so the veil leaves the scheduler's records (one layer
+redrawn per frame), and its slot goes to the other layers and the sky.
+
+The border is drawn as the svg drew it, to the pixel: the svg multiplied the fill's soft edge by the mask's white frame
+(the same box) and cut both on whole device pixels at the mask's region (the same box again). The canvas takes the edge
+in once with `destination-in` and clears outside the box rounded to whole device pixels. Without this the map's left
+border line under the veil came out up to 21/255 darker.
+
+In a press at 412 px the cloud now rasters 2,883 tiles in 809 ms, against 2,987 in 892 ms: the veil's 87 tiles are gone.
+
+### Checks
+
+- Real clicks against 17d (the compass press and its release, fixed clock, 1920 and 412): with a probe that keeps an
+  empty veil slot, so every layer is redrawn on the same frames as in 17d, the canvas veil matches 17d within 3/255 on
+  every pixel at rest at 1920, and at 412 differs by at most 5/255 on 19 pixels. Without the probe (the build) the
+  resting frames differ only in idle animations caught at another phase (the longship's bob, Yggdrasil's ring, 10 to
+  111 pixels), because the freed slot lets the idle layers redraw sooner, and mid-press frames differ in sharpness
+  (another layer redrawn on that frame) and in the veil's fade, which runs on real time.
+- Pass in the cloud: finds (trip.mjs pin re-recorded), explore, steps, check (budgets +1.31 KB: 226.73 KB runtime,
+  343.03 KB map, 589.73 KB joined), comb-r-compass, comb-s-raster, comb-s-idle, comb-t-words, comb-t-legend,
+  comb-t-ash, comb-t-beacon and comb-t-spatial.
+- `comb-s-raster` counts six layer cameras now (the veil has none). `comb-o-dim` (PC only, Edge 158, not run in the
+  cloud) asks that the canvas was drawn at the shown camera and is not moved; its veil opacity check still expected the
+  CSS opacity .45 that moved into the fill's alpha in the part 12 review fixes (the veil shows at opacity 1), so it now
+  checks both.
+
+### Tools
+
+- `p51/layerraster.cjs` (cloud scratch, not in the repo) counts the tiles each composited layer rasters in a pinch, a
+  glide or a compass press, from the trace's raster tasks and the DevTools layer tree.
+
+### Next
+
+- Phone pass of 17e against 17d: both compass presses with traces.
+- The lines layer is now the press's dearest: it is rastered on about 67 of a press's frames as its dashes grow.
+- The pinch and glide repaints of the names and map layers (label easing, the legend).

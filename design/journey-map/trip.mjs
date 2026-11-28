@@ -712,10 +712,11 @@ function tripLabels(st, t2Fade = 1) {
 }
 export function tripGliding() { return !!TRIP_EL.raster?.gliding; }
 // COMB-S: every camera owner uses the same slot, including focus and rest.
-function tripRasters(E,r,st,focus,layers,veil,camVeil,moving,camMoved,lastCam) {
+function tripRasters(E,r,st,focus,layers,veil,moving,camMoved,lastCam) {
   const c=st.cam, equal=(a,b)=>a&&b&&['s','tx','ty'].every(k=>Math.abs(a[k]-b[k])<1e-10);
   const matrix=p=>'matrix('+p.s.toFixed(4)+' 0 0 '+p.s.toFixed(4)+' '+p.tx.toFixed(2)+' '+p.ty.toFixed(2)+')';
-  const records=[['map',E.svg,E.cam],['base',E.base,E.camBase],...layers.map(([svg,cam])=>[svg.id.slice(4),svg,cam]),['veil',veil,camVeil]].filter(([,svg,cam])=>svg&&cam);
+  // Part 17e: the veil is a canvas drawn at the shown camera (tripVeil), so it has no raster camera of its own.
+  const records=[['map',E.svg,E.cam],['base',E.base,E.camBase],...layers.map(([svg,cam])=>[svg.id.slice(4),svg,cam])].filter(([,svg,cam])=>svg&&cam);
   r.layerCams ||= {};
   const slack=FRAME_PERF.slack, free=!!st.exploring||st.exploreK>0;
   const change=lastCam?Math.max(c.s/lastCam.s,lastCam.s/c.s):1;
@@ -736,8 +737,6 @@ function tripRasters(E,r,st,focus,layers,veil,camVeil,moving,camMoved,lastCam) {
   const requests=(VIEW.skyPlan?.(st)||[]).map(q=>({...q,kind:'sky'})),forced=[];
   for(const[id,svg,cam]of records){
     const p=r.layerCams[id],k=p?c.s/p.s:1;
-    // Part 17: no redraws of the hidden veil while moving; rest draws it sharp.
-    if(id==='veil'&&p&&moving&&svg.style.visibility!=='visible')continue;
     const lo=free?FRAME_PERF.exploreMin:id==='base'?FRAME_PERF.baseMin:FRAME_PERF.scaleMin;
     const hi=free?FRAME_PERF.exploreMax:id==='base'?FRAME_PERF.baseMax:FRAME_PERF.scaleMax;
     let covers=true;
@@ -755,11 +754,11 @@ function tripRasters(E,r,st,focus,layers,veil,camVeil,moving,camMoved,lastCam) {
   const chosen=forced.length?null:requests.sort((a,b)=>b.score-a.score)[0]||null;
   const jobs=forced.length?forced:chosen&&chosen.kind!=='sky'?[chosen]:[];
   for(const q of jobs){const p=ahead(q.kind);r.layerCams[q.kind]=p;tripWrite(q.cam,'transform',matrix(p),true);}
-  r.base=r.layerCams.map||{...c};E.veilRaster=r.layerCams.veil||{...c};
+  r.base=r.layerCams.map||{...c};
   for(const[id,svg]of records){
     const p=r.layerCams[id];if(!p)continue;const k=c.s/p.s;
-    // Part 17b: hidden ones wait for rest (one shown mid-move fades in from 0 and is placed the next frame).
-    if((id==='veil'||id==='lines')&&moving&&svg.style.visibility!=='visible')continue;
+    // Part 17b: the hidden lines wait for rest (shown mid-move, they fade in from 0 and are placed the next frame).
+    if(id==='lines'&&moving&&svg.style.visibility!=='visible')continue;
     tripWrite(svg,'transform',equal(c,p)?'none':'matrix('+k+',0,0,'+k+','+(c.tx-p.tx*k)+','+(c.ty-p.ty*k)+')');
   }
   if(E.base){const B=E.baseRaster??={};B.camera=r.layerCams.base;B.last={...c,P:st.P,focus:focus?.k||0};B.held=!equal(c,B.camera);B.w=VIEW.w;B.h=VIEW.h;B.box=VIEW.baseBox||NO_BOX;}
@@ -779,25 +778,67 @@ function tripRasters(E,r,st,focus,layers,veil,camVeil,moving,camMoved,lastCam) {
     st.rasterDestination={...(focus?target.cam:st.exploreDestination|| (glide?tripState(lastCam&&st.P<lastCam.P?glide.a:glide.b).cam:c))};
     r.destination=st.rasterDestination; // st is new each frame
   }
-  if(!moving&&jobs.some(q=>q.kind==='veil'))st.veilRestCommit=true;
+  // The veil's holes are fitted again to the words and labels as shown once a move has come to rest (they were fitted to
+  // the destination when it began), as when the veil was an svg drawn sharp at rest.
+  if(!moving&&r.wasMoving&&veil?.style.visibility==='visible')st.veilRestCommit=true;
   r.wasMoving=moving;r.moveKey=key;r.focusK=focus?.k||0;
   r.gliding=moving||pending;r.promo=!st.reduced&&(st.handoffT>=1||moving);r.soft=false;
   st.gliding=r.gliding;
   return {pending:moving||pending};
 }
+// Part 17e (lag spikes, 2026-11-28): the compass veil is a canvas drawn at the shown camera when anything in it changes. As
+// an svg with a mask of soft holes it was drawn again at every rebase of a press's pull-back, and its new tiles made the
+// press's longest frames on the phone (none over 50 ms without it). The shade covers the frame at the fill's alpha with the
+// svg's border (the fill's soft edge times the mask's white frame, cut on whole device pixels by the mask's region), and
+// each hole is taken out with destination-out, which gives the product of (1 - hole alpha) the luminance mask gave.
+export function tripVeil(st) {
+  const E = TRIP_EL, v = E.veil ??= document.getElementById('map-veil');
+  if (!v?.getContext || v.style.visibility !== 'visible') return;
+  if (!E.veilSize) {
+    E.veilSize = [0, 0];
+    // The backing store takes the box's exact device pixels, so the compositor shows it 1:1.
+    try { new ResizeObserver(es => { const b = es[0]?.devicePixelContentBoxSize?.[0]; if (b && (b.inlineSize !== E.veilSize[0] || b.blockSize !== E.veilSize[1])) { E.veilSize = [b.inlineSize, b.blockSize]; if (E.veilLast) tripVeil(E.veilLast); } }).observe(v, { box: 'device-pixel-content-box' }); } catch (e) { /* the rounded size below */ }
+  }
+  E.veilLast = st;
+  const c = st.cam, W = E.veilSize[0] || Math.round(VIEW.w * (globalThis.devicePixelRatio || 1)), H = E.veilSize[1] || Math.round(VIEW.h * (globalThis.devicePixelRatio || 1));
+  const fill = E.veilFill ??= document.getElementById('veil-fill'), holes = E.veilHoles ??= document.getElementById('veil-holes');
+  const box = ['x', 'y', 'width', 'height'].map(k => +fill.getAttribute(k) || 0), alpha = fill.hasAttribute('fill-opacity') ? +fill.getAttribute('fill-opacity') : 1, shade = fill.getAttribute('fill');
+  const list = [...holes.children].map(h => [+h.getAttribute('cx'), +h.getAttribute('cy'), +h.getAttribute('r')]);
+  const key = [W, H, VIEW.w, VIEW.h, c.s, c.tx, c.ty, box, alpha, shade, list].join();
+  if (key === E.veilKey) return;
+  E.veilKey = key;
+  if (v.width !== W) v.width = W;
+  if (v.height !== H) v.height = H;
+  const ctx = E.veilCtx ??= v.getContext('2d'), sx = W / VIEW.w, sy = H / VIEW.h, at = () => ctx.setTransform(sx * c.s, 0, 0, sy * c.s, sx * c.tx, sy * c.ty);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.clearRect(0, 0, W, H);
+  at(); ctx.globalAlpha = alpha; ctx.fillStyle = shade; ctx.fillRect(...box);
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'destination-in'; ctx.fillRect(...box);
+  const x0 = Math.min(W, Math.max(0, Math.round(sx * (c.tx + c.s * box[0])))), x1 = Math.min(W, Math.max(x0, Math.round(sx * (c.tx + c.s * (box[0] + box[2])))));
+  const y0 = Math.min(H, Math.max(0, Math.round(sy * (c.ty + c.s * box[1])))), y1 = Math.min(H, Math.max(y0, Math.round(sy * (c.ty + c.s * (box[1] + box[3])))));
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, y0); ctx.clearRect(0, y1, W, H - y1); ctx.clearRect(0, y0, x0, y1 - y0); ctx.clearRect(x1, y0, W - x1, y1 - y0);
+  at(); ctx.globalCompositeOperation = 'destination-out';
+  // #veil-soft: solid to .6 of the radius, then fading to nothing at its edge.
+  for (const [x, y, r] of list) {
+    if (!(r > 0)) continue;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(.6, shade); g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  E.veilDrawn = { s: c.s, tx: c.tx, ty: c.ty };
+}
 export function tripApply(st, focus = null) {
   const E = TRIP_EL, c = st.cam; E.clockFading = false;
-  const veil = E.veil ??= document.getElementById('map-veil'), camVeil = E.camVeil ??= document.getElementById('cam-veil');
+  const veil = E.veil ??= document.getElementById('map-veil');
   // L5: the names-and-trail and finds svgs ride svg#map's raster camera; div#map-stack takes the fade.
   const layers = E.layers ??= ['live', 'finds', 'anim', 'lines'].map(id => [document.getElementById('map-' + id), document.getElementById('cam-' + id)]).filter(([svg, cam]) => svg && cam), stack = E.stack ??= document.getElementById('map-stack');
   const free = !!st.exploring || st.exploreK > 0;
   const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
-  if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.layerCams = null; r.focusRun = null; E.veilRaster = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
+  if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.layerCams = null; r.focusRun = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }
   const lastCam=r.lastCam,camMoved=!!lastCam&&['s','tx','ty'].some(k=>lastCam[k]!==c[k]);
   r.lastCam={...c,P:st.P,focus:focus?.k||0};
   const glideHold=FRAME_PERF.glideHold&&!free&&!st.reduced&&st.handoffT>=1;
   const moving=!st.reduced&&(camMoved||!!st.exploreMoving||!!focus&&(focus.k<1||!focus.swapped));
-  const raster=tripRasters(E,r,st,focus,layers,veil,camVeil,moving,camMoved,lastCam);
+  const raster=tripRasters(E,r,st,focus,layers,veil,moving,camMoved,lastCam);
   // Keep the displayed label state across camera commits. Its own size and tier
   // clock eases continuously, including across interrupted gestures/rebases.
   const settle = free ? 1 - Math.exp(-(st.exploreDt || 0) / (FRAME_PERF.labelSettle / 3)) : 1;

@@ -7,7 +7,8 @@ async function move(label,act,ms=6500){await begin(b);await act();await b.advanc
  for(const f of r.frames){const b=f.coverage;if(b&&(b[0]>.001||b[1]>.001||b[2]<b[4]-.001||b[3]<b[5]-.001))fail.push(label+' base uncovered '+JSON.stringify(b));}
  for(const f of r.frames)for(const p of f.trail||[])if(p.error===null||p.error>.051)fail.push(label+' trail dash differs from its raster '+JSON.stringify(p));
  for(const[id,c]of Object.entries(r.cameras||{}))if(!equal(c,r.cam))fail.push(label+' unsharp '+id);
- if(Object.keys(r.cameras||{}).length!==7)fail.push(label+' missing independent camera');
+ // Part 17e (2026-11-28): the compass veil is a canvas drawn at the shown camera, so the other six layers keep raster cameras.
+ if(Object.keys(r.cameras||{}).length!==6||'veil' in(r.cameras||{}))fail.push(label+' missing independent camera');
  rows.push({label,commits:r.commits,forced:r.commits.filter(f=>f.forced.length),last:r.cameras,cam:r.cam});}
 try{for(const[w,h]of[[1920,950],[412,915]]){const touch=w<641;await b.size(w,h,touch,1);
  await b.page(false,'map');await move(w+' Set out',()=>b.click('.go-next',touch));

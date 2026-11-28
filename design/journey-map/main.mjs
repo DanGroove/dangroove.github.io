@@ -1,7 +1,7 @@
 // Wires the journey map together: builds the stage, listens to scroll and resize, runs the one frame loop.
 import { COMB, FINDS, C, COPY, MAP, CAMERA, PALETTES, STOPS, STEPS, DEPTH, NOVA } from './data.mjs';
 import { bigMap, mapDefs, stoneDefs, pathD, TRAIL } from './art.mjs';
-import { tripBuild, tripResize, tripState, tripFocus, tripApply, tripMiniVisited, VIEW, SEQ, tripMeasureLabels, tripXCamera, toScreen, smooth } from './trip.mjs';
+import { tripBuild, tripResize, tripState, tripFocus, tripApply, tripVeil, tripMiniVisited, VIEW, SEQ, tripMeasureLabels, tripXCamera, toScreen, smooth } from './trip.mjs';
 import { starsBuild, starsResize, starsFrame, starsStill, starsTick, starsSkyVisible } from './stars.mjs';
 import { cardsBuild, cardsResize, cardsFrame, cardsList, cardsOverride, cardsClose, cardsReduced } from './cards.mjs';
 import { tlBuild, tlResize, tlFrame, tlReduced, tlCurrent, tlSetCount } from './timeline.mjs';
@@ -40,7 +40,7 @@ const M = bigMap();
 MAIN.innerHTML = `<h1 class="sr">${COPY.title}</h1><section class="trip" id="trip" aria-label="${COPY.srMap}"><div class="stage" id="stage">
 <canvas id="deep" aria-hidden="true"></canvas>
 <svg id="map" class="map" role="group" aria-label="${COPY.srMap}">${mapDefs()}<g id="cam"><g id="b-all"><g id="b-sea">${M.sea}</g><g id="b-fill">${M.fill}</g><g id="b-coast">${M.coast}</g><g id="b-detail">${M.detail}</g></g><path id="trail-done" class="done" d="${pathD(TRAIL)}"/><g id="trail-pieces">${DONE_PIECES.map(q => `<path class="done-p" data-u0="${q.u0}" data-u1="${q.u1}" d="M${q.pts.map(p => p.join(' ')).join('L')}"/>`).join('')}</g><g id="finds">${M.finds}</g><g id="fxg" transform="translate(${MAP.x[0]} ${MAP.x[1]})"></g></g></svg>
-<svg id="map-veil" class="map" aria-hidden="true" pointer-events="none"><defs><radialGradient id="veil-soft"><stop offset=".6" stop-color="black"/><stop offset="1" stop-color="black" stop-opacity="0"/></radialGradient><mask id="veil-mask" maskUnits="userSpaceOnUse"><rect id="veil-mask-frame" fill="white"/><g id="veil-holes"></g></mask><clipPath id="veil-lines-clip" clipPathUnits="userSpaceOnUse"><path id="veil-line-cuts" clip-rule="evenodd"/></clipPath></defs><g id="cam-veil"><rect id="veil-fill" fill="${C.shade}" mask="url(#veil-mask)"/><g id="wf-lines" clip-path="url(#veil-lines-clip)" pointer-events="none"></g></g></svg>
+<canvas id="map-veil" class="map" aria-hidden="true"></canvas><svg id="map-veil-defs" aria-hidden="true" pointer-events="none" width="0" height="0"><defs><radialGradient id="veil-soft"><stop offset=".6" stop-color="black"/><stop offset="1" stop-color="black" stop-opacity="0"/></radialGradient><mask id="veil-mask" maskUnits="userSpaceOnUse"><rect id="veil-mask-frame" fill="white"/><g id="veil-holes"></g></mask><clipPath id="veil-lines-clip" clipPathUnits="userSpaceOnUse"><path id="veil-line-cuts" clip-rule="evenodd"/></clipPath><rect id="veil-fill" fill="${C.shade}" mask="url(#veil-mask)"/></defs><g id="cam-veil"><g id="wf-lines" clip-path="url(#veil-lines-clip)" pointer-events="none"></g></g></svg>
 <canvas id="nova" aria-hidden="true"></canvas><canvas id="stars" aria-hidden="true"></canvas>
 <canvas id="air" aria-hidden="true"></canvas><div id="sky" aria-hidden="true"></div>
 <button type="button" class="fx-hit" id="nova-hit" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true"></button>
@@ -254,7 +254,7 @@ function frame(ts) {
   const dt = mainTs === null ? 0 : Math.max(0, Math.min(STEPS.frameMax, (ts - mainTs) / 1000)); mainTs = ts;
   P = stepsFrame(ts);
   if (JOIN.leave) JOIN.leave(P);
-  if (RM) { findsFrame(time, FIXED);mainPlaceChestHit(FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], { ...jr, still: true }); raf = requestAnimationFrame(frame); return; }
+  if (RM) { findsFrame(time, FIXED);mainPlaceChestHit(FIXED);tripVeil(FIXED); const jr = JOIN.frame && JOIN.frame(FIXED, true, P); if (jr) starsFrame(0, FIXED, [.5, .5], { ...jr, still: true }); raf = requestAnimationFrame(frame); return; }
   const st = tripState(P); st.frameDt = dt;
   // Under the opaque hero the map's frame is skipped (F2), but only once a full frame has put every map layer in its hero
   // state (shields, cards, footer, mini-map, timeline, explore): after a load or a resize, and after a cut or a glide back
@@ -297,6 +297,7 @@ function frame(ts) {
   const shown=st.handoffT>=COMB.mapFindsIn,cardVisibility=shown?'':'hidden';
   if($('cards').style.visibility!==cardVisibility)$('cards').style.visibility=cardVisibility;
   if(shown){st.smallMoved=moved;cardsFrame(st, aim.look, PTR);findsFrame(time, st);mainPlaceChestHit(st);}
+  tripVeil(st);
   mainHeroTidy = !!JOIN.heroStart && P < mainHeroEnd && !mainMapPending;
   raf = requestAnimationFrame(frame);
 }
