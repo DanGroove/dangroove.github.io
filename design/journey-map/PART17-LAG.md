@@ -176,3 +176,83 @@ flat, the presses are flat at about 200 fps with 2 to 4 frames over 25 ms, and r
   timeline track (476), the markers' size groups (about 300 each), the Next bar (296), `div.ov` (294) and a card face
   (180).
 - The main thread still layerizes every frame (1.25 ms in the cloud), and the page's own frame code is 3.3 ms.
+
+## Part 17d: the spikes first (cloud and phone, 28 Nov 2026)
+
+Dan, 28 Nov 7:49 AM: "lets really hone in on the lag spikes, if we can remove those, a dropped frame here or there wont
+be so noticeable". Done by Claude in the cloud, with the phone and PC measuring, keeping the picture the same.
+
+### What the phone showed (Preview 29 against 17c, Galaxy S24 Ultra, two runs each)
+
+17c is smoother in moves (Set out 7 frames over 25 ms to 2, HMC1 to Mohawk 6 and 5 to 2 and 1, the Laurier visit 8 to
+2 and 1) and its compass presses no longer flash (Preview 29: 103 to 1,762 flashed frames), but the presses still have 5
+to 10 frames over 25 ms and one stall of 167 ms. Every gap over 50 ms in the traces (17 of them, both builds) is the GPU
+process, not the page: the main thread does 3 to 9 ms in each, and the GPU spends it creating new tile memory
+(`SharedImageStub::OnCreateSharedImage`, up to 147 ms; 53 to 96 new 544x544 tiles in one press gap) or drawing tiles
+(`DoEndRasterCHROMIUM`, up to 166 ms), at the start of a press or a move, often with tiles still missing.
+
+The screen recordings show one more thing on both builds: when the Set out and HMC1 to Mohawk glides end (4.1 to 5.0 s
+after Next), the picture changes only about every 98 ms (10 fps) for 2.5 to 3.3 s. Its first gaps are the page's own
+work (main thread 26 to 61 ms: script 10 to 34, layerizing 8 to 12). The cloud does not show it (60 fps from 0.5 s after
+a glide ends), and the traces stopped at 4.5 s, so the next phone pass records 9 s.
+
+### Fixes
+
+1. **The compass lines are cut by a clip, not a mask.** Under the compass and its words the growing lines were cut by
+   a mask, so every redraw of the lines layer drew it twice and blended the two: in a press the cloud drew 4,362 tiles
+   in 8.4 s for it, against 2,185 tiles in 0.7 s with no cut. The cut is now an even-odd clip path, the map frame with
+   one hole per cut (the compass ring and each word's box; they never overlap), so the same pixels stay hidden:
+   1,964 tiles in 1.2 s (main.mjs, findhoards.mjs).
+2. **No forced layout when a move starts or ends.** The idle layers paused and resumed their one CSS stroke animation
+   (the rune trace) by asking each of the 33 layers for its animations, and each ask forced a style and layout pass
+   (30 ms in the cloud, at every start and end of a move). The animation is now listed when made (`findIdleAnim`,
+   findkit.mjs and findsheets.mjs) and only it is paused or played.
+3. **The next glide is worked out in a seventh of the time.** 0.1 s after a glide ends the page builds the path table
+   of the glide ahead (2,049 camera samples) in one task, and each sample worked out the glide's two ends and its nine
+   Bezier controls (81 trail lookups) again. They are now worked out once per table (`glidePrep`, trip.mjs): 14 ms to
+   2 ms per table in the cloud (median of five, each glide), 35 ms to 12 ms in the first one after a glide.
+
+### Checks
+
+- Pass: finds (trip.mjs pin re-recorded), explore, steps, check (budgets +0.75 KB), comb-s-raster, comb-s-idle,
+  comb-t-words, comb-t-legend, comb-t-ash, comb-t-beacon and comb-t-spatial (comb-o-dim needs Edge 158, on the PC).
+- Every camera of 360 frames through five glides (Set out, HMC1 to Mohawk, Lennard to the X, Back from Laurier and
+  from Mohawk), at 412 and 1920, is the same as 17c's to the last digit: fix 3 changes when the table's numbers are
+  worked out, not the numbers.
+- Real clicks against 17c at 1920 and 412 (cards, a glide, the X and its dig, a compass word, its veil and the compass
+  off): rest, the cards, the glide and the X match within 18/255 on at most 12 pixels, the phone-size compass within
+  6/255. In the first 0.3 s of a wide compass press some label and line edges differ by up to 62/255 while 17c run twice
+  matches itself exactly, most likely because those layers' new tiles are ready sooner; from 0.7 s on, 3 pixels at one
+  cut edge differ by at most 11/255. A first pass taken while other probes ran showed larger differences (the compass
+  caption at 412, the X arriving at 1920) that quiet reruns did not, so captures are taken on a quiet machine.
+
+### On the PC (Preview 32 against 17c, 1920x950 at DPR 2, two runs each)
+
+Presses: print 194.8 to 200.7 fps (frames over 25 ms 5 to 2.5, worst 45.9 to 29.2 ms), screen 194.3 to 198 (4 to 2.5,
+worst 33.4 to 54.2). Moves: Set out 191.4 to 197.2 (10 to 7.5 over 25 ms, worst 66.7 to 50), HMC1 to Mohawk 213.9 to
+212.8 (worst 62.5 on both), the explore opening 189.6 to 191.8, Lennard to the X flat at 217. Another Codex run on the
+PC (its own Chrome) used about one core from 13:09 to 13:12 UTC, during the moves; those rows are marked in the run's
+summary.
+
+The long frames are all on the graphics side: the GPU process's longest frame is 42 to 67 ms in Set out and HMC1 to
+Mohawk, while the page's own frame (BeginMainFrame) never passes 18 ms and averages about 3 ms, half of it script. 17c
+cut layout events by about 40% (545 against 864 in Set out, 400 against 971 in HMC1 to Mohawk), paints by 35% and hit
+tests by 40%, which saves 0.15 to 0.25 ms of main thread a frame. In the moves the big layers are still redrawn at map
+size (Set out: an unnamed svg 40 times, `svg#map-live` 19, `svg#map-base` 5), and each of those is a GPU raster.
+Every gap over 25 ms in 17c's PC traces is the GPU process replaying the recorded drawing of map-sized layers
+(`RD::DoRasterCHROMIUM::Deserializing`, 14 to 47 ms, then `DoEndRasterCHROMIUM` 3 to 14 ms) with the main thread at 1
+to 15 ms; in the presses the compass words' map-sized svg is repainted almost every frame (about 180 times in 4.5 s).
+
+### Tools
+
+- `tools/phone-fps.mjs --js` (with `--trace`) records V8's sampling profiler in each row's trace.
+- `tools/trace-js.mjs <trace> --page <served page> --from 3500 --to 9000` prints the main thread's stages per slice,
+  the script entry points and, from those samples, the page functions by module and line. On a cloud trace of HMC1 to
+  Mohawk it names the explore labels' idle warm-up (`tripMeasureExploreLabels`, trip.mjs), which runs in short idle
+  tasks for seconds after the glide ends, beside the frame code.
+
+### Next
+
+- Phone pass of 17d against 17c: the presses with the veil's mask and with the whole veil left out (to price them),
+  and Set out and HMC1 to Mohawk with a 9 s window and script samples, for the 10 fps stretch after a glide.
+- Then the press-start tile memory (the veil, the lines and the pull-back's rebases) and the pinch's repaints.

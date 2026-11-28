@@ -210,21 +210,34 @@ export const glideMove = (P0, P1) => {
 };
 const glideCache = new Map();
 const glideView = (g, end) => g.i === 0 && !end ? camOverview() : g.i === STOPS.length && end ? tripXCamera() : tripStopCamera(end ? g.i : g.i - 1);
-function glideRaw(g, q) {
+// Part 17d: a glide's two ends and its Bezier controls are worked out once per path table (glidePrep) instead of at each
+// of the table's 2,049 samples (nine trail averages of nine points each, every sample), which made the warm-up at rest one
+// task of about 35 ms in the cloud, more on a phone, just after a glide ended. Each sample is the same arithmetic as before.
+function glidePrep(g) {
   const A = glideView(g, false), B = glideView(g, true), G = STEPS.glide;
-  let centre;
-  if (!g.i) centre = [lerp(A.cx, B.cx, q), lerp(A.cy, B.cy, q)];
-  else {
+  let xs = null, ys = null;
+  if (g.i) {
     // A broad Bezier through trail samples removes the polyline's tiny corners.
     const points = Array.from({ length: G.controls + 1 }, (_, i) => smoothCenter(lerp(g.u0, g.u1, i / G.controls)));
     const start = points[0].slice(), end = points.at(-1).slice();
     points.forEach((p, i) => p.forEach((v, k) => { p[k] += lerp([A.cx,A.cy][k] - start[k], [B.cx,B.cy][k] - end[k], i / G.controls); }));
-    for (let n = points.length - 1; n > 0; n--) for (let i = 0; i < n; i++) points[i] = points[i].map((v, k) => lerp(v, points[i + 1][k], q));
-    centre = points[0];
+    xs = points.map(p => p[0]); ys = points.map(p => p[1]);
   }
   const depth = VIEW.depth && g.i ? Math.log(CAMERA.holdZoom / (1 - (VIEW.phone ? G.zoomOutPhone : G.zoomOut))) * Math.min(1, (g.u1 - g.u0) * ACTS.legPerUnit / G.zoomLength) : 0;
-  return camFinal({ cx: centre[0], cy: centre[1], s: Math.exp(lerp(Math.log(A.s), Math.log(B.s), q) - depth * 4 * q * (1 - q)), ax: lerp(A.ax, B.ax, q), ay: lerp(A.ay, B.ay, q) });
+  return { A, B, xs, ys, x: xs && xs.slice(), y: ys && ys.slice(), depth };
 }
+function glideEval(o, g, q) {
+  const { A, B } = o; let cx, cy;
+  if (!o.xs) { cx = lerp(A.cx, B.cx, q); cy = lerp(A.cy, B.cy, q); }
+  else {
+    const x = o.x, y = o.y, m = x.length;
+    for (let i = 0; i < m; i++) { x[i] = o.xs[i]; y[i] = o.ys[i]; }
+    for (let n = m - 1; n > 0; n--) for (let i = 0; i < n; i++) { x[i] = lerp(x[i], x[i + 1], q); y[i] = lerp(y[i], y[i + 1], q); }
+    cx = x[0]; cy = y[0];
+  }
+  return camFinal({ cx, cy, s: Math.exp(lerp(Math.log(A.s), Math.log(B.s), q) - o.depth * 4 * q * (1 - q)), ax: lerp(A.ax, B.ax, q), ay: lerp(A.ay, B.ay, q) });
+}
+function glideRaw(g, q) { return glideEval(glidePrep(g), g, q); }
 function glidePath(g, distance) {
   if (distance <= 0) return 0;
   if (distance >= 1) return 1;
@@ -234,9 +247,9 @@ function glidePath(g, distance) {
     // Integrate the largest instantaneous screen velocity at the five test points.
     // Equal distance in this metric has no zoom/travel/zoom speed troughs.
     const points = [[.5,.5],[.25,.25],[.75,.25],[.25,.75],[.75,.75]].map(p => [p[0] * VIEW.w, p[1] * VIEW.h]);
-    const N = STEPS.glide.samples; table = [0]; let before = glideRaw(g, 0);
+    const N = STEPS.glide.samples, prep = glidePrep(g); table = [0]; let before = glideEval(prep, g, 0);
     for (let i = 1; i <= N; i++) {
-      const after = glideRaw(g, i / N), logScale = Math.log(after.s / before.s);
+      const after = glideEval(prep, g, i / N), logScale = Math.log(after.s / before.s);
       const length = Math.max(...points.map(p => Math.hypot(after.tx - before.tx + (p[0] - (before.tx + after.tx) / 2) * logScale, after.ty - before.ty + (p[1] - (before.ty + after.ty) / 2) * logScale)));
       table.push(table.at(-1) + length); before = after;
     }

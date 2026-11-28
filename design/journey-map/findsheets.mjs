@@ -3,7 +3,7 @@ import { C, COPY, FIND_COPY, FIND_PLAY, FIND_TIMING, COMB, DEPTH } from './data.
 import { VIEW, clamp01, lerp } from './trip.mjs';
 import { rubbingSvg } from './art.mjs';
 import { depthBeam } from './depth.mjs';
-import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, closeSheet, findBits, findSvg, findSheet, findSlot, findAngleDelta, findStyle, findSheetFrame, findIdleTime } from './findkit.mjs';
+import { findPointer, FD, FIND_BY, D, ease, out3, fEsc, attr, toMap, found, opened, press, closeSheet, findBits, findSvg, findSheet, findSlot, findAngleDelta, findStyle, findSheetFrame, findIdleTime, findIdleAnim } from './findkit.mjs';
 
 export function findBeacon(svg) {
   const f=FIND_BY.beacon,el=svg.querySelector('#f-beacon'),beam=el.querySelector('.bc-beam'),flame=el.querySelector('.bc-flame'),glow=el.querySelector('.bc-glow');
@@ -100,7 +100,7 @@ export function findRune(svg) {
     const R = FIND_PLAY.rune; trace.classList.toggle('red', red); trace.style.stroke = red ? '' : C.paper; trace.style.opacity = red ? 1 : 0; trace.style.strokeDasharray = red ? 'none' : R.dash.join(' ');
     trace.getAnimations().forEach(a => a.cancel());
     if (red) trace.style.strokeDasharray = R.dash[1] + ' ' + R.dash[1];
-    if (!FD.rm) trace.animate(red ? [{ strokeDashoffset: R.dash[1], opacity: 1 }, { strokeDashoffset: 0, opacity: 1 }] : [{ strokeDashoffset: 0, opacity: 0 }, { strokeDashoffset: -R.dash[1] / 2, opacity: 1 }, { strokeDashoffset: -R.dash[1], opacity: 0 }], { duration: (red ? R.carving : R.dashTime) * 1000, fill: red ? 'forwards' : 'none' }).id = red ? '' : 'jm-idle';
+    if (!FD.rm) { const anim = trace.animate(red ? [{ strokeDashoffset: R.dash[1], opacity: 1 }, { strokeDashoffset: 0, opacity: 1 }] : [{ strokeDashoffset: 0, opacity: 0 }, { strokeDashoffset: -R.dash[1] / 2, opacity: 1 }, { strokeDashoffset: -R.dash[1], opacity: 0 }], { duration: (red ? R.carving : R.dashTime) * 1000, fill: red ? 'forwards' : 'none' }); anim.id = red ? '' : 'jm-idle'; if (!red) findIdleAnim(anim); }
   };
   const autoStart = () => { if (o.read) return; o.autoTs = FD.now; o.autoLast = null; };
   const rub = (x, y) => {

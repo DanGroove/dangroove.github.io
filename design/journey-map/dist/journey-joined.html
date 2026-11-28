@@ -3792,21 +3792,34 @@ const glideMove = (P0, P1) => {
 };
 const glideCache = new Map();
 const glideView = (g, end) => g.i === 0 && !end ? camOverview() : g.i === STOPS.length && end ? tripXCamera() : tripStopCamera(end ? g.i : g.i - 1);
-function glideRaw(g, q) {
+// Part 17d: a glide's two ends and its Bezier controls are worked out once per path table (glidePrep) instead of at each
+// of the table's 2,049 samples (nine trail averages of nine points each, every sample), which made the warm-up at rest one
+// task of about 35 ms in the cloud, more on a phone, just after a glide ended. Each sample is the same arithmetic as before.
+function glidePrep(g) {
   const A = glideView(g, false), B = glideView(g, true), G = STEPS.glide;
-  let centre;
-  if (!g.i) centre = [lerp(A.cx, B.cx, q), lerp(A.cy, B.cy, q)];
-  else {
+  let xs = null, ys = null;
+  if (g.i) {
     // A broad Bezier through trail samples removes the polyline's tiny corners.
     const points = Array.from({ length: G.controls + 1 }, (_, i) => smoothCenter(lerp(g.u0, g.u1, i / G.controls)));
     const start = points[0].slice(), end = points.at(-1).slice();
     points.forEach((p, i) => p.forEach((v, k) => { p[k] += lerp([A.cx,A.cy][k] - start[k], [B.cx,B.cy][k] - end[k], i / G.controls); }));
-    for (let n = points.length - 1; n > 0; n--) for (let i = 0; i < n; i++) points[i] = points[i].map((v, k) => lerp(v, points[i + 1][k], q));
-    centre = points[0];
+    xs = points.map(p => p[0]); ys = points.map(p => p[1]);
   }
   const depth = VIEW.depth && g.i ? Math.log(CAMERA.holdZoom / (1 - (VIEW.phone ? G.zoomOutPhone : G.zoomOut))) * Math.min(1, (g.u1 - g.u0) * ACTS.legPerUnit / G.zoomLength) : 0;
-  return camFinal({ cx: centre[0], cy: centre[1], s: Math.exp(lerp(Math.log(A.s), Math.log(B.s), q) - depth * 4 * q * (1 - q)), ax: lerp(A.ax, B.ax, q), ay: lerp(A.ay, B.ay, q) });
+  return { A, B, xs, ys, x: xs && xs.slice(), y: ys && ys.slice(), depth };
 }
+function glideEval(o, g, q) {
+  const { A, B } = o; let cx, cy;
+  if (!o.xs) { cx = lerp(A.cx, B.cx, q); cy = lerp(A.cy, B.cy, q); }
+  else {
+    const x = o.x, y = o.y, m = x.length;
+    for (let i = 0; i < m; i++) { x[i] = o.xs[i]; y[i] = o.ys[i]; }
+    for (let n = m - 1; n > 0; n--) for (let i = 0; i < n; i++) { x[i] = lerp(x[i], x[i + 1], q); y[i] = lerp(y[i], y[i + 1], q); }
+    cx = x[0]; cy = y[0];
+  }
+  return camFinal({ cx, cy, s: Math.exp(lerp(Math.log(A.s), Math.log(B.s), q) - o.depth * 4 * q * (1 - q)), ax: lerp(A.ax, B.ax, q), ay: lerp(A.ay, B.ay, q) });
+}
+function glideRaw(g, q) { return glideEval(glidePrep(g), g, q); }
 function glidePath(g, distance) {
   if (distance <= 0) return 0;
   if (distance >= 1) return 1;
@@ -3816,9 +3829,9 @@ function glidePath(g, distance) {
     // Integrate the largest instantaneous screen velocity at the five test points.
     // Equal distance in this metric has no zoom/travel/zoom speed troughs.
     const points = [[.5,.5],[.25,.25],[.75,.25],[.25,.75],[.75,.75]].map(p => [p[0] * VIEW.w, p[1] * VIEW.h]);
-    const N = STEPS.glide.samples; table = [0]; let before = glideRaw(g, 0);
+    const N = STEPS.glide.samples, prep = glidePrep(g); table = [0]; let before = glideEval(prep, g, 0);
     for (let i = 1; i <= N; i++) {
-      const after = glideRaw(g, i / N), logScale = Math.log(after.s / before.s);
+      const after = glideEval(prep, g, i / N), logScale = Math.log(after.s / before.s);
       const length = Math.max(...points.map(p => Math.hypot(after.tx - before.tx + (p[0] - (before.tx + after.tx) / 2) * logScale, after.ty - before.ty + (p[1] - (before.ty + after.ty) / 2) * logScale)));
       table.push(table.at(-1) + length); before = after;
     }
@@ -5560,6 +5573,9 @@ function tlCurrent(i, force = false) {
 
 
 
+// Part 17d: an idle CSS stroke animation (id jm-idle) is listed until it finishes or is cancelled, the animations
+// getAnimations would return for its idle layer.
+const findIdleAnim = a => { const set = FD.idleAnims ||= new Set(), drop = () => set.delete(a); set.add(a); a.addEventListener?.('finish', drop); a.addEventListener?.('cancel', drop); return a; };
 const FD = { st: null, now: 0, dt: 0, pointer: [-Infinity, -Infinity], pointerT: -Infinity, found: new Set(), last: null, list: {}, popOwner: null, sheetOwner: null, bits: [], serial: 0, flights: [], flight: null, landed: 0, hover: false, focusId: null, overlayEpoch: 0 };
 const D = s => FD.rm ? Number.EPSILON : s;
 const ease = t => easeIO(clamp01(t));
@@ -5624,7 +5640,9 @@ function findIdleFrame(st,advance=true) {
     const shown=String(visible);if(q.shown!==shown){q.shown=shown;if(q.el.dataset.idleVisible!==shown)q.el.dataset.idleVisible=shown;}
     idleStyle(q,'visibility',visible?'inherit':'hidden');idleStyle(q,'opacity',visible?(q.opacity??''):0);
     // An idle CSS stroke animation has the same visibility/movement clock.
-    const run=visible&&!moving;if(q.animationRun!==run){q.animationRun=run;for(const a of q.node.getAnimations?.({subtree:true})||[])if(a.id==='jm-idle'){if(run)a.play();else a.pause();}}
+    // Part 17d: the idle CSS stroke animations are kept in FD.idleAnims while they run or wait (findIdleAnim), so a move's
+    // start and end no longer call getAnimations on every idle layer, which forced a style and layout pass (30 ms in the cloud).
+    const run=visible&&!moving;if(q.animationRun!==run){q.animationRun=run;if(FD.idleAnims)for(const a of FD.idleAnims)if(a.id==='jm-idle'&&(a.playState==='running'||a.playState==='paused')&&q.node.contains(a.effect?.target)){if(run)a.play();else a.pause();}}
     if(!visible)continue;
 
 
@@ -7524,13 +7542,17 @@ function findWay(svg) {
       const frame = DEPTH.frame.outer, holes = document.getElementById('veil-holes');
       // The dim lives in the fill's own alpha, so the veil shows at opacity 1 and the lines inside it keep their full strength.
       attr(document.getElementById('veil-fill'), 'fill-opacity', 1 - FIND_PLAY.way.dim);
-      for (const rect of [document.getElementById('veil-fill'), document.getElementById('veil-mask-frame'), document.getElementById('veil-mask'), document.getElementById('veil-lines-frame'), document.getElementById('veil-lines-mask')])
+      for (const rect of [document.getElementById('veil-fill'), document.getElementById('veil-mask-frame'), document.getElementById('veil-mask')])
         for (const [key, value] of Object.entries({ x: frame[0], y: frame[1], width: frame[2]-frame[0], height: frame[3]-frame[1] })) attr(rect, key, value);
+      // Part 17d: the lines are cut under the compass and its words by an even-odd clip (the frame with one hole per cut)
+      // instead of a mask, which made every redraw of the growing lines draw the whole layer twice. The cuts never overlap.
+      const cuts = document.getElementById('veil-line-cuts'), frameCut = 'M' + frame[0] + ' ' + frame[1] + 'H' + frame[2] + 'V' + frame[3] + 'H' + frame[0] + 'Z';
+      attr(cuts, 'd', frameCut);
       o.veilUpdate = destination => {
         const s = destination?.s || FD.st?.cam.s || VIEW.s0;
         if (!o.mask) return;
         o.veilScale = s; holes.replaceChildren();
-        const cuts=document.getElementById('veil-line-cuts'); cuts.replaceChildren(findSvg('circle',{cx:f.x,cy:f.y,r:FIND_PLAY.way.wordRing+1/s}));
+        const cr=FIND_PLAY.way.wordRing+1/s; let cut=frameCut+'M'+(f.x-cr)+' '+f.y+'a'+cr+' '+cr+' 0 1 0 '+2*cr+' 0a'+cr+' '+cr+' 0 1 0 '+(-2*cr)+' 0Z';
         const W = FIND_PLAY.way;
         let compassRadius=FIND_PLAY.way.wordRing+2/s;
         for(const [i,word] of [...words,tally].entries()) { let a,z,width;
@@ -7539,7 +7561,8 @@ function findWay(svg) {
             const x=i<words.length?[ls/(2*s),out,ls/(2*s),ls/s-out][i]:W.tally[2]/2, y=i<words.length?[-out,cap/2,out+cap,cap/2][i]:-(out+cap+W.wordGap/s);
             a=[f.x+x+(b.x-(+word.getAttribute('x')||0))*k-3/s,f.y+y+(b.y-(+word.getAttribute('y')||0))*k-3/s]; z=[a[0]+b.width*k+6/s,a[1]+b.height*k+6/s]; width=b.width;
           } else { const b=word.getBoundingClientRect();a=toMap([b.left-3,b.top-3]);z=toMap([b.right+3,b.bottom+3]);width=b.width; }
-          if(width){cuts.appendChild(findSvg('rect',{x:a[0],y:a[1],width:z[0]-a[0],height:z[1]-a[1]}));for(const x of[a[0],z[0]])for(const y of[a[1],z[1]])compassRadius=Math.max(compassRadius,Math.hypot(x-f.x,y-f.y));}}
+          if(width){cut+='M'+a[0]+' '+a[1]+'H'+z[0]+'V'+z[1]+'H'+a[0]+'Z';for(const x of[a[0],z[0]])for(const y of[a[1],z[1]])compassRadius=Math.max(compassRadius,Math.hypot(x-f.x,y-f.y));}}
+        attr(cuts,'d',cut);
         const hole = (x,y,r) => holes.appendChild(findSvg('circle', { cx:x, cy:y, r, fill:'url(#veil-soft)' }));
         // The clear core contains the entire instrument, including screen-sized words and title.
         hole(f.x, f.y, compassRadius / W.veilCore);
@@ -8136,7 +8159,7 @@ function findRune(svg) {
     const R = FIND_PLAY.rune; trace.classList.toggle('red', red); trace.style.stroke = red ? '' : C.paper; trace.style.opacity = red ? 1 : 0; trace.style.strokeDasharray = red ? 'none' : R.dash.join(' ');
     trace.getAnimations().forEach(a => a.cancel());
     if (red) trace.style.strokeDasharray = R.dash[1] + ' ' + R.dash[1];
-    if (!FD.rm) trace.animate(red ? [{ strokeDashoffset: R.dash[1], opacity: 1 }, { strokeDashoffset: 0, opacity: 1 }] : [{ strokeDashoffset: 0, opacity: 0 }, { strokeDashoffset: -R.dash[1] / 2, opacity: 1 }, { strokeDashoffset: -R.dash[1], opacity: 0 }], { duration: (red ? R.carving : R.dashTime) * 1000, fill: red ? 'forwards' : 'none' }).id = red ? '' : 'jm-idle';
+    if (!FD.rm) { const anim = trace.animate(red ? [{ strokeDashoffset: R.dash[1], opacity: 1 }, { strokeDashoffset: 0, opacity: 1 }] : [{ strokeDashoffset: 0, opacity: 0 }, { strokeDashoffset: -R.dash[1] / 2, opacity: 1 }, { strokeDashoffset: -R.dash[1], opacity: 0 }], { duration: (red ? R.carving : R.dashTime) * 1000, fill: red ? 'forwards' : 'none' }); anim.id = red ? '' : 'jm-idle'; if (!red) findIdleAnim(anim); }
   };
   const autoStart = () => { if (o.read) return; o.autoTs = FD.now; o.autoLast = null; };
   const rub = (x, y) => {
@@ -9119,7 +9142,7 @@ const M = bigMap();
 MAIN.innerHTML = `<h1 class="sr">${COPY.title}</h1><section class="trip" id="trip" aria-label="${COPY.srMap}"><div class="stage" id="stage">
 <canvas id="deep" aria-hidden="true"></canvas>
 <svg id="map" class="map" role="group" aria-label="${COPY.srMap}">${mapDefs()}<g id="cam"><g id="b-all"><g id="b-sea">${M.sea}</g><g id="b-fill">${M.fill}</g><g id="b-coast">${M.coast}</g><g id="b-detail">${M.detail}</g></g><path id="trail-done" class="done" d="${pathD(TRAIL)}"/><g id="trail-pieces">${DONE_PIECES.map(q => `<path class="done-p" data-u0="${q.u0}" data-u1="${q.u1}" d="M${q.pts.map(p => p.join(' ')).join('L')}"/>`).join('')}</g><g id="finds">${M.finds}</g><g id="fxg" transform="translate(${MAP.x[0]} ${MAP.x[1]})"></g></g></svg>
-<svg id="map-veil" class="map" aria-hidden="true" pointer-events="none"><defs><radialGradient id="veil-soft"><stop offset=".6" stop-color="black"/><stop offset="1" stop-color="black" stop-opacity="0"/></radialGradient><mask id="veil-mask" maskUnits="userSpaceOnUse"><rect id="veil-mask-frame" fill="white"/><g id="veil-holes"></g></mask><mask id="veil-lines-mask" maskUnits="userSpaceOnUse"><rect id="veil-lines-frame" fill="white"/><g id="veil-line-cuts" fill="black"></g></mask></defs><g id="cam-veil"><rect id="veil-fill" fill="${C.shade}" mask="url(#veil-mask)"/><g id="wf-lines" mask="url(#veil-lines-mask)" pointer-events="none"></g></g></svg>
+<svg id="map-veil" class="map" aria-hidden="true" pointer-events="none"><defs><radialGradient id="veil-soft"><stop offset=".6" stop-color="black"/><stop offset="1" stop-color="black" stop-opacity="0"/></radialGradient><mask id="veil-mask" maskUnits="userSpaceOnUse"><rect id="veil-mask-frame" fill="white"/><g id="veil-holes"></g></mask><clipPath id="veil-lines-clip" clipPathUnits="userSpaceOnUse"><path id="veil-line-cuts" clip-rule="evenodd"/></clipPath></defs><g id="cam-veil"><rect id="veil-fill" fill="${C.shade}" mask="url(#veil-mask)"/><g id="wf-lines" clip-path="url(#veil-lines-clip)" pointer-events="none"></g></g></svg>
 <canvas id="nova" aria-hidden="true"></canvas><canvas id="stars" aria-hidden="true"></canvas>
 <canvas id="air" aria-hidden="true"></canvas><div id="sky" aria-hidden="true"></div>
 <button type="button" class="fx-hit" id="nova-hit" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true"></button>

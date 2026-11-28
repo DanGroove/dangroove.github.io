@@ -5,6 +5,9 @@ import { findRnd, starPath } from './art.mjs';
 import { tlSetCount } from './timeline.mjs';
 import { JOURNEY, stepsFocus, stepsRelease, stepsFocusNow } from './steps.mjs';
 
+// Part 17d: an idle CSS stroke animation (id jm-idle) is listed until it finishes or is cancelled, the animations
+// getAnimations would return for its idle layer.
+export const findIdleAnim = a => { const set = FD.idleAnims ||= new Set(), drop = () => set.delete(a); set.add(a); a.addEventListener?.('finish', drop); a.addEventListener?.('cancel', drop); return a; };
 export const FD = { st: null, now: 0, dt: 0, pointer: [-Infinity, -Infinity], pointerT: -Infinity, found: new Set(), last: null, list: {}, popOwner: null, sheetOwner: null, bits: [], serial: 0, flights: [], flight: null, landed: 0, hover: false, focusId: null, overlayEpoch: 0 };
 export const D = s => FD.rm ? Number.EPSILON : s;
 export const ease = t => easeIO(clamp01(t));
@@ -69,7 +72,9 @@ export function findIdleFrame(st,advance=true) {
     const shown=String(visible);if(q.shown!==shown){q.shown=shown;if(q.el.dataset.idleVisible!==shown)q.el.dataset.idleVisible=shown;}
     idleStyle(q,'visibility',visible?'inherit':'hidden');idleStyle(q,'opacity',visible?(q.opacity??''):0);
     // An idle CSS stroke animation has the same visibility/movement clock.
-    const run=visible&&!moving;if(q.animationRun!==run){q.animationRun=run;for(const a of q.node.getAnimations?.({subtree:true})||[])if(a.id==='jm-idle'){if(run)a.play();else a.pause();}}
+    // Part 17d: the idle CSS stroke animations are kept in FD.idleAnims while they run or wait (findIdleAnim), so a move's
+    // start and end no longer call getAnimations on every idle layer, which forced a style and layout pass (30 ms in the cloud).
+    const run=visible&&!moving;if(q.animationRun!==run){q.animationRun=run;if(FD.idleAnims)for(const a of FD.idleAnims)if(a.id==='jm-idle'&&(a.playState==='running'||a.playState==='paused')&&q.node.contains(a.effect?.target)){if(run)a.play();else a.pause();}}
     if(!visible)continue;
 
 

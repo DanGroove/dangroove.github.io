@@ -56,13 +56,17 @@ export function findWay(svg) {
       const frame = DEPTH.frame.outer, holes = document.getElementById('veil-holes');
       // The dim lives in the fill's own alpha, so the veil shows at opacity 1 and the lines inside it keep their full strength.
       attr(document.getElementById('veil-fill'), 'fill-opacity', 1 - FIND_PLAY.way.dim);
-      for (const rect of [document.getElementById('veil-fill'), document.getElementById('veil-mask-frame'), document.getElementById('veil-mask'), document.getElementById('veil-lines-frame'), document.getElementById('veil-lines-mask')])
+      for (const rect of [document.getElementById('veil-fill'), document.getElementById('veil-mask-frame'), document.getElementById('veil-mask')])
         for (const [key, value] of Object.entries({ x: frame[0], y: frame[1], width: frame[2]-frame[0], height: frame[3]-frame[1] })) attr(rect, key, value);
+      // Part 17d: the lines are cut under the compass and its words by an even-odd clip (the frame with one hole per cut)
+      // instead of a mask, which made every redraw of the growing lines draw the whole layer twice. The cuts never overlap.
+      const cuts = document.getElementById('veil-line-cuts'), frameCut = 'M' + frame[0] + ' ' + frame[1] + 'H' + frame[2] + 'V' + frame[3] + 'H' + frame[0] + 'Z';
+      attr(cuts, 'd', frameCut);
       o.veilUpdate = destination => {
         const s = destination?.s || FD.st?.cam.s || VIEW.s0;
         if (!o.mask) return;
         o.veilScale = s; holes.replaceChildren();
-        const cuts=document.getElementById('veil-line-cuts'); cuts.replaceChildren(findSvg('circle',{cx:f.x,cy:f.y,r:FIND_PLAY.way.wordRing+1/s}));
+        const cr=FIND_PLAY.way.wordRing+1/s; let cut=frameCut+'M'+(f.x-cr)+' '+f.y+'a'+cr+' '+cr+' 0 1 0 '+2*cr+' 0a'+cr+' '+cr+' 0 1 0 '+(-2*cr)+' 0Z';
         const W = FIND_PLAY.way;
         let compassRadius=FIND_PLAY.way.wordRing+2/s;
         for(const [i,word] of [...words,tally].entries()) { let a,z,width;
@@ -71,7 +75,8 @@ export function findWay(svg) {
             const x=i<words.length?[ls/(2*s),out,ls/(2*s),ls/s-out][i]:W.tally[2]/2, y=i<words.length?[-out,cap/2,out+cap,cap/2][i]:-(out+cap+W.wordGap/s);
             a=[f.x+x+(b.x-(+word.getAttribute('x')||0))*k-3/s,f.y+y+(b.y-(+word.getAttribute('y')||0))*k-3/s]; z=[a[0]+b.width*k+6/s,a[1]+b.height*k+6/s]; width=b.width;
           } else { const b=word.getBoundingClientRect();a=toMap([b.left-3,b.top-3]);z=toMap([b.right+3,b.bottom+3]);width=b.width; }
-          if(width){cuts.appendChild(findSvg('rect',{x:a[0],y:a[1],width:z[0]-a[0],height:z[1]-a[1]}));for(const x of[a[0],z[0]])for(const y of[a[1],z[1]])compassRadius=Math.max(compassRadius,Math.hypot(x-f.x,y-f.y));}}
+          if(width){cut+='M'+a[0]+' '+a[1]+'H'+z[0]+'V'+z[1]+'H'+a[0]+'Z';for(const x of[a[0],z[0]])for(const y of[a[1],z[1]])compassRadius=Math.max(compassRadius,Math.hypot(x-f.x,y-f.y));}}
+        attr(cuts,'d',cut);
         const hole = (x,y,r) => holes.appendChild(findSvg('circle', { cx:x, cy:y, r, fill:'url(#veil-soft)' }));
         // The clear core contains the entire instrument, including screen-sized words and title.
         hole(f.x, f.y, compassRadius / W.veilCore);

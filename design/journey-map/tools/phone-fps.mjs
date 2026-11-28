@@ -15,6 +15,8 @@
 // --trace also records a Chrome trace of each row's window (trace-<build>-<beat>-<run>.json.gz, opens in DevTools'
 // Performance panel or ui.perfetto.dev) and adds a summary to the row's file: main-thread tasks over 8 ms with what
 // fills them, and the busiest work on each thread (main, compositor, raster, GPU, Viz).
+// --js (with --trace) adds V8's sampling profiler to the trace, so tools/trace-js.mjs can name the page functions that
+// took the main thread's time in any stretch of the window (part 17d).
 // A beat written press:<craft> (for example press:screen) measures a compass press instead of a glide: it opens ?beat=map,
 // clicks the compass marker, waits for the compass to open, then records while it clicks that craft's word.
 import { spawn, spawnSync } from 'node:child_process';
@@ -28,7 +30,7 @@ import {pipeline} from 'node:stream/promises';
 const args = process.argv.slice(2), opt = { page: [] };
 for (let i = 0; i < args.length; i++) {
   const k = args[i].replace(/^--/, '');
-  if (k === 'no-adb') opt.noAdb = true; else if (k === 'touch') opt.touch = true; else if (k === 'unthrottled') opt.unthrottled = true; else if (k === 'trace') opt.trace = true; else if (k === 'page') opt.page.push(args[++i]); else opt[k] = args[++i];
+  if (k === 'no-adb') opt.noAdb = true; else if (k === 'touch') opt.touch = true; else if (k === 'unthrottled') opt.unthrottled = true; else if (k === 'trace') opt.trace = true; else if (k === 'js') opt.js = true; else if (k === 'page') opt.page.push(args[++i]); else opt[k] = args[++i];
 }
 if (opt.launch) opt.noAdb = true;
 const ADB = opt.adb, SERIAL = opt.serial, PORT = +(opt.port || 8765), DEV = +(opt.devtools || 9222);
@@ -176,7 +178,7 @@ const PINCH_BOX = where => `(() => { const R = e => e && e.getBoundingClientRect
   return { box: box.map(Math.round), fingersOut: [at(innerWidth / 2, cy - d), at(innerWidth / 2, cy + d)], fingersIn: [at(innerWidth / 2, cy - ${PINCH_REACH}), at(innerWidth / 2, cy + ${PINCH_REACH})] }; })()`;
 
 // Tracing for --trace: events arrive as Tracing.dataCollected while the window records.
-const TRACE_CATS = ['toplevel', 'devtools.timeline', 'disabled-by-default-devtools.timeline', 'disabled-by-default-devtools.timeline.frame', 'blink', 'cc', 'gpu', 'viz', 'v8.execute', 'blink.rendering', 'benchmark'];
+const TRACE_CATS = ['toplevel', 'devtools.timeline', 'disabled-by-default-devtools.timeline', 'disabled-by-default-devtools.timeline.frame', 'blink', 'cc', 'gpu', 'viz', 'v8.execute', 'blink.rendering', 'benchmark'].concat(opt.js ? ['disabled-by-default-v8.cpu_profiler'] : []);
 async function traceStart() { for (let i = events.length - 1; i >= 0; i--) if (/^Tracing\./.test(events[i].method)) events.splice(i, 1); await send('Tracing.start', { traceConfig: { includedCategories: TRACE_CATS, recordMode: 'recordAsMuchAsPossible' }, transferMode: 'ReportEvents' }); }
 async function traceEnd() {
   await send('Tracing.end'); await waitEvent('Tracing.tracingComplete', 120000);
