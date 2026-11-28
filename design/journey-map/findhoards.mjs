@@ -24,16 +24,19 @@ export function findWay(svg) {
     });
     return {text,shell};
   });
+  // Part 17c: only this frame writes the shells, so a write is skipped when unchanged and never read back (T1 keeps every
+  // word in place on every frame, on screen or not).
+  const wordStyle=(q,key,value)=>{const text=String(value),w=q.w||(q.w={});if(w[key]===text)return;w[key]=text;q.shell.style[key]=text;};
   o.compassFrame=()=>{
     if(!FD.st)return;const W=FIND_PLAY.way,c=FD.st.cam,shown=TRIP_EL.raster?.layerCams?.finds||c;
     // Match the ring's actual held raster and outer compositor camera.
-    const ringScale=c.s,centre=[f.x*c.s+c.tx,f.y*c.s+c.ty],out=W.wordRing*ringScale+W.wordGap,cap=COMB.wordPx*W.wordCap;
+    const ringScale=c.s,centre=[f.x*c.s+c.tx,f.y*c.s+c.ty],out=W.wordRing*ringScale+W.wordGap,cap=COMB.wordPx*W.wordCap,seen=o.el.style.visibility||'inherit',fade=1-(o.cover||0);
     for(const [i,q] of screenWords.entries()){
       if(q.copy!==q.text.textContent){q.copy=q.text.textContent;const b=q.text.getBBox();q.box=b;attr(q.shell,'viewBox',[b.x-4,b.y-4,b.width+8,b.height+8].join(' '));attr(q.shell,'width',b.width+8);attr(q.shell,'height',b.height+8);}
       const k=i<4?1:Math.max(W.tally[1]*ringScale,W.tally[3])/W.tally[1],b=q.box;
       const x=centre[0]+(i===1?out:i===3?-out:i===4?W.tally[2]*ringScale/2:0),y=centre[1]+(i===0?-out:i===2?out+cap:i===4?-(out+cap+W.wordGap):cap/2);
-      findStyle(q.shell,'transform','translate('+(x+(b.x-4)*k)+'px,'+(y+(b.y-4)*k)+'px) scale('+k+')');
-      findStyle(q.shell,'opacity',1-(o.cover||0));findStyle(q.shell,'visibility',o.el.style.visibility||'inherit');
+      wordStyle(q,'transform','translate('+(x+(b.x-4)*k)+'px,'+(y+(b.y-4)*k)+'px) scale('+k+')');
+      wordStyle(q,'opacity',fade);wordStyle(q,'visibility',seen);
     }
     findStyle(wordLayer,'opacity',TRIP_EL.finds.style.opacity||1);
   };

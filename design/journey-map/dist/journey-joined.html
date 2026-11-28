@@ -110,7 +110,9 @@ button { font-family: inherit; }
 .mini svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .mm-coast { fill: var(--land); stroke: var(--dim); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .mm-trail { fill: none; stroke: var(--note); stroke-width: 1; stroke-dasharray: 1 2; vector-effect: non-scaling-stroke; }
-.mm-view { fill: none; stroke: var(--paper); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.mm-over { position: absolute; inset: 0; overflow: hidden; pointer-events: none; isolation: isolate; }
+.mm-edge { position: absolute; left: 0; top: 0; width: 1px; height: 1px; background: var(--paper); transform-origin: 0 0; mix-blend-mode: plus-lighter; }
+.mini .mm-trav-at { overflow: visible; }
 .mm-trav { fill: var(--red); }
 .mm-stop { position: absolute; width: 24px; height: 24px; margin: calc(var(--oy) - 12px) 0 0 calc(var(--ox) - 12px); padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
 .mm-stop i { width: 6px; height: 6px; border-radius: 50%; border: 1px solid var(--paper); background: var(--ink); transform: translate(calc(0px - var(--ox)), calc(0px - var(--oy))); }
@@ -632,6 +634,10 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 
 /* Keep markers and the bar composited as glide opacities reach one. */
 .marker-layer, .marker-layer .mk, #go { will-change: opacity; }
+/* Part 17c: marker svgs moved by CSS (no SVG layout per move); the timeline's ink fades on a layer of its own (not the
+   rows, which a squeeze would draw soft, nor the years, whose layer would lift the rows onto one). */
+.marker-layer > svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+html:not(.rm) .tl-bg { will-change: opacity; }
 
 /* COMB-Q: carved detail is readable only as the camera approaches the serpent. */
 .jo-body .jd, .jo-head .jd { opacity: var(--jo-detail, 0); }
@@ -3687,6 +3693,7 @@ function tripResize(w, h, tlH) {
   glideCache.clear();
   const m = w <= CAMERA.phoneMax ? 16 : 28;
   VIEW.w = w; VIEW.h = h; VIEW.phone = w <= CAMERA.phoneMax; VIEW.unit = h / 100;
+  TRIP_EL.mmMeet = null;
   VIEW.footerY = null;
   const availH = h - m - (tlH + 10);
   VIEW.s0 = Math.min((w - 2 * m) / MAP.w, (availH - m) / MAP.h);
@@ -3923,9 +3930,10 @@ function tripBuild(els) {
   // 104 / 600: the mini-map's CSS width over the map's (25: 24 and its 1 px border's share).
   const mm = STOPS.map(s => MAP.waypoints[s.w].map(v => v * 104 / 600)), off = mm.map(() => [0, 0]);
   for (let n = 0; n < 12; n++) mm.forEach((a, i) => mm.forEach((b, j) => { if (j <= i) return; const p = [0, 1].map(k => a[k] + off[i][k] - b[k] - off[j][k]), k = +(Math.abs(p[1]) >= Math.abs(p[0])), o = 25 - Math.abs(p[k]); if (Math.abs(p[1 - k]) < 25 && o > 0) { const m = Math.sign(p[k] || 1) * o / 2; off[i][k] += m; off[j][k] -= m; } }));
-  els.mini.innerHTML = `<svg viewBox="0 0 600 900" aria-hidden="true">${miniMapSvg()}<rect class="mm-view" x="0" y="0" width="1" height="1"/><circle class="mm-trav" r="10"/></svg>`
+  // Part 17c: the view box as four 1 px strips and the traveller as its own svg, moved by CSS (no SVG layout per move).
+  els.mini.innerHTML = `<svg viewBox="0 0 600 900" aria-hidden="true">${miniMapSvg()}</svg><div class="mm-over" aria-hidden="true"><i class="mm-edge"></i><i class="mm-edge"></i><i class="mm-edge"></i><i class="mm-edge"></i><svg class="mm-trav-at" viewBox="0 0 600 900"><circle class="mm-trav" r="10"/></svg></div>`
     + STOPS.map((s, i) => `<button class="mm-stop" data-i="${i}" style="left:${(MAP.waypoints[s.w][0] / 6).toFixed(2)}%;top:${(MAP.waypoints[s.w][1] / 9).toFixed(2)}%;--ox:${off[i][0].toFixed(1)}px;--oy:${off[i][1].toFixed(1)}px" aria-label="${COPY.stoneGo.replace('{name}', s.name).replace('{dates}', s.dates)}"><i></i></button>`).join('');
-  TRIP_EL.mmView = els.mini.querySelector('.mm-view'); TRIP_EL.mmTrav = els.mini.querySelector('.mm-trav');
+  TRIP_EL.mmSvg = els.mini.querySelector('svg'); TRIP_EL.mmEdges = [...els.mini.querySelectorAll('.mm-edge')]; TRIP_EL.mmTrav = els.mini.querySelector('.mm-trav-at'); TRIP_EL.mmMeet = null;
   TRIP_EL.mmStops = [...els.mini.querySelectorAll('.mm-stop')];
   globalThis.window?.addEventListener('jm-explore', () => {
     const on = document.documentElement.classList.contains('jm-explore');
@@ -4438,12 +4446,20 @@ function tripApply(st, focus = null) {
   const mo = smooth(.5, 1, st.pushT) * (1 - smooth(0, .4, st.rushT));
   tripWrite(E.mini, 'opacity', mo); tripWrite(E.mini, 'visibility', mo > .01 ? 'visible' : 'hidden');
   if (mo > .01) {
-    tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
-    const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
+    // Four strips tile the view rect's 1 px stroke without overlapping (top and bottom take the corners) and add their
+    // light (plus-lighter in an isolated group), so a pixel two strips share gets the stroke's coverage; M is the svg's
+    // meet mapping.
+    const M = E.mmMeet || tripMiniMeet(), x = M.ox + M.k * +n2(-c.tx / c.s), y = M.oy + M.k * +n2(-c.ty / c.s), w = M.k * +n2(VIEW.w / c.s), h = M.k * +n2(VIEW.h / c.s), [top, bottom, left, right] = E.mmEdges;
+    tripWrite(top, 'transform', `translate(${x - .5}px,${y - .5}px) scale(${w + 1},1)`); tripWrite(bottom, 'transform', `translate(${x - .5}px,${y + h - .5}px) scale(${w + 1},1)`);
+    tripWrite(left, 'transform', `translate(${x - .5}px,${y + .5}px) scale(1,${h - 1})`); tripWrite(right, 'transform', `translate(${x + w - .5}px,${y + .5}px) scale(1,${h - 1})`);
+    const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${M.k * +n2(tp[0])}px,${M.k * +n2(tp[1])}px)`);
   }
   return raster.pending || (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.clockFading || !!E.baseRaster?.held;
 }
 const n2 = v => v.toFixed(2);
+// The mini svg's meet mapping, measured once after each resize (none while the mini-map is not displayed: a phone, a short
+// landscape screen; only a resize changes that).
+function tripMiniMeet() { const svg = TRIP_EL.mmSvg, cs = svg?.clientWidth ? getComputedStyle(svg) : null, W = parseFloat(cs?.width) || 0, H = parseFloat(cs?.height) || 0, k = W && H ? Math.min(W / 600, H / 900) : 0; return TRIP_EL.mmMeet = { k, ox: (W - 600 * k) / 2, oy: (H - 900 * k) / 2 }; }
 function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }
 
 // Rewrites only the frame's camera and card strength; progress and traveller stay on the trail.
@@ -5578,15 +5594,20 @@ function findIdleFrame(st,advance=true) {
       if(!q.loop&&!active||!q.visible&&!active)continue;
     }
     q.placed=true;
-    const contentKey=q.node.childElementCount+'/'+q.node.textContent;
-    if(contentKey!==q.contentKey&&!q.bits){q.contentKey=contentKey;const b=findIdleBox(q.node);q.box=[b.x-q.pad,b.y-q.pad,b.x+b.width+q.pad,b.y+b.height+q.pad];}
+    // Part 17c: the content and chain keys are read again only after a mutation there.
+    const MO=globalThis.MutationObserver;if(!q.watch&&MO){q.watch=new MO(()=>{q.contentDirty=true;});q.watch.observe(q.node,{childList:true,characterData:true,subtree:true});q.chainWatch=new MO(()=>{q.chainDirty=true;});for(const e of q.chain)q.chainWatch.observe(e,{attributes:true,attributeFilter:['transform']});q.contentDirty=q.chainDirty=true;}
+    if(!q.watch||q.watch.takeRecords().length)q.contentDirty=true;
+    if(q.contentDirty&&!q.bits){q.contentDirty=false;const contentKey=q.node.childElementCount+'/'+q.node.textContent;if(contentKey!==q.contentKey){q.contentKey=contentKey;const b=findIdleBox(q.node);q.box=[b.x-q.pad,b.y-q.pad,b.x+b.width+q.pad,b.y+b.height+q.pad];}}
     let b=q.box;
     if(q.bits){
-      const live=FD.bits.filter(b=>b.live);const extra=[...q.node.children].some(e=>!FD.bits.some(b=>b.el===e)&&+(e.getAttribute('opacity')||1)>0);
+      if(FD.bitSetOf!==FD.bits){FD.bitSetOf=FD.bits;FD.bitSet=new Set(FD.bits.map(b=>b.el));}
+      const live=FD.bits.filter(b=>b.live);let extra=false;for(const e of q.node.children)if(!FD.bitSet.has(e)&&+(e.getAttribute('opacity')||1)>0){extra=true;break;}
       if(!live.length&&!extra){q.visible=false;q.running=false;q.dt=0;idleStyle(q,'visibility','hidden');idleStyle(q,'opacity',0);continue;}
       b=extra?[-c.tx/c.s,-c.ty/c.s,(VIEW.w-c.tx)/c.s,(VIEW.h-c.ty)/c.s]:[Math.min(...live.map(b=>b.x))-20,Math.min(...live.map(b=>b.y))-20,Math.max(...live.map(b=>b.x))+20,Math.max(...live.map(b=>b.y))+20];
     }else{
-      const chainKey=q.chain.map(e=>e.getAttribute('transform')).join('/');
+      if(!q.chainWatch||q.chainWatch.takeRecords().length)q.chainDirty=true;
+      if(q.chainDirty){q.chainDirty=false;q.chainKey=q.chain.map(e=>e.getAttribute('transform')).join('/');}
+      const chainKey=q.chainKey;
       if(q.boundsKey===chainKey&&q.boundsBox===q.box)b=q.worldBox;
       else {let m=new DOMMatrix();
       for(const e of q.chain){const t=e.transform?.baseVal;if(t)for(let i=0;i<t.numberOfItems;i++)m=m.multiply(t.getItem(i).matrix);}
@@ -6355,8 +6376,9 @@ function stepsButtons() {
   if (end && !SC.go.hidden && focus === document.getElementById('nova-hit')) next.focus({ preventScroll: true });
   if (!SC.go.hidden && !SC.shown) { SC.shown = true; SC.go.classList.add('go-reveal'); }
   if (SC.root.classList.contains('jm-moving') !== JOURNEY.moving) SC.root.classList.toggle('jm-moving', JOURNEY.moving);
-  const fill = SC.go.querySelector('.go-fill'), transform = `scaleX(${SC.move ? SC.fill : 0})`;
-  if (fill.style.transform !== transform) fill.style.transform = transform;
+  // Part 17c: the fill is written only here: keep the last write.
+  const fill = SC.fillEl?.parentNode && SC.go.contains(SC.fillEl) ? SC.fillEl : (SC.fillEl = SC.go.querySelector('.go-fill')), transform = `scaleX(${SC.move ? SC.fill : 0})`;
+  if (SC.fillDone !== fill || SC.fillT !== transform) { SC.fillDone = fill; SC.fillT = transform; fill.style.transform = transform; }
 }
 // The Next button's words for the beat at P. A jump writes them as soon as it lands under its cover, so the button never names
 // the old next stop over the new view.
@@ -7470,16 +7492,19 @@ function findWay(svg) {
     });
     return {text,shell};
   });
+  // Part 17c: only this frame writes the shells, so a write is skipped when unchanged and never read back (T1 keeps every
+  // word in place on every frame, on screen or not).
+  const wordStyle=(q,key,value)=>{const text=String(value),w=q.w||(q.w={});if(w[key]===text)return;w[key]=text;q.shell.style[key]=text;};
   o.compassFrame=()=>{
     if(!FD.st)return;const W=FIND_PLAY.way,c=FD.st.cam,shown=TRIP_EL.raster?.layerCams?.finds||c;
     // Match the ring's actual held raster and outer compositor camera.
-    const ringScale=c.s,centre=[f.x*c.s+c.tx,f.y*c.s+c.ty],out=W.wordRing*ringScale+W.wordGap,cap=COMB.wordPx*W.wordCap;
+    const ringScale=c.s,centre=[f.x*c.s+c.tx,f.y*c.s+c.ty],out=W.wordRing*ringScale+W.wordGap,cap=COMB.wordPx*W.wordCap,seen=o.el.style.visibility||'inherit',fade=1-(o.cover||0);
     for(const [i,q] of screenWords.entries()){
       if(q.copy!==q.text.textContent){q.copy=q.text.textContent;const b=q.text.getBBox();q.box=b;attr(q.shell,'viewBox',[b.x-4,b.y-4,b.width+8,b.height+8].join(' '));attr(q.shell,'width',b.width+8);attr(q.shell,'height',b.height+8);}
       const k=i<4?1:Math.max(W.tally[1]*ringScale,W.tally[3])/W.tally[1],b=q.box;
       const x=centre[0]+(i===1?out:i===3?-out:i===4?W.tally[2]*ringScale/2:0),y=centre[1]+(i===0?-out:i===2?out+cap:i===4?-(out+cap+W.wordGap):cap/2);
-      findStyle(q.shell,'transform','translate('+(x+(b.x-4)*k)+'px,'+(y+(b.y-4)*k)+'px) scale('+k+')');
-      findStyle(q.shell,'opacity',1-(o.cover||0));findStyle(q.shell,'visibility',o.el.style.visibility||'inherit');
+      wordStyle(q,'transform','translate('+(x+(b.x-4)*k)+'px,'+(y+(b.y-4)*k)+'px) scale('+k+')');
+      wordStyle(q,'opacity',fade);wordStyle(q,'visibility',seen);
     }
     findStyle(wordLayer,'opacity',TRIP_EL.finds.style.opacity||1);
   };
@@ -9033,9 +9058,15 @@ function findsFrame(time, st) {
     FD.idleOnly=false; FD.currentFind=null;
   });
   // These shells retain the drawn part's inherited camera, scale and find visibility without duplicate hits or ids.
-  for (const { source, clone } of FD.animCopies || []) for (const key of ['transform','opacity','style','visibility']) {
-    const value = source.getAttribute(key); if (value === null) { if (clone.hasAttribute(key)) clone.removeAttribute(key); }
-    else attr(clone, key, value);
+  // Part 17c: copy only the sources a MutationObserver saw change.
+  const copies = FD.animCopies || [], keys = ['transform','opacity','style','visibility'], MO = globalThis.MutationObserver, watch = FD.copyWatch ||= MO && new MO(rs => { for (const r of rs) FD.copyDirty.add(r.target); });
+  if (watch) { FD.copyDirty ||= new Set(); FD.copyWatched ||= 0; for (; FD.copyWatched < copies.length; FD.copyWatched++) { const source = copies[FD.copyWatched].source; watch.observe(source, { attributes: true, attributeFilter: keys }); FD.copyDirty.add(source); } for (const r of watch.takeRecords()) FD.copyDirty.add(r.target); }
+  if (!watch || FD.copyDirty.size) {
+    for (const { source, clone } of copies) if (!watch || FD.copyDirty.has(source)) for (const key of keys) {
+      const value = source.getAttribute(key); if (value === null) { if (clone.hasAttribute(key)) clone.removeAttribute(key); }
+      else attr(clone, key, value);
+    }
+    FD.copyDirty?.clear();
   }
   const bits = FD.bits;
   if (quiet) FD.bits = [];
@@ -9152,9 +9183,10 @@ stepsBuild({ stage: $('stage'), rm: false, resize, joinedTop: () => JOIN.heroSta
 findsBuild(SVG, $('pop'), $('sheet'), { style: { set opacity(v) { $('b-all').style.opacity = v; $('b-rest').style.opacity = v; const live = $('live-rest'); if (live) live.style.opacity = v; } } }, RM);
 // The same six markers move in screen space, so their type never needs to be
 // resized and rasterized on every camera frame. No marker is copied.
-const mainMarkerLayer = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); mainMarkerLayer.classList.add('marker-layer');
+// Part 17c: 96 px marker svgs, viewBox centred on the map spot, moved by CSS in an HTML layer (no SVG layout per move).
+const mainMarkerLayer = document.createElement('div'), MAIN_MARK_R = 48; mainMarkerLayer.className = 'marker-layer';
 $('stage').querySelector('.ov').appendChild(mainMarkerLayer);
-const mainMarkers = FINDS.filter(f => f.n).map(f => { const el = $('mk-' + f.id), place = document.createElementNS('http://www.w3.org/2000/svg', 'g'); el.dataset.screen = 'true'; place.appendChild(el); mainMarkerLayer.appendChild(place); return { el, place, at: f.mark }; });
+const mainMarkers = FINDS.filter(f => f.n).map(f => { const el = $('mk-' + f.id), place = document.createElementNS('http://www.w3.org/2000/svg', 'svg'), R = MAIN_MARK_R; place.setAttribute('width', 2 * R); place.setAttribute('height', 2 * R); place.setAttribute('viewBox', `${f.mark[0] - R} ${f.mark[1] - R} ${2 * R} ${2 * R}`); el.dataset.screen = 'true'; place.appendChild(el); mainMarkerLayer.appendChild(place); return { el, place, at: f.mark, transform: '' }; });
 // COMB-T: the moved HMC chest's ink remains reachable where numbered marker padding overlaps it.
 const mainHmcHit=document.createElement('div');mainHmcHit.className='hmc1-screen-hit find hit';mainHmcHit.dataset.findProxy='hoard-hmc1';mainHmcHit.setAttribute('aria-hidden','true');$('stage').querySelector('.ov').appendChild(mainHmcHit);
 for(const type of ['pointerdown','pointermove','pointerup','pointercancel','click'])mainHmcHit.addEventListener(type,e=>{e.stopPropagation();const target=$('f-hoard-hmc1');if(type==='click')target.dispatchEvent(new MouseEvent(type,{bubbles:true,detail:e.detail,clientX:e.clientX,clientY:e.clientY}));else target.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerId:e.pointerId,pointerType:e.pointerType,clientX:e.clientX,clientY:e.clientY,button:e.button,buttons:e.buttons}));});
@@ -9215,15 +9247,16 @@ for(const type of ['pointerdown','pointermove','pointerup','pointercancel','clic
   };
 }
 function mainPlaceChestHit(st) {
-  const h=FD.list.hoards.items.find(h=>h.id==='hoard-hmc1'),c=st.cam,place='translate('+((h.d.x-19)*c.s+c.tx)+'px,'+((h.d.y-20)*c.s+c.ty)+'px) scale('+c.s+')';
-  if(mainHmcHit.style.transform!==place)mainHmcHit.style.transform=place;
+  // Part 17c: only this writes the hit's transform, so the last write is kept instead of read back.
+  const h=mainHmcHit.hoard||(mainHmcHit.hoard=FD.list.hoards.items.find(h=>h.id==='hoard-hmc1')),c=st.cam,place='translate('+((h.d.x-19)*c.s+c.tx)+'px,'+((h.d.y-20)*c.s+c.ty)+'px) scale('+c.s+')';
+  if(mainHmcHit.placed!==place){mainHmcHit.placed=place;mainHmcHit.style.transform=place;}
   const hitVisible=h.el.tabIndex===0&&MAP_STACK.style.visibility!=='hidden'&&st.handoffT>=COMB.mapFindsIn;
   if(mainHmcHit.hidden===hitVisible)mainHmcHit.hidden=!hitVisible;
 
 }
 function mainPlaceMarkers(st) {
   mainPlaceChestHit(st);
-  mainMarkers.forEach(m => { const p = toScreen(st, m.at), transform = `translate(${p[0]-m.at[0]} ${p[1]-m.at[1]})`; if (m.place.getAttribute('transform') !== transform) m.place.setAttribute('transform', transform); });
+  mainMarkers.forEach(m => { const p = toScreen(st, m.at), transform = `translate(${p[0] - MAIN_MARK_R}px,${p[1] - MAIN_MARK_R}px)`; if (m.transform !== transform) { m.transform = transform; m.place.style.transform = transform; } });
   const opacity = String(smooth(.5, 1, st.handoffT) * Number(MAP_STACK.style.opacity || 1)); if (mainMarkerLayer.style.opacity !== opacity) mainMarkerLayer.style.opacity = opacity;
   const visible=Number(opacity)>0&&MAP_STACK.style.visibility!=='hidden'?'visible':'hidden'; if (mainMarkerLayer.style.visibility!==visible) mainMarkerLayer.style.visibility=visible;
 }
@@ -9271,7 +9304,6 @@ function resize() {
   const room = stepMode ? (phone ? STEPS.nav.bar : STEPS.nav.h + STEPS.nav.gap + 6) : 0;
   tripResize(w, h, RM ? 0 : (phone ? 44 : 56) + room);
   MAP_SVGS.forEach(svg => { svg.setAttribute('width', w); svg.setAttribute('height', h); svg.setAttribute('viewBox', `0 0 ${w} ${h}`); });
-  mainMarkerLayer.setAttribute('viewBox', `0 0 ${w} ${h}`);
   tripMeasureLabels(); starsResize(w, h);
   footerNovaResize(w, h);
   depthResize(w, h);

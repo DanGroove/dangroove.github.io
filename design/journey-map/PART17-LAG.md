@@ -101,3 +101,44 @@ Paint events fell from 10,528 to 5,006 and composited layers from 109 to 85.
 Inline style writes every frame for off-screen compass words (16 a frame), stop transforms, labels and the HMC chest
 hit; the seven find markers (SVG transform attributes) and the minimap repaint and relayout every frame; the trail
 drawing in repaints by design. JS is led by `findsFrame` (1.0 ms in the cloud), `depthFrame` (0.8) and `starsFrame` (0.7).
+
+## Part 17c: no layout per move from the markers and minimap (cloud, 28 Nov 2026)
+
+Also found and fixed in the cloud by Claude while the PC slept, keeping the picture the same.
+
+1. **The seven find markers move without a layout.** They sat in one screen-sized svg and moved by SVG transform
+   attributes, and any change inside an svg makes the browser lay it out again; every layout then makes it hit-test the
+   mouse again on the next frame. Each marker is now its own 96 px svg (its viewBox centred on the marker's map spot) in
+   an HTML layer, moved by a CSS transform in px (main.mjs, map.css). The `.mk` elements, their hits, sizes and fades
+   are unchanged.
+2. **The minimap moves without a layout.** Its view box is four 1 px strips that tile the 1 px stroke the rect had (top
+   and bottom take the corners) and add their light (`mix-blend-mode: plus-lighter` in an isolated group), so a pixel
+   two strips share gets one stroke's coverage. The traveller dot is a small svg of its own with the map svg's box and
+   viewBox. Both move by CSS transforms in px over the map svg, clipped to the same box (trip.mjs `tripApply`,
+   map.css); the svg's meet mapping is measured once after each resize.
+3. **The timeline's ink fades on a layer of its own** (`.tl-bg` gets `will-change: opacity` outside reduced motion), so
+   a card opening no longer redraws the 1920 px bar each frame. The rows and years stay painted: a squeezed layer draws
+   soft, and a layer for the years would lift the rows onto one.
+4. **The finds re-read only what changed.** `findIdleFrame` (findkit.mjs) read the text of all 33 looping layers and
+   their chains' transforms twice a frame to notice changes; MutationObservers now say when to read again. The copies
+   of the looping finds' attributes (finds.mjs) are made only for sources that changed. Without MutationObserver (the
+   node tests) both fall back to reading every frame.
+5. **The compass words, the HMC chest hit and the Next bar's fill keep their last write** instead of reading the style
+   back (findhoards.mjs, main.mjs, steps.mjs); only their own frame code writes them. Every word is still placed every
+   frame, on screen or not (comb-t-words).
+
+### Checks
+
+- Pass: comb-s-raster, comb-s-idle, comb-t-words, comb-t-legend, comb-t-ash, comb-t-beacon, comb-t-spatial, explore,
+  steps, finds (trip.mjs pin re-recorded) and check (budgets +1.7 KB).
+- Rest stills at every beat: identical to part 17b at 412; at 1920 only the minimap's view box differs, at its corners
+  (4 or 5 pixels a still, at most 54/255). Part 17b's SVG stroke drew each corner pixel about a third darker than the
+  stroke's own coverage; the strips draw the exact coverage.
+- Real clicks and keys at 1920 (a card closing, reopening, closing by its button, Tab and Enter, a glide, Lennard to
+  the X and the X dig, a compass word and its veil), against part 17b and against part 17b run twice: every frame
+  matches except the view box's edges (exact coverage now, where the stroke's was rounded to quarter pixels, at most
+  50/255 on its 1 px lines), three pixels of a card's leader dot (at most 32/255) and the compass words' CSS fades,
+  which differ as much between two runs of part 17b.
+- Every layer stays locked to the map in every move at 1920 and 412 (worst 0.11 px), with no afterimage, and no
+  looping layer clips. comb-t-picture's poses, part 17b against 17c: identical within 5/255 (a repeat of the 412
+  overview, whose first run showed 14/255 on outer-space strokes, is identical).

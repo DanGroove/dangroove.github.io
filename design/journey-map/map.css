@@ -102,7 +102,9 @@ button { font-family: inherit; }
 .mini svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .mm-coast { fill: var(--land); stroke: var(--dim); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .mm-trail { fill: none; stroke: var(--note); stroke-width: 1; stroke-dasharray: 1 2; vector-effect: non-scaling-stroke; }
-.mm-view { fill: none; stroke: var(--paper); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.mm-over { position: absolute; inset: 0; overflow: hidden; pointer-events: none; isolation: isolate; }
+.mm-edge { position: absolute; left: 0; top: 0; width: 1px; height: 1px; background: var(--paper); transform-origin: 0 0; mix-blend-mode: plus-lighter; }
+.mini .mm-trav-at { overflow: visible; }
 .mm-trav { fill: var(--red); }
 .mm-stop { position: absolute; width: 24px; height: 24px; margin: calc(var(--oy) - 12px) 0 0 calc(var(--ox) - 12px); padding: 0; border: 0; background: none; cursor: pointer; display: grid; place-items: center; }
 .mm-stop i { width: 6px; height: 6px; border-radius: 50%; border: 1px solid var(--paper); background: var(--ink); transform: translate(calc(0px - var(--ox)), calc(0px - var(--oy))); }
@@ -624,6 +626,10 @@ html.jm-steps, .jm-steps body { height: 100%; overflow: hidden; overscroll-behav
 
 /* Keep markers and the bar composited as glide opacities reach one. */
 .marker-layer, .marker-layer .mk, #go { will-change: opacity; }
+/* Part 17c: marker svgs moved by CSS (no SVG layout per move); the timeline's ink fades on a layer of its own (not the
+   rows, which a squeeze would draw soft, nor the years, whose layer would lift the rows onto one). */
+.marker-layer > svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+html:not(.rm) .tl-bg { will-change: opacity; }
 
 /* COMB-Q: carved detail is readable only as the camera approaches the serpent. */
 .jo-body .jd, .jo-head .jd { opacity: var(--jo-detail, 0); }

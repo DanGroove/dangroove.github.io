@@ -111,6 +111,7 @@ export function tripResize(w, h, tlH) {
   glideCache.clear();
   const m = w <= CAMERA.phoneMax ? 16 : 28;
   VIEW.w = w; VIEW.h = h; VIEW.phone = w <= CAMERA.phoneMax; VIEW.unit = h / 100;
+  TRIP_EL.mmMeet = null;
   VIEW.footerY = null;
   const availH = h - m - (tlH + 10);
   VIEW.s0 = Math.min((w - 2 * m) / MAP.w, (availH - m) / MAP.h);
@@ -347,9 +348,10 @@ export function tripBuild(els) {
   // 104 / 600: the mini-map's CSS width over the map's (25: 24 and its 1 px border's share).
   const mm = STOPS.map(s => MAP.waypoints[s.w].map(v => v * 104 / 600)), off = mm.map(() => [0, 0]);
   for (let n = 0; n < 12; n++) mm.forEach((a, i) => mm.forEach((b, j) => { if (j <= i) return; const p = [0, 1].map(k => a[k] + off[i][k] - b[k] - off[j][k]), k = +(Math.abs(p[1]) >= Math.abs(p[0])), o = 25 - Math.abs(p[k]); if (Math.abs(p[1 - k]) < 25 && o > 0) { const m = Math.sign(p[k] || 1) * o / 2; off[i][k] += m; off[j][k] -= m; } }));
-  els.mini.innerHTML = `<svg viewBox="0 0 600 900" aria-hidden="true">${miniMapSvg()}<rect class="mm-view" x="0" y="0" width="1" height="1"/><circle class="mm-trav" r="10"/></svg>`
+  // Part 17c: the view box as four 1 px strips and the traveller as its own svg, moved by CSS (no SVG layout per move).
+  els.mini.innerHTML = `<svg viewBox="0 0 600 900" aria-hidden="true">${miniMapSvg()}</svg><div class="mm-over" aria-hidden="true"><i class="mm-edge"></i><i class="mm-edge"></i><i class="mm-edge"></i><i class="mm-edge"></i><svg class="mm-trav-at" viewBox="0 0 600 900"><circle class="mm-trav" r="10"/></svg></div>`
     + STOPS.map((s, i) => `<button class="mm-stop" data-i="${i}" style="left:${(MAP.waypoints[s.w][0] / 6).toFixed(2)}%;top:${(MAP.waypoints[s.w][1] / 9).toFixed(2)}%;--ox:${off[i][0].toFixed(1)}px;--oy:${off[i][1].toFixed(1)}px" aria-label="${COPY.stoneGo.replace('{name}', s.name).replace('{dates}', s.dates)}"><i></i></button>`).join('');
-  TRIP_EL.mmView = els.mini.querySelector('.mm-view'); TRIP_EL.mmTrav = els.mini.querySelector('.mm-trav');
+  TRIP_EL.mmSvg = els.mini.querySelector('svg'); TRIP_EL.mmEdges = [...els.mini.querySelectorAll('.mm-edge')]; TRIP_EL.mmTrav = els.mini.querySelector('.mm-trav-at'); TRIP_EL.mmMeet = null;
   TRIP_EL.mmStops = [...els.mini.querySelectorAll('.mm-stop')];
   globalThis.window?.addEventListener('jm-explore', () => {
     const on = document.documentElement.classList.contains('jm-explore');
@@ -862,12 +864,20 @@ export function tripApply(st, focus = null) {
   const mo = smooth(.5, 1, st.pushT) * (1 - smooth(0, .4, st.rushT));
   tripWrite(E.mini, 'opacity', mo); tripWrite(E.mini, 'visibility', mo > .01 ? 'visible' : 'hidden');
   if (mo > .01) {
-    tripWrite(E.mmView, 'transform', `translate(${n2(-c.tx / c.s)} ${n2(-c.ty / c.s)}) scale(${n2(VIEW.w / c.s)} ${n2(VIEW.h / c.s)})`, true);
-    const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${n2(tp[0])} ${n2(tp[1])})`, true);
+    // Four strips tile the view rect's 1 px stroke without overlapping (top and bottom take the corners) and add their
+    // light (plus-lighter in an isolated group), so a pixel two strips share gets the stroke's coverage; M is the svg's
+    // meet mapping.
+    const M = E.mmMeet || tripMiniMeet(), x = M.ox + M.k * +n2(-c.tx / c.s), y = M.oy + M.k * +n2(-c.ty / c.s), w = M.k * +n2(VIEW.w / c.s), h = M.k * +n2(VIEW.h / c.s), [top, bottom, left, right] = E.mmEdges;
+    tripWrite(top, 'transform', `translate(${x - .5}px,${y - .5}px) scale(${w + 1},1)`); tripWrite(bottom, 'transform', `translate(${x - .5}px,${y + h - .5}px) scale(${w + 1},1)`);
+    tripWrite(left, 'transform', `translate(${x - .5}px,${y + .5}px) scale(1,${h - 1})`); tripWrite(right, 'transform', `translate(${x + w - .5}px,${y + .5}px) scale(1,${h - 1})`);
+    const tp = pointAt(st.u); tripWrite(E.mmTrav, 'transform', `translate(${M.k * +n2(tp[0])}px,${M.k * +n2(tp[1])}px)`);
   }
   return raster.pending || (free && (r.scale !== c.s || E.labels.some(label => label.k !== label.target)||E.subFading)) || !!E.edgeFading || !!E.clockFading || !!E.baseRaster?.held;
 }
 const n2 = v => v.toFixed(2);
+// The mini svg's meet mapping, measured once after each resize (none while the mini-map is not displayed: a phone, a short
+// landscape screen; only a resize changes that).
+function tripMiniMeet() { const svg = TRIP_EL.mmSvg, cs = svg?.clientWidth ? getComputedStyle(svg) : null, W = parseFloat(cs?.width) || 0, H = parseFloat(cs?.height) || 0, k = W && H ? Math.min(W / 600, H / 900) : 0; return TRIP_EL.mmMeet = { k, ox: (W - 600 * k) / 2, oy: (H - 900 * k) / 2 }; }
 export function tripMiniVisited(st) { TRIP_EL.mmStops.forEach((b, i) => b.classList.toggle('on', st.visited[i])); }
 
 // Rewrites only the frame's camera and card strength; progress and traveller stay on the trail.

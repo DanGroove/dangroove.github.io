@@ -104,9 +104,10 @@ stepsBuild({ stage: $('stage'), rm: false, resize, joinedTop: () => JOIN.heroSta
 findsBuild(SVG, $('pop'), $('sheet'), { style: { set opacity(v) { $('b-all').style.opacity = v; $('b-rest').style.opacity = v; const live = $('live-rest'); if (live) live.style.opacity = v; } } }, RM);
 // The same six markers move in screen space, so their type never needs to be
 // resized and rasterized on every camera frame. No marker is copied.
-const mainMarkerLayer = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); mainMarkerLayer.classList.add('marker-layer');
+// Part 17c: 96 px marker svgs, viewBox centred on the map spot, moved by CSS in an HTML layer (no SVG layout per move).
+const mainMarkerLayer = document.createElement('div'), MAIN_MARK_R = 48; mainMarkerLayer.className = 'marker-layer';
 $('stage').querySelector('.ov').appendChild(mainMarkerLayer);
-const mainMarkers = FINDS.filter(f => f.n).map(f => { const el = $('mk-' + f.id), place = document.createElementNS('http://www.w3.org/2000/svg', 'g'); el.dataset.screen = 'true'; place.appendChild(el); mainMarkerLayer.appendChild(place); return { el, place, at: f.mark }; });
+const mainMarkers = FINDS.filter(f => f.n).map(f => { const el = $('mk-' + f.id), place = document.createElementNS('http://www.w3.org/2000/svg', 'svg'), R = MAIN_MARK_R; place.setAttribute('width', 2 * R); place.setAttribute('height', 2 * R); place.setAttribute('viewBox', `${f.mark[0] - R} ${f.mark[1] - R} ${2 * R} ${2 * R}`); el.dataset.screen = 'true'; place.appendChild(el); mainMarkerLayer.appendChild(place); return { el, place, at: f.mark, transform: '' }; });
 // COMB-T: the moved HMC chest's ink remains reachable where numbered marker padding overlaps it.
 const mainHmcHit=document.createElement('div');mainHmcHit.className='hmc1-screen-hit find hit';mainHmcHit.dataset.findProxy='hoard-hmc1';mainHmcHit.setAttribute('aria-hidden','true');$('stage').querySelector('.ov').appendChild(mainHmcHit);
 for(const type of ['pointerdown','pointermove','pointerup','pointercancel','click'])mainHmcHit.addEventListener(type,e=>{e.stopPropagation();const target=$('f-hoard-hmc1');if(type==='click')target.dispatchEvent(new MouseEvent(type,{bubbles:true,detail:e.detail,clientX:e.clientX,clientY:e.clientY}));else target.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerId:e.pointerId,pointerType:e.pointerType,clientX:e.clientX,clientY:e.clientY,button:e.button,buttons:e.buttons}));});
@@ -167,15 +168,16 @@ for(const type of ['pointerdown','pointermove','pointerup','pointercancel','clic
   };
 }
 function mainPlaceChestHit(st) {
-  const h=FD.list.hoards.items.find(h=>h.id==='hoard-hmc1'),c=st.cam,place='translate('+((h.d.x-19)*c.s+c.tx)+'px,'+((h.d.y-20)*c.s+c.ty)+'px) scale('+c.s+')';
-  if(mainHmcHit.style.transform!==place)mainHmcHit.style.transform=place;
+  // Part 17c: only this writes the hit's transform, so the last write is kept instead of read back.
+  const h=mainHmcHit.hoard||(mainHmcHit.hoard=FD.list.hoards.items.find(h=>h.id==='hoard-hmc1')),c=st.cam,place='translate('+((h.d.x-19)*c.s+c.tx)+'px,'+((h.d.y-20)*c.s+c.ty)+'px) scale('+c.s+')';
+  if(mainHmcHit.placed!==place){mainHmcHit.placed=place;mainHmcHit.style.transform=place;}
   const hitVisible=h.el.tabIndex===0&&MAP_STACK.style.visibility!=='hidden'&&st.handoffT>=COMB.mapFindsIn;
   if(mainHmcHit.hidden===hitVisible)mainHmcHit.hidden=!hitVisible;
 
 }
 function mainPlaceMarkers(st) {
   mainPlaceChestHit(st);
-  mainMarkers.forEach(m => { const p = toScreen(st, m.at), transform = `translate(${p[0]-m.at[0]} ${p[1]-m.at[1]})`; if (m.place.getAttribute('transform') !== transform) m.place.setAttribute('transform', transform); });
+  mainMarkers.forEach(m => { const p = toScreen(st, m.at), transform = `translate(${p[0] - MAIN_MARK_R}px,${p[1] - MAIN_MARK_R}px)`; if (m.transform !== transform) { m.transform = transform; m.place.style.transform = transform; } });
   const opacity = String(smooth(.5, 1, st.handoffT) * Number(MAP_STACK.style.opacity || 1)); if (mainMarkerLayer.style.opacity !== opacity) mainMarkerLayer.style.opacity = opacity;
   const visible=Number(opacity)>0&&MAP_STACK.style.visibility!=='hidden'?'visible':'hidden'; if (mainMarkerLayer.style.visibility!==visible) mainMarkerLayer.style.visibility=visible;
 }
@@ -223,7 +225,6 @@ function resize() {
   const room = stepMode ? (phone ? STEPS.nav.bar : STEPS.nav.h + STEPS.nav.gap + 6) : 0;
   tripResize(w, h, RM ? 0 : (phone ? 44 : 56) + room);
   MAP_SVGS.forEach(svg => { svg.setAttribute('width', w); svg.setAttribute('height', h); svg.setAttribute('viewBox', `0 0 ${w} ${h}`); });
-  mainMarkerLayer.setAttribute('viewBox', `0 0 ${w} ${h}`);
   tripMeasureLabels(); starsResize(w, h);
   footerNovaResize(w, h);
   depthResize(w, h);

@@ -39,15 +39,20 @@ export function findIdleFrame(st,advance=true) {
       if(!q.loop&&!active||!q.visible&&!active)continue;
     }
     q.placed=true;
-    const contentKey=q.node.childElementCount+'/'+q.node.textContent;
-    if(contentKey!==q.contentKey&&!q.bits){q.contentKey=contentKey;const b=findIdleBox(q.node);q.box=[b.x-q.pad,b.y-q.pad,b.x+b.width+q.pad,b.y+b.height+q.pad];}
+    // Part 17c: the content and chain keys are read again only after a mutation there.
+    const MO=globalThis.MutationObserver;if(!q.watch&&MO){q.watch=new MO(()=>{q.contentDirty=true;});q.watch.observe(q.node,{childList:true,characterData:true,subtree:true});q.chainWatch=new MO(()=>{q.chainDirty=true;});for(const e of q.chain)q.chainWatch.observe(e,{attributes:true,attributeFilter:['transform']});q.contentDirty=q.chainDirty=true;}
+    if(!q.watch||q.watch.takeRecords().length)q.contentDirty=true;
+    if(q.contentDirty&&!q.bits){q.contentDirty=false;const contentKey=q.node.childElementCount+'/'+q.node.textContent;if(contentKey!==q.contentKey){q.contentKey=contentKey;const b=findIdleBox(q.node);q.box=[b.x-q.pad,b.y-q.pad,b.x+b.width+q.pad,b.y+b.height+q.pad];}}
     let b=q.box;
     if(q.bits){
-      const live=FD.bits.filter(b=>b.live);const extra=[...q.node.children].some(e=>!FD.bits.some(b=>b.el===e)&&+(e.getAttribute('opacity')||1)>0);
+      if(FD.bitSetOf!==FD.bits){FD.bitSetOf=FD.bits;FD.bitSet=new Set(FD.bits.map(b=>b.el));}
+      const live=FD.bits.filter(b=>b.live);let extra=false;for(const e of q.node.children)if(!FD.bitSet.has(e)&&+(e.getAttribute('opacity')||1)>0){extra=true;break;}
       if(!live.length&&!extra){q.visible=false;q.running=false;q.dt=0;idleStyle(q,'visibility','hidden');idleStyle(q,'opacity',0);continue;}
       b=extra?[-c.tx/c.s,-c.ty/c.s,(VIEW.w-c.tx)/c.s,(VIEW.h-c.ty)/c.s]:[Math.min(...live.map(b=>b.x))-20,Math.min(...live.map(b=>b.y))-20,Math.max(...live.map(b=>b.x))+20,Math.max(...live.map(b=>b.y))+20];
     }else{
-      const chainKey=q.chain.map(e=>e.getAttribute('transform')).join('/');
+      if(!q.chainWatch||q.chainWatch.takeRecords().length)q.chainDirty=true;
+      if(q.chainDirty){q.chainDirty=false;q.chainKey=q.chain.map(e=>e.getAttribute('transform')).join('/');}
+      const chainKey=q.chainKey;
       if(q.boundsKey===chainKey&&q.boundsBox===q.box)b=q.worldBox;
       else {let m=new DOMMatrix();
       for(const e of q.chain){const t=e.transform?.baseVal;if(t)for(let i=0;i<t.numberOfItems;i++)m=m.multiply(t.getItem(i).matrix);}

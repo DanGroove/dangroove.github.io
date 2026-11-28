@@ -101,8 +101,9 @@ function stepsButtons() {
   if (end && !SC.go.hidden && focus === document.getElementById('nova-hit')) next.focus({ preventScroll: true });
   if (!SC.go.hidden && !SC.shown) { SC.shown = true; SC.go.classList.add('go-reveal'); }
   if (SC.root.classList.contains('jm-moving') !== JOURNEY.moving) SC.root.classList.toggle('jm-moving', JOURNEY.moving);
-  const fill = SC.go.querySelector('.go-fill'), transform = `scaleX(${SC.move ? SC.fill : 0})`;
-  if (fill.style.transform !== transform) fill.style.transform = transform;
+  // Part 17c: the fill is written only here: keep the last write.
+  const fill = SC.fillEl?.parentNode && SC.go.contains(SC.fillEl) ? SC.fillEl : (SC.fillEl = SC.go.querySelector('.go-fill')), transform = `scaleX(${SC.move ? SC.fill : 0})`;
+  if (SC.fillDone !== fill || SC.fillT !== transform) { SC.fillDone = fill; SC.fillT = transform; fill.style.transform = transform; }
 }
 // The Next button's words for the beat at P. A jump writes them as soon as it lands under its cover, so the button never names
 // the old next stop over the new view.

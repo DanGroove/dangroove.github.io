@@ -89,9 +89,15 @@ export function findsFrame(time, st) {
     FD.idleOnly=false; FD.currentFind=null;
   });
   // These shells retain the drawn part's inherited camera, scale and find visibility without duplicate hits or ids.
-  for (const { source, clone } of FD.animCopies || []) for (const key of ['transform','opacity','style','visibility']) {
-    const value = source.getAttribute(key); if (value === null) { if (clone.hasAttribute(key)) clone.removeAttribute(key); }
-    else attr(clone, key, value);
+  // Part 17c: copy only the sources a MutationObserver saw change.
+  const copies = FD.animCopies || [], keys = ['transform','opacity','style','visibility'], MO = globalThis.MutationObserver, watch = FD.copyWatch ||= MO && new MO(rs => { for (const r of rs) FD.copyDirty.add(r.target); });
+  if (watch) { FD.copyDirty ||= new Set(); FD.copyWatched ||= 0; for (; FD.copyWatched < copies.length; FD.copyWatched++) { const source = copies[FD.copyWatched].source; watch.observe(source, { attributes: true, attributeFilter: keys }); FD.copyDirty.add(source); } for (const r of watch.takeRecords()) FD.copyDirty.add(r.target); }
+  if (!watch || FD.copyDirty.size) {
+    for (const { source, clone } of copies) if (!watch || FD.copyDirty.has(source)) for (const key of keys) {
+      const value = source.getAttribute(key); if (value === null) { if (clone.hasAttribute(key)) clone.removeAttribute(key); }
+      else attr(clone, key, value);
+    }
+    FD.copyDirty?.clear();
   }
   const bits = FD.bits;
   if (quiet) FD.bits = [];
