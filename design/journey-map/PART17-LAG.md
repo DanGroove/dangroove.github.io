@@ -142,3 +142,37 @@ Also found and fixed in the cloud by Claude while the PC slept, keeping the pict
 - Every layer stays locked to the map in every move at 1920 and 412 (worst 0.11 px), with no afterimage, and no
   looping layer clips. comb-t-picture's poses, part 17b against 17c: identical within 5/255 (a repeat of the 412
   overview, whose first run showed 14/255 on outer-space strokes, is identical).
+
+### Results (cloud, ms per frame, part 17b against 17c)
+
+| | JS | style | layout | prepaint | paint | layerize | hit test | total |
+|---|---|---|---|---|---|---|---|---|
+| HMC1 to Mohawk, 1920, two runs each: 17b | 3.59 | 0.64 | 0.16 | 0.27 | 0.37 | 1.24 | 0.45 | 6.72 |
+| 17c | 3.26 | 0.68 | 0.11 | 0.25 | 0.31 | 1.25 | 0.20 | 6.06 |
+| Set out, 1920: 17b | 3.53 | 0.61 | 0.26 | 0.27 | 0.37 | 1.25 | 0.45 | 6.74 |
+| 17c | 3.23 | 0.62 | 0.24 | 0.25 | 0.23 | 1.28 | 0.26 | 6.11 |
+| HMC1 to Mohawk, 412: 17b | 0.69 | 0.12 | 0.05 | 0.05 | 0.08 | 0.21 | 0.06 | 1.26 |
+| 17c | 0.67 | 0.13 | 0.05 | 0.05 | 0.07 | 0.23 | 0.04 | 1.24 |
+
+Layouts fell from 1,222 to 557 in HMC1 to Mohawk and from 1,219 to 754 in Set out, hit tests from 1,252 to 586 and
+from 1,257 to 791, paint events from 5,006 to 3,555 and from 5,683 to 3,824. Tile rasters in HMC1 to Mohawk fell from
+6,480 to 5,220. The phone size does about a fifth of the work and is flat in total.
+
+### On the PC (Preview 29 against Preview 32, 1920x950 at DPR 2, 240 Hz, two runs each)
+
+Moves got faster: Set out 186 to 201 fps, HMC1 to Mohawk 196 to 210 (frames over 25 ms 11 to 5), the explore opening
+144 to 192, the visit to Laurier 170 to 203, the pinch 140 to 165. Lennard (201 to 208) and the X (217 to 214) are
+flat, the presses are flat at about 200 fps with 2 to 4 frames over 25 ms, and rest stays at the runner's cap
+(233 to 235) with no big layer redrawn at rest. The worst frames line up with the GPU process's longest tasks (54 to
+58 ms in HMC1 to Mohawk): the big map layers drawn again at a new zoom.
+
+### Next costs
+
+- The big map layers (`svg#map-base`, `svg#map`, `svg#map-finds`, `svg#map-live`) are drawn again at each zoom step
+  of a move; on the PC those redraws are the longest frames.
+- In the pinch the compass words (`svg.compass-word.find`, inside `#map-stack`) are repainted at map size 1,100 to
+  1,300 times.
+- Small layers drawn again almost every frame of HMC1 to Mohawk: the tier-2 label groups (`g.t2b`, 758 tiles), the
+  timeline track (476), the markers' size groups (about 300 each), the Next bar (296), `div.ov` (294) and a card face
+  (180).
+- The main thread still layerizes every frame (1.25 ms in the cloud), and the page's own frame code is 3.3 ms.
