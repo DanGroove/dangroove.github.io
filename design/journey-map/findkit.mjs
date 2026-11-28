@@ -25,6 +25,7 @@ export const findIdleBox = node => {
 export const findIdleTime = el => { const layer=findIdleLayer(el); return layer ? layer.time : FD.now; };
 export const findIdleDelta = el => findIdleLayer(el)?.dt ?? FD.dt;
 export const findIdleVisible = el => findIdleLayer(el)?.visible ?? true;
+const IDLE_MARGIN=128;
 export function findIdleFrame(st,advance=true) {
   const moving=!!(st.gliding||st.exploreMoving),c=st.cam,dpr=globalThis.devicePixelRatio||1;
   for(const q of FD.idleLayers||[]){
@@ -65,14 +66,19 @@ export function findIdleFrame(st,advance=true) {
     if(!visible)continue;
 
 
+    // Part 17: hold against the unsnapped box (the snapped one outgrew the drawing by a fraction of a pixel, so 33 layers
+    // redrew 21,240 times in Set out), and draw past the screen's edges while moving so a piece sliding in is not redrawn.
     const p=q.camera,k=p?c.s/p.s:1,tx=p?c.tx-p.tx*k+q.origin[0]*k:0,ty=p?c.ty-p.ty*k+q.origin[1]*k:0;
-    const covers=p&&rect[0]>=tx-.01&&rect[1]>=ty-.01&&rect[2]<=tx+q.width*k+.01&&rect[3]<=ty+q.height*k+.01;
+    const need=active?rect:[Math.max(0,raw[0]),Math.max(0,raw[1]),Math.min(VIEW.w,raw[2]),Math.min(VIEW.h,raw[3])];
+    const covers=p&&need[0]>=tx-.01&&need[1]>=ty-.01&&need[2]<=tx+q.width*k+.01&&need[3]<=ty+q.height*k+.01;
     if(!p||!moving||!covers||k<.8||k>1.25){
-      const key=[c.s,c.tx,c.ty,...rect].join('/');
+      const m=moving&&!active?IDLE_MARGIN:0;
+      const box=m?[Math.max(-m,Math.floor(raw[0]*dpr)/dpr),Math.max(-m,Math.floor(raw[1]*dpr)/dpr),Math.min(VIEW.w+m,Math.ceil(raw[2]*dpr)/dpr),Math.min(VIEW.h+m,Math.ceil(raw[3]*dpr)/dpr)]:rect;
+      const key=[c.s,c.tx,c.ty,...box].join('/');
       if(key!==q.key){
-        q.key=key;q.camera={...c};q.origin=rect.slice(0,2);q.width=rect[2]-rect[0];q.height=rect[3]-rect[1];
+        q.key=key;q.camera={...c};q.origin=box.slice(0,2);q.width=box[2]-box[0];q.height=box[3]-box[1];
         attr(q.el,'width',q.width);attr(q.el,'height',q.height);findStyle(q.el,'width',q.width+'px');findStyle(q.el,'height',q.height+'px');
-        attr(q.cam,'transform','matrix('+c.s.toFixed(4)+' 0 0 '+c.s.toFixed(4)+' '+(+c.tx.toFixed(2)-rect[0])+' '+(+c.ty.toFixed(2)-rect[1])+')');
+        attr(q.cam,'transform','matrix('+c.s.toFixed(4)+' 0 0 '+c.s.toFixed(4)+' '+(+c.tx.toFixed(2)-box[0])+' '+(+c.ty.toFixed(2)-box[1])+')');
       }
     }
     const v=q.camera,scale=c.s/v.s;

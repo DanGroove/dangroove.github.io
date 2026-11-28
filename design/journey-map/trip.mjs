@@ -704,12 +704,25 @@ function tripRasters(E,r,st,focus,layers,veil,camVeil,moving,camMoved,lastCam) {
   r.layerCams ||= {};
   const slack=FRAME_PERF.slack, free=!!st.exploring||st.exploreK>0;
   const change=lastCam?Math.max(c.s/lastCam.s,lastCam.s/c.s):1;
-  // Queue the cohort before its common deadline, but always raster at the shown camera.
+  // Queue the cohort before its common deadline, on the side the zoom heads for only (part 17: on both, a fast zoom made a
+  // layer drawn at k = 1 due again at once).
   const lead=moving?Math.min(1.4,change**(records.length+1)):1;
+  const growing=!!lastCam&&c.s>lastCam.s,shrinking=!!lastCam&&c.s<lastCam.s;
+  // Part 17: zoom-in journey glides draw ahead toward the end scale again (as Preview 29), so a redraw lasts k .87 to 1.15:
+  // at the shown camera Set out redrew each layer 12 times, not 6, and fell to 140 fps. Explore stays true scale (p25v).
+  const endS=moving&&growing&&!free&&!focus&&!st.reduced&&FRAME_PERF.glideHold&&st.handoffT>=1&&r.wasMoving?r.destination?.s||0:0;
+  const ahead=id=>{
+    const a=endS>c.s?Math.min(id==='base'?FRAME_PERF.baseAhead:.9999/FRAME_PERF.scaleMin,endS/c.s):1;
+    if(!(a>1))return {...c};
+    const ox=id!=='base'&&Number.isFinite(c.ax)?c.ax:VIEW.w/2,oy=id!=='base'&&Number.isFinite(c.ay)?c.ay:VIEW.h/2;
+    return {s:c.s*a,tx:ox-(ox-c.tx)*a,ty:oy-(oy-c.ty)*a};
+  };
   st.gliding=moving;
   const requests=(VIEW.skyPlan?.(st)||[]).map(q=>({...q,kind:'sky'})),forced=[];
   for(const[id,svg,cam]of records){
     const p=r.layerCams[id],k=p?c.s/p.s:1;
+    // Part 17: no redraws of the hidden veil while moving; rest draws it sharp.
+    if(id==='veil'&&p&&moving&&svg.style.visibility!=='visible')continue;
     const lo=free?FRAME_PERF.exploreMin:id==='base'?FRAME_PERF.baseMin:FRAME_PERF.scaleMin;
     const hi=free?FRAME_PERF.exploreMax:id==='base'?FRAME_PERF.baseMax:FRAME_PERF.scaleMax;
     let covers=true;
@@ -718,7 +731,7 @@ function tripRasters(E,r,st,focus,layers,veil,camVeil,moving,camMoved,lastCam) {
       const tx=c.tx-p.tx*k,ty=c.ty-p.ty*k;
       covers=-tx/k>=-sx&&(VIEW.w-tx)/k<=VIEW.w+sx&&-ty/k>=-sy&&(VIEW.h-ty)/k<=VIEW.h+sy;
     }
-    const due=!p||!covers||(moving?k<lo*lead||k>hi/lead:!equal(c,p));
+    const due=!p||!covers||(moving?k<lo*(shrinking?lead:1)||k>hi/(growing?lead:1):!equal(c,p));
     if(!due)continue;
     const q={kind:id,svg,cam,score:!p||!covers?Infinity:Math.max(lo/k,k/hi)};
     requests.push(q);
@@ -726,7 +739,7 @@ function tripRasters(E,r,st,focus,layers,veil,camVeil,moving,camMoved,lastCam) {
   }
   const chosen=forced.length?null:requests.sort((a,b)=>b.score-a.score)[0]||null;
   const jobs=forced.length?forced:chosen&&chosen.kind!=='sky'?[chosen]:[];
-  for(const q of jobs){r.layerCams[q.kind]={...c};tripWrite(q.cam,'transform',matrix(c),true);}
+  for(const q of jobs){const p=ahead(q.kind);r.layerCams[q.kind]=p;tripWrite(q.cam,'transform',matrix(p),true);}
   r.base=r.layerCams.map||{...c};E.veilRaster=r.layerCams.veil||{...c};
   for(const[id,svg]of records){
     const p=r.layerCams[id];if(!p)continue;const k=c.s/p.s;
@@ -747,6 +760,7 @@ function tripRasters(E,r,st,focus,layers,veil,camVeil,moving,camMoved,lastCam) {
     const glide=GLIDES.find(g=>st.P>=g.a&&st.P<g.b);
     const target=tripState(st.P);if(focus&&!r.focusRelease)tripFocus(target,E.focusAim?.view||focus.view,1);
     st.rasterDestination={...(focus?target.cam:st.exploreDestination|| (glide?tripState(lastCam&&st.P<lastCam.P?glide.a:glide.b).cam:c))};
+    r.destination=st.rasterDestination; // st is new each frame
   }
   if(!moving&&jobs.some(q=>q.kind==='veil'))st.veilRestCommit=true;
   r.wasMoving=moving;r.moveKey=key;r.focusK=focus?.k||0;
