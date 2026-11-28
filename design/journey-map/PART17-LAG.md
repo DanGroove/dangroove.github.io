@@ -392,3 +392,65 @@ as before.
   veil canvas) to rank what is left in a press.
 - In the cloud the names layer (`svg#map-live`) is now a press's dearest: 168 tiles on 40 frames.
 - The small idle layers repaint one tile each per frame at rest after a press; their boxes are resized at each rebase.
+
+## Part 17g: no path clip, one veil size, fewer layer placements in a press (cloud, 28 Nov 2026)
+
+Still for Dan's steer to remove the spikes first. Done by Claude in the cloud, keeping the picture the same.
+
+### What the phone showed (17e, 17f and three measuring variants of 17f, 16:31 to 16:41 UTC, six presses a page)
+
+| Page | Frames over 50 ms | Over 25 ms | Worst frame | New GPU images a press |
+|---|---|---|---|---|
+| 17e | 8 | 52 | 83 ms | about 925 |
+| 17f | 3 | 39 | 100 ms (one press) | about 595 |
+| 17f without the idle layers | 1 | 16 | 83 ms | about 250 |
+| 17f without the veil canvas | 0 | 21 | 50 ms | about 510 |
+| 17f without the names layer | 3 | 31 | 100 ms | about 620 |
+
+17f no longer runs out of tile memory in a press (17e did 2 to 6 times a press). Read from the saved 17f traces on the
+PC (no new phone run):
+
+- Every 17f press has a GPU flush of 50 to 103 ms starting 60 to 83 ms after the tap; no press without the veil canvas
+  has one. The one thing 17f's canvas does that 17e's svg did not is the even-odd path clip that cuts the lines, which
+  the GPU has to work out again at every camera.
+- The screen-sized images (8 to 10 a press, 2 to 9 ms of GPU time each) come right after the page's four 2D canvases
+  hand over a frame, each time with a new image pool. The first two are the veil's: drawn at 1079 px, the rounded
+  width, and a frame later at 1080 once its ResizeObserver, started only at its first showing, reported the box.
+- The 544 x 544 tiles come 100 to 600 ms after the tap, about 60 fewer per 100 ms without the idle layers. In the
+  cloud the two idle layers as big as the screen (the compass's moving parts and the particles) were placed again on
+  all 36 frames of a press's pull-back, and at rest all 33 idle layers were placed again in one frame.
+
+### Fix
+
+- **Lines cut without a path clip.** Every compass line is a straight path (`M0 0H<length>`), so `tripVeil` strokes it
+  along its stretches outside the cuts (`tripLineStretches`: the frame, the ring and the word boxes, which never
+  overlap), each stretch from its own dash phase. A stretch that ends on a word's box or the frame runs 2 px on and is
+  cut by a rectangle clip on that edge, as the path clip cut it; at the ring a line meets the cut square on, so it simply
+  stops there. A ring that meets a cut, and any other shape, keep the path clip (none did in the presses measured).
+  findhoards.mjs keeps the cuts as shapes beside the path.
+- **One veil size.** The veil's ResizeObserver starts with the first frame, so its first drawing already has the box's
+  device pixels.
+- **The two screen-sized idle layers keep the move's margin**, like the rest, so a press's pull-back places them again
+  only when the zoom leaves 0.8 to 1.25: 5 times instead of 36.
+- **At rest at most six idle layers a frame are placed again.** One that still covers its box at a scale within 0.8 to
+  1.25 waits a frame; a press's end now spreads its placements over 6 frames.
+
+### Checks
+
+- The veil canvas against the same build with the old path clip, fixed clock, the four words pressed and read 33 ms to
+  3 s after: at 1920 at 1x within 2/255 but for at most 8 pixels (up to 35/255, at dash ends); at 412 on a 2.625 screen
+  within 18/255 (at most 34 pixels over 3/255, none over 20 at rest).
+- Real clicks against 17f (cards, a glide, the X, the compass press and release, fixed clock): at 416 x 912 on a 2.625
+  screen every resting frame matches within 12/255 (9 pixels). At 1920 resting frames differ by at most 26 pixels (up to
+  18/255, the compass's edges). At 412 at 1x the compass after its focus glide is now drawn as a fresh raster draws it:
+  17f kept a raster from the glide, half a pixel softer (the compass's crossbar over three rows instead of two), which a
+  fresh raster of its layer turns into 17g's. The frames at the press's end differ while the layers' placements are
+  spread over 6 frames, and mid-press frames differ where the two screen-sized layers are scaled instead of redrawn.
+- Placements in a print press at 412 on a 2.625 screen: the compass's moving parts and the particles 5 times each
+  instead of 36; at rest 6 a frame from 700 to 783 ms instead of 33 in one frame.
+- Tiles, a print press at 412 on a 2.625 screen with the phone's 544 px tiles, twice each, back to back: 986 and 1,004
+  against 1,042 and 1,038 (the particles 70 to 43, the compass's moving parts 36 to 21); the most tiles held at once
+  is unchanged (148 and 153 against 160 and 149).
+- Pass in the cloud: finds (trip.mjs pin re-recorded), explore, steps, check, comb-r-compass, comb-s-raster,
+  comb-s-idle, comb-t-words, comb-t-legend, comb-t-ash, comb-t-beacon and comb-t-spatial.
+- Budgets +2.36 KB (230.53 KB runtime, 346.96 KB map, 593.62 KB joined).
