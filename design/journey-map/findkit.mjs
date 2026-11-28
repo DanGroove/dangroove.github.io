@@ -28,7 +28,7 @@ export const findIdleBox = node => {
 export const findIdleTime = el => { const layer=findIdleLayer(el); return layer ? layer.time : FD.now; };
 export const findIdleDelta = el => findIdleLayer(el)?.dt ?? FD.dt;
 export const findIdleVisible = el => findIdleLayer(el)?.visible ?? true;
-const IDLE_MARGIN=128;
+const IDLE_MARGIN=128,IDLE_REST_PLACES=6;
 // Part 17b: only this loop writes these, so unchanged values skip findStyle's read-back.
 const idleStyle=(q,key,value)=>{const text=String(value),w=q.writes||(q.writes={});if(w[key]===text)return;w[key]=text;findStyle(q.el,key,value);};
 export function findIdleFrame(st,advance=true) {
@@ -37,7 +37,7 @@ export function findIdleFrame(st,advance=true) {
     // The particle layer has no actor: it is active while any particle is live or it is still shown, or it stayed hidden
     // at rest once its first burst ended (2026-11-27 review: sparks, drops and feathers showed only while the camera moved).
     const actor=q.actor,active=q.bits?q.visible||FD.bits.some(b=>b.live):actor&&(actor.playing||actor.drag||actor.busy||actor.hearing||FD.sheetOwner===actor||['flight','hear','landing','reel','chase','eating','waking','trace','opening','sheet','closing','sliding','reply','pebble','sounding','echo','pull','lifting','rising','rattling','bouncing'].includes(actor.stage)||q.owner==='wayfinder'&&FD.focusId===q.owner);
-    if(q.placed&&!st.smallMoved){
+    if(q.placed&&!st.smallMoved&&!q.waiting){
       if(advance){const run=q.visible&&!moving;q.dt=q.loop&&run&&q.running?FD.dt:0;q.time+=q.dt;q.running=run;continue;}
       if(!q.loop&&!active||!q.visible&&!active)continue;
     }
@@ -84,10 +84,18 @@ export function findIdleFrame(st,advance=true) {
     const need=active?rect:[Math.max(0,raw[0]),Math.max(0,raw[1]),Math.min(VIEW.w,raw[2]),Math.min(VIEW.h,raw[3])];
     const covers=p&&need[0]>=tx-.01&&need[1]>=ty-.01&&need[2]<=tx+q.width*k+.01&&need[3]<=ty+q.height*k+.01;
     if(!p||!moving||!covers||k<.8||k>1.25){
-      const m=moving&&!active?IDLE_MARGIN:0;
-      const box=m?[Math.max(-m,Math.floor(raw[0]*dpr)/dpr),Math.max(-m,Math.floor(raw[1]*dpr)/dpr),Math.min(VIEW.w+m,Math.ceil(raw[2]*dpr)/dpr),Math.min(VIEW.h+m,Math.ceil(raw[3]*dpr)/dpr)]:rect;
+      // Part 17g (lag spikes, 2026-11-28): an active layer (the whole screen) keeps the move's margin too. Without it a
+      // press's pull-back drew the compass's moving parts and the particles again on every frame (two screen-sized
+      // layers, the phone's most new tiles in a press); now, like the rest, when the zoom leaves .8-1.25 or the screen.
+      const m=moving?IDLE_MARGIN:0;
+      const box=active?m?[-m,-m,VIEW.w+m,VIEW.h+m]:rect:m?[Math.max(-m,Math.floor(raw[0]*dpr)/dpr),Math.max(-m,Math.floor(raw[1]*dpr)/dpr),Math.min(VIEW.w+m,Math.ceil(raw[2]*dpr)/dpr),Math.min(VIEW.h+m,Math.ceil(raw[3]*dpr)/dpr)]:rect;
       const key=[c.s,c.tx,c.ty,...box].join('/');
-      if(key!==q.key){
+      // Part 17g: at rest, at most IDLE_REST_PLACES layers a frame are drawn again at the camera; one still covering its
+      // box at a scale within .8-1.25 waits a frame (a press's end redrew all 33 in one frame, each a new GPU image).
+      if(FD.idlePlaceAt!==FD.now){FD.idlePlaceAt=FD.now;FD.idlePlaces=0;}
+      q.waiting=key!==q.key&&!moving&&!!p&&covers&&k>=.8&&k<=1.25&&FD.idlePlaces>=IDLE_REST_PLACES;
+      if(key!==q.key&&!q.waiting){
+        if(!moving)FD.idlePlaces++;
         q.key=key;q.camera={...c};q.origin=box.slice(0,2);q.width=box[2]-box[0];q.height=box[3]-box[1];
         attr(q.el,'width',q.width);attr(q.el,'height',q.height);idleStyle(q,'width',q.width+'px');idleStyle(q,'height',q.height+'px');
         attr(q.cam,'transform','matrix('+c.s.toFixed(4)+' 0 0 '+c.s.toFixed(4)+' '+(+c.tx.toFixed(2)-box[0])+' '+(+c.ty.toFixed(2)-box[1])+')');

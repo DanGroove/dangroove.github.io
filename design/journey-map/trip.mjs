@@ -797,12 +797,15 @@ function tripRasters(E,r,st,focus,layers,veil,moving,camMoved,lastCam) {
 // emulated screen reports CSS pixels for the device box: there, the backing's own scale).
 export function tripVeil(st) {
   const E = TRIP_EL, v = E.veil ??= document.getElementById('map-veil');
-  if (!v?.getContext || v.style.visibility !== 'visible') return;
+  if (!v?.getContext) return;
+  // Part 17g: the box is watched from the first frame, not from the veil's first showing, so its first drawing has the
+  // box's device pixels (on the phone a press made it at the rounded width, 1079 px, and again at 1080 a frame later).
   if (!E.veilSize) {
     E.veilSize = [0, 0]; E.veilBox = [0, 0];
     // The backing store takes the box's exact device pixels, so the compositor shows it 1:1.
     try { new ResizeObserver(es => { const b = es[0]?.devicePixelContentBoxSize?.[0], q = es[0]?.contentBoxSize?.[0]; if (b && q && (b.inlineSize !== E.veilSize[0] || b.blockSize !== E.veilSize[1] || q.inlineSize !== E.veilBox[0] || q.blockSize !== E.veilBox[1])) { E.veilSize = [b.inlineSize, b.blockSize]; E.veilBox = [q.inlineSize, q.blockSize]; if (E.veilLast) tripVeil(E.veilLast); } }).observe(v, { box: 'device-pixel-content-box' }); } catch (e) { /* the rounded size below */ }
   }
+  if (v.style.visibility !== 'visible') return;
   E.veilLast = st;
   const dpr = globalThis.devicePixelRatio || 1, c = st.cam, W = E.veilSize[0] || Math.round(VIEW.w * dpr), H = E.veilSize[1] || Math.round(VIEW.h * dpr);
   const bw = E.veilBox[0] || VIEW.w, bh = E.veilBox[1] || VIEW.h, k = Math.min(bw / VIEW.w, bh / VIEW.h), view = [k, 0, 0, k, (bw - k * VIEW.w) / 2, (bh - k * VIEW.h) / 2];
@@ -833,22 +836,55 @@ export function tripVeil(st) {
   }
   ctx.globalCompositeOperation = 'source-over';
   // The lines' svg drew at its raster camera written to 4 and 2 decimals (the shown camera at rest); an empty clip hid all.
+  // Part 17g (lag spikes, 2026-11-28): the cuts (the map's frame less the compass ring and its words, which never overlap)
+  // are no longer one even-odd path clip, which the phone's GPU worked out again at every camera (flushes of 50-100 ms as
+  // a press began). A straight line is stroked along its stretches outside the cuts, each from its own dash phase; a
+  // stretch ending on a word's edge or the frame is cut there by a rectangle clip on that edge, as the path clip cut it
+  // (at the ring a line meets the cut square on). A ring that meets a cut, and any other shape, keeps the path clip.
   if (lines && cuts) {
-    const linesAt = tripMul(view, [+c.s.toFixed(4), 0, 0, +c.s.toFixed(4), +c.tx.toFixed(2), +c.ty.toFixed(2)]);
-    ctx.save(); at(linesAt); ctx.clip(new Path2D(cuts), 'evenodd'); at([1, 0, 0, 1, 0, 0]);
+    const linesAt = tripMul(view, [+c.s.toFixed(4), 0, 0, +c.s.toFixed(4), +c.tx.toFixed(2), +c.ty.toFixed(2)]), shapes = E.lineCuts.__shapes;
+    let clipped = false;
+    const clipAll = on => { if (on === clipped) return; clipped = on; if (on) { ctx.save(); at(linesAt); ctx.clip(new Path2D(cuts), 'evenodd'); at([1, 0, 0, 1, 0, 0]); } else ctx.restore(); };
+    at([1, 0, 0, 1, 0, 0]);
     for (const q of lines.shapes) {
-      const opacity = q.el.hasAttribute('opacity') ? +q.el.getAttribute('opacity') : 1, m = tripMul(tripMul(linesAt, tripOwnMatrix(q.g)), tripOwnMatrix(q.el));
+      const opacity = q.el.hasAttribute('opacity') ? +q.el.getAttribute('opacity') : 1, w = tripMul(tripOwnMatrix(q.g), tripOwnMatrix(q.el)), m = tripMul(linesAt, w);
       // A shape at scale 0 (a line not grown yet) has no inverse: the svg drew nothing.
       if (!(opacity > 0) || !(Math.abs(m[0] * m[3] - m[1] * m[2]) > 1e-12)) continue;
-      const own = q.circle ? new Path2D() : new Path2D(q.el.getAttribute('d') || ''), path = new Path2D();
-      if (q.circle) { const r = +q.el.getAttribute('r') || 0; if (!(r > 0)) continue; own.arc(+q.el.getAttribute('cx') || 0, +q.el.getAttribute('cy') || 0, r, 0, 2 * Math.PI); }
+      const len = !q.circle && shapes && /^M0 0H(\d+(?:\.\d+)?(?:e[-+]?\d+)?)$/.exec(q.el.getAttribute('d') || ''), r = q.circle ? +q.el.getAttribute('r') || 0 : 0;
+      if (q.circle && !(r > 0)) continue;
+      const dash = q.el.getAttribute('stroke-dasharray'), style = () => { ctx.globalAlpha = opacity * q.alpha; ctx.strokeStyle = q.stroke; ctx.lineWidth = q.width; ctx.lineCap = q.cap; ctx.setLineDash(!dash || dash === 'none' ? [] : dash.split(/[\s,]+/).map(Number)); };
+      if (len) {
+        const L = +len[1], p0 = [m[4], m[5]], dv = [m[0] * L, m[1] * L], Lv = Math.hypot(dv[0], dv[1]), F = shapes.frame;
+        if (!(Lv > 0)) continue;
+        clipAll(false); style();
+        for (const [t0, t1, e0, e1] of tripLineStretches([w[4], w[5]], [w[0] * L + w[4], w[1] * L + w[5]], shapes)) {
+          // An end on an edge runs 2 px on into the cut, which its rectangle clip takes off along the edge.
+          const s0 = e0 ? t0 - 2 / Lv : t0, s1 = e1 ? t1 + 2 / Lv : t1, seg = new Path2D();
+          seg.moveTo(p0[0] + dv[0] * s0, p0[1] + dv[1] * s0); seg.lineTo(p0[0] + dv[0] * s1, p0[1] + dv[1] * s1); ctx.lineDashOffset = s0 * Lv;
+          if (!e0 && !e1) { ctx.stroke(seg); continue; }
+          const R = F.slice(); for (const e of [e0, e1]) if (Array.isArray(e)) { if (e[1] < 0) R[e[0] + 2] = Math.min(R[e[0] + 2], e[2]); else R[e[0]] = Math.max(R[e[0]], e[2]); }
+          const box = new Path2D(); box.rect(linesAt[0] * R[0] + linesAt[4], linesAt[3] * R[1] + linesAt[5], linesAt[0] * (R[2] - R[0]), linesAt[3] * (R[3] - R[1]));
+          ctx.save(); ctx.clip(box); ctx.stroke(seg); ctx.restore();
+        }
+        continue;
+      }
+      const own = new Path2D(), path = new Path2D();
+      if (q.circle) {
+        const cx = +q.el.getAttribute('cx') || 0, cy = +q.el.getAttribute('cy') || 0; own.arc(cx, cy, r, 0, 2 * Math.PI);
+        let meets = !shapes;
+        if (shapes) {
+          const xs = [], ys = [], pad = (q.width / 2 + 1) / linesAt[0], F = shapes.frame, o = shapes.circle;
+          for (const [x, y] of [[cx - r, cy - r], [cx + r, cy - r], [cx - r, cy + r], [cx + r, cy + r]]) { xs.push(w[0] * x + w[2] * y + w[4]); ys.push(w[1] * x + w[3] * y + w[5]); }
+          const B = [Math.min(...xs) - pad, Math.min(...ys) - pad, Math.max(...xs) + pad, Math.max(...ys) + pad];
+          meets = !(B[0] >= F[0] && B[1] >= F[1] && B[2] <= F[2] && B[3] <= F[3]) || shapes.boxes.some(k => B[0] < k[2] && B[2] > k[0] && B[1] < k[3] && B[3] > k[1]) || !!o && Math.hypot(Math.max(B[0], Math.min(o[0], B[2])) - o[0], Math.max(B[1], Math.min(o[1], B[3])) - o[1]) < o[2];
+        }
+        clipAll(meets);
+      } else { own.addPath(new Path2D(q.el.getAttribute('d') || '')); clipAll(true); }
       // Non-scaling strokes: taken to the svg's viewport, then stroked with width and dashes in CSS pixels.
       path.addPath(own, { a: m[0], b: m[1], c: m[2], d: m[3], e: m[4], f: m[5] });
-      const dash = q.el.getAttribute('stroke-dasharray');
-      ctx.globalAlpha = opacity * q.alpha; ctx.strokeStyle = q.stroke; ctx.lineWidth = q.width; ctx.lineCap = q.cap;
-      ctx.setLineDash(!dash || dash === 'none' ? [] : dash.split(/[\s,]+/).map(Number)); ctx.stroke(path);
+      style(); ctx.lineDashOffset = 0; ctx.stroke(path);
     }
-    ctx.restore();
+    clipAll(false);
   }
   E.veilDrawn = { s: c.s, tx: c.tx, ty: c.ty };
 }
@@ -864,6 +900,45 @@ function tripVeilLines(E) {
   }
   const { shapes } = E.lineShapes, read = (el, k) => el.getAttribute(k);
   return { shapes, key: shapes.map(({ g, el }) => [read(g, 'transform'), read(el, 'transform'), read(el, 'opacity'), read(el, 'stroke-dasharray'), read(el, 'd'), read(el, 'r'), read(el, 'cx'), read(el, 'cy')].join(' ')).join('|') };
+}
+// Part 17g: the stretches of the segment a-b (map units) outside the cuts, as [t0, t1, end0, end1] along it (0 to 1). An
+// end is null where nothing cuts it (the line's own ends, the ring), true at the frame, or the edge [axis, side, at] of
+// the word's box it meets (side -1: the line's side is coordinate <= at).
+function tripLineStretches(a, b, cuts) {
+  const d = [b[0] - a[0], b[1] - a[1]], F = cuts.frame, holes = [];
+  let t0 = 0, t1 = 1, f0 = null, f1 = null;
+  for (let i = 0; i < 2; i++) {
+    if (d[i] === 0) { if (a[i] < F[i] || a[i] > F[i + 2]) return []; continue; }
+    let u = (F[i] - a[i]) / d[i], v = (F[i + 2] - a[i]) / d[i]; if (u > v) [u, v] = [v, u];
+    if (u > t0) { t0 = u; f0 = true; } if (v < t1) { t1 = v; f1 = true; }
+  }
+  if (!(t1 > t0)) return [];
+  if (cuts.circle) {
+    const [cx, cy, r] = cuts.circle, fx = a[0] - cx, fy = a[1] - cy, A = d[0] * d[0] + d[1] * d[1], B = fx * d[0] + fy * d[1], D = B * B - A * (fx * fx + fy * fy - r * r);
+    if (A > 0 && D > 0) { const q = Math.sqrt(D); holes.push([(-B - q) / A, (-B + q) / A, null, null]); }
+  }
+  for (const k of cuts.boxes) {
+    let te = -Infinity, tx = Infinity, ee = null, ex = null;
+    for (let i = 0; i < 2; i++) {
+      if (d[i] === 0) { if (a[i] <= k[i] || a[i] >= k[i + 2]) te = Infinity; continue; }
+      // Going up the axis the line comes in across the low edge and leaves across the high one.
+      const lo = (k[i] - a[i]) / d[i], hi = (k[i + 2] - a[i]) / d[i], up = d[i] > 0;
+      if ((up ? lo : hi) > te) { te = up ? lo : hi; ee = up ? [i, -1, k[i]] : [i, 1, k[i + 2]]; }
+      if ((up ? hi : lo) < tx) { tx = up ? hi : lo; ex = up ? [i, 1, k[i + 2]] : [i, -1, k[i]]; }
+    }
+    if (tx > te) holes.push([te, tx, ee, ex]);
+  }
+  holes.sort((p, q) => p[0] - q[0]);
+  const out = []; let s = t0, se = f0;
+  for (const [h0, h1, ein, eout] of holes) {
+    if (h1 <= s) continue;
+    if (h0 >= t1) break;
+    if (h0 > s) out.push([s, h0, se, ein]);
+    s = h1; se = eout;
+    if (s >= t1) return out;
+  }
+  out.push([s, t1, se, f1]);
+  return out;
 }
 // [a, b, c, d, e, f] matrices; a transform list is multiplied out item by item (consolidate() rewrites the attribute).
 const tripMul = (m, t) => [m[0] * t[0] + m[2] * t[1], m[1] * t[0] + m[3] * t[1], m[0] * t[2] + m[2] * t[3], m[1] * t[2] + m[3] * t[3], m[0] * t[4] + m[2] * t[5] + m[4], m[1] * t[4] + m[3] * t[5] + m[5]];
