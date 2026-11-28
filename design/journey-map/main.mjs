@@ -40,7 +40,7 @@ const M = bigMap();
 MAIN.innerHTML = `<h1 class="sr">${COPY.title}</h1><section class="trip" id="trip" aria-label="${COPY.srMap}"><div class="stage" id="stage">
 <canvas id="deep" aria-hidden="true"></canvas>
 <svg id="map" class="map" role="group" aria-label="${COPY.srMap}">${mapDefs()}<g id="cam"><g id="b-all"><g id="b-sea">${M.sea}</g><g id="b-fill">${M.fill}</g><g id="b-coast">${M.coast}</g><g id="b-detail">${M.detail}</g></g><path id="trail-done" class="done" d="${pathD(TRAIL)}"/><g id="trail-pieces">${DONE_PIECES.map(q => `<path class="done-p" data-u0="${q.u0}" data-u1="${q.u1}" d="M${q.pts.map(p => p.join(' ')).join('L')}"/>`).join('')}</g><g id="finds">${M.finds}</g><g id="fxg" transform="translate(${MAP.x[0]} ${MAP.x[1]})"></g></g></svg>
-<canvas id="map-veil" class="map" aria-hidden="true"></canvas><svg id="map-veil-defs" aria-hidden="true" pointer-events="none" width="0" height="0"><defs><radialGradient id="veil-soft"><stop offset=".6" stop-color="black"/><stop offset="1" stop-color="black" stop-opacity="0"/></radialGradient><mask id="veil-mask" maskUnits="userSpaceOnUse"><rect id="veil-mask-frame" fill="white"/><g id="veil-holes"></g></mask><clipPath id="veil-lines-clip" clipPathUnits="userSpaceOnUse"><path id="veil-line-cuts" clip-rule="evenodd"/></clipPath><rect id="veil-fill" fill="${C.shade}" mask="url(#veil-mask)"/></defs><g id="cam-veil"><g id="wf-lines" clip-path="url(#veil-lines-clip)" pointer-events="none"></g></g></svg>
+<canvas id="map-veil" class="map" aria-hidden="true"></canvas><svg id="map-veil-defs" aria-hidden="true" pointer-events="none" width="0" height="0"><defs><radialGradient id="veil-soft"><stop offset=".6" stop-color="black"/><stop offset="1" stop-color="black" stop-opacity="0"/></radialGradient><mask id="veil-mask" maskUnits="userSpaceOnUse"><rect id="veil-mask-frame" fill="white"/><g id="veil-holes"></g></mask><clipPath id="veil-lines-clip" clipPathUnits="userSpaceOnUse"><path id="veil-line-cuts" clip-rule="evenodd"/></clipPath><rect id="veil-fill" fill="${C.shade}" mask="url(#veil-mask)"/><g id="wf-lines" clip-path="url(#veil-lines-clip)" pointer-events="none"></g></defs></svg>
 <canvas id="nova" aria-hidden="true"></canvas><canvas id="stars" aria-hidden="true"></canvas>
 <canvas id="air" aria-hidden="true"></canvas><div id="sky" aria-hidden="true"></div>
 <button type="button" class="fx-hit" id="nova-hit" tabindex="-1" aria-label="${COPY.steps.dig}" aria-disabled="true"></button>
@@ -72,11 +72,10 @@ const $ = id => document.getElementById(id);
     svg.id = 'map-' + id; svg.setAttribute('class', 'map'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('pointer-events', 'none');
     cam.id = 'cam-' + id; inner.id = 'map-' + id + '-cover'; cam.appendChild(inner); svg.appendChild(cam); stack.appendChild(svg);
   }
-  const lines = document.createElementNS(NS, 'svg'), lineCam = document.createElementNS(NS, 'g');
-  lines.id = 'map-lines'; lines.setAttribute('class', 'map'); lines.setAttribute('aria-hidden', 'true'); lines.setAttribute('pointer-events', 'none');
-  lineCam.id = 'cam-lines'; lineCam.appendChild($('wf-lines')); lines.appendChild(lineCam); $('map-veil').after(lines);
+  // Part 17f (lag spikes, 2026-11-28): the compass lines are no longer an svg of their own above the veil: tripVeil draws them
+  // in the veil's canvas from #wf-lines, which stays in the veil's defs as their model.
 }
-const SVG = $('map'), CANVAS = $('stars'), TLEL = $('tl'), MAP_STACK = $('map-stack'), MAP_SVGS = [SVG, $('map-live'), $('map-finds'), $('map-anim'), $('map-lines')];
+const SVG = $('map'), CANVAS = $('stars'), TLEL = $('tl'), MAP_STACK = $('map-stack'), MAP_SVGS = [SVG, $('map-live'), $('map-finds'), $('map-anim')];
 // timeline sits in the stage overlay so it can become the footer rule; in reduced motion it is a sticky jump menu
 const FTWORLD = document.createElement('div'); FTWORLD.id = 'ft-world'; $('stage').querySelector('.ov').appendChild(FTWORLD); FTWORLD.append($('ft'), TLEL);
 

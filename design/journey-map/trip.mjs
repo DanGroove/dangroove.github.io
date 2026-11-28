@@ -715,7 +715,8 @@ export function tripGliding() { return !!TRIP_EL.raster?.gliding; }
 function tripRasters(E,r,st,focus,layers,veil,moving,camMoved,lastCam) {
   const c=st.cam, equal=(a,b)=>a&&b&&['s','tx','ty'].every(k=>Math.abs(a[k]-b[k])<1e-10);
   const matrix=p=>'matrix('+p.s.toFixed(4)+' 0 0 '+p.s.toFixed(4)+' '+p.tx.toFixed(2)+' '+p.ty.toFixed(2)+')';
-  // Part 17e: the veil is a canvas drawn at the shown camera (tripVeil), so it has no raster camera of its own.
+  // Part 17e: the veil is a canvas drawn at the shown camera (tripVeil), so it has no raster camera of its own; part 17f:
+  // nor have the compass lines, drawn in the veil's canvas.
   const records=[['map',E.svg,E.cam],['base',E.base,E.camBase],...layers.map(([svg,cam])=>[svg.id.slice(4),svg,cam])].filter(([,svg,cam])=>svg&&cam);
   r.layerCams ||= {};
   const slack=FRAME_PERF.slack, free=!!st.exploring||st.exploreK>0;
@@ -757,8 +758,6 @@ function tripRasters(E,r,st,focus,layers,veil,moving,camMoved,lastCam) {
   r.base=r.layerCams.map||{...c};
   for(const[id,svg]of records){
     const p=r.layerCams[id];if(!p)continue;const k=c.s/p.s;
-    // Part 17b: the hidden lines wait for rest (shown mid-move, they fade in from 0 and are placed the next frame).
-    if(id==='lines'&&moving&&svg.style.visibility!=='visible')continue;
     tripWrite(svg,'transform',equal(c,p)?'none':'matrix('+k+',0,0,'+k+','+(c.tx-p.tx*k)+','+(c.ty-p.ty*k)+')');
   }
   if(E.base){const B=E.baseRaster??={};B.camera=r.layerCams.base;B.last={...c,P:st.P,focus:focus?.k||0};B.held=!equal(c,B.camera);B.w=VIEW.w;B.h=VIEW.h;B.box=VIEW.baseBox||NO_BOX;}
@@ -791,32 +790,41 @@ function tripRasters(E,r,st,focus,layers,veil,moving,camMoved,lastCam) {
 // press's longest frames on the phone (none over 50 ms without it). The shade covers the frame at the fill's alpha with the
 // svg's border (the fill's soft edge times the mask's white frame, cut on whole device pixels by the mask's region), and
 // each hole is taken out with destination-out, which gives the product of (1 - hole alpha) the luminance mask gave.
+// Part 17f (lag spikes, 2026-11-28): the compass lines are drawn here too, over the shade and its holes, as their own svg
+// drew them just above the veil (the two show, fade and hide together). Its redraws as the lines grew in a press's
+// pull-back were about 270 of the phone's tiles a press, while it was out of tile memory. Both are placed as the svgs are,
+// through their viewBox (xMidYMid meet), at the device pixel ratio when the backing has the box's device pixels (an
+// emulated screen reports CSS pixels for the device box: there, the backing's own scale).
 export function tripVeil(st) {
   const E = TRIP_EL, v = E.veil ??= document.getElementById('map-veil');
   if (!v?.getContext || v.style.visibility !== 'visible') return;
   if (!E.veilSize) {
-    E.veilSize = [0, 0];
+    E.veilSize = [0, 0]; E.veilBox = [0, 0];
     // The backing store takes the box's exact device pixels, so the compositor shows it 1:1.
-    try { new ResizeObserver(es => { const b = es[0]?.devicePixelContentBoxSize?.[0]; if (b && (b.inlineSize !== E.veilSize[0] || b.blockSize !== E.veilSize[1])) { E.veilSize = [b.inlineSize, b.blockSize]; if (E.veilLast) tripVeil(E.veilLast); } }).observe(v, { box: 'device-pixel-content-box' }); } catch (e) { /* the rounded size below */ }
+    try { new ResizeObserver(es => { const b = es[0]?.devicePixelContentBoxSize?.[0], q = es[0]?.contentBoxSize?.[0]; if (b && q && (b.inlineSize !== E.veilSize[0] || b.blockSize !== E.veilSize[1] || q.inlineSize !== E.veilBox[0] || q.blockSize !== E.veilBox[1])) { E.veilSize = [b.inlineSize, b.blockSize]; E.veilBox = [q.inlineSize, q.blockSize]; if (E.veilLast) tripVeil(E.veilLast); } }).observe(v, { box: 'device-pixel-content-box' }); } catch (e) { /* the rounded size below */ }
   }
   E.veilLast = st;
-  const c = st.cam, W = E.veilSize[0] || Math.round(VIEW.w * (globalThis.devicePixelRatio || 1)), H = E.veilSize[1] || Math.round(VIEW.h * (globalThis.devicePixelRatio || 1));
+  const dpr = globalThis.devicePixelRatio || 1, c = st.cam, W = E.veilSize[0] || Math.round(VIEW.w * dpr), H = E.veilSize[1] || Math.round(VIEW.h * dpr);
+  const bw = E.veilBox[0] || VIEW.w, bh = E.veilBox[1] || VIEW.h, k = Math.min(bw / VIEW.w, bh / VIEW.h), view = [k, 0, 0, k, (bw - k * VIEW.w) / 2, (bh - k * VIEW.h) / 2];
+  const fit = Math.abs(W - bw * dpr) < 1 && Math.abs(H - bh * dpr) < 1, sx = fit ? dpr : W / bw, sy = fit ? dpr : H / bh;
   const fill = E.veilFill ??= document.getElementById('veil-fill'), holes = E.veilHoles ??= document.getElementById('veil-holes');
   const box = ['x', 'y', 'width', 'height'].map(k => +fill.getAttribute(k) || 0), alpha = fill.hasAttribute('fill-opacity') ? +fill.getAttribute('fill-opacity') : 1, shade = fill.getAttribute('fill');
   const list = [...holes.children].map(h => [+h.getAttribute('cx'), +h.getAttribute('cy'), +h.getAttribute('r')]);
-  const key = [W, H, VIEW.w, VIEW.h, c.s, c.tx, c.ty, box, alpha, shade, list].join();
+  const lines = tripVeilLines(E), cuts = (E.lineCuts ??= document.getElementById('veil-line-cuts'))?.getAttribute('d') || '';
+  const key = [W, H, sx, sy, bw, bh, VIEW.w, VIEW.h, c.s, c.tx, c.ty, box, alpha, shade, list, cuts, lines?.key].join();
   if (key === E.veilKey) return;
   E.veilKey = key;
   if (v.width !== W) v.width = W;
   if (v.height !== H) v.height = H;
-  const ctx = E.veilCtx ??= v.getContext('2d'), sx = W / VIEW.w, sy = H / VIEW.h, at = () => ctx.setTransform(sx * c.s, 0, 0, sy * c.s, sx * c.tx, sy * c.ty);
+  const ctx = E.veilCtx ??= v.getContext('2d'), at = m => ctx.setTransform(sx * m[0], sy * m[1], sx * m[2], sy * m[3], sx * m[4], sy * m[5]);
+  const veilAt = tripMul(view, [c.s, 0, 0, c.s, c.tx, c.ty]), edge = (x, n) => Math.min(n, Math.max(0, Math.round(x)));
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.clearRect(0, 0, W, H);
-  at(); ctx.globalAlpha = alpha; ctx.fillStyle = shade; ctx.fillRect(...box);
+  at(veilAt); ctx.globalAlpha = alpha; ctx.fillStyle = shade; ctx.fillRect(...box);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'destination-in'; ctx.fillRect(...box);
-  const x0 = Math.min(W, Math.max(0, Math.round(sx * (c.tx + c.s * box[0])))), x1 = Math.min(W, Math.max(x0, Math.round(sx * (c.tx + c.s * (box[0] + box[2])))));
-  const y0 = Math.min(H, Math.max(0, Math.round(sy * (c.ty + c.s * box[1])))), y1 = Math.min(H, Math.max(y0, Math.round(sy * (c.ty + c.s * (box[1] + box[3])))));
+  const x0 = edge(sx * (veilAt[4] + veilAt[0] * box[0]), W), x1 = Math.max(x0, edge(sx * (veilAt[4] + veilAt[0] * (box[0] + box[2])), W));
+  const y0 = edge(sy * (veilAt[5] + veilAt[3] * box[1]), H), y1 = Math.max(y0, edge(sy * (veilAt[5] + veilAt[3] * (box[1] + box[3])), H));
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, W, y0); ctx.clearRect(0, y1, W, H - y1); ctx.clearRect(0, y0, x0, y1 - y0); ctx.clearRect(x1, y0, W - x1, y1 - y0);
-  at(); ctx.globalCompositeOperation = 'destination-out';
+  at(veilAt); ctx.globalCompositeOperation = 'destination-out';
   // #veil-soft: solid to .6 of the radius, then fading to nothing at its edge.
   for (const [x, y, r] of list) {
     if (!(r > 0)) continue;
@@ -824,13 +832,52 @@ export function tripVeil(st) {
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill();
   }
   ctx.globalCompositeOperation = 'source-over';
+  // The lines' svg drew at its raster camera written to 4 and 2 decimals (the shown camera at rest); an empty clip hid all.
+  if (lines && cuts) {
+    const linesAt = tripMul(view, [+c.s.toFixed(4), 0, 0, +c.s.toFixed(4), +c.tx.toFixed(2), +c.ty.toFixed(2)]);
+    ctx.save(); at(linesAt); ctx.clip(new Path2D(cuts), 'evenodd'); at([1, 0, 0, 1, 0, 0]);
+    for (const q of lines.shapes) {
+      const opacity = q.el.hasAttribute('opacity') ? +q.el.getAttribute('opacity') : 1, m = tripMul(tripMul(linesAt, tripOwnMatrix(q.g)), tripOwnMatrix(q.el));
+      // A shape at scale 0 (a line not grown yet) has no inverse: the svg drew nothing.
+      if (!(opacity > 0) || !(Math.abs(m[0] * m[3] - m[1] * m[2]) > 1e-12)) continue;
+      const own = q.circle ? new Path2D() : new Path2D(q.el.getAttribute('d') || ''), path = new Path2D();
+      if (q.circle) { const r = +q.el.getAttribute('r') || 0; if (!(r > 0)) continue; own.arc(+q.el.getAttribute('cx') || 0, +q.el.getAttribute('cy') || 0, r, 0, 2 * Math.PI); }
+      // Non-scaling strokes: taken to the svg's viewport, then stroked with width and dashes in CSS pixels.
+      path.addPath(own, { a: m[0], b: m[1], c: m[2], d: m[3], e: m[4], f: m[5] });
+      const dash = q.el.getAttribute('stroke-dasharray');
+      ctx.globalAlpha = opacity * q.alpha; ctx.strokeStyle = q.stroke; ctx.lineWidth = q.width; ctx.lineCap = q.cap;
+      ctx.setLineDash(!dash || dash === 'none' ? [] : dash.split(/[\s,]+/).map(Number)); ctx.stroke(path);
+    }
+    ctx.restore();
+  }
   E.veilDrawn = { s: c.s, tx: c.tx, ty: c.ty };
+}
+// The lines' model: #wf-lines (findhoards.mjs) holds a group per line and per ring, each with one stroked shape; the paint
+// is read once, and the attributes the wayfinder writes each frame make the key.
+function tripVeilLines(E) {
+  const group = E.wfLines ??= document.getElementById('wf-lines');
+  if (!group) return null;
+  if (E.lineShapes?.n !== group.childElementCount) {
+    const shapes = [];
+    for (const g of group.children) for (const el of g.children) { const cs = getComputedStyle(el); shapes.push({ g, el, circle: el.tagName === 'circle', stroke: cs.stroke, width: parseFloat(cs.strokeWidth) || 0, alpha: +cs.strokeOpacity, cap: cs.strokeLinecap }); }
+    E.lineShapes = { n: group.childElementCount, shapes };
+  }
+  const { shapes } = E.lineShapes, read = (el, k) => el.getAttribute(k);
+  return { shapes, key: shapes.map(({ g, el }) => [read(g, 'transform'), read(el, 'transform'), read(el, 'opacity'), read(el, 'stroke-dasharray'), read(el, 'd'), read(el, 'r'), read(el, 'cx'), read(el, 'cy')].join(' ')).join('|') };
+}
+// [a, b, c, d, e, f] matrices; a transform list is multiplied out item by item (consolidate() rewrites the attribute).
+const tripMul = (m, t) => [m[0] * t[0] + m[2] * t[1], m[1] * t[0] + m[3] * t[1], m[0] * t[2] + m[2] * t[3], m[1] * t[2] + m[3] * t[3], m[0] * t[4] + m[2] * t[5] + m[4], m[1] * t[4] + m[3] * t[5] + m[5]];
+function tripOwnMatrix(el) {
+  let m = [1, 0, 0, 1, 0, 0];
+  const list = el.transform?.baseVal;
+  for (let i = 0; i < (list?.numberOfItems || 0); i++) { const t = list.getItem(i).matrix; m = tripMul(m, [t.a, t.b, t.c, t.d, t.e, t.f]); }
+  return m;
 }
 export function tripApply(st, focus = null) {
   const E = TRIP_EL, c = st.cam; E.clockFading = false;
   const veil = E.veil ??= document.getElementById('map-veil');
   // L5: the names-and-trail and finds svgs ride svg#map's raster camera; div#map-stack takes the fade.
-  const layers = E.layers ??= ['live', 'finds', 'anim', 'lines'].map(id => [document.getElementById('map-' + id), document.getElementById('cam-' + id)]).filter(([svg, cam]) => svg && cam), stack = E.stack ??= document.getElementById('map-stack');
+  const layers = E.layers ??= ['live', 'finds', 'anim'].map(id => [document.getElementById('map-' + id), document.getElementById('cam-' + id)]).filter(([svg, cam]) => svg && cam), stack = E.stack ??= document.getElementById('map-stack');
   const free = !!st.exploring || st.exploreK > 0;
   const r = E.raster ??= { base: null, moving: false, scale: c.s, elapsed: FRAME_PERF.labelSettle, w: VIEW.w, h: VIEW.h };
   if (r.w !== VIEW.w || r.h !== VIEW.h) { r.base = null; r.layerCams = null; r.focusRun = null; r.moving = false; r.scale = c.s; r.elapsed = FRAME_PERF.labelSettle; r.w = VIEW.w; r.h = VIEW.h; }

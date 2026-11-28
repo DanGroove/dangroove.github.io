@@ -335,3 +335,60 @@ In a press at 412 px the cloud now rasters 2,883 tiles in 809 ms, against 2,987 
 - Phone pass of 17e against 17d: both compass presses with traces.
 - The lines layer is now the press's dearest: it is rastered on about 67 of a press's frames as its dashes grow.
 - The pinch and glide repaints of the names and map layers (label easing, the legend).
+
+## Part 17f: the compass lines in the veil's canvas (cloud and phone, 28 Nov 2026)
+
+Still for Dan's steer to remove the spikes first. Done by Claude in the cloud, keeping the picture the same.
+
+### What the phone showed (17d against 17e, Galaxy S24 Ultra, 15:02 to 15:07 UTC, three runs each)
+
+17e halved the press spikes: frames over 50 ms went from 4 to 2 (print) and 5 to 2 (screen), and the worst frame from
+133.3 to 66.6 ms; frames over 25 ms stayed about the same (print 26 against 25, screen 26 against 23). Every gap over
+50 ms that is left is the GPU process making new 544 x 544 tiles (`OnCreateSharedImage`).
+
+Read from the saved traces on the PC (no new phone run): the phone runs out of tile memory in the press's pull-back, from
+about 275 to 480 ms after the tap (`DidPrepareTiles` reports oom, and its hard limit is 256 MB). From then on a freed tile
+is thrown away instead of kept for the next one, so a press makes 800 to 1,000 new images, 500 to 700 of them 544 x 544
+tiles (the rest are the small idle layers and the veil's canvas). The compass lines' svg was the single dearest layer: its
+dashes grew on about 67 frames of a press while the camera pulled back, about 270 tile rasters a press, plus a burst of 24
+to 33 new tiles the moment it was shown.
+
+### Fix
+
+**The lines are drawn in the veil's canvas.** There is no `#map-lines` svg any more. `#wf-lines` moved into the veil's
+defs, where findhoards.mjs still writes it each frame, so the compass code is unchanged, and `tripVeil` draws it after
+the veil's holes: each line and ring is taken to the svg's viewport by its own transform list and the camera the svg drew
+at (scale to 4 decimals, offsets to 2), stroked there as a non-scaling stroke (width and dashes in CSS pixels), and cut by
+the even-odd clip `#veil-line-cuts`. The two always show, fade and hide together, so one canvas holds both: no new layer,
+no new canvas buffers, and the lines leave the scheduler (five layer cameras now, not six).
+
+The canvas is now placed as the svgs are placed, through their viewBox (`xMidYMid meet`) at the device pixel ratio when
+the backing store has the box's device pixels. The 17e veil used the backing's width over `VIEW.w`, half a device pixel
+off at the right edge at 412 px on a 2.625 screen, and wrong in reduced motion where a classic scrollbar narrows the box.
+A screen emulated by DevTools or Playwright reports CSS pixels for the device box; there the backing's own scale is used,
+as before.
+
+### Checks
+
+- Real clicks against 17e (the compass press and its release, fixed clock): with a probe that keeps an empty slot for the
+  lines, so every other layer is redrawn on the same frames as in 17e, every resting frame matches 17e within 3/255 at
+  1920, and at 416 x 912 on a 2.625 screen (both canvases at device resolution) 24 pixels differ, by at most 5/255. At
+  412 at 1x the probe's resting frames differ only in the tally ("PRINT: 5 of 6 stops"), from raster history: rendered
+  without the mid-press screenshots all three builds draw it alike, and a fresh raster of its layer changes it the same
+  way in each. Without the probe (the build) resting frames differ only in idle animations caught a frame apart (the
+  longship's shields, a bird; 19 to 112 pixels), because the freed slot ends a move's resting redraws a frame sooner.
+  Mid-press frames differ on the lines, now drawn at the shown camera instead of a scaled raster, and in the veil's
+  fade, which runs on real time.
+- Tiles, a print press at 412 on a 2.625 screen with the phone's 544 px tiles, the 1.5 s after the tap: 1,046 tiles
+  against 1,199; the lines' 103 tiles, and 316 of 820 ms of the cloud's raster, are gone.
+- Pass in the cloud: finds (trip.mjs pin re-recorded), explore, steps, check, comb-r-compass, comb-s-raster,
+  comb-s-idle, comb-t-words, comb-t-legend, comb-t-ash, comb-t-beacon and comb-t-spatial.
+- `comb-s-raster` counts five layer cameras now (neither the veil nor the lines has one).
+- Budgets +1.37 KB (228.17 KB runtime, 344.53 KB map, 591.18 KB joined).
+
+### Next
+
+- Phone pass of 17f against 17e, with three measuring variants of 17f (no idle animation layers, no names layer, no
+  veil canvas) to rank what is left in a press.
+- In the cloud the names layer (`svg#map-live`) is now a press's dearest: 168 tiles on 40 frames.
+- The small idle layers repaint one tile each per frame at rest after a press; their boxes are resized at each rebase.

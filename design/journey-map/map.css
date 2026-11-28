@@ -655,12 +655,10 @@ html:not(.rm) .tl-bg { will-change: opacity; }
    before that every stop's shield drew at full size in the page's top-left corner for two or three frames of each load. */
 html:not(.rm) .stop:not([data-state]) { visibility: hidden; }
 
-/* COMB-R: idle ink shares the stack fade; growing way lines have an independent masked raster. */
+/* COMB-R: idle ink shares the stack fade. The growing way lines are drawn in the veil's canvas (part 17f, tripVeil). */
 #map-anim { pointer-events: none; visibility: inherit; }
 #map-anim .anim-find { opacity: var(--jm-find); }
 #map-anim .anim-find.hoard { transition: opacity .3s; }
-#map-lines { pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .3s; }
-.rm #map-lines { transition: none; }
 
 /* COMB-S: tightly bounded idle ink keeps the stack fade and original SVG order. */
 .idle-layer { overflow: hidden; contain: paint; pointer-events: none; will-change: transform; }
